@@ -1,0 +1,19 @@
+# Decentraland Godot Rust
+
+## Building and Running
+
+1. Install rust (https://www.rust-lang.org/tools/install)
+2. Install protoc (https://github.com/protocolbuffers/protobuf/releases) (has to be able of finding PROTOC env var pointing to the binary)
+3. Download latest Godot 4 (https://godotengine.org/)
+4. Develop the project with
+
+### 1. Editing the godot project
+
+You can open the folder `godot/` with the Godot editor.
+
+### 2. Editing the GD Extension Rust library
+
+Open this repo with Visual Studio code, and run the `Launch Game` or `Run Editor`. This builds the library and run the game or editor (only available or at least tested on Windows for now)
+
+## Run test with coverage
+Run `cargo xtask coverage --dev`. It'll create a `coverage` folder with the index.html with the all information. For running this commands you need to have lvvm tools and grcov, you can install them with `rustup component add llvm-tools-preview` and `cargo install grcov`.

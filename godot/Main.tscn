@@ -1,0 +1,56 @@
+[gd_scene load_steps=8 format=3 uid="uid://cyfwty2q3rdse"]
+
+[ext_resource type="Script" path="res://Main.gd" id="1_nv2ru"]
+[ext_resource type="Script" path="res://Camera.gd" id="2_1rghv"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_jtcv1"]
+sky_top_color = Color(0.827451, 0.760784, 0.639216, 1)
+sky_horizon_color = Color(0.615686, 0.560784, 0.619608, 1)
+ground_bottom_color = Color(0.4, 0.278431, 0.207843, 1)
+sun_angle_max = 120.0
+
+[sub_resource type="Sky" id="Sky_7xgv5"]
+sky_material = SubResource("ProceduralSkyMaterial_jtcv1")
+
+[sub_resource type="Environment" id="Environment_immgo"]
+background_mode = 2
+sky = SubResource("Sky_7xgv5")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gyax8"]
+albedo_color = Color(1, 0.67451, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ftw7c"]
+albedo_color = Color(0, 0.654902, 0.658824, 1)
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_nv2ru")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(0.960784, -0.146243, 0.2356, -0.0652374, 0.706571, 0.704628, -0.269515, -0.692366, 0.669322, 13.015, 10.1224, 18.9597)
+current = true
+script = ExtResource("2_1rghv")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_immgo")
+
+[node name="FloorCube3D" type="CSGBox3D" parent="."]
+transform = Transform3D(16, 0, 0, 0, 0.026, 0, 0, 0, 16, 8, 0, 8)
+material = SubResource("StandardMaterial3D_gyax8")
+
+[node name="OriginCube3D" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.504672, 0)
+material = SubResource("StandardMaterial3D_ftw7c")
+
+[node name="SpotLight3D" type="SpotLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 17, 6)
+
+[node name="Label" type="Label" parent="."]
+offset_right = 149.0
+offset_bottom = 23.0
+text = "FPS: "
+
+[node name="Label2" type="Label" parent="."]
+offset_top = 32.0
+offset_right = 40.0
+offset_bottom = 55.0
+text = "Move with WASD, camera with holding right-click"

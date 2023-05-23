@@ -1,0 +1,10 @@
+[configuration]
+entry_symbol = "gdext_rust_init"
+
+[libraries]
+windows.debug.x86_64 = "res://lib/decentraland_godot_lib.dll"
+windows.release.x86_64 ="res://lib/decentraland_godot_lib.dll"
+linux.debug.x86_64 = "res://lib/libdecentraland_godot_lib.so"
+linux.release.x86_64 = "res://lib/libdecentraland_godot_lib.so"
+macos.debug = "res://lib/libdecentraland_godot_lib.dylib"
+macos.release = "res://lib/libdecentraland_godot_lib.dylib"

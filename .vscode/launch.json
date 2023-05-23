@@ -1,0 +1,36 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(Windows) Launch",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${env:GODOT4_BIN}",
+            "args": [
+                "--path",
+                "${workspaceFolder}/godot"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/godot",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "(win) Copy GDExtension Lib",
+        },
+        {
+            "name": "(Windows) Launch Editor",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${env:GODOT4_BIN}",
+            "args": [
+                "--path",
+                "${workspaceFolder}/godot",
+                "-e"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/godot",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "(win) Copy GDExtension Lib",
+        }
+    ]
+}

@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "decentraland-godot-lib",
+    "xtask",
+]

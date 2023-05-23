@@ -1,0 +1,1 @@
+put decentraland_godot_lib libraries files here
