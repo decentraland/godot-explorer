@@ -123,10 +123,7 @@ jobs:
   build-macos:
     name: Build on MacOS
     runs-on: macos-latest
-    if: ${{ github.ref == 'refs/heads/main' }}
-    strategy: 
-      matrix:
-        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+    # if: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v2
       - name: Cache
@@ -137,36 +134,41 @@ jobs:
             ~/.cargo/git
             rust/target
             rust/Cargo.lock
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-${{ matrix.target }}-cargo-
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
-          target: ${{ matrix.target }}
+      - name: Set up target platform
+        run: |
+          rustup add target x86_64-apple-darwin
+          rustup add target aarch64-apple-darwin
       - name: Install protoc
         uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: actions-rs/cargo@v1
-        name: cargo test
-        if: ${{ matrix.target }} == "x86_64-apple-darwin" # the actino is cross-compiling the aarch64 target
-        with:
-          command: test
-          args: --manifest-path rust/Cargo.toml --release 
-      - uses: actions-rs/cargo@v1
-        name: cargo build
+        name: build for x86_64
         with:
           command: build
-          args: --manifest-path rust/Cargo.toml --release --target=${{ matrix.target }}
+          args: --manifest-path rust/Cargo.toml --release --target=x86_64-apple-darwin
           
-      - name: print ls
-        run: ls rust/target 
+      - uses: actions-rs/cargo@v1
+        name: build for arm64
+        with:
+          command: build
+          args: --manifest-path rust/Cargo.toml --release --target=aarch64-apple-darwin
+
+      - name: Make universal library
+        run: |
+          lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib  rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output godot/lib/libdecentraland_godot_lib.dylib
       - uses: actions/upload-artifact@master
         with:
-          name: decentraland-godot-lib-${{ matrix.target }}
-          path: rust/target/${{ matrix.target }}/release/libdecentraland_godot_lib.dylib
+          name: decentraland-godot-lib-${{ runner.os }}
+          path: rust/target/godot/lib/libdecentraland_godot_lib.dylib
     
   export:
     name: Export
