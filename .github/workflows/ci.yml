@@ -143,8 +143,8 @@ jobs:
           override: true
       - name: Set up target platform
         run: |
-          rustup add target x86_64-apple-darwin
-          rustup add target aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
+          rustup target add aarch64-apple-darwin
       - name: Install protoc
         uses: arduino/setup-protoc@v1
         with:
