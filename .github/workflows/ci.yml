@@ -65,7 +65,16 @@ jobs:
           override: true
           components: llvm-tools-preview
 
-      - uses: Swatinem/rust-cache@v1
+      - name: Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+            rust/Cargo.lock
+          key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: coverage-cargo-
 
       - name: Download grcov
         run: |
@@ -146,7 +155,8 @@ jobs:
       - name: Make universal library
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output godot/lib/libdecentraland_godot_lib.dylib
+          mkdir rust/target/release || true
+          lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output rust/target/release/libdecentraland_godot_lib.dylib
 
       - uses: actions/upload-artifact@master
         with:
@@ -154,7 +164,7 @@ jobs:
           path: |
             rust/target/release/decentraland_godot_lib.dll
             rust/target/release/libdecentraland_godot_lib.so
-            godot/lib/libdecentraland_godot_lib.dylib
+            rust/target/release/libdecentraland_godot_lib.dylib
 
   export:
     name: Export (all platforms)
