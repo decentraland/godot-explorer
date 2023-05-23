@@ -151,9 +151,10 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions-rs/cargo@v1
         name: cargo test
+        if: ${{ matrix.target }} == "x86_64-apple-darwin" # the actino is cross-compiling the aarch64 target
         with:
           command: test
-          args: --manifest-path rust/Cargo.toml --target=${{ matrix.target }} --release 
+          args: --manifest-path rust/Cargo.toml --release 
       - uses: actions-rs/cargo@v1
         name: cargo build
         with:

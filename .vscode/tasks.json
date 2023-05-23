@@ -25,6 +25,32 @@
                 "$rustc"
             ],
             "dependsOn": "Build GDExtension Lib"
+        },
+        {
+            "label": "(macos) Copy GDExtension Lib",
+            "type": "shell",
+            "command": "cp",
+            "args": [
+                "rust/target/debug/libdecentraland_godot_lib.dylib",
+                "godot/lib"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "dependsOn": "Build GDExtension Lib"
+        },
+        {
+            "label": "(linux) Copy GDExtension Lib",
+            "type": "shell",
+            "command": "cp",
+            "args": [
+                "rust/target/debug/libdecentraland_godot_lib.so",
+                "godot/lib"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "dependsOn": "Build GDExtension Lib"
         }
     ]
 }
