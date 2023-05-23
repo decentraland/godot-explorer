@@ -83,7 +83,7 @@ jobs:
           files: rust/coverage/*.lcov
 
   build:
-    name: Build on Windows and Linux
+    name: Build and test
     # if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       matrix:
@@ -100,8 +100,8 @@ jobs:
             ~/.cargo/git
             rust/target
             rust/Cargo.lock
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ matrix.os }}-cargo-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -112,7 +112,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up target platform
-        if: ${{ runner.os == 'macos-latest' }}
+        if: ${{ matrix.os == 'macos-latest' }}
         run: |
           rustup target add x86_64-apple-darwin
           rustup target add aarch64-apple-darwin
@@ -123,7 +123,7 @@ jobs:
           args: --manifest-path rust/Cargo.toml --release 
 
       - uses: actions-rs/cargo@v1
-        if: ${{ runner.os != 'macos-latest' }}
+        if: ${{ matrix.os != 'macos-latest' }}
         name: cargo build
         with:
           command: build
@@ -131,20 +131,20 @@ jobs:
 
       - uses: actions-rs/cargo@v1
         name: build for x86_64 (macos)
-        if: ${{ runner.os == 'macos-latest' }}
+        if: ${{ matrix.os == 'macos-latest' }}
         with:
           command: build
           args: --manifest-path rust/Cargo.toml --release --target=x86_64-apple-darwin
           
       - uses: actions-rs/cargo@v1
         name: build for arm64 (macos)
-        if: ${{ runner.os == 'macos-latest' }}
+        if: ${{ matrix.os == 'macos-latest' }}
         with:
           command: build
           args: --manifest-path rust/Cargo.toml --release --target=aarch64-apple-darwin
 
       - name: Make universal library
-        if: ${{ runner.os == 'macos-latest' }}
+        if: ${{ matrix.os == 'macos-latest' }}
         run: |
           lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output godot/lib/libdecentraland_godot_lib.dylib
 
@@ -157,7 +157,7 @@ jobs:
             godot/lib/libdecentraland_godot_lib.dylib
 
   export:
-    name: Export
+    name: Export (all platforms)
     needs: build
     runs-on: ubuntu-latest
     # if: ${{ github.ref == 'refs/heads/main' }}
