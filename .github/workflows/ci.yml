@@ -7,7 +7,7 @@ on:
     types:
       - created
 
-name: Test and build CI
+name: CI
 
 jobs: 
   lints:
@@ -175,10 +175,10 @@ jobs:
           name: decentraland-godot-lib-windows-latest
           path: godot/lib
           
-      - name: Download macos aarch64 lib artifact 
+      - name: Download macos lib artifact 
         uses: actions/download-artifact@master
         with:
-          name: decentraland-godot-lib-macOS
+          name: decentraland-godot-lib-macos-latest
           path: godot/lib
           
       - name: export
