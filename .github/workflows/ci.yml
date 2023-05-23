@@ -158,7 +158,7 @@ jobs:
 
   export:
     name: Export
-    needs: [build-win-linux, build-macos]
+    needs: build
     runs-on: ubuntu-latest
     # if: ${{ github.ref == 'refs/heads/main' }}
     steps:
