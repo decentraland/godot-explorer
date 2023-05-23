@@ -1,4 +1,11 @@
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  release:
+    types:
+      - created
 
 name: Test and build CI
 
@@ -75,55 +82,14 @@ jobs:
         with:
           files: rust/coverage/*.lcov
 
-  build-win-linux:
+  build:
     name: Build on Windows and Linux
     # if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
         rust: [stable]
     runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v2
-      - name: Cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-            rust/Cargo.lock
-          key: ${{ matrix.os }}-cargo
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Install protoc
-        uses: arduino/setup-protoc@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions-rs/cargo@v1
-        name: cargo test
-        with:
-          command: test
-          args: --manifest-path rust/Cargo.toml --release 
-      - uses: actions-rs/cargo@v1
-        name: cargo build
-        with:
-          command: build
-          args: --manifest-path rust/Cargo.toml --release
-      - uses: actions/upload-artifact@master
-        with:
-          name: decentraland-godot-lib-${{ matrix.os }}
-          path: |
-            rust/target/release/decentraland_godot_lib.dll
-            rust/target/release/libdecentraland_godot_lib.so
-    
-  build-macos:
-    name: Build on MacOS
-    runs-on: macos-latest
-    # if: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v2
       - name: Cache
@@ -141,35 +107,55 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Set up target platform
-        run: |
-          rustup target add x86_64-apple-darwin
-          rustup target add aarch64-apple-darwin
       - name: Install protoc
         uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up target platform
+        if: ${{ runner.os == 'macos-latest' }}
+        run: |
+          rustup target add x86_64-apple-darwin
+          rustup target add aarch64-apple-darwin
+      - uses: actions-rs/cargo@v1
+        name: cargo test
+        with:
+          command: test
+          args: --manifest-path rust/Cargo.toml --release 
 
       - uses: actions-rs/cargo@v1
-        name: build for x86_64
+        if: ${{ runner.os != 'macos-latest' }}
+        name: cargo build
+        with:
+          command: build
+          args: --manifest-path rust/Cargo.toml --release
+
+      - uses: actions-rs/cargo@v1
+        name: build for x86_64 (macos)
+        if: ${{ runner.os == 'macos-latest' }}
         with:
           command: build
           args: --manifest-path rust/Cargo.toml --release --target=x86_64-apple-darwin
           
       - uses: actions-rs/cargo@v1
-        name: build for arm64
+        name: build for arm64 (macos)
+        if: ${{ runner.os == 'macos-latest' }}
         with:
           command: build
           args: --manifest-path rust/Cargo.toml --release --target=aarch64-apple-darwin
 
       - name: Make universal library
+        if: ${{ runner.os == 'macos-latest' }}
         run: |
-          lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib  rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output godot/lib/libdecentraland_godot_lib.dylib
+          lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output godot/lib/libdecentraland_godot_lib.dylib
+
       - uses: actions/upload-artifact@master
         with:
-          name: decentraland-godot-lib-${{ runner.os }}
-          path: godot/lib/libdecentraland_godot_lib.dylib
-    
+          name: decentraland-godot-lib-${{ matrix.os }}
+          path: |
+            rust/target/release/decentraland_godot_lib.dll
+            rust/target/release/libdecentraland_godot_lib.so
+            godot/lib/libdecentraland_godot_lib.dylib
+
   export:
     name: Export
     needs: [build-win-linux, build-macos]
