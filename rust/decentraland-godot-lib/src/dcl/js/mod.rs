@@ -80,6 +80,7 @@ pub(crate) fn scene_thread(
     // store channels
     state.borrow_mut().put(thread_sender_to_main);
     state.borrow_mut().put(thread_receive_from_main);
+    state.borrow_mut().put(scene_id);
 
     // store kill handle
     state
@@ -130,6 +131,7 @@ pub(crate) fn scene_thread(
         });
 
         if state.borrow().try_borrow::<ShuttingDown>().is_some() {
+            println!("exiting from the thread {:?}", scene_id);
             return;
         }
 

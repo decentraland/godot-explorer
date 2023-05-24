@@ -44,13 +44,125 @@ material = SubResource("StandardMaterial3D_ftw7c")
 [node name="SpotLight3D" type="SpotLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 17, 6)
 
-[node name="Label" type="Label" parent="."]
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label_FPS" type="Label" parent="UI"]
+unique_name_in_owner = true
+layout_mode = 0
 offset_right = 149.0
-offset_bottom = 23.0
+offset_bottom = 26.0
 text = "FPS: "
 
-[node name="Label2" type="Label" parent="."]
+[node name="Label_Info" type="Label" parent="UI"]
+layout_mode = 0
 offset_top = 32.0
-offset_right = 40.0
-offset_bottom = 55.0
+offset_right = 378.0
+offset_bottom = 58.0
 text = "Move with WASD, camera with holding right-click"
+
+[node name="Panel" type="Panel" parent="UI"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -199.0
+offset_top = -258.0
+offset_right = -8.0
+offset_bottom = -8.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="Panel" type="Panel" parent="UI/Panel"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 25.0
+offset_top = -99.0
+offset_right = -24.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Button_AddScene" type="Button" parent="UI/Panel/Panel"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -47.0
+offset_top = -39.0
+offset_right = 49.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "Add"
+
+[node name="X" type="TextEdit" parent="UI/Panel/Panel"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -56.5
+offset_top = 8.0
+offset_right = -7.5
+offset_bottom = 43.0
+grow_horizontal = 2
+text = "16"
+
+[node name="Z" type="TextEdit" parent="UI/Panel/Panel"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 7.5
+offset_top = 8.0
+offset_right = 56.5
+offset_bottom = 43.0
+grow_horizontal = 2
+text = "16"
+
+[node name="ItemList_Scenes" type="ItemList" parent="UI/Panel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 25.0
+offset_top = 32.0
+offset_right = -24.0
+offset_bottom = 109.0
+grow_horizontal = 2
+
+[node name="Button_DeleteScene" type="Button" parent="UI/Panel"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -48.0
+offset_top = 115.0
+offset_right = 48.0
+offset_bottom = 146.0
+grow_horizontal = 2
+text = "Delete"
+
+[node name="Label" type="Label" parent="UI/Panel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 26.0
+grow_horizontal = 2
+text = "Scenes"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[connection signal="pressed" from="UI/Panel/Panel/Button_AddScene" to="." method="_on_add_button_pressed"]
+[connection signal="pressed" from="UI/Panel/Button_DeleteScene" to="." method="_on_button_delete_scene_pressed"]

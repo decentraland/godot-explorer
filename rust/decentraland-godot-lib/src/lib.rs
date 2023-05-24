@@ -7,7 +7,7 @@
 use godot::prelude::*;
 
 pub mod dcl;
-pub mod main_class;
+pub mod scene_runner;
 
 struct GodotRustTest;
 

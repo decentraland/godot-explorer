@@ -13,6 +13,7 @@ use num_traits::FromPrimitive;
 use crate::dcl::{
     components::{SceneComponentId, SceneCrdtTimestamp, SceneEntityId},
     crdt::SceneCrdtState,
+    js::ShuttingDown,
     serialization::reader::{DclReader, DclReaderError},
     RendererResponse, SceneId, SceneResponse,
 };
@@ -104,6 +105,7 @@ fn process_message(
 fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
     let mut op_state = op_state.borrow_mut();
 
+    let scene_id = op_state.take::<SceneId>();
     let mutex_scene_crdt_state = op_state.take::<Arc<Mutex<SceneCrdtState>>>();
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
     let mut stream = DclReader::new(messages);
@@ -130,10 +132,11 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
 
     let dirty = scene_crdt_state.take_dirty();
     op_state.put(mutex_scene_crdt_state);
+    op_state.put(scene_id);
 
     let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
     sender
-        .send(SceneResponse::Ok(SceneId(0), dirty))
+        .send(SceneResponse::Ok(scene_id, dirty))
         .expect("error sending scene response!!")
 }
 
@@ -174,27 +177,27 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
     let mut receiver = op_state
         .borrow_mut()
         .take::<tokio::sync::mpsc::Receiver<RendererResponse>>();
-    let _response = receiver.recv().await;
+    let response = receiver.recv().await;
     op_state.borrow_mut().put(receiver);
 
-    // let results = match response {
-    //     Some(RendererResponse::Ok) => {
-    //         let mut results = Vec::new();
-    //         // // TODO: consider writing directly into a v8 buffer
-    //         // for (component_id, lww) in updates.lww.iter() {
-    //         //     for (entity_id, data) in lww.last_write.iter() {
-    //         //         results.push(put_component(entity_id, component_id, data));
-    //         //     }
-    //         // }
-    //         results
-    //     }
-    //     None => {
-    //         // channel has been closed, shutdown gracefully
-    //         println!("{}: shutting down", std::thread::current().name().unwrap());
-    //         op_state.borrow_mut().put(ShuttingDown);
-    //         Default::default()
-    //     }
-    // };
+    match response {
+        Some(RendererResponse::Ok(_data)) => {
+            // let mut results = Vec::new();
+            // // TODO: consider writing directly into a v8 buffer
+            // for (component_id, lww) in updates.lww.iter() {
+            //     for (entity_id, data) in lww.last_write.iter() {
+            //         results.push(put_component(entity_id, component_id, data));
+            //     }
+            // }
+            // results
+        }
+        _ => {
+            // channel has been closed, shutdown gracefully
+            println!("{}: shutting down", std::thread::current().name().unwrap());
+            op_state.borrow_mut().put(ShuttingDown);
+            Default::default()
+        }
+    }
 
     // results
     vec![vec![0]]
