@@ -1,10 +1,18 @@
 use self::godot_dcl_scene::GodotDclScene;
-use crate::dcl::{RendererResponse, SceneDefinition, SceneId, SceneResponse};
+use crate::dcl::{DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse};
 use godot::{engine::node::InternalMode, prelude::*};
 use std::collections::{HashMap, HashSet};
 
+mod components;
 mod godot_dcl_scene;
 mod update_scene;
+
+pub struct Scene {
+    pub godot_dcl_scene: GodotDclScene,
+    pub dcl_scene: DclScene,
+    pub waiting_for_updates: bool,
+    pub alive: bool,
+}
 
 // Deriving GodotClass makes the class available to Godot
 #[derive(GodotClass)]
@@ -12,7 +20,7 @@ mod update_scene;
 pub struct SceneRunner {
     #[base]
     base: Base<Node>,
-    scenes: HashMap<SceneId, GodotDclScene>,
+    scenes: HashMap<SceneId, Scene>,
 
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     main_receiver_from_thread: std::sync::mpsc::Receiver<SceneResponse>,
@@ -27,10 +35,22 @@ impl SceneRunner {
             offset,
             visible: true,
         };
-        let new_scene = GodotDclScene::new(scene_definition, self.thread_sender_to_main.clone());
+        let dcl_scene =
+            DclScene::spawn_new(scene_definition.clone(), self.thread_sender_to_main.clone());
+        let godot_dcl_scene: GodotDclScene = GodotDclScene::new(
+            scene_definition,
+            dcl_scene.scene_crdt.clone(),
+            dcl_scene.scene_id,
+        );
+        let new_scene = Scene {
+            godot_dcl_scene,
+            dcl_scene,
+            waiting_for_updates: false,
+            alive: true,
+        };
 
         self.base.add_child(
-            new_scene.root_node.share().upcast(),
+            new_scene.godot_dcl_scene.root_node.share().upcast(),
             false,
             InternalMode::INTERNAL_MODE_DISABLED,
         );
@@ -101,14 +121,19 @@ impl SceneRunner {
 
         for scene_id in scene_to_remove.iter() {
             let mut scene = self.scenes.remove(scene_id).unwrap();
-            let node = scene.root_node.share().upcast::<Node>().share();
+            let node = scene
+                .godot_dcl_scene
+                .root_node
+                .share()
+                .upcast::<Node>()
+                .share();
             self.remove_child(node);
 
-            while let Some(mut obj) = scene.objs.pop() {
+            while let Some(mut obj) = scene.godot_dcl_scene.objs.pop() {
                 obj.queue_free();
             }
 
-            scene.root_node.queue_free();
+            scene.godot_dcl_scene.root_node.queue_free();
         }
     }
 
@@ -122,11 +147,15 @@ impl SceneRunner {
                     }
                     SceneResponse::Ok(scene_id, (dirty_entities, dirty_components)) => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
+                            let crdt = scene.dcl_scene.scene_crdt.clone();
+                            let mut crdt_state = crdt.lock().unwrap();
+
                             update_scene::update_scene(
                                 delta,
                                 scene,
-                                dirty_entities,
-                                dirty_components,
+                                &mut crdt_state,
+                                &dirty_entities,
+                                &dirty_components,
                             );
                         }
                     }
