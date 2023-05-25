@@ -1,6 +1,6 @@
 use num_traits::ToPrimitive;
 
-use crate::dcl::js::engine::CrdtMessageType;
+use crate::dcl::crdt::message::CrdtMessageType;
 
 use super::writer::{DclWriter, ToDclWriter};
 

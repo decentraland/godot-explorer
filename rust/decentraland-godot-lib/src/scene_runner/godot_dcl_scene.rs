@@ -13,6 +13,8 @@ pub struct GodotDclScene {
     // godot
     pub entities: HashMap<SceneEntityId, Node3DEntity>,
     pub root_node: Gd<Node3D>,
+
+    // TODO: store all the objs should be not necessary
     pub objs: Vec<Gd<Node>>,
 
     pub hierarchy_dirty: bool,

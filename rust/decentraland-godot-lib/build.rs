@@ -127,6 +127,8 @@ fn generate_impl_crdt(proto_components: &Vec<Component>) {
     let mut defining_proto = String::new();
     let mut lww_getter = String::new();
     let mut gos_getter = String::new();
+    let mut lww_getter_mut = String::new();
+    let mut gos_getter_mut = String::new();
     let mut custom_proto_methods = String::new();
 
     for component in proto_components {
@@ -141,8 +143,12 @@ fn generate_impl_crdt(proto_components: &Vec<Component>) {
             )\n",
                 component.pascal_name, component.id
             );
-            gos_getter += &format!(
+            gos_getter_mut += &format!(
                 "SceneComponentId({}) => self.get_unknown_gos_component_mut::<GrowOnlySet<proto_components::sdk::components::Pb{}>>(SceneComponentId({})),\n",
+                component.id, component.pascal_name, component.id
+            );
+            gos_getter += &format!(
+                "SceneComponentId({}) => self.get_unknown_gos_component::<GrowOnlySet<proto_components::sdk::components::Pb{}>>(SceneComponentId({})),\n",
                 component.id, component.pascal_name, component.id
             );
             custom_proto_methods += &format!(
@@ -174,8 +180,12 @@ fn generate_impl_crdt(proto_components: &Vec<Component>) {
             )\n",
                 component.pascal_name, component.id
             );
-            lww_getter += &format!(
+            lww_getter_mut += &format!(
                 "SceneComponentId({0}) => self.get_unknown_lww_component_mut::<LastWriteWins<proto_components::sdk::components::Pb{1}>>(SceneComponentId({0})),\n",
+                component.id, component.pascal_name
+            );
+            lww_getter += &format!(
+                "SceneComponentId({0}) => self.get_unknown_lww_component::<LastWriteWins<proto_components::sdk::components::Pb{1}>>(SceneComponentId({0})),\n",
                 component.id, component.pascal_name
             );
             custom_proto_methods += &format!(
@@ -221,26 +231,46 @@ fn generate_impl_crdt(proto_components: &Vec<Component>) {
 impl SceneCrdtState {{
     pub fn from_proto() -> Self {{
         let mut crdt_state = Self::default();
-        crdt_state{};
+        crdt_state{defining_proto};
         crdt_state
     }}
     
     pub fn get_proto_lww_component_definition(
-        &mut self,
+        &self,
         component_id: SceneComponentId,
-    ) -> Option<&mut dyn GenericLastWriteWinsComponent> {{
+    ) -> Option<&dyn GenericLastWriteWinsComponent> {{
         match component_id {{
-            {}
+            {lww_getter}
             _ => None
         }}
     }}
 
     pub fn get_proto_gos_component_definition(
+        &self,
+        component_id: SceneComponentId,
+    ) -> Option<&dyn GenericGrowOnlySetComponent> {{
+        match component_id {{
+            {gos_getter}
+            _ => None
+        }}
+    }}
+    
+    pub fn get_proto_lww_component_definition_mut(
+        &mut self,
+        component_id: SceneComponentId,
+    ) -> Option<&mut dyn GenericLastWriteWinsComponent> {{
+        match component_id {{
+            {lww_getter_mut}
+            _ => None
+        }}
+    }}
+
+    pub fn get_proto_gos_component_definition_mut(
         &mut self,
         component_id: SceneComponentId,
     ) -> Option<&mut dyn GenericGrowOnlySetComponent> {{
         match component_id {{
-            {}
+            {gos_getter_mut}
             _ => None
         }}
     }}
@@ -248,10 +278,9 @@ impl SceneCrdtState {{
 
 pub struct SceneCrdtStateProtoComponents();
 impl SceneCrdtStateProtoComponents {{
-{}
+{custom_proto_methods}
 }}
-",
-        defining_proto, lww_getter, gos_getter, custom_proto_methods
+"
     );
     generate_file(dest_path, output_str.as_bytes());
 }

@@ -1,6 +1,7 @@
 pub mod entity;
 pub mod grow_only_set;
 pub mod last_write_wins;
+pub mod message;
 
 use std::{
     any::Any,
@@ -66,11 +67,54 @@ impl SceneCrdtState {
     }
 
     pub fn get_lww_component_definition(
+        &self,
+        component_id: SceneComponentId,
+    ) -> Option<&dyn GenericLastWriteWinsComponent> {
+        if SceneCrdtStateProtoComponents::is_proto_component_id(component_id) {
+            return self.get_proto_lww_component_definition(component_id);
+        }
+
+        match component_id {
+            SceneComponentId::TRANSFORM => self
+                .get_unknown_lww_component::<LastWriteWins<DclTransformAndParent>>(
+                    SceneComponentId::TRANSFORM,
+                ),
+            _ => None,
+        }
+    }
+
+    pub fn get_gos_component_definition(
+        &self,
+        component_id: SceneComponentId,
+    ) -> Option<&dyn GenericGrowOnlySetComponent> {
+        if SceneCrdtStateProtoComponents::is_proto_component_id(component_id) {
+            return self.get_proto_gos_component_definition(component_id);
+        }
+        None
+    }
+
+    pub fn get_unknown_gos_component<T: 'static + GenericGrowOnlySetComponent>(
+        &self,
+        component_id: SceneComponentId,
+    ) -> Option<&dyn GenericGrowOnlySetComponent> {
+        let component = self.components.get(&component_id)?.downcast_ref::<T>()?;
+        Some(component)
+    }
+
+    pub fn get_unknown_lww_component<T: 'static + GenericLastWriteWinsComponent>(
+        &self,
+        component_id: SceneComponentId,
+    ) -> Option<&dyn GenericLastWriteWinsComponent> {
+        let component = self.components.get(&component_id)?.downcast_ref::<T>()?;
+        Some(component)
+    }
+
+    pub fn get_lww_component_definition_mut(
         &mut self,
         component_id: SceneComponentId,
     ) -> Option<&mut dyn GenericLastWriteWinsComponent> {
         if SceneCrdtStateProtoComponents::is_proto_component_id(component_id) {
-            return self.get_proto_lww_component_definition(component_id);
+            return self.get_proto_lww_component_definition_mut(component_id);
         }
 
         match component_id {
@@ -82,12 +126,12 @@ impl SceneCrdtState {
         }
     }
 
-    pub fn get_gos_component_definition(
+    pub fn get_gos_component_definition_mut(
         &mut self,
         component_id: SceneComponentId,
     ) -> Option<&mut dyn GenericGrowOnlySetComponent> {
         if SceneCrdtStateProtoComponents::is_proto_component_id(component_id) {
-            return self.get_proto_gos_component_definition(component_id);
+            return self.get_proto_gos_component_definition_mut(component_id);
         }
         None
     }
@@ -143,7 +187,8 @@ impl SceneCrdtState {
         let dirty_entities = self.entities.take_dirty();
 
         for component_id in keys {
-            if let Some(component_definition) = self.get_lww_component_definition(component_id) {
+            if let Some(component_definition) = self.get_lww_component_definition_mut(component_id)
+            {
                 let mut dirty = component_definition.take_dirty();
 
                 for entity in dirty_entities.died.iter() {
@@ -180,126 +225,157 @@ impl SceneCrdtState {
 include!(concat!(env!("OUT_DIR"), "/crdt_impl.gen.rs"));
 
 mod test {
-    // #[test]
-    // fn test_invalid_component_id() {
-    //     let mut crdt_state = SceneCrdtState::default();
-    //     assert!(crdt_state
-    //         .get_lww_component_mut::<bool>(SceneComponentId(0))
-    //         .is_none());
+    #[allow(unused_imports)]
+    use crate::dcl::{
+        components::SceneCrdtTimestamp,
+        crdt::last_write_wins::{LWWEntry, LastWriteWinsComponentOperation},
+        serialization::{reader::DclReader, writer::DclWriter},
+    };
 
-    //     crdt_state.insert_lww_component::<bool>(SceneComponentId(0));
+    #[allow(unused_imports)]
+    use super::*;
 
-    //     assert!(crdt_state
-    //         .get_lww_component_mut::<bool>(SceneComponentId(0))
-    //         .is_some());
-    // }
+    #[test]
+    fn test_invalid_component_id() {
+        let mut crdt_state = SceneCrdtState::default();
+        assert!(crdt_state
+            .get_lww_component_mut::<bool>(SceneComponentId(0))
+            .is_none());
 
-    // #[test]
-    // fn test_invalid_component_type() {
-    //     let mut crdt_state = SceneCrdtState::default();
-    //     assert!(crdt_state
-    //         .get_lww_component_mut::<bool>(SceneComponentId(0))
-    //         .is_none());
+        crdt_state.insert_lww_component::<bool>(SceneComponentId(0));
 
-    //     crdt_state.insert_lww_component::<bool>(SceneComponentId(0));
+        assert!(crdt_state
+            .get_lww_component_mut::<bool>(SceneComponentId(0))
+            .is_some());
+    }
 
-    //     assert!(crdt_state
-    //         .get_lww_component_mut::<bool>(SceneComponentId(0))
-    //         .is_some());
+    #[test]
+    fn test_invalid_component_type() {
+        let mut crdt_state = SceneCrdtState::default();
+        assert!(crdt_state
+            .get_lww_component_mut::<bool>(SceneComponentId(0))
+            .is_none());
 
-    //     assert!(crdt_state
-    //         .get_lww_component_mut::<u64>(SceneComponentId(0))
-    //         .is_none());
-    // }
+        crdt_state.insert_lww_component::<bool>(SceneComponentId(0));
 
-    // #[test]
-    // fn test() {
-    //     let mut crdt_state = SceneCrdtState::default();
-    //     let entity = SceneEntityId::new(0, 0);
-    //     let mut MeshRenderer = crdt_state
-    //         .get_lww_component_mut::<PbMeshRenderer>(SceneComponentId::MESH_RENDERER)
-    //         .unwrap();
+        assert!(crdt_state
+            .get_lww_component_mut::<bool>(SceneComponentId(0))
+            .is_some());
 
-    //     let some_mesh_renderer = PbMeshRenderer::default();
-    //     MeshRenderer.set(
-    //         SceneEntityId::new(0, 0),
-    //         SceneCrdtTimestamp(0),
-    //         Some(some_mesh_renderer),
-    //     );
+        assert!(crdt_state
+            .get_lww_component_mut::<u64>(SceneComponentId(0))
+            .is_none());
+    }
 
-    //     let mesh_renderer = MeshRenderer.get(SceneEntityId::new(0, 0));
-    //     assert_eq!(
-    //         *mesh_renderer.unwrap(),
-    //         LWWEntry {
-    //             timestamp: SceneCrdtTimestamp(0),
-    //             value: Some(PbMeshRenderer { mesh: None })
-    //         }
-    //     );
+    #[test]
+    fn test_adding_and_retrieving_proto_component() {
+        let mut crdt_state = SceneCrdtState::from_proto();
 
-    //     let new_mesh_renderer = PbMeshRenderer {
-    //         mesh: Some(pb_mesh_renderer::Mesh::Box(BoxMesh { uvs: vec![] })),
-    //     };
-    //     MeshRenderer.set(
-    //         SceneEntityId::new(0, 0),
-    //         SceneCrdtTimestamp(0),
-    //         Some(new_mesh_renderer),
-    //     );
+        let mesh_renderer_component =
+            SceneCrdtStateProtoComponents::get_mesh_renderer_mut(&mut crdt_state);
+        let some_mesh_renderer = proto_components::sdk::components::PbMeshRenderer::default();
+        mesh_renderer_component.set(
+            SceneEntityId::new(0, 0),
+            SceneCrdtTimestamp(0),
+            Some(some_mesh_renderer),
+        );
 
-    //     let mesh_renderer = MeshRenderer.get(SceneEntityId::new(0, 0));
-    //     assert_eq!(
-    //         *mesh_renderer.unwrap(),
-    //         LWWEntry {
-    //             timestamp: SceneCrdtTimestamp(0),
-    //             value: Some(PbMeshRenderer {
-    //                 mesh: Some(pb_mesh_renderer::Mesh::Box(BoxMesh { uvs: vec![] }))
-    //             })
-    //         }
-    //     );
+        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        assert_eq!(
+            *mesh_renderer.unwrap(),
+            LWWEntry {
+                timestamp: SceneCrdtTimestamp(0),
+                value: Some(proto_components::sdk::components::PbMeshRenderer { mesh: None })
+            }
+        );
+    }
 
-    //     MeshRenderer.set(SceneEntityId::new(0, 0), SceneCrdtTimestamp(0), None);
+    #[test]
+    fn test_updating_proto_component() {
+        let mut crdt_state = SceneCrdtState::from_proto();
+        let mesh_renderer_component =
+            SceneCrdtStateProtoComponents::get_mesh_renderer_mut(&mut crdt_state);
 
-    //     let mesh_renderer = MeshRenderer.get(SceneEntityId::new(0, 0));
-    //     assert_eq!(
-    //         *mesh_renderer.unwrap(),
-    //         LWWEntry {
-    //             timestamp: SceneCrdtTimestamp(0),
-    //             value: None
-    //         }
-    //     );
+        let new_mesh_renderer = proto_components::sdk::components::PbMeshRenderer {
+            mesh: Some(
+                proto_components::sdk::components::pb_mesh_renderer::Mesh::Box(
+                    proto_components::sdk::components::pb_mesh_renderer::BoxMesh { uvs: vec![] },
+                ),
+            ),
+        };
+        mesh_renderer_component.set(
+            SceneEntityId::new(0, 0),
+            SceneCrdtTimestamp(0),
+            Some(new_mesh_renderer),
+        );
 
-    //     MeshRenderer.remove(SceneEntityId::new(0, 0));
+        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        assert_eq!(
+            *mesh_renderer.unwrap(),
+            LWWEntry {
+                timestamp: SceneCrdtTimestamp(0),
+                value: Some(proto_components::sdk::components::PbMeshRenderer {
+                    mesh: Some(
+                        proto_components::sdk::components::pb_mesh_renderer::Mesh::Box(
+                            proto_components::sdk::components::pb_mesh_renderer::BoxMesh {
+                                uvs: vec![]
+                            }
+                        )
+                    )
+                })
+            }
+        );
+    }
 
-    //     let mesh_renderer = MeshRenderer.get(SceneEntityId::new(0, 0));
-    //     assert!(mesh_renderer.is_none());
+    #[test]
+    fn test_removing_proto_component() {
+        let mut crdt_state = SceneCrdtState::from_proto();
+        let mesh_renderer_component =
+            SceneCrdtStateProtoComponents::get_mesh_renderer_mut(&mut crdt_state);
 
-    //     let mut MeshRenderer = crdt_state
-    //         .get_unknown_lww_component_mut::<LastWriteWins<PbMeshRenderer>>(
-    //             SceneComponentId::MESH_RENDERER,
-    //         );
-    //     assert!(MeshRenderer.is_some());
+        mesh_renderer_component.set(SceneEntityId::new(0, 0), SceneCrdtTimestamp(0), None);
+        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        assert_eq!(
+            *mesh_renderer.unwrap(),
+            LWWEntry {
+                timestamp: SceneCrdtTimestamp(0),
+                value: None
+            }
+        );
 
-    //     let MeshRenderer: &mut dyn GenericLastWriteWinsComponent = MeshRenderer.unwrap();
-    //     let bin_mesh = PbMeshRenderer {
-    //         mesh: Some(pb_mesh_renderer::Mesh::Box(BoxMesh {
-    //             uvs: vec![1.2, 1.3],
-    //         })),
-    //     };
+        mesh_renderer_component.remove(SceneEntityId::new(0, 0));
+        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        assert!(mesh_renderer.is_none());
+    }
 
-    //     let mut buf = Vec::new();
-    //     DclWriter::new(&mut buf).write(&bin_mesh);
+    #[test]
+    fn test_setting_proto_component_from_binary() {
+        let mut crdt_state = SceneCrdtState::from_proto();
+        let mesh_renderer_component_generic = crdt_state.get_unknown_lww_component_mut::<LastWriteWins<
+            proto_components::sdk::components::PbMeshRenderer,
+        >>(SceneComponentId::MESH_RENDERER);
+        assert!(mesh_renderer_component_generic.is_some());
 
-    //     let mut reader = DclReader::new(&buf);
-    //     MeshRenderer.set_from_binary(
-    //         SceneEntityId::new(0, 0),
-    //         SceneCrdtTimestamp(10),
-    //         &mut reader,
-    //     );
+        let mesh_renderer_component: &mut dyn GenericLastWriteWinsComponent =
+            mesh_renderer_component_generic.unwrap();
+        let bin_mesh = proto_components::sdk::components::PbMeshRenderer {
+            mesh: Some(
+                proto_components::sdk::components::pb_mesh_renderer::Mesh::Box(
+                    proto_components::sdk::components::pb_mesh_renderer::BoxMesh {
+                        uvs: vec![1.2, 1.3],
+                    },
+                ),
+            ),
+        };
 
-    //     let MeshRenderer = crdt_state
-    //         .get_lww_component_mut::<PbMeshRenderer>(SceneComponentId::MESH_RENDERER)
-    //         .unwrap();
+        let mut buf = Vec::new();
+        DclWriter::new(&mut buf).write(&bin_mesh);
 
-    //     let mesh_renderer = MeshRenderer.get(SceneEntityId::new(0, 0));
-    //     println!("{:?}", mesh_renderer);
-    // }
+        let mut reader = DclReader::new(&buf);
+        mesh_renderer_component.set_from_binary(
+            SceneEntityId::new(0, 0),
+            SceneCrdtTimestamp(10),
+            &mut reader,
+        );
+    }
 }
