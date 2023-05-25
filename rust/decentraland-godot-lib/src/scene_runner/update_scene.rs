@@ -36,6 +36,7 @@ fn update_deleted_entities(
                 .reparent(godot_dcl_scene.root_node.share().upcast(), false);
             node.computed_parent = SceneEntityId::ROOT;
             godot_dcl_scene.unparented_entities.insert(*entity_id);
+            godot_dcl_scene.hierarchy_dirty = true;
         }
     }
 

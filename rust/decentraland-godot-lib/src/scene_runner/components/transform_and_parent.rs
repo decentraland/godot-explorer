@@ -14,7 +14,6 @@ pub fn update_transform_and_parent(
     crdt_state: &mut SceneCrdtState,
     dirty_components: &DirtyComponents,
 ) {
-    let mut hierarchy_dirty = false;
     let transform_component = crdt_state.get_transform();
 
     if let Some(dirty_transform) = dirty_components.get(&SceneComponentId::TRANSFORM) {
@@ -42,14 +41,14 @@ pub fn update_transform_and_parent(
 
             if node.desired_parent != old_parent {
                 godot_dcl_scene.unparented_entities.insert(*entity);
-                hierarchy_dirty = true;
+                godot_dcl_scene.hierarchy_dirty = true;
             }
         }
     }
 
     let root_node = godot_dcl_scene.root_node.share().upcast::<Node>();
-    while hierarchy_dirty {
-        hierarchy_dirty = false;
+    while godot_dcl_scene.hierarchy_dirty {
+        godot_dcl_scene.hierarchy_dirty = false;
 
         let unparented = godot_dcl_scene
             .unparented_entities
@@ -58,7 +57,6 @@ pub fn update_transform_and_parent(
             .collect::<Vec<SceneEntityId>>();
 
         for entity in unparented {
-            println!("unparented: {:?}", entity);
             let desired_parent = godot_dcl_scene.get_node(&entity).unwrap().desired_parent;
 
             // cancel if the desired_parent is the entity itself
@@ -73,25 +71,25 @@ pub fn update_transform_and_parent(
                 current_node.computed_parent = SceneEntityId::ROOT;
 
                 godot_dcl_scene.ensure_node_mut(&entity).desired_parent = SceneEntityId::ROOT;
-                continue;
-            }
+                godot_dcl_scene.hierarchy_dirty = true;
+            } else {
+                let has_cycle =
+                    detect_entity_id_in_parent_chain(godot_dcl_scene, desired_parent, entity);
 
-            let has_cycle =
-                detect_entity_id_in_parent_chain(godot_dcl_scene, desired_parent, entity);
+                if !has_cycle {
+                    let parent_node = godot_dcl_scene
+                        .ensure_node_mut(&desired_parent)
+                        .base
+                        .share()
+                        .upcast::<Node>();
 
-            if !has_cycle {
-                let parent_node = godot_dcl_scene
-                    .ensure_node_mut(&desired_parent)
-                    .base
-                    .share()
-                    .upcast::<Node>();
+                    let current_node = godot_dcl_scene.ensure_node_mut(&entity);
+                    current_node.base.reparent(parent_node, false);
+                    current_node.computed_parent = desired_parent;
 
-                let current_node = godot_dcl_scene.ensure_node_mut(&entity);
-                current_node.base.reparent(parent_node, false);
-                current_node.computed_parent = desired_parent;
-
-                hierarchy_dirty = true;
-                godot_dcl_scene.unparented_entities.remove(&entity);
+                    godot_dcl_scene.hierarchy_dirty = true;
+                    godot_dcl_scene.unparented_entities.remove(&entity);
+                }
             }
         }
     }

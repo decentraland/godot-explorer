@@ -12,9 +12,11 @@ pub struct GodotDclScene {
 
     // godot
     pub entities: HashMap<SceneEntityId, Node3DEntity>,
-    pub unparented_entities: HashSet<SceneEntityId>,
     pub root_node: Gd<Node3D>,
     pub objs: Vec<Gd<Node>>,
+
+    pub hierarchy_dirty: bool,
+    pub unparented_entities: HashSet<SceneEntityId>,
 }
 
 pub struct Node3DEntity {
@@ -62,6 +64,8 @@ impl GodotDclScene {
             entities,
             root_node,
             objs: Vec::new(),
+
+            hierarchy_dirty: false,
             unparented_entities: HashSet::new(),
         }
     }
