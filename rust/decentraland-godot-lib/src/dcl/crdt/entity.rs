@@ -81,8 +81,7 @@ impl SceneEntityContainer {
     }
 
     pub fn is_dead(&self, entity: &SceneEntityId) -> bool {
-        let (version, live) = &self.entity_version[entity.number as usize];
-        *version > entity.version
+        self.entity_version[entity.number as usize].0 > entity.version
     }
 
     pub fn take_dirty(&mut self) -> DirtyEntities {

@@ -54,7 +54,7 @@ pub fn update_transform_and_parent(
         let unparented = godot_dcl_scene
             .unparented_entities
             .iter()
-            .map(|x| x.clone())
+            .copied()
             .collect::<Vec<SceneEntityId>>();
 
         for entity in unparented {
@@ -77,7 +77,7 @@ pub fn update_transform_and_parent(
             }
 
             let has_cycle =
-                detect_entity_id_in_parent_chain(&godot_dcl_scene, desired_parent, entity);
+                detect_entity_id_in_parent_chain(godot_dcl_scene, desired_parent, entity);
 
             if !has_cycle {
                 let parent_node = godot_dcl_scene

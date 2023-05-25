@@ -26,7 +26,7 @@ fn update_deleted_entities(
     godot_dcl_scene: &mut super::godot_dcl_scene::GodotDclScene,
     died: &std::collections::HashSet<crate::dcl::components::SceneEntityId>,
 ) {
-    if died.len() == 0 {
+    if died.is_empty() {
         return;
     }
 

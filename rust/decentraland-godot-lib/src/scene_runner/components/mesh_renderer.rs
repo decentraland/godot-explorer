@@ -5,7 +5,7 @@ use crate::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
-        DirtyComponents, DirtyEntities,
+        DirtyComponents,
     },
     scene_runner::godot_dcl_scene::GodotDclScene,
 };
@@ -99,4 +99,3 @@ pub fn update_mesh_renderer(
         }
     }
 }
-
