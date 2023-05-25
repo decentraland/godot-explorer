@@ -8,10 +8,7 @@ use super::{
 };
 use crate::dcl::{
     components::{transform_and_parent::DclTransformAndParent, SceneEntityId},
-    crdt::{
-        last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
-        SceneCrdtStateProtoComponents,
-    },
+    crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
     DirtyComponents, DirtyEntities,
 };
 
