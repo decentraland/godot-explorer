@@ -13,15 +13,7 @@ impl SceneEntityId {
     pub fn new(number: u16, version: u16) -> Self {
         Self { number, version }
     }
-}
 
-impl std::fmt::Display for SceneEntityId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("dcl_{}v{}", self.number, self.version))
-    }
-}
-
-impl SceneEntityId {
     const fn reserved(number: u16) -> Self {
         Self { number, version: 0 }
     }
@@ -36,6 +28,12 @@ impl SceneEntityId {
 
     pub fn as_usize(&self) -> usize {
         (self.number as usize) << 16 | self.version as usize
+    }
+}
+
+impl std::fmt::Display for SceneEntityId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("dcl_{}v{}", self.number, self.version))
     }
 }
 

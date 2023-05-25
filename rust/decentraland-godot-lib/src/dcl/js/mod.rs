@@ -14,6 +14,8 @@ use super::SceneDefinition;
 use super::{RendererResponse, SceneId, SceneResponse, VM_HANDLES};
 use crate::dcl::crdt::SceneCrdtState;
 
+struct SceneJsFileContent(pub String);
+
 pub mod engine;
 
 // marker to indicate shutdown has been triggered
@@ -22,7 +24,7 @@ pub struct ShuttingDown;
 // main scene processing thread - constructs an isolate and runs the scene
 pub(crate) fn scene_thread(
     scene_id: SceneId,
-    _scene_definition: SceneDefinition,
+    scene_definition: SceneDefinition,
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
     scene_crdt: Arc<Mutex<SceneCrdtState>>,
@@ -80,14 +82,36 @@ pub(crate) fn scene_thread(
     // store channels
     state.borrow_mut().put(thread_sender_to_main);
     state.borrow_mut().put(thread_receive_from_main);
+    state.borrow_mut().put(scene_id);
 
     // store kill handle
     state
         .borrow_mut()
         .put(runtime.v8_isolate().thread_safe_handle());
 
+    let scene_file_path = format!("res://assets/scenes/{}/index.js", scene_definition.path);
+    let file = godot::engine::FileAccess::open(
+        godot::prelude::GodotString::from(scene_file_path.clone()),
+        godot::engine::file_access::ModeFlags::READ,
+    );
+
+    if file.is_none() {
+        // ignore failure to send failure
+        let _ = state
+            .borrow_mut()
+            .take::<std::sync::mpsc::SyncSender<SceneResponse>>()
+            .send(SceneResponse::Error(
+                scene_id,
+                format!("Scene `{scene_file_path}` not found - file is none"),
+            ));
+        return;
+    }
+
+    let scene_code = SceneJsFileContent(file.unwrap().get_as_text(true).to_string());
+    state.borrow_mut().put(scene_code);
+
     // load module
-    let script = runtime.execute_script("<loader>", "require (\"index.js\")");
+    let script = runtime.execute_script("<loader>", "require (\"~scene.js\")");
 
     let script = match script {
         Err(e) => {
@@ -130,6 +154,7 @@ pub(crate) fn scene_thread(
         });
 
         if state.borrow().try_borrow::<ShuttingDown>().is_some() {
+            println!("exiting from the thread {:?}", scene_id);
             return;
         }
 
@@ -197,47 +222,21 @@ fn run_script(
     futures_lite::future::block_on(f).map(|_| ())
 }
 
-const MODULE_SUFFIX: &str = ".js";
-const MODULE_PREFIX: &str = "res://assets/modules/";
-const SCENE_PREFIX: &str = "res://assets/scenes/";
-
 // synchronously returns a string containing JS code from the file system
 #[op(v8)]
 fn op_require(
     state: Rc<RefCell<OpState>>,
     module_spec: String,
 ) -> Result<String, deno_core::error::AnyError> {
-    // only allow items within designated paths
-    if module_spec.contains("..") {
-        return Err(generic_error(format!(
-            "invalid module request: '..' not allowed in `{module_spec}`"
-        )));
-    }
+    println!("require(\"{module_spec}\")");
 
-    let (scheme, name) = module_spec.split_at(1);
-    let filename = match (scheme, name) {
+    match module_spec.as_str() {
+        // user module load
+        "~scene.js" => Ok(state.borrow().borrow::<SceneJsFileContent>().0.clone()),
         // core module load
-        ("~", name) => format!("{MODULE_PREFIX}{name}{MODULE_SUFFIX}"),
-        // generic load from the script path
-        (scheme, name) => {
-            let _state = state.borrow();
-            let path = "cube_wave";
-            format!("{SCENE_PREFIX}{path}/{scheme}{name}")
-        }
-    };
-
-    println!("require(\"{filename}\")");
-
-    let file = godot::engine::FileAccess::open(
-        godot::prelude::GodotString::from(filename),
-        godot::engine::file_access::ModeFlags::READ,
-    );
-
-    if file.is_none() {
-        return Err(generic_error(format!(
-            "invalid module request `{module_spec}` - file is none"
-        )));
+        "~system/EngineApi" => Ok(include_str!("EngineApi.js").to_owned()),
+        _ => Err(generic_error(format!(
+            "invalid module request `{module_spec}`"
+        ))),
     }
-
-    Ok(file.unwrap().get_as_text(true).to_string())
 }
