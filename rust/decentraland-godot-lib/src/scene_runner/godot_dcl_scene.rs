@@ -1,7 +1,7 @@
 use crate::dcl::{components::SceneEntityId, crdt::SceneCrdtState, SceneDefinition, SceneId};
 use godot::{engine::node::InternalMode, prelude::*};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
 };
 
@@ -12,13 +12,15 @@ pub struct GodotDclScene {
 
     // godot
     pub entities: HashMap<SceneEntityId, Node3DEntity>,
+    pub unparented_entities: HashSet<SceneEntityId>,
     pub root_node: Gd<Node3D>,
     pub objs: Vec<Gd<Node>>,
 }
 
 pub struct Node3DEntity {
     pub base: Gd<Node3D>,
-    pub parent: SceneEntityId,
+    pub desired_parent: SceneEntityId,
+    pub computed_parent: SceneEntityId,
 }
 
 impl Node3DEntity {
@@ -27,7 +29,8 @@ impl Node3DEntity {
 
         Self {
             base,
-            parent: SceneEntityId::new(0, 0),
+            desired_parent: SceneEntityId::new(0, 0),
+            computed_parent: SceneEntityId::new(0, 0),
         }
     }
 }
@@ -46,7 +49,8 @@ impl GodotDclScene {
             SceneEntityId::new(0, 0),
             Node3DEntity {
                 base: root_node.share(),
-                parent: SceneEntityId::new(0, 0),
+                desired_parent: SceneEntityId::new(0, 0),
+                computed_parent: SceneEntityId::new(0, 0),
             },
         )]);
 
@@ -58,6 +62,7 @@ impl GodotDclScene {
             entities,
             root_node,
             objs: Vec::new(),
+            unparented_entities: HashSet::new(),
         }
     }
 
@@ -86,5 +91,9 @@ impl GodotDclScene {
 
     pub fn get_node(&self, entity: &SceneEntityId) -> Option<&Node3DEntity> {
         self.entities.get(entity)
+    }
+
+    pub fn exist_node(&self, entity: &SceneEntityId) -> bool {
+        self.entities.get(entity).is_some()
     }
 }

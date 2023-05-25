@@ -80,6 +80,11 @@ impl SceneEntityContainer {
         if deleted_entity.version < *version {}
     }
 
+    pub fn is_dead(&self, entity: &SceneEntityId) -> bool {
+        let (version, live) = &self.entity_version[entity.number as usize];
+        *version > entity.version
+    }
+
     pub fn take_dirty(&mut self) -> DirtyEntities {
         DirtyEntities {
             born: std::mem::take(&mut self.new_entities_created),

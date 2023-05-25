@@ -17,7 +17,6 @@ use godot::{
 pub fn update_mesh_renderer(
     godot_dcl_scene: &mut GodotDclScene,
     crdt_state: &mut SceneCrdtState,
-    _dirty_entities: &DirtyEntities,
     dirty_components: &DirtyComponents,
 ) {
     if let Some(mesh_renderer_dirty) = dirty_components.get(&SceneComponentId::MESH_RENDERER) {
@@ -100,3 +99,4 @@ pub fn update_mesh_renderer(
         }
     }
 }
+

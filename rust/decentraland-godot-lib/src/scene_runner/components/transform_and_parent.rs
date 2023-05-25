@@ -1,10 +1,10 @@
-use godot::prelude::EulerOrder;
+use godot::prelude::{EulerOrder, Node, Share, Vector3};
 
 use crate::{
     dcl::{
-        components::SceneComponentId,
+        components::{SceneComponentId, SceneEntityId},
         crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
-        DirtyComponents, DirtyEntities,
+        DirtyComponents,
     },
     scene_runner::GodotDclScene,
 };
@@ -12,41 +12,106 @@ use crate::{
 pub fn update_transform_and_parent(
     godot_dcl_scene: &mut GodotDclScene,
     crdt_state: &mut SceneCrdtState,
-    _dirty_entities: &DirtyEntities,
     dirty_components: &DirtyComponents,
 ) {
+    let mut hierarchy_dirty = false;
     let transform_component = crdt_state.get_transform();
 
     if let Some(dirty_transform) = dirty_components.get(&SceneComponentId::TRANSFORM) {
         for entity in dirty_transform {
-            let value = transform_component.get(*entity);
+            let value = if let Some(entry) = transform_component.get(*entity) {
+                entry.value.clone()
+            } else {
+                None
+            };
             let node = godot_dcl_scene.ensure_node_mut(entity);
-            if let Some(entry) = value {
-                if let Some(transform) = entry.value.clone() {
-                    node.base
-                        .set_rotation(transform.rotation.to_euler(EulerOrder::XYZ));
-                    node.base.set_position(transform.translation);
-                    node.base.set_scale(transform.scale);
-                }
+
+            let old_parent = node.desired_parent;
+            if let Some(transform) = value {
+                node.base
+                    .set_rotation(transform.rotation.to_euler(EulerOrder::XYZ));
+                node.base.set_position(transform.translation);
+                node.base.set_scale(transform.scale);
+                node.desired_parent = transform.parent;
+            } else {
+                node.base.set_rotation(Vector3::ZERO);
+                node.base.set_position(Vector3::ZERO);
+                node.base.set_scale(Vector3::ONE);
+                node.desired_parent = SceneEntityId::ROOT;
+            }
+
+            if node.desired_parent != old_parent {
+                godot_dcl_scene.unparented_entities.insert(*entity);
+                hierarchy_dirty = true;
+            }
+        }
+    }
+
+    let root_node = godot_dcl_scene.root_node.share().upcast::<Node>();
+    while hierarchy_dirty {
+        hierarchy_dirty = false;
+
+        let unparented = godot_dcl_scene
+            .unparented_entities
+            .iter()
+            .map(|x| x.clone())
+            .collect::<Vec<SceneEntityId>>();
+
+        for entity in unparented {
+            println!("unparented: {:?}", entity);
+            let desired_parent = godot_dcl_scene.get_node(&entity).unwrap().desired_parent;
+
+            // cancel if the desired_parent is the entity itself
+            if desired_parent == entity {
+                continue;
+            }
+
+            // if parent doens't exist cause it's dead, we remap to the root entity
+            if crdt_state.entities.is_dead(&desired_parent) {
+                let current_node = godot_dcl_scene.ensure_node_mut(&entity);
+                current_node.base.reparent(root_node.share(), false);
+                current_node.computed_parent = SceneEntityId::ROOT;
+
+                godot_dcl_scene.ensure_node_mut(&entity).desired_parent = SceneEntityId::ROOT;
+                continue;
+            }
+
+            let has_cycle =
+                detect_entity_id_in_parent_chain(&godot_dcl_scene, desired_parent, entity);
+
+            if !has_cycle {
+                let parent_node = godot_dcl_scene
+                    .ensure_node_mut(&desired_parent)
+                    .base
+                    .share()
+                    .upcast::<Node>();
+
+                let current_node = godot_dcl_scene.ensure_node_mut(&entity);
+                current_node.base.reparent(parent_node, false);
+                current_node.computed_parent = desired_parent;
+
+                hierarchy_dirty = true;
+                godot_dcl_scene.unparented_entities.remove(&entity);
             }
         }
     }
 }
 
-// #[itest]
-// fn cyclic() {
-//     // Mock all params needed to run update_transform_and_parent
-//     let mut scene = GodotDclScene {
-//         definition: SceneDefinition {
-//             offset: Vector3::new(0.0, 0.0, 0.0),
-//             ..Default::default()
-//         },
-//         ..Default::default()
-//     };
-//     let mut crdt_state = SceneCrdtState::new();
-//     let dirty_entities = DirtyEntities {
-//         born: HashSet::new(),
-//         died: HashSet::new(),
-//     };
-//     let mut dirty_components = DirtyComponents::new();
-// }
+fn detect_entity_id_in_parent_chain(
+    godot_dcl_scene: &GodotDclScene,
+    mut current_entity: SceneEntityId,
+    search_entity: SceneEntityId,
+) -> bool {
+    while let Some(node) = godot_dcl_scene.get_node(&current_entity) {
+        if current_entity != SceneEntityId::ROOT {
+            return false;
+        }
+
+        if node.desired_parent == search_entity {
+            return true;
+        }
+        current_entity = node.desired_parent;
+    }
+
+    false
+}
