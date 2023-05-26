@@ -145,7 +145,7 @@ impl SceneRunner {
     }
 
     fn process_scenes(&mut self, delta: f64) {
-        let camera_global_transform = if let Some(camera_node) = self.camera_node.as_ref().clone() {
+        let camera_global_transform = if let Some(camera_node) = self.camera_node.as_ref() {
             camera_node.get_global_transform()
         } else {
             Transform3D::IDENTITY
