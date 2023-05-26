@@ -1,13 +1,30 @@
-use godot::prelude::{EulerOrder, Node, Share, Vector3};
+use godot::prelude::{EulerOrder, Node, Share, Transform3D, Vector3};
 
 use crate::{
     dcl::{
-        components::{SceneComponentId, SceneEntityId},
+        components::{
+            transform_and_parent::DclTransformAndParent, SceneComponentId, SceneEntityId,
+        },
         crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
         DirtyComponents,
     },
     scene_runner::GodotDclScene,
 };
+
+impl DclTransformAndParent {
+    pub fn from_godot(godot_transform: &Transform3D, offset: Vector3) -> Self {
+        let rotation = godot_transform.basis.orthonormalized().to_quat();
+        let translation = godot_transform.origin - offset;
+        let scale = godot_transform.basis.scale();
+
+        Self {
+            translation,
+            rotation,
+            scale,
+            parent: SceneEntityId::ROOT,
+        }
+    }
+}
 
 pub fn update_transform_and_parent(
     godot_dcl_scene: &mut GodotDclScene,

@@ -1,4 +1,4 @@
-use godot::prelude::Share;
+use godot::prelude::{Share, Transform3D};
 
 use super::{
     components::{
@@ -18,6 +18,7 @@ pub fn update_scene(
     crdt_state: &mut SceneCrdtState,
     dirty_entities: &DirtyEntities,
     dirty_components: &DirtyComponents,
+    camera_global_transform: &Transform3D,
 ) {
     scene.waiting_for_updates = false;
 
@@ -25,11 +26,16 @@ pub fn update_scene(
     update_transform_and_parent(&mut scene.godot_dcl_scene, crdt_state, dirty_components);
     update_mesh_renderer(&mut scene.godot_dcl_scene, crdt_state, dirty_components);
 
-    // TODO: get the player transform
-    let player_transform = DclTransformAndParent::default();
+    let player_transform = DclTransformAndParent::from_godot(
+        camera_global_transform,
+        scene.godot_dcl_scene.root_node.get_position(),
+    );
     crdt_state
         .get_transform_mut()
-        .put(SceneEntityId::PLAYER, Some(player_transform));
+        .put(SceneEntityId::PLAYER, Some(player_transform.clone()));
+    crdt_state
+        .get_transform_mut()
+        .put(SceneEntityId::CAMERA, Some(player_transform));
 }
 
 fn update_deleted_entities(

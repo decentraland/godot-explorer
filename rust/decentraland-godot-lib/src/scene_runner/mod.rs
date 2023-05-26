@@ -22,6 +22,8 @@ pub struct SceneRunner {
     base: Base<Node>,
     scenes: HashMap<SceneId, Scene>,
 
+    camera_node: Option<Gd<Node3D>>,
+
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     main_receiver_from_thread: std::sync::mpsc::Receiver<SceneResponse>,
 }
@@ -77,6 +79,11 @@ impl SceneRunner {
             }
         }
         false
+    }
+
+    #[func]
+    fn set_camera_node(&mut self, camera_node: Gd<Node3D>) {
+        self.camera_node = Some(camera_node.share());
     }
 
     fn scene_runner_update(&mut self, delta: f64) {
@@ -138,6 +145,12 @@ impl SceneRunner {
     }
 
     fn process_scenes(&mut self, delta: f64) {
+        let camera_global_transform = if let Some(camera_node) = self.camera_node.as_ref().clone() {
+            camera_node.get_global_transform()
+        } else {
+            Transform3D::IDENTITY
+        };
+
         // TODO: check infinity loop (loop_end_time)
         loop {
             match self.main_receiver_from_thread.try_recv() {
@@ -156,6 +169,7 @@ impl SceneRunner {
                                 &mut crdt_state,
                                 &dirty_entities,
                                 &dirty_components,
+                                &camera_global_transform,
                             );
                         }
                     }
@@ -180,6 +194,7 @@ impl NodeVirtual for SceneRunner {
             scenes: HashMap::new(),
             main_receiver_from_thread,
             thread_sender_to_main,
+            camera_node: None,
         }
     }
 
