@@ -1,4 +1,4 @@
-use godot::prelude::Share;
+use godot::prelude::{Share, Transform3D};
 
 use super::{
     components::{
@@ -6,7 +6,11 @@ use super::{
     },
     Scene,
 };
-use crate::dcl::{components::SceneEntityId, crdt::SceneCrdtState, DirtyComponents, DirtyEntities};
+use crate::dcl::{
+    components::{transform_and_parent::DclTransformAndParent, SceneEntityId},
+    crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
+    DirtyComponents, DirtyEntities,
+};
 
 pub fn update_scene(
     _dt: f64,
@@ -14,12 +18,24 @@ pub fn update_scene(
     crdt_state: &mut SceneCrdtState,
     dirty_entities: &DirtyEntities,
     dirty_components: &DirtyComponents,
+    camera_global_transform: &Transform3D,
 ) {
     scene.waiting_for_updates = false;
 
     update_deleted_entities(&mut scene.godot_dcl_scene, &dirty_entities.died);
     update_transform_and_parent(&mut scene.godot_dcl_scene, crdt_state, dirty_components);
     update_mesh_renderer(&mut scene.godot_dcl_scene, crdt_state, dirty_components);
+
+    let player_transform = DclTransformAndParent::from_godot(
+        camera_global_transform,
+        scene.godot_dcl_scene.root_node.get_position(),
+    );
+    crdt_state
+        .get_transform_mut()
+        .put(SceneEntityId::PLAYER, Some(player_transform.clone()));
+    crdt_state
+        .get_transform_mut()
+        .put(SceneEntityId::CAMERA, Some(player_transform));
 }
 
 fn update_deleted_entities(

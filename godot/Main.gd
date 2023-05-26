@@ -8,6 +8,7 @@ func _process(delta):
 	
 func _ready():
 	scene_runner = SceneRunner.new()
+	scene_runner.set_camera_node($Camera3D)
 	self.add_child(scene_runner)
 	print('scene_runner created')
 	

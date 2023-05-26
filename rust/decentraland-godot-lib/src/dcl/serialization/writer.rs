@@ -15,6 +15,10 @@ impl<'a> DclWriter<'a> {
         self.buffer.extend_from_slice(data)
     }
 
+    pub fn write_u8(&mut self, value: u8) {
+        self.write_raw(&[value]);
+    }
+
     pub fn write_u16(&mut self, value: u16) {
         self.write_raw(&value.to_le_bytes());
     }
