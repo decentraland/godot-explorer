@@ -4,20 +4,18 @@
 [ext_resource type="Script" path="res://Camera.gd" id="2_1rghv"]
 [ext_resource type="Texture2D" uid="uid://m7i23bc2yyqt" path="res://grid.png" id="3_g6j8l"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_4tfnw"]
-sky_top_color = Color(0.384314, 0.454902, 0.54902, 1)
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_xbryr"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
 
-[sub_resource type="Sky" id="Sky_054c4"]
-sky_material = SubResource("ProceduralSkyMaterial_4tfnw")
+[sub_resource type="Sky" id="Sky_ogrvh"]
+sky_material = SubResource("ProceduralSkyMaterial_xbryr")
 
-[sub_resource type="Environment" id="Environment_immgo"]
+[sub_resource type="Environment" id="Environment_ur1u6"]
 background_mode = 2
-sky = SubResource("Sky_054c4")
-ambient_light_source = 3
-ambient_light_color = Color(1, 1, 1, 1)
-reflected_light_source = 2
-volumetric_fog_emission = Color(0.635294, 0.635294, 0.635294, 1)
-adjustment_brightness = 1.41
+sky = SubResource("Sky_ogrvh")
+tonemap_mode = 2
+glow_enabled = true
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
 
@@ -35,16 +33,17 @@ albedo_color = Color(0, 0.654902, 0.658824, 1)
 [node name="Main" type="Node3D"]
 script = ExtResource("1_nv2ru")
 
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, 0, 0, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_ur1u6")
+
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(0.960784, -0.146243, 0.2356, -0.0652374, 0.706571, 0.704628, -0.269515, -0.692366, 0.669322, 13.015, 10.1224, 18.9597)
 current = true
 script = ExtResource("2_1rghv")
-
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_immgo")
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -0.5, 0.866025, 0, -0.866025, -0.5, 1, 22, 0)
 
 [node name="Floor" type="MeshInstance3D" parent="."]
 mesh = SubResource("PlaneMesh_x854j")
