@@ -6,6 +6,7 @@ use crate::dcl::{
         writer::DclWriter,
     },
 };
+use godot::prelude::godot_print;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
@@ -87,10 +88,10 @@ pub fn process_many_messages(stream: &mut DclReader, scene_crdt_state: &mut Scen
         match FromPrimitive::from_u32(crdt_type) {
             Some(crdt_type) => {
                 if let Err(e) = process_message(scene_crdt_state, crdt_type, &mut message_stream) {
-                    println!("CRDT Buffer error: {:?}", e);
+                    godot_print!("CRDT Buffer error: {:?}", e);
                 };
             }
-            None => println!("CRDT Header error: unhandled crdt message type {crdt_type}"),
+            None => godot_print!("CRDT Header error: unhandled crdt message type {crdt_type}"),
         }
     }
 }

@@ -3,7 +3,12 @@
 // required for async ops (engine.sendMessage is declared as async)
 Deno.core.initializeAsyncOps();
 
-Deno.core.ops.op_print('This is a message from the init.js\n')
+// minimal console
+const console = {
+    // log: function(text) { Deno.core.print("LOG  :" + text + "\n") },
+    log: function (text) { },
+    error: function (text) { Deno.core.print("ERROR: " + text + "\n") },
+}
 
 // load a cjs/node-style module
 // TODO: consider using deno.land/std/node's `createRequire` directly.
@@ -37,14 +42,8 @@ function require(moduleName) {
         require,                    // require
         module,                     // module
         moduleName.substring(1),    // __filename
-        moduleName.substring(0,1)   // __dirname
+        moduleName.substring(0, 1)   // __dirname
     );
 
     return module.exports;
-}
-
-// minimal console
-const console = { 
-    log: function(text) { Deno.core.print("LOG  :" + text + "\n") },
-    error: function(text) { Deno.core.print("ERROR: " + text + "\n") },
 }

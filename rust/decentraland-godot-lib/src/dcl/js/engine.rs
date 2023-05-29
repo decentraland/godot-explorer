@@ -5,6 +5,7 @@ use std::{
 };
 
 use deno_core::{op, OpDecl, OpState};
+use godot::prelude::godot_print;
 
 use crate::dcl::{
     crdt::{
@@ -76,7 +77,7 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
                         &component_id,
                         &mut data_writter,
                     ) {
-                        println!("error writing crdt message: {}", err);
+                        godot_print!("error writing crdt message: {}", err);
                     }
                 }
             }
@@ -85,7 +86,7 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
         }
         _ => {
             // channel has been closed, shutdown gracefully
-            println!("{}: shutting down", std::thread::current().name().unwrap());
+            godot_print!("{}: shutting down", std::thread::current().name().unwrap());
             op_state.put(ShuttingDown);
             Default::default()
         }

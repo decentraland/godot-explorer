@@ -1,0 +1,49 @@
+[gd_scene load_steps=5 format=3 uid="uid://dkqc3of5bdx2i"]
+
+[ext_resource type="Script" path="res://src/map/map.gd" id="1_1j46y"]
+[ext_resource type="Shader" path="res://src/map/map.gdshader" id="2_fuvm1"]
+[ext_resource type="Texture2D" uid="uid://dsmrko8upputd" path="res://src/map/map_data.png" id="3_wcx6h"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fnml8"]
+shader = ExtResource("2_fuvm1")
+shader_parameter/global_transform = null
+shader_parameter/size = 16.0
+shader_parameter/line_width_px = 1.0
+shader_parameter/selected_tile = Vector2(20, 20)
+shader_parameter/map_data = ExtResource("3_wcx6h")
+
+[node name="Control" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_1j46y")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_right = 128.0
+offset_bottom = 128.0
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+handle_input_locally = false
+size = Vector2i(128, 128)
+render_target_update_mode = 4
+
+[node name="ColorRect" type="ColorRect" parent="SubViewportContainer/SubViewport"]
+unique_name_in_owner = true
+texture_filter = 1
+texture_repeat = 3
+material = SubResource("ShaderMaterial_fnml8")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label_MousePosition" type="Label" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 69.0
+offset_bottom = 34.0
+text = "Mouse: "
+
+[connection signal="gui_input" from="SubViewportContainer/SubViewport/ColorRect" to="." method="_on_color_rect_gui_input"]

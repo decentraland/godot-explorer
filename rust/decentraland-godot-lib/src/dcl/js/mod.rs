@@ -9,6 +9,7 @@ use deno_core::{
     error::{generic_error, AnyError},
     include_js_files, op, v8, Extension, JsRuntime, OpState, RuntimeOptions,
 };
+use godot::prelude::godot_print;
 
 use super::SceneDefinition;
 use super::{RendererResponse, SceneId, SceneResponse, VM_HANDLES};
@@ -29,9 +30,6 @@ pub(crate) fn scene_thread(
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
     scene_crdt: Arc<Mutex<SceneCrdtState>>,
 ) {
-    // create an extension referencing our native functions and JS initialisation scripts
-    // TODO: to make this more generic for multiple modules we could use
-    // https://crates.io/crates/inventory or similar
     let ext = Extension::builder("decentraland")
         // add require operation
         .ops(vec![op_require::decl()])
@@ -44,19 +42,17 @@ pub(crate) fn scene_thread(
         ))
         // remove core deno ops that are not required
         .middleware(|op| {
-            const ALLOW: [&str; 4] = [
-                "op_print",
+            const ALLOW: [&str; 5] = [
                 "op_eval_context",
                 "op_require",
                 "op_crdt_send_to_renderer",
+                "op_crdt_recv_from_renderer",
+                "op_print",
             ];
             if ALLOW.contains(&op.name) {
-                println!("allow: {}", op.name);
                 op
             } else {
-                println!("deny: {}", op.name);
-                // op.disable()
-                op
+                op.disable()
             }
         })
         .build();
@@ -89,54 +85,65 @@ pub(crate) fn scene_thread(
         .borrow_mut()
         .put(runtime.v8_isolate().thread_safe_handle());
 
-    let scene_file_path = format!("res://assets/scenes/{}/index.js", scene_definition.path);
+    let scene_file_path = scene_definition.path;
     let file = godot::engine::FileAccess::open(
         godot::prelude::GodotString::from(scene_file_path.clone()),
         godot::engine::file_access::ModeFlags::READ,
     );
 
     if file.is_none() {
-        // ignore failure to send failure
-        let _ = state
+        let err_string = format!("Scene `{scene_file_path}` not found - file is none");
+        if let Err(send_err) = state
             .borrow_mut()
             .take::<std::sync::mpsc::SyncSender<SceneResponse>>()
-            .send(SceneResponse::Error(
-                scene_id,
-                format!("Scene `{scene_file_path}` not found - file is none"),
-            ));
+            .send(SceneResponse::Error(scene_id, format!("{err_string:?}")))
+        {
+            godot_print!("error sending error: {send_err:?}. original error {err_string:?}")
+        }
         return;
     }
 
     let scene_code = SceneJsFileContent(file.unwrap().get_as_text(true).to_string());
     state.borrow_mut().put(scene_code);
 
-    // load module
     let script = runtime.execute_script("<loader>", "require (\"~scene.js\")");
-
     let script = match script {
-        Err(e) => {
-            panic!("script load error: {}", e);
+        Err(execute_script_error) => {
+            if let Err(send_err) = state
+                .borrow_mut()
+                .take::<std::sync::mpsc::SyncSender<SceneResponse>>()
+                .send(SceneResponse::Error(
+                    scene_id,
+                    format!("{execute_script_error:?}"),
+                ))
+            {
+                godot_print!(
+                    "error sending error: {send_err:?}. original error {execute_script_error:?}"
+                )
+            }
+            return;
         }
         Ok(script) => script,
     };
 
-    println!("script evaluated, onStart is being to be called.");
-
     // run startup function
-    let result = run_script(&mut runtime, &script, "onStart", (), |_| Vec::new());
-
-    println!("onStart called");
-
-    if let Err(e) = result {
+    let result: Result<(), deno_core::anyhow::Error> =
+        run_script(&mut runtime, &script, "onStart", (), |_| Vec::new());
+    if let Err(start_script_error) = result {
         // ignore failure to send failure
-        let _ = state
+        if let Err(send_err) = state
             .borrow_mut()
             .take::<std::sync::mpsc::SyncSender<SceneResponse>>()
-            .send(SceneResponse::Error(scene_id, format!("{e:?}")));
+            .send(SceneResponse::Error(
+                scene_id,
+                format!("{start_script_error:?}"),
+            ))
+        {
+            godot_print!("error sending error: {send_err:?}. original error {start_script_error:?}")
+        }
+
         return;
     }
-
-    println!("entering loop");
 
     let start_time = std::time::SystemTime::now();
     let mut elapsed = Duration::default();
@@ -154,7 +161,7 @@ pub(crate) fn scene_thread(
         });
 
         if state.borrow().try_borrow::<ShuttingDown>().is_some() {
-            println!("exiting from the thread {:?}", scene_id);
+            godot_print!("exiting from the thread {:?}", scene_id);
             return;
         }
 
@@ -176,11 +183,6 @@ fn run_script(
     messages_in: (),
     arg_fn: impl for<'a> Fn(&mut v8::HandleScope<'a>) -> Vec<v8::Local<'a, v8::Value>>,
 ) -> Result<(), AnyError> {
-    // TODO: this was commented
-    // let script_span = info_span!("js_run_script");
-    // let _guard = script_span.enter();
-
-    // set up scene i/o
     let op_state = runtime.op_state();
     op_state.borrow_mut().put(messages_in);
 
@@ -195,12 +197,9 @@ fn run_script(
             v8::String::new_from_utf8(scope, fn_name.as_bytes(), v8::NewStringType::Internalized)
                 .unwrap();
         let Some(target_function) = script.get(scope, target_function.into()) else {
-            // function not define, is that an error ?
-            // debug!("{fn_name} is not defined");
             return Err(AnyError::msg(format!("{fn_name} is not defined")));
         };
         let Ok(target_function) = v8::Local::<v8::Function>::try_from(target_function) else {
-            // error!("{fn_name} is not a function");
             return Err(AnyError::msg(format!("{fn_name} is not a function")));
         };
 
@@ -210,7 +209,6 @@ fn run_script(
         // call
         let res = target_function.call(scope, script_this, &args);
         let Some(res) = res else {
-            // error!("{fn_name} did not return a promise");
             return Err(AnyError::msg(format!("{fn_name} did not return a promise")));
         };
 
@@ -228,8 +226,6 @@ fn op_require(
     state: Rc<RefCell<OpState>>,
     module_spec: String,
 ) -> Result<String, deno_core::error::AnyError> {
-    println!("require(\"{module_spec}\")");
-
     match module_spec.as_str() {
         // user module load
         "~scene.js" => Ok(state.borrow().borrow::<SceneJsFileContent>().0.clone()),

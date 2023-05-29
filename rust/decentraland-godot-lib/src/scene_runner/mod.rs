@@ -39,13 +39,12 @@ impl SceneRunner {
         };
         let dcl_scene =
             DclScene::spawn_new(scene_definition.clone(), self.thread_sender_to_main.clone());
-        let godot_dcl_scene: GodotDclScene = GodotDclScene::new(
-            scene_definition,
-            dcl_scene.scene_crdt.clone(),
-            dcl_scene.scene_id,
-        );
         let new_scene = Scene {
-            godot_dcl_scene,
+            godot_dcl_scene: GodotDclScene::new(
+                scene_definition,
+                dcl_scene.scene_crdt.clone(),
+                dcl_scene.scene_id,
+            ),
             dcl_scene,
             waiting_for_updates: false,
             alive: true,
@@ -56,13 +55,6 @@ impl SceneRunner {
             false,
             InternalMode::INTERNAL_MODE_DISABLED,
         );
-
-        godot_print!(
-            "starting scene {} with id {:?}",
-            path,
-            new_scene.dcl_scene.scene_id
-        );
-
         let ret = new_scene.dcl_scene.scene_id.0;
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
 
@@ -102,23 +94,24 @@ impl SceneRunner {
                 let dirty = crdt_state.take_dirty();
                 drop(crdt_state);
 
-                if let Err(e) = scene
+                if let Err(_e) = scene
                     .dcl_scene
                     .main_sender_to_thread
                     .blocking_send(RendererResponse::Ok(dirty))
                 {
-                    println!("failed to send updates to scene: {e:?}");
+                    // TODO: clean up this scene?
+                    // godot_print!("failed to send updates to scene: {e:?}");
                 } else {
                     scene.waiting_for_updates = true;
                 }
             } else {
-                if let Err(e) = scene
+                if let Err(_e) = scene
                     .dcl_scene
                     .main_sender_to_thread
                     .blocking_send(RendererResponse::Kill)
                 {
-                    println!("failed to send updates to scene: {e:?}");
-                    // TODO: clean up
+                    // TODO: clean up this scene?
+                    // godot_print!("failed to send updates to scene: {e:?} after killing it");
                 } else {
                     scene.waiting_for_updates = true;
                 }
@@ -156,7 +149,7 @@ impl SceneRunner {
             match self.main_receiver_from_thread.try_recv() {
                 Ok(response) => match response {
                     SceneResponse::Error(scene_id, msg) => {
-                        println!("[{scene_id:?}] error: {msg}");
+                        godot_print!("[{scene_id:?}] error: {msg}");
                     }
                     SceneResponse::Ok(scene_id, (dirty_entities, dirty_components)) => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {

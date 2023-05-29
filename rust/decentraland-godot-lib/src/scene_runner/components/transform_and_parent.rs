@@ -44,8 +44,10 @@ pub fn update_transform_and_parent(
 
             let old_parent = node.desired_parent;
             if let Some(transform) = value {
-                node.base
-                    .set_rotation(transform.rotation.to_euler(EulerOrder::XYZ));
+                if transform.rotation.is_normalized() {
+                    node.base
+                        .set_rotation(transform.rotation.to_euler(EulerOrder::XYZ));
+                }
                 node.base.set_position(transform.translation);
                 node.base.set_scale(transform.scale);
                 node.desired_parent = transform.parent;
