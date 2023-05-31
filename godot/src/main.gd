@@ -4,7 +4,7 @@ func _ready():
 	start.call_deferred()
 	
 func start():
-	var scene_runner = SceneRunner.new()
+	var scene_runner = SceneManager.new()
 	scene_runner.set_name("scene_runner")
 	
 	var realm = Realm.new()

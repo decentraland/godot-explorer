@@ -3,7 +3,7 @@ extends Node3D
 @export var dcl_gltf_src: String = ""
 @export var dcl_scene_id: int = -1
 
-var scene_runner: SceneRunner
+var scene_runner: SceneManager
 var realm: Realm
 var base_url: String
 var hash: String
@@ -29,13 +29,10 @@ func load_gltf():
 	
 	var gltf := GLTFDocument.new()
 	var gltf_state := GLTFState.new()
-
 	var custom_importer = custom_gltf_importer.new()
-	
 	gltf.register_gltf_document_extension(custom_importer)
-	gltf.append_from_file(local_gltf_path, gltf_state)
+	gltf.append_from_file(local_gltf_path, gltf_state,0, "res://")
 	var node = gltf.generate_scene(gltf_state)
-	
 	add_child(node)
 
 	print("gltf is almost loaded!! ", dcl_gltf_src)
@@ -54,6 +51,9 @@ class custom_gltf_importer extends GLTFDocumentExtension:
 		return OK # super._import_post_parse(state)
 		
 	func _import_preflight(state: GLTFState, extensions: PackedStringArray) -> Error:
-		return OK # super._import_preflight(state,extensions)
+		for image in state.json.get("images", []):
+			image["uri"] = "assets/decentraland_logo.png"
+			
+		return OK 
 		
 

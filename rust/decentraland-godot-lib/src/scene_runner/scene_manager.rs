@@ -1,8 +1,5 @@
 use crate::dcl::{DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse};
-use godot::{
-    engine::node::InternalMode,
-    prelude::{meta::VariantMetadata, *},
-};
+use godot::{engine::node::InternalMode, prelude::*};
 use std::collections::{HashMap, HashSet};
 
 use super::godot_dcl_scene::GodotDclScene;
@@ -20,7 +17,7 @@ pub struct Scene {
 // Deriving GodotClass makes the class available to Godot
 #[derive(GodotClass)]
 #[class(base=Node)]
-pub struct SceneRunner {
+pub struct SceneManager {
     #[base]
     base: Base<Node>,
     scenes: HashMap<SceneId, Scene>,
@@ -34,7 +31,7 @@ pub struct SceneRunner {
 }
 
 #[godot_api]
-impl SceneRunner {
+impl SceneManager {
     #[func]
     fn start_scene(
         &mut self,
@@ -212,12 +209,12 @@ impl SceneRunner {
 }
 
 #[godot_api]
-impl NodeVirtual for SceneRunner {
+impl NodeVirtual for SceneManager {
     fn init(base: Base<Node>) -> Self {
         let (thread_sender_to_main, main_receiver_from_thread) =
             std::sync::mpsc::sync_channel(1000);
 
-        SceneRunner {
+        SceneManager {
             base,
             scenes: HashMap::new(),
             main_receiver_from_thread,

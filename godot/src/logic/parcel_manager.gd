@@ -2,7 +2,7 @@ extends Node
 
 class_name ParcelManager
 
-var scene_runner: SceneRunner = null
+var scene_runner: SceneManager = null
 var realm: Realm = null
 var last_parcel: Vector2i = Vector2i(-1000,-1000)
 

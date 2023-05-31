@@ -10,10 +10,7 @@ use crate::{
     scene_runner::godot_dcl_scene::GodotDclScene,
 };
 use godot::{
-    engine::{
-        node::InternalMode, packed_scene::GenEditState, BoxMesh, CylinderMesh, MeshInstance3D,
-        PlaneMesh, SphereMesh,
-    },
+    engine::{node::InternalMode, packed_scene::GenEditState},
     prelude::*,
 };
 
@@ -22,7 +19,7 @@ pub fn update_gltf_container(
     crdt_state: &mut SceneCrdtState,
     dirty_components: &DirtyComponents,
 ) {
-    let scene_id = godot_dcl_scene.scene_id.clone().0;
+    let scene_id = godot_dcl_scene.scene_id.0;
     if let Some(gltf_container_dirty) = dirty_components.get(&SceneComponentId::GLTF_CONTAINER) {
         let gltf_container_component =
             SceneCrdtStateProtoComponents::get_gltf_container(crdt_state);
@@ -39,7 +36,7 @@ pub fn update_gltf_container(
             let new_value = new_value.value.clone();
             let existing = node
                 .base
-                .try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
+                .try_get_node_as::<Node>(NodePath::from("GltfContainer"));
 
             if new_value.is_none() {
                 if existing.is_some() {

@@ -5,7 +5,7 @@ use super::{
         gltf_container::update_gltf_container, mesh_renderer::update_mesh_renderer,
         transform_and_parent::update_transform_and_parent,
     },
-    scene_runner::Scene,
+    scene_manager::Scene,
 };
 use crate::dcl::{
     components::{transform_and_parent::DclTransformAndParent, SceneEntityId},

@@ -99,6 +99,7 @@ impl GodotDclScene {
         self.entities.get(entity)
     }
 
+    #[allow(dead_code)]
     pub fn exist_node(&self, entity: &SceneEntityId) -> bool {
         self.entities.get(entity).is_some()
     }

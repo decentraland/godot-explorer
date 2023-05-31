@@ -1,6 +1,6 @@
 extends Node
 
-var scene_runner: SceneRunner = null
+var scene_runner: SceneManager = null
 var realm: Realm = null
 var parcel_manager: ParcelManager = null
 
