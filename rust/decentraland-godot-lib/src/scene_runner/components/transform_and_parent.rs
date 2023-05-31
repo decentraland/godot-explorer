@@ -8,7 +8,7 @@ use crate::{
         crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
         DirtyComponents,
     },
-    scene_runner::GodotDclScene,
+    scene_runner::godot_dcl_scene::GodotDclScene,
 };
 
 impl DclTransformAndParent {

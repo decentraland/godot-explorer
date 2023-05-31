@@ -35,11 +35,11 @@ func update_position(new_position: Vector2i) -> void:
 				
 			load_scene(entity)
 		
-	
-func init(set_scene_runner: SceneRunner, set_realm: Realm):
-	scene_runner = set_scene_runner
-	realm = set_realm
+func _ready():
+	scene_runner = get_tree().root.get_node("scene_runner")
+	realm = get_tree().root.get_node("realm")
 	realm.realm_changed.connect(self._on_realm_changed)
+
 	
 func _on_realm_changed():
 	print("realm changed ")
@@ -89,7 +89,9 @@ func load_scene(entity: Dictionary) -> bool:
 			return false
 	
 	var base_parcel = scene_json.get("metadata", {}).get("scene", {}).get("base", "0,0").split_floats(",")
-	var scene_number_id: int = scene_runner.start_scene(local_main_js_path, 16 * Vector3(base_parcel[0], 0, base_parcel[1]))
+	var offset: Vector3 = 16 * Vector3(base_parcel[0], 0, base_parcel[1])
+	var base_url = scene_json.get("baseUrl", "")
+	var scene_number_id: int = scene_runner.start_scene(local_main_js_path, offset, base_url, file_content)
 	loaded_scenes[scene_entity_id].scene_number_id = scene_number_id
 	
 	return true

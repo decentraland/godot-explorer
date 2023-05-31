@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bbhylh7hx01q0"]
+
+[ext_resource type="Script" path="res://src/decentraland_components/gltf_container.gd" id="1_t3d20"]
+
+[node name="gltf_container" type="Node3D"]
+script = ExtResource("1_t3d20")

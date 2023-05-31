@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dsmrko8upputd"
-path.s3tc="res://.godot/imported/map_data.png-febd37ce539e683a2adc3988b5bf8e6f.s3tc.ctex"
+path.s3tc="res://.godot/imported/map_data.png-e9c1adf1290529bc9a05e22d71ddf800.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://src/map/map_data.png"
-dest_files=["res://.godot/imported/map_data.png-febd37ce539e683a2adc3988b5bf8e6f.s3tc.ctex"]
+source_file="res://src/ui/map/map_data.png"
+dest_files=["res://.godot/imported/map_data.png-e9c1adf1290529bc9a05e22d71ddf800.s3tc.ctex"]
 
 [params]
 

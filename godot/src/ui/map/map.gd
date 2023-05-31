@@ -55,10 +55,10 @@ func read_binary_file(file_path: String) -> void:
 	var texture = ImageTexture.create_from_image(image)
 	map_rect.material.set_shader_parameter("map_data", texture)
 
-	image.save_png("res://src/map/map_data.png")
+	image.save_png("res://src/ui/map/map_data.png")
 
 func _ready():
-	read_binary_file("res://src/map/map_data.bin")
+	read_binary_file("res://src/ui/map/map_data.bin")
 	set_zoom(4)
 	
 var drag_position

@@ -1,8 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://dkqc3of5bdx2i"]
 
-[ext_resource type="Script" path="res://src/map/map.gd" id="1_1j46y"]
-[ext_resource type="Shader" path="res://src/map/map.gdshader" id="2_fuvm1"]
-[ext_resource type="Texture2D" uid="uid://dsmrko8upputd" path="res://src/map/map_data.png" id="3_wcx6h"]
+[ext_resource type="Script" path="res://src/ui/map/map.gd" id="1_1j46y"]
+[ext_resource type="Shader" path="res://src/ui/map/map.gdshader" id="2_fuvm1"]
+[ext_resource type="Texture2D" uid="uid://dsmrko8upputd" path="res://src/ui/map/map_data.png" id="3_wcx6h"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fnml8"]
 shader = ExtResource("2_fuvm1")

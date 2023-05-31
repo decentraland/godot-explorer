@@ -97,3 +97,6 @@ func set_realm(new_realm_string: String) -> void:
 	
 	emit_signal("realm_changed")
 
+func get_content_url(path: String, scene_id: int) -> Dictionary:
+	
+	return {}
