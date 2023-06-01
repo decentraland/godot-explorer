@@ -10,10 +10,7 @@ use crate::{
     scene_runner::godot_dcl_scene::GodotDclScene,
 };
 use godot::{
-    engine::{
-        node::InternalMode, plane_mesh::Orientation, BoxMesh, CylinderMesh, MeshInstance3D,
-        PlaneMesh, SphereMesh,
-    },
+    engine::{node::InternalMode, BoxMesh, CylinderMesh, MeshInstance3D, SphereMesh},
     prelude::*,
 };
 

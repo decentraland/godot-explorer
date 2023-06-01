@@ -1,4 +1,4 @@
-use godot::prelude::{EulerOrder, Node, Share, Transform3D, Vector3};
+use godot::prelude::{Node, Share, Transform3D, Vector3};
 
 use crate::{
     dcl::{
