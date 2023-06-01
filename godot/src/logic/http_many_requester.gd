@@ -52,6 +52,9 @@ func do_request_file(url: String, file_hash: String, timeout: int = -1) -> Varia
 	var local_file = "user://content/" + file_hash 
 	DirAccess.make_dir_recursive_absolute("user://content/")
 	
+	if FileAccess.file_exists(local_file):
+		DirAccess.remove_absolute(local_file)
+	
 	var result = await do_request_raw(url, HTTPClient.METHOD_GET, "", [], timeout, local_file)
 	var result_code = result[1]
 	var http_response_code = result[2]
@@ -71,14 +74,22 @@ func do_request_json(url: String, method: HTTPClient.Method, body: String = "", 
 	if result_code != OK or http_response_code < 200 or http_response_code > 299:
 		return null
 		
-	return JSON.parse_string((result[4] as PackedByteArray).get_string_from_utf8())
+	var json_str: String = (result[4] as PackedByteArray).get_string_from_utf8()
 	
+	if json_str.length() > 0:
+		var json = JSON.parse_string(json_str)
+		if json == null:
+			printerr("do_request_json failed because json_string is not a valid json with length ", json_str.length(), " ", url, " ", method, " ", body, " ", headers, " ", timeout)
+		return json
+	else:
+		return null
+		
 func _process(_dt):
 	if pending_requests.size() > 0 and available_requests.size() > 0:
 		var request = pending_requests.pop_front()
 #		print("getting new request", request)
 		var http_request: HTTPRequest = available_requests.pop_front()
-		http_request.timeout = request["timeout"]
+		http_request.timeout = min(30.0, max(0.0, float(request["timeout"])))
 		http_request.set_meta("hash", request["hash"])
 		
 		var file: String = request["file"]

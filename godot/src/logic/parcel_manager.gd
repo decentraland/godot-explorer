@@ -8,7 +8,7 @@ var last_parcel: Vector2i = Vector2i(-1000,-1000)
 
 var loaded_scenes: Dictionary = {}
 
-const SCENE_RADIUS = 5
+const SCENE_RADIUS = 2
 
 func update_position(new_position: Vector2i) -> void:
 	if last_parcel == new_position or realm.content_base_url.is_empty():
@@ -24,7 +24,7 @@ func update_position(new_position: Vector2i) -> void:
 	for x in range(new_position.x - SCENE_RADIUS, new_position.x + SCENE_RADIUS + 1):
 		for z in range(new_position.y - SCENE_RADIUS, new_position.y + SCENE_RADIUS + 1):
 			pointers.push_back(str(x) + "," + str(z))
-	
+#	print(pointers)
 	var entities = await realm.get_active_entities(pointers)
 	if entities != null:
 		for entity in entities:
@@ -89,9 +89,12 @@ func load_scene(entity: Dictionary) -> bool:
 			return false
 	
 	var base_parcel = scene_json.get("metadata", {}).get("scene", {}).get("base", "0,0").split_floats(",")
-	var offset: Vector3 = 16 * Vector3(base_parcel[0], 0, base_parcel[1])
+	var offset: Vector3 = 16 * Vector3(base_parcel[0], 0, -base_parcel[1])
 	var base_url = scene_json.get("baseUrl", "")
-	var scene_number_id: int = scene_runner.start_scene(local_main_js_path, offset, base_url, file_content)
+	var content_mapping = ContentMapping.new()
+	content_mapping.set_content_mapping(file_content)
+	content_mapping.set_base_url(base_url)
+	var scene_number_id: int = scene_runner.start_scene(local_main_js_path, offset, content_mapping)
 	loaded_scenes[scene_entity_id].scene_number_id = scene_number_id
 	
 	return true

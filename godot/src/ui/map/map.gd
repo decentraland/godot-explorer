@@ -19,7 +19,7 @@ func unsigned16_to_signed(unsigned):
 func read_binary_file(file_path: String) -> void:
 	var file = FileAccess.open(file_path, FileAccess.READ)
 	file.big_endian = true
-	var arr: Array[Vector3]
+	var arr: Array[Vector3] = []
 	
 	var max_x: int = -1000000
 	var min_x: int = 1000000
@@ -50,7 +50,6 @@ func read_binary_file(file_path: String) -> void:
 		var y = size_y - 1 - (tile.y - min_y)
 		var flags = tile.z / 255.0
 		image.set_pixel(x, y, Color(flags, 0.0, 0.0, 0.0))
-		var test = image.get_pixel(x, y)
 		
 	var texture = ImageTexture.create_from_image(image)
 	map_rect.material.set_shader_parameter("map_data", texture)
@@ -81,9 +80,9 @@ func _on_color_rect_gui_input(event):
 				zoom(-1)
 				
 	if event is InputEventMouseMotion:
-		var position = get_global_mouse_position() - map_rect.get_global_rect().position
-		position.x = round(position.x / 2)
-		position.y = round(position.y / 2)
+#		var rel_position = get_global_mouse_position() - map_rect.get_global_rect().position
+#		rel_position.x = round(rel_position.x / 2)
+#		rel_position.y = round(rel_position.y / 2)
 		
 		var mouse_tile: Vector2i = floor(event.position / float(zoom_value))
 		if last_mouse_tile != mouse_tile:
@@ -102,8 +101,6 @@ func zoom(dir: int) -> void:
 		set_zoom(new_zoom_value)
 
 func set_zoom(new_zoom_value: int) -> void:
-	var old_position = map_rect.position
-
 	map_rect.position = new_zoom_value * (map_rect.position / float(zoom_value))
 	map_rect.size = new_zoom_value * map_size
 	
@@ -112,7 +109,7 @@ func set_zoom(new_zoom_value: int) -> void:
 	map_rect.material.set_shader_parameter("size", float(zoom_value))
 	map_rect.material.set_shader_parameter("line_width_px", floor(1.0 + float(zoom_value) / 16.0) )
 
-func set_center_position(parcel_position: Vector2i):
+func set_center_position(_parcel_position: Vector2i):
 	pass 
 	#map_rect.position = -(parcel_position * zoom_value - top_left_offset * zoom_value)
 	

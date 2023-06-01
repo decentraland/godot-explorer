@@ -9,7 +9,7 @@ use godot::prelude::*;
 pub mod dcl;
 pub mod scene_runner;
 
-struct GodotRustTest;
+struct DecentralandGodotLibrary;
 
 #[gdextension]
-unsafe impl ExtensionLibrary for GodotRustTest {}
+unsafe impl ExtensionLibrary for DecentralandGodotLibrary {}

@@ -20,6 +20,12 @@ config/icon="res://assets/decentraland_logo.png"
 
 gdscript/warnings/redundant_await=false
 
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="viewport"
+
 [input]
 
 move_left={

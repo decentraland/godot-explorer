@@ -1,4 +1,7 @@
-use crate::dcl::{DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse};
+use crate::{
+    dcl::{DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse},
+    scene_runner::content::ContentMapping,
+};
 use godot::{engine::node::InternalMode, prelude::*};
 use std::collections::{HashMap, HashSet};
 
@@ -10,8 +13,7 @@ pub struct Scene {
     pub waiting_for_updates: bool,
     pub alive: bool,
 
-    pub content: Dictionary,
-    pub base_url: String,
+    pub content_mapping: Gd<ContentMapping>,
 }
 
 // Deriving GodotClass makes the class available to Godot
@@ -37,8 +39,7 @@ impl SceneManager {
         &mut self,
         path: GodotString,
         offset: godot::prelude::Vector3,
-        base_url: GodotString,
-        content: Dictionary,
+        content_mapping: Gd<ContentMapping>,
     ) -> u32 {
         let scene_definition = SceneDefinition {
             path: path.to_string(),
@@ -47,6 +48,7 @@ impl SceneManager {
         };
         let dcl_scene =
             DclScene::spawn_new(scene_definition.clone(), self.thread_sender_to_main.clone());
+
         let new_scene = Scene {
             godot_dcl_scene: GodotDclScene::new(
                 scene_definition,
@@ -57,8 +59,7 @@ impl SceneManager {
             waiting_for_updates: false,
             alive: true,
 
-            content,
-            base_url: base_url.to_string(),
+            content_mapping,
         };
 
         self.base.add_child(
@@ -90,22 +91,11 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_scene_content_hash(&self, scene_id: i32, path: GodotString) -> GodotString {
+    fn get_scene_content_mapping(&self, scene_id: i32) -> Gd<ContentMapping> {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
-            if let Some(hash) = scene.content.get(path) {
-                return GodotString::from_variant(&hash);
-            }
+            return scene.content_mapping.share();
         }
-
-        GodotString::new()
-    }
-
-    #[func]
-    fn get_scene_base_url(&self, scene_id: i32) -> GodotString {
-        if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
-            return GodotString::from(&scene.base_url);
-        }
-        GodotString::new()
+        Gd::new_default()
     }
 
     fn scene_runner_update(&mut self, delta: f64) {

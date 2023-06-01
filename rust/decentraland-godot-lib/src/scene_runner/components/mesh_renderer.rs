@@ -10,7 +10,10 @@ use crate::{
     scene_runner::godot_dcl_scene::GodotDclScene,
 };
 use godot::{
-    engine::{node::InternalMode, BoxMesh, CylinderMesh, MeshInstance3D, PlaneMesh, SphereMesh},
+    engine::{
+        node::InternalMode, plane_mesh::Orientation, BoxMesh, CylinderMesh, MeshInstance3D,
+        PlaneMesh, SphereMesh,
+    },
     prelude::*,
 };
 
@@ -74,7 +77,10 @@ pub fn update_mesh_renderer(
                                 // update the material
                             }
                             pb_mesh_renderer::Mesh::Plane(_plane_mesh) => {
-                                let new_plane_mesh = PlaneMesh::new();
+                                // TODO: using box mesh for now, the planeshape is one side faced
+                                let mut new_plane_mesh = BoxMesh::new();
+                                new_plane_mesh
+                                    .set_size(godot::prelude::Vector3::new(1.0, 1.0, 0.0));
                                 new_mesh_instance_3d.set_mesh(new_plane_mesh.upcast());
 
                                 // update the material (and with uvs)

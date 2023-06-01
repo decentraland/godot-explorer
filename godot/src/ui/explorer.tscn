@@ -48,6 +48,7 @@ current = true
 script = ExtResource("2_qygvh")
 
 [node name="Floor" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 mesh = SubResource("PlaneMesh_x854j")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
 

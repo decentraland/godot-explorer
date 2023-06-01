@@ -43,21 +43,17 @@ pub fn update_transform_and_parent(
             let node = godot_dcl_scene.ensure_node_mut(entity);
 
             let old_parent = node.desired_parent;
-            if let Some(transform) = value {
-                if transform.rotation.is_normalized() {
-                    node.base
-                        .set_rotation(transform.rotation.to_euler(EulerOrder::XYZ));
+            let mut transform = value.unwrap_or_default();
+            if !transform.rotation.is_normalized() {
+                if transform.rotation.length_squared() == 0.0 {
+                    transform.rotation = godot::prelude::Quaternion::default();
+                } else {
+                    transform.rotation = transform.rotation.normalized();
                 }
-                node.base.set_position(transform.translation);
-                node.base.set_scale(transform.scale);
-                node.desired_parent = transform.parent;
-            } else {
-                node.base.set_rotation(Vector3::ZERO);
-                node.base.set_position(Vector3::ZERO);
-                node.base.set_scale(Vector3::ONE);
-                node.desired_parent = SceneEntityId::ROOT;
             }
 
+            node.base.set_transform(transform.to_godot_transform_3d());
+            node.desired_parent = transform.parent;
             if node.desired_parent != old_parent {
                 godot_dcl_scene.unparented_entities.insert(*entity);
                 godot_dcl_scene.hierarchy_dirty = true;

@@ -72,8 +72,8 @@ func get_active_entities(pointers: Array) -> Variant:
 	var body_json = JSON.stringify({"pointers": pointers})
 	var entities_response = await requester.do_request_json(content_base_url + "entities/active", HTTPClient.METHOD_POST, body_json, ["Content-type: application/json"])
 	if entities_response == null:
-		printerr("Failed getting active entities " + self.realm_string)
-		return
+#		printerr("Failed getting active entities " + self.realm_string)
+		return []
 		
 	return entities_response
 
@@ -96,7 +96,3 @@ func set_realm(new_realm_string: String) -> void:
 	content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
 	
 	emit_signal("realm_changed")
-
-func get_content_url(path: String, scene_id: int) -> Dictionary:
-	
-	return {}
