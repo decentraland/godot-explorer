@@ -7,7 +7,7 @@ var realm: Realm = null
 var last_parcel: Vector2i = Vector2i(-1000,-1000)
 var loaded_scenes: Dictionary = {}
 
-const SCENE_RADIUS = 5
+const SCENE_RADIUS = 2
 
 var desired_scene = []
 var http_many_requester: HTTPManyRequester

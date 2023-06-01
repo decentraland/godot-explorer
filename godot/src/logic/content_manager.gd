@@ -1,9 +1,7 @@
 extends Node
-
 class_name ContentManager
 
 signal internal_call_download_file(url: String, file: String)
-
 signal content_loading_finished(hash: String)
 
 enum ContentType {
@@ -12,18 +10,16 @@ enum ContentType {
 
 var pending_content: Array[Dictionary] = []
 var content_cache_map: Dictionary = {}
-
 var content_thread_pool: Thread = null
-
 var http_many_requester: HTTPManyRequester
-
 var downloading_file: Dictionary = {}
 
 func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 	
-
+	self.internal_call_download_file.connect(self._on_internal_call_download_file)
+	
 	http_many_requester = HTTPManyRequester.new()
 	http_many_requester.name = "http_many_requester_parcel"
 	http_many_requester.request_completed.connect(self._on_requested_completed)
@@ -31,8 +27,6 @@ func _ready():
 	
 	content_thread_pool = Thread.new()
 	content_thread_pool.start(self.content_thread_pool_func)
-	
-	self.internal_call_download_file.connect(self._on_internal_call_download_file)
 	
 func _on_requested_completed(reference_id: int, request_id: String, result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray):
 	for file in downloading_file.values():
@@ -48,10 +42,6 @@ func _on_internal_call_download_file(url: String, file: String):
 		"request_id": request_id,
 		"completed": false
 	}
-	
-func _process(dt: float):
-	pass
-	
 
 func get_resource_from_hash(file_hash: String):
 	var content_cached = content_cache_map.get(file_hash)
