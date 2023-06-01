@@ -26,8 +26,8 @@ func _ready():
 	
 	realm = get_tree().root.get_node("realm")
 #	realm.set_realm("mannakia.dcl.eth")
-	realm.set_realm("https://sdk-test-scenes.decentraland.zone")
-#	realm.set_realm("http://127.0.0.1:8000")
+#	realm.set_realm("https://sdk-test-scenes.decentraland.zone")
+	realm.set_realm("http://127.0.0.1:8000")
 	realm.realm_changed.connect(self._on_realm_changed)
 	
 	parcel_manager = ParcelManager.new()

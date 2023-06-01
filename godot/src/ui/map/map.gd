@@ -102,7 +102,7 @@ func zoom(dir: int) -> void:
 
 func set_zoom(new_zoom_value: int) -> void:
 	map_rect.position = new_zoom_value * (map_rect.position / float(zoom_value))
-	map_rect.size = new_zoom_value * map_size
+#	map_rect.size = new_zoom_value * map_size
 	
 	zoom_value = new_zoom_value
 	

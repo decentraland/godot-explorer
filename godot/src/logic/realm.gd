@@ -1,8 +1,6 @@
 extends Node
 class_name Realm
 
-var requester: HTTPManyRequester = null
-	
 var realm_desired_running_scenes: Array[Dictionary] = []
 var realm_about = null
 var realm_url: String = ""
@@ -10,12 +8,46 @@ var realm_string: String = ""
 
 var content_base_url: String = ""
 
+var http_many_requester: HTTPManyRequester
+const ABOUT_REQUEST = 1
+
 signal realm_changed()
 
 func _ready():
+	http_many_requester = HTTPManyRequester.new()
+	http_many_requester.name = "http_many_requester_parcel"
+	http_many_requester.request_completed.connect(self._on_request_completed)
+	add_child(http_many_requester)
+
+func _on_request_completed(_reference_id: int, _request_id: String, result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray):
+	if result != OK or response_code < 200 or response_code > 299:
+		return null
+		
+	var json_str: String = body.get_string_from_utf8()
+	if json_str.is_empty():
+		return
 	
-	requester = HTTPManyRequester.new()
-	add_child(requester)
+	var json = JSON.parse_string(json_str)
+	if json == null:
+		printerr("do_request_json failed because json_string is not a valid json with length ", json_str.length())
+		return
+		
+	var about_response = json
+	if about_response == null or not about_response is Dictionary:
+		printerr("Failed setting new realm " + realm_string)
+		return
+		
+	realm_about = about_response
+	
+	realm_desired_running_scenes.clear()
+	for urn in realm_about.get("configurations", {}).get("scenesUrn", []):
+		var parsed_urn = parse_urn(urn)
+		if parsed_urn != null:
+			realm_desired_running_scenes.push_back(parsed_urn)
+
+	content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
+	
+	emit_signal("realm_changed")
 
 func is_dcl_ens(str_param: String) -> bool:
 	var regex = RegEx.new()
@@ -64,35 +96,8 @@ func parse_urn(urn: String):
 		"baseUrl": base_url
 	}
 
-func get_active_entities(pointers: Array) -> Variant:
-	
-	if realm_about == null:
-		await self.realm_changed
-	
-	var body_json = JSON.stringify({"pointers": pointers})
-	var entities_response = await requester.do_request_json(content_base_url + "entities/active", HTTPClient.METHOD_POST, body_json, ["Content-type: application/json"])
-	if entities_response == null:
-#		printerr("Failed getting active entities " + self.realm_string)
-		return []
-		
-	return entities_response
-
 func set_realm(new_realm_string: String) -> void:
 	realm_string = new_realm_string
 	realm_url = ensure_ends_with_slash(resolve_realm_url(realm_string))
-	var about_response = await requester.do_request_json(realm_url + "about", HTTPClient.METHOD_GET)
-	if about_response == null or not about_response is Dictionary:
-		printerr("Failed setting new realm " + realm_string)
-		return
-		
-	realm_about = about_response
-	
-	realm_desired_running_scenes.clear()
-	for urn in realm_about.get("configurations", {}).get("scenesUrn", []):
-		var parsed_urn = parse_urn(urn)
-		if parsed_urn != null:
-			realm_desired_running_scenes.push_back(parsed_urn)
+	http_many_requester.request(ABOUT_REQUEST, realm_url + "about")
 
-	content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
-	
-	emit_signal("realm_changed")

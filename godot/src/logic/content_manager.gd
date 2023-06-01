@@ -2,6 +2,8 @@ extends Node
 
 class_name ContentManager
 
+signal internal_call_download_file(url: String, file: String)
+
 signal content_loading_finished(hash: String)
 
 enum ContentType {
@@ -13,19 +15,51 @@ var content_cache_map: Dictionary = {}
 
 var content_thread_pool: Thread = null
 
+var http_many_requester: HTTPManyRequester
+
+var downloading_file: Dictionary = {}
+
 func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
+	
+
+	http_many_requester = HTTPManyRequester.new()
+	http_many_requester.name = "http_many_requester_parcel"
+	http_many_requester.request_completed.connect(self._on_requested_completed)
+	add_child(http_many_requester)
+	
 	content_thread_pool = Thread.new()
 	content_thread_pool.start(self.content_thread_pool_func)
 	
+	self.internal_call_download_file.connect(self._on_internal_call_download_file)
+	
+func _on_requested_completed(reference_id: int, request_id: String, result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray):
+	for file in downloading_file.values():
+		if request_id == file["request_id"]:
+			if result == OK and response_code >= 200 and response_code <= 299:
+				file["success"] = true
+			file["completed"] = true
+			return
+	
+func _on_internal_call_download_file(url: String, file: String):
+	var request_id = http_many_requester.request(0, url, HTTPClient.METHOD_GET, "", [], 0, file)
+	downloading_file[file] = {
+		"request_id": request_id,
+		"completed": false
+	}
+	
+func _process(dt: float):
+	pass
+	
+
 func get_resource_from_hash(file_hash: String):
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null and content_cached.get("loaded"):
 		return content_cached.get("resource")
 	return null
 	
-func get_resource(file_path: String, content_type: ContentType, content_mapping: ContentMapping):
+func get_resource(file_path: String, _content_type: ContentType, content_mapping: ContentMapping):
 	var file_hash = content_mapping.get_content_hash(file_path)
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null and content_cached.get("loaded"):
@@ -53,6 +87,8 @@ func fetch_resource(file_path: String, content_type: ContentType, content_mappin
 	return true
 	
 func content_thread_pool_func():
+	DirAccess.copy_absolute("res://assets/decentraland_logo.png", "user://decentraland_logo.png")
+	
 	var is_pending_content: bool = false
 	while true:
 		is_pending_content = pending_content.size() > 0
@@ -87,107 +123,17 @@ func hide_colliders(gltf_node):
 		if maybe_collider is Node:
 			hide_colliders(maybe_collider)
 			
-func download_file(url: String, file: String, redirection: int = 0) -> bool:
-	var http_client = HTTPClient.new()
-	var parsed_url = parse_url(url)
-	print("downloading file ", file)
-	if not parsed_url is Dictionary:
-		printerr("Error parsing url ContentManager::download_file ", parsed_url)
-		return false
-	
-	var port = parsed_url.get("r_port")
-	if port == 0:
-		port = -1
-		
-	var tls = null
-	if parsed_url.get("r_scheme") == "https":
-		tls = TLSOptions.client()
-		
-	var err = http_client.connect_to_host(parsed_url.get("r_host"), port, tls)
-	if err != OK:
-		printerr("Error connecting url ContentManager::download_file ", url, " error ", err)
-		return false
-		
-	while http_client.get_status() == HTTPClient.STATUS_CONNECTING or http_client.get_status() == HTTPClient.STATUS_RESOLVING:
-		http_client.poll()
-#		print("Connecting...")
+func download_file(url: String, file: String) -> bool:
+	emit_signal.call_deferred("internal_call_download_file", url, file)
+	OS.delay_msec(1)
+	while downloading_file.get(file) == null:
 		OS.delay_msec(1)
-
-	assert(http_client.get_status() == HTTPClient.STATUS_CONNECTED) # Check if the connection was made successfully.
-	print("connected to host requesting ", parsed_url["r_path"])
-
-	var result = http_client.request(HTTPClient.METHOD_GET, parsed_url["r_path"], [])
-	print("some")
-	if result != OK:
-		printerr("Error connecting url ContentManager::download_file ", url, " error ", err)
-		return false
 		
-	while http_client.get_status() == HTTPClient.STATUS_REQUESTING:
-		http_client.poll()
-#		print("Requesting...")
+	while downloading_file.get(file).get("completed", false) == false:
 		OS.delay_msec(1)
-
-	assert(http_client.get_status() == HTTPClient.STATUS_BODY or http_client.get_status() == HTTPClient.STATUS_CONNECTED) # Make sure request finished well.
-#	print("response? ", http_client.has_response()) # Site might not have a response.
-
-	if http_client.has_response():
-		var headers = http_client.get_response_headers_as_dictionary()
-		print("code: ", http_client.get_response_code())
-		var code = http_client.get_response_code()
-		if code == 301 or code == 302:
-			
-			if redirection > 8:
-				printerr("too many redirect ")
-				return false
-				
-				
-			var new_location = headers.get("Location")
-			if new_location == null:
-				printerr("no location to redirect ", headers)
-			
-				return false
-				
-			if new_location != url:
-				print("redirection to ", new_location)
-				http_client.close()
-				return download_file(new_location, file, redirection + 1)
-			else:
-				printerr("wrong redirection ", new_location)
-				return false
-				
-#		print("**headers:\\n", headers) # Show headers.
-
-		if http_client.is_response_chunked():
-			print("Response is Chunked!")
-		else:
-			var bl = http_client.get_response_body_length()
-			print("Response Length: ", bl)
-			
-		if http_client.get_status() == HTTPClient.STATUS_BODY:
-			var file_write = FileAccess.open(file,FileAccess.WRITE)
-			if file_write == null:
-				return false
-				
-			while http_client.get_status() == HTTPClient.STATUS_BODY:
-				http_client.poll()
-				var chunk: PackedByteArray = http_client.read_response_body_chunk()
-				if chunk.size() == 0:
-					OS.delay_msec(1)
-				else:
-					file_write.store_buffer(chunk)
-					
-			file_write.close()
-		else: 
-			printerr(http_client.get_status())
-			return false
-#		print("bytes got: ", rb.size())
-#			var text = rb.get_string_from_ascii()
-#			print("Text: ", text)
 		
-	print("ok download file ", file)
 	return true
 	
-
 func load_gltf(file_path: String, file_hash: String,  content_mapping: ContentMapping):
 	var base_url = content_mapping.get_base_url()
 
@@ -242,83 +188,3 @@ func load_gltf(file_path: String, file_hash: String,  content_mapping: ContentMa
 				node.rotate_y(PI)
 
 	return node
-
-#func load_gltf(file_path: String, file_hash: String,  content_mapping: ContentMapping):
-#	var realm: Realm = get_tree().root.get_node("realm")
-#	var base_url = content_mapping.get_base_url()
-#
-#	if file_hash.is_empty() or base_url.is_empty():
-#		return null
-#
-#	await realm.requester.do_request_file(base_url + file_hash, file_hash, 0)
-#	var local_gltf_path = "user://content/" + file_hash
-#	if not FileAccess.file_exists(local_gltf_path):
-#		return null
-#
-#	var base_path = file_path.get_base_dir()
-#	var gltf := GLTFDocument.new()
-#	var gltf_state := GLTFState.new()
-#	gltf_state.set_additional_data("base_path", base_path)
-#	gltf_state.set_additional_data("content_mapping", content_mapping)
-#	gltf_state.set_additional_data("realm", realm)
-#	var err = gltf.append_from_file(local_gltf_path, gltf_state, 0, "user://")
-#	if err != OK:
-#		printerr("GLTF " + file_path + " couldn't be loaded succesfully: ", err)
-#
-#	var node = gltf.generate_scene(gltf_state)
-#	if node != null:
-#		hide_colliders(node)
-#0
-#	return node
-
-func parse_url(base: String):
-	var ret = {}
-	ret["r_scheme"] = ""
-	ret["r_host"] = ""
-	ret["r_port"] = 0
-	ret["r_path"] = ""
-	var pos := base.find("://")
-	# Scheme
-	if pos != -1:
-		ret["r_scheme"] = base.substr(0, pos + 3).to_lower()
-		base = base.substr(pos + 3, base.length() - pos - 3)
-	pos = base.find("/")
-	# Path
-	if pos != -1:
-		ret["r_path"] = base.substr(pos, base.length() - pos)
-		base = base.substr(0, pos)
-	# Host
-	pos = base.find("@")
-	if pos != -1:
-		# Strip credentials
-		base = base.substr(pos + 1, base.length() - pos - 1)
-	if base.begins_with("["):
-		# Literal IPv6
-		pos = base.rfind("]")
-		if pos == -1:
-			return ERR_INVALID_PARAMETER
-		ret["r_host"] = base.substr(1, pos - 1)
-		base = base.substr(pos + 1, base.length() - pos - 1)
-	else:
-		# Anything else
-		if base.get_slice_count(":") > 2:
-			return ERR_INVALID_PARAMETER
-		pos = base.rfind(":")
-		if pos == -1:
-			ret["r_host"] = base
-			base = ""
-		else:
-			ret["r_host"] = base.substr(0, pos)
-			base = base.substr(pos, base.length() - pos)
-	if ret["r_host"].is_empty():
-		return ERR_INVALID_PARAMETER
-	ret["r_host"] = ret["r_host"].to_lower()
-	# Port
-	if base.begins_with(":"):
-		base = base.substr(1, base.length() - 1)
-		if not base.is_valid_int():
-			return ERR_INVALID_PARAMETER
-		ret["r_port"] = base.to_int()
-		if ret["r_port"] < 1 or ret["r_port"] > 65535:
-			return ERR_INVALID_PARAMETER
-	return ret
