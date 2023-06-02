@@ -7,7 +7,7 @@ var realm: Realm = null
 var last_parcel: Vector2i = Vector2i(-1000,-1000)
 var loaded_scenes: Dictionary = {}
 
-const SCENE_RADIUS = 2
+const SCENE_RADIUS = 1
 
 var desired_scene = []
 var http_many_requester: HTTPManyRequester
@@ -15,6 +15,8 @@ var http_many_requester: HTTPManyRequester
 const ACTIVE_ENTITIES_REQUEST = 1
 const ENTITY_METADATA_REQUEST = 2
 const MAIN_FILE_REQUEST = 3
+
+var pointers: Array[String] = []
 
 func _ready():
 	scene_runner = get_tree().root.get_node("scene_runner")
@@ -59,6 +61,29 @@ func _on_active_entities_requested_completed(result: int, response_code: int, _h
 			
 		load_scene(entity)
 	
+	for scene_id in loaded_scenes.keys():
+		var scene = loaded_scenes[scene_id]
+		var should_unload = true
+		var scene_pointers = scene.get("scene_json", {}).get("metadata", {}).get("scene", {}).get("parcels", [])
+		for pointer in pointers:
+			for parcel in scene_pointers:
+				if parcel == pointer:
+					should_unload = false
+					break
+			if not should_unload:
+				break
+		
+		if should_unload:
+			var scene_number_id: int = scene.get("scene_number_id", -1)
+			if scene_number_id != -1:
+				scene_runner.kill_scene(scene_number_id)
+				
+			loaded_scenes[scene_id] = {}
+	
+	for scene_id in loaded_scenes.keys():
+		if loaded_scenes[scene_id].keys().is_empty():
+			loaded_scenes.erase(scene_id)
+		
 func _on_entity_metadata_requested_completed(request_id: String, result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray):
 	if result != OK or response_code < 200 or response_code > 299:
 		return
@@ -92,7 +117,7 @@ func update_position(new_position: Vector2i) -> void:
 	if realm.realm_desired_running_scenes.size() > 0:
 		return
 	
-	var pointers: Array[String] = []
+	pointers.clear()
 	for x in range(new_position.x - SCENE_RADIUS, new_position.x + SCENE_RADIUS + 1):
 		for z in range(new_position.y - SCENE_RADIUS, new_position.y + SCENE_RADIUS + 1):
 			pointers.push_back(str(x) + "," + str(z))
