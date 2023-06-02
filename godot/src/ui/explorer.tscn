@@ -1,8 +1,9 @@
-[gd_scene load_steps=11 format=3 uid="uid://cyfwty2q3rdse"]
+[gd_scene load_steps=12 format=3 uid="uid://deq5v42fmh0y7"]
 
-[ext_resource type="Script" path="res://Main.gd" id="1_nv2ru"]
-[ext_resource type="Script" path="res://Camera.gd" id="2_1rghv"]
-[ext_resource type="Texture2D" uid="uid://m7i23bc2yyqt" path="res://grid.png" id="3_g6j8l"]
+[ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
+[ext_resource type="Script" path="res://src/logic/camera.gd" id="2_qygvh"]
+[ext_resource type="Texture2D" uid="uid://m7i23bc2yyqt" path="res://assets/grid.png" id="3_g5xa3"]
+[ext_resource type="PackedScene" uid="uid://dkqc3of5bdx2i" path="res://src/ui/map/map.tscn" id="4_3k3lb"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_xbryr"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
@@ -21,17 +22,18 @@ glow_enabled = true
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_x854j"]
 material = SubResource("ShaderMaterial_lovo8")
-size = Vector2(1024, 1024)
+size = Vector2(4800, 4800)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fstik"]
-albedo_texture = ExtResource("3_g6j8l")
-uv1_scale = Vector3(512, 512, 512)
+albedo_texture = ExtResource("3_g5xa3")
+uv1_scale = Vector3(300, 300, 300)
+texture_filter = 0
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ftw7c"]
 albedo_color = Color(0, 0.654902, 0.658824, 1)
 
-[node name="Main" type="Node3D"]
-script = ExtResource("1_nv2ru")
+[node name="explorer" type="Node3D"]
+script = ExtResource("1_5n8xk")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, 0, 0, 0)
@@ -40,12 +42,13 @@ shadow_enabled = true
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_ur1u6")
 
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(0.960784, -0.146243, 0.2356, -0.0652374, 0.706571, 0.704628, -0.269515, -0.692366, 0.669322, 13.015, 10.1224, 18.9597)
+[node name="Camera3D_FreeCamera" type="Camera3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 20, 10, 20)
 current = true
-script = ExtResource("2_1rghv")
+script = ExtResource("2_qygvh")
 
 [node name="Floor" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 mesh = SubResource("PlaneMesh_x854j")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
 
@@ -61,6 +64,12 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="Map" parent="UI" instance=ExtResource("4_3k3lb")]
+visible = false
+layout_mode = 0
+offset_right = 128.0
+offset_bottom = 128.0
+
 [node name="Label_FPS" type="Label" parent="UI"]
 unique_name_in_owner = true
 layout_mode = 1
@@ -71,6 +80,20 @@ offset_left = -157.0
 offset_top = 8.0
 offset_right = -8.0
 offset_bottom = 34.0
+grow_horizontal = 0
+text = "FPS"
+horizontal_alignment = 2
+
+[node name="Label_ParcelPosition" type="Label" parent="UI"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -157.0
+offset_top = 32.0
+offset_right = -8.0
+offset_bottom = 58.0
 grow_horizontal = 0
 text = "FPS"
 horizontal_alignment = 2

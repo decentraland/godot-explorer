@@ -31,6 +31,68 @@
             "environment": [],
             "externalConsole": true,
             "preLaunchTask": "(win) Copy GDExtension Lib",
-        }
+        },
+        {
+            "name": "(Linux) Launch Editor",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${env:GODOT4_BIN}",
+            "args": [
+                "--path",
+                "${workspaceFolder}/godot",
+                "-e"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/godot",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "(linux) Copy GDExtension Lib",
+        },
+        {
+            "name": "(Linux) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${env:GODOT4_BIN}",
+            "args": [
+                "--path",
+                "${workspaceFolder}/godot"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/godot",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "(linux) Copy GDExtension Lib",
+        },
+        {
+            "name": "(MacOS) Launch Editor",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${env:GODOT4_BIN}",
+            "args": [
+                "--path",
+                "${workspaceFolder}/godot",
+                "-e"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/godot",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "(macos) Copy GDExtension Lib",
+        },
+        {
+            "name": "(MacOS) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${env:GODOT4_BIN}",
+            "args": [
+                "--path",
+                "${workspaceFolder}/godot"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/godot",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "(macos) Copy GDExtension Lib",
+        },
     ]
 }

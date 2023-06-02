@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://m7i23bc2yyqt"
-path.s3tc="res://.godot/imported/grid.png-9bb66f80dbdd793fb4bb275a0d999fdf.s3tc.ctex"
+path.s3tc="res://.godot/imported/grid.png-0e5acf495abafdc7f64f9b213a44aa0e.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://grid.png"
-dest_files=["res://.godot/imported/grid.png-9bb66f80dbdd793fb4bb275a0d999fdf.s3tc.ctex"]
+source_file="res://assets/grid.png"
+dest_files=["res://.godot/imported/grid.png-0e5acf495abafdc7f64f9b213a44aa0e.s3tc.ctex"]
 
 [params]
 
@@ -22,11 +22,11 @@ compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
-roughness/mode=0
+roughness/mode=1
 roughness/src_normal=""
-process/fix_alpha_border=true
+process/fix_alpha_border=false
 process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false

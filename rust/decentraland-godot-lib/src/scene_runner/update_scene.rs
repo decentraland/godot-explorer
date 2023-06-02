@@ -2,9 +2,10 @@ use godot::prelude::{Share, Transform3D};
 
 use super::{
     components::{
-        mesh_renderer::update_mesh_renderer, transform_and_parent::update_transform_and_parent,
+        gltf_container::update_gltf_container, mesh_renderer::update_mesh_renderer,
+        transform_and_parent::update_transform_and_parent,
     },
-    Scene,
+    scene_manager::Scene,
 };
 use crate::dcl::{
     components::{transform_and_parent::DclTransformAndParent, SceneEntityId},
@@ -25,6 +26,7 @@ pub fn update_scene(
     update_deleted_entities(&mut scene.godot_dcl_scene, &dirty_entities.died);
     update_transform_and_parent(&mut scene.godot_dcl_scene, crdt_state, dirty_components);
     update_mesh_renderer(&mut scene.godot_dcl_scene, crdt_state, dirty_components);
+    update_gltf_container(&mut scene.godot_dcl_scene, crdt_state, dirty_components);
 
     let player_transform = DclTransformAndParent::from_godot(
         camera_global_transform,

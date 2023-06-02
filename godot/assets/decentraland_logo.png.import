@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://eur1b465onwu"
-path="res://.godot/imported/decentraland-logo.png-a436f0a78c7da657ced5e0540fabd4e1.ctex"
+path="res://.godot/imported/decentraland_logo.png-828ea01e0bdbfa73a7ddf9f51f74a75c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://decentraland-logo.png"
-dest_files=["res://.godot/imported/decentraland-logo.png-a436f0a78c7da657ced5e0540fabd4e1.ctex"]
+source_file="res://assets/decentraland_logo.png"
+dest_files=["res://.godot/imported/decentraland_logo.png-828ea01e0bdbfa73a7ddf9f51f74a75c.ctex"]
 
 [params]
 
