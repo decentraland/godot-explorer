@@ -164,7 +164,7 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 
 	# Stage 3 => wait for dependencies
 		3:
-			var dep: Array = content["ww"]
+			var dep: Array = content["request_dependencies"]
 			for item in finished_downloads:
 				if dep.has(item.id()):
 					dep.erase(item.id())

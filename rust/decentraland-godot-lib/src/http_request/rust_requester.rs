@@ -28,7 +28,7 @@ impl RustHttpRequester {
                     None
                 }
             },
-            None => return None,
+            None => None,
         }
     }
 
@@ -114,15 +114,4 @@ impl NodeVirtual for RustHttpRequester {
     }
 
     fn ready(&mut self) {}
-
-    fn process(&mut self, _delta: f64) {
-        loop {
-            match self.http_requester.poll() {
-                Some(response) => {
-                    println!("{:?}", response);
-                }
-                None => break,
-            }
-        }
-    }
 }

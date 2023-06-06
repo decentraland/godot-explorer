@@ -75,16 +75,16 @@ impl HttpRequester {
 
         let response_data = match request_option.response_type.clone() {
             ResponseType::AsString => {
-                ResponseEnum::StringResponse(response.text().await.map_err(|e| e.to_string())?)
+                ResponseEnum::String(response.text().await.map_err(|e| e.to_string())?)
             }
-            ResponseType::AsBytes => ResponseEnum::BytesResponse(
-                response.bytes().await.map_err(|e| e.to_string())?.to_vec(),
-            ),
+            ResponseType::AsBytes => {
+                ResponseEnum::Bytes(response.bytes().await.map_err(|e| e.to_string())?.to_vec())
+            }
             ResponseType::ToFile(file_path) => {
                 let content = response.bytes().await.map_err(|e| e.to_string())?.to_vec();
                 let mut file = std::fs::File::create(file_path).map_err(|e| e.to_string())?;
                 let result = std::io::Write::write_all(&mut file, &content);
-                ResponseEnum::ToFileResponse(result)
+                ResponseEnum::ToFile(result)
             }
         };
 

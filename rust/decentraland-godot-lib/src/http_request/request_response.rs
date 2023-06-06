@@ -2,14 +2,15 @@ use godot::prelude::{GodotString, Variant};
 
 #[derive(Debug)]
 pub enum ResponseEnum {
-    StringResponse(String),
-    BytesResponse(Vec<u8>),
-    ToFileResponse(Result<(), std::io::Error>),
+    String(String),
+    Bytes(Vec<u8>),
+    ToFile(Result<(), std::io::Error>),
 }
 
 #[derive(Debug, Clone)]
 pub enum ResponseType {
     AsString,
+    #[allow(dead_code)]
     AsBytes,
     ToFile(String),
 }
@@ -83,7 +84,7 @@ impl RequestResponse {
         let response = self.response_data.as_ref().unwrap();
 
         match response {
-            ResponseEnum::StringResponse(string) => {
+            ResponseEnum::String(string) => {
                 godot::engine::Json::parse_string(GodotString::from(string))
             }
             _ => Variant::default(),
