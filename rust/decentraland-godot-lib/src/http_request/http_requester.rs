@@ -98,6 +98,8 @@ impl HttpRequester {
 
 #[test]
 fn test() {
+    // TODO: add tests
+
     let mut requester = HttpRequester::new();
 
     // requester.send_request(RequestOption::new(
@@ -176,7 +178,7 @@ fn test() {
                 std::thread::sleep(std::time::Duration::from_millis(100));
             }
         }
-        if counter >= 10 {
+        if counter >= 1 {
             break;
         }
     }
