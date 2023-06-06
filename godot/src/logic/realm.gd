@@ -8,28 +8,25 @@ var realm_string: String = ""
 
 var content_base_url: String = ""
 
-var http_many_requester: HTTPManyRequester
+var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
 const ABOUT_REQUEST = 1
 
 signal realm_changed()
 
-func _ready():
-	http_many_requester = HTTPManyRequester.new()
-	http_many_requester.name = "http_many_requester_parcel"
-	http_many_requester.request_completed.connect(self._on_request_completed)
-	add_child(http_many_requester)
+func _process(delta):
+	http_requester.poll()
 
-func _on_request_completed(_reference_id: int, _request_id: String, result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray):
-	if result != OK or response_code < 200 or response_code > 299:
+func _ready():
+	http_requester.request_completed.connect(self._on_request_completed)
+
+func _on_request_completed(response: RequestResponse):
+	var status_code = response.status_code()
+	if response.is_error() or status_code < 200 or status_code > 299:
 		return null
-		
-	var json_str: String = body.get_string_from_utf8()
-	if json_str.is_empty():
-		return
 	
-	var json = JSON.parse_string(json_str)
+	var json = response.get_string_response_as_json()
 	if json == null:
-		printerr("do_request_json failed because json_string is not a valid json with length ", json_str.length())
+		printerr("do_request_json failed because json_string is not a valid json")
 		return
 		
 	var about_response = json
@@ -99,5 +96,5 @@ func parse_urn(urn: String):
 func set_realm(new_realm_string: String) -> void:
 	realm_string = new_realm_string
 	realm_url = ensure_ends_with_slash(resolve_realm_url(realm_string))
-	http_many_requester.request(ABOUT_REQUEST, realm_url + "about")
+	http_requester._requester.request_json(ABOUT_REQUEST, realm_url + "about", HTTPClient.METHOD_GET, "", [])
 

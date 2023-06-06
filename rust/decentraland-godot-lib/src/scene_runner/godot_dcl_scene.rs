@@ -14,9 +14,6 @@ pub struct GodotDclScene {
     pub entities: HashMap<SceneEntityId, Node3DEntity>,
     pub root_node: Gd<Node3D>,
 
-    // TODO: store all the objs should be not necessary
-    pub objs: Vec<Gd<Node>>,
-
     pub hierarchy_dirty: bool,
     pub unparented_entities: HashSet<SceneEntityId>,
 }
@@ -65,7 +62,6 @@ impl GodotDclScene {
 
             entities,
             root_node,
-            objs: Vec::new(),
 
             hierarchy_dirty: false,
             unparented_entities: HashSet::new(),
@@ -88,7 +84,6 @@ impl GodotDclScene {
                 InternalMode::INTERNAL_MODE_DISABLED,
             );
 
-            self.objs.push(new_node.base.share().upcast());
             self.entities.insert(*entity, new_node);
         }
 

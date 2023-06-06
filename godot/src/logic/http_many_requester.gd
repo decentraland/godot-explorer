@@ -1,3 +1,5 @@
+# Deprecated: use the RustHttpRequester or its wrapper RustHttpRequesterWrapper (emit the signal when it's completed) 
+
 extends Node
 class_name HTTPManyRequester
 
@@ -27,7 +29,6 @@ func request(reference_id: int, url: String, method: HTTPClient.Method = HTTPCli
 func _process(_dt):
 	if pending_requests.size() > 0  and requester.size() < MAX_REQUESTER:
 		var pending_request = pending_requests.pop_front()
-		
 		
 		http_requester_count += 1
 		print("adding http requester ", http_requester_count)

@@ -22,10 +22,17 @@ func load_gltf():
 	else:
 		content_manager.content_loading_finished.connect(self._on_gltf_loaded)
 
+func _content_manager_resource_loaded(resource_hash: String):
+	var content_manager: ContentManager = get_tree().root.get_node("content_manager")
+	content_manager.content_loading_finished.disconnect(self._on_gltf_loaded)
+	
+	_on_gltf_loaded(resource_hash)
 
 func _on_gltf_loaded(resource_hash: String):
 	if resource_hash != file_hash:
 		return
+		
 	var node = get_tree().root.get_node("content_manager").get_resource_from_hash(file_hash)
 	if node != null:
 		add_child(node.duplicate())
+		

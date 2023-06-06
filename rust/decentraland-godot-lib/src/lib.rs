@@ -7,8 +7,8 @@
 use godot::prelude::*;
 
 pub mod dcl;
+pub mod http_request;
 pub mod scene_runner;
-
 struct DecentralandGodotLibrary;
 
 #[gdextension]

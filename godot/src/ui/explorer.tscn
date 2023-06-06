@@ -249,5 +249,19 @@ anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
+[node name="CheckButton" type="CheckButton" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -22.0
+offset_top = -24.0
+offset_right = 22.0
+grow_horizontal = 2
+grow_vertical = 0
+button_pressed = true
+
 [connection signal="pressed" from="UI/Panel_SpawnScene/Button_AddScene" to="." method="_on_add_button_pressed"]
 [connection signal="pressed" from="UI/Panel_Scenes/Button_DeleteScene" to="." method="_on_button_delete_scene_pressed"]
+[connection signal="toggled" from="CheckButton" to="." method="_on_check_button_toggled"]

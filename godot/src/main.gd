@@ -4,6 +4,15 @@ func _ready():
 	start.call_deferred()
 	
 func start():
+	# Clean the content cache folder
+	# if DirAccess.dir_exists_absolute("user://content/"):
+	# 	for file in DirAccess.get_files_at("user://content/"):
+	# 		DirAccess.remove_absolute("user://content/" + file)
+	# 	DirAccess.remove_absolute("user://content")
+	
+	if not DirAccess.dir_exists_absolute("user://content/"):
+		DirAccess.make_dir_absolute("user://content/")
+		
 	var scene_runner = SceneManager.new()
 	scene_runner.set_name("scene_runner")
 	
@@ -18,3 +27,4 @@ func start():
 	get_tree().root.add_child(content_manager)
 	
 	get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+
