@@ -30,6 +30,8 @@ pub struct SceneManager {
     main_receiver_from_thread: std::sync::mpsc::Receiver<SceneResponse>,
 
     renderering_tick: i64,
+
+    pause: bool,
 }
 
 #[godot_api]
@@ -99,6 +101,9 @@ impl SceneManager {
     }
 
     fn scene_runner_update(&mut self, delta: f64) {
+        if self.pause {
+            return;
+        }
         self.renderering_tick += 1;
 
         self.process_scenes(delta);
@@ -150,11 +155,6 @@ impl SceneManager {
                 .upcast::<Node>()
                 .share();
             self.remove_child(node);
-
-            while let Some(mut obj) = scene.godot_dcl_scene.objs.pop() {
-                obj.queue_free();
-            }
-
             scene.godot_dcl_scene.root_node.queue_free();
         }
     }
@@ -196,6 +196,11 @@ impl SceneManager {
             }
         }
     }
+
+    #[func]
+    fn set_pause(&mut self, value: bool) {
+        self.pause = value;
+    }
 }
 
 #[godot_api]
@@ -211,6 +216,7 @@ impl NodeVirtual for SceneManager {
             thread_sender_to_main,
             camera_node: None,
             renderering_tick: 0,
+            pause: false,
         }
     }
 

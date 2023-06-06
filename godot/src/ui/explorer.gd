@@ -25,10 +25,12 @@ func _ready():
 	scene_runner.set_camera_node(free_camera)
 	
 	realm = get_tree().root.get_node("realm")
-#	realm.set_realm("mannakia.dcl.eth")
-#	realm.set_realm("https://sdk-test-scenes.decentraland.zone")
-	realm.set_realm("http://127.0.0.1:8000")
 	realm.realm_changed.connect(self._on_realm_changed)
+	
+	# Set the initial realm
+	# realm.set_realm("mannakia.dcl.eth")
+	# realm.set_realm("http://127.0.0.1:8000")
+	realm.set_realm("https://sdk-test-scenes.decentraland.zone")
 	
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
@@ -61,3 +63,7 @@ func _on_button_delete_scene_pressed():
 		
 func _on_realm_changed(): 
 	pass
+
+
+func _on_check_button_toggled(button_pressed):
+	scene_runner.set_pause(button_pressed)

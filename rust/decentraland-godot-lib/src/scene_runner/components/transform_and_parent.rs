@@ -52,7 +52,14 @@ pub fn update_transform_and_parent(
                 }
             }
 
+            // node.base.set_position(transform.translation);
+            // node.base
+            //     .set_rotation(transform.rotation.to_euler(godot::prelude::EulerOrder::XYZ));
+
+            // TODO: the scale seted in the transform is local
             node.base.set_transform(transform.to_godot_transform_3d());
+            node.base.set_scale(transform.scale);
+
             node.desired_parent = transform.parent;
             if node.desired_parent != old_parent {
                 godot_dcl_scene.unparented_entities.insert(*entity);

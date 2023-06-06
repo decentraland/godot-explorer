@@ -1,3 +1,5 @@
+# Deprecated: use the RustHttpRequester or its wrapper RustHttpRequesterWrapper (emit the signal when it's completed) 
+
 extends Node
 class_name HTTPManyRequester
 

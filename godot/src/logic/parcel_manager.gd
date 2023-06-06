@@ -7,10 +7,10 @@ var realm: Realm = null
 var last_parcel: Vector2i = Vector2i(-1000,-1000)
 var loaded_scenes: Dictionary = {}
 
-const SCENE_RADIUS = 1
+const SCENE_RADIUS = 3
 
 var desired_scene = []
-var http_many_requester: HTTPManyRequester
+var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
 
 const ACTIVE_ENTITIES_REQUEST = 1
 const ENTITY_METADATA_REQUEST = 2
@@ -23,34 +23,30 @@ func _ready():
 	realm = get_tree().root.get_node("realm")
 	realm.realm_changed.connect(self._on_realm_changed)
 	
-	http_many_requester = HTTPManyRequester.new()
-	http_many_requester.name = "http_many_requester_parcel"
-	http_many_requester.request_completed.connect(self._on_requested_completed)
-	add_child(http_many_requester)
+	http_requester.request_completed.connect(self._on_requested_completed)
 	
-func _on_requested_completed(reference_id: int, request_id: String, result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray):
-	
-	match reference_id:
+func _process(_dt):
+	http_requester.poll()
+
+func _on_requested_completed(response: RequestResponse):
+	match response.reference_id():
 		ACTIVE_ENTITIES_REQUEST:
-			_on_active_entities_requested_completed(result, response_code, headers, body)
+			_on_active_entities_requested_completed(response)
 		ENTITY_METADATA_REQUEST:
-			_on_entity_metadata_requested_completed(request_id, result, response_code, headers, body)
+			_on_entity_metadata_requested_completed(response)
 		MAIN_FILE_REQUEST:
-			_on_main_file_requested_completed(request_id, result, response_code, headers, body)
+			_on_main_file_requested_completed(response)
 		_:
 			pass
 			
-func _on_active_entities_requested_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray):
-	if result != OK or response_code < 200 or response_code > 299:
-		return
-		
-	var json_str: String = body.get_string_from_utf8()
-	if json_str.is_empty():
-		return
+func _on_active_entities_requested_completed(response: RequestResponse):
+	var status_code = response.status_code()
+	if response.is_error() or status_code < 200 or status_code > 299:
+		return null
 	
-	var json = JSON.parse_string(json_str)
+	var json = response.get_string_response_as_json()
 	if json == null:
-		printerr("do_request_json failed because json_string is not a valid json with length ", json_str.length())
+		printerr("do_request_json failed because json_string is not a valid json")
 		return
 
 	for entity in json:
@@ -84,29 +80,37 @@ func _on_active_entities_requested_completed(result: int, response_code: int, _h
 		if loaded_scenes[scene_id].keys().is_empty():
 			loaded_scenes.erase(scene_id)
 		
-func _on_entity_metadata_requested_completed(request_id: String, result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray):
-	if result != OK or response_code < 200 or response_code > 299:
-		return
-		
-	var json_str: String = body.get_string_from_utf8()
-	if json_str.is_empty():
+func _on_entity_metadata_requested_completed(response: RequestResponse):
+	var status_code = response.status_code()
+	if response.is_error() or status_code < 200 or status_code > 299:
+		return null
+	
+	var json = response.get_string_response_as_json()
+	if json == null:
+		printerr("do_request_json failed because json_string is not a valid json")
 		return
 	
-	var json = JSON.parse_string(json_str)
-	if json == null:
-		printerr("do_request_json failed because json_string is not a valid json with length ", json_str.length())
-		return
-
+	var request_id = response.id()
 	for scene in loaded_scenes:
 		if scene.get("entity_metadata_request_id", "") == request_id:
 			_on_load_scene_entity(json)
+	
+func _on_main_file_requested_completed(response: RequestResponse):
+	var status_code = response.status_code()
+	if response.is_error() or status_code < 200 or status_code > 299:
+		return null
+		
+	var request_id = response.id()
+	for scene in loaded_scenes.values():
+		if scene.get("main_file_request_id", "") == request_id:
+			_on_try_spawn_scene(scene)
 	
 func request_active_entities(pointers: Array):
 	if realm.realm_about == null:
 		return
 		
 	var body_json = JSON.stringify({"pointers": pointers})
-	http_many_requester.request(ACTIVE_ENTITIES_REQUEST, realm.content_base_url + "entities/active",HTTPClient.METHOD_POST, body_json, ["Content-type: application/json"])
+	http_requester._requester.request_json(ACTIVE_ENTITIES_REQUEST, realm.content_base_url + "entities/active", HTTPClient.METHOD_POST, body_json, ["Content-type: application/json"])
 
 func update_position(new_position: Vector2i) -> void:
 	if last_parcel == new_position or realm.content_base_url.is_empty():
@@ -114,6 +118,7 @@ func update_position(new_position: Vector2i) -> void:
 		
 	last_parcel = new_position
 	
+	# TODO: when there are desired scene, should it load also parcels from pointers? 
 	if realm.realm_desired_running_scenes.size() > 0:
 		return
 	
@@ -142,7 +147,7 @@ func load_scene(entity: Dictionary):
 	
 	if entity.get("metadata") == null:
 		var scene_entity_url: String = entity.get("baseUrl", "") + entity.get("entityId", "")
-		var entity_metadata_request_id = http_many_requester.request(ENTITY_METADATA_REQUEST, scene_entity_url)
+		var entity_metadata_request_id = http_requester._requester.request_json(ENTITY_METADATA_REQUEST, scene_entity_url, HTTPClient.METHOD_GET, "", [])
 		loaded_scenes[scene_entity_id]["entity_metadata_request_id"] = entity_metadata_request_id
 	else:
 		_on_load_scene_entity(entity)
@@ -165,21 +170,13 @@ func _on_load_scene_entity(scene_json: Dictionary):
 		
 	var local_main_js_path = "user://content/" + main_js_file_hash
 	var main_js_file_url: String = scene_json.get("baseUrl", "") + main_js_file_hash
-	var request_id = http_many_requester.request(MAIN_FILE_REQUEST, main_js_file_url, HTTPClient.METHOD_GET, "", [], 0, local_main_js_path)
+	var request_id = http_requester._requester.request_file(MAIN_FILE_REQUEST, main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir()))
 	loaded_scenes[scene_entity_id]["main_file_request_id"] = request_id
 	loaded_scenes[scene_entity_id]["local_main_js_path"] = local_main_js_path
 	loaded_scenes[scene_entity_id]["scene_json"] = scene_json
 	loaded_scenes[scene_entity_id]["file_content"] = file_content
 	
-	
-func _on_main_file_requested_completed(request_id: String, result: int, response_code: int, _headers: PackedStringArray, _body: PackedByteArray):
-	if result != OK or response_code < 200 or response_code > 299:
-		return
-	
-	for scene in loaded_scenes.values():
-		if scene.get("main_file_request_id", "") == request_id:
-			_on_try_spawn_scene(scene)
-	
+
 func _on_try_spawn_scene(scene):
 	var scene_json = scene["scene_json"]
 	var local_main_js_path = scene["local_main_js_path"]
