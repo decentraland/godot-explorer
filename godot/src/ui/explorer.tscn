@@ -105,5 +105,29 @@ offset_right = 151.0
 grow_vertical = 0
 text = "Pause scenes"
 
+[node name="OptionButton" type="OptionButton" parent="UI"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -743.0
+offset_top = -46.0
+offset_right = -8.0
+offset_bottom = -8.0
+grow_horizontal = 0
+grow_vertical = 0
+item_count = 4
+popup/item_0/text = "mannakia.dcl.eth"
+popup/item_0/id = 0
+popup/item_1/text = "http://127.0.0.1:8000"
+popup/item_1/id = 1
+popup/item_2/text = "https://sdk-test-scenes.decentraland.zone"
+popup/item_2/id = 2
+popup/item_3/text = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+popup/item_3/id = 3
+
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="toggled" from="UI/CheckButton_Pause" to="." method="_on_check_button_toggled"]
+[connection signal="item_selected" from="UI/OptionButton" to="." method="_on_option_button_item_selected"]

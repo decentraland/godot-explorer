@@ -1,3 +1,3 @@
-mod http_requester;
-mod request_response;
-mod rust_requester;
+pub mod http_requester;
+pub mod request_response;
+pub mod rust_requester;

@@ -6,7 +6,7 @@ func _import_preflight(state: GLTFState, _extensions: PackedStringArray) -> Erro
 		var dependencies: Array[String] = []
 		for image in state.json.get("images", []):
 			var uri = image.get("uri", "")
-			if not uri.is_empty():
+			if not uri.is_empty() and not uri.begins_with("data:"):
 				dependencies.push_back(String(uri))
 				image["uri"] = "decentraland_logo.png"
 		state.set_additional_data("dependencies", dependencies)
@@ -16,6 +16,6 @@ func _import_preflight(state: GLTFState, _extensions: PackedStringArray) -> Erro
 			var mappings = state.get_additional_data("mappings")
 			for image in state.json.get("images", []):
 				var uri = image.get("uri", "")
-				if not uri.is_empty():
-					image["uri"]= mappings.get(uri, "decentraland_logo.png")
+				if not uri.is_empty() and not uri.begins_with("data:"):
+					image["uri"]= mappings.get(uri, uri)
 	return OK 

@@ -100,6 +100,8 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 	var local_gltf_path = "user://content/" + file_hash
 	
 	var stage = content.get("stage", 0)
+
+	# TODO: this is temp
 	var it = content.get("it", 0)
 	if it > 100000:
 		printerr("timeout ", file_path, " stage ", stage)
@@ -137,7 +139,7 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 			var gltf := GLTFDocument.new()
 			var pre_gltf_state := GLTFState.new()
 			pre_gltf_state.set_additional_data("placeholder_image", true)
-			var err = gltf.append_from_file(local_gltf_path, pre_gltf_state, 0, "user://")
+			var err = gltf.append_from_file(local_gltf_path, pre_gltf_state, 0, OS.get_user_data_dir())
 			if err != OK:
 				printerr("GLTF " + file_path + " couldn't be loaded succesfully: ", err)
 				return false
@@ -182,7 +184,7 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 
 			new_gltf_state.set_additional_data("base_path", base_path)
 			new_gltf_state.set_additional_data("mappings", content["gltf_mappings"])
-			var err = new_gltf.append_from_file(local_gltf_path, new_gltf_state, 0, "user://")
+			var err = new_gltf.append_from_file(local_gltf_path, new_gltf_state, 0, OS.get_user_data_dir())
 
 			var node = new_gltf.generate_scene(new_gltf_state)
 			if node != null:

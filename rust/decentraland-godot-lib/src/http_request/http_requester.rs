@@ -1,8 +1,22 @@
+use std::fmt::Debug;
+
 use super::request_response::*;
 
 pub struct HttpRequester {
     sender_to_thread: tokio::sync::mpsc::Sender<RequestOption>,
     receiver_from_thread: tokio::sync::mpsc::Receiver<Result<RequestResponse, String>>,
+}
+
+impl Debug for HttpRequester {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HttpRequester").finish()
+    }
+}
+
+impl Default for HttpRequester {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HttpRequester {
@@ -85,6 +99,10 @@ impl HttpRequester {
                 let mut file = std::fs::File::create(file_path).map_err(|e| e.to_string())?;
                 let result = std::io::Write::write_all(&mut file, &content);
                 ResponseEnum::ToFile(result)
+            }
+            ResponseType::AsJson => {
+                let json_string = &response.text().await.map_err(|e| e.to_string())?;
+                ResponseEnum::Json(serde_json::from_str(json_string))
             }
         };
 

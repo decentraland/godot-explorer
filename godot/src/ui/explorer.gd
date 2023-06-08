@@ -16,18 +16,13 @@ func _process(_dt):
 	%Label_ParcelPosition.set_text(str(parcel_position) )
 	$UI/Map.set_center_position(parcel_position)
 	
-func _ready():
+func _ready():	
 	player.position = 16 * Vector3(72, 0.1, 10) 
 	player.look_at(16 * Vector3(73, 0, 9) )
 	scene_runner = get_tree().root.get_node("scene_runner")
 	scene_runner.set_camera_node(player)
 	
 	realm = get_tree().root.get_node("realm")
-	
-	# Set the initial realm
-	# realm.set_realm("mannakia.dcl.eth")
-	# realm.set_realm("http://127.0.0.1:8000")
-	realm.set_realm("https://sdk-test-scenes.decentraland.zone")
 	
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
@@ -40,3 +35,7 @@ func _on_ui_gui_input(event):
 	if event is InputEventMouseButton and event.pressed:
 		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+
+func _on_option_button_item_selected(index):
+	realm.set_realm($UI/OptionButton.get_item_text(index))

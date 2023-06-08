@@ -123,7 +123,7 @@ fn detect_entity_id_in_parent_chain(
     search_entity: SceneEntityId,
 ) -> bool {
     while let Some(node) = godot_dcl_scene.get_node(&current_entity) {
-        if current_entity != SceneEntityId::ROOT {
+        if current_entity == SceneEntityId::ROOT {
             return false;
         }
 
