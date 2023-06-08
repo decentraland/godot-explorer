@@ -5,6 +5,7 @@ pub enum ResponseEnum {
     String(String),
     Bytes(Vec<u8>),
     ToFile(Result<(), std::io::Error>),
+    Json(Result<serde_json::Value, serde_json::Error>),
 }
 
 #[derive(Debug, Clone)]
@@ -12,6 +13,7 @@ pub enum ResponseType {
     AsString,
     #[allow(dead_code)]
     AsBytes,
+    AsJson,
     ToFile(String),
 }
 

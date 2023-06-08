@@ -1,10 +1,15 @@
 extends Node
 class_name Realm
 
-var realm_desired_running_scenes: Array[Dictionary] = []
 var realm_about = null
 var realm_url: String = ""
 var realm_string: String = ""
+
+# Mirror realm_about.get("configuration")
+var realm_name: String = ""
+var realm_scene_urns: Array[Dictionary] = []
+var realm_global_scene_urns: Array[Dictionary] = []
+var realm_city_loader_content_base_url = ""
 
 var content_base_url: String = ""
 
@@ -36,11 +41,23 @@ func _on_request_completed(response: RequestResponse):
 		
 	realm_about = about_response
 	
-	realm_desired_running_scenes.clear()
-	for urn in realm_about.get("configurations", {}).get("scenesUrn", []):
+	var configuration = realm_about.get("configurations", {})
+
+	realm_scene_urns.clear()
+	for urn in configuration.get("scenesUrn", []):
 		var parsed_urn = parse_urn(urn)
 		if parsed_urn != null:
-			realm_desired_running_scenes.push_back(parsed_urn)
+			realm_scene_urns.push_back(parsed_urn)
+	
+	realm_global_scene_urns.clear()
+	for urn in configuration.get("globalScenesUrn", []):
+		var parsed_urn = parse_urn(urn)
+		if parsed_urn != null:
+			realm_global_scene_urns.push_back(parsed_urn)
+
+	realm_city_loader_content_base_url = configuration.get("cityLoaderContentServer", "")
+		
+	realm_name = configuration.get("realmName", "no_realm_name")
 
 	content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
 	

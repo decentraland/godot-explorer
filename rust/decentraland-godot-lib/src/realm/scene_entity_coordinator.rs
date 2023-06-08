@@ -1,0 +1,582 @@
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
+
+use godot::prelude::*;
+
+use crate::http_request::{
+    http_requester::HttpRequester,
+    request_response::{RequestOption, RequestResponse, ResponseEnum, ResponseType},
+};
+
+use super::parcel::*;
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct TypedIpfsRef {
+    file: String,
+    hash: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct EntityDefinitionJson {
+    id: Option<String>,
+    base_url: Option<String>,
+    pointers: Vec<String>,
+    content: Vec<TypedIpfsRef>,
+    metadata: Option<serde_json::Value>,
+}
+
+impl EntityDefinitionJson {
+    // TODO: (performance) this could be an custom class type with accessors
+    fn to_godot_dictionary(&self) -> Dictionary {
+        let mut dict = Dictionary::new();
+
+        dict.set(
+            GodotString::from("id"),
+            Variant::from(self.id.as_ref().unwrap().clone()),
+        );
+        dict.set(
+            GodotString::from("baseUrl"),
+            Variant::from(self.base_url.as_ref().unwrap().clone()),
+        );
+
+        let mut content = Dictionary::new();
+        for typed_ipfs_ref in self.content.iter() {
+            content.set(
+                Variant::from(typed_ipfs_ref.file.clone()),
+                Variant::from(typed_ipfs_ref.hash.clone()),
+            );
+        }
+        dict.set(GodotString::from("content"), content);
+
+        let metadata = match &self.metadata {
+            Some(metadata) => serde_json::ser::to_string(metadata).unwrap_or("{}".to_string()),
+            None => "{}".to_string(),
+        };
+        dict.set(GodotString::from("metadata"), metadata);
+
+        dict
+    }
+}
+
+#[derive(Debug)]
+struct EntityBase {
+    hash: String,
+    base_url: String,
+}
+
+impl EntityBase {
+    fn from_urn(urn_str: &str, default_base_url: &String) -> Option<Self> {
+        let Ok(urn) = urn::Urn::from_str(urn_str) else { return None;};
+        let Some((lhs, rhs)) = urn.nss().split_once(':') else { return None; };
+        let hash = match lhs {
+            "entity" => rhs.to_owned(),
+            _ => return None,
+        };
+
+        let key_values = urn
+            .q_component()
+            .unwrap_or("")
+            .split('&')
+            .flat_map(|piece| piece.split_once('='))
+            .flat_map(|(key, value)| match key {
+                "baseUrl" => Some(value.to_string()),
+                _ => None,
+            })
+            .collect::<Vec<String>>();
+
+        Some(EntityBase {
+            hash,
+            base_url: if let Some(base_url) = key_values.first() {
+                base_url.clone()
+            } else {
+                format!("{}contents/", default_base_url)
+            },
+        })
+    }
+}
+
+#[derive(Debug, Default, GodotClass)]
+#[class(base=Node)]
+struct SceneEntityCoordinator {
+    parcel_radius_calculator: ParcelRadiusCalculator,
+
+    current_position: Coord,
+    should_load_city_scenes: bool,
+    requested_city_pointers: HashMap<u32, HashSet<Coord>>,
+    cache_city_pointers: HashMap<Coord, String>, // coord to entity_id
+
+    fixed_desired_entities: Vec<String>,
+    requested_entity: HashMap<u32, EntityBase>,
+    cache_scene_data: HashMap<String, EntityDefinitionJson>, // entity_id to SceneData
+
+    http_requester: HttpRequester,
+    entities_active_url: String,
+    content_url: String,
+
+    version: u32,
+    dirty_loadable_scenes: bool,
+    loadable_scenes: HashSet<String>,
+    keep_alive_scenes: HashSet<String>,
+}
+
+impl SceneEntityCoordinator {
+    const REQUEST_TYPE_SCENE_DATA: u32 = 1;
+    const REQUEST_TYPE_SCENE_POINTERS: u32 = 2;
+
+    pub fn new(entities_active_url: String, content_url: String) -> Self {
+        SceneEntityCoordinator {
+            parcel_radius_calculator: ParcelRadiusCalculator::new(3),
+            should_load_city_scenes: true,
+            entities_active_url,
+            content_url,
+            version: 0,
+            ..Default::default()
+        }
+    }
+
+    pub fn _config(
+        &mut self,
+        entities_active_url: String,
+        content_url: String,
+        should_load_city_scenes: bool,
+    ) {
+        self.entities_active_url = entities_active_url;
+        self.content_url = content_url;
+        self.current_position = Coord(-1000, -1000);
+        self.should_load_city_scenes = should_load_city_scenes;
+        self.fixed_desired_entities.clear();
+        self.cache_city_pointers.clear();
+        self.cache_scene_data.clear();
+        self.requested_city_pointers.clear();
+        self.requested_entity.clear();
+        self.version = 0;
+        self.dirty_loadable_scenes = true;
+    }
+
+    fn request_pointers(&mut self, set_request_pointers: HashSet<Coord>) {
+        // Request the new pointers
+        if !set_request_pointers.is_empty() {
+            let request_pointers_body = set_request_pointers
+                .iter()
+                .map(|coord| format!("\"{}\"", coord))
+                .collect::<Vec<_>>()
+                .join(",");
+
+            let request_body: String = format!("{{\"pointers\":[{}]}}", request_pointers_body);
+
+            let request = RequestOption::new(
+                Self::REQUEST_TYPE_SCENE_POINTERS,
+                self.entities_active_url.to_string(),
+                reqwest::Method::POST,
+                ResponseType::AsJson,
+                Some(request_body.as_bytes().to_vec()),
+                Some(vec!["Content-Type: application/json".to_string()]),
+            );
+            self.requested_city_pointers
+                .insert(request.id, set_request_pointers);
+            self.http_requester.send_request(request);
+        }
+    }
+
+    fn handle_scene_data(&mut self, id: u32, json: serde_json::Value) {
+        let entity_base = self.requested_entity.remove(&id).unwrap();
+        let entity_definition = serde_json::from_value::<EntityDefinitionJson>(json);
+
+        if entity_definition.is_err() {
+            println!(
+                "Error handling scene data from entity {:?} Error parsing the JSON {:?}",
+                entity_base.hash, entity_definition
+            );
+            return;
+        }
+
+        let mut entity_definition = entity_definition.unwrap();
+        entity_definition.id = Some(entity_base.hash.clone());
+        entity_definition.base_url = Some(entity_base.base_url);
+
+        self.cache_scene_data
+            .insert(entity_base.hash, entity_definition);
+    }
+
+    fn handle_entity_pointers(&mut self, request_id: u32, json: serde_json::Value) {
+        let entity_pointers = json.as_array().unwrap();
+        let mut remaining_pointers = self.requested_city_pointers.remove(&request_id).unwrap();
+
+        // Add the scene data to the cache
+        for entity_pointer in entity_pointers.iter() {
+            let entity_definition =
+                serde_json::from_value::<EntityDefinitionJson>(entity_pointer.clone());
+
+            if entity_definition.is_err() {
+                println!("Error handling pointer data {:?}", entity_definition);
+                continue;
+            }
+
+            let mut entity_definition = entity_definition.unwrap();
+            let entity_id = entity_definition.id.as_ref().unwrap().clone();
+            entity_definition.base_url = Some(format!("{}contents/", self.content_url));
+
+            for pointer in entity_definition.pointers.iter() {
+                let coord = Coord::from(pointer);
+
+                remaining_pointers.remove(&coord);
+                self.cache_city_pointers.insert(coord, entity_id.clone());
+            }
+
+            self.cache_scene_data.insert(entity_id, entity_definition);
+        }
+
+        for pointer in remaining_pointers.into_iter() {
+            self.cache_city_pointers
+                .insert(pointer, "empty".to_string());
+        }
+    }
+
+    fn handle_response(&mut self, response: RequestResponse) {
+        match response.response_data {
+            Ok(response_data) => match response_data {
+                ResponseEnum::Json(json) => {
+                    if json.is_err() {
+                        self.cleanup_request_id(response.request_option.id);
+                        println!("Error parsing the JSON {:?}", json);
+                        return;
+                    }
+
+                    match response.request_option.reference_id {
+                        Self::REQUEST_TYPE_SCENE_DATA => {
+                            self.handle_scene_data(response.request_option.id, json.unwrap());
+                        }
+                        Self::REQUEST_TYPE_SCENE_POINTERS => {
+                            self.handle_entity_pointers(response.request_option.id, json.unwrap());
+                        }
+                        _ => {
+                            println!("Invalid type of request ID while handling a request");
+                        }
+                    }
+                }
+                _ => {
+                    self.cleanup_request_id(response.request_option.id);
+                    println!("Invalid type of request while handling a request");
+                }
+            },
+            Err(err) => {
+                self.cleanup_request_id(response.request_option.id);
+                println!("Error while handling a request: {:?}", err);
+            }
+        }
+    }
+
+    fn cleanup_request_id(&mut self, request_id: u32) {
+        self.requested_city_pointers.remove(&request_id);
+        self.requested_entity.remove(&request_id);
+    }
+
+    /// Returns the scenes that are desired to be loaded
+    fn update_loadable_and_keep_alive_scenes(&mut self) {
+        self.version += 1;
+        self.loadable_scenes.clear();
+        self.keep_alive_scenes.clear();
+
+        // Check what are the new scenes to load that are not in the cache
+        for coord in self.parcel_radius_calculator.get_inner_parcels() {
+            let coord = coord.plus(&self.current_position);
+
+            if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
+                if entity_id == "empty" {
+                    continue;
+                }
+                self.loadable_scenes.insert(entity_id.clone());
+            }
+        }
+
+        for coord in self.parcel_radius_calculator.get_outer_parcels() {
+            let coord = coord.plus(&self.current_position);
+
+            if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
+                if entity_id == "empty" {
+                    continue;
+                }
+                if self.loadable_scenes.contains(entity_id) {
+                    continue;
+                }
+                self.keep_alive_scenes.insert(entity_id.clone());
+            }
+        }
+
+        for entity_id in self.fixed_desired_entities.iter() {
+            if self.cache_scene_data.contains_key(entity_id) {
+                self.loadable_scenes.insert(entity_id.clone());
+            }
+        }
+    }
+
+    pub fn _set_fixed_desired_entities_urns(&mut self, entities: Vec<String>) {
+        if self.content_url.is_empty() {
+            return;
+        }
+
+        self.dirty_loadable_scenes = true;
+
+        for urn_str in entities.iter() {
+            if self.cache_scene_data.contains_key(urn_str) {
+                continue;
+            }
+            let Some(entity_base) = EntityBase::from_urn(urn_str, &self.content_url) else { continue; };
+
+            let url = format!("{}{}", entity_base.base_url, entity_base.hash);
+            let request = RequestOption::new(
+                Self::REQUEST_TYPE_SCENE_DATA,
+                url,
+                reqwest::Method::GET,
+                ResponseType::AsJson,
+                None,
+                None,
+            );
+
+            self.fixed_desired_entities.push(entity_base.hash.clone());
+            self.requested_entity.insert(request.id, entity_base);
+            self.http_requester.send_request(request);
+        }
+    }
+
+    pub fn update_position(&mut self, x: i16, z: i16) {
+        if self.entities_active_url.is_empty() {
+            return;
+        }
+
+        self.dirty_loadable_scenes = true;
+        self.current_position = Coord(x, z);
+
+        if self.should_load_city_scenes {
+            let inner_parcels = self.parcel_radius_calculator.get_inner_parcels();
+            let mut request_pointers = HashSet::with_capacity(inner_parcels.capacity());
+            // Check what are the new scenes to load that are not in the cache
+            for coord in inner_parcels {
+                let coord = coord.plus(&self.current_position);
+
+                // If I already have the scene data, continue
+                if self.cache_city_pointers.contains_key(&coord) {
+                    continue;
+                }
+
+                request_pointers.insert(coord);
+            }
+
+            // Request the new pointers
+            self.request_pointers(request_pointers);
+        }
+    }
+
+    pub fn _update(&mut self) {
+        while let Some(response) = self.http_requester.poll() {
+            match response {
+                Ok(response) => {
+                    if response.status_code.as_u16() >= 200 && response.status_code.as_u16() < 300 {
+                        self.handle_response(response);
+                        self.dirty_loadable_scenes = true;
+                    } else {
+                        self.cleanup_request_id(response.request_option.id);
+                        println!(
+                            "status code while doing a request: {:?}",
+                            response.status_code
+                        );
+                        println!("{:?}", response);
+                    }
+                }
+                Err(err) => {
+                    println!("Error while doing a request: {:?}", err);
+                }
+            }
+        }
+
+        if self.dirty_loadable_scenes {
+            self.dirty_loadable_scenes = false;
+            self.update_loadable_and_keep_alive_scenes();
+        }
+    }
+
+    pub fn get_entity_definition(&self, entity_id: &String) -> Option<&EntityDefinitionJson> {
+        self.cache_scene_data.get(entity_id)
+    }
+
+    pub fn get_loadable_scenes(&self) -> &HashSet<String> {
+        &self.loadable_scenes
+    }
+
+    pub fn get_keep_alive_scenes(&self) -> &HashSet<String> {
+        &self.keep_alive_scenes
+    }
+
+    pub fn _get_version(&self) -> u32 {
+        self.version
+    }
+}
+
+#[godot_api]
+impl SceneEntityCoordinator {
+    #[func]
+    fn config(
+        &mut self,
+        entities_active_url: GodotString,
+        content_url: GodotString,
+        should_load_city_scenes: bool,
+    ) {
+        self._config(
+            entities_active_url.to_string(),
+            content_url.to_string(),
+            should_load_city_scenes,
+        );
+    }
+
+    #[func]
+    pub fn get_desired_scenes(&self) -> Dictionary {
+        let mut dict = Dictionary::new();
+        let mut loadable_scenes = VariantArray::new();
+        let mut keep_alive_scenes = VariantArray::new();
+
+        for loadable_scene in self.get_loadable_scenes().iter() {
+            loadable_scenes.push(Variant::from(GodotString::from(loadable_scene)));
+        }
+
+        for keep_alive_scene in self.get_keep_alive_scenes().iter() {
+            keep_alive_scenes.push(Variant::from(GodotString::from(keep_alive_scene)));
+        }
+
+        dict.set(GodotString::from("loadable_scenes"), loadable_scenes);
+        dict.set(GodotString::from("keep_alive_scenes"), keep_alive_scenes);
+
+        dict
+    }
+
+    #[func]
+    pub fn get_version(&self) -> u32 {
+        self.version
+    }
+
+    #[func]
+    pub fn set_fixed_desired_entities_urns(&mut self, entities: VariantArray) {
+        let entities = entities
+            .iter_shared()
+            .map(|entity| entity.to_string())
+            .collect::<Vec<_>>();
+        self._set_fixed_desired_entities_urns(entities);
+    }
+
+    #[func]
+    pub fn set_current_position(&mut self, x: i16, z: i16) {
+        self.update_position(x, z);
+    }
+
+    #[func]
+    pub fn get_scene_dict(&self, entity_id: GodotString) -> Dictionary {
+        if let Some(def) = self.get_entity_definition(&entity_id.to_string()) {
+            def.to_godot_dictionary()
+        } else {
+            Dictionary::new()
+        }
+    }
+
+    #[func]
+    pub fn update(&mut self) {
+        self._update();
+    }
+}
+
+#[godot_api]
+impl NodeVirtual for SceneEntityCoordinator {
+    fn init(_base: Base<Node>) -> Self {
+        SceneEntityCoordinator::new("".into(), "".into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    pub fn mock_server() -> httpmock::MockServer {
+        let server = httpmock::MockServer::start();
+
+        server.mock(|when, then| {
+            when.method(httpmock::Method::POST)
+                .path("/content/entities/active")
+                .body_contains("\"0,0\"");
+
+            then.status(200)
+                .header("content-type", "text/json")
+                .body("[{\"id\":\"some\",\"pointers\":[\"0,0\"],\"content\":[]}]");
+        });
+
+        server.mock(|when, then| {
+            when.method(httpmock::Method::POST)
+                .path("/content/entities/active");
+
+            then.status(200)
+                .header("content-type", "text/json")
+                .body("[]");
+        });
+
+        server.mock(|when, then| {
+            when.method(httpmock::Method::GET)
+                .path("/contents/bafkreifkdpp3kupctqxurlusqcq6h4itimtaavlgiqgn7xr3xx75pqr444");
+
+            then.status(200)
+                .header("content-type", "text/json")
+                .body("{\"pointers\":[],\"content\":[]}");
+        });
+
+        server
+    }
+
+    fn wait_ms(ms: u32) {
+        std::thread::sleep(std::time::Duration::from_millis(ms as u64));
+    }
+
+    #[test]
+    fn test_scene_entity_coordinator() {
+        let mock_server = mock_server();
+        let entities_active_url = mock_server.url("/content/entities/active");
+        let content_url = mock_server.url("/");
+
+        let mut scene_entity_coordinator =
+            SceneEntityCoordinator::new(entities_active_url, content_url);
+
+        // Test scenes
+        scene_entity_coordinator._set_fixed_desired_entities_urns(vec![
+            "urn:decentraland:entity:bafkreifkdpp3kupctqxurlusqcq6h4itimtaavlgiqgn7xr3xx75pqr444"
+                .to_string(),
+            "unknown_entity+".to_string(),
+        ]);
+        wait_ms(100);
+        scene_entity_coordinator.update();
+
+        assert!(scene_entity_coordinator
+            .get_loadable_scenes()
+            .contains("bafkreifkdpp3kupctqxurlusqcq6h4itimtaavlgiqgn7xr3xx75pqr444"));
+        assert!(!scene_entity_coordinator
+            .get_loadable_scenes()
+            .contains("some"));
+
+        // Test parcels
+        scene_entity_coordinator.update_position(0, 0);
+        wait_ms(100);
+        scene_entity_coordinator.update();
+        assert!(scene_entity_coordinator
+            .get_loadable_scenes()
+            .contains("bafkreifkdpp3kupctqxurlusqcq6h4itimtaavlgiqgn7xr3xx75pqr444"));
+        assert!(scene_entity_coordinator
+            .get_loadable_scenes()
+            .contains("some"));
+
+        // Test parcels
+        scene_entity_coordinator.update_position(100, 100);
+        wait_ms(100);
+        scene_entity_coordinator.update();
+        assert!(scene_entity_coordinator
+            .get_loadable_scenes()
+            .contains("bafkreifkdpp3kupctqxurlusqcq6h4itimtaavlgiqgn7xr3xx75pqr444"));
+        assert!(!scene_entity_coordinator
+            .get_loadable_scenes()
+            .contains("some"));
+    }
+}

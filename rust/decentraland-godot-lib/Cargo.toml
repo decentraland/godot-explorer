@@ -25,6 +25,11 @@ serde_v8 = "0.81.0"
 hyper = { version = "1.0.0-rc.3", features = ["full"] }
 http-body-util = "0.1.0-rc.2"
 reqwest = { version = "0.11" }
+regex = "*"
+urn = "0.7.0"
 
 [build-dependencies]
 prost-build = "0.11.8"
+
+[dev-dependencies]
+httpmock = "0.6"
