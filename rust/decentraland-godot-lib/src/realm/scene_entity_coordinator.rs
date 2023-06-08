@@ -125,15 +125,18 @@ impl SceneEntityCoordinator {
     const REQUEST_TYPE_SCENE_DATA: u32 = 1;
     const REQUEST_TYPE_SCENE_POINTERS: u32 = 2;
 
-    pub fn new(entities_active_url: String, content_url: String) -> Self {
-        SceneEntityCoordinator {
+    pub fn new(
+        entities_active_url: String,
+        content_url: String,
+        should_load_city_scenes: bool,
+    ) -> Self {
+        let mut _self = SceneEntityCoordinator {
             parcel_radius_calculator: ParcelRadiusCalculator::new(3),
-            should_load_city_scenes: true,
-            entities_active_url,
-            content_url,
-            version: 0,
             ..Default::default()
-        }
+        };
+
+        _self._config(entities_active_url, content_url, should_load_city_scenes);
+        _self
     }
 
     pub fn _config(
@@ -151,7 +154,6 @@ impl SceneEntityCoordinator {
         self.cache_scene_data.clear();
         self.requested_city_pointers.clear();
         self.requested_entity.clear();
-        self.version = 0;
         self.dirty_loadable_scenes = true;
     }
 
@@ -412,6 +414,10 @@ impl SceneEntityCoordinator {
     pub fn _get_version(&self) -> u32 {
         self.version
     }
+
+    pub fn pending_response(&self) -> bool {
+        !(self.requested_city_pointers.is_empty() && self.requested_entity.is_empty())
+    }
 }
 
 #[godot_api]
@@ -487,12 +493,16 @@ impl SceneEntityCoordinator {
 #[godot_api]
 impl NodeVirtual for SceneEntityCoordinator {
     fn init(_base: Base<Node>) -> Self {
-        SceneEntityCoordinator::new("".into(), "".into())
+        SceneEntityCoordinator::new("".into(), "".into(), false)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    const TEST_URN: &str = "urn:decentraland:entity:bafkreias3hru4s64inlkwceqeghlolpjjfaqaxxmghvuyrcfzs6u5fmg2q?=&baseUrl=https://sdk-team-cdn.decentraland.org/ipfs/";
+    const TEST_URN_HASH: &str = "bafkreias3hru4s64inlkwceqeghlolpjjfaqaxxmghvuyrcfzs6u5fmg2q";
+    const TEST_POINTER_O_O_ID: &str = "b64-L3Vzci9zcmMvYXBwLzAuMC5ibGFuay1zY2VuZQ==";
+
     use super::*;
     pub fn mock_server() -> httpmock::MockServer {
         let server = httpmock::MockServer::start();
@@ -504,7 +514,10 @@ mod tests {
 
             then.status(200)
                 .header("content-type", "text/json")
-                .body("[{\"id\":\"some\",\"pointers\":[\"0,0\"],\"content\":[]}]");
+                .body(format!(
+                    "[{{\"id\":\"{}\",\"pointers\":[\"0,0\"],\"content\":[]}}]",
+                    TEST_POINTER_O_O_ID
+                ));
         });
 
         server.mock(|when, then| {
@@ -518,7 +531,7 @@ mod tests {
 
         server.mock(|when, then| {
             when.method(httpmock::Method::GET)
-                .path("/contents/bafkreifkdpp3kupctqxurlusqcq6h4itimtaavlgiqgn7xr3xx75pqr444");
+                .path(format!("/contents/{}", TEST_URN_HASH));
 
             then.status(200)
                 .header("content-type", "text/json")
@@ -528,55 +541,68 @@ mod tests {
         server
     }
 
-    fn wait_ms(ms: u32) {
-        std::thread::sleep(std::time::Duration::from_millis(ms as u64));
+    fn wait_update_or_timeout(
+        scene_entity_coordinator: &mut SceneEntityCoordinator,
+        timeout_ms: u32,
+    ) -> bool {
+        let mut remaining_ms: i32 = timeout_ms as i32;
+        while scene_entity_coordinator.pending_response() && remaining_ms > 0 {
+            scene_entity_coordinator._update();
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            remaining_ms -= 10;
+        }
+        remaining_ms > 0
     }
 
     #[test]
     fn test_scene_entity_coordinator() {
-        let mock_server = mock_server();
-        let entities_active_url = mock_server.url("/content/entities/active");
-        let content_url = mock_server.url("/");
+        // let mock_server = mock_server();
+        // let entities_active_url = mock_server.url("/content/entities/active");
+        // let content_url = mock_server.url("/");
+
+        // TODO: the mock server is not working in the github actions
+        // The test now is using the real server
+        let entities_active_url =
+            "https://sdk-test-scenes.decentraland.zone/content/entities/active".to_string();
+        let content_url =
+            "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main/contents".to_string();
 
         let mut scene_entity_coordinator =
-            SceneEntityCoordinator::new(entities_active_url, content_url);
+            SceneEntityCoordinator::new(entities_active_url, content_url, true);
 
         // Test scenes
+        scene_entity_coordinator.set_current_position(10, 5);
         scene_entity_coordinator._set_fixed_desired_entities_urns(vec![
-            "urn:decentraland:entity:bafkreifkdpp3kupctqxurlusqcq6h4itimtaavlgiqgn7xr3xx75pqr444"
-                .to_string(),
+            TEST_URN.to_string(),
             "unknown_entity+".to_string(),
         ]);
-        wait_ms(100);
-        scene_entity_coordinator.update();
+        assert!(wait_update_or_timeout(&mut scene_entity_coordinator, 10000));
 
         assert!(scene_entity_coordinator
             .get_loadable_scenes()
-            .contains("bafkreifkdpp3kupctqxurlusqcq6h4itimtaavlgiqgn7xr3xx75pqr444"));
+            .contains(&TEST_URN_HASH.to_string()));
         assert!(!scene_entity_coordinator
             .get_loadable_scenes()
-            .contains("some"));
+            .contains(&TEST_POINTER_O_O_ID.to_string()));
 
         // Test parcels
         scene_entity_coordinator.update_position(0, 0);
-        wait_ms(100);
-        scene_entity_coordinator.update();
+        assert!(wait_update_or_timeout(&mut scene_entity_coordinator, 10000));
         assert!(scene_entity_coordinator
             .get_loadable_scenes()
-            .contains("bafkreifkdpp3kupctqxurlusqcq6h4itimtaavlgiqgn7xr3xx75pqr444"));
+            .contains(&TEST_URN_HASH.to_string()));
         assert!(scene_entity_coordinator
             .get_loadable_scenes()
-            .contains("some"));
+            .contains(&TEST_POINTER_O_O_ID.to_string()));
 
         // Test parcels
         scene_entity_coordinator.update_position(100, 100);
-        wait_ms(100);
-        scene_entity_coordinator.update();
+        assert!(wait_update_or_timeout(&mut scene_entity_coordinator, 10000));
         assert!(scene_entity_coordinator
             .get_loadable_scenes()
-            .contains("bafkreifkdpp3kupctqxurlusqcq6h4itimtaavlgiqgn7xr3xx75pqr444"));
+            .contains(&TEST_URN_HASH.to_string()));
         assert!(!scene_entity_coordinator
             .get_loadable_scenes()
-            .contains("some"));
+            .contains(&TEST_POINTER_O_O_ID.to_string()));
     }
 }
