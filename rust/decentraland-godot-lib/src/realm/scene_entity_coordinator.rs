@@ -415,6 +415,7 @@ impl SceneEntityCoordinator {
         self.version
     }
 
+    #[allow(dead_code)]
     pub fn pending_response(&self) -> bool {
         !(self.requested_city_pointers.is_empty() && self.requested_entity.is_empty())
     }
