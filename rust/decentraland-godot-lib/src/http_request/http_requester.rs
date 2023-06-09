@@ -27,7 +27,11 @@ impl HttpRequester {
             tokio::sync::mpsc::channel::<Result<RequestResponse, String>>(100);
 
         std::thread::spawn(move || {
-            let runtime = tokio::runtime::Runtime::new().unwrap();
+            let runtime = tokio::runtime::Runtime::new();
+            if runtime.is_err() {
+                panic!("Failed to create runtime {:?}", runtime.err());
+            }
+            let runtime = runtime.unwrap();
             let client = reqwest::Client::new();
 
             runtime.block_on(async move {

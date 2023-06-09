@@ -97,6 +97,7 @@ pub struct SceneManager {
     elapsed_time: f32,
     pause: bool,
     begin_time: Instant,
+    sorted_scene_ids: Vec<SceneId>,
 }
 
 #[godot_api]
@@ -118,13 +119,14 @@ impl SceneManager {
 
         let dcl_scene =
             DclScene::spawn_new(scene_definition.clone(), self.thread_sender_to_main.clone());
+        let scene_id = dcl_scene.scene_id.clone();
 
         let new_scene = Scene {
-            scene_id: dcl_scene.scene_id,
+            scene_id,
             godot_dcl_scene: GodotDclScene::new(
                 scene_definition,
                 dcl_scene.scene_crdt.clone(),
-                dcl_scene.scene_id,
+                scene_id,
             ),
             dcl_scene,
             waiting_for_updates: false,
@@ -150,6 +152,7 @@ impl SceneManager {
         let ret = new_scene.dcl_scene.scene_id.0;
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
 
+        self.sorted_scene_ids.push(scene_id);
         self.compute_scene_distance();
 
         ret
@@ -224,13 +227,16 @@ impl SceneManager {
         let start_time = std::time::Instant::now();
         let end_time = start_time + std::time::Duration::from_millis(1);
 
-        let mut scene_ids: Vec<SceneId> = self.scenes.keys().cloned().collect();
-        scene_ids.sort_by_key(|&scene_id| {
-            self.scenes
-                .get(&scene_id)
-                .unwrap()
-                .next_update
-                .duration_since(self.begin_time)
+        //
+        self.sorted_scene_ids.sort_by_key(|&scene_id| {
+            let mut scene = self.scenes.get_mut(&scene_id).unwrap();
+            if scene_id == self.current_parcel_scene_id {
+                scene.next_update = self.begin_time;
+            } else {
+                scene.next_update = scene.last_tick
+                    + Duration::from_millis((20.0 * scene.distance).max(10.0) as u64);
+            }
+            scene.next_update
         });
 
         // let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
@@ -238,22 +244,32 @@ impl SceneManager {
         if self.elapsed_time > 1.0 {
             self.elapsed_time = 0.0;
             let now = Instant::now();
-            let next_update_vec: Vec<String> = scene_ids
+            let next_update_vec: Vec<String> = self
+                .sorted_scene_ids
                 .iter()
                 .map(|value| {
+                    let scene = self.scenes.get(value).unwrap();
+
+                    fn get_diff_in_millis(i1: Instant, i2: Instant) -> i32 {
+                        if i1 > i2 {
+                            (i1 - i2).as_millis() as i32
+                        } else {
+                            -((i2 - i1).as_millis() as i32)
+                        }
+                    }
                     format!(
                         "{} = {:#?} => {:#?} || d= {:#?}",
                         value.0,
-                        self.scenes.get(value).unwrap().last_tick.duration_since(self.begin_time),
-                        self.scenes.get(value).unwrap().next_update.duration_since(self.begin_time),
-                        self.scenes.get(value).unwrap().distance
+                        get_diff_in_millis(scene.last_tick, now),
+                        get_diff_in_millis(scene.next_update, now),
+                        scene.distance
                     )
                 })
                 .collect();
             godot_print!("next_update: {next_update_vec:#?}");
         }
 
-        for scene_id in scene_ids.iter() {
+        for scene_id in self.sorted_scene_ids.iter() {
             let scene = self.scenes.get_mut(&scene_id).unwrap();
             if !scene.alive {
                 continue;
@@ -345,6 +361,7 @@ impl SceneManager {
         //         .share();
         //     self.remove_child(node);
         //     scene.godot_dcl_scene.root_node.queue_free();
+        //      self.sorted_scene_ids.remove(scene_id);
         // }
     }
 
@@ -403,6 +420,7 @@ impl NodeVirtual for SceneManager {
             current_parcel_scene_id: SceneId(0),
             elapsed_time: 0.0,
             begin_time: Instant::now(),
+            sorted_scene_ids: vec![],
         }
     }
 
