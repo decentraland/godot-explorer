@@ -27,14 +27,17 @@ pub struct SceneId(pub u32);
 #[derive(Clone, Default, Debug)]
 pub struct SceneDefinition {
     pub path: String,
-    pub offset: godot::prelude::Vector3,
+    pub base: godot::prelude::Vector2i,
     pub visible: bool,
+
+    pub parcels: Vec<godot::prelude::Vector2i>,
+    pub is_global: bool,
 }
 
 pub type DirtyComponents = HashMap<SceneComponentId, HashSet<SceneEntityId>>;
 
 // message from scene-thread describing new and deleted entities
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DirtyEntities {
     pub born: HashSet<SceneEntityId>,
     pub died: HashSet<SceneEntityId>,

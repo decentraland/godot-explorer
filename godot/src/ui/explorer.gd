@@ -20,7 +20,7 @@ func _ready():
 	player.position = 16 * Vector3(72, 0.1, 10) 
 	player.look_at(16 * Vector3(73, 0, 9) )
 	scene_runner = get_tree().root.get_node("scene_runner")
-	scene_runner.set_camera_node(player)
+	scene_runner.set_camera_and_player_node(player, player)
 	
 	realm = get_tree().root.get_node("realm")
 	

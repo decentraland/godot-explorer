@@ -5,20 +5,17 @@ use crate::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
-        DirtyComponents,
     },
-    scene_runner::godot_dcl_scene::GodotDclScene,
+    scene_runner::scene_manager::Scene,
 };
 use godot::{
     engine::{node::InternalMode, BoxMesh, CylinderMesh, MeshInstance3D, SphereMesh},
     prelude::*,
 };
 
-pub fn update_mesh_renderer(
-    godot_dcl_scene: &mut GodotDclScene,
-    crdt_state: &mut SceneCrdtState,
-    dirty_components: &DirtyComponents,
-) {
+pub fn update_mesh_renderer(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    let godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let dirty_components = &scene.current_dirty.components;
     if let Some(mesh_renderer_dirty) = dirty_components.get(&SceneComponentId::MESH_RENDERER) {
         let mesh_renderer_component = SceneCrdtStateProtoComponents::get_mesh_renderer(crdt_state);
 

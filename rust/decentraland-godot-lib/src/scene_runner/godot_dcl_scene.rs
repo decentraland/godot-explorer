@@ -24,6 +24,40 @@ pub struct Node3DEntity {
     pub computed_parent: SceneEntityId,
 }
 
+impl SceneDefinition {
+    pub fn from_dict(dict: Dictionary) -> Result<Self, String> {
+        let Some(path) = dict.get("path") else { return Err("path not found".to_string()) };
+        let Some(base) = dict.get("base") else { return Err("base not found".to_string()) };
+        let Some(parcels) = dict.get("parcels") else { return Err("parcels not found".to_string()) };
+        let Some(visible) = dict.get("visible") else { return Err("visible not found".to_string()) };
+        let Some(is_global) = dict.get("is_global") else { return Err("is_global not found".to_string()) };
+
+        let base =
+            Vector2i::try_from_variant(&base).map_err(|_op| "couldn't get offset as Vector2i")?;
+
+        let parcels = VariantArray::try_from_variant(&parcels)
+            .map_err(|_op| "couldn't get parcels as array")?;
+
+        let mut parcels = parcels
+            .iter_shared()
+            .map(|v| Vector2i::try_from_variant(&v));
+
+        if parcels.any(|v| v.is_err()) {
+            return Err("couldn't get parcels as Vector2".to_string());
+        }
+
+        let parcels = parcels.map(|v| v.unwrap()).collect();
+
+        Ok(Self {
+            path: path.to::<GodotString>().to_string(),
+            base,
+            visible: visible.to::<bool>(),
+            parcels,
+            is_global: is_global.to::<bool>(),
+        })
+    }
+}
+
 impl Node3DEntity {
     fn new() -> Self {
         let base = Node3D::new_alloc();
@@ -43,7 +77,11 @@ impl GodotDclScene {
         scene_id: SceneId,
     ) -> Self {
         let mut root_node = Node3D::new_alloc();
-        root_node.set_position(definition.offset);
+        root_node.set_position(Vector3 {
+            x: 16.0 * definition.base.x as f32,
+            y: 0.0,
+            z: 16.0 * -definition.base.y as f32,
+        });
         root_node.set_name(GodotString::from(format!("scene_id_{:?}", scene_id.0)));
 
         let entities = HashMap::from([(

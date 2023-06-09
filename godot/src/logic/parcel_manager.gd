@@ -39,7 +39,18 @@ func _on_desired_parsel_manager_update():
 				load_scene(scene_id, dict)
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")
-	
+	var to_remove: Array[String] = []
+	for scene_id in loaded_scenes.keys():
+		if not loadable_scenes.has(scene_id):
+			var scene = loaded_scenes[scene_id]
+			var scene_number_id: int = scene.get("scene_number_id", -1)
+			if scene_number_id != -1:
+				scene_runner.kill_scene(scene_number_id)
+				to_remove.push_back(scene_id)
+				
+	for scene_id in to_remove:
+		loaded_scenes.erase(scene_id)
+		
 func _on_realm_changed():
 	var should_load_city_pointers = true
 	var content_base_url = realm.content_base_url
@@ -116,12 +127,29 @@ func _on_try_spawn_scene(scene):
 		return false
 
 	var base_parcel = scene.entity.get("metadata", {}).get("scene", {}).get("base", "0,0").split_floats(",")
-	var offset: Vector3 = 16 * Vector3(base_parcel[0], 0, -base_parcel[1])
+	var parcels_str = scene.entity.get("metadata", {}).get("scene", {}).get("parcels", [])
+	var title = scene.entity.get("metadata", {}).get("scene", {}).get("title", "No title")
+	var parcels = []
+	for parcel in parcels_str:
+		var p = parcel.split_floats(",")
+		parcels.push_back(Vector2i(int(p[0]),int(p[1])))
+		
 	var base_url = scene.entity.get("baseUrl", "")
+	
 	var content_mapping = ContentMapping.new()
 	content_mapping.set_content_mapping(scene.entity["content"])
 	content_mapping.set_base_url(scene.entity.baseUrl)
-	var scene_number_id: int = scene_runner.start_scene(local_main_js_path, offset, content_mapping)
+	
+	var scene_definition: Dictionary = {
+		"base": Vector2i(base_parcel[0], base_parcel[1]),
+		"is_global": false,
+		"path": local_main_js_path,
+		"visible": true,
+		"parcels": parcels,
+		"title": title
+	}
+	
+	var scene_number_id: int = scene_runner.start_scene(scene_definition, content_mapping)
 	scene.scene_number_id = scene_number_id
 	
 	return true
