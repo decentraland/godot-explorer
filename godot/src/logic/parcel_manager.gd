@@ -39,7 +39,18 @@ func _on_desired_parsel_manager_update():
 				load_scene(scene_id, dict)
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")
-	
+	var to_remove: Array[String] = []
+	for scene_id in loaded_scenes.keys():
+		if not loadable_scenes.has(scene_id):
+			var scene = loaded_scenes[scene_id]
+			var scene_number_id: int = scene.get("scene_number_id", -1)
+			if scene_number_id != -1:
+				scene_runner.kill_scene(scene_number_id)
+				to_remove.push_back(scene_id)
+				
+	for scene_id in to_remove:
+		loaded_scenes.erase(scene_id)
+		
 func _on_realm_changed():
 	var should_load_city_pointers = true
 	var content_base_url = realm.content_base_url
