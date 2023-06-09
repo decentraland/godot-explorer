@@ -6,7 +6,6 @@ use crate::{
             transform_and_parent::DclTransformAndParent, SceneComponentId, SceneEntityId,
         },
         crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
-        DirtyComponents,
     },
     scene_runner::{godot_dcl_scene::GodotDclScene, scene_manager::Scene},
 };
@@ -18,8 +17,17 @@ impl DclTransformAndParent {
         let scale = godot_transform.basis.scale();
 
         Self {
-            translation,
-            rotation,
+            translation: godot::prelude::Vector3 {
+                x: translation.x,
+                y: translation.y,
+                z: -translation.z,
+            },
+            rotation: godot::prelude::Quaternion {
+                x: rotation.x,
+                y: rotation.y,
+                z: -rotation.z,
+                w: -rotation.w,
+            },
             scale,
             parent: SceneEntityId::ROOT,
         }

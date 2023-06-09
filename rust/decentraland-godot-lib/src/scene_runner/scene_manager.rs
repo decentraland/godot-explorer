@@ -6,11 +6,9 @@ use crate::{
     scene_runner::content::ContentMapping,
 };
 use godot::{engine::node::InternalMode, prelude::*};
-use num::integer::Roots;
 use std::{
-    cmp::Ordering,
-    collections::{BinaryHeap, HashMap},
-    time::{Duration, Instant},
+    collections::{HashMap, HashSet},
+    time::Instant,
 };
 
 use super::godot_dcl_scene::GodotDclScene;
@@ -21,55 +19,34 @@ pub struct Dirty {
     pub components: DirtyComponents,
 }
 
+pub enum SceneState {
+    Alive,
+    ToKill,
+    KillSignal(i64),
+    Dead,
+}
+
 pub struct Scene {
     pub scene_id: SceneId,
     pub godot_dcl_scene: GodotDclScene,
     pub dcl_scene: DclScene,
     pub waiting_for_updates: bool,
-    pub alive: bool,
+    pub state: SceneState,
 
     pub content_mapping: Gd<ContentMapping>,
 
     pub current_dirty: Dirty,
     pub distance: f32,
-    pub priority: i8,
-    pub last_tick: Instant,
-    pub next_update: Instant,
-}
-
-impl Eq for Scene {}
-impl PartialEq for Scene {
-    fn eq(&self, other: &Self) -> bool {
-        self.scene_id == other.scene_id
-    }
-}
-
-impl PartialOrd for Scene {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Scene {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self.priority == other.priority {
-            self.distance
-                .partial_cmp(&other.distance)
-                .unwrap()
-                .reverse()
-        } else {
-            self.priority.cmp(&other.priority)
-        }
-    }
+    pub last_tick_us: i64,
+    pub next_tick_us: i64,
 }
 
 impl Scene {
     pub fn min_distance(&self, parcel_position: &Vector2i) -> (f32, bool) {
-        let mut inside_scene = false;
         let diff = self.godot_dcl_scene.definition.base - *parcel_position;
         let mut distance_squared = diff.x * diff.x + diff.y * diff.y;
         for parcel in self.godot_dcl_scene.definition.parcels.iter() {
-            let diff = self.godot_dcl_scene.definition.base - *parcel_position;
+            let diff = *parcel - *parcel_position;
             distance_squared = distance_squared.min(diff.x * diff.x + diff.y * diff.y);
         }
         ((distance_squared as f32).sqrt(), distance_squared == 0)
@@ -93,11 +70,11 @@ pub struct SceneManager {
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     main_receiver_from_thread: std::sync::mpsc::Receiver<SceneResponse>,
 
-    global_renderering_tick: i64,
     elapsed_time: f32,
     pause: bool,
     begin_time: Instant,
     sorted_scene_ids: Vec<SceneId>,
+    dying_scene_ids: Vec<SceneId>,
 }
 
 #[godot_api]
@@ -119,7 +96,7 @@ impl SceneManager {
 
         let dcl_scene =
             DclScene::spawn_new(scene_definition.clone(), self.thread_sender_to_main.clone());
-        let scene_id = dcl_scene.scene_id.clone();
+        let scene_id = dcl_scene.scene_id;
 
         let new_scene = Scene {
             scene_id,
@@ -130,7 +107,7 @@ impl SceneManager {
             ),
             dcl_scene,
             waiting_for_updates: false,
-            alive: true,
+            state: SceneState::Alive,
 
             content_mapping,
             current_dirty: Dirty {
@@ -139,9 +116,8 @@ impl SceneManager {
                 components: DirtyComponents::default(),
             },
             distance: 0.0,
-            priority: 0,
-            next_update: Instant::now(),
-            last_tick: Instant::now(),
+            next_tick_us: 0,
+            last_tick_us: 0,
         };
 
         self.base.add_child(
@@ -162,8 +138,9 @@ impl SceneManager {
     fn kill_scene(&mut self, scene_id: u32) -> bool {
         let scene_id = SceneId(scene_id);
         if let Some(scene) = self.scenes.get_mut(&scene_id) {
-            if scene.alive {
-                scene.alive = false;
+            if let SceneState::Alive = scene.state {
+                scene.state = SceneState::ToKill;
+                self.dying_scene_ids.push(scene_id);
                 return true;
             }
         }
@@ -186,8 +163,9 @@ impl SceneManager {
 
     fn compute_scene_distance(&mut self) {
         let mut player_global_position = self.player_node.get_global_transform().origin;
-        player_global_position = player_global_position / 16.0;
-        player_global_position.z = -player_global_position.z;
+        player_global_position.x *= 0.0625;
+        player_global_position.y *= 0.0625;
+        player_global_position.z *= -0.0625;
         let player_parcel_position = Vector2i::new(
             player_global_position.x.floor() as i32,
             player_global_position.z.floor() as i32,
@@ -206,7 +184,6 @@ impl SceneManager {
         if self.pause {
             return;
         }
-        self.global_renderering_tick += 1;
         self.elapsed_time += delta as f32;
 
         self.receive_from_thread();
@@ -224,58 +201,53 @@ impl SceneManager {
             self.player_position = player_parcel_position;
         }
 
-        let start_time = std::time::Instant::now();
-        let end_time = start_time + std::time::Duration::from_millis(1);
+        let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+        let end_time_us = start_time_us + 5000;
 
         //
         self.sorted_scene_ids.sort_by_key(|&scene_id| {
             let mut scene = self.scenes.get_mut(&scene_id).unwrap();
-            if scene_id == self.current_parcel_scene_id {
-                scene.next_update = self.begin_time;
+            if !scene.current_dirty.waiting_process {
+                scene.next_tick_us = start_time_us + 120000;
+            } else if scene_id == self.current_parcel_scene_id {
+                scene.next_tick_us = 0;
             } else {
-                scene.next_update = scene.last_tick
-                    + Duration::from_millis((20.0 * scene.distance).max(10.0) as u64);
+                scene.next_tick_us = scene.last_tick_us
+                    + (20000.0 * scene.distance).max(10000.0).min(100000.0) as i64;
             }
-            scene.next_update
+            scene.next_tick_us
         });
 
-        // let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
+        let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
 
-        if self.elapsed_time > 1.0 {
-            self.elapsed_time = 0.0;
-            let now = Instant::now();
-            let next_update_vec: Vec<String> = self
-                .sorted_scene_ids
-                .iter()
-                .map(|value| {
-                    let scene = self.scenes.get(value).unwrap();
+        // TODO: this is debug information, very useful to see the scene priority
+        // if self.elapsed_time > 1.0 {
+        //     self.elapsed_time = 0.0;
+        //     let next_update_vec: Vec<String> = self
+        //         .sorted_scene_ids
+        //         .iter()
+        //         .map(|value| {
+        //             let scene = self.scenes.get(value).unwrap();
+        //             let last_tick_ms = ((scene.last_tick_us - start_time_us) as f32) / 1000.0;
+        //             let next_tick_ms = ((scene.next_tick_us - start_time_us) as f32) / 1000.0;
+        //             format!(
+        //                 "{} = {:#?}ms => {:#?}ms || d= {:#?}",
+        //                 value.0, last_tick_ms, next_tick_ms, scene.distance
+        //             )
+        //         })
+        //         .collect();
+        //     godot_print!("next_update: {next_update_vec:#?}");
+        // }
 
-                    fn get_diff_in_millis(i1: Instant, i2: Instant) -> i32 {
-                        if i1 > i2 {
-                            (i1 - i2).as_millis() as i32
-                        } else {
-                            -((i2 - i1).as_millis() as i32)
-                        }
-                    }
-                    format!(
-                        "{} = {:#?} => {:#?} || d= {:#?}",
-                        value.0,
-                        get_diff_in_millis(scene.last_tick, now),
-                        get_diff_in_millis(scene.next_update, now),
-                        scene.distance
-                    )
-                })
-                .collect();
-            godot_print!("next_update: {next_update_vec:#?}");
-        }
-
+        let mut current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         for scene_id in self.sorted_scene_ids.iter() {
-            let scene = self.scenes.get_mut(&scene_id).unwrap();
-            if !scene.alive {
-                continue;
+            let scene = self.scenes.get_mut(scene_id).unwrap();
+
+            if scene.next_tick_us > current_time_us {
+                break;
             }
 
-            if scene.current_dirty.waiting_process {
+            if let SceneState::Alive = scene.state {
                 let crdt = scene.dcl_scene.scene_crdt.clone();
                 let Ok(mut crdt_state) = crdt.try_lock() else {continue;};
 
@@ -287,11 +259,6 @@ impl SceneManager {
                 );
 
                 scene.current_dirty.waiting_process = false;
-                scene.last_tick = Instant::now();
-
-                scene.next_update = scene.last_tick
-                    + Duration::from_millis((20.0 * scene.distance).min(1000.0).max(10.0) as u64);
-
                 let dirty = crdt_state.take_dirty();
                 drop(crdt_state);
 
@@ -302,67 +269,62 @@ impl SceneManager {
                 {
                     // TODO: clean up this scene?
                     // godot_print!("failed to send updates to scene: {e:?}");
-                } else {
-                    // scene.waiting_for_updates = true;
+                }
+
+                current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+                scene.last_tick_us = current_time_us;
+                if current_time_us > end_time_us {
+                    break;
                 }
             }
 
-            if Instant::now() > end_time {
-                break;
+            for scene_id in self.dying_scene_ids.iter() {
+                let scene = self.scenes.get_mut(scene_id).unwrap();
+                match scene.state {
+                    SceneState::ToKill => {
+                        scene.state = SceneState::KillSignal(current_time_us);
+                        if let Err(_e) = scene
+                            .dcl_scene
+                            .main_sender_to_thread
+                            .try_send(RendererResponse::Kill)
+                        {
+                            // show error
+                        } else {
+                            scene.state = SceneState::KillSignal(current_time_us);
+                        }
+                    }
+                    SceneState::KillSignal(kill_time_us) => {
+                        if scene.dcl_scene.thread_join_handle.is_finished() {
+                            scene.state = SceneState::Dead;
+                        } else {
+                            let elapsed_from_kill_us = current_time_us - kill_time_us;
+                            if elapsed_from_kill_us > 10 * 1e6 as i64 {
+                                // 10 seconds from the kill signal
+                            }
+                        }
+                    }
+                    SceneState::Dead => {
+                        scene_to_remove.insert(*scene_id);
+                    }
+                    _ => {}
+                }
             }
-
-            // if scene.waiting_for_updates && !scene.alive {
-            //     if scene.dcl_scene.thread_join_handle.is_finished() {
-            //         scene_to_remove.insert(*id);
-            //     }
-            // } else if scene.alive {
-            //     let crdt = scene.dcl_scene.scene_crdt.clone();
-            //     let crdt_state = crdt.try_lock();
-            //     if crdt_state.is_err() {
-            //         continue;
-            //     }
-
-            //     let mut crdt_state = crdt_state.unwrap();
-            //     let dirty = crdt_state.take_dirty();
-            //     drop(crdt_state);
-
-            //     if let Err(_e) = scene
-            //         .dcl_scene
-            //         .main_sender_to_thread
-            //         .blocking_send(RendererResponse::Ok(dirty))
-            //     {
-            //         // TODO: clean up this scene?
-            //         // godot_print!("failed to send updates to scene: {e:?}");
-            //     } else {
-            //         scene.waiting_for_updates = true;
-            //     }
-            // } else {
-            //     if let Err(_e) = scene
-            //         .dcl_scene
-            //         .main_sender_to_thread
-            //         .blocking_send(RendererResponse::Kill)
-            //     {
-            //         // TODO: clean up this scene?
-            //         // godot_print!("failed to send updates to scene: {e:?} after killing it");
-            //     } else {
-            //         scene.waiting_for_updates = true;
-            //     }
-            //     continue;
-            // }
         }
 
-        // for scene_id in scene_to_remove.iter() {
-        //     let mut scene = self.scenes.remove(scene_id).unwrap();
-        //     let node = scene
-        //         .godot_dcl_scene
-        //         .root_node
-        //         .share()
-        //         .upcast::<Node>()
-        //         .share();
-        //     self.remove_child(node);
-        //     scene.godot_dcl_scene.root_node.queue_free();
-        //      self.sorted_scene_ids.remove(scene_id);
-        // }
+        for scene_id in scene_to_remove.iter() {
+            let mut scene = self.scenes.remove(scene_id).unwrap();
+            let node = scene
+                .godot_dcl_scene
+                .root_node
+                .share()
+                .upcast::<Node>()
+                .share();
+            self.remove_child(node);
+            scene.godot_dcl_scene.root_node.queue_free();
+            self.sorted_scene_ids.retain(|x| x != scene_id);
+            self.dying_scene_ids.retain(|x| x != scene_id);
+            self.scenes.remove(scene_id);
+        }
     }
 
     fn receive_from_thread(&mut self) {
@@ -409,18 +371,23 @@ impl NodeVirtual for SceneManager {
 
         SceneManager {
             base,
+
             scenes: HashMap::new(),
+            pause: false,
+            sorted_scene_ids: vec![],
+            dying_scene_ids: vec![],
+            current_parcel_scene_id: SceneId(0),
+
             main_receiver_from_thread,
             thread_sender_to_main,
+
             camera_node: Node3D::new_alloc(),
             player_node: Node3D::new_alloc(),
-            global_renderering_tick: 0,
-            pause: false,
+
             player_position: Vector2i::new(-1000, -1000),
-            current_parcel_scene_id: SceneId(0),
+
             elapsed_time: 0.0,
             begin_time: Instant::now(),
-            sorted_scene_ids: vec![],
         }
     }
 

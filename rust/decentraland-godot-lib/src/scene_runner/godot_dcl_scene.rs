@@ -1,5 +1,5 @@
 use crate::dcl::{components::SceneEntityId, crdt::SceneCrdtState, SceneDefinition, SceneId};
-use godot::{engine::node::InternalMode, prelude::*, sys::types::OpaqueBool};
+use godot::{engine::node::InternalMode, prelude::*};
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
