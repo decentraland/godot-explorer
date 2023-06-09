@@ -8,7 +8,7 @@ use crate::{
         crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
         DirtyComponents,
     },
-    scene_runner::godot_dcl_scene::GodotDclScene,
+    scene_runner::{godot_dcl_scene::GodotDclScene, scene_manager::Scene},
 };
 
 impl DclTransformAndParent {
@@ -26,11 +26,9 @@ impl DclTransformAndParent {
     }
 }
 
-pub fn update_transform_and_parent(
-    godot_dcl_scene: &mut GodotDclScene,
-    crdt_state: &mut SceneCrdtState,
-    dirty_components: &DirtyComponents,
-) {
+pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    let mut godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let dirty_components = &scene.current_dirty.components;
     let transform_component = crdt_state.get_transform();
 
     if let Some(dirty_transform) = dirty_components.get(&SceneComponentId::TRANSFORM) {

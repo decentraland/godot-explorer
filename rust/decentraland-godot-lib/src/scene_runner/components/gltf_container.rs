@@ -7,18 +7,16 @@ use crate::{
         },
         DirtyComponents,
     },
-    scene_runner::godot_dcl_scene::GodotDclScene,
+    scene_runner::{godot_dcl_scene::GodotDclScene, scene_manager::Scene},
 };
 use godot::{
     engine::{node::InternalMode, packed_scene::GenEditState},
     prelude::*,
 };
 
-pub fn update_gltf_container(
-    godot_dcl_scene: &mut GodotDclScene,
-    crdt_state: &mut SceneCrdtState,
-    dirty_components: &DirtyComponents,
-) {
+pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    let mut godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let dirty_components = &scene.current_dirty.components;
     let scene_id = godot_dcl_scene.scene_id.0;
     if let Some(gltf_container_dirty) = dirty_components.get(&SceneComponentId::GLTF_CONTAINER) {
         let gltf_container_component =
