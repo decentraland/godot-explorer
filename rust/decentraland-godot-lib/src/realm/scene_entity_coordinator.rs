@@ -463,6 +463,14 @@ impl SceneEntityCoordinator {
     }
 
     #[func]
+    pub fn set_scene_radius(&mut self, new_value: i16) {
+        self.parcel_radius_calculator = ParcelRadiusCalculator::new(new_value);
+
+        // This triggers the update of the loadable scenes
+        self.update_position(self.current_position.0, self.current_position.1);
+    }
+
+    #[func]
     pub fn set_fixed_desired_entities_urns(&mut self, entities: VariantArray) {
         let entities = entities
             .iter_shared()
