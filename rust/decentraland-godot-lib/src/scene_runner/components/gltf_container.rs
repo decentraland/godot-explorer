@@ -36,14 +36,16 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                 .try_get_node_as::<Node>(NodePath::from("GltfContainer"));
 
             if new_value.is_none() {
-                if existing.is_some() {
-                    // remove
+                if let Some(gltf_node) = existing {
+                    node.base.remove_child(gltf_node);
                 }
             } else if let Some(new_value) = new_value {
-                if let Some(_existing) = existing {
-                    // update
+                if let Some(mut gltf_node) = existing {
+                    gltf_node.call_deferred(
+                        StringName::from(GodotString::from("change_gltf")),
+                        &[Variant::from(GodotString::from(new_value.src))],
+                    );
                 } else {
-                    // create
                     let mut new_gltf = godot::engine::load::<PackedScene>(
                         "res://src/decentraland_components/gltf_container.tscn",
                     )
@@ -56,14 +58,12 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                     );
 
                     new_gltf.set(StringName::from("dcl_scene_id"), Variant::from(scene_id));
-
+                    new_gltf.set_name(GodotString::from("GltfContainer"));
                     node.base.add_child(
                         new_gltf.share().upcast(),
                         false,
                         InternalMode::INTERNAL_MODE_DISABLED,
                     );
-
-                    // scene.objs.push(new_mesh_instance_3d.share().upcast());
                 }
             }
         }

@@ -4,6 +4,7 @@ extends Node3D
 @export var dcl_scene_id: int = -1
 
 var file_hash: String = ""
+var gltf_node = null
 
 func _ready():
 	self.load_gltf.call_deferred()
@@ -34,5 +35,18 @@ func _on_gltf_loaded(resource_hash: String):
 		
 	var node = get_tree().root.get_node("content_manager").get_resource_from_hash(file_hash)
 	if node != null:
-		add_child(node.duplicate())
+		gltf_node = node.duplicate()
+		add_child(gltf_node)
 		
+func change_gltf(new_gltf: String):
+	if self.dcl_gltf_src == new_gltf:
+		# TODO: maybe some property changed
+		return
+
+	if gltf_node != null:
+		remove_child(gltf_node)
+		gltf_node.queue_free()
+		gltf_node = null
+	
+	self.dcl_gltf_src = new_gltf
+	self.load_gltf.call_deferred()

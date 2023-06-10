@@ -150,7 +150,9 @@ offset_top = 117.0
 offset_right = 309.0
 offset_bottom = 133.0
 focus_mode = 0
+min_value = 1.0
 max_value = 4.0
+value = 1.0
 ticks_on_borders = true
 
 [node name="Label_SceneRadius" type="Label" parent="UI/Panel_BottomLeft"]
@@ -167,8 +169,7 @@ offset_left = 318.0
 offset_top = 112.0
 offset_right = 346.0
 offset_bottom = 138.0
-text = "0
-"
+text = "1"
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="toggled" from="UI/Panel_BottomLeft/CheckButton_Pause" to="." method="_on_check_button_toggled"]

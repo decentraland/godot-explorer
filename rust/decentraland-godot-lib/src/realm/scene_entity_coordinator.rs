@@ -513,6 +513,7 @@ mod tests {
     const TEST_POINTER_O_O_ID: &str = "b64-L3Vzci9zcmMvYXBwLzAuMC5ibGFuay1zY2VuZQ==";
 
     use super::*;
+    #[allow(dead_code)]
     pub fn mock_server() -> httpmock::MockServer {
         let server = httpmock::MockServer::start();
 

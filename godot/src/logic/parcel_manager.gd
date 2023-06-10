@@ -21,7 +21,7 @@ func _ready():
 	realm.realm_changed.connect(self._on_realm_changed)
 	http_requester.request_completed.connect(self._on_requested_completed)
 	
-	scene_entity_coordinator.set_scene_radius(0)
+	scene_entity_coordinator.set_scene_radius(1)
 	
 func set_scene_radius(value: int):
 	scene_entity_coordinator.set_scene_radius(value)
