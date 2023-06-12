@@ -1,7 +1,7 @@
 use crate::{
     dcl::{
-        DclScene, DirtyComponents, DirtyEntities, RendererResponse, SceneDefinition, SceneId,
-        SceneResponse,
+        components::SceneEntityId, DclScene, DirtyComponents, DirtyEntities, RendererResponse,
+        SceneDefinition, SceneId, SceneResponse,
     },
     scene_runner::content::ContentMapping,
 };
@@ -34,6 +34,8 @@ pub struct Scene {
     pub state: SceneState,
 
     pub content_mapping: Gd<ContentMapping>,
+
+    pub gltf_loading: HashSet<SceneEntityId>,
 
     pub current_dirty: Dirty,
     pub distance: f32,
@@ -118,6 +120,7 @@ impl SceneManager {
             distance: 0.0,
             next_tick_us: 0,
             last_tick_us: 0,
+            gltf_loading: HashSet::new(),
         };
 
         self.base.add_child(

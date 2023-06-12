@@ -21,11 +21,11 @@ jobs:
           toolchain: stable
           override: true
       - run: rustup component add rustfmt
-      - name: Install protoc
-        uses: arduino/setup-protoc@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          
+      
+      - name: cargo xtask install
+        working-directory: rust
+        run: cargo xtask install
+
       - uses: actions-rs/cargo@v1
         name: cargo check
         with:
@@ -52,11 +52,6 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -75,6 +70,10 @@ jobs:
             rust/Cargo.lock
           key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: coverage-cargo-
+      
+      - name: cargo xtask install
+        working-directory: rust
+        run: cargo xtask install
 
       - name: Download grcov
         run: |
@@ -116,10 +115,11 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Install protoc
-        uses: arduino/setup-protoc@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: cargo xtask install
+        working-directory: rust
+        run: cargo xtask install
+
       - name: Set up target platform
         if: ${{ matrix.os == 'macos-latest' }}
         run: |

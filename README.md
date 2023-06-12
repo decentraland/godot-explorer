@@ -3,9 +3,7 @@
 ## Dependencies
 
 1. Install rust (https://www.rust-lang.org/tools/install)
-2. Install protoc (https://github.com/protocolbuffers/protobuf/releases) (has to be able of finding PROTOC env var pointing to the binary)
-3. Download latest Godot 4 (https://godotengine.org/)
-4. Optional Windows: You can set `GODOT4_BIN` and use the `launch.json` in VSCode to debug the build.
+2. Go to `rust` folder, and run `cargo xtask install`.
 
 ### 1. Editing the godot project
 
