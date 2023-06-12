@@ -1,15 +1,20 @@
 # Decentraland Godot Rust
 
-## Dependencies
+## Install dependencies
 
 1. Install rust (https://www.rust-lang.org/tools/install)
 2. Go to `rust` folder, and run `cargo xtask install`.
 
-### 1. Editing the godot project
 
-You can open the folder `godot/` with the Godot editor.
+## Running the project
 
-### 2. Editing the GD Extension Rust library
+Run `cargo xtask run-godot-lib -d` in the `rust` folder.
+
+## Editing the godot project
+
+Run `cargo xtask run-godot-lib -d -e` in the `rust` folder.
+
+## Editing and debugging the GD Extension Rust library
 
 Open this repo with VSCode, run the task pressing `Cmd+Shift+P` or `Control+Shift+P`, type `Run task` then Enter and look for your platform when writing `Copy GDExtension Lib`.
 
