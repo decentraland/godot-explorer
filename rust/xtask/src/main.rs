@@ -77,9 +77,17 @@ fn main() -> Result<(), anyhow::Error> {
 
             let debug_mode = sm.is_present("debug");
             if debug_mode {
-                xtaskops::ops::cmd!("cargo", "build").run()?;
+                xtaskops::ops::cmd!("cargo", "build", "--package", "decentraland-godot-lib")
+                    .run()?;
             } else {
-                xtaskops::ops::cmd!("cargo", "build", "--release").run()?;
+                xtaskops::ops::cmd!(
+                    "cargo",
+                    "build",
+                    "--package",
+                    "decentraland-godot-lib",
+                    "--release"
+                )
+                .run()?;
             }
 
             match install_dependency::copy_library(debug_mode) {
