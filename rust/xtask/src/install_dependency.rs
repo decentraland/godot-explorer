@@ -148,6 +148,30 @@ pub fn get_godot_executable_path() -> Option<String> {
     Some(os_url)
 }
 
+pub fn copy_library(debug_mode: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let os = env::consts::OS;
+    let arch = env::consts::ARCH;
+    let file_name = match (os, arch) {
+        ("linux", _) => Some("libdecentraland_godot_lib.so".to_string()),
+        ("windows", _) => Some("decentraland_godot_lib.dll".to_string()),
+        ("macos", _) => Some("libdecentraland_godot_lib.dylib".to_string()),
+        _ => None,
+    }
+    .expect("Couldn't find a library for this platform");
+
+    let source_folder: &str = if debug_mode {
+        "target/debug/"
+    } else {
+        "target/release/"
+    };
+
+    let source_file = fs::canonicalize(source_folder)?.join(file_name.clone());
+    let destination_file = fs::canonicalize("./../godot/lib")?.join(file_name);
+    fs::copy(source_file, destination_file)?;
+
+    Ok(())
+}
+
 pub fn install() -> Result<(), Box<dyn std::error::Error>> {
     install_dcl_protocol()?;
 

@@ -40,13 +40,23 @@ fn main() -> Result<(), anyhow::Error> {
         )
         .subcommand(Command::new("docs"))
         .subcommand(Command::new("install"))
-        .subcommand(Command::new("run-godot-lib").arg(
-            Arg::new("editor")
-                .short('e')
-                .long("editor")
-                .help("open godot editor mode")
-                .takes_value(false),
-        ));
+        .subcommand(
+            Command::new("run-godot-lib")
+                .arg(
+                    Arg::new("editor")
+                        .short('e')
+                        .long("editor")
+                        .help("open godot editor mode")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("debug")
+                        .short('d')
+                        .long("debug")
+                        .help("build debug mode")
+                        .takes_value(false),
+                ),
+        );
     let matches = cli.get_matches();
 
     let root = xtaskops::ops::root_dir();
@@ -56,23 +66,41 @@ fn main() -> Result<(), anyhow::Error> {
             Err(e) => Err(anyhow::anyhow!("install failed: {}", e)),
         },
         Some(("run-godot-lib", sm)) => {
-            let program = format!("./../.bin/godot/{}", install_dependency::get_godot_executable_path().unwrap());
+            let program = format!(
+                "./../.bin/godot/{}",
+                install_dependency::get_godot_executable_path().unwrap()
+            );
             let mut args = vec!["--path", "./../godot"];
-            if sm.is_present("editor") { 
+            if sm.is_present("editor") {
                 args.push("-e");
             }
-            
+
+            let debug_mode = sm.is_present("debug");
+            if debug_mode {
+                xtaskops::ops::cmd!("cargo", "build").run()?;
+            } else {
+                xtaskops::ops::cmd!("cargo", "build", "--release").run()?;
+            }
+
+            match install_dependency::copy_library(debug_mode) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(anyhow::anyhow!("copy the library failed: {}", e)),
+            }?;
+
             let status = std::process::Command::new(program.as_str())
                 .args(&args)
                 .status()
                 .expect("Failed to run Godot");
 
             if !status.success() {
-                Err(anyhow::anyhow!("Godot exited with non-zero status: {}", status))
+                Err(anyhow::anyhow!(
+                    "Godot exited with non-zero status: {}",
+                    status
+                ))
             } else {
                 Ok(())
             }
-        },
+        }
         Some(("coverage", sm)) => xtaskops::tasks::coverage(sm.is_present("dev")),
         Some(("vars", _)) => {
             println!("root: {root:?}");
