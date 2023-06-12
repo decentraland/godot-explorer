@@ -14,6 +14,7 @@ struct Component {
 const COMPONENT_BASE_DIR: &str = "src/dcl/components/proto/decentraland/sdk/components/";
 const GROW_ONLY_SET_COMPONENTS: [&str; 2] = ["PointerEventsResult", "VideoEvent"];
 
+
 pub fn snake_to_pascal(input: &str) -> String {
     input
         .split('_')

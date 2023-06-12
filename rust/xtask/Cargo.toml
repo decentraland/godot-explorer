@@ -8,3 +8,9 @@ edition = "2021"
 [dependencies]
 xtaskops = "^0.4.1"
 anyhow = "1"
+clap = "3"
+reqwest = { version = "0.11.18", features = ["blocking", "json"] }
+serde = "1.0.152"
+serde_json = { version = "1.0.92", features = ["raw_value"] }
+flate2 = "1.0.20"
+tar = "0.4.26"
