@@ -26,6 +26,7 @@ pub struct Node3DEntity {
 
 impl SceneDefinition {
     pub fn from_dict(dict: Dictionary) -> Result<Self, String> {
+        let Some(main_crdt_path) = dict.get("main_crdt_path") else { return Err("main_crdt_path not found".to_string()) };
         let Some(path) = dict.get("path") else { return Err("path not found".to_string()) };
         let Some(base) = dict.get("base") else { return Err("base not found".to_string()) };
         let Some(parcels) = dict.get("parcels") else { return Err("parcels not found".to_string()) };
@@ -49,6 +50,7 @@ impl SceneDefinition {
         let parcels = parcels.map(|v| v.unwrap()).collect();
 
         Ok(Self {
+            main_crdt_path: main_crdt_path.to::<GodotString>().to_string(),
             path: path.to::<GodotString>().to_string(),
             base,
             visible: visible.to::<bool>(),

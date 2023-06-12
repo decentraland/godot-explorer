@@ -16,6 +16,7 @@ use super::{RendererResponse, SceneId, SceneResponse, VM_HANDLES};
 use crate::dcl::crdt::SceneCrdtState;
 
 struct SceneJsFileContent(pub String);
+struct SceneMainCrdtFileContent(pub Vec<u8>);
 
 pub mod engine;
 
@@ -84,6 +85,20 @@ pub(crate) fn scene_thread(
     state
         .borrow_mut()
         .put(runtime.v8_isolate().thread_safe_handle());
+
+    let main_crdt_file_path = scene_definition.main_crdt_path;
+    if !main_crdt_file_path.is_empty() {
+        let file = godot::engine::FileAccess::open(
+            godot::prelude::GodotString::from(main_crdt_file_path.clone()),
+            godot::engine::file_access::ModeFlags::READ,
+        );
+
+        if let Some(file) = file {
+            let buf = file.get_buffer(file.get_length()).to_vec();
+            let scene_main_crdt = SceneMainCrdtFileContent(buf);
+            state.borrow_mut().put(scene_main_crdt);
+        }
+    }
 
     let scene_file_path = scene_definition.path;
     let file = godot::engine::FileAccess::open(
@@ -231,6 +246,7 @@ fn op_require(
         "~scene.js" => Ok(state.borrow().borrow::<SceneJsFileContent>().0.clone()),
         // core module load
         "~system/EngineApi" => Ok(include_str!("EngineApi.js").to_owned()),
+        "~system/UserIdentity" => Ok(include_str!("UserIdentity.js").to_owned()),
         _ => Err(generic_error(format!(
             "invalid module request `{module_spec}`"
         ))),
