@@ -121,25 +121,41 @@ fn get_godot_url() -> Option<String> {
 }
 
 fn set_executable_permission(file_path: &Path) -> std::io::Result<()> {
-    let permissions = fs::metadata(file_path)?.permissions();
-    let mut new_permissions = permissions.clone();
-    new_permissions.set_mode(0o755);
-    fs::set_permissions(file_path, new_permissions)?;
+    let mut permissions = fs::metadata(file_path)?.permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(file_path, permissions)?;
     Ok(())
+}
+
+fn get_godot_executable_path() -> Option<String> {
+    let os = env::consts::OS;
+    let arch = env::consts::ARCH;
+
+    let os_url = match (os, arch) {
+        ("linux", "x86_64") => Some("Godot_v4.0.3-stable_linux.x86_64".to_string()),
+        ("windows", "x86_64") => Some("Godot_v4.0.3-stable_win64.exe".to_string()),
+        ("macos", _) => Some("Godot_v4.0.3-stable_macos.universal".to_string()),
+        _ => None,
+    }?;
+
+    Some(os_url)
 }
 
 pub fn install() -> Result<(), Box<dyn std::error::Error>> {
     install_dcl_protocol()?;
-    
+
     download_and_extract_zip(get_protoc_url().unwrap().as_str(), "./../.bin/protoc")?;
+    download_and_extract_zip(get_godot_url().unwrap().as_str(), "./../.bin/godot")?;
+
     match (env::consts::OS, env::consts::ARCH) {
         ("linux", _) | ("macos", _) => {
             set_executable_permission(Path::new("./../.bin/protoc/bin/protoc"))?;
+            set_executable_permission(Path::new(
+                format!("./../.bin/godot/{}", get_godot_executable_path().unwrap()).as_str(),
+            ))?;
         }
         _ => (),
     };
-
-    download_and_extract_zip(get_godot_url().unwrap().as_str(), "./../.bin/godot")?;
 
     Ok(())
 }

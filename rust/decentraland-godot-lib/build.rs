@@ -2,8 +2,7 @@ use std::{
     env,
     fs::{self, File},
     io::{self, Write},
-    os,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 struct Component {
