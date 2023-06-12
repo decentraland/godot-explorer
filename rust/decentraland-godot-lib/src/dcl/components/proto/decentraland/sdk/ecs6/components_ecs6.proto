@@ -4,6 +4,14 @@ package decentraland.sdk.ecs6;
 import "decentraland/common/vectors.proto";
 import "decentraland/common/colors.proto";
 
+
+message ECS6Color4 {
+    float r = 1;
+    float g = 2;
+    float b = 3;
+    optional float a = 4;
+}
+
 message Area {
     optional decentraland.common.Vector3 box = 1; 
 }
@@ -236,7 +244,7 @@ message ECS6ComponentTextShape {
 // CLASS_ID.PBR_MATERIAL
 message ECS6ComponentMaterial {
     optional float alpha_test = 1;
-    optional decentraland.common.Color3 albedo_color = 2;
+    optional ECS6Color4 albedo_color = 2;
     optional decentraland.common.Color3 emissive_color = 3;
     optional float metallic = 4;
     optional float roughness = 5;
@@ -360,9 +368,9 @@ message ECS6ComponentAvatarShape {
   }
 
   repeated Emote emotes = 7;
-  optional decentraland.common.Color4 skin_color = 8;
-  optional decentraland.common.Color4 hair_color = 9;
-  optional decentraland.common.Color4 eye_color = 10;
+  optional ECS6Color4 skin_color = 8;
+  optional ECS6Color4 hair_color = 9;
+  optional ECS6Color4 eye_color = 10;
   optional bool use_dummy_model = 11;
   optional bool talking = 12;
 }
@@ -408,7 +416,7 @@ message ECS6ComponentUiContainerRect {
     optional string parent_component = 14;
     // UiShape
     optional float thickness = 11;
-    optional decentraland.common.Color4 color = 12;
+    optional ECS6Color4 color = 12;
     optional bool alignment_uses_size = 13;
 }
 
@@ -430,7 +438,7 @@ message ECS6ComponentUiContainerStack {
 
     optional bool adapt_width = 11;
     optional bool adapt_height = 12;
-    optional decentraland.common.Color4 color = 13;
+    optional ECS6Color4 color = 13;
 
     enum UIStackOrientation {
         VERTICAL = 0;
@@ -460,8 +468,8 @@ message ECS6ComponentUiButton {
     optional string font_weight = 12;
     optional float thickness = 13;
     optional float corner_radius = 14;
-    optional decentraland.common.Color4 color = 15;
-    optional decentraland.common.Color4 background = 16;
+    optional ECS6Color4 color = 15;
+    optional ECS6Color4 background = 16;
     optional float padding_top = 17;
     optional float padding_right = 18;
     optional float padding_bottom = 19;
@@ -469,7 +477,7 @@ message ECS6ComponentUiButton {
     optional float shadow_blur = 21;
     optional float shadow_offset_x = 22;
     optional float shadow_offset_y = 23;
-    optional decentraland.common.Color4 shadow_color = 24;
+    optional ECS6Color4 shadow_color = 24;
     optional string text = 25;
 }
 
@@ -490,8 +498,8 @@ message ECS6ComponentUiText {
     // UiShape
 
     optional float outline_width = 11;
-    optional decentraland.common.Color4 outline_color = 12;
-    optional decentraland.common.Color4 color = 13;
+    optional ECS6Color4 outline_color = 12;
+    optional ECS6Color4 color = 13;
     optional float font_size = 14;
     optional bool font_auto_size = 15;
     optional string font = 16;
@@ -504,7 +512,7 @@ message ECS6ComponentUiText {
     optional float shadow_blur = 23;
     optional float shadow_offset_x = 24;
     optional float shadow_offset_y = 25;
-    optional decentraland.common.Color4 shadow_color = 26;
+    optional ECS6Color4 shadow_color = 26;
     optional string h_text_align = 27;
     optional string v_text_align = 28;
     optional float padding_top = 29;
@@ -530,21 +538,21 @@ message ECS6ComponentUiInputText {
     // UiShape
 
     optional float outline_width = 11;
-    optional decentraland.common.Color4 outline_color = 12;
-    optional decentraland.common.Color4 color = 13;
+    optional ECS6Color4 outline_color = 12;
+    optional ECS6Color4 color = 13;
     optional float font_size = 14;
     optional string font = 16;
     optional string value = 17;
 
     optional string placeholder = 33;
     optional float margin = 34;
-    optional decentraland.common.Color4 focused_background = 35;
+    optional ECS6Color4 focused_background = 35;
 
     optional bool text_wrapping = 22;
     optional float shadow_blur = 23;
     optional float shadow_offset_x = 24;
     optional float shadow_offset_y = 25;
-    optional decentraland.common.Color4 shadow_color = 26;
+    optional ECS6Color4 shadow_color = 26;
     optional string h_text_align = 27;
     optional string v_text_align = 28;
     optional float padding_top = 29;
@@ -556,6 +564,7 @@ message ECS6ComponentUiInputText {
     optional string on_focus = 37;
     optional string on_blur = 38;
     optional string on_text_submit = 40;
+    optional string on_changed = 41;
 }
 
 // CLASS_ID.UI_IMAGE_SHAPE
@@ -606,7 +615,7 @@ message ECS6ComponentUiScrollRect {
 
     optional float value_x = 1;
     optional float value_y = 2;
-    optional decentraland.common.Color4 background_color = 3;
+    optional ECS6Color4 background_color = 3;
     optional bool is_horizontal = 4;
     optional bool is_vertical = 5;
     optional float padding_top = 6;

@@ -13,14 +13,22 @@ use godot::{
     prelude::*,
 };
 
+// see gltf_container.gd
+enum GodotGltfState {
+    Unknown = 0,
+    Loading = 1,
+    NotFound = 2,
+    FinishedWithError = 3,
+    Finished = 4,
+}
+
 pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_components = &scene.current_dirty.components;
     let scene_id = godot_dcl_scene.scene_id.0;
-    if let Some(gltf_container_dirty) = dirty_components.get(&SceneComponentId::GLTF_CONTAINER) {
-        let gltf_container_component =
-            SceneCrdtStateProtoComponents::get_gltf_container(crdt_state);
+    let gltf_container_component = SceneCrdtStateProtoComponents::get_gltf_container(crdt_state);
 
+    if let Some(gltf_container_dirty) = dirty_components.get(&SceneComponentId::GLTF_CONTAINER) {
         for entity in gltf_container_dirty {
             let new_value = gltf_container_component.get(*entity);
             if new_value.is_none() {
@@ -38,6 +46,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
             if new_value.is_none() {
                 if let Some(gltf_node) = existing {
                     node.base.remove_child(gltf_node);
+                    scene.gltf_loading.remove(entity);
                 }
             } else if let Some(new_value) = new_value {
                 if let Some(mut gltf_node) = existing {
@@ -45,6 +54,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                         StringName::from(GodotString::from("change_gltf")),
                         &[Variant::from(GodotString::from(new_value.src))],
                     );
+                    scene.gltf_loading.insert(*entity);
                 } else {
                     let mut new_gltf = godot::engine::load::<PackedScene>(
                         "res://src/decentraland_components/gltf_container.tscn",
@@ -64,7 +74,53 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                         false,
                         InternalMode::INTERNAL_MODE_DISABLED,
                     );
+
+                    scene.gltf_loading.insert(*entity);
                 }
+            }
+        }
+    }
+
+    let gltf_container_loading_state_component =
+        SceneCrdtStateProtoComponents::get_gltf_container_loading_state_mut(crdt_state);
+
+    for entity in scene.gltf_loading.clone().iter() {
+        let gltf_node = godot_dcl_scene
+            .ensure_node_mut(&entity)
+            .base
+            .try_get_node_as::<Node>(NodePath::from("GltfContainer"));
+
+        let current_state = match gltf_container_loading_state_component.get(*entity) {
+            Some(state) => match state.value.as_ref() {
+                Some(value) => value.current_state,
+                _ => GodotGltfState::Unknown as i32,
+            },
+            None => GodotGltfState::Unknown as i32,
+        };
+
+        let current_state_godot = match gltf_node {
+            Some(gltf_node) => {
+                let gltf_state = gltf_node.get(StringName::from(GodotString::from("gltf_state")));
+                let gltf_state = i32::try_from_variant(&gltf_state);
+                match gltf_state {
+                    Ok(gltf_state) => gltf_state,
+                    Err(err) => {
+                        godot_print!("Error getting gltf_state: {:?}", err);
+                        GodotGltfState::Unknown as i32
+                    }
+                }
+            }
+            None => GodotGltfState::Unknown as i32,
+        };
+
+        if current_state_godot != current_state {
+            gltf_container_loading_state_component.put(*entity, Some(crate::dcl::components::proto_components::sdk::components::PbGltfContainerLoadingState { current_state: current_state_godot }));
+
+            if current_state_godot == GodotGltfState::Finished as i32
+                || current_state_godot == GodotGltfState::FinishedWithError as i32
+                || current_state_godot == GodotGltfState::NotFound as i32
+            {
+                scene.gltf_loading.remove(entity);
             }
         }
     }
