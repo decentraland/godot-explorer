@@ -107,7 +107,8 @@ fn download_and_extract_zip(
 fn get_godot_url() -> Option<String> {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
-    let base_url = "https://downloads.tuxfamily.org/godotengine/4.0.3/Godot_v4.0.3-stable_";
+    let base_url =
+        "https://github.com/godotengine/godot/releases/download/4.0.3-stable/Godot_v4.0.3-stable_";
 
     let os_url = match (os, arch) {
         ("linux", "x86_64") => Some("linux.x86_64.zip".to_string()),
