@@ -1,7 +1,7 @@
 use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
 
-mod proto_dependency;
+mod install_dependency;
 
 fn main() -> Result<(), anyhow::Error> {
     let cli = Command::new("xtask")
@@ -39,14 +39,14 @@ fn main() -> Result<(), anyhow::Error> {
             ),
         )
         .subcommand(Command::new("docs"))
-        .subcommand(Command::new("install-protocol"));
+        .subcommand(Command::new("install"));
     let matches = cli.get_matches();
 
     let root = xtaskops::ops::root_dir();
     let res = match matches.subcommand() {
-        Some(("install-protocol", _)) => match proto_dependency::install_dependency() {
+        Some(("install", _)) => match install_dependency::install() {
             Ok(_) => Ok(()),
-            Err(e) => Err(anyhow::anyhow!("install-protocol failed: {}", e)),
+            Err(e) => Err(anyhow::anyhow!("install failed: {}", e)),
         },
         Some(("coverage", sm)) => xtaskops::tasks::coverage(sm.is_present("dev")),
         Some(("vars", _)) => {

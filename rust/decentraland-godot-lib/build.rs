@@ -2,7 +2,8 @@ use std::{
     env,
     fs::{self, File},
     io::{self, Write},
-    path::Path,
+    os,
+    path::{Path, PathBuf},
 };
 
 struct Component {
@@ -13,7 +14,6 @@ struct Component {
 
 const COMPONENT_BASE_DIR: &str = "src/dcl/components/proto/decentraland/sdk/components/";
 const GROW_ONLY_SET_COMPONENTS: [&str; 2] = ["PointerEventsResult", "VideoEvent"];
-
 
 pub fn snake_to_pascal(input: &str) -> String {
     input
@@ -307,6 +307,17 @@ fn main() -> io::Result<()> {
     generate_impl_crdt(&proto_components);
     generate_dcl_component_impl(&proto_components);
 
+    let mut protoc_path = std::env::current_dir()
+        .unwrap()
+        .join("../../.bin/protoc/bin/protoc");
+    if std::env::consts::OS == "windows" {
+        protoc_path.set_extension("exe");
+    }
+    let protoc_path = protoc_path
+        .canonicalize()
+        .expect("Failed to canonicalize protoc path");
+
+    std::env::set_var("PROTOC", protoc_path);
     prost_build::compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
     Ok(())
 }
