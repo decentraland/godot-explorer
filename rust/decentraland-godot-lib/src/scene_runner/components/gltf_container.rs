@@ -16,6 +16,7 @@ use godot::{
 // see gltf_container.gd
 enum GodotGltfState {
     Unknown = 0,
+    #[allow(dead_code)]
     Loading = 1,
     NotFound = 2,
     FinishedWithError = 3,
@@ -86,7 +87,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
 
     for entity in scene.gltf_loading.clone().iter() {
         let gltf_node = godot_dcl_scene
-            .ensure_node_mut(&entity)
+            .ensure_node_mut(entity)
             .base
             .try_get_node_as::<Node>(NodePath::from("GltfContainer"));
 
