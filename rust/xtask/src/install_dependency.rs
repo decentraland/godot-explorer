@@ -4,7 +4,6 @@ use serde_json::Value;
 use std::env;
 use std::fs::{self, File};
 use std::io::{self};
-use std::os::unix::prelude::PermissionsExt;
 use std::path::Path;
 use tar::Archive;
 use zip::ZipArchive;
@@ -120,21 +119,29 @@ fn get_godot_url() -> Option<String> {
     Some(format!("{}{}", base_url, os_url))
 }
 
-fn set_executable_permission(file_path: &Path) -> std::io::Result<()> {
-    let mut permissions = fs::metadata(file_path)?.permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(file_path, permissions)?;
-    Ok(())
+fn set_executable_permission(_file_path: &Path) -> std::io::Result<()> {
+    #[cfg(unix)]
+    {
+        let mut permissions = fs::metadata(_file_path)?.permissions();
+        use std::os::unix::prelude::PermissionsExt;
+        permissions.set_mode(0o755);
+        fs::set_permissions(_file_path, permissions)?;
+        Ok(())
+    }
+    #[cfg(not(unix))]
+    {
+        Ok(())
+    }
 }
 
-fn get_godot_executable_path() -> Option<String> {
+pub fn get_godot_executable_path() -> Option<String> {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
         ("linux", "x86_64") => Some("Godot_v4.0.3-stable_linux.x86_64".to_string()),
         ("windows", "x86_64") => Some("Godot_v4.0.3-stable_win64.exe".to_string()),
-        ("macos", _) => Some("Godot_v4.0.3-stable_macos.universal".to_string()),
+        ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
         _ => None,
     }?;
 

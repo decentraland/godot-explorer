@@ -67,7 +67,7 @@
             "name": "(MacOS) Launch Editor",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.bin/godot/Godot_v4.0.3-stable_macos.universal",
+            "program": "${workspaceFolder}/.bin/godot/Godot.app/Contents/MacOS/Godot",
             "args": [
                 "--path",
                 "${workspaceFolder}/godot",
@@ -83,7 +83,7 @@
             "name": "(MacOS) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.bin/godot/Godot_v4.0.3-stable_macos.universal",
+            "program": "${workspaceFolder}/.bin/godot/Godot.app/Contents/MacOS/Godot",
             "args": [
                 "--path",
                 "${workspaceFolder}/godot"
