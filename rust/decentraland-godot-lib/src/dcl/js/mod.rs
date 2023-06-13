@@ -89,7 +89,7 @@ pub(crate) fn scene_thread(
     let main_crdt_file_path = scene_definition.main_crdt_path;
     if !main_crdt_file_path.is_empty() {
         let file = godot::engine::FileAccess::open(
-            godot::prelude::GodotString::from(main_crdt_file_path.clone()),
+            godot::prelude::GodotString::from(main_crdt_file_path),
             godot::engine::file_access::ModeFlags::READ,
         );
 

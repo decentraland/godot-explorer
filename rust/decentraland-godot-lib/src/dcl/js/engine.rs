@@ -51,8 +51,8 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
 #[op(v8)]
 async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u8>> {
     let mut ret = Vec::<Vec<u8>>::with_capacity(1);
-    let mut op_state_main_crdt = op_state.borrow_mut();
-    if let Some(main_crdt) = op_state_main_crdt.try_take::<SceneMainCrdtFileContent>() {
+    if let Some(main_crdt) = op_state.borrow_mut().try_take::<SceneMainCrdtFileContent>() {
+        let mut op_state_main_crdt = op_state.borrow_mut();
         let scene_id = op_state_main_crdt.take::<SceneId>();
         let mutex_scene_crdt_state = op_state_main_crdt.take::<Arc<Mutex<SceneCrdtState>>>();
         let cloned_scene_crdt = mutex_scene_crdt_state.clone();
@@ -72,7 +72,6 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
 
         ret.push(main_crdt.0);
     }
-    drop(op_state_main_crdt);
 
     let mut receiver = op_state
         .borrow_mut()

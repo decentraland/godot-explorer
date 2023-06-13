@@ -5,14 +5,13 @@
 1. Install rust (https://www.rust-lang.org/tools/install)
 2. Go to `rust` folder, and run `cargo xtask install`.
 
-
 ## Running the project
 
-Run `cargo xtask run-godot-lib -d` in the `rust` folder.
+Run `cargo xtask run` in the `rust` folder.
 
 ## Editing the godot project
 
-Run `cargo xtask run-godot-lib -d -e` in the `rust` folder.
+Run `cargo xtask run -e` in the `rust` folder.
 
 ## Editing and debugging the GD Extension Rust library
 
