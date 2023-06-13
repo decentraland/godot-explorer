@@ -20,6 +20,21 @@ use crate::dcl::crdt::SceneCrdtState;
 struct SceneJsFileContent(pub String);
 struct SceneMainCrdtFileContent(pub Vec<u8>);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum SceneLogLevel {
+    Log = 1,
+    SceneError = 2,
+    SystemError = 3,
+}
+
+#[derive(Clone, Debug)]
+pub struct SceneLogMessage {
+    pub timestamp: f64, // scene local time
+    pub level: SceneLogLevel,
+    pub message: String,
+}
+pub struct SceneElapsedTime(pub f32);
+
 pub mod engine;
 
 // marker to indicate shutdown has been triggered
@@ -35,7 +50,7 @@ pub(crate) fn scene_thread(
 ) {
     let ext = Extension::builder("decentraland")
         // add require operation
-        .ops(vec![op_require::decl()])
+        .ops(vec![op_require::decl(), op_log::decl(), op_error::decl()])
         // add plugin registrations
         .ops(engine::ops())
         // set startup JS script
@@ -45,12 +60,14 @@ pub(crate) fn scene_thread(
         ))
         // remove core deno ops that are not required
         .middleware(|op| {
-            const ALLOW: [&str; 5] = [
+            const ALLOW: [&str; 7] = [
                 "op_eval_context",
                 "op_require",
                 "op_crdt_send_to_renderer",
                 "op_crdt_recv_from_renderer",
                 "op_print",
+                "op_log",
+                "op_error",
             ];
             if ALLOW.contains(&op.name) {
                 op
@@ -91,7 +108,7 @@ pub(crate) fn scene_thread(
 
             let dirty = scene_crdt_state.take_dirty();
             thread_sender_to_main
-                .send(SceneResponse::Ok(scene_id, dirty))
+                .send(SceneResponse::Ok(scene_id, dirty, Vec::new(), 0.0))
                 .expect("error sending scene response!!");
 
             scene_main_crdt = Some(SceneMainCrdtFileContent(buf));
@@ -99,6 +116,10 @@ pub(crate) fn scene_thread(
     }
 
     let state = runtime.op_state();
+
+    // store log output and initial elapsed of zero
+    state.borrow_mut().put(Vec::<SceneLogMessage>::default());
+    state.borrow_mut().put(SceneElapsedTime(0.0));
 
     // store scene detail in the runtime state
     state.borrow_mut().put(scene_crdt);
@@ -187,6 +208,10 @@ pub(crate) fn scene_thread(
             - elapsed;
         elapsed += dt;
 
+        state
+            .borrow_mut()
+            .put(SceneElapsedTime(elapsed.as_secs_f32()));
+
         // run the onUpdate function
         let result = run_script(&mut runtime, &script, "onUpdate", (), |scope| {
             vec![v8::Number::new(scope, dt.as_secs_f64()).into()]
@@ -268,4 +293,30 @@ fn op_require(
             "invalid module request `{module_spec}`"
         ))),
     }
+}
+
+#[op(v8)]
+fn op_log(state: Rc<RefCell<OpState>>, message: String) {
+    let time = state.borrow().borrow::<SceneElapsedTime>().0;
+    state
+        .borrow_mut()
+        .borrow_mut::<Vec<SceneLogMessage>>()
+        .push(SceneLogMessage {
+            timestamp: time as f64,
+            level: SceneLogLevel::Log,
+            message,
+        })
+}
+
+#[op(v8)]
+fn op_error(state: Rc<RefCell<OpState>>, message: String) {
+    let time = state.borrow().borrow::<SceneElapsedTime>().0;
+    state
+        .borrow_mut()
+        .borrow_mut::<Vec<SceneLogMessage>>()
+        .push(SceneLogMessage {
+            timestamp: time as f64,
+            level: SceneLogLevel::SceneError,
+            message,
+        })
 }

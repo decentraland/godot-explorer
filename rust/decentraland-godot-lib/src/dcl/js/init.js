@@ -4,10 +4,16 @@
 Deno.core.initializeAsyncOps();
 
 // minimal console
+// const console = {
+//     // log: function(text) { Deno.core.print("LOG  :" + text + "\n") },
+//     log: function (text) { },
+//     error: function (text) { Deno.core.print("ERROR: " + text + "\n") },
+// }
+
+// minimal console
 const console = {
-    // log: function(text) { Deno.core.print("LOG  :" + text + "\n") },
-    log: function (text) { },
-    error: function (text) { Deno.core.print("ERROR: " + text + "\n") },
+    log: function (text) { Deno.core.ops.op_log("" + text) },
+    error: function (text) { Deno.core.ops.op_error("" + text) },
 }
 
 // load a cjs/node-style module

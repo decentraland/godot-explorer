@@ -18,7 +18,7 @@ const ABOUT_REQUEST = 1
 
 signal realm_changed()
 
-func _process(delta):
+func _process(_delta):
 	http_requester.poll()
 
 func _ready():

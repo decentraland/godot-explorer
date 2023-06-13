@@ -7,11 +7,11 @@ var file_hash: String = ""
 var gltf_node = null
 
 const GodotGltfState = {
-    Unknown = 0,
-    Loading = 1,
-    NotFound = 2,
-    FinishedWithError = 3,
-    Finished = 4,
+	Unknown = 0,
+	Loading = 1,
+	NotFound = 2,
+	FinishedWithError = 3,
+	Finished = 4,
 }
 var gltf_state: int = 0
 
