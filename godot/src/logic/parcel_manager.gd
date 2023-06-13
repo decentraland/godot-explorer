@@ -2,7 +2,8 @@ extends Node
 
 class_name ParcelManager
 
-const MAIN_FILE_REQUEST = 100
+const MAIN_JS_FILE_REQUEST = 100
+const MAIN_CRDT_FILE_REQUEST = 101
 
 var scene_runner: SceneManager = null
 var realm: Realm = null
@@ -66,7 +67,6 @@ func _on_realm_changed():
 	if realm.realm_scene_urns.size() > 0 and realm.realm_city_loader_content_base_url.is_empty():
 		should_load_city_pointers = false
 		
-	print(content_base_url , " & ", should_load_city_pointers)
 	scene_entity_coordinator.config(content_base_url + "entities/active", content_base_url, should_load_city_pointers)
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 	var scenes_urns: Array = realm.realm_about.get("configurations", {}).get("scenesUrn", [])
@@ -81,20 +81,44 @@ func _on_realm_changed():
 
 func _on_requested_completed(response: RequestResponse):
 	match response.reference_id():
-		MAIN_FILE_REQUEST:
-			_on_main_file_requested_completed(response)
+		MAIN_JS_FILE_REQUEST:
+			_on_main_js_file_requested_completed(response)
+		MAIN_CRDT_FILE_REQUEST:
+			_on_main_crdt_file_requested_completed(response)
 		_:
 			pass
-	
-func _on_main_file_requested_completed(response: RequestResponse):
-	var status_code = response.status_code()
-	if response.is_error() or status_code < 200 or status_code > 299:
-		return null
-		
-	var request_id = response.id()
+
+func get_scene_by_req_id(request_id: int):
 	for scene in loaded_scenes.values():
-		if scene.get("main_file_request_id", "") == request_id:
-			_on_try_spawn_scene(scene)
+		var req = scene.get("req", {})
+		if req.get("js_request_id", -1) == request_id or req.get("crdt_request_id", -1) == request_id:
+			return scene
+	
+	return null
+
+func _on_main_crdt_file_requested_completed(response: RequestResponse):
+	var status_code = response.status_code()
+	var scene = get_scene_by_req_id(response.id())
+	
+	# Probably the scene was unloaded
+	if scene == null:
+		return
+		
+	scene.req.crdt_request_completed = true
+	if scene.req.js_request_completed and scene.req.crdt_request_completed:
+		_on_try_spawn_scene(scene)
+
+func _on_main_js_file_requested_completed(response: RequestResponse):
+	var status_code = response.status_code()
+	var scene = get_scene_by_req_id(response.id())	
+	
+	# Probably the scene was unloaded
+	if scene == null:
+		return
+		
+	scene.req.js_request_completed = true
+	if scene.req.js_request_completed and scene.req.crdt_request_completed:
+		_on_try_spawn_scene(scene)
 
 func update_position(new_position: Vector2i) -> void:
 	if current_position == new_position:
@@ -105,30 +129,54 @@ func update_position(new_position: Vector2i) -> void:
 
 func load_scene(scene_entity_id: String, entity: Dictionary):
 	loaded_scenes[scene_entity_id] = {
+		"id": scene_entity_id,
 		"entity": entity,
 		"scene_number_id": -1
 	}
 	
-	var main_crdt_file_hash = entity.get("content", {}).get("main.crdt", null)
-	if main_crdt_file_hash != null:
-		pass
-		# TODO: load main.crdt
-	
 	var main_js_file_hash = entity.get("content", {}).get(entity.get("metadata", {}).get("main", ""), null)
-	if main_js_file_hash == null or main_js_file_hash == "no_hash":
+	if main_js_file_hash == null:
 		printerr("Scene ", scene_entity_id, " fail getting the main js file hash.")
 		return false
-		
+	
 	var local_main_js_path = "user://content/" + main_js_file_hash
 	var main_js_file_url: String = entity.baseUrl + main_js_file_hash
-	var request_id = http_requester._requester.request_file(MAIN_FILE_REQUEST, main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir()))
-	loaded_scenes[scene_entity_id]["main_file_request_id"] = request_id
-	loaded_scenes[scene_entity_id]["local_main_js_path"] = local_main_js_path
+	var main_js_request_id = http_requester._requester.request_file(MAIN_JS_FILE_REQUEST, main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir()))
+	
+	var req = {
+		"js_request_completed": false,
+		"js_request_id": main_js_request_id,
+		"js_path": local_main_js_path,
+		"crdt_request_completed": true,
+		"crdt_request_id": -1,
+		"crdt_path": "",
+	}
+	
+	var main_crdt_file_hash = entity.get("content", {}).get("main.crdt", null)
+	if main_crdt_file_hash != null:
+		var local_main_crdt_path = "user://content/" + main_crdt_file_hash
+		var main_crdt_file_url: String = entity.baseUrl + main_crdt_file_hash
+		var main_crdt_request_id = http_requester._requester.request_file(MAIN_CRDT_FILE_REQUEST, main_crdt_file_url, local_main_crdt_path.replace("user:/", OS.get_user_data_dir()))
+		req["crdt_request_completed"] = false
+		req["crdt_request_id"] = main_crdt_request_id
+		req["crdt_path"] = local_main_crdt_path
 
+	loaded_scenes[scene_entity_id]["req"] = req
+	
 func _on_try_spawn_scene(scene):
-	var local_main_js_path = scene["local_main_js_path"]
+	var local_main_js_path = scene.req.js_path
+	var local_main_crdt_path = scene.req.crdt_path
 	
 	if not FileAccess.file_exists(local_main_js_path):
+		printerr("Couldn't get main.js file")
+		local_main_js_path = ""
+		
+	if not local_main_crdt_path.is_empty() and not FileAccess.file_exists(local_main_crdt_path):
+		printerr("Couldn't get main.crdt file")
+		local_main_crdt_path = ""
+
+	if local_main_crdt_path.is_empty() and local_main_js_path.is_empty():
+		printerr("Couldn't spawn the scene ", scene.id)
 		return false
 
 	var base_parcel = scene.entity.get("metadata", {}).get("scene", {}).get("base", "0,0").split_floats(",")
@@ -149,6 +197,7 @@ func _on_try_spawn_scene(scene):
 		"base": Vector2i(base_parcel[0], base_parcel[1]),
 		"is_global": false,
 		"path": local_main_js_path,
+		"main_crdt_path": local_main_crdt_path,
 		"visible": true,
 		"parcels": parcels,
 		"title": title

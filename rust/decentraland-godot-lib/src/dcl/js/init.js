@@ -47,3 +47,5 @@ function require(moduleName) {
 
     return module.exports;
 }
+
+globalThis.setImmediate = (fn) => Promise.resolve().then(fn)

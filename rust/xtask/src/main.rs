@@ -41,7 +41,7 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("docs"))
         .subcommand(Command::new("install"))
         .subcommand(
-            Command::new("run-godot-lib")
+            Command::new("run")
                 .arg(
                     Arg::new("editor")
                         .short('e')
@@ -50,10 +50,10 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
-                    Arg::new("debug")
-                        .short('d')
-                        .long("debug")
-                        .help("build debug mode")
+                    Arg::new("release")
+                        .short('r')
+                        .long("release")
+                        .help("build release mode (but it doesn't use godot release build")
                         .takes_value(false),
                 ),
         );
@@ -65,7 +65,7 @@ fn main() -> Result<(), anyhow::Error> {
             Ok(_) => Ok(()),
             Err(e) => Err(anyhow::anyhow!("install failed: {}", e)),
         },
-        Some(("run-godot-lib", sm)) => {
+        Some(("run", sm)) => {
             let program = format!(
                 "./../.bin/godot/{}",
                 install_dependency::get_godot_executable_path().unwrap()
@@ -75,11 +75,8 @@ fn main() -> Result<(), anyhow::Error> {
                 args.push("-e");
             }
 
-            let debug_mode = sm.is_present("debug");
-            if debug_mode {
-                xtaskops::ops::cmd!("cargo", "build", "--package", "decentraland-godot-lib")
-                    .run()?;
-            } else {
+            let release_mode = sm.is_present("release");
+            if release_mode {
                 xtaskops::ops::cmd!(
                     "cargo",
                     "build",
@@ -88,9 +85,12 @@ fn main() -> Result<(), anyhow::Error> {
                     "--release"
                 )
                 .run()?;
+            } else {
+                xtaskops::ops::cmd!("cargo", "build", "--package", "decentraland-godot-lib")
+                    .run()?;
             }
 
-            match install_dependency::copy_library(debug_mode) {
+            match install_dependency::copy_library(!release_mode) {
                 Ok(_) => Ok(()),
                 Err(e) => Err(anyhow::anyhow!("copy the library failed: {}", e)),
             }?;
