@@ -363,7 +363,7 @@ impl SceneManager {
                         let mut arguments = VariantArray::new();
                         arguments.push((scene_id.0 as i32).to_variant());
                         arguments.push((SceneLogLevel::SystemError as i32).to_variant());
-                        arguments.push((self.elapsed_time as f32).to_variant());
+                        arguments.push(self.elapsed_time.to_variant());
                         arguments.push(GodotString::from(&msg).to_variant());
                         self.console.callv(arguments);
                     }

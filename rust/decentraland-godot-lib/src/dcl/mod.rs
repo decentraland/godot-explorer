@@ -6,7 +6,7 @@ pub mod serialization;
 use self::{
     components::{SceneComponentId, SceneEntityId},
     crdt::SceneCrdtState,
-    js::{scene_thread, SceneElapsedTime, SceneLogMessage},
+    js::{scene_thread, SceneLogMessage},
 };
 
 use deno_core::v8::IsolateHandle;
