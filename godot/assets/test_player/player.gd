@@ -59,7 +59,7 @@ func _input(event):
 func _physics_process(delta: float) -> void:
 	# Add the gravity.
 	if position.y > 1:
-		velocity.y -= 15 * delta
+		velocity.y -= 10 * delta
 	else: 
 		velocity.y = 0
 	# Handle Jump.

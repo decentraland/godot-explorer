@@ -54,10 +54,25 @@ func _on_gltf_loaded(resource_hash: String):
 	if node != null:
 		gltf_state = GodotGltfState.Finished
 		gltf_node = node.duplicate()
-		add_child(gltf_node)
+		add_gltf_node.call_deferred(gltf_node)
 	else:
 		gltf_state = GodotGltfState.FinishedWithError
-		
+
+func convert_colliders(gltf_node):
+	for maybe_collider in gltf_node.get_children():
+		if maybe_collider is Node3D and maybe_collider.name.ends_with("_collider"):
+			if maybe_collider is MeshInstance3D:
+				maybe_collider.visible = false
+				maybe_collider.create_trimesh_collision()
+				
+				
+		if maybe_collider is Node:
+			convert_colliders(maybe_collider)
+
+func add_gltf_node(node):
+	convert_colliders(node)
+	add_child(node)
+	
 func change_gltf(new_gltf: String):
 	if self.dcl_gltf_src == new_gltf:
 		# TODO: maybe some property changed
