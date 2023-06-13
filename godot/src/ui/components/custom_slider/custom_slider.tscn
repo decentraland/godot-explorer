@@ -1,0 +1,92 @@
+[gd_scene load_steps=6 format=3 uid="uid://15ogbh1jx2ig"]
+
+[ext_resource type="Script" path="res://src/ui/components/custom_slider/custom_slider.gd" id="1_2slg6"]
+[ext_resource type="StyleBox" uid="uid://c7w8klqwa0ok1" path="res://assets/themes/custom_slider/grabber_area.tres" id="2_oxnsr"]
+[ext_resource type="Theme" uid="uid://beks1i0peawwa" path="res://assets/themes/custom_slider_panel.tres" id="3_sboqa"]
+[ext_resource type="StyleBox" uid="uid://cucuu3npiu754" path="res://assets/themes/custom_slider/grabber_area_highlight.tres" id="4_pdbun"]
+[ext_resource type="StyleBox" uid="uid://ghkbqasu22be" path="res://assets/themes/custom_slider/grabber.tres" id="5_mdbfs"]
+
+[node name="Control_DclSlider" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_2slg6")
+max_value = 100
+step = 2
+value = 20
+lenght = 100
+heigth = 20
+
+[node name="Label_GrabberValue2" type="Label" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_right = 140.0
+offset_bottom = 20.0
+theme_override_colors/font_color = Color(0.192157, 0.192157, 0.192157, 1)
+theme_override_font_sizes/font_size = 12
+text = "CUSTOM SLIDER NAME"
+
+[node name="Panel_GrabberArea" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 20.0
+offset_right = 158.0
+offset_bottom = 35.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = ExtResource("2_oxnsr")
+
+[node name="Panel_GrabberAreaHighlight" type="Panel" parent="."]
+custom_minimum_size = Vector2(10, 15)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 20.0
+offset_right = 86.0
+offset_bottom = 35.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("3_sboqa")
+theme_override_styles/panel = ExtResource("4_pdbun")
+
+[node name="Panel_Grabber" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 75.0
+offset_top = 18.0
+offset_right = 94.0
+offset_bottom = 37.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("5_mdbfs")
+
+[node name="Label_GrabberValue" type="Label" parent="Panel_Grabber"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -11.5
+offset_top = -12.0
+offset_right = 11.5
+offset_bottom = 14.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 12
+text = "5"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[connection signal="gui_input" from="Panel_GrabberArea" to="." method="_on_color_rect_grabber_area_gui_input"]

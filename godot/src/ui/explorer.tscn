@@ -1,9 +1,11 @@
-[gd_scene load_steps=12 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=15 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://assets/test_player/player.tscn" id="3_8rjl7"]
 [ext_resource type="Texture2D" uid="uid://m7i23bc2yyqt" path="res://assets/grid.png" id="3_g5xa3"]
-[ext_resource type="PackedScene" uid="uid://dkqc3of5bdx2i" path="res://src/ui/map/map.tscn" id="4_3k3lb"]
+[ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
+[ext_resource type="PackedScene" uid="uid://rt4tyyg7gd1s" path="res://src/ui/components/panel_bottom_left.tscn" id="4_x5dml"]
+[ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_xbryr"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
@@ -31,6 +33,8 @@ texture_filter = 0
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ftw7c"]
 albedo_color = Color(0, 0.654902, 0.658824, 1)
+
+[sub_resource type="Theme" id="Theme_1ufu0"]
 
 [node name="explorer" type="Node3D"]
 script = ExtResource("1_5n8xk")
@@ -60,12 +64,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="Minimap" parent="UI" instance=ExtResource("4_3k3lb")]
-visible = false
-layout_mode = 0
-offset_right = 128.0
-offset_bottom = 128.0
+theme = SubResource("Theme_1ufu0")
 
 [node name="Label_FPS" type="Label" parent="UI"]
 unique_name_in_owner = true
@@ -78,11 +77,16 @@ offset_top = 8.0
 offset_right = -8.0
 offset_bottom = 34.0
 grow_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 24
 text = "FPS"
 horizontal_alignment = 2
 
-[node name="Label_ParcelPosition" type="Label" parent="UI"]
+[node name="Label_RAM" type="Label" parent="UI"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
@@ -92,87 +96,32 @@ offset_top = 32.0
 offset_right = -8.0
 offset_bottom = 58.0
 grow_horizontal = 0
-text = "FPS"
+text = "RAM"
 horizontal_alignment = 2
 
-[node name="Panel_BottomLeft" type="Panel" parent="UI"]
+[node name="Panel_BottomLeft" parent="UI" instance=ExtResource("4_x5dml")]
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
-anchor_bottom = 1.0
-offset_top = -144.0
-offset_right = 538.0
+anchor_right = 0.0
+grow_horizontal = 1
 grow_vertical = 0
 
-[node name="CheckButton_Pause" type="CheckButton" parent="UI/Panel_BottomLeft"]
+[node name="Control_Minimap" parent="UI" instance=ExtResource("4_6aqla")]
 layout_mode = 1
-offset_left = 8.0
-offset_top = 72.0
-offset_right = 159.0
-offset_bottom = 103.0
-focus_mode = 0
-text = "Pause scenes"
-alignment = 2
 
-[node name="OptionButton_Realm" type="OptionButton" parent="UI/Panel_BottomLeft"]
+[node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
+visible = false
 layout_mode = 1
-offset_left = 8.0
-offset_top = 32.0
-offset_right = 526.0
-offset_bottom = 63.0
-focus_mode = 0
-item_count = 4
-popup/item_0/text = "mannakia.dcl.eth"
-popup/item_0/id = 0
-popup/item_1/text = "http://127.0.0.1:8000"
-popup/item_1/id = 1
-popup/item_2/text = "https://sdk-test-scenes.decentraland.zone"
-popup/item_2/id = 2
-popup/item_3/text = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
-popup/item_3/id = 3
 
-[node name="Button_Collapse" type="Button" parent="UI/Panel_BottomLeft"]
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -28.0
-offset_top = 8.0
-offset_right = -8.0
-offset_bottom = 18.0
-grow_horizontal = 0
-focus_mode = 0
-
-[node name="HSlider_SceneRadius" type="HSlider" parent="UI/Panel_BottomLeft"]
-layout_mode = 0
-offset_left = 128.0
-offset_top = 117.0
-offset_right = 309.0
-offset_bottom = 133.0
-focus_mode = 0
-min_value = 1.0
-max_value = 4.0
-value = 1.0
-ticks_on_borders = true
-
-[node name="Label_SceneRadius" type="Label" parent="UI/Panel_BottomLeft"]
-layout_mode = 0
-offset_left = 14.0
-offset_top = 112.0
-offset_right = 116.0
-offset_bottom = 138.0
-text = "Scene Radius"
-
-[node name="Label_SceneRadiusValue" type="Label" parent="UI/Panel_BottomLeft"]
-layout_mode = 0
-offset_left = 318.0
-offset_top = 112.0
-offset_right = 346.0
-offset_bottom = 138.0
-text = "1"
+[node name="Timer" type="Timer" parent="UI"]
+autostart = true
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
-[connection signal="toggled" from="UI/Panel_BottomLeft/CheckButton_Pause" to="." method="_on_check_button_toggled"]
-[connection signal="item_selected" from="UI/Panel_BottomLeft/OptionButton_Realm" to="." method="_on_option_button_item_selected"]
-[connection signal="pressed" from="UI/Panel_BottomLeft/Button_Collapse" to="." method="_on_button_collapse_pressed"]
-[connection signal="drag_ended" from="UI/Panel_BottomLeft/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_drag_ended"]
+[connection signal="request_change_realm" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_realm"]
+[connection signal="request_change_scene_radius" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_scene_radius"]
+[connection signal="request_pause_scenes" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_pause_scenes"]
+[connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
+[connection signal="hide_menu" from="UI/Control_Menu" to="." method="_on_control_menu_hide_menu"]
+[connection signal="jump_to" from="UI/Control_Menu" to="." method="_on_control_menu_jump_to"]
+[connection signal="timeout" from="UI/Timer" to="." method="_on_timer_timeout"]

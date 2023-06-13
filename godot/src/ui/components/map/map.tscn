@@ -1,0 +1,125 @@
+[gd_scene load_steps=3 format=3 uid="uid://dkqc3of3acx2i"]
+
+[ext_resource type="Script" path="res://src/ui/components/map/map.gd" id="1_1j46y"]
+[ext_resource type="PackedScene" uid="uid://dkqc3of5bdx2i" path="res://src/ui/components/map_shader/map_shader.tscn" id="2_el671"]
+
+[node name="Control_Map" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+script = ExtResource("1_1j46y")
+
+[node name="Control_MapShader" parent="." instance=ExtResource("2_el671")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Control_Tooltip" type="Control" parent="."]
+anchors_preset = 0
+mouse_filter = 2
+
+[node name="Label_MousePosition" type="Label" parent="Control_Tooltip"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -44.5
+offset_top = -19.0
+offset_right = 44.5
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+text = "x, y"
+horizontal_alignment = 1
+
+[node name="Control_JumpTo" type="Control" parent="."]
+anchors_preset = 0
+
+[node name="JumpTo" type="Panel" parent="Control_JumpTo"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -85.0
+offset_top = -230.0
+offset_right = 129.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Button_JumpTo" type="Button" parent="Control_JumpTo/JumpTo"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -31.5
+offset_top = -47.0
+offset_right = 31.5
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "JUMP IN"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control_JumpTo/JumpTo"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -90.0
+offset_top = -34.5
+offset_right = 90.0
+offset_bottom = 42.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label_ParcelName" type="Label" parent="Control_JumpTo/JumpTo/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+text = "Parcel Name"
+horizontal_alignment = 1
+
+[node name="Label_ParcelPosition" type="Label" parent="Control_JumpTo/JumpTo/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+text = "x, y"
+horizontal_alignment = 1
+
+[node name="Label_ParcelCreator" type="Label" parent="Control_JumpTo/JumpTo/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 0
+text = "Created by: Decentraland"
+horizontal_alignment = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="Control_JumpTo/JumpTo"]
+position = Vector2(90, 64)
+scale = Vector2(0.3, 0.3)
+
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
+[connection signal="gui_input" from="Control_MapShader" to="." method="_on_control_map_shader_gui_input"]
+[connection signal="on_move" from="Control_MapShader" to="." method="_on_control_map_shader_on_move"]
+[connection signal="pressed" from="Control_JumpTo/JumpTo/Button_JumpTo" to="." method="_on_button_pressed"]

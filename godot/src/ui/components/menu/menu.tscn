@@ -1,0 +1,89 @@
+[gd_scene load_steps=6 format=3 uid="uid://co44hxd7jbcjs"]
+
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
+[ext_resource type="Script" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
+[ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="3_1stdy"]
+[ext_resource type="PackedScene" uid="uid://dkqc3of3acx2i" path="res://src/ui/components/map/map.tscn" id="4_jtsir"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_p3dor"]
+resource_name = "Tabs"
+
+[node name="Control_Menu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_force_pass_scroll_events = false
+theme = ExtResource("1_ji0pe")
+script = ExtResource("2_cgghr")
+
+[node name="Control_Settings" parent="." instance=ExtResource("3_1stdy")]
+visible = false
+layout_mode = 1
+
+[node name="Control_Map" parent="." instance=ExtResource("4_jtsir")]
+layout_mode = 1
+offset_top = 61.0
+
+[node name="ColorRect_Header" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 59.0
+grow_horizontal = 2
+color = Color(0.0862745, 0.0862745, 0.0862745, 1)
+
+[node name="Button_Close" type="Button" parent="."]
+custom_minimum_size = Vector2(75, 0)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -77.0
+offset_top = 18.0
+offset_right = -27.0
+offset_bottom = 41.0
+grow_horizontal = 0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+text = "CLOSE"
+
+[node name="Button_Map" type="Button" parent="."]
+custom_minimum_size = Vector2(75, 0)
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 26.5
+offset_top = 16.0
+offset_right = 101.5
+offset_bottom = 39.0
+grow_horizontal = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+toggle_mode = true
+button_group = SubResource("ButtonGroup_p3dor")
+text = "Map"
+
+[node name="Button_Settings" type="Button" parent="."]
+custom_minimum_size = Vector2(75, 0)
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -101.5
+offset_top = 16.0
+offset_right = -26.5
+offset_bottom = 39.0
+grow_horizontal = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+toggle_mode = true
+button_group = SubResource("ButtonGroup_p3dor")
+text = "Settings"
+
+[connection signal="pressed" from="Button_Close" to="." method="_on_button_close_pressed"]
+[connection signal="pressed" from="Button_Map" to="." method="_on_button_map_pressed"]
+[connection signal="pressed" from="Button_Settings" to="." method="_on_button_settings_pressed"]

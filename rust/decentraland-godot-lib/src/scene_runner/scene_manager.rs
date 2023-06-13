@@ -1,7 +1,9 @@
 use crate::{
     dcl::{
-        components::SceneEntityId, DclScene, DirtyComponents, DirtyEntities, RendererResponse,
-        SceneDefinition, SceneId, SceneResponse,
+        components::SceneEntityId,
+        js::{SceneLogLevel, SceneLogMessage},
+        DclScene, DirtyComponents, DirtyEntities, RendererResponse, SceneDefinition, SceneId,
+        SceneResponse,
     },
     scene_runner::content::ContentMapping,
 };
@@ -17,6 +19,8 @@ pub struct Dirty {
     pub waiting_process: bool,
     pub entities: DirtyEntities,
     pub components: DirtyComponents,
+    pub logs: Vec<SceneLogMessage>,
+    pub elapsed_time: f32,
 }
 
 pub enum SceneState {
@@ -65,6 +69,8 @@ pub struct SceneManager {
 
     camera_node: Gd<Node3D>,
     player_node: Gd<Node3D>,
+
+    console: Callable,
 
     player_position: Vector2i,
     current_parcel_scene_id: SceneId,
@@ -116,6 +122,8 @@ impl SceneManager {
                 waiting_process: true,
                 entities: DirtyEntities::default(),
                 components: DirtyComponents::default(),
+                logs: Vec::new(),
+                elapsed_time: 0.0,
             },
             distance: 0.0,
             next_tick_us: 0,
@@ -151,9 +159,15 @@ impl SceneManager {
     }
 
     #[func]
-    fn set_camera_and_player_node(&mut self, camera_node: Gd<Node3D>, player_node: Gd<Node3D>) {
+    fn set_camera_and_player_node(
+        &mut self,
+        camera_node: Gd<Node3D>,
+        player_node: Gd<Node3D>,
+        console: Callable,
+    ) {
         self.camera_node = camera_node.share();
         self.player_node = player_node.share();
+        self.console = console;
     }
 
     #[func]
@@ -261,6 +275,16 @@ impl SceneManager {
                     &camera_global_transform,
                 );
 
+                // enable logs
+                for log in &scene.current_dirty.logs {
+                    let mut arguments = VariantArray::new();
+                    arguments.push((scene_id.0 as i32).to_variant());
+                    arguments.push((log.level as i32).to_variant());
+                    arguments.push((log.timestamp as f32).to_variant());
+                    arguments.push(GodotString::from(&log.message).to_variant());
+                    self.console.callv(arguments);
+                }
+
                 scene.current_dirty.waiting_process = false;
                 let dirty = crdt_state.take_dirty();
                 drop(crdt_state);
@@ -336,15 +360,27 @@ impl SceneManager {
             match self.main_receiver_from_thread.try_recv() {
                 Ok(response) => match response {
                     SceneResponse::Error(scene_id, msg) => {
-                        godot_print!("[{scene_id:?}] error: {msg}");
+                        let mut arguments = VariantArray::new();
+                        arguments.push((scene_id.0 as i32).to_variant());
+                        arguments.push((SceneLogLevel::SystemError as i32).to_variant());
+                        arguments.push((self.elapsed_time as f32).to_variant());
+                        arguments.push(GodotString::from(&msg).to_variant());
+                        self.console.callv(arguments);
                     }
-                    SceneResponse::Ok(scene_id, (dirty_entities, dirty_components)) => {
+                    SceneResponse::Ok(
+                        scene_id,
+                        (dirty_entities, dirty_components),
+                        logs,
+                        elapsed_time,
+                    ) => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
                             if !scene.current_dirty.waiting_process {
                                 scene.current_dirty = Dirty {
                                     waiting_process: true,
                                     entities: dirty_entities,
                                     components: dirty_components,
+                                    logs,
+                                    elapsed_time,
                                 };
                             } else {
                                 godot_print!("scene {scene_id:?} is already dirty, skipping");
@@ -391,6 +427,7 @@ impl NodeVirtual for SceneManager {
 
             elapsed_time: 0.0,
             begin_time: Instant::now(),
+            console: Callable::default(),
         }
     }
 

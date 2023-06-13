@@ -6,7 +6,7 @@ pub mod serialization;
 use self::{
     components::{SceneComponentId, SceneEntityId},
     crdt::SceneCrdtState,
-    js::scene_thread,
+    js::{scene_thread, SceneElapsedTime, SceneLogMessage},
 };
 
 use deno_core::v8::IsolateHandle;
@@ -55,7 +55,12 @@ pub enum RendererResponse {
 #[derive(Debug)]
 pub enum SceneResponse {
     Error(SceneId, String),
-    Ok(SceneId, (DirtyEntities, DirtyComponents)),
+    Ok(
+        SceneId,
+        (DirtyEntities, DirtyComponents),
+        Vec<SceneLogMessage>,
+        f32,
+    ),
 }
 
 static SCENE_ID_MONOTONIC_COUNTER: Lazy<AtomicU32> = Lazy::new(Default::default);

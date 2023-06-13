@@ -17,6 +17,8 @@ use crate::dcl::{
     RendererResponse, SceneId, SceneResponse,
 };
 
+use super::{SceneElapsedTime, SceneLogMessage};
+
 // list of op declarations
 pub fn ops() -> Vec<OpDecl> {
     vec![
@@ -30,6 +32,9 @@ pub fn ops() -> Vec<OpDecl> {
 fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
     let mut op_state = op_state.borrow_mut();
 
+    let elapsed_time = op_state.borrow::<SceneElapsedTime>().0;
+    let logs = op_state.take::<Vec<SceneLogMessage>>();
+    op_state.put(Vec::<SceneLogMessage>::default());
     let scene_id = op_state.take::<SceneId>();
     let mutex_scene_crdt_state = op_state.take::<Arc<Mutex<SceneCrdtState>>>();
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
@@ -44,7 +49,7 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
 
     let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
     sender
-        .send(SceneResponse::Ok(scene_id, dirty))
+        .send(SceneResponse::Ok(scene_id, dirty, logs, elapsed_time))
         .expect("error sending scene response!!")
 }
 
