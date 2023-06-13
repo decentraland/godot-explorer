@@ -50,29 +50,6 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
 
 #[op(v8)]
 async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u8>> {
-    let mut ret = Vec::<Vec<u8>>::with_capacity(1);
-    if let Some(main_crdt) = op_state.borrow_mut().try_take::<SceneMainCrdtFileContent>() {
-        let mut op_state_main_crdt = op_state.borrow_mut();
-        let scene_id = op_state_main_crdt.take::<SceneId>();
-        let mutex_scene_crdt_state = op_state_main_crdt.take::<Arc<Mutex<SceneCrdtState>>>();
-        let cloned_scene_crdt = mutex_scene_crdt_state.clone();
-        let mut stream = DclReader::new(&main_crdt.0);
-        let mut scene_crdt_state = cloned_scene_crdt.lock().unwrap();
-
-        process_many_messages(&mut stream, &mut scene_crdt_state);
-
-        let dirty = scene_crdt_state.take_dirty();
-        op_state_main_crdt.put(mutex_scene_crdt_state);
-        op_state_main_crdt.put(scene_id);
-
-        let sender = op_state_main_crdt.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
-        sender
-            .send(SceneResponse::Ok(scene_id, dirty))
-            .expect("error sending scene response!!");
-
-        ret.push(main_crdt.0);
-    }
-
     let mut receiver = op_state
         .borrow_mut()
         .take::<tokio::sync::mpsc::Receiver<RendererResponse>>();
@@ -116,6 +93,10 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
     };
 
     op_state.put(mutex_scene_crdt_state);
+    let mut ret = Vec::<Vec<u8>>::with_capacity(1);
+    if let Some(main_crdt) = op_state.try_take::<SceneMainCrdtFileContent>() {
+        ret.push(main_crdt.0);
+    }
     ret.push(data);
     ret
 }

@@ -11,7 +11,9 @@ use deno_core::{
 };
 use godot::prelude::godot_print;
 
-use super::SceneDefinition;
+use super::{
+    crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
+};
 use super::{RendererResponse, SceneId, SceneResponse, VM_HANDLES};
 use crate::dcl::crdt::SceneCrdtState;
 
@@ -71,6 +73,31 @@ pub(crate) fn scene_thread(
     guard.insert(scene_id, vm_handle);
     drop(guard);
 
+    let mut scene_main_crdt = None;
+    let main_crdt_file_path = scene_definition.main_crdt_path;
+    if !main_crdt_file_path.is_empty() {
+        let file = godot::engine::FileAccess::open(
+            godot::prelude::GodotString::from(main_crdt_file_path),
+            godot::engine::file_access::ModeFlags::READ,
+        );
+
+        if let Some(file) = file {
+            let buf = file.get_buffer(file.get_length()).to_vec();
+
+            let mut stream = DclReader::new(&buf);
+            let mut scene_crdt_state = scene_crdt.lock().unwrap();
+
+            process_many_messages(&mut stream, &mut scene_crdt_state);
+
+            let dirty = scene_crdt_state.take_dirty();
+            thread_sender_to_main
+                .send(SceneResponse::Ok(scene_id, dirty))
+                .expect("error sending scene response!!");
+
+            scene_main_crdt = Some(SceneMainCrdtFileContent(buf));
+        }
+    }
+
     let state = runtime.op_state();
 
     // store scene detail in the runtime state
@@ -81,24 +108,14 @@ pub(crate) fn scene_thread(
     state.borrow_mut().put(thread_receive_from_main);
     state.borrow_mut().put(scene_id);
 
+    if let Some(scene_main_crdt) = scene_main_crdt {
+        state.borrow_mut().put(scene_main_crdt);
+    }
+
     // store kill handle
     state
         .borrow_mut()
         .put(runtime.v8_isolate().thread_safe_handle());
-
-    let main_crdt_file_path = scene_definition.main_crdt_path;
-    if !main_crdt_file_path.is_empty() {
-        let file = godot::engine::FileAccess::open(
-            godot::prelude::GodotString::from(main_crdt_file_path),
-            godot::engine::file_access::ModeFlags::READ,
-        );
-
-        if let Some(file) = file {
-            let buf = file.get_buffer(file.get_length()).to_vec();
-            let scene_main_crdt = SceneMainCrdtFileContent(buf);
-            state.borrow_mut().put(scene_main_crdt);
-        }
-    }
 
     let scene_file_path = scene_definition.path;
     let file = godot::engine::FileAccess::open(
