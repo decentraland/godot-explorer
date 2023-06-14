@@ -89,9 +89,9 @@ func _physics_process(delta: float) -> void:
 			animation_player.play("idle")
 		velocity.x = move_toward(velocity.x, 0, SPEED)
 		velocity.z = move_toward(velocity.z, 0, SPEED)
-	
-	if is_on_wall() and is_on_floor() and velocity.x > 0:
-		position.y += 0.25
+#
+#	if is_on_wall() and is_on_floor() and velocity.x > 0:
+#		position.y += 0.25
 	
 	move_and_slide()
 	

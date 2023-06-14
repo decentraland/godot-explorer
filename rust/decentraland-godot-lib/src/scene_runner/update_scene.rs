@@ -2,8 +2,8 @@ use godot::prelude::{Share, Transform3D};
 
 use super::{
     components::{
-        gltf_container::update_gltf_container, mesh_renderer::update_mesh_renderer,
-        transform_and_parent::update_transform_and_parent, mesh_collider::update_mesh_collider,
+        gltf_container::update_gltf_container, mesh_collider::update_mesh_collider,
+        mesh_renderer::update_mesh_renderer, transform_and_parent::update_transform_and_parent,
     },
     scene_manager::Scene,
 };
