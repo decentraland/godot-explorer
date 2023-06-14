@@ -50,10 +50,19 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                     scene.gltf_loading.remove(entity);
                 }
             } else if let Some(new_value) = new_value {
+                let visible_meshes_collision_mask =
+                    new_value.visible_meshes_collision_mask.unwrap_or(0) as i32;
+                let invisible_meshes_collision_mask =
+                    new_value.invisible_meshes_collision_mask.unwrap_or(3) as i32;
+
                 if let Some(mut gltf_node) = existing {
                     gltf_node.call_deferred(
                         StringName::from(GodotString::from("change_gltf")),
-                        &[Variant::from(GodotString::from(new_value.src))],
+                        &[
+                            Variant::from(GodotString::from(new_value.src)),
+                            Variant::from(visible_meshes_collision_mask),
+                            Variant::from(invisible_meshes_collision_mask),
+                        ],
                     );
                     scene.gltf_loading.insert(*entity);
                 } else {
@@ -69,6 +78,14 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                     );
 
                     new_gltf.set(StringName::from("dcl_scene_id"), Variant::from(scene_id));
+                    new_gltf.set(
+                        StringName::from("dcl_visible_cmask"),
+                        Variant::from(visible_meshes_collision_mask),
+                    );
+                    new_gltf.set(
+                        StringName::from("dcl_invisible_cmask"),
+                        Variant::from(invisible_meshes_collision_mask),
+                    );
                     new_gltf.set_name(GodotString::from("GltfContainer"));
                     node.base.add_child(
                         new_gltf.share().upcast(),

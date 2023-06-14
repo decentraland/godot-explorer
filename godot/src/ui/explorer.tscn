@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=17 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://assets/test_player/player.tscn" id="3_8rjl7"]
@@ -38,6 +38,8 @@ data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 
 albedo_color = Color(0, 0.654902, 0.658824, 1)
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_q47mw"]
 
 [node name="explorer" type="Node3D"]
 script = ExtResource("1_5n8xk")
@@ -124,6 +126,12 @@ layout_mode = 1
 
 [node name="Timer" type="Timer" parent="UI"]
 autostart = true
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.70852, 0.567815, 0)
+shape = SubResource("BoxShape3D_q47mw")
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="request_change_realm" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_realm"]

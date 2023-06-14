@@ -38,7 +38,7 @@ func _input(event):
 		if event.keycode == KEY_TAB:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 			
-	#toggle first or third person camera
+	# Toggle first or third person camera
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			if first_person == true:
@@ -63,6 +63,7 @@ func _physics_process(delta: float) -> void:
 		
 	# Handle Jump.
 	if Input.is_action_just_pressed("jump") and is_on_floor():
+		apply_floor_snap()
 		velocity.y = JUMP_VELOCITY
 
 	# Get the input direction and handle the movement/deceleration.
