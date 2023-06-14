@@ -51,7 +51,7 @@ func _unhandled_input(event):
 				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 				
 		if event.pressed and event.keycode == KEY_M:
-			if control_menu.visible: #agregaría un and está en mapa:
+			if control_menu.visible: 
 				control_menu.hide()
 			else:
 				control_menu.show_map()

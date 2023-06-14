@@ -2,6 +2,8 @@ extends Node3D
 
 @export var dcl_gltf_src: String = ""
 @export var dcl_scene_id: int = -1
+@export var dcl_visible_cmask: int = 0
+@export var dcl_invisible_cmask: int = 3
 
 var file_hash: String = ""
 var gltf_node = null
@@ -51,22 +53,57 @@ func _on_gltf_loaded(resource_hash: String):
 		return
 		
 	var node = get_tree().root.get_node("content_manager").get_resource_from_hash(file_hash)
-	if node != null:
-		gltf_state = GodotGltfState.Finished
-		gltf_node = node.duplicate()
-		add_child(gltf_node)
-	else:
+	if node == null:
 		gltf_state = GodotGltfState.FinishedWithError
-		
-func change_gltf(new_gltf: String):
-	if self.dcl_gltf_src == new_gltf:
-		# TODO: maybe some property changed
 		return
 
-	if gltf_node != null:
-		remove_child(gltf_node)
-		gltf_node.queue_free()
-		gltf_node = null
+	gltf_state = GodotGltfState.Finished
+	gltf_node = node.duplicate()
 	
-	self.dcl_gltf_src = new_gltf
-	self.load_gltf.call_deferred()
+	create_and_set_mask_colliders(gltf_node)
+	add_child.call_deferred(gltf_node)
+
+func get_collider(mesh_instance: MeshInstance3D):
+	for maybe_static_body in mesh_instance.get_children():
+		if maybe_static_body is StaticBody3D:
+			return maybe_static_body
+
+	return null
+	
+func create_and_set_mask_colliders(gltf_node: Node):
+	for node in gltf_node.get_children():
+		if node is MeshInstance3D:
+			var mask: int = 0
+			if node.visible:
+				mask = dcl_visible_cmask
+			else:
+				mask = dcl_invisible_cmask
+
+			var static_body_3d = get_collider(node)
+			if static_body_3d == null and mask > 0:
+				node.create_trimesh_collision()
+				static_body_3d = get_collider(node)
+				
+			if static_body_3d != null: 
+				static_body_3d.collision_layer = mask
+
+		if node is Node:
+			create_and_set_mask_colliders(node)
+	
+func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_collision_mask):
+	if self.dcl_gltf_src != new_gltf:
+		self.dcl_gltf_src = new_gltf
+		dcl_visible_cmask = visible_meshes_collision_mask
+		dcl_invisible_cmask = invisible_meshes_collision_mask
+
+		if gltf_node != null:
+			remove_child(gltf_node)
+			gltf_node.queue_free()
+			gltf_node = null
+
+		self.load_gltf.call_deferred()
+	else:
+		if visible_meshes_collision_mask != dcl_visible_cmask or invisible_meshes_collision_mask != dcl_invisible_cmask:
+			dcl_visible_cmask = visible_meshes_collision_mask
+			dcl_invisible_cmask = invisible_meshes_collision_mask
+			create_and_set_mask_colliders(gltf_node)

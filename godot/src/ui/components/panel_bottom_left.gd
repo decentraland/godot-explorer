@@ -70,7 +70,7 @@ func _on_option_button_realm_item_selected(index):
 
 func _on_h_slider_scene_radius_drag_ended(value_changed):
 	if value_changed:
-		emit_signal("request_change_scene_radius", h_slider_scene_radius)
+		emit_signal("request_change_scene_radius", h_slider_scene_radius.value)
 		label_scene_radius_value.text = str(h_slider_scene_radius.value)
 
 func _on_console_add(scene_id: int, level: int, timestamp: float, text: String) -> void:

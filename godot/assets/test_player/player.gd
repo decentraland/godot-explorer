@@ -1,7 +1,7 @@
 extends CharacterBody3D
 
 const SPEED = 5.0
-const JUMP_VELOCITY = 4.5
+const JUMP_VELOCITY = 5.0
 
 @onready var mount_camera := get_node("Mount")
 @onready var camera := get_node("Mount/Camera3D")
@@ -38,7 +38,7 @@ func _input(event):
 		if event.keycode == KEY_TAB:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 			
-	#toggle first or third person camera
+	# Toggle first or third person camera
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			if first_person == true:
@@ -58,12 +58,12 @@ func _input(event):
 
 func _physics_process(delta: float) -> void:
 	# Add the gravity.
-	if position.y > 1:
-		velocity.y -= 15 * delta
-	else: 
-		velocity.y = 0
+	if not is_on_floor():
+		velocity.y -= 10 * delta
+		
 	# Handle Jump.
-	if Input.is_action_just_pressed("jump") and position.y <= 2:
+	if Input.is_action_just_pressed("jump") and is_on_floor():
+		apply_floor_snap()
 		velocity.y = JUMP_VELOCITY
 
 	# Get the input direction and handle the movement/deceleration.
@@ -83,12 +83,18 @@ func _physics_process(delta: float) -> void:
 			velocity.x = direction.x * 3 * SPEED
 			velocity.z = direction.z * 3 * SPEED
 		visuals.look_at(direction + position)
-		
+	
 	else:
 		if animation_player.current_animation != "idle":
 			animation_player.play("idle")
 		velocity.x = move_toward(velocity.x, 0, SPEED)
 		velocity.z = move_toward(velocity.z, 0, SPEED)
-
+#
+#	if is_on_wall() and is_on_floor() and velocity.x > 0:
+#		position.y += 0.25
+	
 	move_and_slide()
-
+	
+#	if is_on_floor():
+#		print(" floor angle " , get_floor_angle(), " and normal ", get_floor_normal())
+#		velocity += col_velocity

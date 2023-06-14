@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=17 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://assets/test_player/player.tscn" id="3_8rjl7"]
@@ -31,10 +31,15 @@ albedo_texture = ExtResource("3_g5xa3")
 uv1_scale = Vector3(300, 300, 300)
 texture_filter = 0
 
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
+data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
+
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ftw7c"]
 albedo_color = Color(0, 0.654902, 0.658824, 1)
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_q47mw"]
 
 [node name="explorer" type="Node3D"]
 script = ExtResource("1_5n8xk")
@@ -50,6 +55,11 @@ environment = SubResource("Environment_ur1u6")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 mesh = SubResource("PlaneMesh_x854j")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Floor"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D"]
+shape = SubResource("ConcavePolygonShape3D_xs7js")
 
 [node name="OriginCube3D" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.504672, 0)
@@ -116,6 +126,12 @@ layout_mode = 1
 
 [node name="Timer" type="Timer" parent="UI"]
 autostart = true
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.70852, 0.567815, 0)
+shape = SubResource("BoxShape3D_q47mw")
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="request_change_realm" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_realm"]
