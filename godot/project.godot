@@ -80,6 +80,25 @@ walk={
 ]
 }
 
+[layer_names]
+
+3d_physics/layer_1="CL_POINTER"
+3d_physics/layer_2="CL_PHYSICS"
+3d_physics/layer_3="CL_RESERVED1"
+3d_physics/layer_4="CL_RESERVED2"
+3d_physics/layer_5="CL_RESERVED3"
+3d_physics/layer_6="CL_RESERVED4"
+3d_physics/layer_7="CL_RESERVED5"
+3d_physics/layer_8="CL_RESERVED6"
+3d_physics/layer_9="CL_CUSTOM1"
+3d_physics/layer_10="CL_CUSTOM2"
+3d_physics/layer_11="CL_CUSTOM3"
+3d_physics/layer_12="CL_CUSTOM4"
+3d_physics/layer_13="CL_CUSTOM5"
+3d_physics/layer_14="CL_CUSTOM6"
+3d_physics/layer_15="CL_CUSTOM7"
+3d_physics/layer_16="CL_CUSTOM8"
+
 [rendering]
 
 vulkan/rendering/back_end=1
