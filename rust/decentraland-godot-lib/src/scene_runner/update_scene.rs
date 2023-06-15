@@ -2,8 +2,9 @@ use godot::prelude::{Share, Transform3D};
 
 use super::{
     components::{
-        gltf_container::update_gltf_container, mesh_collider::update_mesh_collider,
-        mesh_renderer::update_mesh_renderer, transform_and_parent::update_transform_and_parent,
+        gltf_container::update_gltf_container, material::update_material,
+        mesh_collider::update_mesh_collider, mesh_renderer::update_mesh_renderer,
+        transform_and_parent::update_transform_and_parent,
     },
     scene_manager::Scene,
 };
@@ -23,6 +24,7 @@ pub fn update_scene(
     update_deleted_entities(scene);
     update_transform_and_parent(scene, crdt_state);
     update_mesh_renderer(scene, crdt_state);
+    update_material(scene, crdt_state);
     update_mesh_collider(scene, crdt_state);
     update_gltf_container(scene, crdt_state);
 
