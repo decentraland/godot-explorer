@@ -45,7 +45,7 @@ offset_right = 573.0
 offset_bottom = 49.0
 tooltip_text = "Select scene to load"
 focus_mode = 0
-item_count = 4
+item_count = 5
 popup/item_0/text = "mannakia.dcl.eth"
 popup/item_0/id = 0
 popup/item_1/text = "http://127.0.0.1:8000"
@@ -54,6 +54,8 @@ popup/item_2/text = "https://sdk-test-scenes.decentraland.zone"
 popup/item_2/id = 2
 popup/item_3/text = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
 popup/item_3/id = 3
+popup/item_4/text = "https://peer-testing.decentraland.org"
+popup/item_4/id = 4
 
 [node name="HSlider_SceneRadius" type="HSlider" parent="HFlowContainer/Panel_Settings"]
 layout_mode = 0

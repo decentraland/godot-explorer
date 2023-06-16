@@ -1,7 +1,8 @@
 extends CharacterBody3D
 
-const SPEED = 5.0
-const JUMP_VELOCITY = 5.0
+const WALK_SPEED = 5.0
+const RUN_SPEED = 10.0
+const JUMP_VELOCITY = 50.0
 
 @onready var mount_camera := get_node("Mount")
 @onready var camera := get_node("Mount/Camera3D")
@@ -57,13 +58,30 @@ func _input(event):
 				visuals.hide()
 		
 
+var _tmp_floor: bool
+var _floor = null
 func _physics_process(delta: float) -> void:
+	_tmp_floor = is_on_floor()
+	
+	
 	# Add the gravity.
-	if not is_on_floor():
-		velocity.y -= 10 * delta
+	if not _tmp_floor:
+		velocity.y -= 100 * delta
+	else:
+		var s = str(get_slide_collision_count())
+		
+		for i in range(0, get_slide_collision_count()):
+			s = s + " = " + str(get_slide_collision(i))
+			
+		print(s)
+#		var slide = get_slide_collision(0)
+#
+#		var query := PhysicsRayQueryParameters3D.create(self.position, self.position + (10.0*Vector3.DOWN), 0xffffffff, [self])
+#		var result := get_world_3d().direct_space_state.intersect_ray(query)
+#		print(result)
 		
 	# Handle Jump.
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	if Input.is_action_just_pressed("jump") and _tmp_floor:
 		apply_floor_snap()
 		velocity.y = JUMP_VELOCITY
 
@@ -75,27 +93,31 @@ func _physics_process(delta: float) -> void:
 		if Input.is_action_pressed("walk"):
 			if animation_player.current_animation != "walking":
 				animation_player.play("walking")
-			velocity.x = direction.x * SPEED
-			velocity.z = direction.z * SPEED
+			velocity.x = direction.x * WALK_SPEED
+			velocity.z = direction.z * WALK_SPEED
 		else:
 			if animation_player.current_animation != "running":
 				animation_player.play("running")
 				
-			velocity.x = direction.x * 3 * SPEED
-			velocity.z = direction.z * 3 * SPEED
+			velocity.x = direction.x * RUN_SPEED
+			velocity.z = direction.z * RUN_SPEED
 		visuals.look_at(direction + position)
 	
 	else:
 		if animation_player.current_animation != "idle":
 			animation_player.play("idle")
-		velocity.x = move_toward(velocity.x, 0, SPEED)
-		velocity.z = move_toward(velocity.z, 0, SPEED)
+		velocity.x = move_toward(velocity.x, 0, WALK_SPEED)
+		velocity.z = move_toward(velocity.z, 0, WALK_SPEED)
 #
 #	if is_on_wall() and is_on_floor() and velocity.x > 0:
 #		position.y += 0.25
 	
 	move_and_slide()
 	
+	if is_on_floor():
+		var floor := get_slide_collision(0)
+		if floor != null:
+			print(floor.get_position(0))
 #	if is_on_floor():
 #		print(" floor angle " , get_floor_angle(), " and normal ", get_floor_normal())
 #		velocity += col_velocity
