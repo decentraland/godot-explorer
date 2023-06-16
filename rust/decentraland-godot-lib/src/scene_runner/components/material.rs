@@ -98,21 +98,17 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 .try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
 
             let new_value = if let Some(material) = new_value.value.clone() {
-                if let Some(material) = material.material {
-                    Some(material)
-                } else {
-                    None
-                }
+                material.material
             } else {
                 None
             };
 
             if let Some(proto_material) = new_value {
                 let mut godot_material = if node.material.is_some() {
-                    node.material.as_ref().clone().unwrap().share()
+                    node.material.as_ref().unwrap().share()
                 } else {
                     node.material = Some(StandardMaterial3D::new());
-                    node.material.as_ref().clone().unwrap().share()
+                    node.material.as_ref().unwrap().share()
                 };
                 match proto_material {
                     pb_material::Material::Unlit(_unlit_material) => {
@@ -144,14 +140,12 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 if let Some(mut mesh_renderer) = mesh_renderer {
                     mesh_renderer.set_surface_override_material(0, godot_material.upcast());
                 }
-            } else {
-                if let Some(mut mesh_renderer) = mesh_renderer {
-                    mesh_renderer.call(
-                        "set_surface_override_material".into(),
-                        &[0.to_variant(), Variant::nil()],
-                    );
-                    node.material.take();
-                }
+            } else if let Some(mut mesh_renderer) = mesh_renderer {
+                mesh_renderer.call(
+                    "set_surface_override_material".into(),
+                    &[0.to_variant(), Variant::nil()],
+                );
+                node.material.take();
             }
         }
     }
