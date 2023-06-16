@@ -18,9 +18,7 @@ var panel_bottom_left_height: int = 0
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x*0.0625, -player.position.z*0.0625)
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
-	
 	parcel_manager.update_position(parcel_position)
-	
 	control_minimap.set_center_position(parcel_position_real)
 	
 func _ready():
@@ -85,7 +83,6 @@ func _on_panel_bottom_left_request_change_scene_radius(new_value):
 
 func _on_panel_bottom_left_request_pause_scenes(enabled):
 	scene_runner.set_pause(enabled)
-
 
 func _on_timer_timeout():
 	label_ram.set_text("RAM Usage: "+ str(OS.get_static_memory_usage()/1024/1024) + " MB")

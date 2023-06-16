@@ -63,7 +63,7 @@ func _on_button_collapse_pressed():
 				tab.panel.show()
 
 func _on_check_button_pause_pressed():
-	emit_signal("request_pause_scenes", check_button_pause.pressed)
+	emit_signal("request_pause_scenes", check_button_pause.button_pressed)
 
 func _on_option_button_realm_item_selected(index):
 	emit_signal("request_change_realm", option_button_realm.get_item_text(index))
