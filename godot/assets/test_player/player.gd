@@ -23,6 +23,7 @@ func _ready():
 	tween_out.tween_property(camera, "position", Vector3(0.5,0,4), 0.25 ).set_ease(Tween.EASE_IN_OUT)
 	visuals.show()
 	visuals.set_rotation(Vector3(0,0,0))
+	floor_snap_length = 0.2
 
 func _input(event):
 	# Receives mouse motion

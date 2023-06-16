@@ -1,0 +1,50 @@
+[gd_scene load_steps=6 format=3 uid="uid://drle8sbexaohk"]
+
+[ext_resource type="Shader" path="res://assets/sky/krzmig/sky.gdshader" id="1_x45ob"]
+[ext_resource type="Script" path="res://assets/sky/krzmig/world_environment.gd" id="2_ritvr"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_7msf7"]
+shader = ExtResource("1_x45ob")
+shader_parameter/clouds_edge_color = Color(0.8, 0.8, 0.98, 1)
+shader_parameter/clouds_top_color = Color(1, 1, 1, 1)
+shader_parameter/clouds_middle_color = Color(0.92, 0.92, 0.98, 1)
+shader_parameter/clouds_bottom_color = Color(0.83, 0.83, 0.94, 1)
+shader_parameter/clouds_speed = 2.0
+shader_parameter/clouds_direction = 0.2
+shader_parameter/clouds_scale = 1.0
+shader_parameter/clouds_cutoff = 0.3
+shader_parameter/clouds_fuzziness = 0.5
+shader_parameter/clouds_weight = 0.0
+shader_parameter/clouds_blur = 0.25
+shader_parameter/horizon_color = Color(0, 0, 0, 1)
+shader_parameter/horizon_blur = 0.05
+shader_parameter/moon_color = Color(1, 0.95, 0.7, 1)
+shader_parameter/moon_size = 0.06
+shader_parameter/moon_blur = 0.1
+shader_parameter/overwritten_time = 0.0
+shader_parameter/day_top_color = Color(0.1, 0.6, 1, 1)
+shader_parameter/day_bottom_color = Color(0.4, 0.8, 1, 1)
+shader_parameter/sunset_top_color = Color(0.7, 0.75, 1, 1)
+shader_parameter/sunset_bottom_color = Color(1, 0.5, 0.7, 1)
+shader_parameter/night_top_color = Color(0.02, 0, 0.04, 1)
+shader_parameter/night_bottom_color = Color(0.1, 0, 0.2, 1)
+shader_parameter/stars_speed = 1.0
+shader_parameter/sun_color = Color(10, 8, 1, 1)
+shader_parameter/sun_sunset_color = Color(10, 0, 0, 1)
+shader_parameter/sun_size = 0.2
+shader_parameter/sun_blur = 10.0
+
+[sub_resource type="Sky" id="Sky_ogrvh"]
+sky_material = SubResource("ShaderMaterial_7msf7")
+
+[sub_resource type="Environment" id="Environment_ur1u6"]
+background_mode = 2
+sky = SubResource("Sky_ogrvh")
+fog_density = 0.0
+fog_height = 788.14
+volumetric_fog_anisotropy = -0.9
+adjustment_saturation = 0.01
+
+[node name="WorldEnvironment_krzmig" type="WorldEnvironment"]
+environment = SubResource("Environment_ur1u6")
+script = ExtResource("2_ritvr")

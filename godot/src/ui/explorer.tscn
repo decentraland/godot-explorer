@@ -1,24 +1,15 @@
-[gd_scene load_steps=17 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=13 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
+[ext_resource type="PackedScene" uid="uid://drle8sbexaohk" path="res://assets/sky/krzmig/world_environment.tscn" id="2_40m6d"]
 [ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://assets/test_player/player.tscn" id="3_8rjl7"]
 [ext_resource type="Texture2D" uid="uid://m7i23bc2yyqt" path="res://assets/grid.png" id="3_g5xa3"]
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
 [ext_resource type="PackedScene" uid="uid://rt4tyyg7gd1s" path="res://src/ui/components/panel_bottom_left.tscn" id="4_x5dml"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_xbryr"]
-sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
-ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
-
-[sub_resource type="Sky" id="Sky_ogrvh"]
-sky_material = SubResource("ProceduralSkyMaterial_xbryr")
-
-[sub_resource type="Environment" id="Environment_ur1u6"]
-background_mode = 2
-sky = SubResource("Sky_ogrvh")
-tonemap_mode = 2
-glow_enabled = true
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
+data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
 
@@ -31,39 +22,43 @@ albedo_texture = ExtResource("3_g5xa3")
 uv1_scale = Vector3(300, 300, 300)
 texture_filter = 0
 
-[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
-data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ftw7c"]
-albedo_color = Color(0, 0.654902, 0.658824, 1)
-
 [sub_resource type="Theme" id="Theme_1ufu0"]
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_q47mw"]
 
 [node name="explorer" type="Node3D"]
 script = ExtResource("1_5n8xk")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, 0, 0, 0)
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.921025, 0, -0.389504, 0.0827968, -0.977146, 0.195782, -0.380602, -0.21257, -0.899976, 0, 0, 0)
+rotation_order = 4
+light_energy = -1.0
 shadow_enabled = true
+shadow_opacity = 0.75
+shadow_blur = 5.0
+sky_mode = 2
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_ur1u6")
+[node name="Moon" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.882585, 0, 0.470154, 0.39335, 0.547751, -0.738406, -0.257528, 0.83664, 0.483437, 0, 0, 0)
+rotation_order = 4
+light_color = Color(1, 1, 0.6, 1)
+light_energy = 0.0
+shadow_enabled = true
+shadow_opacity = 0.75
+shadow_blur = 5.0
+sky_mode = 2
+
+[node name="WorldEnvironment" parent="." instance=ExtResource("2_40m6d")]
+day_time = 17.1818
+use_day_time_for_shader = true
+
+[node name="StaticBody3D_Floor" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D_Floor"]
+shape = SubResource("ConcavePolygonShape3D_xs7js")
 
 [node name="Floor" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 mesh = SubResource("PlaneMesh_x854j")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
-
-[node name="StaticBody3D" type="StaticBody3D" parent="Floor"]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D"]
-shape = SubResource("ConcavePolygonShape3D_xs7js")
-
-[node name="OriginCube3D" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.504672, 0)
-material = SubResource("StandardMaterial3D_ftw7c")
 
 [node name="Player" parent="." instance=ExtResource("3_8rjl7")]
 
@@ -126,12 +121,6 @@ layout_mode = 1
 
 [node name="Timer" type="Timer" parent="UI"]
 autostart = true
-
-[node name="StaticBody3D" type="StaticBody3D" parent="."]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.70852, 0.567815, 0)
-shape = SubResource("BoxShape3D_q47mw")
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="request_change_realm" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_realm"]

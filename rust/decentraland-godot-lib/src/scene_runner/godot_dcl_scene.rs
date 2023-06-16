@@ -1,5 +1,8 @@
 use crate::dcl::{components::SceneEntityId, crdt::SceneCrdtState, SceneDefinition, SceneId};
-use godot::{engine::node::InternalMode, prelude::*};
+use godot::{
+    engine::{node::InternalMode, StandardMaterial3D},
+    prelude::*,
+};
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
@@ -22,6 +25,7 @@ pub struct Node3DEntity {
     pub base: Gd<Node3D>,
     pub desired_parent: SceneEntityId,
     pub computed_parent: SceneEntityId,
+    pub material: Option<Gd<StandardMaterial3D>>,
 }
 
 impl SceneDefinition {
@@ -68,6 +72,7 @@ impl Node3DEntity {
             base,
             desired_parent: SceneEntityId::new(0, 0),
             computed_parent: SceneEntityId::new(0, 0),
+            material: None,
         }
     }
 }
@@ -92,6 +97,7 @@ impl GodotDclScene {
                 base: root_node.share(),
                 desired_parent: SceneEntityId::new(0, 0),
                 computed_parent: SceneEntityId::new(0, 0),
+                material: None,
             },
         )]);
 
