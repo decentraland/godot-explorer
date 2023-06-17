@@ -22,7 +22,7 @@ func _process(_dt):
 	control_minimap.set_center_position(parcel_position_real)
 	
 func _ready():
-	player.position = 16 * Vector3(72, 0.1, 10) 
+	player.position = 16 * Vector3(78, 0.1, 6) 
 	player.look_at(16 * Vector3(73, 0, 9) )
 
 	scene_runner = get_tree().root.get_node("scene_runner")
