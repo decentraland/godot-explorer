@@ -79,14 +79,23 @@ func create_and_set_mask_colliders(gltf_node: Node):
 			else:
 				mask = dcl_invisible_cmask
 
-			var static_body_3d = get_collider(node)
+			var static_body_3d: StaticBody3D = get_collider(node)
 			if static_body_3d == null and mask > 0:
 				node.create_trimesh_collision()
 				static_body_3d = get_collider(node)
 				
 			if static_body_3d != null: 
-				static_body_3d.collision_layer = mask
-
+				static_body_3d.collision_mask = mask
+				
+				var new_animatable = AnimatableBody3D.new()
+				var parent = static_body_3d.get_parent()
+				for child in static_body_3d.get_children(true):
+					child.reparent(new_animatable)
+				
+				parent.add_child(new_animatable)
+				parent.remove_child(static_body_3d)
+				new_animatable.collision_layer = mask
+				new_animatable.sync_to_physics = false
 		if node is Node:
 			create_and_set_mask_colliders(node)
 	
