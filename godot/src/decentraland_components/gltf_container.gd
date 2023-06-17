@@ -85,17 +85,21 @@ func create_and_set_mask_colliders(gltf_node: Node):
 				static_body_3d = get_collider(node)
 				
 			if static_body_3d != null: 
-				static_body_3d.collision_mask = mask
-				
-				var new_animatable = AnimatableBody3D.new()
 				var parent = static_body_3d.get_parent()
-				for child in static_body_3d.get_children(true):
-					child.reparent(new_animatable)
-				
+				var new_animatable = AnimatableBody3D.new()
 				parent.add_child(new_animatable)
 				parent.remove_child(static_body_3d)
+				
+				for child in static_body_3d.get_children(true):
+					static_body_3d.remove_child(child)
+					new_animatable.add_child(child)
+					if child is CollisionShape3D and child.shape is ConcavePolygonShape3D:
+						# TODO: workaround, the face's normals probably need to be inverted in some meshes
+						child.shape.backface_collision = true
+				
 				new_animatable.collision_layer = mask
 				new_animatable.sync_to_physics = false
+				
 		if node is Node:
 			create_and_set_mask_colliders(node)
 	

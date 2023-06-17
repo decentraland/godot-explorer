@@ -85,5 +85,5 @@ func _on_panel_bottom_left_request_pause_scenes(enabled):
 	scene_runner.set_pause(enabled)
 
 func _on_timer_timeout():
-	label_ram.set_text("RAM Usage: "+ str(OS.get_static_memory_usage()/1024/1024) + " MB")
+	label_ram.set_text("RAM Usage: "+ str(OS.get_static_memory_usage()/1024.0/1024.0) + " MB")
 	label_fps.set_text(str(Engine.get_frames_per_second()) + " FPS")

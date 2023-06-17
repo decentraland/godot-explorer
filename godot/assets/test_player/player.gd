@@ -2,7 +2,7 @@ extends CharacterBody3D
 
 const WALK_SPEED = 5.0
 const RUN_SPEED = 10.0
-const JUMP_VELOCITY = 5.0
+const JUMP_VELOCITY = 7.5
 
 @onready var mount_camera := get_node("Mount")
 @onready var camera := get_node("Mount/Camera3D")
@@ -60,7 +60,7 @@ func _input(event):
 
 func _physics_process(delta: float) -> void:
 	if not is_on_floor():
-		velocity.y -= 10 * delta
+		velocity.y -= 20 * delta
 		
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		apply_floor_snap()
