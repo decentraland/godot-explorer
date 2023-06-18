@@ -4,12 +4,6 @@ func _ready():
 	start.call_deferred()
 	
 func start():
-	# Clean the content cache folder
-	# if DirAccess.dir_exists_absolute("user://content/"):
-	# 	for file in DirAccess.get_files_at("user://content/"):
-	# 		DirAccess.remove_absolute("user://content/" + file)
-	# 	DirAccess.remove_absolute("user://content")
-	
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 		

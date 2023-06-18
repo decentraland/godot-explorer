@@ -1,17 +1,16 @@
 extends CharacterBody3D
 
-const SPEED = 5.0
-const JUMP_VELOCITY = 5.0
-
 @onready var mount_camera := get_node("Mount")
 @onready var camera := get_node("Mount/Camera3D")
-@onready var animation_player = $Visuals/mixamo_base/AnimationPlayer
+@onready var animation_player: AnimationPlayer = $Visuals/AnimationPlayer
 
 @onready var direction: Vector3 = Vector3(0,0,0)
 
 @onready var visuals = $Visuals
 @export var vertical_sens:float = 0.5
 @export var horizontal_sens:float = 0.5
+
+@onready var skeleton_3d: Skeleton3D = $Visuals/Model/Armature/Skeleton3D
 
 var first_person : bool = true
 var _mouse_position = Vector2(0.0, 0.0)
@@ -24,6 +23,13 @@ func _ready():
 	visuals.show()
 	visuals.set_rotation(Vector3(0,0,0))
 	floor_snap_length = 0.2
+	
+	# Fix the Idle animation
+	var idle_anim := animation_player.get_animation("Idle")
+	for i in range(idle_anim.get_track_count()):
+		var original_path: NodePath = idle_anim.track_get_path(i)
+		var bone_name: StringName = original_path.get_name(original_path.get_name_count() - 1)
+		idle_anim.track_set_path(i, NodePath("Armature/Skeleton3D:" + bone_name))
 
 func _input(event):
 	# Receives mouse motion
@@ -55,47 +61,44 @@ func _input(event):
 				var tween_in = create_tween()
 				tween_in.tween_property(camera, "position", Vector3(0,0,-0.2), 0.25 ).set_ease(Tween.EASE_IN_OUT)
 				visuals.hide()
-		
-
+	
+const WALK_SPEED = 5.0
+const RUN_SPEED = 12.0
+const GRAVITY := 55.0
+const JUMP_VELOCITY_0 := 12.0
+	
 func _physics_process(delta: float) -> void:
-	# Add the gravity.
-	if not is_on_floor():
-		velocity.y -= 10 * delta
-		
-	# Handle Jump.
-	if Input.is_action_just_pressed("jump") and is_on_floor():
-		apply_floor_snap()
-		velocity.y = JUMP_VELOCITY
-
-	# Get the input direction and handle the movement/deceleration.
-	# As good practice, you should replace UI actions with custom gameplay actions.
 	var input_dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+	
+	if not is_on_floor():
+		if Input.is_action_pressed("double_gravity"):
+			velocity.y -= GRAVITY * delta * .5
+		else:
+			velocity.y -= GRAVITY * delta
+	elif Input.is_action_just_pressed("jump"):
+		velocity.y = JUMP_VELOCITY_0
+
 	if direction:
 		if Input.is_action_pressed("walk"):
-			if animation_player.current_animation != "walking":
-				animation_player.play("walking")
-			velocity.x = direction.x * SPEED
-			velocity.z = direction.z * SPEED
+			if animation_player.current_animation != "Walk":
+				animation_player.play("Walk")
+			velocity.x = direction.x * WALK_SPEED
+			velocity.z = direction.z * WALK_SPEED
 		else:
-			if animation_player.current_animation != "running":
-				animation_player.play("running")
+			if animation_player.current_animation != "Run":
+				animation_player.play("Run")
 				
-			velocity.x = direction.x * 3 * SPEED
-			velocity.z = direction.z * 3 * SPEED
+			velocity.x = direction.x * RUN_SPEED
+			velocity.z = direction.z * RUN_SPEED
+	
 		visuals.look_at(direction + position)
 	
 	else:
-		if animation_player.current_animation != "idle":
-			animation_player.play("idle")
-		velocity.x = move_toward(velocity.x, 0, SPEED)
-		velocity.z = move_toward(velocity.z, 0, SPEED)
-#
-#	if is_on_wall() and is_on_floor() and velocity.x > 0:
-#		position.y += 0.25
-	
+		if animation_player.current_animation != "Idle":
+			animation_player.play("Idle")
+		velocity.x = move_toward(velocity.x, 0, WALK_SPEED)
+		velocity.z = move_toward(velocity.z, 0, WALK_SPEED)
+
 	move_and_slide()
 	
-#	if is_on_floor():
-#		print(" floor angle " , get_floor_angle(), " and normal ", get_floor_normal())
-#		velocity += col_velocity

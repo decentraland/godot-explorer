@@ -5,7 +5,7 @@ signal jump_to(tile: Vector2i)
 @export var drag_enabled: bool = false
 @onready var control_jump_to = $Control_JumpTo
 @onready var label_mouse_position = $Control_Tooltip/Label_MousePosition
-@onready var label_parcel_position = $Control_JumpTo/JumpTo/VBoxContainer/Label_ParcelPosition
+@onready var label_parcel_position = $Control_JumpTo/Panel_JumpTo/VBoxContainer/Label_ParcelPosition
 @onready var control_tooltip = $Control_Tooltip
 @onready var control_map_shader = $Control_MapShader
 
@@ -48,8 +48,9 @@ func _on_button_pressed():
 	emit_signal("jump_to", parcel_to_jump)
 	
 func _on_visibility_changed():
-	control_tooltip.show()
-	control_jump_to.hide()
+	#control_tooltip.show()
+	#control_jump_to.hide()
+	pass
 	
 func _on_control_map_shader_on_move():
 	control_jump_to.hide()

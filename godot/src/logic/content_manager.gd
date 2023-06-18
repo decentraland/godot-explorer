@@ -207,7 +207,7 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 
 func hide_colliders(gltf_node):
 	for maybe_collider in gltf_node.get_children():
-		if maybe_collider is Node3D and maybe_collider.name.ends_with("_collider"):
+		if maybe_collider is Node3D and maybe_collider.name.find("_collider") != -1:
 			maybe_collider.visible = false
 		
 		if maybe_collider is Node:

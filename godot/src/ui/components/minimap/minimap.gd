@@ -2,8 +2,8 @@ extends Control
 
 signal request_open_map()
 
-@onready var control_map_shader = $Panel/Control_MapShader
-@onready var label_parcel = $Panel/Label_Parcel
+@onready var control_map_shader = $Panel_Background/Control_MapShader
+@onready var label_parcel = $Panel_Background/Label_Parcel
 
 func set_center_position(player_position: Vector2):
 	control_map_shader.set_center_position(player_position)

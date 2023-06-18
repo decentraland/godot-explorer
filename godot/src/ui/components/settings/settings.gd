@@ -1,18 +1,17 @@
 extends Control
-@onready var general = $General
-@onready var graphics = $Graphics
-@onready var monitoring = $Monitoring
+@onready var general = $VBoxContainer_General
+@onready var graphics = $VBoxContainer_Graphics
+@onready var monitoring = $VBoxContainer_Monitoring
 
-@onready var text_edit = $General/CachePath/TextEdit
-@onready var window_size_menu_button = $Graphics/WindowSize/WindowSizeMenuButton
-@onready var resolution_menu_button = $Graphics/Resolution/ResolutionMenuButton
-@onready var map = $General/Map
-@onready var h_slider = $Graphics/GuiScale/HSlider
+@onready var text_edit = $VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
+@onready var window_size_menu_button = $VBoxContainer_Graphics/WindowSize/MenuButton_WindowSize
+@onready var resolution_menu_button = $VBoxContainer_Graphics/Resolution/MenuButton_Resolution
+@onready var minimap = $VBoxContainer_General/Checkbox_Minimap
+@onready var h_slider_ui_scale = $VBoxContainer_Graphics/GuiScale/HSlider_GuiScale
 
-signal toggle_scenes_list_visibility()
-signal toggle_scenes_spawner_visibility()
-signal toggle_ram_usage_visibility()
-signal toggle_map_visibility()
+signal toggle_ram_usage_visibility(visibility:bool)
+signal toggle_map_visibility(visibility:bool)
+signal toggle_fps_visibility(visibility:bool)
 
 var resolutions_16_9 := [
 	Vector2i(1280, 720),
@@ -34,9 +33,9 @@ func _ready():
 	
 	var screen_size = DisplayServer.screen_get_size()
 	for j in range(resolutions_16_9.size()):
-		var size = resolutions_16_9[j]
-		if screen_size.x >= size.x and screen_size.y >= size.y:
-			window_size_menu_button.add_item("%d x %d" % [size.x, size.y], j)
+		var option_size = resolutions_16_9[j]
+		if screen_size.x >= option_size.x and screen_size.y >= option_size.y:
+			window_size_menu_button.add_item("%d x %d" % [option_size.x, option_size.y], j)
 		
 	var err = config.load("user://settings.cfg")
 	if err != OK:
@@ -44,23 +43,43 @@ func _ready():
 		return
 	
 	var window = get_window()
-	var size  = config.get_value("display", "window")
-	DisplayServer.window_set_size(size)
-	get_viewport().size = Vector2(size)
-	window.content_scale_mode = config.get_value("display", "mode")
-	window.content_scale_size = config.get_value("display", "resolution")
+	var window_size  = config.get_value("display", "window")
+	
+	var size_text = "%d x %d" % [window_size.x, window_size.y]
+	var resolution_text = "%d x %d" % [window.content_scale_size.x, window.content_scale_size.y]
+	for idx in range(window_size_menu_button.item_count):
+		var item_text = window_size_menu_button.get_item_text(idx)
+		if item_text == size_text:
+			change_window_size(window_size_menu_button.get_item_id(idx), false)
+			window_size_menu_button.selected = idx
+			break
+			
+	if resolution_text == "0 x 0":
+		resolution_text = size_text
+		
+	for idx in range(resolution_menu_button.item_count):
+		var item_text = resolution_menu_button.get_item_text(idx)
+		if item_text == size_text:
+			change_resolution(resolution_menu_button.get_item_id(idx), false)
+			resolution_menu_button.selected = idx
+			break
+		
 	window.content_scale_factor = config.get_value("display", "ui")
+	h_slider_ui_scale.value = 100.0 * window.content_scale_factor
+	
+	DisplayServer.window_set_position(screen_size*0.5 - window.size*0.5)
 
-func change_window_size(id: int) -> void:
+func change_window_size(id: int, save: bool = true) -> void:
 	DisplayServer.window_set_size(resolutions_16_9[id])
 	get_viewport().size = Vector2(resolutions_16_9[id])
 	load_resolutions()
 	change_resolution(id)
 	
-	config.set_value("display", "window", resolutions_16_9[id])
-	_save()
+	if save:
+		config.set_value("display", "window", resolutions_16_9[id])
+		_save()
 	
-func change_resolution(id: int) -> void:
+func change_resolution(id: int, save: bool = true) -> void:
 	var res_size = Vector2(resolutions_16_9[id])
 	var factor = get_viewport().size.x / res_size.x
 	var window = get_window()
@@ -71,9 +90,10 @@ func change_resolution(id: int) -> void:
 		window.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
 		window.content_scale_size = res_size
 		
-	config.set_value("display", "mode", window.content_scale_mode)
-	config.set_value("display", "resolution", window.content_scale_size)
-	_save()
+	if save:
+		config.set_value("display", "mode", window.content_scale_mode)
+		config.set_value("display", "resolution", window.content_scale_size)
+		_save()
 	
 func _on_button_pressed():
 	self.hide() 
@@ -91,48 +111,50 @@ func load_resolutions():
 	resolution_menu_button.clear()
 	var window_size = DisplayServer.window_get_size()
 	for j in range(resolutions_16_9.size()):
-		var size = resolutions_16_9[j]
-		if window_size.x >= size.x and window_size.y >= size.y:
-			resolution_menu_button.add_item("%d x %d" % [size.x, size.y], j)
+		var res_size = resolutions_16_9[j]
+		if window_size.x >= res_size.x and window_size.y >= res_size.y:
+			resolution_menu_button.add_item("%d x %d" % [res_size.x, res_size.y], j)
 
-func _on_general_button_toggled(button_pressed):
+func _on_general_button_toggled(_button_pressed):
 	general.show()
 	graphics.hide()
 	monitoring.hide()
 
-func _on_graphic_button_toggled(button_pressed):
+func _on_graphic_button_toggled(_button_pressed):
 	general.hide()
 	graphics.show()
 	monitoring.hide()
 
-func _on_monitoring_button_toggled(button_pressed):
+func _on_monitoring_button_toggled(_button_pressed):
 	general.hide()
 	graphics.hide()
 	monitoring.show()
 
-
-func _on_spawned_scenes_toggled(button_pressed):
-	emit_signal('toggle_scenes_list_visibility', button_pressed)
-
-func _on_scenes_selector_2_toggled(button_pressed):
-	emit_signal('toggle_scenes_spawner_visibility', button_pressed)
-
-func _on_ram_usage_toggled(button_pressed):
-	emit_signal('toggle_ram_usage_visibility', button_pressed)
-
-func _on_map_toggled(button_pressed):
-	emit_signal('toggle_map_visibility', button_pressed)
-
-
-func _on_menu_button_gui_scale_item_selected(index):
-	pass # Replace with function body.
-
 func _on_h_slider_drag_ended(value_changed):
 	if value_changed:
 		var window = get_window()
-		window.content_scale_factor = h_slider.value / 100.0
+		window.content_scale_factor = h_slider_ui_scale.value / 100.0
 		config.set_value("display", "ui", window.content_scale_factor)
 		_save()
 		
 func _save():
 	config.save("user://settings.cfg")
+
+
+func _on_button_clear_cache_pressed():
+	# Clean the content cache folder
+	if DirAccess.dir_exists_absolute("user://content/"):
+		for file in DirAccess.get_files_at("user://content/"):
+			DirAccess.remove_absolute("user://content/" + file)
+		DirAccess.remove_absolute("user://content")
+
+	if not DirAccess.dir_exists_absolute("user://content/"):
+		DirAccess.make_dir_absolute("user://content/")
+func _on_ram_usage_toggled(button_pressed):
+	emit_signal('toggle_ram_usage_visibility', button_pressed)
+
+func _on_checkbox_fps_toggled(button_pressed):
+	emit_signal('toggle_fps_visibility', button_pressed)
+	
+func _on_map_toggled(button_pressed):
+	emit_signal('toggle_map_visibility', button_pressed)

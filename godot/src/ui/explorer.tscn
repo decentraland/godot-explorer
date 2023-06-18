@@ -1,12 +1,13 @@
-[gd_scene load_steps=13 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=14 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://drle8sbexaohk" path="res://assets/sky/krzmig/world_environment.tscn" id="2_40m6d"]
-[ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://assets/test_player/player.tscn" id="3_8rjl7"]
+[ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://assets/test_player/player.tscn" id="3_fr1df"]
 [ext_resource type="Texture2D" uid="uid://m7i23bc2yyqt" path="res://assets/grid.png" id="3_g5xa3"]
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
 [ext_resource type="PackedScene" uid="uid://rt4tyyg7gd1s" path="res://src/ui/components/panel_bottom_left.tscn" id="4_x5dml"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
+[ext_resource type="PackedScene" uid="uid://cbtnbb03jb1u6" path="res://src/ui/components/info_panel/info_panel.tscn" id="6_3c8pn"]
 
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
 data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
@@ -55,12 +56,12 @@ use_day_time_for_shader = true
 [node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D_Floor"]
 shape = SubResource("ConcavePolygonShape3D_xs7js")
 
+[node name="Player" parent="." instance=ExtResource("3_fr1df")]
+
 [node name="Floor" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 mesh = SubResource("PlaneMesh_x854j")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
-
-[node name="Player" parent="." instance=ExtResource("3_8rjl7")]
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3
@@ -115,6 +116,11 @@ grow_vertical = 0
 [node name="Control_Minimap" parent="UI" instance=ExtResource("4_6aqla")]
 layout_mode = 1
 
+[node name="Contro_InfoPanel" parent="UI/Control_Minimap" instance=ExtResource("6_3c8pn")]
+layout_mode = 1
+offset_top = 176.0
+offset_bottom = 176.0
+
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
@@ -129,4 +135,7 @@ autostart = true
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
 [connection signal="hide_menu" from="UI/Control_Menu" to="." method="_on_control_menu_hide_menu"]
 [connection signal="jump_to" from="UI/Control_Menu" to="." method="_on_control_menu_jump_to"]
+[connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
+[connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
+[connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
 [connection signal="timeout" from="UI/Timer" to="." method="_on_timer_timeout"]

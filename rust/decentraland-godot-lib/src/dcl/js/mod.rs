@@ -55,8 +55,8 @@ pub(crate) fn scene_thread(
         .ops(engine::ops())
         // set startup JS script
         .js(include_js_files!(
-            prefix "example:init",
-            "init.js",
+            prefix "dcl_core_init",
+            "js_modules/init.js",
         ))
         // remove core deno ops that are not required
         .middleware(|op| {
@@ -287,8 +287,27 @@ fn op_require(
         // user module load
         "~scene.js" => Ok(state.borrow().borrow::<SceneJsFileContent>().0.clone()),
         // core module load
-        "~system/EngineApi" => Ok(include_str!("EngineApi.js").to_owned()),
-        "~system/UserIdentity" => Ok(include_str!("UserIdentity.js").to_owned()),
+        "~system/CommunicationsController" => {
+            Ok(include_str!("js_modules/CommunicationsController.js").to_owned())
+        }
+        "~system/EngineApi" => Ok(include_str!("js_modules/EngineApi.js").to_owned()),
+        "~system/EnvironmentApi" => Ok(include_str!("js_modules/EnvironmentApi.js").to_owned()),
+        "~system/EthereumController" => {
+            Ok(include_str!("js_modules/EthereumController.js").to_owned())
+        }
+        "~system/Players" => Ok(include_str!("js_modules/Players.js").to_owned()),
+        "~system/PortableExperiences" => {
+            Ok(include_str!("js_modules/PortableExperiences.js").to_owned())
+        }
+        "~system/RestrictedActions" => {
+            Ok(include_str!("js_modules/RestrictedActions.js").to_owned())
+        }
+        "~system/Runtime" => Ok(include_str!("js_modules/Runtime.js").to_owned()),
+        "~system/Scene" => Ok(include_str!("js_modules/Scene.js").to_owned()),
+        "~system/SignedFetch" => Ok(include_str!("js_modules/SignedFetch.js").to_owned()),
+        "~system/Testing" => Ok(include_str!("js_modules/Testing.js").to_owned()),
+        "~system/UserActionModule" => Ok(include_str!("js_modules/UserActionModule.js").to_owned()),
+        "~system/UserIdentity" => Ok(include_str!("js_modules/UserIdentity.js").to_owned()),
         _ => Err(generic_error(format!(
             "invalid module request `{module_spec}`"
         ))),

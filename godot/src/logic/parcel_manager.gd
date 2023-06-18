@@ -97,7 +97,6 @@ func get_scene_by_req_id(request_id: int):
 	return null
 
 func _on_main_crdt_file_requested_completed(response: RequestResponse):
-	var status_code = response.status_code()
 	var scene = get_scene_by_req_id(response.id())
 	
 	# Probably the scene was unloaded
@@ -109,7 +108,6 @@ func _on_main_crdt_file_requested_completed(response: RequestResponse):
 		_on_try_spawn_scene(scene)
 
 func _on_main_js_file_requested_completed(response: RequestResponse):
-	var status_code = response.status_code()
 	var scene = get_scene_by_req_id(response.id())	
 	
 	# Probably the scene was unloaded
@@ -186,8 +184,6 @@ func _on_try_spawn_scene(scene):
 	for parcel in parcels_str:
 		var p = parcel.split_floats(",")
 		parcels.push_back(Vector2i(int(p[0]),int(p[1])))
-		
-	var base_url = scene.entity.get("baseUrl", "")
 	
 	var content_mapping = ContentMapping.new()
 	content_mapping.set_content_mapping(scene.entity["content"])
