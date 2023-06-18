@@ -17,6 +17,7 @@ func _ready():
 	vbox_events.hide()
 	vbox_favorites.hide()
 
+
 func hide_all():
 	vbox_highlights.hide()
 	vbox_places.hide()

@@ -5,10 +5,14 @@ signal request_completed(response: RequestResponse)
 
 var _requester = RustHttpRequester.new()
 
+
 func _ready():
 	_requester = RustHttpRequester.new()
-	
+
+
 var tmp
+
+
 func poll():
 	tmp = _requester.poll()
 	while tmp != null:

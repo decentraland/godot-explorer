@@ -13,6 +13,7 @@ var parcel_to_jump: Vector2i
 var mouse_tile: Vector2i
 var last_mouse_tile: Vector2i
 
+
 func _on_control_map_shader_gui_input(event):
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
@@ -26,7 +27,7 @@ func _on_control_map_shader_gui_input(event):
 
 		if not event.pressed:
 			var zoom_value = control_map_shader.zoom_value
-			
+
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				if zoom_value < 48:
 					control_map_shader.set_zoom(zoom_value + 1)
@@ -42,15 +43,17 @@ func _on_control_map_shader_gui_input(event):
 			control_tooltip.show()
 			label_mouse_position.text = str(mouse_tile)
 			control_map_shader.set_selected_parcel(mouse_tile)
-			
+
 
 func _on_button_pressed():
 	emit_signal("jump_to", parcel_to_jump)
-	
+
+
 func _on_visibility_changed():
 	#control_tooltip.show()
 	#control_jump_to.hide()
 	pass
-	
+
+
 func _on_control_map_shader_on_move():
 	control_jump_to.hide()
