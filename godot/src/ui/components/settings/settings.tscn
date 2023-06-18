@@ -10,7 +10,7 @@ Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
 
 [sub_resource type="Theme" id="Theme_eontw"]
 
-[node name="SettingsPanel" type="Control"]
+[node name="Control_SettingsPanel" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -29,7 +29,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.85098, 0.843137, 0.866667, 1)
 
-[node name="ColorRect_LeftMenu" type="ColorRect" parent="."]
+[node name="ColorRect_Sidebar" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 9
 anchor_bottom = 1.0
@@ -37,7 +37,7 @@ offset_right = 240.0
 grow_vertical = 2
 color = Color(0.960784, 0.960784, 0.960784, 1)
 
-[node name="Sections" type="VBoxContainer" parent="ColorRect_LeftMenu"]
+[node name="VBoxContainer_Sections" type="VBoxContainer" parent="ColorRect_Sidebar"]
 layout_mode = 1
 offset_top = 63.0
 offset_right = 239.0
@@ -47,13 +47,13 @@ theme_type_variation = &"2"
 theme_override_constants/separation = 25
 alignment = 1
 
-[node name="Label" type="Label" parent="ColorRect_LeftMenu/Sections"]
+[node name="Label_Title" type="Label" parent="ColorRect_Sidebar/VBoxContainer_Sections"]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Settings"
 
-[node name="GeneralButton" type="Button" parent="ColorRect_LeftMenu/Sections"]
+[node name="Button_General" type="Button" parent="ColorRect_Sidebar/VBoxContainer_Sections"]
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -66,7 +66,7 @@ button_group = SubResource("ButtonGroup_jsp7l")
 text = "General"
 alignment = 0
 
-[node name="GraphicButton" type="Button" parent="ColorRect_LeftMenu/Sections"]
+[node name="Button_Graphics" type="Button" parent="ColorRect_Sidebar/VBoxContainer_Sections"]
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -78,7 +78,7 @@ button_group = SubResource("ButtonGroup_jsp7l")
 text = "Graphics"
 alignment = 0
 
-[node name="MonitoringButton" type="Button" parent="ColorRect_LeftMenu/Sections"]
+[node name="Button_Monitoring" type="Button" parent="ColorRect_Sidebar/VBoxContainer_Sections"]
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -91,127 +91,126 @@ text = "Monitoring
 "
 alignment = 0
 
-[node name="General" type="VBoxContainer" parent="."]
+[node name="VBoxContainer_General" type="VBoxContainer" parent="."]
 layout_mode = 2
-offset_left = 304.0
-offset_top = 129.0
-offset_right = 804.0
-offset_bottom = 301.0
+offset_left = 302.0
+offset_top = 121.0
+offset_right = 802.0
+offset_bottom = 281.0
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
 
-[node name="CachePath" type="VBoxContainer" parent="General"]
+[node name="VBoxContainer_CachePath" type="VBoxContainer" parent="VBoxContainer_General"]
 layout_mode = 2
 size_flags_vertical = 4
+theme_override_constants/separation = 10
+alignment = 1
 
-[node name="Label2" type="Label" parent="General/CachePath"]
+[node name="Label_CachePath" type="Label" parent="VBoxContainer_General/VBoxContainer_CachePath"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Cache Path"
 
-[node name="TextEdit" type="LineEdit" parent="General/CachePath"]
+[node name="TextEdit_CachePath" type="LineEdit" parent="VBoxContainer_General/VBoxContainer_CachePath"]
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
 editable = false
 
-[node name="Button_ClearCache" type="Button" parent="General"]
+[node name="Button_ClearCache" type="Button" parent="VBoxContainer_General/VBoxContainer_CachePath"]
 layout_mode = 2
-text = "Clear cache"
+text = "Clear Cache"
 
-[node name="HSeparator" type="HSeparator" parent="General"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer_General"]
 layout_mode = 2
 
-[node name="Map" type="CheckBox" parent="General"]
+[node name="Checkbox_Minimap" type="CheckBox" parent="VBoxContainer_General"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-text = "Show minimap"
+button_pressed = true
+text = "Show map"
 flat = true
 
-[node name="Graphics" type="VBoxContainer" parent="."]
+[node name="VBoxContainer_Graphics" type="VBoxContainer" parent="."]
 visible = false
 layout_mode = 2
 offset_left = 302.0
-offset_top = 129.0
-offset_right = 622.0
-offset_bottom = 236.0
+offset_top = 121.0
+offset_right = 802.0
+offset_bottom = 293.0
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
 
-[node name="WindowSize" type="VBoxContainer" parent="Graphics"]
+[node name="WindowSize" type="VBoxContainer" parent="VBoxContainer_Graphics"]
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
 
-[node name="Label" type="Label" parent="Graphics/WindowSize"]
+[node name="Label_WindowSize" type="Label" parent="VBoxContainer_Graphics/WindowSize"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Window Size"
 
-[node name="WindowSizeMenuButton" type="OptionButton" parent="Graphics/WindowSize"]
+[node name="MenuButton_WindowSize" type="OptionButton" parent="VBoxContainer_Graphics/WindowSize"]
 layout_mode = 2
 
-[node name="Resolution" type="VBoxContainer" parent="Graphics"]
+[node name="Resolution" type="VBoxContainer" parent="VBoxContainer_Graphics"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="Label" type="Label" parent="Graphics/Resolution"]
+[node name="Label_Resolution" type="Label" parent="VBoxContainer_Graphics/Resolution"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Resolution"
 
-[node name="ResolutionMenuButton" type="OptionButton" parent="Graphics/Resolution"]
+[node name="MenuButton_Resolution" type="OptionButton" parent="VBoxContainer_Graphics/Resolution"]
 layout_mode = 2
 
-[node name="GuiScale" type="VBoxContainer" parent="Graphics"]
+[node name="GuiScale" type="VBoxContainer" parent="VBoxContainer_Graphics"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="Label" type="Label" parent="Graphics/GuiScale"]
+[node name="Label_GuiScale" type="Label" parent="VBoxContainer_Graphics/GuiScale"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "UI Scale"
 
-[node name="HSlider" type="HSlider" parent="Graphics/GuiScale"]
+[node name="HSlider_GuiScale" type="HSlider" parent="VBoxContainer_Graphics/GuiScale"]
 layout_mode = 2
 min_value = 50.0
 max_value = 200.0
 step = 10.0
 value = 100.0
 
-[node name="Monitoring" type="VBoxContainer" parent="."]
+[node name="VBoxContainer_Monitoring" type="VBoxContainer" parent="."]
 visible = false
 layout_mode = 2
 offset_left = 302.0
-offset_top = 129.0
+offset_top = 121.0
 offset_right = 602.0
-offset_bottom = 293.0
+offset_bottom = 285.0
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 25
 
-[node name="SpawnedScenes" type="CheckBox" parent="Monitoring"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-text = "Spawned Scenes"
-flat = true
-
-[node name="ScenesSelector2" type="CheckBox" parent="Monitoring"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-text = "Scenes Selector"
-flat = true
-
-[node name="RamUsage" type="CheckBox" parent="Monitoring"]
+[node name="Checkbox_RamUsage" type="CheckBox" parent="VBoxContainer_Monitoring"]
+visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "RAM Usage"
 flat = true
 
-[node name="ColorRect_Top" type="ColorRect" parent="."]
+[node name="Checkbox_Fps" type="CheckBox" parent="VBoxContainer_Monitoring"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+button_pressed = true
+text = "Frame rate"
+flat = true
+
+[node name="ColorRect_Navbar" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
@@ -219,7 +218,7 @@ offset_bottom = 59.0
 grow_horizontal = 2
 color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 
-[node name="Button" type="Button" parent="."]
+[node name="Button_Back" type="Button" parent="."]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 1
 anchors_preset = 1
@@ -234,15 +233,14 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 text = "Back"
 
-[connection signal="toggled" from="ColorRect_LeftMenu/Sections/GeneralButton" to="." method="_on_general_button_toggled"]
-[connection signal="toggled" from="ColorRect_LeftMenu/Sections/GraphicButton" to="." method="_on_graphic_button_toggled"]
-[connection signal="toggled" from="ColorRect_LeftMenu/Sections/MonitoringButton" to="." method="_on_monitoring_button_toggled"]
-[connection signal="pressed" from="General/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
-[connection signal="toggled" from="General/Map" to="." method="_on_map_toggled"]
-[connection signal="item_selected" from="Graphics/WindowSize/WindowSizeMenuButton" to="." method="_on_window_size_menu_button_item_selected"]
-[connection signal="item_selected" from="Graphics/Resolution/ResolutionMenuButton" to="." method="_on_resolution_menu_button_item_selected"]
-[connection signal="drag_ended" from="Graphics/GuiScale/HSlider" to="." method="_on_h_slider_drag_ended"]
-[connection signal="toggled" from="Monitoring/SpawnedScenes" to="." method="_on_spawned_scenes_toggled"]
-[connection signal="toggled" from="Monitoring/ScenesSelector2" to="." method="_on_scenes_selector_2_toggled"]
-[connection signal="toggled" from="Monitoring/RamUsage" to="." method="_on_ram_usage_toggled"]
-[connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
+[connection signal="toggled" from="ColorRect_Sidebar/VBoxContainer_Sections/Button_General" to="." method="_on_general_button_toggled"]
+[connection signal="toggled" from="ColorRect_Sidebar/VBoxContainer_Sections/Button_Graphics" to="." method="_on_graphic_button_toggled"]
+[connection signal="toggled" from="ColorRect_Sidebar/VBoxContainer_Sections/Button_Monitoring" to="." method="_on_monitoring_button_toggled"]
+[connection signal="pressed" from="VBoxContainer_General/VBoxContainer_CachePath/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
+[connection signal="toggled" from="VBoxContainer_General/Checkbox_Minimap" to="." method="_on_map_toggled"]
+[connection signal="item_selected" from="VBoxContainer_Graphics/WindowSize/MenuButton_WindowSize" to="." method="_on_window_size_menu_button_item_selected"]
+[connection signal="item_selected" from="VBoxContainer_Graphics/Resolution/MenuButton_Resolution" to="." method="_on_resolution_menu_button_item_selected"]
+[connection signal="drag_ended" from="VBoxContainer_Graphics/GuiScale/HSlider_GuiScale" to="." method="_on_h_slider_drag_ended"]
+[connection signal="toggled" from="VBoxContainer_Monitoring/Checkbox_RamUsage" to="." method="_on_ram_usage_toggled"]
+[connection signal="toggled" from="VBoxContainer_Monitoring/Checkbox_Fps" to="." method="_on_checkbox_fps_toggled"]
+[connection signal="pressed" from="Button_Back" to="." method="_on_button_pressed"]

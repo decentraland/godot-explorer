@@ -70,8 +70,8 @@ func get_collider(mesh_instance: MeshInstance3D):
 
 	return null
 	
-func create_and_set_mask_colliders(gltf_node: Node):
-	for node in gltf_node.get_children():
+func create_and_set_mask_colliders(node_to_inspect: Node):
+	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
 			var mask: int = 0
 			if node.visible:

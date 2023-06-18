@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://b7esfr7w0bwnr"
-path="res://.godot/imported/mixamo_base.glb-acdfc03620c40737fc273d0343383117.scn"
+uid="uid://yogsr8lcend1"
+path="res://.godot/imported/idle.glb-8d239cf53bb236ab2fa03273482387d3.scn"
 
 [deps]
 
-source_file="res://assets/test_player/mixamo_base.glb"
-dest_files=["res://.godot/imported/mixamo_base.glb-acdfc03620c40737fc273d0343383117.scn"]
+source_file="res://assets/test_player/emotes/idle.glb"
+dest_files=["res://.godot/imported/idle.glb-8d239cf53bb236ab2fa03273482387d3.scn"]
 
 [params]
 

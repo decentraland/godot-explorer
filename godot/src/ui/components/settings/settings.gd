@@ -1,18 +1,17 @@
 extends Control
-@onready var general = $General
-@onready var graphics = $Graphics
-@onready var monitoring = $Monitoring
+@onready var general = $VBoxContainer_General
+@onready var graphics = $VBoxContainer_Graphics
+@onready var monitoring = $VBoxContainer_Monitoring
 
-@onready var text_edit = $General/CachePath/TextEdit
-@onready var window_size_menu_button = $Graphics/WindowSize/WindowSizeMenuButton
-@onready var resolution_menu_button = $Graphics/Resolution/ResolutionMenuButton
-@onready var map = $General/Map
-@onready var h_slider_ui_scale = $Graphics/GuiScale/HSlider
+@onready var text_edit = $VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
+@onready var window_size_menu_button = $VBoxContainer_Graphics/WindowSize/MenuButton_WindowSize
+@onready var resolution_menu_button = $VBoxContainer_Graphics/Resolution/MenuButton_Resolution
+@onready var minimap = $VBoxContainer_General/Checkbox_Minimap
+@onready var h_slider_ui_scale = $VBoxContainer_Graphics/GuiScale/HSlider_GuiScale
 
-signal toggle_scenes_list_visibility()
-signal toggle_scenes_spawner_visibility()
-signal toggle_ram_usage_visibility()
-signal toggle_map_visibility()
+signal toggle_ram_usage_visibility(visibility:bool)
+signal toggle_map_visibility(visibility:bool)
+signal toggle_fps_visibility(visibility:bool)
 
 var resolutions_16_9 := [
 	Vector2i(1280, 720),
@@ -112,9 +111,9 @@ func load_resolutions():
 	resolution_menu_button.clear()
 	var window_size = DisplayServer.window_get_size()
 	for j in range(resolutions_16_9.size()):
-		var size = resolutions_16_9[j]
-		if window_size.x >= size.x and window_size.y >= size.y:
-			resolution_menu_button.add_item("%d x %d" % [size.x, size.y], j)
+		var res_size = resolutions_16_9[j]
+		if window_size.x >= res_size.x and window_size.y >= res_size.y:
+			resolution_menu_button.add_item("%d x %d" % [res_size.x, res_size.y], j)
 
 func _on_general_button_toggled(_button_pressed):
 	general.show()
@@ -130,22 +129,6 @@ func _on_monitoring_button_toggled(_button_pressed):
 	general.hide()
 	graphics.hide()
 	monitoring.show()
-
-func _on_spawned_scenes_toggled(button_pressed):
-	emit_signal('toggle_scenes_list_visibility', button_pressed)
-
-func _on_scenes_selector_2_toggled(button_pressed):
-	emit_signal('toggle_scenes_spawner_visibility', button_pressed)
-
-func _on_ram_usage_toggled(button_pressed):
-	emit_signal('toggle_ram_usage_visibility', button_pressed)
-
-func _on_map_toggled(button_pressed):
-	emit_signal('toggle_map_visibility', button_pressed)
-
-
-func _on_menu_button_gui_scale_item_selected(index):
-	pass # Replace with function body.
 
 func _on_h_slider_drag_ended(value_changed):
 	if value_changed:
@@ -167,3 +150,11 @@ func _on_button_clear_cache_pressed():
 
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
+func _on_ram_usage_toggled(button_pressed):
+	emit_signal('toggle_ram_usage_visibility', button_pressed)
+
+func _on_checkbox_fps_toggled(button_pressed):
+	emit_signal('toggle_fps_visibility', button_pressed)
+	
+func _on_map_toggled(button_pressed):
+	emit_signal('toggle_map_visibility', button_pressed)

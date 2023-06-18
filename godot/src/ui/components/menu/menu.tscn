@@ -1,9 +1,17 @@
-[gd_scene load_steps=6 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=9 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
 [ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="3_1stdy"]
+[ext_resource type="PackedScene" uid="uid://bp6yn0qw2s6ua" path="res://src/ui/components/discover/discover.tscn" id="4_5qyiw"]
 [ext_resource type="PackedScene" uid="uid://dkqc3of3acx2i" path="res://src/ui/components/map/map.tscn" id="4_jtsir"]
+[ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_t4bn8"]
+shader = ExtResource("5_k4wpn")
+shader_parameter/strength = 0.9
+shader_parameter/speed = 0.025
+shader_parameter/angle = 0.0
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_p3dor"]
 resource_name = "Tabs"
@@ -19,11 +27,16 @@ mouse_force_pass_scroll_events = false
 theme = ExtResource("1_ji0pe")
 script = ExtResource("2_cgghr")
 
+[node name="Control_Discover" parent="." instance=ExtResource("4_5qyiw")]
+visible = false
+layout_mode = 1
+
 [node name="Control_Settings" parent="." instance=ExtResource("3_1stdy")]
 visible = false
 layout_mode = 1
 
 [node name="Control_Map" parent="." instance=ExtResource("4_jtsir")]
+visible = false
 layout_mode = 1
 offset_top = 61.0
 
@@ -34,6 +47,66 @@ anchor_right = 1.0
 offset_bottom = 59.0
 grow_horizontal = 2
 color = Color(0.0862745, 0.0862745, 0.0862745, 1)
+
+[node name="ColorRect_Separator" type="ColorRect" parent="ColorRect_Header"]
+material = SubResource("ShaderMaterial_t4bn8")
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = 2.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="ColorRect_Header"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -117.5
+offset_top = -20.0
+offset_right = 117.5
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 50
+
+[node name="Button_Discover" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
+visible = false
+custom_minimum_size = Vector2(75, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_p3dor")
+text = "Discover"
+
+[node name="Button_Map" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
+custom_minimum_size = Vector2(75, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_p3dor")
+text = "Map"
+
+[node name="Button_Settings" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
+custom_minimum_size = Vector2(75, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_p3dor")
+text = "Settings"
 
 [node name="Button_Close" type="Button" parent="."]
 custom_minimum_size = Vector2(75, 0)
@@ -48,42 +121,13 @@ offset_bottom = 41.0
 grow_horizontal = 0
 size_flags_horizontal = 4
 size_flags_vertical = 4
+focus_mode = 0
 text = "CLOSE"
 
-[node name="Button_Map" type="Button" parent="."]
-custom_minimum_size = Vector2(75, 0)
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = 26.5
-offset_top = 16.0
-offset_right = 101.5
-offset_bottom = 39.0
-grow_horizontal = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-toggle_mode = true
-button_group = SubResource("ButtonGroup_p3dor")
-text = "Map"
-
-[node name="Button_Settings" type="Button" parent="."]
-custom_minimum_size = Vector2(75, 0)
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -101.5
-offset_top = 16.0
-offset_right = -26.5
-offset_bottom = 39.0
-grow_horizontal = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-toggle_mode = true
-button_group = SubResource("ButtonGroup_p3dor")
-text = "Settings"
-
+[connection signal="toggle_fps_visibility" from="Control_Settings" to="." method="_on_control_settings_toggle_fps_visibility"]
+[connection signal="toggle_map_visibility" from="Control_Settings" to="." method="_on_control_settings_toggle_map_visibility"]
+[connection signal="toggle_ram_usage_visibility" from="Control_Settings" to="." method="_on_control_settings_toggle_ram_usage_visibility"]
+[connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="." method="_on_button_discover_pressed"]
+[connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
+[connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Settings" to="." method="_on_button_settings_pressed"]
 [connection signal="pressed" from="Button_Close" to="." method="_on_button_close_pressed"]
-[connection signal="pressed" from="Button_Map" to="." method="_on_button_map_pressed"]
-[connection signal="pressed" from="Button_Settings" to="." method="_on_button_settings_pressed"]

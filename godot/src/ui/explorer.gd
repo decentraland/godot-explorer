@@ -4,12 +4,13 @@ var scene_runner: SceneManager = null
 var realm: Realm = null
 var parcel_manager: ParcelManager = null
 
-@onready var player = $Player
+#@onready var player = $Player
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
 @onready var panel_bottom_left = $UI/Panel_BottomLeft
+@onready var player = $Player
 
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
@@ -49,7 +50,7 @@ func _unhandled_input(event):
 				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 				
 		if event.pressed and event.keycode == KEY_M:
-			if control_menu.visible: 
+			if control_menu.visible:
 				control_menu.hide()
 			else:
 				control_menu.show_map()
@@ -87,3 +88,15 @@ func _on_panel_bottom_left_request_pause_scenes(enabled):
 func _on_timer_timeout():
 	label_ram.set_text("RAM Usage: "+ str(OS.get_static_memory_usage()/1024.0/1024.0) + " MB")
 	label_fps.set_text(str(Engine.get_frames_per_second()) + " FPS")
+
+
+func _on_control_menu_toggle_ram(visibility):
+	label_ram.visible = visibility
+
+
+func _on_control_menu_toggle_fps(visibility):
+	label_fps.visible = visibility
+
+
+func _on_control_menu_toggle_minimap(visibility):
+	control_minimap.visible = visibility
