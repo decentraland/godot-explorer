@@ -11,6 +11,10 @@ You can run `cargo xtask run` to build the Rust library and execute the client.
 - With `-r` it builds the library in release mode. Note: the Godot executable is an editor, so it's a `release_debug` build, see the Target section [here](https://docs.godotengine.org/en/stable/contributing/development/compiling/introduction_to_the_buildsystem.html) for more infromation.
 - With `-e` it also builds the library, but the project edition is executed instead of the client.
 
+## GDScript formatting
+
+When GD files are modified, they must be well-formated. You can autoformat all files running `gdformat godot/` (it requires [godot-gdscript-toolkit](https://github.com/Scony/godot-gdscript-toolkit) installed)
+
 ## Debugging the library
 This repos is set up to be opened with Visual Studio Code. In the section `Run and Debug` in the Activity bar, you can find the configuration for your platform.
 
