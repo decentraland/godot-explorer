@@ -12,21 +12,23 @@ var _mouse_position = Vector2(0.0, 0.0)
 @export var vertical_sens: float = 0.5
 @export var horizontal_sens: float = 0.5
 
+
 func _ready():
-	
 	var tween_out = create_tween()
 	tween_out.tween_property(camera, "position", Vector3(0.5, 0, 4), 0.25).set_ease(
 		Tween.EASE_IN_OUT
 	)
-	
+
 	first_person = false
-	
+
 	visuals.show()
 	visuals.set_rotation(Vector3(0, 0, 0))
-	
+
 	floor_snap_length = 0.2
 
 	# Fix the Idle animation
+
+
 #	var idle_anim := animation_player.get_animation("Idle")
 #	for i in range(idle_anim.get_track_count()):
 #		var original_path: NodePath = idle_anim.track_get_path(i)
