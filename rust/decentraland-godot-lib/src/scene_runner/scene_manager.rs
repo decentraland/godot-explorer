@@ -584,10 +584,12 @@ impl NodeVirtual for SceneManager {
 
                             let state =
                                 *self.input_state.state.get(&input_action).unwrap_or(&false);
-
-                            if pointer_event.event_type == PointerEventType::PetDown as i32
-                                && !state
-                            {
+                            let match_state = (pointer_event.event_type
+                                == PointerEventType::PetUp as i32
+                                && state)
+                                || (pointer_event.event_type == PointerEventType::PetDown as i32
+                                    && !state);
+                            if match_state {
                                 let text = if let Some(text) = info.hover_text.as_ref() {
                                     GodotString::from(text)
                                 } else {
@@ -595,26 +597,14 @@ impl NodeVirtual for SceneManager {
                                 };
 
                                 let mut dict = Dictionary::new();
-                                dict.set(StringName::from("text"), GodotString::from(text));
+                                dict.set(StringName::from("text"), text);
                                 dict.set(
                                     StringName::from("action"),
                                     GodotString::from(input_action.as_str_name()),
                                 );
-                                tooltips.push(dict.to_variant());
-                            } else if pointer_event.event_type == PointerEventType::PetUp as i32
-                                && state
-                            {
-                                let text = if let Some(text) = info.hover_text.as_ref() {
-                                    GodotString::from(text)
-                                } else {
-                                    GodotString::default()
-                                };
-
-                                let mut dict = Dictionary::new();
-                                dict.set(StringName::from("text"), GodotString::from(text));
                                 dict.set(
-                                    StringName::from("action"),
-                                    GodotString::from(input_action.as_str_name()),
+                                    StringName::from("event_type"),
+                                    Variant::from(pointer_event.event_type),
                                 );
                                 tooltips.push(dict.to_variant());
                             }

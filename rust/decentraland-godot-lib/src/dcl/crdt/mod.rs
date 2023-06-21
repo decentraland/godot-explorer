@@ -237,7 +237,7 @@ include!(concat!(env!("OUT_DIR"), "/crdt_impl.gen.rs"));
 mod test {
     #[allow(unused_imports)]
     use crate::dcl::{
-        components::SceneCrdtTimestamp,
+        components::{SceneCrdtTimestamp, SceneEntityId},
         crdt::last_write_wins::{LWWEntry, LastWriteWinsComponentOperation},
         serialization::{reader::DclReader, writer::DclWriter},
     };
