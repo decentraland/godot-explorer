@@ -1,4 +1,11 @@
-use crate::dcl::{components::SceneEntityId, crdt::SceneCrdtState, SceneDefinition, SceneId};
+use crate::dcl::{
+    components::{
+        proto_components::{self},
+        SceneEntityId,
+    },
+    crdt::SceneCrdtState,
+    SceneDefinition, SceneId,
+};
 use godot::{
     engine::{node::InternalMode, StandardMaterial3D},
     prelude::*,
@@ -26,6 +33,7 @@ pub struct Node3DEntity {
     pub desired_parent: SceneEntityId,
     pub computed_parent: SceneEntityId,
     pub material: Option<Gd<StandardMaterial3D>>,
+    pub pointer_events: Option<proto_components::sdk::components::PbPointerEvents>,
 }
 
 impl SceneDefinition {
@@ -65,14 +73,13 @@ impl SceneDefinition {
 }
 
 impl Node3DEntity {
-    fn new() -> Self {
-        let base = Node3D::new_alloc();
-
+    fn new(base: Gd<Node3D>) -> Self {
         Self {
             base,
             desired_parent: SceneEntityId::new(0, 0),
             computed_parent: SceneEntityId::new(0, 0),
             material: None,
+            pointer_events: None,
         }
     }
 }
@@ -93,12 +100,7 @@ impl GodotDclScene {
 
         let entities = HashMap::from([(
             SceneEntityId::new(0, 0),
-            Node3DEntity {
-                base: root_node.share(),
-                desired_parent: SceneEntityId::new(0, 0),
-                computed_parent: SceneEntityId::new(0, 0),
-                material: None,
-            },
+            Node3DEntity::new(root_node.share()),
         )]);
 
         GodotDclScene {
@@ -117,7 +119,7 @@ impl GodotDclScene {
     pub fn ensure_node_mut(&mut self, entity: &SceneEntityId) -> &mut Node3DEntity {
         let maybe_node = self.entities.get(entity);
         if maybe_node.is_none() {
-            let mut new_node = Node3DEntity::new();
+            let mut new_node = Node3DEntity::new(Node3D::new_alloc());
 
             new_node.base.set_name(GodotString::from(format!(
                 "e{:?}_{:?}",

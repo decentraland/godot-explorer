@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bcf5ftohkinyv"
-path.s3tc="res://.godot/imported/run_Avatar_MaleSkinBase.png-db31a52db9708451403585c80ce5cb08.s3tc.ctex"
+uid="uid://bq1ukl50ppjbm"
+path.s3tc="res://.godot/imported/Avatar_MaleSkinBase.png-af11a406c6ebc8bcc5a244e42d4fdf63.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ generator_parameters={}
 
 [deps]
 
-source_file="res://assets/test_player/emotes/run_Avatar_MaleSkinBase.png"
-dest_files=["res://.godot/imported/run_Avatar_MaleSkinBase.png-db31a52db9708451403585c80ce5cb08.s3tc.ctex"]
+source_file="res://assets/test_player/emotes/Avatar_MaleSkinBase.png"
+dest_files=["res://.godot/imported/Avatar_MaleSkinBase.png-af11a406c6ebc8bcc5a244e42d4fdf63.s3tc.ctex"]
 
 [params]
 

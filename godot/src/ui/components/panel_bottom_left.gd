@@ -89,3 +89,7 @@ func _on_console_add(scene_id: int, level: int, timestamp: float, text: String) 
 	rich_text_label_console.add_text(msg)
 	rich_text_label_console.pop()
 	rich_text_label_console.newline()
+
+
+func _on_button_clear_console_pressed():
+	rich_text_label_console.clear()

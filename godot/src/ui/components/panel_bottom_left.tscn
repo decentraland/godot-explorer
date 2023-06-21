@@ -24,6 +24,7 @@ grow_vertical = 0
 theme_override_constants/v_separation = 8
 
 [node name="Panel_Settings" type="Panel" parent="HFlowContainer"]
+visible = false
 custom_minimum_size = Vector2(600, 95)
 layout_mode = 2
 
@@ -96,7 +97,6 @@ offset_bottom = 46.0
 text = "Realm"
 
 [node name="Panel_Console" type="Panel" parent="HFlowContainer"]
-visible = false
 custom_minimum_size = Vector2(600, 300)
 layout_mode = 2
 
@@ -113,6 +113,21 @@ grow_horizontal = 2
 grow_vertical = 2
 bbcode_enabled = true
 scroll_following = true
+
+[node name="Button_ClearConsole" type="Button" parent="HFlowContainer/Panel_Console"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -71.0
+offset_top = -35.0
+offset_right = -16.0
+offset_bottom = -8.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Clear"
 
 [node name="VFlowContainer_Tabs" type="VFlowContainer" parent="HFlowContainer"]
 layout_mode = 2
@@ -138,6 +153,7 @@ text = "Settings"
 [connection signal="pressed" from="HFlowContainer/Panel_Settings/CheckButton_Pause" to="." method="_on_check_button_pause_pressed"]
 [connection signal="item_selected" from="HFlowContainer/Panel_Settings/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
 [connection signal="drag_ended" from="HFlowContainer/Panel_Settings/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_drag_ended"]
+[connection signal="pressed" from="HFlowContainer/Panel_Console/Button_ClearConsole" to="." method="_on_button_clear_console_pressed"]
 [connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Collapse" to="." method="_on_button_collapse_pressed"]
 [connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Console" to="." method="_on_button_tab_pressed" binds= ["console"]]
 [connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Settings" to="." method="_on_button_tab_pressed" binds= ["settings"]]

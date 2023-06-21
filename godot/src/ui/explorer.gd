@@ -10,7 +10,7 @@ var parcel_manager: ParcelManager = null
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
 @onready var panel_bottom_left = $UI/Panel_BottomLeft
-@onready var player = $Player
+@onready var player := $Player
 
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
@@ -29,7 +29,7 @@ func _ready():
 	player.look_at(16 * Vector3(73, 0, 9))
 
 	scene_runner = get_tree().root.get_node("scene_runner")
-	scene_runner.set_camera_and_player_node(player, player, self.panel_bottom_left._on_console_add)
+	scene_runner.set_camera_and_player_node(player.camera, player, self.panel_bottom_left._on_console_add)
 
 	realm = get_tree().root.get_node("realm")
 

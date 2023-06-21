@@ -91,7 +91,7 @@ impl EntityBase {
             base_url: if let Some(base_url) = key_values.first() {
                 base_url.clone()
             } else {
-                format!("{}contents/", default_base_url)
+                format!("{default_base_url}contents/")
             },
         })
     }
@@ -162,11 +162,11 @@ impl SceneEntityCoordinator {
         if !set_request_pointers.is_empty() {
             let request_pointers_body = set_request_pointers
                 .iter()
-                .map(|coord| format!("\"{}\"", coord))
+                .map(|coord| format!("\"{coord}\""))
                 .collect::<Vec<_>>()
                 .join(",");
 
-            let request_body: String = format!("{{\"pointers\":[{}]}}", request_pointers_body);
+            let request_body: String = format!("{{\"pointers\":[{request_pointers_body}]}}");
 
             let request = RequestOption::new(
                 Self::REQUEST_TYPE_SCENE_POINTERS,
@@ -212,7 +212,7 @@ impl SceneEntityCoordinator {
                 serde_json::from_value::<EntityDefinitionJson>(entity_pointer.clone());
 
             if entity_definition.is_err() {
-                println!("Error handling pointer data {:?}", entity_definition);
+                println!("Error handling pointer data {entity_definition:?}");
                 continue;
             }
 
@@ -242,7 +242,7 @@ impl SceneEntityCoordinator {
                 ResponseEnum::Json(json) => {
                     if json.is_err() {
                         self.cleanup_request_id(response.request_option.id);
-                        println!("Error parsing the JSON {:?}", json);
+                        println!("Error parsing the JSON {json:?}");
                         return;
                     }
 
@@ -265,7 +265,7 @@ impl SceneEntityCoordinator {
             },
             Err(err) => {
                 self.cleanup_request_id(response.request_option.id);
-                println!("Error while handling a request: {:?}", err);
+                println!("Error while handling a request: {err:?}");
             }
         }
     }
@@ -384,11 +384,11 @@ impl SceneEntityCoordinator {
                             "status code while doing a request: {:?}",
                             response.status_code
                         );
-                        println!("{:?}", response);
+                        println!("{response:?}");
                     }
                 }
                 Err(err) => {
-                    println!("Error while doing a request: {:?}", err);
+                    println!("Error while doing a request: {err:?}");
                 }
             }
         }

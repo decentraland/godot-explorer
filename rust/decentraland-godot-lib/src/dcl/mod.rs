@@ -35,7 +35,8 @@ pub struct SceneDefinition {
     pub is_global: bool,
 }
 
-pub type DirtyComponents = HashMap<SceneComponentId, HashSet<SceneEntityId>>;
+pub type DirtyLwwComponents = HashMap<SceneComponentId, HashSet<SceneEntityId>>;
+pub type DirtyGosComponents = HashMap<SceneComponentId, HashMap<SceneEntityId, usize>>;
 
 // message from scene-thread describing new and deleted entities
 #[derive(Debug, Default)]
@@ -47,7 +48,7 @@ pub struct DirtyEntities {
 // data from renderer to scene
 #[derive(Debug)]
 pub enum RendererResponse {
-    Ok((DirtyEntities, DirtyComponents)),
+    Ok((DirtyEntities, DirtyLwwComponents, DirtyGosComponents)),
     Kill,
 }
 
@@ -57,7 +58,7 @@ pub enum SceneResponse {
     Error(SceneId, String),
     Ok(
         SceneId,
-        (DirtyEntities, DirtyComponents),
+        (DirtyEntities, DirtyLwwComponents, DirtyGosComponents),
         Vec<SceneLogMessage>,
         f32,
     ),

@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bshfkr3ekeno5"
-path.s3tc="res://.godot/imported/walk_M_EyeBrows_00.png-ff23f4460b2118d7509f09c7c99ced1a.s3tc.ctex"
+path.s3tc="res://.godot/imported/M_EyeBrows_00.png-0b797f3b607c1714ca74aa92780d58b8.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ generator_parameters={}
 
 [deps]
 
-source_file="res://assets/test_player/emotes/walk_M_EyeBrows_00.png"
-dest_files=["res://.godot/imported/walk_M_EyeBrows_00.png-ff23f4460b2118d7509f09c7c99ced1a.s3tc.ctex"]
+source_file="res://assets/test_player/emotes/M_EyeBrows_00.png"
+dest_files=["res://.godot/imported/M_EyeBrows_00.png-0b797f3b607c1714ca74aa92780d58b8.s3tc.ctex"]
 
 [params]
 

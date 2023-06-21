@@ -1,24 +1,31 @@
 use crate::{
     dcl::{
-        components::SceneEntityId,
+        components::{proto_components::sdk::components::PbPointerEventsResult, SceneEntityId},
         js::{SceneLogLevel, SceneLogMessage},
-        DclScene, DirtyComponents, DirtyEntities, RendererResponse, SceneDefinition, SceneId,
-        SceneResponse,
+        DclScene, DirtyEntities, DirtyGosComponents, DirtyLwwComponents, RendererResponse,
+        SceneDefinition, SceneId, SceneResponse,
     },
     scene_runner::content::ContentMapping,
 };
-use godot::{engine::node::InternalMode, prelude::*};
+use godot::{
+    engine::{node::InternalMode, CharacterBody3D, PhysicsRayQueryParameters3D},
+    prelude::*,
+};
 use std::{
     collections::{HashMap, HashSet},
     time::Instant,
 };
 
-use super::godot_dcl_scene::GodotDclScene;
+use super::{
+    components::pointer_events::pointer_events_system, godot_dcl_scene::GodotDclScene,
+    input::InputState,
+};
 
 pub struct Dirty {
     pub waiting_process: bool,
     pub entities: DirtyEntities,
-    pub components: DirtyComponents,
+    pub lww_components: DirtyLwwComponents,
+    pub gos_components: DirtyGosComponents,
     pub logs: Vec<SceneLogMessage>,
     pub elapsed_time: f32,
 }
@@ -40,11 +47,43 @@ pub struct Scene {
     pub content_mapping: Gd<ContentMapping>,
 
     pub gltf_loading: HashSet<SceneEntityId>,
+    pub pointer_events_result: Vec<(SceneEntityId, PbPointerEventsResult)>,
 
     pub current_dirty: Dirty,
     pub distance: f32,
     pub last_tick_us: i64,
     pub next_tick_us: i64,
+}
+
+#[derive(Debug)]
+pub struct GodotDclRaycastResult {
+    pub scene_id: SceneId,
+    pub entity_id: SceneEntityId,
+    pub hit: Dictionary,
+}
+
+impl GodotDclRaycastResult {
+    pub fn eq_key(a: &Option<GodotDclRaycastResult>, b: &Option<GodotDclRaycastResult>) -> bool {
+        if a.is_some() && b.is_some() {
+            let a = a.as_ref().unwrap();
+            let b = b.as_ref().unwrap();
+            a.scene_id == b.scene_id && a.entity_id == b.entity_id
+        } else {
+            a.is_none() && b.is_none()
+        }
+    }
+
+    // pub fn get_hit(&self) -> RaycastHit {
+    //     RaycastHit {
+    //         // pub position: ::core::option::Option<super::super::super::common::Vector3>,
+    //         // pub global_origin: ::core::option::Option<super::super::super::common::Vector3>,
+    //         // pub direction: ::core::option::Option<super::super::super::common::Vector3>,
+    //         // pub normal_hit: ::core::option::Option<super::super::super::common::Vector3>,
+    //         // pub length: f32,
+    //         // pub mesh_name: ::core::option::Option<::prost::alloc::string::String>,
+    //         // pub entity_id: ::core::option::Option<u32>,
+    //     }
+    // }
 }
 
 impl Scene {
@@ -67,8 +106,8 @@ pub struct SceneManager {
     base: Base<Node>,
     scenes: HashMap<SceneId, Scene>,
 
-    camera_node: Gd<Node3D>,
-    player_node: Gd<Node3D>,
+    camera_node: Gd<Camera3D>,
+    player_node: Gd<CharacterBody3D>,
 
     console: Callable,
 
@@ -83,6 +122,10 @@ pub struct SceneManager {
     begin_time: Instant,
     sorted_scene_ids: Vec<SceneId>,
     dying_scene_ids: Vec<SceneId>,
+
+    input_state: InputState,
+    last_raycast_result: Option<GodotDclRaycastResult>,
+    global_tick_number: u32,
 }
 
 #[godot_api]
@@ -121,7 +164,8 @@ impl SceneManager {
             current_dirty: Dirty {
                 waiting_process: true,
                 entities: DirtyEntities::default(),
-                components: DirtyComponents::default(),
+                lww_components: DirtyLwwComponents::default(),
+                gos_components: DirtyGosComponents::default(),
                 logs: Vec::new(),
                 elapsed_time: 0.0,
             },
@@ -129,6 +173,7 @@ impl SceneManager {
             next_tick_us: 0,
             last_tick_us: 0,
             gltf_loading: HashSet::new(),
+            pointer_events_result: Vec::new(),
         };
 
         self.base.add_child(
@@ -161,8 +206,8 @@ impl SceneManager {
     #[func]
     fn set_camera_and_player_node(
         &mut self,
-        camera_node: Gd<Node3D>,
-        player_node: Gd<Node3D>,
+        camera_node: Gd<Camera3D>,
+        player_node: Gd<CharacterBody3D>,
         console: Callable,
     ) {
         self.camera_node = camera_node.share();
@@ -273,6 +318,7 @@ impl SceneManager {
                     scene,
                     &mut crdt_state,
                     &camera_global_transform,
+                    &player_global_transform,
                 );
 
                 // enable logs
@@ -304,37 +350,37 @@ impl SceneManager {
                     break;
                 }
             }
+        }
 
-            for scene_id in self.dying_scene_ids.iter() {
-                let scene = self.scenes.get_mut(scene_id).unwrap();
-                match scene.state {
-                    SceneState::ToKill => {
+        for scene_id in self.dying_scene_ids.iter() {
+            let scene = self.scenes.get_mut(scene_id).unwrap();
+            match scene.state {
+                SceneState::ToKill => {
+                    scene.state = SceneState::KillSignal(current_time_us);
+                    if let Err(_e) = scene
+                        .dcl_scene
+                        .main_sender_to_thread
+                        .try_send(RendererResponse::Kill)
+                    {
+                        // show error
+                    } else {
                         scene.state = SceneState::KillSignal(current_time_us);
-                        if let Err(_e) = scene
-                            .dcl_scene
-                            .main_sender_to_thread
-                            .try_send(RendererResponse::Kill)
-                        {
-                            // show error
-                        } else {
-                            scene.state = SceneState::KillSignal(current_time_us);
-                        }
                     }
-                    SceneState::KillSignal(kill_time_us) => {
-                        if scene.dcl_scene.thread_join_handle.is_finished() {
-                            scene.state = SceneState::Dead;
-                        } else {
-                            let elapsed_from_kill_us = current_time_us - kill_time_us;
-                            if elapsed_from_kill_us > 10 * 1e6 as i64 {
-                                // 10 seconds from the kill signal
-                            }
-                        }
-                    }
-                    SceneState::Dead => {
-                        scene_to_remove.insert(*scene_id);
-                    }
-                    _ => {}
                 }
+                SceneState::KillSignal(kill_time_us) => {
+                    if scene.dcl_scene.thread_join_handle.is_finished() {
+                        scene.state = SceneState::Dead;
+                    } else {
+                        let elapsed_from_kill_us = current_time_us - kill_time_us;
+                        if elapsed_from_kill_us > 10 * 1e6 as i64 {
+                            // 10 seconds from the kill signal
+                        }
+                    }
+                }
+                SceneState::Dead => {
+                    scene_to_remove.insert(*scene_id);
+                }
+                _ => {}
             }
         }
 
@@ -369,7 +415,7 @@ impl SceneManager {
                     }
                     SceneResponse::Ok(
                         scene_id,
-                        (dirty_entities, dirty_components),
+                        (dirty_entities, dirty_lww_components, dirty_gos_components),
                         logs,
                         elapsed_time,
                     ) => {
@@ -378,7 +424,8 @@ impl SceneManager {
                                 scene.current_dirty = Dirty {
                                     waiting_process: true,
                                     entities: dirty_entities,
-                                    components: dirty_components,
+                                    lww_components: dirty_lww_components,
+                                    gos_components: dirty_gos_components,
                                     logs,
                                     elapsed_time,
                                 };
@@ -400,6 +447,53 @@ impl SceneManager {
     fn set_pause(&mut self, value: bool) {
         self.pause = value;
     }
+
+    fn get_current_mouse_entity(&mut self) -> Option<GodotDclRaycastResult> {
+        const RAY_LENGTH: f32 = 100.0;
+
+        let mouse_position = self.get_viewport()?.get_mouse_position();
+        let raycast_from = self.camera_node.project_ray_origin(mouse_position);
+        let raycast_to =
+            raycast_from + self.camera_node.project_ray_normal(mouse_position) * RAY_LENGTH;
+        let mut space = self.camera_node.get_world_3d()?.get_direct_space_state()?;
+        let mut raycast_query = PhysicsRayQueryParameters3D::new();
+        raycast_query.set_from(raycast_from);
+        raycast_query.set_to(raycast_to);
+        raycast_query.set_collision_mask(1); // CL_POINTER
+
+        let raycast_result = space.intersect_ray(raycast_query);
+        let collider = raycast_result.get("collider")?;
+
+        let has_dcl_entity_id = collider
+            .call(
+                StringName::from("has_meta"),
+                &[Variant::from("dcl_entity_id")],
+            )
+            .booleanize();
+
+        if !has_dcl_entity_id {
+            return None;
+        }
+
+        let dcl_entity_id = collider
+            .call(
+                StringName::from("get_meta"),
+                &[Variant::from("dcl_entity_id")],
+            )
+            .to::<i32>();
+        let dcl_scene_id = collider
+            .call(
+                StringName::from("get_meta"),
+                &[Variant::from("dcl_scene_id")],
+            )
+            .to::<i32>();
+
+        Some(GodotDclRaycastResult {
+            scene_id: SceneId(dcl_scene_id as u32),
+            entity_id: SceneEntityId::from_i32(dcl_entity_id),
+            hit: raycast_result,
+        })
+    }
 }
 
 #[godot_api]
@@ -420,24 +514,34 @@ impl NodeVirtual for SceneManager {
             main_receiver_from_thread,
             thread_sender_to_main,
 
-            camera_node: Node3D::new_alloc(),
-            player_node: Node3D::new_alloc(),
+            camera_node: Camera3D::new_alloc(),
+            player_node: CharacterBody3D::new_alloc(),
 
             player_position: Vector2i::new(-1000, -1000),
 
             elapsed_time: 0.0,
             begin_time: Instant::now(),
             console: Callable::default(),
+            input_state: InputState::default(),
+            last_raycast_result: None,
+            global_tick_number: 0,
         }
-    }
-
-    fn ready(&mut self) {
-        // Note: this is downcast during load() -- completely type-safe thanks to type inference!
-        // If the resource does not exist or has an incompatible type, this panics.
-        // There is also try_load() if you want to check whether loading succeeded.
     }
 
     fn process(&mut self, delta: f64) {
         self.scene_runner_update(delta);
+
+        let changed_inputs = self.input_state.get_new_inputs();
+        let current_pointer_raycast_result = self.get_current_mouse_entity();
+
+        pointer_events_system(
+            self.global_tick_number,
+            &mut self.scenes,
+            &changed_inputs,
+            &self.last_raycast_result,
+            &current_pointer_raycast_result,
+        );
+        self.last_raycast_result = current_pointer_raycast_result;
+        self.global_tick_number += 1;
     }
 }

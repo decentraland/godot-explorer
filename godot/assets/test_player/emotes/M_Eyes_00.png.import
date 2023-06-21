@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bq1ukl50ppjbm"
-path.s3tc="res://.godot/imported/walk_Avatar_MaleSkinBase.png-deb11bbd8ff74084e68b6e8d32cfd1c9.s3tc.ctex"
+uid="uid://cqf7wyhouoxpk"
+path.s3tc="res://.godot/imported/M_Eyes_00.png-e4241d5b0a730b32b97d431b5dfc5ebc.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ generator_parameters={}
 
 [deps]
 
-source_file="res://assets/test_player/emotes/walk_Avatar_MaleSkinBase.png"
-dest_files=["res://.godot/imported/walk_Avatar_MaleSkinBase.png-deb11bbd8ff74084e68b6e8d32cfd1c9.s3tc.ctex"]
+source_file="res://assets/test_player/emotes/M_Eyes_00.png"
+dest_files=["res://.godot/imported/M_Eyes_00.png-e4241d5b0a730b32b97d431b5dfc5ebc.s3tc.ctex"]
 
 [params]
 

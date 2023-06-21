@@ -25,11 +25,12 @@ enum GodotGltfState {
 
 pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
-    let dirty_components = &scene.current_dirty.components;
+    let dirty_lww_components = &scene.current_dirty.lww_components;
     let scene_id = godot_dcl_scene.scene_id.0;
     let gltf_container_component = SceneCrdtStateProtoComponents::get_gltf_container(crdt_state);
 
-    if let Some(gltf_container_dirty) = dirty_components.get(&SceneComponentId::GLTF_CONTAINER) {
+    if let Some(gltf_container_dirty) = dirty_lww_components.get(&SceneComponentId::GLTF_CONTAINER)
+    {
         for entity in gltf_container_dirty {
             let new_value = gltf_container_component.get(*entity);
             if new_value.is_none() {
@@ -78,6 +79,10 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                     );
 
                     new_gltf.set(StringName::from("dcl_scene_id"), Variant::from(scene_id));
+                    new_gltf.set(
+                        StringName::from("dcl_entity_id"),
+                        Variant::from(entity.as_usize() as i32),
+                    );
                     new_gltf.set(
                         StringName::from("dcl_visible_cmask"),
                         Variant::from(visible_meshes_collision_mask),

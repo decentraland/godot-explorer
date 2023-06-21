@@ -39,7 +39,7 @@ impl HttpRequester {
                     let url = request_option.url.clone();
                     let response = Self::do_request(&client, request_option).await;
                     if response.is_err() {
-                        println!("Error in request: {:?}", url);
+                        println!("Error in request: {url:?}");
                     } else {
                         // println!("Ok in request: {:?}", url);
                     }

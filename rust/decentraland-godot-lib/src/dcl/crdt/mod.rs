@@ -3,10 +3,7 @@ pub mod grow_only_set;
 pub mod last_write_wins;
 pub mod message;
 
-use std::{
-    any::Any,
-    collections::{HashMap, HashSet},
-};
+use std::{any::Any, collections::HashMap};
 
 use self::{
     entity::SceneEntityContainer,
@@ -15,11 +12,8 @@ use self::{
 };
 
 use super::{
-    components::{
-        proto_components, transform_and_parent::DclTransformAndParent, SceneComponentId,
-        SceneEntityId,
-    },
-    DirtyComponents, DirtyEntities,
+    components::{proto_components, transform_and_parent::DclTransformAndParent, SceneComponentId},
+    DirtyEntities, DirtyGosComponents, DirtyLwwComponents,
 };
 
 #[derive(Debug)]
@@ -180,14 +174,14 @@ impl SceneCrdtState {
         Some(component)
     }
 
-    pub fn take_dirty(&mut self) -> (DirtyEntities, DirtyComponents) {
-        let mut dirty_components: HashMap<SceneComponentId, HashSet<SceneEntityId>> =
-            HashMap::new();
+    pub fn take_dirty(&mut self) -> (DirtyEntities, DirtyLwwComponents, DirtyGosComponents) {
+        let mut dirty_lww_components: DirtyLwwComponents = HashMap::new();
+        let mut dirty_gos_components: DirtyGosComponents = HashMap::new();
         let keys: Vec<SceneComponentId> = self.components.keys().cloned().collect(); // another way to do this?
         let dirty_entities = self.entities.take_dirty();
 
-        for component_id in keys {
-            if let Some(component_definition) = self.get_lww_component_definition_mut(component_id)
+        for component_id in keys.iter() {
+            if let Some(component_definition) = self.get_lww_component_definition_mut(*component_id)
             {
                 let mut dirty = component_definition.take_dirty();
 
@@ -197,12 +191,28 @@ impl SceneCrdtState {
                 }
 
                 if !dirty.is_empty() {
-                    dirty_components.insert(component_id, dirty);
+                    dirty_lww_components.insert(*component_id, dirty);
                 }
             }
         }
 
-        (dirty_entities, dirty_components)
+        for component_id in keys.iter() {
+            if let Some(component_definition) = self.get_gos_component_definition_mut(*component_id)
+            {
+                let mut dirty = component_definition.take_dirty();
+
+                for entity in dirty_entities.died.iter() {
+                    component_definition.clean_without_dirty(*entity);
+                    dirty.remove(entity);
+                }
+
+                if !dirty.is_empty() {
+                    dirty_gos_components.insert(*component_id, dirty);
+                }
+            }
+        }
+
+        (dirty_entities, dirty_lww_components, dirty_gos_components)
     }
 
     pub fn get_transform_mut(&mut self) -> &mut LastWriteWins<DclTransformAndParent> {

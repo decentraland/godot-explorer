@@ -99,8 +99,8 @@ pub fn create_or_update_mesh(
 
 pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
-    let dirty_components = &scene.current_dirty.components;
-    if let Some(mesh_collider_dirty) = dirty_components.get(&SceneComponentId::MESH_COLLIDER) {
+    let dirty_lww_components = &scene.current_dirty.lww_components;
+    if let Some(mesh_collider_dirty) = dirty_lww_components.get(&SceneComponentId::MESH_COLLIDER) {
         let mesh_collider_component = SceneCrdtStateProtoComponents::get_mesh_collider(crdt_state);
 
         for entity in mesh_collider_dirty {
@@ -140,6 +140,15 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
                 if add_to_base {
                     static_body_3d.set_name(GodotString::from("MeshCollider"));
+                    static_body_3d.set_meta(
+                        "dcl_entity_id".into(),
+                        (entity.as_usize() as i32).to_variant(),
+                    );
+                    static_body_3d.set_meta(
+                        "dcl_scene_id".into(),
+                        (scene.scene_id.0 as i32).to_variant(),
+                    );
+
                     node.base.add_child(
                         static_body_3d.upcast(),
                         false,

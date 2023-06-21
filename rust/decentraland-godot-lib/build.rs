@@ -58,18 +58,10 @@ fn get_component_id(proto_content: &str) -> Result<u32, String> {
     let parsed_component_id = component_id_value
         .split(|c: char| !c.is_ascii_digit())
         .find(|s| !s.is_empty())
-        .ok_or_else(|| {
-            format!(
-                "Failed to parse `ecs_component_id` value: {}",
-                component_id_value
-            )
-        })?;
+        .ok_or_else(|| format!("Failed to parse `ecs_component_id` value: {component_id_value}"))?;
 
     let parsed_component_id = parsed_component_id.parse::<u32>().map_err(|err| {
-        format!(
-            "Failed to parse `ecs_component_id` value: {}, err: {:?}",
-            component_id_value, err
-        )
+        format!("Failed to parse `ecs_component_id` value: {component_id_value}, err: {err:?}")
     })?;
 
     Ok(parsed_component_id)
@@ -116,7 +108,7 @@ fn generate_enum(proto_components: &Vec<Component>) {
             component.id
         );
     }
-    let output_str = format!("impl SceneComponentId {{ {} }}", output_str);
+    let output_str = format!("impl SceneComponentId {{ {output_str} }}");
     generate_file(dest_path, output_str.as_bytes());
 }
 
@@ -221,9 +213,8 @@ fn generate_impl_crdt(proto_components: &Vec<Component>) {
 
     custom_proto_methods += &format!(
         "pub fn is_proto_component_id(id: SceneComponentId) -> bool {{
-            matches!(id.0, {})
-        }}\n",
-        or_components
+            matches!(id.0, {or_components})
+        }}\n"
     );
 
     let output_str = format!(
