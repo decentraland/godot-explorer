@@ -44,7 +44,8 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 };
 
                 label_3d.set_text(GodotString::from(new_value.text));
-                label_3d.set_font_size(8 * new_value.font_size.unwrap_or(24.0) as i64); // TODO: see font size fix
+                label_3d.set_font_size(12 * new_value.font_size.unwrap_or(3.0) as i64); // TODO: see font size fix
+                label_3d.set_outline_size(8); // TODO: see font size fix
 
                 if add_to_base {
                     label_3d.set_name(GodotString::from("TextShape"));

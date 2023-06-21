@@ -1,6 +1,12 @@
 use crate::{
     dcl::{
-        components::{proto_components::sdk::components::PbPointerEventsResult, SceneEntityId},
+        components::{
+            proto_components::sdk::components::{
+                common::{InputAction, PointerEventType},
+                PbPointerEventsResult,
+            },
+            SceneEntityId,
+        },
         js::{SceneLogLevel, SceneLogMessage},
         DclScene, DirtyEntities, DirtyGosComponents, DirtyLwwComponents, RendererResponse,
         SceneDefinition, SceneId, SceneResponse,
@@ -17,7 +23,8 @@ use std::{
 };
 
 use super::{
-    components::pointer_events::pointer_events_system, godot_dcl_scene::GodotDclScene,
+    components::pointer_events::{get_entity_pointer_event, pointer_events_system},
+    godot_dcl_scene::GodotDclScene,
     input::InputState,
 };
 
@@ -126,6 +133,8 @@ pub struct SceneManager {
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
     global_tick_number: u32,
+
+    pointer_tooltips: VariantArray,
 }
 
 #[godot_api]
@@ -494,6 +503,14 @@ impl SceneManager {
             hit: raycast_result,
         })
     }
+
+    #[func]
+    fn get_tooltips(&self) -> VariantArray {
+        self.pointer_tooltips.share()
+    }
+
+    #[signal]
+    fn pointer_tooltip_changed() {}
 }
 
 #[godot_api]
@@ -525,6 +542,7 @@ impl NodeVirtual for SceneManager {
             input_state: InputState::default(),
             last_raycast_result: None,
             global_tick_number: 0,
+            pointer_tooltips: VariantArray::new(),
         }
     }
 
@@ -541,6 +559,74 @@ impl NodeVirtual for SceneManager {
             &self.last_raycast_result,
             &current_pointer_raycast_result,
         );
+
+        let should_update_tooltip = !changed_inputs.is_empty()
+            || !GodotDclRaycastResult::eq_key(
+                &self.last_raycast_result,
+                &current_pointer_raycast_result,
+            );
+
+        if should_update_tooltip {
+            let mut tooltips = VariantArray::new();
+            if let Some(raycast) = current_pointer_raycast_result.as_ref() {
+                if let Some(pointer_events) =
+                    get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
+                {
+                    for pointer_event in pointer_events.pointer_events.iter() {
+                        if let Some(info) = pointer_event.event_info.as_ref() {
+                            // if !info.show_feedback.as_ref().unwrap_or(&false) {
+                            //     continue;
+                            // }
+
+                            let input_action =
+                                InputAction::from_i32(*info.button.as_ref().unwrap_or(&0))
+                                    .unwrap_or(InputAction::IaAny);
+
+                            let state =
+                                *self.input_state.state.get(&input_action).unwrap_or(&false);
+
+                            if pointer_event.event_type == PointerEventType::PetDown as i32
+                                && !state
+                            {
+                                let text = if let Some(text) = info.hover_text.as_ref() {
+                                    GodotString::from(text)
+                                } else {
+                                    GodotString::default()
+                                };
+
+                                let mut dict = Dictionary::new();
+                                dict.set(StringName::from("text"), GodotString::from(text));
+                                dict.set(
+                                    StringName::from("action"),
+                                    GodotString::from(input_action.as_str_name()),
+                                );
+                                tooltips.push(dict.to_variant());
+                            } else if pointer_event.event_type == PointerEventType::PetUp as i32
+                                && state
+                            {
+                                let text = if let Some(text) = info.hover_text.as_ref() {
+                                    GodotString::from(text)
+                                } else {
+                                    GodotString::default()
+                                };
+
+                                let mut dict = Dictionary::new();
+                                dict.set(StringName::from("text"), GodotString::from(text));
+                                dict.set(
+                                    StringName::from("action"),
+                                    GodotString::from(input_action.as_str_name()),
+                                );
+                                tooltips.push(dict.to_variant());
+                            }
+                        }
+                    }
+                }
+            }
+
+            self.pointer_tooltips = tooltips;
+            self.emit_signal("pointer_tooltip_changed".into(), &[]);
+        }
+
         self.last_raycast_result = current_pointer_raycast_result;
         self.global_tick_number += 1;
     }

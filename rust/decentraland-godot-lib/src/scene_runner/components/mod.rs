@@ -5,3 +5,4 @@ pub mod mesh_renderer;
 pub mod pointer_events;
 pub mod text_shape;
 pub mod transform_and_parent;
+pub mod billboard;

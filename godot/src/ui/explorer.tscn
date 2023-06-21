@@ -156,6 +156,19 @@ offset_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="Tooltip" type="Panel" parent="."]
+modulate = Color(1, 1, 1, 0.803922)
+offset_right = 285.0
+offset_bottom = 39.0
+
+[node name="Label" type="Label" parent="Tooltip"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 90.0
+offset_bottom = 31.0
+text = "[E] Activate"
+
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="request_change_realm" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_realm"]
 [connection signal="request_change_scene_radius" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_scene_radius"]
@@ -167,3 +180,4 @@ grow_vertical = 2
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
 [connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
 [connection signal="timeout" from="UI/Timer" to="." method="_on_timer_timeout"]
+[connection signal="gui_input" from="Tooltip" to="." method="_on_tooltip_gui_input"]

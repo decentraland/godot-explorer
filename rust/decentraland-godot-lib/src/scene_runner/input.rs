@@ -6,7 +6,7 @@ use crate::dcl::components::proto_components::sdk::components::common::InputActi
 
 pub struct InputState {
     dcl_to_action: HashMap<InputAction, StringName>,
-    state: HashMap<InputAction, bool>, // for now, only support bool states
+    pub state: HashMap<InputAction, bool>, // for now, only support bool states
 }
 
 impl InputState {
@@ -48,4 +48,6 @@ impl InputState {
         }
         result
     }
+
+    
 }

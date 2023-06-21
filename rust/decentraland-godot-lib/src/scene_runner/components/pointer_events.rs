@@ -45,7 +45,7 @@ impl PbPointerEvents {
     }
 }
 
-fn get_entity_pointer_event<'a>(
+pub fn get_entity_pointer_event<'a>(
     scenes: &'a HashMap<SceneId, Scene>,
     scene_id: &SceneId,
     entity_id: &SceneEntityId,

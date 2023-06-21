@@ -11,6 +11,7 @@ var parcel_manager: ParcelManager = null
 @onready var control_minimap = $UI/Control_Minimap
 @onready var panel_bottom_left = $UI/Panel_BottomLeft
 @onready var player := $Player
+@onready var tooltip_node = $Tooltip
 
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
@@ -30,12 +31,31 @@ func _ready():
 
 	scene_runner = get_tree().root.get_node("scene_runner")
 	scene_runner.set_camera_and_player_node(player.camera, player, self.panel_bottom_left._on_console_add)
-
+	scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
+	
 	realm = get_tree().root.get_node("realm")
 
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
 
+func _on_pointer_tooltip_changed():
+	change_tooltips.call_deferred()
+	
+func change_tooltips():
+	var tooltips = scene_runner.get_tooltips()
+	tooltip_node.hide()
+	
+	if not tooltips.is_empty():
+		var tooltip: Dictionary = tooltips[0]
+		var events := InputMap.action_get_events(tooltip.get("action", "").to_lower())
+		
+		if not events.is_empty():
+			var tooltip_text = "[" + events[0].as_text() + "] " + tooltip.get("text", "")
+			tooltip_node.show()
+			tooltip_node.position = tooltip_node.get_global_mouse_position() + Vector2(20, 0)
+			tooltip_node.get_node("Label").text = tooltip_text
+		
+		print("(", Time.get_ticks_msec(), ") > " ,tooltips )
 
 func _on_check_button_toggled(button_pressed):
 	scene_runner.set_pause(button_pressed)
@@ -113,3 +133,8 @@ func _on_control_menu_toggle_fps(visibility):
 
 func _on_control_menu_toggle_minimap(visibility):
 	control_minimap.visible = visibility
+
+
+func _on_tooltip_gui_input(_event):
+	if tooltip_node.visible:
+		tooltip_node.position = tooltip_node.get_global_mouse_position() + Vector2(20, 0)

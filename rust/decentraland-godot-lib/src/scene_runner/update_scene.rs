@@ -2,10 +2,10 @@ use godot::prelude::{Share, Transform3D};
 
 use super::{
     components::{
-        gltf_container::update_gltf_container, material::update_material,
-        mesh_collider::update_mesh_collider, mesh_renderer::update_mesh_renderer,
-        pointer_events::update_scene_pointer_events, text_shape::update_text_shape,
-        transform_and_parent::update_transform_and_parent,
+        billboard::update_billboard, gltf_container::update_gltf_container,
+        material::update_material, mesh_collider::update_mesh_collider,
+        mesh_renderer::update_mesh_renderer, pointer_events::update_scene_pointer_events,
+        text_shape::update_text_shape, transform_and_parent::update_transform_and_parent,
     },
     scene_manager::Scene,
 };
@@ -33,6 +33,7 @@ pub fn update_scene(
     update_scene_pointer_events(scene, crdt_state);
     update_material(scene, crdt_state);
     update_text_shape(scene, crdt_state);
+    update_billboard(scene, crdt_state, camera_global_transform);
     update_mesh_collider(scene, crdt_state);
     update_gltf_container(scene, crdt_state);
 
