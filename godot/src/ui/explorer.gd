@@ -12,17 +12,28 @@ var parcel_manager: ParcelManager = null
 @onready var panel_bottom_left = $UI/Panel_BottomLeft
 @onready var player := $Player
 @onready var tooltip_node = $Tooltip
+@onready var contro_info_panel = $UI/Control_Minimap/Contro_InfoPanel
 
 var parcel_position: Vector2i
+var _last_parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
 
 
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
-	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
-	parcel_manager.update_position(parcel_position)
 	control_minimap.set_center_position(parcel_position_real)
+
+	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
+	if _last_parcel_position != parcel_position:
+		parcel_manager.update_position(parcel_position)
+		_last_parcel_position = parcel_position
+
+		var scene_data = parcel_manager.get_current_scene_data()
+		var title = scene_data.get("entity", {}).get("metadata", {}).get("display", {}).get(
+			"title", "No title"
+		)
+		contro_info_panel.set_parcel_scene_name(title)
 
 
 func _ready():
@@ -30,15 +41,23 @@ func _ready():
 	player.look_at(16 * Vector3(73, 0, 9))
 
 	scene_runner = get_tree().root.get_node("scene_runner")
-	scene_runner.set_camera_and_player_node(
-		player.camera, player, self.panel_bottom_left._on_console_add
-	)
+	scene_runner.set_camera_and_player_node(player.camera, player, self._on_scene_console_message)
 	scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
 
 	realm = get_tree().root.get_node("realm")
 
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
+
+
+func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
+	_scene_console_message.call_deferred(scene_id, level, timestamp, text)
+
+
+func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
+	var title: String = scene_runner.get_scene_title(scene_id)
+	title += str(scene_runner.get_scene_base_parcel(scene_id))
+	self.panel_bottom_left._on_console_add(title, level, timestamp, text)
 
 
 func _on_pointer_tooltip_changed():
@@ -54,12 +73,11 @@ func change_tooltips():
 		var events := InputMap.action_get_events(tooltip.get("action", "").to_lower())
 
 		if not events.is_empty():
-			var tooltip_text = "[" + events[0].as_text() + "] " + tooltip.get("text", "")
-			tooltip_node.show()
+			tooltip_node._open_with("[" + events[0].as_text() + "] ", tooltip.get("text", ""))
 			tooltip_node.position = tooltip_node.get_global_mouse_position() + Vector2(20, 0)
-			tooltip_node.get_node("Label").text = tooltip_text
 
-		print("(", Time.get_ticks_msec(), ") > ", tooltips)
+
+#		print("(", Time.get_ticks_msec(), ") > ", tooltips)
 
 
 func _on_check_button_toggled(button_pressed):

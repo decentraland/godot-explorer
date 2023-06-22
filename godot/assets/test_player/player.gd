@@ -43,7 +43,12 @@ func _input(event):
 		rotate_y(deg_to_rad(-_mouse_position.x) * horizontal_sens)
 		visuals.rotate_y(deg_to_rad(_mouse_position.x) * horizontal_sens)
 		mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * vertical_sens)
-		mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(5))
+		if first_person:
+			mount_camera.rotation.x = clamp(
+				mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(60)
+			)
+		else:
+			mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(5))
 
 	# Release mouse
 	if event is InputEventKey:

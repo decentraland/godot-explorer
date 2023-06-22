@@ -44,6 +44,7 @@ impl SceneDefinition {
         let Some(parcels) = dict.get("parcels") else { return Err("parcels not found".to_string()) };
         let Some(visible) = dict.get("visible") else { return Err("visible not found".to_string()) };
         let Some(is_global) = dict.get("is_global") else { return Err("is_global not found".to_string()) };
+        let Some(title) = dict.get("title") else { return Err("title not found".to_string()) };
 
         let base =
             Vector2i::try_from_variant(&base).map_err(|_op| "couldn't get offset as Vector2i")?;
@@ -68,6 +69,7 @@ impl SceneDefinition {
             visible: visible.to::<bool>(),
             parcels,
             is_global: is_global.to::<bool>(),
+            title: title.to::<GodotString>().to_string(),
         })
     }
 }

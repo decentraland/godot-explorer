@@ -26,6 +26,15 @@ func _ready():
 	scene_entity_coordinator.set_scene_radius(1)
 
 
+func get_current_scene_data() -> Dictionary:
+	var scene_entity_id = scene_entity_coordinator.get_scene_entity_id(current_position)
+	if scene_entity_id == "empty":
+		return {}
+	else:
+		var scene = loaded_scenes.get(scene_entity_id, {})
+		return scene
+
+
 func set_scene_radius(value: int):
 	scene_entity_coordinator.set_scene_radius(value)
 
@@ -206,7 +215,7 @@ func _on_try_spawn_scene(scene):
 		scene.entity.get("metadata", {}).get("scene", {}).get("base", "0,0").split_floats(",")
 	)
 	var parcels_str = scene.entity.get("metadata", {}).get("scene", {}).get("parcels", [])
-	var title = scene.entity.get("metadata", {}).get("scene", {}).get("title", "No title")
+	var title = scene.entity.get("metadata", {}).get("display", {}).get("title", "No title")
 	var parcels = []
 	for parcel in parcels_str:
 		var p = parcel.split_floats(",")

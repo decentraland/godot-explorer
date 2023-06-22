@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-#[derive(PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub struct Coord(pub i16, pub i16);
 
 #[derive(Debug)]

@@ -30,6 +30,7 @@ pub struct SceneDefinition {
     pub main_crdt_path: String,
     pub base: godot::prelude::Vector2i,
     pub visible: bool,
+    pub title: String,
 
     pub parcels: Vec<godot::prelude::Vector2i>,
     pub is_global: bool,

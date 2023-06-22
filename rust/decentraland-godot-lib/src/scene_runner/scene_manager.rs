@@ -2,7 +2,7 @@ use crate::{
     dcl::{
         components::{
             proto_components::sdk::components::{
-                common::{InputAction, PointerEventType},
+                common::{InputAction, PointerEventType, RaycastHit},
                 PbPointerEventsResult,
             },
             SceneEntityId,
@@ -66,7 +66,7 @@ pub struct Scene {
 pub struct GodotDclRaycastResult {
     pub scene_id: SceneId,
     pub entity_id: SceneEntityId,
-    pub hit: Dictionary,
+    pub hit: RaycastHit,
 }
 
 impl GodotDclRaycastResult {
@@ -232,6 +232,22 @@ impl SceneManager {
         Gd::new_default()
     }
 
+    #[func]
+    fn get_scene_title(&self, scene_id: i32) -> GodotString {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
+            return GodotString::from(scene.godot_dcl_scene.definition.title.clone());
+        }
+        GodotString::default()
+    }
+
+    #[func]
+    fn get_scene_base_parcel(&self, scene_id: i32) -> Vector2i {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
+            return scene.godot_dcl_scene.definition.base;
+        }
+        Vector2i::default()
+    }
+
     fn compute_scene_distance(&mut self) {
         let mut player_global_position = self.player_node.get_global_transform().origin;
         player_global_position.x *= 0.0625;
@@ -273,7 +289,7 @@ impl SceneManager {
         }
 
         let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
-        let end_time_us = start_time_us + 5000;
+        let end_time_us = start_time_us + 1000;
 
         //
         self.sorted_scene_ids.sort_by_key(|&scene_id| {
@@ -497,10 +513,19 @@ impl SceneManager {
             )
             .to::<i32>();
 
+        let scene = self.scenes.get(&SceneId(dcl_scene_id as u32))?;
+        let scene_position = scene.godot_dcl_scene.root_node.get_position();
+        let raycast_data = RaycastHit::from_godot_raycast(
+            scene_position,
+            raycast_from,
+            &raycast_result,
+            Some(dcl_entity_id as u32),
+        )?;
+
         Some(GodotDclRaycastResult {
             scene_id: SceneId(dcl_scene_id as u32),
             entity_id: SceneEntityId::from_i32(dcl_entity_id),
-            hit: raycast_result,
+            hit: raycast_data,
         })
     }
 
@@ -574,7 +599,12 @@ impl NodeVirtual for SceneManager {
                 {
                     for pointer_event in pointer_events.pointer_events.iter() {
                         if let Some(info) = pointer_event.event_info.as_ref() {
-                            // if !info.show_feedback.as_ref().unwrap_or(&false) {
+                            // TODO: filter by show_beedback and max_distance
+                            // let (show_feedback, max_distance) = (
+                            //     info.show_feedback.as_ref().unwrap_or(&true).clone(),
+                            //     info.max_distance.as_ref().unwrap_or(&10.0).clone(),
+                            // );
+                            // if !show_feedback || raycast.hit.length > max_distance {
                             //     continue;
                             // }
 
@@ -593,7 +623,7 @@ impl NodeVirtual for SceneManager {
                                 let text = if let Some(text) = info.hover_text.as_ref() {
                                     GodotString::from(text)
                                 } else {
-                                    GodotString::default()
+                                    GodotString::from("Interact")
                                 };
 
                                 let mut dict = Dictionary::new();

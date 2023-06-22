@@ -18,6 +18,57 @@ use crate::{
     scene_runner::scene_manager::{GodotDclRaycastResult, Scene},
 };
 
+impl crate::dcl::components::proto_components::sdk::components::common::RaycastHit {
+    pub fn from_godot_raycast(
+        scene_position: godot::prelude::Vector3,
+        raycast_from: godot::prelude::Vector3,
+        raycast_result: &godot::prelude::Dictionary,
+        entity_id: Option<u32>,
+    ) -> Option<Self> {
+        let global_origin = raycast_from - scene_position;
+        let position = raycast_result
+            .get("position")?
+            .to::<godot::prelude::Vector3>()
+            - scene_position;
+        let direction = global_origin - position;
+        let normal = raycast_result
+            .get("normal")?
+            .to::<godot::prelude::Vector3>();
+        Some(Self {
+            /// the intersection point in global coordinates
+            position: Some(crate::dcl::components::proto_components::common::Vector3 {
+                x: position.x,
+                y: position.y,
+                z: -position.z,
+            }),
+            /// the starting point of the ray in global coordinates
+            global_origin: Some(crate::dcl::components::proto_components::common::Vector3 {
+                x: global_origin.x,
+                y: global_origin.y,
+                z: -global_origin.z,
+            }),
+            /// the direction vector of the ray in global coordinates
+            direction: Some(crate::dcl::components::proto_components::common::Vector3 {
+                x: direction.x,
+                y: direction.y,
+                z: -direction.z,
+            }),
+            /// normal of the hit surface in global coordinates
+            normal_hit: Some(crate::dcl::components::proto_components::common::Vector3 {
+                x: normal.x,
+                y: normal.y,
+                z: -normal.z,
+            }),
+            /// the distance between the ray origin and the hit position
+            length: position.length(),
+            /// mesh name, if collision happened inside a GltfContainer
+            mesh_name: None,
+            /// the ID of the Entity that has the impacted mesh attached
+            entity_id,
+        })
+    }
+}
+
 pub fn update_scene_pointer_events(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
@@ -113,11 +164,15 @@ pub fn pointer_events_system(
         }
     }
 
-    let (current_raycast_scene_id, current_raycast_entity_id) =
+    let (current_raycast_scene_id, current_raycast_entity_id, raycast_hit) =
         if let Some(raycast) = current_raycast.as_ref() {
-            (raycast.scene_id, raycast.entity_id)
+            (
+                raycast.scene_id,
+                raycast.entity_id,
+                Some(raycast.hit.clone()),
+            )
         } else {
-            (SceneId::default(), SceneEntityId::new(0, 0))
+            (SceneId::default(), SceneEntityId::new(0, 0), None)
         };
 
     for (_scene_id, scene) in scenes.iter_mut() {
@@ -172,7 +227,7 @@ pub fn pointer_events_system(
                 if match_state {
                     let pointer_event_result = PbPointerEventsResult {
                         button: *input_action as i32,
-                        hit: None,
+                        hit: raycast_hit.clone(),
                         state: pointer_event.event_type,
                         timestamp: global_tick_number,
                         analog: None,

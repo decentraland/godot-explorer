@@ -45,7 +45,7 @@ layout_mode = 2
 [node name="Label_Field" type="Label" parent="Panel/MarginContainer/Control/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 9
-text = "Field:"
+text = "Scene:"
 
 [node name="Label_Value" type="Label" parent="Panel/MarginContainer/Control/VBoxContainer/HBoxContainer"]
 layout_mode = 2

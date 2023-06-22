@@ -27,6 +27,17 @@ pub struct EntityDefinitionJson {
     metadata: Option<serde_json::Value>,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct SceneFieldJson {
+    parcels: Vec<String>,
+    base: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct SceneJsonMetadata {
+    scene: SceneFieldJson,
+}
+
 impl EntityDefinitionJson {
     // TODO: (performance) this could be an custom class type with accessors
     fn to_godot_dictionary(&self) -> Dictionary {
@@ -197,6 +208,17 @@ impl SceneEntityCoordinator {
         let mut entity_definition = entity_definition.unwrap();
         entity_definition.id = Some(entity_base.hash.clone());
         entity_definition.base_url = Some(entity_base.base_url);
+
+        if let Some(metadata) = entity_definition.metadata.as_ref() {
+            if let Ok(metadata) = serde_json::from_value::<SceneJsonMetadata>(metadata.clone()) {
+                // TODO: global scenes should not fill this 'cache'
+                let entity_id = entity_definition.id.as_ref().unwrap().clone();
+                for pointer in metadata.scene.parcels.iter() {
+                    let coord = Coord::from(pointer);
+                    self.cache_city_pointers.insert(coord, entity_id.clone());
+                }
+            }
+        }
 
         self.cache_scene_data
             .insert(entity_base.hash, entity_definition);
@@ -496,6 +518,16 @@ impl SceneEntityCoordinator {
     #[func]
     pub fn update(&mut self) {
         self._update();
+    }
+
+    #[func]
+    pub fn get_scene_entity_id(&self, coord: Vector2i) -> GodotString {
+        let coord = Coord(coord.x as i16, coord.y as i16);
+        if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
+            GodotString::from(entity_id)
+        } else {
+            GodotString::from("empty")
+        }
     }
 }
 

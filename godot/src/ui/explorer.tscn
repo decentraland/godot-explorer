@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=15 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://drle8sbexaohk" path="res://assets/sky/krzmig/world_environment.tscn" id="2_40m6d"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" uid="uid://rt4tyyg7gd1s" path="res://src/ui/components/panel_bottom_left.tscn" id="4_x5dml"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 [ext_resource type="PackedScene" uid="uid://cbtnbb03jb1u6" path="res://src/ui/components/info_panel/info_panel.tscn" id="6_3c8pn"]
+[ext_resource type="PackedScene" uid="uid://6m5q52mc7rlp" path="res://src/ui/components/pointer_tooltip.tscn" id="9_b8wdq"]
 
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
 data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
@@ -28,28 +29,25 @@ texture_filter = 0
 [node name="explorer" type="Node3D"]
 script = ExtResource("1_5n8xk")
 
+[node name="WorldEnvironment_krzmig" parent="." instance=ExtResource("2_40m6d")]
+day_time = 14.9859
+
 [node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.921025, 0, -0.389504, 0.0827968, -0.977146, 0.195782, -0.380602, -0.21257, -0.899976, 0, 0, 0)
+transform = Transform3D(0.920973, 0, -0.389627, 0.276523, -0.704492, 0.653625, -0.274489, -0.709712, -0.648817, 0, 0, 0)
 rotation_order = 4
-light_energy = -1.0
+light_energy = 0.2
 shadow_enabled = true
-shadow_opacity = 0.75
-shadow_blur = 5.0
-sky_mode = 2
 
 [node name="Moon" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.882585, 0, 0.470154, 0.39335, 0.547751, -0.738406, -0.257528, 0.83664, 0.483437, 0, 0, 0)
+transform = Transform3D(0.929433, 0, 0.368989, 0.155738, 0.906564, -0.392283, -0.334512, 0.422067, 0.842592, 0, 0, 0)
 rotation_order = 4
 light_color = Color(1, 1, 0.6, 1)
 light_energy = 0.0
 shadow_enabled = true
-shadow_opacity = 0.75
+shadow_opacity = 0.25
 shadow_blur = 5.0
+directional_shadow_fade_start = 0.1
 sky_mode = 2
-
-[node name="WorldEnvironment" parent="." instance=ExtResource("2_40m6d")]
-day_time = 17.1818
-use_day_time_for_shader = true
 
 [node name="StaticBody3D_Floor" type="StaticBody3D" parent="."]
 
@@ -105,29 +103,6 @@ grow_horizontal = 0
 text = "RAM"
 horizontal_alignment = 2
 
-[node name="Panel_BottomLeft" parent="UI" instance=ExtResource("4_x5dml")]
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_right = 0.0
-grow_horizontal = 1
-grow_vertical = 0
-
-[node name="Control_Minimap" parent="UI" instance=ExtResource("4_6aqla")]
-layout_mode = 1
-
-[node name="Contro_InfoPanel" parent="UI/Control_Minimap" instance=ExtResource("6_3c8pn")]
-layout_mode = 1
-offset_top = 176.0
-offset_bottom = 176.0
-
-[node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
-visible = false
-layout_mode = 1
-
-[node name="Timer" type="Timer" parent="UI"]
-autostart = true
-
 [node name="ColorRect" type="ColorRect" parent="UI"]
 layout_mode = 1
 anchors_preset = 8
@@ -156,18 +131,31 @@ offset_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Tooltip" type="Panel" parent="."]
-modulate = Color(1, 1, 1, 0.803922)
-offset_right = 285.0
-offset_bottom = 39.0
+[node name="Panel_BottomLeft" parent="UI" instance=ExtResource("4_x5dml")]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_right = 0.0
+grow_horizontal = 1
+grow_vertical = 0
 
-[node name="Label" type="Label" parent="Tooltip"]
-layout_mode = 0
-offset_left = 8.0
-offset_top = 8.0
-offset_right = 90.0
-offset_bottom = 31.0
-text = "[E] Activate"
+[node name="Control_Minimap" parent="UI" instance=ExtResource("4_6aqla")]
+layout_mode = 1
+
+[node name="Contro_InfoPanel" parent="UI/Control_Minimap" instance=ExtResource("6_3c8pn")]
+layout_mode = 1
+offset_top = 176.0
+offset_bottom = 176.0
+
+[node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
+visible = false
+layout_mode = 1
+
+[node name="Timer" type="Timer" parent="UI"]
+autostart = true
+
+[node name="Tooltip" parent="." instance=ExtResource("9_b8wdq")]
+visible = false
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="request_change_realm" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_realm"]
@@ -180,4 +168,3 @@ text = "[E] Activate"
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
 [connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
 [connection signal="timeout" from="UI/Timer" to="." method="_on_timer_timeout"]
-[connection signal="gui_input" from="Tooltip" to="." method="_on_tooltip_gui_input"]
