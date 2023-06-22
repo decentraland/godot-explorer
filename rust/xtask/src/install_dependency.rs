@@ -20,7 +20,7 @@ fn get_protocol_url() -> Result<String, Box<dyn std::error::Error>> {
 
     let client = Client::new();
     let response = client
-        .get(format!("https://registry.npmjs.org/{}", package_name))
+        .get(format!("https://registry.npmjs.org/{package_name}"))
         .send()?
         .json::<Value>()?;
 
@@ -36,7 +36,7 @@ pub fn install_dcl_protocol() -> Result<(), Box<dyn std::error::Error>> {
     let protocol_url = get_protocol_url()?;
     let destination_path = "./decentraland-godot-lib/src/dcl/components";
 
-    println!("Downloading {:?}", protocol_url);
+    println!("Downloading {protocol_url:?}");
 
     let client = Client::new();
     let response = client.get(protocol_url).send()?;
@@ -77,14 +77,14 @@ fn get_protoc_url() -> Option<String> {
         _ => None,
     }?;
 
-    Some(format!("{}{}", base_url, os_url))
+    Some(format!("{base_url}{os_url}"))
 }
 
 fn download_and_extract_zip(
     url: &str,
     destination_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Downloading {:?}", url);
+    println!("Downloading {url:?}");
     let response = reqwest::blocking::get(url)?;
     let zip_bytes = response.bytes()?;
 
@@ -117,7 +117,7 @@ fn get_godot_url() -> Option<String> {
         _ => None,
     }?;
 
-    Some(format!("{}{}", base_url, os_url))
+    Some(format!("{base_url}{os_url}"))
 }
 
 fn set_executable_permission(_file_path: &Path) -> std::io::Result<()> {

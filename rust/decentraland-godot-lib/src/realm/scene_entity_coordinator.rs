@@ -27,6 +27,17 @@ pub struct EntityDefinitionJson {
     metadata: Option<serde_json::Value>,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct SceneFieldJson {
+    parcels: Vec<String>,
+    base: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct SceneJsonMetadata {
+    scene: SceneFieldJson,
+}
+
 impl EntityDefinitionJson {
     // TODO: (performance) this could be an custom class type with accessors
     fn to_godot_dictionary(&self) -> Dictionary {
@@ -91,7 +102,7 @@ impl EntityBase {
             base_url: if let Some(base_url) = key_values.first() {
                 base_url.clone()
             } else {
-                format!("{}contents/", default_base_url)
+                format!("{default_base_url}contents/")
             },
         })
     }
@@ -162,11 +173,11 @@ impl SceneEntityCoordinator {
         if !set_request_pointers.is_empty() {
             let request_pointers_body = set_request_pointers
                 .iter()
-                .map(|coord| format!("\"{}\"", coord))
+                .map(|coord| format!("\"{coord}\""))
                 .collect::<Vec<_>>()
                 .join(",");
 
-            let request_body: String = format!("{{\"pointers\":[{}]}}", request_pointers_body);
+            let request_body: String = format!("{{\"pointers\":[{request_pointers_body}]}}");
 
             let request = RequestOption::new(
                 Self::REQUEST_TYPE_SCENE_POINTERS,
@@ -198,6 +209,17 @@ impl SceneEntityCoordinator {
         entity_definition.id = Some(entity_base.hash.clone());
         entity_definition.base_url = Some(entity_base.base_url);
 
+        if let Some(metadata) = entity_definition.metadata.as_ref() {
+            if let Ok(metadata) = serde_json::from_value::<SceneJsonMetadata>(metadata.clone()) {
+                // TODO: global scenes should not fill this 'cache'
+                let entity_id = entity_definition.id.as_ref().unwrap().clone();
+                for pointer in metadata.scene.parcels.iter() {
+                    let coord = Coord::from(pointer);
+                    self.cache_city_pointers.insert(coord, entity_id.clone());
+                }
+            }
+        }
+
         self.cache_scene_data
             .insert(entity_base.hash, entity_definition);
     }
@@ -212,7 +234,7 @@ impl SceneEntityCoordinator {
                 serde_json::from_value::<EntityDefinitionJson>(entity_pointer.clone());
 
             if entity_definition.is_err() {
-                println!("Error handling pointer data {:?}", entity_definition);
+                println!("Error handling pointer data {entity_definition:?}");
                 continue;
             }
 
@@ -242,7 +264,7 @@ impl SceneEntityCoordinator {
                 ResponseEnum::Json(json) => {
                     if json.is_err() {
                         self.cleanup_request_id(response.request_option.id);
-                        println!("Error parsing the JSON {:?}", json);
+                        println!("Error parsing the JSON {json:?}");
                         return;
                     }
 
@@ -265,7 +287,7 @@ impl SceneEntityCoordinator {
             },
             Err(err) => {
                 self.cleanup_request_id(response.request_option.id);
-                println!("Error while handling a request: {:?}", err);
+                println!("Error while handling a request: {err:?}");
             }
         }
     }
@@ -384,11 +406,11 @@ impl SceneEntityCoordinator {
                             "status code while doing a request: {:?}",
                             response.status_code
                         );
-                        println!("{:?}", response);
+                        println!("{response:?}");
                     }
                 }
                 Err(err) => {
-                    println!("Error while doing a request: {:?}", err);
+                    println!("Error while doing a request: {err:?}");
                 }
             }
         }
@@ -496,6 +518,16 @@ impl SceneEntityCoordinator {
     #[func]
     pub fn update(&mut self) {
         self._update();
+    }
+
+    #[func]
+    pub fn get_scene_entity_id(&self, coord: Vector2i) -> GodotString {
+        let coord = Coord(coord.x as i16, coord.y as i16);
+        if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
+            GodotString::from(entity_id)
+        } else {
+            GodotString::from("empty")
+        }
     }
 }
 

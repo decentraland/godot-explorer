@@ -2,18 +2,17 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bcf5ftohkinyv"
-path.s3tc="res://.godot/imported/run_Avatar_MaleSkinBase.png-db31a52db9708451403585c80ce5cb08.s3tc.ctex"
+uid="uid://bv6wcmvu5n2dj"
+path.s3tc="res://.godot/imported/stars.png-94071d7b5f525346eda4ba145a90f1c8.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
 }
-generator_parameters={}
 
 [deps]
 
-source_file="res://assets/test_player/emotes/run_Avatar_MaleSkinBase.png"
-dest_files=["res://.godot/imported/run_Avatar_MaleSkinBase.png-db31a52db9708451403585c80ce5cb08.s3tc.ctex"]
+source_file="res://assets/sky/krzmig/stars.png"
+dest_files=["res://.godot/imported/stars.png-94071d7b5f525346eda4ba145a90f1c8.s3tc.ctex"]
 
 [params]
 

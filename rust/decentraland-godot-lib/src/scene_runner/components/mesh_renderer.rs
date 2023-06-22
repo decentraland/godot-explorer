@@ -82,8 +82,8 @@ pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMe
 
 pub fn update_mesh_renderer(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
-    let dirty_components = &scene.current_dirty.components;
-    if let Some(mesh_renderer_dirty) = dirty_components.get(&SceneComponentId::MESH_RENDERER) {
+    let dirty_lww_components = &scene.current_dirty.lww_components;
+    if let Some(mesh_renderer_dirty) = dirty_lww_components.get(&SceneComponentId::MESH_RENDERER) {
         let mesh_renderer_component = SceneCrdtStateProtoComponents::get_mesh_renderer(crdt_state);
 
         for entity in mesh_renderer_dirty {

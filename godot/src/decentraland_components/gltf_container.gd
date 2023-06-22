@@ -4,6 +4,7 @@ extends Node3D
 @export var dcl_scene_id: int = -1
 @export var dcl_visible_cmask: int = 0
 @export var dcl_invisible_cmask: int = 3
+@export var dcl_entity_id: int = -1
 
 var file_hash: String = ""
 var gltf_node = null
@@ -107,6 +108,8 @@ func create_and_set_mask_colliders(node_to_inspect: Node):
 
 				new_animatable.collision_layer = mask
 				new_animatable.sync_to_physics = false
+				new_animatable.set_meta("dcl_scene_id", dcl_scene_id)
+				new_animatable.set_meta("dcl_entity_id", dcl_entity_id)
 
 		if node is Node:
 			create_and_set_mask_colliders(node)

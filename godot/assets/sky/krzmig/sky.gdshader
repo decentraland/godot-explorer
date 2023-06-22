@@ -145,7 +145,7 @@ float sphere_intersect( vec3 view_dir, vec3 sphere_pos, float radius )
 
 void sky()
 {
-	float time = overwritten_time != 0.0 ? overwritten_time : TIME;
+	float time = overwritten_time != 0.0 ? overwritten_time : 10.0 * TIME;
 
 	//////////////////// SKY ///////////////////////////////////////////////////////////////////////
 	float _eyedir_y = abs( sin( EYEDIR.y * PI * 0.5 ));
@@ -286,5 +286,6 @@ void sky()
 		_clouds_color = mix( _clouds_color, _sky_color, clamp( _night_amount, 0.0, 0.98 ));
 		_clouds_color = mix( _clouds_color, vec3( 0.0 ), clouds_weight * 0.9 );
 		COLOR = mix( COLOR, _clouds_color, _clouds_amount );
+		//COLOR = mix( COLOR, _clouds_color, clamp( _clouds_amount + clouds_weight * ( 1.0 - clouds_cutoff ) * 0.75, 0.0, 1.0 ));
 	}
 }

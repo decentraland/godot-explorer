@@ -9,7 +9,7 @@ use godot::prelude::godot_print;
 
 use crate::dcl::{
     crdt::{
-        message::{process_many_messages, put_or_delete_lww_component},
+        message::{append_gos_component, process_many_messages, put_or_delete_lww_component},
         SceneCrdtState,
     },
     js::{SceneMainCrdtFileContent, ShuttingDown},
@@ -69,17 +69,31 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
 
     let data = match response {
         Some(RendererResponse::Ok(data)) => {
-            let (_dirty_entities, dirty_components) = data;
+            let (_dirty_entities, dirty_lww_components, dirty_gos_components) = data;
 
             let mut data_buf = Vec::new();
             let mut data_writter = DclWriter::new(&mut data_buf);
 
-            for (component_id, entities) in dirty_components {
+            for (component_id, entities) in dirty_lww_components {
                 for entity_id in entities {
                     if let Err(err) = put_or_delete_lww_component(
                         &scene_crdt_state,
                         &entity_id,
                         &component_id,
+                        &mut data_writter,
+                    ) {
+                        godot_print!("error writing crdt message: {}", err);
+                    }
+                }
+            }
+
+            for (component_id, entities) in dirty_gos_components {
+                for (entity_id, element_count) in entities {
+                    if let Err(err) = append_gos_component(
+                        &scene_crdt_state,
+                        &entity_id,
+                        &component_id,
+                        element_count,
                         &mut data_writter,
                     ) {
                         godot_print!("error writing crdt message: {}", err);

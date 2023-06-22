@@ -36,10 +36,10 @@ impl DclTransformAndParent {
 
 pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let mut godot_dcl_scene = &mut scene.godot_dcl_scene;
-    let dirty_components = &scene.current_dirty.components;
+    let dirty_lww_components = &scene.current_dirty.lww_components;
     let transform_component = crdt_state.get_transform();
 
-    if let Some(dirty_transform) = dirty_components.get(&SceneComponentId::TRANSFORM) {
+    if let Some(dirty_transform) = dirty_lww_components.get(&SceneComponentId::TRANSFORM) {
         for entity in dirty_transform {
             let value = if let Some(entry) = transform_component.get(*entity) {
                 entry.value.clone()

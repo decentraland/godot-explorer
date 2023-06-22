@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://drle8sbexaohk"]
+[gd_scene load_steps=7 format=3 uid="uid://drle8sbexaohk"]
 
 [ext_resource type="Shader" path="res://assets/sky/krzmig/sky.gdshader" id="1_x45ob"]
+[ext_resource type="Texture2D" uid="uid://bv6wcmvu5n2dj" path="res://assets/sky/krzmig/stars.png" id="2_oeujs"]
 [ext_resource type="Script" path="res://assets/sky/krzmig/world_environment.gd" id="2_ritvr"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_7msf7"]
@@ -16,7 +17,7 @@ shader_parameter/clouds_cutoff = 0.3
 shader_parameter/clouds_fuzziness = 0.5
 shader_parameter/clouds_weight = 0.0
 shader_parameter/clouds_blur = 0.25
-shader_parameter/horizon_color = Color(0, 0, 0, 1)
+shader_parameter/horizon_color = Color(0.929412, 1, 1, 1)
 shader_parameter/horizon_blur = 0.05
 shader_parameter/moon_color = Color(1, 0.95, 0.7, 1)
 shader_parameter/moon_size = 0.06
@@ -29,6 +30,7 @@ shader_parameter/sunset_bottom_color = Color(1, 0.5, 0.7, 1)
 shader_parameter/night_top_color = Color(0.02, 0, 0.04, 1)
 shader_parameter/night_bottom_color = Color(0.1, 0, 0.2, 1)
 shader_parameter/stars_speed = 1.0
+shader_parameter/stars_texture = ExtResource("2_oeujs")
 shader_parameter/sun_color = Color(10, 8, 1, 1)
 shader_parameter/sun_sunset_color = Color(10, 0, 0, 1)
 shader_parameter/sun_size = 0.2
@@ -40,10 +42,12 @@ sky_material = SubResource("ShaderMaterial_7msf7")
 [sub_resource type="Environment" id="Environment_ur1u6"]
 background_mode = 2
 sky = SubResource("Sky_ogrvh")
-fog_density = 0.0
-fog_height = 788.14
-volumetric_fog_anisotropy = -0.9
-adjustment_saturation = 0.01
+ambient_light_source = 3
+reflected_light_source = 2
+fog_light_color = Color(0.517647, 0.552941, 0.607843, 1)
+fog_aerial_perspective = 0.68
+fog_sky_affect = 0.785
+volumetric_fog_length = 21.0
 
 [node name="WorldEnvironment_krzmig" type="WorldEnvironment"]
 environment = SubResource("Environment_ur1u6")

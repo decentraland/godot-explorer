@@ -73,7 +73,7 @@ func _on_h_slider_scene_radius_drag_ended(value_changed):
 		label_scene_radius_value.text = str(h_slider_scene_radius.value)
 
 
-func _on_console_add(scene_id: int, level: int, timestamp: float, text: String) -> void:
+func _on_console_add(scene_title: String, level: int, timestamp: float, text: String) -> void:
 	var color := Color.BLACK
 	match level:
 		SceneLogLevel.Log:
@@ -84,8 +84,12 @@ func _on_console_add(scene_id: int, level: int, timestamp: float, text: String) 
 			color = Color.RED
 
 	timestamp = round(timestamp * 100.0) / 100.0
-	var msg = "(" + str(timestamp) + ") Scene " + str(scene_id) + " > " + text
+	var msg = "(" + str(timestamp) + ") " + scene_title + " > " + text
 	rich_text_label_console.push_color(color)
 	rich_text_label_console.add_text(msg)
 	rich_text_label_console.pop()
 	rich_text_label_console.newline()
+
+
+func _on_button_clear_console_pressed():
+	rich_text_label_console.clear()

@@ -80,10 +80,10 @@ impl Color3 {
 
 pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
-    let dirty_components = &scene.current_dirty.components;
+    let dirty_lww_components = &scene.current_dirty.lww_components;
     let material_component = SceneCrdtStateProtoComponents::get_material(crdt_state);
 
-    if let Some(material_dirty) = dirty_components.get(&SceneComponentId::MATERIAL) {
+    if let Some(material_dirty) = dirty_lww_components.get(&SceneComponentId::MATERIAL) {
         for entity in material_dirty {
             let new_value = material_component.get(*entity);
             if new_value.is_none() {

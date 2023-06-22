@@ -14,6 +14,10 @@ func _ready():
 	control.hide()
 
 
+func set_parcel_scene_name(value: String):
+	label_value.text = value
+
+
 func _on_button_more_or_less_toggled(button_pressed):
 	if button_pressed:
 		panel.size = expanded

@@ -14,6 +14,13 @@ impl SceneEntityId {
         Self { number, version }
     }
 
+    pub fn from_i32(value: i32) -> Self {
+        Self {
+            number: ((value as u32) & 0xffff) as u16,
+            version: (((value as u32) & 0xffff0000) >> 16) as u16,
+        }
+    }
+
     const fn reserved(number: u16) -> Self {
         Self { number, version: 0 }
     }
@@ -23,11 +30,11 @@ impl SceneEntityId {
     pub const CAMERA: SceneEntityId = Self::reserved(2);
 
     pub fn as_proto_u32(&self) -> Option<u32> {
-        Some((self.number as u32) << 16 | self.version as u32)
+        Some((self.version as u32) << 16 | self.number as u32)
     }
 
     pub fn as_usize(&self) -> usize {
-        (self.number as usize) << 16 | self.version as usize
+        (self.version as usize) << 16 | self.number as usize
     }
 }
 
