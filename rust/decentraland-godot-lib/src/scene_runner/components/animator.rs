@@ -53,10 +53,8 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let current_anim_name = animation_player.get_current_animation();
 
             let (_, req_state) = states.fold((0.0, None), |v, state| {
-                if state.should_reset() {
-                    if current_anim_name.eq(&GodotString::from(&state.clip)) {
-                        should_reset_current_animation = true;
-                    }
+                if state.should_reset() && current_anim_name.eq(&GodotString::from(&state.clip)) {
+                    should_reset_current_animation = true;
                 }
 
                 if !state.playing.unwrap_or_default() {

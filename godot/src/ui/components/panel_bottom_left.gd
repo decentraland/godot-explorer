@@ -41,7 +41,7 @@ func _ready():
 
 	_on_button_tab_pressed("realm")
 	set_ws_state(false)
-	
+
 
 func _on_button_tab_pressed(tab_id: String):
 	for tab in tabs.values():
@@ -99,6 +99,7 @@ func _on_console_add(scene_title: String, level: int, timestamp: float, text: St
 func _on_button_clear_console_pressed():
 	rich_text_label_console.clear()
 
+
 @onready var label_ws_state = $HFlowContainer/Panel_Preview/Label_WsState
 @onready var line_edit_preview_url = $HFlowContainer/Panel_Preview/LineEdit_PreviewUrl
 
@@ -106,6 +107,7 @@ var preview_ws = WebSocketPeer.new()
 var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
 var _dirty_connected: bool = false
+
 
 func set_ws_state(connected: bool) -> void:
 	if connected:
@@ -115,19 +117,20 @@ func set_ws_state(connected: bool) -> void:
 		label_ws_state.text = "Disconnected"
 		label_ws_state.add_theme_color_override("font_color", Color.RED)
 
+
 func _process(delta):
 	preview_ws.poll()
-	
+
 	var state = preview_ws.get_ready_state()
 	if state == WebSocketPeer.STATE_OPEN:
 		if not _preview_connect_to_url.is_empty():
 			preview_ws.close()
-			
+
 		if _dirty_connected:
 			_dirty_connected = false
 			_dirty_closed = true
 			set_ws_state(true)
-			
+
 		while preview_ws.get_available_packet_count():
 			var packet = preview_ws.get_packet().get_string_from_utf8()
 			var json = JSON.parse_string(packet)
@@ -137,22 +140,27 @@ func _process(delta):
 					"SCENE_UPDATE":
 						var scene_id = json.get("payload", {}).get("sceneId", "unknown")
 						var scene_type = json.get("payload", {}).get("sceneType", "scene")
-						print("preview-ws > update of ", scene_type, " with id '",scene_id , "'")
+						print("preview-ws > update of ", scene_type, " with id '", scene_id, "'")
 						preview_hot_reload.emit(scene_type, scene_id)
 					_:
 						printerr("preview-ws > unknown message type ", msg_type)
-			
+
 	elif state == WebSocketPeer.STATE_CLOSING:
 		_dirty_closed = true
 	elif state == WebSocketPeer.STATE_CLOSED:
 		if _dirty_closed:
 			set_ws_state(false)
-			
+
 			var code = preview_ws.get_close_code()
 			var reason = preview_ws.get_close_reason()
-			print("preview-ws > closed with code: %d, reason %s. Clean: %s" % [code, reason, code != -1])
+			print(
+				(
+					"preview-ws > closed with code: %d, reason %s. Clean: %s"
+					% [code, reason, code != -1]
+				)
+			)
 			_dirty_closed = false
-		
+
 		if not _preview_connect_to_url.is_empty():
 			preview_ws.connect_to_url(_preview_connect_to_url)
 			print("preview-ws > connecting to ", _preview_connect_to_url)
@@ -161,4 +169,10 @@ func _process(delta):
 
 
 func _on_button_connect_preview_pressed():
-	_preview_connect_to_url = line_edit_preview_url.text.to_lower().replace("http://", "ws://").replace("https://", "wss://")
+	_preview_connect_to_url = (
+		line_edit_preview_url
+		. text
+		. to_lower()
+		. replace("http://", "ws://")
+		. replace("https://", "wss://")
+	)

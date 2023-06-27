@@ -23,4 +23,3 @@ func start():
 	get_tree().root.add_child(content_manager)
 
 	get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
-

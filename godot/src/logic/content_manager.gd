@@ -223,9 +223,12 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 
 	return true
 
+
 func split_animations(gltf_node: Node) -> void:
 	pass
-#	# TODO: multiple animations	
+
+
+#	# TODO: multiple animations
 #	var animation_player: AnimationPlayer = gltf_node.get_node("AnimationPlayer")
 #	if animation_player == null:
 #		return
@@ -241,7 +244,8 @@ func split_animations(gltf_node: Node) -> void:
 #		index += 1
 #
 #	gltf_node.remove_child(animation_player)
-	
+
+
 func hide_colliders(gltf_node):
 	for maybe_collider in gltf_node.get_children():
 		if maybe_collider is Node3D and maybe_collider.name.find("_collider") != -1:
