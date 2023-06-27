@@ -239,3 +239,14 @@ func _on_try_spawn_scene(scene):
 	scene.scene_number_id = scene_number_id
 
 	return true
+	
+func reload_scene(scene_id:String) -> void:
+	var scene = loaded_scenes.get(scene_id)
+	if scene != null:
+		var scene_number_id: int = scene.get("scene_number_id", -1)
+		if scene_number_id != -1:
+			scene_runner.kill_scene(scene_number_id)
+		
+		loaded_scenes.erase(scene_id)
+		scene_entity_coordinator.reload_scene_data(scene_id)
+		

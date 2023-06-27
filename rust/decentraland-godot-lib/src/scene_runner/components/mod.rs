@@ -1,3 +1,4 @@
+pub mod animator;
 pub mod billboard;
 pub mod gltf_container;
 pub mod material;

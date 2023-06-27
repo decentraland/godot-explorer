@@ -158,6 +158,7 @@ autostart = true
 visible = false
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
+[connection signal="preview_hot_reload" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_preview_hot_reload"]
 [connection signal="request_change_realm" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_realm"]
 [connection signal="request_change_scene_radius" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_scene_radius"]
 [connection signal="request_pause_scenes" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_pause_scenes"]
