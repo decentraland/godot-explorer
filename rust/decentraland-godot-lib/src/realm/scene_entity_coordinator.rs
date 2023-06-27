@@ -529,6 +529,24 @@ impl SceneEntityCoordinator {
             GodotString::from("empty")
         }
     }
+
+    #[func]
+    pub fn reload_scene_data(&mut self, scene_id: GodotString) {
+        let scene_id = scene_id.to_string();
+        let mut coord_to_clean = Vec::new();
+        for (key, value) in self.cache_city_pointers.iter() {
+            if value.eq(&scene_id) {
+                coord_to_clean.push(key.clone());
+            }
+        }
+
+        for coord in coord_to_clean.iter() {
+            self.cache_city_pointers.remove(coord);
+        }
+
+        self.cache_scene_data.remove(&scene_id);
+        self.update_position(self.current_position.0, self.current_position.1);
+    }
 }
 
 #[godot_api]

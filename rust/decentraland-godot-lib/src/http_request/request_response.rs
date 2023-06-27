@@ -1,4 +1,5 @@
 use godot::prelude::{GodotString, Variant};
+use reqwest::StatusCode;
 
 #[derive(Debug)]
 pub enum ResponseEnum {
@@ -55,7 +56,7 @@ impl RequestOption {
 #[derive(Debug, godot::prelude::GodotClass)]
 pub struct RequestResponse {
     pub request_option: RequestOption,
-    pub status_code: hyper::StatusCode,
+    pub status_code: StatusCode,
     pub response_data: Result<ResponseEnum, String>,
 }
 

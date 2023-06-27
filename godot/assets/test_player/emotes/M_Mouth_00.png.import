@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://5ow6vjd062om"
 path.s3tc="res://.godot/imported/M_Mouth_00.png-a8da1059500a460c36b293de59ea683a.s3tc.ctex"
+path.etc2="res://.godot/imported/M_Mouth_00.png-a8da1059500a460c36b293de59ea683a.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={}
@@ -13,7 +14,7 @@ generator_parameters={}
 [deps]
 
 source_file="res://assets/test_player/emotes/M_Mouth_00.png"
-dest_files=["res://.godot/imported/M_Mouth_00.png-a8da1059500a460c36b293de59ea683a.s3tc.ctex"]
+dest_files=["res://.godot/imported/M_Mouth_00.png-a8da1059500a460c36b293de59ea683a.s3tc.ctex", "res://.godot/imported/M_Mouth_00.png-a8da1059500a460c36b293de59ea683a.etc2.ctex"]
 
 [params]
 

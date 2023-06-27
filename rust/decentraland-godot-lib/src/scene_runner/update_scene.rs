@@ -2,10 +2,11 @@ use godot::prelude::{Share, Transform3D};
 
 use super::{
     components::{
-        billboard::update_billboard, gltf_container::update_gltf_container,
-        material::update_material, mesh_collider::update_mesh_collider,
-        mesh_renderer::update_mesh_renderer, pointer_events::update_scene_pointer_events,
-        text_shape::update_text_shape, transform_and_parent::update_transform_and_parent,
+        animator::update_animator, billboard::update_billboard,
+        gltf_container::update_gltf_container, material::update_material,
+        mesh_collider::update_mesh_collider, mesh_renderer::update_mesh_renderer,
+        pointer_events::update_scene_pointer_events, text_shape::update_text_shape,
+        transform_and_parent::update_transform_and_parent,
     },
     scene_manager::Scene,
 };
@@ -36,6 +37,7 @@ pub fn update_scene(
     update_billboard(scene, crdt_state, camera_global_transform);
     update_mesh_collider(scene, crdt_state);
     update_gltf_container(scene, crdt_state);
+    update_animator(scene, crdt_state);
 
     let camera_transform = DclTransformAndParent::from_godot(
         camera_global_transform,

@@ -161,3 +161,7 @@ func _on_control_menu_toggle_minimap(visibility):
 func _on_tooltip_gui_input(_event):
 	if tooltip_node.visible:
 		tooltip_node.position = tooltip_node.get_global_mouse_position() + Vector2(20, 0)
+
+
+func _on_panel_bottom_left_preview_hot_reload(scene_type, scene_id):
+	parcel_manager.reload_scene(scene_id)

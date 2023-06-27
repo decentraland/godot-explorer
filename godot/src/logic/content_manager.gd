@@ -207,6 +207,7 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 			if node != null:
 				node.rotate_y(PI)
 				hide_colliders(node)
+				split_animations(node)
 				if err != OK:
 					push_warning("resource with errors ", file_path, " : ", err)
 			else:
@@ -221,6 +222,28 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 			return false
 
 	return true
+
+
+func split_animations(gltf_node: Node) -> void:
+	pass
+
+
+#	# TODO: multiple animations
+#	var animation_player: AnimationPlayer = gltf_node.get_node("AnimationPlayer")
+#	if animation_player == null:
+#		return
+#
+#	var index: int = 0
+#	var animation_players = []
+#	var anims := animation_player.get_animation_list()
+#	for current_anim in anims:
+#		var dedicated_anim_player = animation_player.duplicate()
+#		dedicated_anim_player.set_name("AnimationPlayer_" + str(index))
+#		dedicated_anim_player.set_meta("anim_name", current_anim)
+#		gltf_node.add_child(dedicated_anim_player)
+#		index += 1
+#
+#	gltf_node.remove_child(animation_player)
 
 
 func hide_colliders(gltf_node):

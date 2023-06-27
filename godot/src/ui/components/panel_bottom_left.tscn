@@ -23,12 +23,12 @@ offset_bottom = -8.0
 grow_vertical = 0
 theme_override_constants/v_separation = 8
 
-[node name="Panel_Settings" type="Panel" parent="HFlowContainer"]
+[node name="Panel_Realm" type="Panel" parent="HFlowContainer"]
 visible = false
 custom_minimum_size = Vector2(600, 95)
 layout_mode = 2
 
-[node name="CheckButton_Pause" type="CheckButton" parent="HFlowContainer/Panel_Settings"]
+[node name="CheckButton_Pause" type="CheckButton" parent="HFlowContainer/Panel_Realm"]
 layout_mode = 1
 offset_left = 8.0
 offset_top = 60.0
@@ -38,7 +38,7 @@ focus_mode = 0
 text = "Pause scenes"
 alignment = 2
 
-[node name="OptionButton_Realm" type="OptionButton" parent="HFlowContainer/Panel_Settings"]
+[node name="OptionButton_Realm" type="OptionButton" parent="HFlowContainer/Panel_Realm"]
 layout_mode = 1
 offset_left = 64.0
 offset_top = 16.0
@@ -58,7 +58,7 @@ popup/item_3/id = 3
 popup/item_4/text = "https://peer-testing.decentraland.org"
 popup/item_4/id = 4
 
-[node name="HSlider_SceneRadius" type="HSlider" parent="HFlowContainer/Panel_Settings"]
+[node name="HSlider_SceneRadius" type="HSlider" parent="HFlowContainer/Panel_Realm"]
 layout_mode = 0
 offset_left = 304.0
 offset_top = 69.0
@@ -70,7 +70,7 @@ max_value = 4.0
 value = 2.0
 ticks_on_borders = true
 
-[node name="Label_SceneRadiusValue" type="Label" parent="HFlowContainer/Panel_Settings"]
+[node name="Label_SceneRadiusValue" type="Label" parent="HFlowContainer/Panel_Realm"]
 layout_mode = 0
 offset_left = 493.0
 offset_top = 66.0
@@ -80,7 +80,7 @@ theme_override_colors/font_color = Color(0.960784, 0.152941, 0.345098, 1)
 theme_override_font_sizes/font_size = 14
 text = "2"
 
-[node name="Label2" type="Label" parent="HFlowContainer/Panel_Settings"]
+[node name="Label2" type="Label" parent="HFlowContainer/Panel_Realm"]
 layout_mode = 0
 offset_left = 205.0
 offset_top = 66.0
@@ -88,7 +88,7 @@ offset_right = 297.0
 offset_bottom = 89.0
 text = "Scene Radius"
 
-[node name="Label" type="Label" parent="HFlowContainer/Panel_Settings"]
+[node name="Label" type="Label" parent="HFlowContainer/Panel_Realm"]
 layout_mode = 0
 offset_left = 10.0
 offset_top = 23.0
@@ -97,6 +97,7 @@ offset_bottom = 46.0
 text = "Realm"
 
 [node name="Panel_Console" type="Panel" parent="HFlowContainer"]
+visible = false
 custom_minimum_size = Vector2(600, 300)
 layout_mode = 2
 
@@ -129,6 +130,43 @@ grow_horizontal = 0
 grow_vertical = 0
 text = "Clear"
 
+[node name="Panel_Preview" type="Panel" parent="HFlowContainer"]
+custom_minimum_size = Vector2(600, 95)
+layout_mode = 2
+
+[node name="Button_ConnectPreview" type="Button" parent="HFlowContainer/Panel_Preview"]
+layout_mode = 0
+offset_left = 416.0
+offset_top = 8.0
+offset_right = 495.0
+offset_bottom = 35.0
+focus_mode = 0
+text = "Connect!"
+
+[node name="LineEdit_PreviewUrl" type="LineEdit" parent="HFlowContainer/Panel_Preview"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 35.0
+text = "http://127.0.0.1:8000/"
+
+[node name="Label" type="Label" parent="HFlowContainer/Panel_Preview"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 48.0
+offset_right = 56.0
+offset_bottom = 68.0
+text = "WebSocket state:"
+
+[node name="Label_WsState" type="Label" parent="HFlowContainer/Panel_Preview"]
+layout_mode = 0
+offset_left = 152.0
+offset_top = 48.0
+offset_right = 249.0
+offset_bottom = 71.0
+text = "Disconnected"
+
 [node name="VFlowContainer_Tabs" type="VFlowContainer" parent="HFlowContainer"]
 layout_mode = 2
 theme_override_constants/h_separation = 5
@@ -145,15 +183,22 @@ layout_mode = 2
 focus_mode = 0
 text = "Console"
 
-[node name="Button_Settings" type="Button" parent="HFlowContainer/VFlowContainer_Tabs"]
+[node name="Button_Realm" type="Button" parent="HFlowContainer/VFlowContainer_Tabs"]
 layout_mode = 2
 focus_mode = 0
-text = "Settings"
+text = "Realm"
 
-[connection signal="pressed" from="HFlowContainer/Panel_Settings/CheckButton_Pause" to="." method="_on_check_button_pause_pressed"]
-[connection signal="item_selected" from="HFlowContainer/Panel_Settings/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
-[connection signal="drag_ended" from="HFlowContainer/Panel_Settings/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_drag_ended"]
+[node name="Button_Preview" type="Button" parent="HFlowContainer/VFlowContainer_Tabs"]
+layout_mode = 2
+focus_mode = 0
+text = "Preview"
+
+[connection signal="pressed" from="HFlowContainer/Panel_Realm/CheckButton_Pause" to="." method="_on_check_button_pause_pressed"]
+[connection signal="item_selected" from="HFlowContainer/Panel_Realm/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
+[connection signal="drag_ended" from="HFlowContainer/Panel_Realm/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_drag_ended"]
 [connection signal="pressed" from="HFlowContainer/Panel_Console/Button_ClearConsole" to="." method="_on_button_clear_console_pressed"]
+[connection signal="pressed" from="HFlowContainer/Panel_Preview/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
 [connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Collapse" to="." method="_on_button_collapse_pressed"]
 [connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Console" to="." method="_on_button_tab_pressed" binds= ["console"]]
-[connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Settings" to="." method="_on_button_tab_pressed" binds= ["settings"]]
+[connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Realm" to="." method="_on_button_tab_pressed" binds= ["realm"]]
+[connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Preview" to="." method="_on_button_tab_pressed" binds= ["preview"]]
