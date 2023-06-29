@@ -62,6 +62,15 @@
             "environment": [],
             "externalConsole": true,
             "preLaunchTask": "(linux) Copy GDExtension Lib",
+            "sourceFileMap": {
+                "${workspaceFolder}": {
+                    "editorPath": "${workspaceFolder}",
+                    "useForBreakpoints": "true"
+                }
+            },
+            "logging": {
+                "engineLogging": true
+            }
         },
         {
             "name": "(MacOS) Launch Editor",

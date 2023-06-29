@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use godot::prelude::{Share, Transform3D};
 
 use super::{
@@ -5,13 +7,16 @@ use super::{
         animator::update_animator, billboard::update_billboard,
         gltf_container::update_gltf_container, material::update_material,
         mesh_collider::update_mesh_collider, mesh_renderer::update_mesh_renderer,
-        pointer_events::update_scene_pointer_events, text_shape::update_text_shape,
-        transform_and_parent::update_transform_and_parent,
+        pointer_events::update_scene_pointer_events, raycast::update_raycasts,
+        text_shape::update_text_shape, transform_and_parent::update_transform_and_parent,
     },
     scene_manager::Scene,
 };
 use crate::dcl::{
-    components::{transform_and_parent::DclTransformAndParent, SceneEntityId},
+    components::{
+        proto_components::sdk::components::PbEngineInfo,
+        transform_and_parent::DclTransformAndParent, SceneEntityId,
+    },
     crdt::{
         grow_only_set::GenericGrowOnlySetComponentOperation,
         last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
@@ -25,8 +30,28 @@ pub fn update_scene(
     crdt_state: &mut SceneCrdtState,
     camera_global_transform: &Transform3D,
     player_global_transform: &Transform3D,
+    frames_count: i64,
 ) {
     scene.waiting_for_updates = false;
+
+    let engine_info_component = SceneCrdtStateProtoComponents::get_engine_info_mut(crdt_state);
+    let tick_number = if let Some(entry) = engine_info_component.get(SceneEntityId::ROOT) {
+        if let Some(value) = entry.value.as_ref() {
+            value.tick_number + 1
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+    engine_info_component.put(
+        SceneEntityId::ROOT,
+        Some(PbEngineInfo {
+            tick_number,
+            frame_number: frames_count as u32,
+            total_runtime: (Instant::now() - scene.start_time).as_secs_f32(),
+        }),
+    );
 
     update_deleted_entities(scene);
     update_transform_and_parent(scene, crdt_state);
@@ -38,6 +63,7 @@ pub fn update_scene(
     update_mesh_collider(scene, crdt_state);
     update_gltf_container(scene, crdt_state);
     update_animator(scene, crdt_state);
+    update_raycasts(scene, crdt_state);
 
     let camera_transform = DclTransformAndParent::from_godot(
         camera_global_transform,
