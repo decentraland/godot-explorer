@@ -36,9 +36,9 @@ pub fn update_raycasts(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             if let Some(raycast_value) = new_value.unwrap().value.as_ref() {
                 if raycast_value.continuous() {
-                    scene.continuos_raycast.insert(entity.clone());
+                    scene.continuos_raycast.insert(*entity);
                 } else {
-                    one_shot_raycast.push(entity.clone());
+                    one_shot_raycast.push(*entity);
                 }
             } else {
                 scene.continuos_raycast.remove(entity);
@@ -67,13 +67,11 @@ pub fn update_raycasts(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         raycast_results.push((entity, result));
     }
 
-    drop(raycast_component);
-
     let raycast_result_component =
         SceneCrdtStateProtoComponents::get_raycast_result_mut(crdt_state);
 
     for (entity, result) in raycast_results {
-        raycast_result_component.put(entity.clone(), Some(result));
+        raycast_result_component.put(*entity, Some(result));
     }
 }
 
@@ -197,7 +195,7 @@ fn do_raycast(scene: &Scene, node: &Node3DEntity, raycast: &PbRaycast) -> PbRayc
 
     PbRaycastResult {
         /// timestamp is a correlation id, copied from the PBRaycast
-        timestamp: raycast.timestamp.clone(),
+        timestamp: raycast.timestamp,
         /// the starting point of the ray in global coordinates
         global_origin: Some(proto_components::common::Vector3 {
             x: raycast_from.x - scene_position.x,

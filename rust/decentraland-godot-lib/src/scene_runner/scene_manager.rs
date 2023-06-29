@@ -283,7 +283,6 @@ impl SceneManager {
 
         let frames_count = godot::engine::Engine::singleton().get_physics_frames();
 
-
         let player_parcel_position = Vector2i::new(
             (player_global_transform.origin.x / 16.0).floor() as i32,
             (-player_global_transform.origin.z / 16.0).floor() as i32,
