@@ -34,7 +34,6 @@ pub struct Dirty {
     pub lww_components: DirtyLwwComponents,
     pub gos_components: DirtyGosComponents,
     pub logs: Vec<SceneLogMessage>,
-    pub elapsed_time: f32,
 }
 
 pub enum SceneState {
@@ -55,9 +54,12 @@ pub struct Scene {
 
     pub gltf_loading: HashSet<SceneEntityId>,
     pub pointer_events_result: Vec<(SceneEntityId, PbPointerEventsResult)>,
+    pub continuos_raycast: HashSet<SceneEntityId>,
 
     pub current_dirty: Dirty,
     pub distance: f32,
+
+    pub start_time: Instant,
     pub last_tick_us: i64,
     pub next_tick_us: i64,
 }
@@ -124,7 +126,7 @@ pub struct SceneManager {
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     main_receiver_from_thread: std::sync::mpsc::Receiver<SceneResponse>,
 
-    elapsed_time: f32,
+    total_time_seconds_time: f32,
     pause: bool,
     begin_time: Instant,
     sorted_scene_ids: Vec<SceneId>,
@@ -176,13 +178,14 @@ impl SceneManager {
                 lww_components: DirtyLwwComponents::default(),
                 gos_components: DirtyGosComponents::default(),
                 logs: Vec::new(),
-                elapsed_time: 0.0,
             },
             distance: 0.0,
             next_tick_us: 0,
             last_tick_us: 0,
             gltf_loading: HashSet::new(),
             pointer_events_result: Vec::new(),
+            continuos_raycast: HashSet::new(),
+            start_time: Instant::now(),
         };
 
         self.base.add_child(
@@ -271,12 +274,14 @@ impl SceneManager {
         if self.pause {
             return;
         }
-        self.elapsed_time += delta as f32;
+        self.total_time_seconds_time += delta as f32;
 
         self.receive_from_thread();
 
         let camera_global_transform = self.camera_node.get_global_transform();
         let player_global_transform = self.player_node.get_global_transform();
+
+        let frames_count = godot::engine::Engine::singleton().get_physics_frames();
 
         let player_parcel_position = Vector2i::new(
             (player_global_transform.origin.x / 16.0).floor() as i32,
@@ -308,8 +313,8 @@ impl SceneManager {
         let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
 
         // TODO: this is debug information, very useful to see the scene priority
-        // if self.elapsed_time > 1.0 {
-        //     self.elapsed_time = 0.0;
+        // if self.total_time_seconds_time > 1.0 {
+        //     self.total_time_seconds_time = 0.0;
         //     let next_update_vec: Vec<String> = self
         //         .sorted_scene_ids
         //         .iter()
@@ -344,6 +349,7 @@ impl SceneManager {
                     &mut crdt_state,
                     &camera_global_transform,
                     &player_global_transform,
+                    frames_count,
                 );
 
                 // enable logs
@@ -434,7 +440,7 @@ impl SceneManager {
                         let mut arguments = VariantArray::new();
                         arguments.push((scene_id.0 as i32).to_variant());
                         arguments.push((SceneLogLevel::SystemError as i32).to_variant());
-                        arguments.push(self.elapsed_time.to_variant());
+                        arguments.push(self.total_time_seconds_time.to_variant());
                         arguments.push(GodotString::from(&msg).to_variant());
                         self.console.callv(arguments);
                     }
@@ -442,7 +448,7 @@ impl SceneManager {
                         scene_id,
                         (dirty_entities, dirty_lww_components, dirty_gos_components),
                         logs,
-                        elapsed_time,
+                        _,
                     ) => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
                             if !scene.current_dirty.waiting_process {
@@ -452,7 +458,6 @@ impl SceneManager {
                                     lww_components: dirty_lww_components,
                                     gos_components: dirty_gos_components,
                                     logs,
-                                    elapsed_time,
                                 };
                             } else {
                                 godot_print!("scene {scene_id:?} is already dirty, skipping");
@@ -561,7 +566,7 @@ impl NodeVirtual for SceneManager {
 
             player_position: Vector2i::new(-1000, -1000),
 
-            elapsed_time: 0.0,
+            total_time_seconds_time: 0.0,
             begin_time: Instant::now(),
             console: Callable::default(),
             input_state: InputState::default(),

@@ -37,8 +37,9 @@ func _process(_dt):
 
 
 func _ready():
-	player.position = 16 * Vector3(78, 0.1, 6)
-	player.look_at(16 * Vector3(73, 0, 9))
+	var start_parcel_position: Vector2i = Vector2i(74, -2)
+	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
+	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
 	scene_runner = get_tree().root.get_node("scene_runner")
 	scene_runner.set_camera_and_player_node(player.camera, player, self._on_scene_console_message)

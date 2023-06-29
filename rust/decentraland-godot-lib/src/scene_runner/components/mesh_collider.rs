@@ -13,17 +13,17 @@ use crate::{
 };
 use godot::{
     engine::{
-        node::InternalMode, BoxShape3D, CollisionShape3D, CylinderShape3D, SphereShape3D,
-        StaticBody3D,
+        node::InternalMode, AnimatableBody3D, BoxShape3D, CollisionShape3D, CylinderShape3D,
+        SphereShape3D,
     },
     prelude::*,
 };
 
 pub fn create_or_update_mesh(
-    static_body_3d: &mut Gd<StaticBody3D>,
+    animatable_body_3d: &mut Gd<AnimatableBody3D>,
     mesh_collider: &PbMeshCollider,
 ) {
-    let mut collision_shape = if let Some(maybe_shape) = static_body_3d.get_child(0, false) {
+    let mut collision_shape = if let Some(maybe_shape) = animatable_body_3d.get_child(0, false) {
         if let Some(shape) = maybe_shape.try_cast::<CollisionShape3D>() {
             shape
         } else {
@@ -94,7 +94,7 @@ pub fn create_or_update_mesh(
     };
 
     collision_shape.set_shape(godot_shape);
-    static_body_3d.set_collision_layer(collision_mask as i64);
+    animatable_body_3d.set_collision_layer(collision_mask as i64);
 }
 
 pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -115,17 +115,19 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             let new_value = new_value.value.clone();
             let existing = node
                 .base
-                .try_get_node_as::<StaticBody3D>(NodePath::from("MeshCollider"));
+                .try_get_node_as::<AnimatableBody3D>(NodePath::from("MeshCollider"));
 
             if new_value.is_none() {
                 if let Some(mesh_collider_node) = existing {
                     node.base.remove_child(mesh_collider_node.upcast());
                 }
             } else if let Some(new_value) = new_value {
-                let (mut static_body_3d, add_to_base) = match existing {
-                    Some(static_body_3d) => (static_body_3d, false),
+                let (mut animatable_body_3d, add_to_base) = match existing {
+                    Some(animatable_body_3d) => (animatable_body_3d, false),
                     None => {
-                        let mut body = StaticBody3D::new_alloc();
+                        let mut body = AnimatableBody3D::new_alloc();
+
+                        body.set("sync_to_physics".into(), Variant::from(false));
                         body.add_child(
                             CollisionShape3D::new_alloc().upcast(),
                             false,
@@ -136,21 +138,21 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     }
                 };
 
-                create_or_update_mesh(&mut static_body_3d, &new_value);
+                create_or_update_mesh(&mut animatable_body_3d, &new_value);
 
                 if add_to_base {
-                    static_body_3d.set_name(GodotString::from("MeshCollider"));
-                    static_body_3d.set_meta(
+                    animatable_body_3d.set_name(GodotString::from("MeshCollider"));
+                    animatable_body_3d.set_meta(
                         "dcl_entity_id".into(),
                         (entity.as_usize() as i32).to_variant(),
                     );
-                    static_body_3d.set_meta(
+                    animatable_body_3d.set_meta(
                         "dcl_scene_id".into(),
                         (scene.scene_id.0 as i32).to_variant(),
                     );
 
                     node.base.add_child(
-                        static_body_3d.upcast(),
+                        animatable_body_3d.upcast(),
                         false,
                         InternalMode::INTERNAL_MODE_DISABLED,
                     );
