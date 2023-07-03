@@ -134,7 +134,7 @@ impl Scene {
         ((distance_squared as f32).sqrt(), distance_squared == 0)
     }
 
-    pub fn default() -> Self {
+    pub fn unsafe_default() -> Self {
         let scene_definition = SceneDefinition::default();
         let scene_id = Scene::new_id();
         let dcl_scene = DclScene::spawn_new_test_scene(scene_id);

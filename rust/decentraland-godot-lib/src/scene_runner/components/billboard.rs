@@ -51,7 +51,7 @@ mod test {
 
     #[godot::test::itest]
     fn test_billboard_empty(scene_context: &TestContext) {
-        let mut scene = Scene::default();
+        let mut scene = Scene::unsafe_default();
         let crdt = scene.dcl_scene.scene_crdt.clone();
         let mut crdt_state = crdt.try_lock().unwrap();
         scene_context.scene_tree.share().add_child(
@@ -66,7 +66,7 @@ mod test {
 
     #[godot::test::itest]
     fn test_billboard(scene_context: &TestContext) {
-        let mut scene = Scene::default();
+        let mut scene = Scene::unsafe_default();
         let crdt = scene.dcl_scene.scene_crdt.clone();
         let mut crdt_state = crdt.try_lock().unwrap();
         scene_context.scene_tree.share().add_child(
@@ -93,8 +93,8 @@ mod test {
         assert_eq!(
             node.base.get_global_rotation(),
             Vector3 {
-                x: -0.0,
-                y: 0.7853982, // pi/4 ~ 45 degrees
+                x: 0.0,
+                y: std::f32::consts::FRAC_PI_4,
                 z: 0.0
             }
         );

@@ -6,7 +6,6 @@ func _ready():
 
 
 func start():
-
 	var args := OS.get_cmdline_args()
 #	if some.
 	if args.has("--test"):
