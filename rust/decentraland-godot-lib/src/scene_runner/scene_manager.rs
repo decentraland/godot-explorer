@@ -1,15 +1,13 @@
 use crate::{
     dcl::{
         components::{
-            proto_components::sdk::components::{
-                common::{InputAction, PointerEventType, RaycastHit},
-                PbPointerEventsResult,
+            proto_components::sdk::components::common::{
+                InputAction, PointerEventType, RaycastHit,
             },
             SceneEntityId,
         },
-        js::{SceneLogLevel, SceneLogMessage},
-        DclScene, DirtyEntities, DirtyGosComponents, DirtyLwwComponents, RendererResponse,
-        SceneDefinition, SceneId, SceneResponse,
+        js::SceneLogLevel,
+        DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
     scene_runner::content::ContentMapping,
 };
@@ -24,88 +22,9 @@ use std::{
 
 use super::{
     components::pointer_events::{get_entity_pointer_event, pointer_events_system},
-    godot_dcl_scene::GodotDclScene,
     input::InputState,
+    scene::{Dirty, GodotDclRaycastResult, Scene, SceneState},
 };
-
-pub struct Dirty {
-    pub waiting_process: bool,
-    pub entities: DirtyEntities,
-    pub lww_components: DirtyLwwComponents,
-    pub gos_components: DirtyGosComponents,
-    pub logs: Vec<SceneLogMessage>,
-}
-
-pub enum SceneState {
-    Alive,
-    ToKill,
-    KillSignal(i64),
-    Dead,
-}
-
-pub struct Scene {
-    pub scene_id: SceneId,
-    pub godot_dcl_scene: GodotDclScene,
-    pub dcl_scene: DclScene,
-    pub waiting_for_updates: bool,
-    pub state: SceneState,
-
-    pub content_mapping: Gd<ContentMapping>,
-
-    pub gltf_loading: HashSet<SceneEntityId>,
-    pub pointer_events_result: Vec<(SceneEntityId, PbPointerEventsResult)>,
-    pub continuos_raycast: HashSet<SceneEntityId>,
-
-    pub current_dirty: Dirty,
-    pub distance: f32,
-
-    pub start_time: Instant,
-    pub last_tick_us: i64,
-    pub next_tick_us: i64,
-}
-
-#[derive(Debug)]
-pub struct GodotDclRaycastResult {
-    pub scene_id: SceneId,
-    pub entity_id: SceneEntityId,
-    pub hit: RaycastHit,
-}
-
-impl GodotDclRaycastResult {
-    pub fn eq_key(a: &Option<GodotDclRaycastResult>, b: &Option<GodotDclRaycastResult>) -> bool {
-        if a.is_some() && b.is_some() {
-            let a = a.as_ref().unwrap();
-            let b = b.as_ref().unwrap();
-            a.scene_id == b.scene_id && a.entity_id == b.entity_id
-        } else {
-            a.is_none() && b.is_none()
-        }
-    }
-
-    // pub fn get_hit(&self) -> RaycastHit {
-    //     RaycastHit {
-    //         // pub position: ::core::option::Option<super::super::super::common::Vector3>,
-    //         // pub global_origin: ::core::option::Option<super::super::super::common::Vector3>,
-    //         // pub direction: ::core::option::Option<super::super::super::common::Vector3>,
-    //         // pub normal_hit: ::core::option::Option<super::super::super::common::Vector3>,
-    //         // pub length: f32,
-    //         // pub mesh_name: ::core::option::Option<::prost::alloc::string::String>,
-    //         // pub entity_id: ::core::option::Option<u32>,
-    //     }
-    // }
-}
-
-impl Scene {
-    pub fn min_distance(&self, parcel_position: &Vector2i) -> (f32, bool) {
-        let diff = self.godot_dcl_scene.definition.base - *parcel_position;
-        let mut distance_squared = diff.x * diff.x + diff.y * diff.y;
-        for parcel in self.godot_dcl_scene.definition.parcels.iter() {
-            let diff = *parcel - *parcel_position;
-            distance_squared = distance_squared.min(diff.x * diff.x + diff.y * diff.y);
-        }
-        ((distance_squared as f32).sqrt(), distance_squared == 0)
-    }
-}
 
 // Deriving GodotClass makes the class available to Godot
 #[derive(GodotClass)]
@@ -156,50 +75,26 @@ impl SceneManager {
             }
         };
 
-        let dcl_scene =
-            DclScene::spawn_new(scene_definition.clone(), self.thread_sender_to_main.clone());
-        let scene_id = dcl_scene.scene_id;
+        let new_scene_id = Scene::new_id();
+        let dcl_scene = DclScene::spawn_new_js_dcl_scene(
+            new_scene_id,
+            scene_definition.clone(),
+            self.thread_sender_to_main.clone(),
+        );
 
-        let new_scene = Scene {
-            scene_id,
-            godot_dcl_scene: GodotDclScene::new(
-                scene_definition,
-                dcl_scene.scene_crdt.clone(),
-                scene_id,
-            ),
-            dcl_scene,
-            waiting_for_updates: false,
-            state: SceneState::Alive,
-
-            content_mapping,
-            current_dirty: Dirty {
-                waiting_process: true,
-                entities: DirtyEntities::default(),
-                lww_components: DirtyLwwComponents::default(),
-                gos_components: DirtyGosComponents::default(),
-                logs: Vec::new(),
-            },
-            distance: 0.0,
-            next_tick_us: 0,
-            last_tick_us: 0,
-            gltf_loading: HashSet::new(),
-            pointer_events_result: Vec::new(),
-            continuos_raycast: HashSet::new(),
-            start_time: Instant::now(),
-        };
+        let new_scene = Scene::new(new_scene_id, scene_definition, dcl_scene, content_mapping);
 
         self.base.add_child(
             new_scene.godot_dcl_scene.root_node.share().upcast(),
             false,
             InternalMode::INTERNAL_MODE_DISABLED,
         );
-        let ret = new_scene.dcl_scene.scene_id.0;
-        self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
 
-        self.sorted_scene_ids.push(scene_id);
+        self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
+        self.sorted_scene_ids.push(new_scene_id);
         self.compute_scene_distance();
 
-        ret
+        new_scene_id.0
     }
 
     #[func]
@@ -238,7 +133,7 @@ impl SceneManager {
     #[func]
     fn get_scene_title(&self, scene_id: i32) -> GodotString {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
-            return GodotString::from(scene.godot_dcl_scene.definition.title.clone());
+            return GodotString::from(scene.definition.title.clone());
         }
         GodotString::default()
     }
@@ -246,7 +141,7 @@ impl SceneManager {
     #[func]
     fn get_scene_base_parcel(&self, scene_id: i32) -> Vector2i {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
-            return scene.godot_dcl_scene.definition.base;
+            return scene.definition.base;
         }
         Vector2i::default()
     }

@@ -1,9 +1,4 @@
-use std::{
-    cell::RefCell,
-    rc::Rc,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use deno_core::{
     error::{generic_error, AnyError},
@@ -13,9 +8,9 @@ use godot::prelude::godot_print;
 
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
+    SharedSceneCrdtState,
 };
 use super::{RendererResponse, SceneId, SceneResponse, VM_HANDLES};
-use crate::dcl::crdt::SceneCrdtState;
 
 struct SceneJsFileContent(pub String);
 struct SceneMainCrdtFileContent(pub Vec<u8>);
@@ -46,7 +41,7 @@ pub(crate) fn scene_thread(
     scene_definition: SceneDefinition,
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
-    scene_crdt: Arc<Mutex<SceneCrdtState>>,
+    scene_crdt: SharedSceneCrdtState,
 ) {
     let ext = Extension::builder("decentraland")
         // add require operation

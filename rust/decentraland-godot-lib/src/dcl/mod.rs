@@ -13,10 +13,7 @@ use deno_core::v8::IsolateHandle;
 use once_cell::sync::Lazy;
 use std::{
     collections::{HashMap, HashSet},
-    sync::{
-        atomic::{AtomicU32, Ordering},
-        Arc, Mutex,
-    },
+    sync::{Arc, Mutex},
     thread::JoinHandle,
 };
 
@@ -65,23 +62,24 @@ pub enum SceneResponse {
     ),
 }
 
-static SCENE_ID_MONOTONIC_COUNTER: Lazy<AtomicU32> = Lazy::new(Default::default);
 pub(crate) static VM_HANDLES: Lazy<Mutex<HashMap<SceneId, IsolateHandle>>> =
     Lazy::new(Default::default);
 
+pub type SharedSceneCrdtState = Arc<Mutex<SceneCrdtState>>;
+
 pub struct DclScene {
     pub scene_id: SceneId,
-    pub scene_crdt: Arc<Mutex<SceneCrdtState>>,
+    pub scene_crdt: SharedSceneCrdtState,
     pub main_sender_to_thread: tokio::sync::mpsc::Sender<RendererResponse>,
     pub thread_join_handle: JoinHandle<()>,
 }
 
 impl DclScene {
-    pub fn spawn_new(
+    pub fn spawn_new_js_dcl_scene(
+        id: SceneId,
         scene_definition: SceneDefinition,
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     ) -> Self {
-        let id = SceneId(SCENE_ID_MONOTONIC_COUNTER.fetch_add(1, Ordering::Relaxed));
         let (main_sender_to_thread, thread_receive_from_renderer) =
             tokio::sync::mpsc::channel::<RendererResponse>(1);
 
@@ -99,6 +97,25 @@ impl DclScene {
                     thread_scene_crdt,
                 )
             })
+            .unwrap();
+
+        DclScene {
+            scene_id: id,
+            scene_crdt,
+            main_sender_to_thread,
+            thread_join_handle,
+        }
+    }
+
+    pub fn spawn_new_test_scene(id: SceneId) -> Self {
+        let (main_sender_to_thread, _thread_receive_from_renderer) =
+            tokio::sync::mpsc::channel::<RendererResponse>(1);
+
+        let scene_crdt = Arc::new(Mutex::new(SceneCrdtState::from_proto()));
+
+        let thread_join_handle = std::thread::Builder::new()
+            .name(format!("scene thread {}", id.0))
+            .spawn(move || {})
             .unwrap();
 
         DclScene {

@@ -12,7 +12,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene_manager::Scene,
+    scene_runner::scene::Scene,
 };
 use godot::{
     engine::{MeshInstance3D, StandardMaterial3D},

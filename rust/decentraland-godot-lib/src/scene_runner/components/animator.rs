@@ -6,7 +6,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::{godot_dcl_scene::Node3DEntity, scene_manager::Scene},
+    scene_runner::{godot_dcl_scene::Node3DEntity, scene::Scene},
 };
 use godot::{
     engine::{animation::LoopMode, AnimationPlayer},

@@ -6,7 +6,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene_manager::Scene,
+    scene_runner::scene::Scene,
 };
 use godot::{
     engine::{node::InternalMode, Label3D},

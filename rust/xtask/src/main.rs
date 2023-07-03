@@ -1,5 +1,8 @@
+use std::fs::create_dir_all;
+
 use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
+use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
 mod install_dependency;
 
@@ -55,6 +58,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("release")
                         .help("build release mode (but it doesn't use godot release build")
                         .takes_value(false),
+                )
+                .arg(
+                    Arg::new("itest")
+                        .long("itest")
+                        .help("run tests")
+                        .takes_value(false),
                 ),
         );
     let matches = cli.get_matches();
@@ -95,6 +104,11 @@ fn main() -> Result<(), anyhow::Error> {
                 Err(e) => Err(anyhow::anyhow!("copy the library failed: {}", e)),
             }?;
 
+            if sm.is_present("itest") {
+                args.push("--test");
+                args.push("--headless");
+            }
+
             let status = std::process::Command::new(program.as_str())
                 .args(&args)
                 .status()
@@ -109,7 +123,7 @@ fn main() -> Result<(), anyhow::Error> {
                 Ok(())
             }
         }
-        Some(("coverage", sm)) => xtaskops::tasks::coverage(sm.is_present("dev")),
+        Some(("coverage", sm)) => coverage_with_itest(sm.is_present("dev")),
         Some(("vars", _)) => {
             println!("root: {root:?}");
             Ok(())
@@ -129,4 +143,77 @@ fn main() -> Result<(), anyhow::Error> {
     };
     res
     // xtaskops::tasks::main()
+}
+
+pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
+    remove_dir("coverage")?;
+    create_dir_all("coverage")?;
+
+    println!("=== running coverage ===");
+    cmd!("cargo", "test")
+        .env("CARGO_INCREMENTAL", "0")
+        .env("RUSTFLAGS", "-Cinstrument-coverage")
+        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
+        .run()?;
+
+    cmd!("cargo", "xtask", "run", "--itest")
+        .env("CARGO_INCREMENTAL", "0")
+        .env("RUSTFLAGS", "-Cinstrument-coverage")
+        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
+        .run()?;
+
+    let err = glob::glob("./../godot/*.profraw")?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| cmd!("mv", entry, "./").run())
+        .any(|res| res.is_err());
+
+    if err {
+        return Err(anyhow::anyhow!("failed to move profraw files"));
+    }
+
+    println!("ok.");
+
+    println!("=== generating report ===");
+    let (fmt, file) = if devmode {
+        ("html", "coverage/html")
+    } else {
+        ("lcov", "coverage/tests.lcov")
+    };
+    cmd!(
+        "grcov",
+        ".",
+        "--binary-path",
+        "./target/debug/deps",
+        "-s",
+        ".",
+        "-t",
+        fmt,
+        "--branch",
+        "--ignore-not-existing",
+        "--ignore",
+        "../*",
+        "--ignore",
+        "/*",
+        "--ignore",
+        "xtask/*",
+        "--ignore",
+        "*/src/tests/*",
+        "-o",
+        file,
+    )
+    .run()?;
+    println!("ok.");
+
+    println!("=== cleaning up ===");
+    clean_files("**/*.profraw")?;
+    println!("ok.");
+    if devmode {
+        if confirm("open report folder?") {
+            cmd!("open", file).run()?;
+        } else {
+            println!("report location: {file}");
+        }
+    }
+
+    Ok(())
 }

@@ -10,7 +10,7 @@ use super::{
         pointer_events::update_scene_pointer_events, raycast::update_raycasts,
         text_shape::update_text_shape, transform_and_parent::update_transform_and_parent,
     },
-    scene_manager::Scene,
+    scene::Scene,
 };
 use crate::dcl::{
     components::{

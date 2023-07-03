@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use godot::prelude::*;
+use godot::{prelude::*, test::itest};
 
 use crate::http_request::{
     http_requester::HttpRequester,
@@ -665,4 +665,9 @@ mod tests {
             .get_loadable_scenes()
             .contains(&TEST_POINTER_O_O_ID.to_string()));
     }
+}
+
+#[itest]
+fn some() {
+    godot_print!("this is a itest");
 }
