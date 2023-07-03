@@ -73,6 +73,31 @@
             }
         },
         {
+            "name": "(Linux) Run Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/.bin/godot/Godot_v4.0.3-stable_linux.x86_64",
+            "args": [
+                "--path",
+                "${workspaceFolder}/godot",
+                "--test"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/godot",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "(linux) Copy GDExtension Lib",
+            "sourceFileMap": {
+                "${workspaceFolder}": {
+                    "editorPath": "${workspaceFolder}",
+                    "useForBreakpoints": "true"
+                }
+            },
+            "logging": {
+                "engineLogging": true
+            }
+        },
+        {
             "name": "(MacOS) Launch Editor",
             "type": "cppdbg",
             "request": "launch",

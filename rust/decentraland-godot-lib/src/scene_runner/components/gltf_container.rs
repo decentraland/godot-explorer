@@ -6,7 +6,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene_manager::Scene,
+    scene_runner::scene::Scene,
 };
 use godot::{
     engine::{node::InternalMode, packed_scene::GenEditState},
@@ -26,7 +26,7 @@ enum GodotGltfState {
 pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
-    let scene_id = godot_dcl_scene.scene_id.0;
+    let scene_id = scene.scene_id.0;
     let gltf_container_component = SceneCrdtStateProtoComponents::get_gltf_container(crdt_state);
 
     if let Some(gltf_container_dirty) = dirty_lww_components.get(&SceneComponentId::GLTF_CONTAINER)

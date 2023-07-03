@@ -14,7 +14,7 @@ use crate::dcl::{
     },
     js::{SceneMainCrdtFileContent, ShuttingDown},
     serialization::{reader::DclReader, writer::DclWriter},
-    RendererResponse, SceneId, SceneResponse,
+    RendererResponse, SceneId, SceneResponse, SharedSceneCrdtState,
 };
 
 use super::{SceneElapsedTime, SceneLogMessage};
@@ -36,7 +36,7 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
     let logs = op_state.take::<Vec<SceneLogMessage>>();
     op_state.put(Vec::<SceneLogMessage>::default());
     let scene_id = op_state.take::<SceneId>();
-    let mutex_scene_crdt_state = op_state.take::<Arc<Mutex<SceneCrdtState>>>();
+    let mutex_scene_crdt_state = op_state.take::<SharedSceneCrdtState>();
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
     let mut stream = DclReader::new(messages);
     let mut scene_crdt_state = cloned_scene_crdt.lock().unwrap();

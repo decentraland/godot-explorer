@@ -6,6 +6,15 @@ func _ready():
 
 
 func start():
+
+	var args := OS.get_cmdline_args()
+#	if some.
+	if args.has("--test"):
+		var test_runner = load("res://src/test/test_runner.gd").new()
+		add_child(test_runner)
+		test_runner.start.call_deferred()
+		return
+
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 

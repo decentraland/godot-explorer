@@ -3,24 +3,15 @@ use crate::dcl::{
         proto_components::{self},
         SceneEntityId,
     },
-    crdt::SceneCrdtState,
     SceneDefinition, SceneId,
 };
 use godot::{
     engine::{node::InternalMode, StandardMaterial3D},
     prelude::*,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    sync::{Arc, Mutex},
-};
+use std::collections::{HashMap, HashSet};
 
 pub struct GodotDclScene {
-    pub scene_id: SceneId,
-    pub scene_crdt: Arc<Mutex<SceneCrdtState>>,
-    pub definition: SceneDefinition,
-
-    // godot
     pub entities: HashMap<SceneEntityId, Node3DEntity>,
     pub root_node: Gd<Node3D>,
 
@@ -87,16 +78,12 @@ impl Node3DEntity {
 }
 
 impl GodotDclScene {
-    pub fn new(
-        definition: SceneDefinition,
-        scene_crdt: Arc<Mutex<SceneCrdtState>>,
-        scene_id: SceneId,
-    ) -> Self {
+    pub fn new(scene_definition: &SceneDefinition, scene_id: &SceneId) -> Self {
         let mut root_node = Node3D::new_alloc();
         root_node.set_position(Vector3 {
-            x: 16.0 * definition.base.x as f32,
+            x: 16.0 * scene_definition.base.x as f32,
             y: 0.0,
-            z: 16.0 * -definition.base.y as f32,
+            z: 16.0 * -scene_definition.base.y as f32,
         });
         root_node.set_name(GodotString::from(format!("scene_id_{:?}", scene_id.0)));
 
@@ -106,10 +93,6 @@ impl GodotDclScene {
         )]);
 
         GodotDclScene {
-            scene_id,
-            scene_crdt,
-            definition,
-
             entities,
             root_node,
 

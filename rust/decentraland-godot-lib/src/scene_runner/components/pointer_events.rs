@@ -15,7 +15,7 @@ use crate::{
         },
         SceneId,
     },
-    scene_runner::scene_manager::{GodotDclRaycastResult, Scene},
+    scene_runner::scene::{GodotDclRaycastResult, Scene},
 };
 
 impl crate::dcl::components::proto_components::sdk::components::common::RaycastHit {
