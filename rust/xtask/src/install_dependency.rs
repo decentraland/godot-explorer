@@ -151,6 +151,20 @@ pub fn get_godot_executable_path() -> Option<String> {
     Some(os_url)
 }
 
+pub fn get_godot_editor_path() -> Option<String> {
+    let os = env::consts::OS;
+    let arch = env::consts::ARCH;
+
+    let os_url = match (os, arch) {
+        ("linux", "x86_64") => Some("Godot_v4.0.3-stable_linux.x86_64".to_string()),
+        ("windows", "x86_64") => Some("Godot_v4.0.3-stable_win64.exe".to_string()),
+        ("macos", _) => Some("Godot.app".to_string()),
+        _ => None,
+    }?;
+
+    Some(os_url)
+}
+
 pub fn copy_library(debug_mode: bool) -> Result<(), anyhow::Error> {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;

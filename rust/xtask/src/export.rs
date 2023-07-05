@@ -1,6 +1,20 @@
-use std::fs;
+use std::{fs, path::Path, io};
 
-use crate::install_dependency::{self};
+use crate::install_dependency::{self, get_godot_editor_path};
+
+fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
+    fs::create_dir_all(&dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        } else {
+            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        }
+    }
+    Ok(())
+}
 
 pub fn export() -> Result<(), anyhow::Error> {
     let program = format!(
@@ -10,28 +24,17 @@ pub fn export() -> Result<(), anyhow::Error> {
 
     // Make exports directory
     let export_dir = "./../exports";
-    if !std::path::Path::new(export_dir).exists() {
-        fs::create_dir(export_dir)?;
+    if std::path::Path::new(export_dir).exists() {
+        fs::remove_dir_all(export_dir)?;
     }
-    let lib_dir = "./../exports/lib";
-    if !std::path::Path::new(lib_dir).exists() {
-        fs::create_dir(lib_dir)?;
-    }
+    fs::create_dir(export_dir)?;
 
     // Do imports and one project open
     let args = vec!["-e", "--path", "./../godot", "--headless", "--quit"];
-
-    let status = std::process::Command::new(program.as_str())
+    std::process::Command::new(program.as_str())
         .args(&args)
         .status()
         .expect("Failed to run Godot");
-
-    if !status.success() {
-        return Err(anyhow::anyhow!(
-            "(pre-import) Godot exited with non-zero status: {}",
-            status
-        ));
-    }
 
     // Export .pck
     let args = vec![
@@ -44,17 +47,10 @@ pub fn export() -> Result<(), anyhow::Error> {
         "./../exports/decentraland.godot.client.pck",
         "--quit",
     ];
-    let status = std::process::Command::new(program.as_str())
+    std::process::Command::new(program.as_str())
         .args(&args)
         .status()
         .expect("Failed to run Godot");
-
-    if !status.success() {
-        return Err(anyhow::anyhow!(
-            "(export-pack) Godot exited with non-zero status: {}",
-            status
-        ));
-    }
 
     // check platform
     match std::env::consts::OS {
@@ -72,11 +68,25 @@ pub fn export() -> Result<(), anyhow::Error> {
                 "./../exports/decentraland_godot_lib.dll",
             )?;
         }
-        "macos" => {
-            std::fs::copy(program, "./../exports/decentraland.godot.client")?;
+        "macos" => {  
+            let program = format!("./../.bin/godot/{}", get_godot_editor_path().unwrap());  
+            copy_dir_all(program, "./../exports/DecentralandGodotClient.app")?;
+            
+            let frameworks_dir = "./../exports/DecentralandGodotClient.app/Contents/Frameworks";
+            if !std::path::Path::new(frameworks_dir).exists() {
+                fs::create_dir(frameworks_dir)?;
+            }
+            
             std::fs::copy(
                 "./../godot/lib/libdecentraland_godot_lib.dylib",
-                "./../exports/libdecentraland_godot_lib.dylib",
+                "./../exports/DecentralandGodotClient.app/Contents/Frameworks/libdecentraland_godot_lib.dylib",
+            )?;
+            std::fs::copy(
+                "./../exports/decentraland.godot.client.pck",
+                "./../exports/DecentralandGodotClient.app/Contents/Resources/Godot.pck",
+            )?;
+            std::fs::remove_file(
+                "./../exports/decentraland.godot.client.pck"
             )?;
         }
         _ => {}
