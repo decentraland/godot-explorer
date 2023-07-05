@@ -162,6 +162,17 @@ jobs:
           mkdir rust/target/release || true
           lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output rust/target/release/libdecentraland_godot_lib.dylib
 
+      - name: Copy library (win)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+            cp rust/target/release/decentraland_godot_lib.dll godot/lib/
+
+      - name: Copy library (unix)
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+            cp rust/target/release/libdecentraland_godot_lib.so godot/lib/ || true
+            cp rust/target/release/libdecentraland_godot_lib.dylib godot/lib/ || true
+
       - name: Export
         working-directory: rust
         run: cargo xtask export
