@@ -4,7 +4,9 @@ use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
+mod export;
 mod install_dependency;
+mod run;
 
 fn main() -> Result<(), anyhow::Error> {
     let cli = Command::new("xtask")
@@ -43,6 +45,7 @@ fn main() -> Result<(), anyhow::Error> {
         )
         .subcommand(Command::new("docs"))
         .subcommand(Command::new("install"))
+        .subcommand(Command::new("export"))
         .subcommand(
             Command::new("run")
                 .arg(
@@ -70,59 +73,13 @@ fn main() -> Result<(), anyhow::Error> {
 
     let root = xtaskops::ops::root_dir();
     let res = match matches.subcommand() {
-        Some(("install", _)) => match install_dependency::install() {
-            Ok(_) => Ok(()),
-            Err(e) => Err(anyhow::anyhow!("install failed: {}", e)),
-        },
-        Some(("run", sm)) => {
-            let program = format!(
-                "./../.bin/godot/{}",
-                install_dependency::get_godot_executable_path().unwrap()
-            );
-            let mut args = vec!["--path", "./../godot"];
-            if sm.is_present("editor") {
-                args.push("-e");
-            }
-
-            let release_mode = sm.is_present("release");
-            if release_mode {
-                xtaskops::ops::cmd!(
-                    "cargo",
-                    "build",
-                    "--package",
-                    "decentraland-godot-lib",
-                    "--release"
-                )
-                .run()?;
-            } else {
-                xtaskops::ops::cmd!("cargo", "build", "--package", "decentraland-godot-lib")
-                    .run()?;
-            }
-
-            match install_dependency::copy_library(!release_mode) {
-                Ok(_) => Ok(()),
-                Err(e) => Err(anyhow::anyhow!("copy the library failed: {}", e)),
-            }?;
-
-            if sm.is_present("itest") {
-                args.push("--test");
-                args.push("--headless");
-            }
-
-            let status = std::process::Command::new(program.as_str())
-                .args(&args)
-                .status()
-                .expect("Failed to run Godot");
-
-            if !status.success() {
-                Err(anyhow::anyhow!(
-                    "Godot exited with non-zero status: {}",
-                    status
-                ))
-            } else {
-                Ok(())
-            }
-        }
+        Some(("install", _)) => install_dependency::install(),
+        Some(("run", sm)) => run::run(
+            sm.is_present("editor"),
+            sm.is_present("release"),
+            sm.is_present("itest"),
+        ),
+        Some(("export", _m)) => export::export(),
         Some(("coverage", sm)) => coverage_with_itest(sm.is_present("dev")),
         Some(("vars", _)) => {
             println!("root: {root:?}");

@@ -8,6 +8,15 @@ use std::path::Path;
 use tar::Archive;
 use zip::ZipArchive;
 
+const PROTOC_BASE_URL: &str =
+    "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";
+
+const GODOT4_BIN_BASE_URL: &str =
+    "https://github.com/godotengine/godot/releases/download/4.0.3-stable/Godot_v4.0.3-stable_";
+
+// pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
+//     "https://downloads.tuxfamily.org/godotengine/4.0.3/Godot_v4.0.3-stable_export_templates.tpz";
+
 fn create_directory_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -15,7 +24,7 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-fn get_protocol_url() -> Result<String, Box<dyn std::error::Error>> {
+fn get_protocol_url() -> Result<String, anyhow::Error> {
     let package_name = "@dcl/protocol";
 
     let client = Client::new();
@@ -32,7 +41,7 @@ fn get_protocol_url() -> Result<String, Box<dyn std::error::Error>> {
     Ok(tarball_url.to_string())
 }
 
-pub fn install_dcl_protocol() -> Result<(), Box<dyn std::error::Error>> {
+pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
     let protocol_url = get_protocol_url()?;
     let destination_path = "./decentraland-godot-lib/src/dcl/components";
 
@@ -66,8 +75,6 @@ pub fn install_dcl_protocol() -> Result<(), Box<dyn std::error::Error>> {
 fn get_protoc_url() -> Option<String> {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
-    let base_url =
-        "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";
 
     let os_url = match (os, arch) {
         ("linux", "x86_64") => Some("linux-x86_64.zip".to_string()),
@@ -77,13 +84,10 @@ fn get_protoc_url() -> Option<String> {
         _ => None,
     }?;
 
-    Some(format!("{base_url}{os_url}"))
+    Some(format!("{PROTOC_BASE_URL}{os_url}"))
 }
 
-fn download_and_extract_zip(
-    url: &str,
-    destination_path: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn download_and_extract_zip(url: &str, destination_path: &str) -> Result<(), anyhow::Error> {
     println!("Downloading {url:?}");
     let response = reqwest::blocking::get(url)?;
     let zip_bytes = response.bytes()?;
@@ -107,8 +111,6 @@ fn download_and_extract_zip(
 fn get_godot_url() -> Option<String> {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
-    let base_url =
-        "https://github.com/godotengine/godot/releases/download/4.0.3-stable/Godot_v4.0.3-stable_";
 
     let os_url = match (os, arch) {
         ("linux", "x86_64") => Some("linux.x86_64.zip".to_string()),
@@ -117,7 +119,7 @@ fn get_godot_url() -> Option<String> {
         _ => None,
     }?;
 
-    Some(format!("{base_url}{os_url}"))
+    Some(format!("{GODOT4_BIN_BASE_URL}{os_url}"))
 }
 
 fn set_executable_permission(_file_path: &Path) -> std::io::Result<()> {
@@ -149,7 +151,21 @@ pub fn get_godot_executable_path() -> Option<String> {
     Some(os_url)
 }
 
-pub fn copy_library(debug_mode: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn get_godot_editor_path() -> Option<String> {
+    let os = env::consts::OS;
+    let arch = env::consts::ARCH;
+
+    let os_url = match (os, arch) {
+        ("linux", "x86_64") => Some("Godot_v4.0.3-stable_linux.x86_64".to_string()),
+        ("windows", "x86_64") => Some("Godot_v4.0.3-stable_win64.exe".to_string()),
+        ("macos", _) => Some("Godot.app".to_string()),
+        _ => None,
+    }?;
+
+    Some(os_url)
+}
+
+pub fn copy_library(debug_mode: bool) -> Result<(), anyhow::Error> {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
     let file_name = match (os, arch) {
@@ -173,7 +189,7 @@ pub fn copy_library(debug_mode: bool) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-pub fn install() -> Result<(), Box<dyn std::error::Error>> {
+pub fn install() -> Result<(), anyhow::Error> {
     install_dcl_protocol()?;
 
     download_and_extract_zip(get_protoc_url().unwrap().as_str(), "./../.bin/protoc")?;
