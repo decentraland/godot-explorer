@@ -31,19 +31,16 @@ pub fn export() -> Result<(), anyhow::Error> {
 
     // Do imports and one project open
     let args = vec!["-e", "--path", "./../godot", "--headless", "--quit"];
-    let status = std::process::Command::new(program.as_str())
+    let status1 = std::process::Command::new(program.as_str())
         .args(&args)
         .status()
         .expect("Failed to run Godot");
 
-    if !status.success() {
-        return Err(anyhow::anyhow!(
-            "(pre-import) Godot exited with non-zero status: {}",
-            status
-        ));
-    }
-
     // Export .pck
+    let pck_path = "./../exports/decentraland.godot.client.pck";
+    if std::path::Path::new(pck_path).exists() {
+        fs::remove_file(export_dir)?;
+    }
     let args = vec![
         "-e",
         "--path",
@@ -51,17 +48,19 @@ pub fn export() -> Result<(), anyhow::Error> {
         "--headless",
         "--export-pack",
         "linux",
-        "./../exports/decentraland.godot.client.pck",
+        pck_path,
         "--quit",
     ];
-    let status = std::process::Command::new(program.as_str())
+    let status2 = std::process::Command::new(program.as_str())
         .args(&args)
         .status()
         .expect("Failed to run Godot");
-    if !status.success() {
+
+    if !std::path::Path::new(pck_path).exists() {
         return Err(anyhow::anyhow!(
-            "(export-pack) Godot exited with non-zero status: {}",
-            status
+            ".pck file was not generated. pre-import godot status: {:?}, pck-export godot status: {:?}",
+            status1,
+            status2
         ));
     }
 
@@ -102,6 +101,8 @@ pub fn export() -> Result<(), anyhow::Error> {
         }
         _ => {}
     };
+
+    println!("Exported to {export_dir} succesfully!");
 
     Ok(())
 }
