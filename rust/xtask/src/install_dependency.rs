@@ -14,8 +14,8 @@ const PROTOC_BASE_URL: &str =
 const GODOT4_BIN_BASE_URL: &str =
     "https://github.com/godotengine/godot/releases/download/4.0.3-stable/Godot_v4.0.3-stable_";
 
-const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
-    "https://downloads.tuxfamily.org/godotengine/4.0.3/Godot_v4.0.3-stable_export_templates.tpz";
+// pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
+//     "https://downloads.tuxfamily.org/godotengine/4.0.3/Godot_v4.0.3-stable_export_templates.tpz";
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
@@ -87,7 +87,7 @@ fn get_protoc_url() -> Option<String> {
     Some(format!("{PROTOC_BASE_URL}{os_url}"))
 }
 
-fn download_and_extract_zip(url: &str, destination_path: &str) -> Result<(), anyhow::Error> {
+pub fn download_and_extract_zip(url: &str, destination_path: &str) -> Result<(), anyhow::Error> {
     println!("Downloading {url:?}");
     let response = reqwest::blocking::get(url)?;
     let zip_bytes = response.bytes()?;
