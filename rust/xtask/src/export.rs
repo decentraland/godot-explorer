@@ -1,4 +1,4 @@
-use std::{fs, path::Path, io};
+use std::{fs, io, path::Path};
 
 use crate::install_dependency::{self, get_godot_editor_path};
 
@@ -68,15 +68,15 @@ pub fn export() -> Result<(), anyhow::Error> {
                 "./../exports/decentraland_godot_lib.dll",
             )?;
         }
-        "macos" => {  
-            let program = format!("./../.bin/godot/{}", get_godot_editor_path().unwrap());  
+        "macos" => {
+            let program = format!("./../.bin/godot/{}", get_godot_editor_path().unwrap());
             copy_dir_all(program, "./../exports/DecentralandGodotClient.app")?;
-            
+
             let frameworks_dir = "./../exports/DecentralandGodotClient.app/Contents/Frameworks";
             if !std::path::Path::new(frameworks_dir).exists() {
                 fs::create_dir(frameworks_dir)?;
             }
-            
+
             std::fs::copy(
                 "./../godot/lib/libdecentraland_godot_lib.dylib",
                 "./../exports/DecentralandGodotClient.app/Contents/Frameworks/libdecentraland_godot_lib.dylib",
@@ -85,9 +85,7 @@ pub fn export() -> Result<(), anyhow::Error> {
                 "./../exports/decentraland.godot.client.pck",
                 "./../exports/DecentralandGodotClient.app/Contents/Resources/Godot.pck",
             )?;
-            std::fs::remove_file(
-                "./../exports/decentraland.godot.client.pck"
-            )?;
+            std::fs::remove_file("./../exports/decentraland.godot.client.pck")?;
         }
         _ => {}
     };

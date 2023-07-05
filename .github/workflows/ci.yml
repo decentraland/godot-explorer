@@ -162,51 +162,13 @@ jobs:
           mkdir rust/target/release || true
           lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output rust/target/release/libdecentraland_godot_lib.dylib
 
+      - name: Export
+        working-directory: rust
+        run: cargo xtask export
+
       - uses: actions/upload-artifact@master
         with:
-          name: decentraland-godot-lib-${{ matrix.os }}
+          name: decentraland-godot-${{ matrix.os }}
           path: |
-            rust/target/release/decentraland_godot_lib.dll
-            rust/target/release/libdecentraland_godot_lib.so
-            rust/target/release/libdecentraland_godot_lib.dylib
+            exports/**/*
 
-  export:
-    name: Export (all platforms)
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' }}
-    steps:
-      - uses: actions/checkout@v2
-      - name: Download linux lib artifact
-        uses: actions/download-artifact@master
-        with:
-          name: decentraland-godot-lib-ubuntu-latest
-          path: godot/lib
-          
-      - name: Download windows lib artifact 
-        uses: actions/download-artifact@master
-        with:
-          name: decentraland-godot-lib-windows-latest
-          path: godot/lib
-          
-      - name: Download macos lib artifact 
-        uses: actions/download-artifact@master
-        with:
-          name: decentraland-godot-lib-macos-latest
-          path: godot/lib
-          
-      - name: export
-        id: export
-        # Use latest version (see releases for all versions)
-        uses: firebelley/godot-export@v5.1.0
-        with:
-          # Defining all the required inputs
-          godot_executable_download_url: https://downloads.tuxfamily.org/godotengine/4.0.3/Godot_v4.0.3-stable_linux.x86_64.zip
-          godot_export_templates_download_url: https://downloads.tuxfamily.org/godotengine/4.0.3/Godot_v4.0.3-stable_export_templates.tpz
-          relative_project_path: ./godot
-          archive_output: true
-
-      - uses: actions/upload-artifact@master
-        with:
-          name: decentraland-godot-export
-          path: ${{ steps.export.outputs.archive_directory }}/*
