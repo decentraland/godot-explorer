@@ -12,10 +12,7 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{
-        node::InternalMode, AnimatableBody3D, BoxShape3D, CollisionShape3D, CylinderShape3D,
-        SphereShape3D,
-    },
+    engine::{AnimatableBody3D, BoxShape3D, CollisionShape3D, CylinderShape3D, SphereShape3D},
     prelude::*,
 };
 
@@ -23,7 +20,7 @@ pub fn create_or_update_mesh(
     animatable_body_3d: &mut Gd<AnimatableBody3D>,
     mesh_collider: &PbMeshCollider,
 ) {
-    let mut collision_shape = if let Some(maybe_shape) = animatable_body_3d.get_child(0, false) {
+    let mut collision_shape = if let Some(maybe_shape) = animatable_body_3d.get_child(0) {
         if let Some(shape) = maybe_shape.try_cast::<CollisionShape3D>() {
             shape
         } else {
@@ -67,7 +64,7 @@ pub fn create_or_update_mesh(
                 let radius = (cylinder_mesh_value.radius_top.unwrap_or(0.5)
                     + cylinder_mesh_value.radius_bottom.unwrap_or(0.5))
                     * 0.5;
-                cylinder_shape.set_radius(radius as f64);
+                cylinder_shape.set_radius(radius);
                 cylinder_shape.set_height(1.0);
                 cylinder_shape.upcast()
             }
@@ -94,7 +91,7 @@ pub fn create_or_update_mesh(
     };
 
     collision_shape.set_shape(godot_shape);
-    animatable_body_3d.set_collision_layer(collision_mask as i64);
+    animatable_body_3d.set_collision_layer(collision_mask);
 }
 
 pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -128,11 +125,7 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                         let mut body = AnimatableBody3D::new_alloc();
 
                         body.set("sync_to_physics".into(), Variant::from(false));
-                        body.add_child(
-                            CollisionShape3D::new_alloc().upcast(),
-                            false,
-                            InternalMode::INTERNAL_MODE_DISABLED,
-                        );
+                        body.add_child(CollisionShape3D::new_alloc().upcast());
 
                         (body, true)
                     }
@@ -151,11 +144,7 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                         (scene.scene_id.0 as i32).to_variant(),
                     );
 
-                    node.base.add_child(
-                        animatable_body_3d.upcast(),
-                        false,
-                        InternalMode::INTERNAL_MODE_DISABLED,
-                    );
+                    node.base.add_child(animatable_body_3d.upcast());
                 }
             }
         }

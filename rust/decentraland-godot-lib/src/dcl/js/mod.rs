@@ -94,7 +94,7 @@ pub(crate) fn scene_thread(
         );
 
         if let Some(file) = file {
-            let buf = file.get_buffer(file.get_length()).to_vec();
+            let buf = file.get_buffer(file.get_length() as i64).to_vec();
 
             let mut stream = DclReader::new(&buf);
             let mut scene_crdt_state = scene_crdt.lock().unwrap();
@@ -151,7 +151,7 @@ pub(crate) fn scene_thread(
         return;
     }
 
-    let scene_code = SceneJsFileContent(file.unwrap().get_as_text(true).to_string());
+    let scene_code = SceneJsFileContent(file.unwrap().get_as_text().to_string());
     state.borrow_mut().put(scene_code);
 
     let script = runtime.execute_script("<loader>", "require (\"~scene.js\")");

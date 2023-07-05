@@ -31,10 +31,7 @@ pub fn update_billboard(
 }
 
 mod test {
-    use godot::{
-        engine::node::InternalMode,
-        prelude::{Basis, Share, Transform3D, Vector3},
-    };
+    use godot::prelude::{Basis, Share, Transform3D, Vector3};
 
     use crate::{
         dcl::{
@@ -54,11 +51,10 @@ mod test {
         let mut scene = Scene::unsafe_default();
         let crdt = scene.dcl_scene.scene_crdt.clone();
         let mut crdt_state = crdt.try_lock().unwrap();
-        scene_context.scene_tree.share().add_child(
-            scene.godot_dcl_scene.root_node.share().upcast(),
-            false,
-            InternalMode::INTERNAL_MODE_DISABLED,
-        );
+        scene_context
+            .scene_tree
+            .share()
+            .add_child(scene.godot_dcl_scene.root_node.share().upcast());
 
         let camera_global_transform = Transform3D::IDENTITY;
         update_billboard(&mut scene, &mut crdt_state, &camera_global_transform);
@@ -69,11 +65,10 @@ mod test {
         let mut scene = Scene::unsafe_default();
         let crdt = scene.dcl_scene.scene_crdt.clone();
         let mut crdt_state = crdt.try_lock().unwrap();
-        scene_context.scene_tree.share().add_child(
-            scene.godot_dcl_scene.root_node.share().upcast(),
-            false,
-            InternalMode::INTERNAL_MODE_DISABLED,
-        );
+        scene_context
+            .scene_tree
+            .share()
+            .add_child(scene.godot_dcl_scene.root_node.share().upcast());
 
         let camera_global_transform =
             Transform3D::new(Basis::IDENTITY, Vector3::new(1.0, 0.0, 1.0));

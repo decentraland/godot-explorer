@@ -116,11 +116,9 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material.set_albedo(Color::from_rgb(0.0, 1.0, 0.0));
                     }
                     pb_material::Material::Pbr(pbr_material) => {
-                        godot_material.set_metallic(pbr_material.metallic.unwrap_or(0.5) as f64);
-                        godot_material.set_roughness(pbr_material.roughness.unwrap_or(0.5) as f64);
-
-                        godot_material
-                            .set_specular(pbr_material.specular_intensity.unwrap_or(1.0) as f64);
+                        godot_material.set_metallic(pbr_material.metallic.unwrap_or(0.5));
+                        godot_material.set_roughness(pbr_material.roughness.unwrap_or(0.5));
+                        godot_material.set_specular(pbr_material.specular_intensity.unwrap_or(1.0));
 
                         let emission = pbr_material
                             .emissive_color

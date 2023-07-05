@@ -8,10 +8,7 @@ use crate::{
     },
     scene_runner::scene::Scene,
 };
-use godot::{
-    engine::{node::InternalMode, Label3D},
-    prelude::*,
-};
+use godot::{engine::Label3D, prelude::*};
 
 pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
@@ -44,16 +41,12 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 };
 
                 label_3d.set_text(GodotString::from(new_value.text));
-                label_3d.set_font_size(12 * new_value.font_size.unwrap_or(3.0) as i64); // TODO: see font size fix
+                label_3d.set_font_size(12 * new_value.font_size.unwrap_or(3.0) as i32); // TODO: see font size fix
                 label_3d.set_outline_size(8); // TODO: see font size fix
 
                 if add_to_base {
                     label_3d.set_name(GodotString::from("TextShape"));
-                    node.base.add_child(
-                        label_3d.upcast(),
-                        false,
-                        InternalMode::INTERNAL_MODE_DISABLED,
-                    );
+                    node.base.add_child(label_3d.upcast());
                 }
             }
         }

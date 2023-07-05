@@ -31,10 +31,17 @@ pub fn export() -> Result<(), anyhow::Error> {
 
     // Do imports and one project open
     let args = vec!["-e", "--path", "./../godot", "--headless", "--quit"];
-    std::process::Command::new(program.as_str())
+    let status = std::process::Command::new(program.as_str())
         .args(&args)
         .status()
         .expect("Failed to run Godot");
+
+    if !status.success() {
+        return Err(anyhow::anyhow!(
+            "(pre-import) Godot exited with non-zero status: {}",
+            status
+        ));
+    }
 
     // Export .pck
     let args = vec![
@@ -47,10 +54,16 @@ pub fn export() -> Result<(), anyhow::Error> {
         "./../exports/decentraland.godot.client.pck",
         "--quit",
     ];
-    std::process::Command::new(program.as_str())
+    let status = std::process::Command::new(program.as_str())
         .args(&args)
         .status()
         .expect("Failed to run Godot");
+    if !status.success() {
+        return Err(anyhow::anyhow!(
+            "(export-pack) Godot exited with non-zero status: {}",
+            status
+        ));
+    }
 
     // check platform
     match std::env::consts::OS {

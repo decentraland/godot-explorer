@@ -8,10 +8,7 @@ use crate::{
     },
     scene_runner::scene::Scene,
 };
-use godot::{
-    engine::{node::InternalMode, packed_scene::GenEditState},
-    prelude::*,
-};
+use godot::prelude::*;
 
 // see gltf_container.gd
 enum GodotGltfState {
@@ -70,7 +67,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                     let mut new_gltf = godot::engine::load::<PackedScene>(
                         "res://src/decentraland_components/gltf_container.tscn",
                     )
-                    .instantiate(GenEditState::GEN_EDIT_STATE_DISABLED)
+                    .instantiate()
                     .unwrap();
 
                     new_gltf.set(
@@ -92,11 +89,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                         Variant::from(invisible_meshes_collision_mask),
                     );
                     new_gltf.set_name(GodotString::from("GltfContainer"));
-                    node.base.add_child(
-                        new_gltf.share().upcast(),
-                        false,
-                        InternalMode::INTERNAL_MODE_DISABLED,
-                    );
+                    node.base.add_child(new_gltf.share().upcast());
 
                     scene.gltf_loading.insert(*entity);
                 }

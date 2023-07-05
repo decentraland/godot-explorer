@@ -140,7 +140,7 @@ fn do_raycast(scene: &Scene, node: &Node3DEntity, raycast: &PbRaycast) -> PbRayc
         .get_direct_space_state()
         .unwrap();
     let mut raycast_query = PhysicsRayQueryParameters3D::new();
-    let collision_mask = raycast.collision_mask.unwrap_or(3) as i64;
+    let collision_mask = raycast.collision_mask.unwrap_or(3);
 
     raycast_query.set_from(raycast_from);
     raycast_query.set_to(raycast_to);

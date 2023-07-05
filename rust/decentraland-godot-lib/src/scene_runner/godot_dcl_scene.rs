@@ -5,10 +5,7 @@ use crate::dcl::{
     },
     SceneDefinition, SceneId,
 };
-use godot::{
-    engine::{node::InternalMode, StandardMaterial3D},
-    prelude::*,
-};
+use godot::{engine::StandardMaterial3D, prelude::*};
 use std::collections::{HashMap, HashSet};
 
 pub struct GodotDclScene {
@@ -111,12 +108,7 @@ impl GodotDclScene {
                 entity.number, entity.version
             )));
 
-            self.root_node.add_child(
-                new_node.base.share().upcast(),
-                false,
-                InternalMode::INTERNAL_MODE_DISABLED,
-            );
-
+            self.root_node.add_child(new_node.base.share().upcast());
             self.entities.insert(*entity, new_node);
         }
 

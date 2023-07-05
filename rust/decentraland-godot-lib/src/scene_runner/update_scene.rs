@@ -30,7 +30,7 @@ pub fn update_scene(
     crdt_state: &mut SceneCrdtState,
     camera_global_transform: &Transform3D,
     player_global_transform: &Transform3D,
-    frames_count: i64,
+    frames_count: u64,
 ) {
     scene.waiting_for_updates = false;
 
@@ -100,7 +100,9 @@ fn update_deleted_entities(scene: &mut Scene) {
     for (entity_id, node) in godot_dcl_scene.entities.iter_mut() {
         if died.contains(&node.computed_parent) && *entity_id != node.computed_parent {
             node.base
-                .reparent(godot_dcl_scene.root_node.share().upcast(), false);
+                .reparent_ex(godot_dcl_scene.root_node.share().upcast())
+                .keep_global_transform(false)
+                .done();
             node.computed_parent = SceneEntityId::ROOT;
             godot_dcl_scene.unparented_entities.insert(*entity_id);
             godot_dcl_scene.hierarchy_dirty = true;

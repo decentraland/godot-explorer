@@ -95,7 +95,11 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
             // if parent doens't exist cause it's dead, we remap to the root entity
             if crdt_state.entities.is_dead(&desired_parent) {
                 let current_node = godot_dcl_scene.ensure_node_mut(&entity);
-                current_node.base.reparent(root_node.share(), false);
+                current_node
+                    .base
+                    .reparent_ex(root_node.share())
+                    .keep_global_transform(false)
+                    .done();
                 current_node.computed_parent = SceneEntityId::ROOT;
 
                 godot_dcl_scene.ensure_node_mut(&entity).desired_parent = SceneEntityId::ROOT;
@@ -112,7 +116,11 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
                         .upcast::<Node>();
 
                     let current_node = godot_dcl_scene.ensure_node_mut(&entity);
-                    current_node.base.reparent(parent_node, false);
+                    current_node
+                        .base
+                        .reparent_ex(parent_node)
+                        .keep_global_transform(false)
+                        .done();
                     current_node.computed_parent = desired_parent;
 
                     godot_dcl_scene.hierarchy_dirty = true;

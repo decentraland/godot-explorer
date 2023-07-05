@@ -12,7 +12,7 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{node::InternalMode, BoxMesh, CylinderMesh, MeshInstance3D, SphereMesh},
+    engine::{BoxMesh, CylinderMesh, MeshInstance3D, SphereMesh},
     prelude::*,
 };
 
@@ -48,9 +48,8 @@ pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMe
                         .unwrap_or(CylinderMesh::new()),
                     None => CylinderMesh::new(),
                 };
-                cylinder_mesh.set_top_radius(cylinder_mesh_value.radius_top.unwrap_or(0.5) as f64);
-                cylinder_mesh
-                    .set_bottom_radius(cylinder_mesh_value.radius_bottom.unwrap_or(0.5) as f64);
+                cylinder_mesh.set_top_radius(cylinder_mesh_value.radius_top.unwrap_or(0.5));
+                cylinder_mesh.set_bottom_radius(cylinder_mesh_value.radius_bottom.unwrap_or(0.5));
                 cylinder_mesh.set_height(1.0);
                 mesh_instance.set_mesh(cylinder_mesh.upcast());
 
@@ -114,11 +113,7 @@ pub fn update_mesh_renderer(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
                 if add_to_base {
                     mesh_instance_3d.set_name(GodotString::from("MeshRenderer"));
-                    node.base.add_child(
-                        mesh_instance_3d.upcast(),
-                        false,
-                        InternalMode::INTERNAL_MODE_DISABLED,
-                    );
+                    node.base.add_child(mesh_instance_3d.upcast());
                 }
             }
         }

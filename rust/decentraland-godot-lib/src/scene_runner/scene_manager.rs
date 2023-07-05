@@ -12,7 +12,7 @@ use crate::{
     scene_runner::content::ContentMapping,
 };
 use godot::{
-    engine::{node::InternalMode, CharacterBody3D, PhysicsRayQueryParameters3D},
+    engine::{CharacterBody3D, PhysicsRayQueryParameters3D},
     prelude::*,
 };
 use std::{
@@ -84,11 +84,8 @@ impl SceneManager {
 
         let new_scene = Scene::new(new_scene_id, scene_definition, dcl_scene, content_mapping);
 
-        self.base.add_child(
-            new_scene.godot_dcl_scene.root_node.share().upcast(),
-            false,
-            InternalMode::INTERNAL_MODE_DISABLED,
-        );
+        self.base
+            .add_child(new_scene.godot_dcl_scene.root_node.share().upcast());
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
         self.sorted_scene_ids.push(new_scene_id);
@@ -463,7 +460,7 @@ impl NodeVirtual for SceneManager {
 
             total_time_seconds_time: 0.0,
             begin_time: Instant::now(),
-            console: Callable::default(),
+            console: Callable::invalid(),
             input_state: InputState::default(),
             last_raycast_result: None,
             global_tick_number: 0,

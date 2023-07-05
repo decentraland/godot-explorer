@@ -16,7 +16,7 @@ use godot::{
 fn get_animation_player(node: &mut Node3DEntity) -> Option<Gd<AnimationPlayer>> {
     node.base
         .try_get_node_as::<Node>(NodePath::from("GltfContainer"))?
-        .get_child(0, false)?
+        .get_child(0)?
         .try_get_node_as::<AnimationPlayer>("AnimationPlayer")
 }
 
@@ -80,19 +80,21 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         animation.set_loop_mode(LoopMode::LOOP_NONE);
                     }
 
-                    animation_player.play(
-                        StringName::from(&state.clip),
-                        -1.0,
-                        state.speed.unwrap_or(1.0) as f64,
-                        false,
-                    );
+                    animation_player
+                        .play_ex()
+                        .name(StringName::from(&state.clip))
+                        .custom_speed(state.speed.unwrap_or(1.0))
+                        .done();
 
                     if should_reset_current_animation {
-                        animation_player.seek(0.0, false);
+                        animation_player.seek(0.0);
                     }
                 }
             } else {
-                animation_player.stop(!should_reset_current_animation);
+                animation_player
+                    .stop_ex()
+                    .keep_state(!should_reset_current_animation)
+                    .done();
             }
         }
     }

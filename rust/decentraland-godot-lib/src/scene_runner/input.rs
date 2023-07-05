@@ -40,7 +40,7 @@ impl InputState {
         let mut result = HashSet::new();
         let input: Gd<Input> = Input::singleton();
         for (input_action, action_string) in self.dcl_to_action.iter() {
-            let current_state = input.is_action_pressed(action_string.clone(), true);
+            let current_state = input.is_action_pressed(action_string.clone());
             if self.state[input_action] != current_state {
                 self.state.insert(*input_action, current_state);
                 result.insert((*input_action, current_state));
