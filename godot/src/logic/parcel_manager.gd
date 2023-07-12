@@ -221,10 +221,11 @@ func _on_try_spawn_scene(scene):
 		var p = parcel.split_floats(",")
 		parcels.push_back(Vector2i(int(p[0]), int(p[1])))
 
-	var content_mapping = ContentMapping.new()
-	content_mapping.set_content_mapping(scene.entity["content"])
-	content_mapping.set_base_url(scene.entity.baseUrl)
-
+	var content_mapping: Dictionary = {
+		"base_url": scene.entity.baseUrl,
+		"content": scene.entity["content"]
+	}
+	
 	var scene_definition: Dictionary = {
 		"base": Vector2i(base_parcel[0], base_parcel[1]),
 		"is_global": false,

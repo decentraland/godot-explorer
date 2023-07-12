@@ -27,8 +27,8 @@ func get_resource_from_hash(file_hash: String):
 	return null
 
 
-func get_resource(file_path: String, _content_type: ContentType, content_mapping: ContentMapping):
-	var file_hash = content_mapping.get_content_hash(file_path)
+func get_resource(file_path: String, _content_type: ContentType, content_mapping: Dictionary):
+	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null and content_cached.get("loaded"):
 		return content_cached.get("resource")
@@ -36,8 +36,8 @@ func get_resource(file_path: String, _content_type: ContentType, content_mapping
 	return null
 
 
-func fetch_resource(file_path: String, content_type: ContentType, content_mapping: ContentMapping):
-	var file_hash = content_mapping.get_content_hash(file_path)
+func fetch_resource(file_path: String, content_type: ContentType, content_mapping: Dictionary):
+	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		return not content_cached.get("loaded")
@@ -97,10 +97,10 @@ func get_finished_downloads() -> Array[RequestResponse]:
 
 
 func process_loading_gltf(content: Dictionary, finished_downloads: Array[RequestResponse]) -> bool:
-	var content_mapping: ContentMapping = content.get("content_mapping")
+	var content_mapping = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
 	var file_path: String = content.get("file_path")
-	var base_url = content_mapping.get_base_url()
+	var base_url: String = content_mapping.get("base_url", "")
 	var base_path = file_path.get_base_dir()
 	var local_gltf_path = "user://content/" + file_hash
 
@@ -158,11 +158,11 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 			content["request_dependencies"] = []
 			for uri in dependencies:
 				var image_path = base_path + "/" + uri
-				var image_hash = content_mapping.get_content_hash(image_path.to_lower())
+				var image_hash = content_mapping.get("content", {}).get(image_path.to_lower(), "")
 				if image_hash.is_empty() or base_url.is_empty():
 					printerr(
 						uri + " not found (resolved: " + image_path + ") => ",
-						content_mapping.get_mappings()
+						content_mapping
 					)
 					continue
 

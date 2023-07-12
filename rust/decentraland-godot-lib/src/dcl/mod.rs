@@ -6,11 +6,9 @@ pub mod serialization;
 use self::{
     components::{SceneComponentId, SceneEntityId},
     crdt::SceneCrdtState,
-    js::{scene_thread, SceneLogMessage},
+    js::{js_runtime::SceneLogMessage, scene_thread},
 };
 
-use deno_core::v8::IsolateHandle;
-use once_cell::sync::Lazy;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
@@ -61,9 +59,6 @@ pub enum SceneResponse {
         f32,
     ),
 }
-
-pub(crate) static VM_HANDLES: Lazy<Mutex<HashMap<SceneId, IsolateHandle>>> =
-    Lazy::new(Default::default);
 
 pub type SharedSceneCrdtState = Arc<Mutex<SceneCrdtState>>;
 

@@ -1,6 +1,8 @@
 use std::{fs, io, path::Path};
 
-use crate::install_dependency::{self, get_godot_editor_path};
+use crate::install_dependency::{
+    self, download_and_extract_zip, get_godot_editor_path, GODOT4_EXPORT_TEMPLATES_BASE_URL,
+};
 
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
     fs::create_dir_all(&dst)?;
@@ -103,6 +105,15 @@ pub fn export() -> Result<(), anyhow::Error> {
     };
 
     println!("Exported to {export_dir} succesfully!");
+
+    Ok(())
+}
+
+pub fn prepare_templates() -> Result<(), anyhow::Error> {
+    download_and_extract_zip(
+        GODOT4_EXPORT_TEMPLATES_BASE_URL,
+        "./../.bin/godot/templates",
+    )?;
 
     Ok(())
 }

@@ -1,15 +1,10 @@
-use crate::{
-    dcl::{
-        components::{
-            proto_components::sdk::components::common::{
-                InputAction, PointerEventType, RaycastHit,
-            },
-            SceneEntityId,
-        },
-        js::SceneLogLevel,
-        DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
+use crate::dcl::{
+    components::{
+        proto_components::sdk::components::common::{InputAction, PointerEventType, RaycastHit},
+        SceneEntityId,
     },
-    scene_runner::content::ContentMapping,
+    js::js_runtime::SceneLogLevel,
+    DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
 };
 use godot::{
     engine::{CharacterBody3D, PhysicsRayQueryParameters3D},
@@ -62,11 +57,7 @@ pub struct SceneManager {
 impl SceneManager {
     // Testing a comment for the API
     #[func]
-    fn start_scene(
-        &mut self,
-        scene_definition: Dictionary,
-        content_mapping: Gd<ContentMapping>,
-    ) -> u32 {
+    fn start_scene(&mut self, scene_definition: Dictionary, content_mapping: Dictionary) -> u32 {
         let scene_definition = match SceneDefinition::from_dict(scene_definition) {
             Ok(scene_definition) => scene_definition,
             Err(e) => {
@@ -120,11 +111,11 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_scene_content_mapping(&self, scene_id: i32) -> Gd<ContentMapping> {
+    fn get_scene_content_mapping(&self, scene_id: i32) -> Dictionary {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
             return scene.content_mapping.share();
         }
-        Gd::new_default()
+        Dictionary::default()
     }
 
     #[func]
@@ -232,45 +223,87 @@ impl SceneManager {
             }
 
             if let SceneState::Alive = scene.state {
-                let crdt = scene.dcl_scene.scene_crdt.clone();
-                let Ok(mut crdt_state) = crdt.try_lock() else {continue;};
+                if scene.current_dirty.renderer_response.is_some() {
+                    if scene.dcl_scene.main_sender_to_thread.capacity() > 0 {
+                        let response = scene.current_dirty.renderer_response.take().unwrap();
+                        if let Err(_err) = scene
+                            .dcl_scene
+                            .main_sender_to_thread
+                            .blocking_send(response)
+                        {
+                            // TODO: handle fail sending to thread
+                        }
 
-                super::update_scene::update_scene(
-                    delta,
-                    scene,
-                    &mut crdt_state,
-                    &camera_global_transform,
-                    &player_global_transform,
-                    frames_count,
-                );
+                        scene.current_dirty = scene.enqueued_dirty.pop().unwrap_or(Dirty {
+                            waiting_process: false,
+                            entities: Default::default(),
+                            lww_components: Default::default(),
+                            gos_components: Default::default(),
+                            logs: Vec::new(),
+                            renderer_response: None,
+                        });
 
-                // enable logs
-                for log in &scene.current_dirty.logs {
-                    let mut arguments = VariantArray::new();
-                    arguments.push((scene_id.0 as i32).to_variant());
-                    arguments.push((log.level as i32).to_variant());
-                    arguments.push((log.timestamp as f32).to_variant());
-                    arguments.push(GodotString::from(&log.message).to_variant());
-                    self.console.callv(arguments);
-                }
+                        current_time_us =
+                            (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+                        scene.last_tick_us = current_time_us;
+                        if current_time_us > end_time_us {
+                            break;
+                        }
+                    }
+                } else {
+                    let crdt = scene.dcl_scene.scene_crdt.clone();
+                    let Ok(mut crdt_state) = crdt.try_lock() else {continue;};
 
-                scene.current_dirty.waiting_process = false;
-                let dirty = crdt_state.take_dirty();
-                drop(crdt_state);
+                    super::update_scene::update_scene(
+                        delta,
+                        scene,
+                        &mut crdt_state,
+                        &camera_global_transform,
+                        &player_global_transform,
+                        frames_count,
+                    );
 
-                if let Err(_e) = scene
-                    .dcl_scene
-                    .main_sender_to_thread
-                    .blocking_send(RendererResponse::Ok(dirty))
-                {
-                    // TODO: clean up this scene?
-                    // godot_print!("failed to send updates to scene: {e:?}");
-                }
+                    // enable logs
+                    for log in &scene.current_dirty.logs {
+                        let mut arguments = VariantArray::new();
+                        arguments.push((scene_id.0 as i32).to_variant());
+                        arguments.push((log.level as i32).to_variant());
+                        arguments.push((log.timestamp as f32).to_variant());
+                        arguments.push(GodotString::from(&log.message).to_variant());
+                        self.console.callv(arguments);
+                    }
 
-                current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
-                scene.last_tick_us = current_time_us;
-                if current_time_us > end_time_us {
-                    break;
+                    let dirty = crdt_state.take_dirty();
+                    drop(crdt_state);
+
+                    scene.current_dirty.renderer_response = Some(RendererResponse::Ok(dirty));
+
+                    if scene.dcl_scene.main_sender_to_thread.capacity() > 0 {
+                        let response = scene.current_dirty.renderer_response.take().unwrap();
+                        if let Err(_err) = scene
+                            .dcl_scene
+                            .main_sender_to_thread
+                            .blocking_send(response)
+                        {
+                            // TODO: handle fail sending to thread
+                        }
+
+                        scene.current_dirty = scene.enqueued_dirty.pop().unwrap_or(Dirty {
+                            waiting_process: false,
+                            entities: Default::default(),
+                            lww_components: Default::default(),
+                            gos_components: Default::default(),
+                            logs: Vec::new(),
+                            renderer_response: None,
+                        });
+
+                        current_time_us =
+                            (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+                        scene.last_tick_us = current_time_us;
+                        if current_time_us > end_time_us {
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -350,9 +383,17 @@ impl SceneManager {
                                     lww_components: dirty_lww_components,
                                     gos_components: dirty_gos_components,
                                     logs,
+                                    renderer_response: None,
                                 };
                             } else {
-                                godot_print!("scene {scene_id:?} is already dirty, skipping");
+                                scene.enqueued_dirty.push(Dirty {
+                                    waiting_process: true,
+                                    entities: dirty_entities,
+                                    lww_components: dirty_lww_components,
+                                    gos_components: dirty_gos_components,
+                                    logs,
+                                    renderer_response: None,
+                                });
                             }
                         }
                     }
@@ -440,6 +481,9 @@ impl NodeVirtual for SceneManager {
     fn init(base: Base<Node>) -> Self {
         let (thread_sender_to_main, main_receiver_from_thread) =
             std::sync::mpsc::sync_channel(1000);
+
+        // TODO: should this be initialized somewhere else?
+        crate::dcl::js::js_runtime::init_v8();
 
         SceneManager {
             base,

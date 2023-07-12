@@ -1,9 +1,27 @@
+// module.exports.crdtSendToRenderer = async function (messages) {
+//     Deno.core.ops.op_crdt_send_to_renderer(messages.data);
+//     const data = (await Deno.core.ops.op_crdt_recv_from_renderer()).map((item) => new Uint8Array(item));
+//     return {
+//         data: data
+//     };
+// }
+
+// module.exports.sendBatch = async function () {
+//     return { events: [] }
+// }
+
+// module.exports.crdtGetState = async function () {
+//     const data = (await Deno.core.ops.op_crdt_recv_from_renderer()).map((item) => new Uint8Array(item))
+//     return {
+//         data: data
+//     };
+// }
+
+// TODO: make really async
+
 module.exports.crdtSendToRenderer = async function (messages) {
-    Deno.core.ops.op_crdt_send_to_renderer(messages.data);
-    const data = (await Deno.core.ops.op_crdt_recv_from_renderer()).map((item) => new Uint8Array(item));
-    return {
-        data: data
-    };
+    op_crdt_send_to_renderer(messages.data);
+    return { data: op_crdt_recv_from_renderer() };
 }
 
 module.exports.sendBatch = async function () {
@@ -11,9 +29,5 @@ module.exports.sendBatch = async function () {
 }
 
 module.exports.crdtGetState = async function () {
-    const data = (await Deno.core.ops.op_crdt_recv_from_renderer()).map((item) => new Uint8Array(item))
-    return {
-        data: data
-    };
+    return { data: op_crdt_recv_from_renderer() };
 }
-

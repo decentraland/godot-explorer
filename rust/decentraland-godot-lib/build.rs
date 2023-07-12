@@ -11,6 +11,7 @@ struct Component {
     snake_name: String,
 }
 
+const PROTO_FILES_BASE_DIR: &str = "src/dcl/components/proto/";
 const COMPONENT_BASE_DIR: &str = "src/dcl/components/proto/decentraland/sdk/components/";
 const GROW_ONLY_SET_COMPONENTS: [&str; 2] = ["PointerEventsResult", "VideoEvent"];
 
@@ -292,6 +293,12 @@ fn main() -> io::Result<()> {
             }
         }
     }
+
+    proto_files.push(
+        format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc5/ws_comms.proto").into(),
+    );
+    proto_files
+        .push(format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto").into());
 
     generate_enum(&proto_components);
     generate_impl_crdt(&proto_components);

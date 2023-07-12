@@ -4,6 +4,7 @@ use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
+mod download_file;
 mod export;
 mod install_dependency;
 mod run;
@@ -67,6 +68,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("itest")
                         .help("run tests")
                         .takes_value(false),
+                )
+                .arg(
+                    Arg::new("only-build")
+                        .long("only-build")
+                        .help("skip the run")
+                        .takes_value(false),
                 ),
         );
     let matches = cli.get_matches();
@@ -78,6 +85,7 @@ fn main() -> Result<(), anyhow::Error> {
             sm.is_present("editor"),
             sm.is_present("release"),
             sm.is_present("itest"),
+            sm.is_present("only-build"),
         ),
         Some(("export", _m)) => export::export(),
         Some(("coverage", sm)) => coverage_with_itest(sm.is_present("dev")),

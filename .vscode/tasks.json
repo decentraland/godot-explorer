@@ -11,7 +11,10 @@
             ],
             "problemMatcher": [
                 "$rustc"
-            ]
+            ],
+            "env": {
+                "GODOT4_BIN": "${workspaceFolder}/.bin/godot/godot4_bin"
+            }
         },
         {
             "label": "(win) Copy GDExtension Lib",

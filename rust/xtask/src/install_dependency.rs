@@ -8,14 +8,17 @@ use std::path::Path;
 use tar::Archive;
 use zip::ZipArchive;
 
+use crate::download_file::download_file;
+use crate::export::prepare_templates;
+
 const PROTOC_BASE_URL: &str =
     "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";
 
 const GODOT4_BIN_BASE_URL: &str =
-    "https://github.com/godotengine/godot/releases/download/4.0.3-stable/Godot_v4.0.3-stable_";
+    "https://github.com/godotengine/godot/releases/download/4.1-stable/Godot_v4.1-stable_";
 
-// pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
-//     "https://downloads.tuxfamily.org/godotengine/4.0.3/Godot_v4.0.3-stable_export_templates.tpz";
+pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
+    "https://github.com/godotengine/godot/releases/download/4.1-stable/Godot_v4.1-stable_export_templates.tpz";
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
@@ -89,10 +92,13 @@ fn get_protoc_url() -> Option<String> {
 
 pub fn download_and_extract_zip(url: &str, destination_path: &str) -> Result<(), anyhow::Error> {
     println!("Downloading {url:?}");
-    let response = reqwest::blocking::get(url)?;
-    let zip_bytes = response.bytes()?;
+    if Path::new("./tmp-file.zip").exists() {
+        fs::remove_file("./tmp-file.zip")?;
+    }
 
-    let mut zip_archive = ZipArchive::new(std::io::Cursor::new(zip_bytes))?;
+    download_file(url, "./tmp-file.zip")?;
+    let file = File::open("./tmp-file.zip")?;
+    let mut zip_archive = ZipArchive::new(file)?;
 
     for i in 0..zip_archive.len() {
         let mut file = zip_archive.by_index(i)?;
@@ -104,6 +110,8 @@ pub fn download_and_extract_zip(url: &str, destination_path: &str) -> Result<(),
             std::io::copy(&mut file, &mut extracted_file)?;
         }
     }
+
+    fs::remove_file("./tmp-file.zip")?;
 
     Ok(())
 }
@@ -142,8 +150,8 @@ pub fn get_godot_executable_path() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("Godot_v4.0.3-stable_linux.x86_64".to_string()),
-        ("windows", "x86_64") => Some("Godot_v4.0.3-stable_win64.exe".to_string()),
+        ("linux", "x86_64") => Some("Godot_v4.1-stable_linux.x86_64".to_string()),
+        ("windows", "x86_64") => Some("Godot_v4.1-stable_win64.exe".to_string()),
         ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
         _ => None,
     }?;
@@ -156,8 +164,8 @@ pub fn get_godot_editor_path() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("Godot_v4.0.3-stable_linux.x86_64".to_string()),
-        ("windows", "x86_64") => Some("Godot_v4.0.3-stable_win64.exe".to_string()),
+        ("linux", "x86_64") => Some("Godot_v4.1-stable_linux.x86_64".to_string()),
+        ("windows", "x86_64") => Some("Godot_v4.1-stable_win64.exe".to_string()),
         ("macos", _) => Some("Godot.app".to_string()),
         _ => None,
     }?;
@@ -195,15 +203,20 @@ pub fn install() -> Result<(), anyhow::Error> {
     download_and_extract_zip(get_protoc_url().unwrap().as_str(), "./../.bin/protoc")?;
     download_and_extract_zip(get_godot_url().unwrap().as_str(), "./../.bin/godot")?;
 
+    let program_path = format!("./../.bin/godot/{}", get_godot_executable_path().unwrap());
+    let dest_program_path = "./../.bin/godot/godot4_bin";
+
     match (env::consts::OS, env::consts::ARCH) {
         ("linux", _) | ("macos", _) => {
             set_executable_permission(Path::new("./../.bin/protoc/bin/protoc"))?;
-            set_executable_permission(Path::new(
-                format!("./../.bin/godot/{}", get_godot_executable_path().unwrap()).as_str(),
-            ))?;
+            set_executable_permission(Path::new(program_path.as_str()))?;
         }
         _ => (),
     };
+
+    fs::copy(program_path, dest_program_path)?;
+
+    prepare_templates()?;
 
     Ok(())
 }

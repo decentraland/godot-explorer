@@ -19,7 +19,7 @@ pub fn update_billboard(
             let origin = node.base.get_global_position();
             let direction = node.base.get_global_position() - camera_position;
 
-            let basis = Basis::new_looking_at(direction, Vector3::UP);
+            let basis = Basis::new_looking_at(direction, Vector3::UP, false);
             node.base
                 .set_global_transform(Transform3D { basis, origin });
 
