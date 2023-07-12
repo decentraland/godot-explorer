@@ -13,6 +13,8 @@ jobs:
   lints:
     name: Check and lints
     runs-on: ubuntu-latest
+    env:
+      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -53,6 +55,8 @@ jobs:
         os: [ubuntu-latest]
         rust: [stable]
     runs-on: ${{ matrix.os }}
+    env:
+      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -96,12 +100,14 @@ jobs:
 
   build:
     name: Build and test
-    if: ${{ github.ref == 'refs/heads/main' }}
+    # Commented to test if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]
         rust: [stable]
     runs-on: ${{ matrix.os }}
+    env:
+      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     continue-on-error: true
     steps:
       - uses: actions/checkout@v2
@@ -130,11 +136,6 @@ jobs:
         run: |
           rustup target add x86_64-apple-darwin
           rustup target add aarch64-apple-darwin
-      - uses: actions-rs/cargo@v1
-        name: cargo test
-        with:
-          command: test
-          args: --manifest-path rust/Cargo.toml --release 
 
       - uses: actions-rs/cargo@v1
         if: ${{ matrix.os != 'macos-latest' }}
@@ -156,6 +157,12 @@ jobs:
         with:
           command: build
           args: --manifest-path rust/Cargo.toml --release --target=aarch64-apple-darwin
+
+      - uses: actions-rs/cargo@v1
+        name: cargo test
+        with:
+          command: test
+          args: --manifest-path rust/Cargo.toml --release 
 
       - name: Make universal library
         if: ${{ matrix.os == 'macos-latest' }}

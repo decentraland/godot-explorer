@@ -130,7 +130,7 @@ fn get_godot_url() -> Option<String> {
     Some(format!("{GODOT4_BIN_BASE_URL}{os_url}"))
 }
 
-fn set_executable_permission(_file_path: &Path) -> std::io::Result<()> {
+pub fn set_executable_permission(_file_path: &Path) -> std::io::Result<()> {
     #[cfg(unix)]
     {
         let mut permissions = fs::metadata(_file_path)?.permissions();
@@ -153,20 +153,6 @@ pub fn get_godot_executable_path() -> Option<String> {
         ("linux", "x86_64") => Some("Godot_v4.1-stable_linux.x86_64".to_string()),
         ("windows", "x86_64") => Some("Godot_v4.1-stable_win64.exe".to_string()),
         ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
-        _ => None,
-    }?;
-
-    Some(os_url)
-}
-
-pub fn get_godot_editor_path() -> Option<String> {
-    let os = env::consts::OS;
-    let arch = env::consts::ARCH;
-
-    let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("Godot_v4.1-stable_linux.x86_64".to_string()),
-        ("windows", "x86_64") => Some("Godot_v4.1-stable_win64.exe".to_string()),
-        ("macos", _) => Some("Godot.app".to_string()),
         _ => None,
     }?;
 

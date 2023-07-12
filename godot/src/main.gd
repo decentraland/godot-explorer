@@ -28,7 +28,7 @@ func start():
 
 	var comms = Comms.new()
 	comms.set_name("comms")
-	
+
 	get_tree().root.add_child(scene_runner)
 	get_tree().root.add_child(realm)
 	get_tree().root.add_child(comms)

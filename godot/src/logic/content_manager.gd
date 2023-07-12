@@ -160,10 +160,7 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 				var image_path = base_path + "/" + uri
 				var image_hash = content_mapping.get("content", {}).get(image_path.to_lower(), "")
 				if image_hash.is_empty() or base_url.is_empty():
-					printerr(
-						uri + " not found (resolved: " + image_path + ") => ",
-						content_mapping
-					)
+					printerr(uri + " not found (resolved: " + image_path + ") => ", content_mapping)
 					continue
 
 				var local_image_path = "user://content/" + image_hash

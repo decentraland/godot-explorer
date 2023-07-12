@@ -62,8 +62,6 @@ func _on_request_completed(response: RequestResponse):
 
 	realm_name = configuration.get("realmName", "no_realm_name")
 
-
-
 	content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
 
 	emit_signal("realm_changed")
