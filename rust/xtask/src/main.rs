@@ -45,7 +45,14 @@ fn main() -> Result<(), anyhow::Error> {
             ),
         )
         .subcommand(Command::new("docs"))
-        .subcommand(Command::new("install"))
+        .subcommand(
+            Command::new("install").arg(
+                Arg::new("no-templates")
+                    .long("no-templates")
+                    .help("skip download templates")
+                    .takes_value(false),
+            ),
+        )
         .subcommand(Command::new("export"))
         .subcommand(
             Command::new("run")
@@ -80,7 +87,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     let root = xtaskops::ops::root_dir();
     let res = match matches.subcommand() {
-        Some(("install", _)) => install_dependency::install(),
+        Some(("install", sm)) => install_dependency::install(sm.is_present("no-templates")),
         Some(("run", sm)) => run::run(
             sm.is_present("editor"),
             sm.is_present("release"),

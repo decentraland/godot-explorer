@@ -29,7 +29,7 @@ jobs:
         run: gdformat -d godot/
       - name: cargo xtask install
         working-directory: rust
-        run: cargo xtask install
+        run: cargo xtask install --no-templates
       - uses: actions-rs/cargo@v1
         name: cargo check
         with:
@@ -77,7 +77,7 @@ jobs:
       
       - name: cargo xtask install
         working-directory: rust
-        run: cargo xtask install
+        run: cargo xtask install --no-templates
 
       - name: Download grcov
         run: |
@@ -99,7 +99,7 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
         rust: [stable]
     runs-on: ${{ matrix.os }}
     continue-on-error: true

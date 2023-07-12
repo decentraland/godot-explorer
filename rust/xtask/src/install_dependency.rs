@@ -197,7 +197,7 @@ pub fn copy_library(debug_mode: bool) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-pub fn install() -> Result<(), anyhow::Error> {
+pub fn install(skip_download_templates: bool) -> Result<(), anyhow::Error> {
     install_dcl_protocol()?;
 
     download_and_extract_zip(get_protoc_url().unwrap().as_str(), "./../.bin/protoc")?;
@@ -216,7 +216,9 @@ pub fn install() -> Result<(), anyhow::Error> {
 
     fs::copy(program_path, dest_program_path)?;
 
-    prepare_templates()?;
+    if !skip_download_templates {
+        prepare_templates()?;
+    }
 
     Ok(())
 }
