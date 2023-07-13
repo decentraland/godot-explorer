@@ -35,7 +35,7 @@ impl DclTransformAndParent {
 }
 
 pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
-    let mut godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
     let transform_component = crdt_state.get_transform();
 

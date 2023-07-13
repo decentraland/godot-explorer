@@ -221,7 +221,7 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 	return true
 
 
-func split_animations(gltf_node: Node) -> void:
+func split_animations(_gltf_node: Node) -> void:
 	pass
 
 

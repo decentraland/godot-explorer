@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=10 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
@@ -6,15 +6,14 @@
 [ext_resource type="PackedScene" uid="uid://bp6yn0qw2s6ua" path="res://src/ui/components/discover/discover.tscn" id="4_5qyiw"]
 [ext_resource type="PackedScene" uid="uid://dkqc3of3acx2i" path="res://src/ui/components/map/map.tscn" id="4_jtsir"]
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
+[ext_resource type="PackedScene" uid="uid://c8v1b3owo26xt" path="res://src/ui/components/advance_settings/advance_settings.tscn" id="6_dtnry"]
+[ext_resource type="ButtonGroup" uid="uid://73odg1nwdkof" path="res://src/ui/components/menu/button_group_menu_tabs.tres" id="8_ao4hb"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_t4bn8"]
 shader = ExtResource("5_k4wpn")
 shader_parameter/strength = 0.9
 shader_parameter/speed = 0.025
 shader_parameter/angle = 0.0
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_p3dor"]
-resource_name = "Tabs"
 
 [node name="Control_Menu" type="Control"]
 layout_mode = 3
@@ -26,19 +25,33 @@ grow_vertical = 2
 mouse_force_pass_scroll_events = false
 theme = ExtResource("1_ji0pe")
 script = ExtResource("2_cgghr")
+group = ExtResource("8_ao4hb")
 
-[node name="Control_Discover" parent="." instance=ExtResource("4_5qyiw")]
+[node name="ColorRect_Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.85098, 0.843137, 0.866667, 1)
+
+[node name="Control_Discover" parent="ColorRect_Background" instance=ExtResource("4_5qyiw")]
 visible = false
 layout_mode = 1
 
-[node name="Control_Settings" parent="." instance=ExtResource("3_1stdy")]
-visible = false
+[node name="Control_Settings" parent="ColorRect_Background" instance=ExtResource("3_1stdy")]
 layout_mode = 1
 
-[node name="Control_Map" parent="." instance=ExtResource("4_jtsir")]
+[node name="Control_Map" parent="ColorRect_Background" instance=ExtResource("4_jtsir")]
 visible = false
 layout_mode = 1
 offset_top = 61.0
+offset_bottom = -1.0
+
+[node name="Control_AdvanceSettings" parent="ColorRect_Background" instance=ExtResource("6_dtnry")]
+visible = false
+layout_mode = 1
 
 [node name="ColorRect_Header" type="ColorRect" parent="."]
 layout_mode = 1
@@ -72,6 +85,7 @@ offset_right = 117.5
 offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
+focus_mode = 2
 theme_override_constants/separation = 50
 
 [node name="Button_Discover" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
@@ -82,8 +96,9 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
+disabled = true
 toggle_mode = true
-button_group = SubResource("ButtonGroup_p3dor")
+button_group = ExtResource("8_ao4hb")
 text = "Discover"
 
 [node name="Button_Map" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
@@ -94,7 +109,7 @@ size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
 toggle_mode = true
-button_group = SubResource("ButtonGroup_p3dor")
+button_group = ExtResource("8_ao4hb")
 text = "Map"
 
 [node name="Button_Settings" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
@@ -105,8 +120,19 @@ size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
 toggle_mode = true
-button_group = SubResource("ButtonGroup_p3dor")
+button_group = ExtResource("8_ao4hb")
 text = "Settings"
+
+[node name="Button_AdvanceSettings" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
+custom_minimum_size = Vector2(75, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+toggle_mode = true
+button_group = ExtResource("8_ao4hb")
+text = "Advance Settings"
 
 [node name="Button_Close" type="Button" parent="."]
 custom_minimum_size = Vector2(75, 0)
@@ -124,10 +150,11 @@ size_flags_vertical = 4
 focus_mode = 0
 text = "CLOSE"
 
-[connection signal="toggle_fps_visibility" from="Control_Settings" to="." method="_on_control_settings_toggle_fps_visibility"]
-[connection signal="toggle_map_visibility" from="Control_Settings" to="." method="_on_control_settings_toggle_map_visibility"]
-[connection signal="toggle_ram_usage_visibility" from="Control_Settings" to="." method="_on_control_settings_toggle_ram_usage_visibility"]
+[connection signal="toggle_fps_visibility" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_toggle_fps_visibility"]
+[connection signal="toggle_map_visibility" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_toggle_map_visibility"]
+[connection signal="toggle_ram_usage_visibility" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_toggle_ram_usage_visibility"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="." method="_on_button_discover_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Settings" to="." method="_on_button_settings_pressed"]
+[connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_AdvanceSettings" to="." method="_on_button_advance_settings_pressed"]
 [connection signal="pressed" from="Button_Close" to="." method="_on_button_close_pressed"]

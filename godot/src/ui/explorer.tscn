@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=16 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://drle8sbexaohk" path="res://assets/sky/krzmig/world_environment.tscn" id="2_40m6d"]
@@ -8,7 +8,7 @@
 [ext_resource type="PackedScene" uid="uid://rt4tyyg7gd1s" path="res://src/ui/components/panel_bottom_left.tscn" id="4_x5dml"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 [ext_resource type="PackedScene" uid="uid://cbtnbb03jb1u6" path="res://src/ui/components/info_panel/info_panel.tscn" id="6_3c8pn"]
-[ext_resource type="PackedScene" uid="uid://6m5q52mc7rlp" path="res://src/ui/components/pointer_tooltip.tscn" id="9_b8wdq"]
+[ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
 data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
@@ -25,6 +25,9 @@ uv1_scale = Vector3(300, 300, 300)
 texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_48gvr"]
+resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
 script = ExtResource("1_5n8xk")
@@ -104,6 +107,7 @@ text = "RAM"
 horizontal_alignment = 2
 
 [node name="ColorRect" type="ColorRect" parent="UI"]
+visible = false
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -118,6 +122,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="ColorRect2" type="ColorRect" parent="UI"]
+visible = false
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -150,12 +155,42 @@ offset_bottom = 176.0
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
+group = SubResource("ButtonGroup_48gvr")
 
 [node name="Timer" type="Timer" parent="UI"]
 autostart = true
 
-[node name="Tooltip" parent="." instance=ExtResource("9_b8wdq")]
+[node name="Control_Crosshair" type="Control" parent="UI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Label_Crosshair" type="Label" parent="UI/Control_Crosshair"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 19
+text = "+"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LineEdit_Command" type="LineEdit" parent="UI"]
 visible = false
+layout_mode = 0
+offset_left = 160.0
+offset_top = 8.0
+offset_right = 814.0
+offset_bottom = 35.0
+
+[node name="Control_PointerTooltip" parent="." instance=ExtResource("11_qjs00")]
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="preview_hot_reload" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_preview_hot_reload"]
@@ -169,3 +204,4 @@ visible = false
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
 [connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
 [connection signal="timeout" from="UI/Timer" to="." method="_on_timer_timeout"]
+[connection signal="text_submitted" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]

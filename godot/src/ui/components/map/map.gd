@@ -14,17 +14,8 @@ var mouse_tile: Vector2i
 var last_mouse_tile: Vector2i
 
 
-func _on_control_map_shader_gui_input(event):
+func _gui_input(event):
 	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			if event.double_click:
-				mouse_tile = control_map_shader.get_parcel_from_mouse()
-				mouse_tile = Vector2i(floor(mouse_tile.x), floor(mouse_tile.y))
-				parcel_to_jump = mouse_tile
-				control_jump_to.position = event.position
-				label_parcel_position.text = str(mouse_tile)
-				control_jump_to.show()
-
 		if not event.pressed:
 			var zoom_value = control_map_shader.zoom_value
 
@@ -47,13 +38,23 @@ func _on_control_map_shader_gui_input(event):
 
 func _on_button_pressed():
 	emit_signal("jump_to", parcel_to_jump)
-
-
-func _on_visibility_changed():
-	#control_tooltip.show()
-	#control_jump_to.hide()
-	pass
+	control_jump_to.hide()
 
 
 func _on_control_map_shader_on_move():
 	control_jump_to.hide()
+
+
+#function to call when menu is closed
+func clear():
+	control_tooltip.show()
+	control_jump_to.hide()
+
+
+func _on_control_map_shader_parcel_click(_parcel_position):
+	mouse_tile = control_map_shader.get_parcel_from_mouse()
+	mouse_tile = Vector2i(floor(mouse_tile.x), floor(mouse_tile.y))
+	parcel_to_jump = mouse_tile
+	control_jump_to.position = get_global_mouse_position()
+	label_parcel_position.text = str(mouse_tile)
+	control_jump_to.show()

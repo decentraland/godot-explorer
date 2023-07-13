@@ -22,10 +22,10 @@ impl InputState {
             (InputAction::IaLeft, StringName::from("ia_left")),
             (InputAction::IaJump, StringName::from("ia_jump")),
             (InputAction::IaWalk, StringName::from("ia_walk")),
-            (InputAction::IaAction3, StringName::from("ia_action3")),
-            (InputAction::IaAction4, StringName::from("ia_action4")),
-            (InputAction::IaAction5, StringName::from("ia_action5")),
-            (InputAction::IaAction6, StringName::from("ia_action6")),
+            (InputAction::IaAction3, StringName::from("ia_action_3")),
+            (InputAction::IaAction4, StringName::from("ia_action_4")),
+            (InputAction::IaAction5, StringName::from("ia_action_5")),
+            (InputAction::IaAction6, StringName::from("ia_action_6")),
         ]);
 
         let state = HashMap::from_iter(dcl_to_action.keys().map(|k| (*k, false)));

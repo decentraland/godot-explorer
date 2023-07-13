@@ -118,7 +118,7 @@ func set_ws_state(connected: bool) -> void:
 		label_ws_state.add_theme_color_override("font_color", Color.RED)
 
 
-func _process(delta):
+func _process(_delta):
 	preview_ws.poll()
 
 	var state = preview_ws.get_ready_state()
