@@ -8,7 +8,6 @@ extends CharacterBody3D
 @onready var particles_move = $PlayerVisuals/GPUParticles3D_Move
 @onready var particles_jump = $PlayerVisuals/GPUParticles3D_Jump
 @onready var particles_land = $PlayerVisuals/GPUParticles3D_Land
-@onready var spring_arm_3d = $Mount/SpringArm3D
 
 var first_person: bool = true
 var _mouse_position = Vector2(0.0, 0.0)

@@ -26,7 +26,7 @@ texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_ih3ky"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_48gvr"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
@@ -155,7 +155,7 @@ offset_bottom = 176.0
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_ih3ky")
+group = SubResource("ButtonGroup_48gvr")
 
 [node name="Timer" type="Timer" parent="UI"]
 autostart = true

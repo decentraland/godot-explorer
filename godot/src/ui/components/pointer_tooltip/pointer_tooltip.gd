@@ -15,8 +15,8 @@ func set_pointer_data(interacts_array: Array):
 	for interact in interacts_array:
 		var tooltip_scene_instance = tooltip_scene.instantiate()
 		tooltip_scene_instance.set_position(Vector2(0, -95).rotated(deg_to_rad(angles[i])))
-		var position = tooltip_scene_instance.get_position()
-		tooltip_scene_instance.set_position(Vector2(position.x, position.y - 20))
+		var tooltip_position = tooltip_scene_instance.get_position()
+		tooltip_scene_instance.set_position(Vector2(tooltip_position.x, tooltip_position.y - 20))
 		control_center.add_child(tooltip_scene_instance)
 		tooltip_scene_instance.set_tooltip_data(
 			interact.get("text", ""), interact.get("action", "")

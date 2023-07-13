@@ -175,7 +175,7 @@ func _on_control_menu_toggle_minimap(visibility):
 	control_minimap.visible = visibility
 
 
-func _on_panel_bottom_left_preview_hot_reload(scene_type, scene_id):
+func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	parcel_manager.reload_scene(scene_id)
 
 

@@ -1,17 +1,17 @@
 extends Control
 
 signal on_move
+signal parcel_click(parcel_position: Vector2i)
 
 @onready var color_rect_map = %ColorRect_Map
-@onready var sub_viewport = $SubViewportContainer_MapShader/SubViewport
-
 @export var drag_enabled: bool = true
 @export var zoom_value: int = 20
 
 # Draging variables
 var is_dragging = false
-var _is_dragging = false
+var dirty_is_dragging = false
 var drag_position: Vector2
+var start_dragging_position: Vector2
 
 # The size of the map in parcels
 var map_parcel_size: Vector2
@@ -64,13 +64,14 @@ func read_binary_file(file_path: String) -> void:
 	var texture = ImageTexture.create_from_image(image)
 	color_rect_map.material.set_shader_parameter("map_data", texture)
 
-	image.save_png("res://src/ui/components/map_shader/map_data.png")
+	# This is not required for now (static map_data.png)
+	# image.save_png("res://src/ui/components/map_shader/map_data.png")
 
 
 func _ready():
 	color_rect_map.material = color_rect_map.material.duplicate()
 	read_binary_file("res://src/ui/components/map_shader/map_data.bin")
-	_on_resized()
+#	_on_resized()
 	set_zoom(zoom_value)
 	set_center_position(Vector2(0, 0))
 
@@ -114,24 +115,28 @@ func _on_color_rect_map_gui_input(event):
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
-				_is_dragging = true
-				drag_position = (
-					get_global_mouse_position() - color_rect_map.get_global_rect().position
-				)
+				dirty_is_dragging = true
+				drag_position = get_global_mouse_position() - color_rect_map.position
+				start_dragging_position = get_global_mouse_position()
 				self.reflect_dragging.call_deferred()
 			else:
-				_is_dragging = false
+				dirty_is_dragging = false
 				self.reflect_dragging.call_deferred()
+				var diff: Vector2 = (
+					(get_global_mouse_position() - start_dragging_position) / zoom_value
+				)
+				if diff.length() < 1:
+					parcel_click.emit(get_parcel_from_mouse())
 
 	if event is InputEventMouseMotion:
-		if drag_enabled and _is_dragging:
+		if drag_enabled and dirty_is_dragging:
 			var new_pos = get_global_mouse_position() - drag_position
 			color_rect_map.position = new_pos
 			emit_signal("on_move")
 
 
 func reflect_dragging():
-	is_dragging = _is_dragging
+	is_dragging = dirty_is_dragging
 
 
 func get_parcel_from_mouse_real() -> Vector2:
@@ -153,8 +158,3 @@ func set_selected_parcel(parcel_position: Vector2):
 		Vector2(parcel_position.x, -parcel_position.y) - map_topleft_parcel_position
 	)
 	color_rect_map.material.set_shader_parameter("selected_tile", color_rect_position)
-
-
-func _on_resized():
-	if is_instance_valid(sub_viewport):
-		sub_viewport.size = self.size

@@ -11,25 +11,20 @@ shader_parameter/line_width_px = 1.0
 shader_parameter/selected_tile = Vector2(20, 20)
 
 [node name="Control_Map" type="Control"]
+clip_contents = true
 layout_mode = 3
 anchors_preset = 0
+offset_right = 50.0
+offset_bottom = 50.0
 script = ExtResource("1_yemwb")
 
-[node name="SubViewportContainer_MapShader" type="SubViewportContainer" parent="."]
-layout_mode = 0
-offset_right = 120.0
-offset_bottom = 120.0
-
-[node name="SubViewport" type="SubViewport" parent="SubViewportContainer_MapShader"]
-handle_input_locally = false
-size = Vector2i(120, 120)
-render_target_update_mode = 4
-
-[node name="ColorRect_Map" type="ColorRect" parent="SubViewportContainer_MapShader/SubViewport"]
+[node name="ColorRect_Map" type="ColorRect" parent="."]
 unique_name_in_owner = true
 texture_filter = 1
 texture_repeat = 3
 material = SubResource("ShaderMaterial_fnml8")
+layout_mode = 1
+offset_right = 200.0
+offset_bottom = 200.0
 
-[connection signal="resized" from="." to="." method="_on_resized"]
-[connection signal="gui_input" from="SubViewportContainer_MapShader/SubViewport/ColorRect_Map" to="." method="_on_color_rect_map_gui_input"]
+[connection signal="gui_input" from="ColorRect_Map" to="." method="_on_color_rect_map_gui_input"]
