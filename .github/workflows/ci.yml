@@ -100,7 +100,7 @@ jobs:
 
   build:
     name: Build and test
-    # Commented to test if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]

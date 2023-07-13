@@ -92,6 +92,7 @@ text = "Monitoring
 alignment = 0
 
 [node name="VBoxContainer_General" type="VBoxContainer" parent="."]
+visible = false
 layout_mode = 2
 offset_left = 302.0
 offset_top = 121.0
@@ -115,10 +116,12 @@ text = "Cache Path"
 [node name="TextEdit_CachePath" type="LineEdit" parent="VBoxContainer_General/VBoxContainer_CachePath"]
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
+focus_mode = 0
 editable = false
 
 [node name="Button_ClearCache" type="Button" parent="VBoxContainer_General/VBoxContainer_CachePath"]
 layout_mode = 2
+focus_mode = 0
 text = "Clear Cache"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer_General"]
@@ -126,13 +129,13 @@ layout_mode = 2
 
 [node name="Checkbox_Minimap" type="CheckBox" parent="VBoxContainer_General"]
 layout_mode = 2
+focus_mode = 0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 button_pressed = true
 text = "Show map"
 flat = true
 
 [node name="VBoxContainer_Graphics" type="VBoxContainer" parent="."]
-visible = false
 layout_mode = 2
 offset_left = 302.0
 offset_top = 121.0
@@ -154,6 +157,7 @@ text = "Window Size"
 
 [node name="MenuButton_WindowSize" type="OptionButton" parent="VBoxContainer_Graphics/WindowSize"]
 layout_mode = 2
+focus_mode = 0
 
 [node name="Resolution" type="VBoxContainer" parent="VBoxContainer_Graphics"]
 layout_mode = 2
@@ -167,6 +171,7 @@ text = "Resolution"
 
 [node name="MenuButton_Resolution" type="OptionButton" parent="VBoxContainer_Graphics/Resolution"]
 layout_mode = 2
+focus_mode = 0
 
 [node name="GuiScale" type="VBoxContainer" parent="VBoxContainer_Graphics"]
 layout_mode = 2
@@ -180,10 +185,59 @@ text = "UI Scale"
 
 [node name="HSlider_GuiScale" type="HSlider" parent="VBoxContainer_Graphics/GuiScale"]
 layout_mode = 2
+focus_mode = 0
 min_value = 50.0
 max_value = 200.0
 step = 10.0
 value = 100.0
+
+[node name="LimitFps" type="VBoxContainer" parent="VBoxContainer_Graphics"]
+layout_mode = 2
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Label_LimitFps" type="Label" parent="VBoxContainer_Graphics/LimitFps"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "Limit FPS"
+
+[node name="MenuButton_LimitFps" type="OptionButton" parent="VBoxContainer_Graphics/LimitFps"]
+layout_mode = 2
+focus_mode = 0
+item_count = 6
+selected = 0
+popup/item_0/text = "Vsync"
+popup/item_0/id = 0
+popup/item_1/text = "30"
+popup/item_1/id = 1
+popup/item_2/text = "60"
+popup/item_2/id = 2
+popup/item_3/text = "120"
+popup/item_3/id = 3
+popup/item_4/text = "240"
+popup/item_4/id = 4
+popup/item_5/text = "No Limit"
+popup/item_5/id = 5
+
+[node name="Skybox" type="VBoxContainer" parent="VBoxContainer_Graphics"]
+layout_mode = 2
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Label_Skybox" type="Label" parent="VBoxContainer_Graphics/Skybox"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "Skybox"
+
+[node name="MenuButton_Skybox" type="OptionButton" parent="VBoxContainer_Graphics/Skybox"]
+layout_mode = 2
+focus_mode = 0
+item_count = 2
+selected = 0
+popup/item_0/text = "Default"
+popup/item_0/id = 0
+popup/item_1/text = "Beauty"
+popup/item_1/id = 1
 
 [node name="VBoxContainer_Monitoring" type="VBoxContainer" parent="."]
 visible = false
@@ -199,12 +253,14 @@ theme_override_constants/separation = 25
 [node name="Checkbox_RamUsage" type="CheckBox" parent="VBoxContainer_Monitoring"]
 visible = false
 layout_mode = 2
+focus_mode = 0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 text = "RAM Usage"
 flat = true
 
 [node name="Checkbox_Fps" type="CheckBox" parent="VBoxContainer_Monitoring"]
 layout_mode = 2
+focus_mode = 0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 button_pressed = true
 text = "Frame rate"
@@ -231,6 +287,7 @@ offset_bottom = 41.0
 grow_horizontal = 0
 size_flags_horizontal = 4
 size_flags_vertical = 4
+focus_mode = 0
 text = "Back"
 
 [connection signal="toggled" from="ColorRect_Sidebar/VBoxContainer_Sections/Button_General" to="." method="_on_general_button_toggled"]

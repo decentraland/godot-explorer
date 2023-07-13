@@ -75,6 +75,7 @@ offset_right = 31.5
 offset_bottom = -24.0
 grow_horizontal = 2
 grow_vertical = 0
+focus_mode = 0
 text = "JUMP IN"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Control_JumpTo/Panel_JumpTo"]
@@ -115,11 +116,6 @@ theme_override_constants/outline_size = 0
 text = "Created by: Decentraland"
 horizontal_alignment = 1
 
-[node name="Sprite2D" type="Sprite2D" parent="Control_JumpTo/Panel_JumpTo"]
-position = Vector2(90, 64)
-scale = Vector2(0.3, 0.3)
-
-[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="gui_input" from="Control_MapShader" to="." method="_on_control_map_shader_gui_input"]
 [connection signal="on_move" from="Control_MapShader" to="." method="_on_control_map_shader_on_move"]
 [connection signal="pressed" from="Control_JumpTo/Panel_JumpTo/Button_JumpTo" to="." method="_on_button_pressed"]

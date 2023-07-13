@@ -47,13 +47,14 @@ func _on_control_map_shader_gui_input(event):
 
 func _on_button_pressed():
 	emit_signal("jump_to", parcel_to_jump)
-
-
-func _on_visibility_changed():
-	#control_tooltip.show()
-	#control_jump_to.hide()
-	pass
+	control_jump_to.hide()
 
 
 func _on_control_map_shader_on_move():
+	control_jump_to.hide()
+
+
+#function to call when menu is closed
+func clear():
+	control_tooltip.show()
 	control_jump_to.hide()

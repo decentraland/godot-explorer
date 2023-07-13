@@ -3,15 +3,17 @@ extends Node
 var scene_runner: SceneManager = null
 var realm: Realm = null
 var parcel_manager: ParcelManager = null
+var pointer_tooltip_scene = preload("res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn")
 
-#@onready var player = $Player
+@onready var control_crosshair = $UI/Control_Crosshair
+@onready var control_pointer_tooltip = $Control_PointerTooltip
+
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
 @onready var panel_bottom_left = $UI/Panel_BottomLeft
 @onready var player := $Player
-@onready var tooltip_node = $Tooltip
 @onready var contro_info_panel = $UI/Control_Minimap/Contro_InfoPanel
 
 var parcel_position: Vector2i
@@ -37,6 +39,7 @@ func _process(_dt):
 
 
 func _ready():
+	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(74, -2)
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
@@ -67,18 +70,13 @@ func _on_pointer_tooltip_changed():
 
 func change_tooltips():
 	var tooltips = scene_runner.get_tooltips()
-	tooltip_node.hide()
 
-	if not tooltips.is_empty():
-		var tooltip: Dictionary = tooltips[0]
-		var events := InputMap.action_get_events(tooltip.get("action", "").to_lower())
-
-		if not events.is_empty():
-			tooltip_node._open_with("[" + events[0].as_text() + "] ", tooltip.get("text", ""))
-			tooltip_node.position = tooltip_node.get_global_mouse_position() + Vector2(20, 0)
-
-
-#		print("(", Time.get_ticks_msec(), ") > ", tooltips)
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		if not tooltips.is_empty():
+			control_pointer_tooltip.set_pointer_data(tooltips)
+			control_pointer_tooltip.show()
+		else:
+			control_pointer_tooltip.hide()
 
 
 func _on_check_button_toggled(button_pressed):
@@ -89,25 +87,42 @@ func _on_ui_gui_input(event):
 	if event is InputEventMouseButton and event.pressed:
 		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+			control_crosshair.show()
+
+
+@onready var line_edit_command = $UI/LineEdit_Command
 
 
 func _unhandled_input(event):
 	if event is InputEventKey:
 		if event.pressed and event.keycode == KEY_TAB:
 			if not control_menu.visible:
-				control_menu.show()
+				control_menu.show_last()
 				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+				control_crosshair.hide()
 
 		if event.pressed and event.keycode == KEY_M:
 			if control_menu.visible:
-				control_menu.hide()
+				pass
 			else:
 				control_menu.show_map()
 				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+				control_crosshair.hide()
 
 		if event.pressed and event.keycode == KEY_ESCAPE:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+				control_crosshair.hide()
+
+			if line_edit_command.visible:
+				line_edit_command.hide()
+
+		if event.pressed and event.keycode == KEY_ENTER:
+			if not line_edit_command.visible:
+				line_edit_command.text = ""
+				line_edit_command.show()
+
+			line_edit_command.grab_focus()
 
 
 func _toggle_ram_usage(visibility: bool):
@@ -123,11 +138,12 @@ func _on_control_minimap_request_open_map():
 
 func _on_control_menu_jump_to(parcel: Vector2i):
 	player.set_position(Vector3i(parcel.x * 16, 3, -parcel.y * 16))
-	control_menu.hide()
+	control_menu.close()
 
 
 func _on_control_menu_hide_menu():
-	control_menu.hide()
+	control_menu.close()
+	control_menu.control_map.clear()
 
 
 func _on_panel_bottom_left_request_change_realm(realm_string):
@@ -159,10 +175,18 @@ func _on_control_menu_toggle_minimap(visibility):
 	control_minimap.visible = visibility
 
 
-func _on_tooltip_gui_input(_event):
-	if tooltip_node.visible:
-		tooltip_node.position = tooltip_node.get_global_mouse_position() + Vector2(20, 0)
-
-
 func _on_panel_bottom_left_preview_hot_reload(scene_type, scene_id):
 	parcel_manager.reload_scene(scene_id)
+
+
+func _on_line_edit_command_text_submitted(new_text: String) -> void:
+	line_edit_command.hide()
+
+	var params := new_text.split(" ")
+	var command_str := params[0].to_lower()
+	if command_str == "/go" or command_str == "/goto" and params.size() > 1:
+		var comma_params = params[1].split(",")
+		if comma_params.size() > 1:
+			_on_control_menu_jump_to(Vector2i(int(comma_params[0]), int(comma_params[1])))
+		elif params.size() > 2:
+			_on_control_menu_jump_to(Vector2i(int(params[1]), int(params[2])))

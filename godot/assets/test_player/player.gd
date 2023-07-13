@@ -5,15 +5,31 @@ extends CharacterBody3D
 @onready var animation_player: AnimationPlayer = $PlayerVisuals/AnimationPlayer
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var visuals = $PlayerVisuals
+@onready var particles_move = $PlayerVisuals/GPUParticles3D_Move
+@onready var particles_jump = $PlayerVisuals/GPUParticles3D_Jump
+@onready var particles_land = $PlayerVisuals/GPUParticles3D_Land
+@onready var spring_arm_3d = $Mount/SpringArm3D
 
 var first_person: bool = true
 var _mouse_position = Vector2(0.0, 0.0)
+var captured: bool = true
+
+var is_on_air: bool
 
 @export var vertical_sens: float = 0.5
 @export var horizontal_sens: float = 0.5
 
 
 func _ready():
+	camera.current = true
+
+	if is_on_floor():
+		is_on_air = false
+	particles_move.emitting = false
+	if captured:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+	first_person = false
 	var tween_out = create_tween()
 	tween_out.tween_property(camera, "position", Vector3(0.5, 0, 4), 0.25).set_ease(
 		Tween.EASE_IN_OUT
@@ -26,15 +42,6 @@ func _ready():
 
 	floor_snap_length = 0.2
 
-	# Fix the Idle animation
-
-
-#	var idle_anim := animation_player.get_animation("Idle")
-#	for i in range(idle_anim.get_track_count()):
-#		var original_path: NodePath = idle_anim.track_get_path(i)
-#		var bone_name: StringName = original_path.get_name(original_path.get_name_count() - 1)
-#		idle_anim.track_set_path(i, NodePath("Armature/Skeleton3D:" + bone_name))
-
 
 func _input(event):
 	# Receives mouse motion
@@ -45,10 +52,12 @@ func _input(event):
 		mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * vertical_sens)
 		if first_person:
 			mount_camera.rotation.x = clamp(
-				mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(60)
+				mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90)
 			)
 		else:
-			mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(5))
+			mount_camera.rotation.x = clamp(
+				mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45)
+			)
 
 	# Release mouse
 	if event is InputEventKey:
@@ -87,15 +96,31 @@ func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
+	if is_on_floor():
+		if not is_on_floor() == is_on_air:
+			particles_jump.emitting = true
+			is_on_air = is_on_floor()
+	else:
+		if not is_on_floor() == is_on_air:
+			particles_land.emitting = true
+			is_on_air = is_on_floor()
+
 	if not is_on_floor():
+		particles_move.emitting = false
 		if Input.is_action_pressed("double_gravity"):
 			velocity.y -= GRAVITY * delta * .5
 		else:
 			velocity.y -= GRAVITY * delta
+
 	elif Input.is_action_just_pressed("ia_jump"):
 		velocity.y = JUMP_VELOCITY_0
 
 	if direction:
+		if is_on_floor():
+			particles_move.emitting = true
+		else:
+			particles_move.emitting = false
+
 		if Input.is_action_pressed("ia_walk"):
 			if animation_player.current_animation != "Walk":
 				animation_player.play("Walk")
@@ -111,6 +136,7 @@ func _physics_process(delta: float) -> void:
 		visuals.look_at(direction + position)
 
 	else:
+		particles_move.emitting = false
 		if animation_player.current_animation != "Idle":
 			animation_player.play("Idle")
 		velocity.x = move_toward(velocity.x, 0, WALK_SPEED)
