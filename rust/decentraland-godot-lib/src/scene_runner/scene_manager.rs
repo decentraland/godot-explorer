@@ -144,7 +144,7 @@ impl SceneManager {
             player_global_position.z.floor() as i32,
         );
 
-        for (id, mut scene) in self.scenes.iter_mut() {
+        for (id, scene) in self.scenes.iter_mut() {
             let (distance, inside_scene) = scene.min_distance(&player_parcel_position);
             scene.distance = distance;
             if inside_scene {
@@ -181,7 +181,7 @@ impl SceneManager {
 
         //
         self.sorted_scene_ids.sort_by_key(|&scene_id| {
-            let mut scene = self.scenes.get_mut(&scene_id).unwrap();
+            let scene = self.scenes.get_mut(&scene_id).unwrap();
             if !scene.current_dirty.waiting_process {
                 scene.next_tick_us = start_time_us + 120000;
             } else if scene_id == self.current_parcel_scene_id {

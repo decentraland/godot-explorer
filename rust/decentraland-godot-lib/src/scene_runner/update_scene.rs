@@ -94,7 +94,7 @@ fn update_deleted_entities(scene: &mut Scene) {
         return;
     }
 
-    let mut godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let died = &scene.current_dirty.entities.died;
 
     for (entity_id, node) in godot_dcl_scene.entities.iter_mut() {
