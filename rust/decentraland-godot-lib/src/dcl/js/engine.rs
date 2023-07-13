@@ -1,69 +1,66 @@
-use std::{
-    cell::RefCell,
-    rc::Rc,
-    sync::{Arc, Mutex},
-};
-
-use deno_core::{op, OpDecl, OpState};
-use godot::prelude::godot_print;
-
 use crate::dcl::{
-    crdt::{
-        message::{append_gos_component, process_many_messages, put_or_delete_lww_component},
-        SceneCrdtState,
-    },
-    js::{SceneMainCrdtFileContent, ShuttingDown},
+    crdt::message::{append_gos_component, process_many_messages, put_or_delete_lww_component},
     serialization::{reader::DclReader, writer::DclWriter},
-    RendererResponse, SceneId, SceneResponse, SharedSceneCrdtState,
+    RendererResponse, SceneResponse,
 };
 
-use super::{SceneElapsedTime, SceneLogMessage};
+use super::js_runtime::JsRuntime;
 
-// list of op declarations
-pub fn ops() -> Vec<OpDecl> {
-    vec![
-        op_crdt_send_to_renderer::decl(),
-        op_crdt_recv_from_renderer::decl(),
-    ]
-}
+pub fn op_crdt_send_to_renderer(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut _ret: v8::ReturnValue,
+) {
+    let state = JsRuntime::state_from(scope);
+    let mut state = state.borrow_mut();
 
-// receive and process a buffer of crdt messages
-#[op(v8)]
-fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
-    let mut op_state = op_state.borrow_mut();
+    let logs = std::mem::take(&mut state.logs);
 
-    let elapsed_time = op_state.borrow::<SceneElapsedTime>().0;
-    let logs = op_state.take::<Vec<SceneLogMessage>>();
-    op_state.put(Vec::<SceneLogMessage>::default());
-    let scene_id = op_state.take::<SceneId>();
-    let mutex_scene_crdt_state = op_state.take::<SharedSceneCrdtState>();
+    let mutex_scene_crdt_state = &mut state.crdt;
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
-    let mut stream = DclReader::new(messages);
     let mut scene_crdt_state = cloned_scene_crdt.lock().unwrap();
+
+    let param_0 = args.get(0);
+    let buffer_uint8array = v8::Local::<v8::Uint8Array>::try_from(param_0).unwrap();
+
+    // TODO: avoid the copy
+    let buffer = unsafe {
+        let mut buffer = Vec::with_capacity(buffer_uint8array.byte_length());
+        #[allow(clippy::uninit_vec)]
+        buffer.set_len(buffer_uint8array.byte_length());
+        buffer_uint8array.copy_contents(&mut buffer);
+        buffer
+    };
+
+    let mut stream = DclReader::new(&buffer);
 
     process_many_messages(&mut stream, &mut scene_crdt_state);
 
     let dirty = scene_crdt_state.take_dirty();
-    op_state.put(mutex_scene_crdt_state);
-    op_state.put(scene_id);
 
-    let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
-    sender
-        .send(SceneResponse::Ok(scene_id, dirty, logs, elapsed_time))
-        .expect("error sending scene response!!")
+    drop(scene_crdt_state);
+    drop(cloned_scene_crdt);
+
+    if let Err(_err) =
+        state
+            .thread_sender_to_main
+            .send(SceneResponse::Ok(state.scene_id, dirty, logs, 0.1))
+    {
+        // TODO: handle fail to send to renderer
+    }
 }
 
-#[op(v8)]
-async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u8>> {
-    let mut receiver = op_state
-        .borrow_mut()
-        .take::<tokio::sync::mpsc::Receiver<RendererResponse>>();
-    let response = receiver.recv().await;
+pub fn op_crdt_recv_from_renderer(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    mut ret: v8::ReturnValue,
+) {
+    let state = JsRuntime::state_from(scope);
+    let mut state = state.borrow_mut();
+    let receiver = &mut state.thread_receive_from_main;
+    let response = receiver.blocking_recv();
 
-    let mut op_state = op_state.borrow_mut();
-    op_state.put(receiver);
-
-    let mutex_scene_crdt_state = op_state.take::<Arc<Mutex<SceneCrdtState>>>();
+    let mutex_scene_crdt_state = &mut state.crdt;
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
     let scene_crdt_state = cloned_scene_crdt.lock().unwrap();
 
@@ -82,7 +79,7 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
                         &component_id,
                         &mut data_writter,
                     ) {
-                        godot_print!("error writing crdt message: {}", err);
+                        println!("error writing crdt message: {}", err);
                     }
                 }
             }
@@ -96,7 +93,7 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
                         element_count,
                         &mut data_writter,
                     ) {
-                        godot_print!("error writing crdt message: {}", err);
+                        println!("error writing crdt message: {}", err);
                     }
                 }
             }
@@ -105,17 +102,50 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
         }
         _ => {
             // channel has been closed, shutdown gracefully
-            godot_print!("{}: shutting down", std::thread::current().name().unwrap());
-            op_state.put(ShuttingDown);
+            println!("{}: shutting down", std::thread::current().name().unwrap());
+
+            // TODO: handle recv from renderer
+
             Default::default()
         }
     };
+    drop(scene_crdt_state);
+    drop(cloned_scene_crdt);
 
-    op_state.put(mutex_scene_crdt_state);
-    let mut ret = Vec::<Vec<u8>>::with_capacity(1);
-    if let Some(main_crdt) = op_state.try_take::<SceneMainCrdtFileContent>() {
-        ret.push(main_crdt.0);
+    let arr_bytes = if state.main_crdt.is_some() {
+        let main_crdt_data = state.main_crdt.take().unwrap();
+        vec![main_crdt_data, data]
+    } else {
+        vec![data]
+    };
+    // TODO: main.crdt
+
+    let arr = v8::Array::new(scope, arr_bytes.len() as i32);
+    for (index, arr_u8) in arr_bytes.into_iter().enumerate() {
+        let uint8_array = slice_to_uint8array(scope, &arr_u8);
+        arr.set_index(scope, index as u32, uint8_array.into());
     }
-    ret.push(data);
-    ret
+
+    ret.set(arr.into());
+}
+
+pub fn slice_to_uint8array<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    buf: &[u8],
+) -> v8::Local<'a, v8::Uint8Array> {
+    let buffer = if buf.is_empty() {
+        v8::ArrayBuffer::new(scope, 0)
+    } else {
+        let store: v8::UniqueRef<_> = v8::ArrayBuffer::new_backing_store(scope, buf.len());
+        // SAFETY: raw memory copy into the v8 ArrayBuffer allocated above
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                buf.as_ptr(),
+                store.data().unwrap().as_ptr() as *mut u8,
+                buf.len(),
+            )
+        }
+        v8::ArrayBuffer::with_backing_store(scope, &store.make_shared())
+    };
+    v8::Uint8Array::new(scope, buffer, 0, buf.len()).expect("Failed to create UintArray8")
 }

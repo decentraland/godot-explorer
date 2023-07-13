@@ -29,7 +29,7 @@ func load_gltf():
 	var content_manager: ContentManager = get_tree().root.get_node("content_manager")
 
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
-	self.file_hash = content_mapping.get_content_hash(dcl_gltf_src)
+	self.file_hash = content_mapping.get("content", {}).get(dcl_gltf_src, "")
 
 	if self.file_hash.is_empty():
 		gltf_state = GodotGltfState.NotFound

@@ -1,10 +1,22 @@
 use crate::install_dependency;
 
-pub fn run(editor: bool, release_mode: bool, itest: bool) -> Result<(), anyhow::Error> {
-    let program = format!(
+pub fn run(
+    editor: bool,
+    release_mode: bool,
+    itest: bool,
+    only_build: bool,
+) -> Result<(), anyhow::Error> {
+    let program = std::fs::canonicalize(format!(
         "./../.bin/godot/{}",
         install_dependency::get_godot_executable_path().unwrap()
-    );
+    ))
+    .unwrap()
+    .to_str()
+    .unwrap()
+    .to_string();
+
+    std::env::set_var("GODOT4_BIN", program.clone());
+
     let mut args = vec!["--path", "./../godot"];
     if editor {
         args.push("-e");
@@ -31,6 +43,10 @@ pub fn run(editor: bool, release_mode: bool, itest: bool) -> Result<(), anyhow::
     if itest {
         args.push("--test");
         args.push("--headless");
+    }
+
+    if only_build {
+        return Ok(());
     }
 
     let status = std::process::Command::new(program.as_str())

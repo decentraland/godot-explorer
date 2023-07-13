@@ -1,17 +1,18 @@
 use std::{collections::HashSet, time::Instant};
 
-use godot::prelude::Gd;
+use godot::prelude::Dictionary;
 
 use crate::dcl::{
     components::{
         proto_components::sdk::components::{common::RaycastHit, PbPointerEventsResult},
         SceneEntityId,
     },
-    js::SceneLogMessage,
-    DclScene, DirtyEntities, DirtyGosComponents, DirtyLwwComponents, SceneDefinition, SceneId,
+    js::js_runtime::SceneLogMessage,
+    DclScene, DirtyEntities, DirtyGosComponents, DirtyLwwComponents, RendererResponse,
+    SceneDefinition, SceneId,
 };
 
-use super::{content::ContentMapping, godot_dcl_scene::GodotDclScene};
+use super::godot_dcl_scene::GodotDclScene;
 
 pub struct Dirty {
     pub waiting_process: bool,
@@ -19,6 +20,7 @@ pub struct Dirty {
     pub lww_components: DirtyLwwComponents,
     pub gos_components: DirtyGosComponents,
     pub logs: Vec<SceneLogMessage>,
+    pub renderer_response: Option<RendererResponse>,
 }
 
 pub enum SceneState {
@@ -37,13 +39,14 @@ pub struct Scene {
     pub waiting_for_updates: bool,
     pub state: SceneState,
 
-    pub content_mapping: godot::prelude::Gd<ContentMapping>,
+    pub content_mapping: Dictionary,
 
     pub gltf_loading: HashSet<SceneEntityId>,
     pub pointer_events_result: Vec<(SceneEntityId, PbPointerEventsResult)>,
     pub continuos_raycast: HashSet<SceneEntityId>,
 
     pub current_dirty: Dirty,
+    pub enqueued_dirty: Vec<Dirty>,
     pub distance: f32,
 
     pub start_time: Instant,
@@ -94,7 +97,7 @@ impl Scene {
         scene_id: SceneId,
         scene_definition: SceneDefinition,
         dcl_scene: DclScene,
-        content_mapping: godot::prelude::Gd<ContentMapping>,
+        content_mapping: Dictionary,
     ) -> Self {
         let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id);
 
@@ -113,7 +116,9 @@ impl Scene {
                 lww_components: DirtyLwwComponents::default(),
                 gos_components: DirtyGosComponents::default(),
                 logs: Vec::new(),
+                renderer_response: None,
             },
+            enqueued_dirty: Vec::new(),
             distance: 0.0,
             next_tick_us: 0,
             last_tick_us: 0,
@@ -138,7 +143,7 @@ impl Scene {
         let scene_definition = SceneDefinition::default();
         let scene_id = Scene::new_id();
         let dcl_scene = DclScene::spawn_new_test_scene(scene_id);
-        let content_mapping = Gd::<ContentMapping>::new_default();
+        let content_mapping = Dictionary::default();
         let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id);
 
         Self {
@@ -148,7 +153,7 @@ impl Scene {
             dcl_scene,
             waiting_for_updates: false,
             state: SceneState::Alive,
-
+            enqueued_dirty: Vec::new(),
             content_mapping,
             current_dirty: Dirty {
                 waiting_process: true,
@@ -156,6 +161,7 @@ impl Scene {
                 lww_components: DirtyLwwComponents::default(),
                 gos_components: DirtyGosComponents::default(),
                 logs: Vec::new(),
+                renderer_response: None,
             },
             distance: 0.0,
             next_tick_us: 0,

@@ -5,7 +5,7 @@ use std::collections::HashSet;
 pub struct SceneEntityContainer {
     // fixed array of 65536=2^16 elements, each index is the entity_number
     // the u16 item is the generation and the bool if is alive
-    entity_version: [(u16, bool); 65536],
+    entity_version: Vec<(u16, bool)>,
     new_entities_created: HashSet<SceneEntityId>,
     entities_deleted: HashSet<SceneEntityId>,
 }
@@ -18,8 +18,11 @@ impl Default for SceneEntityContainer {
 
 impl SceneEntityContainer {
     pub fn new() -> Self {
+        let mut entity_version: Vec<(u16, bool)> = Vec::new();
+        entity_version.resize(65536, (0, false));
+
         Self {
-            entity_version: [(0, false); 65536],
+            entity_version,
             new_entities_created: Default::default(),
             entities_deleted: Default::default(),
         }

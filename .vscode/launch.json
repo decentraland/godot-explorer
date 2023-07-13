@@ -5,7 +5,7 @@
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.bin/godot/Godot_v4.0.3-stable_win64.exe",
+            "program": "${workspaceFolder}/.bin/godot/godot4_bin",
             "args": [
                 "--path",
                 "${workspaceFolder}/godot"
@@ -20,7 +20,7 @@
             "name": "(Windows) Launch Editor",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.bin/godot/Godot_v4.0.3-stable_win64.exe",
+            "program": "${workspaceFolder}/.bin/godot/godot4_bin",
             "args": [
                 "--path",
                 "${workspaceFolder}/godot",
@@ -36,7 +36,7 @@
             "name": "(Linux) Launch Editor",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.bin/godot/Godot_v4.0.3-stable_linux.x86_64",
+            "program": "${workspaceFolder}/.bin/godot/godot4_bin",
             "args": [
                 "--path",
                 "${workspaceFolder}/godot",
@@ -52,7 +52,7 @@
             "name": "(Linux) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.bin/godot/Godot_v4.0.3-stable_linux.x86_64",
+            "program": "${workspaceFolder}/.bin/godot/godot4_bin",
             "args": [
                 "--path",
                 "${workspaceFolder}/godot"
@@ -76,7 +76,7 @@
             "name": "(Linux) Run Test",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.bin/godot/Godot_v4.0.3-stable_linux.x86_64",
+            "program": "${workspaceFolder}/.bin/godot/godot4_bin",
             "args": [
                 "--path",
                 "${workspaceFolder}/godot",
@@ -101,7 +101,7 @@
             "name": "(MacOS) Launch Editor",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.bin/godot/Godot.app/Contents/MacOS/Godot",
+            "program": "${workspaceFolder}/.bin/godot/godot4_bin",
             "args": [
                 "--path",
                 "${workspaceFolder}/godot",
@@ -117,7 +117,7 @@
             "name": "(MacOS) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.bin/godot/Godot.app/Contents/MacOS/Godot",
+            "program": "${workspaceFolder}/.bin/godot/godot4_bin",
             "args": [
                 "--path",
                 "${workspaceFolder}/godot"

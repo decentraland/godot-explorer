@@ -4,6 +4,7 @@ use std::{
 };
 
 use godot::{prelude::*, test::itest};
+use serde::{Deserialize, Serialize};
 
 use crate::http_request::{
     http_requester::HttpRequester,
@@ -12,13 +13,13 @@ use crate::http_request::{
 
 use super::parcel::*;
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TypedIpfsRef {
     file: String,
     hash: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct EntityDefinitionJson {
     id: Option<String>,
     base_url: Option<String>,
@@ -27,13 +28,13 @@ pub struct EntityDefinitionJson {
     metadata: Option<serde_json::Value>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SceneFieldJson {
     parcels: Vec<String>,
     base: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SceneJsonMetadata {
     scene: SceneFieldJson,
 }
@@ -563,43 +564,6 @@ mod tests {
     const TEST_POINTER_O_O_ID: &str = "b64-L3Vzci9zcmMvYXBwLzAuMC5ibGFuay1zY2VuZQ==";
 
     use super::*;
-    #[allow(dead_code)]
-    pub fn mock_server() -> httpmock::MockServer {
-        let server = httpmock::MockServer::start();
-
-        server.mock(|when, then| {
-            when.method(httpmock::Method::POST)
-                .path("/content/entities/active")
-                .body_contains("\"0,0\"");
-
-            then.status(200)
-                .header("content-type", "text/json")
-                .body(format!(
-                    "[{{\"id\":\"{}\",\"pointers\":[\"0,0\"],\"content\":[]}}]",
-                    TEST_POINTER_O_O_ID
-                ));
-        });
-
-        server.mock(|when, then| {
-            when.method(httpmock::Method::POST)
-                .path("/content/entities/active");
-
-            then.status(200)
-                .header("content-type", "text/json")
-                .body("[]");
-        });
-
-        server.mock(|when, then| {
-            when.method(httpmock::Method::GET)
-                .path(format!("/contents/{}", TEST_URN_HASH));
-
-            then.status(200)
-                .header("content-type", "text/json")
-                .body("{\"pointers\":[],\"content\":[]}");
-        });
-
-        server
-    }
 
     fn wait_update_or_timeout(
         scene_entity_coordinator: &mut SceneEntityCoordinator,

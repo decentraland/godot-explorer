@@ -9,3 +9,7 @@ func _ready():
 
 func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
 	raycast_debugger.add_raycast(id, time, from, to)
+
+
+func get_tls_client():
+	return TLSOptions.client_unsafe()

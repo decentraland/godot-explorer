@@ -4,6 +4,7 @@ use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
+mod download_file;
 mod export;
 mod install_dependency;
 mod run;
@@ -44,7 +45,14 @@ fn main() -> Result<(), anyhow::Error> {
             ),
         )
         .subcommand(Command::new("docs"))
-        .subcommand(Command::new("install"))
+        .subcommand(
+            Command::new("install").arg(
+                Arg::new("no-templates")
+                    .long("no-templates")
+                    .help("skip download templates")
+                    .takes_value(false),
+            ),
+        )
         .subcommand(Command::new("export"))
         .subcommand(
             Command::new("run")
@@ -67,17 +75,24 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("itest")
                         .help("run tests")
                         .takes_value(false),
+                )
+                .arg(
+                    Arg::new("only-build")
+                        .long("only-build")
+                        .help("skip the run")
+                        .takes_value(false),
                 ),
         );
     let matches = cli.get_matches();
 
     let root = xtaskops::ops::root_dir();
     let res = match matches.subcommand() {
-        Some(("install", _)) => install_dependency::install(),
+        Some(("install", sm)) => install_dependency::install(sm.is_present("no-templates")),
         Some(("run", sm)) => run::run(
             sm.is_present("editor"),
             sm.is_present("release"),
             sm.is_present("itest"),
+            sm.is_present("only-build"),
         ),
         Some(("export", _m)) => export::export(),
         Some(("coverage", sm)) => coverage_with_itest(sm.is_present("dev")),
