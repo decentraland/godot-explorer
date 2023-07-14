@@ -90,7 +90,7 @@ pub(crate) fn scene_thread(
     // Setup the global context
     match js_context.run("dcl_init", include_str!("js_modules/main.js")) {
         Ok(_) => {
-            println!("init script run");
+            // println!("init script run");
         }
         Err(err) => {
             println!("error init script {:?}", err);
@@ -100,7 +100,7 @@ pub(crate) fn scene_thread(
 
     match js_context.run("dcl_init", "globalThis.onStart()") {
         Ok(value) => {
-            println!("onStart script run");
+            // println!("onStart script run");
             if value.is_promise() {
                 let _promise = v8::Local::<Promise>::try_from(value).unwrap();
                 // println!("is a promise {:?}", promise.state());

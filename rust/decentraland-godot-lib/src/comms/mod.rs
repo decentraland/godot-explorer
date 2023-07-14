@@ -1,15 +1,89 @@
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
+pub mod wallet;
+
+use crate::dcl::components::proto_components::kernel::comms::rfc5::{ws_packet, WsIdentification};
 use godot::{
     engine::{TlsOptions, WebSocketPeer},
     prelude::*,
 };
+
+use self::wallet::Wallet;
 
 struct WebSocketRoom {
     url: GodotString,
     ws_peer: Gd<WebSocketPeer>,
     last_state: godot::engine::web_socket_peer::State,
     last_try_time: Instant,
+    tls_client: Gd<TlsOptions>,
+    wallet: Arc<Wallet>,
+}
+
+impl WebSocketRoom {
+    fn new(ws_url: &str, tls_client: Gd<TlsOptions>, wallet: Arc<Wallet>) -> Self {
+        Self {
+            ws_peer: WebSocketPeer::new(),
+            url: GodotString::from(ws_url),
+            last_state: godot::engine::web_socket_peer::State::STATE_CLOSED,
+            last_try_time: Instant::now(),
+            tls_client,
+            wallet,
+        }
+    }
+
+    fn poll(&mut self) {
+        let mut peer = self.ws_peer.share();
+        peer.poll();
+
+        let current_state = peer.get_ready_state();
+        if current_state != self.last_state {
+            match peer.get_ready_state() {
+                godot::engine::web_socket_peer::State::STATE_CONNECTING => {
+                    godot_print!("comms > connecting to {}", self.url);
+                    self.last_try_time = Instant::now();
+                }
+                godot::engine::web_socket_peer::State::STATE_CLOSING => {
+                    godot_print!("comms > closing to {}", self.url);
+                }
+                godot::engine::web_socket_peer::State::STATE_CLOSED => {
+                    godot_print!("comms > closed to {}", self.url);
+                }
+                godot::engine::web_socket_peer::State::STATE_OPEN => {
+                    godot_print!("comms > connected to {}", self.url);
+
+                    let ident = ws_packet::Message::PeerIdentification(WsIdentification {
+                        address: format!("{:#x}", self.wallet.address()),
+                    });
+
+                    let mut buf = Vec::new();
+                    ident.encode(&mut buf);
+
+                    let buf = PackedByteArray::from_iter(buf.into_iter());
+                    peer.send(buf);
+                }
+                _ => {}
+            }
+            self.last_state = current_state;
+        }
+
+        match peer.get_ready_state() {
+            godot::engine::web_socket_peer::State::STATE_CLOSED => {
+                if (Instant::now() - self.last_try_time).as_secs() > 1 {
+                    // TODO: see if the tls client is really required for now
+                    let _tls_client = self.tls_client.share();
+
+                    peer.call("connect_to_url".into(), &[self.url.clone().to_variant()]);
+                }
+            }
+            godot::engine::web_socket_peer::State::STATE_OPEN => {
+                while peer.get_available_packet_count() > 0 {
+                    let packet = peer.get_packet();
+                    godot_print!("comms > packet {:?}", packet);
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 enum Adapter {
@@ -24,6 +98,7 @@ pub struct Comms {
     base: Base<Node>,
     current_adapter: Adapter,
     tls_client: Option<Gd<TlsOptions>>,
+    wallet: Arc<Wallet>,
 }
 
 #[godot_api]
@@ -33,6 +108,7 @@ impl NodeVirtual for Comms {
             base,
             current_adapter: Adapter::None,
             tls_client: None,
+            wallet: Arc::new(Wallet::new_local_wallet()),
         }
     }
 
@@ -44,48 +120,7 @@ impl NodeVirtual for Comms {
         match &mut self.current_adapter {
             Adapter::None => {}
             Adapter::WsRoom(ws_room) => {
-                let mut peer = ws_room.ws_peer.share();
-                peer.poll();
-
-                let current_state = peer.get_ready_state();
-                if current_state != ws_room.last_state {
-                    match peer.get_ready_state() {
-                        godot::engine::web_socket_peer::State::STATE_CONNECTING => {
-                            godot_print!("comms > connecting to {}", ws_room.url);
-                            ws_room.last_try_time = Instant::now();
-                        }
-                        godot::engine::web_socket_peer::State::STATE_CLOSING => {
-                            godot_print!("comms > closing to {}", ws_room.url);
-                        }
-                        godot::engine::web_socket_peer::State::STATE_CLOSED => {
-                            godot_print!("comms > closed to {}", ws_room.url);
-                        }
-                        godot::engine::web_socket_peer::State::STATE_OPEN => {
-                            godot_print!("comms > connected to {}", ws_room.url);
-                            // ws_packet::Message::PeerIdentification(WsIdentification {})
-                        }
-                        _ => {}
-                    }
-                    ws_room.last_state = current_state;
-                }
-
-                match peer.get_ready_state() {
-                    godot::engine::web_socket_peer::State::STATE_CLOSED => {
-                        if (Instant::now() - ws_room.last_try_time).as_secs() > 1 {
-                            // TODO: see if the tls client is really required for now
-                            let _tls_client = self.tls_client.as_ref().unwrap().share();
-
-                            peer.call("connect_to_url".into(), &[ws_room.url.clone().to_variant()]);
-                        }
-                    }
-                    godot::engine::web_socket_peer::State::STATE_OPEN => {
-                        while peer.get_available_packet_count() > 0 {
-                            let packet = peer.get_packet();
-                            godot_print!("comms > packet {:?}", packet);
-                        }
-                    }
-                    _ => {}
-                }
+                ws_room.poll();
             }
         }
     }
@@ -163,12 +198,11 @@ impl Comms {
             "ws-room" => {
                 if let Some(ws_url) = fixed_adapter.get(1) {
                     godot_print!("comms > websocket to {}", ws_url);
-                    self.current_adapter = Adapter::WsRoom(WebSocketRoom {
-                        ws_peer: WebSocketPeer::new(),
-                        url: GodotString::from(ws_url),
-                        last_state: godot::engine::web_socket_peer::State::STATE_CLOSED,
-                        last_try_time: Instant::now(),
-                    });
+                    self.current_adapter = Adapter::WsRoom(WebSocketRoom::new(
+                        ws_url,
+                        self.tls_client.as_ref().unwrap().share(),
+                        self.wallet.clone(),
+                    ));
                 }
             }
             "offline" => {
