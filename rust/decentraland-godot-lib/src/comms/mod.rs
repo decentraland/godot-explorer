@@ -2,13 +2,26 @@ use std::{sync::Arc, time::Instant};
 
 pub mod wallet;
 
-use crate::dcl::components::proto_components::kernel::comms::rfc5::{ws_packet, WsIdentification};
+use crate::dcl::components::proto_components::kernel::comms::rfc5::{
+    ws_packet, WsIdentification, WsPacket, WsSignedChallenge,
+};
+use ethers::signers::WalletError;
 use godot::{
     engine::{TlsOptions, WebSocketPeer},
     prelude::*,
 };
+use prost::Message;
 
 use self::wallet::Wallet;
+
+#[derive(Default)]
+struct InitialSignState {
+    signed: bool,
+    challenge_to_sign: String,
+
+    signing_promise: Option<poll_promise::Promise<Result<ethers::types::Signature, WalletError>>>,
+    signature: Option<ethers::types::Signature>,
+}
 
 struct WebSocketRoom {
     url: GodotString,
@@ -17,6 +30,8 @@ struct WebSocketRoom {
     last_try_time: Instant,
     tls_client: Gd<TlsOptions>,
     wallet: Arc<Wallet>,
+
+    signing_state: InitialSignState,
 }
 
 impl WebSocketRoom {
@@ -28,6 +43,7 @@ impl WebSocketRoom {
             last_try_time: Instant::now(),
             tls_client,
             wallet,
+            signing_state: InitialSignState::default(),
         }
     }
 
@@ -72,13 +88,98 @@ impl WebSocketRoom {
                     // TODO: see if the tls client is really required for now
                     let _tls_client = self.tls_client.share();
 
+                    let ws_protocols = {
+                        let mut v = PackedStringArray::new();
+                        v.push(GodotString::from("rfc5"));
+                        v
+                    };
+
+                    peer.set("supported_protocols".into(), ws_protocols.to_variant());
                     peer.call("connect_to_url".into(), &[self.url.clone().to_variant()]);
                 }
             }
             godot::engine::web_socket_peer::State::STATE_OPEN => {
                 while peer.get_available_packet_count() > 0 {
                     let packet = peer.get_packet();
-                    godot_print!("comms > packet {:?}", packet);
+                    let packet_length = packet.len();
+                    let packet = WsPacket::decode(packet.as_slice());
+
+                    match packet {
+                        Ok(packet) => match packet.message {
+                            Some(msg) => match msg {
+                                ws_packet::Message::ChallengeMessage(challenge_msg) => {
+                                    godot_print!("comms > peer msg {:?}", challenge_msg);
+
+                                    if !self.signing_state.signed
+                                        && self.signing_state.signing_promise.is_none()
+                                    {
+                                        self.signing_state.challenge_to_sign =
+                                            challenge_msg.challenge_to_sign.clone();
+
+                                        let wallet = self.wallet.clone();
+                                        let challenge_to_sign =
+                                            challenge_msg.challenge_to_sign.clone();
+
+                                        self.signing_state.signing_promise =
+                                            Some(poll_promise::Promise::spawn_thread(
+                                                "sign_challenge_message",
+                                                move || {
+                                                    futures_lite::future::block_on(
+                                                        wallet.sign_message(
+                                                            challenge_to_sign.as_bytes(),
+                                                        ),
+                                                    )
+                                                },
+                                            ));
+                                    }
+                                }
+                                _ => {
+                                    godot_print!(
+                                        "comms > received unknown message {} bytes",
+                                        packet_length
+                                    );
+                                }
+                            },
+
+                            None => {
+                                godot_print!(
+                                    "comms > received empty message {} bytes",
+                                    packet_length
+                                );
+                            }
+                        },
+                        Err(err) => {
+                            godot_print!("comms > error decoding packet {:?}", err);
+                        }
+                    }
+                }
+                if !self.signing_state.signed && self.signing_state.signing_promise.is_some() {
+                    let promise = self.signing_state.signing_promise.as_ref().unwrap();
+                    if let Some(ret) = promise.ready() {
+                        if let Ok(signature) = ret {
+                            self.signing_state.signed = true;
+                            self.signing_state.signature = Some(*signature);
+
+                            let chain = wallet::SimpleAuthChain::new(
+                                self.wallet.address(),
+                                self.signing_state.challenge_to_sign.clone(),
+                                *signature,
+                            );
+                            let auth_chain_json = serde_json::to_string(&chain).unwrap();
+
+                            // send response
+                            let message =
+                                ws_packet::Message::SignedChallengeForServer(WsSignedChallenge {
+                                    auth_chain_json,
+                                });
+
+                            let mut buf = Vec::new();
+                            message.encode(&mut buf);
+
+                            let buf = PackedByteArray::from_iter(buf.into_iter());
+                            peer.send(buf);
+                        }
+                    }
                 }
             }
             _ => {}
