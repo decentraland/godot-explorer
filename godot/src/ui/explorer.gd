@@ -52,7 +52,7 @@ func _ready():
 
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
-
+	
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	_scene_console_message.call_deferred(scene_id, level, timestamp, text)
@@ -190,3 +190,11 @@ func _on_line_edit_command_text_submitted(new_text: String) -> void:
 			_on_control_menu_jump_to(Vector2i(int(comma_params[0]), int(comma_params[1])))
 		elif params.size() > 2:
 			_on_control_menu_jump_to(Vector2i(int(params[1]), int(params[2])))
+
+
+func _on_timer_broadcast_position_timeout():
+	var comms = get_node("/root/comms")
+	var transform = player.get_player_position()
+	var res = comms.send_position(transform)
+	if res:
+		print("result sending position by comms ", res, " => ", transform)

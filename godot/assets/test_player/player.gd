@@ -142,3 +142,6 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, WALK_SPEED)
 
 	move_and_slide()
+
+func get_player_position() -> Transform3D:
+	return $PlayerVisuals.global_transform

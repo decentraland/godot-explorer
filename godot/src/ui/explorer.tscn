@@ -26,7 +26,7 @@ texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_48gvr"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_er0dy"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
@@ -155,7 +155,7 @@ offset_bottom = 176.0
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_48gvr")
+group = SubResource("ButtonGroup_er0dy")
 
 [node name="Timer" type="Timer" parent="UI"]
 autostart = true
@@ -192,6 +192,9 @@ offset_bottom = 35.0
 
 [node name="Control_PointerTooltip" parent="." instance=ExtResource("11_qjs00")]
 
+[node name="Timer_BroadcastPosition" type="Timer" parent="."]
+autostart = true
+
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="preview_hot_reload" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_preview_hot_reload"]
 [connection signal="request_change_realm" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_realm"]
@@ -205,3 +208,4 @@ offset_bottom = 35.0
 [connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
 [connection signal="timeout" from="UI/Timer" to="." method="_on_timer_timeout"]
 [connection signal="text_submitted" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
+[connection signal="timeout" from="Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]
