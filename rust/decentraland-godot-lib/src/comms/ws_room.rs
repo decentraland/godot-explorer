@@ -1,10 +1,13 @@
 use std::{collections::HashMap, sync::Arc, time::Instant};
 
-use crate::dcl::components::proto_components::kernel::comms::{
-    rfc4,
-    rfc5::{ws_packet, WsIdentification, WsPacket, WsSignedChallenge},
+use crate::{
+    comms::wallet::AsH160,
+    dcl::components::proto_components::kernel::comms::{
+        rfc4,
+        rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
+    },
 };
-use ethers::signers::WalletError;
+use ethers::{signers::WalletError, types::H160};
 use godot::{
     engine::{TlsOptions, WebSocketPeer},
     prelude::*,
@@ -49,7 +52,7 @@ pub struct WebSocketRoom {
     signing_state: InitialSignState,
 
     from_alias: u32,
-    peer_identities: HashMap<u32, String>,
+    peer_identities: HashMap<u32, H160>,
 }
 
 async fn get_final_websocket_url(initial_url: &str) -> Result<String, reqwest::Error> {
@@ -89,6 +92,20 @@ impl WebSocketRoom {
             peer_identities: HashMap::new(),
             resolving_url_promise: None,
         }
+    }
+
+    pub fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
+        let mut buf = Vec::new();
+        packet.encode(&mut buf).unwrap();
+
+        let packet = WsPacket {
+            message: Some(ws_packet::Message::PeerUpdateMessage(WsPeerUpdate {
+                from_alias: self.from_alias,
+                body: buf,
+                unreliable: unreliable,
+            })),
+        };
+        self.send(packet, true)
     }
 
     pub fn send<T>(&mut self, packet: T, only_when_active: bool) -> bool
@@ -287,17 +304,24 @@ impl WebSocketRoom {
                                 // welcome_msg.
                                 self.state = WsRoomState::WelcomeMessageReceived;
                                 self.from_alias = welcome_msg.alias;
-                                self.peer_identities = welcome_msg
-                                    .peer_identities
-                                    .iter()
-                                    .map(|(k, v)| (*k, v.clone()))
-                                    .collect();
+                                self.peer_identities = HashMap::from_iter(
+                                    welcome_msg.peer_identities.into_iter().flat_map(
+                                        |(alias, address)| {
+                                            if let Some(h160) = address.as_h160() {
+                                                Some((alias, h160))
+                                            } else {
+                                                // warn!("failed to parse hash: {}", address);
+                                                None
+                                            }
+                                        },
+                                    ),
+                                );
 
                                 let mut profile = UserProfile::default();
                                 profile.content.user_id =
                                     Some(format!("{:#x}", self.wallet.address()));
 
-                                self.send(
+                                self.send_rfc4(
                                     rfc4::Packet {
                                         message: Some(rfc4::packet::Message::ProfileVersion(
                                             rfc4::AnnounceProfileVersion {
@@ -308,7 +332,7 @@ impl WebSocketRoom {
                                     false,
                                 );
 
-                                self.send(
+                                self.send_rfc4(
                                     rfc4::Packet {
                                         message: Some(rfc4::packet::Message::ProfileResponse(
                                             rfc4::ProfileResponse {
@@ -349,12 +373,13 @@ impl WebSocketRoom {
                             }
                             ws_packet::Message::PeerJoinMessage(peer) => {
                                 godot_print!("comms > received PeerJoinMessage {:?}", peer);
+
                                 // debug!("peer joined: {} -> {}", peer.alias, peer.address);
-                                // if let Some(h160) = peer.address.as_h160() {
-                                //     foreign_aliases.insert(peer.alias, h160);
-                                // } else {
-                                //     warn!("failed to parse hash: {}", peer.address);
-                                // }
+                                if let Some(h160) = peer.address.as_h160() {
+                                    self.peer_identities.insert(peer.alias, h160);
+                                } else {
+                                    // warn!("failed to parse hash: {}", peer.address);
+                                }
                             }
                             ws_packet::Message::PeerLeaveMessage(peer) => {
                                 godot_print!("comms > received PeerLeaveMessage {:?}", peer);
@@ -363,26 +388,47 @@ impl WebSocketRoom {
                                 //     peer.alias,
                                 //     foreign_aliases.get_by_left(&peer.alias)
                                 // );
-                                // foreign_aliases.remove_by_left(&peer.alias);
+                                self.peer_identities.remove(&peer.alias);
                             }
                             ws_packet::Message::PeerUpdateMessage(update) => {
-                                godot_print!("comms > received PeerUpdateMessage {:?}", update);
-                                // let packet = match rfc4::Packet::decode(update.body.as_slice()) {
-                                //     Ok(packet) => packet,
-                                //     Err(e) => {
-                                //         warn!("unable to parse packet body: {e}");
-                                //         continue;
-                                //     }
-                                // };
-                                // let Some(message) = packet.message else {
-                                //     warn!("received empty packet body");
-                                //     continue;
-                                // };
+                                let packet = match rfc4::Packet::decode(update.body.as_slice()) {
+                                    Ok(packet) => packet,
+                                    Err(e) => {
+                                        // warn!("unable to parse packet body: {e}");
+                                        continue;
+                                    }
+                                };
+                                let Some(message) = packet.message else {
+                                    // warn!("received empty packet body");
+                                    continue;
+                                };
 
-                                // let Some(address) = foreign_aliases.get_by_left(&update.from_alias).cloned() else {
-                                //     warn!("received packet for unknown alias {}", update.from_alias);
-                                //     continue;
-                                // };
+                                let Some(address) = self.peer_identities.get(&update.from_alias).cloned() else {
+                                    // warn!("received packet for unknown alias {}", update.from_alias);
+                                    continue;
+                                };
+
+                                godot_print!(
+                                    "comms > received from {address} PeerUpdateMessage {:?}",
+                                    message
+                                );
+
+                                match message {
+                                    rfc4::packet::Message::Position(_position) => {}
+                                    _ => {
+                                        godot_print!(
+                                            "comms > received from {address} PeerUpdateMessage {:?}",
+                                            message
+                                        );
+                                    } // rfc4::packet::Message::ProfileVersion(
+                                      //     _announce_profile_version,
+                                      // ) => {}
+                                      // rfc4::packet::Message::ProfileRequest(_profile_request) => {}
+                                      // rfc4::packet::Message::ProfileResponse(_profile_response) => {}
+                                      // rfc4::packet::Message::Chat(_chat) => {}
+                                      // rfc4::packet::Message::Scene(_scene) => {}
+                                      // rfc4::packet::Message::Voice(_voice) => {}
+                                }
 
                                 // debug!(
                                 //     "[tid: {:?}] received message {:?} from {:?}",
@@ -399,7 +445,7 @@ impl WebSocketRoom {
                             ws_packet::Message::PeerKicked(reason) => {
                                 godot_print!("comms > received PeerKicked {:?}", reason);
                                 // warn!("kicked: {}", reason.reason);
-                                // return Ok(());
+                                // return Ok(());   h
                             } // _ => {
                               //     godot_print!(
                               //         "comms > received unknown message {} bytes",

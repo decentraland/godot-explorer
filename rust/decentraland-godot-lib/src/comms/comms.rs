@@ -81,7 +81,7 @@ impl Comms {
 
         match &mut self.current_adapter {
             Adapter::None => false,
-            Adapter::WsRoom(ws_room) => ws_room.send(get_packet(), true),
+            Adapter::WsRoom(ws_room) => ws_room.send_rfc4(get_packet(), true),
         }
     }
 

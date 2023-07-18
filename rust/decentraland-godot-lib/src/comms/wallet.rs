@@ -3,7 +3,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use ethers::{
     signers::{LocalWallet, Signer, WalletError},
-    types::{transaction::eip2718::TypedTransaction, Address, Signature},
+    types::{transaction::eip2718::TypedTransaction, Address, Signature, H160},
+    utils::hex,
 };
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
@@ -90,4 +91,30 @@ pub struct ChainLink {
     ty: String,
     payload: String,
     signature: String,
+}
+
+// convert string -> Address
+pub trait AsH160 {
+    fn as_h160(&self) -> Option<H160>;
+}
+
+impl AsH160 for &str {
+    fn as_h160(&self) -> Option<H160> {
+        if self.starts_with("0x") {
+            return (&self[2..]).as_h160();
+        }
+
+        let Ok(hex_bytes) = hex::decode(self.as_bytes()) else { return None };
+        if hex_bytes.len() != H160::len_bytes() {
+            return None;
+        }
+
+        Some(H160::from_slice(hex_bytes.as_slice()))
+    }
+}
+
+impl AsH160 for String {
+    fn as_h160(&self) -> Option<H160> {
+        self.as_str().as_h160()
+    }
 }
