@@ -5,6 +5,7 @@ use godot::{engine::TlsOptions, prelude::*};
 use crate::dcl::components::proto_components::kernel::comms::rfc4;
 
 use super::{
+    avatar_scene::AvatarScene,
     wallet::{self, Wallet},
     ws_room::WebSocketRoom,
 };
@@ -86,6 +87,21 @@ impl Comms {
     }
 
     #[func]
+    fn send_chat(&mut self, text: GodotString) -> bool {
+        let get_packet = || rfc4::Packet {
+            message: Some(rfc4::packet::Message::Chat(rfc4::Chat {
+                message: text.to_string(),
+                timestamp: 0.0,
+            })),
+        };
+
+        match &mut self.current_adapter {
+            Adapter::None => false,
+            Adapter::WsRoom(ws_room) => ws_room.send_rfc4(get_packet(), true),
+        }
+    }
+
+    #[func]
     fn init_rs(&mut self) {
         let mut realm = self.realm();
         let on_realm_changed =
@@ -145,6 +161,11 @@ impl Comms {
         let fixed_adapter: Vec<&str> = comms_fixed_adapter_str.splitn(2, ':').collect();
         let adapter_protocol = *fixed_adapter.first().unwrap();
 
+        let avatar_scene = self
+            .get_node("/root/avatars".into())
+            .unwrap()
+            .cast::<AvatarScene>();
+
         match adapter_protocol {
             "ws-room" => {
                 if let Some(ws_url) = fixed_adapter.get(1) {
@@ -153,6 +174,7 @@ impl Comms {
                         ws_url,
                         self.tls_client.as_ref().unwrap().share(),
                         self.wallet.clone(),
+                        avatar_scene,
                     ));
                 }
             }

@@ -15,6 +15,7 @@ use godot::{
 use prost::Message;
 
 use super::{
+    avatar_scene::AvatarScene,
     profile::UserProfile,
     wallet::{self, Wallet},
 };
@@ -53,6 +54,8 @@ pub struct WebSocketRoom {
 
     from_alias: u32,
     peer_identities: HashMap<u32, H160>,
+
+    avatars: Gd<AvatarScene>,
 }
 
 async fn get_final_websocket_url(initial_url: &str) -> Result<String, reqwest::Error> {
@@ -68,7 +71,12 @@ async fn get_final_websocket_url(initial_url: &str) -> Result<String, reqwest::E
 }
 
 impl WebSocketRoom {
-    pub fn new(ws_url: &str, tls_client: Gd<TlsOptions>, wallet: Arc<Wallet>) -> Self {
+    pub fn new(
+        ws_url: &str,
+        tls_client: Gd<TlsOptions>,
+        wallet: Arc<Wallet>,
+        avatars: Gd<AvatarScene>,
+    ) -> Self {
         let lower_url = ws_url.to_lowercase();
         let ws_url = if !lower_url.starts_with("ws://") && !lower_url.starts_with("wss://") {
             if !lower_url.starts_with("http://") && !lower_url.starts_with("https://") {
@@ -91,6 +99,7 @@ impl WebSocketRoom {
             from_alias: 0,
             peer_identities: HashMap::new(),
             resolving_url_promise: None,
+            avatars,
         }
     }
 
@@ -346,6 +355,11 @@ impl WebSocketRoom {
                                     },
                                     false,
                                 );
+
+                                self.avatars.bind_mut().clean();
+                                for (alias, _) in self.peer_identities.iter() {
+                                    self.avatars.bind_mut().add_avatar(*alias);
+                                }
                             }
                             _ => {
                                 godot_print!(
@@ -362,7 +376,7 @@ impl WebSocketRoom {
             },
             WsRoomState::WelcomeMessageReceived => match ws_state {
                 godot::engine::web_socket_peer::State::STATE_OPEN => {
-                    while let Some((packet_length, message)) = get_next_packet(peer.share()) {
+                    while let Some((_packet_length, message)) = get_next_packet(peer.share()) {
                         match message {
                             ws_packet::Message::ChallengeMessage(_)
                             | ws_packet::Message::PeerIdentification(_)
@@ -377,6 +391,7 @@ impl WebSocketRoom {
                                 // debug!("peer joined: {} -> {}", peer.alias, peer.address);
                                 if let Some(h160) = peer.address.as_h160() {
                                     self.peer_identities.insert(peer.alias, h160);
+                                    self.avatars.bind_mut().add_avatar(peer.alias);
                                 } else {
                                     // warn!("failed to parse hash: {}", peer.address);
                                 }
@@ -389,6 +404,7 @@ impl WebSocketRoom {
                                 //     foreign_aliases.get_by_left(&peer.alias)
                                 // );
                                 self.peer_identities.remove(&peer.alias);
+                                self.avatars.bind_mut().remove_avatar(peer.alias);
                             }
                             ws_packet::Message::PeerUpdateMessage(update) => {
                                 let packet = match rfc4::Packet::decode(update.body.as_slice()) {
@@ -414,7 +430,11 @@ impl WebSocketRoom {
                                 );
 
                                 match message {
-                                    rfc4::packet::Message::Position(_position) => {}
+                                    rfc4::packet::Message::Position(position) => {
+                                        self.avatars
+                                            .bind_mut()
+                                            .update_transform(update.from_alias, &position);
+                                    }
                                     _ => {
                                         godot_print!(
                                             "comms > received from {address} PeerUpdateMessage {:?}",
@@ -445,7 +465,7 @@ impl WebSocketRoom {
                             ws_packet::Message::PeerKicked(reason) => {
                                 godot_print!("comms > received PeerKicked {:?}", reason);
                                 // warn!("kicked: {}", reason.reason);
-                                // return Ok(());   h
+                                // return Ok(());   hj
                             } // _ => {
                               //     godot_print!(
                               //         "comms > received unknown message {} bytes",

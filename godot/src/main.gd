@@ -29,9 +29,13 @@ func start():
 	var comms = Comms.new()
 	comms.set_name("comms")
 
+	var avatars = AvatarScene.new()
+	avatars.set_name("avatars")
+
 	get_tree().root.add_child(scene_runner)
 	get_tree().root.add_child(realm)
 	get_tree().root.add_child(comms)
 	get_tree().root.add_child(content_manager)
+	get_tree().root.add_child(avatars)
 
 	get_tree().change_scene_to_file("res://src/ui/explorer.tscn")

@@ -12,7 +12,10 @@ use self::{
 };
 
 use super::{
-    components::{proto_components, transform_and_parent::DclTransformAndParent, SceneComponentId},
+    components::{
+        proto_components, transform_and_parent::DclTransformAndParent, SceneComponentId,
+        SceneEntityId,
+    },
     DirtyEntities, DirtyGosComponents, DirtyLwwComponents,
 };
 
@@ -229,6 +232,11 @@ impl SceneCrdtState {
             .unwrap()
             .downcast_ref::<LastWriteWins<DclTransformAndParent>>()
             .unwrap()
+    }
+
+    pub fn kill_entity(&mut self, entity_id: &SceneEntityId) {
+        self.entities.kill(*entity_id);
+        // TODO: iterato over every component and remove
     }
 }
 
