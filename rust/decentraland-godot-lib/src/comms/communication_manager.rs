@@ -2,13 +2,11 @@ use std::sync::Arc;
 
 use godot::{engine::TlsOptions, prelude::*};
 
-use crate::dcl::components::proto_components::kernel::comms::rfc4;
-
-use super::{
-    avatar_scene::AvatarScene,
-    wallet::{self, Wallet},
-    ws_room::WebSocketRoom,
+use crate::{
+    avatars::avatar_scene::AvatarScene, dcl::components::proto_components::kernel::comms::rfc4,
 };
+
+use super::{wallet::Wallet, ws_room::WebSocketRoom};
 
 enum Adapter {
     None,
@@ -17,7 +15,7 @@ enum Adapter {
 
 #[derive(GodotClass)]
 #[class(base=Node)]
-pub struct Comms {
+pub struct CommunicationManager {
     #[base]
     base: Base<Node>,
     current_adapter: Adapter,
@@ -27,9 +25,9 @@ pub struct Comms {
 }
 
 #[godot_api]
-impl NodeVirtual for Comms {
+impl NodeVirtual for CommunicationManager {
     fn init(base: Base<Node>) -> Self {
-        Comms {
+        CommunicationManager {
             base,
             current_adapter: Adapter::None,
             tls_client: None,
@@ -52,10 +50,10 @@ impl NodeVirtual for Comms {
     }
 }
 
-impl Comms {}
+impl CommunicationManager {}
 
 #[godot_api]
-impl Comms {
+impl CommunicationManager {
     fn realm(&self) -> Gd<Node> {
         self.base.get_node("/root/realm".into()).unwrap()
     }

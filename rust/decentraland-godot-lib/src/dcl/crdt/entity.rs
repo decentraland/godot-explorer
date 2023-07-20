@@ -89,7 +89,7 @@ impl SceneEntityContainer {
 
     // If the entity is alive, return Some(entity) else None
     pub fn get_entity_stat(&self, entity_number: u16) -> &(u16, bool) {
-        return &self.entity_version[entity_number as usize];
+        &self.entity_version[entity_number as usize]
     }
 
     pub fn take_dirty(&mut self) -> DirtyEntities {

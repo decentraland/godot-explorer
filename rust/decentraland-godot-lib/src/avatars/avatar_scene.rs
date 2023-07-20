@@ -7,10 +7,7 @@ use crate::dcl::{
         proto_components::kernel::comms::rfc4, transform_and_parent::DclTransformAndParent,
         SceneEntityId,
     },
-    crdt::{
-        last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
-        SceneCrdtStateProtoComponents,
-    },
+    crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
 };
 
 #[derive(GodotClass)]

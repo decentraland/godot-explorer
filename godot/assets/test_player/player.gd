@@ -162,5 +162,6 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+
 func get_player_position() -> Transform3D:
 	return $PlayerVisuals.global_transform

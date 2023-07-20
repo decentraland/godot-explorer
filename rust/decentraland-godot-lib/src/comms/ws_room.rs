@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use crate::{
+    avatars::avatar_scene::AvatarScene,
     comms::wallet::AsH160,
     dcl::components::proto_components::kernel::comms::{
         rfc4,
@@ -15,14 +16,12 @@ use godot::{
 use prost::Message;
 
 use super::{
-    avatar_scene::AvatarScene,
     profile::UserProfile,
     wallet::{self, Wallet},
 };
 
 #[derive(Clone)]
 enum WsRoomState {
-    ResolvingUrl,
     Connecting,
     Connected,
     IdentMessageSent,
@@ -47,7 +46,6 @@ pub struct WebSocketRoom {
 
     url: GodotString,
     last_try_time: Instant,
-    resolving_url_promise: Option<poll_promise::Promise<Result<String, reqwest::Error>>>,
 
     wallet: Arc<Wallet>,
     signing_state: InitialSignState,
@@ -56,18 +54,6 @@ pub struct WebSocketRoom {
     peer_identities: HashMap<u32, H160>,
 
     avatars: Gd<AvatarScene>,
-}
-
-async fn get_final_websocket_url(initial_url: &str) -> Result<String, reqwest::Error> {
-    let client = reqwest::Client::new();
-    let mut response = client.get(initial_url).send().await?;
-
-    let final_url = match response.url().as_str() {
-        "" => initial_url.to_string(),
-        url => url.to_string(),
-    };
-
-    Ok(final_url)
 }
 
 impl WebSocketRoom {
@@ -98,7 +84,6 @@ impl WebSocketRoom {
             state: WsRoomState::Connecting,
             from_alias: 0,
             peer_identities: HashMap::new(),
-            resolving_url_promise: None,
             avatars,
         }
     }
@@ -111,7 +96,7 @@ impl WebSocketRoom {
             message: Some(ws_packet::Message::PeerUpdateMessage(WsPeerUpdate {
                 from_alias: self.from_alias,
                 body: buf,
-                unreliable: unreliable,
+                unreliable,
             })),
         };
         self.send(packet, true)
@@ -126,11 +111,7 @@ impl WebSocketRoom {
         }
 
         let should_send = if only_when_active {
-            if let WsRoomState::WelcomeMessageReceived = self.state {
-                true
-            } else {
-                false
-            }
+            matches!(self.state, WsRoomState::WelcomeMessageReceived)
         } else {
             true
         };
@@ -140,17 +121,12 @@ impl WebSocketRoom {
         }
 
         let mut buf = Vec::new();
-        if let Err(_) = packet.encode(&mut buf) {
+        if packet.encode(&mut buf).is_err() {
             return false;
         }
 
         let buf = PackedByteArray::from_iter(buf.into_iter());
-
-        if let godot::engine::global::Error::OK = self.ws_peer.send(buf) {
-            true
-        } else {
-            false
-        }
+        matches!(self.ws_peer.send(buf), godot::engine::global::Error::OK)
     }
 
     pub fn poll(&mut self) {
@@ -160,33 +136,6 @@ impl WebSocketRoom {
         let ws_state = peer.get_ready_state();
 
         match self.state.clone() {
-            WsRoomState::ResolvingUrl => {
-                if self.resolving_url_promise.is_none() {
-                    let url = self.url.to_string();
-                    self.resolving_url_promise = Some(poll_promise::Promise::spawn_thread(
-                        "resolving_url",
-                        move || {
-                            futures_lite::future::block_on(get_final_websocket_url(url.as_str()))
-                        },
-                    ));
-                } else {
-                    let promise = self.resolving_url_promise.as_ref().unwrap();
-
-                    if let Some(ret) = promise.ready() {
-                        match ret {
-                            Ok(url) => {
-                                self.url = GodotString::from(url.as_str());
-                            }
-                            Err(err) => {
-                                godot_print!("Error resolving url {:?}", err);
-                            }
-                        }
-
-                        self.resolving_url_promise = None;
-                        self.state = WsRoomState::Connecting;
-                    }
-                }
-            }
             WsRoomState::Connecting => match ws_state {
                 godot::engine::web_socket_peer::State::STATE_CLOSED => {
                     if (Instant::now() - self.last_try_time).as_secs() > 1 {
@@ -273,31 +222,27 @@ impl WebSocketRoom {
                 godot::engine::web_socket_peer::State::STATE_OPEN => {
                     if !self.signing_state.signed && self.signing_state.signing_promise.is_some() {
                         let promise = self.signing_state.signing_promise.as_ref().unwrap();
-                        if let Some(ret) = promise.ready() {
-                            if let Ok(signature) = ret {
-                                self.signing_state.signed = true;
-                                self.signing_state.signature = Some(*signature);
+                        if let Some(Ok(signature)) = promise.ready() {
+                            self.signing_state.signed = true;
+                            self.signing_state.signature = Some(*signature);
 
-                                let chain = wallet::SimpleAuthChain::new(
-                                    self.wallet.address(),
-                                    self.signing_state.challenge_to_sign.clone(),
-                                    *signature,
-                                );
-                                let auth_chain_json = serde_json::to_string(&chain).unwrap();
+                            let chain = wallet::SimpleAuthChain::new(
+                                self.wallet.address(),
+                                self.signing_state.challenge_to_sign.clone(),
+                                *signature,
+                            );
+                            let auth_chain_json = serde_json::to_string(&chain).unwrap();
 
-                                self.send(
-                                    WsPacket {
-                                        message: Some(
-                                            ws_packet::Message::SignedChallengeForServer(
-                                                WsSignedChallenge { auth_chain_json },
-                                            ),
-                                        ),
-                                    },
-                                    false,
-                                );
+                            self.send(
+                                WsPacket {
+                                    message: Some(ws_packet::Message::SignedChallengeForServer(
+                                        WsSignedChallenge { auth_chain_json },
+                                    )),
+                                },
+                                false,
+                            );
 
-                                self.state = WsRoomState::ChallengeMessageSent;
-                            }
+                            self.state = WsRoomState::ChallengeMessageSent;
                         }
                     }
                 }
@@ -316,12 +261,7 @@ impl WebSocketRoom {
                                 self.peer_identities = HashMap::from_iter(
                                     welcome_msg.peer_identities.into_iter().flat_map(
                                         |(alias, address)| {
-                                            if let Some(h160) = address.as_h160() {
-                                                Some((alias, h160))
-                                            } else {
-                                                // warn!("failed to parse hash: {}", address);
-                                                None
-                                            }
+                                            address.as_h160().map(|h160| (alias, h160))
                                         },
                                     ),
                                 );
@@ -387,40 +327,29 @@ impl WebSocketRoom {
                             }
                             ws_packet::Message::PeerJoinMessage(peer) => {
                                 godot_print!("comms > received PeerJoinMessage {:?}", peer);
-
-                                // debug!("peer joined: {} -> {}", peer.alias, peer.address);
                                 if let Some(h160) = peer.address.as_h160() {
                                     self.peer_identities.insert(peer.alias, h160);
                                     self.avatars.bind_mut().add_avatar(peer.alias);
                                 } else {
-                                    // warn!("failed to parse hash: {}", peer.address);
                                 }
                             }
                             ws_packet::Message::PeerLeaveMessage(peer) => {
                                 godot_print!("comms > received PeerLeaveMessage {:?}", peer);
-                                // debug!(
-                                //     "peer left: {} -> {:?}",
-                                //     peer.alias,
-                                //     foreign_aliases.get_by_left(&peer.alias)
-                                // );
                                 self.peer_identities.remove(&peer.alias);
                                 self.avatars.bind_mut().remove_avatar(peer.alias);
                             }
                             ws_packet::Message::PeerUpdateMessage(update) => {
                                 let packet = match rfc4::Packet::decode(update.body.as_slice()) {
                                     Ok(packet) => packet,
-                                    Err(e) => {
-                                        // warn!("unable to parse packet body: {e}");
+                                    Err(_e) => {
                                         continue;
                                     }
                                 };
                                 let Some(message) = packet.message else {
-                                    // warn!("received empty packet body");
                                     continue;
                                 };
 
                                 let Some(address) = self.peer_identities.get(&update.from_alias).cloned() else {
-                                    // warn!("received packet for unknown alias {}", update.from_alias);
                                     continue;
                                 };
 
@@ -449,29 +378,11 @@ impl WebSocketRoom {
                                       // rfc4::packet::Message::Scene(_scene) => {}
                                       // rfc4::packet::Message::Voice(_voice) => {}
                                 }
-
-                                // debug!(
-                                //     "[tid: {:?}] received message {:?} from {:?}",
-                                //     transport_id, message, address
-                                // );
-                                // sender
-                                //     .send(PlayerUpdate {
-                                //         transport_id,
-                                //         message,
-                                //         address,
-                                //     })
-                                //     .await?;
                             }
                             ws_packet::Message::PeerKicked(reason) => {
                                 godot_print!("comms > received PeerKicked {:?}", reason);
-                                // warn!("kicked: {}", reason.reason);
-                                // return Ok(());   hj
-                            } // _ => {
-                              //     godot_print!(
-                              //         "comms > received unknown message {} bytes",
-                              //         packet_length
-                              //     );
-                              // }
+                                // TODO: clean?
+                            }
                         }
                     }
                 }
@@ -501,9 +412,7 @@ fn get_next_packet(mut peer: Gd<WebSocketPeer>) -> Option<(usize, ws_packet::Mes
         let packet_length = packet.len();
         let packet = WsPacket::decode(packet.as_slice());
         if let Ok(packet) = packet {
-            if packet.message.is_none() {
-                return None;
-            }
+            packet.message.as_ref()?;
             return Some((packet_length, packet.message.unwrap()));
         }
     }

@@ -26,7 +26,7 @@ func start():
 	var content_manager = ContentManager.new()
 	content_manager.set_name("content_manager")
 
-	var comms = Comms.new()
+	var comms = CommunicationManager.new()
 	comms.set_name("comms")
 
 	var avatars = AvatarScene.new()

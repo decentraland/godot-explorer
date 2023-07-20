@@ -1,7 +1,5 @@
 use std::ops::Deref;
 
-use godot::prelude::PackedByteArray;
-
 use super::reader::DclReader;
 
 pub struct DclWriter<'a> {

@@ -93,7 +93,7 @@ pub(crate) fn scene_thread(
             // println!("init script run");
         }
         Err(err) => {
-            println!("error init script {:?}", err);
+            println!("error init script {err:?}");
             return;
         }
     };
@@ -114,7 +114,7 @@ pub(crate) fn scene_thread(
             // println!("2) there is pending tasks? {:?}", pending_task);
         }
         Err(err) => {
-            println!("error init script {:?}", err);
+            println!("error init script {err:?}");
             return;
         }
     };
@@ -150,7 +150,7 @@ pub(crate) fn scene_thread(
                 // println!("2) there is pending tasks? {:?}", pending_task);
             }
             Err(err) => {
-                println!("error init script {:?}", err);
+                println!("error init script {err:?}");
                 return;
             }
         };

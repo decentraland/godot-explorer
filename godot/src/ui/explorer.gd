@@ -67,7 +67,6 @@ func _ready():
 
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
-	
 
 	if OS.get_name() == "Android":
 		_on_panel_bottom_left_request_change_realm(
@@ -222,6 +221,8 @@ func _on_timer_broadcast_position_timeout():
 	var res = comms.send_position(transform)
 	if res:
 		print("result sending position by comms ", res, " => ", transform)
+
+
 func _on_virtual_joystick_right_stick_position(stick_position: Vector2):
 	player.stick_position = stick_position
 
