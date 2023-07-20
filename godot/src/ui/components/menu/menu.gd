@@ -104,6 +104,8 @@ func show_last():
 
 func show_map():
 	self.show()
+	control_map.clear()
+
 	if selected_node != control_map:
 		self._on_button_map_pressed()
 		button_map.set_pressed(true)
@@ -125,23 +127,27 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 
 
 func _on_button_advance_settings_pressed():
-	fade_out(selected_node)
-	fade_in(control_advance_settings)
+	if selected_node != control_advance_settings:
+		fade_out(selected_node)
+		fade_in(control_advance_settings)
 
 
 func _on_button_settings_pressed():
-	fade_out(selected_node)
-	fade_in(control_settings)
+	if selected_node != control_settings:
+		fade_out(selected_node)
+		fade_in(control_settings)
 
 
 func _on_button_map_pressed():
-	fade_out(selected_node)
-	fade_in(control_map)
+	if selected_node != control_map:
+		fade_out(selected_node)
+		fade_in(control_map)
 
 
 func _on_button_discover_pressed():
-	fade_out(selected_node)
-	fade_in(control_discover)
+	if selected_node != control_discover:
+		fade_out(selected_node)
+		fade_in(control_discover)
 
 
 func fade_in(node: Control):

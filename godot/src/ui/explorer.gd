@@ -6,7 +6,7 @@ var parcel_manager: ParcelManager = null
 var pointer_tooltip_scene = preload("res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn")
 
 @onready var control_crosshair = $UI/Control_Crosshair
-@onready var control_pointer_tooltip = $Control_PointerTooltip
+@onready var control_pointer_tooltip = $UI/Control_PointerTooltip
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
@@ -15,6 +15,7 @@ var pointer_tooltip_scene = preload("res://src/ui/components/pointer_tooltip/poi
 @onready var panel_bottom_left = $UI/Panel_BottomLeft
 @onready var player := $Player
 @onready var contro_info_panel = $UI/Control_Minimap/Contro_InfoPanel
+@onready var mobile_ui = $UI/MobileUI
 
 var parcel_position: Vector2i
 var _last_parcel_position: Vector2i
@@ -39,6 +40,20 @@ func _process(_dt):
 
 
 func _ready():
+	var sky = null
+
+	if OS.get_name() == "Android":
+		sky = load("res://assets/sky/sky_basic.tscn").instantiate()
+		mobile_ui.show()
+		var screen_size = DisplayServer.screen_get_size()
+		get_viewport().size = screen_size
+	else:
+		sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
+		sky.day_time = 14.9859
+		mobile_ui.hide()
+
+	add_child(sky)
+
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(74, -2)
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
@@ -53,6 +68,12 @@ func _ready():
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
 	
+
+	if OS.get_name() == "Android":
+		_on_panel_bottom_left_request_change_realm(
+			"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+		)
+
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	_scene_console_message.call_deferred(scene_id, level, timestamp, text)
@@ -133,7 +154,10 @@ func _toggle_ram_usage(visibility: bool):
 
 
 func _on_control_minimap_request_open_map():
-	control_menu.show_map()
+	if !control_menu.visible:
+		control_menu.show_map()
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		control_crosshair.hide()
 
 
 func _on_control_menu_jump_to(parcel: Vector2i):
@@ -198,3 +222,17 @@ func _on_timer_broadcast_position_timeout():
 	var res = comms.send_position(transform)
 	if res:
 		print("result sending position by comms ", res, " => ", transform)
+func _on_virtual_joystick_right_stick_position(stick_position: Vector2):
+	player.stick_position = stick_position
+
+
+func _on_virtual_joystick_right_is_hold(hold: bool):
+	player.stick_holded = hold
+
+
+func _on_touch_screen_button_pressed():
+	Input.action_press("ia_jump")
+
+
+func _on_touch_screen_button_released():
+	Input.action_release("ia_jump")

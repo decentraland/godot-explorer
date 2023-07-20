@@ -1,6 +1,7 @@
 # Godot 4+ specific ignores
 .godot/editor
 .godot/export_credentials.cfg
+android/
 
 # Godot-specific ignores
 .import/

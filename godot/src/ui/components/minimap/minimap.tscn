@@ -49,6 +49,7 @@ offset_right = -5.0
 offset_bottom = -6.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 color = Color(1, 0.121569, 0.631373, 1)
 
 [node name="Label_Parcel" type="Label" parent="Panel_Background"]

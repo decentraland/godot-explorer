@@ -22,6 +22,7 @@ offset_right = 0.0
 offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 1
 
 [node name="Control_Tooltip" type="Control" parent="."]
 anchors_preset = 0
@@ -118,7 +119,6 @@ theme_override_constants/outline_size = 0
 text = "Created by: Decentraland"
 horizontal_alignment = 1
 
-[connection signal="gui_input" from="Control_MapShader" to="." method="_on_control_map_shader_gui_input"]
 [connection signal="on_move" from="Control_MapShader" to="." method="_on_control_map_shader_on_move"]
 [connection signal="parcel_click" from="Control_MapShader" to="." method="_on_control_map_shader_parcel_click"]
 [connection signal="pressed" from="Control_JumpTo/Panel_JumpTo/Button_JumpTo" to="." method="_on_button_pressed"]
