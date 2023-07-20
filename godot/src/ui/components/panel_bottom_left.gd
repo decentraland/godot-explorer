@@ -8,17 +8,20 @@ signal preview_hot_reload(scene_type: String, scene_id: String)
 @onready var panel_console = $HFlowContainer/Panel_Console
 @onready var panel_realm = $HFlowContainer/Panel_Realm
 @onready var panel_preview = $HFlowContainer/Panel_Preview
+@onready var panel_chat = $HFlowContainer/Panel_Chat
 
 @onready var button_realm = $HFlowContainer/VFlowContainer_Tabs/Button_Realm
 @onready var button_console = $HFlowContainer/VFlowContainer_Tabs/Button_Console
 @onready var button_collapse = $HFlowContainer/VFlowContainer_Tabs/Button_Collapse
 @onready var button_preview = $HFlowContainer/VFlowContainer_Tabs/Button_Preview
+@onready var button_chat = $HFlowContainer/VFlowContainer_Tabs/Button_Chat
 
 @onready var h_slider_scene_radius = $HFlowContainer/Panel_Realm/HSlider_SceneRadius
 @onready var label_scene_radius_value = $HFlowContainer/Panel_Realm/Label_SceneRadiusValue
 @onready var option_button_realm = $HFlowContainer/Panel_Realm/OptionButton_Realm
 @onready var check_button_pause = $HFlowContainer/Panel_Realm/CheckButton_Pause
 @onready var rich_text_label_console = $HFlowContainer/Panel_Console/RichTextLabel_Console
+@onready var rich_text_label_chat = $HFlowContainer/Panel_Chat/RichTextLabel_Chat
 
 const SceneLogLevel := {
 	Log = 1,
@@ -34,13 +37,26 @@ func _ready():
 	tabs = {
 		"console": {"panel": panel_console, "button": button_console},
 		"realm": {"panel": panel_realm, "button": button_realm},
-		"preview": {"panel": panel_preview, "button": button_preview}
+		"preview": {"panel": panel_preview, "button": button_preview},
+		"chat": {"panel": panel_chat, "button": button_chat}
 	}
 	button_collapse.button_pressed = false
 	_on_button_collapse_pressed()
 
-	_on_button_tab_pressed("realm")
+	_on_button_tab_pressed("chat")
 	set_ws_state(false)
+
+	add_chat_message(
+		"[color=#141]Welcome to the Godot Client! Navigate to Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/color]"
+	)
+
+	Global.comms.chat_message.connect(self._on_chats_arrived)
+
+
+func _on_chats_arrived(chats: Array):
+	for chat in chats:
+		var text = "[b][color=#144]%s[/color] > [color=#111]%s[/color]" % [chat[0], chat[2]]
+		add_chat_message(text)
 
 
 func _on_button_tab_pressed(tab_id: String):
@@ -176,3 +192,12 @@ func _on_button_connect_preview_pressed():
 		. replace("http://", "ws://")
 		. replace("https://", "wss://")
 	)
+
+
+func add_chat_message(bb_text: String) -> void:
+	rich_text_label_chat.append_text(bb_text)
+	rich_text_label_chat.newline()
+
+
+func _on_button_clear_chat_pressed():
+	rich_text_label_chat.clear()

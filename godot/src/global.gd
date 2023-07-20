@@ -1,5 +1,24 @@
 extends Node
 
+signal config_changed
+
+## Global classes (singleton pattern)
+
+var scene_runner: SceneManager
+var realm: Realm
+var content_manager: ContentManager
+var comms: CommunicationManager
+var avatars: AvatarScene
+
+var config_dictionary: Dictionary = {
+	"gravity": 55.0,
+	"jump_velocity": 12.0,
+	"walk_velocity": 12.0,
+	"run_velocity": 20.0,
+	"process_tick_quota": 1,
+	"scene_radius": 1,
+}
+
 var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
 
 
@@ -11,16 +30,8 @@ func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
 	raycast_debugger.add_raycast(id, time, from, to)
 
 
-var config_dictionary: Dictionary = {
-	"gravity": 55.0,
-	"jump_velocity": 12.0,
-	"walk_velocity": 12.0,
-	"run_velocity": 20.0,
-	"process_tick_quota": 1,
-	"scene_radius": 1,
-}
-
-signal config_changed
+# TODO: move this to another class?
+# Configuration section
 
 
 func _load():

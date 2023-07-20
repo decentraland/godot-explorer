@@ -134,15 +134,10 @@ func _unhandled_input(event):
 				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 				control_crosshair.hide()
 
-			if line_edit_command.visible:
-				line_edit_command.hide()
+			line_edit_command.finish()
 
 		if event.pressed and event.keycode == KEY_ENTER:
-			if not line_edit_command.visible:
-				line_edit_command.text = ""
-				line_edit_command.show()
-
-			line_edit_command.grab_focus()
+			line_edit_command.start()
 
 
 func _toggle_ram_usage(visibility: bool):
@@ -202,25 +197,21 @@ func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	parcel_manager.reload_scene(scene_id)
 
 
-func _on_line_edit_command_text_submitted(new_text: String) -> void:
-	line_edit_command.hide()
-
-	var params := new_text.split(" ")
-	var command_str := params[0].to_lower()
-	if command_str == "/go" or command_str == "/goto" and params.size() > 1:
-		var comma_params = params[1].split(",")
-		if comma_params.size() > 1:
-			_on_control_menu_jump_to(Vector2i(int(comma_params[0]), int(comma_params[1])))
-		elif params.size() > 2:
-			_on_control_menu_jump_to(Vector2i(int(params[1]), int(params[2])))
+var last_transform_sent: Transform3D = Transform3D.IDENTITY
+var counter: int = 0
 
 
 func _on_timer_broadcast_position_timeout():
 	var comms = get_node("/root/comms")
 	var transform = player.get_player_position()
-	var res = comms.send_position(transform)
-	if res:
-		print("result sending position by comms ", res, " => ", transform)
+	if transform.is_equal_approx(last_transform_sent):
+		counter += 1
+		if counter < 10:
+			return
+	comms.send_position(transform)
+
+	last_transform_sent = transform
+	counter = 0
 
 
 func _on_virtual_joystick_right_stick_position(stick_position: Vector2):
@@ -237,3 +228,25 @@ func _on_touch_screen_button_pressed():
 
 func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
+
+
+func _on_line_edit_command_submit_message(message: String):
+	line_edit_command.finish()
+
+	if message.length() == 0:
+		return
+
+	var params := message.split(" ")
+	var command_str := params[0].to_lower()
+	if command_str.begins_with("/"):
+		if command_str == "/go" or command_str == "/goto" and params.size() > 1:
+			var comma_params = params[1].split(",")
+			if comma_params.size() > 1:
+				_on_control_menu_jump_to(Vector2i(int(comma_params[0]), int(comma_params[1])))
+			elif params.size() > 2:
+				_on_control_menu_jump_to(Vector2i(int(params[1]), int(params[2])))
+		else:
+			pass
+			# TODO: unknown command
+	else:
+		Global.comms.send_chat(message)

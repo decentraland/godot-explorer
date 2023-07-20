@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=18 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://assets/test_player/player.tscn" id="3_fr1df"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 [ext_resource type="PackedScene" uid="uid://cbtnbb03jb1u6" path="res://src/ui/components/info_panel/info_panel.tscn" id="6_3c8pn"]
 [ext_resource type="Texture2D" uid="uid://bkvmydfn5saxg" path="res://src/mobile/joystick/textures/joystick_tip.png" id="9_3v3rc"]
+[ext_resource type="PackedScene" uid="uid://c6a0rjrc13kel" path="res://src/ui/components/line_edit_command/line_edit_command.tscn" id="9_5u55i"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 
@@ -27,7 +28,7 @@ texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_pnqq3"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_blfvw"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
@@ -179,18 +180,17 @@ offset_bottom = 176.0
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_pnqq3")
+group = SubResource("ButtonGroup_blfvw")
 
 [node name="Timer" type="Timer" parent="UI"]
 autostart = true
 
-[node name="LineEdit_Command" type="LineEdit" parent="UI"]
-visible = false
+[node name="LineEdit_Command" parent="UI" instance=ExtResource("9_5u55i")]
 layout_mode = 0
 offset_left = 160.0
-offset_top = 8.0
-offset_right = 814.0
-offset_bottom = 35.0
+offset_top = 16.0
+offset_right = 889.0
+offset_bottom = 52.0
 
 [node name="MobileUI" type="CanvasLayer" parent="UI"]
 visible = false
@@ -230,6 +230,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Timer_BroadcastPosition" type="Timer" parent="."]
+wait_time = 0.1
 autostart = true
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
@@ -244,7 +245,7 @@ autostart = true
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
 [connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
 [connection signal="timeout" from="UI/Timer" to="." method="_on_timer_timeout"]
-[connection signal="text_submitted" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
+[connection signal="submit_message" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_submit_message"]
 [connection signal="gui_input" from="UI/MobileUI/Control" to="." method="_on_control_gui_input"]
 [connection signal="pressed" from="UI/MobileUI/Control/TouchScreenButton" to="." method="_on_touch_screen_button_pressed"]
 [connection signal="released" from="UI/MobileUI/Control/TouchScreenButton" to="." method="_on_touch_screen_button_released"]

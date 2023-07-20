@@ -54,6 +54,8 @@ pub struct WebSocketRoom {
     peer_identities: HashMap<u32, H160>,
 
     avatars: Gd<AvatarScene>,
+
+    chats: Vec<(H160, rfc4::Chat)>,
 }
 
 impl WebSocketRoom {
@@ -85,7 +87,12 @@ impl WebSocketRoom {
             from_alias: 0,
             peer_identities: HashMap::new(),
             avatars,
+            chats: Vec::new(),
         }
+    }
+
+    pub fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
+        std::mem::take(&mut self.chats)
     }
 
     pub fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
@@ -349,14 +356,9 @@ impl WebSocketRoom {
                                     continue;
                                 };
 
-                                let Some(address) = self.peer_identities.get(&update.from_alias).cloned() else {
+                                let Some(address) = self.peer_identities.get(&update.from_alias) else {
                                     continue;
                                 };
-
-                                godot_print!(
-                                    "comms > received from {address} PeerUpdateMessage {:?}",
-                                    message
-                                );
 
                                 match message {
                                     rfc4::packet::Message::Position(position) => {
@@ -364,19 +366,16 @@ impl WebSocketRoom {
                                             .bind_mut()
                                             .update_transform(update.from_alias, &position);
                                     }
-                                    _ => {
-                                        godot_print!(
-                                            "comms > received from {address} PeerUpdateMessage {:?}",
-                                            message
-                                        );
-                                    } // rfc4::packet::Message::ProfileVersion(
-                                      //     _announce_profile_version,
-                                      // ) => {}
-                                      // rfc4::packet::Message::ProfileRequest(_profile_request) => {}
-                                      // rfc4::packet::Message::ProfileResponse(_profile_response) => {}
-                                      // rfc4::packet::Message::Chat(_chat) => {}
-                                      // rfc4::packet::Message::Scene(_scene) => {}
-                                      // rfc4::packet::Message::Voice(_voice) => {}
+                                    rfc4::packet::Message::Chat(chat) => {
+                                        self.chats.push((*address, chat));
+                                    }
+                                    rfc4::packet::Message::ProfileVersion(
+                                        _announce_profile_version,
+                                    ) => {}
+                                    rfc4::packet::Message::ProfileRequest(_profile_request) => {}
+                                    rfc4::packet::Message::ProfileResponse(_profile_response) => {}
+                                    rfc4::packet::Message::Scene(_scene) => {}
+                                    rfc4::packet::Message::Voice(_voice) => {}
                                 }
                             }
                             ws_packet::Message::PeerKicked(reason) => {
