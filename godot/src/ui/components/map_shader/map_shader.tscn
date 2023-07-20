@@ -26,5 +26,6 @@ material = SubResource("ShaderMaterial_fnml8")
 layout_mode = 1
 offset_right = 200.0
 offset_bottom = 200.0
+mouse_filter = 1
 
 [connection signal="gui_input" from="ColorRect_Map" to="." method="_on_color_rect_map_gui_input"]

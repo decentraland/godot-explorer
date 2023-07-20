@@ -11,6 +11,7 @@ extends CharacterBody3D
 
 var first_person: bool = true
 var _mouse_position = Vector2(0.0, 0.0)
+var _touch_position = Vector2(0.0, 0.0)
 var captured: bool = true
 
 var is_on_air: bool
@@ -21,7 +22,6 @@ var is_on_air: bool
 
 func _ready():
 	camera.current = true
-
 	if is_on_floor():
 		is_on_air = false
 	particles_move.emitting = false
@@ -42,7 +42,26 @@ func _ready():
 	floor_snap_length = 0.2
 
 
+@onready var is_mobile = OS.get_name() == "Android"
+
+
 func _input(event):
+	# Receives touchscreen motion
+	if is_mobile:
+		if event is InputEventScreenDrag:
+			_touch_position = event.relative
+			rotate_y(deg_to_rad(-_touch_position.x) * horizontal_sens)
+			visuals.rotate_y(deg_to_rad(_touch_position.x) * horizontal_sens)
+			mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * vertical_sens)
+			if first_person:
+				mount_camera.rotation.x = clamp(
+					mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90)
+				)
+			else:
+				mount_camera.rotation.x = clamp(
+					mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45)
+				)
+
 	# Receives mouse motion
 	if event is InputEventMouseMotion && Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 		_mouse_position = event.relative
