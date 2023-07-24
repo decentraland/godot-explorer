@@ -2,8 +2,8 @@ extends Node
 
 signal config_changed
 
-#@onready var is_mobile = OS.get_name() == "Android"
-@onready var is_mobile = true
+@onready var is_mobile = OS.get_name() == "Android"
+#@onready var is_mobile = true
 
 ## Global classes (singleton pattern)
 
@@ -29,8 +29,8 @@ func _ready():
 	add_child(raycast_debugger)
 
 
-func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
 	# TODO: enable raycast debugger
+func add_raycast(_id: int, _time: float, _from: Vector3, _to: Vector3) -> void:
 	pass
 	#raycast_debugger.add_raycast(id, time, from, to)
 

@@ -414,7 +414,8 @@ impl SceneManager {
     fn get_current_mouse_entity(&mut self) -> Option<GodotDclRaycastResult> {
         const RAY_LENGTH: f32 = 100.0;
 
-        let mouse_position = self.get_viewport()?.get_mouse_position();
+        let viewport_size = self.get_viewport()?.get_visible_rect();
+        let mouse_position = Vector2::new(viewport_size.size.x * 0.5, viewport_size.size.y * 0.5);
         let raycast_from = self.camera_node.project_ray_origin(mouse_position);
         let raycast_to =
             raycast_from + self.camera_node.project_ray_normal(mouse_position) * RAY_LENGTH;

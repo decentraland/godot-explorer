@@ -3,9 +3,8 @@ extends Node
 var scene_runner: SceneManager = null
 var realm: Realm = null
 var parcel_manager: ParcelManager = null
-var pointer_tooltip_scene = preload("res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn")
 
-@onready var control_crosshair = $UI/Control_Crosshair
+@onready var label_crosshair = $UI/Label_Crosshair
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
 
 @onready var panel_chat = $UI/VBoxContainer_Chat/MarginContainer/Panel_Chat
@@ -17,6 +16,7 @@ var pointer_tooltip_scene = preload("res://src/ui/components/pointer_tooltip/poi
 @onready var player := $Player
 @onready var mobile_ui = $UI/MobileUI
 @onready var v_box_container_chat = $UI/VBoxContainer_Chat
+@onready var button_jump = $UI/Button_Jump
 
 var parcel_position: Vector2i
 var _last_parcel_position: Vector2i
@@ -32,11 +32,11 @@ func _process(_dt):
 	if _last_parcel_position != parcel_position:
 		parcel_manager.update_position(parcel_position)
 		_last_parcel_position = parcel_position
-
-		var scene_data = parcel_manager.get_current_scene_data()
-		var title = scene_data.get("entity", {}).get("metadata", {}).get("display", {}).get(
-			"title", "No title"
-		)
+#
+#		var scene_data = parcel_manager.get_current_scene_data()
+#		var title = scene_data.get("entity", {}).get("metadata", {}).get("display", {}).get(
+#			"title", "No title"
+#		)
 
 
 func _ready():
@@ -48,7 +48,7 @@ func _ready():
 		mobile_ui.show()
 		var screen_size = DisplayServer.screen_get_size()
 		get_viewport().size = screen_size
-		control_crosshair.show()
+		label_crosshair.show()
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 	else:
@@ -56,6 +56,7 @@ func _ready():
 		sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
 		sky.day_time = 14.9859
 		mobile_ui.hide()
+		button_jump.hide()
 
 	add_child(sky)
 
@@ -95,12 +96,11 @@ func _on_pointer_tooltip_changed():
 func change_tooltips():
 	var tooltips = scene_runner.get_tooltips()
 
-	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		if not tooltips.is_empty():
-			control_pointer_tooltip.set_pointer_data(tooltips)
-			control_pointer_tooltip.show()
-		else:
-			control_pointer_tooltip.hide()
+	if not tooltips.is_empty():
+		control_pointer_tooltip.set_pointer_data(tooltips)
+		control_pointer_tooltip.show()
+	else:
+		control_pointer_tooltip.hide()
 
 
 func _on_check_button_toggled(button_pressed):
@@ -112,44 +112,10 @@ func _on_ui_gui_input(event):
 		if event is InputEventMouseButton and event.pressed:
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-				control_crosshair.show()
-
-
-@onready var texture_rect = $UI/MobileUI/Control/TextureRect
-
-
-func _is_point_inside_joystick_area(point: Vector2) -> bool:
-	var x: bool = (
-		point.x >= texture_rect.global_position.x
-		and (
-			point.x
-			<= (
-				texture_rect.global_position.x
-				+ (
-					texture_rect.size.x
-					* texture_rect.get_global_transform_with_canvas().get_scale().x
-				)
-			)
-		)
-	)
-	var y: bool = (
-		point.y >= texture_rect.global_position.y
-		and (
-			point.y
-			<= (
-				texture_rect.global_position.y
-				+ (
-					texture_rect.size.y
-					* texture_rect.get_global_transform_with_canvas().get_scale().y
-				)
-			)
-		)
-	)
-	return x and y
+				label_crosshair.show()
 
 
 @onready var line_edit_command = $UI/LineEdit_Command
-
 
 func _unhandled_input(event):
 	if not Global.is_mobile:
@@ -158,7 +124,7 @@ func _unhandled_input(event):
 				if not control_menu.visible:
 					control_menu.show_last()
 					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-					control_crosshair.hide()
+					label_crosshair.hide()
 
 			if event.pressed and event.keycode == KEY_M:
 				if control_menu.visible:
@@ -166,12 +132,12 @@ func _unhandled_input(event):
 				else:
 					control_menu.show_map()
 					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-					control_crosshair.hide()
+					label_crosshair.hide()
 
 			if event.pressed and event.keycode == KEY_ESCAPE:
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-					control_crosshair.hide()
+					label_crosshair.hide()
 
 				line_edit_command.finish()
 
@@ -190,7 +156,7 @@ func _on_control_minimap_request_open_map():
 	if !control_menu.visible:
 		control_menu.show_map()
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-		control_crosshair.hide()
+		label_crosshair.hide()
 
 
 func _on_control_menu_jump_to(parcel: Vector2i):
@@ -282,7 +248,7 @@ func _on_line_edit_command_submit_message(message: String):
 		panel_chat._on_chats_arrived([["Godot User", 0, message]])
 
 
-func _on_control_menu_preview_hot_reload(scene_type, scene_id):
+func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
 	pass  # Replace with function body.
 
 
@@ -297,6 +263,6 @@ func _on_control_menu_request_change_scene_radius(new_value):
 func _on_control_menu_request_pause_scenes(enabled):
 	scene_runner.set_pause(enabled)
 
-
-func _on_button_pressed():
-	Input.action_press("ia_jump")
+func _on_button_jump_gui_input(event):
+	if event is InputEventScreenTouch:	
+		Input.action_press("ia_jump")

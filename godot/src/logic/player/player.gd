@@ -132,18 +132,18 @@ const JUMP_VELOCITY_0 := 12.0
 func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-	var floor: bool = is_on_floor()
+	var _floor: bool = is_on_floor()
 
-	if floor:
-		if not floor == is_on_air:
+	if _floor:
+		if not _floor == is_on_air:
 #			particles_jump.emitting = true
-			is_on_air = floor
+			is_on_air = _floor
 	else:
-		if not floor == is_on_air:
+		if not _floor == is_on_air:
 #			particles_land.emitting = true
-			is_on_air = floor
+			is_on_air = _floor
 
-	if not floor:
+	if not _floor:
 #		particles_move.emitting = false
 		if Input.is_action_pressed("double_gravity"):
 			velocity.y -= GRAVITY * delta * .5
