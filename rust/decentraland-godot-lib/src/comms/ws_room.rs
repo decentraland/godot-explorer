@@ -1,14 +1,18 @@
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use crate::{
     avatars::avatar_scene::AvatarScene,
-    comms::wallet::AsH160,
+    comms::wallet::{self, AsH160},
     dcl::components::proto_components::kernel::comms::{
         rfc4,
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
     },
 };
-use ethers::{signers::WalletError, types::H160};
+use ethers::types::{Signature, H160};
 use godot::{
     engine::{TlsOptions, WebSocketPeer},
     prelude::*,
@@ -16,8 +20,8 @@ use godot::{
 use prost::Message;
 
 use super::{
-    profile::UserProfile,
-    wallet::{self, Wallet},
+    player_identity::PlayerIdentity,
+    profile::{SerializedProfile, UserProfile},
 };
 
 #[derive(Clone)]
@@ -25,44 +29,53 @@ enum WsRoomState {
     Connecting,
     Connected,
     IdentMessageSent,
-    ChallengeMessageWaitingPromise,
     ChallengeMessageSent,
     WelcomeMessageReceived,
 }
 
-#[derive(Default)]
-struct InitialSignState {
-    signed: bool,
-    challenge_to_sign: String,
+struct Peer {
+    address: H160,
+    profile: Option<UserProfile>,
+    announced_version: Option<u32>,
+}
 
-    signing_promise: Option<poll_promise::Promise<Result<ethers::types::Signature, WalletError>>>,
-    signature: Option<ethers::types::Signature>,
+impl Peer {
+    pub fn new(address: H160) -> Self {
+        Self {
+            address,
+            profile: None,
+            announced_version: None,
+        }
+    }
 }
 
 pub struct WebSocketRoom {
     state: WsRoomState,
+
+    // Connection
+    ws_url: GodotString,
+    last_try_to_connect: Instant,
     ws_peer: Gd<WebSocketPeer>,
     tls_client: Gd<TlsOptions>,
+    signature: Option<Signature>,
 
-    url: GodotString,
-    last_try_time: Instant,
-
-    wallet: Arc<Wallet>,
-    signing_state: InitialSignState,
-
+    // Self alias
     from_alias: u32,
-    peer_identities: HashMap<u32, H160>,
+    player_identity: Arc<PlayerIdentity>,
+    peer_identities: HashMap<u32, Peer>,
 
+    // Trade-off with other peers
     avatars: Gd<AvatarScene>,
-
     chats: Vec<(H160, rfc4::Chat)>,
+    last_profile_response_sent: Instant,
+    last_profile_request_sent: Instant,
 }
 
 impl WebSocketRoom {
     pub fn new(
         ws_url: &str,
         tls_client: Gd<TlsOptions>,
-        wallet: Arc<Wallet>,
+        player_identity: Arc<PlayerIdentity>,
         avatars: Gd<AvatarScene>,
     ) -> Self {
         let lower_url = ws_url.to_lowercase();
@@ -76,18 +89,22 @@ impl WebSocketRoom {
             ws_url.to_string()
         };
 
+        let old_time = Instant::now() - Duration::from_secs(1000);
+
         Self {
             ws_peer: WebSocketPeer::new(),
-            url: GodotString::from(ws_url),
-            last_try_time: Instant::now(),
-            tls_client,
-            wallet,
-            signing_state: InitialSignState::default(),
+            ws_url: GodotString::from(ws_url),
             state: WsRoomState::Connecting,
+            tls_client,
+            player_identity,
             from_alias: 0,
             peer_identities: HashMap::new(),
             avatars,
             chats: Vec::new(),
+            signature: None,
+            last_profile_response_sent: old_time,
+            last_profile_request_sent: old_time,
+            last_try_to_connect: old_time,
         }
     }
 
@@ -145,7 +162,7 @@ impl WebSocketRoom {
         match self.state.clone() {
             WsRoomState::Connecting => match ws_state {
                 godot::engine::web_socket_peer::State::STATE_CLOSED => {
-                    if (Instant::now() - self.last_try_time).as_secs() > 1 {
+                    if (Instant::now() - self.last_try_to_connect).as_secs() > 1 {
                         // TODO: see if the tls client is really required for now
                         let _tls_client = self.tls_client.share();
 
@@ -156,11 +173,12 @@ impl WebSocketRoom {
                         };
 
                         peer.set("supported_protocols".into(), ws_protocols.to_variant());
-                        peer.call("connect_to_url".into(), &[self.url.clone().to_variant()]);
+                        peer.call("connect_to_url".into(), &[self.ws_url.clone().to_variant()]);
 
-                        self.last_try_time = Instant::now();
+                        self.last_try_to_connect = Instant::now();
                         self.peer_identities.clear();
                         self.from_alias = 0;
+                        self.signature = None;
                     }
                 }
                 godot::engine::web_socket_peer::State::STATE_OPEN => {
@@ -174,7 +192,10 @@ impl WebSocketRoom {
                         WsPacket {
                             message: Some(ws_packet::Message::PeerIdentification(
                                 WsIdentification {
-                                    address: format!("{:#x}", self.wallet.address()),
+                                    address: format!(
+                                        "{:#x}",
+                                        self.player_identity.wallet().address()
+                                    ),
                                 },
                             )),
                         },
@@ -194,23 +215,41 @@ impl WebSocketRoom {
                             ws_packet::Message::ChallengeMessage(challenge_msg) => {
                                 godot_print!("comms > peer msg {:?}", challenge_msg);
 
-                                self.signing_state.challenge_to_sign =
-                                    challenge_msg.challenge_to_sign.clone();
-
-                                let wallet = self.wallet.clone();
                                 let challenge_to_sign = challenge_msg.challenge_to_sign.clone();
 
-                                self.signing_state.signing_promise =
-                                    Some(poll_promise::Promise::spawn_thread(
-                                        "sign_challenge_message",
-                                        move || {
-                                            futures_lite::future::block_on(
-                                                wallet.sign_message(challenge_to_sign.as_bytes()),
-                                            )
-                                        },
-                                    ));
+                                // TODO: this should be async, now it's a local wallet and it's blocking
+                                let sign = futures_lite::future::block_on(
+                                    self.player_identity
+                                        .wallet()
+                                        .sign_message(challenge_to_sign.as_bytes()),
+                                );
 
-                                self.state = WsRoomState::ChallengeMessageWaitingPromise;
+                                if let Ok(sign) = sign {
+                                    self.signature = Some(sign);
+
+                                    let chain = wallet::SimpleAuthChain::new(
+                                        self.player_identity.wallet().address(),
+                                        challenge_to_sign.clone(),
+                                        *self.signature.as_ref().unwrap(),
+                                    );
+                                    let auth_chain_json = serde_json::to_string(&chain).unwrap();
+
+                                    self.send(
+                                        WsPacket {
+                                            message: Some(
+                                                ws_packet::Message::SignedChallengeForServer(
+                                                    WsSignedChallenge { auth_chain_json },
+                                                ),
+                                            ),
+                                        },
+                                        false,
+                                    );
+
+                                    self.state = WsRoomState::ChallengeMessageSent;
+                                } else {
+                                    peer.close();
+                                    self.state = WsRoomState::Connecting;
+                                }
                             }
                             _ => {
                                 godot_print!(
@@ -218,38 +257,6 @@ impl WebSocketRoom {
                                     packet_length
                                 );
                             }
-                        }
-                    }
-                }
-                _ => {
-                    self.state = WsRoomState::Connecting;
-                }
-            },
-            WsRoomState::ChallengeMessageWaitingPromise => match ws_state {
-                godot::engine::web_socket_peer::State::STATE_OPEN => {
-                    if !self.signing_state.signed && self.signing_state.signing_promise.is_some() {
-                        let promise = self.signing_state.signing_promise.as_ref().unwrap();
-                        if let Some(Ok(signature)) = promise.ready() {
-                            self.signing_state.signed = true;
-                            self.signing_state.signature = Some(*signature);
-
-                            let chain = wallet::SimpleAuthChain::new(
-                                self.wallet.address(),
-                                self.signing_state.challenge_to_sign.clone(),
-                                *signature,
-                            );
-                            let auth_chain_json = serde_json::to_string(&chain).unwrap();
-
-                            self.send(
-                                WsPacket {
-                                    message: Some(ws_packet::Message::SignedChallengeForServer(
-                                        WsSignedChallenge { auth_chain_json },
-                                    )),
-                                },
-                                false,
-                            );
-
-                            self.state = WsRoomState::ChallengeMessageSent;
                         }
                     }
                 }
@@ -268,24 +275,9 @@ impl WebSocketRoom {
                                 self.peer_identities = HashMap::from_iter(
                                     welcome_msg.peer_identities.into_iter().flat_map(
                                         |(alias, address)| {
-                                            address.as_h160().map(|h160| (alias, h160))
+                                            address.as_h160().map(|h160| (alias, Peer::new(h160)))
                                         },
                                     ),
-                                );
-
-                                let mut profile = UserProfile::default();
-                                profile.content.user_id =
-                                    Some(format!("{:#x}", self.wallet.address()));
-
-                                self.send_rfc4(
-                                    rfc4::Packet {
-                                        message: Some(rfc4::packet::Message::ProfileVersion(
-                                            rfc4::AnnounceProfileVersion {
-                                                profile_version: profile.version,
-                                            },
-                                        )),
-                                    },
-                                    false,
                                 );
 
                                 self.send_rfc4(
@@ -293,10 +285,14 @@ impl WebSocketRoom {
                                         message: Some(rfc4::packet::Message::ProfileResponse(
                                             rfc4::ProfileResponse {
                                                 serialized_profile: serde_json::to_string(
-                                                    &profile.content,
+                                                    &self.player_identity.profile().content,
                                                 )
                                                 .unwrap(),
-                                                base_url: profile.base_url.clone(),
+                                                base_url: self
+                                                    .player_identity
+                                                    .profile()
+                                                    .base_url
+                                                    .clone(),
                                             },
                                         )),
                                     },
@@ -323,67 +319,7 @@ impl WebSocketRoom {
             },
             WsRoomState::WelcomeMessageReceived => match ws_state {
                 godot::engine::web_socket_peer::State::STATE_OPEN => {
-                    while let Some((_packet_length, message)) = get_next_packet(peer.share()) {
-                        match message {
-                            ws_packet::Message::ChallengeMessage(_)
-                            | ws_packet::Message::PeerIdentification(_)
-                            | ws_packet::Message::SignedChallengeForServer(_)
-                            | ws_packet::Message::WelcomeMessage(_) => {
-                                // warn!("unexpected bau message: {message:?}");
-                                godot_print!("comms > unexpected bau message {:?}", message);
-                            }
-                            ws_packet::Message::PeerJoinMessage(peer) => {
-                                godot_print!("comms > received PeerJoinMessage {:?}", peer);
-                                if let Some(h160) = peer.address.as_h160() {
-                                    self.peer_identities.insert(peer.alias, h160);
-                                    self.avatars.bind_mut().add_avatar(peer.alias);
-                                } else {
-                                }
-                            }
-                            ws_packet::Message::PeerLeaveMessage(peer) => {
-                                godot_print!("comms > received PeerLeaveMessage {:?}", peer);
-                                self.peer_identities.remove(&peer.alias);
-                                self.avatars.bind_mut().remove_avatar(peer.alias);
-                            }
-                            ws_packet::Message::PeerUpdateMessage(update) => {
-                                let packet = match rfc4::Packet::decode(update.body.as_slice()) {
-                                    Ok(packet) => packet,
-                                    Err(_e) => {
-                                        continue;
-                                    }
-                                };
-                                let Some(message) = packet.message else {
-                                    continue;
-                                };
-
-                                let Some(address) = self.peer_identities.get(&update.from_alias) else {
-                                    continue;
-                                };
-
-                                match message {
-                                    rfc4::packet::Message::Position(position) => {
-                                        self.avatars
-                                            .bind_mut()
-                                            .update_transform(update.from_alias, &position);
-                                    }
-                                    rfc4::packet::Message::Chat(chat) => {
-                                        self.chats.push((*address, chat));
-                                    }
-                                    rfc4::packet::Message::ProfileVersion(
-                                        _announce_profile_version,
-                                    ) => {}
-                                    rfc4::packet::Message::ProfileRequest(_profile_request) => {}
-                                    rfc4::packet::Message::ProfileResponse(_profile_response) => {}
-                                    rfc4::packet::Message::Scene(_scene) => {}
-                                    rfc4::packet::Message::Voice(_voice) => {}
-                                }
-                            }
-                            ws_packet::Message::PeerKicked(reason) => {
-                                godot_print!("comms > received PeerKicked {:?}", reason);
-                                // TODO: clean?
-                            }
-                        }
-                    }
+                    self._handle_messages();
                 }
                 _ => {
                     self.state = WsRoomState::Connecting;
@@ -401,6 +337,167 @@ impl WebSocketRoom {
                 peer.close();
             }
             _ => {}
+        }
+    }
+
+    fn _handle_messages(&mut self) {
+        while let Some((_packet_length, message)) = get_next_packet(self.ws_peer.share()) {
+            match message {
+                ws_packet::Message::ChallengeMessage(_)
+                | ws_packet::Message::PeerIdentification(_)
+                | ws_packet::Message::SignedChallengeForServer(_)
+                | ws_packet::Message::WelcomeMessage(_) => {
+                    // TODO: invalid message when it's already connected
+                }
+                ws_packet::Message::PeerJoinMessage(peer) => {
+                    if let Some(h160) = peer.address.as_h160() {
+                        self.peer_identities.insert(peer.alias, Peer::new(h160));
+                        self.avatars.bind_mut().add_avatar(peer.alias);
+                        // TODO: message XXX joined
+                    } else {
+                        // TODO: Invalid address
+                    }
+                }
+                ws_packet::Message::PeerLeaveMessage(peer) => {
+                    self.peer_identities.remove(&peer.alias);
+                    self.avatars.bind_mut().remove_avatar(peer.alias);
+                    // TODO: message XXX left
+                }
+                ws_packet::Message::PeerUpdateMessage(update) => {
+                    let packet = match rfc4::Packet::decode(update.body.as_slice()) {
+                        Ok(packet) => packet,
+                        Err(_e) => {
+                            continue;
+                        }
+                    };
+                    let Some(message) = packet.message else {
+                        continue;
+                    };
+
+                    let Some(peer) = self.peer_identities.get(&update.from_alias) else {
+                        continue;
+                    };
+
+                    match message {
+                        rfc4::packet::Message::Position(position) => {
+                            self.avatars
+                                .bind_mut()
+                                .update_transform(update.from_alias, &position);
+                        }
+                        rfc4::packet::Message::Chat(chat) => {
+                            self.chats.push((peer.address, chat));
+                        }
+                        rfc4::packet::Message::ProfileVersion(_announce_profile_version) => {}
+                        rfc4::packet::Message::ProfileRequest(profile_request) => {
+                            if self.last_profile_response_sent.elapsed().as_secs_f32() > 10.0 {
+                                continue;
+                            }
+
+                            if let Some(addr) = profile_request.address.as_h160() {
+                                if addr == self.player_identity.wallet().address() {
+                                    self.last_profile_response_sent = Instant::now();
+
+                                    self.send_rfc4(
+                                        rfc4::Packet {
+                                            message: Some(rfc4::packet::Message::ProfileResponse(
+                                                rfc4::ProfileResponse {
+                                                    serialized_profile: serde_json::to_string(
+                                                        &self.player_identity.profile().content,
+                                                    )
+                                                    .unwrap(),
+                                                    base_url: self
+                                                        .player_identity
+                                                        .profile()
+                                                        .base_url
+                                                        .clone(),
+                                                },
+                                            )),
+                                        },
+                                        false,
+                                    );
+                                }
+                            }
+                        }
+                        rfc4::packet::Message::ProfileResponse(profile_response) => {
+                            let serialized_profile: SerializedProfile =
+                                match serde_json::from_str(&profile_response.serialized_profile) {
+                                    Ok(p) => p,
+                                    Err(_e) => {
+                                        continue;
+                                    }
+                                };
+
+                            let incoming_version = serialized_profile.version as u32;
+                            let current_version = if let Some(profile) = peer.profile.as_ref() {
+                                profile.version
+                            } else {
+                                0
+                            };
+
+                            if incoming_version < current_version {
+                                continue;
+                            }
+
+                            self.peer_identities
+                                .get_mut(&update.from_alias)
+                                .unwrap()
+                                .profile = Some(UserProfile {
+                                version: incoming_version,
+                                content: serialized_profile,
+                                base_url: profile_response.base_url,
+                            });
+                        }
+                        rfc4::packet::Message::Scene(_scene) => {}
+                        rfc4::packet::Message::Voice(_voice) => {}
+                    }
+                }
+                ws_packet::Message::PeerKicked(reason) => {
+                    godot_print!("comms > received PeerKicked {:?}", reason);
+                    // TODO: message announcing the kick
+                    self.ws_peer.close();
+                    self.state = WsRoomState::Connecting;
+                }
+            }
+        }
+
+        if self.last_profile_request_sent.elapsed().as_secs_f32() > 10.0 {
+            self.last_profile_request_sent = Instant::now();
+
+            let to_request = self
+                .peer_identities
+                .iter()
+                .filter_map(|(_, peer)| {
+                    if peer.profile.is_some() {
+                        let announced_version = peer.announced_version.unwrap_or(0);
+                        let current_version = peer.profile.as_ref().unwrap().version;
+
+                        if announced_version > current_version {
+                            None
+                        } else {
+                            Some((peer.address.to_string(), announced_version))
+                        }
+                    } else {
+                        Some((
+                            peer.address.to_string(),
+                            peer.announced_version.unwrap_or(0),
+                        ))
+                    }
+                })
+                .collect::<Vec<(String, u32)>>();
+
+            for (address, profile_version) in to_request {
+                self.send_rfc4(
+                    rfc4::Packet {
+                        message: Some(rfc4::packet::Message::ProfileRequest(
+                            rfc4::ProfileRequest {
+                                address,
+                                profile_version,
+                            },
+                        )),
+                    },
+                    false,
+                );
+            }
         }
     }
 }

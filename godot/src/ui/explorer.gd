@@ -8,14 +8,15 @@ var pointer_tooltip_scene = preload("res://src/ui/components/pointer_tooltip/poi
 @onready var control_crosshair = $UI/Control_Crosshair
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
 
+@onready var panel_chat = $UI/VBoxContainer_Chat/MarginContainer/Panel_Chat
+
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
-@onready var panel_bottom_left = $UI/Panel_BottomLeft
 @onready var player := $Player
-@onready var contro_info_panel = $UI/Control_Minimap/Contro_InfoPanel
 @onready var mobile_ui = $UI/MobileUI
+@onready var v_box_container_chat = $UI/VBoxContainer_Chat
 
 var parcel_position: Vector2i
 var _last_parcel_position: Vector2i
@@ -36,18 +37,22 @@ func _process(_dt):
 		var title = scene_data.get("entity", {}).get("metadata", {}).get("display", {}).get(
 			"title", "No title"
 		)
-		contro_info_panel.set_parcel_scene_name(title)
 
 
 func _ready():
 	var sky = null
 
-	if OS.get_name() == "Android":
+	if Global.is_mobile:
+		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_BEGIN
 		sky = load("res://assets/sky/sky_basic.tscn").instantiate()
 		mobile_ui.show()
 		var screen_size = DisplayServer.screen_get_size()
 		get_viewport().size = screen_size
+		control_crosshair.show()
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
 	else:
+		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_END
 		sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
 		sky.day_time = 14.9859
 		mobile_ui.hide()
@@ -68,10 +73,9 @@ func _ready():
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
 
-	if OS.get_name() == "Android":
-		_on_panel_bottom_left_request_change_realm(
-			"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
-		)
+	_on_control_menu_request_change_realm(
+		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+	)
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -81,7 +85,7 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	var title: String = scene_runner.get_scene_title(scene_id)
 	title += str(scene_runner.get_scene_base_parcel(scene_id))
-	self.panel_bottom_left._on_console_add(title, level, timestamp, text)
+	control_menu.control_advance_settings._on_console_add(title, level, timestamp, text)
 
 
 func _on_pointer_tooltip_changed():
@@ -104,40 +108,75 @@ func _on_check_button_toggled(button_pressed):
 
 
 func _on_ui_gui_input(event):
-	if event is InputEventMouseButton and event.pressed:
-		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-			control_crosshair.show()
+	if not Global.is_mobile:
+		if event is InputEventMouseButton and event.pressed:
+			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+				control_crosshair.show()
+
+
+@onready var texture_rect = $UI/MobileUI/Control/TextureRect
+
+
+func _is_point_inside_joystick_area(point: Vector2) -> bool:
+	var x: bool = (
+		point.x >= texture_rect.global_position.x
+		and (
+			point.x
+			<= (
+				texture_rect.global_position.x
+				+ (
+					texture_rect.size.x
+					* texture_rect.get_global_transform_with_canvas().get_scale().x
+				)
+			)
+		)
+	)
+	var y: bool = (
+		point.y >= texture_rect.global_position.y
+		and (
+			point.y
+			<= (
+				texture_rect.global_position.y
+				+ (
+					texture_rect.size.y
+					* texture_rect.get_global_transform_with_canvas().get_scale().y
+				)
+			)
+		)
+	)
+	return x and y
 
 
 @onready var line_edit_command = $UI/LineEdit_Command
 
 
 func _unhandled_input(event):
-	if event is InputEventKey:
-		if event.pressed and event.keycode == KEY_TAB:
-			if not control_menu.visible:
-				control_menu.show_last()
-				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-				control_crosshair.hide()
+	if not Global.is_mobile:
+		if event is InputEventKey:
+			if event.pressed and event.keycode == KEY_TAB:
+				if not control_menu.visible:
+					control_menu.show_last()
+					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+					control_crosshair.hide()
 
-		if event.pressed and event.keycode == KEY_M:
-			if control_menu.visible:
-				pass
-			else:
-				control_menu.show_map()
-				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-				control_crosshair.hide()
+			if event.pressed and event.keycode == KEY_M:
+				if control_menu.visible:
+					pass
+				else:
+					control_menu.show_map()
+					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+					control_crosshair.hide()
 
-		if event.pressed and event.keycode == KEY_ESCAPE:
-			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-				control_crosshair.hide()
+			if event.pressed and event.keycode == KEY_ESCAPE:
+				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+					control_crosshair.hide()
 
-			line_edit_command.finish()
+				line_edit_command.finish()
 
-		if event.pressed and event.keycode == KEY_ENTER:
-			line_edit_command.start()
+			if event.pressed and event.keycode == KEY_ENTER:
+				line_edit_command.start()
 
 
 func _toggle_ram_usage(visibility: bool):
@@ -164,18 +203,6 @@ func _on_control_menu_hide_menu():
 	control_menu.control_map.clear()
 
 
-func _on_panel_bottom_left_request_change_realm(realm_string):
-	realm.set_realm(realm_string)
-
-
-func _on_panel_bottom_left_request_change_scene_radius(new_value):
-	parcel_manager.set_scene_radius(new_value)
-
-
-func _on_panel_bottom_left_request_pause_scenes(enabled):
-	scene_runner.set_pause(enabled)
-
-
 func _on_timer_timeout():
 	label_ram.set_text("RAM Usage: " + str(OS.get_static_memory_usage() / 1024.0 / 1024.0) + " MB")
 	label_fps.set_text(str(Engine.get_frames_per_second()) + " FPS")
@@ -197,20 +224,22 @@ func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	parcel_manager.reload_scene(scene_id)
 
 
-var last_transform_sent: Transform3D = Transform3D.IDENTITY
+var last_position_sent: Vector3 = Vector3.ZERO
 var counter: int = 0
 
 
 func _on_timer_broadcast_position_timeout():
-	var comms = get_node("/root/comms")
-	var transform = player.get_player_position()
-	if transform.is_equal_approx(last_transform_sent):
+	var transform: Transform3D = player.avatar.global_transform
+	var position = transform.origin
+	var rotation = transform.basis.get_rotation_quaternion()
+
+	if last_position_sent.is_equal_approx(position):
 		counter += 1
 		if counter < 10:
 			return
-	comms.send_position(transform)
 
-	last_transform_sent = transform
+	Global.comms.broadcast_position_and_rotation(position, rotation)
+	last_position_sent = position
 	counter = 0
 
 
@@ -250,3 +279,24 @@ func _on_line_edit_command_submit_message(message: String):
 			# TODO: unknown command
 	else:
 		Global.comms.send_chat(message)
+		panel_chat._on_chats_arrived([["Godot User", 0, message]])
+
+
+func _on_control_menu_preview_hot_reload(scene_type, scene_id):
+	pass  # Replace with function body.
+
+
+func _on_control_menu_request_change_realm(realm_string):
+	realm.set_realm(realm_string)
+
+
+func _on_control_menu_request_change_scene_radius(new_value):
+	parcel_manager.set_scene_radius(new_value)
+
+
+func _on_control_menu_request_pause_scenes(enabled):
+	scene_runner.set_pause(enabled)
+
+
+func _on_button_pressed():
+	Input.action_press("ia_jump")

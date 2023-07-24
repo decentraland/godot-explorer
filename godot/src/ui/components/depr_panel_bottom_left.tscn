@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://rt4tyyg7gd1s"]
 
-[ext_resource type="Script" path="res://src/ui/components/panel_bottom_left.gd" id="1_nhq7r"]
+[ext_resource type="Script" path="res://src/ui/components/depr_panel_bottom_left.gd" id="1_p0rt6"]
 
 [node name="Control" type="Control"]
 layout_mode = 3
@@ -9,7 +9,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_nhq7r")
+script = ExtResource("1_p0rt6")
 
 [node name="HFlowContainer" type="HFlowContainer" parent="."]
 layout_mode = 1
@@ -46,7 +46,7 @@ offset_right = 573.0
 offset_bottom = 49.0
 tooltip_text = "Select scene to load"
 focus_mode = 0
-item_count = 5
+item_count = 6
 popup/item_0/text = "mannakia.dcl.eth"
 popup/item_0/id = 0
 popup/item_1/text = "http://127.0.0.1:8000"
@@ -57,6 +57,8 @@ popup/item_3/text = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-mai
 popup/item_3/id = 3
 popup/item_4/text = "https://peer-testing.decentraland.org"
 popup/item_4/id = 4
+popup/item_5/text = "https://sdk-team-cdn.decentraland.org/ipfs/streaming-world-main"
+popup/item_5/id = 5
 
 [node name="HSlider_SceneRadius" type="HSlider" parent="HFlowContainer/Panel_Realm"]
 layout_mode = 0

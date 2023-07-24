@@ -60,4 +60,11 @@ offset_right = 48.0
 offset_bottom = 151.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 
+[node name="Button_Menu" type="Button" parent="."]
+offset_right = 68.0
+offset_bottom = 35.0
+focus_mode = 0
+text = "Menu"
+
 [connection signal="gui_input" from="Panel_Background/Control_MapShader" to="." method="_on_control_map_shader_gui_input"]
+[connection signal="pressed" from="Button_Menu" to="." method="_on_button_menu_pressed"]

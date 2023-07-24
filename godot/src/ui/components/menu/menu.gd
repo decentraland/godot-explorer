@@ -10,6 +10,12 @@ signal toggle_minimap
 signal toggle_fps
 signal toggle_ram
 
+#signals from advanced settings
+signal request_change_realm(realm_string: String)
+signal request_change_scene_radius(new_value: int)
+signal request_pause_scenes(enabled: bool)
+signal preview_hot_reload(scene_type: String, scene_id: String)
+
 @onready var color_rect_header = $ColorRect_Header
 
 @onready var control_discover = $ColorRect_Background/Control_Discover
@@ -104,7 +110,6 @@ func show_last():
 
 func show_map():
 	self.show()
-	control_map.clear()
 
 	if selected_node != control_map:
 		self._on_button_map_pressed()
@@ -162,3 +167,19 @@ func fade_out(node: Control):
 	tween_m.tween_property(node, "modulate", Color(1, 1, 1, 0), 0.3)
 	var tween_h = create_tween()
 	tween_h.tween_callback(node.hide).set_delay(0.3)
+
+
+func _on_control_advance_settings_preview_hot_reload(scene_type, scene_id):
+	emit_signal("preview_hot_reload", scene_type, scene_id)
+
+
+func _on_control_advance_settings_request_change_realm(realm_string):
+	emit_signal("request_change_realm", realm_string)
+
+
+func _on_control_advance_settings_request_change_scene_radius(new_value):
+	emit_signal("request_change_scene_radius", new_value)
+
+
+func _on_control_advance_settings_request_pause_scenes(enabled):
+	emit_signal("request_pause_scene", enabled)

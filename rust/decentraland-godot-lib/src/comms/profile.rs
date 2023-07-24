@@ -1,3 +1,4 @@
+use godot::prelude::{GodotString, PackedStringArray, ToVariant, Variant, VariantArray};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
@@ -22,6 +23,12 @@ pub struct AvatarEmote {
 #[derive(Serialize, Deserialize, Copy, Clone)]
 pub struct AvatarColor {
     pub color: AvatarColor3,
+}
+
+impl From<&AvatarColor> for godot::prelude::Color {
+    fn from(val: &AvatarColor) -> Self {
+        godot::prelude::Color::from_rgb(val.color.r, val.color.g, val.color.b)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -104,6 +111,95 @@ impl Default for SerializedProfile {
             has_connected_web3: Default::default(),
             avatar,
         }
+    }
+}
+
+impl SerializedProfile {
+    pub fn to_godot_array(&self) -> [Variant; 7] {
+        let name: GodotString = self
+            .avatar
+            .name
+            .as_ref()
+            .unwrap_or(&"Unknown No Name".to_string())
+            .into();
+
+        let body_shape: GodotString = self
+            .avatar
+            .body_shape
+            .as_ref()
+            .unwrap_or(&"default".into())
+            .into();
+
+        let eyes: godot::prelude::Color = self
+            .avatar
+            .eyes
+            .as_ref()
+            .unwrap_or(&AvatarColor {
+                color: AvatarColor3 {
+                    r: 0.2,
+                    g: 0.2,
+                    b: 0.5,
+                },
+            })
+            .into();
+
+        let hair: godot::prelude::Color = self
+            .avatar
+            .hair
+            .as_ref()
+            .unwrap_or(&AvatarColor {
+                color: AvatarColor3 {
+                    r: 0.2,
+                    g: 0.2,
+                    b: 0.5,
+                },
+            })
+            .into();
+
+        let skin: godot::prelude::Color = self
+            .avatar
+            .skin
+            .as_ref()
+            .unwrap_or(&AvatarColor {
+                color: AvatarColor3 {
+                    r: 0.2,
+                    g: 0.2,
+                    b: 0.5,
+                },
+            })
+            .into();
+
+        let wearables = self
+            .avatar
+            .wearables
+            .iter()
+            .map(GodotString::from)
+            .collect::<PackedStringArray>();
+
+        let emotes = self
+            .avatar
+            .emotes
+            .as_ref()
+            .unwrap_or(&vec![])
+            .iter()
+            .map(|v| {
+                let mut arr = VariantArray::new();
+                arr.push(GodotString::from(v.urn.as_str()).to_variant());
+                arr.push(v.slot.to_variant());
+                arr.to_variant()
+            })
+            .collect::<VariantArray>();
+
+        // let _base_url = self;
+        let name = name.to_variant();
+        let body_shape = body_shape.to_variant();
+        let eyes = eyes.to_variant();
+        let hair = hair.to_variant();
+        let skin = skin.to_variant();
+        let wearables = wearables.to_variant();
+        let emotes = emotes.to_variant();
+
+        [name, body_shape, eyes, hair, skin, wearables, emotes]
     }
 }
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://c8v1b3owo26xt"]
+[gd_scene load_steps=5 format=3 uid="uid://c8v1b3owo26xt"]
 
 [ext_resource type="Script" path="res://src/ui/components/advance_settings/advance_settings.gd" id="1_mo2dv"]
 
@@ -6,6 +6,13 @@
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
 
 [sub_resource type="Theme" id="Theme_o8ri3"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wrxk6"]
+bg_color = Color(0.976471, 0.976471, 0.976471, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [node name="Control_AdvanceSettings" type="Control"]
 layout_mode = 3
@@ -16,177 +23,333 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_mo2dv")
 
-[node name="ColorRect_Background" type="ColorRect" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="ColorRect_Navbar" type="ColorRect" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+color = Color(0.0862745, 0.0862745, 0.0862745, 1)
+
+[node name="ColorRect_Background" type="ColorRect" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
 color = Color(0.85098, 0.843137, 0.866667, 1)
 
-[node name="VBoxContainer_General" type="VBoxContainer" parent="."]
-layout_mode = 0
-offset_left = 120.0
-offset_top = 120.0
-offset_right = 624.0
-offset_bottom = 402.0
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -492.0
+offset_top = -225.5
+offset_right = 492.0
+offset_bottom = 225.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 50
+alignment = 1
+
+[node name="VBoxContainer_General" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer"]
+layout_mode = 2
 theme = SubResource("Theme_fdw13")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
 
-[node name="VBoxContainer_ProcessTickQuota" type="VBoxContainer" parent="VBoxContainer_General"]
+[node name="VBoxContainer_Realm" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
+custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label_ProcessTickQuota" type="Label" parent="VBoxContainer_General/VBoxContainer_ProcessTickQuota"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 31
+alignment = 2
+
+[node name="CheckButton_Pause" type="CheckButton" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer"]
+layout_mode = 2
+focus_mode = 0
+disabled = true
+text = "Pause scenes"
+alignment = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer2"]
+layout_mode = 2
+text = "Realm"
+
+[node name="OptionButton_Realm" type="OptionButton" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Select scene to load"
+focus_mode = 0
+item_count = 6
+popup/item_0/text = "mannakia.dcl.eth"
+popup/item_0/id = 0
+popup/item_1/text = "http://127.0.0.1:8000"
+popup/item_1/id = 1
+popup/item_2/text = "https://sdk-test-scenes.decentraland.zone"
+popup/item_2/id = 2
+popup/item_3/text = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+popup/item_3/id = 3
+popup/item_4/text = "https://peer-testing.decentraland.org"
+popup/item_4/id = 4
+popup/item_5/text = "https://sdk-team-cdn.decentraland.org/ipfs/streaming-world-main"
+popup/item_5/id = 5
+
+[node name="HSeparator4" type="HSeparator" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
+layout_mode = 2
+
+[node name="VBoxContainer_Connection" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 15
+
+[node name="LineEdit_PreviewUrl" type="LineEdit" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "http://127.0.0.1:8000/"
+
+[node name="Button_ConnectPreview" type="Button" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection/HBoxContainer"]
+layout_mode = 2
+focus_mode = 0
+text = "Connect!"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection/HBoxContainer2"]
+layout_mode = 2
+text = "WebSocket state:"
+
+[node name="Label_WsState" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection/HBoxContainer2"]
+layout_mode = 2
+text = "Disconnected"
+
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
+layout_mode = 2
+
+[node name="VBoxContainer_ProcessTickQuota" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Label_ProcessTickQuota" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_ProcessTickQuota"]
 layout_mode = 2
 theme = SubResource("Theme_o8ri3")
 text = "Process Tick Quota"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_General/VBoxContainer_ProcessTickQuota"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_ProcessTickQuota"]
 layout_mode = 2
+size_flags_vertical = 3
 
-[node name="HSlider_ProcessTickQuota" type="HSlider" parent="VBoxContainer_General/VBoxContainer_ProcessTickQuota/HBoxContainer"]
+[node name="HSlider_ProcessTickQuota" type="HSlider" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_ProcessTickQuota/HBoxContainer"]
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
+size_flags_horizontal = 3
 focus_mode = 0
 min_value = 1.0
 max_value = 16.0
 value = 1.0
+editable = false
 
-[node name="Label_ProcessTickQuotaValue" type="Label" parent="VBoxContainer_General/VBoxContainer_ProcessTickQuota/HBoxContainer"]
+[node name="Label_ProcessTickQuotaValue" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_ProcessTickQuota/HBoxContainer"]
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 text = "1"
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer_General"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 layout_mode = 2
 
-[node name="VBoxContainer_SceneRadius" type="VBoxContainer" parent="VBoxContainer_General"]
+[node name="VBoxContainer_SceneRadius" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
+custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label_SceneRadius" type="Label" parent="VBoxContainer_General/VBoxContainer_SceneRadius"]
+[node name="Label_SceneRadius" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius"]
 layout_mode = 2
 theme = SubResource("Theme_o8ri3")
 text = "Scene Radius"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_General/VBoxContainer_SceneRadius"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius"]
 layout_mode = 2
 
-[node name="HSlider_SceneRadius" type="HSlider" parent="VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
+[node name="HSlider_SceneRadius" type="HSlider" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
+size_flags_horizontal = 3
 focus_mode = 0
 min_value = 1.0
 max_value = 16.0
 value = 1.0
+editable = false
 
-[node name="Label_SceneRadiusValue" type="Label" parent="VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
+[node name="Label_SceneRadiusValue" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 text = "1"
 horizontal_alignment = 1
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer_General"]
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_General"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
+custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
+size_flags_vertical = 3
 size_flags_stretch_ratio = 0.0
 
-[node name="HBoxContainer_Gravity" type="HBoxContainer" parent="VBoxContainer_General/HBoxContainer"]
+[node name="HBoxContainer_Gravity" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 10
 
-[node name="Label_Gravity" type="Label" parent="VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity"]
+[node name="Label_Gravity" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme = SubResource("Theme_o8ri3")
 text = "Gravity
 "
 
-[node name="LineEdit_Gravity" type="LineEdit" parent="VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity"]
+[node name="LineEdit_Gravity" type="LineEdit" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity"]
 layout_mode = 2
 focus_mode = 0
 text = "55.0"
 editable = false
 
-[node name="HBoxContainer_JumpVelocity" type="HBoxContainer" parent="VBoxContainer_General/HBoxContainer"]
+[node name="HBoxContainer_JumpVelocity" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 10
 
-[node name="Label_JumpVelocity" type="Label" parent="VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity"]
+[node name="Label_JumpVelocity" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme = SubResource("Theme_o8ri3")
 text = "Jump Velocity
 "
 
-[node name="LineEdit_JumpVelocity" type="LineEdit" parent="VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity"]
+[node name="LineEdit_JumpVelocity" type="LineEdit" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity"]
 layout_mode = 2
 focus_mode = 0
 text = "12.0"
 editable = false
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer_General"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
+custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_stretch_ratio = 0.0
 
-[node name="HBoxContainer_RunSpeed" type="HBoxContainer" parent="VBoxContainer_General/HBoxContainer2"]
+[node name="HBoxContainer_RunSpeed" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 10
 
-[node name="Label_RunSpeed" type="Label" parent="VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed"]
+[node name="Label_RunSpeed" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme = SubResource("Theme_o8ri3")
 text = "Run Speed
 "
 
-[node name="LineEdit_RunSpeed" type="LineEdit" parent="VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed"]
+[node name="LineEdit_RunSpeed" type="LineEdit" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed"]
 layout_mode = 2
 focus_mode = 0
 text = "20.0"
 editable = false
 
-[node name="HBoxContainer_WalkSpeed" type="HBoxContainer" parent="VBoxContainer_General/HBoxContainer2"]
+[node name="HBoxContainer_WalkSpeed" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 10
 
-[node name="Label_WalkSpeed" type="Label" parent="VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed"]
+[node name="Label_WalkSpeed" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme = SubResource("Theme_o8ri3")
 text = "Walk Speed"
 
-[node name="LineEdit_WalkSpeed" type="LineEdit" parent="VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed"]
+[node name="LineEdit_WalkSpeed" type="LineEdit" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed"]
 layout_mode = 2
 focus_mode = 0
 text = "12.0"
 editable = false
 
-[node name="ColorRect_Navbar" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_bottom = 59.0
-grow_horizontal = 2
-color = Color(0.0862745, 0.0862745, 0.0862745, 1)
+[node name="VBoxContainer_General2" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+theme = SubResource("Theme_fdw13")
+theme_type_variation = &"2"
+theme_override_constants/separation = 15
 
-[connection signal="value_changed" from="VBoxContainer_General/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
-[connection signal="value_changed" from="VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_value_changed"]
+[node name="Panel_Console" type="Panel" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2"]
+custom_minimum_size = Vector2(400, 300)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_wrxk6")
+
+[node name="RichTextLabel_Console" type="RichTextLabel" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -8.0
+offset_bottom = -58.0
+grow_horizontal = 2
+grow_vertical = 2
+bbcode_enabled = true
+scroll_following = true
+
+[node name="Button_ClearConsole" type="Button" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -70.0
+offset_top = -42.0
+offset_right = -15.0
+offset_bottom = -15.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Clear"
+
+[connection signal="toggled" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer/CheckButton_Pause" to="." method="_on_check_button_pause_toggled"]
+[connection signal="item_selected" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
+[connection signal="drag_ended" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_drag_ended"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console/Button_ClearConsole" to="." method="_on_button_clear_console_pressed"]

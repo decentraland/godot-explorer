@@ -57,7 +57,6 @@ var _touch_index: int = -1
 @onready var _tip_default_position: Vector2 = _tip.position
 
 @onready var _default_color: Color = _tip.modulate
-
 # FUNCTIONS
 
 
@@ -70,30 +69,31 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			if _is_point_inside_joystick_area(event.position) and _touch_index == -1:
-				if (
-					joystick_mode == Joystick_mode.DYNAMIC
-					or (
-						joystick_mode == Joystick_mode.FIXED
-						and _is_point_inside_base(event.position)
-					)
-				):
-					if joystick_mode == Joystick_mode.DYNAMIC:
-						_move_base(event.position)
-					_touch_index = event.index
-					_tip.modulate = pressed_color
-					_update_joystick(event.position)
-					get_viewport().set_input_as_handled()
-		elif event.index == _touch_index:
-			_reset()
-			emit_signal("stick_position", Vector2.ZERO)
-			get_viewport().set_input_as_handled()
-	elif event is InputEventScreenDrag:
-		if event.index == _touch_index:
-			_update_joystick(event.position)
-			get_viewport().set_input_as_handled()
+	if Global.is_mobile:
+		if event is InputEventScreenTouch:
+			if event.pressed:
+				if _is_point_inside_joystick_area(event.position) and _touch_index == -1:
+					if (
+						joystick_mode == Joystick_mode.DYNAMIC
+						or (
+							joystick_mode == Joystick_mode.FIXED
+							and _is_point_inside_base(event.position)
+						)
+					):
+						if joystick_mode == Joystick_mode.DYNAMIC:
+							_move_base(event.position)
+						_touch_index = event.index
+						_tip.modulate = pressed_color
+						_update_joystick(event.position)
+						get_viewport().set_input_as_handled()
+			elif event.index == _touch_index:
+				_reset()
+				emit_signal("stick_position", Vector2.ZERO)
+				get_viewport().set_input_as_handled()
+		elif event is InputEventScreenDrag:
+			if event.index == _touch_index:
+				_update_joystick(event.position)
+				get_viewport().set_input_as_handled()
 
 
 func _move_base(new_position: Vector2) -> void:

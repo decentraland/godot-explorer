@@ -2,6 +2,9 @@ extends Node
 
 signal config_changed
 
+#@onready var is_mobile = OS.get_name() == "Android"
+@onready var is_mobile = true
+
 ## Global classes (singleton pattern)
 
 var scene_runner: SceneManager
@@ -27,7 +30,9 @@ func _ready():
 
 
 func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
-	raycast_debugger.add_raycast(id, time, from, to)
+	# TODO: enable raycast debugger
+	pass
+	#raycast_debugger.add_raycast(id, time, from, to)
 
 
 # TODO: move this to another class?

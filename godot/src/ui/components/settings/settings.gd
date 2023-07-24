@@ -69,7 +69,7 @@ func _ready():
 			resolution_menu_button.selected = idx
 			break
 
-	window.content_scale_factor = config.get_value("display", "ui")
+	#window.content_scale_factor = config.get_value("display", "ui")
 	h_slider_ui_scale.value = 100.0 * window.content_scale_factor
 
 	DisplayServer.window_set_position(screen_size * 0.5 - window.size * 0.5)

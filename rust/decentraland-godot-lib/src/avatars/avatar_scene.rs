@@ -2,12 +2,15 @@ use std::collections::HashMap;
 
 use godot::prelude::*;
 
-use crate::dcl::{
-    components::{
-        proto_components::kernel::comms::rfc4, transform_and_parent::DclTransformAndParent,
-        SceneEntityId,
+use crate::{
+    comms::profile::SerializedProfile,
+    dcl::{
+        components::{
+            proto_components::kernel::comms::rfc4, transform_and_parent::DclTransformAndParent,
+            SceneEntityId,
+        },
+        crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
     },
-    crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
 };
 
 #[derive(GodotClass)]
@@ -117,13 +120,31 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        let avatar_scene = self.avatar_godot_scene.get_mut(&entity_id).unwrap();
+        // let avatar_scene = self.avatar_godot_scene.get_mut(&entity_id).unwrap();
 
-        // TODO: the scale seted in the transform is local
-        avatar_scene.set_transform(dcl_transform.to_godot_transform_3d());
+        // // TODO: the scale seted in the transform is local
+        // avatar_scene.set_transform(dcl_transform.to_godot_transform_3d());
+        self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
+            "set_target".into(),
+            &[dcl_transform.to_godot_transform_3d().to_variant()],
+        );
 
         self.crdt
             .get_transform_mut()
             .put(entity_id, Some(dcl_transform));
+    }
+
+    pub fn update_avatar(&mut self, alias: u32, profile: &SerializedProfile) {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            // TODO: handle this condition
+            return;
+        };
+
+        self.avatar_godot_scene
+            .get_mut(&entity_id)
+            .unwrap()
+            .call("update_avatar".into(), &profile.to_godot_array());
     }
 }

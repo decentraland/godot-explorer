@@ -1,13 +1,11 @@
-[gd_scene load_steps=18 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=16 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
-[ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://assets/test_player/player.tscn" id="3_fr1df"]
+[ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://src/logic/player/player.tscn" id="3_fr1df"]
 [ext_resource type="Texture2D" uid="uid://m7i23bc2yyqt" path="res://assets/grid.png" id="3_g5xa3"]
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
-[ext_resource type="PackedScene" uid="uid://rt4tyyg7gd1s" path="res://src/ui/components/panel_bottom_left.tscn" id="4_x5dml"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
-[ext_resource type="PackedScene" uid="uid://cbtnbb03jb1u6" path="res://src/ui/components/info_panel/info_panel.tscn" id="6_3c8pn"]
-[ext_resource type="Texture2D" uid="uid://bkvmydfn5saxg" path="res://src/mobile/joystick/textures/joystick_tip.png" id="9_3v3rc"]
+[ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
 [ext_resource type="PackedScene" uid="uid://c6a0rjrc13kel" path="res://src/ui/components/line_edit_command/line_edit_command.tscn" id="9_5u55i"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
@@ -28,7 +26,7 @@ texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_blfvw"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_g82po"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
@@ -56,12 +54,12 @@ sky_mode = 2
 [node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D_Floor"]
 shape = SubResource("ConcavePolygonShape3D_xs7js")
 
-[node name="Player" parent="." instance=ExtResource("3_fr1df")]
-
 [node name="Floor" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 mesh = SubResource("PlaneMesh_x854j")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
+
+[node name="Player" parent="." instance=ExtResource("3_fr1df")]
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3
@@ -161,92 +159,88 @@ grow_horizontal = 0
 text = "RAM"
 horizontal_alignment = 2
 
-[node name="Panel_BottomLeft" parent="UI" instance=ExtResource("4_x5dml")]
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_right = 0.0
-grow_horizontal = 1
-grow_vertical = 0
-
 [node name="Control_Minimap" parent="UI" instance=ExtResource("4_6aqla")]
-layout_mode = 1
+layout_mode = 2
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_right = 15.0
+offset_bottom = 15.0
 
-[node name="Contro_InfoPanel" parent="UI/Control_Minimap" instance=ExtResource("6_3c8pn")]
-layout_mode = 1
-offset_top = 176.0
-offset_bottom = 176.0
-
-[node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
-visible = false
-layout_mode = 1
-group = SubResource("ButtonGroup_blfvw")
+[node name="LineEdit_Command" parent="UI" instance=ExtResource("9_5u55i")]
+layout_mode = 0
+offset_left = 272.0
+offset_top = 16.0
+offset_right = 1001.0
+offset_bottom = 52.0
 
 [node name="Timer" type="Timer" parent="UI"]
 autostart = true
 
-[node name="LineEdit_Command" parent="UI" instance=ExtResource("9_5u55i")]
-layout_mode = 0
-offset_left = 160.0
-offset_top = 16.0
-offset_right = 889.0
-offset_bottom = 52.0
-
-[node name="MobileUI" type="CanvasLayer" parent="UI"]
-visible = false
-
-[node name="VirtualJoystick_Left" parent="UI/MobileUI" instance=ExtResource("9_lxw33")]
-offset_top = -444.0
-offset_bottom = -144.0
-deadzone_size = 0.0
-
-[node name="Control" type="Control" parent="UI/MobileUI"]
-layout_mode = 3
+[node name="Button" type="Button" parent="UI"]
+layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -148.0
-offset_top = -161.0
-offset_right = -24.0
-offset_bottom = -24.0
+offset_left = -136.0
+offset_top = -136.0
+offset_right = -8.0
+offset_bottom = -8.0
 grow_horizontal = 0
 grow_vertical = 0
-
-[node name="TouchScreenButton" type="TouchScreenButton" parent="UI/MobileUI/Control"]
-scale = Vector2(1.32, 1.38)
-texture_normal = ExtResource("9_3v3rc")
-
-[node name="Label" type="Label" parent="UI/MobileUI/Control"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+theme_override_font_sizes/font_size = 24
 text = "Jump"
-horizontal_alignment = 1
-vertical_alignment = 1
+
+[node name="MobileUI" type="CanvasLayer" parent="UI"]
+layer = -1
+
+[node name="VirtualJoystick_Left" parent="UI/MobileUI" instance=ExtResource("9_lxw33")]
+pivot_offset = Vector2(1, 299)
+deadzone_size = 0.0
+
+[node name="VBoxContainer_Chat" type="VBoxContainer" parent="UI"]
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_right = 265.0
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/VBoxContainer_Chat"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 60
+theme_override_constants/margin_bottom = 15
+
+[node name="Panel_Chat" parent="UI/VBoxContainer_Chat/MarginContainer" instance=ExtResource("9_4ktln")]
+layout_mode = 2
+
+[node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
+visible = false
+layout_mode = 1
+group = SubResource("ButtonGroup_g82po")
 
 [node name="Timer_BroadcastPosition" type="Timer" parent="."]
 wait_time = 0.1
 autostart = true
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
-[connection signal="preview_hot_reload" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_preview_hot_reload"]
-[connection signal="request_change_realm" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_realm"]
-[connection signal="request_change_scene_radius" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_change_scene_radius"]
-[connection signal="request_pause_scenes" from="UI/Panel_BottomLeft" to="." method="_on_panel_bottom_left_request_pause_scenes"]
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
+[connection signal="submit_message" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_submit_message"]
+[connection signal="timeout" from="UI/Timer" to="." method="_on_timer_timeout"]
+[connection signal="button_down" from="UI/Button" to="." method="_on_button_button_down"]
+[connection signal="button_up" from="UI/Button" to="." method="_on_button_button_up"]
+[connection signal="pressed" from="UI/Button" to="." method="_on_button_pressed"]
 [connection signal="hide_menu" from="UI/Control_Menu" to="." method="_on_control_menu_hide_menu"]
 [connection signal="jump_to" from="UI/Control_Menu" to="." method="_on_control_menu_jump_to"]
+[connection signal="preview_hot_reload" from="UI/Control_Menu" to="." method="_on_control_menu_preview_hot_reload"]
+[connection signal="request_change_realm" from="UI/Control_Menu" to="." method="_on_control_menu_request_change_realm"]
+[connection signal="request_change_scene_radius" from="UI/Control_Menu" to="." method="_on_control_menu_request_change_scene_radius"]
+[connection signal="request_pause_scenes" from="UI/Control_Menu" to="." method="_on_control_menu_request_pause_scenes"]
 [connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
 [connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
-[connection signal="timeout" from="UI/Timer" to="." method="_on_timer_timeout"]
-[connection signal="submit_message" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_submit_message"]
-[connection signal="gui_input" from="UI/MobileUI/Control" to="." method="_on_control_gui_input"]
-[connection signal="pressed" from="UI/MobileUI/Control/TouchScreenButton" to="." method="_on_touch_screen_button_pressed"]
-[connection signal="released" from="UI/MobileUI/Control/TouchScreenButton" to="." method="_on_touch_screen_button_released"]
 [connection signal="timeout" from="Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]

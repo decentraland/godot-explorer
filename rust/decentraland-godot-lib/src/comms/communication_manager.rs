@@ -6,8 +6,9 @@ use crate::{
     avatars::avatar_scene::AvatarScene, dcl::components::proto_components::kernel::comms::rfc4,
 };
 
-use super::{wallet::Wallet, ws_room::WebSocketRoom};
+use super::{player_identity::PlayerIdentity, ws_room::WebSocketRoom};
 
+#[allow(clippy::large_enum_variant)]
 enum Adapter {
     None,
     WsRoom(WebSocketRoom),
@@ -20,7 +21,7 @@ pub struct CommunicationManager {
     base: Base<Node>,
     current_adapter: Adapter,
     tls_client: Option<Gd<TlsOptions>>,
-    wallet: Arc<Wallet>,
+    player_identity: Arc<PlayerIdentity>,
     last_index: u64,
 }
 
@@ -31,7 +32,7 @@ impl NodeVirtual for CommunicationManager {
             base,
             current_adapter: Adapter::None,
             tls_client: None,
-            wallet: Arc::new(Wallet::new_local_wallet()),
+            player_identity: Arc::new(PlayerIdentity::new()),
             last_index: 0,
         }
     }
@@ -76,18 +77,17 @@ impl CommunicationManager {
     fn chat_message(chats: VariantArray) {}
 
     #[func]
-    fn send_position(&mut self, transform: Transform3D) -> bool {
+    fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
         let get_packet = || {
-            let dcl_rotation = transform.basis.to_quat();
             let position_packet = rfc4::Position {
                 index: self.last_index as u32,
-                position_x: transform.origin.x,
-                position_y: transform.origin.y,
-                position_z: -transform.origin.z,
-                rotation_x: dcl_rotation.x,
-                rotation_y: dcl_rotation.y,
-                rotation_z: -dcl_rotation.z,
-                rotation_w: -dcl_rotation.w,
+                position_x: position.x,
+                position_y: position.y,
+                position_z: -position.z,
+                rotation_x: rotation.x,
+                rotation_y: rotation.y,
+                rotation_z: -rotation.z,
+                rotation_w: -rotation.w,
             };
 
             rfc4::Packet {
@@ -190,7 +190,7 @@ impl CommunicationManager {
                     self.current_adapter = Adapter::WsRoom(WebSocketRoom::new(
                         ws_url,
                         self.tls_client.as_ref().unwrap().share(),
-                        self.wallet.clone(),
+                        self.player_identity.clone(),
                         avatar_scene,
                     ));
                 }

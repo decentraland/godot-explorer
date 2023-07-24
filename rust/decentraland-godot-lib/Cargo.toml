@@ -29,6 +29,7 @@ urn = "0.7.0"
 ethers = { version = "2.0", features = ["rustls"] }
 async-trait = "0.1.68"
 poll-promise = "0.2.0"
+log-panics = { version = "2", features = ["with-backtrace"]}
 
 [build-dependencies]
 prost-build = "0.11.8"

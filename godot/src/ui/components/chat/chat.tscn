@@ -1,0 +1,52 @@
+[gd_scene load_steps=3 format=3 uid="uid://bl6h58asl377"]
+
+[ext_resource type="Script" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xauh3"]
+bg_color = Color(0, 0, 0, 0.235294)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="Panel_Chat" type="Panel"]
+custom_minimum_size = Vector2(250, 280)
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_xauh3")
+script = ExtResource("1_llfi5")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 40
+
+[node name="RichTextLabel_Chat" type="RichTextLabel" parent="MarginContainer"]
+layout_mode = 2
+bbcode_enabled = true
+scroll_following = true
+
+[node name="Button_ClearChat" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -71.0
+offset_top = -35.0
+offset_right = -16.0
+offset_bottom = -8.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Clear"
+
+[connection signal="pressed" from="Button_ClearChat" to="." method="_on_button_clear_chat_pressed"]

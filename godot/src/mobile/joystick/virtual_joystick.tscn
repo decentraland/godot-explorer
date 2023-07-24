@@ -4,15 +4,13 @@
 [ext_resource type="Texture2D" uid="uid://bm30au8mjfc2f" path="res://src/mobile/joystick/textures/joystick_base_outline.png" id="2_jhjs2"]
 [ext_resource type="Texture2D" uid="uid://dt13r06u87fib" path="res://src/mobile/joystick/textures/joystick_tip_arrows.png" id="3_3etdg"]
 
-
 [node name="VirtualJoystick" type="Control"]
 layout_mode = 3
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = -308.0
+offset_top = -300.0
 offset_right = 300.0
-offset_bottom = -8.0
 grow_vertical = 0
 script = ExtResource("1_8x4dy")
 deadzone_size = 1.0

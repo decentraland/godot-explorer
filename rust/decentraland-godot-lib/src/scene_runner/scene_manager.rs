@@ -485,6 +485,8 @@ impl NodeVirtual for SceneManager {
         // TODO: should this be initialized somewhere else?
         crate::dcl::js::js_runtime::init_v8();
 
+        log_panics::init();
+
         SceneManager {
             base,
 
