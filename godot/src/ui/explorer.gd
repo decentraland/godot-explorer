@@ -61,7 +61,7 @@ func _ready():
 	add_child(sky)
 
 	control_pointer_tooltip.hide()
-	var start_parcel_position: Vector2i = Vector2i(74, -2)
+	var start_parcel_position: Vector2i = Vector2i(78, -7)
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 

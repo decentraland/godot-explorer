@@ -367,14 +367,17 @@ impl WebSocketRoom {
                     let packet = match rfc4::Packet::decode(update.body.as_slice()) {
                         Ok(packet) => packet,
                         Err(_e) => {
+                            godot_error!("comms > invalid data packet {:?}", update);
                             continue;
                         }
                     };
                     let Some(message) = packet.message else {
+                        godot_error!("comms > empty data packet {:?}", update);
                         continue;
                     };
 
                     let Some(peer) = self.peer_identities.get(&update.from_alias) else {
+                        godot_error!("comms > peer not found {:?}", update);
                         continue;
                     };
 
@@ -409,6 +412,8 @@ impl WebSocketRoom {
                                 continue;
                             }
 
+                            godot_print!("comms > received ProfileRequest {:?}", profile_request);
+
                             if let Some(addr) = profile_request.address.as_h160() {
                                 if addr == self.player_identity.wallet().address() {
                                     self.last_profile_response_sent = Instant::now();
@@ -439,6 +444,10 @@ impl WebSocketRoom {
                                 match serde_json::from_str(&profile_response.serialized_profile) {
                                     Ok(p) => p,
                                     Err(_e) => {
+                                        godot_error!(
+                                            "comms > invalid data ProfileResponse {:?}",
+                                            profile_response
+                                        );
                                         continue;
                                     }
                                 };
@@ -451,8 +460,18 @@ impl WebSocketRoom {
                             };
 
                             if incoming_version < current_version {
+                                godot_error!(
+                                    "comms > old version ProfileResponse {:?}",
+                                    profile_response
+                                );
                                 continue;
                             }
+
+                            self.avatars.bind_mut().update_avatar(
+                                update.from_alias,
+                                &serialized_profile,
+                                &profile_response.base_url,
+                            );
 
                             self.peer_identities
                                 .get_mut(&update.from_alias)
@@ -490,23 +509,20 @@ impl WebSocketRoom {
                         if announced_version > current_version {
                             None
                         } else {
-                            Some((peer.address.to_string(), announced_version))
+                            Some((peer.address, announced_version))
                         }
                     } else {
-                        Some((
-                            peer.address.to_string(),
-                            peer.announced_version.unwrap_or(0),
-                        ))
+                        Some((peer.address, peer.announced_version.unwrap_or(0)))
                     }
                 })
-                .collect::<Vec<(String, u32)>>();
+                .collect::<Vec<(H160, u32)>>();
 
             for (address, profile_version) in to_request {
                 self.send_rfc4(
                     rfc4::Packet {
                         message: Some(rfc4::packet::Message::ProfileRequest(
                             rfc4::ProfileRequest {
-                                address,
+                                address: format!("{:#x}", address),
                                 profile_version,
                             },
                         )),

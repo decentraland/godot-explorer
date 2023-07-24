@@ -74,6 +74,7 @@ impl AvatarScene {
         let entity_id = self
             .get_next_entity_id()
             .unwrap_or(SceneEntityId::new(Self::MAX_ENTITY_ID + 1, 0));
+        self.crdt.entities.try_init(entity_id);
 
         self.avatar_entity.insert(alias, entity_id);
 
@@ -134,7 +135,7 @@ impl AvatarScene {
             .put(entity_id, Some(dcl_transform));
     }
 
-    pub fn update_avatar(&mut self, alias: u32, profile: &SerializedProfile) {
+    pub fn update_avatar(&mut self, alias: u32, profile: &SerializedProfile, base_url: &str) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
@@ -145,6 +146,6 @@ impl AvatarScene {
         self.avatar_godot_scene
             .get_mut(&entity_id)
             .unwrap()
-            .call("update_avatar".into(), &profile.to_godot_array());
+            .call("update_avatar".into(), &profile.to_godot_array(base_url));
     }
 }

@@ -78,9 +78,10 @@ impl CommunicationManager {
 
     #[func]
     fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
+        let index = self.last_index;
         let get_packet = || {
             let position_packet = rfc4::Position {
-                index: self.last_index as u32,
+                index: index as u32,
                 position_x: position.x,
                 position_y: position.y,
                 position_z: -position.z,
@@ -97,7 +98,10 @@ impl CommunicationManager {
 
         match &mut self.current_adapter {
             Adapter::None => false,
-            Adapter::WsRoom(ws_room) => ws_room.send_rfc4(get_packet(), true),
+            Adapter::WsRoom(ws_room) => {
+                self.last_index += 1;
+                ws_room.send_rfc4(get_packet(), true)
+            }
         }
     }
 

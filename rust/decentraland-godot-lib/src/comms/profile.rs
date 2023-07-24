@@ -115,13 +115,8 @@ impl Default for SerializedProfile {
 }
 
 impl SerializedProfile {
-    pub fn to_godot_array(&self) -> [Variant; 7] {
-        let name: GodotString = self
-            .avatar
-            .name
-            .as_ref()
-            .unwrap_or(&"Unknown No Name".to_string())
-            .into();
+    pub fn to_godot_array(&self, base_url: &str) -> [Variant; 8] {
+        let name: GodotString = GodotString::from(self.name.as_str());
 
         let body_shape: GodotString = self
             .avatar
@@ -190,7 +185,7 @@ impl SerializedProfile {
             })
             .collect::<VariantArray>();
 
-        // let _base_url = self;
+        let base_url = GodotString::from(base_url).to_variant();
         let name = name.to_variant();
         let body_shape = body_shape.to_variant();
         let eyes = eyes.to_variant();
@@ -199,7 +194,9 @@ impl SerializedProfile {
         let wearables = wearables.to_variant();
         let emotes = emotes.to_variant();
 
-        [name, body_shape, eyes, hair, skin, wearables, emotes]
+        [
+            base_url, name, body_shape, eyes, hair, skin, wearables, emotes,
+        ]
     }
 }
 
