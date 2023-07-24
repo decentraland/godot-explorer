@@ -28,8 +28,9 @@ var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd
 func _ready():
 	add_child(raycast_debugger)
 
-
 	# TODO: enable raycast debugger
+
+
 func add_raycast(_id: int, _time: float, _from: Vector3, _to: Vector3) -> void:
 	pass
 	#raycast_debugger.add_raycast(id, time, from, to)

@@ -32,6 +32,8 @@ func _process(_dt):
 	if _last_parcel_position != parcel_position:
 		parcel_manager.update_position(parcel_position)
 		_last_parcel_position = parcel_position
+
+
 #
 #		var scene_data = parcel_manager.get_current_scene_data()
 #		var title = scene_data.get("entity", {}).get("metadata", {}).get("display", {}).get(
@@ -116,6 +118,7 @@ func _on_ui_gui_input(event):
 
 
 @onready var line_edit_command = $UI/LineEdit_Command
+
 
 func _unhandled_input(event):
 	if not Global.is_mobile:
@@ -263,6 +266,7 @@ func _on_control_menu_request_change_scene_radius(new_value):
 func _on_control_menu_request_pause_scenes(enabled):
 	scene_runner.set_pause(enabled)
 
+
 func _on_button_jump_gui_input(event):
-	if event is InputEventScreenTouch:	
+	if event is InputEventScreenTouch:
 		Input.action_press("ia_jump")

@@ -6,10 +6,12 @@ var label_action = $PanelContainer/MarginContainer/HBoxContainer/PanelContainer/
 
 var action_to_trigger: String = ""
 
+
 func _ready():
 	if Global.is_mobile:
 		self.gui_input.connect(self.mobile_on_panel_container_gui_input)
-		
+
+
 func set_tooltip_data(text: String, action: String):
 	var key: String
 	var index: int = InputMap.get_actions().find(action.to_lower(), 0)

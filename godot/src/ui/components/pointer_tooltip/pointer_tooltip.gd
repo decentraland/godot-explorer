@@ -7,6 +7,7 @@ var tooltip_scene = preload("res://src/ui/components/pointer_tooltip/tooltip_lab
 
 @onready var control_center = $Control_Center
 
+
 func set_pointer_data(interacts_array: Array):
 	for child in control_center.get_children():
 		child.queue_free()
