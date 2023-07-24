@@ -66,7 +66,7 @@ pub struct WebSocketRoom {
 
     // Trade-off with other peers
     avatars: Gd<AvatarScene>,
-    chats: Vec<(H160, rfc4::Chat)>,
+    chats: Vec<(String, rfc4::Chat)>,
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
 }
@@ -108,7 +108,7 @@ impl WebSocketRoom {
         }
     }
 
-    pub fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
+    pub fn consume_chats(&mut self) -> Vec<(String, rfc4::Chat)> {
         std::mem::take(&mut self.chats)
     }
 
@@ -385,11 +385,27 @@ impl WebSocketRoom {
                                 .update_transform(update.from_alias, &position);
                         }
                         rfc4::packet::Message::Chat(chat) => {
-                            self.chats.push((peer.address, chat));
+                            let peer_name = {
+                                if let Some(profile) = peer.profile.as_ref() {
+                                    profile.content.name.clone()
+                                } else {
+                                    peer.address.to_string()
+                                }
+                            };
+                            self.chats.push((peer_name, chat));
                         }
-                        rfc4::packet::Message::ProfileVersion(_announce_profile_version) => {}
+                        rfc4::packet::Message::ProfileVersion(announce_profile_version) => {
+                            self.peer_identities
+                                .get_mut(&update.from_alias)
+                                .unwrap()
+                                .announced_version = Some(
+                                announce_profile_version
+                                    .profile_version
+                                    .max(peer.announced_version.unwrap_or(0)),
+                            );
+                        }
                         rfc4::packet::Message::ProfileRequest(profile_request) => {
-                            if self.last_profile_response_sent.elapsed().as_secs_f32() > 10.0 {
+                            if self.last_profile_response_sent.elapsed().as_secs_f32() < 10.0 {
                                 continue;
                             }
 
@@ -495,7 +511,7 @@ impl WebSocketRoom {
                             },
                         )),
                     },
-                    false,
+                    true,
                 );
             }
         }
