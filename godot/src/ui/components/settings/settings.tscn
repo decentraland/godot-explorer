@@ -132,7 +132,7 @@ layout_mode = 2
 focus_mode = 0
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 button_pressed = true
-text = "Show map"
+text = "Show minimap"
 flat = true
 
 [node name="VBoxContainer_Graphics" type="VBoxContainer" parent="."]
@@ -204,6 +204,7 @@ text = "Limit FPS"
 [node name="MenuButton_LimitFps" type="OptionButton" parent="VBoxContainer_Graphics/LimitFps"]
 layout_mode = 2
 focus_mode = 0
+disabled = true
 item_count = 6
 selected = 0
 popup/item_0/text = "Vsync"
@@ -232,6 +233,7 @@ text = "Skybox"
 [node name="MenuButton_Skybox" type="OptionButton" parent="VBoxContainer_Graphics/Skybox"]
 layout_mode = 2
 focus_mode = 0
+disabled = true
 item_count = 2
 selected = 0
 popup/item_0/text = "Default"
@@ -274,22 +276,6 @@ offset_bottom = 59.0
 grow_horizontal = 2
 color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 
-[node name="Button_Back" type="Button" parent="."]
-custom_minimum_size = Vector2(100, 0)
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -127.0
-offset_top = 18.0
-offset_right = -27.0
-offset_bottom = 41.0
-grow_horizontal = 0
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-text = "Back"
-
 [connection signal="toggled" from="ColorRect_Sidebar/VBoxContainer_Sections/Button_General" to="." method="_on_general_button_toggled"]
 [connection signal="toggled" from="ColorRect_Sidebar/VBoxContainer_Sections/Button_Graphics" to="." method="_on_graphic_button_toggled"]
 [connection signal="toggled" from="ColorRect_Sidebar/VBoxContainer_Sections/Button_Monitoring" to="." method="_on_monitoring_button_toggled"]
@@ -300,4 +286,3 @@ text = "Back"
 [connection signal="drag_ended" from="VBoxContainer_Graphics/GuiScale/HSlider_GuiScale" to="." method="_on_h_slider_drag_ended"]
 [connection signal="toggled" from="VBoxContainer_Monitoring/Checkbox_RamUsage" to="." method="_on_ram_usage_toggled"]
 [connection signal="toggled" from="VBoxContainer_Monitoring/Checkbox_Fps" to="." method="_on_checkbox_fps_toggled"]
-[connection signal="pressed" from="Button_Back" to="." method="_on_button_pressed"]

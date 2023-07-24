@@ -87,6 +87,11 @@ impl SceneEntityContainer {
         self.entity_version[entity.number as usize].0 > entity.version
     }
 
+    // If the entity is alive, return Some(entity) else None
+    pub fn get_entity_stat(&self, entity_number: u16) -> &(u16, bool) {
+        &self.entity_version[entity_number as usize]
+    }
+
     pub fn take_dirty(&mut self) -> DirtyEntities {
         DirtyEntities {
             born: std::mem::take(&mut self.new_entities_created),

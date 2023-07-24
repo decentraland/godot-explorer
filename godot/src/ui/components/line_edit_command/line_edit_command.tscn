@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3 uid="uid://c6a0rjrc13kel"]
+
+[ext_resource type="Script" path="res://src/ui/components/line_edit_command/line_edit_command.gd" id="1_llajn"]
+
+[node name="Control_Talk" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 729.0
+offset_bottom = 36.0
+script = ExtResource("1_llajn")
+
+[node name="LineEdit_Command" type="LineEdit" parent="."]
+layout_mode = 0
+offset_left = 72.0
+offset_top = 3.0
+offset_right = 726.0
+offset_bottom = 30.0
+
+[node name="Button_Send" type="Button" parent="."]
+layout_mode = 0
+offset_right = 68.0
+offset_bottom = 35.0
+text = "Talk"
+
+[connection signal="text_submitted" from="LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
+[connection signal="pressed" from="Button_Send" to="." method="_on_button_send_pressed"]

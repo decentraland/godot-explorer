@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bshfkr3ekeno5"
-path.s3tc="res://.godot/imported/M_EyeBrows_00.png-0b797f3b607c1714ca74aa92780d58b8.s3tc.ctex"
-path.etc2="res://.godot/imported/M_EyeBrows_00.png-0b797f3b607c1714ca74aa92780d58b8.etc2.ctex"
+uid="uid://5ow6vjd062om"
+path.s3tc="res://.godot/imported/M_Mouth_00.png-c79c02b91847a0f16c7083496252e389.s3tc.ctex"
+path.etc2="res://.godot/imported/M_Mouth_00.png-c79c02b91847a0f16c7083496252e389.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -13,8 +13,8 @@ generator_parameters={}
 
 [deps]
 
-source_file="res://assets/test_player/emotes/M_EyeBrows_00.png"
-dest_files=["res://.godot/imported/M_EyeBrows_00.png-0b797f3b607c1714ca74aa92780d58b8.s3tc.ctex", "res://.godot/imported/M_EyeBrows_00.png-0b797f3b607c1714ca74aa92780d58b8.etc2.ctex"]
+source_file="res://assets/avatar/M_Mouth_00.png"
+dest_files=["res://.godot/imported/M_Mouth_00.png-c79c02b91847a0f16c7083496252e389.s3tc.ctex", "res://.godot/imported/M_Mouth_00.png-c79c02b91847a0f16c7083496252e389.etc2.ctex"]
 
 [params]
 

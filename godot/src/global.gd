@@ -1,15 +1,17 @@
 extends Node
 
-var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
+signal config_changed
 
+@onready var is_mobile = OS.get_name() == "Android"
+#@onready var is_mobile = true
 
-func _ready():
-	add_child(raycast_debugger)
+## Global classes (singleton pattern)
 
-
-func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
-	raycast_debugger.add_raycast(id, time, from, to)
-
+var scene_runner: SceneManager
+var realm: Realm
+var content_manager: ContentManager
+var comms: CommunicationManager
+var avatars: AvatarScene
 
 var config_dictionary: Dictionary = {
 	"gravity": 55.0,
@@ -20,7 +22,22 @@ var config_dictionary: Dictionary = {
 	"scene_radius": 1,
 }
 
-signal config_changed
+var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
+
+
+func _ready():
+	add_child(raycast_debugger)
+
+	# TODO: enable raycast debugger
+
+
+func add_raycast(_id: int, _time: float, _from: Vector3, _to: Vector3) -> void:
+	pass
+	#raycast_debugger.add_raycast(id, time, from, to)
+
+
+# TODO: move this to another class?
+# Configuration section
 
 
 func _load():

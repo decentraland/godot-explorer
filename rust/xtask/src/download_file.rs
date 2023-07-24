@@ -62,7 +62,7 @@ pub fn _download_file(url: &str, path: &str) -> Result<(), anyhow::Error> {
             Ok(event) => match event {
                 DownloadEvent::Progress(bytes) => {
                     if bytes - last_download_report > 5e6 as u64 {
-                        println!("Bytes downloaded: {}", bytes);
+                        println!("Bytes downloaded: {bytes}");
                         last_download_report = bytes;
                     }
                 }

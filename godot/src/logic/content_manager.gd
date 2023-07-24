@@ -27,15 +27,8 @@ func get_resource_from_hash(file_hash: String):
 	return null
 
 
-func get_resource(file_path: String, _content_type: ContentType, content_mapping: Dictionary):
-	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
-	var content_cached = content_cache_map.get(file_hash)
-	if content_cached != null and content_cached.get("loaded"):
-		return content_cached.get("resource")
-
-	return null
-
-
+# Public function
+# @returns true if the resource was added to queue to fetch, false if it had already been fetched
 func fetch_resource(file_path: String, content_type: ContentType, content_mapping: Dictionary):
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
@@ -69,16 +62,13 @@ func content_thread_pool_func():
 		OS.delay_msec(1)
 		while pending_content.size() > 0:
 			loading_content.push_back(pending_content.pop_front())
-		finished_downloads = get_finished_downloads()
-		if finished_downloads.size() > 0:
-			# print("finished downloads ", finished_downloads.size())
-			pass
+		finished_downloads = _get_finished_downloads()
+
 		for content in loading_content:
 			content_type = content.get("content_type")
 			match content_type:
 				ContentType.CT_GLTF_GLB:
-					if not process_loading_gltf(content, finished_downloads):
-						# print("deleting ", content["file_path"])
+					if not _process_loading_gltf(content, finished_downloads):
 						to_delete.push_back(content)
 				_:
 					printerr("Fetching invalid content type ", content_type)
@@ -87,7 +77,7 @@ func content_thread_pool_func():
 			loading_content.erase(item)
 
 
-func get_finished_downloads() -> Array[RequestResponse]:
+func _get_finished_downloads() -> Array[RequestResponse]:
 	var ret: Array[RequestResponse] = []
 	var finished_download: RequestResponse = http_requester.poll()
 	while finished_download != null:
@@ -96,7 +86,7 @@ func get_finished_downloads() -> Array[RequestResponse]:
 	return ret
 
 
-func process_loading_gltf(content: Dictionary, finished_downloads: Array[RequestResponse]) -> bool:
+func _process_loading_gltf(content: Dictionary, finished_downloads: Array[RequestResponse]) -> bool:
 	var content_mapping = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
 	var file_path: String = content.get("file_path")
@@ -203,7 +193,7 @@ func process_loading_gltf(content: Dictionary, finished_downloads: Array[Request
 			var node = new_gltf.generate_scene(new_gltf_state)
 			if node != null:
 				node.rotate_y(PI)
-				hide_colliders(node)
+				_hide_colliders(node)
 				split_animations(node)
 				if err != OK:
 					push_warning("resource with errors ", file_path, " : ", err)
@@ -243,10 +233,10 @@ func split_animations(_gltf_node: Node) -> void:
 #	gltf_node.remove_child(animation_player)
 
 
-func hide_colliders(gltf_node):
+func _hide_colliders(gltf_node):
 	for maybe_collider in gltf_node.get_children():
 		if maybe_collider is Node3D and maybe_collider.name.find("_collider") != -1:
 			maybe_collider.visible = false
 
 		if maybe_collider is Node:
-			hide_colliders(maybe_collider)
+			_hide_colliders(maybe_collider)

@@ -162,16 +162,21 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 		printerr("Scene ", scene_entity_id, " fail getting the main js file hash.")
 		return false
 
+	var main_js_request_id := -1
 	var local_main_js_path = "user://content/" + main_js_file_hash
-	var main_js_file_url: String = entity.baseUrl + main_js_file_hash
-	var main_js_request_id = http_requester._requester.request_file(
-		MAIN_JS_FILE_REQUEST,
-		main_js_file_url,
-		local_main_js_path.replace("user:/", OS.get_user_data_dir())
-	)
+	var js_request_completed = true
+
+	if not FileAccess.file_exists(local_main_js_path):
+		js_request_completed = false
+		var main_js_file_url: String = entity.baseUrl + main_js_file_hash
+		main_js_request_id = http_requester._requester.request_file(
+			MAIN_JS_FILE_REQUEST,
+			main_js_file_url,
+			local_main_js_path.replace("user:/", OS.get_user_data_dir())
+		)
 
 	var req = {
-		"js_request_completed": false,
+		"js_request_completed": js_request_completed,
 		"js_request_id": main_js_request_id,
 		"js_path": local_main_js_path,
 		"crdt_request_completed": true,
@@ -193,6 +198,9 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 		req["crdt_path"] = local_main_crdt_path
 
 	loaded_scenes[scene_entity_id]["req"] = req
+
+	if req.crdt_request_completed and req.js_request_completed:
+		_on_try_spawn_scene(loaded_scenes[scene_entity_id])
 
 
 func _on_try_spawn_scene(scene):

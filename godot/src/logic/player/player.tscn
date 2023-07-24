@@ -1,0 +1,33 @@
+[gd_scene load_steps=5 format=3 uid="uid://blv7r5folt1d5"]
+
+[ext_resource type="Script" path="res://src/logic/player/player.gd" id="1_5bfm2"]
+[ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar.tscn" id="2_n22nx"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pxti1"]
+margin = 0.05
+radius = 0.25
+height = 1.50214
+
+[sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
+length = 1.0779
+
+[node name="Player" type="CharacterBody3D"]
+script = ExtResource("1_5bfm2")
+
+[node name="CollisionShape3D_Body" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.153, 0)
+shape = SubResource("CapsuleShape3D_pxti1")
+
+[node name="CollisionShape3D_ContactPoint" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 1.1, 0)
+shape = SubResource("SeparationRayShape3D_3217e")
+
+[node name="Mount" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Mount"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.85493e-08, 0, -0.212179)
+current = true
+
+[node name="Avatar" parent="." instance=ExtResource("2_n22nx")]
+skip_process = true

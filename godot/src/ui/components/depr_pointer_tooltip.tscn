@@ -1,11 +1,11 @@
 [gd_scene load_steps=2 format=3 uid="uid://6m5q52mc7rlp"]
 
-[ext_resource type="Script" path="res://src/ui/components/pointer_tooltip.gd" id="1_fwdsx"]
+[ext_resource type="Script" path="res://src/ui/components/depr_pointer_tooltip.gd" id="1_iotui"]
 
 [node name="Panel" type="Panel"]
 offset_right = 40.0
 offset_bottom = 40.0
-script = ExtResource("1_fwdsx")
+script = ExtResource("1_iotui")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 layout_mode = 0

@@ -6,11 +6,13 @@
 
 use godot::prelude::*;
 
+pub mod avatars;
 pub mod comms;
 pub mod dcl;
 pub mod http_request;
 pub mod realm;
 pub mod scene_runner;
+pub mod session;
 pub mod test_runner;
 struct DecentralandGodotLibrary;
 

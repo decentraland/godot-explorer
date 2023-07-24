@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://rt4tyyg7gd1s"]
 
-[ext_resource type="Script" path="res://src/ui/components/panel_bottom_left.gd" id="1_nhq7r"]
+[ext_resource type="Script" path="res://src/ui/components/depr_panel_bottom_left.gd" id="1_p0rt6"]
 
 [node name="Control" type="Control"]
 layout_mode = 3
@@ -9,7 +9,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_nhq7r")
+script = ExtResource("1_p0rt6")
 
 [node name="HFlowContainer" type="HFlowContainer" parent="."]
 layout_mode = 1
@@ -46,7 +46,7 @@ offset_right = 573.0
 offset_bottom = 49.0
 tooltip_text = "Select scene to load"
 focus_mode = 0
-item_count = 5
+item_count = 6
 popup/item_0/text = "mannakia.dcl.eth"
 popup/item_0/id = 0
 popup/item_1/text = "http://127.0.0.1:8000"
@@ -57,6 +57,8 @@ popup/item_3/text = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-mai
 popup/item_3/id = 3
 popup/item_4/text = "https://peer-testing.decentraland.org"
 popup/item_4/id = 4
+popup/item_5/text = "https://sdk-team-cdn.decentraland.org/ipfs/streaming-world-main"
+popup/item_5/id = 5
 
 [node name="HSlider_SceneRadius" type="HSlider" parent="HFlowContainer/Panel_Realm"]
 layout_mode = 0
@@ -130,6 +132,40 @@ grow_horizontal = 0
 grow_vertical = 0
 text = "Clear"
 
+[node name="Panel_Chat" type="Panel" parent="HFlowContainer"]
+visible = false
+custom_minimum_size = Vector2(600, 300)
+layout_mode = 2
+
+[node name="RichTextLabel_Chat" type="RichTextLabel" parent="HFlowContainer/Panel_Chat"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -8.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+bbcode_enabled = true
+scroll_following = true
+
+[node name="Button_ClearChat" type="Button" parent="HFlowContainer/Panel_Chat"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -71.0
+offset_top = -35.0
+offset_right = -16.0
+offset_bottom = -8.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Clear"
+
 [node name="Panel_Preview" type="Panel" parent="HFlowContainer"]
 custom_minimum_size = Vector2(600, 95)
 layout_mode = 2
@@ -178,6 +214,12 @@ toggle_mode = true
 button_pressed = true
 text = " "
 
+[node name="Button_Chat" type="Button" parent="HFlowContainer/VFlowContainer_Tabs"]
+layout_mode = 2
+focus_mode = 0
+text = "Chat
+"
+
 [node name="Button_Console" type="Button" parent="HFlowContainer/VFlowContainer_Tabs"]
 layout_mode = 2
 focus_mode = 0
@@ -197,8 +239,10 @@ text = "Preview"
 [connection signal="item_selected" from="HFlowContainer/Panel_Realm/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
 [connection signal="drag_ended" from="HFlowContainer/Panel_Realm/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_drag_ended"]
 [connection signal="pressed" from="HFlowContainer/Panel_Console/Button_ClearConsole" to="." method="_on_button_clear_console_pressed"]
+[connection signal="pressed" from="HFlowContainer/Panel_Chat/Button_ClearChat" to="." method="_on_button_clear_chat_pressed"]
 [connection signal="pressed" from="HFlowContainer/Panel_Preview/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
 [connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Collapse" to="." method="_on_button_collapse_pressed"]
+[connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Chat" to="." method="_on_button_tab_pressed" binds= ["chat"]]
 [connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Console" to="." method="_on_button_tab_pressed" binds= ["console"]]
 [connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Realm" to="." method="_on_button_tab_pressed" binds= ["realm"]]
 [connection signal="pressed" from="HFlowContainer/VFlowContainer_Tabs/Button_Preview" to="." method="_on_button_tab_pressed" binds= ["preview"]]
