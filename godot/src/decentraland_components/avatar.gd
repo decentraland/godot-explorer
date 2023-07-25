@@ -22,6 +22,8 @@ var content_waiting_hash: Array = []
 var content_waiting_hash_signal_connected: bool = false
 var wearables_dict: Dictionary = {}
 
+var body_skeleton_3d: Skeleton3D = null 
+
 func update_avatar(
 	base_url: String,
 	avatar_name: String,
@@ -124,7 +126,25 @@ func _on_content_loading_finished(resource_hash: String):
 		content_waiting_hash.erase(resource_hash)
 		if content_waiting_hash.is_empty():
 			load_wearables()
+			
 
+func try_to_set_body_shape(body_shape_hash):
+	var body_shape = Global.content_manager.get_resource_from_hash(body_shape_hash)
+	if body_shape == null:
+		return
+		
+	Global.print_node_tree(body_shape)
+	var skeleton = body_shape.get_node("Armature/Skeleton3D")
+	if skeleton == null:
+		return
+		
+	if body_skeleton_3d != null:
+		remove_child(body_skeleton_3d)
+		body_skeleton_3d.free()
+		
+	body_skeleton_3d = skeleton.duplicate()
+	add_child(body_skeleton_3d)
+	
 func load_wearables():
 	if content_waiting_hash_signal_connected:
 		content_waiting_hash_signal_connected = false
@@ -134,11 +154,9 @@ func load_wearables():
 	if body_shape == null:
 		printerr("body shape not found")
 		return
-		
-	body_shape = Global.content_manager.get_resource_from_hash(body_shape.file_hash)
-	var body_shape_instance = body_shape.duplicate()
-	add_child(body_shape_instance)
-	
+
+	try_to_set_body_shape(body_shape)
+
 
 func set_target(target: Transform3D) -> void:
 	if not first_position:

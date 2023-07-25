@@ -43,13 +43,14 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 	var wearables_loaded = true
 	
 	for wearable in wearables:
-		var wearable_cached = wearable_cache_map.get(wearable)
+		var wearable_lower = wearable.to_lower()
+		var wearable_cached = wearable_cache_map.get(wearable_lower)
 		if wearable_cached == null:
-			wearable_cache_map[wearable] = {
+			wearable_cache_map[wearable_lower] = {
 				"id": new_id,
 				"loaded": false,
 			}
-			new_wearables.append(wearable.to_lower())
+			new_wearables.append(wearable_lower)
 		elif wearables_loaded and not wearable_cached.loaded:
 			wearables_loaded = false
 

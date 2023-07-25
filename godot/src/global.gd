@@ -88,3 +88,11 @@ func get_scene_radius():
 
 func get_tls_client():
 	return TLSOptions.client_unsafe()
+
+
+func print_node_tree(node: Node, prefix = ""):
+	print(prefix + node.name)
+	for child in node.get_children():
+		if child is Node:
+			print_node_tree(child, prefix + node.name + "/")
+	
