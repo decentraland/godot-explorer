@@ -35,7 +35,7 @@ func load_gltf():
 		gltf_state = GodotGltfState.NotFound
 		return
 
-	var fetching_resource = content_manager.fetch_resource(
+	var fetching_resource = content_manager.fetch_content(
 		dcl_gltf_src, ContentManager.ContentType.CT_GLTF_GLB, content_mapping
 	)
 

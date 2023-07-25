@@ -2,15 +2,17 @@ extends Node
 class_name ContentManager
 
 signal content_loading_finished(hash: String)
+signal wearable_data_loaded(id: String)
 
-enum ContentType { CT_GLTF_GLB = 1 }
+enum ContentType { CT_GLTF_GLB = 1, CT_TEXTURE = 2, CT_WEARABLE_EMOTE = 3 }
 
 var loading_content: Array[Dictionary] = []
 var pending_content: Array[Dictionary] = []
 var content_cache_map: Dictionary = {}
 var content_thread_pool: Thread = null
 var http_requester = RustHttpRequester.new()
-
+var wearable_cache_map: Dictionary = {}
+var wearable_request_monotonic_counter:int = 0
 
 func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
@@ -26,10 +28,49 @@ func get_resource_from_hash(file_hash: String):
 		return content_cached.get("resource")
 	return null
 
+func get_wearable(id: String):
+	var wearable_cached = wearable_cache_map.get(id)
+	if wearable_cached != null and wearable_cached.get("loaded"):
+		return wearable_cached.get("data")
+	return null
+	
+# Public function
+# @returns $id if the resource was added to queue to fetch, -1 if it had already been fetched
+func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> int:
+	var new_wearables: PackedStringArray = []
+	var new_id: int = wearable_request_monotonic_counter + 1
+	var wearables_loaded = true
+	
+	for wearable in wearables:
+		var wearable_cached = wearable_cache_map.get(wearable)
+		if wearable_cached == null:
+			wearable_cache_map[wearable] = {
+				"id": new_id,
+				"loaded": false,
+			}
+			new_wearables.append(wearable)
+		elif wearables_loaded and not wearable_cached.loaded:
+			wearables_loaded = false
+
+	if new_wearables.is_empty():
+		return -1
+
+	wearable_request_monotonic_counter = new_id
+	pending_content.push_back(
+		{
+			"id": new_id,
+			"content_type": ContentType.CT_WEARABLE_EMOTE,
+			"stage": 0,
+			"new_wearables": new_wearables,
+			"content_base_url": content_base_url
+		}
+	)
+
+	return new_id
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_resource(file_path: String, content_type: ContentType, content_mapping: Dictionary):
+func fetch_content(file_path: String, content_type: ContentType, content_mapping: Dictionary):
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
@@ -70,6 +111,11 @@ func content_thread_pool_func():
 				ContentType.CT_GLTF_GLB:
 					if not _process_loading_gltf(content, finished_downloads):
 						to_delete.push_back(content)
+					
+				ContentType.CT_WEARABLE_EMOTE:
+					if not _process_loading_wearable(content, finished_downloads):
+						to_delete.push_back(content)
+					
 				_:
 					printerr("Fetching invalid content type ", content_type)
 
@@ -85,7 +131,69 @@ func _get_finished_downloads() -> Array[RequestResponse]:
 		finished_download = http_requester.poll()
 	return ret
 
+func _process_loading_wearable(content: Dictionary, finished_downloads: Array[RequestResponse]) -> bool:
+	var stage:int = content.get("stage", 0)
+	match stage:
+		# Stage 0 => do the request
+		0:
+			var url: String = content.get("content_base_url", "https://peer.decentraland.org/content") + "entities/active"
+			var wearables: PackedStringArray = content.get("new_wearables", [])
+			var json_payload: String = JSON.stringify({ "pointers": wearables })
+			var headers = ["Content-Type: application/json"]
+			
+			content["request_id"] = http_requester.request_json(
+				0, url, HTTPClient.METHOD_POST, json_payload, headers
+			)
+			content["stage"] = 1
 
+		# Stage 1 => wait for the request
+		1:
+			for item in finished_downloads:
+				if item.id() == content["request_id"]:
+					if item.is_error():
+						printerr("wearable download is_error() == true!")
+						return false
+					else:
+						content["stage"] = 2
+						content["response"] = item.get_string_response_as_json()
+		
+		# Stage 2 => process the request
+		2: 
+			var pointers_missing: Array = content["new_wearables"]
+			var pointer_fetched: Array = []
+			
+			var response = content["response"]
+			if not response is Array:
+				# TODO: clean cached?
+				return false
+				
+			for item in response:
+				if not item is Dictionary:
+					# TODO: clean cached?
+					continue
+					
+				var pointers: Array = item.get("pointers", [])
+				for pointer in pointers:
+					if pointer in pointers_missing:
+						wearable_cache_map[pointer]["data"] = item 
+						wearable_cache_map[pointer]["loaded"] = true
+						pointer_fetched.push_back(pointer)
+						
+			for pointer in pointer_fetched:
+				pointers_missing.erase(pointer)
+				
+			if not pointers_missing.is_empty():
+				for pointer in pointers_missing:
+					wearable_cache_map[pointer]["loaded"] = true
+					wearable_cache_map[pointer]["data"] = null
+					
+			self.emit_signal.call_deferred("wearable_data_loaded", content["id"])
+			return false
+		_:
+			return false
+			
+	return true
+	
 func _process_loading_gltf(content: Dictionary, finished_downloads: Array[RequestResponse]) -> bool:
 	var content_mapping = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
@@ -120,7 +228,7 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 					0, base_url + file_hash, absolute_file_path
 				)
 
-		# Stage 2 => wait for the file
+		# Stage 1 => wait for the file
 		1:
 			for item in finished_downloads:
 				if item.id() == content["request_id"]:
@@ -130,7 +238,7 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 					else:
 						content["stage"] = 2
 
-		# Stage 3 => process gltf/glb (and request dependencies)
+		# Stage 2 => process gltf/glb (and request dependencies)
 		2:
 			var gltf := GLTFDocument.new()
 			var pre_gltf_state := GLTFState.new()
