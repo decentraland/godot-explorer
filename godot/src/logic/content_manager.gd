@@ -70,7 +70,7 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_content(file_path: String, content_type: ContentType, content_mapping: Dictionary):
+func fetch_gltf(file_path: String, content_mapping: Dictionary):
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
@@ -84,14 +84,37 @@ func fetch_content(file_path: String, content_type: ContentType, content_mapping
 		{
 			"file_path": file_path,
 			"file_hash": file_hash,
-			"content_type": content_type,
+			"content_type": ContentType.CT_GLTF_GLB,
 			"content_mapping": content_mapping,
 			"stage": 0
 		}
 	)
 
 	return true
+	
+# Public function
+# @returns true if the resource was added to queue to fetch, false if it had already been fetched
+func fetch_texture(file_path: String, content_mapping: Dictionary):
+	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+	var content_cached = content_cache_map.get(file_hash)
+	if content_cached != null:
+		return not content_cached.get("loaded")
 
+	content_cache_map[file_hash] = {
+		"loaded": false,
+	}
+
+	pending_content.push_back(
+		{
+			"file_path": file_path,
+			"file_hash": file_hash,
+			"content_type": ContentType.CT_TEXTURE,
+			"content_mapping": content_mapping,
+			"stage": 0
+		}
+	)
+
+	return true
 
 func content_thread_pool_func():
 	var to_delete = []
@@ -110,6 +133,10 @@ func content_thread_pool_func():
 			match content_type:
 				ContentType.CT_GLTF_GLB:
 					if not _process_loading_gltf(content, finished_downloads):
+						to_delete.push_back(content)
+						
+				ContentType.CT_TEXTURE:
+					if not _process_loading_texture(content, finished_downloads):
 						to_delete.push_back(content)
 					
 				ContentType.CT_WEARABLE_EMOTE:
@@ -179,6 +206,12 @@ func _process_loading_wearable(content: Dictionary, finished_downloads: Array[Re
 						wearable_cache_map[pointer]["loaded"] = true
 						pointer_fetched.push_back(pointer)
 						
+				var wearable_content_dict: Dictionary = {}
+				var wearable_content: Array = item.get("content", [])
+				for content_item in wearable_content:
+					wearable_content_dict[content_item.file.to_lower()] = content_item.hash
+				item["content"] = wearable_content_dict
+						
 			for pointer in pointer_fetched:
 				pointers_missing.erase(pointer)
 				
@@ -247,7 +280,7 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 				local_gltf_path, pre_gltf_state, 0, OS.get_user_data_dir()
 			)
 			if err != OK:
-				printerr("GLTF " + file_path + " couldn't be loaded succesfully: ", err)
+				printerr("GLTF " + base_url + file_hash + " couldn't be loaded succesfully: ", err)
 				return false
 
 			var dependencies: Array[String] = pre_gltf_state.get_additional_data("dependencies")
@@ -255,7 +288,11 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 
 			content["request_dependencies"] = []
 			for uri in dependencies:
-				var image_path = base_path + "/" + uri
+				var image_path
+				if base_path.is_empty(): 
+					image_path = uri 
+				else: 
+					image_path = base_path + "/" + uri
 				var image_hash = content_mapping.get("content", {}).get(image_path.to_lower(), "")
 				if image_hash.is_empty() or base_url.is_empty():
 					printerr(uri + " not found (resolved: " + image_path + ") => ", content_mapping)
@@ -318,6 +355,58 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 
 	return true
 
+
+func _process_loading_texture(content: Dictionary, finished_downloads: Array[RequestResponse]) -> bool:
+	var content_mapping = content.get("content_mapping")
+	var file_hash: String = content.get("file_hash")
+	var file_path: String = content.get("file_path")
+	var base_url: String = content_mapping.get("base_url", "")
+	var local_texture_path = "user://content/" + file_hash
+	var stage = content.get("stage", 0)
+
+	match stage:
+		# Stage 0 => request png file
+		0:
+			if FileAccess.file_exists(local_texture_path):
+				content["stage"] = 2
+			else:
+				if file_hash.is_empty() or base_url.is_empty():
+					printerr("hash or base_url is empty")
+					return false
+
+				var absolute_file_path = local_texture_path.replace("user:/", OS.get_user_data_dir())
+				content["stage"] = 1
+				content["request_id"] = http_requester.request_file(
+					0, base_url + file_hash, absolute_file_path
+				)
+
+		# Stage 1 => wait for the file
+		1:
+			for item in finished_downloads:
+				if item.id() == content["request_id"]:
+					if item.is_error():
+						printerr("gltf download is_error() == true!")
+						return false
+					else:
+						content["stage"] = 2
+
+		# Stage 2 => process texture
+		2:
+			var resource = Image.load_from_file(local_texture_path)
+#			if err != OK:
+#				printerr("Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err)
+#				return false
+
+			content_cache_map[file_hash]["resource"] = resource
+			content_cache_map[file_hash]["loaded"] = true
+			content_cache_map[file_hash]["stage"] = 3
+			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			return false
+		_:
+			printerr("unknown stage ", file_path)
+			return false
+
+	return true
 
 func split_animations(_gltf_node: Node) -> void:
 	pass

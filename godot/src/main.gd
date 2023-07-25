@@ -38,4 +38,7 @@ func start():
 	get_tree().root.add_child(Global.content_manager)
 	get_tree().root.add_child(Global.avatars)
 
+	self._start.call_deferred()
+	
+func _start():
 	get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
