@@ -21,6 +21,7 @@ func _ready():
 	content_thread_pool = Thread.new()
 	content_thread_pool.start(self.content_thread_pool_func)
 
+	DirAccess.copy_absolute("res://decentraland_logo.png", "user://decentraland_logo.png")
 
 func get_resource_from_hash(file_hash: String):
 	var content_cached = content_cache_map.get(file_hash)
@@ -29,7 +30,7 @@ func get_resource_from_hash(file_hash: String):
 	return null
 
 func get_wearable(id: String):
-	var wearable_cached = wearable_cache_map.get(id)
+	var wearable_cached = wearable_cache_map.get(id.to_lower())
 	if wearable_cached != null and wearable_cached.get("loaded"):
 		return wearable_cached.get("data")
 	return null
@@ -48,7 +49,7 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 				"id": new_id,
 				"loaded": false,
 			}
-			new_wearables.append(wearable)
+			new_wearables.append(wearable.to_lower())
 		elif wearables_loaded and not wearable_cached.loaded:
 			wearables_loaded = false
 
@@ -116,38 +117,47 @@ func fetch_texture(file_path: String, content_mapping: Dictionary):
 
 	return true
 
+
+func _process(dt: float) -> void:
+	_th_poll()
+
 func content_thread_pool_func():
-	var to_delete = []
-	var content_type: ContentType
-	var finished_downloads: Array[RequestResponse] = []
-	DirAccess.copy_absolute("res://decentraland_logo.png", "user://decentraland_logo.png")
-
+	return
+	
+	
 	while true:
+		_th_poll()
 		OS.delay_msec(1)
-		while pending_content.size() > 0:
-			loading_content.push_back(pending_content.pop_front())
-		finished_downloads = _get_finished_downloads()
+		
+var _th_to_delete = []
+var _th_content_type: ContentType
+var _th_finished_downloads: Array[RequestResponse] = []
+		
+func _th_poll():
+	while pending_content.size() > 0:
+		loading_content.push_back(pending_content.pop_front())
+	_th_finished_downloads = _get_finished_downloads()
 
-		for content in loading_content:
-			content_type = content.get("content_type")
-			match content_type:
-				ContentType.CT_GLTF_GLB:
-					if not _process_loading_gltf(content, finished_downloads):
-						to_delete.push_back(content)
-						
-				ContentType.CT_TEXTURE:
-					if not _process_loading_texture(content, finished_downloads):
-						to_delete.push_back(content)
+	for content in loading_content:
+		_th_content_type = content.get("content_type")
+		match _th_content_type:
+			ContentType.CT_GLTF_GLB:
+				if not _process_loading_gltf(content, _th_finished_downloads):
+					_th_to_delete.push_back(content)
 					
-				ContentType.CT_WEARABLE_EMOTE:
-					if not _process_loading_wearable(content, finished_downloads):
-						to_delete.push_back(content)
-					
-				_:
-					printerr("Fetching invalid content type ", content_type)
+			ContentType.CT_TEXTURE:
+				if not _process_loading_texture(content, _th_finished_downloads):
+					_th_to_delete.push_back(content)
+				
+			ContentType.CT_WEARABLE_EMOTE:
+				if not _process_loading_wearable(content, _th_finished_downloads):
+					_th_to_delete.push_back(content)
+				
+			_:
+				printerr("Fetching invalid content type ", _th_content_type)
 
-		for item in to_delete:
-			loading_content.erase(item)
+	for item in _th_to_delete:
+		loading_content.erase(item)
 
 
 func _get_finished_downloads() -> Array[RequestResponse]:
@@ -201,11 +211,13 @@ func _process_loading_wearable(content: Dictionary, finished_downloads: Array[Re
 					
 				var pointers: Array = item.get("pointers", [])
 				for pointer in pointers:
-					if pointer in pointers_missing:
-						wearable_cache_map[pointer]["data"] = item 
-						wearable_cache_map[pointer]["loaded"] = true
-						pointer_fetched.push_back(pointer)
+					var lower_pointer_fetched = pointer.to_lower()
+					if pointers_missing.find(lower_pointer_fetched) != -1:
+						wearable_cache_map[lower_pointer_fetched]["data"] = item 
+						wearable_cache_map[lower_pointer_fetched]["loaded"] = true
+						pointer_fetched.push_back(lower_pointer_fetched)
 						
+				printerr("free error ", pointer_fetched)
 				var wearable_content_dict: Dictionary = {}
 				var wearable_content: Array = item.get("content", [])
 				for content_item in wearable_content:
@@ -215,8 +227,10 @@ func _process_loading_wearable(content: Dictionary, finished_downloads: Array[Re
 			for pointer in pointer_fetched:
 				pointers_missing.erase(pointer)
 				
+				
 			if not pointers_missing.is_empty():
 				for pointer in pointers_missing:
+					printerr("Missing pointer ", pointer)
 					wearable_cache_map[pointer]["loaded"] = true
 					wearable_cache_map[pointer]["data"] = null
 					

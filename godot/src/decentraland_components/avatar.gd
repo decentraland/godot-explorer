@@ -137,7 +137,7 @@ func load_wearables():
 		
 	body_shape = Global.content_manager.get_resource_from_hash(body_shape.file_hash)
 	var body_shape_instance = body_shape.duplicate()
-	add_child(body_shape)
+	add_child(body_shape_instance)
 	
 
 func set_target(target: Transform3D) -> void:
