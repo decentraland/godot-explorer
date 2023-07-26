@@ -1,0 +1,33 @@
+[gd_scene load_steps=6 format=3 uid="uid://d1o5sgdmergr1"]
+
+[ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar.tscn" id="1_l0gen"]
+[ext_resource type="Script" path="res://src/test/avatar/test_avatar.gd" id="1_l76dp"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sqk37"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_iu4xf"]
+sky_material = SubResource("ProceduralSkyMaterial_sqk37")
+
+[sub_resource type="Environment" id="Environment_w6oks"]
+background_mode = 2
+sky = SubResource("Sky_iu4xf")
+tonemap_mode = 2
+glow_enabled = true
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_l76dp")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_w6oks")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Avatar" parent="." instance=ExtResource("1_l0gen")]
+skip_process = true
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-0.999994, 0.0023038, -0.00262236, 0, 0.751264, 0.660002, 0.00349059, 0.659998, -0.75126, 0, 2.662, -1.581)

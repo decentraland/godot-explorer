@@ -118,14 +118,12 @@ func fetch_texture(file_path: String, content_mapping: Dictionary):
 
 	return true
 
-
-func _process(dt: float) -> void:
-	_th_poll()
+#
+#func _process(dt: float) -> void:
+#	_th_poll()
 
 func content_thread_pool_func():
-	return
-	
-	
+	#return
 	while true:
 		_th_poll()
 		OS.delay_msec(1)
@@ -218,7 +216,6 @@ func _process_loading_wearable(content: Dictionary, finished_downloads: Array[Re
 						wearable_cache_map[lower_pointer_fetched]["loaded"] = true
 						pointer_fetched.push_back(lower_pointer_fetched)
 						
-				printerr("free error ", pointer_fetched)
 				var wearable_content_dict: Dictionary = {}
 				var wearable_content: Array = item.get("content", [])
 				for content_item in wearable_content:
@@ -407,7 +404,14 @@ func _process_loading_texture(content: Dictionary, finished_downloads: Array[Req
 
 		# Stage 2 => process texture
 		2:
-			var resource = Image.load_from_file(local_texture_path)
+			var file = FileAccess.open(local_texture_path, FileAccess.READ)
+			if file == null:
+				printerr("texture download fails")
+				return false
+				
+			var buf = file.get_buffer(file.get_length())
+			var resource := Image.new()
+			resource.load_png_from_buffer(buf)
 #			if err != OK:
 #				printerr("Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err)
 #				return false
