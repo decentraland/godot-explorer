@@ -14,13 +14,17 @@ var http_requester = RustHttpRequester.new()
 var wearable_cache_map: Dictionary = {}
 var wearable_request_monotonic_counter:int = 0
 
+var use_thread = true
+
 func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
-	content_thread_pool = Thread.new()
-	content_thread_pool.start(self.content_thread_pool_func)
-
+	if use_thread:
+		self.process_mode = Node.PROCESS_MODE_DISABLED
+		content_thread_pool = Thread.new()
+		content_thread_pool.start(self.content_thread_pool_func)
+		
 	DirAccess.copy_absolute("res://decentraland_logo.png", "user://decentraland_logo.png")
 
 func get_resource_from_hash(file_hash: String):
@@ -118,12 +122,10 @@ func fetch_texture(file_path: String, content_mapping: Dictionary):
 
 	return true
 
-#
-#func _process(dt: float) -> void:
-#	_th_poll()
+func _process(dt: float) -> void:
+	_th_poll()
 
 func content_thread_pool_func():
-	#return
 	while true:
 		_th_poll()
 		OS.delay_msec(1)
@@ -411,10 +413,10 @@ func _process_loading_texture(content: Dictionary, finished_downloads: Array[Req
 				
 			var buf = file.get_buffer(file.get_length())
 			var resource := Image.new()
-			resource.load_png_from_buffer(buf)
-#			if err != OK:
-#				printerr("Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err)
-#				return false
+			var err = resource.load_png_from_buffer(buf)
+			if err != OK:
+				printerr("Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err)
+				return false
 
 			content_cache_map[file_hash]["resource"] = resource
 			content_cache_map[file_hash]["loaded"] = true

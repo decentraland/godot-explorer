@@ -28,8 +28,7 @@ func _ready():
 		wearables,
 		emotes
 	)
-	avatar.set_running()
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
-	pass
+	avatar.set_running()

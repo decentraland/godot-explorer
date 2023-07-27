@@ -20,7 +20,14 @@ var content_waiting_hash_signal_connected: bool = false
 # Current wearables equippoed
 var current_wearables: PackedStringArray
 var current_body_shape: String = ""
+var current_eyes_color: Color = Color.BLACK
+var current_skin_color: Color = Color.BLACK
+var current_hair_color: Color = Color.BLACK
 var wearables_dict: Dictionary = {}
+
+const CATEGORY_HIDDEN = {
+	
+}
 
 
 func _ready():
@@ -30,9 +37,9 @@ func update_avatar(
 	base_url: String,
 	avatar_name: String,
 	body_shape: String,
-	_eyes: Color,
-	_hair: Color,
-	_skin: Color,
+	eyes: Color,
+	hair: Color,
+	skin: Color,
 	wearables: PackedStringArray,
 	emotes: Array
 ):
@@ -43,7 +50,10 @@ func update_avatar(
 	label_3d_name.text = avatar_name
 	current_wearables = wearables
 	current_body_shape = body_shape
-	
+	current_eyes_color = eyes 
+	current_skin_color = skin 
+	current_hair_color = hair 
+
 	var wearable_to_request := PackedStringArray(wearables)
 
 	wearable_to_request.push_back(body_shape)
@@ -166,6 +176,19 @@ func load_wearables():
 
 	try_to_set_body_shape(body_shape.get("file_hash"))
 	
+	var textures_unapplied = []
+	
+	var has_skin = false
+	var hide_upper_body = false
+	var hide_lower_body = false
+	var hide_feet = false
+	var hide_head = false
+#	  const hasSkin = loadedWearables.some((part) => part.wearable.data.category === WearableCategory.SKIN)
+#	  const hideUpperBody = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.UPPER_BODY))
+#	  const hideLowerBody = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.LOWER_BODY))
+#	  const hideFeet = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.FEET))
+#	  const hideHead = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.HEAD))
+
 	for wearable_key in current_wearables:
 		var wearable = wearables_dict.get(wearable_key)
 		var hash = wearable.get("file_hash")
@@ -179,18 +202,74 @@ func load_wearables():
 			continue
 			
 		if obj is Image:
-			# TODO: load texture also
+			textures_unapplied.push_back(obj)
+		elif obj is Node3D:
+			var wearable_skeleton: Skeleton3D = obj.find_child("Skeleton3D")
+			if wearable_skeleton == null:
+				printerr("wearable ", wearable_key, " doesn't Skeleton3D")
+				continue
+
+			for child in wearable_skeleton.get_children():
+				var new_wearable = child.duplicate()
+				new_wearable.name = new_wearable.name.to_lower()
+				body_shape_skeleton_3d.add_child(new_wearable)
+			
+			match wearable.get("metadata").get("data").get("category"):
+				WearableCategory.UPPER_BODY:
+					hide_upper_body = true
+				WearableCategory.LOWER_BODY:
+					hide_lower_body = true
+				WearableCategory.FEET:
+					hide_feet = true
+				WearableCategory.HEAD:
+					hide_head = true
+				WearableCategory.SKIN:
+					has_skin = true
+					
+	for child in body_shape_skeleton_3d.get_children():
+		if child.name.ends_with('ubody_basemesh') and (has_skin or hide_upper_body):
+			child.hide()
 			continue
-			
-		var wearable_skeleton: Skeleton3D = obj.get_node("Armature/Skeleton3D")
-		if wearable_skeleton == null:
-			printerr("wearable ", wearable_key, " doesn't Armature/Skeleton3D")
+		if child.name.ends_with('lbody_basemesh') and (has_skin or hide_lower_body):
+			child.hide()
 			continue
-			
-		for child in wearable_skeleton.get_children():
-			var new_wearable = child.duplicate()
-			body_shape_skeleton_3d.add_child(new_wearable)
-			
+		if child.name.ends_with('feet_basemesh') and (has_skin or hide_feet):
+			child.hide()
+			continue
+		if child.name.ends_with('head') and (has_skin or hide_head):
+			child.hide()
+			continue
+		if child.name.ends_with('head_basemesh') and (has_skin or hide_head):
+			child.hide()
+			continue
+		if child.name.ends_with('mask_eyes') and (has_skin or hide_head):
+			child.hide()
+			continue
+		if child.name.ends_with('mask_eyebrows') and (has_skin or hide_head):
+			child.hide()
+			continue
+		if child.name.ends_with('mask_mouth') and (has_skin or hide_head):
+			child.hide()
+			continue
+		if child is MeshInstance3D:
+			var mat_name: String = child.mesh.get("surface_0/name").to_lower()
+			var material: StandardMaterial3D = child.mesh.surface_get_material(0)
+			material.metallic = 0
+			material.metallic_specular = 0
+			if mat_name.find("skin"):
+				material.albedo_color = current_skin_color
+				material.metallic = 0
+			elif mat_name.find("hair"):
+				material.roughness = 1
+				material.albedo_color = current_hair_color
+#
+#	// hide base body parts if necessary
+#  const hasSkin = loadedWearables.some((part) => part.wearable.data.category === WearableCategory.SKIN)
+#  const hideUpperBody = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.UPPER_BODY))
+#  const hideLowerBody = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.LOWER_BODY))
+#  const hideFeet = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.FEET))
+#  const hideHead = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.HEAD))
+
 func set_target(target: Transform3D) -> void:
 	target_distance = target_position.distance_to(target.origin)
 
