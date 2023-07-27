@@ -25,6 +25,9 @@ var current_skin_color: Color = Color.BLACK
 var current_hair_color: Color = Color.BLACK
 var wearables_dict: Dictionary = {}
 
+# Loaded and curated wearables by category
+var wearables_by_category: Dictionary = {}
+
 const CATEGORY_HIDDEN = {
 	
 }
@@ -171,24 +174,12 @@ func load_wearables():
 	
 	var body_shape = wearables_dict.get(current_body_shape)
 	if body_shape == null:
+		# TODO: fallback to a random body shape?
 		printerr("body shape not found")
 		return
 
 	try_to_set_body_shape(body_shape.get("file_hash"))
 	
-	var textures_unapplied = []
-	
-	var has_skin = false
-	var hide_upper_body = false
-	var hide_lower_body = false
-	var hide_feet = false
-	var hide_head = false
-#	  const hasSkin = loadedWearables.some((part) => part.wearable.data.category === WearableCategory.SKIN)
-#	  const hideUpperBody = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.UPPER_BODY))
-#	  const hideLowerBody = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.LOWER_BODY))
-#	  const hideFeet = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.FEET))
-#	  const hideHead = hasSkin || loadedWearables.some(isCategoryHidden(WearableCategory.HEAD))
-
 	for wearable_key in current_wearables:
 		var wearable = wearables_dict.get(wearable_key)
 		var hash = wearable.get("file_hash")
@@ -200,21 +191,48 @@ func load_wearables():
 		if obj == null:
 			printerr("wearable ", wearable_key, " doesn't have resource from hash")
 			continue
+		
+		var category: String = wearable.get("metadata").get("data").get("category")
+		
+		if obj is Image:
+			if not WearableCategory.is_texture(category):
+				# Category and the object don't match
+				continue
+		elif obj is Node3D:
+			var wearable_skeleton: Skeleton3D = obj.find_child("Skeleton3D")
+			if wearable_skeleton == null:
+				# The wearable doesn't have a skeleton
+				continue
+		else:
+			# Invalid object
+			continue
+		
+		if not wearables_by_category.has(category):
+			wearables_by_category[category] = wearable_key
+
+			
+	var textures_unapplied = []
+	var has_skin = false
+	var hide_upper_body = false
+	var hide_lower_body = false
+	var hide_feet = false
+	var hide_head = false
+	
+	for category in wearables_by_category:
+		var wearable_key = wearables_by_category[category] 
+		var wearable = wearables_dict.get(wearable_key)
+		var obj = Global.content_manager.get_resource_from_hash(wearable.get("file_hash"))
 			
 		if obj is Image:
 			textures_unapplied.push_back(obj)
 		elif obj is Node3D:
 			var wearable_skeleton: Skeleton3D = obj.find_child("Skeleton3D")
-			if wearable_skeleton == null:
-				printerr("wearable ", wearable_key, " doesn't Skeleton3D")
-				continue
-
 			for child in wearable_skeleton.get_children():
 				var new_wearable = child.duplicate()
 				new_wearable.name = new_wearable.name.to_lower()
 				body_shape_skeleton_3d.add_child(new_wearable)
 			
-			match wearable.get("metadata").get("data").get("category"):
+			match category:
 				WearableCategory.UPPER_BODY:
 					hide_upper_body = true
 				WearableCategory.LOWER_BODY:
@@ -226,31 +244,26 @@ func load_wearables():
 				WearableCategory.SKIN:
 					has_skin = true
 					
+	var hidings = {
+		"ubody_basemesh": has_skin or hide_upper_body,
+		"lbody_basemesh": has_skin or hide_lower_body,
+		"feet_basemesh": has_skin or hide_feet,
+		"head": has_skin or hide_head,
+		"head_basemesh": has_skin or hide_head,
+		"mask_eyes": has_skin or hide_head,
+		"mask_eyebrows": has_skin or hide_head,
+		"mask_mouth": has_skin or hide_head,
+	}
 	for child in body_shape_skeleton_3d.get_children():
-		if child.name.ends_with('ubody_basemesh') and (has_skin or hide_upper_body):
+		var should_hide = false
+		for ends_with in hidings:
+			if child.name.ends_with(ends_with) and hidings[ends_with]:
+				should_hide = true
+				
+		if should_hide:
 			child.hide()
 			continue
-		if child.name.ends_with('lbody_basemesh') and (has_skin or hide_lower_body):
-			child.hide()
-			continue
-		if child.name.ends_with('feet_basemesh') and (has_skin or hide_feet):
-			child.hide()
-			continue
-		if child.name.ends_with('head') and (has_skin or hide_head):
-			child.hide()
-			continue
-		if child.name.ends_with('head_basemesh') and (has_skin or hide_head):
-			child.hide()
-			continue
-		if child.name.ends_with('mask_eyes') and (has_skin or hide_head):
-			child.hide()
-			continue
-		if child.name.ends_with('mask_eyebrows') and (has_skin or hide_head):
-			child.hide()
-			continue
-		if child.name.ends_with('mask_mouth') and (has_skin or hide_head):
-			child.hide()
-			continue
+			
 		if child is MeshInstance3D:
 			var mat_name: String = child.mesh.get("surface_0/name").to_lower()
 			var material: StandardMaterial3D = child.mesh.surface_get_material(0)
