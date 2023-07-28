@@ -81,6 +81,10 @@ func change_window_size(id: int, save: bool = true) -> void:
 	load_resolutions()
 	change_resolution(id)
 
+	var ui_factor = Vector2(resolutions_16_9[id]).x / 1280
+	h_slider_ui_scale.value = 100 * ui_factor
+	_on_h_slider_drag_ended.call_deferred(true)
+
 	if save:
 		config.set_value("display", "window", resolutions_16_9[id])
 		_save()

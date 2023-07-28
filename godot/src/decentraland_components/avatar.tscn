@@ -1610,7 +1610,6 @@ bones/61/scale = Vector3(1, 1, 1)
 [node name="Label3D_Name" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.09995, 0)
 billboard = 2
-text = "Player"
 font_size = 20
 outline_size = 6
 

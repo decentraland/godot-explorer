@@ -186,9 +186,9 @@ text = "UI Scale"
 [node name="HSlider_GuiScale" type="HSlider" parent="VBoxContainer_Graphics/GuiScale"]
 layout_mode = 2
 focus_mode = 0
-min_value = 50.0
+min_value = 100.0
 max_value = 200.0
-step = 10.0
+step = 25.0
 value = 100.0
 
 [node name="LimitFps" type="VBoxContainer" parent="VBoxContainer_Graphics"]

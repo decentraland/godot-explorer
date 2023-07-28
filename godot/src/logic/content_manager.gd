@@ -129,7 +129,7 @@ func fetch_texture(file_path: String, content_mapping: Dictionary):
 	return true
 
 
-func _process(dt: float) -> void:
+func _process(_dt: float) -> void:
 	_th_poll()
 
 

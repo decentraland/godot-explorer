@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=3 uid="uid://d1o5sgdmergr1"]
+[gd_scene load_steps=7 format=3 uid="uid://d1o5sgdmergr1"]
 
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar.tscn" id="1_l0gen"]
 [ext_resource type="Script" path="res://src/test/avatar/test_avatar.gd" id="1_l76dp"]
+[ext_resource type="Script" path="res://src/logic/camera.gd" id="3_m3c32"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sqk37"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
@@ -11,10 +12,9 @@ ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
 sky_material = SubResource("ProceduralSkyMaterial_sqk37")
 
 [sub_resource type="Environment" id="Environment_w6oks"]
-background_mode = 2
+background_energy_multiplier = 16.0
 sky = SubResource("Sky_iu4xf")
-tonemap_mode = 2
-glow_enabled = true
+reflected_light_source = 2
 
 [node name="Node3D" type="Node3D"]
 script = ExtResource("1_l76dp")
@@ -29,5 +29,6 @@ shadow_enabled = true
 [node name="Avatar" parent="." instance=ExtResource("1_l0gen")]
 skip_process = true
 
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-0.999994, 0.0023038, -0.00262236, 0, 0.751264, 0.660002, 0.00349059, 0.659998, -0.75126, 0, 2.662, -1.581)
+[node name="FreeLookCamera" type="Camera3D" parent="."]
+transform = Transform3D(-0.999187, 0, 0.0403063, 0, 1, 0, -0.0403063, 0, -0.999187, 0, 1.70643, -0.288892)
+script = ExtResource("3_m3c32")

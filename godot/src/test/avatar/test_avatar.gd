@@ -11,7 +11,7 @@ var wearables: PackedStringArray = [
 	"urn:decentraland:off-chain:base-avatars:f_eyebrows_00",
 	"urn:decentraland:off-chain:base-avatars:f_mouth_00"
 ]
-var eyes_color: Color = Color(0.3, 0.2235294133424759, 0.99)
+var eyes_color: Color = Color(0.3, 0.8, 0.5)
 var hair_color: Color = Color(0.5960784554481506, 0.37254902720451355, 0.21568627655506134)
 var skin_color: Color = Color(0.4901960790157318, 0.364705890417099, 0.27843138575553894)
 var emotes: Array = []
@@ -33,4 +33,6 @@ func _ready():
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
-	avatar.set_running()
+	pass
+
+#	avatar.set_running()
