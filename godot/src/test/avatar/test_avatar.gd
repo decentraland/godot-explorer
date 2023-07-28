@@ -16,6 +16,7 @@ var hair_color: Color = Color(0.5960784554481506, 0.37254902720451355, 0.2156862
 var skin_color: Color = Color(0.4901960790157318, 0.364705890417099, 0.27843138575553894)
 var emotes: Array = []
 
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	avatar.update_avatar(
@@ -28,6 +29,7 @@ func _ready():
 		wearables,
 		emotes
 	)
+
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):

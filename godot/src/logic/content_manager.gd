@@ -12,9 +12,10 @@ var content_cache_map: Dictionary = {}
 var content_thread_pool: Thread = null
 var http_requester = RustHttpRequester.new()
 var wearable_cache_map: Dictionary = {}
-var wearable_request_monotonic_counter:int = 0
+var wearable_request_monotonic_counter: int = 0
 
 var use_thread = true
+
 
 func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
@@ -24,8 +25,9 @@ func _ready():
 		self.process_mode = Node.PROCESS_MODE_DISABLED
 		content_thread_pool = Thread.new()
 		content_thread_pool.start(self.content_thread_pool_func)
-		
+
 	DirAccess.copy_absolute("res://decentraland_logo.png", "user://decentraland_logo.png")
+
 
 func get_resource_from_hash(file_hash: String):
 	var content_cached = content_cache_map.get(file_hash)
@@ -33,19 +35,21 @@ func get_resource_from_hash(file_hash: String):
 		return content_cached.get("resource")
 	return null
 
+
 func get_wearable(id: String):
 	var wearable_cached = wearable_cache_map.get(id.to_lower())
 	if wearable_cached != null and wearable_cached.get("loaded"):
 		return wearable_cached.get("data")
 	return null
-	
+
+
 # Public function
 # @returns $id if the resource was added to queue to fetch, -1 if it had already been fetched
 func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> int:
 	var new_wearables: PackedStringArray = []
 	var new_id: int = wearable_request_monotonic_counter + 1
 	var wearables_loaded = true
-	
+
 	for wearable in wearables:
 		var wearable_lower = wearable.to_lower()
 		var wearable_cached = wearable_cache_map.get(wearable_lower)
@@ -74,6 +78,7 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 
 	return new_id
 
+
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
 func fetch_gltf(file_path: String, content_mapping: Dictionary):
@@ -97,7 +102,8 @@ func fetch_gltf(file_path: String, content_mapping: Dictionary):
 	)
 
 	return true
-	
+
+
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
 func fetch_texture(file_path: String, content_mapping: Dictionary):
@@ -122,18 +128,22 @@ func fetch_texture(file_path: String, content_mapping: Dictionary):
 
 	return true
 
+
 func _process(dt: float) -> void:
 	_th_poll()
+
 
 func content_thread_pool_func():
 	while true:
 		_th_poll()
 		OS.delay_msec(1)
-		
+
+
 var _th_to_delete = []
 var _th_content_type: ContentType
 var _th_finished_downloads: Array[RequestResponse] = []
-		
+
+
 func _th_poll():
 	while pending_content.size() > 0:
 		loading_content.push_back(pending_content.pop_front())
@@ -145,15 +155,15 @@ func _th_poll():
 			ContentType.CT_GLTF_GLB:
 				if not _process_loading_gltf(content, _th_finished_downloads):
 					_th_to_delete.push_back(content)
-					
+
 			ContentType.CT_TEXTURE:
 				if not _process_loading_texture(content, _th_finished_downloads):
 					_th_to_delete.push_back(content)
-				
+
 			ContentType.CT_WEARABLE_EMOTE:
 				if not _process_loading_wearable(content, _th_finished_downloads):
 					_th_to_delete.push_back(content)
-				
+
 			_:
 				printerr("Fetching invalid content type ", _th_content_type)
 
@@ -169,16 +179,22 @@ func _get_finished_downloads() -> Array[RequestResponse]:
 		finished_download = http_requester.poll()
 	return ret
 
-func _process_loading_wearable(content: Dictionary, finished_downloads: Array[RequestResponse]) -> bool:
-	var stage:int = content.get("stage", 0)
+
+func _process_loading_wearable(
+	content: Dictionary, finished_downloads: Array[RequestResponse]
+) -> bool:
+	var stage: int = content.get("stage", 0)
 	match stage:
 		# Stage 0 => do the request
 		0:
-			var url: String = content.get("content_base_url", "https://peer.decentraland.org/content") + "entities/active"
+			var url: String = (
+				content.get("content_base_url", "https://peer.decentraland.org/content")
+				+ "entities/active"
+			)
 			var wearables: PackedStringArray = content.get("new_wearables", [])
-			var json_payload: String = JSON.stringify({ "pointers": wearables })
+			var json_payload: String = JSON.stringify({"pointers": wearables})
 			var headers = ["Content-Type: application/json"]
-			
+
 			content["request_id"] = http_requester.request_json(
 				0, url, HTTPClient.METHOD_POST, json_payload, headers
 			)
@@ -194,53 +210,53 @@ func _process_loading_wearable(content: Dictionary, finished_downloads: Array[Re
 					else:
 						content["stage"] = 2
 						content["response"] = item.get_string_response_as_json()
-		
+
 		# Stage 2 => process the request
-		2: 
+		2:
 			var pointers_missing: Array = content["new_wearables"]
 			var pointer_fetched: Array = []
-			
+
 			var response = content["response"]
 			if not response is Array:
 				# TODO: clean cached?
 				return false
-				
+
 			for item in response:
 				if not item is Dictionary:
 					# TODO: clean cached?
 					continue
-					
+
 				var pointers: Array = item.get("pointers", [])
 				for pointer in pointers:
 					var lower_pointer_fetched = pointer.to_lower()
 					if pointers_missing.find(lower_pointer_fetched) != -1:
-						wearable_cache_map[lower_pointer_fetched]["data"] = item 
+						wearable_cache_map[lower_pointer_fetched]["data"] = item
 						wearable_cache_map[lower_pointer_fetched]["loaded"] = true
 						pointer_fetched.push_back(lower_pointer_fetched)
-						
+
 				var wearable_content_dict: Dictionary = {}
 				var wearable_content: Array = item.get("content", [])
 				for content_item in wearable_content:
 					wearable_content_dict[content_item.file.to_lower()] = content_item.hash
 				item["content"] = wearable_content_dict
-						
+
 			for pointer in pointer_fetched:
 				pointers_missing.erase(pointer)
-				
-				
+
 			if not pointers_missing.is_empty():
 				for pointer in pointers_missing:
 					printerr("Missing pointer ", pointer)
 					wearable_cache_map[pointer]["loaded"] = true
 					wearable_cache_map[pointer]["data"] = null
-					
+
 			self.emit_signal.call_deferred("wearable_data_loaded", content["id"])
 			return false
 		_:
 			return false
-			
+
 	return true
-	
+
+
 func _process_loading_gltf(content: Dictionary, finished_downloads: Array[RequestResponse]) -> bool:
 	var content_mapping = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
@@ -303,9 +319,9 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 			content["request_dependencies"] = []
 			for uri in dependencies:
 				var image_path
-				if base_path.is_empty(): 
-					image_path = uri 
-				else: 
+				if base_path.is_empty():
+					image_path = uri
+				else:
 					image_path = base_path + "/" + uri
 				var image_hash = content_mapping.get("content", {}).get(image_path.to_lower(), "")
 				if image_hash.is_empty() or base_url.is_empty():
@@ -370,7 +386,9 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 	return true
 
 
-func _process_loading_texture(content: Dictionary, finished_downloads: Array[RequestResponse]) -> bool:
+func _process_loading_texture(
+	content: Dictionary, finished_downloads: Array[RequestResponse]
+) -> bool:
 	var content_mapping = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
 	var file_path: String = content.get("file_path")
@@ -388,7 +406,9 @@ func _process_loading_texture(content: Dictionary, finished_downloads: Array[Req
 					printerr("hash or base_url is empty")
 					return false
 
-				var absolute_file_path = local_texture_path.replace("user:/", OS.get_user_data_dir())
+				var absolute_file_path = local_texture_path.replace(
+					"user:/", OS.get_user_data_dir()
+				)
 				content["stage"] = 1
 				content["request_id"] = http_requester.request_file(
 					0, base_url + file_hash, absolute_file_path
@@ -410,12 +430,14 @@ func _process_loading_texture(content: Dictionary, finished_downloads: Array[Req
 			if file == null:
 				printerr("texture download fails")
 				return false
-				
+
 			var buf = file.get_buffer(file.get_length())
 			var resource := Image.new()
 			var err = resource.load_png_from_buffer(buf)
 			if err != OK:
-				printerr("Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err)
+				printerr(
+					"Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err
+				)
 				return false
 
 			content_cache_map[file_hash]["resource"] = resource
@@ -428,6 +450,7 @@ func _process_loading_texture(content: Dictionary, finished_downloads: Array[Req
 			return false
 
 	return true
+
 
 func split_animations(_gltf_node: Node) -> void:
 	pass

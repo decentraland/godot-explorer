@@ -58,9 +58,10 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.comms)
 	get_tree().root.add_child.call_deferred(self.content_manager)
 	get_tree().root.add_child.call_deferred(self.avatars)
-	
+
 	# TODO: enable raycast debugger
 	add_child(raycast_debugger)
+
 
 func add_raycast(_id: int, _time: float, _from: Vector3, _to: Vector3) -> void:
 	pass
@@ -126,4 +127,3 @@ func print_node_tree(node: Node, prefix = ""):
 	for child in node.get_children():
 		if child is Node:
 			print_node_tree(child, prefix + node.name + "/")
-	
