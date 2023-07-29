@@ -80,6 +80,8 @@ func _ready():
 		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
 	)
 
+	self.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
+
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	_scene_console_message.call_deferred(scene_id, level, timestamp, text)

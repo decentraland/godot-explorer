@@ -20,7 +20,7 @@ func _import_preflight(state: GLTFState, _extensions: PackedStringArray) -> Erro
 		state.set_additional_data("dependencies", dependencies)
 	else:
 		var base_path = state.get_additional_data("base_path")
-		if base_path != null and not base_path.is_empty():
+		if base_path != null:
 			var mappings = state.get_additional_data("mappings")
 			for image in state.json.get("images", []):
 				var uri = image.get("uri", "")

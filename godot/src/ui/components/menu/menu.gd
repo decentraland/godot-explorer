@@ -22,6 +22,8 @@ signal preview_hot_reload(scene_type: String, scene_id: String)
 @onready var control_settings = $ColorRect_Background/Control_Settings
 @onready var control_map = $ColorRect_Background/Control_Map
 @onready var control_advance_settings = $ColorRect_Background/Control_AdvanceSettings
+@onready var control_backpack = $ColorRect_Background/Control_Backpack
+
 var selected_node: Control
 
 @onready var button_discover = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Discover
@@ -44,6 +46,7 @@ func _ready():
 	control_settings.show()
 	control_discover.hide()
 	control_advance_settings.hide()
+	control_backpack.hide()
 	control_map.jump_to.connect(_jump_to)
 
 
@@ -68,6 +71,11 @@ func _unhandled_input(event):
 				emit_signal("hide_menu")
 			else:
 				show_map()
+		if event.pressed and event.keycode == KEY_P:
+			if selected_node == control_settings:
+				emit_signal("hide_menu")
+			else:
+				_on_button_settings_pressed()
 
 
 func modulate_all():
@@ -153,6 +161,12 @@ func _on_button_discover_pressed():
 	if selected_node != control_discover:
 		fade_out(selected_node)
 		fade_in(control_discover)
+
+
+func _on_button_backpack_pressed():
+	if selected_node != control_backpack:
+		fade_out(selected_node)
+		fade_in(control_backpack)
 
 
 func fade_in(node: Control):

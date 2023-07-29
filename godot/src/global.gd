@@ -26,9 +26,41 @@ var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd
 
 
 func _ready():
-	add_child(raycast_debugger)
+	var args := OS.get_cmdline_args()
+#	if some.
+	if args.has("--test"):
+		var test_runner = load("res://src/test/test_runner.gd").new()
+		add_child(test_runner)
+		test_runner.start.call_deferred()
+		return
+
+	if not DirAccess.dir_exists_absolute("user://content/"):
+		DirAccess.make_dir_absolute("user://content/")
+
+	self.scene_runner = SceneManager.new()
+	self.scene_runner.set_name("scene_runner")
+	self.scene_runner.process_mode = Node.PROCESS_MODE_DISABLED
+
+	self.realm = Realm.new()
+	self.realm.set_name("realm")
+
+	self.content_manager = ContentManager.new()
+	self.content_manager.set_name("content_manager")
+
+	self.comms = CommunicationManager.new()
+	self.comms.set_name("comms")
+
+	self.avatars = AvatarScene.new()
+	self.avatars.set_name("avatars")
+
+	get_tree().root.add_child.call_deferred(self.scene_runner)
+	get_tree().root.add_child.call_deferred(self.realm)
+	get_tree().root.add_child.call_deferred(self.comms)
+	get_tree().root.add_child.call_deferred(self.content_manager)
+	get_tree().root.add_child.call_deferred(self.avatars)
 
 	# TODO: enable raycast debugger
+	add_child(raycast_debugger)
 
 
 func add_raycast(_id: int, _time: float, _from: Vector3, _to: Vector3) -> void:
@@ -88,3 +120,10 @@ func get_scene_radius():
 
 func get_tls_client():
 	return TLSOptions.client_unsafe()
+
+
+func print_node_tree(node: Node, prefix = ""):
+	print(prefix + node.name)
+	for child in node.get_children():
+		if child is Node:
+			print_node_tree(child, prefix + node.name + "/")

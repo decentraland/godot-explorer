@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=11 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
@@ -8,6 +8,7 @@
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
 [ext_resource type="PackedScene" uid="uid://c8v1b3owo26xt" path="res://src/ui/components/advance_settings/advance_settings.tscn" id="6_dtnry"]
 [ext_resource type="ButtonGroup" uid="uid://73odg1nwdkof" path="res://src/ui/components/menu/button_group_menu_tabs.tres" id="8_ao4hb"]
+[ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="8_d38wp"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_t4bn8"]
 shader = ExtResource("5_k4wpn")
@@ -41,6 +42,7 @@ visible = false
 layout_mode = 1
 
 [node name="Control_Settings" parent="ColorRect_Background" instance=ExtResource("3_1stdy")]
+visible = false
 layout_mode = 1
 
 [node name="Control_Map" parent="ColorRect_Background" instance=ExtResource("4_jtsir")]
@@ -51,6 +53,9 @@ offset_bottom = -1.0
 
 [node name="Control_AdvanceSettings" parent="ColorRect_Background" instance=ExtResource("6_dtnry")]
 visible = false
+layout_mode = 1
+
+[node name="Control_Backpack" parent="ColorRect_Background" instance=ExtResource("8_d38wp")]
 layout_mode = 1
 
 [node name="ColorRect_Header" type="ColorRect" parent="."]
@@ -112,6 +117,17 @@ toggle_mode = true
 button_group = ExtResource("8_ao4hb")
 text = "Map"
 
+[node name="Button_Backpack" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
+custom_minimum_size = Vector2(75, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+toggle_mode = true
+button_group = ExtResource("8_ao4hb")
+text = "Backpack"
+
 [node name="Button_Settings" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
 custom_minimum_size = Vector2(75, 0)
 layout_mode = 2
@@ -159,6 +175,7 @@ text = "CLOSE"
 [connection signal="request_pause_scenes" from="ColorRect_Background/Control_AdvanceSettings" to="." method="_on_control_advance_settings_request_pause_scenes"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="." method="_on_button_discover_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
+[connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Settings" to="." method="_on_button_settings_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_AdvanceSettings" to="." method="_on_button_advance_settings_pressed"]
 [connection signal="pressed" from="Button_Close" to="." method="_on_button_close_pressed"]
