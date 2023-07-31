@@ -28,14 +28,19 @@ var mythic_thumbnail = preload("res://assets/ui/MythicThumbnail.png")
 var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 
+signal equip(wearable_id: String)
+signal unequip(wearable_id: String)
+
+var wearable_id
 
 func _ready():
 	unset_wearable()
 
-
-func set_wearable(wearable: Dictionary):
+func set_wearable(wearable: Dictionary, _wearable_id: String):
 	show()
-	print(wearable)
+	
+	wearable_id = _wearable_id
+	
 	var wearable_name: String = wearable.get("metadata", {}).get("name", "")
 	var wearable_display: Array = wearable.get("metadata", {}).get("i18n", [])
 
@@ -94,6 +99,18 @@ func _on_content_loading_finished(content_hash: String):
 	Global.content_manager.content_loading_finished.disconnect(self._on_content_loading_finished)
 	load_thumbnail()
 
+func set_equipable_and_equip(equipable: bool, equipped: bool):
+	button_equip.disabled = not equipable
+	if not equipable:
+		button_equip.text = "UNAVAILABLE"
+		button_equip.button_pressed = false
+	elif equipped:
+		button_equip.text = "UNEQUIP"
+		button_equip.button_pressed = true
+	else:
+		button_equip.text = "EQUIP"
+		button_equip.button_pressed = false
+		
 
 func load_thumbnail():
 	var image = Global.content_manager.get_resource_from_hash(thumbnail_hash)
@@ -107,8 +124,8 @@ func unset_wearable():
 
 func _on_button_equip_toggled(button_pressed):
 	if button_pressed:
+		self.equip.emit(wearable_id)
 		button_equip.text = "UNEQUIP"
-		#Add function to equip
 	else:
+		self.unequip.emit(wearable_id)
 		button_equip.text = "EQUIP"
-		#Add function to eunequip

@@ -166,9 +166,6 @@ size_flags_vertical = 4
 focus_mode = 0
 text = "CLOSE"
 
-[connection signal="toggle_fps_visibility" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_toggle_fps_visibility"]
-[connection signal="toggle_map_visibility" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_toggle_map_visibility"]
-[connection signal="toggle_ram_usage_visibility" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_toggle_ram_usage_visibility"]
 [connection signal="preview_hot_reload" from="ColorRect_Background/Control_AdvanceSettings" to="." method="_on_control_advance_settings_preview_hot_reload"]
 [connection signal="request_change_realm" from="ColorRect_Background/Control_AdvanceSettings" to="." method="_on_control_advance_settings_request_change_realm"]
 [connection signal="request_change_scene_radius" from="ColorRect_Background/Control_AdvanceSettings" to="." method="_on_control_advance_settings_request_change_scene_radius"]

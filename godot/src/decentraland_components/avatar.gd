@@ -30,30 +30,20 @@ func _ready():
 	Global.content_manager.wearable_data_loaded.connect(self._on_wearable_data_loaded)
 
 
-func update_avatar(
-	_base_url: String,
-	avatar_name: String,
-	body_shape: String,
-	eyes: Color,
-	hair: Color,
-	skin: Color,
-	wearables: PackedStringArray,
-	_emotes: Array
-):
+func update_avatar(avatar: Dictionary):
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
 		current_content_url = Global.realm.content_base_url
 
-	label_3d_name.text = avatar_name
-	current_wearables = wearables
-	current_body_shape = body_shape
-	current_eyes_color = eyes
-	current_skin_color = skin
-	current_hair_color = hair
+	label_3d_name.text = avatar.get("name")
+	current_wearables = avatar.get("wearables")
+	current_body_shape = avatar.get("body_shape")
+	current_eyes_color = avatar.get("eyes")
+	current_skin_color = avatar.get("skin")
+	current_hair_color = avatar.get("hair")
 
-	var wearable_to_request := PackedStringArray(wearables)
-
-	wearable_to_request.push_back(body_shape)
+	var wearable_to_request := PackedStringArray(current_wearables)
+	wearable_to_request.push_back(current_body_shape)
 #	for emote in emotes:
 #		var id: String = emote.get("id", "")
 #		if not id.is_empty():
@@ -319,9 +309,10 @@ func apply_texture_and_mask(
 		current_material.set_shader_parameter("material_color", color)
 		mesh.mesh.surface_set_material(0, current_material)
 	else:
-		var current_material: BaseMaterial3D = mesh.mesh.surface_get_material(0)
-		current_material.albedo_texture = main_texture
-		current_material.albedo_color = color
+		var current_material = mesh.mesh.surface_get_material(0)
+		if current_material is BaseMaterial3D:
+			current_material.albedo_texture = main_texture
+			current_material.albedo_color = color
 
 
 func set_target(target: Transform3D) -> void:

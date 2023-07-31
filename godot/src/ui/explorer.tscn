@@ -26,7 +26,7 @@ texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_7vmn5"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_5f1e5"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
@@ -188,7 +188,7 @@ layout_mode = 2
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_7vmn5")
+group = SubResource("ButtonGroup_5f1e5")
 
 [node name="Timer_BroadcastPosition" type="Timer" parent="."]
 wait_time = 0.1

@@ -183,13 +183,26 @@ layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "UI Scale"
 
-[node name="HSlider_GuiScale" type="HSlider" parent="VBoxContainer_Graphics/GuiScale"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_Graphics/GuiScale"]
 layout_mode = 2
+
+[node name="HSlider_GuiScale" type="HSlider" parent="VBoxContainer_Graphics/GuiScale/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
 focus_mode = 0
 min_value = 100.0
 max_value = 200.0
 step = 25.0
 value = 100.0
+
+[node name="Label_GuiScale" type="Label" parent="VBoxContainer_Graphics/GuiScale/HBoxContainer"]
+custom_minimum_size = Vector2(45, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+theme = SubResource("Theme_eontw")
+text = "100%"
+horizontal_alignment = 2
 
 [node name="LimitFps" type="VBoxContainer" parent="VBoxContainer_Graphics"]
 layout_mode = 2
@@ -204,36 +217,43 @@ text = "Limit FPS"
 [node name="MenuButton_LimitFps" type="OptionButton" parent="VBoxContainer_Graphics/LimitFps"]
 layout_mode = 2
 focus_mode = 0
-disabled = true
-item_count = 6
+item_count = 5
 selected = 0
-popup/item_0/text = "Vsync"
+popup/item_0/text = "VSync"
 popup/item_0/id = 0
-popup/item_1/text = "30"
+popup/item_1/text = "No Limit"
 popup/item_1/id = 1
-popup/item_2/text = "60"
+popup/item_2/text = "30"
 popup/item_2/id = 2
-popup/item_3/text = "120"
+popup/item_3/text = "60"
 popup/item_3/id = 3
-popup/item_4/text = "240"
+popup/item_4/text = "120"
 popup/item_4/id = 4
-popup/item_5/text = "No Limit"
-popup/item_5/id = 5
 
 [node name="Skybox" type="VBoxContainer" parent="VBoxContainer_Graphics"]
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
 
-[node name="Label_Skybox" type="Label" parent="VBoxContainer_Graphics/Skybox"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_Graphics/Skybox"]
+layout_mode = 2
+
+[node name="Label_Skybox" type="Label" parent="VBoxContainer_Graphics/Skybox/HBoxContainer"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Skybox"
 
+[node name="Label_Skybox2" type="Label" parent="VBoxContainer_Graphics/Skybox/HBoxContainer"]
+self_modulate = Color(1, 1, 1, 0.784314)
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+theme_override_font_sizes/font_size = 12
+text = "(require to restart the client)"
+vertical_alignment = 1
+
 [node name="MenuButton_Skybox" type="OptionButton" parent="VBoxContainer_Graphics/Skybox"]
 layout_mode = 2
 focus_mode = 0
-disabled = true
 item_count = 2
 selected = 0
 popup/item_0/text = "Default"
@@ -283,6 +303,8 @@ color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 [connection signal="toggled" from="VBoxContainer_General/Checkbox_Minimap" to="." method="_on_map_toggled"]
 [connection signal="item_selected" from="VBoxContainer_Graphics/WindowSize/MenuButton_WindowSize" to="." method="_on_window_size_menu_button_item_selected"]
 [connection signal="item_selected" from="VBoxContainer_Graphics/Resolution/MenuButton_Resolution" to="." method="_on_resolution_menu_button_item_selected"]
-[connection signal="drag_ended" from="VBoxContainer_Graphics/GuiScale/HSlider_GuiScale" to="." method="_on_h_slider_drag_ended"]
+[connection signal="drag_ended" from="VBoxContainer_Graphics/GuiScale/HBoxContainer/HSlider_GuiScale" to="." method="_on_h_slider_drag_ended"]
+[connection signal="item_selected" from="VBoxContainer_Graphics/LimitFps/MenuButton_LimitFps" to="." method="_on_menu_button_limit_fps_item_selected"]
+[connection signal="item_selected" from="VBoxContainer_Graphics/Skybox/MenuButton_Skybox" to="." method="_on_menu_button_skybox_item_selected"]
 [connection signal="toggled" from="VBoxContainer_Monitoring/Checkbox_RamUsage" to="." method="_on_ram_usage_toggled"]
 [connection signal="toggled" from="VBoxContainer_Monitoring/Checkbox_Fps" to="." method="_on_checkbox_fps_toggled"]

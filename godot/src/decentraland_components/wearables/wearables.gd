@@ -477,6 +477,9 @@ static func get_representation(wearable: Dictionary, body_shape_id: String) -> D
 static func get_category(wearable: Dictionary) -> String:
 	return wearable.get("metadata", {}).get("data", {}).get("category", "unknown-category")
 
+static func can_equip(wearable: Dictionary, body_shape_id: String) -> bool:
+	var representation = get_representation(wearable, body_shape_id)
+	return not representation.is_empty()
 
 static func compose_hidden_categories(
 	body_shape_id: String, force_render: PackedStringArray, wearables_by_category: Dictionary

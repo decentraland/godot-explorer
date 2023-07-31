@@ -1,5 +1,8 @@
+use godot::prelude::Dictionary;
+
 use super::{profile::UserProfile, wallet::Wallet};
 
+#[derive(Clone)]
 pub struct PlayerIdentity {
     wallet: Wallet,
     profile: UserProfile,
@@ -26,5 +29,10 @@ impl PlayerIdentity {
 
     pub fn profile(&self) -> &UserProfile {
         &self.profile
+    }
+
+    pub fn update_profile_from_dictionary(&mut self, dict: &Dictionary) {
+        self.profile.content.copy_from_godot_dictionary(dict);
+        self.profile.version += 1;
     }
 }

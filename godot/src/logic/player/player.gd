@@ -15,26 +15,13 @@ var is_on_air: bool
 @export var vertical_sens: float = 0.5
 @export var horizontal_sens: float = 0.5
 
-var body_shape: String = "urn:decentraland:off-chain:base-avatars:BaseFemale"
-var wearables: PackedStringArray = [
-	"urn:decentraland:off-chain:base-avatars:f_sweater",
-	"urn:decentraland:off-chain:base-avatars:f_jeans",
-	"urn:decentraland:off-chain:base-avatars:bun_shoes",
-	"urn:decentraland:off-chain:base-avatars:standard_hair",
-	"urn:decentraland:off-chain:base-avatars:f_eyes_01",
-	"urn:decentraland:off-chain:base-avatars:f_eyebrows_00",
-	"urn:decentraland:off-chain:base-avatars:f_mouth_00"
-]
-var eyes_color: Color = Color(0.3, 0.2235294133424759, 0.99)
-var hair_color: Color = Color(0.5960784554481506, 0.37254902720451355, 0.21568627655506134)
-var skin_color: Color = Color(0.4901960790157318, 0.364705890417099, 0.27843138575553894)
-var emotes: Array = []
-
+var WALK_SPEED = 2.0
+var RUN_SPEED = 6.0
+var GRAVITY := 55.0
+var JUMP_VELOCITY_0 := 12.0
 
 func _ready():
 	camera.current = true
-	if is_on_floor():
-		is_on_air = false
 
 	if captured:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -49,17 +36,21 @@ func _ready():
 	avatar.show()
 
 	floor_snap_length = 0.2
+		
+	Global.comms.update_profile_avatar(Global.config.avatar_profile)
+	avatar.update_avatar(Global.config.avatar_profile)
+		
+	Global.config.param_changed.connect(self._on_param_changed)
+	Global.comms.profile_changed.connect(self._on_player_profile_changed)
 
-	avatar.update_avatar(
-		"https://peer.decentraland.org/content",
-		"Godot User",
-		body_shape,
-		eyes_color,
-		hair_color,
-		skin_color,
-		wearables,
-		emotes
-	)
+func _on_player_profile_changed(new_profile: Dictionary):
+	avatar.update_avatar(new_profile)
+
+func _on_param_changed(param: ConfigData.ConfigParams):
+	WALK_SPEED = Global.config.walk_velocity
+	RUN_SPEED = Global.config.run_velocity
+	GRAVITY = Global.config.gravity
+	JUMP_VELOCITY_0 = Global.config.jump_velocity
 
 
 func _input(event):
@@ -123,62 +114,31 @@ func _input(event):
 					avatar.hide()
 
 
-const WALK_SPEED = 2.0
-const RUN_SPEED = 6.0
-const GRAVITY := 55.0
-const JUMP_VELOCITY_0 := 12.0
-
-
+var current_direction: Vector3 = Vector3()
+ 
 func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-	var _floor: bool = is_on_floor()
-
-	if _floor:
-		if not _floor == is_on_air:
-#			particles_jump.emitting = true
-			is_on_air = _floor
-	else:
-		if not _floor == is_on_air:
-#			particles_land.emitting = true
-			is_on_air = _floor
-
-	if not _floor:
-#		particles_move.emitting = false
-		if Input.is_action_pressed("double_gravity"):
-			velocity.y -= GRAVITY * delta * .5
-		else:
-			velocity.y -= GRAVITY * delta
+	current_direction = current_direction.move_toward(direction, 10 * delta)
+	
+	if not is_on_floor():
+		velocity.y -= GRAVITY * delta
 
 	elif Input.is_action_just_pressed("ia_jump"):
 		velocity.y = JUMP_VELOCITY_0
 
-	if direction:
-#		if is_on_floor():
-#			particles_move.emitting = true
-#		else:
-#			particles_move.emitting = false
-
+	if current_direction:
 		if Input.is_action_pressed("ia_walk"):
-#			if animation_player.current_animation != "Walk":
-#				animation_player.play("Walk")
 			avatar.set_walking()
-			velocity.x = direction.x * WALK_SPEED
-			velocity.z = direction.z * WALK_SPEED
+			velocity.x = current_direction.x * WALK_SPEED
+			velocity.z = current_direction.z * WALK_SPEED
 		else:
-#			if animation_player.current_animation != "Run":
-#				animation_player.play("Run")
-
 			avatar.set_running()
-			velocity.x = direction.x * RUN_SPEED
-			velocity.z = direction.z * RUN_SPEED
+			velocity.x = current_direction.x * RUN_SPEED
+			velocity.z = current_direction.z * RUN_SPEED
 
-		avatar.look_at(direction + position)
-
+		avatar.look_at(current_direction + position)
 	else:
-#		particles_move.emitting = false
-#		if animation_player.current_animation != "Idle":
-#			animation_player.play("Idle")
 		avatar.set_idle()
 		velocity.x = move_toward(velocity.x, 0, WALK_SPEED)
 		velocity.z = move_toward(velocity.z, 0, WALK_SPEED)

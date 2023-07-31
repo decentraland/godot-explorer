@@ -17,22 +17,15 @@ var h_slider_scene_radius = $VBoxContainer/ColorRect_Background/HBoxContainer/VB
 @onready
 var label_scene_radius_value = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/Label_SceneRadiusValue
 @onready
-var line_edit_gravity = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity/LineEdit_Gravity
-@onready
-var line_edit_jump_velocity = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity/LineEdit_JumpVelocity
-@onready
-var line_edit_run_speed = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed/LineEdit_RunSpeed
-@onready
-var line_edit_walk_speed = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed/LineEdit_WalkSpeed
-@onready
 var rich_text_label_console = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console/RichTextLabel_Console
-
-var gravity: float
-var walk_velocity: float
-var run_velocity: float
-var jump_velocity: float
-var scene_radius: int
-var process_tick_quota: int
+@onready
+var spin_box_gravity = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
+@onready
+var spin_box_jump_velocity = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity
+@onready
+var spin_box_run_speed = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed
+@onready
+var spin_box_walk_speed = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed
 
 var preview_ws = WebSocketPeer.new()
 var _preview_connect_to_url: String = ""
@@ -52,32 +45,18 @@ const SceneLogLevel := {
 
 
 func _ready():
-	get_config_dictionary()
 	refresh_values()
 
 
-func get_config_dictionary():
-	gravity = Global.get_gravity()
-	walk_velocity = Global.get_walk_velocity()
-	run_velocity = Global.get_run_velocity()
-	jump_velocity = Global.get_jump_velocity()
-	scene_radius = Global.get_scene_radius()
-	process_tick_quota = Global.get_process_tick_quota()
-
-
 func refresh_values():
-	line_edit_gravity.text = str(gravity).pad_decimals(1)
-	line_edit_walk_speed.text = str(walk_velocity).pad_decimals(1)
-	line_edit_run_speed.text = str(run_velocity).pad_decimals(1)
-	line_edit_jump_velocity.text = str(jump_velocity).pad_decimals(1)
-	h_slider_process_tick_quota.set_value_no_signal(process_tick_quota)
-	h_slider_scene_radius.set_value_no_signal(scene_radius)
-	label_process_tick_quota_value.text = str(process_tick_quota)
-	label_scene_radius_value.text = str(scene_radius)
-
-
-func apply_changes():
-	pass
+	spin_box_gravity.value = Global.config.gravity
+	spin_box_walk_speed.value = Global.config.walk_velocity
+	spin_box_run_speed.value = Global.config.run_velocity
+	spin_box_jump_velocity.value = Global.config.jump_velocity
+	h_slider_process_tick_quota.set_value_no_signal(Global.config.process_tick_quota_ms)
+	h_slider_scene_radius.set_value_no_signal(Global.config.scene_radius)
+	label_process_tick_quota_value.text = str(Global.config.process_tick_quota_ms)
+	label_scene_radius_value.text = str(Global.config.scene_radius)
 
 
 func _on_h_slider_process_tick_quota_value_changed(value):
@@ -187,3 +166,23 @@ func _on_console_add(scene_title: String, level: int, timestamp: float, text: St
 	rich_text_label_console.add_text(msg)
 	rich_text_label_console.pop()
 	rich_text_label_console.newline()
+
+
+func _on_spin_box_walk_speed_value_changed(value):
+	Global.config.walk_velocity = value
+	Global.config.save_to_settings_file()
+
+
+func _on_spin_box_run_speed_value_changed(value):
+	Global.config.run_velocity = value
+	Global.config.save_to_settings_file()
+
+
+func _on_spin_box_jump_velocity_value_changed(value):
+	Global.config.jump_velocity = value
+	Global.config.save_to_settings_file()
+
+
+func _on_spin_box_gravity_value_changed(value):
+	Global.config.gravity = value
+	Global.config.save_to_settings_file()

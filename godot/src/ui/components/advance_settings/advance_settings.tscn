@@ -205,8 +205,7 @@ custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-min_value = 1.0
-max_value = 16.0
+max_value = 4.0
 value = 1.0
 editable = false
 
@@ -238,11 +237,9 @@ theme = SubResource("Theme_o8ri3")
 text = "Gravity
 "
 
-[node name="LineEdit_Gravity" type="LineEdit" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity"]
+[node name="SpinBox_Gravity" type="SpinBox" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity"]
 layout_mode = 2
-focus_mode = 0
-text = "55.0"
-editable = false
+value = 100.0
 
 [node name="HBoxContainer_JumpVelocity" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer"]
 custom_minimum_size = Vector2(250, 0)
@@ -257,10 +254,8 @@ theme = SubResource("Theme_o8ri3")
 text = "Jump Velocity
 "
 
-[node name="LineEdit_JumpVelocity" type="LineEdit" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity"]
+[node name="SpinBox_JumpVelocity" type="SpinBox" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity"]
 layout_mode = 2
-focus_mode = 0
-text = "12.0"
 editable = false
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
@@ -281,10 +276,8 @@ theme = SubResource("Theme_o8ri3")
 text = "Run Speed
 "
 
-[node name="LineEdit_RunSpeed" type="LineEdit" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed"]
+[node name="SpinBox_RunSpeed" type="SpinBox" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed"]
 layout_mode = 2
-focus_mode = 0
-text = "20.0"
 editable = false
 
 [node name="HBoxContainer_WalkSpeed" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2"]
@@ -299,10 +292,8 @@ layout_mode = 2
 theme = SubResource("Theme_o8ri3")
 text = "Walk Speed"
 
-[node name="LineEdit_WalkSpeed" type="LineEdit" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed"]
+[node name="SpinBox_WalkSpeed" type="SpinBox" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed"]
 layout_mode = 2
-focus_mode = 0
-text = "12.0"
 editable = false
 
 [node name="VBoxContainer_General2" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer"]
@@ -352,4 +343,8 @@ text = "Clear"
 [connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
 [connection signal="drag_ended" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_drag_ended"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity" to="." method="_on_spin_box_gravity_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity" to="." method="_on_spin_box_jump_velocity_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed" to="." method="_on_spin_box_run_speed_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed" to="." method="_on_spin_box_walk_speed_value_changed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console/Button_ClearConsole" to="." method="_on_button_clear_console_pressed"]

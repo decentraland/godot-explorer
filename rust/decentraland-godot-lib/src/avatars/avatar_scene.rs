@@ -143,9 +143,9 @@ impl AvatarScene {
             return;
         };
 
-        self.avatar_godot_scene
-            .get_mut(&entity_id)
-            .unwrap()
-            .call("update_avatar".into(), &profile.to_godot_array(base_url));
+        self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
+            "update_avatar".into(),
+            &[profile.to_godot_dictionary(base_url).to_variant()],
+        );
     }
 }

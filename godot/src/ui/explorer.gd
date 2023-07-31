@@ -42,23 +42,22 @@ func _process(_dt):
 
 
 func _ready():
-	var sky = null
-
 	if Global.is_mobile:
 		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_BEGIN
-		sky = load("res://assets/sky/sky_basic.tscn").instantiate()
 		mobile_ui.show()
-		var screen_size = DisplayServer.screen_get_size()
-		get_viewport().size = screen_size
 		label_crosshair.show()
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-
 	else:
 		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_END
-		sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
-		sky.day_time = 14.9859
 		mobile_ui.hide()
 		button_jump.hide()
+
+	var sky = null
+	match Global.config.skybox:
+		0:
+			sky = load("res://assets/sky/sky_basic.tscn").instantiate()
+		1:
+			sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
+			sky.day_time = 14.9859
 
 	add_child(sky)
 

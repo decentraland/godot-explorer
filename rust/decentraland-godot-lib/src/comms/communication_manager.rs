@@ -76,6 +76,9 @@ impl CommunicationManager {
     #[signal]
     fn chat_message(chats: VariantArray) {}
 
+    #[signal]
+    fn profile_changed(new_profile: Dictionary) {}
+
     #[func]
     fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
         let index = self.last_index;
@@ -217,5 +220,20 @@ impl CommunicationManager {
         }
 
         self.current_adapter = Adapter::None;
+    }
+
+    #[func]
+    fn update_profile_avatar(&mut self, new_profile: Dictionary) {
+        let player_identity = Arc::<PlayerIdentity>::make_mut(&mut self.player_identity);
+        player_identity.update_profile_from_dictionary(&new_profile);
+
+        match &mut self.current_adapter {
+            Adapter::None => {}
+            Adapter::WsRoom(ws_room) => {
+                ws_room.change_profile(self.player_identity.clone());
+            }
+        }
+
+        self.emit_signal("profile_changed".into(), &[new_profile.to_variant()]);
     }
 }
