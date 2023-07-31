@@ -37,6 +37,7 @@ signal clear_filter
 
 var thumbnail_hash: String
 
+
 func _update_category_icon():
 	if is_instance_valid(texture_rect_icon):
 		var texture_path = (
@@ -49,8 +50,10 @@ func _update_category_icon():
 			if texture != null:
 				texture_rect_icon.texture = texture
 
+
 func update_preview(hash: String) -> void:
 	pass
+
 
 func _ready():
 	panel_container.hide()
@@ -120,16 +123,16 @@ func set_wearable(wearable: Dictionary):
 	var wearable_category = Wearables.get_category(wearable)
 	if wearable_category != type_to_category(filter_category):
 		return
-	
+
 	var wearable_thumbnail: String = wearable.get("metadata", {}).get("thumbnail", "")
 	var new_thumbnail_hash = wearable.get("content", {}).get(wearable_thumbnail, "")
-	
+
 	if new_thumbnail_hash == thumbnail_hash:
 		return
-		
+
 	thumbnail_hash = new_thumbnail_hash
 	# TODO: loading?
-	
+
 	if not thumbnail_hash.is_empty():
 		if Global.content_manager.get_resource_from_hash(thumbnail_hash) == null:
 			var content_mapping: Dictionary = {

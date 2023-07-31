@@ -302,7 +302,7 @@ impl WebSocketRoom {
                                 );
 
                                 self.last_profile_version_announced =
-                                    self.player_identity.profile().version as u32;
+                                    self.player_identity.profile().version;
 
                                 self.send_rfc4(
                                     rfc4::Packet {
@@ -549,8 +549,8 @@ impl WebSocketRoom {
             }
         }
 
-        if self.last_profile_version_announced != self.player_identity.profile().version as u32 {
-            self.last_profile_version_announced = self.player_identity.profile().version as u32;
+        if self.last_profile_version_announced != self.player_identity.profile().version {
+            self.last_profile_version_announced = self.player_identity.profile().version;
             self.send_rfc4(
                 rfc4::Packet {
                     message: Some(rfc4::packet::Message::ProfileVersion(

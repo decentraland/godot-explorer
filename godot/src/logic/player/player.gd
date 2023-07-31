@@ -20,6 +20,7 @@ var RUN_SPEED = 6.0
 var GRAVITY := 55.0
 var JUMP_VELOCITY_0 := 12.0
 
+
 func _ready():
 	camera.current = true
 
@@ -36,15 +37,17 @@ func _ready():
 	avatar.show()
 
 	floor_snap_length = 0.2
-		
+
 	Global.comms.update_profile_avatar(Global.config.avatar_profile)
 	avatar.update_avatar(Global.config.avatar_profile)
-		
+
 	Global.config.param_changed.connect(self._on_param_changed)
 	Global.comms.profile_changed.connect(self._on_player_profile_changed)
 
+
 func _on_player_profile_changed(new_profile: Dictionary):
 	avatar.update_avatar(new_profile)
+
 
 func _on_param_changed(param: ConfigData.ConfigParams):
 	WALK_SPEED = Global.config.walk_velocity
@@ -115,12 +118,13 @@ func _input(event):
 
 
 var current_direction: Vector3 = Vector3()
- 
+
+
 func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	current_direction = current_direction.move_toward(direction, 10 * delta)
-	
+
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 

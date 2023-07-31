@@ -33,14 +33,16 @@ signal unequip(wearable_id: String)
 
 var wearable_id
 
+
 func _ready():
 	unset_wearable()
 
+
 func set_wearable(wearable: Dictionary, _wearable_id: String):
 	show()
-	
+
 	wearable_id = _wearable_id
-	
+
 	var wearable_name: String = wearable.get("metadata", {}).get("name", "")
 	var wearable_display: Array = wearable.get("metadata", {}).get("i18n", [])
 
@@ -99,6 +101,7 @@ func _on_content_loading_finished(content_hash: String):
 	Global.content_manager.content_loading_finished.disconnect(self._on_content_loading_finished)
 	load_thumbnail()
 
+
 func set_equipable_and_equip(equipable: bool, equipped: bool):
 	button_equip.disabled = not equipable
 	if not equipable:
@@ -110,7 +113,7 @@ func set_equipable_and_equip(equipable: bool, equipped: bool):
 	else:
 		button_equip.text = "EQUIP"
 		button_equip.button_pressed = false
-		
+
 
 func load_thumbnail():
 	var image = Global.content_manager.get_resource_from_hash(thumbnail_hash)

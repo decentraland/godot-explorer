@@ -1,6 +1,7 @@
 extends VBoxContainer
 
-@onready var button_save_profile = $ColorRect_Background/HBoxContainer/Control/VBoxContainer/Button_SaveProfile
+@onready
+var button_save_profile = $ColorRect_Background/HBoxContainer/Control/VBoxContainer/Button_SaveProfile
 @onready var line_edit_name = $ColorRect_Background/HBoxContainer/Control/VBoxContainer/LineEdit_Name
 
 @onready var avatar_preview = %AvatarPreview
@@ -35,6 +36,7 @@ var renderer_avatar_dictionary: Dictionary = {}
 
 var wearable_buttons: Array = []
 
+
 func _ready():
 	for child in v_box_container_category.get_children():
 		# TODO: check if it's a wearable_button
@@ -52,7 +54,7 @@ func _ready():
 	base_wearable_request_id = Global.content_manager.fetch_wearables(
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
 	)
-	
+
 	avatar_body_shape = Global.config.avatar_profile.body_shape
 	avatar_wearables = Global.config.avatar_profile.wearables
 	avatar_eyes_color = Global.config.avatar_profile.eyes
@@ -60,6 +62,7 @@ func _ready():
 	avatar_skin_color = Global.config.avatar_profile.skin
 	avatar_emotes = Global.config.avatar_profile.emotes
 	line_edit_name.text = Global.config.avatar_profile.name
+
 
 func _on_wearable_data_loaded(req_id: int):
 	if base_wearable_request_id == -1 or req_id != base_wearable_request_id:
@@ -82,7 +85,7 @@ func _update_avatar():
 		"wearables": avatar_wearables,
 		"emotes": avatar_emotes
 	}
-	
+
 	# TODO: make this more performant
 	for wearable_button in wearable_buttons:
 		for wearable in avatar_wearables:
@@ -91,6 +94,7 @@ func _update_avatar():
 
 	avatar_preview.avatar.update_avatar(renderer_avatar_dictionary)
 	button_save_profile.disabled = false
+
 
 func load_filtered_data(filter: String):
 	wearable_panel.unset_wearable()
@@ -118,7 +122,7 @@ func show_wearables():
 func _on_wearable_toggled(_button_toggled: bool, wearable_id: String) -> void:
 	var desired_wearable = wearable_data[wearable_id]
 	var category = Wearables.get_category(desired_wearable)
-	
+
 	var equipped = false
 	var can_equip = true
 	if category != Wearables.Categories.BODY_SHAPE:
@@ -129,7 +133,7 @@ func _on_wearable_toggled(_button_toggled: bool, wearable_id: String) -> void:
 				break
 	else:
 		equipped = avatar_body_shape == wearable_id
-	
+
 	wearable_panel.set_wearable(wearable_data[wearable_id], wearable_id)
 	wearable_panel.set_equipable_and_equip(can_equip, equipped)
 
@@ -150,18 +154,17 @@ func _on_line_edit_name_text_changed(new_text):
 func _on_button_save_profile_pressed():
 	button_save_profile.disabled = true
 	renderer_avatar_dictionary["name"] = line_edit_name.text
-	
+
 	Global.config.avatar_profile = renderer_avatar_dictionary
 	Global.config.save_to_settings_file()
-	
+
 	Global.comms.update_profile_avatar(renderer_avatar_dictionary)
-	
 
 
 func _on_wearable_panel_equip(wearable_id: String):
 	var desired_wearable = wearable_data[wearable_id]
 	var category = Wearables.get_category(desired_wearable)
-	
+
 	if category == Wearables.Categories.BODY_SHAPE:
 		avatar_body_shape = wearable_id
 	else:
@@ -181,14 +184,15 @@ func _on_wearable_panel_equip(wearable_id: String):
 
 	_update_avatar()
 
+
 func _on_wearable_panel_unequip(wearable_id: String):
 	var desired_wearable = wearable_data[wearable_id]
 	var category = Wearables.get_category(desired_wearable)
-	
+
 	if category == Wearables.Categories.BODY_SHAPE:
 		# TODO: can not unequip a body shape
 		return
-		
+
 	else:
 		var index = avatar_wearables.find(wearable_id)
 		if index != -1:

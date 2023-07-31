@@ -14,10 +14,11 @@ func _process(delta):
 	pass
 
 
-var start_camera_transform 
+var start_camera_transform
 var start_angle
-var start_dragging_position 
+var start_dragging_position
 var dirty_is_dragging
+
 
 func _on_gui_input(event):
 	if event is InputEventMouseButton:
@@ -26,7 +27,7 @@ func _on_gui_input(event):
 				dirty_is_dragging = true
 				start_dragging_position = get_global_mouse_position()
 				start_camera_transform = camera_3d.transform
-				start_angle = avatar.rotation.y 
+				start_angle = avatar.rotation.y
 			else:
 				dirty_is_dragging = false
 
@@ -36,14 +37,16 @@ func _on_gui_input(event):
 				dir = 0.1
 			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				dir = -0.1
-				
+
 			if dir != 0.0:
-				camera_3d.transform.origin.z = clampf(camera_3d.transform.origin.z + dir, -1.6, -0.4 )
-			
+				camera_3d.transform.origin.z = clampf(
+					camera_3d.transform.origin.z + dir, -1.6, -0.4
+				)
+
 	if event is InputEventMouseMotion:
 		if dirty_is_dragging:
-			var diff =  0.005 * (get_global_mouse_position() - start_dragging_position)
-			var changed_transform = Transform3D(start_camera_transform) 
+			var diff = 0.005 * (get_global_mouse_position() - start_dragging_position)
+			var changed_transform = Transform3D(start_camera_transform)
 			changed_transform.origin.y = clampf(start_camera_transform.origin.y + diff.y, 0.2, 2)
 			avatar.rotation.y = start_angle + diff.x
 			camera_3d.transform = changed_transform

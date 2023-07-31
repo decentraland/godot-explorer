@@ -119,10 +119,11 @@ func default():
 		"base_url": "https://peer.decentraland.org/content",
 		"name": "Godotte",
 		"body_shape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
-		"eyes":  Color(0.3, 0.22, 0.99),
+		"eyes": Color(0.3, 0.22, 0.99),
 		"hair": Color(0.6, 0.38, 0.1),
 		"skin": Color(0.5, 0.36, 0.28),
-		"wearables": [
+		"wearables":
+		[
 			"urn:decentraland:off-chain:base-avatars:f_sweater",
 			"urn:decentraland:off-chain:base-avatars:f_jeans",
 			"urn:decentraland:off-chain:base-avatars:bun_shoes",
@@ -164,6 +165,7 @@ func load_from_settings_file():
 	self.ui_scale = settings_file.get_value("config", "ui_scale", default.ui_scale)
 
 	self.avatar_profile = settings_file.get_value("profile", "avatar", default.avatar_profile)
+
 
 func save_to_settings_file():
 	var settings_file: ConfigFile = ConfigFile.new()
