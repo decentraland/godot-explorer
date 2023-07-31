@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://wuyfsip50bwb"]
+[gd_scene load_steps=6 format=3 uid="uid://wuyfsip50bwb"]
 
 [ext_resource type="Script" path="res://src/ui/components/wearable_button/wearable_button.gd" id="1_8llwr"]
-[ext_resource type="Texture2D" uid="uid://dph3nkw6h0go3" path="res://assets/wearable_categories/body_shape_icon.png" id="2_2fjeg"]
+[ext_resource type="Texture2D" uid="uid://dh84266djh5rq" path="res://assets/wearable_categories/hair_icon.png" id="2_wkqcs"]
+[ext_resource type="Texture2D" uid="uid://dh3uy1elavq14" path="res://assets/ui/EmptyIcon.png" id="3_j8oa3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8krxp"]
 bg_color = Color(0.92549, 0.443137, 0, 1)
@@ -64,7 +65,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("2_2fjeg")
+scale = Vector2(0.7, 0.7)
+pivot_offset = Vector2(24, 25)
+texture = ExtResource("2_wkqcs")
 expand_mode = 1
 stretch_mode = 4
 
@@ -74,6 +77,7 @@ layout_mode = 2
 mouse_filter = 2
 
 [node name="PanelContainer" type="PanelContainer" parent="HBoxContainer/Control2"]
+visible = false
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 0
 offset_right = 40.0
@@ -96,6 +100,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+texture = ExtResource("3_j8oa3")
 expand_mode = 1
 stretch_mode = 4
 

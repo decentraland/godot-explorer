@@ -26,7 +26,7 @@ var config = ConfigFile.new()
 
 
 func _ready():
-	if OS.get_name() == "Android":
+	if Global.is_mobile:
 		window_size_menu_button.disabled = true
 		resolution_menu_button.disabled = true
 

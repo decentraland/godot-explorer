@@ -9,15 +9,15 @@ uniform float line_width_px = 1.0;
 
 uniform vec2 selected_tile = vec2(20.0, 20.0);
 
-const vec4[] colors = {
-	vec4(0.0, 0.0, 0.0, 1.0),
-	vec4(0.314,0.329,0.831, 1.0),
-	vec4(0.439,0.675,0.463, 1.0),
-	vec4(0.443,0.424,0.478, 1.0),
-	vec4(0.239,0.227,0.275, 1.0),
-	vec4(0.035,0.031,0.039, 1.0),
-	vec4(0.0, 0.0, 0.0, 1.0),
-	vec4(0.0, 0.0, 0.0, 1.0)
+const vec3[] colors = {
+	vec3(0.0, 0.0, 0.0),
+	vec3(0.314,0.329,0.831),
+	vec3(0.439,0.675,0.463),
+	vec3(0.443,0.424,0.478),
+	vec3(0.239,0.227,0.275),
+	vec3(0.035,0.031,0.039),
+	vec3(0.0, 0.0, 0.0),
+	vec3(0.0, 0.0, 0.0)
 };
 
 
@@ -39,7 +39,7 @@ void fragment() {
 	bool leftMask = (flags & 0x10) > 0;
 	bool topLeftMask = (flags & 0x20) > 0;
 
-	vec4 resolved_color = colors[type];
+	vec4 resolved_color = vec4(colors[type], COLOR.a);
 
 	bool borderLeft = false;
 	bool borderTop = false;
@@ -60,15 +60,15 @@ void fragment() {
 	}
 
 	if (borderLeft && (fx - cx < line_width)) {
-		resolved_color = vec4(0.0, 0.0, 0.0, 1.0);
+		resolved_color = vec4(0.0, 0.0, 0.0, COLOR.a);
 	}
 
 	if (borderTop && (fy - cy < line_width)) {
-		resolved_color = vec4(0.0, 0.0, 0.0, 1.0);
+		resolved_color = vec4(0.0, 0.0, 0.0, COLOR.a);
 	}
 	
 	if (selected_tile.x == cx && selected_tile.y == cy) {
-		resolved_color += vec4(0.7, 0.1, 0.1, 1.0);
+		resolved_color += vec4(0.7, 0.1, 0.1, COLOR.a);
 	}
 	
 	COLOR = resolved_color;

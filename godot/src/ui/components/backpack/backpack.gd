@@ -1,12 +1,18 @@
 extends VBoxContainer
 
 @onready
+var button_equip = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/PanelContainer/HBoxContainer/MarginContainer/Button_Equip
+@onready
 var v_box_container_category = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer
 @onready var avatar = %Avatar
 @onready
 var wearable_item_instanceable = preload("res://src/ui/components/wearable_item/wearable_item.tscn")
 @onready
 var grid_container_wearables_list = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/GridContainer_WearablesList
+@onready
+var sprite_2d_preview = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/PanelContainer/HBoxContainer/MarginContainer2/Sprite2D_Preview
+@onready
+var wearable_panel = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
 
 var filtered_data: Array
 var avatar_body_shape: String = "urn:decentraland:off-chain:base-avatars:BaseFemale"
@@ -19,6 +25,8 @@ var avatar_wearables: PackedStringArray = [
 	"urn:decentraland:off-chain:base-avatars:f_eyebrows_00",
 	"urn:decentraland:off-chain:base-avatars:f_mouth_00"
 ]
+
+var items_button_group = ButtonGroup.new()
 
 var avatar_eyes_color: Color = Color(0.3, 0.8, 0.5)
 var avatar_hair_color: Color = Color(0.5960784554481506, 0.37254902720451355, 0.21568627655506134)
@@ -69,6 +77,7 @@ func _update_avatar():
 
 
 func load_filtered_data(filter: String):
+	wearable_panel.unset_wearable()
 	filtered_data = []
 	for wearable_id in wearable_data:
 		var wearable = wearable_data[wearable_id]
@@ -85,6 +94,7 @@ func show_wearables():
 	for wearable_id in filtered_data:
 		var wearable_item = wearable_item_instanceable.instantiate()
 		grid_container_wearables_list.add_child(wearable_item)
+		wearable_item.button_group = items_button_group
 		wearable_item.set_wearable(wearable_data[wearable_id])
 		wearable_item.toggled.connect(self._on_wearable_toggled.bind(wearable_id))
 
@@ -112,6 +122,7 @@ func _on_wearable_toggled(_button_toggled: bool, wearable_id: String) -> void:
 
 #	print("item ", item, " toggled ", button_toggled)
 	_update_avatar()
+	_update_panel(wearable_id)
 
 
 func _on_wearable_button_filter_type(type):
@@ -121,3 +132,7 @@ func _on_wearable_button_filter_type(type):
 func _on_wearable_button_clear_filter():
 	filtered_data = []
 	show_wearables()
+
+
+func _update_panel(wearable_id: String):
+	wearable_panel.set_wearable(wearable_data[wearable_id])

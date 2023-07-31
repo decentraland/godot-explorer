@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://cnabnesv3iw5v"]
+
+[ext_resource type="Script" path="res://src/ui/components/wearable_category/wearable_category.gd" id="1_b7rfm"]
+[ext_resource type="Texture2D" uid="uid://yjqjjts2p0tp" path="res://assets/wearable_categories/hat_icon.png" id="2_aksym"]
+
+[node name="Wearable_Category" type="Control"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_b7rfm")
+
+[node name="TextureRect_Icon" type="TextureRect" parent="."]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 0
+offset_right = 20.0
+offset_bottom = 10.0
+texture = ExtResource("2_aksym")
+expand_mode = 5

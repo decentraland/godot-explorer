@@ -12,7 +12,7 @@ var realm: Realm
 var content_manager: ContentManager
 var comms: CommunicationManager
 var avatars: AvatarScene
-
+var config: Config
 var config_dictionary: Dictionary = {
 	"gravity": 55.0,
 	"jump_velocity": 12.0,
@@ -52,6 +52,10 @@ func _ready():
 
 	self.avatars = AvatarScene.new()
 	self.avatars.set_name("avatars")
+	
+	self.config = Config.new()
+	self.config.set_name("config")
+	config.init()
 
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)

@@ -1,16 +1,17 @@
-[gd_scene load_steps=13 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=14 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
 [ext_resource type="FontFile" uid="uid://cmc7ku5u0efdy" path="res://assets/themes/fonts/lato_family/Lato-Bold.ttf" id="1_f3d1j"]
+[ext_resource type="Texture2D" uid="uid://b5sb3odhk0ews" path="res://assets/ui/Background.jpeg" id="2_q2lt3"]
 [ext_resource type="PackedScene" uid="uid://wuyfsip50bwb" path="res://src/ui/components/wearable_button/wearable_button.tscn" id="3_ih1sc"]
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar.tscn" id="3_r7puc"]
+[ext_resource type="PackedScene" uid="uid://bamnvinmv5e6g" path="res://src/ui/components/wearable_panel/wearable_panel.tscn" id="7_x3c64"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_0kgen"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_p4h11"]
-sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
-ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_energy_multiplier = 28.76
 
 [sub_resource type="Sky" id="Sky_cjba7"]
 sky_material = SubResource("ProceduralSkyMaterial_p4h11")
@@ -18,35 +19,25 @@ sky_material = SubResource("ProceduralSkyMaterial_p4h11")
 [sub_resource type="Environment" id="Environment_65n6i"]
 background_mode = 2
 sky = SubResource("Sky_cjba7")
-tonemap_mode = 2
-glow_enabled = true
+ambient_light_source = 3
+reflected_light_source = 2
+tonemap_mode = 3
+tonemap_exposure = 2.48
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_tq2r2"]
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_0xmb3"]
 color = Color(1, 1, 1, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4d32d"]
-bg_color = Color(1, 1, 1, 1)
-skew = Vector2(0, 0.01)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-shadow_color = Color(0, 0, 0, 0.823529)
-shadow_size = 2
-shadow_offset = Vector2(15, 5)
-anti_aliasing_size = 0.01
-
 [node name="Control_Backpack" type="VBoxContainer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_right = 40.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 script = ExtResource("1_a5ql5")
-metadata/_edit_use_anchors_ = true
 
 [node name="ColorRect_Navbar" type="ColorRect" parent="."]
 custom_minimum_size = Vector2(0, 60)
@@ -54,10 +45,11 @@ layout_mode = 2
 color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 metadata/_edit_lock_ = true
 
-[node name="ColorRect_Background" type="ColorRect" parent="."]
+[node name="ColorRect_Background" type="TextureRect" parent="."]
 layout_mode = 2
 size_flags_vertical = 3
-color = Color(0.827451, 0.768627, 0.717647, 1)
+texture = ExtResource("2_q2lt3")
+expand_mode = 3
 
 [node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Background"]
 layout_mode = 1
@@ -71,7 +63,6 @@ theme_override_constants/separation = 0
 
 [node name="Control" type="MarginContainer" parent="ColorRect_Background/HBoxContainer"]
 layout_mode = 2
-size_flags_horizontal = 3
 size_flags_stretch_ratio = 2.0
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 20
@@ -118,9 +109,6 @@ button_group = SubResource("ButtonGroup_0kgen")
 text = "Emotes
 "
 
-[node name="SubViewportContainer" type="SubViewportContainer" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer/HBoxContainer3"]
-layout_mode = 2
-
 [node name="SubViewportContainer" type="SubViewportContainer" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
@@ -143,7 +131,9 @@ environment = SubResource("Environment_65n6i")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer/SubViewportContainer/SubViewport"]
 transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
-shadow_enabled = true
+shadow_reverse_cull_face = true
+shadow_transmittance_bias = 2.455
+shadow_blur = 6.834
 
 [node name="ScrollContainer" type="ScrollContainer" parent="ColorRect_Background/HBoxContainer"]
 layout_mode = 2
@@ -166,7 +156,7 @@ grow_vertical = 2
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_bottom = 35
 
 [node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer"]
 layout_mode = 2
@@ -369,23 +359,23 @@ filter_category = 17
 
 [node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2"]
 layout_mode = 2
-theme_override_constants/separation = 0
-alignment = 1
+theme_override_constants/separation = 30
 
 [node name="ScrollContainer" type="ScrollContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer"]
-custom_minimum_size = Vector2(500, 0)
+custom_minimum_size = Vector2(580, 350)
 layout_mode = 2
-size_flags_vertical = 3
 
 [node name="GridContainer_WearablesList" type="GridContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
-theme_override_constants/h_separation = 120
-theme_override_constants/v_separation = 120
-columns = 4
+theme_override_constants/h_separation = 15
+theme_override_constants/v_separation = 15
+columns = 5
 
-[node name="PanelContainer" type="PanelContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer"]
 layout_mode = 2
-size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_4d32d")
+theme_override_constants/margin_bottom = 30
+
+[node name="WearablePanel" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer" instance=ExtResource("7_x3c64")]
+layout_mode = 2
