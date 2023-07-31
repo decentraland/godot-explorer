@@ -8,7 +8,7 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::wallet::{self, AsH160},
     dcl::components::proto_components::kernel::comms::{
-        rfc4,
+        rfc4::{self},
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
     },
 };
@@ -69,6 +69,7 @@ pub struct WebSocketRoom {
     chats: Vec<(String, rfc4::Chat)>,
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
+    last_profile_version_announced: u32,
 }
 
 impl WebSocketRoom {
@@ -105,6 +106,7 @@ impl WebSocketRoom {
             last_profile_response_sent: old_time,
             last_profile_request_sent: old_time,
             last_try_to_connect: old_time,
+            last_profile_version_announced: 0,
         }
     }
 
@@ -293,6 +295,21 @@ impl WebSocketRoom {
                                                     .profile()
                                                     .base_url
                                                     .clone(),
+                                            },
+                                        )),
+                                    },
+                                    false,
+                                );
+
+                                self.last_profile_version_announced =
+                                    self.player_identity.profile().version;
+
+                                self.send_rfc4(
+                                    rfc4::Packet {
+                                        message: Some(rfc4::packet::Message::ProfileVersion(
+                                            rfc4::AnnounceProfileVersion {
+                                                profile_version: self
+                                                    .last_profile_version_announced,
                                             },
                                         )),
                                     },
@@ -531,6 +548,24 @@ impl WebSocketRoom {
                 );
             }
         }
+
+        if self.last_profile_version_announced != self.player_identity.profile().version {
+            self.last_profile_version_announced = self.player_identity.profile().version;
+            self.send_rfc4(
+                rfc4::Packet {
+                    message: Some(rfc4::packet::Message::ProfileVersion(
+                        rfc4::AnnounceProfileVersion {
+                            profile_version: self.last_profile_version_announced,
+                        },
+                    )),
+                },
+                false,
+            );
+        }
+    }
+
+    pub fn change_profile(&mut self, new_profile: Arc<PlayerIdentity>) {
+        self.player_identity = new_profile;
     }
 }
 

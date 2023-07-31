@@ -1,4 +1,4 @@
-use godot::prelude::{GodotString, PackedStringArray, ToVariant, Variant, VariantArray};
+use godot::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone)]
@@ -28,6 +28,18 @@ pub struct AvatarColor {
 impl From<&AvatarColor> for godot::prelude::Color {
     fn from(val: &AvatarColor) -> Self {
         godot::prelude::Color::from_rgb(val.color.r, val.color.g, val.color.b)
+    }
+}
+
+impl From<&godot::prelude::Color> for AvatarColor {
+    fn from(val: &godot::prelude::Color) -> Self {
+        AvatarColor {
+            color: AvatarColor3 {
+                r: val.r,
+                g: val.g,
+                b: val.b,
+            },
+        }
     }
 }
 
@@ -115,7 +127,8 @@ impl Default for SerializedProfile {
 }
 
 impl SerializedProfile {
-    pub fn to_godot_array(&self, base_url: &str) -> [Variant; 8] {
+    pub fn to_godot_dictionary(&self, base_url: &str) -> Dictionary {
+        let mut dictionary = Dictionary::new();
         let name: GodotString = GodotString::from(self.name.as_str());
 
         let body_shape: GodotString = self
@@ -185,18 +198,78 @@ impl SerializedProfile {
             })
             .collect::<VariantArray>();
 
-        let base_url = GodotString::from(base_url).to_variant();
-        let name = name.to_variant();
-        let body_shape = body_shape.to_variant();
-        let eyes = eyes.to_variant();
-        let hair = hair.to_variant();
-        let skin = skin.to_variant();
-        let wearables = wearables.to_variant();
-        let emotes = emotes.to_variant();
+        dictionary.set("name", name);
+        dictionary.set("body_shape", body_shape);
+        dictionary.set("eyes", eyes);
+        dictionary.set("hair", hair);
+        dictionary.set("skin", skin);
+        dictionary.set("wearables", wearables);
+        dictionary.set("emotes", emotes);
+        dictionary.set("base_url", base_url);
 
-        [
-            base_url, name, body_shape, eyes, hair, skin, wearables, emotes,
-        ]
+        dictionary
+    }
+
+    pub fn copy_from_godot_dictionary(&mut self, dictionary: &Dictionary) {
+        let name = dictionary.get("name").unwrap_or("Noname".to_variant());
+
+        let body_shape = dictionary
+            .get("body_shape")
+            .unwrap_or("default".to_variant())
+            .to::<GodotString>();
+        let eyes = dictionary
+            .get("eyes")
+            .unwrap_or(godot::prelude::Color::from_rgb(0.1, 0.5, 0.8).to_variant())
+            .to::<godot::prelude::Color>();
+        let hair = dictionary
+            .get("hair")
+            .unwrap_or(godot::prelude::Color::from_rgb(0.1, 0.5, 0.8).to_variant())
+            .to::<godot::prelude::Color>();
+        let skin = dictionary
+            .get("skin")
+            .unwrap_or(godot::prelude::Color::from_rgb(0.1, 0.5, 0.8).to_variant())
+            .to::<godot::prelude::Color>();
+
+        let wearables: Vec<String> = {
+            let ret = dictionary.get("wearables").unwrap();
+            if let Ok(ret) = ret.try_to::<VariantArray>() {
+                ret.iter_shared()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<String>>()
+            } else if let Ok(ret) = ret.try_to::<PackedStringArray>() {
+                ret.to_vec()
+                    .iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<String>>()
+            } else {
+                Vec::default()
+            }
+        };
+
+        let emotes = dictionary
+            .get("emotes")
+            .unwrap_or(VariantArray::default().to_variant())
+            .to::<VariantArray>();
+
+        self.name = name.to_string();
+        self.avatar.body_shape = Some(body_shape.to_string());
+        self.avatar.eyes = Some((&eyes).into());
+        self.avatar.hair = Some((&hair).into());
+        self.avatar.skin = Some((&skin).into());
+        self.avatar.wearables = wearables;
+        self.avatar.emotes = emotes
+            .iter_shared()
+            .filter_map(|_v| {
+                // if !v() {
+                //     return None;
+                // }
+                // Some(AvatarEmote {
+                //     slot: 0,
+                //     urn: v.get("urn").unwrap_or("".to_variant()),
+                // })
+                None
+            })
+            .collect();
     }
 }
 
