@@ -31,6 +31,7 @@ func _ready():
 
 
 func update_avatar(avatar: Dictionary):
+	print(avatar)
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
 		current_content_url = Global.realm.content_base_url
@@ -242,18 +243,20 @@ func load_wearables():
 			continue
 
 		if child is MeshInstance3D:
-			var mat_name: String = child.mesh.get("surface_0/name").to_lower()
-			var material = child.mesh.surface_get_material(0)
+			
+			for i in range(child.get_surface_override_material_count()):
+				var mat_name = child.mesh.get("surface_" + str(i) + "/name").to_lower()
+				var material = child.mesh.surface_get_material(i)
 
-			if material is StandardMaterial3D:
-				material.metallic = 0
-				material.metallic_specular = 0
-				if mat_name.find("skin"):
-					material.albedo_color = current_skin_color
+				if material is StandardMaterial3D:
 					material.metallic = 0
-				elif mat_name.find("hair"):
-					material.roughness = 1
-					material.albedo_color = current_hair_color
+					material.metallic_specular = 0
+					if mat_name.find("skin") != -1:
+						material.albedo_color = current_skin_color
+						material.metallic = 0
+					elif mat_name.find("hair") != -1:
+						material.roughness = 1
+						material.albedo_color = current_hair_color
 
 	var eyes = wearables_by_category.get(Wearables.Categories.EYES)
 	var eyebrows = wearables_by_category.get(Wearables.Categories.EYEBROWS)
@@ -273,6 +276,7 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 
 		if child.name.ends_with("mask_eyes"):
 			if not eyes.is_empty():
+				print(eyes)
 				apply_texture_and_mask(child, eyes, current_eyes_color, Color.WHITE)
 			else:
 				child.hide()
@@ -298,21 +302,19 @@ func apply_texture_and_mask(
 	var main_texture := ImageTexture.create_from_image(
 		Global.content_manager.get_resource_from_hash(textures[0])
 	)
+	
+	var current_material = mask_material.duplicate()
+	current_material.set_shader_parameter("base_texture", main_texture)
+	current_material.set_shader_parameter("material_color", color)
+	current_material.set_shader_parameter("mask_color", mask_color)
+	
 	if textures.size() > 1:
 		var mask_texture := ImageTexture.create_from_image(
 			Global.content_manager.get_resource_from_hash(textures[1])
 		)
-		var current_material = mask_material.duplicate()
-
-		current_material.set_shader_parameter("base_texture", main_texture)
 		current_material.set_shader_parameter("mask_texture", mask_texture)
-		current_material.set_shader_parameter("material_color", color)
-		mesh.mesh.surface_set_material(0, current_material)
-	else:
-		var current_material = mesh.mesh.surface_get_material(0)
-		if current_material is BaseMaterial3D:
-			current_material.albedo_texture = main_texture
-			current_material.albedo_color = color
+		
+	mesh.mesh.surface_set_material(0, current_material)
 
 
 func set_target(target: Transform3D) -> void:
