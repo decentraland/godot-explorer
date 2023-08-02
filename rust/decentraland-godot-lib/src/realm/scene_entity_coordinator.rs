@@ -195,6 +195,8 @@ impl SceneEntityCoordinator {
     }
 
     fn handle_scene_data(&mut self, id: u32, json: serde_json::Value) {
+        println!("{:#}", &json.to_string());
+
         let entity_base = self.requested_entity.remove(&id).unwrap();
         let entity_definition = serde_json::from_value::<EntityDefinitionJson>(json);
 
@@ -330,11 +332,11 @@ impl SceneEntityCoordinator {
             }
         }
 
-        for entity_id in self.fixed_desired_entities.iter() {
-            if self.cache_scene_data.contains_key(entity_id) {
-                self.loadable_scenes.insert(entity_id.clone());
-            }
-        }
+        // for entity_id in self.fixed_desired_entities.iter() {
+        //     if self.cache_scene_data.contains_key(entity_id) {
+        //         self.loadable_scenes.insert(entity_id.clone());
+        //     }
+        // }
     }
 
     pub fn _set_fixed_desired_entities_urns(&mut self, entities: Vec<String>) {

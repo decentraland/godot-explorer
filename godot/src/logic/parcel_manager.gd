@@ -56,8 +56,10 @@ func _on_desired_parsel_manager_update():
 			if dict.size() > 0:
 				dict["metadata"] = JSON.parse_string(dict.metadata)
 				load_scene(scene_id, dict)
+				print("sc> spawning ", scene_id)
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")
+				
 	var to_remove: Array[String] = []
 	for scene_id in loaded_scenes.keys():
 		if not loadable_scenes.has(scene_id):
@@ -68,6 +70,7 @@ func _on_desired_parsel_manager_update():
 				to_remove.push_back(scene_id)
 
 	for scene_id in to_remove:
+		print("sc>  removing ", scene_id)
 		loaded_scenes.erase(scene_id)
 
 
