@@ -22,7 +22,7 @@ var parcel_position: Vector2i
 var _last_parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
-
+var dirty_save_position: bool = false
 
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
@@ -32,6 +32,8 @@ func _process(_dt):
 	if _last_parcel_position != parcel_position:
 		parcel_manager.update_position(parcel_position)
 		_last_parcel_position = parcel_position
+		Global.config.last_parcel_position = parcel_position
+		dirty_save_position = true
 
 
 #
@@ -62,7 +64,7 @@ func _ready():
 	add_child(sky)
 
 	control_pointer_tooltip.hide()
-	var start_parcel_position: Vector2i = Vector2i(78, -7)
+	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
@@ -75,12 +77,17 @@ func _ready():
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
 
-	_on_control_menu_request_change_realm(
-		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
-	)
+	if Global.config.last_realm_joined.is_empty():
+		realm.set_realm(
+			"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+		)
+	else :
+		realm.set_realm(Global.config.last_realm_joined)
+		
 
 	self.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
+	control_menu.control_advance_settings.preview_hot_reload.connect(self._on_panel_bottom_left_preview_hot_reload)
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	_scene_console_message.call_deferred(scene_id, level, timestamp, text)
@@ -176,7 +183,9 @@ func _on_control_menu_hide_menu():
 func _on_timer_timeout():
 	label_ram.set_text("RAM Usage: " + str(OS.get_static_memory_usage() / 1024.0 / 1024.0) + " MB")
 	label_fps.set_text(str(Engine.get_frames_per_second()) + " FPS")
-
+	if dirty_save_position:
+		dirty_save_position = false
+		Global.config.save_to_settings_file()
 
 func _on_control_menu_toggle_ram(visibility):
 	label_ram.visible = visibility
@@ -250,18 +259,6 @@ func _on_line_edit_command_submit_message(message: String):
 	else:
 		Global.comms.send_chat(message)
 		panel_chat._on_chats_arrived([["Godot User", 0, message]])
-
-
-func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
-	pass  # Replace with function body.
-
-
-func _on_control_menu_request_change_realm(realm_string):
-	realm.set_realm(realm_string)
-
-
-func _on_control_menu_request_change_scene_radius(new_value):
-	parcel_manager.set_scene_radius(new_value)
 
 
 func _on_control_menu_request_pause_scenes(enabled):

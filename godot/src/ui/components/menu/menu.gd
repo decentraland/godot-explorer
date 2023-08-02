@@ -11,8 +11,6 @@ signal toggle_fps
 signal toggle_ram
 
 #signals from advanced settings
-signal request_change_realm(realm_string: String)
-signal request_change_scene_radius(new_value: int)
 signal request_pause_scenes(enabled: bool)
 signal preview_hot_reload(scene_type: String, scene_id: String)
 
@@ -185,14 +183,6 @@ func fade_out(node: Control):
 
 func _on_control_advance_settings_preview_hot_reload(scene_type, scene_id):
 	emit_signal("preview_hot_reload", scene_type, scene_id)
-
-
-func _on_control_advance_settings_request_change_realm(realm_string):
-	emit_signal("request_change_realm", realm_string)
-
-
-func _on_control_advance_settings_request_change_scene_radius(new_value):
-	emit_signal("request_change_scene_radius", new_value)
 
 
 func _on_control_advance_settings_request_pause_scenes(enabled):

@@ -31,7 +31,7 @@ func _ready():
 
 
 func update_avatar(avatar: Dictionary):
-	print(avatar)
+#	print(avatar)
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
 		current_content_url = Global.realm.content_base_url
@@ -208,6 +208,7 @@ func load_wearables():
 			var new_wearable = child.duplicate()
 			new_wearable.name = new_wearable.name.to_lower()
 			body_shape_skeleton_3d.add_child(new_wearable)
+			
 
 		match category:
 			Wearables.Categories.UPPER_BODY:
@@ -243,12 +244,13 @@ func load_wearables():
 			continue
 
 		if child is MeshInstance3D:
+			child.mesh = child.mesh.duplicate(true)
 			
 			for i in range(child.get_surface_override_material_count()):
 				var mat_name = child.mesh.get("surface_" + str(i) + "/name").to_lower()
-				var material = child.mesh.surface_get_material(i)
-
+				var material = child.mesh.surface_get_material(i).duplicate(true)
 				if material is StandardMaterial3D:
+#					material = material.duplicate()
 					material.metallic = 0
 					material.metallic_specular = 0
 					if mat_name.find("skin") != -1:
@@ -258,6 +260,8 @@ func load_wearables():
 						material.roughness = 1
 						material.albedo_color = current_hair_color
 
+					child.mesh.surface_set_material(i, material)
+					
 	var eyes = wearables_by_category.get(Wearables.Categories.EYES)
 	var eyebrows = wearables_by_category.get(Wearables.Categories.EYEBROWS)
 	var mouth = wearables_by_category.get(Wearables.Categories.MOUTH)
@@ -276,7 +280,6 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 
 		if child.name.ends_with("mask_eyes"):
 			if not eyes.is_empty():
-				print(eyes)
 				apply_texture_and_mask(child, eyes, current_eyes_color, Color.WHITE)
 			else:
 				child.hide()

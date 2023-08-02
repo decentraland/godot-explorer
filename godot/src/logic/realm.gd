@@ -64,6 +64,9 @@ func _on_request_completed(response: RequestResponse):
 
 	content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
 
+	Global.config.last_realm_joined = realm_url
+	Global.config.save_to_settings_file()
+	
 	emit_signal("realm_changed")
 
 

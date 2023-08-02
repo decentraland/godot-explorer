@@ -131,6 +131,7 @@ struct SceneEntityCoordinator {
     dirty_loadable_scenes: bool,
     loadable_scenes: HashSet<String>,
     keep_alive_scenes: HashSet<String>,
+    empty_parcels: HashSet<String>,
 }
 
 impl SceneEntityCoordinator {
@@ -305,6 +306,11 @@ impl SceneEntityCoordinator {
         self.version += 1;
         self.loadable_scenes.clear();
         self.keep_alive_scenes.clear();
+        self.empty_parcels.clear();
+
+        let unexisting_taken_as_empty: bool = !self.should_load_city_scenes
+            && self.requested_city_pointers.is_empty()
+            && self.requested_entity.is_empty();
 
         // Check what are the new scenes to load that are not in the cache
         for coord in self.parcel_radius_calculator.get_inner_parcels() {
@@ -312,9 +318,12 @@ impl SceneEntityCoordinator {
 
             if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
                 if entity_id == "empty" {
-                    continue;
+                    self.empty_parcels.insert(coord.to_string());
+                } else {
+                    self.loadable_scenes.insert(entity_id.clone());
                 }
-                self.loadable_scenes.insert(entity_id.clone());
+            } else if unexisting_taken_as_empty {
+                self.empty_parcels.insert(coord.to_string());
             }
         }
 
@@ -436,6 +445,10 @@ impl SceneEntityCoordinator {
         &self.keep_alive_scenes
     }
 
+    pub fn get_empty_parcels(&self) -> &HashSet<String> {
+        &self.empty_parcels
+    }
+
     pub fn _get_version(&self) -> u32 {
         self.version
     }
@@ -467,6 +480,7 @@ impl SceneEntityCoordinator {
         let mut dict = Dictionary::new();
         let mut loadable_scenes = VariantArray::new();
         let mut keep_alive_scenes = VariantArray::new();
+        let mut empty_parcels = VariantArray::new();
 
         for loadable_scene in self.get_loadable_scenes().iter() {
             loadable_scenes.push(Variant::from(GodotString::from(loadable_scene)));
@@ -476,8 +490,13 @@ impl SceneEntityCoordinator {
             keep_alive_scenes.push(Variant::from(GodotString::from(keep_alive_scene)));
         }
 
+        for empty_parcel in self.get_empty_parcels().iter() {
+            empty_parcels.push(Variant::from(GodotString::from(empty_parcel)));
+        }
+
         dict.set(GodotString::from("loadable_scenes"), loadable_scenes);
         dict.set(GodotString::from("keep_alive_scenes"), keep_alive_scenes);
+        dict.set(GodotString::from("empty_parcels"), empty_parcels);
 
         dict
     }

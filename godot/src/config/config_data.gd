@@ -65,7 +65,7 @@ var process_tick_quota_ms: int = 10:
 		process_tick_quota_ms = value
 		param_changed.emit(ConfigParams.ProcessTickQuotaMs)
 
-var scene_radius: int = 1:
+var scene_radius: int = 4:
 	set(value):
 		scene_radius = value
 		param_changed.emit(ConfigParams.SceneRadius)
@@ -92,7 +92,14 @@ var avatar_profile: Dictionary = {}:
 		avatar_profile = value
 		param_changed.emit(ConfigParams.AvatarProfile)
 
-
+var last_realm_joined: String = "":
+	set(value):
+		last_realm_joined = value
+		
+var last_parcel_position: Vector2i = Vector2i(72, -10):
+	set(value):
+		last_parcel_position = value
+		
 func default():
 	self.gravity = 55.0
 	self.jump_velocity = 12.0
@@ -100,7 +107,7 @@ func default():
 	self.run_velocity = 6.0
 
 	self.process_tick_quota_ms = 10
-	self.scene_radius = 1
+	self.scene_radius = 4
 	self.limit_fps = 0
 
 	if OS.get_name() == "Android":
@@ -134,6 +141,9 @@ func default():
 		],
 		"emotes": []
 	}
+	
+	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+	self.last_parcel_position = Vector2i(72, -10)
 
 
 const SETTINGS_FILE = "user://settings.cfg"
@@ -165,6 +175,8 @@ func load_from_settings_file():
 	self.ui_scale = settings_file.get_value("config", "ui_scale", default.ui_scale)
 
 	self.avatar_profile = settings_file.get_value("profile", "avatar", default.avatar_profile)
+	self.last_parcel_position = settings_file.get_value("user", "last_parcel_position", default.last_parcel_position)
+	self.last_realm_joined = settings_file.get_value("user", "last_realm_joined", default.last_realm_joined)
 
 
 func save_to_settings_file():
@@ -183,4 +195,6 @@ func save_to_settings_file():
 	settings_file.set_value("config", "window_size", self.window_size)
 	settings_file.set_value("config", "ui_scale", self.ui_scale)
 	settings_file.set_value("profile", "avatar", self.avatar_profile)
+	settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
+	settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	settings_file.save(SETTINGS_FILE)

@@ -5,3 +5,6 @@
 [resource]
 render_priority = 0
 shader = ExtResource("1_10eub")
+shader_parameter/mix_mask = true
+shader_parameter/material_color = null
+shader_parameter/mask_color = null
