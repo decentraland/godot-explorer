@@ -1,5 +1,7 @@
 extends VBoxContainer
 
+@onready var color_picker_panel = $Color_Picker_Panel
+
 @onready
 var button_save_profile = $ColorRect_Background/HBoxContainer/Control/VBoxContainer/Button_SaveProfile
 @onready var line_edit_name = $ColorRect_Background/HBoxContainer/Control/VBoxContainer/LineEdit_Name
@@ -141,6 +143,27 @@ func _on_wearable_toggled(_button_toggled: bool, wearable_id: String) -> void:
 func _on_wearable_button_filter_type(type):
 	load_filtered_data(type)
 
+	var should_hide = false
+	if type == Wearables.Categories.BODY_SHAPE:
+		skin_color_picker.color_target = skin_color_picker.ColorTarget.SKIN
+		skin_color_picker.set_color(avatar_skin_color)
+		skin_color_picker.set_text("SKIN COLOR")
+	elif type == Wearables.Categories.HAIR or type == Wearables.Categories.FACIAL_HAIR:
+		skin_color_picker.color_target = skin_color_picker.ColorTarget.HAIR
+		skin_color_picker.set_color(avatar_hair_color)
+		skin_color_picker.set_text("HAIR COLOR")
+	elif type == Wearables.Categories.EYES:
+		skin_color_picker.color_target = skin_color_picker.ColorTarget.EYE
+		skin_color_picker.set_color(avatar_eyes_color)
+		skin_color_picker.set_text("EYE COLOR")
+	else:
+		should_hide = true
+
+	if should_hide:
+		skin_color_picker.hide()
+	else:
+		skin_color_picker.show()
+
 
 func _on_wearable_button_clear_filter():
 	filtered_data = []
@@ -199,3 +222,52 @@ func _on_wearable_panel_unequip(wearable_id: String):
 			avatar_wearables.remove_at(index)
 
 	_update_avatar()
+
+
+@onready
+var skin_color_picker = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker
+
+
+func _on_skin_color_picker_toggle_color_panel(toggled, color_target):
+	if not toggled and color_picker_panel.visible:
+		hide()
+
+	if toggled:
+		var rect = skin_color_picker.get_global_rect()
+		rect.position.y += rect.size.y + 10
+
+		var current_color: Color
+		match skin_color_picker.color_target:
+			skin_color_picker.ColorTarget.EYE:
+				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
+				current_color = avatar_eyes_color
+			skin_color_picker.ColorTarget.SKIN:
+				color_picker_panel.color_type = color_picker_panel.ColorTargetType.SKIN
+				current_color = avatar_skin_color
+			skin_color_picker.ColorTarget.HAIR:
+				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
+				current_color = avatar_hair_color
+
+		color_picker_panel.custom_popup(rect, current_color)
+
+
+func _on_color_picker_panel_popup_hide():
+	skin_color_picker.set_toggled(false)
+
+
+func _on_color_picker_panel_pick_color(color):
+	match skin_color_picker.color_target:
+		skin_color_picker.ColorTarget.EYE:
+			avatar_eyes_color = color
+		skin_color_picker.ColorTarget.SKIN:
+			avatar_skin_color = color
+		skin_color_picker.ColorTarget.HAIR:
+			avatar_hair_color = color
+
+	skin_color_picker.set_color(color)
+	avatar_preview.avatar.update_colors(avatar_eyes_color, avatar_skin_color, avatar_hair_color)
+
+	renderer_avatar_dictionary["eyes"] = avatar_eyes_color
+	renderer_avatar_dictionary["hair"] = avatar_hair_color
+	renderer_avatar_dictionary["skin"] = avatar_skin_color
+	button_save_profile.disabled = false

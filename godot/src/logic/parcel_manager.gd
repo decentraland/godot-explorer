@@ -27,10 +27,11 @@ func _ready():
 	scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
 	Global.config.param_changed.connect(self._on_config_changed)
 
+
 func _on_config_changed(param: ConfigData.ConfigParams):
 	if param == ConfigData.ConfigParams.SceneRadius:
 		scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
-	
+
 
 func get_current_scene_data() -> Dictionary:
 	var scene_entity_id = scene_entity_coordinator.get_scene_entity_id(current_position)
@@ -52,20 +53,22 @@ func _process(_dt):
 		_on_desired_parsel_manager_update()
 		last_version_updated = scene_entity_coordinator.get_version()
 
+
 var empty_scenes = [
-	 preload("res://assets/empty-scenes/EP_01.glb"),
-	 preload("res://assets/empty-scenes/EP_02.glb"),
-	 preload("res://assets/empty-scenes/EP_03.glb"),
-	 preload("res://assets/empty-scenes/EP_04.glb"),
-	 preload("res://assets/empty-scenes/EP_05.glb"),
-	 preload("res://assets/empty-scenes/EP_06.glb"),
-	 preload("res://assets/empty-scenes/EP_07.glb"),
-	 preload("res://assets/empty-scenes/EP_08.glb"),
-	 preload("res://assets/empty-scenes/EP_09.glb"),
-	 preload("res://assets/empty-scenes/EP_10.glb"),
-	 preload("res://assets/empty-scenes/EP_11.glb"),
-	 preload("res://assets/empty-scenes/EP_12.glb")
+	preload("res://assets/empty-scenes/EP_01.glb"),
+	preload("res://assets/empty-scenes/EP_02.glb"),
+	preload("res://assets/empty-scenes/EP_03.glb"),
+	preload("res://assets/empty-scenes/EP_04.glb"),
+	preload("res://assets/empty-scenes/EP_05.glb"),
+	preload("res://assets/empty-scenes/EP_06.glb"),
+	preload("res://assets/empty-scenes/EP_07.glb"),
+	preload("res://assets/empty-scenes/EP_08.glb"),
+	preload("res://assets/empty-scenes/EP_09.glb"),
+	preload("res://assets/empty-scenes/EP_10.glb"),
+	preload("res://assets/empty-scenes/EP_11.glb"),
+	preload("res://assets/empty-scenes/EP_12.glb")
 ]
+
 
 func _on_desired_parsel_manager_update():
 	var d = scene_entity_coordinator.get_desired_scenes()
@@ -80,7 +83,7 @@ func _on_desired_parsel_manager_update():
 				load_scene(scene_id, dict)
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")
-				
+
 	var to_remove: Array[String] = []
 	for scene_id in loaded_scenes.keys():
 		if not loadable_scenes.has(scene_id) and not keep_alive_scenes.has(scene_id):
@@ -95,7 +98,7 @@ func _on_desired_parsel_manager_update():
 
 	for parcel in empty_parcels:
 		if not loaded_empty_scenes.has(parcel):
-			var coord = parcel.split(',')
+			var coord = parcel.split(",")
 			var x = int(coord[0])
 			var z = int(coord[1])
 			var index = randi_range(0, 11)
@@ -104,6 +107,7 @@ func _on_desired_parsel_manager_update():
 			Global.content_manager._hide_colliders(scene)
 			add_child(scene)
 			loaded_empty_scenes[parcel] = scene
+
 
 func _on_realm_changed():
 	var should_load_city_pointers = true
@@ -126,7 +130,7 @@ func _on_realm_changed():
 		var scene_number_id: int = scene.get("scene_number_id", -1)
 		if scene_number_id != -1:
 			scene_runner.kill_scene(scene_number_id)
-			
+
 	for parcel in loaded_empty_scenes:
 		remove_child(loaded_empty_scenes[parcel])
 

@@ -1,0 +1,81 @@
+[gd_scene load_steps=5 format=3 uid="uid://djuo7hndjhpas"]
+
+[ext_resource type="Script" path="res://src/ui/color_picker/color_picker_panel.gd" id="1_vgcr1"]
+[ext_resource type="PackedScene" uid="uid://c0wiiuanid2fw" path="res://src/ui/components/custom_slider/custom_background_slider.tscn" id="2_h35qg"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xl22q"]
+content_margin_left = 40.0
+content_margin_top = 20.0
+content_margin_right = 40.0
+content_margin_bottom = 20.0
+bg_color = Color(0.976563, 0.976563, 0.976563, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+shadow_size = 1
+shadow_offset = Vector2(2, 2)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_n4u5d"]
+bg_color = Color(1, 1, 1, 1)
+
+[node name="Color_Picker_Panel" type="PopupPanel"]
+size = Vector2i(280, 458)
+visible = true
+theme_override_styles/panel = SubResource("StyleBoxFlat_xl22q")
+script = ExtResource("1_vgcr1")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 240.0
+offset_bottom = 438.0
+
+[node name="Label_Presets" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 13
+text = "PRESETS
+"
+
+[node name="VBoxContainer_Hair" type="VBoxContainer" parent="VBoxContainer"]
+visible = false
+layout_mode = 2
+
+[node name="GridContainer_Hair" type="GridContainer" parent="VBoxContainer/VBoxContainer_Hair"]
+custom_minimum_size = Vector2(0, 65)
+layout_mode = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 6
+
+[node name="ColorSlider" parent="VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
+layout_mode = 2
+slider_type = 0
+value = 50
+
+[node name="SaturationSlider" parent="VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
+layout_mode = 2
+value = 50
+
+[node name="BrightnessSlider" parent="VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
+layout_mode = 2
+slider_type = 1
+value = 50
+
+[node name="Panel_Preview" type="Panel" parent="VBoxContainer/VBoxContainer_Hair"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_n4u5d")
+
+[node name="GridContainer_Skin" type="GridContainer" parent="VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(0, 65)
+layout_mode = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 6
+
+[connection signal="value_change" from="VBoxContainer/VBoxContainer_Hair/ColorSlider" to="." method="_on_custom_background_slider_value_change"]
+[connection signal="value_change" from="VBoxContainer/VBoxContainer_Hair/SaturationSlider" to="." method="_on_custom_background_slider_2_value_change"]
+[connection signal="value_change" from="VBoxContainer/VBoxContainer_Hair/BrightnessSlider" to="." method="_on_custom_background_slider_3_value_change"]

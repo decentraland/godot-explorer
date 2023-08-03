@@ -95,11 +95,12 @@ var avatar_profile: Dictionary = {}:
 var last_realm_joined: String = "":
 	set(value):
 		last_realm_joined = value
-		
+
 var last_parcel_position: Vector2i = Vector2i(72, -10):
 	set(value):
 		last_parcel_position = value
-		
+
+
 func default():
 	self.gravity = 55.0
 	self.jump_velocity = 12.0
@@ -141,7 +142,7 @@ func default():
 		],
 		"emotes": []
 	}
-	
+
 	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
 	self.last_parcel_position = Vector2i(72, -10)
 
@@ -175,8 +176,12 @@ func load_from_settings_file():
 	self.ui_scale = settings_file.get_value("config", "ui_scale", default.ui_scale)
 
 	self.avatar_profile = settings_file.get_value("profile", "avatar", default.avatar_profile)
-	self.last_parcel_position = settings_file.get_value("user", "last_parcel_position", default.last_parcel_position)
-	self.last_realm_joined = settings_file.get_value("user", "last_realm_joined", default.last_realm_joined)
+	self.last_parcel_position = settings_file.get_value(
+		"user", "last_parcel_position", default.last_parcel_position
+	)
+	self.last_realm_joined = settings_file.get_value(
+		"user", "last_realm_joined", default.last_realm_joined
+	)
 
 
 func save_to_settings_file():

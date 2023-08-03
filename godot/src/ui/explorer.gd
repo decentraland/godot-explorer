@@ -24,6 +24,7 @@ var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
 
+
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
 	control_minimap.set_center_position(parcel_position_real)
@@ -78,16 +79,16 @@ func _ready():
 	add_child(parcel_manager)
 
 	if Global.config.last_realm_joined.is_empty():
-		realm.set_realm(
-			"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
-		)
-	else :
+		realm.set_realm("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main")
+	else:
 		realm.set_realm(Global.config.last_realm_joined)
-		
 
 	self.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
-	control_menu.control_advance_settings.preview_hot_reload.connect(self._on_panel_bottom_left_preview_hot_reload)
+	control_menu.control_advance_settings.preview_hot_reload.connect(
+		self._on_panel_bottom_left_preview_hot_reload
+	)
+
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	_scene_console_message.call_deferred(scene_id, level, timestamp, text)
@@ -186,6 +187,7 @@ func _on_timer_timeout():
 	if dirty_save_position:
 		dirty_save_position = false
 		Global.config.save_to_settings_file()
+
 
 func _on_control_menu_toggle_ram(visibility):
 	label_ram.visible = visibility

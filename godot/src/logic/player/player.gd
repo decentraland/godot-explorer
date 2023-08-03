@@ -22,6 +22,7 @@ var JUMP_VELOCITY_0 := 12.0
 
 var THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 
+
 func _ready():
 	camera.current = true
 
@@ -102,8 +103,10 @@ func _input(event):
 				if first_person == true:
 					first_person = false
 					var tween_out = create_tween()
-					tween_out.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25).set_ease(
-						Tween.EASE_IN_OUT
+					(
+						tween_out
+						. tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25)
+						. set_ease(Tween.EASE_IN_OUT)
 					)
 					avatar.show()
 					avatar.set_rotation(Vector3(0, 0, 0))
