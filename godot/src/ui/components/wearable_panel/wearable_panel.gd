@@ -47,9 +47,6 @@ func set_wearable(wearable: Dictionary, _wearable_id: String):
 	var wearable_display: Array = wearable.get("metadata", {}).get("i18n", [])
 
 	match wearable.get("rarity", ""):
-		_:
-			texture_rect_panel_background.texture = base_panel
-			texture_rect_thumbnail_background.texture = base_thumbnail
 		"common":
 			texture_rect_panel_background.texture = common_panel
 			texture_rect_thumbnail_background.texture = common_thumbnail
@@ -71,6 +68,9 @@ func set_wearable(wearable: Dictionary, _wearable_id: String):
 		"unique":
 			texture_rect_panel_background.texture = unique_panel
 			texture_rect_thumbnail_background.texture = unique_thumbnail
+		_:
+			texture_rect_panel_background.texture = base_panel
+			texture_rect_thumbnail_background.texture = base_thumbnail
 
 	if wearable_display.size() > 0:
 		label_name.text = wearable_display[0].get("text")

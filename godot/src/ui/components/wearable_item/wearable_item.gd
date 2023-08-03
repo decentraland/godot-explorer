@@ -22,14 +22,10 @@ func _ready():
 
 
 func set_wearable(wearable: Dictionary):
-	var wearable_display: Array = wearable.get("metadata", {}).get("i18n", [])
-
 	var wearable_thumbnail: String = wearable.get("metadata", {}).get("thumbnail", "")
 	thumbnail_hash = wearable.get("content", {}).get(wearable_thumbnail, "")
 
 	match wearable.get("rarity", ""):
-		_:
-			texture_rect_background.texture = base_thumbnail
 		"common":
 			texture_rect_background.texture = common_thumbnail
 		"uncommon":
@@ -44,6 +40,8 @@ func set_wearable(wearable: Dictionary):
 			texture_rect_background.texture = mythic_thumbnail
 		"unique":
 			texture_rect_background.texture = unique_thumbnail
+		_:
+			texture_rect_background.texture = base_thumbnail
 
 	if not thumbnail_hash.is_empty():
 		if Global.content_manager.get_resource_from_hash(thumbnail_hash) == null:

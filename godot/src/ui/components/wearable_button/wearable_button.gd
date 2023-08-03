@@ -51,10 +51,6 @@ func _update_category_icon():
 				texture_rect_icon.texture = texture
 
 
-func update_preview(hash: String) -> void:
-	pass
-
-
 func _ready():
 	panel_container.hide()
 	_update_category_icon()

@@ -90,6 +90,7 @@ func _on_color_toggled(toggled: bool, color: Color):
 		panel_preview.modulate = color
 		pick_color.emit(color)
 
+
 func _on_custom_background_slider_value_change():
 	modulate_panel_preview()
 	pick_color.emit(panel_preview.modulate)

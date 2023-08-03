@@ -50,7 +50,7 @@ func update_avatar(avatar: Dictionary):
 
 	var wearable_to_request := PackedStringArray(current_wearables)
 	wearable_to_request.push_back(current_body_shape)
-	
+
 	# TODO: load emotes
 
 	finish_loading = false
@@ -151,6 +151,7 @@ func _on_content_loading_finished(resource_hash: String):
 		if content_waiting_hash.is_empty():
 			should_load_wearables = true
 
+
 func _free_old_skeleton(skeleton: Node):
 	for child in skeleton.get_children():
 		child.free()
@@ -158,9 +159,9 @@ func _free_old_skeleton(skeleton: Node):
 #			for i in child.get_surface_override_material_count():
 #				var material = child.mesh.surface_get_material(i)
 #				material.free()
-				
+
 	skeleton.free()
-	
+
 
 func try_to_set_body_shape(body_shape_hash):
 	var body_shape: Node3D = Global.content_manager.get_resource_from_hash(body_shape_hash)
@@ -186,6 +187,7 @@ func try_to_set_body_shape(body_shape_hash):
 
 	add_child(body_shape_skeleton_3d)
 	body_shape_skeleton_3d.visible = false
+
 
 func load_wearables():
 	if content_waiting_hash_signal_connected:
@@ -269,15 +271,12 @@ func load_wearables():
 	for child in body_shape_skeleton_3d.get_children():
 		if child.visible and child is MeshInstance3D:
 			child.mesh = child.mesh.duplicate(true)
-			meshes.push_back({
-				"n": child.get_surface_override_material_count(),
-				"mesh": child.mesh
-			})
-			
-	
+			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
+
 	duplicate_materials_request_id = Global.content_manager.duplicate_materials(meshes)
 
-func _on_meshes_material_finished(id: int): 
+
+func _on_meshes_material_finished(id: int):
 	if duplicate_materials_request_id == id:
 		apply_color_and_facial()
 		body_shape_skeleton_3d.visible = true
@@ -290,7 +289,7 @@ func apply_color_and_facial():
 			for i in range(child.get_surface_override_material_count()):
 				var mat_name = child.mesh.get("surface_" + str(i) + "/name").to_lower()
 				var material = child.mesh.surface_get_material(i)
-				
+
 				if material is StandardMaterial3D:
 					material.metallic = 0
 					material.metallic_specular = 0
@@ -341,12 +340,16 @@ func apply_texture_and_mask(
 	mesh: MeshInstance3D, textures: Array[String], color: Color, mask_color: Color
 ):
 	var current_material = mask_material.duplicate()
-	current_material.set_shader_parameter("base_texture", Global.content_manager.get_resource_from_hash(textures[0]))
+	current_material.set_shader_parameter(
+		"base_texture", Global.content_manager.get_resource_from_hash(textures[0])
+	)
 	current_material.set_shader_parameter("material_color", color)
 	current_material.set_shader_parameter("mask_color", mask_color)
 
 	if textures.size() > 1:
-		current_material.set_shader_parameter("mask_texture", Global.content_manager.get_resource_from_hash(textures[1]))
+		current_material.set_shader_parameter(
+			"mask_texture", Global.content_manager.get_resource_from_hash(textures[1])
+		)
 
 	mesh.mesh.surface_set_material(0, current_material)
 
@@ -364,11 +367,10 @@ func set_target(target: Transform3D) -> void:
 
 
 func _process(delta):
-	
 	if should_load_wearables:
 		load_wearables()
 		should_load_wearables = false
-		
+
 	if skip_process:
 		return
 

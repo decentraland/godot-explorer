@@ -17,8 +17,8 @@ func _ready():
 	panel_color.modulate = background_color
 
 
-func _on_toggled(button_pressed):
-	if button_pressed:
+func _on_toggled(is_button_pressed):
+	if is_button_pressed:
 		emit_signal("select_color", background_color)
 		panel_container_border.show()
 	else:

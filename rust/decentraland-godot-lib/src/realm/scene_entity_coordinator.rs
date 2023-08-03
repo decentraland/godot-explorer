@@ -196,8 +196,6 @@ impl SceneEntityCoordinator {
     }
 
     fn handle_scene_data(&mut self, id: u32, json: serde_json::Value) {
-        println!("{:#}", &json.to_string());
-
         let entity_base = self.requested_entity.remove(&id).unwrap();
         let entity_definition = serde_json::from_value::<EntityDefinitionJson>(json);
 

@@ -51,7 +51,7 @@ func _on_player_profile_changed(new_profile: Dictionary):
 	avatar.update_avatar(new_profile)
 
 
-func _on_param_changed(param: ConfigData.ConfigParams):
+func _on_param_changed(_param):
 	WALK_SPEED = Global.config.walk_velocity
 	RUN_SPEED = Global.config.run_velocity
 	GRAVITY = Global.config.gravity

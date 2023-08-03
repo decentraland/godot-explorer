@@ -49,16 +49,16 @@ func _ready():
 
 	slider_scale = float(lenght) / float(max_value)
 
-	refresh_grabber_position(value * slider_scale)
+	refresh_grabber_position(int(float(value) * slider_scale))
 
 
-func _process(delta):
+func _process(_delta):
 	if selected:
 		follow_mouse(get_local_mouse_position())
 
 
-func follow_mouse(position: Vector2i):
-	refresh_grabber_position(position.x)
+func follow_mouse(mouse_position: Vector2i):
+	refresh_grabber_position(mouse_position.x)
 	emit_signal("value_change")
 
 
@@ -66,7 +66,7 @@ func refresh_grabber_position(new_x: int):
 	var new_grabber_position: Vector2i = Vector2i(new_x, control_grabber.position.y)
 	if new_grabber_position.x <= lenght and new_grabber_position.x >= 0:
 		control_grabber.set_position(new_grabber_position)
-		value = new_x / slider_scale
+		value = int(float(new_x) / slider_scale)
 	elif new_grabber_position.x > lenght:
 		control_grabber.set_position(Vector2i(lenght, control_grabber.position.y))
 		value = max_value
@@ -85,7 +85,7 @@ func _on_texture_rect_background_gui_input(event):
 
 func refresh_from_color(color_value: int):
 	var new_grabber_position: Vector2i = Vector2i(
-		color_value * slider_scale, control_grabber.position.y
+		int(float(color_value) * slider_scale), int(control_grabber.position.y)
 	)
 	if new_grabber_position.x <= lenght and new_grabber_position.x >= 0:
 		control_grabber.set_position(new_grabber_position)

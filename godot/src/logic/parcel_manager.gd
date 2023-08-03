@@ -103,9 +103,9 @@ func _on_desired_parsel_manager_update():
 			var z = int(coord[1])
 			var index = randi_range(0, 11)
 			var scene: Node3D = empty_scenes[index].instantiate()
-			scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
 			Global.content_manager._hide_colliders(scene)
 			add_child(scene)
+			scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
 			loaded_empty_scenes[parcel] = scene
 
 

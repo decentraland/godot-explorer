@@ -116,7 +116,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     "wearables",
                     wearables
                         .iter()
-                        .map(|v| GodotString::from(v))
+                        .map(GodotString::from)
                         .collect::<Array<GodotString>>()
                         .to_variant(),
                 );

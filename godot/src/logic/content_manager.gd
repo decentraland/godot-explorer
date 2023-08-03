@@ -79,19 +79,17 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 
 	return new_id
 
+
 func duplicate_materials(target_meshes: Array[Dictionary]) -> int:
 	var id = request_monotonic_counter + 1
 	request_monotonic_counter = id
-	
+
 	pending_content.push_back(
-		{
-			"id": id,
-			"content_type": ContentType.CT_MESHES_MATERIAL,
-			"target_meshes": target_meshes
-		}
+		{"id": id, "content_type": ContentType.CT_MESHES_MATERIAL, "target_meshes": target_meshes}
 	)
-	
+
 	return id
+
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
@@ -177,7 +175,7 @@ func _th_poll():
 			ContentType.CT_WEARABLE_EMOTE:
 				if not _process_loading_wearable(content, _th_finished_downloads):
 					_th_to_delete.push_back(content)
-					
+
 			ContentType.CT_MESHES_MATERIAL:
 				if not _process_meshes_material(content):
 					_th_to_delete.push_back(content)
@@ -187,20 +185,21 @@ func _th_poll():
 
 	for item in _th_to_delete:
 		loading_content.erase(item)
-	
+
 	_th_to_delete = []
+
+
 func _process_meshes_material(content: Dictionary):
 	var target_meshes: Array[Dictionary] = content.get("target_meshes")
-	
+
 	for mesh_dict in target_meshes:
 		var mesh = mesh_dict.get("mesh")
 		for i in range(mesh_dict.get("n")):
-			var mat_name = mesh.get("surface_" + str(i) + "/name").to_lower()
 			var material = mesh.surface_get_material(i).duplicate(true)
 			mesh.surface_set_material(i, material)
 
 	self.emit_signal.call_deferred("meshes_material_finished", content["id"])
-	
+
 	return false
 
 
@@ -472,9 +471,9 @@ func _process_loading_texture(
 					"Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err
 				)
 				return false
-				
+
 			content_cache_map[file_hash]["image"] = image
-			content_cache_map[file_hash]["resource"] =  ImageTexture.create_from_image(image)
+			content_cache_map[file_hash]["resource"] = ImageTexture.create_from_image(image)
 			content_cache_map[file_hash]["loaded"] = true
 			content_cache_map[file_hash]["stage"] = 3
 			self.emit_signal.call_deferred("content_loading_finished", file_hash)

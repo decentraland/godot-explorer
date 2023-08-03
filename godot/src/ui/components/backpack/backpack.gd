@@ -9,15 +9,11 @@ var button_save_profile = $ColorRect_Background/HBoxContainer/Control/VBoxContai
 @onready var avatar_preview = %AvatarPreview
 
 @onready
-var button_equip = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/PanelContainer/HBoxContainer/MarginContainer/Button_Equip
-@onready
 var v_box_container_category = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer
 @onready
 var wearable_item_instanceable = preload("res://src/ui/components/wearable_item/wearable_item.tscn")
 @onready
 var grid_container_wearables_list = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/GridContainer_WearablesList
-@onready
-var sprite_2d_preview = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/PanelContainer/HBoxContainer/MarginContainer2/Sprite2D_Preview
 @onready
 var wearable_panel = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
 
@@ -170,7 +166,7 @@ func _on_wearable_button_clear_filter():
 	show_wearables()
 
 
-func _on_line_edit_name_text_changed(new_text):
+func _on_line_edit_name_text_changed(_new_text):
 	button_save_profile.disabled = false
 
 
