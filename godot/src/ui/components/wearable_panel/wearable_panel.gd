@@ -116,9 +116,7 @@ func set_equipable_and_equip(equipable: bool, equipped: bool):
 
 
 func load_thumbnail():
-	var image = Global.content_manager.get_resource_from_hash(thumbnail_hash)
-	var texture = ImageTexture.create_from_image(image)
-	texture_rect_preview.texture = texture
+	texture_rect_preview.texture = Global.content_manager.get_resource_from_hash(thumbnail_hash)
 
 
 func unset_wearable():

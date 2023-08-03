@@ -602,7 +602,7 @@ static func is_valid_wearable(
 			return false
 
 		var category: String = get_category(wearable)
-		if obj is Image:
+		if obj is Image or obj is ImageTexture:
 			if not is_texture(category):
 				# Category and the object don't match
 				return false

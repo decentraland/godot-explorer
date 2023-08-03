@@ -68,9 +68,7 @@ func _on_content_loading_finished(content_hash: String):
 
 
 func load_thumbnail():
-	var image = Global.content_manager.get_resource_from_hash(thumbnail_hash)
-	var texture = ImageTexture.create_from_image(image)
-	texture_rect_preview.texture = texture
+	texture_rect_preview.texture = Global.content_manager.get_resource_from_hash(thumbnail_hash)
 
 
 func _on_mouse_entered():

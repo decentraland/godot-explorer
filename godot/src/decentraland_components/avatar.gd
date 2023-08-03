@@ -27,10 +27,13 @@ var wearables_dict: Dictionary = {}
 
 var finish_loading = false
 var wearables_by_category
+var should_load_wearables: bool = false
+var duplicate_materials_request_id: int = -1
 
 
 func _ready():
 	Global.content_manager.wearable_data_loaded.connect(self._on_wearable_data_loaded)
+	Global.content_manager.meshes_material_finished.connect(self._on_meshes_material_finished)
 
 
 func update_avatar(avatar: Dictionary):
@@ -136,7 +139,7 @@ func fetch_wearables():
 				content_waiting_hash.push_back(content_to_fetch[file_name])
 
 	if content_waiting_hash.is_empty():
-		load_wearables()
+		should_load_wearables = true
 	else:
 		content_waiting_hash_signal_connected = true
 		Global.content_manager.content_loading_finished.connect(self._on_content_loading_finished)
@@ -146,8 +149,18 @@ func _on_content_loading_finished(resource_hash: String):
 	if resource_hash in content_waiting_hash:
 		content_waiting_hash.erase(resource_hash)
 		if content_waiting_hash.is_empty():
-			load_wearables()
+			should_load_wearables = true
 
+func _free_old_skeleton(skeleton: Node):
+	for child in skeleton.get_children():
+		child.free()
+#		if child is MeshInstance3D:
+#			for i in child.get_surface_override_material_count():
+#				var material = child.mesh.surface_get_material(i)
+#				material.free()
+				
+	skeleton.free()
+	
 
 func try_to_set_body_shape(body_shape_hash):
 	var body_shape: Node3D = Global.content_manager.get_resource_from_hash(body_shape_hash)
@@ -160,7 +173,7 @@ func try_to_set_body_shape(body_shape_hash):
 
 	if body_shape_skeleton_3d != null:
 		remove_child(body_shape_skeleton_3d)
-		body_shape_skeleton_3d.free()
+		_free_old_skeleton.call_deferred(body_shape_skeleton_3d)
 
 	body_shape_skeleton_3d = skeleton.duplicate()
 	body_shape_skeleton_3d.name = "Skeleton3D"
@@ -172,7 +185,7 @@ func try_to_set_body_shape(body_shape_hash):
 		child.name = child.name.to_lower()
 
 	add_child(body_shape_skeleton_3d)
-
+	body_shape_skeleton_3d.visible = false
 
 func load_wearables():
 	if content_waiting_hash_signal_connected:
@@ -252,19 +265,32 @@ func load_wearables():
 		if should_hide:
 			child.hide()
 
-	apply_color_and_facial()
+	var meshes: Array[Dictionary] = []
+	for child in body_shape_skeleton_3d.get_children():
+		if child.visible and child is MeshInstance3D:
+			child.mesh = child.mesh.duplicate(true)
+			meshes.push_back({
+				"n": child.get_surface_override_material_count(),
+				"mesh": child.mesh
+			})
+			
+	
+	duplicate_materials_request_id = Global.content_manager.duplicate_materials(meshes)
 
-	finish_loading = true
+func _on_meshes_material_finished(id: int): 
+	if duplicate_materials_request_id == id:
+		apply_color_and_facial()
+		body_shape_skeleton_3d.visible = true
+		finish_loading = true
 
 
 func apply_color_and_facial():
 	for child in body_shape_skeleton_3d.get_children():
 		if child.visible and child is MeshInstance3D:
-			child.mesh = child.mesh.duplicate(true)
-
 			for i in range(child.get_surface_override_material_count()):
 				var mat_name = child.mesh.get("surface_" + str(i) + "/name").to_lower()
-				var material = child.mesh.surface_get_material(i).duplicate(true)
+				var material = child.mesh.surface_get_material(i)
+				
 				if material is StandardMaterial3D:
 					material.metallic = 0
 					material.metallic_specular = 0
@@ -274,8 +300,6 @@ func apply_color_and_facial():
 					elif mat_name.find("hair") != -1:
 						material.roughness = 1
 						material.albedo_color = current_hair_color
-
-					child.mesh.surface_set_material(i, material)
 
 	var eyes = wearables_by_category.get(Wearables.Categories.EYES)
 	var eyebrows = wearables_by_category.get(Wearables.Categories.EYEBROWS)
@@ -316,20 +340,13 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 func apply_texture_and_mask(
 	mesh: MeshInstance3D, textures: Array[String], color: Color, mask_color: Color
 ):
-	var main_texture := ImageTexture.create_from_image(
-		Global.content_manager.get_resource_from_hash(textures[0])
-	)
-
 	var current_material = mask_material.duplicate()
-	current_material.set_shader_parameter("base_texture", main_texture)
+	current_material.set_shader_parameter("base_texture", Global.content_manager.get_resource_from_hash(textures[0]))
 	current_material.set_shader_parameter("material_color", color)
 	current_material.set_shader_parameter("mask_color", mask_color)
 
 	if textures.size() > 1:
-		var mask_texture := ImageTexture.create_from_image(
-			Global.content_manager.get_resource_from_hash(textures[1])
-		)
-		current_material.set_shader_parameter("mask_texture", mask_texture)
+		current_material.set_shader_parameter("mask_texture", Global.content_manager.get_resource_from_hash(textures[1]))
 
 	mesh.mesh.surface_set_material(0, current_material)
 
@@ -347,6 +364,11 @@ func set_target(target: Transform3D) -> void:
 
 
 func _process(delta):
+	
+	if should_load_wearables:
+		load_wearables()
+		should_load_wearables = false
+		
 	if skip_process:
 		return
 
