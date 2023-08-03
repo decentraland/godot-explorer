@@ -37,13 +37,6 @@ func _process(_dt):
 		dirty_save_position = true
 
 
-#
-#		var scene_data = parcel_manager.get_current_scene_data()
-#		var title = scene_data.get("entity", {}).get("metadata", {}).get("display", {}).get(
-#			"title", "No title"
-#		)
-
-
 func _ready():
 	if Global.is_mobile:
 		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_BEGIN
@@ -63,6 +56,8 @@ func _ready():
 			sky.day_time = 14.9859
 
 	add_child(sky)
+	if Global.config.skybox == 1:
+		sky.day_time = 10
 
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)

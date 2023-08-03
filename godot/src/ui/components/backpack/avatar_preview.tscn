@@ -14,10 +14,6 @@ sky_material = SubResource("ProceduralSkyMaterial_6yihh")
 [sub_resource type="Environment" id="Environment_lhy6q"]
 background_mode = 2
 sky = SubResource("Sky_puthh")
-tonemap_mode = 2
-ssao_enabled = true
-sdfgi_enabled = true
-glow_enabled = true
 
 [node name="SubViewportContainer" type="SubViewportContainer"]
 size_flags_horizontal = 4

@@ -26,28 +26,11 @@ texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_hirg0"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_d1h4b"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
 script = ExtResource("1_5n8xk")
-
-[node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.920973, 0, -0.389627, 0.276523, -0.704492, 0.653625, -0.274489, -0.709712, -0.648817, 0, 0, 0)
-rotation_order = 4
-light_energy = 0.2
-shadow_enabled = true
-
-[node name="Moon" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.929433, 0, 0.368989, 0.155738, 0.906564, -0.392283, -0.334512, 0.422067, 0.842592, 0, 0, 0)
-rotation_order = 4
-light_color = Color(1, 1, 0.6, 1)
-light_energy = 0.0
-shadow_enabled = true
-shadow_opacity = 0.25
-shadow_blur = 5.0
-directional_shadow_fade_start = 0.1
-sky_mode = 2
 
 [node name="StaticBody3D_Floor" type="StaticBody3D" parent="."]
 
@@ -188,7 +171,7 @@ layout_mode = 2
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_hirg0")
+group = SubResource("ButtonGroup_d1h4b")
 
 [node name="Timer_BroadcastPosition" type="Timer" parent="."]
 wait_time = 0.1
