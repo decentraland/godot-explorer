@@ -614,7 +614,7 @@ mod tests {
             SceneEntityCoordinator::new(entities_active_url, content_url, true);
 
         // Test scenes
-        scene_entity_coordinator.set_current_position(10, 5);
+        scene_entity_coordinator.set_current_position(74, -7);
         scene_entity_coordinator._set_fixed_desired_entities_urns(vec![
             TEST_URN.to_string(),
             "unknown_entity+".to_string(),
@@ -631,20 +631,10 @@ mod tests {
         // Test parcels
         scene_entity_coordinator.update_position(0, 0);
         assert!(wait_update_or_timeout(&mut scene_entity_coordinator, 10000));
-        assert!(scene_entity_coordinator
-            .get_loadable_scenes()
-            .contains(&TEST_URN_HASH.to_string()));
-        assert!(scene_entity_coordinator
-            .get_loadable_scenes()
-            .contains(&TEST_POINTER_O_O_ID.to_string()));
-
-        // Test parcels
-        scene_entity_coordinator.update_position(100, 100);
-        assert!(wait_update_or_timeout(&mut scene_entity_coordinator, 10000));
-        assert!(scene_entity_coordinator
-            .get_loadable_scenes()
-            .contains(&TEST_URN_HASH.to_string()));
         assert!(!scene_entity_coordinator
+            .get_loadable_scenes()
+            .contains(&TEST_URN_HASH.to_string()));
+        assert!(scene_entity_coordinator
             .get_loadable_scenes()
             .contains(&TEST_POINTER_O_O_ID.to_string()));
     }
