@@ -65,7 +65,7 @@ var process_tick_quota_ms: int = 10:
 		process_tick_quota_ms = value
 		param_changed.emit(ConfigParams.ProcessTickQuotaMs)
 
-var scene_radius: int = 1:
+var scene_radius: int = 4:
 	set(value):
 		scene_radius = value
 		param_changed.emit(ConfigParams.SceneRadius)
@@ -92,15 +92,23 @@ var avatar_profile: Dictionary = {}:
 		avatar_profile = value
 		param_changed.emit(ConfigParams.AvatarProfile)
 
+var last_realm_joined: String = "":
+	set(value):
+		last_realm_joined = value
 
-func default():
+var last_parcel_position: Vector2i = Vector2i(72, -10):
+	set(value):
+		last_parcel_position = value
+
+
+func load_from_default():
 	self.gravity = 55.0
 	self.jump_velocity = 12.0
 	self.walk_velocity = 2.0
 	self.run_velocity = 6.0
 
 	self.process_tick_quota_ms = 10
-	self.scene_radius = 1
+	self.scene_radius = 4
 	self.limit_fps = 0
 
 	if OS.get_name() == "Android":
@@ -135,36 +143,49 @@ func default():
 		"emotes": []
 	}
 
+	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+	self.last_parcel_position = Vector2i(72, -10)
+
 
 const SETTINGS_FILE = "user://settings.cfg"
 
 
 func load_from_settings_file():
-	var default = ConfigData.new()
-	default.default()
+	var data_default = ConfigData.new()
+	data_default.load_from_default()
 
 	var settings_file: ConfigFile = ConfigFile.new()
 	settings_file.load(SETTINGS_FILE)
 
-	self.gravity = settings_file.get_value("config", "gravity", default.gravity)
-	self.jump_velocity = settings_file.get_value("config", "jump_velocity", default.jump_velocity)
-	self.walk_velocity = settings_file.get_value("config", "walk_velocity", default.walk_velocity)
-	self.run_velocity = settings_file.get_value("config", "run_velocity", default.run_velocity)
+	self.gravity = settings_file.get_value("config", "gravity", data_default.gravity)
+	self.jump_velocity = settings_file.get_value(
+		"config", "jump_velocity", data_default.jump_velocity
+	)
+	self.walk_velocity = settings_file.get_value(
+		"config", "walk_velocity", data_default.walk_velocity
+	)
+	self.run_velocity = settings_file.get_value("config", "run_velocity", data_default.run_velocity)
 	self.process_tick_quota_ms = settings_file.get_value(
-		"config", "process_tick_quota_ms", default.process_tick_quota_ms
+		"config", "process_tick_quota_ms", data_default.process_tick_quota_ms
 	)
-	self.scene_radius = settings_file.get_value("config", "scene_radius", default.scene_radius)
-	self.limit_fps = settings_file.get_value("config", "limit_fps", default.limit_fps)
-	self.skybox = settings_file.get_value("config", "skybox", default.skybox)
+	self.scene_radius = settings_file.get_value("config", "scene_radius", data_default.scene_radius)
+	self.limit_fps = settings_file.get_value("config", "limit_fps", data_default.limit_fps)
+	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
 	self.local_content_dir = settings_file.get_value(
-		"config", "local_content_dir", default.local_content_dir
+		"config", "local_content_dir", data_default.local_content_dir
 	)
-	self.show_fps = settings_file.get_value("config", "show_fps", default.show_fps)
-	self.resolution = settings_file.get_value("config", "resolution", default.resolution)
-	self.window_size = settings_file.get_value("config", "window_size", default.window_size)
-	self.ui_scale = settings_file.get_value("config", "ui_scale", default.ui_scale)
+	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
+	self.resolution = settings_file.get_value("config", "resolution", data_default.resolution)
+	self.window_size = settings_file.get_value("config", "window_size", data_default.window_size)
+	self.ui_scale = settings_file.get_value("config", "ui_scale", data_default.ui_scale)
 
-	self.avatar_profile = settings_file.get_value("profile", "avatar", default.avatar_profile)
+	self.avatar_profile = settings_file.get_value("profile", "avatar", data_default.avatar_profile)
+	self.last_parcel_position = settings_file.get_value(
+		"user", "last_parcel_position", data_default.last_parcel_position
+	)
+	self.last_realm_joined = settings_file.get_value(
+		"user", "last_realm_joined", data_default.last_realm_joined
+	)
 
 
 func save_to_settings_file():
@@ -183,4 +204,6 @@ func save_to_settings_file():
 	settings_file.set_value("config", "window_size", self.window_size)
 	settings_file.set_value("config", "ui_scale", self.ui_scale)
 	settings_file.set_value("profile", "avatar", self.avatar_profile)
+	settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
+	settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	settings_file.save(SETTINGS_FILE)

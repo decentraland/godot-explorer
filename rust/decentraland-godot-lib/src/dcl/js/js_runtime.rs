@@ -32,6 +32,7 @@ pub struct JsRuntimeState {
     pub main_crdt: Option<Vec<u8>>,
     pub main_code: String,
     pub logs: Vec<SceneLogMessage>,
+    pub dying: bool,
 }
 
 pub fn init_v8() {

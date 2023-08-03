@@ -1,8 +1,8 @@
 [gd_scene load_steps=16 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
+[ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/FloorBaseGrass_01/Floor_Grass01.png.png" id="2_7jksa"]
 [ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://src/logic/player/player.tscn" id="3_fr1df"]
-[ext_resource type="Texture2D" uid="uid://m7i23bc2yyqt" path="res://assets/grid.png" id="3_g5xa3"]
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 [ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
@@ -20,34 +20,17 @@ material = SubResource("ShaderMaterial_lovo8")
 size = Vector2(4800, 4800)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fstik"]
-albedo_texture = ExtResource("3_g5xa3")
+albedo_texture = ExtResource("2_7jksa")
 uv1_scale = Vector3(300, 300, 300)
 texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_5f1e5"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_d1h4b"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
 script = ExtResource("1_5n8xk")
-
-[node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.920973, 0, -0.389627, 0.276523, -0.704492, 0.653625, -0.274489, -0.709712, -0.648817, 0, 0, 0)
-rotation_order = 4
-light_energy = 0.2
-shadow_enabled = true
-
-[node name="Moon" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.929433, 0, 0.368989, 0.155738, 0.906564, -0.392283, -0.334512, 0.422067, 0.842592, 0, 0, 0)
-rotation_order = 4
-light_color = Color(1, 1, 0.6, 1)
-light_energy = 0.0
-shadow_enabled = true
-shadow_opacity = 0.25
-shadow_blur = 5.0
-directional_shadow_fade_start = 0.1
-sky_mode = 2
 
 [node name="StaticBody3D_Floor" type="StaticBody3D" parent="."]
 
@@ -71,7 +54,7 @@ grow_vertical = 2
 mouse_filter = 1
 theme = SubResource("Theme_1ufu0")
 
-[node name="Timer" type="Timer" parent="UI"]
+[node name="Timer_FPSLabel" type="Timer" parent="UI"]
 autostart = true
 
 [node name="Control_PointerTooltip" parent="UI" instance=ExtResource("11_qjs00")]
@@ -188,22 +171,20 @@ layout_mode = 2
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_5f1e5")
+group = SubResource("ButtonGroup_d1h4b")
 
 [node name="Timer_BroadcastPosition" type="Timer" parent="."]
 wait_time = 0.1
 autostart = true
 
 [connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
-[connection signal="timeout" from="UI/Timer" to="." method="_on_timer_timeout"]
+[connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_timeout"]
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
 [connection signal="submit_message" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_submit_message"]
 [connection signal="gui_input" from="UI/Button_Jump" to="." method="_on_button_jump_gui_input"]
 [connection signal="hide_menu" from="UI/Control_Menu" to="." method="_on_control_menu_hide_menu"]
 [connection signal="jump_to" from="UI/Control_Menu" to="." method="_on_control_menu_jump_to"]
 [connection signal="preview_hot_reload" from="UI/Control_Menu" to="." method="_on_control_menu_preview_hot_reload"]
-[connection signal="request_change_realm" from="UI/Control_Menu" to="." method="_on_control_menu_request_change_realm"]
-[connection signal="request_change_scene_radius" from="UI/Control_Menu" to="." method="_on_control_menu_request_change_scene_radius"]
 [connection signal="request_pause_scenes" from="UI/Control_Menu" to="." method="_on_control_menu_request_pause_scenes"]
 [connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]

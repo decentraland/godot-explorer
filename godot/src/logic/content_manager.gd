@@ -3,8 +3,9 @@ class_name ContentManager
 
 signal content_loading_finished(hash: String)
 signal wearable_data_loaded(id: String)
+signal meshes_material_finished(id: int)
 
-enum ContentType { CT_GLTF_GLB = 1, CT_TEXTURE = 2, CT_WEARABLE_EMOTE = 3 }
+enum ContentType { CT_GLTF_GLB = 1, CT_TEXTURE = 2, CT_WEARABLE_EMOTE = 3, CT_MESHES_MATERIAL = 4 }
 
 var loading_content: Array[Dictionary] = []
 var pending_content: Array[Dictionary] = []
@@ -12,7 +13,7 @@ var content_cache_map: Dictionary = {}
 var content_thread_pool: Thread = null
 var http_requester = RustHttpRequester.new()
 var wearable_cache_map: Dictionary = {}
-var wearable_request_monotonic_counter: int = 0
+var request_monotonic_counter: int = 0
 
 var use_thread = true
 
@@ -47,7 +48,7 @@ func get_wearable(id: String):
 # @returns $id if the resource was added to queue to fetch, -1 if it had already been fetched
 func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> int:
 	var new_wearables: PackedStringArray = []
-	var new_id: int = wearable_request_monotonic_counter + 1
+	var new_id: int = request_monotonic_counter + 1
 	var wearables_loaded = true
 
 	for wearable in wearables:
@@ -65,7 +66,7 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 	if new_wearables.is_empty():
 		return -1
 
-	wearable_request_monotonic_counter = new_id
+	request_monotonic_counter = new_id
 	pending_content.push_back(
 		{
 			"id": new_id,
@@ -77,6 +78,17 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 	)
 
 	return new_id
+
+
+func duplicate_materials(target_meshes: Array[Dictionary]) -> int:
+	var id = request_monotonic_counter + 1
+	request_monotonic_counter = id
+
+	pending_content.push_back(
+		{"id": id, "content_type": ContentType.CT_MESHES_MATERIAL, "target_meshes": target_meshes}
+	)
+
+	return id
 
 
 # Public function
@@ -164,11 +176,31 @@ func _th_poll():
 				if not _process_loading_wearable(content, _th_finished_downloads):
 					_th_to_delete.push_back(content)
 
+			ContentType.CT_MESHES_MATERIAL:
+				if not _process_meshes_material(content):
+					_th_to_delete.push_back(content)
+
 			_:
 				printerr("Fetching invalid content type ", _th_content_type)
 
 	for item in _th_to_delete:
 		loading_content.erase(item)
+
+	_th_to_delete = []
+
+
+func _process_meshes_material(content: Dictionary):
+	var target_meshes: Array[Dictionary] = content.get("target_meshes")
+
+	for mesh_dict in target_meshes:
+		var mesh = mesh_dict.get("mesh")
+		for i in range(mesh_dict.get("n")):
+			var material = mesh.surface_get_material(i).duplicate(true)
+			mesh.surface_set_material(i, material)
+
+	self.emit_signal.call_deferred("meshes_material_finished", content["id"])
+
+	return false
 
 
 func _get_finished_downloads() -> Array[RequestResponse]:
@@ -432,15 +464,16 @@ func _process_loading_texture(
 				return false
 
 			var buf = file.get_buffer(file.get_length())
-			var resource := Image.new()
-			var err = resource.load_png_from_buffer(buf)
+			var image := Image.new()
+			var err = image.load_png_from_buffer(buf)
 			if err != OK:
 				printerr(
 					"Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err
 				)
 				return false
 
-			content_cache_map[file_hash]["resource"] = resource
+			content_cache_map[file_hash]["image"] = image
+			content_cache_map[file_hash]["resource"] = ImageTexture.create_from_image(image)
 			content_cache_map[file_hash]["loaded"] = true
 			content_cache_map[file_hash]["stage"] = 3
 			self.emit_signal.call_deferred("content_loading_finished", file_hash)

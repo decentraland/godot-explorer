@@ -71,6 +71,7 @@ pub(crate) fn scene_thread(
         main_crdt: scene_main_crdt,
         logs: Vec::new(),
         main_code: file.unwrap().get_as_text().to_string(),
+        dying: false,
     };
 
     // Eval Init Code
@@ -154,6 +155,11 @@ pub(crate) fn scene_thread(
                 return;
             }
         };
+
+        let state = JsRuntime::state_from(&js_context.isolate);
+        if state.borrow().dying {
+            break;
+        }
     }
 
     // println!("finishing thread");

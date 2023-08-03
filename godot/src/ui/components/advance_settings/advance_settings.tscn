@@ -207,7 +207,6 @@ size_flags_horizontal = 3
 focus_mode = 0
 max_value = 4.0
 value = 1.0
-editable = false
 
 [node name="Label_SceneRadiusValue" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
 custom_minimum_size = Vector2(50, 0)

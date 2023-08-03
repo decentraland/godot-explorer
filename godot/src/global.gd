@@ -16,10 +16,16 @@ var config: ConfigData
 
 var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
 
+var standalone = false
+
 
 func _ready():
 	var args := OS.get_cmdline_args()
-#	if some.
+
+	if args.size() == 1 and args[0].begins_with("res://"):
+		if args[0] != "res://src/main.tscn":
+			self.standalone = true
+
 	if args.has("--test"):
 		var test_runner = load("res://src/test/test_runner.gd").new()
 		add_child(test_runner)

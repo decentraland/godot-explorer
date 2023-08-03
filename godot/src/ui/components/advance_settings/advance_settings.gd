@@ -32,8 +32,6 @@ var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
 var _dirty_connected: bool = false
 
-signal request_change_realm(realm_string: String)
-signal request_change_scene_radius(new_value: int)
 signal request_pause_scenes(enabled: bool)
 signal preview_hot_reload(scene_type: String, scene_id: String)
 
@@ -64,13 +62,14 @@ func _on_h_slider_process_tick_quota_value_changed(value):
 
 
 func _on_option_button_realm_item_selected(index):
-	emit_signal("request_change_realm", option_button_realm.get_item_text(index))
+	Global.realm.set_realm(option_button_realm.get_item_text(index))
 
 
 func _on_h_slider_scene_radius_drag_ended(value_changed):
 	if value_changed:
-		emit_signal("request_change_scene_radius", h_slider_scene_radius.value)
+		Global.config.scene_radius = h_slider_scene_radius.value
 		label_scene_radius_value.text = str(h_slider_scene_radius.value)
+		Global.config.save_to_settings_file()
 
 
 func _on_check_button_pause_toggled(button_pressed):

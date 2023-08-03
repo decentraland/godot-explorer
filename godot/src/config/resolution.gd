@@ -43,10 +43,7 @@ func change_window_size(window: Window, viewport: Viewport, option_key: String) 
 
 	DisplayServer.window_set_size(window_options[option_key])
 	viewport.size = Vector2(window_options[option_key])
-	Global.config
-
 	change_resolution(window, viewport, option_key)
-
 	refresh_resolutions()
 
 

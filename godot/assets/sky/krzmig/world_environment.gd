@@ -48,26 +48,28 @@ const DAYS_IN_YEAR: int = 365
 		_update_shader()
 
 var sun: DirectionalLight3D
-var sun_base_enegry: float = -1
+var sun_base_enegry: float = 0.6
 var moon: DirectionalLight3D
-var moon_base_enegry: float = -1
+var moon_base_enegry: float = 1.0
 
 
 func _ready():
-	sun = get_parent().get_node("Sun")
-	moon = get_parent().get_node("Moon")
+	sun = DirectionalLight3D.new()
+	sun.light_color = Color.BLACK
+	sun.name = "DirectionalLight3D_Sun"
+	sun.position = Vector3(0.0, 0.0, 0.0)
+	sun.rotation = Vector3(0.0, 0.0, 0.0)
+	sun.rotation_order = EULER_ORDER_ZXY
 
-	if is_instance_valid(sun):
-		sun_base_enegry = sun.light_energy
-		sun.position = Vector3(0.0, 0.0, 0.0)
-		sun.rotation = Vector3(0.0, 0.0, 0.0)
-		sun.rotation_order = EULER_ORDER_ZXY
+	moon = DirectionalLight3D.new()
+	moon.light_color = Color.BLACK
+	moon.name = "DirectionalLight3D_Moon"
+	moon.position = Vector3(0.0, 0.0, 0.0)
+	moon.rotation = Vector3(0.0, 0.0, 0.0)
+	moon.rotation_order = EULER_ORDER_ZXY
 
-	if is_instance_valid(moon):
-		moon_base_enegry = moon.light_energy
-		moon.position = Vector3(0.0, 0.0, 0.0)
-		moon.rotation = Vector3(0.0, 0.0, 0.0)
-		moon.rotation_order = EULER_ORDER_ZXY
+	add_sibling(moon)
+	add_sibling(sun)
 
 	_update()
 

@@ -20,6 +20,8 @@ var RUN_SPEED = 6.0
 var GRAVITY := 55.0
 var JUMP_VELOCITY_0 := 12.0
 
+var THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
+
 
 func _ready():
 	camera.current = true
@@ -29,7 +31,7 @@ func _ready():
 
 	first_person = false
 	var tween_out = create_tween()
-	tween_out.tween_property(camera, "position", Vector3(0.5, 0, 4), 0.25).set_ease(
+	tween_out.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25).set_ease(
 		Tween.EASE_IN_OUT
 	)
 
@@ -49,7 +51,7 @@ func _on_player_profile_changed(new_profile: Dictionary):
 	avatar.update_avatar(new_profile)
 
 
-func _on_param_changed(param: ConfigData.ConfigParams):
+func _on_param_changed(_param):
 	WALK_SPEED = Global.config.walk_velocity
 	RUN_SPEED = Global.config.run_velocity
 	GRAVITY = Global.config.gravity
@@ -101,8 +103,10 @@ func _input(event):
 				if first_person == true:
 					first_person = false
 					var tween_out = create_tween()
-					tween_out.tween_property(camera, "position", Vector3(0.5, 0, 4), 0.25).set_ease(
-						Tween.EASE_IN_OUT
+					(
+						tween_out
+						. tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25)
+						. set_ease(Tween.EASE_IN_OUT)
 					)
 					avatar.show()
 					avatar.set_rotation(Vector3(0, 0, 0))

@@ -4,14 +4,9 @@ extends SubViewportContainer
 @onready var camera_3d = $SubViewport/Camera3D
 
 
-# Called when the node enters the scene tree for the first time.
 func _ready():
-	pass  # Replace with function body.
-
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-	pass
+	if Global.standalone:
+		avatar.update_avatar(Global.config.avatar_profile)
 
 
 var start_camera_transform

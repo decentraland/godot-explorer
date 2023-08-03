@@ -1,0 +1,56 @@
+[gd_scene load_steps=4 format=3 uid="uid://bpr72166gh2i0"]
+
+[ext_resource type="Script" path="res://src/ui/color_picker/colorable_square.gd" id="1_ps4c1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_513wp"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.996078, 0.486275, 0.290196, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+expand_margin_left = 3.0
+expand_margin_top = 3.0
+expand_margin_right = 3.0
+expand_margin_bottom = 3.0
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bderj"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+anti_aliasing = false
+
+[node name="colorable_square" type="Button"]
+custom_minimum_size = Vector2(35, 35)
+offset_right = 35.0
+offset_bottom = 35.0
+focus_mode = 0
+mouse_filter = 1
+mouse_default_cursor_shape = 2
+toggle_mode = true
+flat = true
+script = ExtResource("1_ps4c1")
+
+[node name="PanelContainer_Border" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 0
+offset_right = 35.0
+offset_bottom = 35.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_513wp")
+
+[node name="Panel_Color" type="Panel" parent="."]
+layout_mode = 0
+offset_right = 35.0
+offset_bottom = 35.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bderj")
+
+[connection signal="toggled" from="." to="." method="_on_toggled"]

@@ -105,6 +105,7 @@ pub fn op_crdt_recv_from_renderer(
             println!("{}: shutting down", std::thread::current().name().unwrap());
 
             // TODO: handle recv from renderer
+            state.dying = true;
 
             Default::default()
         }
