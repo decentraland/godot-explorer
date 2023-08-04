@@ -43,6 +43,7 @@ pub fn export() -> Result<(), anyhow::Error> {
     let output_path = match std::env::consts::OS {
         "linux" => format!("{export_dir}/decentraland.godot.client.x86_64"),
         "windows" => format!("{export_dir}/decentraland.godot.client.exe"),
+        "macos" => format!("{export_dir}/decentraland.godot.client.dmg"),
         _ => {
             return Err(anyhow::anyhow!(
                 "Unsupported platform: {}",
@@ -54,6 +55,7 @@ pub fn export() -> Result<(), anyhow::Error> {
     let target = match std::env::consts::OS {
         "linux" => "linux",
         "windows" => "win64",
+        "macos" => "macos",
         _ => {
             return Err(anyhow::anyhow!(
                 "Unsupported platform: {}",
