@@ -224,6 +224,9 @@ jobs:
 
       - name: Export
         working-directory: rust
+        env:
+          GODOT_MACOS_CODESIGN_CERTIFICATE_FILE: certificate.p12
+          GODOT_MACOS_CODESIGN_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
         run: cargo xtask export
 
       - name: Notarize MacOS (dmg)
