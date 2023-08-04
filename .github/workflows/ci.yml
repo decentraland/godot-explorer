@@ -185,37 +185,8 @@ jobs:
             cp rust/target/release/libdecentraland_godot_lib.so godot/lib/ || true
             cp rust/target/release/libdecentraland_godot_lib.dylib godot/lib/ || true
 
-      - name: Export
-        working-directory: rust
-        run: cargo xtask export
-
-      - name: Copy the library to exports
-        run: cp rust/target/release/libdecentraland_godot_lib.dylib exports/libdecentraland_godot_lib.dylib
-
-      - uses: actions/upload-artifact@master
-        with:
-          name: decentraland-godot-${{ matrix.os }}
-          path: |
-            exports/**/*
-  
-  macos-sign:
-    name: Test sign macos
-    strategy:
-      matrix:
-        # os: [windows-latest, ubuntu-latest]
-        os: [macos-latest]
-        rust: [stable]
-    runs-on: ${{ matrix.os }}
-    env:
-      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v2
-      - name: create folder
-        run: mkdir exports || true
-      - name: download library
-        run: curl -L -o exports/libdecentraland_godot_lib.dylib https://github.com/decentraland/godot-explorer/releases/download/v0.5.0-alpha/libdecentraland_godot_lib.dylib
-      - name: Codesign executable
+      - name: Codesign library
+        if: ${{ matrix.os == 'macos-latest' }}
         env: 
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CSC_LINK }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
@@ -238,9 +209,88 @@ jobs:
           echo "running find identity"
           identity_id=$(security find-identity -v | grep -oE '1\) ([A-F0-9]{40})' | awk '{print $2}')
           echo "signing dcl library"
-          /usr/bin/codesign --force -s $identity_id ./exports/libdecentraland_godot_lib.dylib -v 
+          /usr/bin/codesign --force -s $identity_id godot/lib/libdecentraland_godot_lib.dylib -v 
+
+      - name: Export
+        working-directory: rust
+        run: cargo xtask export
+
+      - name: Notarize MacOS (dmg)
+        if: ${{ matrix.os == 'macos-latest' }}
+        env:
+          MACOS_NOTARIZATION_APPLE_ID: ${{secrets.MACOS_NOTARIZATION_APPLE_ID}}
+          MACOS_NOTARIZATION_TEAM_ID: ${{secrets.MACOS_NOTARIZATION_TEAM_ID}}
+          MACOS_NOTARIZATION_PWD: ${{secrets.MACOS_NOTARIZATION_PWD}}
+        run: |
+          # Store the notarization credentials to prevent the UI password dialog for blocking the CI
+          echo "Create keychain profile"
+          xcrun notarytool store-credentials "notary-profile" --apple-id "$MACOS_NOTARIZATION_APPLE_ID" --team-id "$MACOS_NOTARIZATION_TEAM_ID" --password "$MACOS_NOTARIZATION_PWD"
+
+          # Send the notarization request to the Apple's Notarization service and wait for the result.
+          echo "Notarize app"
+          xcrun notarytool submit "decentraland.godot.macos.dmg" --keychain-profile "notary-profile" --wait
+
+          # Attach the staple to the executable, this allow the app to be validated by macOS
+          # even when an internet connection is not available.
+          echo "Attach staple"
+          xcrun stapler staple "decentraland.godot.macos.dmg"
+
+          # Validate the staple attached to the executable.
+          echo "Validate staple"
+          xcrun stapler validate "decentraland.godot.macos.dmg"
+
+      - name: Copy the library to exports
+        run: cp rust/target/release/libdecentraland_godot_lib.dylib exports/libdecentraland_godot_lib.dylib
+
       - uses: actions/upload-artifact@master
         with:
-          name: signed-decentraland-godot-${{ matrix.os }}
+          name: decentraland-godot-${{ matrix.os }}
           path: |
             exports/**/*
+  
+  # macos-sign:
+  #   name: Test sign macos
+  #   strategy:
+  #     matrix:
+  #       # os: [windows-latest, ubuntu-latest]
+  #       os: [macos-latest]
+  #       rust: [stable]
+  #   runs-on: ${{ matrix.os }}
+  #   env:
+  #     GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
+  #   continue-on-error: true
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: create folder
+  #       run: mkdir exports || true
+  #     - name: download library
+  #       run: curl -L -o exports/libdecentraland_godot_lib.dylib https://github.com/decentraland/godot-explorer/releases/download/v0.5.0-alpha/libdecentraland_godot_lib.dylib
+  #     - name: Codesign executable
+  #       env: 
+  #         MACOS_CERTIFICATE: ${{ secrets.MACOS_CSC_LINK }}
+  #         MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
+  #       run: |
+  #         mkdir exports || true
+  #         echo "Creating temp password"
+  #         tmp_password=$(head -c 32 /dev/urandom | base64)
+  #         echo "Dumping cert"
+  #         echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+  #         echo "Creating keychain"
+  #         security create-keychain -p $tmp_password build.keychain
+  #         echo "Setting default keychain"
+  #         security default-keychain -s build.keychain
+  #         echo "Unlock keychain"
+  #         security unlock-keychain -p $tmp_password build.keychain
+  #         echo "Importing cert"
+  #         security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
+  #         echo "set-key-partition-list"
+  #         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $tmp_password build.keychain
+  #         echo "running find identity"
+  #         identity_id=$(security find-identity -v | grep -oE '1\) ([A-F0-9]{40})' | awk '{print $2}')
+  #         echo "signing dcl library"
+  #         /usr/bin/codesign --force -s $identity_id ./exports/libdecentraland_godot_lib.dylib -v 
+  #     - uses: actions/upload-artifact@master
+  #       with:
+  #         name: signed-decentraland-godot-${{ matrix.os }}
+  #         path: |
+  #           exports/**/*
