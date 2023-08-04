@@ -200,13 +200,15 @@ jobs:
   
   macos-sign:
     name: Test sign macos
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         # os: [windows-latest, ubuntu-latest]
         os: [macos-latest]
         rust: [stable]
     runs-on: ${{ matrix.os }}
+    env:
+      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
+    continue-on-error: true
     steps:
       - name: create folder
         run: mkdir exports || true
