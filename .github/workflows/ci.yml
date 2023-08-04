@@ -206,7 +206,7 @@ jobs:
         # os: [windows-latest, ubuntu-latest]
         os: [macos-latest]
         rust: [stable]
-    runs-on: ${{ matrix.ox }}
+    runs-on: ${{ matrix.os }}
     steps:
       - name: create folder
         run: mkdir exports || true
