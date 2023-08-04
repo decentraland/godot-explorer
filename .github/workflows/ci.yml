@@ -237,7 +237,7 @@ jobs:
           echo "running find identity"
           security find-identity -v
           echo "signing dcl library"
-          /usr/bin/codesign --force -s $(security find-identity -v) ./exports/libdecentraland_godot_lib.dylib -v 
+          /usr/bin/codesign --force -s C6D65E924E13D94F1B661543E29FAC46C5AC10AD ./exports/libdecentraland_godot_lib.dylib -v 
       - uses: actions/upload-artifact@master
         with:
           name: signed-decentraland-godot-${{ matrix.os }}
