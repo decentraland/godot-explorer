@@ -220,14 +220,23 @@ jobs:
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
         run: |
           mkdir exports || true
+          echo "Creating temp password"
           tmp_password=$(head -c 32 /dev/urandom | base64)
+          echo "Dumping cert"
           echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+          echo "Creating keychain"
           security create-keychain -p $tmp_password build.keychain
+          echo "Setting default keychain"
           security default-keychain -s build.keychain
+          echo "Unlock keychain"
           security unlock-keychain -p $tmp_password build.keychain
+          echo "Importing cert"
           security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
+          echo "set-key-partition-list"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $tmp_password build.keychain
+          echo "running find identity"
           security find-identity -v
+          echo "signing dcl library"
           /usr/bin/codesign --force -s $(security find-identity -v) ./exports/libdecentraland_godot_lib.dylib -v 
       - uses: actions/upload-artifact@master
         with:
