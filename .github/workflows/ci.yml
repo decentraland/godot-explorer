@@ -252,7 +252,7 @@ jobs:
           xcrun stapler validate "decentraland.godot.macos.dmg"
 
       - name: Copy the library to exports
-        run: cp rust/target/release/libdecentraland_godot_lib.dylib exports/libdecentraland_godot_lib.dylib
+        run: cp godot/lib/libdecentraland_godot_lib.dylib exports/libdecentraland_godot_lib.dylib
 
       - uses: actions/upload-artifact@master
         with:
