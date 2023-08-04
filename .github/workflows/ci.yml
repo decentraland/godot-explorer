@@ -102,6 +102,7 @@ jobs:
   build:
     name: Build and test
     # if: ${{ github.ref == 'refs/heads/main' }}
+    if: false
     strategy:
       matrix:
         # os: [windows-latest, ubuntu-latest]
@@ -196,4 +197,38 @@ jobs:
           name: decentraland-godot-${{ matrix.os }}
           path: |
             exports/**/*
-
+  
+  macos-sign:
+    name: Test sign macos
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # os: [windows-latest, ubuntu-latest]
+        os: [macos-latest]
+        rust: [stable]
+    runs-on: ${{ matrix.ox }}
+    steps:
+      - name: create folder
+        run: mkdir exports || true
+      - name: download library
+        run: curl -o exports/libdecentraland_godot_lib.dylib https://github.com/decentraland/godot-explorer/releases/download/v0.5.0-alpha/libdecentraland_godot_lib.dylib
+      - name: Codesign executable
+        env: 
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CSC_LINK }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
+        run: |
+          mkdir exports || true
+          tmp_password=$(head -c 32 /dev/urandom | base64)
+          echo $MACOS_CERTIFICATE | base64 —decode > certificate.p12
+          security create-keychain -p $tmp_password build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p $tmp_password build.keychain
+          security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $tmp_password build.keychain
+          security find-identity -v
+          /usr/bin/codesign --force -s $(security find-identity -v) ./exports/libdecentraland_godot_lib.dylib -v 
+      - uses: actions/upload-artifact@master
+        with:
+          name: signed-decentraland-godot-${{ matrix.os }}
+          path: |
+            exports/**/*
