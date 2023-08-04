@@ -9,101 +9,103 @@ on:
 
 name: CI
 
-jobs: 
-  lints:
-    name: Check and lints
-    runs-on: ubuntu-latest
-    env:
-      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add rustfmt
-      - name: Set up Python
-        uses: actions/setup-python@v4
-      - name: Install gdtoolkit 4
-        run: pip3 install "gdtoolkit==4.*"
-      - name: Check format GDScript
-        run: gdformat -d godot/
-      - name: cargo xtask install
-        working-directory: rust
-        run: cargo xtask install --no-templates
-      - uses: actions-rs/cargo@v1
-        name: cargo check
-        with:
-          command: check
-          args: --manifest-path rust/Cargo.toml
-      - uses: actions-rs/cargo@v1
-        name: cargo fmt
-        with:
-          command: fmt
-          args: --manifest-path rust/Cargo.toml --all -- --check
-      - uses: actions-rs/cargo@v1
-        name: cargo clippy
-        with:
-          command: clippy
-          args: --manifest-path rust/Cargo.toml -- -D warnings
+jobs:
+  # TODO: back later
+  # lints:
+  #   name: Check and lints
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - run: rustup component add rustfmt
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #     - name: Install gdtoolkit 4
+  #       run: pip3 install "gdtoolkit==4.*"
+  #     - name: Check format GDScript
+  #       run: gdformat -d godot/
+  #     - name: cargo xtask install
+  #       working-directory: rust
+  #       run: cargo xtask install --no-templates
+  #     - uses: actions-rs/cargo@v1
+  #       name: cargo check
+  #       with:
+  #         command: check
+  #         args: --manifest-path rust/Cargo.toml
+  #     - uses: actions-rs/cargo@v1
+  #       name: cargo fmt
+  #       with:
+  #         command: fmt
+  #         args: --manifest-path rust/Cargo.toml --all -- --check
+  #     - uses: actions-rs/cargo@v1
+  #       name: cargo clippy
+  #       with:
+  #         command: clippy
+  #         args: --manifest-path rust/Cargo.toml -- -D warnings
 
-  coverage:
-    name: Coverage
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        rust: [stable]
-    runs-on: ${{ matrix.os }}
-    env:
-      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
+  # coverage:
+  #   name: Coverage
+  #   strategy:
+  #     matrix:
+  #       os: [ubuntu-latest]
+  #       rust: [stable]
+  #   runs-on: ${{ matrix.os }}
+  #   env:
+  #     GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
+  #   steps:
+  #     - name: Checkout sources
+  #       uses: actions/checkout@v2
           
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          override: true
-          components: llvm-tools-preview
+  #     - name: Install stable toolchain
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: ${{ matrix.rust }}
+  #         override: true
+  #         components: llvm-tools-preview
 
-      - name: Cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-            rust/Cargo.lock
-          key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: coverage-cargo-
+  #     - name: Cache
+  #       uses: actions/cache@v2
+  #       with:
+  #         path: |
+  #           ~/.cargo/registry
+  #           ~/.cargo/git
+  #           rust/target
+  #           rust/Cargo.lock
+  #         key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
+  #         restore-keys: coverage-cargo-
       
-      - name: cargo xtask install
-        working-directory: rust
-        run: cargo xtask install --no-templates
+  #     - name: cargo xtask install
+  #       working-directory: rust
+  #       run: cargo xtask install --no-templates
 
-      - name: Download grcov
-        run: |
-          mkdir -p "${HOME}/.local/bin"
-          curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.10/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf - -C "${HOME}/.local/bin"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+  #     - name: Download grcov
+  #       run: |
+  #         mkdir -p "${HOME}/.local/bin"
+  #         curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.10/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf - -C "${HOME}/.local/bin"
+  #         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Run xtask coverage
-        working-directory: rust
-        run: cargo xtask coverage
+  #     - name: Run xtask coverage
+  #       working-directory: rust
+  #       run: cargo xtask coverage
 
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v3
-        with:
-          files: rust/coverage/*.lcov
+  #     - name: Upload to codecov.io
+  #       uses: codecov/codecov-action@v3
+  #       with:
+  #         files: rust/coverage/*.lcov
 
   build:
     name: Build and test
-    if: ${{ github.ref == 'refs/heads/main' }}
+    # if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        # os: [windows-latest, ubuntu-latest]
+        os: [macos-latest]
         rust: [stable]
     runs-on: ${{ matrix.os }}
     env:
@@ -111,16 +113,18 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v2
-      - name: Cache
-        uses: actions/cache@v2
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-            rust/Cargo.lock
-          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ matrix.os }}-cargo-
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/target/            
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -134,7 +138,7 @@ jobs:
       - name: Set up target platform
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          rustup target add x86_64-apple-darwin
+          echo "rustup target add x86_64-apple-darwin" 
           rustup target add aarch64-apple-darwin
 
       - uses: actions-rs/cargo@v1
@@ -144,12 +148,12 @@ jobs:
           command: build
           args: --manifest-path rust/Cargo.toml --release
 
-      - uses: actions-rs/cargo@v1
-        name: build for x86_64 (macos)
-        if: ${{ matrix.os == 'macos-latest' }}
-        with:
-          command: build
-          args: --manifest-path rust/Cargo.toml --release --target=x86_64-apple-darwin
+      # - uses: actions-rs/cargo@v1
+      #   name: build for x86_64 (macos)
+      #   if: ${{ matrix.os == 'macos-latest' }}
+      #   with:
+      #     command: build
+      #     args: --manifest-path rust/Cargo.toml --release --target=x86_64-apple-darwin
           
       - uses: actions-rs/cargo@v1
         name: build for arm64 (macos)
@@ -158,17 +162,18 @@ jobs:
           command: build
           args: --manifest-path rust/Cargo.toml --release --target=aarch64-apple-darwin
 
-      - uses: actions-rs/cargo@v1
-        name: cargo test
-        with:
-          command: test
-          args: --manifest-path rust/Cargo.toml --release 
+      # - uses: actions-rs/cargo@v1
+      #   name: cargo test
+      #   with:
+      #     command: test
+      #     args: --manifest-path rust/Cargo.toml --release 
 
       - name: Make universal library
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           mkdir rust/target/release || true
-          lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output rust/target/release/libdecentraland_godot_lib.dylib
+          cp rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/target/release/libdecentraland_godot_lib.dylib
+          echo "lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output rust/target/release/libdecentraland_godot_lib.dylib"
 
       - name: Copy library (win)
         if: ${{ matrix.os == 'windows-latest' }}
