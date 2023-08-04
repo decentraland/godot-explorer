@@ -102,7 +102,6 @@ jobs:
   build:
     name: Build and test
     # if: ${{ github.ref == 'refs/heads/main' }}
-    if: false
     strategy:
       matrix:
         # os: [windows-latest, ubuntu-latest]
