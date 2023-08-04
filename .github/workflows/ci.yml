@@ -210,6 +210,7 @@ jobs:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     continue-on-error: true
     steps:
+      - uses: actions/checkout@v2
       - name: create folder
         run: mkdir exports || true
       - name: download library
@@ -235,9 +236,9 @@ jobs:
           echo "set-key-partition-list"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $tmp_password build.keychain
           echo "running find identity"
-          security find-identity -v
+          identity_id=$(security find-identity -v | grep -oE '1\) ([A-F0-9]{40})' | awk '{print $2}')
           echo "signing dcl library"
-          /usr/bin/codesign --force -s C6D65E924E13D94F1B661543E29FAC46C5AC10AD ./exports/libdecentraland_godot_lib.dylib -v 
+          /usr/bin/codesign --force -s $identity_id ./exports/libdecentraland_godot_lib.dylib -v 
       - uses: actions/upload-artifact@master
         with:
           name: signed-decentraland-godot-${{ matrix.os }}
