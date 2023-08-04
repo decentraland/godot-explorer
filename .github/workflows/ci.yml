@@ -214,7 +214,7 @@ jobs:
       - name: create folder
         run: mkdir exports || true
       - name: download library
-        run: curl -o exports/libdecentraland_godot_lib.dylib https://github.com/decentraland/godot-explorer/releases/download/v0.5.0-alpha/libdecentraland_godot_lib.dylib
+        run: curl -L -o exports/libdecentraland_godot_lib.dylib https://github.com/decentraland/godot-explorer/releases/download/v0.5.0-alpha/libdecentraland_godot_lib.dylib
       - name: Codesign executable
         env: 
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CSC_LINK }}
