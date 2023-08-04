@@ -187,26 +187,38 @@ jobs:
       - name: Codesign library
         if: ${{ matrix.os == 'macos-latest' }}
         env: 
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CSC_LINK }}
+          MACOS_CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
         run: |
-          mkdir exports || true
           echo "Creating temp password"
           tmp_password=$(head -c 32 /dev/urandom | base64)
+
           echo "Dumping cert"
-          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+          echo $MACOS_CSC_LINK | base64 --decode > certificate.p12
+          ls -la certificate.p12
+
+          echo "Downloading cert"
+          curl -sL $MACOS_CSC_LINK -o tcertificate.p12 || true
+          ls -la tcertificate.p12 || true
+
           echo "Creating keychain"
           security create-keychain -p $tmp_password build.keychain
+
           echo "Setting default keychain"
           security default-keychain -s build.keychain
+
           echo "Unlock keychain"
           security unlock-keychain -p $tmp_password build.keychain
+
           echo "Importing cert"
           security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
+
           echo "set-key-partition-list"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $tmp_password build.keychain
+
           echo "running find identity"
           identity_id=$(security find-identity -v | grep -oE '1\) ([A-F0-9]{40})' | awk '{print $2}')
+
           echo "signing dcl library"
           /usr/bin/codesign --force -s $identity_id godot/lib/libdecentraland_godot_lib.dylib -v 
 
@@ -216,6 +228,7 @@ jobs:
 
       - name: Notarize MacOS (dmg)
         if: ${{ matrix.os == 'macos-latest' }}
+        continue-on-error: true
         env:
           MACOS_NOTARIZATION_APPLE_ID: ${{secrets.MACOS_NOTARIZATION_APPLE_ID}}
           MACOS_NOTARIZATION_TEAM_ID: ${{secrets.MACOS_NOTARIZATION_TEAM_ID}}
