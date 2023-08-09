@@ -1,3 +1,4 @@
+pub mod material;
 pub mod proto_components;
 pub mod transform_and_parent;
 

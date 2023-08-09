@@ -12,7 +12,7 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{BoxMesh, CylinderMesh, MeshInstance3D, SphereMesh},
+    engine::{BoxMesh, MeshInstance3D},
     prelude::*,
 };
 
@@ -21,51 +21,35 @@ pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMe
 
     match mesh.mesh.as_ref() {
         Some(mesh) => match mesh {
-            pb_mesh_renderer::Mesh::Box(_box_mesh) => {
-                let box_mesh = match current_mesh {
-                    Some(current_mesh) => {
-                        current_mesh.try_cast::<BoxMesh>().unwrap_or(BoxMesh::new())
-                    }
-                    None => BoxMesh::new(),
-                };
-                mesh_instance.set_mesh(box_mesh.upcast());
-
-                // update the material (and with uvs)
+            pb_mesh_renderer::Mesh::Box(box_mesh) => {
+                let uvs = box_mesh
+                    .uvs
+                    .iter()
+                    .map(f32::to_variant)
+                    .collect::<VariantArray>()
+                    .to_variant();
+                mesh_instance.call("set_box".into(), &[uvs]);
             }
-            pb_mesh_renderer::Mesh::Sphere(_sphere_mesh) => {
-                let sphere_mesh = match current_mesh {
-                    Some(current_mesh) => current_mesh
-                        .try_cast::<SphereMesh>()
-                        .unwrap_or(SphereMesh::new()),
-                    None => SphereMesh::new(),
-                };
-                mesh_instance.set_mesh(sphere_mesh.upcast());
+            pb_mesh_renderer::Mesh::Sphere(_) => {
+                mesh_instance.call("set_sphere".into(), &[]);
             }
             pb_mesh_renderer::Mesh::Cylinder(cylinder_mesh_value) => {
-                let mut cylinder_mesh = match current_mesh {
-                    Some(current_mesh) => current_mesh
-                        .try_cast::<CylinderMesh>()
-                        .unwrap_or(CylinderMesh::new()),
-                    None => CylinderMesh::new(),
-                };
-                cylinder_mesh.set_top_radius(cylinder_mesh_value.radius_top.unwrap_or(0.5));
-                cylinder_mesh.set_bottom_radius(cylinder_mesh_value.radius_bottom.unwrap_or(0.5));
-                cylinder_mesh.set_height(1.0);
-                mesh_instance.set_mesh(cylinder_mesh.upcast());
-
-                // update the material
+                let top_radius = cylinder_mesh_value.radius_top.unwrap_or(0.5);
+                let bottom_radius = cylinder_mesh_value.radius_bottom.unwrap_or(0.5);
+                mesh_instance.call(
+                    "set_cylinder".into(),
+                    &[top_radius.to_variant(), bottom_radius.to_variant()],
+                );
             }
-            pb_mesh_renderer::Mesh::Plane(_plane_mesh) => {
-                let mut box_mesh = match current_mesh {
-                    Some(current_mesh) => {
-                        current_mesh.try_cast::<BoxMesh>().unwrap_or(BoxMesh::new())
-                    }
-                    None => BoxMesh::new(),
-                };
-                box_mesh.set_size(godot::prelude::Vector3::new(1.0, 1.0, 0.0));
-                mesh_instance.set_mesh(box_mesh.upcast());
+            pb_mesh_renderer::Mesh::Plane(plane_mesh) => {
+                let uvs = plane_mesh
+                    .uvs
+                    .iter()
+                    .map(f32::to_variant)
+                    .collect::<VariantArray>()
+                    .to_variant();
 
-                // update the material (and with uvs)
+                mesh_instance.call("set_plane".into(), &[uvs]);
             }
         },
         _ => {
@@ -106,7 +90,15 @@ pub fn update_mesh_renderer(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             } else if let Some(new_value) = new_value {
                 let (mut mesh_instance_3d, add_to_base) = match existing {
                     Some(mesh_instance_3d) => (mesh_instance_3d, false),
-                    None => (MeshInstance3D::new_alloc(), true),
+                    None => (
+                        godot::engine::load::<PackedScene>(
+                            "res://src/decentraland_components/mesh_renderer.tscn",
+                        )
+                        .instantiate()
+                        .unwrap()
+                        .cast::<MeshInstance3D>(),
+                        true,
+                    ),
                 };
 
                 create_or_update_mesh(&mut mesh_instance_3d, &new_value);

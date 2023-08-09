@@ -24,9 +24,7 @@ func _ready():
 
 
 func load_gltf():
-	var scene_runner: SceneManager = get_tree().root.get_node("scene_runner")
-	var content_mapping = scene_runner.get_scene_content_mapping(dcl_scene_id)
-	var content_manager: ContentManager = get_tree().root.get_node("content_manager")
+	var content_mapping = Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
 	self.file_hash = content_mapping.get("content", {}).get(dcl_gltf_src, "")
@@ -35,7 +33,7 @@ func load_gltf():
 		gltf_state = GodotGltfState.NotFound
 		return
 
-	var fetching_resource = content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
+	var fetching_resource = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
 
 	# TODO: should we set a timeout?
 	gltf_state = GodotGltfState.Loading
@@ -43,13 +41,11 @@ func load_gltf():
 	if not fetching_resource:
 		self._on_gltf_loaded.call_deferred(self.file_hash)
 	else:
-		content_manager.content_loading_finished.connect(self._on_gltf_loaded)
+		Global.content_manager.content_loading_finished.connect(self._on_gltf_loaded)
 
 
 func _content_manager_resource_loaded(resource_hash: String):
-	var content_manager: ContentManager = get_tree().root.get_node("content_manager")
-	content_manager.content_loading_finished.disconnect(self._on_gltf_loaded)
-
+	Global.content_manager.content_loading_finished.disconnect(self._on_gltf_loaded)
 	_on_gltf_loaded(resource_hash)
 
 
@@ -57,7 +53,7 @@ func _on_gltf_loaded(resource_hash: String):
 	if resource_hash != file_hash:
 		return
 
-	var node = get_tree().root.get_node("content_manager").get_resource_from_hash(file_hash)
+	var node = Global.content_manager.get_resource_from_hash(file_hash)
 	if node == null:
 		gltf_state = GodotGltfState.FinishedWithError
 		return

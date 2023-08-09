@@ -1,9 +1,13 @@
-use std::{collections::HashSet, time::Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Instant,
+};
 
 use godot::prelude::Dictionary;
 
 use crate::dcl::{
     components::{
+        material::DclMaterial,
         proto_components::sdk::components::{common::RaycastHit, PbPointerEventsResult},
         SceneEntityId,
     },
@@ -30,6 +34,12 @@ pub enum SceneState {
     Dead,
 }
 
+pub struct MaterialItem {
+    pub weak_ref: godot::prelude::Variant,
+    pub waiting_textures: bool,
+    pub alive: bool,
+}
+
 pub struct Scene {
     pub scene_id: SceneId,
     pub godot_dcl_scene: GodotDclScene,
@@ -52,6 +62,9 @@ pub struct Scene {
     pub start_time: Instant,
     pub last_tick_us: i64,
     pub next_tick_us: i64,
+
+    pub materials: HashMap<DclMaterial, MaterialItem>,
+    pub dirty_materials: bool,
 }
 
 #[derive(Debug)]
@@ -126,6 +139,8 @@ impl Scene {
             pointer_events_result: Vec::new(),
             continuos_raycast: HashSet::new(),
             start_time: Instant::now(),
+            materials: HashMap::new(),
+            dirty_materials: false,
         }
     }
 
@@ -170,6 +185,8 @@ impl Scene {
             pointer_events_result: Vec::new(),
             continuos_raycast: HashSet::new(),
             start_time: Instant::now(),
+            materials: HashMap::new(),
+            dirty_materials: false,
         }
     }
 }
