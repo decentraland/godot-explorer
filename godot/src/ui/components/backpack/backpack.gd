@@ -138,6 +138,7 @@ func _on_wearable_toggled(_button_toggled: bool, wearable_id: String) -> void:
 
 func _on_wearable_button_filter_type(type):
 	load_filtered_data(type)
+	avatar_preview.focus_camera_on(type)
 
 	var should_hide = false
 	if type == Wearables.Categories.BODY_SHAPE:
