@@ -1,11 +1,12 @@
 use crate::dcl::{
     components::{
+        material::DclMaterial,
         proto_components::{self},
         SceneEntityId,
     },
     SceneDefinition, SceneId,
 };
-use godot::{engine::StandardMaterial3D, prelude::*};
+use godot::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 pub struct GodotDclScene {
@@ -20,7 +21,7 @@ pub struct Node3DEntity {
     pub base: Gd<Node3D>,
     pub desired_parent: SceneEntityId,
     pub computed_parent: SceneEntityId,
-    pub material: Option<Gd<StandardMaterial3D>>,
+    pub material: Option<DclMaterial>,
     pub pointer_events: Option<proto_components::sdk::components::PbPointerEvents>,
 }
 

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dv8en1g567m6m"]
+
+[ext_resource type="Script" path="res://src/decentraland_components/mesh_renderer.gd" id="1_ab55h"]
+
+[node name="mesh_renderer" type="MeshInstance3D"]
+script = ExtResource("1_ab55h")

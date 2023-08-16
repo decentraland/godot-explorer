@@ -37,6 +37,13 @@ func get_resource_from_hash(file_hash: String):
 	return null
 
 
+func is_resource_from_hash_loaded(file_hash: String):
+	var content_cached = content_cache_map.get(file_hash)
+	if content_cached != null:
+		return content_cached.get("loaded")
+	return false
+
+
 func get_wearable(id: String):
 	var wearable_cached = wearable_cache_map.get(id.to_lower())
 	if wearable_cached != null and wearable_cached.get("loaded"):
@@ -49,7 +56,6 @@ func get_wearable(id: String):
 func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> int:
 	var new_wearables: PackedStringArray = []
 	var new_id: int = request_monotonic_counter + 1
-	var wearables_loaded = true
 
 	for wearable in wearables:
 		var wearable_lower = wearable.to_lower()
@@ -60,8 +66,6 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 				"loaded": false,
 			}
 			new_wearables.append(wearable_lower)
-		elif wearables_loaded and not wearable_cached.loaded:
-			wearables_loaded = false
 
 	if new_wearables.is_empty():
 		return -1
@@ -120,6 +124,10 @@ func fetch_gltf(file_path: String, content_mapping: Dictionary):
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
 func fetch_texture(file_path: String, content_mapping: Dictionary):
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+	return fetch_texture_by_hash(file_hash, content_mapping)
+
+
+func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		return not content_cached.get("loaded")
@@ -130,7 +138,6 @@ func fetch_texture(file_path: String, content_mapping: Dictionary):
 
 	pending_content.push_back(
 		{
-			"file_path": file_path,
 			"file_hash": file_hash,
 			"content_type": ContentType.CT_TEXTURE,
 			"content_mapping": content_mapping,
@@ -423,7 +430,6 @@ func _process_loading_texture(
 ) -> bool:
 	var content_mapping = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
-	var file_path: String = content.get("file_path")
 	var base_url: String = content_mapping.get("base_url", "")
 	var local_texture_path = "user://content/" + file_hash
 	var stage = content.get("stage", 0)
@@ -479,7 +485,7 @@ func _process_loading_texture(
 			self.emit_signal.call_deferred("content_loading_finished", file_hash)
 			return false
 		_:
-			printerr("unknown stage ", file_path)
+			printerr("unknown stage ", file_hash)
 			return false
 
 	return true
