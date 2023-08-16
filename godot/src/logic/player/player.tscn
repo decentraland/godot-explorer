@@ -1,7 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://blv7r5folt1d5"]
+[gd_scene load_steps=8 format=3 uid="uid://blv7r5folt1d5"]
 
 [ext_resource type="Script" path="res://src/logic/player/player.gd" id="1_5bfm2"]
+[ext_resource type="PackedScene" uid="uid://b4kad2kuba1yn" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/left_hand_low.tscn" id="2_664h5"]
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar.tscn" id="2_n22nx"]
+[ext_resource type="PackedScene" uid="uid://l2n30mpbkdyw" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/right_hand_low.tscn" id="3_qm1vm"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pxti1"]
 margin = 0.05
@@ -10,6 +12,11 @@ height = 1.5
 
 [sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
 length = 1.0779
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_3uflu"]
+top_radius = 0.01
+bottom_radius = 0.01
+height = 5.0
 
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_5bfm2")
@@ -24,6 +31,28 @@ shape = SubResource("SeparationRayShape3D_3217e")
 
 [node name="Mount" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
+
+[node name="XROrigin3D" type="XROrigin3D" parent="Mount"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.52985, 0)
+
+[node name="XRCamera3D" type="XRCamera3D" parent="Mount/XROrigin3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.21)
+
+[node name="XRController3D_Left" type="XRController3D" parent="Mount/XROrigin3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1, -0.5)
+tracker = &"left_hand"
+
+[node name="LeftHand" parent="Mount/XROrigin3D/XRController3D_Left" instance=ExtResource("2_664h5")]
+
+[node name="XRController3D_Right" type="XRController3D" parent="Mount/XROrigin3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1, -0.5)
+tracker = &"right_hand"
+
+[node name="RightHand" parent="Mount/XROrigin3D/XRController3D_Right" instance=ExtResource("3_qm1vm")]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Mount/XROrigin3D/XRController3D_Right/RightHand"]
+transform = Transform3D(0.649899, -0.76002, -3.32215e-08, 0, -4.37114e-08, 1, -0.76002, -0.649899, -2.8408e-08, -1.88233, 0, -1.60959)
+mesh = SubResource("CylinderMesh_3uflu")
 
 [node name="Camera3D" type="Camera3D" parent="Mount"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.85493e-08, 0, -0.212179)

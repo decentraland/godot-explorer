@@ -2,7 +2,10 @@ extends Node
 
 signal config_changed
 
-@onready var is_mobile = OS.get_name() == "Android"
+@onready var is_mobile =OS.get_name() == "Android" or OS.get_name() == "iOS"
+@onready var is_desktop = OS.get_name() != "Android" and OS.get_name() != "iOS"
+@onready var is_vr = false
+
 #@onready var is_mobile = true
 
 ## Global classes (singleton pattern)
@@ -18,6 +21,10 @@ var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd
 
 var standalone = false
 
+var xr_interface: XRInterface = null
+
+var current_camera: Camera3D 
+var xr_main_controller: XRController3D 
 
 func _ready():
 	var args := OS.get_cmdline_args()
@@ -34,6 +41,22 @@ func _ready():
 
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
+		
+		
+	if is_mobile:
+		xr_interface = XRServer.find_interface("OpenXR")
+		if xr_interface and xr_interface.is_initialized():
+			print("OpenXR initialised successfully")
+
+			# Turn off v-sync!
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+
+			# Change our main viewport to output to the HMD
+			get_viewport().use_xr = true
+			self.is_vr = true
+			self.is_mobile = false
+		else:
+			print("OpenXR not initialized, please check if your headset is connected")
 
 	self.scene_runner = SceneManager.new()
 	self.scene_runner.set_name("scene_runner")
@@ -64,6 +87,7 @@ func _ready():
 	add_child(raycast_debugger)
 
 	DCLMeshRenderer._init_primitive_shapes()
+	
 
 
 func add_raycast(_id: int, _time: float, _from: Vector3, _to: Vector3) -> void:
@@ -80,3 +104,18 @@ func print_node_tree(node: Node, prefix = ""):
 	for child in node.get_children():
 		if child is Node:
 			print_node_tree(child, prefix + node.name + "/")
+
+func get_raycast_params() -> Array[Vector3]:
+	if is_vr:
+		var raycast_from = xr_main_controller.global_position
+		var direction = xr_main_controller.global_transform.rotated(Vector3.RIGHT, PI/2).rotated(Vector3.UP, PI * 49.5 / 180.0)
+		var raycast_to = raycast_from + direction.basis.z * -100.0
+#		print("raycast params ", raycast_from, " and ", raycast_to)
+		return [raycast_from, raycast_to]
+	elif is_desktop or is_mobile :
+		var mouse_position = get_viewport().get_visible_rect().size  * 0.5
+		var raycast_from = current_camera.project_ray_origin(mouse_position)
+		var raycast_to = raycast_from + current_camera.project_ray_normal(mouse_position) * 100.0
+		return [raycast_from, raycast_to]
+	
+	return []

@@ -148,3 +148,9 @@ pointing/emulate_touch_from_mouse=true
 
 textures/vram_compression/import_etc2_astc=true
 vulkan/rendering/back_end=1
+
+[xr]
+
+openxr/enabled=true
+openxr/startup_alert=false
+shaders/enabled=true

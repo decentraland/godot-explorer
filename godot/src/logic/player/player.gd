@@ -22,9 +22,21 @@ var JUMP_VELOCITY_0 := 12.0
 
 var THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 
+@onready var xr_controller_3d_left = $Mount/XROrigin3D/XRController3D_Left
+@onready var xr_controller_3d_right = $Mount/XROrigin3D/XRController3D_Right
+@onready var xr_camera_3d = $Mount/XROrigin3D/XRCamera3D
+@onready var xr_origin_3d = $Mount/XROrigin3D
 
 func _ready():
+	if Global.is_vr:
+		camera = xr_camera_3d
+		Global.xr_main_controller = xr_controller_3d_right
+	else:
+		xr_origin_3d.queue_free()
+		
 	camera.current = true
+	Global.current_camera = camera
+	
 
 	if captured:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -45,6 +57,8 @@ func _ready():
 
 	Global.config.param_changed.connect(self._on_param_changed)
 	Global.comms.profile_changed.connect(self._on_player_profile_changed)
+	
+
 
 
 func _on_player_profile_changed(new_profile: Dictionary):
@@ -76,7 +90,7 @@ func _input(event):
 				)
 
 	# Receives mouse motion
-	if not Global.is_mobile && event:
+	if Global.is_desktop && event:
 		if event is InputEventMouseMotion && Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 			_mouse_position = event.relative
 			rotate_y(deg_to_rad(-_mouse_position.x) * horizontal_sens)
@@ -125,10 +139,16 @@ var current_direction: Vector3 = Vector3()
 
 
 func _physics_process(delta: float) -> void:
-	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
+	
+	var input_dir :Vector2 
+	if Global.is_vr:
+		input_dir = xr_controller_3d_right.get_vector2("primary")
+	else:
+		input_dir = Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
+	
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	current_direction = current_direction.move_toward(direction, 10 * delta)
-
+	
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 
