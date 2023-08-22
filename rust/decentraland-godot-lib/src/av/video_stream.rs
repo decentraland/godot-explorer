@@ -1,5 +1,8 @@
 use ffmpeg_next::format::input;
-use godot::{engine::ImageTexture, prelude::Gd};
+use godot::{
+    engine::{Image, ImageTexture},
+    prelude::{Gd, Share},
+};
 use kira::sound::streaming::StreamingSoundData;
 use tracing::{debug, warn};
 
@@ -39,7 +42,13 @@ pub fn av_sinks(
     let (video_sender, video_receiver) = tokio::sync::mpsc::channel(10);
     let (audio_sender, audio_receiver) = tokio::sync::mpsc::channel(1);
 
-    spawn_av_thread(command_receiver, video_sender, audio_sender, source.clone());
+    spawn_av_thread(
+        command_receiver,
+        video_sender,
+        audio_sender,
+        source.clone(),
+        tex.share(),
+    );
 
     if playing {
         command_sender.blocking_send(AVCommand::Play).unwrap();
@@ -68,10 +77,11 @@ pub fn spawn_av_thread(
     frames: tokio::sync::mpsc::Sender<VideoData>,
     audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
     path: String,
+    tex: Gd<ImageTexture>,
 ) {
     std::thread::Builder::new()
         .name(format!("av thread"))
-        .spawn(move || av_thread(commands, frames, audio, path))
+        .spawn(move || av_thread(commands, frames, audio, path, ImageTexture::new()))
         .unwrap();
 }
 
@@ -80,8 +90,9 @@ fn av_thread(
     frames: tokio::sync::mpsc::Sender<VideoData>,
     audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
     path: String,
+    tex: Gd<ImageTexture>,
 ) {
-    if let Err(error) = av_thread_inner(commands, frames, audio, path) {
+    if let Err(error) = av_thread_inner(commands, frames, audio, path, tex) {
         warn!("av error: {error}");
     } else {
         debug!("av closed");
@@ -93,12 +104,13 @@ pub fn av_thread_inner(
     video: tokio::sync::mpsc::Sender<VideoData>,
     audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
     path: String,
+    tex: Gd<ImageTexture>,
 ) -> Result<(), String> {
     let mut input_context = input(&path).map_err(|e| format!("{:?} on line {}", e, line!()))?;
 
     // try and get a video context
     let video_context: Option<VideoContext> = {
-        match VideoContext::init(&input_context, video.clone()) {
+        match VideoContext::init(&input_context, video.clone(), tex) {
             Ok(vc) => Some(vc),
             Err(VideoError::BadPixelFormat) => {
                 // try to workaround ffmpeg remote streaming issue by downloading the file

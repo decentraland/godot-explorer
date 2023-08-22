@@ -20,13 +20,19 @@ pub struct GodotDclScene {
     pub unparented_entities: HashSet<SceneEntityId>,
 }
 
+pub struct VideoPlayerData {
+    pub video_sink: VideoSink,
+    pub audio_sink: AudioSink,
+    pub buffer: PackedByteArray,
+}
+
 pub struct Node3DEntity {
     pub base: Gd<Node3D>,
     pub desired_parent: SceneEntityId,
     pub computed_parent: SceneEntityId,
     pub material: Option<DclMaterial>,
     pub pointer_events: Option<proto_components::sdk::components::PbPointerEvents>,
-    pub video_player_data: Option<(VideoSink, AudioSink)>,
+    pub video_player_data: Option<VideoPlayerData>,
 }
 
 impl SceneDefinition {

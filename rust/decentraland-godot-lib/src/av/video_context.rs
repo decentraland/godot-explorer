@@ -4,6 +4,9 @@ use ffmpeg_next::ffi::AVPixelFormat;
 use ffmpeg_next::format::Pixel;
 use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
 use ffmpeg_next::{decoder, format::context::Input, media::Type, util::frame, Packet};
+use godot::engine::image::Format;
+use godot::engine::{Image, ImageTexture};
+use godot::prelude::{Gd, PackedByteArray};
 use thiserror::Error;
 use tracing::debug;
 
@@ -30,6 +33,8 @@ pub struct VideoContext {
     sink: tokio::sync::mpsc::Sender<VideoData>,
     current_frame: usize,
     start_frame: usize,
+    texture: Gd<ImageTexture>,
+    video_info: VideoInfo,
 }
 
 #[derive(Debug, Error)]
@@ -48,6 +53,7 @@ impl VideoContext {
     pub fn init(
         input_context: &Input,
         sink: tokio::sync::mpsc::Sender<VideoData>,
+        tex: Gd<ImageTexture>,
     ) -> Result<Self, VideoError> {
         let input_stream = input_context
             .streams()
@@ -122,6 +128,13 @@ impl VideoContext {
             sink,
             current_frame: 0,
             start_frame: 0,
+            texture: tex,
+            video_info: VideoInfo {
+                width,
+                height,
+                rate,
+                length,
+            },
         })
     }
 }
@@ -157,8 +170,41 @@ impl FfmpegContext for VideoContext {
             self.current_frame,
             self.buffer.len()
         );
+
+        let current_frame = self.buffer.pop_front().unwrap();
+        let data_arr = PackedByteArray::from(current_frame.data(0));
+
+        let img = if let Some(mut img) = self.texture.get_image() {
+            img.set_data(
+                self.video_info.width as i32,
+                self.video_info.height as i32,
+                false,
+                Format::FORMAT_RGBA8,
+                data_arr,
+            );
+            img
+        } else {
+            Image::create_from_data(
+                self.video_info.width as i32,
+                self.video_info.height as i32,
+                false,
+                Format::FORMAT_RGBA8,
+                data_arr,
+            )
+            .unwrap()
+        };
+
+        self.texture.update(img);
+
+        // if let Some(img) = img {
+        //     data.video_sink.tex.update(img);
+        //     tracing::trace!("godotandroid set frame on {:?}", data.video_sink.tex);
+        // } else {
+        //     tracing::error!("godotandroid failed to create image");
+        // }
+
         let _ = self.sink.blocking_send(VideoData::Frame(
-            self.buffer.pop_front().unwrap(),
+            current_frame,
             self.current_frame as f64 / self.rate,
         ));
         self.current_frame += 1;

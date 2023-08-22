@@ -282,8 +282,8 @@ fn check_texture(
         }
         DclSourceTex::VideoTexture(video_entity_id) => {
             if let Some(node) = scene.godot_dcl_scene.get_node(video_entity_id) {
-                if let Some((video_sink, _)) = &node.video_player_data {
-                    material.set_texture(param, video_sink.tex.share().upcast());
+                if let Some(data) = &node.video_player_data {
+                    material.set_texture(param, data.video_sink.tex.share().upcast());
                     return true;
                 }
             }
