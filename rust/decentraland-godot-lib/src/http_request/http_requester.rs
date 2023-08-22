@@ -39,13 +39,13 @@ impl HttpRequester {
                     let url = request_option.url.clone();
                     let response = Self::do_request(&client, request_option).await;
                     if response.is_err() {
-                        println!("Error in request: {url:?}");
+                        tracing::info!("Error in request: {url:?}");
                     } else {
-                        // println!("Ok in request: {:?}", url);
+                        // tracing::info!("Ok in request: {:?}", url);
                     }
                     match sender_to_parent.send(response).await {
                         Ok(_) => {
-                            // println!("Ok sending reqsuest: {:?}", url);
+                            // tracing::info!("Ok sending reqsuest: {:?}", url);
                         }
                         Err(_) => {
                             panic!("Failed to send response");
@@ -192,7 +192,7 @@ fn test() {
     loop {
         match requester.poll() {
             Some(response) => {
-                println!("{:?}", response);
+                tracing::info!("{:?}", response);
                 counter += 1;
             }
             None => {

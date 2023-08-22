@@ -9,6 +9,7 @@ use super::{
         mesh_collider::update_mesh_collider, mesh_renderer::update_mesh_renderer,
         pointer_events::update_scene_pointer_events, raycast::update_raycasts,
         text_shape::update_text_shape, transform_and_parent::update_transform_and_parent,
+        video_player::update_video_player,
     },
     scene::Scene,
 };
@@ -65,6 +66,7 @@ pub fn update_scene(
     update_animator(scene, crdt_state);
     update_avatar_shape(scene, crdt_state);
     update_raycasts(scene, crdt_state);
+    update_video_player(scene, crdt_state);
 
     let camera_transform = DclTransformAndParent::from_godot(
         camera_global_transform,

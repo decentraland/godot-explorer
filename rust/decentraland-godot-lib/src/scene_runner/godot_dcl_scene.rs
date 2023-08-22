@@ -1,10 +1,13 @@
-use crate::dcl::{
-    components::{
-        material::DclMaterial,
-        proto_components::{self},
-        SceneEntityId,
+use crate::{
+    av::{audio_sink::AudioSink, video_stream::VideoSink},
+    dcl::{
+        components::{
+            material::DclMaterial,
+            proto_components::{self},
+            SceneEntityId,
+        },
+        SceneDefinition, SceneId,
     },
-    SceneDefinition, SceneId,
 };
 use godot::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -23,6 +26,7 @@ pub struct Node3DEntity {
     pub computed_parent: SceneEntityId,
     pub material: Option<DclMaterial>,
     pub pointer_events: Option<proto_components::sdk::components::PbPointerEvents>,
+    pub video_player_data: Option<(VideoSink, AudioSink)>,
 }
 
 impl SceneDefinition {
@@ -71,6 +75,7 @@ impl Node3DEntity {
             computed_parent: SceneEntityId::new(0, 0),
             material: None,
             pointer_events: None,
+            video_player_data: None,
         }
     }
 }

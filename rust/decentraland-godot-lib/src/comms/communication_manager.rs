@@ -164,18 +164,18 @@ impl CommunicationManager {
 
         let comms = self._internal_get_comms_from_real();
         if comms.is_none() {
-            godot_print!("comms > invalid comms from realm.");
+            tracing::info!("comms > invalid comms from realm.");
             return;
         }
 
         let (comms_protocol, comms_fixed_adapter) = comms.unwrap();
         if comms_protocol != "v3" {
-            godot_print!("comms > Only protocol 'v3' is supported.");
+            tracing::info!("comms > Only protocol 'v3' is supported.");
             return;
         }
 
         if comms_fixed_adapter.is_none() {
-            godot_print!("comms > As far, only fixedAdapter is supported.");
+            tracing::info!("comms > As far, only fixedAdapter is supported.");
             return;
         }
 
@@ -193,7 +193,7 @@ impl CommunicationManager {
         match adapter_protocol {
             "ws-room" => {
                 if let Some(ws_url) = fixed_adapter.get(1) {
-                    godot_print!("comms > websocket to {}", ws_url);
+                    tracing::info!("comms > websocket to {}", ws_url);
                     self.current_adapter = Adapter::WsRoom(WebSocketRoom::new(
                         ws_url,
                         self.tls_client.as_ref().unwrap().share(),
@@ -203,10 +203,10 @@ impl CommunicationManager {
                 }
             }
             "offline" => {
-                godot_print!("comms > set offline");
+                tracing::info!("comms > set offline");
             }
             _ => {
-                godot_print!("comms > unknown adapter {:?}", adapter_protocol);
+                tracing::info!("comms > unknown adapter {:?}", adapter_protocol);
             }
         }
     }

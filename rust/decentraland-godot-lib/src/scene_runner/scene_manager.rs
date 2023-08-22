@@ -14,6 +14,7 @@ use std::{
     collections::{HashMap, HashSet},
     time::Instant,
 };
+use tracing::info;
 
 use super::{
     components::pointer_events::{get_entity_pointer_event, pointer_events_system},
@@ -61,7 +62,7 @@ impl SceneManager {
         let scene_definition = match SceneDefinition::from_dict(scene_definition) {
             Ok(scene_definition) => scene_definition,
             Err(e) => {
-                godot_print!("error parsing scene definition: {e:?}");
+                tracing::info!("error parsing scene definition: {e:?}");
                 return 0;
             }
         };
@@ -211,7 +212,7 @@ impl SceneManager {
         //             )
         //         })
         //         .collect();
-        //     godot_print!("next_update: {next_update_vec:#?}");
+        //     tracing::info!("next_update: {next_update_vec:#?}");
         // }
 
         let mut current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
@@ -485,6 +486,9 @@ impl NodeVirtual for SceneManager {
 
         // TODO: should this be initialized somewhere else?
         crate::dcl::js::js_runtime::init_v8();
+        tracing_subscriber::fmt::init();
+
+        info!("SceneManager started");
 
         log_panics::init();
 

@@ -16,7 +16,7 @@ impl RustHttpRequester {
         match self.http_requester.poll() {
             Some(response) => match response {
                 Ok(response) => {
-                    // godot_print!(
+                    // tracing::info!(
                     //     "response {:?} ok? {:?}",
                     //     response.request_option.url.clone(),
                     //     !response.is_error()
@@ -24,7 +24,7 @@ impl RustHttpRequester {
                     Some(Gd::new(response))
                 }
                 Err(_error) => {
-                    godot_print!("error polling http_requester {_error}");
+                    tracing::info!("error polling http_requester {_error}");
                     None
                 }
             },
@@ -39,7 +39,7 @@ impl RustHttpRequester {
         url: GodotString,
         absolute_path: GodotString,
     ) -> u32 {
-        // godot_print!(
+        // tracing::info!(
         //     "Requesting file: {:?} in {absolute_path}  ",
         //     url.to_string()
         // );
@@ -66,7 +66,7 @@ impl RustHttpRequester {
         body: GodotString,
         headers: VariantArray,
     ) -> u32 {
-        godot_print!("Requesting json: {:?}", url.to_string());
+        tracing::info!("Requesting json: {:?}", url.to_string());
 
         let method = match method {
             godot::engine::http_client::Method::METHOD_POST => reqwest::Method::POST,
