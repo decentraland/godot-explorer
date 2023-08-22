@@ -65,7 +65,7 @@ impl AvatarScene {
 
         let avatars = std::mem::take(&mut self.avatar_godot_scene);
         for (_, avatar) in avatars {
-            self.remove_child(avatar.upcast());
+            self.base.remove_child(avatar.upcast());
         }
     }
 
@@ -84,7 +84,7 @@ impl AvatarScene {
                 .unwrap()
                 .cast::<Node3D>();
 
-        self.add_child(new_avatar.share().upcast());
+        self.base.add_child(new_avatar.share().upcast());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
     }
 
@@ -92,7 +92,7 @@ impl AvatarScene {
         if let Some(entity_id) = self.avatar_entity.remove(&alias) {
             self.crdt.kill_entity(&entity_id);
             let mut avatar = self.avatar_godot_scene.remove(&entity_id).unwrap();
-            self.remove_child(avatar.share().upcast());
+            self.base.remove_child(avatar.share().upcast());
             avatar.queue_free();
         }
     }

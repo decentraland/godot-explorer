@@ -1,7 +1,7 @@
 use ffmpeg_next::format::input;
 use godot::{
     engine::{Image, ImageTexture},
-    prelude::{Gd, Share},
+    prelude::{Gd, InstanceId, Share},
 };
 use kira::sound::streaming::StreamingSoundData;
 use tracing::{debug, warn};
@@ -79,9 +79,10 @@ pub fn spawn_av_thread(
     path: String,
     tex: Gd<ImageTexture>,
 ) {
+    let instance_id = tex.instance_id().clone();
     std::thread::Builder::new()
         .name(format!("av thread"))
-        .spawn(move || av_thread(commands, frames, audio, path, ImageTexture::new()))
+        .spawn(move || av_thread(commands, frames, audio, path, instance_id))
         .unwrap();
 }
 
@@ -90,8 +91,9 @@ fn av_thread(
     frames: tokio::sync::mpsc::Sender<VideoData>,
     audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
     path: String,
-    tex: Gd<ImageTexture>,
+    tex: InstanceId,
 ) {
+    let tex = Gd::from_instance_id(tex);
     if let Err(error) = av_thread_inner(commands, frames, audio, path, tex) {
         warn!("av error: {error}");
     } else {

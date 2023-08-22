@@ -349,7 +349,7 @@ impl SceneManager {
                 .share()
                 .upcast::<Node>()
                 .share();
-            self.remove_child(node);
+            self.base.remove_child(node);
             scene.godot_dcl_scene.root_node.queue_free();
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);
@@ -415,7 +415,7 @@ impl SceneManager {
     fn get_current_mouse_entity(&mut self) -> Option<GodotDclRaycastResult> {
         const RAY_LENGTH: f32 = 100.0;
 
-        let viewport_size = self.get_viewport()?.get_visible_rect();
+        let viewport_size = self.base.get_viewport()?.get_visible_rect();
         let mouse_position = Vector2::new(viewport_size.size.x * 0.5, viewport_size.size.y * 0.5);
         let raycast_from = self.camera_node.project_ray_origin(mouse_position);
         let raycast_to =
@@ -592,7 +592,7 @@ impl NodeVirtual for SceneManager {
             }
 
             self.pointer_tooltips = tooltips;
-            self.emit_signal("pointer_tooltip_changed".into(), &[]);
+            self.base.emit_signal("pointer_tooltip_changed".into(), &[]);
         }
 
         self.last_raycast_result = current_pointer_raycast_result;

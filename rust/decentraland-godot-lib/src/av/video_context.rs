@@ -6,7 +6,7 @@ use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
 use ffmpeg_next::{decoder, format::context::Input, media::Type, util::frame, Packet};
 use godot::engine::image::Format;
 use godot::engine::{Image, ImageTexture};
-use godot::prelude::{Gd, PackedByteArray};
+use godot::prelude::{Gd, PackedByteArray, Share, Vector2, Vector2i};
 use thiserror::Error;
 use tracing::debug;
 
@@ -34,6 +34,7 @@ pub struct VideoContext {
     current_frame: usize,
     start_frame: usize,
     texture: Gd<ImageTexture>,
+    texture_computed_size: Vector2i,
     video_info: VideoInfo,
 }
 
@@ -135,6 +136,7 @@ impl VideoContext {
                 rate,
                 length,
             },
+            texture_computed_size: Vector2i::new(-1, -1),
         })
     }
 }
@@ -174,27 +176,32 @@ impl FfmpegContext for VideoContext {
         let current_frame = self.buffer.pop_front().unwrap();
         let data_arr = PackedByteArray::from(current_frame.data(0));
 
-        let img = if let Some(mut img) = self.texture.get_image() {
-            img.set_data(
-                self.video_info.width as i32,
-                self.video_info.height as i32,
-                false,
-                Format::FORMAT_RGBA8,
-                data_arr,
-            );
-            img
-        } else {
-            Image::create_from_data(
+        let current_size =
+            Vector2::new(self.video_info.width as f32, self.video_info.height as f32);
+        let texture_size = self.texture.get_size();
+
+        if current_size != texture_size {
+            let image = Image::create_from_data(
                 self.video_info.width as i32,
                 self.video_info.height as i32,
                 false,
                 Format::FORMAT_RGBA8,
                 data_arr,
             )
-            .unwrap()
-        };
-
-        self.texture.update(img);
+            .unwrap();
+            self.texture.set_image(image.share());
+            self.texture.update(image);
+        } else {
+            let mut image = self.texture.get_image().unwrap();
+            image.set_data(
+                self.video_info.width as i32,
+                self.video_info.height as i32,
+                false,
+                Format::FORMAT_RGBA8,
+                data_arr,
+            );
+            self.texture.update(image);
+        }
 
         // if let Some(img) = img {
         //     data.video_sink.tex.update(img);

@@ -38,7 +38,7 @@ impl NodeVirtual for CommunicationManager {
     }
 
     fn ready(&mut self) {
-        self.call_deferred("init_rs".into(), &[]);
+        self.base.call_deferred("init_rs".into(), &[]);
     }
 
     fn process(&mut self, _dt: f64) {
@@ -58,7 +58,8 @@ impl NodeVirtual for CommunicationManager {
 
                         chats_variant_array.push(chat_arr.to_variant());
                     }
-                    self.emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
+                    self.base
+                        .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
                 }
             }
         }
@@ -133,6 +134,7 @@ impl CommunicationManager {
 
         if self.tls_client.is_none() {
             let tls_client = self
+                .base
                 .get_node("/root/Global".into())
                 .unwrap()
                 .call("get_tls_client".into(), &[]);
@@ -143,7 +145,8 @@ impl CommunicationManager {
 
     #[func]
     fn _on_realm_changed(&mut self) {
-        self.call_deferred("_on_realm_changed_deferred".into(), &[]);
+        self.base
+            .call_deferred("_on_realm_changed_deferred".into(), &[]);
     }
 
     fn _internal_get_comms_from_real(&self) -> Option<(String, Option<GodotString>)> {
@@ -184,6 +187,7 @@ impl CommunicationManager {
         let adapter_protocol = *fixed_adapter.first().unwrap();
 
         let avatar_scene = self
+            .base
             .get_node("/root/avatars".into())
             .unwrap()
             .cast::<AvatarScene>();
@@ -234,6 +238,7 @@ impl CommunicationManager {
             }
         }
 
-        self.emit_signal("profile_changed".into(), &[new_profile.to_variant()]);
+        self.base
+            .emit_signal("profile_changed".into(), &[new_profile.to_variant()]);
     }
 }
