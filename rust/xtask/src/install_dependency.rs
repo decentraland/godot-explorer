@@ -5,6 +5,7 @@ use std::env;
 use std::fs::{self, File};
 use std::io::{self};
 use std::path::Path;
+use std::process::Command;
 use tar::Archive;
 use zip::ZipArchive;
 
@@ -183,7 +184,39 @@ pub fn copy_library(debug_mode: bool) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
+pub fn install_and_config_ffmpeg_windows() -> Result<(), anyhow::Error> {
+    // $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
+    // Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
+    // Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile ffmpeg-release-full-shared.7z
+    // 7z x ffmpeg-release-full-shared.7z
+    // mkdir ffmpeg
+    // mv ffmpeg-*/* ffmpeg/
+    // Add-Content $env:GITHUB_ENV "FFMPEG_DIR=${pwd}\ffmpeg`n"
+    // Add-Content $env:GITHUB_PATH "${pwd}\ffmpeg\bin`n"
+    // Get the installation path of Visual Studio
+
+    
+    download_and_extract_zip(get_godot_url().unwrap().as_str(), "./../.bin/godot")?;
+
+    // let vcinstalldir =
+    //     Command::new(r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe")
+    //         .arg("-latest")
+    //         .arg("-property")
+    //         .arg("installationPath")
+    //         .output()?;
+    // let vcinstalldir = String::from_utf8_lossy(&vcinstalldir.stdout)
+    //     .trim()
+    //     .to_string();
+
+    // panic!("vcinstalldir: {}", vcinstalldir);
+
+    Ok(())
+}
+
 pub fn install(skip_download_templates: bool) -> Result<(), anyhow::Error> {
+    install_and_config_ffmpeg_windows()?;
+    return Ok(());
+
     install_dcl_protocol()?;
 
     download_and_extract_zip(get_protoc_url().unwrap().as_str(), "./../.bin/protoc")?;
