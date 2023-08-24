@@ -1,6 +1,6 @@
 use super::engine::{op_crdt_recv_from_renderer, op_crdt_send_to_renderer};
 use crate::dcl::{RendererResponse, SceneId, SceneResponse, SharedSceneCrdtState};
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum SceneLogLevel {
@@ -33,6 +33,8 @@ pub struct JsRuntimeState {
     pub main_code: String,
     pub logs: Vec<SceneLogMessage>,
     pub dying: bool,
+    pub content_mapping: HashMap<String, String>,
+    pub base_url: String,
 }
 
 pub fn init_v8() {
