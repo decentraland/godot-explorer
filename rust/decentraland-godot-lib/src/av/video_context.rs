@@ -30,7 +30,7 @@ pub struct VideoContext {
     scaler_context: Context,
     rate: f64,
     buffer: VecDeque<frame::video::Video>,
-    sink: tokio::sync::mpsc::Sender<VideoData>,
+    // sink: tokio::sync::mpsc::Sender<VideoData>,
     current_frame: usize,
     start_frame: usize,
     texture: Gd<ImageTexture>,
@@ -53,7 +53,7 @@ pub enum VideoError {
 impl VideoContext {
     pub fn init(
         input_context: &Input,
-        sink: tokio::sync::mpsc::Sender<VideoData>,
+        // sink: tokio::sync::mpsc::Sender<VideoData>,
         tex: Gd<ImageTexture>,
     ) -> Result<Self, VideoError> {
         let input_stream = input_context
@@ -107,18 +107,18 @@ impl VideoContext {
             rate
         );
 
-        if sink
-            .blocking_send(VideoData::Info(VideoInfo {
-                width,
-                height,
-                rate,
-                length,
-            }))
-            .is_err()
-        {
-            // channel closed
-            return Err(VideoError::ChannelClosed);
-        }
+        // if sink
+        //     .blocking_send(VideoData::Info(VideoInfo {
+        //         width,
+        //         height,
+        //         rate,
+        //         length,
+        //     }))
+        //     .is_err()
+        // {
+        //     // channel closed
+        //     return Err(VideoError::ChannelClosed);
+        // }
 
         Ok(VideoContext {
             stream_index,
@@ -126,7 +126,7 @@ impl VideoContext {
             decoder,
             scaler_context,
             buffer: Default::default(),
-            sink,
+            // sink,
             current_frame: 0,
             start_frame: 0,
             texture: tex,
@@ -210,10 +210,10 @@ impl FfmpegContext for VideoContext {
         //     tracing::error!("godotandroid failed to create image");
         // }
 
-        let _ = self.sink.blocking_send(VideoData::Frame(
-            current_frame,
-            self.current_frame as f64 / self.rate,
-        ));
+        // let _ = self.sink.blocking_send(VideoData::Frame(
+        //     current_frame,
+        //     self.current_frame as f64 / self.rate,
+        // ));
         self.current_frame += 1;
     }
 

@@ -1,5 +1,5 @@
 use crate::{
-    av::{audio_sink::AudioSink, video_stream::VideoSink},
+    av::{audio_context::AudioSink, video_stream::VideoSink},
     dcl::{
         components::{
             material::DclMaterial,
@@ -23,7 +23,6 @@ pub struct GodotDclScene {
 pub struct VideoPlayerData {
     pub video_sink: VideoSink,
     pub audio_sink: AudioSink,
-    pub buffer: PackedByteArray,
 }
 
 pub struct Node3DEntity {

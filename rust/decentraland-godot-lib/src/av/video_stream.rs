@@ -1,17 +1,15 @@
 use ffmpeg_next::format::input;
 use godot::{
-    engine::{Image, ImageTexture},
-    prelude::{Gd, InstanceId, Share},
+    engine::ImageTexture,
+    prelude::{AudioStreamPlayer, Gd, InstanceId, Share},
 };
-use kira::sound::streaming::StreamingSoundData;
 use tracing::{debug, warn};
 
 use super::{
-    audio_context::{AudioContext, AudioError},
-    audio_sink::AudioSink,
+    audio_context::{AudioContext, AudioError, AudioSink},
     ffmpeg_util::InputWrapper,
     stream_processor::{process_streams, AVCommand},
-    video_context::{VideoContext, VideoData, VideoError},
+    video_context::{VideoContext, VideoError},
 };
 
 #[derive(Debug)]
@@ -23,7 +21,6 @@ pub enum AudioDecoderError {
 pub struct VideoSink {
     pub source: String,
     pub command_sender: tokio::sync::mpsc::Sender<AVCommand>,
-    pub video_receiver: tokio::sync::mpsc::Receiver<VideoData>,
     pub tex: Gd<ImageTexture>,
     pub size: (u32, u32),
     pub current_time: f64,
@@ -34,20 +31,20 @@ pub struct VideoSink {
 pub fn av_sinks(
     source: String,
     tex: Gd<ImageTexture>,
+    audio_stream_player: Gd<AudioStreamPlayer>,
     volume: f32,
     playing: bool,
     repeat: bool,
 ) -> (VideoSink, AudioSink) {
     let (command_sender, command_receiver) = tokio::sync::mpsc::channel(10);
-    let (video_sender, video_receiver) = tokio::sync::mpsc::channel(10);
-    let (audio_sender, audio_receiver) = tokio::sync::mpsc::channel(1);
 
     spawn_av_thread(
         command_receiver,
-        video_sender,
-        audio_sender,
+        // video_sender,
+        // audio_sender,
         source.clone(),
         tex.share(),
+        audio_stream_player,
     );
 
     if playing {
@@ -61,40 +58,68 @@ pub fn av_sinks(
         VideoSink {
             source,
             command_sender: command_sender.clone(),
-            video_receiver,
             size: (0, 0),
             tex,
             current_time: 0.0,
             length: None,
             rate: None,
         },
-        AudioSink::new(volume, command_sender, audio_receiver),
+        AudioSink {
+            volume,
+            command_sender,
+        },
     )
 }
 
 pub fn spawn_av_thread(
     commands: tokio::sync::mpsc::Receiver<AVCommand>,
-    frames: tokio::sync::mpsc::Sender<VideoData>,
-    audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
     path: String,
     tex: Gd<ImageTexture>,
+    audio_stream_player: Gd<AudioStreamPlayer>,
 ) {
-    let instance_id = tex.instance_id().clone();
+    let video_instance_id = tex.instance_id().clone();
+    let audio_stream_player_instance_id = audio_stream_player.instance_id().clone();
     std::thread::Builder::new()
         .name(format!("av thread"))
-        .spawn(move || av_thread(commands, frames, audio, path, instance_id))
+        .spawn(move || {
+            av_thread(
+                commands,
+                path,
+                video_instance_id,
+                audio_stream_player_instance_id,
+            )
+        })
         .unwrap();
 }
 
 fn av_thread(
     commands: tokio::sync::mpsc::Receiver<AVCommand>,
-    frames: tokio::sync::mpsc::Sender<VideoData>,
-    audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
+    // frames: tokio::sync::mpsc::Sender<VideoData>,
+    // audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
     path: String,
     tex: InstanceId,
+    audio_stream: InstanceId,
 ) {
     let tex = Gd::from_instance_id(tex);
-    if let Err(error) = av_thread_inner(commands, frames, audio, path, tex) {
+    let mut audio_stream_player: Gd<AudioStreamPlayer> = Gd::from_instance_id(audio_stream);
+    // let mut audio_stream_generator = AudioStreamGenerator::new();
+
+    // // audio_stream_player.set_stream(audio_stream_generator.share().upcast());
+
+    // audio_stream_player.call_deferred("set_stream".into(), &[audio_stream_generator.to_variant()]);
+    // let audio_stream_playback = audio_stream_player.get_stream_playback().unwrap();
+
+    // // let audio_stream = Gd::from_instance_id(audio_stream);
+
+    // let audio_stream_playback = audio_stream_playback.cast::<AudioStreamGeneratorPlayback>();
+
+    if let Err(error) = av_thread_inner(
+        commands,
+        path,
+        tex,
+        // audio_stream_playback,
+        audio_stream_player,
+    ) {
         warn!("av error: {error}");
     } else {
         debug!("av closed");
@@ -103,16 +128,18 @@ fn av_thread(
 
 pub fn av_thread_inner(
     commands: tokio::sync::mpsc::Receiver<AVCommand>,
-    video: tokio::sync::mpsc::Sender<VideoData>,
-    audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
+    // video: tokio::sync::mpsc::Sender<VideoData>,
+    // audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
     path: String,
     tex: Gd<ImageTexture>,
+    // audio_stream: Gd<AudioStreamGeneratorPlayback>,
+    audio_stream_player: Gd<AudioStreamPlayer>,
 ) -> Result<(), String> {
     let mut input_context = input(&path).map_err(|e| format!("{:?} on line {}", e, line!()))?;
 
     // try and get a video context
     let video_context: Option<VideoContext> = {
-        match VideoContext::init(&input_context, video.clone(), tex) {
+        match VideoContext::init(&input_context, tex) {
             Ok(vc) => Some(vc),
             Err(VideoError::BadPixelFormat) => {
                 // try to workaround ffmpeg remote streaming issue by downloading the file
@@ -145,11 +172,12 @@ pub fn av_thread_inner(
     };
 
     // try and get an audio context
-    let audio_context: Option<AudioContext> = match AudioContext::init(&input_context, audio) {
-        Ok(ac) => Some(ac),
-        Err(AudioError::NoStream) => None,
-        Err(AudioError::Failed(ffmpeg_err)) => return Err(ffmpeg_err.to_string()),
-    };
+    let audio_context: Option<AudioContext> =
+        match AudioContext::init(&input_context, audio_stream_player) {
+            Ok(ac) => Some(ac),
+            Err(AudioError::NoStream) => None,
+            Err(AudioError::Failed(ffmpeg_err)) => return Err(ffmpeg_err.to_string()),
+        };
 
     if video_context.is_none() && audio_context.is_none() {
         // no data

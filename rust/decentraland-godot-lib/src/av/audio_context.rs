@@ -1,14 +1,18 @@
-use std::{collections::VecDeque, time::Duration};
+use std::collections::VecDeque;
 
 use ffmpeg_next::ffi::AVSampleFormat;
 use ffmpeg_next::{decoder, format::context::Input, media::Type, util::frame, Packet};
-use kira::sound::streaming::StreamingSoundData;
+use godot::prelude::{AudioStreamPlayer, Gd, PackedVector2Array, ToVariant, Vector2};
 use thiserror::Error;
-use tokio::sync::mpsc::error::TryRecvError;
 use tracing::{debug, error};
 
+use super::stream_processor::AVCommand;
 use super::stream_processor::FfmpegContext;
-use super::video_stream::AudioDecoderError;
+
+pub struct AudioSink {
+    pub volume: f32,
+    pub command_sender: tokio::sync::mpsc::Sender<AVCommand>,
+}
 
 trait SampleFormatHelper {
     fn is_planar(&self) -> bool;
@@ -86,112 +90,6 @@ impl SampleFormatHelper for AVSampleFormat {
     }
 }
 
-pub struct FfmpegKiraBridge {
-    sample_rate: u32,
-    num_frames: usize,
-    frame_time: f64,
-    frame_size: usize,
-    format: AVSampleFormat,
-    channels: usize,
-    data: tokio::sync::mpsc::Receiver<ffmpeg_next::frame::Audio>,
-    step: usize,
-}
-
-impl kira::sound::streaming::Decoder for FfmpegKiraBridge {
-    type Error = AudioDecoderError;
-
-    fn sample_rate(&self) -> u32 {
-        self.sample_rate
-    }
-
-    fn num_frames(&self) -> usize {
-        if self.num_frames == 0 {
-            u32::MAX as usize
-        } else {
-            self.num_frames * self.frame_size
-        }
-    }
-
-    fn decode(&mut self) -> Result<Vec<kira::dsp::Frame>, Self::Error> {
-        self.step += 1;
-        let mut frames = Vec::default();
-        let bytes_per_sample = self.format.bytes();
-        let is_planar = self.format.is_planar();
-        loop {
-            match self.data.try_recv() {
-                Ok(frame) => {
-                    if is_planar && self.channels > 1 {
-                        let d0 = frame.data(0);
-                        let d1 = frame.data(1);
-                        frames.extend(
-                            d0.chunks_exact(bytes_per_sample)
-                                .take(self.frame_size)
-                                .zip(d1.chunks_exact(bytes_per_sample))
-                                .map(|(l, r)| kira::dsp::Frame {
-                                    left: self.format.to_f32(l),
-                                    right: self.format.to_f32(r),
-                                }),
-                        );
-                    } else if self.channels == 1 {
-                        frames.extend(
-                            frame
-                                .data(0)
-                                .chunks_exact(bytes_per_sample)
-                                .take(self.frame_size)
-                                .map(|c| {
-                                    let val = self.format.to_f32(c);
-                                    kira::dsp::Frame {
-                                        left: val,
-                                        right: val,
-                                    }
-                                }),
-                        );
-                    } else {
-                        frames.extend(
-                            frame
-                                .data(0)
-                                .chunks_exact(bytes_per_sample * self.channels)
-                                .take(self.frame_size)
-                                .map(|c| kira::dsp::Frame {
-                                    left: self.format.to_f32(&c[0..bytes_per_sample]),
-                                    right: self
-                                        .format
-                                        .to_f32(&c[bytes_per_sample..bytes_per_sample * 2]),
-                                }),
-                        );
-                    }
-                }
-                Err(TryRecvError::Empty) => {
-                    // we must sleep here to stop the decoder thread from running constantly, else
-                    // it will keep polling until it's frame buffer is full. as we are streaming
-                    // our audio in realtime that will never happen.
-                    // alternative: we could block until we have enough data to fill the buffer.
-                    // that is unconfigurable and is 16k frames, so at 44100 would be ~1/3 second...
-                    // maybe worth trying, but it just sleeps for 1ms anyway. we can do better by sleeping
-                    // until a new frame arrives (typically 50ms+).
-                    if frames.is_empty() {
-                        debug!("waiting for frames [step {}]", self.step);
-                        std::thread::sleep(Duration::from_secs_f64(self.frame_time / 10.0));
-                    } else {
-                        return Ok(frames);
-                    }
-                }
-                Err(TryRecvError::Disconnected) => {
-                    if frames.is_empty() {
-                        return Err(AudioDecoderError::StreamClosed);
-                    } else {
-                        return Ok(frames);
-                    }
-                }
-            }
-        }
-    }
-
-    fn seek(&mut self, _: usize) -> Result<usize, Self::Error> {
-        Err(AudioDecoderError::Other("Can't seek".to_owned()))
-    }
-}
-
 #[derive(Debug, Error)]
 pub enum AudioError {
     #[error("No Stream")]
@@ -207,16 +105,22 @@ pub struct AudioContext {
     rate: f64,
 
     buffer: VecDeque<frame::audio::Audio>,
-    sink: tokio::sync::mpsc::Sender<ffmpeg_next::frame::Audio>,
 
     current_frame: usize,
     start_frame: usize,
+
+    audio_stream_player: Gd<AudioStreamPlayer>,
+    format: AVSampleFormat,
+    frame_size: usize,
+    channels: usize,
 }
 
 impl AudioContext {
     pub fn init(
         input_context: &Input,
-        channel: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
+        // channel: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
+        // audio_stream: Gd<AudioStreamGeneratorPlayback>,
+        mut audio_stream_player: Gd<AudioStreamPlayer>,
     ) -> Result<Self, AudioError> {
         let input_stream = input_context
             .streams()
@@ -233,6 +137,7 @@ impl AudioContext {
             .decoder()
             .audio()
             .map_err(AudioError::Failed)?;
+
         debug!(
             "decoder says: bitrate: {}, frame_rate: {:?}, channels: {}, frame_size: {}, channels: {}",
             decoder.bit_rate(),
@@ -256,34 +161,34 @@ impl AudioContext {
             length
         );
 
-        let (sx, rx) = tokio::sync::mpsc::channel(10);
-
-        let kira_decoder = FfmpegKiraBridge {
-            sample_rate: p_raw_sample_rate,
-            num_frames: input_stream.frames() as usize,
-            frame_size: decoder.frame_size() as usize,
-            frame_time: frame_rate.recip(),
-            format,
-            channels: decoder.channels() as usize,
-            data: rx,
-            step: 0,
-        };
-
-        let sound_data = kira::sound::streaming::StreamingSoundData::from_decoder(
-            kira_decoder,
-            kira::sound::streaming::StreamingSoundSettings::new(),
+        audio_stream_player.call_deferred(
+            "init".into(),
+            &[
+                frame_rate.to_variant(),
+                input_stream.frames().to_variant(),
+                length.to_variant(),
+                (format as i32).to_variant(),
+                (decoder.bit_rate() as u32).to_variant(),
+                decoder.frame_size().to_variant(),
+                decoder.channels().to_variant(),
+            ],
         );
 
-        let _ = channel.blocking_send(sound_data);
+        let frame_size = decoder.frame_size() as usize;
+        let channels = decoder.channels() as usize;
 
         Ok(AudioContext {
             stream_index,
             decoder,
             buffer: VecDeque::default(),
-            sink: sx,
             current_frame: 0,
             start_frame: 0,
             rate: frame_rate,
+            audio_stream_player,
+            format,
+
+            frame_size,
+            channels,
         })
     }
 }
@@ -316,9 +221,53 @@ impl FfmpegContext for AudioContext {
             self.current_frame,
             self.buffer.len()
         );
-        if let Err(e) = self.sink.blocking_send(self.buffer.pop_front().unwrap()) {
-            error!("failed to send audio frame: {e}");
-        }
+
+        let bytes_per_sample = self.format.bytes();
+        let is_planar = self.format.is_planar();
+        let frame = self.buffer.pop_front().unwrap();
+
+        let data = if is_planar && self.channels > 1 {
+            let d0 = frame.data(0);
+            let d1 = frame.data(1);
+
+            PackedVector2Array::from_iter(
+                d0.chunks_exact(bytes_per_sample)
+                    .take(self.frame_size)
+                    .zip(d1.chunks_exact(bytes_per_sample))
+                    .map(|(l, r)| Vector2 {
+                        x: self.format.to_f32(l),
+                        y: self.format.to_f32(r),
+                    }),
+            )
+        } else if self.channels == 1 {
+            PackedVector2Array::from_iter(
+                frame
+                    .data(0)
+                    .chunks_exact(bytes_per_sample)
+                    .take(self.frame_size)
+                    .map(|c| {
+                        let val = self.format.to_f32(c);
+                        Vector2 { x: val, y: val }
+                    }),
+            )
+        } else {
+            PackedVector2Array::from_iter(
+                frame
+                    .data(0)
+                    .chunks_exact(bytes_per_sample * self.channels)
+                    .take(self.frame_size)
+                    .map(|c| Vector2 {
+                        x: self.format.to_f32(&c[0..bytes_per_sample]),
+                        y: self
+                            .format
+                            .to_f32(&c[bytes_per_sample..bytes_per_sample * 2]),
+                    }),
+            )
+        };
+
+        self.audio_stream_player
+            .call_deferred("stream_buffer".into(), &[data.to_variant()]);
+
         self.current_frame += 1;
     }
 
