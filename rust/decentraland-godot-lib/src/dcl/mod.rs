@@ -74,7 +74,7 @@ impl DclScene {
         id: SceneId,
         scene_definition: SceneDefinition,
         content_mapping: HashMap<String, String>,
-        base_url: base_url,
+        base_url: String,
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     ) -> Self {
         let (main_sender_to_thread, thread_receive_from_renderer) =

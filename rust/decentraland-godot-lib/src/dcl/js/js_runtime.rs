@@ -1,4 +1,7 @@
-use super::engine::{op_crdt_recv_from_renderer, op_crdt_send_to_renderer};
+use super::{
+    engine::{op_crdt_recv_from_renderer, op_crdt_send_to_renderer},
+    runtime_mod::op_read_file,
+};
 use crate::dcl::{RendererResponse, SceneId, SceneResponse, SharedSceneCrdtState};
 use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
 
@@ -187,6 +190,11 @@ impl JsRuntime {
                     .unwrap()
                     .into(),
                 v8::FunctionTemplate::new(&mut scope, op_crdt_send_to_renderer).into(),
+            );
+
+            global.set(
+                v8::String::new(&mut scope, "op_read_file").unwrap().into(),
+                v8::FunctionTemplate::new(&mut scope, op_read_file).into(),
             );
 
             global.set(

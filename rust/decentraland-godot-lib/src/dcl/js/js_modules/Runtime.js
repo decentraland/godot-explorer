@@ -5,10 +5,13 @@ module.exports.getWorldTime = async function (body) { return {} }
 module.exports.readFile = async function (body) {
     // body.fileName
 
-    op_crdt_send_to_renderer(body.fileName);
+    const fileBody = op_read_file(body.fileName);
+    if (!fileBody) {
+        throw new Error("File not found")
+    }
 
     const response = {
-        content: new Uint8Array(),
+        content: fileBody,
         hash: "string"
     }
     return response

@@ -1,10 +1,15 @@
+use std::time::{Duration, Instant};
+
 use crate::{
     dcl::{
         crdt::message::{append_gos_component, process_many_messages, put_or_delete_lww_component},
         serialization::{reader::DclReader, writer::DclWriter},
         RendererResponse, SceneResponse,
     },
-    http_request::{http_requester::HttpRequester, request_response::RequestOption},
+    http_request::{
+        http_requester::HttpRequester,
+        request_response::{RequestOption, ResponseEnum, ResponseType},
+    },
 };
 
 use super::js_runtime::JsRuntime;
@@ -15,94 +20,47 @@ pub fn op_read_file(
     mut ret: v8::ReturnValue,
 ) {
     let state = JsRuntime::state_from(scope);
-    let mut state = state.borrow();
-    let http_requester = HttpRequester::new();
+    let state = state.borrow();
+    let mut http_requester = HttpRequester::new();
     let file = args.get(0).to_rust_string_lossy(scope);
     let file = state.content_mapping.get(&file);
 
-    if let Some(file) = file {
-        
-    }
-    // http_requester.send_request(RequestOption::new(
-    //     0,
-    //     file,
-    //     reqwest::Method::GET,
-    //     ResponseType::AsBytes,
-    //     None,
-    //     None,
-    // ));
+    if let Some(file_hash) = file {
+        let url = format!("{}{file_hash}", state.base_url);
+        http_requester.send_request(RequestOption::new(
+            0,
+            url,
+            reqwest::Method::GET,
+            ResponseType::AsBytes,
+            None,
+            None,
+        ));
 
-    let receiver = &mut state.thread_receive_from_main;
-    let response = receiver.blocking_recv();
-
-    let mutex_scene_crdt_state = &mut state.crdt;
-    let cloned_scene_crdt = mutex_scene_crdt_state.clone();
-    let scene_crdt_state = cloned_scene_crdt.lock().unwrap();
-
-    let data = match response {
-        Some(RendererResponse::Ok(data)) => {
-            let (_dirty_entities, dirty_lww_components, dirty_gos_components) = data;
-
-            let mut data_buf = Vec::new();
-            let mut data_writter = DclWriter::new(&mut data_buf);
-
-            for (component_id, entities) in dirty_lww_components {
-                for entity_id in entities {
-                    if let Err(err) = put_or_delete_lww_component(
-                        &scene_crdt_state,
-                        &entity_id,
-                        &component_id,
-                        &mut data_writter,
-                    ) {
-                        println!("error writing crdt message: {err}");
+        // wait until the request is done or timeout
+        let start_time = Instant::now();
+        loop {
+            if let Some(response) = http_requester.poll() {
+                if let Ok(response) = response {
+                    if let Ok(response_data) = response.response_data {
+                        match response_data {
+                            ResponseEnum::Bytes(bytes) => {
+                                let arr = slice_to_uint8array(scope, &bytes);
+                                ret.set(arr.into());
+                            }
+                            _ => {}
+                        }
                     }
                 }
+                break;
+            } else {
+                std::thread::sleep(Duration::from_millis(10));
             }
 
-            for (component_id, entities) in dirty_gos_components {
-                for (entity_id, element_count) in entities {
-                    if let Err(err) = append_gos_component(
-                        &scene_crdt_state,
-                        &entity_id,
-                        &component_id,
-                        element_count,
-                        &mut data_writter,
-                    ) {
-                        println!("error writing crdt message: {err}");
-                    }
-                }
+            if start_time.elapsed() > Duration::from_secs(10) {
+                break;
             }
-
-            data_buf
         }
-        _ => {
-            // channel has been closed, shutdown gracefully
-            println!("{}: shutting down", std::thread::current().name().unwrap());
-
-            // TODO: handle recv from renderer
-            state.dying = true;
-
-            Default::default()
-        }
-    };
-    drop(scene_crdt_state);
-    drop(cloned_scene_crdt);
-
-    let arr_bytes = if state.main_crdt.is_some() {
-        let main_crdt_data = state.main_crdt.take().unwrap();
-        vec![main_crdt_data, data]
-    } else {
-        vec![data]
-    };
-    // TODO: main.crdt
-
-    let arr = v8::Array::new(scope, arr_bytes.len() as i32);
-    for (index, arr_u8) in arr_bytes.into_iter().enumerate() {
-        let uint8_array = slice_to_uint8array(scope, &arr_u8);
-        arr.set_index(scope, index as u32, uint8_array.into());
     }
-
-    ret.set(arr.into());
 }
 
 pub fn slice_to_uint8array<'a>(
