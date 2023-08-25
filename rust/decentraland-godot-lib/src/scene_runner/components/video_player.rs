@@ -1,10 +1,5 @@
 use crate::{
-    av::{
-        audio_context,
-        stream_processor::AVCommand,
-        video_context::{VideoData, VideoInfo},
-        video_stream::av_sinks,
-    },
+    av::{stream_processor::AVCommand, video_stream::av_sinks},
     dcl::{
         components::SceneComponentId,
         crdt::{
@@ -14,15 +9,10 @@ use crate::{
     },
     scene_runner::{godot_dcl_scene::VideoPlayerData, scene::Scene},
 };
-use ffmpeg_next::codec::audio;
 use godot::{
-    engine::{
-        image::Format, AudioStream, AudioStreamGenerator, AudioStreamGeneratorPlayback,
-        AudioStreamPlayback, Image, ImageTexture,
-    },
+    engine::{image::Format, AudioStreamGenerator, Image, ImageTexture},
     prelude::*,
 };
-use tokio::sync::mpsc::error::TryRecvError;
 
 pub fn update_video_player(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
@@ -54,7 +44,7 @@ pub fn update_video_player(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             } else if let Some(new_value) = new_value {
                 if let Some(video_player_data) = node.video_player_data.as_ref() {
                     new_value.volume.unwrap_or(1.0);
-                    
+
                     new_value.playing.unwrap_or(true);
 
                     if new_value.playing.unwrap_or(true) {

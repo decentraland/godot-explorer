@@ -4,8 +4,6 @@ use godot::prelude::*;
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct RustHttpRequester {
-    #[base]
-    base: Base<Node>,
     http_requester: super::http_requester::HttpRequester,
 }
 
@@ -106,9 +104,8 @@ impl RustHttpRequester {
 
 #[godot_api]
 impl NodeVirtual for RustHttpRequester {
-    fn init(base: Base<Node>) -> Self {
+    fn init(_base: Base<Node>) -> Self {
         RustHttpRequester {
-            base,
             http_requester: super::http_requester::HttpRequester::new(),
         }
     }

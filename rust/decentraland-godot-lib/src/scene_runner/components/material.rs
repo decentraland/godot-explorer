@@ -186,7 +186,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             &unlit_material.texture,
                             &mut material,
                             &mut content_manager,
-                            &scene,
+                            scene,
                         );
                     }
                     DclMaterial::Pbr(pbr) => {
@@ -195,7 +195,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             &pbr.texture,
                             &mut material,
                             &mut content_manager,
-                            &scene,
+                            scene,
                         );
                         // check_texture(
                         //     godot::engine::base_material_3d::TextureParam::,
@@ -208,14 +208,14 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             &pbr.bump_texture,
                             &mut material,
                             &mut content_manager,
-                            &scene,
+                            scene,
                         );
                         ready &= check_texture(
                             godot::engine::base_material_3d::TextureParam::TEXTURE_EMISSION,
                             &pbr.emissive_texture,
                             &mut material,
                             &mut content_manager,
-                            &scene,
+                            scene,
                         );
                     }
                 }

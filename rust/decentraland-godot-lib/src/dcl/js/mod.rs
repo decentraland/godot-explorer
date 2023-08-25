@@ -7,7 +7,7 @@ use super::{
     SharedSceneCrdtState,
 };
 use super::{RendererResponse, SceneId, SceneResponse};
-use godot::prelude::godot_print;
+
 use std::time::Duration;
 use v8::Promise;
 

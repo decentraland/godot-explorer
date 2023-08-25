@@ -56,10 +56,12 @@ func _on_param_changed(_param):
 	RUN_SPEED = Global.config.run_velocity
 	GRAVITY = Global.config.gravity
 	JUMP_VELOCITY_0 = Global.config.jump_velocity
-	
+
+
 @onready var camera_fade_in_audio = preload("res://assets/sfx/ui_fade_in.wav")
 @onready var camera_fade_out_audio = preload("res://assets/sfx/ui_fade_out.wav")
 @onready var audio_stream_player_camera = $AudioStreamPlayer_Camera
+
 
 func _input(event):
 	# Receives touchscreen motion

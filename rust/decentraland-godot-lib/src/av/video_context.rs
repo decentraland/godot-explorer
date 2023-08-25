@@ -1,13 +1,13 @@
 use std::collections::VecDeque;
 use std::time::Instant;
 
-use ffmpeg_next::ffi::{memcpy, AVPixelFormat};
+use ffmpeg_next::ffi::AVPixelFormat;
 use ffmpeg_next::format::Pixel;
 use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
 use ffmpeg_next::{decoder, format::context::Input, media::Type, util::frame, Packet};
 use godot::engine::image::Format;
 use godot::engine::{Image, ImageTexture};
-use godot::prelude::{Gd, PackedByteArray, Share, Vector2, Vector2i};
+use godot::prelude::{Gd, PackedByteArray, Share, Vector2};
 use thiserror::Error;
 use tracing::debug;
 

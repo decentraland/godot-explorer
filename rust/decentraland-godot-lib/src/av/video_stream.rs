@@ -77,10 +77,10 @@ pub fn spawn_av_thread(
     tex: Gd<ImageTexture>,
     audio_stream_player: Gd<AudioStreamPlayer>,
 ) {
-    let video_instance_id = tex.instance_id().clone();
-    let audio_stream_player_instance_id = audio_stream_player.instance_id().clone();
+    let video_instance_id = tex.instance_id();
+    let audio_stream_player_instance_id = audio_stream_player.instance_id();
     std::thread::Builder::new()
-        .name(format!("av thread"))
+        .name("av thread".to_string())
         .spawn(move || {
             av_thread(
                 commands,
@@ -101,25 +101,8 @@ fn av_thread(
     audio_stream: InstanceId,
 ) {
     let tex = Gd::from_instance_id(tex);
-    let mut audio_stream_player: Gd<AudioStreamPlayer> = Gd::from_instance_id(audio_stream);
-    // let mut audio_stream_generator = AudioStreamGenerator::new();
-
-    // // audio_stream_player.set_stream(audio_stream_generator.share().upcast());
-
-    // audio_stream_player.call_deferred("set_stream".into(), &[audio_stream_generator.to_variant()]);
-    // let audio_stream_playback = audio_stream_player.get_stream_playback().unwrap();
-
-    // // let audio_stream = Gd::from_instance_id(audio_stream);
-
-    // let audio_stream_playback = audio_stream_playback.cast::<AudioStreamGeneratorPlayback>();
-
-    if let Err(error) = av_thread_inner(
-        commands,
-        path,
-        tex,
-        // audio_stream_playback,
-        audio_stream_player,
-    ) {
+    let audio_stream_player: Gd<AudioStreamPlayer> = Gd::from_instance_id(audio_stream);
+    if let Err(error) = av_thread_inner(commands, path, tex, audio_stream_player) {
         warn!("av error: {error}");
     } else {
         debug!("av closed");
@@ -128,14 +111,11 @@ fn av_thread(
 
 pub fn av_thread_inner(
     commands: tokio::sync::mpsc::Receiver<AVCommand>,
-    // video: tokio::sync::mpsc::Sender<VideoData>,
-    // audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
     path: String,
     tex: Gd<ImageTexture>,
-    // audio_stream: Gd<AudioStreamGeneratorPlayback>,
     audio_stream_player: Gd<AudioStreamPlayer>,
 ) -> Result<(), String> {
-    let mut input_context = input(&path).map_err(|e| format!("{:?} on line {}", e, line!()))?;
+    let input_context = input(&path).map_err(|e| format!("{:?} on line {}", e, line!()))?;
 
     // try and get a video context
     let video_context: Option<VideoContext> = {
