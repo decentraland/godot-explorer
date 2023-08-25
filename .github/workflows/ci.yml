@@ -137,7 +137,7 @@ jobs:
         # os: [windows-latest, ubuntu-latest, macos-latest]
         os: [ubuntu-20.04-16core]
         rust: [stable]
-    runs-on: ${{ matrix.os }}
+    runs-on: bigrunner
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     continue-on-error: true
