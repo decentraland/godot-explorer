@@ -38,7 +38,7 @@ pub fn export() -> Result<(), anyhow::Error> {
     let args = vec!["-e", "--headless", "--quit"];
     let status1 = std::process::Command::new(program.as_str())
         .args(&args)
-        .current_dir(GODOT_PROJECT_FOLDER)
+        .current_dir(std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap())
         .status()
         .expect("Failed to run Godot");
 
@@ -86,7 +86,7 @@ pub fn export() -> Result<(), anyhow::Error> {
 
     let status2 = std::process::Command::new(program.as_str())
         .args(&args)
-        .current_dir(GODOT_PROJECT_FOLDER)
+        .current_dir(std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap())
         .status()
         .expect("Failed to run Godot");
 

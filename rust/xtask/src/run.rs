@@ -31,9 +31,9 @@ pub fn run(
     } else {
         vec!["build"]
     };
-    
+
     let build_status = std::process::Command::new("cargo")
-        .current_dir(RUST_LIB_PROJECT_FOLDER)
+        .current_dir(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER).unwrap())
         .args(build_args)
         .status()
         .expect("Failed to run Godot");
