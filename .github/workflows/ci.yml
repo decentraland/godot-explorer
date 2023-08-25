@@ -136,7 +136,7 @@ jobs:
       matrix:
         os: [windows-latest] # , ubuntu-latest, macos-latest]
         rust: [stable]
-    runs-on: [windows-latest, bigrunner]
+    runs-on: ${{ matrix.os }}
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     continue-on-error: true
@@ -165,17 +165,17 @@ jobs:
 
       # Depedencies section
       # => Linux 
-      - name: Install alsa and udev
-        if: runner.os == 'linux'
-        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
-      - name: install ffmpeg deps (linux)
-        run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
-        if: runner.os == 'linux'
+      # - name: Install alsa and udev
+      #   if: runner.os == 'linux'
+      #   run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+      # - name: install ffmpeg deps (linux)
+      #   run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
+      #   if: runner.os == 'linux'
 
       # => MacOS 
-      - name: install ffmpeg deps (macOs)
-        if: runner.os == 'macos'
-        run: brew install ffmpeg pkg-config          
+      # - name: install ffmpeg deps (macOs)
+      #   if: runner.os == 'macos'
+      #   run: brew install ffmpeg pkg-config          
         
       # => Windows
       - name: set CLANG path for ffmpeg deps (windows)
