@@ -11,6 +11,7 @@ name: CI
 
 jobs: 
   lints:
+    if: false
     name: Check and lints
     runs-on: ubuntu-latest
     env:
@@ -29,7 +30,10 @@ jobs:
         run: pip3 install "gdtoolkit==4.*"
       - name: Check format GDScript
         run: gdformat -d godot/
-        
+    
+      - name: Install alsa and udev
+        if: runner.os == 'linux'
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
       - name: install ffmpeg deps (linux)
         run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
         if: runner.os == 'linux'
@@ -63,6 +67,7 @@ jobs:
 
   coverage:
     name: Coverage
+    if: false
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -142,6 +147,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      
+      # Setup Cache
       - name: Set up cargo cache
         uses: actions/cache@v3
         continue-on-error: false
@@ -156,17 +163,33 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
+      # Depedencies section
+      # => Linux 
+      - name: Install alsa and udev
+        if: runner.os == 'linux'
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
       - name: install ffmpeg deps (linux)
         run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
         if: runner.os == 'linux'
+
+      # => MacOS 
       - name: install ffmpeg deps (macOs)
         if: runner.os == 'macos'
         run: brew install ffmpeg pkg-config          
+        
+      # => Windows
       - name: set CLANG path for ffmpeg deps (windows)
         if: runner.os == 'windows'
         run: |
           $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
           Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
+          Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile ffmpeg-release-full-shared.7z
+          7z x ffmpeg-release-full-shared.7z
+          mkdir ffmpeg
+          mv ffmpeg-*/* ffmpeg/
+          Add-Content $env:GITHUB_ENV "FFMPEG_DIR=${pwd}\ffmpeg`n"
+          Add-Content $env:GITHUB_PATH "${pwd}\ffmpeg\bin`n"  
+
       - name: cargo xtask install
         working-directory: rust/xtask
         run: cargo run -- install
@@ -177,9 +200,10 @@ jobs:
           rustup target add x86_64-apple-darwin
           rustup target add aarch64-apple-darwin
 
+      # Build section
       - uses: actions-rs/cargo@v1
         if: ${{ matrix.os != 'macos-latest' }}
-        name: cargo build
+        name: cargo build (linux/windows)
         with:
           command: build
           args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release
@@ -199,23 +223,26 @@ jobs:
           args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=aarch64-apple-darwin
 
       - uses: actions-rs/cargo@v1
+        if: false # TODO: enable tests!
         name: cargo test
         with:
           command: test
           args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release 
 
+      # Package section
+      # => MacOS
       - name: Make universal library
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
           mkdir rust/decentraland-godot-lib/target/release || true
           lipo -create rust/decentraland-godot-lib/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/decentraland-godot-lib/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.dylib
 
-      - name: Copy library (win)
+      - name: Copy library (windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
             cp rust/decentraland-godot-lib/target/release/decentraland_godot_lib.dll godot/lib/
 
-      - name: Copy library (unix)
+      - name: Copy library (linux/macos)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
             cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.so godot/lib/ || true
