@@ -31,3 +31,5 @@ current = true
 
 [node name="Avatar" parent="." instance=ExtResource("2_n22nx")]
 skip_process = true
+
+[node name="AudioStreamPlayer_Camera" type="AudioStreamPlayer" parent="."]

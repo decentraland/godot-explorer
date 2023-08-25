@@ -56,7 +56,10 @@ func _on_param_changed(_param):
 	RUN_SPEED = Global.config.run_velocity
 	GRAVITY = Global.config.gravity
 	JUMP_VELOCITY_0 = Global.config.jump_velocity
-
+	
+@onready var camera_fade_in_audio = preload("res://assets/sfx/ui_fade_in.wav")
+@onready var camera_fade_out_audio = preload("res://assets/sfx/ui_fade_out.wav")
+@onready var audio_stream_player_camera = $AudioStreamPlayer_Camera
 
 func _input(event):
 	# Receives touchscreen motion
@@ -110,6 +113,8 @@ func _input(event):
 					)
 					avatar.show()
 					avatar.set_rotation(Vector3(0, 0, 0))
+					audio_stream_player_camera.stream = camera_fade_out_audio
+					audio_stream_player_camera.play()
 
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				if first_person == false:
@@ -119,6 +124,8 @@ func _input(event):
 						Tween.EASE_IN_OUT
 					)
 					avatar.hide()
+					audio_stream_player_camera.stream = camera_fade_in_audio
+					audio_stream_player_camera.play()
 
 
 var current_direction: Vector3 = Vector3()

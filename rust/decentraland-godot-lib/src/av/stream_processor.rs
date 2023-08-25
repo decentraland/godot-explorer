@@ -1,7 +1,6 @@
 use ffmpeg_next::Packet;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc::error::TryRecvError;
-use tracing::debug;
 
 use super::ffmpeg_util::{PacketIter, BUFFER_TIME};
 
@@ -58,7 +57,7 @@ pub fn process_streams(
                 }
                 continue;
             } else if streams.iter().any(|ctx| ctx.buffered_time() == 0.0) {
-                // info!("eof");
+                tracing::info!("eof");
                 start_instant = None;
             }
         }
@@ -102,7 +101,7 @@ pub fn process_streams(
             );
             let now = Instant::now();
             let next_frame_time = play_instant + Duration::from_secs_f64(next_frame_time);
-            debug!("next frame time: {next_frame_time:?}/ now: {now:?}");
+            tracing::debug!("next frame time: {next_frame_time:?}/ now: {now:?}");
             let buffer_till_time = next_frame_time - Duration::from_millis(10);
             // preload frames
             while streams.iter().any(|ctx| ctx.buffered_time() < BUFFER_TIME)
@@ -123,7 +122,7 @@ pub fn process_streams(
             } else if let Some(lost_time) = Instant::now().checked_duration_since(next_frame_time) {
                 if lost_time > Duration::from_secs(1) {
                     // we lost time - reset start frame and instant
-                    debug!("reset on loss");
+                    tracing::debug!("reset on loss");
                     for stream in streams.iter_mut() {
                         stream.set_start_frame();
                     }

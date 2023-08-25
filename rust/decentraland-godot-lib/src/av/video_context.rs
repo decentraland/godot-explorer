@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
+use std::time::Instant;
 
-use ffmpeg_next::ffi::AVPixelFormat;
+use ffmpeg_next::ffi::{memcpy, AVPixelFormat};
 use ffmpeg_next::format::Pixel;
 use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
 use ffmpeg_next::{decoder, format::context::Input, media::Type, util::frame, Packet};
@@ -30,12 +31,11 @@ pub struct VideoContext {
     scaler_context: Context,
     rate: f64,
     buffer: VecDeque<frame::video::Video>,
-    // sink: tokio::sync::mpsc::Sender<VideoData>,
     current_frame: usize,
     start_frame: usize,
     texture: Gd<ImageTexture>,
-    texture_computed_size: Vector2i,
     video_info: VideoInfo,
+    last_frame_time: Instant,
 }
 
 #[derive(Debug, Error)]
@@ -51,11 +51,7 @@ pub enum VideoError {
 }
 
 impl VideoContext {
-    pub fn init(
-        input_context: &Input,
-        // sink: tokio::sync::mpsc::Sender<VideoData>,
-        tex: Gd<ImageTexture>,
-    ) -> Result<Self, VideoError> {
+    pub fn init(input_context: &Input, tex: Gd<ImageTexture>) -> Result<Self, VideoError> {
         let input_stream = input_context
             .streams()
             .best(Type::Video)
@@ -107,26 +103,12 @@ impl VideoContext {
             rate
         );
 
-        // if sink
-        //     .blocking_send(VideoData::Info(VideoInfo {
-        //         width,
-        //         height,
-        //         rate,
-        //         length,
-        //     }))
-        //     .is_err()
-        // {
-        //     // channel closed
-        //     return Err(VideoError::ChannelClosed);
-        // }
-
         Ok(VideoContext {
             stream_index,
             rate,
             decoder,
             scaler_context,
             buffer: Default::default(),
-            // sink,
             current_frame: 0,
             start_frame: 0,
             texture: tex,
@@ -136,7 +118,7 @@ impl VideoContext {
                 rate,
                 length,
             },
-            texture_computed_size: Vector2i::new(-1, -1),
+            last_frame_time: Instant::now(),
         })
     }
 }
@@ -167,14 +149,32 @@ impl FfmpegContext for VideoContext {
     }
 
     fn send_frame(&mut self) {
-        debug!(
-            "send video frame {:?} [{} in buffer]",
-            self.current_frame,
-            self.buffer.len()
-        );
-
         let current_frame = self.buffer.pop_front().unwrap();
-        let data_arr = PackedByteArray::from(current_frame.data(0));
+        // let data_arr = PackedByteArray::from(current_frame.data(0));
+
+        let raw_data = current_frame.data(0);
+        let byte_length = raw_data.len();
+        let mut data_arr = PackedByteArray::new();
+        data_arr.resize(raw_data.len());
+
+        let data_arr_ptr = data_arr.as_mut_slice();
+
+        unsafe {
+            let dst_ptr = &mut data_arr_ptr[0] as *mut u8;
+            let src_ptr = &raw_data[0] as *const u8;
+            std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, byte_length);
+        }
+
+        let diff = self.last_frame_time.elapsed().as_secs_f32();
+        debug!(
+            "send video frame {:?} [{} in buffer] diff {:?} => fps {:?} ({:?} bytes)",
+            self.current_frame,
+            self.buffer.len(),
+            diff,
+            1.0 / diff,
+            current_frame.data(0).len()
+        );
+        self.last_frame_time = Instant::now();
 
         let current_size =
             Vector2::new(self.video_info.width as f32, self.video_info.height as f32);
@@ -203,17 +203,6 @@ impl FfmpegContext for VideoContext {
             self.texture.update(image);
         }
 
-        // if let Some(img) = img {
-        //     data.video_sink.tex.update(img);
-        //     tracing::trace!("godotandroid set frame on {:?}", data.video_sink.tex);
-        // } else {
-        //     tracing::error!("godotandroid failed to create image");
-        // }
-
-        // let _ = self.sink.blocking_send(VideoData::Frame(
-        //     current_frame,
-        //     self.current_frame as f64 / self.rate,
-        // ));
         self.current_frame += 1;
     }
 

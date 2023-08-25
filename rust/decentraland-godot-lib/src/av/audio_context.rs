@@ -118,8 +118,6 @@ pub struct AudioContext {
 impl AudioContext {
     pub fn init(
         input_context: &Input,
-        // channel: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
-        // audio_stream: Gd<AudioStreamGeneratorPlayback>,
         mut audio_stream_player: Gd<AudioStreamPlayer>,
     ) -> Result<Self, AudioError> {
         let input_stream = input_context
@@ -216,12 +214,6 @@ impl FfmpegContext for AudioContext {
     }
 
     fn send_frame(&mut self) {
-        debug!(
-            "send audio frame {:?} [{} in buffer]",
-            self.current_frame,
-            self.buffer.len()
-        );
-
         let bytes_per_sample = self.format.bytes();
         let is_planar = self.format.is_planar();
         let frame = self.buffer.pop_front().unwrap();
