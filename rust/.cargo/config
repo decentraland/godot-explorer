@@ -1,5 +1,0 @@
-[alias]
-xtask = "run --package xtask --"
-
-[env]
-GODOT4_BIN = { value = "../.bin/godot/godot4_bin", relative = true }

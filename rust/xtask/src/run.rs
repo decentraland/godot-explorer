@@ -1,4 +1,7 @@
-use crate::install_dependency;
+use crate::{
+    consts::{BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    install_dependency,
+};
 
 pub fn run(
     editor: bool,
@@ -7,7 +10,8 @@ pub fn run(
     only_build: bool,
 ) -> Result<(), anyhow::Error> {
     let program = std::fs::canonicalize(format!(
-        "./../.bin/godot/{}",
+        "{}godot/{}",
+        BIN_FOLDER,
         install_dependency::get_godot_executable_path().unwrap()
     ))
     .unwrap()
@@ -17,22 +21,28 @@ pub fn run(
 
     std::env::set_var("GODOT4_BIN", program.clone());
 
-    let mut args = vec!["--path", "./../godot"];
+    let mut args = vec!["--path", GODOT_PROJECT_FOLDER];
     if editor {
         args.push("-e");
     }
 
-    if release_mode {
-        xtaskops::ops::cmd!(
-            "cargo",
-            "build",
-            "--package",
-            "decentraland-godot-lib",
-            "--release"
-        )
-        .run()?;
+    let build_args = if release_mode {
+        vec!["build", "--release"]
     } else {
-        xtaskops::ops::cmd!("cargo", "build", "--package", "decentraland-godot-lib").run()?;
+        vec!["build"]
+    };
+    
+    let build_status = std::process::Command::new("cargo")
+        .current_dir(RUST_LIB_PROJECT_FOLDER)
+        .args(build_args)
+        .status()
+        .expect("Failed to run Godot");
+
+    if !build_status.success() {
+        return Err(anyhow::anyhow!(
+            "cargo build exited with non-zero status: {}",
+            build_status
+        ));
     }
 
     match install_dependency::copy_library(!release_mode) {

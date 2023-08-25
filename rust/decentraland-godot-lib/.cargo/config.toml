@@ -1,0 +1,3 @@
+[env]
+GODOT4_BIN = { value = "../../.bin/godot/godot4_bin", relative = true }
+FFMPEG_DIR = { value = "../../.bin/ffmpeg/ffmpeg-6.0-full_build-shared", relative = true } 

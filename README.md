@@ -1,15 +1,24 @@
 # Decentraland Godot Rust
 
-## Install dependencies
+## Set up project
 
-1. Install rust (https://www.rust-lang.org/tools/install)
-2. Go to `rust` folder, and run `cargo xtask install`.
+1. Clone the repo using `git clone https://github.com/decentraland/godot-explorer`
+2. Install [rust](https://www.rust-lang.org/tools/install)
+3. Download and install `ffmpeg` shared binaries
+    - on linux: `sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev`
+    - on macos: `brew install ffmpeg pkg-config`
+    - on windows: 
+      - set `LIBCLANG_PATH` = `path to LLVM\x64\bin` (this is packaged with visual studio, or can be downloaded separately from [here](https://github.com/llvm/llvm-project/releases/download/llvmorg-15.0.7/LLVM-15.0.7-win64.exe))
+      - the `xtask` project will download the shared libraries
+
+2. Go to `rust/xtask` folder, and run `cargo run -- install`.
 
 ## Running and editting the project
 
-You can run `cargo xtask run` to build the Rust library and execute the client. 
-- With `-r` it builds the library in release mode. Note: the Godot executable is an editor, so it's a `release_debug` build, see the Target section [here](https://docs.godotengine.org/en/stable/contributing/development/compiling/introduction_to_the_buildsystem.html) for more infromation.
-- With `-e` it also builds the library, but the project edition is executed instead of the client.
+1. Ensure you are in `rust/xtask` folder first
+2. You can run `cargo run -- run` to build the Rust library and execute the client. 
+- With adding `-r` it builds the library in release mode. Note: the Godot executable is an editor, so it's a `release_debug` build, see the Target section [here](https://docs.godotengine.org/en/stable/contributing/development/compiling/introduction_to_the_buildsystem.html) for more infromation.
+- With adding `-e` it also builds the library, but the project edition is executed instead of the client.
 
 ## GDScript formatting
 
@@ -19,4 +28,5 @@ When GD files are modified, they must be well-formated. You can autoformat all f
 This repos is set up to be opened with Visual Studio Code. In the section `Run and Debug` in the Activity bar, you can find the configuration for your platform.
 
 ## Run test with coverage
-Run `cargo xtask coverage --dev`. It'll create a `coverage` folder with the index.html with the all information. For running this commands you need to have lvvm tools and grcov, you can install them with `rustup component add llvm-tools-preview` and `cargo install grcov`.
+1. Ensure you are in `rust/xtask` folder first
+2. Run `cargo run -- coverage --dev`. It'll create a `coverage` folder with the index.html with the all information. For running this commands you need to have lvvm tools and grcov, you can install them with `rustup component add llvm-tools-preview` and `cargo install grcov`.

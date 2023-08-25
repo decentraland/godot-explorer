@@ -1,0 +1,3 @@
+{
+    "rust-analyzer.linkedProjects": ["rust/xtask/Cargo.toml", "rust/decentraland-godot-lib/Cargo.toml"]
+}

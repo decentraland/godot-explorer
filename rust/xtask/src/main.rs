@@ -7,6 +7,7 @@ use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 mod download_file;
 mod export;
 mod install_dependency;
+mod consts;
 mod run;
 
 fn main() -> Result<(), anyhow::Error> {
@@ -85,29 +86,37 @@ fn main() -> Result<(), anyhow::Error> {
         );
     let matches = cli.get_matches();
 
+    let subcommand = if let Some(value) = matches.subcommand() {
+        value
+    } else {
+        unreachable!("unreachable branch")
+    };
+
+    println!("Running subcommand `{:?}`", subcommand.0);
+
     let root = xtaskops::ops::root_dir();
-    let res = match matches.subcommand() {
-        Some(("install", sm)) => install_dependency::install(sm.is_present("no-templates")),
-        Some(("run", sm)) => run::run(
+    let res = match subcommand {
+        ("install", sm) => install_dependency::install(sm.is_present("no-templates")),
+        ("run", sm) => run::run(
             sm.is_present("editor"),
             sm.is_present("release"),
             sm.is_present("itest"),
             sm.is_present("only-build"),
         ),
-        Some(("export", _m)) => export::export(),
-        Some(("coverage", sm)) => coverage_with_itest(sm.is_present("dev")),
-        Some(("vars", _)) => {
+        ("export", _m) => export::export(),
+        ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),
+        ("vars", _) => {
             println!("root: {root:?}");
             Ok(())
         }
-        Some(("ci", _)) => xtaskops::tasks::ci(),
-        Some(("docs", _)) => xtaskops::tasks::docs(),
-        Some(("powerset", _)) => xtaskops::tasks::powerset(),
-        Some(("bloat-deps", sm)) => xtaskops::tasks::bloat_deps(
+        ("ci", _) => xtaskops::tasks::ci(),
+        ("docs", _) => xtaskops::tasks::docs(),
+        ("powerset", _) => xtaskops::tasks::powerset(),
+        ("bloat-deps", sm) => xtaskops::tasks::bloat_deps(
             sm.get_one::<String>("package")
                 .context("please provide a package with -p")?,
         ),
-        Some(("bloat-time", sm)) => xtaskops::tasks::bloat_time(
+        ("bloat-time", sm) => xtaskops::tasks::bloat_time(
             sm.get_one::<String>("package")
                 .context("please provide a package with -p")?,
         ),
