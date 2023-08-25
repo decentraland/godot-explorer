@@ -29,6 +29,19 @@ jobs:
         run: pip3 install "gdtoolkit==4.*"
       - name: Check format GDScript
         run: gdformat -d godot/
+        
+      - name: install ffmpeg deps (linux)
+        run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
+        if: runner.os == 'linux'
+      - name: install ffmpeg deps (macOs)
+        if: runner.os == 'macos'
+        run: brew install ffmpeg pkg-config          
+      - name: set CLANG path for ffmpeg deps (windows)
+        if: runner.os == 'windows'
+        run: |
+          $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
+          Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
+
       - name: cargo xtask install
         working-directory: rust/xtask
         run: cargo run -- install --no-templates
@@ -74,11 +87,23 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            rust/target
+            rust/decentraland-godot-lib/target
             rust/Cargo.lock
           key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: coverage-cargo-
-      
+
+      - name: install ffmpeg deps (linux)
+        run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
+        if: runner.os == 'linux'
+      - name: install ffmpeg deps (macOs)
+        if: runner.os == 'macos'
+        run: brew install ffmpeg pkg-config          
+      - name: set CLANG path for ffmpeg deps (windows)
+        if: runner.os == 'windows'
+        run: |
+          $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
+          Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
+
       - name: cargo xtask install
         working-directory: rust/xtask
         run: cargo run -- install --no-templates
@@ -126,7 +151,8 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            rust/target/            
+            rust/decentraland-godot-lib/target/ 
+            rust/xtask/target/            
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
@@ -156,44 +182,44 @@ jobs:
         name: cargo build
         with:
           command: build
-          args: --manifest-path rust/Cargo.toml --release
+          args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release
 
       - uses: actions-rs/cargo@v1
         name: build for x86_64 (macos)
         if: ${{ matrix.os == 'macos-latest' }}
         with:
           command: build
-          args: --manifest-path rust/Cargo.toml --release --target=x86_64-apple-darwin
+          args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=x86_64-apple-darwin
           
       - uses: actions-rs/cargo@v1
         name: build for arm64 (macos)
         if: ${{ matrix.os == 'macos-latest' }}
         with:
           command: build
-          args: --manifest-path rust/Cargo.toml --release --target=aarch64-apple-darwin
+          args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=aarch64-apple-darwin
 
       - uses: actions-rs/cargo@v1
         name: cargo test
         with:
           command: test
-          args: --manifest-path rust/Cargo.toml --release 
+          args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release 
 
       - name: Make universal library
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          mkdir rust/target/release || true
-          lipo -create rust/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output rust/target/release/libdecentraland_godot_lib.dylib
+          mkdir rust/decentraland-godot-lib/target/release || true
+          lipo -create rust/decentraland-godot-lib/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/decentraland-godot-lib/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.dylib
 
       - name: Copy library (win)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-            cp rust/target/release/decentraland_godot_lib.dll godot/lib/
+            cp rust/decentraland-godot-lib/target/release/decentraland_godot_lib.dll godot/lib/
 
       - name: Copy library (unix)
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-            cp rust/target/release/libdecentraland_godot_lib.so godot/lib/ || true
-            cp rust/target/release/libdecentraland_godot_lib.dylib godot/lib/ || true
+            cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.so godot/lib/ || true
+            cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.dylib godot/lib/ || true
 
       - name: Export
         working-directory: rust/xtask
