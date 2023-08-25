@@ -202,13 +202,12 @@ jobs:
           rustup target add aarch64-apple-darwin
 
       # Build section
-      - uses: actions-rs/cargo@v1
+      
+      - name: cargo build (linux/windows)
         if: ${{ matrix.os != 'macos-latest' }}
-        name: cargo build (linux/windows)
-        with:
-          command: build
-          args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release
-
+        working-directory: rust/xtask
+        run: cargo run -- run -r --only-build
+        
       - uses: actions-rs/cargo@v1
         name: build for x86_64 (macos)
         if: ${{ matrix.os == 'macos-latest' }}
