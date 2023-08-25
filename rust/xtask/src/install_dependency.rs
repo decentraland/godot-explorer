@@ -210,7 +210,7 @@ pub fn copy_ffmpeg_libraries(dest_folder: String) -> Result<(), anyhow::Error> {
 }
 
 pub fn install(skip_download_templates: bool) -> Result<(), anyhow::Error> {
-    // install_dcl_protocol()?;
+    install_dcl_protocol()?;
 
     if env::consts::OS == "windows" {
         download_and_extract_zip(
