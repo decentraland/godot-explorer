@@ -4,10 +4,12 @@ use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
+use crate::consts::RUST_LIB_PROJECT_FOLDER;
+
+mod consts;
 mod download_file;
 mod export;
 mod install_dependency;
-mod consts;
 mod run;
 
 fn main() -> Result<(), anyhow::Error> {
@@ -135,17 +137,18 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
+        .dir(RUST_LIB_PROJECT_FOLDER)
         .run()?;
 
-    cmd!("cargo", "xtask", "run", "--itest")
+    cmd!("cargo", "run", "--", "run", "--itest")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
         .run()?;
 
-    let err = glob::glob("./../godot/*.profraw")?
+    let err = glob::glob("./../../godot/*.profraw")?
         .filter_map(|entry| entry.ok())
-        .map(|entry| cmd!("mv", entry, "./").run())
+        .map(|entry| cmd!("mv", entry, "./../decentraland-godot-lib/").run())
         .any(|res| res.is_err());
 
     if err {
@@ -164,7 +167,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         "grcov",
         ".",
         "--binary-path",
-        "./target/debug/deps",
+        "./decentraland-godot-lib/target/debug/deps",
         "-s",
         ".",
         "-t",
@@ -182,11 +185,12 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         "-o",
         file,
     )
+    .dir("..")
     .run()?;
     println!("ok.");
 
     println!("=== cleaning up ===");
-    clean_files("**/*.profraw")?;
+    clean_files("../**/*.profraw")?;
     println!("ok.");
     if devmode {
         if confirm("open report folder?") {
