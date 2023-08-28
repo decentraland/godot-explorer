@@ -135,7 +135,7 @@ jobs:
     strategy:
       matrix:
 
-        os: [windows-latest]
+        os: [ubuntu-latest]
 
         # Multi platform CI build dropped for now
         # os: [windows-latest, ubuntu-latest, macos-latest]
@@ -149,41 +149,28 @@ jobs:
           toolchain: 1.71.1
           override: true
       
-      # Old single action to Setup Cache
-      # - name: Set up cargo cache
-      #   uses: actions/cache@v3
-      #   continue-on-error: false
-      #   with:
-      #     path: |
-      #       ~/.cargo/bin/
-      #       ~/.cargo/registry/index/
-      #       ~/.cargo/registry/cache/
-      #       ~/.cargo/git/db/
-      #       rust/decentraland-godot-lib/target/ 
-      #       rust/xtask/target/            
-      #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      #     restore-keys: ${{ runner.os }}-cargo-
-
-      # - uses: actions/cache/restore@v3
-      #   id: restore-cache
-      #   with:
-      #     path: |
-      #       ~/.cargo/bin/
-      #       ~/.cargo/registry/index/
-      #       ~/.cargo/registry/cache/
-      #       ~/.cargo/git/db/
-      #       rust/decentraland-godot-lib/target/ 
-      #       rust/xtask/target/            
-      #     key: ${{ runner.os }}-cargo-new-
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/decentraland-godot-lib/target/ 
+            rust/xtask/target/            
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
           
       # Depedencies section
       # => Linux 
-      # - name: Install alsa and udev
-      #   if: runner.os == 'linux'
-      #   run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
-      # - name: install ffmpeg deps (linux)
-      #   run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
-      #   if: runner.os == 'linux'
+      - name: Install alsa and udev
+        if: runner.os == 'linux'
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+      - name: install ffmpeg deps (linux)
+        run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
+        if: runner.os == 'linux'
 
       # => MacOS 
       # - name: install ffmpeg deps (macOs)
@@ -256,12 +243,12 @@ jobs:
       #     mkdir rust/decentraland-godot-lib/target/release || true
       #     lipo -create rust/decentraland-godot-lib/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/decentraland-godot-lib/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.dylib
 
-      # # => Linux/MacOS (unix)
-      # - name: Copy library (linux/macos)
-      #   if: ${{ matrix.os != 'windows-latest' }}
-      #   run: |
-      #       cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.so godot/lib/ || true
-      #       cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.dylib godot/lib/ || true
+      # => Linux/MacOS (unix)
+      - name: Copy library (linux/macos)
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+            cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.so godot/lib/ || true
+            cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.dylib godot/lib/ || true
 
       # => Windows
       - name: Copy library (windows)
@@ -282,15 +269,3 @@ jobs:
           name: decentraland-godot-${{ matrix.os }}
           path: |
             exports/**/*
-
-      # - uses: actions/cache/save@v3
-      #   if: always()
-      #   with:
-      #     path: |
-      #       ~/.cargo/bin/
-      #       ~/.cargo/registry/index/
-      #       ~/.cargo/registry/cache/
-      #       ~/.cargo/git/db/
-      #       rust/decentraland-godot-lib/target/ 
-      #       rust/xtask/target/            
-      #     key: ${{ runner.os }}-cargo-new-${{ hashFiles('**/Cargo.lock') }}
