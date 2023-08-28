@@ -169,6 +169,13 @@ jobs:
       - uses: actions/cache/restore@v3
         id: restore-cache
         with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/decentraland-godot-lib/target/ 
+            rust/xtask/target/            
           key: ${{ runner.os }}-cargo-
           
       # Depedencies section
