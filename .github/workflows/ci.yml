@@ -139,8 +139,6 @@ jobs:
 
         # Multi platform CI build dropped for now
         # os: [windows-latest, ubuntu-latest, macos-latest]
-
-        rust: [stable]
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     steps:
@@ -148,7 +146,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: 1.71.1
           override: true
       
       # Old single action to Setup Cache
