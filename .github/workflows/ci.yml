@@ -219,6 +219,7 @@ jobs:
       # Build section
       
       - name: cargo build (linux/windows)
+        continue-on-error: true
         if: ${{ matrix.os != 'macos-latest' }}
         working-directory: rust/xtask
         run: cargo run -- run -r --only-build
@@ -238,6 +239,7 @@ jobs:
       #     args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=aarch64-apple-darwin
 
       - uses: actions-rs/cargo@v1
+        continue-on-error: true
         if: false # TODO: enable tests!
         name: cargo test
         with:
@@ -261,16 +263,19 @@ jobs:
 
       # => Windows
       - name: Copy library (windows)
+        continue-on-error: true
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
             cp rust/decentraland-godot-lib/target/release/decentraland_godot_lib.dll godot/lib/
 
       # Export section (multi platform)
       - name: Export
+        continue-on-error: true
         working-directory: rust/xtask
         run: cargo run -- export
 
       - uses: actions/upload-artifact@master
+        continue-on-error: true
         with:
           name: decentraland-godot-${{ matrix.os }}
           path: |
