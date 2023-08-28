@@ -143,8 +143,8 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v2
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -166,17 +166,17 @@ jobs:
       #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       #     restore-keys: ${{ runner.os }}-cargo-
 
-      - uses: actions/cache/restore@v3
-        id: restore-cache
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            rust/decentraland-godot-lib/target/ 
-            rust/xtask/target/            
-          key: ${{ runner.os }}-cargo-new-
+      # - uses: actions/cache/restore@v3
+      #   id: restore-cache
+      #   with:
+      #     path: |
+      #       ~/.cargo/bin/
+      #       ~/.cargo/registry/index/
+      #       ~/.cargo/registry/cache/
+      #       ~/.cargo/git/db/
+      #       rust/decentraland-godot-lib/target/ 
+      #       rust/xtask/target/            
+      #     key: ${{ runner.os }}-cargo-new-
           
       # Depedencies section
       # => Linux 
@@ -281,14 +281,14 @@ jobs:
           path: |
             exports/**/*
 
-      - uses: actions/cache/save@v3
-        if: always()
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            rust/decentraland-godot-lib/target/ 
-            rust/xtask/target/            
-          key: ${{ runner.os }}-cargo-new-${{ hashFiles('**/Cargo.lock') }}
+      # - uses: actions/cache/save@v3
+      #   if: always()
+      #   with:
+      #     path: |
+      #       ~/.cargo/bin/
+      #       ~/.cargo/registry/index/
+      #       ~/.cargo/registry/cache/
+      #       ~/.cargo/git/db/
+      #       rust/decentraland-godot-lib/target/ 
+      #       rust/xtask/target/            
+      #     key: ${{ runner.os }}-cargo-new-${{ hashFiles('**/Cargo.lock') }}
