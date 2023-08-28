@@ -22,6 +22,7 @@ jobs:
           profile: minimal
           toolchain: 1.71
           override: true
+          components: clippy, rustfmt
       - run: rustup component add rustfmt
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -116,11 +117,10 @@ jobs:
   build:
     name: Build and test
     # Comment next line to test this job on PRs
-    # if: ${{ github.ref == 'refs/heads/main' }} 
+    if: ${{ github.ref == 'refs/heads/main' }} 
     strategy:
       matrix:
-        # os: [ubuntu-latest, windows-latest, macos-latest]
-        os: [macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -155,7 +155,9 @@ jobs:
       # => MacOS 
       - name: install ffmpeg deps (macOs)
         if: runner.os == 'macos'
-        run: brew install ffmpeg pkg-config          
+        run: brew install ffmpeg pkg-config
+        
+      # TODO: cross-build deprecated with the ffmpeg integration           
       # - name: Set up target platform
       #   if: ${{ matrix.os == 'macos-latest' }}
       #   run: |
@@ -186,6 +188,8 @@ jobs:
         working-directory: rust/decentraland-godot-lib
         run: cargo build --release
         
+      # TODO: cross-build deprecated with the ffmpeg integration 
+
       # - uses: actions-rs/cargo@v1
       #   name: build for x86_64 (macos)
       #   if: ${{ matrix.os == 'macos-latest' }}
@@ -204,6 +208,7 @@ jobs:
         working-directory: rust/decentraland-godot-lib
         run: cargo test
 
+      # TODO: cross-build deprecated with the ffmpeg integration 
       # Package section
       # # => MacOS
       # - name: Make universal library

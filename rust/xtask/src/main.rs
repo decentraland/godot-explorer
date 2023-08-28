@@ -129,8 +129,8 @@ fn main() -> Result<(), anyhow::Error> {
 }
 
 pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
-    remove_dir("coverage")?;
-    create_dir_all("coverage")?;
+    remove_dir("../coverage")?;
+    create_dir_all("../coverage")?;
 
     println!("=== running coverage ===");
     cmd!("cargo", "test")
