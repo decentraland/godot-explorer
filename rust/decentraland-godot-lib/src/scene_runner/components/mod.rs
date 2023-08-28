@@ -9,3 +9,4 @@ pub mod pointer_events;
 pub mod raycast;
 pub mod text_shape;
 pub mod transform_and_parent;
+pub mod video_player;

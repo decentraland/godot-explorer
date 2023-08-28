@@ -4,6 +4,9 @@ use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
+use crate::consts::RUST_LIB_PROJECT_FOLDER;
+
+mod consts;
 mod download_file;
 mod export;
 mod install_dependency;
@@ -85,29 +88,37 @@ fn main() -> Result<(), anyhow::Error> {
         );
     let matches = cli.get_matches();
 
+    let subcommand = if let Some(value) = matches.subcommand() {
+        value
+    } else {
+        unreachable!("unreachable branch")
+    };
+
+    println!("Running subcommand `{:?}`", subcommand.0);
+
     let root = xtaskops::ops::root_dir();
-    let res = match matches.subcommand() {
-        Some(("install", sm)) => install_dependency::install(sm.is_present("no-templates")),
-        Some(("run", sm)) => run::run(
+    let res = match subcommand {
+        ("install", sm) => install_dependency::install(sm.is_present("no-templates")),
+        ("run", sm) => run::run(
             sm.is_present("editor"),
             sm.is_present("release"),
             sm.is_present("itest"),
             sm.is_present("only-build"),
         ),
-        Some(("export", _m)) => export::export(),
-        Some(("coverage", sm)) => coverage_with_itest(sm.is_present("dev")),
-        Some(("vars", _)) => {
+        ("export", _m) => export::export(),
+        ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),
+        ("vars", _) => {
             println!("root: {root:?}");
             Ok(())
         }
-        Some(("ci", _)) => xtaskops::tasks::ci(),
-        Some(("docs", _)) => xtaskops::tasks::docs(),
-        Some(("powerset", _)) => xtaskops::tasks::powerset(),
-        Some(("bloat-deps", sm)) => xtaskops::tasks::bloat_deps(
+        ("ci", _) => xtaskops::tasks::ci(),
+        ("docs", _) => xtaskops::tasks::docs(),
+        ("powerset", _) => xtaskops::tasks::powerset(),
+        ("bloat-deps", sm) => xtaskops::tasks::bloat_deps(
             sm.get_one::<String>("package")
                 .context("please provide a package with -p")?,
         ),
-        Some(("bloat-time", sm)) => xtaskops::tasks::bloat_time(
+        ("bloat-time", sm) => xtaskops::tasks::bloat_time(
             sm.get_one::<String>("package")
                 .context("please provide a package with -p")?,
         ),
@@ -118,25 +129,26 @@ fn main() -> Result<(), anyhow::Error> {
 }
 
 pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
-    remove_dir("coverage")?;
-    create_dir_all("coverage")?;
+    remove_dir("../coverage")?;
+    create_dir_all("../coverage")?;
 
     println!("=== running coverage ===");
     cmd!("cargo", "test")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
+        .dir(RUST_LIB_PROJECT_FOLDER)
         .run()?;
 
-    cmd!("cargo", "xtask", "run", "--itest")
+    cmd!("cargo", "run", "--", "run", "--itest")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
         .run()?;
 
-    let err = glob::glob("./../godot/*.profraw")?
+    let err = glob::glob("./../../godot/*.profraw")?
         .filter_map(|entry| entry.ok())
-        .map(|entry| cmd!("mv", entry, "./").run())
+        .map(|entry| cmd!("mv", entry, "./../decentraland-godot-lib/").run())
         .any(|res| res.is_err());
 
     if err {
@@ -155,7 +167,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         "grcov",
         ".",
         "--binary-path",
-        "./target/debug/deps",
+        "./decentraland-godot-lib/target/debug/deps",
         "-s",
         ".",
         "-t",
@@ -173,11 +185,12 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         "-o",
         file,
     )
+    .dir("..")
     .run()?;
     println!("ok.");
 
     println!("=== cleaning up ===");
-    clean_files("**/*.profraw")?;
+    clean_files("../**/*.profraw")?;
     println!("ok.");
     if devmode {
         if confirm("open report folder?") {

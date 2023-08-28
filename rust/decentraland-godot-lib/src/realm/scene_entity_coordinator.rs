@@ -200,9 +200,10 @@ impl SceneEntityCoordinator {
         let entity_definition = serde_json::from_value::<EntityDefinitionJson>(json);
 
         if entity_definition.is_err() {
-            println!(
+            tracing::info!(
                 "Error handling scene data from entity {:?} Error parsing the JSON {:?}",
-                entity_base.hash, entity_definition
+                entity_base.hash,
+                entity_definition
             );
             return;
         }
@@ -236,7 +237,7 @@ impl SceneEntityCoordinator {
                 serde_json::from_value::<EntityDefinitionJson>(entity_pointer.clone());
 
             if entity_definition.is_err() {
-                println!("Error handling pointer data {entity_definition:?}");
+                tracing::info!("Error handling pointer data {entity_definition:?}");
                 continue;
             }
 
@@ -266,7 +267,7 @@ impl SceneEntityCoordinator {
                 ResponseEnum::Json(json) => {
                     if json.is_err() {
                         self.cleanup_request_id(response.request_option.id);
-                        println!("Error parsing the JSON {json:?}");
+                        tracing::info!("Error parsing the JSON {json:?}");
                         return;
                     }
 
@@ -278,18 +279,18 @@ impl SceneEntityCoordinator {
                             self.handle_entity_pointers(response.request_option.id, json.unwrap());
                         }
                         _ => {
-                            println!("Invalid type of request ID while handling a request");
+                            tracing::info!("Invalid type of request ID while handling a request");
                         }
                     }
                 }
                 _ => {
                     self.cleanup_request_id(response.request_option.id);
-                    println!("Invalid type of request while handling a request");
+                    tracing::info!("Invalid type of request while handling a request");
                 }
             },
             Err(err) => {
                 self.cleanup_request_id(response.request_option.id);
-                println!("Error while handling a request: {err:?}");
+                tracing::info!("Error while handling a request: {err:?}");
             }
         }
     }
@@ -412,15 +413,15 @@ impl SceneEntityCoordinator {
                         self.dirty_loadable_scenes = true;
                     } else {
                         self.cleanup_request_id(response.request_option.id);
-                        println!(
+                        tracing::info!(
                             "status code while doing a request: {:?}",
                             response.status_code
                         );
-                        println!("{response:?}");
+                        tracing::info!("{response:?}");
                     }
                 }
                 Err(err) => {
-                    println!("Error while doing a request: {err:?}");
+                    tracing::info!("Error while doing a request: {err:?}");
                 }
             }
         }
@@ -642,5 +643,5 @@ mod tests {
 
 #[itest]
 fn some() {
-    godot_print!("this is a itest");
+    tracing::info!("this is a itest");
 }

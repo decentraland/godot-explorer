@@ -6,6 +6,7 @@
 
 use godot::prelude::*;
 
+pub mod av;
 pub mod avatars;
 pub mod comms;
 pub mod dcl;

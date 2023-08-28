@@ -8,8 +8,7 @@ use super::{
     SharedSceneCrdtState,
 };
 use super::{RendererResponse, SceneId, SceneResponse};
-use godot::prelude::godot_print;
-use std::collections::HashMap;
+
 use std::time::Duration;
 use v8::Promise;
 
@@ -59,7 +58,7 @@ pub(crate) fn scene_thread(
         if let Err(send_err) =
             thread_sender_to_main.send(SceneResponse::Error(scene_id, format!("{err_string:?}")))
         {
-            godot_print!("error sending error: {send_err:?}. original error {err_string:?}")
+            tracing::info!("error sending error: {send_err:?}. original error {err_string:?}")
         }
         return;
     }
@@ -87,7 +86,7 @@ pub(crate) fn scene_thread(
         if let Err(send_err) =
             thread_sender_to_main.send(SceneResponse::Error(scene_id, format!("{err_string:?}")))
         {
-            godot_print!("error sending error: {send_err:?}. original error {err_string:?}")
+            tracing::info!("error sending error: {send_err:?}. original error {err_string:?}")
         }
         return;
     }
@@ -97,31 +96,31 @@ pub(crate) fn scene_thread(
     // Setup the global context
     match js_context.run("dcl_init", include_str!("js_modules/main.js")) {
         Ok(_) => {
-            // println!("init script run");
+            // tracing::info!("init script run");
         }
         Err(err) => {
-            println!("error init script {err:?}");
+            tracing::info!("error init script {err:?}");
             return;
         }
     };
 
     match js_context.run("dcl_init", "globalThis.onStart()") {
         Ok(value) => {
-            // println!("onStart script run");
+            // tracing::info!("onStart script run");
             if value.is_promise() {
                 let _promise = v8::Local::<Promise>::try_from(value).unwrap();
-                // println!("is a promise {:?}", promise.state());
+                // tracing::info!("is a promise {:?}", promise.state());
             }
             let _pending_task = js_context.isolate.has_pending_background_tasks();
-            // println!("there is pending tasks? {:?}", pending_task);
+            // tracing::info!("there is pending tasks? {:?}", pending_task);
 
             js_context.isolate.perform_microtask_checkpoint();
 
             let _pending_task = js_context.isolate.has_pending_background_tasks();
-            // println!("2) there is pending tasks? {:?}", pending_task);
+            // tracing::info!("2) there is pending tasks? {:?}", pending_task);
         }
         Err(err) => {
-            println!("error init script {err:?}");
+            tracing::info!("error init script {err:?}");
             return;
         }
     };
@@ -143,21 +142,21 @@ pub(crate) fn scene_thread(
             format!("globalThis.onUpdate({:?})", dt.as_secs_f32()).as_str(),
         ) {
             Ok(value) => {
-                // println!("onUpdate script run");
+                // tracing::info!("onUpdate script run");
                 if value.is_promise() {
                     let _promise = v8::Local::<Promise>::try_from(value).unwrap();
-                    // println!("is a promise {:?}", promise.state());
+                    // tracing::info!("is a promise {:?}", promise.state());
                 }
                 let _pending_task = js_context.isolate.has_pending_background_tasks();
-                // println!("there is pending tasks? {:?}", pending_task);
+                // tracing::info!("there is pending tasks? {:?}", pending_task);
 
                 js_context.isolate.perform_microtask_checkpoint();
 
                 let _pending_task = js_context.isolate.has_pending_background_tasks();
-                // println!("2) there is pending tasks? {:?}", pending_task);
+                // tracing::info!("2) there is pending tasks? {:?}", pending_task);
             }
             Err(err) => {
-                println!("error init script {err:?}");
+                tracing::info!("error init script {err:?}");
                 return;
             }
         };
@@ -168,7 +167,7 @@ pub(crate) fn scene_thread(
         }
     }
 
-    // println!("finishing thread");
+    // tracing::info!("finishing thread");
 
     // let scope = js_context.handle_scope(&mut js_context.isolate);
 
@@ -176,7 +175,7 @@ pub(crate) fn scene_thread(
     // let script_export = match js_context.run("scene.js", "require('~scene.js')") {
     //     Ok(value) => v8::Local::<v8::Object>::try_from(value).unwrap(),
     //     Err(err) => {
-    //         println!("error scene script {:?}", err);
+    //         tracing::info!("error scene script {:?}", err);
     //         return;
     //     }
     // };
@@ -216,7 +215,7 @@ pub(crate) fn scene_thread(
     //             scene_id,
     //             format!("{execute_script_error:?}"),
     //         )) {
-    //             godot_print!(
+    //             tracing::info!(
     //                 "error sending error: {send_err:?}. original error {execute_script_error:?}"
     //             )
     //         }
@@ -238,7 +237,7 @@ pub(crate) fn scene_thread(
     //             format!("{start_script_error:?}"),
     //         ))
     //     {
-    //         godot_print!("error sending error: {send_err:?}. original error {start_script_error:?}")
+    //         tracing::info!("error sending error: {send_err:?}. original error {start_script_error:?}")
     //     }
 
     //     return;
@@ -265,7 +264,7 @@ pub(crate) fn scene_thread(
     //     // });
 
     //     // if state.borrow().try_borrow::<ShuttingDown>().is_some() {
-    //     //     godot_print!("exiting from the thread {:?}", scene_id);
+    //     //     tracing::info!("exiting from the thread {:?}", scene_id);
     //     //     return;
     //     // }
 

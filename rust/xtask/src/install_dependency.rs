@@ -11,14 +11,10 @@ use zip::ZipArchive;
 use crate::download_file::download_file;
 use crate::export::prepare_templates;
 
-const PROTOC_BASE_URL: &str =
-    "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";
-
-const GODOT4_BIN_BASE_URL: &str =
-    "https://github.com/godotengine/godot/releases/download/4.1-stable/Godot_v4.1-stable_";
-
-pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
-    "https://github.com/godotengine/godot/releases/download/4.1-stable/Godot_v4.1-stable_export_templates.tpz";
+use crate::consts::{
+    BIN_FOLDER, EXPORTS_FOLDER, GODOT4_BIN_BASE_URL, GODOT_PROJECT_FOLDER, PROTOC_BASE_URL,
+    RUST_LIB_PROJECT_FOLDER,
+};
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
@@ -46,7 +42,7 @@ fn get_protocol_url() -> Result<String, anyhow::Error> {
 
 pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
     let protocol_url = get_protocol_url()?;
-    let destination_path = "./decentraland-godot-lib/src/dcl/components";
+    let destination_path = format!("{RUST_LIB_PROJECT_FOLDER}src/dcl/components");
 
     println!("Downloading {protocol_url:?}");
 
@@ -66,7 +62,8 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
             continue;
         }
 
-        let dest_path = Path::new(destination_path).join(path.strip_prefix("package/").unwrap());
+        let dest_path =
+            Path::new(destination_path.as_str()).join(path.strip_prefix("package/").unwrap());
         create_directory_all(&dest_path)?;
         let mut file = File::create(dest_path)?;
         io::copy(&mut entry, &mut file)?;
@@ -176,31 +173,75 @@ pub fn copy_library(debug_mode: bool) -> Result<(), anyhow::Error> {
         "target/release/"
     };
 
+    let source_folder = format!("{RUST_LIB_PROJECT_FOLDER}{source_folder}");
+    println!("Copying {source_folder:?}");
     let source_file = fs::canonicalize(source_folder)?.join(file_name.clone());
-    let destination_file = fs::canonicalize("./../godot/lib")?.join(file_name);
+
+    let lib_folder = format!("{GODOT_PROJECT_FOLDER}lib/");
+    let destination_file = fs::canonicalize(lib_folder.as_str())?.join(file_name);
     fs::copy(source_file, destination_file)?;
 
+    copy_ffmpeg_libraries(lib_folder)?;
+
+    Ok(())
+}
+
+pub fn copy_ffmpeg_libraries(dest_folder: String) -> Result<(), anyhow::Error> {
+    let os = env::consts::OS;
+    if os == "windows" {
+        // copy ffmpeg .dll
+        let ffmpeg_dll_folder = format!("{BIN_FOLDER}ffmpeg/ffmpeg-6.0-full_build-shared/bin");
+
+        // copy all dlls in ffmpeg_dll_folder to exports folder
+        for entry in fs::read_dir(ffmpeg_dll_folder)? {
+            let entry = entry?;
+            let ty = entry.file_type()?;
+            if ty.is_file() {
+                let file_name = entry.file_name().to_str().unwrap().to_string();
+
+                if file_name.ends_with(".dll") {
+                    let dest_path = format!("{dest_folder}{file_name}");
+                    fs::copy(entry.path(), dest_path)?;
+                }
+            }
+        }
+    }
     Ok(())
 }
 
 pub fn install(skip_download_templates: bool) -> Result<(), anyhow::Error> {
     install_dcl_protocol()?;
 
-    download_and_extract_zip(get_protoc_url().unwrap().as_str(), "./../.bin/protoc")?;
-    download_and_extract_zip(get_godot_url().unwrap().as_str(), "./../.bin/godot")?;
+    if env::consts::OS == "windows" {
+        download_and_extract_zip(
+            "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-full_build-shared.zip",
+            format!("{BIN_FOLDER}ffmpeg").as_str(),
+        )?;
+    }
 
-    let program_path = format!("./../.bin/godot/{}", get_godot_executable_path().unwrap());
-    let dest_program_path = "./../.bin/godot/godot4_bin";
+    download_and_extract_zip(
+        get_protoc_url().unwrap().as_str(),
+        format!("{BIN_FOLDER}protoc").as_str(),
+    )?;
+    download_and_extract_zip(
+        get_godot_url().unwrap().as_str(),
+        format!("{BIN_FOLDER}godot").as_str(),
+    )?;
+
+    let program_path = format!("{BIN_FOLDER}godot/{}", get_godot_executable_path().unwrap());
+    let dest_program_path = format!("{BIN_FOLDER}godot/godot4_bin");
 
     match (env::consts::OS, env::consts::ARCH) {
         ("linux", _) | ("macos", _) => {
-            set_executable_permission(Path::new("./../.bin/protoc/bin/protoc"))?;
+            set_executable_permission(Path::new(
+                format!("{BIN_FOLDER}protoc/bin/protoc").as_str(),
+            ))?;
             set_executable_permission(Path::new(program_path.as_str()))?;
         }
         _ => (),
     };
 
-    fs::copy(program_path, dest_program_path)?;
+    fs::copy(program_path, dest_program_path.as_str())?;
 
     if !skip_download_templates {
         prepare_templates()?;

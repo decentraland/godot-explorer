@@ -38,7 +38,7 @@ impl NodeVirtual for CommunicationManager {
     }
 
     fn ready(&mut self) {
-        self.call_deferred("init_rs".into(), &[]);
+        self.base.call_deferred("init_rs".into(), &[]);
     }
 
     fn process(&mut self, _dt: f64) {
@@ -58,7 +58,8 @@ impl NodeVirtual for CommunicationManager {
 
                         chats_variant_array.push(chat_arr.to_variant());
                     }
-                    self.emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
+                    self.base
+                        .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
                 }
             }
         }
@@ -133,6 +134,7 @@ impl CommunicationManager {
 
         if self.tls_client.is_none() {
             let tls_client = self
+                .base
                 .get_node("/root/Global".into())
                 .unwrap()
                 .call("get_tls_client".into(), &[]);
@@ -143,7 +145,8 @@ impl CommunicationManager {
 
     #[func]
     fn _on_realm_changed(&mut self) {
-        self.call_deferred("_on_realm_changed_deferred".into(), &[]);
+        self.base
+            .call_deferred("_on_realm_changed_deferred".into(), &[]);
     }
 
     fn _internal_get_comms_from_real(&self) -> Option<(String, Option<GodotString>)> {
@@ -164,18 +167,18 @@ impl CommunicationManager {
 
         let comms = self._internal_get_comms_from_real();
         if comms.is_none() {
-            godot_print!("comms > invalid comms from realm.");
+            tracing::info!("comms > invalid comms from realm.");
             return;
         }
 
         let (comms_protocol, comms_fixed_adapter) = comms.unwrap();
         if comms_protocol != "v3" {
-            godot_print!("comms > Only protocol 'v3' is supported.");
+            tracing::info!("comms > Only protocol 'v3' is supported.");
             return;
         }
 
         if comms_fixed_adapter.is_none() {
-            godot_print!("comms > As far, only fixedAdapter is supported.");
+            tracing::info!("comms > As far, only fixedAdapter is supported.");
             return;
         }
 
@@ -184,6 +187,7 @@ impl CommunicationManager {
         let adapter_protocol = *fixed_adapter.first().unwrap();
 
         let avatar_scene = self
+            .base
             .get_node("/root/avatars".into())
             .unwrap()
             .cast::<AvatarScene>();
@@ -193,7 +197,7 @@ impl CommunicationManager {
         match adapter_protocol {
             "ws-room" => {
                 if let Some(ws_url) = fixed_adapter.get(1) {
-                    godot_print!("comms > websocket to {}", ws_url);
+                    tracing::info!("comms > websocket to {}", ws_url);
                     self.current_adapter = Adapter::WsRoom(WebSocketRoom::new(
                         ws_url,
                         self.tls_client.as_ref().unwrap().share(),
@@ -203,10 +207,10 @@ impl CommunicationManager {
                 }
             }
             "offline" => {
-                godot_print!("comms > set offline");
+                tracing::info!("comms > set offline");
             }
             _ => {
-                godot_print!("comms > unknown adapter {:?}", adapter_protocol);
+                tracing::info!("comms > unknown adapter {:?}", adapter_protocol);
             }
         }
     }
@@ -234,6 +238,7 @@ impl CommunicationManager {
             }
         }
 
-        self.emit_signal("profile_changed".into(), &[new_profile.to_variant()]);
+        self.base
+            .emit_signal("profile_changed".into(), &[new_profile.to_variant()]);
     }
 }

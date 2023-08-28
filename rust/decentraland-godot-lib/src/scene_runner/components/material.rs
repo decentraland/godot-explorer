@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     dcl::{
         components::{
@@ -162,12 +164,15 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if scene.dirty_materials {
         let mut keep_dirty = false;
+        let mut dead_materials = HashSet::with_capacity(scene.materials.capacity());
+        let mut no_more_waiting_materials = HashSet::new();
 
-        for (dcl_material, item) in scene.materials.iter_mut() {
+        for (dcl_material, item) in scene.materials.iter() {
             if item.waiting_textures {
                 let material_item = item.weak_ref.call("get_ref", &[]);
                 if material_item.is_nil() {
-                    item.alive = false;
+                    // item.alive = false;
+                    dead_materials.insert(dcl_material.clone());
                     continue;
                 }
 
@@ -181,6 +186,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             &unlit_material.texture,
                             &mut material,
                             &mut content_manager,
+                            scene,
                         );
                     }
                     DclMaterial::Pbr(pbr) => {
@@ -189,6 +195,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             &pbr.texture,
                             &mut material,
                             &mut content_manager,
+                            scene,
                         );
                         // check_texture(
                         //     godot::engine::base_material_3d::TextureParam::,
@@ -201,12 +208,14 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             &pbr.bump_texture,
                             &mut material,
                             &mut content_manager,
+                            scene,
                         );
                         ready &= check_texture(
                             godot::engine::base_material_3d::TextureParam::TEXTURE_EMISSION,
                             &pbr.emissive_texture,
                             &mut material,
                             &mut content_manager,
+                            scene,
                         );
                     }
                 }
@@ -214,12 +223,21 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 if !ready {
                     keep_dirty = true;
                 } else {
-                    item.waiting_textures = false;
+                    // item.waiting_textures = false;
+                    no_more_waiting_materials.insert(dcl_material.clone());
                 }
             }
         }
 
-        scene.materials.retain(|_, v| v.alive);
+        for materials in no_more_waiting_materials {
+            scene
+                .materials
+                .get_mut(&materials)
+                .unwrap()
+                .waiting_textures = false;
+        }
+
+        scene.materials.retain(|k, _| !dead_materials.contains(k));
         scene.dirty_materials = keep_dirty;
     }
 }
@@ -229,6 +247,7 @@ fn check_texture(
     dcl_texture: &Option<DclTexture>,
     material: &mut Gd<StandardMaterial3D>,
     content_manager: &mut Node,
+    scene: &Scene,
 ) -> bool {
     if dcl_texture.is_none() {
         return true;
@@ -261,7 +280,14 @@ fn check_texture(
         DclSourceTex::AvatarTexture(_user_id) => {
             // TODO: implement load avatar texture
         }
-        DclSourceTex::VideoTexture(_entity_id) => {
+        DclSourceTex::VideoTexture(video_entity_id) => {
+            if let Some(node) = scene.godot_dcl_scene.get_node(video_entity_id) {
+                if let Some(data) = &node.video_player_data {
+                    material.set_texture(param, data.video_sink.tex.share().upcast());
+                    return true;
+                }
+            }
+            return false;
             // TODO: implement link video texture with entity
         }
     }

@@ -18,6 +18,7 @@ use godot::{
     prelude::*,
 };
 use prost::Message;
+use tracing::error;
 
 use super::{
     player_identity::PlayerIdentity,
@@ -215,7 +216,7 @@ impl WebSocketRoom {
                     while let Some((packet_length, message)) = get_next_packet(peer.share()) {
                         match message {
                             ws_packet::Message::ChallengeMessage(challenge_msg) => {
-                                godot_print!("comms > peer msg {:?}", challenge_msg);
+                                tracing::info!("comms > peer msg {:?}", challenge_msg);
 
                                 let challenge_to_sign = challenge_msg.challenge_to_sign.clone();
 
@@ -254,7 +255,7 @@ impl WebSocketRoom {
                                 }
                             }
                             _ => {
-                                godot_print!(
+                                tracing::info!(
                                     "comms > received unknown message {} bytes",
                                     packet_length
                                 );
@@ -322,7 +323,7 @@ impl WebSocketRoom {
                                 }
                             }
                             _ => {
-                                godot_print!(
+                                tracing::info!(
                                     "comms > received unknown message {} bytes",
                                     packet_length
                                 );
@@ -384,17 +385,17 @@ impl WebSocketRoom {
                     let packet = match rfc4::Packet::decode(update.body.as_slice()) {
                         Ok(packet) => packet,
                         Err(_e) => {
-                            godot_error!("comms > invalid data packet {:?}", update);
+                            error!("comms > invalid data packet {:?}", update);
                             continue;
                         }
                     };
                     let Some(message) = packet.message else {
-                        godot_error!("comms > empty data packet {:?}", update);
+                        error!("comms > empty data packet {:?}", update);
                         continue;
                     };
 
                     let Some(peer) = self.peer_identities.get(&update.from_alias) else {
-                        godot_error!("comms > peer not found {:?}", update);
+                        error!("comms > peer not found {:?}", update);
                         continue;
                     };
 
@@ -429,7 +430,7 @@ impl WebSocketRoom {
                                 continue;
                             }
 
-                            godot_print!("comms > received ProfileRequest {:?}", profile_request);
+                            tracing::info!("comms > received ProfileRequest {:?}", profile_request);
 
                             if let Some(addr) = profile_request.address.as_h160() {
                                 if addr == self.player_identity.wallet().address() {
@@ -461,7 +462,7 @@ impl WebSocketRoom {
                                 match serde_json::from_str(&profile_response.serialized_profile) {
                                     Ok(p) => p,
                                     Err(_e) => {
-                                        godot_error!(
+                                        error!(
                                             "comms > invalid data ProfileResponse {:?}",
                                             profile_response
                                         );
@@ -477,7 +478,7 @@ impl WebSocketRoom {
                             };
 
                             if incoming_version < current_version {
-                                godot_error!(
+                                error!(
                                     "comms > old version ProfileResponse {:?}",
                                     profile_response
                                 );
@@ -504,7 +505,7 @@ impl WebSocketRoom {
                     }
                 }
                 ws_packet::Message::PeerKicked(reason) => {
-                    godot_print!("comms > received PeerKicked {:?}", reason);
+                    tracing::info!("comms > received PeerKicked {:?}", reason);
                     // TODO: message announcing the kick
                     self.ws_peer.close();
                     self.state = WsRoomState::Connecting;
