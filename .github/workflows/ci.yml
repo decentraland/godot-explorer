@@ -174,7 +174,7 @@ jobs:
             ~/.cargo/git/db/
             rust/decentraland-godot-lib/target/ 
             rust/xtask/target/            
-          key: ${{ runner.os }}-cargo-
+          key: ${{ runner.os }}-cargo-new-
           
       # Depedencies section
       # => Linux 
@@ -289,4 +289,4 @@ jobs:
             ~/.cargo/git/db/
             rust/decentraland-godot-lib/target/ 
             rust/xtask/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-new-${{ hashFiles('**/Cargo.lock') }}
