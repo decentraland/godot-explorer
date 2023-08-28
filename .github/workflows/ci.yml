@@ -31,43 +31,36 @@ jobs:
       - name: Check format GDScript
         run: gdformat -d godot/
     
+
+      # Depedencies section
+      # => Linux 
       - name: Install alsa and udev
         if: runner.os == 'linux'
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
       - name: install ffmpeg deps (linux)
         run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
         if: runner.os == 'linux'
-      - name: install ffmpeg deps (macOs)
-        if: runner.os == 'macos'
-        run: brew install ffmpeg pkg-config          
-      - name: set CLANG path for ffmpeg deps (windows)
-        if: runner.os == 'windows'
-        run: |
-          $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
-          Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
 
       - name: cargo xtask install
         working-directory: rust/xtask
         run: cargo run -- install --no-templates
-      - uses: actions-rs/cargo@v1
-        name: cargo check
-        with:
-          command: check
-          args: --manifest-path rust/Cargo.toml
-      - uses: actions-rs/cargo@v1
-        name: cargo fmt
-        with:
-          command: fmt
-          args: --manifest-path rust/Cargo.toml --all -- --check
-      - uses: actions-rs/cargo@v1
-        name: cargo clippy
-        with:
-          command: clippy
-          args: --manifest-path rust/Cargo.toml -- -D warnings
+
+
+      - name: cargo check
+        working-directory: rust/decentraland-godot-lib
+        run: cargo check
+
+      - name: cargo fmt
+        working-directory: rust/decentraland-godot-lib
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        working-directory: rust/decentraland-godot-lib
+        run: cargo clippy -D warnings
+        
 
   coverage:
     name: Coverage
-    if: false
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -97,22 +90,21 @@ jobs:
           key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: coverage-cargo-
 
+      # Depedencies section
+      # => Linux 
+      - name: Install alsa and udev
+        if: runner.os == 'linux'
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
       - name: install ffmpeg deps (linux)
         run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
         if: runner.os == 'linux'
-      - name: install ffmpeg deps (macOs)
-        if: runner.os == 'macos'
-        run: brew install ffmpeg pkg-config          
-      - name: set CLANG path for ffmpeg deps (windows)
-        if: runner.os == 'windows'
-        run: |
-          $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
-          Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
 
       - name: cargo xtask install
         working-directory: rust/xtask
         run: cargo run -- install --no-templates
 
+      # Build section
+      
       - name: Download grcov
         run: |
           mkdir -p "${HOME}/.local/bin"
@@ -140,7 +132,6 @@ jobs:
         # Multi platform CI build dropped for now
         # os: [, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -151,7 +142,6 @@ jobs:
       
       - name: Set up cargo cache
         uses: actions/cache@v3
-        continue-on-error: false
         with:
           path: |
             ~/.cargo/bin/
@@ -208,7 +198,6 @@ jobs:
       # Build section
       
       - name: cargo build (linux/windows)
-        continue-on-error: true
         if: ${{ matrix.os != 'macos-latest' }}
         working-directory: rust/decentraland-godot-lib
         run: cargo build --release
@@ -228,7 +217,6 @@ jobs:
       #     args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=aarch64-apple-darwin
 
       - uses: actions-rs/cargo@v1
-        continue-on-error: true
         if: false # TODO: enable tests!
         name: cargo test
         with:
@@ -252,19 +240,16 @@ jobs:
 
       # => Windows
       - name: Copy library (windows)
-        continue-on-error: true
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
             cp rust/decentraland-godot-lib/target/release/decentraland_godot_lib.dll godot/lib/
 
       # Export section (multi platform)
       - name: Export
-        continue-on-error: true
         working-directory: rust/xtask
         run: cargo run -- export
 
       - uses: actions/upload-artifact@master
-        continue-on-error: true
         with:
           name: decentraland-godot-${{ matrix.os }}
           path: |
