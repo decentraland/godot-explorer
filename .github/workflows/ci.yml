@@ -71,7 +71,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        rust: [stable]
+        rust: ["1.71.1"]
     runs-on: ${{ matrix.os }}
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
