@@ -20,7 +20,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: 1.71
           override: true
       - run: rustup component add rustfmt
       - name: Set up Python
@@ -30,7 +30,6 @@ jobs:
       - name: Check format GDScript
         run: gdformat -d godot/
     
-
       # Depedencies section
       # => Linux 
       - name: Install alsa and udev
@@ -43,7 +42,6 @@ jobs:
       - name: cargo xtask install
         working-directory: rust/xtask
         run: cargo run -- install --no-templates
-
 
       - name: cargo check
         working-directory: rust/decentraland-godot-lib
@@ -60,11 +58,7 @@ jobs:
 
   coverage:
     name: Coverage
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        rust: ["1.71.1"]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
@@ -74,7 +68,7 @@ jobs:
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ matrix.rust }}
+          toolchain: 1.71
           override: true
           components: llvm-tools-preview
 
@@ -125,18 +119,15 @@ jobs:
     # if: ${{ github.ref == 'refs/heads/main' }} 
     strategy:
       matrix:
-
-        os: [ubuntu-latest, windows-latest]
-
-        # Multi platform CI build dropped for now
-        # os: [, ubuntu-latest, macos-latest]
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.71.1
+          toolchain: 1.71
           override: true
       
       - name: Set up cargo cache
@@ -162,9 +153,9 @@ jobs:
         if: runner.os == 'linux'
 
       # => MacOS 
-      # - name: install ffmpeg deps (macOs)
-      #   if: runner.os == 'macos'
-      #   run: brew install ffmpeg pkg-config          
+      - name: install ffmpeg deps (macOs)
+        if: runner.os == 'macos'
+        run: brew install ffmpeg pkg-config          
       # - name: Set up target platform
       #   if: ${{ matrix.os == 'macos-latest' }}
       #   run: |
@@ -190,14 +181,8 @@ jobs:
         working-directory: rust/xtask
         run: cargo run -- install
 
-
-      # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
-
       # Build section
-      
-      - name: cargo build (linux/windows)
-        if: ${{ matrix.os != 'macos-latest' }}
+      - name: cargo build
         working-directory: rust/decentraland-godot-lib
         run: cargo build --release
         
@@ -215,12 +200,9 @@ jobs:
       #     command: build
       #     args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=aarch64-apple-darwin
 
-      - uses: actions-rs/cargo@v1
-        if: false # TODO: enable tests!
-        name: cargo test
-        with:
-          command: test
-          args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release 
+      - name: cargo test
+        working-directory: rust/decentraland-godot-lib
+        run: cargo test
 
       # Package section
       # # => MacOS
