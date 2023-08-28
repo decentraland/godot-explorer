@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { git = "https://github.com/godot-rust/gdext", rev = "aa29debf" }
+godot = { git = "https://github.com/godot-rust/gdext", rev = "88d22f801a11e34243890b4f3d4530a6e368b0e1", features = ["threads"] }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
@@ -30,6 +30,17 @@ ethers = { version = "2.0", features = ["rustls"] }
 async-trait = "0.1.68"
 poll-promise = "0.2.0"
 log-panics = { version = "2", features = ["with-backtrace"]}
+
+cpal = "0.15.2"
+ffmpeg-next = "6.0.0"
+thiserror = "1.0"
+anyhow = "1.0.70"
+# todo: use isahc 2.0 when it's released
+isahc = { git = "https://github.com/sagebind/isahc", rev="096aff7b13f4ff5bb474fdc27bc30b297a2968f6", default-features = false, features = ["json", "text-decoding", "http2", "rustls-tls-native-certs"] }
+kira = "0.8.4"
+
+tracing = "0.1"
+tracing-subscriber = "0.3"
 
 [build-dependencies]
 prost-build = "0.11.8"

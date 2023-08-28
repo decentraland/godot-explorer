@@ -121,7 +121,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                 match gltf_state {
                     Ok(gltf_state) => gltf_state,
                     Err(err) => {
-                        godot_print!("Error getting gltf_state: {:?}", err);
+                        tracing::info!("Error getting gltf_state: {:?}", err);
                         GodotGltfState::Unknown as i32
                     }
                 }
