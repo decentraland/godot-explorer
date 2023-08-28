@@ -23,10 +23,15 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
 }
 
 pub fn export() -> Result<(), anyhow::Error> {
-    let program = format!(
-        "{BIN_FOLDER}godot/{}",
+    let program = std::fs::canonicalize(format!(
+        "{}godot/{}",
+        BIN_FOLDER,
         install_dependency::get_godot_executable_path().unwrap()
-    );
+    ))
+    .unwrap()
+    .to_str()
+    .unwrap()
+    .to_string();
 
     // Make exports directory
     if std::path::Path::new(EXPORTS_FOLDER).exists() {
