@@ -135,10 +135,10 @@ jobs:
     strategy:
       matrix:
 
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
 
         # Multi platform CI build dropped for now
-        # os: [windows-latest, ubuntu-latest, macos-latest]
+        # os: [, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     steps:
