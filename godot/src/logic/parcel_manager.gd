@@ -197,26 +197,32 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 	loaded_scenes[scene_entity_id] = {
 		"id": scene_entity_id, "entity": entity, "scene_number_id": -1
 	}
+	var metadata = entity.get("metadata", {})
 
-	var main_js_file_hash = entity.get("content", {}).get(
-		entity.get("metadata", {}).get("main", ""), null
-	)
-	if main_js_file_hash == null:
-		printerr("Scene ", scene_entity_id, " fail getting the main js file hash.")
-		return false
-
+	var is_sdk7 = metadata.get("runtimeVersion", null) == "7"
 	var main_js_request_id := -1
-	var local_main_js_path = "user://content/" + main_js_file_hash
+	var local_main_js_path = ""
 	var js_request_completed = true
+	
+	print('is_sdk7 ', is_sdk7)
+	if is_sdk7:
+		var main_js_file_hash = entity.get("content", {}).get(metadata.get("main", ""), null)
+		if main_js_file_hash == null:
+			printerr("Scene ", scene_entity_id, " fail getting the main js file hash.")
+			return false
 
-	if not FileAccess.file_exists(local_main_js_path) or main_js_file_hash.begins_with("b64"):
-		js_request_completed = false
-		var main_js_file_url: String = entity.baseUrl + main_js_file_hash
-		main_js_request_id = http_requester._requester.request_file(
-			MAIN_JS_FILE_REQUEST,
-			main_js_file_url,
-			local_main_js_path.replace("user:/", OS.get_user_data_dir())
-		)
+		local_main_js_path = "user://content/" + main_js_file_hash
+
+		if not FileAccess.file_exists(local_main_js_path) or main_js_file_hash.begins_with("b64"):
+			js_request_completed = false
+			var main_js_file_url: String = entity.baseUrl + main_js_file_hash
+			main_js_request_id = http_requester._requester.request_file(
+				MAIN_JS_FILE_REQUEST,
+				main_js_file_url,
+				local_main_js_path.replace("user:/", OS.get_user_data_dir())
+			)
+	else:
+		local_main_js_path = "res://assets/sdk7-adaption-layer/index.js"
 
 	var req = {
 		"js_request_completed": js_request_completed,

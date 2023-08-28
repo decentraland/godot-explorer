@@ -1,15 +1,8 @@
 use std::time::{Duration, Instant};
 
-use crate::{
-    dcl::{
-        crdt::message::{append_gos_component, process_many_messages, put_or_delete_lww_component},
-        serialization::{reader::DclReader, writer::DclWriter},
-        RendererResponse, SceneResponse,
-    },
-    http_request::{
-        http_requester::HttpRequester,
-        request_response::{RequestOption, ResponseEnum, ResponseType},
-    },
+use crate::http_request::{
+    http_requester::HttpRequester,
+    request_response::{RequestOption, ResponseEnum, ResponseType},
 };
 
 use super::js_runtime::JsRuntime;
