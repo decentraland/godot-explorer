@@ -215,16 +215,16 @@ jobs:
         run: cargo run -- install
 
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+
       # Build section
       
       - name: cargo build (linux/windows)
         continue-on-error: true
         if: ${{ matrix.os != 'macos-latest' }}
-        working-directory: rust/xtask
-        run: cargo run -- run -r --only-build
+        working-directory: rust/decentraland-godot-lib
+        run: cargo build --release
         
       # - uses: actions-rs/cargo@v1
       #   name: build for x86_64 (macos)
