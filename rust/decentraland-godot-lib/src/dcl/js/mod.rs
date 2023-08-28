@@ -9,6 +9,7 @@ use super::{
 };
 use super::{RendererResponse, SceneId, SceneResponse};
 
+use std::collections::HashMap;
 use std::time::Duration;
 use v8::Promise;
 
