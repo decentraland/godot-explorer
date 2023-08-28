@@ -54,7 +54,7 @@ jobs:
 
       - name: cargo clippy
         working-directory: rust/decentraland-godot-lib
-        run: cargo clippy -D warnings
+        run: cargo clippy -- -D warnings
         
 
   coverage:
@@ -77,10 +77,14 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/decentraland-godot-lib/target
-            rust/Cargo.lock
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/decentraland-godot-lib/target/
+            rust/decentraland-godot-lib/Cargo.lock
+            rust/xtask/target/
+            rust/xtask/Cargo.lock
           key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: coverage-cargo-
 
@@ -138,8 +142,10 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            rust/decentraland-godot-lib/target/ 
-            rust/xtask/target/            
+            rust/decentraland-godot-lib/target/
+            rust/decentraland-godot-lib/Cargo.lock
+            rust/xtask/target/
+            rust/xtask/Cargo.lock
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
           

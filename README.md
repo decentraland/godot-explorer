@@ -4,12 +4,18 @@
 
 1. Clone the repo using `git clone https://github.com/decentraland/godot-explorer`
 2. Install [rust](https://www.rust-lang.org/tools/install)
-3. Download and install `ffmpeg` shared binaries
-    - on linux: `sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev`
-    - on macos: `brew install ffmpeg pkg-config`
-    - on windows: 
-      - set `LIBCLANG_PATH` = `path to LLVM\x64\bin` (this is packaged with visual studio, or can be downloaded separately from [here](https://github.com/llvm/llvm-project/releases/download/llvmorg-15.0.7/LLVM-15.0.7-win64.exe))
-      - the `xtask` project will download the shared libraries
+3. Download and install third party libraries
+    - **Linux** (apt-get based):
+      - Install alsa and udev: `sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev`
+      - Install ffmpeg deps: `sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev`
+      - Install Livekit deps: `sudo apt update -y; sudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev`
+    - **MacOS**: `brew install ffmpeg pkg-config`
+    - **Windows**: 
+      - download and unzip `https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z`
+      - set `LIBCLANG_PATH` = `path to LLVM\x64\bin` (this is packaged with visual studio, or can be downloaded separately)
+      - set `FFMPEG_DIR` = `root folder where ffmpeg has been unzipped`
+      - add `ffmpeg\bin` to your `PATH`
+    - the `.github/workflows/ci.yml` file can be useful to guide you
 
 2. Go to `rust/xtask` folder, and run `cargo run -- install`.
 
