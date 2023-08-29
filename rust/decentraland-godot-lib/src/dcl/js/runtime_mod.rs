@@ -34,14 +34,9 @@ pub fn op_read_file(
         loop {
             if let Some(response) = http_requester.poll() {
                 if let Ok(response) = response {
-                    if let Ok(response_data) = response.response_data {
-                        match response_data {
-                            ResponseEnum::Bytes(bytes) => {
-                                let arr = slice_to_uint8array(scope, &bytes);
-                                ret.set(arr.into());
-                            }
-                            _ => {}
-                        }
+                    if let Ok(ResponseEnum::Bytes(bytes)) = response.response_data {
+                        let arr = slice_to_uint8array(scope, &bytes);
+                        ret.set(arr.into());
                     }
                 }
                 break;

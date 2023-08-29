@@ -203,8 +203,8 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 	var main_js_request_id := -1
 	var local_main_js_path = ""
 	var js_request_completed = true
-	
-	print('is_sdk7 ', is_sdk7)
+
+	print("is_sdk7 ", is_sdk7)
 	if is_sdk7:
 		var main_js_file_hash = entity.get("content", {}).get(metadata.get("main", ""), null)
 		if main_js_file_hash == null:
