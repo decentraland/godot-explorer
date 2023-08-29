@@ -20,7 +20,7 @@ futures-lite = "1.12.0"
 num-traits = "0.2"
 num-derive = "0.3"
 num = "0.4"
-v8 = "0.74.2"
+v8 = "0.74.3"
 hyper = { version = "1.0.0-rc.3", features = ["full"] }
 http-body-util = "0.1.0-rc.2"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "blocking"] }
@@ -32,12 +32,9 @@ poll-promise = "0.2.0"
 log-panics = { version = "2", features = ["with-backtrace"]}
 
 cpal = "0.15.2"
-ffmpeg-next = "6.0.0"
+ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch="audioline-and-mobile-fix" }
 thiserror = "1.0"
 anyhow = "1.0.70"
-# todo: use isahc 2.0 when it's released
-isahc = { git = "https://github.com/sagebind/isahc", rev="096aff7b13f4ff5bb474fdc27bc30b297a2968f6", default-features = false, features = ["json", "text-decoding", "http2", "rustls-tls-native-certs"] }
-kira = "0.8.4"
 
 tracing = "0.1"
 tracing-subscriber = "0.3"
