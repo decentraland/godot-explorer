@@ -122,27 +122,6 @@ pub fn av_thread_inner(
         match VideoContext::init(&input_context, tex) {
             Ok(vc) => Some(vc),
             Err(VideoError::BadPixelFormat) => {
-                // try to workaround ffmpeg remote streaming issue by downloading the file
-                // debug!("failed to determine pixel format - downloading ...");
-                // let mut resp =
-                //     isahc::get(&path).map_err(|e| format!("{:?} on line {}", e, line!()))?;
-                // let data = resp
-                //     .bytes()
-                //     .map_err(|e| format!("{:?} on line {}", e, line!()))?;
-                // let local_folder = PathBuf::from("assets/video_downloads");
-                // std::fs::create_dir_all(&local_folder)
-                //     .map_err(|e| format!("{:?} on line {}", e, line!()))?;
-
-                // // TODO
-                // // let local_path = local_folder.join(Path::new(urlencoding::encode(&path).as_ref()));
-                // // std::fs::write(&local_path, data)?;
-                // // path = local_path.to_string_lossy().to_string();
-
-                // input_context = input(&path).map_err(|e| format!("{:?} on line {}", e, line!()))?;
-                // let context = VideoContext::init(&input_context, video)
-                //     .map_err(|e| format!("{:?} on line {}", e, line!()))?;
-                // Some(context)
-
                 return Err("bad pixel format".to_string());
             }
             Err(VideoError::NoStream) => None,

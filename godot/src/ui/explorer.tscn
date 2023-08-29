@@ -21,12 +21,12 @@ size = Vector2(4800, 4800)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fstik"]
 albedo_texture = ExtResource("2_7jksa")
-uv1_scale = Vector3(300, 300, 300)
+uv1_scale = Vector3(4800, 4800, 4800)
 texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_fw5xg"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_v6d3l"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
@@ -171,7 +171,7 @@ layout_mode = 2
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_fw5xg")
+group = SubResource("ButtonGroup_v6d3l")
 
 [node name="Timer_BroadcastPosition" type="Timer" parent="."]
 wait_time = 0.1
