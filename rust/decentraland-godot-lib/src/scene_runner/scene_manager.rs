@@ -67,10 +67,21 @@ impl SceneManager {
             }
         };
 
+        let base_url =
+            GodotString::from_variant(&content_mapping.get("base_url").unwrap()).to_string();
+        let content_dictionary = Dictionary::from_variant(&content_mapping.get("content").unwrap());
+
+        let content_mapping_hash_map: HashMap<String, String> = content_dictionary
+            .iter_shared()
+            .map(|(file_name, file_hash)| (file_name.to_string(), file_hash.to_string()))
+            .collect();
+
         let new_scene_id = Scene::new_id();
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(
             new_scene_id,
             scene_definition.clone(),
+            content_mapping_hash_map,
+            base_url,
             self.thread_sender_to_main.clone(),
         );
 

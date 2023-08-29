@@ -73,6 +73,8 @@ impl DclScene {
     pub fn spawn_new_js_dcl_scene(
         id: SceneId,
         scene_definition: SceneDefinition,
+        content_mapping: HashMap<String, String>,
+        base_url: String,
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     ) -> Self {
         let (main_sender_to_thread, thread_receive_from_renderer) =
@@ -87,6 +89,8 @@ impl DclScene {
                 scene_thread(
                     id,
                     scene_definition,
+                    content_mapping,
+                    base_url,
                     thread_sender_to_main,
                     thread_receive_from_renderer,
                     thread_scene_crdt,

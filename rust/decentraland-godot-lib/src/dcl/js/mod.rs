@@ -1,5 +1,6 @@
 pub mod engine;
 pub mod js_runtime;
+pub mod runtime_mod;
 
 use self::js_runtime::{JsRuntime, JsRuntimeState};
 use super::{
@@ -8,6 +9,7 @@ use super::{
 };
 use super::{RendererResponse, SceneId, SceneResponse};
 
+use std::collections::HashMap;
 use std::time::Duration;
 use v8::Promise;
 
@@ -15,6 +17,8 @@ use v8::Promise;
 pub(crate) fn scene_thread(
     scene_id: SceneId,
     scene_definition: SceneDefinition,
+    content_mapping: HashMap<String, String>,
+    base_url: String,
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
     scene_crdt: SharedSceneCrdtState,
@@ -72,6 +76,8 @@ pub(crate) fn scene_thread(
         logs: Vec::new(),
         main_code: file.unwrap().get_as_text().to_string(),
         dying: false,
+        content_mapping,
+        base_url,
     };
 
     // Eval Init Code
