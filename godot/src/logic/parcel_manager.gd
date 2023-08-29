@@ -4,6 +4,10 @@ class_name ParcelManager
 
 const MAIN_JS_FILE_REQUEST = 100
 const MAIN_CRDT_FILE_REQUEST = 101
+const ADAPTATION_LAYER_JS_FILE_REQUEST = 102
+
+var adaptation_layer_js_request: int = -1
+var adaptation_layer_js_local_path: String = "user://sdk-adaptation-layer.js"
 
 var scene_runner: SceneManager = null
 var realm: Realm = null
@@ -27,6 +31,9 @@ func _ready():
 	scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
 	Global.config.param_changed.connect(self._on_config_changed)
 
+
+	if FileAccess.file_exists(adaptation_layer_js_local_path):
+		DirAccess.remove_absolute(adaptation_layer_js_local_path)
 
 func _on_config_changed(param: ConfigData.ConfigParams):
 	if param == ConfigData.ConfigParams.SceneRadius:
@@ -145,6 +152,8 @@ func _on_requested_completed(response: RequestResponse):
 			_on_main_js_file_requested_completed(response)
 		MAIN_CRDT_FILE_REQUEST:
 			_on_main_crdt_file_requested_completed(response)
+		ADAPTATION_LAYER_JS_FILE_REQUEST:
+			_on_adaptation_layer_js_file_requested_completed(response)
 		_:
 			pass
 
@@ -171,6 +180,15 @@ func _on_main_crdt_file_requested_completed(response: RequestResponse):
 	scene.req.crdt_request_completed = true
 	if scene.req.js_request_completed and scene.req.crdt_request_completed:
 		_on_try_spawn_scene(scene)
+
+
+func _on_adaptation_layer_js_file_requested_completed(response: RequestResponse):
+	var request_id = response.id()
+	for scene in loaded_scenes.values():
+		var req = scene.get("req", {})
+		if req.get("js_request_id", -1) == request_id:
+			scene.req.js_request_completed = true
+			_on_try_spawn_scene(scene)
 
 
 func _on_main_js_file_requested_completed(response: RequestResponse):
@@ -204,7 +222,6 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 	var local_main_js_path = ""
 	var js_request_completed = true
 
-	print("is_sdk7 ", is_sdk7)
 	if is_sdk7:
 		var main_js_file_hash = entity.get("content", {}).get(metadata.get("main", ""), null)
 		if main_js_file_hash == null:
@@ -212,7 +229,6 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 			return false
 
 		local_main_js_path = "user://content/" + main_js_file_hash
-
 		if not FileAccess.file_exists(local_main_js_path) or main_js_file_hash.begins_with("b64"):
 			js_request_completed = false
 			var main_js_file_url: String = entity.baseUrl + main_js_file_hash
@@ -222,7 +238,16 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 				local_main_js_path.replace("user:/", OS.get_user_data_dir())
 			)
 	else:
-		local_main_js_path = "res://assets/sdk7-adaption-layer/index.js"
+		local_main_js_path = String(adaptation_layer_js_local_path)
+		if not FileAccess.file_exists(local_main_js_path):
+			js_request_completed = false
+			if adaptation_layer_js_request == -1:
+				adaptation_layer_js_request = http_requester._requester.request_file(
+					ADAPTATION_LAYER_JS_FILE_REQUEST,
+					"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.js",
+					local_main_js_path.replace("user:/", OS.get_user_data_dir())
+				)
+			main_js_request_id = adaptation_layer_js_request
 
 	var req = {
 		"js_request_completed": js_request_completed,
@@ -248,9 +273,13 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 
 	loaded_scenes[scene_entity_id]["req"] = req
 
-	if req.crdt_request_completed and req.js_request_completed:
-		_on_try_spawn_scene(loaded_scenes[scene_entity_id])
-
+	if is_sdk7:
+		if req.crdt_request_completed and req.js_request_completed:
+			_on_try_spawn_scene(loaded_scenes[scene_entity_id])
+	else:
+		# SDK6 scenes don't have crdt file, and if they'd have, there is no mechanism to make a clean spawn of both
+		if req.js_request_completed: 
+			_on_try_spawn_scene(loaded_scenes[scene_entity_id])
 
 func _on_try_spawn_scene(scene):
 	var local_main_js_path = scene.req.js_path

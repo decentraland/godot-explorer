@@ -2,12 +2,12 @@
 
 # Tested with NDK 25.2.9519653
 ANDROID_NDK=~/Android/Sdk/ndk/25.2.9519653
+export FFMPEG_DIR=~/Documents/github/ffmpeg-kit/prebuilt/android-arm64/ffmpeg
 
 # Run the specified commands
 export TARGET_CC=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
 export TARGET_CXX=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang++
 export TARGET_AR=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
-export FFMPEG_DIR=~/Documents/github/ffmpeg-kit/prebuilt/android-arm64/ffmpeg
 export RUSTY_V8_MIRROR=https://github.com/leanmendoza/rusty_v8/releases/download
 export CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE=1
 
@@ -23,4 +23,5 @@ sed -i "s|$ffmpeg_dep|$ffmpeg_dep_android|g" "$cargo_file_path"
 # Revert Cargo.toml back to its original content
 echo "$original_content" > $cargo_file_path
 
-(cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/lib/android/libdecentraland_godot_lib.so) || true
+mkdir ../../godot/lib/android/ || true
+cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/lib/android/libdecentraland_godot_lib.so
