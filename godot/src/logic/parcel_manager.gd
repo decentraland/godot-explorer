@@ -31,9 +31,9 @@ func _ready():
 	scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
 	Global.config.param_changed.connect(self._on_config_changed)
 
-
 	if FileAccess.file_exists(adaptation_layer_js_local_path):
 		DirAccess.remove_absolute(adaptation_layer_js_local_path)
+
 
 func _on_config_changed(param: ConfigData.ConfigParams):
 	if param == ConfigData.ConfigParams.SceneRadius:
@@ -278,8 +278,9 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 			_on_try_spawn_scene(loaded_scenes[scene_entity_id])
 	else:
 		# SDK6 scenes don't have crdt file, and if they'd have, there is no mechanism to make a clean spawn of both
-		if req.js_request_completed: 
+		if req.js_request_completed:
 			_on_try_spawn_scene(loaded_scenes[scene_entity_id])
+
 
 func _on_try_spawn_scene(scene):
 	var local_main_js_path = scene.req.js_path
