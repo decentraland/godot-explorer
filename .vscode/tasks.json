@@ -7,7 +7,7 @@
             "command": "build",
             "args": [
                 "--manifest-path",
-                "rust/Cargo.toml"
+                "rust/xtask/Cargo.toml"
             ],
             "problemMatcher": [
                 "$rustc"
