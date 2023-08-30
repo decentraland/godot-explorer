@@ -4,16 +4,20 @@
         {
             "label": "Build GDExtension Lib",
             "type": "cargo",
-            "command": "build",
+            "command": "run",
             "args": [
-                "--manifest-path",
-                "rust/Cargo.toml"
+                "--",
+                "run",
+                "--only-build"
             ],
             "problemMatcher": [
                 "$rustc"
             ],
             "env": {
                 "GODOT4_BIN": "${workspaceFolder}/.bin/godot/godot4_bin"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/rust/xtask"
             }
         },
         {
