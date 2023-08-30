@@ -1,17 +1,103 @@
 pub mod engine;
-pub mod js_runtime;
-pub mod runtime_mod;
+pub mod fetch;
+pub mod runtime;
 
-use self::js_runtime::{JsRuntime, JsRuntimeState};
+use self::fetch::{FP, TP};
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
     SharedSceneCrdtState,
 };
 use super::{RendererResponse, SceneId, SceneResponse};
 
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::time::Duration;
-use v8::Promise;
+
+use deno_core::{
+    ascii_str,
+    error::{generic_error, AnyError},
+    include_js_files, op, v8, Extension, Op, OpState, RuntimeOptions,
+};
+
+struct SceneJsFileContent(pub String);
+struct SceneMainCrdtFileContent(pub Vec<u8>);
+
+pub struct SceneStartTime(pub std::time::SystemTime);
+pub struct SceneLogs(pub Vec<SceneLogMessage>);
+pub struct SceneMainCrdt(pub Option<Vec<u8>>);
+pub struct SceneTickCounter(pub u32);
+pub struct SceneContentMapping(pub String, pub HashMap<String, String>);
+pub struct SceneDying(pub bool);
+
+pub struct SceneElapsedTime(pub f32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum SceneLogLevel {
+    Log = 1,
+    SceneError = 2,
+    SystemError = 3,
+}
+
+#[derive(Clone, Debug)]
+pub struct SceneLogMessage {
+    pub timestamp: f64, // scene local time
+    pub level: SceneLogLevel,
+    pub message: String,
+}
+
+pub fn create_runtime() -> deno_core::JsRuntime {
+    // add fetch stack
+    let web = deno_web::deno_web::init_ops_and_esm::<TP>(
+        std::sync::Arc::new(deno_web::BlobStore::default()),
+        None,
+    );
+    let webidl = deno_webidl::deno_webidl::init_ops_and_esm();
+    let url = deno_url::deno_url::init_ops_and_esm();
+    let console = deno_console::deno_console::init_ops_and_esm();
+    let fetch = deno_fetch::deno_fetch::init_js_only::<FP>();
+
+    let mut ext = &mut Extension::builder_with_deps("decentraland", &["deno_fetch"]);
+
+    // add core ops
+    ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
+
+    let op_sets: [Vec<deno_core::OpDecl>; 2] = [engine::ops(), runtime::ops()];
+
+    // add plugin registrations
+    let mut op_map = HashMap::new();
+    for set in op_sets {
+        for op in &set {
+            // explicitly record the ones we added so we can remove deno_fetch imposters
+            op_map.insert(op.name, *op);
+        }
+        ext = ext.ops(set)
+    }
+
+    let ext = ext
+        // set startup JS script
+        .esm(include_js_files!(
+            GodotExplorer
+            dir "src/dcl/js/js_modules",
+            "main.js",
+        ))
+        .esm_entry_point("ext:GodotExplorer/main.js")
+        .middleware(move |op| {
+            if let Some(custom_op) = op_map.get(&op.name) {
+                tracing::debug!("replace: {}", op.name);
+                op.with_implementation_from(custom_op)
+            } else {
+                op
+            }
+        })
+        .build();
+
+    // create runtime
+    deno_core::JsRuntime::new(RuntimeOptions {
+        v8_platform: v8::Platform::new(1, false).make_shared().into(),
+        extensions: vec![webidl, url, console, web, fetch, ext],
+        ..Default::default()
+    })
+}
 
 // main scene processing thread - constructs an isolate and runs the scene
 pub(crate) fn scene_thread(
@@ -63,71 +149,56 @@ pub(crate) fn scene_thread(
         }
         return;
     }
+    let scene_code = SceneJsFileContent(file.unwrap().get_as_text().to_string());
 
-    let js_context_state = JsRuntimeState {
-        scene_id,
-        counter: 0,
-        start_time: std::time::SystemTime::now(),
-        elapsed: Duration::default(),
-        thread_sender_to_main: thread_sender_to_main.clone(),
-        thread_receive_from_main,
-        crdt: scene_crdt,
-        main_crdt: scene_main_crdt,
-        logs: Vec::new(),
-        main_code: file.unwrap().get_as_text().to_string(),
-        dying: false,
-        content_mapping,
-        base_url,
+    let mut runtime = create_runtime();
+    let state = runtime.op_state();
+
+    state.borrow_mut().put(scene_code);
+
+    state.borrow_mut().put(thread_sender_to_main);
+    state.borrow_mut().put(thread_receive_from_main);
+
+    state.borrow_mut().put(scene_id);
+    state.borrow_mut().put(scene_crdt);
+
+    if let Some(scene_main_crdt) = scene_main_crdt {
+        state.borrow_mut().put(scene_main_crdt);
+    }
+
+    state
+        .borrow_mut()
+        .put(SceneContentMapping(base_url, content_mapping));
+
+    state.borrow_mut().put(SceneLogs(Vec::new()));
+    state.borrow_mut().put(SceneElapsedTime(0.0));
+    state.borrow_mut().put(SceneDying(false));
+    state
+        .borrow_mut()
+        .put(SceneStartTime(std::time::SystemTime::now()));
+
+    let script = runtime.execute_script("<loader>", ascii_str!("require (\"~scene.js\")"));
+
+    let script = match script {
+        Err(e) => {
+            tracing::error!("[scene thread {scene_id:?}] script load error: {}", e);
+            return;
+        }
+        Ok(script) => script,
     };
 
-    // Eval Init Code
-    let js_context = JsRuntime::new(js_context_state);
-    if js_context.is_err() {
-        let err_string = format!("Scene {:?} failed", scene_definition.title);
-        if let Err(send_err) =
-            thread_sender_to_main.send(SceneResponse::Error(scene_id, format!("{err_string:?}")))
-        {
-            tracing::info!("error sending error: {send_err:?}. original error {err_string:?}")
-        }
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()
+        .unwrap();
+
+    let result = rt
+        .block_on(async { run_script(&mut runtime, &script, "onStart", (), |_| Vec::new()).await });
+    if let Err(e) = result {
+        tracing::error!("[scene thread {scene_id:?}] script load running: {}", e);
         return;
     }
 
-    let mut js_context = js_context.unwrap();
-
-    // Setup the global context
-    match js_context.run("dcl_init", include_str!("js_modules/main.js")) {
-        Ok(_) => {
-            // tracing::info!("init script run");
-        }
-        Err(err) => {
-            tracing::info!("error init script {err:?}");
-            return;
-        }
-    };
-
-    match js_context.run("dcl_init", "globalThis.onStart()") {
-        Ok(value) => {
-            // tracing::info!("onStart script run");
-            if value.is_promise() {
-                let _promise = v8::Local::<Promise>::try_from(value).unwrap();
-                // tracing::info!("is a promise {:?}", promise.state());
-            }
-            let _pending_task = js_context.isolate.has_pending_background_tasks();
-            // tracing::info!("there is pending tasks? {:?}", pending_task);
-
-            js_context.isolate.perform_microtask_checkpoint();
-
-            let _pending_task = js_context.isolate.has_pending_background_tasks();
-            // tracing::info!("2) there is pending tasks? {:?}", pending_task);
-        }
-        Err(err) => {
-            tracing::info!("error init script {err:?}");
-            return;
-        }
-    };
-
-    // let ctx = js_context.context.clone();
-    // ctx.
     let start_time = std::time::SystemTime::now();
     let mut elapsed = Duration::default();
 
@@ -138,225 +209,142 @@ pub(crate) fn scene_thread(
             - elapsed;
         elapsed += dt;
 
-        match js_context.run(
-            "dcl_init",
-            format!("globalThis.onUpdate({:?})", dt.as_secs_f32()).as_str(),
-        ) {
-            Ok(value) => {
-                // tracing::info!("onUpdate script run");
-                if value.is_promise() {
-                    let _promise = v8::Local::<Promise>::try_from(value).unwrap();
-                    // tracing::info!("is a promise {:?}", promise.state());
-                }
-                let _pending_task = js_context.isolate.has_pending_background_tasks();
-                // tracing::info!("there is pending tasks? {:?}", pending_task);
+        state
+            .borrow_mut()
+            .put(SceneElapsedTime(elapsed.as_secs_f32()));
 
-                js_context.isolate.perform_microtask_checkpoint();
+        // run the onUpdate function
+        let result = rt.block_on(async {
+            run_script(&mut runtime, &script, "onUpdate", (), |scope| {
+                vec![v8::Number::new(scope, dt.as_secs_f64()).into()]
+            })
+            .await
+        });
 
-                let _pending_task = js_context.isolate.has_pending_background_tasks();
-                // tracing::info!("2) there is pending tasks? {:?}", pending_task);
-            }
-            Err(err) => {
-                tracing::info!("error init script {err:?}");
-                return;
-            }
-        };
+        if let Err(e) = result {
+            tracing::error!("[scene thread {scene_id:?}] script error onUpdate: {}", e);
+            return;
+        }
 
-        let state = JsRuntime::state_from(&js_context.isolate);
-        if state.borrow().dying {
-            break;
+        let value = state.borrow().borrow::<SceneDying>().0;
+        if value {
+            tracing::info!("exiting from the thread {:?}", scene_id);
+            return;
         }
     }
-
-    // tracing::info!("finishing thread");
-
-    // let scope = js_context.handle_scope(&mut js_context.isolate);
-
-    // // Evaluate the scene code
-    // let script_export = match js_context.run("scene.js", "require('~scene.js')") {
-    //     Ok(value) => v8::Local::<v8::Object>::try_from(value).unwrap(),
-    //     Err(err) => {
-    //         tracing::info!("error scene script {:?}", err);
-    //         return;
-    //     }
-    // };
-
-    // let script_export = script_export.clone();
-
-    // js_context.run("asd", "asd");
-
-    // script_export;
-
-    // js_context.do_scoped("initial", move |&mut scope| {
-    //     script_export.get(
-    //         &mut scope,
-    //         v8::String::new(&mut scope, "onStart").unwrap().into(),
-    //     );
-    //     Ok(())
-    // });
-
-    // let init_context = v8::Context::new(&mut init_scope);
-    // let init_scope = &mut v8::ContextScope::new(&mut init_scope, context);
-
-    // let init_code = include_str!("js_modules/init_v8.js");
-    // let code = v8::String::new(scope, init_code).unwrap();
-    // let script = v8::Script::compile(scope, code, None).unwrap();
-    // let result = script.run(scope);
-
-    // // Eval Scene Code
-    // let scene_code = SceneJsFileContent(file.unwrap().get_as_text().to_string());
-    // let code = v8::String::new(scope, scene_code.0.as_str()).unwrap();
-    // let script = v8::Script::compile(scope, code, None).unwrap();
-    // let result = script.run(scope);
-
-    // let script = runtime.execute_script("<loader>", "require (\"~scene.js\")");
-    // let script = match script {
-    //     Err(execute_script_error) => {
-    //         if let Err(send_err) = thread_sender_to_main.send(SceneResponse::Error(
-    //             scene_id,
-    //             format!("{execute_script_error:?}"),
-    //         )) {
-    //             tracing::info!(
-    //                 "error sending error: {send_err:?}. original error {execute_script_error:?}"
-    //             )
-    //         }
-    //         return;
-    //     }
-    //     Ok(script) => script,
-    // };
-
-    // run startup function
-    // let result: Result<(), deno_core::anyhow::Error> =
-    //     run_script(&mut runtime, &script, "onStart", (), |_| Vec::new());
-    // if let Err(start_script_error) = result {
-    //     // ignore failure to send failure
-    //     if let Err(send_err) = state
-    //         .borrow_mut()
-    //         .take::<std::sync::mpsc::SyncSender<SceneResponse>>()
-    //         .send(SceneResponse::Error(
-    //             scene_id,
-    //             format!("{start_script_error:?}"),
-    //         ))
-    //     {
-    //         tracing::info!("error sending error: {send_err:?}. original error {start_script_error:?}")
-    //     }
-
-    //     return;
-    // }
-
-    // let start_time = std::time::SystemTime::now();
-    // let mut elapsed = Duration::default();
-
-    // loop {
-    //     let dt = std::time::SystemTime::now()
-    //         .duration_since(start_time)
-    //         .unwrap_or(elapsed)
-    //         - elapsed;
-    //     elapsed += dt;
-
-    //     // js_context;
-    //     // state
-    //     //     .borrow_mut()
-    //     //     .put(SceneElapsedTime(elapsed.as_secs_f32()));
-
-    //     // // run the onUpdate function
-    //     // let result = run_script(&mut runtime, &script, "onUpdate", (), |scope| {
-    //     //     vec![v8::Number::new(scope, dt.as_secs_f64()).into()]
-    //     // });
-
-    //     // if state.borrow().try_borrow::<ShuttingDown>().is_some() {
-    //     //     tracing::info!("exiting from the thread {:?}", scene_id);
-    //     //     return;
-    //     // }
-
-    //     // if let Err(e) = result {
-    //     //     let _ = state
-    //     //         .borrow_mut()
-    //     //         .take::<std::sync::mpsc::SyncSender<SceneResponse>>()
-    //     //         .send(SceneResponse::Error(scene_id, format!("{e:?}")));
-    //     //     return;
-    //     // }
-    // }
 }
 
-// // helper to setup, acquire, run and return results from a script function
-// fn run_script(
-//     runtime: &mut JsRuntime,
-//     script: &v8::Global<v8::Value>,
-//     fn_name: &str,
-//     messages_in: (),
-//     arg_fn: impl for<'a> Fn(&mut v8::HandleScope<'a>) -> Vec<v8::Local<'a, v8::Value>>,
-// ) -> Result<(), AnyError> {
-//     let op_state = runtime.op_state();
-//     op_state.borrow_mut().put(messages_in);
+// helper to setup, acquire, run and return results from a script function
+async fn run_script(
+    runtime: &mut deno_core::JsRuntime,
+    script: &v8::Global<v8::Value>,
+    fn_name: &str,
+    messages_in: (),
+    arg_fn: impl for<'a> Fn(&mut v8::HandleScope<'a>) -> Vec<v8::Local<'a, v8::Value>>,
+) -> Result<(), AnyError> {
+    // set up scene i/o
+    let op_state = runtime.op_state();
+    op_state.borrow_mut().put(messages_in);
 
-//     let promise = {
-//         let scope = &mut runtime.handle_scope();
-//         let script_this = v8::Local::new(scope, script.clone());
-//         // get module
-//         let script = v8::Local::<v8::Object>::try_from(script_this).unwrap();
+    let promise = {
+        let scope = &mut runtime.handle_scope();
+        let script_this = v8::Local::new(scope, script.clone());
+        // get module
+        let script = v8::Local::<v8::Object>::try_from(script_this).unwrap();
 
-//         // get function
-//         let target_function =
-//             v8::String::new_from_utf8(scope, fn_name.as_bytes(), v8::NewStringType::Internalized)
-//                 .unwrap();
-//         let Some(target_function) = script.get(scope, target_function.into()) else {
-//             return Err(AnyError::msg(format!("{fn_name} is not defined")));
-//         };
-//         let Ok(target_function) = v8::Local::<v8::Function>::try_from(target_function) else {
-//             return Err(AnyError::msg(format!("{fn_name} is not a function")));
-//         };
+        // get function
+        let target_function =
+            v8::String::new_from_utf8(scope, fn_name.as_bytes(), v8::NewStringType::Internalized)
+                .unwrap();
+        let Some(target_function) = script.get(scope, target_function.into()) else {
+            // function not define, is that an error ?
+            // debug!("{fn_name} is not defined");
+            return Err(AnyError::msg(format!("{fn_name} is not defined")));
+        };
+        let Ok(target_function) = v8::Local::<v8::Function>::try_from(target_function) else {
+            // error!("{fn_name} is not a function");
+            return Err(AnyError::msg(format!("{fn_name} is not a function")));
+        };
 
-//         // get args
-//         let args = arg_fn(scope);
+        // get args
+        let args = arg_fn(scope);
 
-//         // call
-//         let res = target_function.call(scope, script_this, &args);
-//         let Some(res) = res else {
-//             return Err(AnyError::msg(format!("{fn_name} did not return a promise")));
-//         };
+        // call
+        let res = target_function.call(scope, script_this, &args);
+        let Some(res) = res else {
+            // error!("{fn_name} did not return a promise");
+            return Err(AnyError::msg(format!("{fn_name} did not return a promise")));
+        };
 
-//         drop(args);
-//         v8::Global::new(scope, res)
-//     };
+        drop(args);
+        v8::Global::new(scope, res)
+    };
 
-//     let f = runtime.resolve_value(promise);
-//     futures_lite::future::block_on(f).map(|_| ())
-// }
+    let f = runtime.resolve_value(promise);
+    f.await.map(|_| ())
+}
 
-// // synchronously returns a string containing JS code from the file system
-// #[op(v8)]
-// fn op_require(
-//     state: Rc<RefCell<OpState>>,
-//     module_spec: String,
-// ) -> Result<String, deno_core::error::AnyError> {
-//     match module_spec.as_str() {
-//         // user module load
-//         "~scene.js" => Ok(state.borrow().borrow::<SceneJsFileContent>().0.clone()),
-//         // core module load
-//         "~system/CommunicationsController" => {
-//             Ok(include_str!("js_modules/CommunicationsController.js").to_owned())
-//         }
-//         "~system/EngineApi" => Ok(include_str!("js_modules/EngineApi.js").to_owned()),
-//         "~system/EnvironmentApi" => Ok(include_str!("js_modules/EnvironmentApi.js").to_owned()),
-//         "~system/EthereumController" => {
-//             Ok(include_str!("js_modules/EthereumController.js").to_owned())
-//         }
-//         "~system/Players" => Ok(include_str!("js_modules/Players.js").to_owned()),
-//         "~system/PortableExperiences" => {
-//             Ok(include_str!("js_modules/PortableExperiences.js").to_owned())
-//         }
-//         "~system/RestrictedActions" => {
-//             Ok(include_str!("js_modules/RestrictedActions.js").to_owned())
-//         }
-//         "~system/Runtime" => Ok(include_str!("js_modules/Runtime.js").to_owned()),
-//         "~system/Scene" => Ok(include_str!("js_modules/Scene.js").to_owned()),
-//         "~system/SignedFetch" => Ok(include_str!("js_modules/SignedFetch.js").to_owned()),
-//         "~system/Testing" => Ok(include_str!("js_modules/Testing.js").to_owned()),
-//         "~system/UserActionModule" => Ok(include_str!("js_modules/UserActionModule.js").to_owned()),
-//         "~system/UserIdentity" => Ok(include_str!("js_modules/UserIdentity.js").to_owned()),
-//         _ => Err(generic_error(format!(
-//             "invalid module request `{module_spec}`"
-//         ))),
-//     }
-// }
+// synchronously returns a string containing JS code from the file system
+#[op(v8)]
+fn op_require(
+    state: Rc<RefCell<OpState>>,
+    module_spec: String,
+) -> Result<String, deno_core::error::AnyError> {
+    match module_spec.as_str() {
+        // user module load
+        "~scene.js" => Ok(state.borrow_mut().take::<SceneJsFileContent>().0),
+        // core module load
+        "~system/CommunicationsController" => {
+            Ok(include_str!("js_modules/CommunicationsController.js").to_owned())
+        }
+        "~system/EngineApi" => Ok(include_str!("js_modules/EngineApi.js").to_owned()),
+        "~system/EnvironmentApi" => Ok(include_str!("js_modules/EnvironmentApi.js").to_owned()),
+        "~system/EthereumController" => {
+            Ok(include_str!("js_modules/EthereumController.js").to_owned())
+        }
+        "~system/Players" => Ok(include_str!("js_modules/Players.js").to_owned()),
+        "~system/PortableExperiences" => {
+            Ok(include_str!("js_modules/PortableExperiences.js").to_owned())
+        }
+        "~system/RestrictedActions" => {
+            Ok(include_str!("js_modules/RestrictedActions.js").to_owned())
+        }
+        "~system/Runtime" => Ok(include_str!("js_modules/Runtime.js").to_owned()),
+        "~system/Scene" => Ok(include_str!("js_modules/Scene.js").to_owned()),
+        "~system/SignedFetch" => Ok(include_str!("js_modules/SignedFetch.js").to_owned()),
+        "~system/Testing" => Ok(include_str!("js_modules/Testing.js").to_owned()),
+        "~system/UserActionModule" => Ok(include_str!("js_modules/UserActionModule.js").to_owned()),
+        "~system/UserIdentity" => Ok(include_str!("js_modules/UserIdentity.js").to_owned()),
+        _ => Err(generic_error(format!(
+            "invalid module request `{module_spec}`"
+        ))),
+    }
+}
+
+#[op(v8)]
+fn op_log(state: Rc<RefCell<OpState>>, message: String) {
+    let time = state.borrow().borrow::<SceneElapsedTime>().0;
+    state
+        .borrow_mut()
+        .borrow_mut::<SceneLogs>()
+        .0
+        .push(SceneLogMessage {
+            timestamp: time as f64,
+            level: SceneLogLevel::Log,
+            message,
+        })
+}
+
+#[op(v8)]
+fn op_error(state: Rc<RefCell<OpState>>, message: String) {
+    let time = state.borrow().borrow::<SceneElapsedTime>().0;
+    state
+        .borrow_mut()
+        .borrow_mut::<SceneLogs>()
+        .0
+        .push(SceneLogMessage {
+            timestamp: time as f64,
+            level: SceneLogLevel::SceneError,
+            message,
+        })
+}

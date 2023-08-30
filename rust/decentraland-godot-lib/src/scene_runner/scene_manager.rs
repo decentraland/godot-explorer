@@ -3,7 +3,7 @@ use crate::dcl::{
         proto_components::sdk::components::common::{InputAction, PointerEventType, RaycastHit},
         SceneEntityId,
     },
-    js::js_runtime::SceneLogLevel,
+    js::SceneLogLevel,
     DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
 };
 use godot::{
@@ -496,7 +496,7 @@ impl NodeVirtual for SceneManager {
             std::sync::mpsc::sync_channel(1000);
 
         // TODO: should this be initialized somewhere else?
-        crate::dcl::js::js_runtime::init_v8();
+        // crate::dcl::js::js_runtime::init_v8();
         tracing_subscriber::fmt::init();
 
         info!("SceneManager started");

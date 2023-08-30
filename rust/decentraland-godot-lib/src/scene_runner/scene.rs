@@ -11,9 +11,15 @@ use crate::dcl::{
         proto_components::sdk::components::{common::RaycastHit, PbPointerEventsResult},
         SceneEntityId,
     },
-    js::js_runtime::SceneLogMessage,
-    DclScene, DirtyEntities, DirtyGosComponents, DirtyLwwComponents, RendererResponse,
-    SceneDefinition, SceneId,
+    js::SceneLogMessage,
+    // js::js_runtime::SceneLogMessage,
+    DclScene,
+    DirtyEntities,
+    DirtyGosComponents,
+    DirtyLwwComponents,
+    RendererResponse,
+    SceneDefinition,
+    SceneId,
 };
 
 use super::godot_dcl_scene::GodotDclScene;

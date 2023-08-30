@@ -6,7 +6,7 @@ pub mod serialization;
 use self::{
     components::{SceneComponentId, SceneEntityId},
     crdt::SceneCrdtState,
-    js::{js_runtime::SceneLogMessage, scene_thread},
+    js::{scene_thread, SceneLogMessage},
 };
 
 use std::{
