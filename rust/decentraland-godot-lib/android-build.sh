@@ -18,7 +18,7 @@ ffmpeg_dep='ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/"
 ffmpeg_dep_android='ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch="audioline-and-mobile-fix", features=["fix_usize_size_t"] }'
 sed -i "s|$ffmpeg_dep|$ffmpeg_dep_android|g" "$cargo_file_path"
 
-(GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --target aarch64-linux-android -vv --verbose --release) || true
+(ANDROID_NDK_HOME=$ANDROID_NDK GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --target aarch64-linux-android -vv --verbose --release) || true
 
 # Revert Cargo.toml back to its original content
 echo "$original_content" > $cargo_file_path

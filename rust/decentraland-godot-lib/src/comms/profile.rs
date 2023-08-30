@@ -1,26 +1,26 @@
 use godot::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 pub struct AvatarColor3 {
     pub r: f32,
     pub g: f32,
     pub b: f32,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AvatarSnapshots {
     pub face256: String,
     pub body: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AvatarEmote {
     pub slot: u32,
     pub urn: String,
 }
 
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 pub struct AvatarColor {
     pub color: AvatarColor3,
 }
@@ -43,7 +43,7 @@ impl From<&godot::prelude::Color> for AvatarColor {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AvatarWireFormat {
     pub name: Option<String>,
     #[serde(rename = "bodyShape")]
@@ -56,7 +56,7 @@ pub struct AvatarWireFormat {
     pub snapshots: Option<AvatarSnapshots>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SerializedProfile {
     #[serde(rename = "userId")]
     pub user_id: Option<String>,
@@ -273,7 +273,7 @@ impl SerializedProfile {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UserProfile {
     pub version: u32,
     pub content: SerializedProfile,

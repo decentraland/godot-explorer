@@ -9,7 +9,6 @@ pub fn run(
     itest: bool,
     only_build: bool,
 ) -> Result<(), anyhow::Error> {
-
     let program = std::fs::canonicalize(format!(
         "{}godot/{}",
         BIN_FOLDER,

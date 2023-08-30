@@ -34,7 +34,7 @@ enum WsRoomState {
     WelcomeMessageReceived,
 }
 
-struct Peer {
+pub struct Peer {
     address: H160,
     profile: Option<UserProfile>,
     announced_version: Option<u32>,
