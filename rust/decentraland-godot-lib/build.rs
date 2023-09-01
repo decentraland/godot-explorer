@@ -316,6 +316,7 @@ fn main() -> io::Result<()> {
 
     std::env::set_var("PROTOC", protoc_path);
     prost_build::compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
+
     Ok(())
 }
 

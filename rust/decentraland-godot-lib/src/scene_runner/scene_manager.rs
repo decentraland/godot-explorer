@@ -497,11 +497,11 @@ impl NodeVirtual for SceneManager {
 
         // TODO: should this be initialized somewhere else?
         // crate::dcl::js::js_runtime::init_v8();
-        tracing_subscriber::fmt::init();
+        // tracing_subscriber::fmt::init();
+        #[cfg(target_os = "android")]
+        android::init_logger();
 
         info!("SceneManager started");
-
-        log_panics::init();
 
         SceneManager {
             base,
@@ -608,5 +608,22 @@ impl NodeVirtual for SceneManager {
 
         self.last_raycast_result = current_pointer_raycast_result;
         self.global_tick_number += 1;
+    }
+}
+
+#[cfg(target_os = "android")]
+mod android {
+    use tracing_subscriber::filter::LevelFilter;
+    use tracing_subscriber::fmt::format::FmtSpan;
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::{self, registry};
+
+    pub fn init_logger() {
+        let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
+            .with_span_events(FmtSpan::CLOSE)
+            .with_thread_names(true)
+            .with_filter(LevelFilter::DEBUG);
+
+        registry().with(android_layer).init();
     }
 }

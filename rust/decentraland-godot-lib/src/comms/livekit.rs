@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{collections::HashMap, ffi::c_void, sync::Arc, time::Instant};
 
 use ethers::types::H160;
 use godot::prelude::Gd;
@@ -40,6 +40,9 @@ struct Peer {
     profile: Option<UserProfile>,
     announced_version: Option<u32>,
 }
+
+static mut jvm_was_initialized: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 
 pub struct LivekitRoom {
     sender_to_thread: tokio::sync::mpsc::Sender<NetworkMessage>,
@@ -91,7 +94,7 @@ impl LivekitRoom {
         // self.thread_join_handle.join().unwrap();
     }
 
-    pub fn poll(&mut self) {
+    pub fn poll(&mut self) -> bool {
         loop {
             match self.receiver_from_thread.try_recv() {
                 Ok(message) => {
@@ -214,7 +217,7 @@ impl LivekitRoom {
                 Err(tokio::sync::mpsc::error::TryRecvError::Empty) => break,
                 Err(err) => {
                     tracing::error!("error polling livekit thread: {err}");
-                    break;
+                    return false;
                 }
             }
         }
@@ -269,6 +272,7 @@ impl LivekitRoom {
                 false,
             );
         }
+        true
     }
 
     pub fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
@@ -289,11 +293,28 @@ impl LivekitRoom {
     }
 }
 
+fn is_jvm_initialized() -> bool {
+    #[cfg(target_os = "android")]
+    unsafe {
+        return jvm_was_initialized.load(std::sync::atomic::Ordering::Relaxed);
+    };
+    true
+}
+
 fn spawn_livekit_task(
     remote_address: String,
     mut receiver: tokio::sync::mpsc::Receiver<NetworkMessage>,
     sender: tokio::sync::mpsc::Sender<IncomingMessage>,
 ) {
+    tracing::debug!("spawn_livekit_task");
+    #[cfg(target_os = "android")]
+    if !android::init_jvm() {
+        tracing::error!("fatal error, jvm couldn't be initilized");
+        return;
+    }
+
+    tracing::debug!("vm ok!");
+
     let url = Uri::try_from(remote_address).unwrap();
     let address = format!(
         "{}://{}{}",
@@ -452,232 +473,76 @@ fn spawn_livekit_task(
     rt.block_on(task);
 }
 
-// async fn livekit_handler(
-//     transport_id: Entity,
-//     remote_address: String,
-//     receiver: Receiver<NetworkMessage>,
-//     sender: Sender<PlayerUpdate>,
-//     mic: tokio::sync::broadcast::Receiver<LocalAudioFrame>,
-// ) {
-//     if let Err(e) = livekit_handler_inner(transport_id, remote_address, receiver, sender, mic).await
-//     {
-//         warn!("livekit error: {e}");
-//     }
-//     warn!("thread exit")
-// }
+#[cfg(target_os = "android")]
+pub mod android {
+    use jni::{
+        errors::jni_error_code_to_result,
+        objects::JValue,
+        sys::{jint, JNI_VERSION_1_6},
+        AttachGuard, InitArgs, InitArgsBuilder, JNIEnv, JNIVersion, JavaVM,
+    };
+    use std::{collections::HashMap, ffi::c_void, sync::Arc, time::Instant};
 
-// async fn livekit_handler_inner(
-//     transport_id: Entity,
-//     remote_address: String,
-//     mut app_rx: Receiver<NetworkMessage>,
-//     sender: Sender<PlayerUpdate>,
-//     mut mic: tokio::sync::broadcast::Receiver<LocalAudioFrame>,
-// ) -> Result<(), anyhow::Error> {
-//     debug!(">> lk connect async : {remote_address}");
+    #[allow(non_snake_case)]
+    #[no_mangle]
+    pub extern "C" fn JNI_OnLoad(vm: JavaVM, _: *mut c_void) -> jint {
+        tracing::debug!("Initializing JNI_OnLoad");
+        livekit::webrtc::android::initialize_android(&vm);
+        JNI_VERSION_1_6
+    }
 
-//     let url = Uri::try_from(remote_address).unwrap();
-//     let address = format!(
-//         "{}://{}{}",
-//         url.scheme_str().unwrap_or_default(),
-//         url.host().unwrap_or_default(),
-//         url.path()
-//     );
-//     let params = HashMap::from_iter(url.query().unwrap_or_default().split('&').flat_map(|par| {
-//         par.split_once('=')
-//             .map(|(a, b)| (a.to_owned(), b.to_owned()))
-//     }));
-//     debug!("{params:?}");
-//     let token = params.get("access_token").cloned().unwrap_or_default();
+    // fn create_jvm() -> Result<JavaVM, jni::errors::Error> {
+    //     unsafe {
+    //         let mut ptr: *mut jni::sys::JavaVM = ::std::ptr::null_mut();
+    //         let mut env: *mut jni::sys::JNIEnv = ::std::ptr::null_mut();
+    //         let mut args: JavaVMInitArgs = JavaVMInitArgs {
+    //             version: jni::sys::JNI_VERSION_1_6,
+    //             ignoreUnrecognized: jni::sys::JNI_FALSE,
+    //             nOptions: 0,
+    //             options: ::std::ptr::null_mut(),
+    //         };
+    //         JNI_GetDefaultJavaVMInitArgs(&mut args as *mut JavaVMInitArgs as *mut c_void);
 
-//     let rt = Arc::new(
-//         tokio::runtime::Builder::new_current_thread()
-//             .enable_all()
-//             .build()
-//             .unwrap(),
-//     );
+    //         jni::sys::JNI_CreateJavaVM(
+    //             &mut ptr as *mut _,
+    //             &mut env as *mut *mut jni::sys::JNIEnv as *mut *mut c_void,
+    //             &mut args as *mut JavaVMInitArgs as *mut c_void,
+    //         );
 
-//     let rt2 = rt.clone();
+    //         let vm = JavaVM::from_raw(ptr)?;
+    //         // java_vm_unchecked!(vm.0, DetachCurrentThread);
 
-//     let task = rt.spawn(async move {
-//         let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe: true, adaptive_stream: false, dynacast: false }).await.unwrap();
-//         let native_source = NativeAudioSource::new(AudioSourceOptions{
-//             echo_cancellation: true,
-//             noise_suppression: true,
-//             auto_gain_control: true,
-//         });
-//         let mic_track = LocalTrack::Audio(LocalAudioTrack::create_audio_track("mic", RtcAudioSource::Native(native_source.clone())));
-//         room.local_participant().publish_track(mic_track, TrackPublishOptions{ source: TrackSource::Microphone, ..Default::default() }).await.unwrap();
+    //         // JavaVM::from_raw(ptr)
+    //         Ok(vm)
+    //     }
+    // }
 
-//         rt2.spawn(async move {
-//             while let Ok(frame) = mic.recv().await {
-//                 let data = frame.data.iter().map(|f| (f * i16::MAX as f32) as i16).collect();
-//                 native_source.capture_frame(&AudioFrame {
-//                     data,
-//                     sample_rate: frame.sample_rate,
-//                     num_channels: frame.num_channels,
-//                     samples_per_channel: frame.data.len() as u32,
-//                 })
-//             }
-//         });
+    pub fn init_jvm() -> bool {
+        tracing::debug!("init_jvm");
+        // // Build the VM properties
+        let jvm_args = InitArgsBuilder::new()
+            // Pass the JNI API version (default is 8)
+            .version(JNIVersion::V8)
+            // You can additionally pass any JVM options (standard, like a system property,
+            // or VM-specific).
+            // Here we enable some extra JNI checks useful during development
+            .option("-Xcheck:jni")
+            .build()
+            .unwrap();
 
-//         'stream: loop {
-//             tokio::select!(
-//                 incoming = network_rx.recv() => {
-//                     debug!("in: {:?}", incoming);
-//                     let Some(incoming) = incoming else {
-//                         debug!("network pipe broken, exiting loop");
-//                         break 'stream;
-//                     };
+        tracing::debug!("jvm_args");
 
-//                     match incoming {
-//                         livekit::RoomEvent::DataReceived { payload, participant, .. } => {
-//                             if let Some(address) = participant.identity().0.as_str().as_h160() {
-//                                 let packet = match rfc4::Packet::decode(payload.as_slice()) {
-//                                     Ok(packet) => packet,
-//                                     Err(e) => {
-//                                         warn!("unable to parse packet body: {e}");
-//                                         continue;
-//                                     }
-//                                 };
-//                                 let Some(message) = packet.message else {
-//                                     warn!("received empty packet body");
-//                                     continue;
-//                                 };
-//                                 warn!("received packet {message:?} from {address}");
-//                                 if let Err(e) = sender.send(PlayerUpdate {
-//                                     transport_id,
-//                                     message: PlayerMessage::PlayerData(message),
-//                                     address,
-//                                 }).await {
-//                                     warn!("app pipe broken ({e}), existing loop");
-//                                     break 'stream;
-//                                 }
-//                             }
-//                         },
-//                         livekit::RoomEvent::TrackSubscribed { track, publication: _, participant } => {
-//                             if let Some(address) = participant.identity().0.as_str().as_h160() {
-//                                 match track {
-//                                     livekit::track::RemoteTrack::Audio(audio) => {
-//                                         let sender = sender.clone();
-//                                         rt2.spawn(async move {
-//                                             let mut x = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track());
+        // Create a new VM
+        let jvm = match JavaVM::new(jvm_args) {
+            Ok(created_jvm) => created_jvm,
+            Err(err) => {
+                tracing::error!("JavaVM new error {err}");
+                return false;
+            }
+        };
 
-//                                             // get first frame to set sample rate
-//                                             let Some(frame) = x.next().await else {
-//                                                 warn!("dropped audio track without samples");
-//                                                 return;
-//                                             };
-
-//                                             let (frame_sender, frame_receiver) = tokio::sync::mpsc::channel(10);
-
-//                                             let bridge = LivekitKiraBridge {
-//                                                 sample_rate: frame.sample_rate,
-//                                                 receiver: frame_receiver,
-//                                             };
-
-//                                             let sound_data = kira::sound::streaming::StreamingSoundData::from_decoder(
-//                                                 bridge,
-//                                                 kira::sound::streaming::StreamingSoundSettings::new(),
-//                                             );
-
-//                                             let _ = sender.send(PlayerUpdate {
-//                                                 transport_id,
-//                                                 message: PlayerMessage::AudioStream(Box::new(sound_data)),
-//                                                 address,
-//                                             }).await;
-
-//                                             while let Some(frame) = x.next().await {
-//                                                 match frame_sender.try_send(frame) {
-//                                                     Ok(()) => (),
-//                                                     Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => (),
-//                                                     Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
-//                                                         warn!("livekit audio receiver dropped, exiting task");
-//                                                         return;
-//                                                     },
-//                                                 }
-//                                             }
-
-//                                             warn!("track ended, exiting task");
-//                                         });
-//                                     },
-//                                     _ => warn!("not processing video tracks"),
-//                                 }
-//                             }
-//                         }
-//                         _ => { debug!("Event: {:?}", incoming); }
-//                     };
-//                 }
-//                 outgoing = app_rx.recv() => {
-//                     let Some(outgoing) = outgoing else {
-//                         debug!("app pipe broken, exiting loop");
-//                         break 'stream;
-//                     };
-
-//                     let kind = if outgoing.unreliable {
-//                         DataPacketKind::Lossy
-//                     } else {
-//                         DataPacketKind::Reliable
-//                     };
-//                     if let Err(e) = room.local_participant().publish_data(outgoing.data, kind, Default::default()).await {
-//                         debug!("outgoing failed: {e}; not exiting loop though since it often fails at least once or twice at the start...");
-//                         // break 'stream;
-//                     };
-//                 }
-//             );
-//         }
-
-//         room.close().await.unwrap();
-//     });
-
-//     rt.block_on(task).unwrap();
-//     Ok(())
-// }
-
-// struct LivekitKiraBridge {
-//     sample_rate: u32,
-//     receiver: tokio::sync::mpsc::Receiver<AudioFrame>,
-// }
-
-// impl kira::sound::streaming::Decoder for LivekitKiraBridge {
-//     type Error = AudioDecoderError;
-
-//     fn sample_rate(&self) -> u32 {
-//         self.sample_rate
-//     }
-
-//     fn num_frames(&self) -> usize {
-//         u32::MAX as usize
-//     }
-
-//     fn decode(&mut self) -> Result<Vec<kira::dsp::Frame>, Self::Error> {
-//         let mut frames = Vec::default();
-
-//         loop {
-//             match self.receiver.try_recv() {
-//                 Ok(frame) => {
-//                     if frame.sample_rate != self.sample_rate {
-//                         warn!(
-//                             "sample rate changed?! was {}, now {}",
-//                             self.sample_rate, frame.sample_rate
-//                         );
-//                     }
-
-//                     if frame.num_channels != 1 {
-//                         warn!("frame has {} channels", frame.num_channels);
-//                     }
-
-//                     for i in 0..frame.samples_per_channel as usize {
-//                         let sample = frame.data[i] as f32 / i16::MAX as f32;
-//                         frames.push(kira::dsp::Frame::new(sample, sample));
-//                     }
-//                 }
-//                 Err(TryRecvError::Disconnected) => return Err(AudioDecoderError::StreamClosed),
-//                 Err(TryRecvError::Empty) => return Ok(frames),
-//             }
-//         }
-//     }
-
-//     fn seek(&mut self, _: usize) -> Result<usize, Self::Error> {
-//         Err(AudioDecoderError::Other("Can't seek".to_owned()))
-//     }
-// }
+        tracing::debug!("JavaVM new");
+        livekit::webrtc::android::initialize_android(&jvm);
+        true
+    }
+}

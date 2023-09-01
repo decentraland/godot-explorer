@@ -82,21 +82,26 @@ impl NodeVirtual for CommunicationManager {
                 }
             },
             Adapter::Livekit(livekit_room) => {
-                livekit_room.poll();
-                let chats = livekit_room.consume_chats();
-                if !chats.is_empty() {
-                    let mut chats_variant_array = VariantArray::new();
-                    for (addr, chat) in chats {
-                        let mut chat_arr = VariantArray::new();
-                        // TODO: change to the name?
-                        chat_arr.push(addr.to_string().to_variant());
-                        chat_arr.push(chat.timestamp.to_variant());
-                        chat_arr.push(chat.message.to_variant());
+                if !livekit_room.poll() {
+                    self.current_adapter = Adapter::None;
+                } else {
+                    let chats = livekit_room.consume_chats();
+                    if !chats.is_empty() {
+                        let mut chats_variant_array = VariantArray::new();
+                        for (addr, chat) in chats {
+                            let mut chat_arr = VariantArray::new();
+                            // TODO: change to the name?
+                            chat_arr.push(addr.to_string().to_variant());
+                            chat_arr.push(chat.timestamp.to_variant());
+                            chat_arr.push(chat.message.to_variant());
 
-                        chats_variant_array.push(chat_arr.to_variant());
+                            chats_variant_array.push(chat_arr.to_variant());
+                        }
+                        self.base.emit_signal(
+                            "chat_message".into(),
+                            &[chats_variant_array.to_variant()],
+                        );
                     }
-                    self.base
-                        .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
                 }
             }
         }
