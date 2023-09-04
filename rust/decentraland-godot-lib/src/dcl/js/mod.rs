@@ -323,6 +323,7 @@ fn op_require(
 
 #[op(v8)]
 fn op_log(state: Rc<RefCell<OpState>>, message: String) {
+    println!("from scene: {}", message);
     let time = state.borrow().borrow::<SceneElapsedTime>().0;
     state
         .borrow_mut()

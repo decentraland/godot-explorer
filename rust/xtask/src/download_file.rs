@@ -46,7 +46,7 @@ async fn download_file_thread(
     let _ = sender.send(DownloadEvent::Result(Ok(())));
 }
 
-pub fn _download_file(url: &str, path: &str) -> Result<(), anyhow::Error> {
+fn _download_file(url: &str, path: &str) -> Result<(), anyhow::Error> {
     let (sender, receiver) = std::sync::mpsc::channel::<DownloadEvent>();
     let url = Url::parse(url)?;
     let path = PathBuf::from(path);

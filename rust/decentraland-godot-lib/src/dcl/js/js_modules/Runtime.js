@@ -1,19 +1,16 @@
 module.exports.getRealm = async function (body) { return {} }
 module.exports.getWorldTime = async function (body) { return {} }
-
-// sync implementation
 module.exports.readFile = async function (body) {
-    // body.fileName
+    console.log('readFile')
+    const { hash, content } = await Deno.core.ops.op_read_file(body.fileName)
+    console.log('get_file_hash', hash)
 
-    const fileBody = op_read_file(body.fileName);
-    if (!fileBody) {
-        throw new Error("File not found")
-    }
+    const data = new Uint8Array(content)
 
-    const response = {
-        content: fileBody,
-        hash: "string"
+    console.log('content', content.length)
+    return {
+        content: data,
+        hash
     }
-    return response
 }
 module.exports.getSceneInformation = async function (body) { return {} }
