@@ -1,8 +1,8 @@
-pub const REPO_FOLDER: &'static str = "../../";
-pub const GODOT_PROJECT_FOLDER: &'static str = "../../godot/";
-pub const BIN_FOLDER: &'static str = "../../.bin/";
-pub const RUST_LIB_PROJECT_FOLDER: &'static str = "../../rust/decentraland-godot-lib/";
-pub const EXPORTS_FOLDER: &'static str = "../../exports/";
+pub const REPO_FOLDER: &'static str = "./../../";
+pub const GODOT_PROJECT_FOLDER: &'static str = "./../../godot/";
+pub const BIN_FOLDER: &'static str = "./../../.bin/";
+pub const RUST_LIB_PROJECT_FOLDER: &'static str = "./../../rust/decentraland-godot-lib/";
+pub const EXPORTS_FOLDER: &'static str = "./../../exports/";
 
 pub const PROTOC_BASE_URL: &str =
     "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";

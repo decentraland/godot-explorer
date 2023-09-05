@@ -15,6 +15,7 @@ use crate::consts::{
     BIN_FOLDER, EXPORTS_FOLDER, GODOT4_BIN_BASE_URL, GODOT_PROJECT_FOLDER, PROTOC_BASE_URL,
     RUST_LIB_PROJECT_FOLDER,
 };
+use crate::path::adjust_canonicalization;
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
@@ -175,10 +176,12 @@ pub fn copy_library(debug_mode: bool) -> Result<(), anyhow::Error> {
 
     let source_folder = format!("{RUST_LIB_PROJECT_FOLDER}{source_folder}");
     println!("Copying {source_folder:?}");
-    let source_file = fs::canonicalize(source_folder)?.join(file_name.clone());
+    let source_file =
+        adjust_canonicalization(fs::canonicalize(source_folder)?.join(file_name.clone()));
 
     let lib_folder = format!("{GODOT_PROJECT_FOLDER}lib/");
-    let destination_file = fs::canonicalize(lib_folder.as_str())?.join(file_name);
+    let destination_file =
+        adjust_canonicalization(fs::canonicalize(lib_folder.as_str())?.join(file_name));
     fs::copy(source_file, destination_file)?;
 
     copy_ffmpeg_libraries(lib_folder)?;

@@ -5,6 +5,7 @@ use crate::{
     install_dependency::{
         self, copy_ffmpeg_libraries, download_and_extract_zip, set_executable_permission,
     },
+    path::adjust_canonicalization,
 };
 
 #[allow(dead_code)]
@@ -23,15 +24,14 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
 }
 
 pub fn export() -> Result<(), anyhow::Error> {
-    let program = std::fs::canonicalize(format!(
-        "{}godot/{}",
-        BIN_FOLDER,
-        install_dependency::get_godot_executable_path().unwrap()
-    ))
-    .unwrap()
-    .to_str()
-    .unwrap()
-    .to_string();
+    let program = adjust_canonicalization(
+        std::fs::canonicalize(format!(
+            "{}godot/{}",
+            BIN_FOLDER,
+            install_dependency::get_godot_executable_path().unwrap()
+        ))
+        .unwrap(),
+    );
 
     // Make exports directory
     if std::path::Path::new(EXPORTS_FOLDER).exists() {
@@ -43,7 +43,9 @@ pub fn export() -> Result<(), anyhow::Error> {
     let args = vec!["-e", "--headless", "--quit"];
     let status1 = std::process::Command::new(program.as_str())
         .args(&args)
-        .current_dir(std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap())
+        .current_dir(adjust_canonicalization(
+            std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap(),
+        ))
         .status()
         .expect("Failed to run Godot");
 
@@ -91,7 +93,9 @@ pub fn export() -> Result<(), anyhow::Error> {
 
     let status2 = std::process::Command::new(program.as_str())
         .args(&args)
-        .current_dir(std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap())
+        .current_dir(adjust_canonicalization(
+            std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap(),
+        ))
         .status()
         .expect("Failed to run Godot");
 

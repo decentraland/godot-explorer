@@ -245,7 +245,13 @@ pub(crate) fn scene_thread(
         }
     }
 
-    std::thread::sleep(Duration::from_millis(1000));
+    let mut op_state = state.borrow_mut();
+    let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
+    sender
+        .send(SceneResponse::RemoveGodotScene(scene_id))
+        .expect("error sending scene response!!");
+
+    std::thread::sleep(Duration::from_millis(5000));
 }
 
 // helper to setup, acquire, run and return results from a script function

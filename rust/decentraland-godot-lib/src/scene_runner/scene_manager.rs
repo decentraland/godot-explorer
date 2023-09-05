@@ -264,7 +264,9 @@ impl SceneManager {
                     }
                 } else {
                     let crdt = scene.dcl_scene.scene_crdt.clone();
-                    let Ok(mut crdt_state) = crdt.try_lock() else {continue;};
+                    let Ok(mut crdt_state) = crdt.try_lock() else {
+                        continue;
+                    };
 
                     super::update_scene::update_scene(
                         delta,
@@ -410,7 +412,9 @@ impl SceneManager {
                         }
                     }
                     SceneResponse::RemoveGodotScene(scene_id) => {
-                        if let Some(scene) = self.scenes.get_mut(&scene_id) {}
+                        if let Some(scene) = self.scenes.get_mut(&scene_id) {
+                            scene.state = SceneState::Dead;
+                        }
                     }
                 },
                 Err(std::sync::mpsc::TryRecvError::Empty) => return,
