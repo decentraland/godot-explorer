@@ -19,6 +19,8 @@ use deno_core::{
     error::{generic_error, AnyError},
     include_js_files, op, v8, Extension, Op, OpState, RuntimeOptions,
 };
+use once_cell::sync::Lazy;
+use v8::IsolateHandle;
 
 struct SceneJsFileContent(pub String);
 struct SceneMainCrdtFileContent(pub Vec<u8>);
@@ -44,6 +46,9 @@ pub struct SceneLogMessage {
     pub level: SceneLogLevel,
     pub message: String,
 }
+
+pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
+    Lazy::new(Default::default);
 
 pub fn create_runtime() -> deno_core::JsRuntime {
     // add fetch stack
@@ -152,6 +157,13 @@ pub(crate) fn scene_thread(
     let scene_code = SceneJsFileContent(file.unwrap().get_as_text().to_string());
 
     let mut runtime = create_runtime();
+
+    // store handle
+    let vm_handle = runtime.v8_isolate().thread_safe_handle();
+    let mut guard = VM_HANDLES.lock().unwrap();
+    guard.insert(scene_id, vm_handle);
+    drop(guard);
+
     let state = runtime.op_state();
 
     state.borrow_mut().put(scene_code);
@@ -223,15 +235,17 @@ pub(crate) fn scene_thread(
 
         if let Err(e) = result {
             tracing::error!("[scene thread {scene_id:?}] script error onUpdate: {}", e);
-            return;
+            break;
         }
 
         let value = state.borrow().borrow::<SceneDying>().0;
         if value {
             tracing::info!("exiting from the thread {:?}", scene_id);
-            return;
+            break;
         }
     }
+
+    std::thread::sleep(Duration::from_millis(1000));
 }
 
 // helper to setup, acquire, run and return results from a script function

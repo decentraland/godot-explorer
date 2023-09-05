@@ -330,7 +330,7 @@ impl SceneManager {
                         .main_sender_to_thread
                         .try_send(RendererResponse::Kill)
                     {
-                        // show error
+                        tracing::error!("error sending kill signal to thread");
                     } else {
                         scene.state = SceneState::KillSignal(current_time_us);
                     }
@@ -408,6 +408,9 @@ impl SceneManager {
                                 });
                             }
                         }
+                    }
+                    SceneResponse::RemoveGodotScene(scene_id) => {
+                        if let Some(scene) = self.scenes.get_mut(&scene_id) {}
                     }
                 },
                 Err(std::sync::mpsc::TryRecvError::Empty) => return,

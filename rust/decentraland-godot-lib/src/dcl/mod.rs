@@ -58,6 +58,7 @@ pub enum SceneResponse {
         Vec<SceneLogMessage>,
         f32,
     ),
+    RemoveGodotScene(SceneId),
 }
 
 pub type SharedSceneCrdtState = Arc<Mutex<SceneCrdtState>>;
