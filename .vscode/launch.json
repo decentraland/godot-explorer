@@ -12,7 +12,12 @@
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}/godot",
-            "environment": [],
+            "environment": [
+                { 
+                    "name": "RUST_LOG",
+                    "value": "debug"
+                }
+            ],
             "externalConsole": true,
             "preLaunchTask": "(win) Copy GDExtension Lib",
         },

@@ -25,7 +25,7 @@
             "type": "shell",
             "command": "cp",
             "args": [
-                "rust/target/debug/decentraland_godot_lib.dll",
+                "rust/decentraland-godot-lib/target/debug/decentraland_godot_lib.dll",
                 "godot/lib"
             ],
             "problemMatcher": [

@@ -244,7 +244,7 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 			if adaptation_layer_js_request == -1:
 				adaptation_layer_js_request = http_requester._requester.request_file(
 					ADAPTATION_LAYER_JS_FILE_REQUEST,
-					"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.js",
+					"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.min.js",
 					local_main_js_path.replace("user:/", OS.get_user_data_dir())
 				)
 			main_js_request_id = adaptation_layer_js_request

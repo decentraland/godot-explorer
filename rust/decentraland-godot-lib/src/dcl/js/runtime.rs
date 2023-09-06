@@ -38,6 +38,8 @@ async fn op_read_file(
     let SceneContentMapping(base_url, content_mapping) = state.borrow::<SceneContentMapping>();
     let file = content_mapping.get(&filename);
 
+    tracing::info!("op_read_file: {}", filename);
+
     if let Some(hash) = file {
         let url = format!("{base_url}{hash}");
         http_requester.send_request(RequestOption::new(
@@ -71,20 +73,6 @@ async fn op_read_file(
             }
         }
     }
-    // let asset_server = op_state.borrow_mut().borrow::<AssetServer>().clone();
-    // let hash = op_state.borrow_mut().borrow::<CrdtContext>().hash.clone();
-    // let ipfs_path = IpfsPath::new(IpfsType::new_content_file(hash, filename));
-
-    // let content = asset_server
-    //     .ipfs()
-    //     .load_path(&PathBuf::from(&ipfs_path))
-    //     .await
-    //     .map_err(|e| anyhow!(e))?;
-    // let hash = asset_server
-    //     .ipfs()
-    //     .ipfs_hash(&ipfs_path)
-    //     .await
-    //     .unwrap_or_default();
 
     Err(anyhow!("not found"))
 }
