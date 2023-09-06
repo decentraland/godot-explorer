@@ -1,14 +1,11 @@
-// this code is executed as the runtime is created, all scopes get these definitions
+globalThis.WebAssembly.Instance = function () {
+    throw new Error('Wasm is not allowed in scene runtimes')
+}
+globalThis.WebAssembly.Module = function () {
+    throw new Error('Wasm is not allowed in scene runtimes')
+}
 
-// required for async ops (engine.sendMessage is declared as async)
-// Deno.core.initializeAsyncOps();
 
-// load a cjs/node-style module
-// TODO: consider using deno.land/std/node's `createRequire` directly.
-// Deno's node polyfill doesn't work without the full deno runtime, and i
-// note that decentraland examples use ESM syntax which deno_core does support,
-// so i haven't gone very deep into making full support work.
-// this is a very simplified version of the deno_std/node `createRequire` implementation.
 function require(moduleName) {
     // dynamically load the module source
     var source = Deno.core.ops.op_require(moduleName);
@@ -41,13 +38,51 @@ function require(moduleName) {
     return module.exports;
 }
 
+function customLog(...values) {
+    return values.map(value => logValue(value, new WeakSet())).join(' ')
+}
+
+function logValue(value, seen) {
+    const valueType = typeof value
+    if (valueType === 'number' || valueType === 'string' || valueType === 'boolean') {
+        return JSON.stringify(value)
+    } else if (valueType === 'function') {
+        return '[Function]'
+    } else if (value === null) {
+        return 'null'
+    } else if (Array.isArray(value)) {
+        if (seen.has(value)) {
+            return '[CircularArray]';
+        } else {
+            seen.add(value);
+            return `Array(${value.length}) [${value.map(item => logValue(item, seen)).join(', ')}]`;
+        }
+    } else if (valueType === 'object') {
+        if (seen.has(value)) {
+            return '[CircularObject]'
+        } else {
+            seen.add(value);
+            return `Object {${Object.keys(value).map(key => `${key}: ${logValue(value[key], seen)}`).join(', ')}}`;
+        }
+    } else if (valueType === 'symbol') {
+        return `Symbol (${value.toString()})`;
+    } else if (valueType === 'bigint') {
+        return `BigInt (${value.toString()})`;
+    } else {
+        return '[Unsupported Type]';
+    }
+}
+
 // minimal console
 const console = {
     log: function (...args) {
-        Deno.core.ops.op_log("" + args.join(' '))
+        Deno.core.ops.op_log("LOG " + customLog(...args))
     },
     error: function (...args) {
-        Deno.core.ops.op_error("" + args.join(' '))
+        Deno.core.ops.op_error("ERROR " + customLog(...args))
+    },
+    warn: function (...args) {
+        Deno.core.ops.op_log("WARN " + customLog(...args))
     },
 }
 

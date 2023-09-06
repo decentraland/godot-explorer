@@ -307,10 +307,17 @@ func _on_try_spawn_scene(scene):
 	for parcel in parcels_str:
 		var p = parcel.split_floats(",")
 		parcels.push_back(Vector2i(int(p[0]), int(p[1])))
+		
 
 	var content_mapping: Dictionary = {
 		"base_url": scene.entity.baseUrl, "content": scene.entity["content"]
 	}
+
+	for key in content_mapping.content.keys():
+		var key_lower = key.to_lower()
+		if not content_mapping.content.has(key_lower):
+			content_mapping.content[key_lower] = content_mapping.content[key]
+			content_mapping.content.erase(key)
 
 	var scene_definition: Dictionary = {
 		"base": Vector2i(base_parcel[0], base_parcel[1]),

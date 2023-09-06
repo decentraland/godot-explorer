@@ -78,6 +78,15 @@ pub fn create_runtime() -> deno_core::JsRuntime {
         ext = ext.ops(set)
     }
 
+    let override_sets: [Vec<deno_core::OpDecl>; 1] = [fetch::ops()];
+
+    for set in override_sets {
+        for op in set {
+            // explicitly record the ones we added so we can remove deno_fetch imposters
+            op_map.insert(op.name, op);
+        }
+    }
+
     let ext = ext
         // set startup JS script
         .esm(include_js_files!(
@@ -251,7 +260,9 @@ pub(crate) fn scene_thread(
         .send(SceneResponse::RemoveGodotScene(scene_id))
         .expect("error sending scene response!!");
 
-    std::thread::sleep(Duration::from_millis(5000));
+    runtime.v8_isolate().terminate_execution();
+
+    // std::thread::sleep(Duration::from_millis(5000));
 }
 
 // helper to setup, acquire, run and return results from a script function

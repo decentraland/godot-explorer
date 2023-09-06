@@ -19,7 +19,7 @@
                 }
             ],
             "externalConsole": true,
-            "preLaunchTask": "(win) Copy GDExtension Lib",
+            "preLaunchTask": "Build GDExtension Lib",
         },
         {
             "name": "(Windows) Launch Editor",
@@ -35,7 +35,7 @@
             "cwd": "${workspaceRoot}/godot",
             "environment": [],
             "externalConsole": true,
-            "preLaunchTask": "(win) Copy GDExtension Lib",
+            "preLaunchTask": "Build GDExtension Lib",
         },
         {
             "name": "(Linux) Launch Editor",
@@ -51,7 +51,7 @@
             "cwd": "${workspaceRoot}/godot",
             "environment": [],
             "externalConsole": true,
-            "preLaunchTask": "(linux) Copy GDExtension Lib",
+            "preLaunchTask": "Build GDExtension Lib",
         },
         {
             "name": "(Linux) Launch",
@@ -66,7 +66,7 @@
             "cwd": "${workspaceRoot}/godot",
             "environment": [],
             "externalConsole": true,
-            "preLaunchTask": "(linux) Copy GDExtension Lib",
+            "preLaunchTask": "Build GDExtension Lib",
             "sourceFileMap": {
                 "${workspaceFolder}": {
                     "editorPath": "${workspaceFolder}",
@@ -91,7 +91,7 @@
             "cwd": "${workspaceRoot}/godot",
             "environment": [],
             "externalConsole": true,
-            "preLaunchTask": "(linux) Copy GDExtension Lib",
+            "preLaunchTask": "Build GDExtension Lib",
             "sourceFileMap": {
                 "${workspaceFolder}": {
                     "editorPath": "${workspaceFolder}",
@@ -116,7 +116,7 @@
             "cwd": "${workspaceRoot}/godot",
             "environment": [],
             "externalConsole": true,
-            "preLaunchTask": "(macos) Copy GDExtension Lib",
+            "preLaunchTask": "Build GDExtension Lib",
         },
         {
             "name": "(MacOS) Launch",
@@ -131,7 +131,7 @@
             "cwd": "${workspaceRoot}/godot",
             "environment": [],
             "externalConsole": true,
-            "preLaunchTask": "(macos) Copy GDExtension Lib",
+            "preLaunchTask": "Build GDExtension Lib",
         },
     ]
 }
