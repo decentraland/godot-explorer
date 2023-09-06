@@ -36,6 +36,11 @@ func _process(_dt):
 		Global.config.last_parcel_position = parcel_position
 		dirty_save_position = true
 
+func _on_parcels_procesed(parcels, empty):
+	control_minimap.control_map_shader.set_used_parcels(parcels, empty)
+	control_menu.control_map.control_map_shader.set_used_parcels(parcels, empty)
+	
+	
 
 func _ready():
 	if Global.is_mobile:
@@ -72,6 +77,7 @@ func _ready():
 
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
+	parcel_manager.connect("parcels_processed", self._on_parcels_procesed)
 
 	if Global.config.last_realm_joined.is_empty():
 		realm.set_realm("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main")

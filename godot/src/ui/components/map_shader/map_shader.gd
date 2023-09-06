@@ -85,7 +85,7 @@ func set_zoom(new_zoom_value: int) -> void:
 		"line_width_px", floor(1.0 + float(zoom_value) / 16.0)
 	)
 	set_center_position(center_parcel_position)
-
+	_update_used_parcels()
 
 func set_center_position(parcel_position: Vector2):
 	var absolute_position = (
@@ -158,3 +158,39 @@ func set_selected_parcel(parcel_position: Vector2):
 		Vector2(parcel_position.x, -parcel_position.y) - map_topleft_parcel_position
 	)
 	color_rect_map.material.set_shader_parameter("selected_tile", color_rect_position)
+
+func set_used_parcels(used_parcel, emtpy_parcels):
+	var total = used_parcel.size() + emtpy_parcels.size()
+	var to_delete = color_rect_map.get_child_count() - total
+	
+	if to_delete > 0:
+		for i in range(to_delete):
+			color_rect_map.remove_child(color_rect_map.get_child(0))
+	elif to_delete < 0:
+		for i in range(-to_delete):
+			color_rect_map.add_child(ColorRect.new())
+	
+	var index: int = 0
+	for i in range(used_parcel.size()):
+		var color_rect: ColorRect = color_rect_map.get_child(index)
+		color_rect.set_meta("parcel", Vector2(used_parcel[i].x, -used_parcel[i].y))
+		color_rect.color = Color.DARK_GREEN
+		color_rect.color.a = 0.5
+		index += 1
+		
+	for i in range(emtpy_parcels.size()):
+		var color_rect: ColorRect = color_rect_map.get_child(index)
+		color_rect.set_meta("parcel", Vector2(emtpy_parcels[i].x, -emtpy_parcels[i].y))
+		color_rect.color = Color.ORANGE_RED
+		color_rect.color.a = 0.5
+		index += 1
+		
+	_update_used_parcels()
+	
+	
+func _update_used_parcels():
+	for child in color_rect_map.get_children():
+		var color_rect: ColorRect = child
+		var parcel_position: Vector2 = Vector2(color_rect.get_meta("parcel")) - map_topleft_parcel_position
+		color_rect.size = Vector2(zoom_value, zoom_value)
+		color_rect.position = Vector2(zoom_value * parcel_position.x, zoom_value * (parcel_position.y - 1))

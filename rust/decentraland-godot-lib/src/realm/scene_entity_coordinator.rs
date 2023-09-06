@@ -497,6 +497,24 @@ impl SceneEntityCoordinator {
         dict.set(GodotString::from("keep_alive_scenes"), keep_alive_scenes);
         dict.set(GodotString::from("empty_parcels"), empty_parcels);
 
+        let mut inside = Array::<Vector2i>::new();
+        let mut outside = Array::<Vector2i>::new();
+
+        self.parcel_radius_calculator
+            .get_inner_parcels()
+            .iter()
+            .for_each(|coord| {
+                inside.push(Vector2i::new(coord.0 as i32, coord.1 as i32));
+            });
+
+        self.parcel_radius_calculator
+            .get_outer_parcels()
+            .iter()
+            .for_each(|coord| {
+                outside.push(Vector2i::new(coord.0 as i32, coord.1 as i32));
+            });
+
+
         dict
     }
 
