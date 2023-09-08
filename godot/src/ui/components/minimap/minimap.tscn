@@ -61,6 +61,7 @@ offset_bottom = 151.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 
 [node name="Button_Menu" type="Button" parent="."]
+layout_mode = 0
 offset_right = 68.0
 offset_bottom = 35.0
 focus_mode = 0
