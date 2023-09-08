@@ -49,6 +49,30 @@
             "preLaunchTask": "(linux) Copy GDExtension Lib",
         },
         {
+            "name": "(Linux) Launch DebugEditor",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/godoteditor/bin/godot.linuxbsd.editor.dev.x86_64",
+            "args": [
+                "--path",
+                "${workspaceFolder}/godot"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}/godot",
+            "environment": [],
+            "externalConsole": true,
+            "preLaunchTask": "(linux) Copy GDExtension Lib",
+            "sourceFileMap": {
+                "${workspaceFolder}": {
+                    "editorPath": "${workspaceFolder}",
+                    "useForBreakpoints": "true"
+                }
+            },
+            "logging": {
+                "engineLogging": true
+            }
+        },
+        {
             "name": "(Linux) Launch",
             "type": "cppdbg",
             "request": "launch",
