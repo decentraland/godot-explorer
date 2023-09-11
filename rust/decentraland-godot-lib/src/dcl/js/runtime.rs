@@ -34,7 +34,7 @@ async fn op_read_file(
     filename: String,
 ) -> Result<ReadFileResponse, AnyError> {
     let state = op_state.borrow();
-    let mut http_requester = HttpRequester::new();
+    let mut http_requester = HttpRequester::new(None);
     let SceneContentMapping(base_url, content_mapping) = state.borrow::<SceneContentMapping>();
     let file = content_mapping.get(&filename);
 

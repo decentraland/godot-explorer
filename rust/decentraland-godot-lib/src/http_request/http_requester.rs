@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use tokio::sync::mpsc::{Receiver, Sender};
+
 use super::request_response::*;
 
 pub struct HttpRequester {
@@ -15,45 +17,58 @@ impl Debug for HttpRequester {
 
 impl Default for HttpRequester {
     fn default() -> Self {
-        Self::new()
+        Self::new(None)
+    }
+}
+
+async fn request_pool(
+    sender_to_parent: Sender<Result<RequestResponse, String>>,
+    mut receiver_from_parent: Receiver<RequestOption>,
+) {
+    let client = reqwest::Client::new();
+    while let Some(request_option) = receiver_from_parent.recv().await {
+        let url = request_option.url.clone();
+        let response = HttpRequester::do_request(&client, request_option).await;
+        if response.is_err() {
+            tracing::info!("Error in request: {url:?}");
+        } else {
+            // tracing::info!("Ok in request: {:?}", url);
+        }
+        match sender_to_parent.send(response).await {
+            Ok(_) => {
+                // tracing::info!("Ok sending reqsuest: {:?}", url);
+            }
+            Err(_) => {
+                panic!("Failed to send response");
+            }
+        }
     }
 }
 
 impl HttpRequester {
-    pub fn new() -> Self {
+    pub fn new(runtime: Option<tokio::runtime::Handle>) -> Self {
         let (sender_to_thread, mut receiver_from_parent) =
             tokio::sync::mpsc::channel::<RequestOption>(100);
         let (sender_to_parent, receiver_from_thread) =
             tokio::sync::mpsc::channel::<Result<RequestResponse, String>>(100);
 
-        std::thread::spawn(move || {
-            let runtime = tokio::runtime::Runtime::new();
-            if runtime.is_err() {
-                panic!("Failed to create runtime {:?}", runtime.err());
-            }
-            let runtime = runtime.unwrap();
-            let client = reqwest::Client::new();
-
-            runtime.block_on(async move {
-                while let Some(request_option) = receiver_from_parent.recv().await {
-                    let url = request_option.url.clone();
-                    let response = Self::do_request(&client, request_option).await;
-                    if response.is_err() {
-                        tracing::info!("Error in request: {url:?}");
-                    } else {
-                        // tracing::info!("Ok in request: {:?}", url);
-                    }
-                    match sender_to_parent.send(response).await {
-                        Ok(_) => {
-                            // tracing::info!("Ok sending reqsuest: {:?}", url);
-                        }
-                        Err(_) => {
-                            panic!("Failed to send response");
-                        }
-                    }
-                }
+        if let Some(rt) = runtime {
+            rt.spawn(async move {
+                request_pool(sender_to_parent, receiver_from_parent).await;
             });
-        });
+        } else {
+            std::thread::spawn(move || {
+                let runtime = tokio::runtime::Runtime::new();
+                if runtime.is_err() {
+                    panic!("Failed to create runtime {:?}", runtime.err());
+                }
+                let runtime = runtime.unwrap();
+
+                runtime.block_on(async move {
+                    request_pool(sender_to_parent, receiver_from_parent).await;
+                });
+            });
+        }
 
         Self {
             sender_to_thread,
@@ -122,7 +137,7 @@ impl HttpRequester {
 fn test() {
     // TODO: add tests
 
-    let mut requester = HttpRequester::new();
+    let mut requester = HttpRequester::new(None);
 
     // requester.send_request(RequestOption::new(
     //     0,

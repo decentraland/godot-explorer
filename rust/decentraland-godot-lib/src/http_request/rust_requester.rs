@@ -1,5 +1,7 @@
 use godot::prelude::*;
 
+use crate::scene_runner::tokio_runtime::TokioRuntime;
+
 // Deriving GodotClass makes the class available to Godot
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -106,7 +108,9 @@ impl RustHttpRequester {
 impl NodeVirtual for RustHttpRequester {
     fn init(_base: Base<Node>) -> Self {
         RustHttpRequester {
-            http_requester: super::http_requester::HttpRequester::new(),
+            http_requester: super::http_requester::HttpRequester::new(
+                TokioRuntime::static_clone_handle(),
+            ),
         }
     }
 
