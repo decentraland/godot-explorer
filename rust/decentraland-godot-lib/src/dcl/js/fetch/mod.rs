@@ -5,6 +5,8 @@ use deno_fetch::FetchPermissions;
 use deno_web::TimersPermission;
 use serde::{Deserialize, Serialize};
 
+use crate::http_request::http_requester::HttpRequester;
+
 // TODO: fetch
 
 // we have to provide fetch perm structs even though we don't use them
@@ -101,5 +103,10 @@ pub fn op_fetch_custom_client(
     state: &mut OpState,
     args: CreateHttpClientOptions,
 ) -> Result<ResourceId, AnyError> {
+    return Err(anyhow::Error::msg("not implemented"));
+}
+
+#[op]
+pub async fn op_fetch_custom(state: Rc<RefCell<OpState>>) -> Result<(), AnyError> {
     return Err(anyhow::Error::msg("not implemented"));
 }

@@ -2,6 +2,8 @@ pub mod engine;
 pub mod fetch;
 pub mod runtime;
 
+use crate::http_request::http_requester::HttpRequester;
+
 use self::fetch::{FP, TP};
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
@@ -212,6 +214,9 @@ pub(crate) fn scene_thread(
         .enable_time()
         .build()
         .unwrap();
+
+    let http_requester = HttpRequester::new(Some(rt.handle().clone()));
+    state.borrow_mut().put(http_requester);
 
     let result = rt
         .block_on(async { run_script(&mut runtime, &script, "onStart", (), |_| Vec::new()).await });

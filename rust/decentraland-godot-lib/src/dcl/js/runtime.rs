@@ -4,6 +4,7 @@ use serde::Serialize;
 use std::{
     cell::RefCell,
     rc::Rc,
+    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -33,15 +34,16 @@ async fn op_read_file(
     op_state: Rc<RefCell<OpState>>,
     filename: String,
 ) -> Result<ReadFileResponse, AnyError> {
-    let state = op_state.borrow();
-    let mut http_requester = HttpRequester::new(None);
+    let mut state = op_state.borrow_mut();
     let SceneContentMapping(base_url, content_mapping) = state.borrow::<SceneContentMapping>();
     let file = content_mapping.get(&filename);
 
     tracing::info!("op_read_file: {}", filename);
 
     if let Some(hash) = file {
+        let hash = hash.clone();
         let url = format!("{base_url}{hash}");
+        let http_requester = state.borrow_mut::<HttpRequester>();
         http_requester.send_request(RequestOption::new(
             0,
             url,
@@ -57,10 +59,7 @@ async fn op_read_file(
             if let Some(response) = http_requester.poll() {
                 if let Ok(response) = response {
                     if let Ok(ResponseEnum::Bytes(content)) = response.response_data {
-                        return Ok(ReadFileResponse {
-                            content,
-                            hash: hash.clone(),
-                        });
+                        return Ok(ReadFileResponse { content, hash });
                     }
                 }
                 break;
