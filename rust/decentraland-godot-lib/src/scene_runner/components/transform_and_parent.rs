@@ -85,7 +85,11 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
             .collect::<Vec<SceneEntityId>>();
 
         for entity in unparented {
-            let desired_parent = godot_dcl_scene.get_node(&entity).unwrap().desired_parent;
+            let desired_parent = if let Some(node) = godot_dcl_scene.get_node(&entity) {
+                node.desired_parent
+            } else {
+                godot_dcl_scene.ensure_node_mut(&entity).desired_parent
+            };
 
             // cancel if the desired_parent is the entity itself
             if desired_parent == entity {

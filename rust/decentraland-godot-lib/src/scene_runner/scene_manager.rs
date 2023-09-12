@@ -350,7 +350,12 @@ impl SceneManager {
                 SceneState::Dead => {
                     scene_to_remove.insert(*scene_id);
                 }
-                _ => {}
+                _ => {
+                    if scene.dcl_scene.thread_join_handle.is_finished() {
+                        tracing::error!("scene closed without kill signal");
+                        scene.state = SceneState::Dead;
+                    }
+                }
             }
         }
 

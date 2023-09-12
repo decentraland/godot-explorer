@@ -34,7 +34,7 @@ async fn op_read_file(
     op_state: Rc<RefCell<OpState>>,
     filename: String,
 ) -> Result<ReadFileResponse, AnyError> {
-    let mut state = op_state.borrow_mut();
+    let state = op_state.borrow();
     let SceneContentMapping(base_url, content_mapping) = state.borrow::<SceneContentMapping>();
     let file = content_mapping.get(&filename);
 
@@ -43,35 +43,39 @@ async fn op_read_file(
     if let Some(hash) = file {
         let hash = hash.clone();
         let url = format!("{base_url}{hash}");
-        let http_requester = state.borrow_mut::<HttpRequester>();
-        http_requester.send_request(RequestOption::new(
-            0,
-            url,
-            reqwest::Method::GET,
-            ResponseType::AsBytes,
-            None,
-            None,
-        ));
+        drop(state);
 
-        // wait until the request is done or timeout
-        let start_time = Instant::now();
-        loop {
-            if let Some(response) = http_requester.poll() {
-                if let Ok(response) = response {
-                    if let Ok(ResponseEnum::Bytes(content)) = response.response_data {
-                        return Ok(ReadFileResponse { content, hash });
-                    }
+        let client = reqwest::Client::new();
+
+        let response = HttpRequester::do_request(
+            &client,
+            RequestOption::new(
+                0,
+                url,
+                reqwest::Method::GET,
+                ResponseType::AsBytes,
+                None,
+                None,
+            ),
+        )
+        .await;
+
+        tracing::info!("ok request");
+
+        match response {
+            Ok(response) => {
+                if let Ok(ResponseEnum::Bytes(content)) = response.response_data {
+                    return Ok(ReadFileResponse { content, hash });
+                } else {
+                    tracing::info!("wrong response");
                 }
-                break;
-            } else {
-                std::thread::sleep(Duration::from_millis(10));
             }
-
-            if start_time.elapsed() > Duration::from_secs(10) {
-                break;
+            Err(error) => {
+                tracing::error!("error polling http_requester {}", error);
             }
         }
     }
 
+    tracing::error!("error polling http_requester unknown");
     Err(anyhow!("not found"))
 }

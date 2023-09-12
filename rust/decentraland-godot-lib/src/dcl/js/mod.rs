@@ -212,6 +212,7 @@ pub(crate) fn scene_thread(
 
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_time()
+        .enable_io()
         .build()
         .unwrap();
 
@@ -254,7 +255,7 @@ pub(crate) fn scene_thread(
 
         let value = state.borrow().borrow::<SceneDying>().0;
         if value {
-            tracing::info!("exiting from the thread {:?}", scene_id);
+            tracing::info!("breaking from the thread {:?}", scene_id);
             break;
         }
     }
@@ -266,6 +267,8 @@ pub(crate) fn scene_thread(
         .expect("error sending scene response!!");
 
     runtime.v8_isolate().terminate_execution();
+
+    tracing::info!("exiting from the thread {:?}", scene_id);
 
     // std::thread::sleep(Duration::from_millis(5000));
 }

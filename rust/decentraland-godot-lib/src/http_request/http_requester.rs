@@ -84,11 +84,13 @@ impl HttpRequester {
         self.receiver_from_thread.try_recv().ok()
     }
 
-    async fn do_request(
+    pub async fn do_request(
         client: &reqwest::Client,
         mut request_option: RequestOption,
     ) -> Result<RequestResponse, String> {
-        let mut request = client.request(request_option.method.clone(), request_option.url.clone());
+        let mut request = client
+            .request(request_option.method.clone(), request_option.url.clone())
+            .timeout(std::time::Duration::from_secs(10));
 
         if let Some(body) = request_option.body.take() {
             request = request.body(body);
