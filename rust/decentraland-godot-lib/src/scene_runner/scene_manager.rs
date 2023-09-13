@@ -419,6 +419,9 @@ impl SceneManager {
                     SceneResponse::RemoveGodotScene(scene_id, logs) => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
                             scene.state = SceneState::Dead;
+                            if !self.dying_scene_ids.contains(&scene_id) {
+                                self.dying_scene_ids.push(scene_id.clone());
+                            }
                         }
                         // enable logs
                         for log in &logs {
