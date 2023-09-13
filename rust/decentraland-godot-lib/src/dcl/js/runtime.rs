@@ -46,6 +46,7 @@ async fn op_read_file(
         drop(state);
 
         let client = reqwest::Client::new();
+        tracing::info!("requesting to {}", url);
 
         let response = HttpRequester::do_request(
             &client,

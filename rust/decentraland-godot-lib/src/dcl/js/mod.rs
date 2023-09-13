@@ -4,7 +4,6 @@ pub mod runtime;
 
 use crate::http_request::http_requester::HttpRequester;
 
-use self::fetch::{FP, TP};
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
     SharedSceneCrdtState,
@@ -54,21 +53,21 @@ pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHand
 
 pub fn create_runtime() -> deno_core::JsRuntime {
     // add fetch stack
-    let web = deno_web::deno_web::init_ops_and_esm::<TP>(
-        std::sync::Arc::new(deno_web::BlobStore::default()),
-        None,
-    );
-    let webidl = deno_webidl::deno_webidl::init_ops_and_esm();
-    let url = deno_url::deno_url::init_ops_and_esm();
-    let console = deno_console::deno_console::init_ops_and_esm();
-    let fetch = deno_fetch::deno_fetch::init_js_only::<FP>();
+    // let web = deno_web::deno_web::init_ops_and_esm::<TP>(
+    //     std::sync::Arc::new(deno_web::BlobStore::default()),
+    //     None,
+    // );
+    // let webidl = deno_webidl::deno_webidl::init_ops_and_esm();
+    // let url = deno_url::deno_url::init_ops_and_esm();
+    // let console = deno_console::deno_console::init_ops_and_esm();
+    // let fetch = deno_fetch::deno_fetch::init_js_only::<FP>();
 
-    let mut ext = &mut Extension::builder_with_deps("decentraland", &["deno_fetch"]);
+    let mut ext = &mut Extension::builder_with_deps("decentraland", &[]);
 
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 2] = [engine::ops(), runtime::ops()];
+    let op_sets: [Vec<deno_core::OpDecl>; 3] = [engine::ops(), runtime::ops(), fetch::ops()];
 
     // add plugin registrations
     let mut op_map = HashMap::new();
@@ -80,14 +79,14 @@ pub fn create_runtime() -> deno_core::JsRuntime {
         ext = ext.ops(set)
     }
 
-    let override_sets: [Vec<deno_core::OpDecl>; 1] = [fetch::ops()];
+    // let override_sets: [Vec<deno_core::OpDecl>; 1] = [fetch::ops()];
 
-    for set in override_sets {
-        for op in set {
-            // explicitly record the ones we added so we can remove deno_fetch imposters
-            op_map.insert(op.name, op);
-        }
-    }
+    // for set in override_sets {
+    //     for op in set {
+    //         // explicitly record the ones we added so we can remove deno_fetch imposters
+    //         op_map.insert(op.name, op);
+    //     }
+    // }
 
     let ext = ext
         // set startup JS script
@@ -110,7 +109,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
     // create runtime
     deno_core::JsRuntime::new(RuntimeOptions {
         v8_platform: v8::Platform::new(1, false).make_shared().into(),
-        extensions: vec![webidl, url, console, web, fetch, ext],
+        extensions: vec![ext],
         ..Default::default()
     })
 }
@@ -348,6 +347,7 @@ fn op_require(
         "~system/RestrictedActions" => {
             Ok(include_str!("js_modules/RestrictedActions.js").to_owned())
         }
+        "fetch" => Ok(include_str!("js_modules/fetch.js").to_owned()),
         "~system/Runtime" => Ok(include_str!("js_modules/Runtime.js").to_owned()),
         "~system/Scene" => Ok(include_str!("js_modules/Scene.js").to_owned()),
         "~system/SignedFetch" => Ok(include_str!("js_modules/SignedFetch.js").to_owned()),

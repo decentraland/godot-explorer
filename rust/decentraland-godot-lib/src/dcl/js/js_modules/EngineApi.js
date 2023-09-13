@@ -18,19 +18,3 @@ module.exports.crdtGetState = async function () {
         data: data
     };
 }
-
-
-// // TODO: make really async
-
-// module.exports.crdtSendToRenderer = async function (messages) {
-//     op_crdt_send_to_renderer(messages.data);
-//     return { data: op_crdt_recv_from_renderer() };
-// }
-
-// module.exports.sendBatch = async function () {
-//     return { events: [] }
-// }
-
-// module.exports.crdtGetState = async function () {
-//     return { data: op_crdt_recv_from_renderer() };
-// }
