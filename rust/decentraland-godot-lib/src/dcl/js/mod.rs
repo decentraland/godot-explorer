@@ -52,16 +52,6 @@ pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHand
     Lazy::new(Default::default);
 
 pub fn create_runtime() -> deno_core::JsRuntime {
-    // add fetch stack
-    // let web = deno_web::deno_web::init_ops_and_esm::<TP>(
-    //     std::sync::Arc::new(deno_web::BlobStore::default()),
-    //     None,
-    // );
-    // let webidl = deno_webidl::deno_webidl::init_ops_and_esm();
-    // let url = deno_url::deno_url::init_ops_and_esm();
-    // let console = deno_console::deno_console::init_ops_and_esm();
-    // let fetch = deno_fetch::deno_fetch::init_js_only::<FP>();
-
     let mut ext = &mut Extension::builder_with_deps("decentraland", &[]);
 
     // add core ops
@@ -78,15 +68,6 @@ pub fn create_runtime() -> deno_core::JsRuntime {
         }
         ext = ext.ops(set)
     }
-
-    // let override_sets: [Vec<deno_core::OpDecl>; 1] = [fetch::ops()];
-
-    // for set in override_sets {
-    //     for op in set {
-    //         // explicitly record the ones we added so we can remove deno_fetch imposters
-    //         op_map.insert(op.name, op);
-    //     }
-    // }
 
     let ext = ext
         // set startup JS script
