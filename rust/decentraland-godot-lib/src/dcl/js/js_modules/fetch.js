@@ -43,13 +43,38 @@ module.exports.fetch = async function (url, init) {
     const reqTimeout = timeout ?? 30
     const reqHeaders = headers ?? {}
     const reqRedirect = redirect ?? 'follow'
-
-    console.log("Fetch request: ", url, reqMethod, reqHeaders, hasBody, body, reqRedirect, reqTimeout)
-
-    const rawResponse = await Deno.core.opAsync(
+    const response = await Deno.core.opAsync(
         "op_fetch_custom",
-        reqMethod, url, reqHeaders, hasBody, body, reqRedirect, reqTimeout
+        reqMethod, url, reqHeaders, hasBody, body ?? '', reqRedirect, reqTimeout
     )
+    const reqId = response._internal_req_id
 
-    throw new Error("not implemented yet")
+    Object.assign(response, {
+        async arrayBuffer() {
+            return new ArrayBuffer(0)
+        },
+        async json() {
+            const data = await Deno.core.opAsync(
+                "op_fetch_consume_text",
+                reqId
+            )
+            return JSON.parse(data)
+        },
+        async text() {
+            const data = await Deno.core.opAsync(
+                "op_fetch_consume_text",
+                reqId
+            )
+            return data
+        },
+        async _internal_bytes() {
+            const data = await Deno.core.opAsync(
+                "op_fetch_consume_bytes",
+                reqId
+            )
+            return data
+        }
+    })
+
+    return response
 }

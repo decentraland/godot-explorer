@@ -416,9 +416,18 @@ impl SceneManager {
                             }
                         }
                     }
-                    SceneResponse::RemoveGodotScene(scene_id) => {
+                    SceneResponse::RemoveGodotScene(scene_id, logs) => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
                             scene.state = SceneState::Dead;
+                        }
+                        // enable logs
+                        for log in &logs {
+                            let mut arguments = VariantArray::new();
+                            arguments.push((scene_id.0 as i32).to_variant());
+                            arguments.push((log.level as i32).to_variant());
+                            arguments.push((log.timestamp as f32).to_variant());
+                            arguments.push(GodotString::from(&log.message).to_variant());
+                            self.console.callv(arguments);
                         }
                     }
                 },

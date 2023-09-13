@@ -185,3 +185,10 @@ func _on_spin_box_jump_velocity_value_changed(value):
 func _on_spin_box_gravity_value_changed(value):
 	Global.config.gravity = value
 	Global.config.save_to_settings_file()
+
+
+func _on_button_copy_console_content_pressed():
+	rich_text_label_console.select_all()
+	var text = rich_text_label_console.get_parsed_text()
+	DisplayServer.clipboard_set(text)
+	

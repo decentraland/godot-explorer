@@ -260,9 +260,10 @@ pub(crate) fn scene_thread(
     }
 
     let mut op_state = state.borrow_mut();
+    let logs = op_state.take::<SceneLogs>();
     let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
     sender
-        .send(SceneResponse::RemoveGodotScene(scene_id))
+        .send(SceneResponse::RemoveGodotScene(scene_id, logs.0))
         .expect("error sending scene response!!");
 
     runtime.v8_isolate().terminate_execution();

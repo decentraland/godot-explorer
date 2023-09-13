@@ -10,12 +10,8 @@ function require(moduleName) {
     // dynamically load the module source
     var source = Deno.core.ops.op_require(moduleName);
 
-    // create a wrapper for the imported script
-    source = source.replace(/^#!.*?\n/, "");
-    const head = "(function (exports, require, module, __filename, __dirname) { (function (exports, require, module, __filename, __dirname) {";
-    const foot = "\n}).call(this, exports, require, module, __filename, __dirname); })";
-    source = `${head}${source}${foot}`;
-    const [wrapped, err] = Deno.core.evalContext(source, "file://${moduleName}");
+    source = `(function (exports, require, module, __filename, __dirname) { (function (exports, require, module, __filename, __dirname) {${source}}).call(this, exports, require, module, __filename, __dirname); })`
+    const [wrapped, err] = Deno.core.evalContext(source, `file://${moduleName}`);
     if (err) {
         throw err.thrown;
     }
@@ -62,14 +58,26 @@ function logValue(value, seen) {
             return '[CircularObject]'
         } else {
             seen.add(value);
-            return `Object {${Object.keys(value).map(key => `${key}: ${logValue(value[key], seen)}`).join(', ')}}`;
+
+            const objName = value?.constructor?.name ?? 'Object'
+            if (objName === 'Object') {
+                return `Object {${Object.keys(value).map(key => `${key}: ${logValue(value[key], seen)}`).join(', ')}}`;
+            } else {
+                if (value instanceof Error) {
+                    return `[${objName} ${value.message} ${value.stack}`;
+                } else {
+                    return `${objName} {${Object.keys(value).map(key => `${key}: ${logValue(value[key], seen)}`).join(', ')}}`;
+                }
+            }
         }
     } else if (valueType === 'symbol') {
         return `Symbol (${value.toString()})`;
     } else if (valueType === 'bigint') {
         return `BigInt (${value.toString()})`;
+    } else if (valueType === 'undefined') {
+        return 'undefined';
     } else {
-        return '[Unsupported Type]';
+        return `[Unsupported Type = ${valueType} toString() ${value?.toString ? value.toString() : 'none'} valueOf() ${value}}]`;
     }
 }
 
@@ -93,12 +101,3 @@ globalThis.require = require;
 globalThis.console = console;
 
 globalThis.fetch = require('fetch').fetch;
-
-{
-
-    const originalEval = globalThis.eval
-    globalThis.eval = (code) => {
-        console.log("using eval")
-        originalEval.call(globalThis, code)
-    }
-}

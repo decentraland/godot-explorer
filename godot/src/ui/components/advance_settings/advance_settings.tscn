@@ -324,6 +324,21 @@ grow_vertical = 2
 bbcode_enabled = true
 scroll_following = true
 
+[node name="Button_CopyConsoleContent" type="Button" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -133.0
+offset_top = -41.0
+offset_right = -78.0
+offset_bottom = -14.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Copy"
+
 [node name="Button_ClearConsole" type="Button" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console"]
 layout_mode = 1
 anchors_preset = 3
@@ -348,4 +363,5 @@ text = "Clear"
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity" to="." method="_on_spin_box_jump_velocity_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed" to="." method="_on_spin_box_run_speed_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed" to="." method="_on_spin_box_walk_speed_value_changed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console/Button_CopyConsoleContent" to="." method="_on_button_copy_console_content_pressed"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console/Button_ClearConsole" to="." method="_on_button_clear_console_pressed"]
