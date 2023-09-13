@@ -29,10 +29,10 @@ func _gui_input(event):
 	if event is InputEventMouseMotion:
 		mouse_tile = control_map_shader.get_parcel_from_mouse()
 		mouse_tile = Vector2i(floor(mouse_tile.x), floor(mouse_tile.y))
-		
+
 		control_tooltip.position = event.position
 		control_tooltip.show()
-		
+
 		if last_mouse_tile != mouse_tile:
 			last_mouse_tile = mouse_tile
 			label_mouse_position.text = str(mouse_tile)

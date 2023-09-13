@@ -6,7 +6,7 @@ module.exports.readFile = async function (body) {
     // body.fileName
     const { hash, url } = Deno.core.ops.op_get_file_url(body.fileName)
     const response = await fetch(url)
-    const bytes = await response._internal_bytes()
+    const bytes = await response.bytes()
     const data = new Uint8Array(bytes)
     return {
         content: data,

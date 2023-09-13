@@ -191,4 +191,3 @@ func _on_button_copy_console_content_pressed():
 	rich_text_label_console.select_all()
 	var text = rich_text_label_console.get_parsed_text()
 	DisplayServer.clipboard_set(text)
-	

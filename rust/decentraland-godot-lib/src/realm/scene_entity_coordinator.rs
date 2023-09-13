@@ -514,7 +514,6 @@ impl SceneEntityCoordinator {
                 outside.push(Vector2i::new(coord.0 as i32, coord.1 as i32));
             });
 
-
         dict
     }
 

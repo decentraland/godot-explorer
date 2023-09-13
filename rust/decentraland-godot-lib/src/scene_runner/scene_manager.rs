@@ -420,7 +420,7 @@ impl SceneManager {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
                             scene.state = SceneState::Dead;
                             if !self.dying_scene_ids.contains(&scene_id) {
-                                self.dying_scene_ids.push(scene_id.clone());
+                                self.dying_scene_ids.push(scene_id);
                             }
                         }
                         // enable logs

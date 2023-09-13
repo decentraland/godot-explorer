@@ -61,7 +61,7 @@ async fn op_fetch_custom(
     headers: HashMap<String, String>,
     has_body: bool,
     body_data: String,
-    _redirect: String, // TODO
+    _redirect: String, // TODO: unimplemented
     timeout: u32,
 ) -> Result<FetchResponse, AnyError> {
     let has_fetch_state = op_state.borrow().has::<FetchRequestsState>();
@@ -71,18 +71,29 @@ async fn op_fetch_custom(
             .put::<FetchRequestsState>(FetchRequestsState::new());
     }
 
-    let mut state = op_state.borrow_mut();
-    let fetch_request = state.borrow_mut::<FetchRequestsState>();
-    let client = fetch_request.client.clone();
-    fetch_request.counter += 1;
+    let (req_id, client) = {
+        let mut state = op_state.borrow_mut();
+        let fetch_request = state.borrow_mut::<FetchRequestsState>();
+        let client = fetch_request.client.clone();
+        fetch_request.counter += 1;
 
-    let req_id = fetch_request.counter;
-    fetch_request
-        .requests
-        .insert(req_id, FetchRequest { response: None });
-    drop(state);
+        let req_id = fetch_request.counter;
+        fetch_request
+            .requests
+            .insert(req_id, FetchRequest { response: None });
+        (req_id, client)
+    };
 
-    let method = match method {
+    let method = match method.as_str() {
+        "GET" => http::Method::GET,
+        "POST" => http::Method::POST,
+        "PUT" => http::Method::PUT,
+        "DELETE" => http::Method::DELETE,
+        "HEAD" => http::Method::HEAD,
+        "OPTIONS" => http::Method::OPTIONS,
+        "CONNECT" => http::Method::CONNECT,
+        "PATCH" => http::Method::PATCH,
+        "TRACE" => http::Method::TRACE,
         _ => http::Method::GET,
     };
 
@@ -95,6 +106,13 @@ async fn op_fetch_custom(
         .request(method, url.clone())
         .headers(headers)
         .timeout(Duration::from_secs(timeout as u64));
+
+    // match redirect.as_str() {
+    //     "follow" => {}
+    //     "error" => {}
+    //     "manual" => {}
+    //     _ => {}
+    // };
 
     if has_body {
         request = request.body(body_data);
@@ -144,11 +162,12 @@ async fn op_fetch_consume_json(
     op_state: Rc<RefCell<OpState>>,
     req_id: u32,
 ) -> Result<serde_json::Value, AnyError> {
-    let mut state = op_state.borrow_mut();
-    let fetch_request = state.borrow_mut::<FetchRequestsState>();
-    let current_request = fetch_request.requests.get_mut(&req_id).unwrap();
-    let response = current_request.response.take();
-    drop(state);
+    let response = {
+        let mut state = op_state.borrow_mut();
+        let fetch_request = state.borrow_mut::<FetchRequestsState>();
+        let current_request = fetch_request.requests.get_mut(&req_id).unwrap();
+        current_request.response.take()
+    };
 
     if let Some(response) = response {
         return Ok(response.json::<serde_json::Value>().await?);
@@ -162,11 +181,12 @@ async fn op_fetch_consume_text(
     op_state: Rc<RefCell<OpState>>,
     req_id: u32,
 ) -> Result<String, AnyError> {
-    let mut state = op_state.borrow_mut();
-    let fetch_request = state.borrow_mut::<FetchRequestsState>();
-    let current_request = fetch_request.requests.get_mut(&req_id).unwrap();
-    let response = current_request.response.take();
-    drop(state);
+    let response = {
+        let mut state = op_state.borrow_mut();
+        let fetch_request = state.borrow_mut::<FetchRequestsState>();
+        let current_request = fetch_request.requests.get_mut(&req_id).unwrap();
+        current_request.response.take()
+    };
 
     if let Some(response) = response {
         return Ok(response.text().await?);
@@ -179,11 +199,12 @@ async fn op_fetch_consume_bytes(
     op_state: Rc<RefCell<OpState>>,
     req_id: u32,
 ) -> Result<bytes::Bytes, AnyError> {
-    let mut state = op_state.borrow_mut();
-    let fetch_request = state.borrow_mut::<FetchRequestsState>();
-    let current_request = fetch_request.requests.get_mut(&req_id).unwrap();
-    let response = current_request.response.take();
-    drop(state);
+    let response = {
+        let mut state = op_state.borrow_mut();
+        let fetch_request = state.borrow_mut::<FetchRequestsState>();
+        let current_request = fetch_request.requests.get_mut(&req_id).unwrap();
+        current_request.response.take()
+    };
 
     if let Some(response) = response {
         return Ok(response.bytes().await?);

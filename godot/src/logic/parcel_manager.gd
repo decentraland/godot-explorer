@@ -105,14 +105,13 @@ func _on_desired_parsel_manager_update():
 	for scene_id in to_remove:
 		loaded_scenes.erase(scene_id)
 
-
 	var empty_parcels_coords = []
 	for parcel in empty_parcels:
 		var coord = parcel.split(",")
 		var x = int(coord[0])
 		var z = int(coord[1])
 		empty_parcels_coords.push_back(Vector2i(x, z))
-		
+
 		if not loaded_empty_scenes.has(parcel):
 			var index = randi_range(0, 11)
 			var scene: Node3D = empty_scenes[index].instantiate()
@@ -124,8 +123,9 @@ func _on_desired_parsel_manager_update():
 	var parcel_filled = []
 	for scene_id in loaded_scenes:
 		parcel_filled.append_array(loaded_scenes[scene_id].parcels)
-		
+
 	parcels_processed.emit(parcel_filled, empty_parcels_coords)
+
 
 func _on_realm_changed():
 	var should_load_city_pointers = true
@@ -224,13 +224,13 @@ func update_position(new_position: Vector2i) -> void:
 
 func load_scene(scene_entity_id: String, entity: Dictionary):
 	var metadata = entity.get("metadata", {})
-	
+
 	var parcels_str = metadata.get("scene", {}).get("parcels", [])
 	var parcels = []
 	for parcel in parcels_str:
 		var p = parcel.split_floats(",")
 		parcels.push_back(Vector2i(int(p[0]), int(p[1])))
-		
+
 	loaded_scenes[scene_entity_id] = {
 		"id": scene_entity_id, "entity": entity, "scene_number_id": -1, "parcels": parcels
 	}
@@ -260,10 +260,14 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 		if not FileAccess.file_exists(local_main_js_path):
 			js_request_completed = false
 			if adaptation_layer_js_request == -1:
-				adaptation_layer_js_request = http_requester._requester.request_file(
-					ADAPTATION_LAYER_JS_FILE_REQUEST,
-					"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.min.js",
-					local_main_js_path.replace("user:/", OS.get_user_data_dir())
+				adaptation_layer_js_request = (
+					http_requester
+					. _requester
+					. request_file(
+						ADAPTATION_LAYER_JS_FILE_REQUEST,
+						"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.min.js",
+						local_main_js_path.replace("user:/", OS.get_user_data_dir())
+					)
 				)
 			main_js_request_id = adaptation_layer_js_request
 

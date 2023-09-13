@@ -18,14 +18,14 @@ var map_parcel_size: Vector2
 # The top left parcel
 var map_topleft_parcel_position: Vector2
 
+
 func _ready():
-	
 	map_parcel_size = Vector2(512, 512)
 	map_topleft_parcel_position = Vector2(-256, -256)
-	
+
 	# TODO: use "https://api.decentraland.org/v1/minimap.png"
 	color_rect_map.material = color_rect_map.material.duplicate()
-	
+
 	set_zoom(zoom_value)
 	set_center_position(Vector2(0, 0))
 
@@ -38,9 +38,10 @@ func set_zoom(new_zoom_value: int) -> void:
 	color_rect_map.material.set_shader_parameter(
 		"line_width_px", floor(1.0 + float(zoom_value) / 16.0)
 	)
-	
+
 	set_center_position(center_parcel_position)
 	_update_used_parcels()
+
 
 func set_center_position(parcel_position: Vector2):
 	var absolute_position = (
@@ -93,9 +94,11 @@ func get_parcel_from_mouse_real() -> Vector2:
 	var position_without_offset: Vector2 = absolute_position + map_topleft_parcel_position
 	return Vector2(position_without_offset.x, -position_without_offset.y)
 
+
 func get_parcel_from_mouse() -> Vector2i:
 	var real_position = get_parcel_from_mouse_real()
 	return Vector2i(floor(real_position.x), floor(real_position.y))
+
 
 func set_selected_parcel(parcel_position: Vector2):
 	var color_rect_position = (
@@ -103,10 +106,11 @@ func set_selected_parcel(parcel_position: Vector2):
 	)
 	color_rect_map.material.set_shader_parameter("selected_tile", color_rect_position)
 
+
 func set_used_parcels(used_parcel, emtpy_parcels):
 	var total = used_parcel.size() + emtpy_parcels.size()
 	var to_delete = color_rect_map.get_child_count() - total
-	
+
 	if to_delete > 0:
 		for i in range(to_delete):
 			color_rect_map.remove_child(color_rect_map.get_child(0))
@@ -115,7 +119,7 @@ func set_used_parcels(used_parcel, emtpy_parcels):
 			var new_child: ColorRect = ColorRect.new()
 			new_child.mouse_filter = Control.MOUSE_FILTER_PASS
 			color_rect_map.add_child(new_child)
-	
+
 	var index: int = 0
 	for i in range(used_parcel.size()):
 		var color_rect: ColorRect = color_rect_map.get_child(index)
@@ -123,24 +127,24 @@ func set_used_parcels(used_parcel, emtpy_parcels):
 		color_rect.color = Color.DARK_GREEN
 		color_rect.color.a = 0.5
 		index += 1
-		
+
 	for i in range(emtpy_parcels.size()):
 		var color_rect: ColorRect = color_rect_map.get_child(index)
 		color_rect.set_meta("parcel", Vector2(emtpy_parcels[i].x, emtpy_parcels[i].y))
 		color_rect.color = Color.ORANGE_RED
 		color_rect.color.a = 0.5
 		index += 1
-		
+
 	_update_used_parcels()
-	
-	
+
+
 func _update_used_parcels():
 	for child in color_rect_map.get_children():
 		var color_rect: ColorRect = child
-		
-		var parcel_position = Vector2(color_rect.get_meta("parcel")) 
+
+		var parcel_position = Vector2(color_rect.get_meta("parcel"))
 		var inverted_position = Vector2(parcel_position.x, -parcel_position.y)
 		var parcel_in_control = inverted_position - map_topleft_parcel_position
-		
+
 		color_rect.size = Vector2(zoom_value, zoom_value)
 		color_rect.position = zoom_value * (parcel_in_control + Vector2.UP)

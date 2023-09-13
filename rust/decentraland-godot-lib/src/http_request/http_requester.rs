@@ -47,7 +47,7 @@ async fn request_pool(
 
 impl HttpRequester {
     pub fn new(runtime: Option<tokio::runtime::Handle>) -> Self {
-        let (sender_to_thread, mut receiver_from_parent) =
+        let (sender_to_thread, receiver_from_parent) =
             tokio::sync::mpsc::channel::<RequestOption>(100);
         let (sender_to_parent, receiver_from_thread) =
             tokio::sync::mpsc::channel::<Result<RequestResponse, String>>(100);

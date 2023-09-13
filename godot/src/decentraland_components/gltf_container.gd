@@ -35,7 +35,6 @@ func load_gltf():
 		gltf_state = GodotGltfState.NotFound
 		return
 
-	
 	gltf_start_loading_time = Time.get_ticks_usec()
 
 	var fetching_resource = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
@@ -58,7 +57,6 @@ func _on_gltf_loaded(resource_hash: String):
 	if resource_hash != file_hash:
 		return
 
-	
 	var node = Global.content_manager.get_resource_from_hash(file_hash)
 	if node == null:
 		gltf_state = GodotGltfState.FinishedWithError
@@ -67,9 +65,11 @@ func _on_gltf_loaded(resource_hash: String):
 	gltf_state = GodotGltfState.Finished
 	gltf_node = node.duplicate()
 
-#	var colliders_timestamp = Time.get_ticks_usec() 
+#	var colliders_timestamp = Time.get_ticks_usec()
 	create_and_set_mask_colliders(gltf_node)
 	add_child.call_deferred(gltf_node)
+
+
 #
 #	var now = Time.get_ticks_usec()
 #	var loading_time = now - gltf_start_loading_time

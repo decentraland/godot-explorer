@@ -51,7 +51,11 @@ module.exports.fetch = async function (url, init) {
 
     Object.assign(response, {
         async arrayBuffer() {
-            return new ArrayBuffer(0)
+            const data = await Deno.core.opAsync(
+                "op_fetch_consume_bytes",
+                reqId
+            )
+            return data
         },
         async json() {
             const data = await Deno.core.opAsync(
@@ -67,7 +71,7 @@ module.exports.fetch = async function (url, init) {
             )
             return data
         },
-        async _internal_bytes() {
+        async bytes() {
             const data = await Deno.core.opAsync(
                 "op_fetch_consume_bytes",
                 reqId
