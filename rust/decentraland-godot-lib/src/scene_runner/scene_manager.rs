@@ -264,7 +264,9 @@ impl SceneManager {
                     }
                 } else {
                     let crdt = scene.dcl_scene.scene_crdt.clone();
-                    let Ok(mut crdt_state) = crdt.try_lock() else {continue;};
+                    let Ok(mut crdt_state) = crdt.try_lock() else {
+                        continue;
+                    };
 
                     super::update_scene::update_scene(
                         delta,
@@ -330,7 +332,7 @@ impl SceneManager {
                         .main_sender_to_thread
                         .try_send(RendererResponse::Kill)
                     {
-                        // show error
+                        tracing::error!("error sending kill signal to thread");
                     } else {
                         scene.state = SceneState::KillSignal(current_time_us);
                     }
@@ -348,7 +350,12 @@ impl SceneManager {
                 SceneState::Dead => {
                     scene_to_remove.insert(*scene_id);
                 }
-                _ => {}
+                _ => {
+                    if scene.dcl_scene.thread_join_handle.is_finished() {
+                        tracing::error!("scene closed without kill signal");
+                        scene.state = SceneState::Dead;
+                    }
+                }
             }
         }
 
@@ -407,6 +414,23 @@ impl SceneManager {
                                     renderer_response: None,
                                 });
                             }
+                        }
+                    }
+                    SceneResponse::RemoveGodotScene(scene_id, logs) => {
+                        if let Some(scene) = self.scenes.get_mut(&scene_id) {
+                            scene.state = SceneState::Dead;
+                            if !self.dying_scene_ids.contains(&scene_id) {
+                                self.dying_scene_ids.push(scene_id);
+                            }
+                        }
+                        // enable logs
+                        for log in &logs {
+                            let mut arguments = VariantArray::new();
+                            arguments.push((scene_id.0 as i32).to_variant());
+                            arguments.push((log.level as i32).to_variant());
+                            arguments.push((log.timestamp as f32).to_variant());
+                            arguments.push(GodotString::from(&log.message).to_variant());
+                            self.console.callv(arguments);
                         }
                     }
                 },

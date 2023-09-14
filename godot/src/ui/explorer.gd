@@ -37,6 +37,11 @@ func _process(_dt):
 		dirty_save_position = true
 
 
+func _on_parcels_procesed(parcels, empty):
+	control_minimap.control_map_shader.set_used_parcels(parcels, empty)
+	control_menu.control_map.control_map_shader.set_used_parcels(parcels, empty)
+
+
 func _ready():
 	if Global.is_mobile:
 		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_BEGIN
@@ -72,6 +77,7 @@ func _ready():
 
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
+	parcel_manager.connect("parcels_processed", self._on_parcels_procesed)
 
 	if Global.config.last_realm_joined.is_empty():
 		realm.set_realm("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main")
@@ -246,10 +252,21 @@ func _on_line_edit_command_submit_message(message: String):
 	if command_str.begins_with("/"):
 		if command_str == "/go" or command_str == "/goto" and params.size() > 1:
 			var comma_params = params[1].split(",")
+			var dest_vector = Vector2i(0, 0)
 			if comma_params.size() > 1:
-				_on_control_menu_jump_to(Vector2i(int(comma_params[0]), int(comma_params[1])))
+				dest_vector = Vector2i(int(comma_params[0]), int(comma_params[1]))
 			elif params.size() > 2:
-				_on_control_menu_jump_to(Vector2i(int(params[1]), int(params[2])))
+				dest_vector = Vector2i(int(params[1]), int(params[2]))
+
+			panel_chat.add_chat_message(
+				"[color=#ccc]> Teleport to " + str(dest_vector) + "[/color]"
+			)
+			_on_control_menu_jump_to(dest_vector)
+		elif command_str == "/changerealm" and params.size() > 1:
+			panel_chat.add_chat_message(
+				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
+			)
+			realm.set_realm(params[1])
 		else:
 			pass
 			# TODO: unknown command

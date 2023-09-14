@@ -18,60 +18,14 @@ var map_parcel_size: Vector2
 # The top left parcel
 var map_topleft_parcel_position: Vector2
 
-const MAX_15B = 1 << 15
-const MAX_16B = 1 << 16
-
-
-func unsigned16_to_signed(unsigned):
-	return (unsigned + MAX_15B) % MAX_16B - MAX_15B
-
-
-func read_binary_file(file_path: String) -> void:
-	var file = FileAccess.open(file_path, FileAccess.READ)
-	file.big_endian = true
-	var arr: Array[Vector3] = []
-
-	var max_x: int = -1000000
-	var min_x: int = 1000000
-	var max_y: int = -1000000
-	var min_y: int = 1000000
-
-	while !file.eof_reached():
-		var x = unsigned16_to_signed(file.get_16())
-		var y = unsigned16_to_signed(file.get_16())
-		var flags = file.get_8()
-		max_x = maxi(x, max_x)
-		max_y = maxi(y, max_y)
-		min_x = mini(x, min_x)
-		min_y = mini(y, min_y)
-		arr.push_back(Vector3(x, y, flags))
-
-	file.close()
-
-	var size_x = max_x - min_x + 1
-	var size_y = max_y - min_y + 1
-	map_parcel_size = Vector2(size_x, size_y)
-	map_topleft_parcel_position = Vector2(min_x, -max_y)
-
-	var image = Image.create(size_x, size_y, false, Image.FORMAT_R8)
-
-	for tile in arr:
-		var x = tile.x - min_x
-		var y = size_y - 1 - (tile.y - min_y)
-		var flags = tile.z / 255.0
-		image.set_pixel(x, y, Color(flags, 0.0, 0.0, 0.0))
-
-	var texture = ImageTexture.create_from_image(image)
-	color_rect_map.material.set_shader_parameter("map_data", texture)
-
-	# This is not required for now (static map_data.png)
-	# image.save_png("res://src/ui/components/map_shader/map_data.png")
-
 
 func _ready():
+	map_parcel_size = Vector2(512, 512)
+	map_topleft_parcel_position = Vector2(-256, -256)
+
+	# TODO: use "https://api.decentraland.org/v1/minimap.png"
 	color_rect_map.material = color_rect_map.material.duplicate()
-	read_binary_file("res://src/ui/components/map_shader/map_data.bin")
-#	_on_resized()
+
 	set_zoom(zoom_value)
 	set_center_position(Vector2(0, 0))
 
@@ -84,7 +38,9 @@ func set_zoom(new_zoom_value: int) -> void:
 	color_rect_map.material.set_shader_parameter(
 		"line_width_px", floor(1.0 + float(zoom_value) / 16.0)
 	)
+
 	set_center_position(center_parcel_position)
+	_update_used_parcels()
 
 
 func set_center_position(parcel_position: Vector2):
@@ -103,12 +59,6 @@ func get_center_position() -> Vector2:
 	var absolute_position: Vector2 = Vector2(position_in_color_rect / zoom_value)
 	var inverted_parcel_position: Vector2 = absolute_position + map_topleft_parcel_position
 	return Vector2(inverted_parcel_position.x, -inverted_parcel_position.y)
-
-
-func to_parcel_position(tile: Vector2):
-	return Vector2(
-		tile.x + map_topleft_parcel_position.x, -(tile.y + map_topleft_parcel_position.y)
-	)
 
 
 func _on_color_rect_map_gui_input(event):
@@ -141,16 +91,13 @@ func reflect_dragging():
 
 func get_parcel_from_mouse_real() -> Vector2:
 	var absolute_position: Vector2 = Vector2(color_rect_map.get_local_mouse_position() / zoom_value)
-	var inverted_parcel_position: Vector2 = absolute_position + map_topleft_parcel_position
-	var ret = Vector2(inverted_parcel_position.x, 1 - inverted_parcel_position.y)
-	return ret
+	var position_without_offset: Vector2 = absolute_position + map_topleft_parcel_position
+	return Vector2(position_without_offset.x, -position_without_offset.y)
 
 
 func get_parcel_from_mouse() -> Vector2i:
-	var absolute_position: Vector2 = Vector2(color_rect_map.get_local_mouse_position() / zoom_value)
-	var inverted_parcel_position: Vector2 = absolute_position + map_topleft_parcel_position
-	var ret = Vector2(inverted_parcel_position.x, 1 - inverted_parcel_position.y)
-	return Vector2i(floor(ret.x), floor(ret.y))
+	var real_position = get_parcel_from_mouse_real()
+	return Vector2i(floor(real_position.x), floor(real_position.y))
 
 
 func set_selected_parcel(parcel_position: Vector2):
@@ -158,3 +105,46 @@ func set_selected_parcel(parcel_position: Vector2):
 		Vector2(parcel_position.x, -parcel_position.y) - map_topleft_parcel_position
 	)
 	color_rect_map.material.set_shader_parameter("selected_tile", color_rect_position)
+
+
+func set_used_parcels(used_parcel, emtpy_parcels):
+	var total = used_parcel.size() + emtpy_parcels.size()
+	var to_delete = color_rect_map.get_child_count() - total
+
+	if to_delete > 0:
+		for i in range(to_delete):
+			color_rect_map.remove_child(color_rect_map.get_child(0))
+	elif to_delete < 0:
+		for i in range(-to_delete):
+			var new_child: ColorRect = ColorRect.new()
+			new_child.mouse_filter = Control.MOUSE_FILTER_PASS
+			color_rect_map.add_child(new_child)
+
+	var index: int = 0
+	for i in range(used_parcel.size()):
+		var color_rect: ColorRect = color_rect_map.get_child(index)
+		color_rect.set_meta("parcel", Vector2(used_parcel[i].x, used_parcel[i].y))
+		color_rect.color = Color.DARK_GREEN
+		color_rect.color.a = 0.5
+		index += 1
+
+	for i in range(emtpy_parcels.size()):
+		var color_rect: ColorRect = color_rect_map.get_child(index)
+		color_rect.set_meta("parcel", Vector2(emtpy_parcels[i].x, emtpy_parcels[i].y))
+		color_rect.color = Color.ORANGE_RED
+		color_rect.color.a = 0.5
+		index += 1
+
+	_update_used_parcels()
+
+
+func _update_used_parcels():
+	for child in color_rect_map.get_children():
+		var color_rect: ColorRect = child
+
+		var parcel_position = Vector2(color_rect.get_meta("parcel"))
+		var inverted_position = Vector2(parcel_position.x, -parcel_position.y)
+		var parcel_in_control = inverted_position - map_topleft_parcel_position
+
+		color_rect.size = Vector2(zoom_value, zoom_value)
+		color_rect.position = zoom_value * (parcel_in_control + Vector2.UP)

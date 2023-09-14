@@ -21,7 +21,7 @@ func _ready():
 func set_center_position(player_position: Vector2):
 	control_map_shader.set_center_position(player_position)
 
-	var parcel_position = Vector2i(player_position)
+	var parcel_position = Vector2i(floori(player_position.x), floori(player_position.y))
 	control_map_shader.set_selected_parcel(parcel_position)
 	label_parcel.text = str(parcel_position)
 

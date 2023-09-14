@@ -2,6 +2,8 @@ extends Node
 
 class_name ParcelManager
 
+signal parcels_processed(parcel_filled, empty)
+
 const MAIN_JS_FILE_REQUEST = 100
 const MAIN_CRDT_FILE_REQUEST = 101
 const ADAPTATION_LAYER_JS_FILE_REQUEST = 102
@@ -103,17 +105,26 @@ func _on_desired_parsel_manager_update():
 	for scene_id in to_remove:
 		loaded_scenes.erase(scene_id)
 
+	var empty_parcels_coords = []
 	for parcel in empty_parcels:
+		var coord = parcel.split(",")
+		var x = int(coord[0])
+		var z = int(coord[1])
+		empty_parcels_coords.push_back(Vector2i(x, z))
+
 		if not loaded_empty_scenes.has(parcel):
-			var coord = parcel.split(",")
-			var x = int(coord[0])
-			var z = int(coord[1])
 			var index = randi_range(0, 11)
 			var scene: Node3D = empty_scenes[index].instantiate()
 			Global.content_manager._hide_colliders(scene)
 			add_child(scene)
 			scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
 			loaded_empty_scenes[parcel] = scene
+
+	var parcel_filled = []
+	for scene_id in loaded_scenes:
+		parcel_filled.append_array(loaded_scenes[scene_id].parcels)
+
+	parcels_processed.emit(parcel_filled, empty_parcels_coords)
 
 
 func _on_realm_changed():
@@ -212,10 +223,17 @@ func update_position(new_position: Vector2i) -> void:
 
 
 func load_scene(scene_entity_id: String, entity: Dictionary):
-	loaded_scenes[scene_entity_id] = {
-		"id": scene_entity_id, "entity": entity, "scene_number_id": -1
-	}
 	var metadata = entity.get("metadata", {})
+
+	var parcels_str = metadata.get("scene", {}).get("parcels", [])
+	var parcels = []
+	for parcel in parcels_str:
+		var p = parcel.split_floats(",")
+		parcels.push_back(Vector2i(int(p[0]), int(p[1])))
+
+	loaded_scenes[scene_entity_id] = {
+		"id": scene_entity_id, "entity": entity, "scene_number_id": -1, "parcels": parcels
+	}
 
 	var is_sdk7 = metadata.get("runtimeVersion", null) == "7"
 	var main_js_request_id := -1
@@ -242,10 +260,14 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 		if not FileAccess.file_exists(local_main_js_path):
 			js_request_completed = false
 			if adaptation_layer_js_request == -1:
-				adaptation_layer_js_request = http_requester._requester.request_file(
-					ADAPTATION_LAYER_JS_FILE_REQUEST,
-					"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.js",
-					local_main_js_path.replace("user:/", OS.get_user_data_dir())
+				adaptation_layer_js_request = (
+					http_requester
+					. _requester
+					. request_file(
+						ADAPTATION_LAYER_JS_FILE_REQUEST,
+						"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.min.js",
+						local_main_js_path.replace("user:/", OS.get_user_data_dir())
+					)
 				)
 			main_js_request_id = adaptation_layer_js_request
 
@@ -301,16 +323,17 @@ func _on_try_spawn_scene(scene):
 	var base_parcel = (
 		scene.entity.get("metadata", {}).get("scene", {}).get("base", "0,0").split_floats(",")
 	)
-	var parcels_str = scene.entity.get("metadata", {}).get("scene", {}).get("parcels", [])
 	var title = scene.entity.get("metadata", {}).get("display", {}).get("title", "No title")
-	var parcels = []
-	for parcel in parcels_str:
-		var p = parcel.split_floats(",")
-		parcels.push_back(Vector2i(int(p[0]), int(p[1])))
 
 	var content_mapping: Dictionary = {
 		"base_url": scene.entity.baseUrl, "content": scene.entity["content"]
 	}
+
+	for key in content_mapping.content.keys():
+		var key_lower = key.to_lower()
+		if not content_mapping.content.has(key_lower):
+			content_mapping.content[key_lower] = content_mapping.content[key]
+			content_mapping.content.erase(key)
 
 	var scene_definition: Dictionary = {
 		"base": Vector2i(base_parcel[0], base_parcel[1]),
@@ -318,7 +341,7 @@ func _on_try_spawn_scene(scene):
 		"path": local_main_js_path,
 		"main_crdt_path": local_main_crdt_path,
 		"visible": true,
-		"parcels": parcels,
+		"parcels": scene.parcels,
 		"title": title
 	}
 

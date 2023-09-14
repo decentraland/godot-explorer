@@ -26,8 +26,9 @@ var THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 func _ready():
 	camera.current = true
 
-	if captured:
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	# TODO: auto capture mouse
+	# if captured:
+	# 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 	first_person = false
 	var tween_out = create_tween()

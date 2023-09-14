@@ -10,6 +10,7 @@ mod consts;
 mod download_file;
 mod export;
 mod install_dependency;
+mod path;
 mod run;
 
 fn main() -> Result<(), anyhow::Error> {

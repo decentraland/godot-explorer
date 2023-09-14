@@ -2,7 +2,6 @@ pub mod engine;
 pub mod fetch;
 pub mod runtime;
 
-use self::fetch::{FP, TP};
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
     SharedSceneCrdtState,
@@ -19,6 +18,8 @@ use deno_core::{
     error::{generic_error, AnyError},
     include_js_files, op, v8, Extension, Op, OpState, RuntimeOptions,
 };
+use once_cell::sync::Lazy;
+use v8::IsolateHandle;
 
 struct SceneJsFileContent(pub String);
 struct SceneMainCrdtFileContent(pub Vec<u8>);
@@ -45,23 +46,16 @@ pub struct SceneLogMessage {
     pub message: String,
 }
 
-pub fn create_runtime() -> deno_core::JsRuntime {
-    // add fetch stack
-    let web = deno_web::deno_web::init_ops_and_esm::<TP>(
-        std::sync::Arc::new(deno_web::BlobStore::default()),
-        None,
-    );
-    let webidl = deno_webidl::deno_webidl::init_ops_and_esm();
-    let url = deno_url::deno_url::init_ops_and_esm();
-    let console = deno_console::deno_console::init_ops_and_esm();
-    let fetch = deno_fetch::deno_fetch::init_js_only::<FP>();
+pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
+    Lazy::new(Default::default);
 
-    let mut ext = &mut Extension::builder_with_deps("decentraland", &["deno_fetch"]);
+pub fn create_runtime() -> deno_core::JsRuntime {
+    let mut ext = &mut Extension::builder_with_deps("decentraland", &[]);
 
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 2] = [engine::ops(), runtime::ops()];
+    let op_sets: [Vec<deno_core::OpDecl>; 3] = [engine::ops(), runtime::ops(), fetch::ops()];
 
     // add plugin registrations
     let mut op_map = HashMap::new();
@@ -94,7 +88,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
     // create runtime
     deno_core::JsRuntime::new(RuntimeOptions {
         v8_platform: v8::Platform::new(1, false).make_shared().into(),
-        extensions: vec![webidl, url, console, web, fetch, ext],
+        extensions: vec![ext],
         ..Default::default()
     })
 }
@@ -152,6 +146,13 @@ pub(crate) fn scene_thread(
     let scene_code = SceneJsFileContent(file.unwrap().get_as_text().to_string());
 
     let mut runtime = create_runtime();
+
+    // store handle
+    let vm_handle = runtime.v8_isolate().thread_safe_handle();
+    let mut guard = VM_HANDLES.lock().unwrap();
+    guard.insert(scene_id, vm_handle);
+    drop(guard);
+
     let state = runtime.op_state();
 
     state.borrow_mut().put(scene_code);
@@ -189,6 +190,7 @@ pub(crate) fn scene_thread(
 
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_time()
+        .enable_io()
         .build()
         .unwrap();
 
@@ -223,15 +225,28 @@ pub(crate) fn scene_thread(
 
         if let Err(e) = result {
             tracing::error!("[scene thread {scene_id:?}] script error onUpdate: {}", e);
-            return;
+            break;
         }
 
         let value = state.borrow().borrow::<SceneDying>().0;
         if value {
-            tracing::info!("exiting from the thread {:?}", scene_id);
-            return;
+            tracing::info!("breaking from the thread {:?}", scene_id);
+            break;
         }
     }
+
+    let mut op_state = state.borrow_mut();
+    let logs = op_state.take::<SceneLogs>();
+    let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
+    sender
+        .send(SceneResponse::RemoveGodotScene(scene_id, logs.0))
+        .expect("error sending scene response!!");
+
+    runtime.v8_isolate().terminate_execution();
+
+    tracing::info!("exiting from the thread {:?}", scene_id);
+
+    // std::thread::sleep(Duration::from_millis(5000));
 }
 
 // helper to setup, acquire, run and return results from a script function
@@ -309,6 +324,7 @@ fn op_require(
         "~system/RestrictedActions" => {
             Ok(include_str!("js_modules/RestrictedActions.js").to_owned())
         }
+        "fetch" => Ok(include_str!("js_modules/fetch.js").to_owned()),
         "~system/Runtime" => Ok(include_str!("js_modules/Runtime.js").to_owned()),
         "~system/Scene" => Ok(include_str!("js_modules/Scene.js").to_owned()),
         "~system/SignedFetch" => Ok(include_str!("js_modules/SignedFetch.js").to_owned()),

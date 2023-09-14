@@ -4,16 +4,13 @@ module.exports.getWorldTime = async function (body) { return {} }
 // sync implementation
 module.exports.readFile = async function (body) {
     // body.fileName
-
-    const fileBody = op_read_file(body.fileName);
-    if (!fileBody) {
-        throw new Error("File not found")
+    const { hash, url } = Deno.core.ops.op_get_file_url(body.fileName)
+    const response = await fetch(url)
+    const bytes = await response.bytes()
+    const data = new Uint8Array(bytes)
+    return {
+        content: data,
+        hash
     }
-
-    const response = {
-        content: fileBody,
-        hash: "string"
-    }
-    return response
 }
 module.exports.getSceneInformation = async function (body) { return {} }

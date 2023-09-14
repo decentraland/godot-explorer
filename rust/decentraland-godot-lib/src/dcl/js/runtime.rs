@@ -1,90 +1,37 @@
 use deno_core::{anyhow::anyhow, error::AnyError, op, Op, OpDecl, OpState};
-
 use serde::Serialize;
-use std::{
-    cell::RefCell,
-    rc::Rc,
-    time::{Duration, Instant},
-};
 
-use crate::http_request::{
-    http_requester::HttpRequester,
-    request_response::{RequestOption, ResponseEnum, ResponseType},
-};
+use std::{cell::RefCell, rc::Rc};
 
 use super::SceneContentMapping;
 
-// use crate::interface::crdt_context::CrdtContext;
-
-// list of op declarations
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_read_file::DECL]
+    vec![op_get_file_url::DECL]
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct ReadFileResponse {
-    content: Vec<u8>,
+struct GetFileUrlResponse {
+    url: String,
     hash: String,
 }
 
 #[op(v8)]
-async fn op_read_file(
+fn op_get_file_url(
     op_state: Rc<RefCell<OpState>>,
     filename: String,
-) -> Result<ReadFileResponse, AnyError> {
+) -> Result<GetFileUrlResponse, AnyError> {
     let state = op_state.borrow();
-    let mut http_requester = HttpRequester::new();
     let SceneContentMapping(base_url, content_mapping) = state.borrow::<SceneContentMapping>();
     let file = content_mapping.get(&filename);
 
     if let Some(hash) = file {
         let url = format!("{base_url}{hash}");
-        http_requester.send_request(RequestOption::new(
-            0,
+        return Ok(GetFileUrlResponse {
             url,
-            reqwest::Method::GET,
-            ResponseType::AsBytes,
-            None,
-            None,
-        ));
-
-        // wait until the request is done or timeout
-        let start_time = Instant::now();
-        loop {
-            if let Some(response) = http_requester.poll() {
-                if let Ok(response) = response {
-                    if let Ok(ResponseEnum::Bytes(content)) = response.response_data {
-                        return Ok(ReadFileResponse {
-                            content,
-                            hash: hash.clone(),
-                        });
-                    }
-                }
-                break;
-            } else {
-                std::thread::sleep(Duration::from_millis(10));
-            }
-
-            if start_time.elapsed() > Duration::from_secs(10) {
-                break;
-            }
-        }
+            hash: hash.to_string(),
+        });
     }
-    // let asset_server = op_state.borrow_mut().borrow::<AssetServer>().clone();
-    // let hash = op_state.borrow_mut().borrow::<CrdtContext>().hash.clone();
-    // let ipfs_path = IpfsPath::new(IpfsType::new_content_file(hash, filename));
-
-    // let content = asset_server
-    //     .ipfs()
-    //     .load_path(&PathBuf::from(&ipfs_path))
-    //     .await
-    //     .map_err(|e| anyhow!(e))?;
-    // let hash = asset_server
-    //     .ipfs()
-    //     .ipfs_hash(&ipfs_path)
-    //     .await
-    //     .unwrap_or_default();
 
     Err(anyhow!("not found"))
 }

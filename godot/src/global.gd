@@ -20,6 +20,10 @@ var standalone = false
 
 
 func _ready():
+	var tokio_runtime = TokioRuntime.new()
+	tokio_runtime.name = "tokio_runtime"
+	add_child(tokio_runtime)
+
 	var args := OS.get_cmdline_args()
 
 	if args.size() == 1 and args[0].begins_with("res://"):

@@ -144,6 +144,10 @@ pointing/emulate_touch_from_mouse=true
 3d_physics/layer_15="CL_CUSTOM7"
 3d_physics/layer_16="CL_CUSTOM8"
 
+[network]
+
+limits/debugger/max_chars_per_second=3276800
+
 [rendering]
 
 textures/vram_compression/import_etc2_astc=true

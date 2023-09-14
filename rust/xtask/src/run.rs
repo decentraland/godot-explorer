@@ -1,6 +1,7 @@
 use crate::{
     consts::{BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
     install_dependency,
+    path::adjust_canonicalization,
 };
 
 pub fn run(
@@ -9,16 +10,14 @@ pub fn run(
     itest: bool,
     only_build: bool,
 ) -> Result<(), anyhow::Error> {
-
-    let program = std::fs::canonicalize(format!(
-        "{}godot/{}",
-        BIN_FOLDER,
-        install_dependency::get_godot_executable_path().unwrap()
-    ))
-    .unwrap()
-    .to_str()
-    .unwrap()
-    .to_string();
+    let program = adjust_canonicalization(
+        std::fs::canonicalize(format!(
+            "{}godot/{}",
+            BIN_FOLDER,
+            install_dependency::get_godot_executable_path().unwrap()
+        ))
+        .unwrap(),
+    );
 
     std::env::set_var("GODOT4_BIN", program.clone());
 
@@ -33,8 +32,13 @@ pub fn run(
         vec!["build"]
     };
 
+    let build_cwd =
+        adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER).unwrap());
+
+    println!("cargo build at {build_cwd} args: {:?}", build_args);
+
     let build_status = std::process::Command::new("cargo")
-        .current_dir(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER).unwrap())
+        .current_dir(build_cwd)
         .args(build_args)
         .status()
         .expect("Failed to run Godot");

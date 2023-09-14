@@ -18,6 +18,8 @@ const GodotGltfState = {
 }
 var gltf_state: int = 0
 
+var gltf_start_loading_time: int = 0
+
 
 func _ready():
 	self.load_gltf.call_deferred()
@@ -32,6 +34,8 @@ func load_gltf():
 	if self.file_hash.is_empty():
 		gltf_state = GodotGltfState.NotFound
 		return
+
+	gltf_start_loading_time = Time.get_ticks_usec()
 
 	var fetching_resource = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
 
@@ -61,8 +65,16 @@ func _on_gltf_loaded(resource_hash: String):
 	gltf_state = GodotGltfState.Finished
 	gltf_node = node.duplicate()
 
+#	var colliders_timestamp = Time.get_ticks_usec()
 	create_and_set_mask_colliders(gltf_node)
 	add_child.call_deferred(gltf_node)
+
+
+#
+#	var now = Time.get_ticks_usec()
+#	var loading_time = now - gltf_start_loading_time
+#	var colliders_time = now - colliders_timestamp
+#	print("gltf ", dcl_gltf_src, " loaded in ", roundf(float(loading_time) / 1000.0), " ms", " collider in ", roundf(float(colliders_time) / 1000.0))
 
 
 func get_collider(mesh_instance: MeshInstance3D):
