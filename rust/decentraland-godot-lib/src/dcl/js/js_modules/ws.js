@@ -55,34 +55,39 @@ class WebSocket {
         this.url = url
         this.protocols = protocols
         this.readyState = WebSocket.CONNECTING
-        this._internal_ws_id = Deno.core.opSync(
-            "op_ws_create",
-            url, protocols
+        this._internal_ws_id = Deno.core.ops.op_ws_create(
+            url, protocols ?? []
         )
 
-        this.bufferedAmount = 0 // TODO
-        this.extensions = ""
-        this.protocol = ""
+        this.bufferedAmount = 0 // TODO: implement
+        this.extensions = "" // TODO: implement
+        this.protocol = "" // TODO: implement
 
         this.onclose = null
         this.onerror = null
         this.onmessage = null
         this.onopen = null
 
-        _poll().then().catch()
+        this._poll().then(console.warn).catch(console.error)
     }
 
     send(data) {
-        Deno.core.opSync(
-            "op_ws_send",
-            this._internal_req_id, data
-        )
+        if (typeof data !== 'string') {
+            if (data instanceof Uint8Array) {
+                Deno.core.ops.op_ws_send_bin(
+                    this._internal_ws_id, data
+                )
+            }
+        } else {
+            Deno.core.ops.op_ws_send_text(
+                this._internal_ws_id, data
+            )
+        }
     }
 
     close(code, reason) {
-        Deno.core.opSync(
-            "op_ws_close",
-            this._internal_req_id, code, reason
+        Deno.core.ops.op_ws_close(
+            this._internal_ws_id, code, reason
         )
         this.readyState = WebSocket.CLOSED
     }
@@ -91,8 +96,33 @@ class WebSocket {
         try {
             while (true) {
                 const data = await Deno.core.opAsync(
-                    "op_ws_poll", this._internal_req_id
+                    "op_ws_poll", this._internal_ws_id
                 )
+
+
+                if (data.closed) {
+                    if (typeof this.onclose === 'function') {
+                        this.onclose({ type: "close" })
+                    }
+                    break
+                }
+
+
+                if (data.binary_data) {
+                    if (typeof this.onmessage === 'function') {
+                        this.onmessage({ type: "binary", data: data.binary_data })
+                    }
+                } else if (data.text_data) {
+                    if (typeof this.onmessage === 'function') {
+                        this.onmessage({ type: "text", data: data.text_data })
+                    }
+                } else if (data.connected) {
+                    if (typeof this.onopen === 'function') {
+                        this.onopen({ type: "open" })
+                    }
+                } else {
+                    throw new Error("unreached")
+                }
             }
         } catch (err) {
             if (typeof this.onerror === 'function') {
@@ -100,9 +130,7 @@ class WebSocket {
             }
         }
 
-        Deno.core.opSync(
-            "op_ws_cleanup", this._internal_req_id
-        )
+        Deno.core.ops.op_ws_cleanup(this._internal_ws_id)
     }
 }
 
