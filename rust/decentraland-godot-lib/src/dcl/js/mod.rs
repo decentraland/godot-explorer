@@ -1,6 +1,7 @@
 pub mod engine;
 pub mod fetch;
 pub mod runtime;
+pub mod websocket;
 
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
@@ -55,13 +56,16 @@ pub fn create_runtime() -> deno_core::JsRuntime {
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 3] = [engine::ops(), runtime::ops(), fetch::ops()];
+    let op_sets: [Vec<deno_core::OpDecl>; 4] = [
+        engine::ops(),
+        runtime::ops(),
+        fetch::ops(),
+        websocket::ops(),
+    ];
 
-    // add plugin registrations
     let mut op_map = HashMap::new();
     for set in op_sets {
         for op in &set {
-            // explicitly record the ones we added so we can remove deno_fetch imposters
             op_map.insert(op.name, *op);
         }
         ext = ext.ops(set)
@@ -325,6 +329,7 @@ fn op_require(
             Ok(include_str!("js_modules/RestrictedActions.js").to_owned())
         }
         "fetch" => Ok(include_str!("js_modules/fetch.js").to_owned()),
+        "ws" => Ok(include_str!("js_modules/ws.js").to_owned()),
         "~system/Runtime" => Ok(include_str!("js_modules/Runtime.js").to_owned()),
         "~system/Scene" => Ok(include_str!("js_modules/Scene.js").to_owned()),
         "~system/SignedFetch" => Ok(include_str!("js_modules/SignedFetch.js").to_owned()),

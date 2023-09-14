@@ -101,3 +101,4 @@ globalThis.require = require;
 globalThis.console = console;
 
 globalThis.fetch = require('fetch').fetch;
+globalThis.WebSocket = require('ws').WebSocket;
