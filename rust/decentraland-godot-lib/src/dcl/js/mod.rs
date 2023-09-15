@@ -347,6 +347,7 @@ fn op_log(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
     if immediate {
         tracing::info!("{}", message);
     }
+    tracing::debug!("{}", message);
 
     let time = state.borrow().borrow::<SceneElapsedTime>().0;
     state
@@ -365,6 +366,7 @@ fn op_error(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
     if immediate {
         tracing::error!("{}", message);
     }
+    tracing::debug!("{}", message);
 
     let time = state.borrow().borrow::<SceneElapsedTime>().0;
     state

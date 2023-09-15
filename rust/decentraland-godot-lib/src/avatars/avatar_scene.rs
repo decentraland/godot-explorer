@@ -41,6 +41,69 @@ impl NodeVirtual for AvatarScene {
     }
 }
 
+#[godot_api]
+impl AvatarScene {
+    #[func]
+    pub fn update_avatar_profile(&mut self, alias: u32, profile: Dictionary) {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            // TODO: handle this condition
+            return;
+        };
+
+        self.avatar_godot_scene
+            .get_mut(&entity_id)
+            .unwrap()
+            .call("update_avatar".into(), &[profile.to_variant()]);
+    }
+
+    #[func]
+    pub fn update_avatar_transform(&mut self, alias: u32, transform: Transform3D) {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            // TODO: handle this condition
+            return;
+        };
+
+        let dcl_transform = DclTransformAndParent::from_godot(&transform, Vector3::ZERO);
+
+        // let avatar_scene = self.avatar_godot_scene.get_mut(&entity_id).unwrap();
+
+        // // TODO: the scale seted in the transform is local
+        // avatar_scene.set_transform(dcl_transform.to_godot_transform_3d());
+        self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
+            "set_target".into(),
+            &[dcl_transform.to_godot_transform_3d().to_variant()],
+        );
+
+        self.crdt
+            .get_transform_mut()
+            .put(entity_id, Some(dcl_transform));
+    }
+
+    #[func]
+    pub fn add_avatar(&mut self, alias: u32) {
+        // TODO: the entity Self::MAX_ENTITY_ID + 1 would be a buggy avatar
+        let entity_id = self
+            .get_next_entity_id()
+            .unwrap_or(SceneEntityId::new(Self::MAX_ENTITY_ID + 1, 0));
+        self.crdt.entities.try_init(entity_id);
+
+        self.avatar_entity.insert(alias, entity_id);
+
+        let new_avatar =
+            godot::engine::load::<PackedScene>("res://src/decentraland_components/avatar.tscn")
+                .instantiate()
+                .unwrap()
+                .cast::<Node3D>();
+
+        self.base.add_child(new_avatar.share().upcast());
+        self.avatar_godot_scene.insert(entity_id, new_avatar);
+    }
+}
+
 impl AvatarScene {
     const FROM_ENTITY_ID: u16 = 10;
     const MAX_ENTITY_ID: u16 = 200;
@@ -67,25 +130,6 @@ impl AvatarScene {
         for (_, avatar) in avatars {
             self.base.remove_child(avatar.upcast());
         }
-    }
-
-    pub fn add_avatar(&mut self, alias: u32) {
-        // TODO: the entity Self::MAX_ENTITY_ID + 1 would be a buggy avatar
-        let entity_id = self
-            .get_next_entity_id()
-            .unwrap_or(SceneEntityId::new(Self::MAX_ENTITY_ID + 1, 0));
-        self.crdt.entities.try_init(entity_id);
-
-        self.avatar_entity.insert(alias, entity_id);
-
-        let new_avatar =
-            godot::engine::load::<PackedScene>("res://src/decentraland_components/avatar.tscn")
-                .instantiate()
-                .unwrap()
-                .cast::<Node3D>();
-
-        self.base.add_child(new_avatar.share().upcast());
-        self.avatar_godot_scene.insert(entity_id, new_avatar);
     }
 
     pub fn remove_avatar(&mut self, alias: u32) {

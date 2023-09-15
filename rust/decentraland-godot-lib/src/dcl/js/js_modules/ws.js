@@ -72,56 +72,60 @@ class WebSocket {
     }
 
     send(data) {
-        if (typeof data !== 'string') {
-            if (data instanceof Uint8Array) {
-                Deno.core.ops.op_ws_send_bin(
-                    this._internal_ws_id, data
-                )
-            }
-        } else {
-            Deno.core.ops.op_ws_send_text(
-                this._internal_ws_id, data
-            )
+        if (typeof data === 'string') {
+            Deno.core.ops.op_ws_send(this._internal_ws_id, { "type": "Text", data })
+        } else if (typeof data === 'object' && data instanceof Uint8Array) {
+            Deno.core.ops.op_ws_send(this._internal_ws_id, { "type": "Binary", data: Array.from(data) })
         }
     }
 
     close(code, reason) {
-        Deno.core.ops.op_ws_close(
-            this._internal_ws_id, code, reason
-        )
-        this.readyState = WebSocket.CLOSED
+        if (this.readyState != WebSocket.CLOSED) {
+            Deno.core.ops.op_ws_send(this._internal_ws_id, { "type": "Close" })
+            this.readyState = WebSocket.CLOSED
+        }
     }
 
     async _poll() {
-        try {
-            while (true) {
-                const data = await Deno.core.opAsync(
-                    "op_ws_poll", this._internal_ws_id
-                )
+        const self = this
+        async function poll_from_native() {
+            const data = await Deno.core.opAsync(
+                "op_ws_poll", self._internal_ws_id
+            )
 
+            console.log("poll data ", data)
 
-                if (data.closed) {
-                    if (typeof this.onclose === 'function') {
-                        this.onclose({ type: "close" })
+            switch (data.type) {
+                case "BinaryData":
+                    if (typeof self.onmessage === 'function') {
+                        self.onmessage({ type: "binary", data: data.data })
                     }
                     break
-                }
-
-
-                if (data.binary_data) {
-                    if (typeof this.onmessage === 'function') {
-                        this.onmessage({ type: "binary", data: data.binary_data })
+                case "TextData":
+                    if (typeof self.onmessage === 'function') {
+                        self.onmessage({ type: "text", data: data.data })
                     }
-                } else if (data.text_data) {
-                    if (typeof this.onmessage === 'function') {
-                        this.onmessage({ type: "text", data: data.text_data })
+                    break
+                case "Connected":
+                    if (typeof self.onopen === 'function') {
+                        self.onopen({ type: "open" })
                     }
-                } else if (data.connected) {
-                    if (typeof this.onopen === 'function') {
-                        this.onopen({ type: "open" })
+                    break
+                case "Closed":
+                    if (typeof self.onclose === 'function') {
+                        self.onclose({ type: "close" })
                     }
-                } else {
+                    return false;
+                default:
                     throw new Error("unreached")
+            }
+            return true
+        }
+
+        try {
+            while (true) {
+                if (!(await poll_from_native())) {
+                    break
                 }
             }
         } catch (err) {
@@ -130,6 +134,7 @@ class WebSocket {
             }
         }
 
+        this.readyState = WebSocket.CLOSED
         Deno.core.ops.op_ws_cleanup(this._internal_ws_id)
     }
 }
