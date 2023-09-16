@@ -235,6 +235,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
             cp rust/decentraland-godot-lib/target/release/decentraland_godot_lib.dll godot/lib/
+            cp .bin/ffmpeg/ffmpeg-6.0-full_build-shared/bin/*.dll godot/lib/
 
       # Export section (multi platform)
       - name: Export
