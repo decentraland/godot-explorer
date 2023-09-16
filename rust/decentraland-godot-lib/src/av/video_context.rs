@@ -7,7 +7,7 @@ use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
 use ffmpeg_next::{decoder, format::context::Input, media::Type, util::frame, Packet};
 use godot::engine::image::Format;
 use godot::engine::{Image, ImageTexture};
-use godot::prelude::{Gd, PackedByteArray, Share, Vector2};
+use godot::prelude::{Gd, PackedByteArray, Vector2};
 use thiserror::Error;
 use tracing::debug;
 
@@ -189,7 +189,7 @@ impl FfmpegContext for VideoContext {
                 data_arr,
             )
             .unwrap();
-            self.texture.set_image(image.share());
+            self.texture.set_image(image.clone());
             self.texture.update(image);
         } else {
             let mut image = self.texture.get_image().unwrap();

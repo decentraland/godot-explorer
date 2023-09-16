@@ -89,7 +89,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                         Variant::from(invisible_meshes_collision_mask),
                     );
                     new_gltf.set_name(GodotString::from("GltfContainer"));
-                    node.base.add_child(new_gltf.share().upcast());
+                    node.base.add_child(new_gltf.clone().upcast());
 
                     scene.gltf_loading.insert(*entity);
                 }

@@ -1,4 +1,4 @@
-use godot::prelude::{Node, Share, Transform3D, Vector3};
+use godot::prelude::{Node, Transform3D, Vector3};
 
 use crate::{
     dcl::{
@@ -74,7 +74,7 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
         }
     }
 
-    let root_node = godot_dcl_scene.root_node.share().upcast::<Node>();
+    let root_node = godot_dcl_scene.root_node.clone().upcast::<Node>();
     while godot_dcl_scene.hierarchy_dirty {
         godot_dcl_scene.hierarchy_dirty = false;
 
@@ -101,7 +101,7 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 let current_node = godot_dcl_scene.ensure_node_mut(&entity);
                 current_node
                     .base
-                    .reparent_ex(root_node.share())
+                    .reparent_ex(root_node.clone())
                     .keep_global_transform(false)
                     .done();
                 current_node.computed_parent = SceneEntityId::ROOT;
@@ -116,7 +116,7 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
                     let parent_node = godot_dcl_scene
                         .ensure_node_mut(&desired_parent)
                         .base
-                        .share()
+                        .clone()
                         .upcast::<Node>();
 
                     let current_node = godot_dcl_scene.ensure_node_mut(&entity);

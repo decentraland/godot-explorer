@@ -36,13 +36,27 @@ pub struct Node3DEntity {
 
 impl SceneDefinition {
     pub fn from_dict(dict: Dictionary) -> Result<Self, String> {
-        let Some(main_crdt_path) = dict.get("main_crdt_path") else { return Err("main_crdt_path not found".to_string()) };
-        let Some(path) = dict.get("path") else { return Err("path not found".to_string()) };
-        let Some(base) = dict.get("base") else { return Err("base not found".to_string()) };
-        let Some(parcels) = dict.get("parcels") else { return Err("parcels not found".to_string()) };
-        let Some(visible) = dict.get("visible") else { return Err("visible not found".to_string()) };
-        let Some(is_global) = dict.get("is_global") else { return Err("is_global not found".to_string()) };
-        let Some(title) = dict.get("title") else { return Err("title not found".to_string()) };
+        let Some(main_crdt_path) = dict.get("main_crdt_path") else {
+            return Err("main_crdt_path not found".to_string());
+        };
+        let Some(path) = dict.get("path") else {
+            return Err("path not found".to_string());
+        };
+        let Some(base) = dict.get("base") else {
+            return Err("base not found".to_string());
+        };
+        let Some(parcels) = dict.get("parcels") else {
+            return Err("parcels not found".to_string());
+        };
+        let Some(visible) = dict.get("visible") else {
+            return Err("visible not found".to_string());
+        };
+        let Some(is_global) = dict.get("is_global") else {
+            return Err("is_global not found".to_string());
+        };
+        let Some(title) = dict.get("title") else {
+            return Err("title not found".to_string());
+        };
 
         let base =
             Vector2i::try_from_variant(&base).map_err(|_op| "couldn't get offset as Vector2i")?;
@@ -97,7 +111,7 @@ impl GodotDclScene {
 
         let entities = HashMap::from([(
             SceneEntityId::new(0, 0),
-            Node3DEntity::new(root_node.share()),
+            Node3DEntity::new(root_node.clone()),
         )]);
 
         GodotDclScene {
@@ -119,7 +133,7 @@ impl GodotDclScene {
                 entity.number, entity.version
             )));
 
-            self.root_node.add_child(new_node.base.share().upcast());
+            self.root_node.add_child(new_node.base.clone().upcast());
             self.entities.insert(*entity, new_node);
         }
 

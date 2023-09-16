@@ -99,7 +99,7 @@ impl AvatarScene {
                 .unwrap()
                 .cast::<Node3D>();
 
-        self.base.add_child(new_avatar.share().upcast());
+        self.base.add_child(new_avatar.clone().upcast());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
     }
 }
@@ -136,7 +136,7 @@ impl AvatarScene {
         if let Some(entity_id) = self.avatar_entity.remove(&alias) {
             self.crdt.kill_entity(&entity_id);
             let mut avatar = self.avatar_godot_scene.remove(&entity_id).unwrap();
-            self.base.remove_child(avatar.share().upcast());
+            self.base.remove_child(avatar.clone().upcast());
             avatar.queue_free();
         }
     }

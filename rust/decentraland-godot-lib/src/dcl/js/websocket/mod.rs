@@ -1,13 +1,10 @@
-use std::{cell::RefCell, collections::HashMap, net::TcpStream, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use deno_core::{error::AnyError, op, Op, OpDecl, OpState};
-use futures_util::{stream::SplitSink, StreamExt};
+use futures_util::{SinkExt, StreamExt};
 use http::{HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
-use tokio_tungstenite::{
-    tungstenite::{client::IntoClientRequest, protocol::CloseFrame, Message},
-    MaybeTlsStream, WebSocketStream,
-};
+use tokio_tungstenite::tungstenite::{client::IntoClientRequest, protocol::CloseFrame};
 
 pub fn ops() -> Vec<OpDecl> {
     vec![
@@ -49,41 +46,6 @@ enum WsPoll {
     TextData { data: String },
 }
 
-async fn ws_poll_send_by_ws(
-    ws_send: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
-    mut receiver: tokio::sync::mpsc::Receiver<WsSendData>,
-    sender: tokio::sync::mpsc::Sender<WsReceiveData>,
-) -> Result<(), AnyError> {
-    loop {
-        let to_send = receiver.recv().await;
-        tracing::debug!("to send {:?}", to_send);
-        match to_send {
-            Some(WsSendData::Binary { data }) => {
-                ws_send
-                    .send(tokio_tungstenite::tungstenite::Message::Binary(data))
-                    .await?;
-            }
-            Some(WsSendData::Text { data }) => {
-                ws_send
-                    .send(tokio_tungstenite::tungstenite::Message::Text(data))
-                    .await?;
-            }
-            Some(WsSendData::Close) => {
-                ws_send.close().await?;
-                break;
-            }
-            None => {
-                sender
-                    .send(WsReceiveData::Error(anyhow::Error::msg("none from sender")))
-                    .await?;
-                ws_send.close().await?;
-                break;
-            }
-        }
-    }
-    Ok(())
-}
-
 async fn ws_poll(
     url: String,
     protocols: Vec<String>,
@@ -110,67 +72,86 @@ async fn ws_poll(
     sender.send(WsReceiveData::Connected).await?;
 
     tracing::debug!("status sent");
-    let (mut write, mut read) = ws_stream.split();
+    let (mut ws_send, mut read) = ws_stream.split();
 
-    loop {
-        tracing::debug!("ws_poll loop");
-        tokio::select! {
-            to_send = receiver.recv() => {
+    let sender_a = sender.clone();
+
+    tokio::join!(
+        async move {
+            loop {
+                let to_send = receiver.recv().await;
                 tracing::debug!("to send {:?}", to_send);
-                match to_send {
-                    Some(WsSendData::Binary { data} ) => {
-                        write.send(tokio_tungstenite::tungstenite::Message::Binary(data)).await?;
-                    }
-                    Some(WsSendData::Text {data }) => {
-                        write.send(tokio_tungstenite::tungstenite::Message::Text(data)).await?;
-                    }
+
+                let result = match to_send {
+                    Some(WsSendData::Binary { data }) => ws_send
+                        .send(tokio_tungstenite::tungstenite::Message::Binary(data))
+                        .await
+                        .ok(),
+                    Some(WsSendData::Text { data }) => ws_send
+                        .send(tokio_tungstenite::tungstenite::Message::Text(data))
+                        .await
+                        .ok(),
                     Some(WsSendData::Close) => {
-                        write.close().await?;
-                        break;
+                        let _ = ws_send.close().await;
+                        None
                     }
                     None => {
-                        sender.send(WsReceiveData::Error(anyhow::Error::msg("none from sender"))).await?;
-                        write.close().await?;
-                        break;
+                        let _ = sender_a
+                            .send(WsReceiveData::Error(anyhow::Error::msg("none from sender")))
+                            .await;
+                        let _ = ws_send.close().await;
+                        None
                     }
+                };
+                if result.is_none() {
+                    break;
                 }
             }
-            data_received = read.next() => {
+        },
+        async move {
+            loop {
+                let data_received = read.next().await;
                 tracing::debug!("receiving {:?}", data_received);
-                match data_received {
+                let result = match data_received {
                     Some(Ok(tokio_tungstenite::tungstenite::Message::Frame(_data))) => {
                         tracing::error!("unsupported frame type");
+                        Some(())
                     }
                     Some(Ok(tokio_tungstenite::tungstenite::Message::Binary(data))) => {
-                        sender.send(WsReceiveData::BinaryData(data)).await?;
+                        sender.send(WsReceiveData::BinaryData(data)).await.ok()
                     }
                     Some(Ok(tokio_tungstenite::tungstenite::Message::Text(data))) => {
-                        sender.send(WsReceiveData::TextData(data)).await?;
+                        sender.send(WsReceiveData::TextData(data)).await.ok()
                     }
                     Some(Ok(tokio_tungstenite::tungstenite::Message::Ping(data))) => {
-                        sender.send(WsReceiveData::BinaryData(data)).await?;
+                        sender.send(WsReceiveData::BinaryData(data)).await.ok()
                     }
                     Some(Ok(tokio_tungstenite::tungstenite::Message::Pong(data))) => {
-                        sender.send(WsReceiveData::BinaryData(data)).await?;
+                        sender.send(WsReceiveData::BinaryData(data)).await.ok()
                     }
                     Some(Ok(tokio_tungstenite::tungstenite::Message::Close(data))) => {
-                        sender.send(WsReceiveData::Close(data)).await?;
-                        break;
+                        let _ = sender.send(WsReceiveData::Close(data)).await;
+                        None
                     }
                     Some(Err(err)) => {
-                        sender.send(WsReceiveData::Error(err.into())).await?;
-                        break;
+                        let _ = sender.send(WsReceiveData::Error(err.into())).await;
+                        None
                     }
                     None => {
-                        sender.send(WsReceiveData::Error(anyhow::Error::msg("data receiver closed"))).await?;
-                        break;
+                        let _ = sender
+                            .send(WsReceiveData::Error(anyhow::Error::msg(
+                                "data receiver closed",
+                            )))
+                            .await;
+                        None
                     }
+                };
+                if result.is_none() {
+                    break;
                 }
-
             }
-
         }
-    }
+    );
     Ok(())
 }
 
@@ -227,7 +208,7 @@ async fn op_ws_poll(op_state: Rc<RefCell<OpState>>, res_id: u32) -> Result<WsPol
         Some(WsReceiveData::BinaryData(data)) => Ok(WsPoll::BinaryData { data }),
         Some(WsReceiveData::TextData(data)) => Ok(WsPoll::TextData { data }),
         Some(WsReceiveData::Connected) => Ok(WsPoll::Connected),
-        Some(WsReceiveData::Error(err)) => Err(err.into()),
+        Some(WsReceiveData::Error(err)) => Err(err),
         Some(WsReceiveData::Close(data)) => {
             if let Some(_data) = data {
                 Ok(WsPoll::Closed)
@@ -246,18 +227,21 @@ async fn op_ws_poll(op_state: Rc<RefCell<OpState>>, res_id: u32) -> Result<WsPol
 }
 
 #[op]
-fn op_ws_send(op_state: &mut OpState, res_id: u32, event: WsSendData) -> Result<(), AnyError> {
+async fn op_ws_send(
+    op_state: Rc<RefCell<OpState>>,
+    res_id: u32,
+    event: WsSendData,
+) -> Result<(), AnyError> {
     let sender = {
-        let sender = op_state.borrow::<WsState>().ws_sender.get(&res_id);
+        let state = op_state.borrow_mut();
+        let sender = state.borrow::<WsState>().ws_sender.get(&res_id);
         if sender.is_none() {
             return Err(anyhow::Error::msg("invalid resource id"));
         }
         sender.unwrap().clone()
     };
 
-    let _ = sender.send(event);
-
-    Ok(())
+    sender.send(event).await.map_err(anyhow::Error::from)
 }
 
 #[op]

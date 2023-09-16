@@ -128,7 +128,7 @@ impl CommunicationManager {
     fn init_rs(&mut self) {
         let mut realm = self.realm();
         let on_realm_changed =
-            Callable::from_object_method(self.base.share(), StringName::from("_on_realm_changed"));
+            Callable::from_object_method(self.base.clone(), StringName::from("_on_realm_changed"));
 
         realm.connect("realm_changed".into(), on_realm_changed);
 
@@ -200,7 +200,7 @@ impl CommunicationManager {
                     tracing::info!("comms > websocket to {}", ws_url);
                     self.current_adapter = Adapter::WsRoom(WebSocketRoom::new(
                         ws_url,
-                        self.tls_client.as_ref().unwrap().share(),
+                        self.tls_client.as_ref().unwrap().clone(),
                         self.player_identity.clone(),
                         avatar_scene,
                     ));

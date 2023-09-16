@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use godot::prelude::{Share, Transform3D};
+use godot::prelude::Transform3D;
 
 use super::{
     components::{
@@ -103,7 +103,7 @@ fn update_deleted_entities(scene: &mut Scene) {
     for (entity_id, node) in godot_dcl_scene.entities.iter_mut() {
         if died.contains(&node.computed_parent) && *entity_id != node.computed_parent {
             node.base
-                .reparent_ex(godot_dcl_scene.root_node.share().upcast())
+                .reparent_ex(godot_dcl_scene.root_node.clone().upcast())
                 .keep_global_transform(false)
                 .done();
             node.computed_parent = SceneEntityId::ROOT;
@@ -114,7 +114,7 @@ fn update_deleted_entities(scene: &mut Scene) {
 
     for deleted_entity in died.iter() {
         let node = godot_dcl_scene.ensure_node_mut(deleted_entity);
-        node.base.share().free();
+        node.base.clone().free();
         godot_dcl_scene.entities.remove(deleted_entity);
     }
 }

@@ -36,8 +36,10 @@ fn process_message(
             if !scene_crdt_state.entities.try_init(entity) {
                 return Ok(());
             }
-            let Some(component_definition) = scene_crdt_state.get_lww_component_definition_mut(component) else {
-                return Ok(())
+            let Some(component_definition) =
+                scene_crdt_state.get_lww_component_definition_mut(component)
+            else {
+                return Ok(());
             };
 
             component_definition.set_from_binary(entity, timestamp, stream);
@@ -50,8 +52,10 @@ fn process_message(
             if !scene_crdt_state.entities.try_init(entity) {
                 return Ok(());
             }
-            let Some(component_definition) = scene_crdt_state.get_lww_component_definition_mut(component) else {
-                return Ok(())
+            let Some(component_definition) =
+                scene_crdt_state.get_lww_component_definition_mut(component)
+            else {
+                return Ok(());
             };
 
             component_definition.set_none(entity, timestamp);
@@ -67,8 +71,10 @@ fn process_message(
             if !scene_crdt_state.entities.try_init(entity) {
                 return Ok(());
             }
-            let Some(component_definition) = scene_crdt_state.get_gos_component_definition_mut(component) else {
-                return Ok(())
+            let Some(component_definition) =
+                scene_crdt_state.get_gos_component_definition_mut(component)
+            else {
+                return Ok(());
             };
 
             component_definition.append_from_binary(entity, stream);
@@ -105,10 +111,11 @@ pub fn put_or_delete_lww_component(
     component_id: &SceneComponentId,
     writer: &mut DclWriter,
 ) -> Result<(), String> {
-    let Some(component_definition) = scene_crdt_state.get_lww_component_definition(*component_id) else {
+    let Some(component_definition) = scene_crdt_state.get_lww_component_definition(*component_id)
+    else {
         return Err("Component not found".into());
     };
-    let Some(opaque_value)= component_definition.get_opaque(*entity_id) else {
+    let Some(opaque_value) = component_definition.get_opaque(*entity_id) else {
         return Err("Entity not found".into());
     };
 
@@ -148,7 +155,8 @@ pub fn append_gos_component(
     elements_count: usize,
     writer: &mut DclWriter,
 ) -> Result<(), String> {
-    let Some(component_definition) = scene_crdt_state.get_gos_component_definition(*component_id) else {
+    let Some(component_definition) = scene_crdt_state.get_gos_component_definition(*component_id)
+    else {
         return Err("Component not found".into());
     };
 

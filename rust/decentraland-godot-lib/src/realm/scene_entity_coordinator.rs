@@ -80,8 +80,12 @@ struct EntityBase {
 
 impl EntityBase {
     fn from_urn(urn_str: &str, default_base_url: &String) -> Option<Self> {
-        let Ok(urn) = urn::Urn::from_str(urn_str) else { return None;};
-        let Some((lhs, rhs)) = urn.nss().split_once(':') else { return None; };
+        let Ok(urn) = urn::Urn::from_str(urn_str) else {
+            return None;
+        };
+        let Some((lhs, rhs)) = urn.nss().split_once(':') else {
+            return None;
+        };
         let hash = match lhs {
             "entity" => rhs.to_owned(),
             _ => return None,
@@ -358,7 +362,9 @@ impl SceneEntityCoordinator {
             if self.cache_scene_data.contains_key(urn_str) {
                 continue;
             }
-            let Some(entity_base) = EntityBase::from_urn(urn_str, &self.content_url) else { continue; };
+            let Some(entity_base) = EntityBase::from_urn(urn_str, &self.content_url) else {
+                continue;
+            };
 
             let url = format!("{}{}", entity_base.base_url, entity_base.hash);
             let request = RequestOption::new(

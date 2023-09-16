@@ -152,12 +152,12 @@ impl WebSocketRoom {
             return false;
         }
 
-        let buf = PackedByteArray::from_iter(buf.into_iter());
+        let buf = PackedByteArray::from_iter(buf);
         matches!(self.ws_peer.send(buf), godot::engine::global::Error::OK)
     }
 
     pub fn poll(&mut self) {
-        let mut peer = self.ws_peer.share();
+        let mut peer = self.ws_peer.clone();
         peer.poll();
 
         let ws_state = peer.get_ready_state();
@@ -167,7 +167,7 @@ impl WebSocketRoom {
                 godot::engine::web_socket_peer::State::STATE_CLOSED => {
                     if (Instant::now() - self.last_try_to_connect).as_secs() > 1 {
                         // TODO: see if the tls client is really required for now
-                        let _tls_client = self.tls_client.share();
+                        let _tls_client = self.tls_client.clone();
 
                         let ws_protocols = {
                             let mut v = PackedStringArray::new();
@@ -213,7 +213,7 @@ impl WebSocketRoom {
             },
             WsRoomState::IdentMessageSent => match ws_state {
                 godot::engine::web_socket_peer::State::STATE_OPEN => {
-                    while let Some((packet_length, message)) = get_next_packet(peer.share()) {
+                    while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
                         match message {
                             ws_packet::Message::ChallengeMessage(challenge_msg) => {
                                 tracing::info!("comms > peer msg {:?}", challenge_msg);
@@ -269,7 +269,7 @@ impl WebSocketRoom {
             },
             WsRoomState::ChallengeMessageSent => match ws_state {
                 godot::engine::web_socket_peer::State::STATE_OPEN => {
-                    while let Some((packet_length, message)) = get_next_packet(peer.share()) {
+                    while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
                         match message {
                             ws_packet::Message::WelcomeMessage(welcome_msg) => {
                                 // welcome_msg.
@@ -347,7 +347,7 @@ impl WebSocketRoom {
     }
 
     pub fn clean(&self) {
-        let mut peer = self.ws_peer.share();
+        let mut peer = self.ws_peer.clone();
         peer.close();
         match peer.get_ready_state() {
             godot::engine::web_socket_peer::State::STATE_OPEN
@@ -359,7 +359,7 @@ impl WebSocketRoom {
     }
 
     fn _handle_messages(&mut self) {
-        while let Some((_packet_length, message)) = get_next_packet(self.ws_peer.share()) {
+        while let Some((_packet_length, message)) = get_next_packet(self.ws_peer.clone()) {
             match message {
                 ws_packet::Message::ChallengeMessage(_)
                 | ws_packet::Message::PeerIdentification(_)

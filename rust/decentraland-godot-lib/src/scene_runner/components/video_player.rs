@@ -77,13 +77,13 @@ pub fn update_video_player(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     let audio_stream_generator = AudioStreamGenerator::new();
 
                     audio_stream_player.set_stream(audio_stream_generator.upcast());
-                    node.base.add_child(audio_stream_player.share().upcast());
+                    node.base.add_child(audio_stream_player.clone().upcast());
                     audio_stream_player.play();
 
                     let (video_sink, audio_sink) = av_sinks(
                         new_value.src.clone(),
                         texture,
-                        audio_stream_player.share(),
+                        audio_stream_player.clone(),
                         new_value.volume.unwrap_or(1.0),
                         new_value.playing.unwrap_or(true),
                         new_value.r#loop.unwrap_or(false),

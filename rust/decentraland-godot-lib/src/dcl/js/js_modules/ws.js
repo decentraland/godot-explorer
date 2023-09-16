@@ -73,9 +73,9 @@ class WebSocket {
 
     send(data) {
         if (typeof data === 'string') {
-            Deno.core.ops.op_ws_send(this._internal_ws_id, { "type": "Text", data })
+            Deno.core.opAsync("op_ws_send", this._internal_ws_id, { "type": "Text", data }).then().catch(console.error)
         } else if (typeof data === 'object' && data instanceof Uint8Array) {
-            Deno.core.ops.op_ws_send(this._internal_ws_id, { "type": "Binary", data: Array.from(data) })
+            Deno.core.opAsync("op_ws_send", this._internal_ws_id, { "type": "Binary", data: Array.from(data) }).then().catch(console.error)
         }
     }
 

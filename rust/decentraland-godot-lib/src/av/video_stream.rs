@@ -1,7 +1,7 @@
 use ffmpeg_next::format::input;
 use godot::{
     engine::ImageTexture,
-    prelude::{AudioStreamPlayer, Gd, InstanceId, Share},
+    prelude::{AudioStreamPlayer, Gd, InstanceId},
 };
 use tracing::{debug, warn};
 
@@ -43,7 +43,7 @@ pub fn av_sinks(
         // video_sender,
         // audio_sender,
         source.clone(),
-        tex.share(),
+        tex.clone(),
         audio_stream_player,
     );
 

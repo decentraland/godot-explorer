@@ -26,7 +26,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         .root_node
         .get_node("/root/content_manager".into())
         .unwrap()
-        .share();
+        .clone();
     let content_mapping_files = scene
         .content_mapping
         .get("content")
@@ -283,7 +283,7 @@ fn check_texture(
         DclSourceTex::VideoTexture(video_entity_id) => {
             if let Some(node) = scene.godot_dcl_scene.get_node(video_entity_id) {
                 if let Some(data) = &node.video_player_data {
-                    material.set_texture(param, data.video_sink.tex.share().upcast());
+                    material.set_texture(param, data.video_sink.tex.clone().upcast());
                     return true;
                 }
             }

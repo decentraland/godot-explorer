@@ -162,7 +162,7 @@ fn do_raycast(scene: &Scene, node: &Node3DEntity, raycast: &PbRaycast) -> PbRayc
 
     let hits = match query_type {
         RaycastQueryType::RqtHitFirst => {
-            if let Some(hit) = get_raycast_hit(scene, space.share(), raycast_query.share()) {
+            if let Some(hit) = get_raycast_hit(scene, space.clone(), raycast_query.clone()) {
                 vec![hit.0]
             } else {
                 vec![]
@@ -172,7 +172,7 @@ fn do_raycast(scene: &Scene, node: &Node3DEntity, raycast: &PbRaycast) -> PbRayc
             let mut counter = 0;
             let mut hits = vec![];
             while let Some((hit, rid)) =
-                get_raycast_hit(scene, space.share(), raycast_query.share())
+                get_raycast_hit(scene, space.clone(), raycast_query.clone())
             {
                 hits.push(hit);
 
@@ -220,7 +220,7 @@ fn get_raycast_hit(
     mut space: Gd<PhysicsDirectSpaceState3D>,
     raycast_query: Gd<PhysicsRayQueryParameters3D>,
 ) -> Option<(RaycastHit, Rid)> {
-    let raycast_result = space.intersect_ray(raycast_query.share());
+    let raycast_result = space.intersect_ray(raycast_query.clone());
     let collider = raycast_result.get("collider")?;
 
     let has_dcl_entity_id = collider
