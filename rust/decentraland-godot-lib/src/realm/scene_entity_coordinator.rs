@@ -80,8 +80,12 @@ struct EntityBase {
 
 impl EntityBase {
     fn from_urn(urn_str: &str, default_base_url: &String) -> Option<Self> {
-        let Ok(urn) = urn::Urn::from_str(urn_str) else { return None;};
-        let Some((lhs, rhs)) = urn.nss().split_once(':') else { return None; };
+        let Ok(urn) = urn::Urn::from_str(urn_str) else {
+            return None;
+        };
+        let Some((lhs, rhs)) = urn.nss().split_once(':') else {
+            return None;
+        };
         let hash = match lhs {
             "entity" => rhs.to_owned(),
             _ => return None,
@@ -196,7 +200,12 @@ impl SceneEntityCoordinator {
     }
 
     fn handle_scene_data(&mut self, id: u32, json: serde_json::Value) {
-        let entity_base = self.requested_entity.remove(&id).unwrap();
+        let entity_base = if let Some(entity_base) = self.requested_entity.remove(&id) {
+            entity_base
+        } else {
+            return;
+        };
+
         let entity_definition = serde_json::from_value::<EntityDefinitionJson>(json);
 
         if entity_definition.is_err() {
@@ -228,8 +237,14 @@ impl SceneEntityCoordinator {
     }
 
     fn handle_entity_pointers(&mut self, request_id: u32, json: serde_json::Value) {
+        let mut remaining_pointers =
+            if let Some(remaining_pointers) = self.requested_city_pointers.remove(&request_id) {
+                remaining_pointers
+            } else {
+                return;
+            };
+
         let entity_pointers = json.as_array().unwrap();
-        let mut remaining_pointers = self.requested_city_pointers.remove(&request_id).unwrap();
 
         // Add the scene data to the cache
         for entity_pointer in entity_pointers.iter() {
@@ -358,7 +373,9 @@ impl SceneEntityCoordinator {
             if self.cache_scene_data.contains_key(urn_str) {
                 continue;
             }
-            let Some(entity_base) = EntityBase::from_urn(urn_str, &self.content_url) else { continue; };
+            let Some(entity_base) = EntityBase::from_urn(urn_str, &self.content_url) else {
+                continue;
+            };
 
             let url = format!("{}{}", entity_base.base_url, entity_base.hash);
             let request = RequestOption::new(

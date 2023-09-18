@@ -31,7 +31,7 @@ pub fn update_billboard(
 }
 
 mod test {
-    use godot::prelude::{Basis, Share, Transform3D, Vector3};
+    use godot::prelude::{Basis, Transform3D, Vector3};
 
     use crate::{
         dcl::{
@@ -40,8 +40,8 @@ mod test {
                 last_write_wins::LastWriteWinsComponentOperation, SceneCrdtStateProtoComponents,
             },
         },
+        framework::TestContext,
         scene_runner::scene::Scene,
-        TestContext,
     };
 
     use super::update_billboard;
@@ -53,8 +53,8 @@ mod test {
         let mut crdt_state = crdt.try_lock().unwrap();
         scene_context
             .scene_tree
-            .share()
-            .add_child(scene.godot_dcl_scene.root_node.share().upcast());
+            .clone()
+            .add_child(scene.godot_dcl_scene.root_node.clone().upcast());
 
         let camera_global_transform = Transform3D::IDENTITY;
         update_billboard(&mut scene, &mut crdt_state, &camera_global_transform);
@@ -67,8 +67,8 @@ mod test {
         let mut crdt_state = crdt.try_lock().unwrap();
         scene_context
             .scene_tree
-            .share()
-            .add_child(scene.godot_dcl_scene.root_node.share().upcast());
+            .clone()
+            .add_child(scene.godot_dcl_scene.root_node.clone().upcast());
 
         let camera_global_transform =
             Transform3D::new(Basis::IDENTITY, Vector3::new(1.0, 0.0, 1.0));

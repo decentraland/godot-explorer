@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { git = "https://github.com/godot-rust/gdext", rev = "88d22f801a11e34243890b4f3d4530a6e368b0e1", features = ["threads"] }
+godot = { git = "https://github.com/godot-rust/gdext", rev = "00ba8c9d", features = ["threads"] }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
@@ -44,6 +44,9 @@ num-derive = "0.3"
 num = "0.4"
 http = "0.2.9"
 bytes = "1.4.0"
+
+tokio-tungstenite = "*"
+futures-util = "*"
 
 [build-dependencies]
 prost-build = "0.11.8"

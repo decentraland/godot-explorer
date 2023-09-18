@@ -125,6 +125,10 @@ fn main() -> Result<(), anyhow::Error> {
         ),
         _ => unreachable!("unreachable branch"),
     };
+
+    if res.is_err() {
+        println!("Fail running subcommand `{:?}`", subcommand.0);
+    }
     res
     // xtaskops::tasks::main()
 }

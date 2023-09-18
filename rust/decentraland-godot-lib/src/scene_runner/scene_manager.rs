@@ -88,7 +88,7 @@ impl SceneManager {
         let new_scene = Scene::new(new_scene_id, scene_definition, dcl_scene, content_mapping);
 
         self.base
-            .add_child(new_scene.godot_dcl_scene.root_node.share().upcast());
+            .add_child(new_scene.godot_dcl_scene.root_node.clone().upcast());
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
         self.sorted_scene_ids.push(new_scene_id);
@@ -117,15 +117,15 @@ impl SceneManager {
         player_node: Gd<CharacterBody3D>,
         console: Callable,
     ) {
-        self.camera_node = camera_node.share();
-        self.player_node = player_node.share();
+        self.camera_node = camera_node.clone();
+        self.player_node = player_node.clone();
         self.console = console;
     }
 
     #[func]
     fn get_scene_content_mapping(&self, scene_id: i32) -> Dictionary {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
-            return scene.content_mapping.share();
+            return scene.content_mapping.clone();
         }
         Dictionary::default()
     }
@@ -364,9 +364,9 @@ impl SceneManager {
             let node = scene
                 .godot_dcl_scene
                 .root_node
-                .share()
+                .clone()
                 .upcast::<Node>()
-                .share();
+                .clone();
             self.base.remove_child(node);
             scene.godot_dcl_scene.root_node.queue_free();
             self.sorted_scene_ids.retain(|x| x != scene_id);
@@ -506,7 +506,7 @@ impl SceneManager {
 
     #[func]
     fn get_tooltips(&self) -> VariantArray {
-        self.pointer_tooltips.share()
+        self.pointer_tooltips.clone()
     }
 
     #[signal]

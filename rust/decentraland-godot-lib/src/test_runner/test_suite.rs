@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use godot::prelude::*;
 use tracing::error;
 
-use crate::{RustTestCase, TestContext};
+use crate::framework::{RustTestCase, TestContext};
 
 #[derive(Debug, Default, GodotClass)]
 #[class(base=Node)]
@@ -27,7 +27,7 @@ impl TestRunnerSuite {
     ) -> bool {
         tracing::info!("{}Run{} Godot integration tests...", FMT_CYAN_BOLD, FMT_END);
 
-        let (rust_tests, rust_file_count, focus_run) = super::super::collect_rust_tests();
+        let (rust_tests, rust_file_count, focus_run) = crate::framework::collect_rust_tests();
         self.focus_run = focus_run;
         if focus_run {
             tracing::info!("  {FMT_CYAN}Focused run{FMT_END} -- execute only selected Rust tests.")

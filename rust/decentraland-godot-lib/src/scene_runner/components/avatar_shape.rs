@@ -142,7 +142,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     new_avatar_shape.set(StringName::from("skip_process"), Variant::from(true));
 
                     new_avatar_shape.set_name(GodotString::from("AvatarShape"));
-                    node.base.add_child(new_avatar_shape.share().upcast());
+                    node.base.add_child(new_avatar_shape.clone().upcast());
 
                     new_avatar_shape.call_deferred(
                         StringName::from(GodotString::from("update_avatar")),
