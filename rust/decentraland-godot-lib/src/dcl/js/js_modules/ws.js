@@ -82,6 +82,12 @@ class WebSocket {
         return "arraybuffer"
     }
 
+    set binaryType(value) {
+        if (value !== "arraybuffer") {
+            throw new Error("Only 'arraybuffer' is supported as binaryType")
+        }
+    }
+
     // TODO: implement
     get protocol() {
         return ""

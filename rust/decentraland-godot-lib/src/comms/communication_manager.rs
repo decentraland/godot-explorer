@@ -246,7 +246,7 @@ impl CommunicationManager {
             "ws-room" => {
                 self.current_adapter = Adapter::WsRoom(WebSocketRoom::new(
                     address,
-                    self.tls_client.as_ref().unwrap().share(),
+                    self.tls_client.as_ref().unwrap().clone(),
                     self.player_identity.clone(),
                     avatar_scene,
                 ));
@@ -288,7 +288,7 @@ impl CommunicationManager {
     fn clean(&mut self) {
         match &self.current_adapter {
             Adapter::None | Adapter::SignedLogin(_) => {}
-            Adapter::Livekit(livekit_room) => {
+            Adapter::Livekit(_livekit_room) => {
                 // livekit_room.clean();
             }
             Adapter::WsRoom(ws_room) => {
@@ -306,7 +306,7 @@ impl CommunicationManager {
 
         match &mut self.current_adapter {
             Adapter::None | Adapter::SignedLogin(_) => {}
-            Adapter::Livekit(livekit_room) => {
+            Adapter::Livekit(_livekit_room) => {
                 // livekit_room.change_profile(self.player_identity.clone());
             }
             Adapter::WsRoom(ws_room) => {

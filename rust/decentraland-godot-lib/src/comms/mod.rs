@@ -1,3 +1,4 @@
+pub mod adapter;
 pub mod communication_manager;
 pub mod livekit;
 pub mod player_identity;
