@@ -200,7 +200,12 @@ impl SceneEntityCoordinator {
     }
 
     fn handle_scene_data(&mut self, id: u32, json: serde_json::Value) {
-        let entity_base = self.requested_entity.remove(&id).unwrap();
+        let entity_base = if let Some(entity_base) = self.requested_entity.remove(&id) {
+            entity_base
+        } else {
+            return;
+        };
+
         let entity_definition = serde_json::from_value::<EntityDefinitionJson>(json);
 
         if entity_definition.is_err() {
@@ -232,8 +237,14 @@ impl SceneEntityCoordinator {
     }
 
     fn handle_entity_pointers(&mut self, request_id: u32, json: serde_json::Value) {
+        let mut remaining_pointers =
+            if let Some(remaining_pointers) = self.requested_city_pointers.remove(&request_id) {
+                remaining_pointers
+            } else {
+                return;
+            };
+
         let entity_pointers = json.as_array().unwrap();
-        let mut remaining_pointers = self.requested_city_pointers.remove(&request_id).unwrap();
 
         // Add the scene data to the cache
         for entity_pointer in entity_pointers.iter() {

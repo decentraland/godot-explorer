@@ -139,4 +139,35 @@ class WebSocket {
     }
 }
 
-module.exports.WebSocket = WebSocket
+class RestrictedWebSocket extends WebSocket {
+    constructor(url, protocols) {
+        const previewMode = true // TODO: this should be exposed from Deno.env
+        const canUseWebsocket = true // TODO: this should be exposed from Deno.env
+
+        if (url.toString().toLowerCase().substr(0, 4) !== 'wss:') {
+            if (previewMode) {
+                console.log(
+                    "⚠️ Warning: can't connect to unsafe WebSocket (ws) server in deployed scenes, consider upgrading to wss."
+                )
+            } else {
+                throw new Error("Can't connect to unsafe WebSocket server")
+            }
+        }
+
+        if (!canUseWebsocket) {
+            throw new Error("This scene doesn't have allowed to use WebSocket")
+        }
+
+        let realProtocols = []
+        if (typeof protocols === 'string') {
+            realProtocols = [protocols]
+        } else if (Array.isArray(protocols)) {
+            realProtocols = protocols
+        }
+
+        super(url.toString(), realProtocols)
+    }
+}
+
+
+module.exports.WebSocket = RestrictedWebSocket
