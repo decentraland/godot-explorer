@@ -72,6 +72,8 @@ async function fetch(url, init) {
         reqMethod, url, reqHeaders, hasBody, body ?? '', reqRedirect, reqTimeout
     )
     const reqId = response._internal_req_id
+    console.log({ reqTimeout })
+    // TODO: the headers object should be read-only
 
     Object.assign(response, {
         async arrayBuffer() {

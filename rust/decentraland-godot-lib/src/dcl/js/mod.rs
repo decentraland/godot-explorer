@@ -14,6 +14,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
+use deno_core::error::JsError;
 use deno_core::{
     ascii_str,
     error::{generic_error, AnyError},
@@ -228,7 +229,21 @@ pub(crate) fn scene_thread(
         });
 
         if let Err(e) = result {
-            tracing::error!("[scene thread {scene_id:?}] script error onUpdate: {}", e);
+            let err_str = format!("{:?}", e);
+            if let Ok(err) = e.downcast::<JsError>() {
+                tracing::error!(
+                    "[scene thread {scene_id:?}] script error onUpdate: {} msg {:?} @ {:?}",
+                    err_str,
+                    err.message,
+                    err
+                );
+            } else {
+                tracing::error!(
+                    "[scene thread {scene_id:?}] script error onUpdate: {}",
+                    err_str
+                );
+            }
+
             break;
         }
 

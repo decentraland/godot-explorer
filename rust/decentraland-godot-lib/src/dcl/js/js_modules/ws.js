@@ -54,14 +54,12 @@ class WebSocket {
     constructor(url, protocols) {
         this.url = url
         this.protocols = protocols
-        this.readyState = WebSocket.CONNECTING
+
+        this._readyState = WebSocket.CONNECTING
+
         this._internal_ws_id = Deno.core.ops.op_ws_create(
             url, protocols ?? []
         )
-
-        this.bufferedAmount = 0 // TODO: implement
-        this.extensions = "" // TODO: implement
-        this.protocol = "" // TODO: implement
 
         this.onclose = null
         this.onerror = null
@@ -69,6 +67,29 @@ class WebSocket {
         this.onopen = null
 
         this._poll().then(console.warn).catch(console.error)
+    }
+
+    // There is no send buffer here
+    get bufferedAmount() {
+        return 0
+    }
+
+    get readyState() {
+        return this._readyState
+    }
+
+    get binaryType() {
+        return "arraybuffer"
+    }
+
+    // TODO: implement
+    get protocol() {
+        return ""
+    }
+
+    // TODO: implement
+    get extensions() {
+        return ""
     }
 
     send(data) {
@@ -79,10 +100,11 @@ class WebSocket {
         }
     }
 
+    // TODO: add code and reason
     close(code, reason) {
-        if (this.readyState != WebSocket.CLOSED) {
+        if (this._readyState != WebSocket.CLOSED) {
             Deno.core.ops.op_ws_send(this._internal_ws_id, { "type": "Close" })
-            this.readyState = WebSocket.CLOSED
+            this._readyState = WebSocket.CLOSED
         }
     }
 
@@ -92,8 +114,6 @@ class WebSocket {
             const data = await Deno.core.opAsync(
                 "op_ws_poll", self._internal_ws_id
             )
-
-            console.log("poll data ", data)
 
             switch (data.type) {
                 case "BinaryData":
@@ -134,7 +154,7 @@ class WebSocket {
             }
         }
 
-        this.readyState = WebSocket.CLOSED
+        this._readyState = WebSocket.CLOSED
         Deno.core.ops.op_ws_cleanup(this._internal_ws_id)
     }
 }
