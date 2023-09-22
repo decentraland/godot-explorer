@@ -482,12 +482,10 @@ fn spawn_livekit_task(
 #[cfg(target_os = "android")]
 pub mod android {
     use jni::{
-        errors::jni_error_code_to_result,
-        objects::JValue,
         sys::{jint, JNI_VERSION_1_6},
-        AttachGuard, InitArgs, InitArgsBuilder, JNIEnv, JNIVersion, JavaVM,
+        JavaVM,
     };
-    use std::{collections::HashMap, ffi::c_void, sync::Arc, time::Instant};
+    use std::ffi::c_void;
 
     #[allow(non_snake_case)]
     #[no_mangle]
