@@ -82,21 +82,26 @@ impl NodeVirtual for CommunicationManager {
                 }
             },
             Adapter::Livekit(livekit_room) => {
-                livekit_room.poll();
-                let chats = livekit_room.consume_chats();
-                if !chats.is_empty() {
-                    let mut chats_variant_array = VariantArray::new();
-                    for (addr, chat) in chats {
-                        let mut chat_arr = VariantArray::new();
-                        // TODO: change to the name?
-                        chat_arr.push(addr.to_string().to_variant());
-                        chat_arr.push(chat.timestamp.to_variant());
-                        chat_arr.push(chat.message.to_variant());
+                if livekit_room.poll() {
+                    let chats = livekit_room.consume_chats();
+                    if !chats.is_empty() {
+                        let mut chats_variant_array = VariantArray::new();
+                        for (addr, chat) in chats {
+                            let mut chat_arr = VariantArray::new();
+                            // TODO: change to the name?
+                            chat_arr.push(addr.to_string().to_variant());
+                            chat_arr.push(chat.timestamp.to_variant());
+                            chat_arr.push(chat.message.to_variant());
 
-                        chats_variant_array.push(chat_arr.to_variant());
+                            chats_variant_array.push(chat_arr.to_variant());
+                        }
+                        self.base.emit_signal(
+                            "chat_message".into(),
+                            &[chats_variant_array.to_variant()],
+                        );
                     }
-                    self.base
-                        .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
+                } else {
+                    self.current_adapter = Adapter::None;
                 }
             }
         }
@@ -116,6 +121,23 @@ impl CommunicationManager {
 
     #[signal]
     fn profile_changed(new_profile: Dictionary) {}
+
+    #[func]
+    fn broadcast_voice(&mut self, frame: PackedVector2Array) {
+        match &mut self.current_adapter {
+            Adapter::Livekit(livekit_room) => {
+                let mut max_value = 0;
+                let vec = frame
+                    .as_slice()
+                    .iter()
+                    .map(|v| ((0.5 * (v.x + v.y)) * i16::MAX as f32) as i16)
+                    .collect::<Vec<i16>>();
+
+                livekit_room.broadcast_voice(vec);
+            }
+            _ => {}
+        };
+    }
 
     #[func]
     fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {

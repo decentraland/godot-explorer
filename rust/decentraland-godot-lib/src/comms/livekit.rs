@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use ethers::types::H160;
 use futures_util::StreamExt;
-use godot::prelude::Gd;
+use godot::prelude::{Gd, PackedVector2Array};
 use http::Uri;
 use livekit::{
     options::TrackPublishOptions,
@@ -30,8 +30,14 @@ pub struct NetworkMessage {
     pub unreliable: bool,
 }
 
+enum ToSceneMessage {
+    Rfc4(rfc4::packet::Message),
+    InitVoice(livekit::webrtc::prelude::AudioFrame),
+    VoiceFrame(livekit::webrtc::prelude::AudioFrame),
+}
+
 struct IncomingMessage {
-    message: rfc4::packet::Message,
+    message: ToSceneMessage,
     address: H160,
 }
 
@@ -44,6 +50,7 @@ struct Peer {
 
 pub struct LivekitRoom {
     sender_to_thread: tokio::sync::mpsc::Sender<NetworkMessage>,
+    mic_sender_to_thread: tokio::sync::mpsc::Sender<Vec<i16>>,
     receiver_from_thread: tokio::sync::mpsc::Receiver<IncomingMessage>,
     player_identity: Arc<PlayerIdentity>,
     avatars: Gd<AvatarScene>,
@@ -64,16 +71,18 @@ impl LivekitRoom {
         tracing::debug!(">> lk connect async : {remote_address}");
         let (sender, receiver_from_thread) = tokio::sync::mpsc::channel(1000);
         let (sender_to_thread, receiver) = tokio::sync::mpsc::channel(1000);
+        let (mic_sender_to_thread, mic_receiver) = tokio::sync::mpsc::channel(1000);
 
         let _ = std::thread::Builder::new()
             .name("livekit dcl thread".into())
             .spawn(move || {
-                spawn_livekit_task(remote_address, receiver, sender);
+                spawn_livekit_task(remote_address, receiver, sender, mic_receiver);
             })
             .unwrap();
 
         Self {
             sender_to_thread,
+            mic_sender_to_thread,
             receiver_from_thread,
             player_identity,
             avatars,
@@ -88,7 +97,10 @@ impl LivekitRoom {
 
     pub fn clean(&mut self) {}
 
-    pub fn poll(&mut self) {
+    pub fn poll(&mut self) -> bool {
+        let mut avatar_scene_ref = self.avatars.clone();
+        let mut avatar_scene = avatar_scene_ref.bind_mut();
+
         loop {
             match self.receiver_from_thread.try_recv() {
                 Ok(message) => {
@@ -104,17 +116,15 @@ impl LivekitRoom {
                                 announced_version: None,
                             },
                         );
-                        self.avatars.bind_mut().add_avatar(self.peer_alias_counter);
+                        avatar_scene.add_avatar(self.peer_alias_counter);
                         self.peer_identities.get_mut(&message.address).unwrap()
                     };
 
                     match message.message {
-                        rfc4::packet::Message::Position(position) => {
-                            self.avatars
-                                .bind_mut()
-                                .update_transform(peer.alias, &position);
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::Position(position)) => {
+                            avatar_scene.update_transform(peer.alias, &position);
                         }
-                        rfc4::packet::Message::Chat(chat) => {
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::Chat(chat)) => {
                             let peer_name = {
                                 if let Some(profile) = peer.profile.as_ref() {
                                     profile.content.name.clone()
@@ -124,14 +134,18 @@ impl LivekitRoom {
                             };
                             self.chats.push((peer_name, chat));
                         }
-                        rfc4::packet::Message::ProfileVersion(announce_profile_version) => {
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileVersion(
+                            announce_profile_version,
+                        )) => {
                             peer.announced_version = Some(
                                 announce_profile_version
                                     .profile_version
                                     .max(peer.announced_version.unwrap_or(0)),
                             );
                         }
-                        rfc4::packet::Message::ProfileRequest(profile_request) => {
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileRequest(
+                            profile_request,
+                        )) => {
                             if self.last_profile_response_sent.elapsed().as_secs_f32() < 10.0 {
                                 continue;
                             }
@@ -163,7 +177,9 @@ impl LivekitRoom {
                                 }
                             }
                         }
-                        rfc4::packet::Message::ProfileResponse(profile_response) => {
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileResponse(
+                            profile_response,
+                        )) => {
                             let serialized_profile: SerializedProfile =
                                 match serde_json::from_str(&profile_response.serialized_profile) {
                                     Ok(p) => p,
@@ -191,7 +207,7 @@ impl LivekitRoom {
                                 continue;
                             }
 
-                            self.avatars.bind_mut().update_avatar(
+                            avatar_scene.update_avatar(
                                 peer.alias,
                                 &serialized_profile,
                                 &profile_response.base_url,
@@ -203,15 +219,31 @@ impl LivekitRoom {
                                 base_url: profile_response.base_url,
                             });
                         }
-                        rfc4::packet::Message::Scene(_scene) => {}
-                        rfc4::packet::Message::Voice(_voice) => {}
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::Scene(_scene)) => {}
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::Voice(_voice)) => {}
+                        ToSceneMessage::InitVoice(frame) => {
+                            avatar_scene.spawn_voice_channel(
+                                peer.alias,
+                                frame.sample_rate,
+                                frame.num_channels,
+                                frame.samples_per_channel,
+                            );
+                        }
+                        ToSceneMessage::VoiceFrame(frame) => {
+                            let frame = PackedVector2Array::from_iter(frame.data.iter().map(|c| {
+                                let val = (*c as f32) / (i16::MAX as f32);
+                                godot::prelude::Vector2 { x: val, y: val }
+                            }));
+
+                            avatar_scene.push_voice_frame(peer.alias, frame);
+                        }
                     }
                 }
 
                 Err(tokio::sync::mpsc::error::TryRecvError::Empty) => break,
                 Err(err) => {
                     tracing::error!("error polling livekit thread: {err}");
-                    break;
+                    return false;
                 }
             }
         }
@@ -266,6 +298,7 @@ impl LivekitRoom {
                 false,
             );
         }
+        true
     }
 
     pub fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
@@ -284,12 +317,17 @@ impl LivekitRoom {
     pub fn consume_chats(&mut self) -> Vec<(String, rfc4::Chat)> {
         std::mem::take(&mut self.chats)
     }
+
+    pub fn broadcast_voice(&mut self, frame: Vec<i16>) {
+        let _ = self.mic_sender_to_thread.blocking_send(frame);
+    }
 }
 
 fn spawn_livekit_task(
     remote_address: String,
     mut receiver: tokio::sync::mpsc::Receiver<NetworkMessage>,
     sender: tokio::sync::mpsc::Sender<IncomingMessage>,
+    mut mic_receiver: tokio::sync::mpsc::Receiver<Vec<i16>>,
 ) {
     let url = Uri::try_from(remote_address).unwrap();
     let address = format!(
@@ -325,18 +363,17 @@ fn spawn_livekit_task(
         let mic_track = LocalTrack::Audio(LocalAudioTrack::create_audio_track("mic", RtcAudioSource::Native(native_source.clone())));
         room.local_participant().publish_track(mic_track, TrackPublishOptions{ source: TrackSource::Microphone, ..Default::default() }).await.unwrap();
 
-        // TODO: mic
-        // rt2.spawn(async move {
-        //     while let Ok(frame) = mic.recv().await {
-        //         let data = frame.data.iter().map(|f| (f * i16::MAX as f32) as i16).collect();
-        //         native_source.capture_frame(&AudioFrame {
-        //             data,
-        //             sample_rate: frame.sample_rate,
-        //             num_channels: frame.num_channels,
-        //             samples_per_channel: frame.data.len() as u32,
-        //         })
-        //     }
-        // });
+        rt2.spawn(async move {
+            while let Some(data) = mic_receiver.recv().await {
+                let samples_per_channel = data.len() as u32;
+                native_source.capture_frame(&livekit::webrtc::prelude::AudioFrame {
+                    data,
+                    sample_rate: 48000,
+                    num_channels: 1,
+                    samples_per_channel
+                })
+            }
+        });
 
         'stream: loop {
             tokio::select!(
@@ -363,7 +400,7 @@ fn spawn_livekit_task(
                                 };
                                 tracing::warn!("received packet {message:?} from {address}");
                                 if let Err(e) = sender.send(IncomingMessage {
-                                    message,
+                                    message: ToSceneMessage::Rfc4(message),
                                     address,
                                 }).await {
                                     tracing::warn!("app pipe broken ({e}), existing loop");
@@ -372,41 +409,32 @@ fn spawn_livekit_task(
                             }
                         },
                         livekit::RoomEvent::TrackSubscribed { track, publication: _, participant } => {
-                            if let Some(_address) = participant.identity().0.as_str().as_h160() {
+                            if let Some(address) = participant.identity().0.as_str().as_h160() {
                                 match track {
                                     livekit::track::RemoteTrack::Audio(audio) => {
-                                        let _sender = sender.clone();
+                                        let sender = sender.clone();
                                         rt2.spawn(async move {
                                             let mut x = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track());
 
                                             tracing::debug!("remove track from {:?}", participant.identity().0.as_str());
 
                                             // get first frame to set sample rate
-                                            let Some(_frame) = x.next().await else {
+                                            let Some(frame) = x.next().await else {
                                                 tracing::warn!("dropped audio track without samples");
                                                 return;
                                             };
 
-                                            let (frame_sender, _frame_receiver) = tokio::sync::mpsc::channel(10);
-
-                                            // let bridge = LivekitKiraBridge {
-                                            //     sample_rate: frame.sample_rate,
-                                            //     receiver: frame_receiver,
-                                            // };
-
-                                            // let sound_data = kira::sound::streaming::StreamingSoundData::from_decoder(
-                                            //     bridge,
-                                            //     kira::sound::streaming::StreamingSoundSettings::new(),
-                                            // );
-
-                                            // let _ = sender.send(PlayerUpdate {
-                                            //     transport_id,
-                                            //     message: PlayerMessage::AudioStream(Box::new(sound_data)),
-                                            //     address,
-                                            // }).await;
+                                            let _ = sender.send(IncomingMessage {
+                                                message: ToSceneMessage::InitVoice(frame),
+                                                address,
+                                            }).await;
 
                                             while let Some(frame) = x.next().await {
-                                                match frame_sender.try_send(frame) {
+                                                let frame: livekit::webrtc::prelude::AudioFrame = frame;
+                                                match sender.try_send(IncomingMessage {
+                                                    message: ToSceneMessage::VoiceFrame(frame),
+                                                    address,
+                                                }) {
                                                     Ok(()) => (),
                                                     Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => (),
                                                     Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
@@ -449,4 +477,30 @@ fn spawn_livekit_task(
     });
 
     let _ = rt.block_on(task);
+}
+
+#[cfg(target_os = "android")]
+pub mod android {
+    use jni::{
+        errors::jni_error_code_to_result,
+        objects::JValue,
+        sys::{jint, JNI_VERSION_1_6},
+        AttachGuard, InitArgs, InitArgsBuilder, JNIEnv, JNIVersion, JavaVM,
+    };
+    use std::{collections::HashMap, ffi::c_void, sync::Arc, time::Instant};
+
+    #[allow(non_snake_case)]
+    #[no_mangle]
+    pub extern "C" fn JNI_OnLoad(vm: JavaVM, _: *mut c_void) -> jint {
+        tracing::debug!("Initializing JNI_OnLoad");
+        livekit::webrtc::android::initialize_android(&vm);
+        JNI_VERSION_1_6
+    }
+
+    #[allow(non_snake_case)]
+    #[no_mangle]
+    pub extern "C" fn Java_org_webrtc_LibaomAv1Decoder_nativeIsSupported() -> bool {
+        tracing::debug!("nativeIsSupported");
+        true
+    }
 }

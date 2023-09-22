@@ -25,3 +25,8 @@ echo "$original_content" > $cargo_file_path
 
 mkdir ../../godot/lib/android/ || true
 cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/lib/android/libdecentraland_godot_lib.so
+cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/android/build/libs/debug/arm64-v8a/libdecentraland_godot_lib.so
+
+# Dependencies 
+# - from web-rtc: libwebrtc.jar 
+# - from ffmpeg: libavcodec, libavfilter, libavdevice, libavformat, libavutil, libswresample, libswscale

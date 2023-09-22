@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3 uid="uid://wgrmvh6h51w3"]
+
+[ext_resource type="Script" path="res://src/ui/voice_chat.gd" id="1_qu3n3"]
+
+[node name="voice_chat" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_qu3n3")
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Enable Mic"
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+
+[connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
