@@ -124,19 +124,23 @@ impl CommunicationManager {
 
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {
-        match &mut self.current_adapter {
-            Adapter::Livekit(livekit_room) => {
-                let mut max_value = 0;
-                let vec = frame
-                    .as_slice()
-                    .iter()
-                    .map(|v| ((0.5 * (v.x + v.y)) * i16::MAX as f32) as i16)
-                    .collect::<Vec<i16>>();
+        if let Adapter::Livekit(livekit_room) = &mut self.current_adapter {
+            let mut max_value = 0;
+            let vec = frame
+                .as_slice()
+                .iter()
+                .map(|v| {
+                    let value = ((0.5 * (v.x + v.y)) * i16::MAX as f32) as i16;
 
+                    max_value = std::cmp::max(max_value, value);
+                    value
+                })
+                .collect::<Vec<i16>>();
+
+            if max_value > 0 {
                 livekit_room.broadcast_voice(vec);
             }
-            _ => {}
-        };
+        }
     }
 
     #[func]
