@@ -404,3 +404,26 @@ func set_running():
 func set_idle():
 	if animation_player.current_animation != "Idle":
 		animation_player.play("Idle")
+
+
+var audio_stream_player: AudioStreamPlayer = null
+var audio_stream_player_gen: AudioStreamGenerator = null
+
+
+func spawn_voice_channel(sample_rate, num_channels, samples_per_channel):
+	printt("init voice chat ", sample_rate, num_channels, samples_per_channel)
+	audio_stream_player = AudioStreamPlayer.new()
+	audio_stream_player_gen = AudioStreamGenerator.new()
+
+	audio_stream_player.set_stream(audio_stream_player_gen)
+	audio_stream_player_gen.mix_rate = sample_rate
+	add_child(audio_stream_player)
+	audio_stream_player.play()
+
+
+func push_voice_frame(frame):
+#	print("voice chat ", frame)
+	if not audio_stream_player.playing:
+		audio_stream_player.play()
+
+	audio_stream_player.get_stream_playback().push_buffer(frame)

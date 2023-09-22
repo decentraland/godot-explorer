@@ -41,3 +41,17 @@ This only buils for arm64. `fribidi` and `libass` should be compiled but I got e
 1. Once the build is done, you need to modify the `android-build.sh` the line:
     - `export FFMPEG_DIR=$FFMPEG_FOLDER/prebuilt/apple-ios-arm64/ffmpeg` 
     - Replace $FFMPEG_FOLDER with your path where you clone ffmpeg_kit
+
+# Run
+## Android
+1. Open the editor and go to `Project` and click `Install Android Build Template` (only requires onces and you need to install export templates)
+2. Add the next line in `godot/android/build/src/com/godot/game/GodotApp.java` after `public class GodotApp extends FullScreenGodotApp {`:
+```
+	// This block calls the JNI_OnLoad, needed for livekit 
+	static {
+		System.loadLibrary("decentraland_godot_lib");
+	}
+```
+3. Ensure the dependencies are copied: 
+- from web-rtc: libwebrtc.jar 
+- from ffmpeg: libavcodec, libavfilter, libavdevice, libavformat, libavutil, libswresample, libswscale
