@@ -124,7 +124,7 @@ class WebSocket {
             switch (data.type) {
                 case "BinaryData":
                     if (typeof self.onmessage === 'function') {
-                        self.onmessage({ type: "binary", data: data.data })
+                        self.onmessage({ type: "binary", data: new Uint8Array(data.data) })
                     }
                     break
                 case "TextData":
