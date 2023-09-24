@@ -105,8 +105,8 @@ impl AvatarScene {
 }
 
 impl AvatarScene {
-    const FROM_ENTITY_ID: u16 = 10;
-    const MAX_ENTITY_ID: u16 = 200;
+    const FROM_ENTITY_ID: u16 = 32;
+    const MAX_ENTITY_ID: u16 = 256;
     // const AVATAR_COMPONENTS: &[SceneComponentId] = &[SceneComponentId::AVATAR_ATTACH];
 
     // This function is not optimized, it will iterate over all the entities but this happens only when add an player
@@ -191,5 +191,45 @@ impl AvatarScene {
             "update_avatar".into(),
             &[profile.to_godot_dictionary(base_url).to_variant()],
         );
+    }
+
+    pub fn spawn_voice_channel(
+        &mut self,
+        alias: u32,
+        sample_rate: u32,
+        num_channels: u32,
+        samples_per_channel: u32,
+    ) {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            // TODO: handle this condition
+            return;
+        };
+
+        let (sample_rate, num_channels, samples_per_channel) = (
+            sample_rate.to_variant(),
+            num_channels.to_variant(),
+            samples_per_channel.to_variant(),
+        );
+
+        self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
+            "spawn_voice_channel".into(),
+            &[sample_rate, num_channels, samples_per_channel],
+        );
+    }
+
+    pub fn push_voice_frame(&mut self, alias: u32, frame: PackedVector2Array) {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            // TODO: handle this condition
+            return;
+        };
+
+        self.avatar_godot_scene
+            .get_mut(&entity_id)
+            .unwrap()
+            .call("push_voice_frame".into(), &[frame.to_variant()]);
     }
 }

@@ -48,5 +48,12 @@ bytes = "1.4.0"
 tokio-tungstenite = "*"
 futures-util = "*"
 
+livekit = { git = "https://github.com/robtfm/client-sdk-rust", branch="h264-false", features=["rustls-tls-webpki-roots"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.21.1", features = ["invocation"] }
+paranoid-android = "0.2.1"
+
 [build-dependencies]
+webrtc-sys-build = "0.2.0"
 prost-build = "0.11.8"
