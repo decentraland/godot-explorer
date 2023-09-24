@@ -3,6 +3,8 @@ pub mod fetch;
 pub mod runtime;
 pub mod websocket;
 
+use crate::wallet::Wallet;
+
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
     SharedSceneCrdtState,
@@ -107,6 +109,7 @@ pub(crate) fn scene_thread(
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
     scene_crdt: SharedSceneCrdtState,
+    wallet: Wallet,
 ) {
     let mut scene_main_crdt = None;
     let main_crdt_file_path = scene_definition.main_crdt_path;
@@ -167,6 +170,8 @@ pub(crate) fn scene_thread(
 
     state.borrow_mut().put(scene_id);
     state.borrow_mut().put(scene_crdt);
+
+    state.borrow_mut().put(wallet);
 
     if let Some(scene_main_crdt) = scene_main_crdt {
         state.borrow_mut().put(scene_main_crdt);

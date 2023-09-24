@@ -4,12 +4,15 @@ use deno_core::{error::AnyError, op, Op, OpDecl, OpState};
 use reqwest::Response;
 use serde::Serialize;
 
+mod signed_fetch;
+
 pub fn ops() -> Vec<OpDecl> {
     vec![
         op_fetch_custom::DECL,
         op_fetch_consume_json::DECL,
         op_fetch_consume_text::DECL,
         op_fetch_consume_bytes::DECL,
+        signed_fetch::op_signed_fetch_headers::DECL,
     ]
 }
 

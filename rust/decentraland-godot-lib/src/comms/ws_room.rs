@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     avatars::avatar_scene::AvatarScene,
-    comms::wallet::{self, AsH160},
+    wallet::{self, AsH160},
     dcl::components::proto_components::kernel::comms::{
         rfc4::{self},
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},

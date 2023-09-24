@@ -6,6 +6,7 @@ use ethers::{
     types::{transaction::eip2718::TypedTransaction, Address, Signature, H160},
     utils::hex,
 };
+use http::Uri;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 #[derive(Clone)]
@@ -83,6 +84,15 @@ impl SimpleAuthChain {
             },
         ])
     }
+
+    pub fn headers(&self) -> impl Iterator<Item = (String, String)> + '_ {
+        self.0.iter().enumerate().map(|(ix, link)| {
+            (
+                format!("x-identity-auth-chain-{}", ix),
+                serde_json::to_string(&link).unwrap(),
+            )
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -119,4 +129,26 @@ impl AsH160 for String {
     fn as_h160(&self) -> Option<H160> {
         self.as_str().as_h160()
     }
+}
+
+pub async fn sign_request<META: Serialize>(
+    method: &str,
+    uri: &Uri,
+    wallet: &Wallet,
+    meta: META,
+) -> Vec<(String, String)> {
+    let unix_time = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+
+    let meta = serde_json::to_string(&meta).unwrap();
+    let payload = format!("{}:{}:{}:{}", method, uri.path(), unix_time, meta).to_lowercase();
+    let signature = wallet.sign_message(&payload).await.unwrap();
+    let auth_chain = SimpleAuthChain::new(wallet.address(), payload, signature);
+
+    let mut headers: Vec<_> = auth_chain.headers().collect();
+    headers.push(("x-identity-timestamp".to_owned(), format!("{}", unix_time)));
+    headers.push(("x-identity-metadata".to_owned(), meta));
+    headers
 }

@@ -1,11 +1,11 @@
-use crate::dcl::{
+use crate::{dcl::{
     components::{
         proto_components::sdk::components::common::{InputAction, PointerEventType, RaycastHit},
         SceneEntityId,
     },
     js::SceneLogLevel,
     DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
-};
+}, wallet::Wallet};
 use godot::{
     engine::{CharacterBody3D, PhysicsRayQueryParameters3D},
     prelude::*,
@@ -59,6 +59,9 @@ impl SceneManager {
     // Testing a comment for the API
     #[func]
     fn start_scene(&mut self, scene_definition: Dictionary, content_mapping: Dictionary) -> u32 {
+        // TODO: Inject wallet from creator
+        let wallet = Wallet::new_local_wallet();
+
         let scene_definition = match SceneDefinition::from_dict(scene_definition) {
             Ok(scene_definition) => scene_definition,
             Err(e) => {
@@ -83,6 +86,7 @@ impl SceneManager {
             content_mapping_hash_map,
             base_url,
             self.thread_sender_to_main.clone(),
+            wallet,
         );
 
         let new_scene = Scene::new(new_scene_id, scene_definition, dcl_scene, content_mapping);
