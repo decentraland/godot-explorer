@@ -6,11 +6,11 @@ use std::{
 
 use crate::{
     avatars::avatar_scene::AvatarScene,
-    wallet::{self, AsH160},
     dcl::components::proto_components::kernel::comms::{
         rfc4::{self},
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
     },
+    wallet::{self, AsH160},
 };
 use ethers::types::{Signature, H160};
 use godot::{

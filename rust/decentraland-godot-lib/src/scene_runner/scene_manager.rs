@@ -1,11 +1,16 @@
-use crate::{dcl::{
-    components::{
-        proto_components::sdk::components::common::{InputAction, PointerEventType, RaycastHit},
-        SceneEntityId,
+use crate::{
+    dcl::{
+        components::{
+            proto_components::sdk::components::common::{
+                InputAction, PointerEventType, RaycastHit,
+            },
+            SceneEntityId,
+        },
+        js::SceneLogLevel,
+        DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
-    js::SceneLogLevel,
-    DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
-}, wallet::Wallet};
+    wallet::Wallet,
+};
 use godot::{
     engine::{CharacterBody3D, PhysicsRayQueryParameters3D},
     prelude::*,

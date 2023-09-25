@@ -1,9 +1,9 @@
-use std::{rc::Rc, cell::RefCell};
+use std::{cell::RefCell, rc::Rc};
 
-use deno_core::{op, OpState, error::AnyError};
+use crate::wallet::{sign_request, Wallet};
+use deno_core::{error::AnyError, op, OpState};
 use http::Uri;
 use serde::Serialize;
-use crate::wallet::{Wallet, sign_request};
 
 #[derive(Serialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -25,7 +25,6 @@ pub struct SignedFetchMeta {
     is_guest: Option<bool>,
     realm: SignedFetchMetaRealm,
 }
-
 
 #[op]
 pub async fn op_signed_fetch_headers(
