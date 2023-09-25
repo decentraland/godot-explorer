@@ -217,6 +217,12 @@ jobs:
       #     args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=aarch64-apple-darwin
 
       - name: cargo test
+        if: runner.os == 'windows'
+        working-directory: rust/decentraland-godot-lib
+        run: cargo test --release
+
+      - name: cargo test
+        if: runner.os != 'windows'
         working-directory: rust/decentraland-godot-lib
         run: cargo test
 
