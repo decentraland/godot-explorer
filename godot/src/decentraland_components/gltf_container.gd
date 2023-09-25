@@ -17,8 +17,7 @@ const GodotGltfState = {
 	Finished = 4,
 }
 var gltf_state: int = 0
-
-var gltf_start_loading_time: int = 0
+var gltf_instance_req_id: int = 0
 
 
 func _ready():
@@ -34,8 +33,6 @@ func load_gltf():
 	if self.file_hash.is_empty():
 		gltf_state = GodotGltfState.NotFound
 		return
-
-	gltf_start_loading_time = Time.get_ticks_usec()
 
 	var fetching_resource = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
 
@@ -62,30 +59,34 @@ func _on_gltf_loaded(resource_hash: String):
 		gltf_state = GodotGltfState.FinishedWithError
 		return
 
-	gltf_state = GodotGltfState.Finished
-	gltf_node = node.duplicate()
+	gltf_instance_req_id = Global.content_manager.instance_gltf_colliders(
+		node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
+	)
+	Global.content_manager.gltf_node_collider_finishes.connect(self._on_gltf_instanced)
 
-#	var colliders_timestamp = Time.get_ticks_usec()
-	create_and_set_mask_colliders(gltf_node)
+
+func _on_gltf_instanced(req_id: int, node: Node):
+	if req_id != gltf_instance_req_id:
+		return
+
+	Global.content_manager.gltf_node_collider_finishes.disconnect(self._on_gltf_instanced)
+
+	gltf_node = node
+	gltf_state = GodotGltfState.Finished
+
 	add_child.call_deferred(gltf_node)
 
 
-#
-#	var now = Time.get_ticks_usec()
-#	var loading_time = now - gltf_start_loading_time
-#	var colliders_time = now - colliders_timestamp
-#	print("gltf ", dcl_gltf_src, " loaded in ", roundf(float(loading_time) / 1000.0), " ms", " collider in ", roundf(float(colliders_time) / 1000.0))
-
-
-func get_collider(mesh_instance: MeshInstance3D):
+func get_animatable_body_3d(mesh_instance: MeshInstance3D):
 	for maybe_static_body in mesh_instance.get_children():
-		if maybe_static_body is StaticBody3D:
+		if maybe_static_body is AnimatableBody3D:
 			return maybe_static_body
 
 	return null
 
 
-func create_and_set_mask_colliders(node_to_inspect: Node):
+func update_mask_colliders(node_to_inspect: Node):
+	print("updating mask colliders")
 	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
 			var mask: int = 0
@@ -94,31 +95,17 @@ func create_and_set_mask_colliders(node_to_inspect: Node):
 			else:
 				mask = dcl_invisible_cmask
 
-			var static_body_3d: StaticBody3D = get_collider(node)
-			if static_body_3d == null and mask > 0:
-				node.create_trimesh_collision()
-				static_body_3d = get_collider(node)
-
-			if static_body_3d != null:
-				var parent = static_body_3d.get_parent()
-				var new_animatable = AnimatableBody3D.new()
-				parent.add_child(new_animatable)
-				parent.remove_child(static_body_3d)
-
-				for child in static_body_3d.get_children(true):
-					static_body_3d.remove_child(child)
-					new_animatable.add_child(child)
-					if child is CollisionShape3D and child.shape is ConcavePolygonShape3D:
-						# TODO: workaround, the face's normals probably need to be inverted in some meshes
-						child.shape.backface_collision = true
-
-				new_animatable.collision_layer = mask
-				new_animatable.sync_to_physics = false
-				new_animatable.set_meta("dcl_scene_id", dcl_scene_id)
-				new_animatable.set_meta("dcl_entity_id", dcl_entity_id)
+			var animatable_body_3d = get_animatable_body_3d(node)
+			if animatable_body_3d != null:
+				if mask == 0:
+					animatable_body_3d.process_mode = Node.PROCESS_MODE_DISABLED
+					animatable_body_3d.mask = 0
+				else:
+					animatable_body_3d.process_mode = Node.PROCESS_MODE_INHERIT
+					animatable_body_3d.mask = mask
 
 		if node is Node:
-			create_and_set_mask_colliders(node)
+			update_mask_colliders(node)
 
 
 func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_collision_mask):
@@ -135,9 +122,12 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 		self.load_gltf.call_deferred()
 	else:
 		if (
-			visible_meshes_collision_mask != dcl_visible_cmask
-			or invisible_meshes_collision_mask != dcl_invisible_cmask
+			(
+				visible_meshes_collision_mask != dcl_visible_cmask
+				or invisible_meshes_collision_mask != dcl_invisible_cmask
+			)
+			and gltf_node != null
 		):
 			dcl_visible_cmask = visible_meshes_collision_mask
 			dcl_invisible_cmask = invisible_meshes_collision_mask
-			create_and_set_mask_colliders(gltf_node)
+			update_mask_colliders(gltf_node)

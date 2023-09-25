@@ -4,8 +4,15 @@ class_name ContentManager
 signal content_loading_finished(hash: String)
 signal wearable_data_loaded(id: String)
 signal meshes_material_finished(id: int)
+signal gltf_node_collider_finishes(id: int, gltf_node: Node)
 
-enum ContentType { CT_GLTF_GLB = 1, CT_TEXTURE = 2, CT_WEARABLE_EMOTE = 3, CT_MESHES_MATERIAL = 4 }
+enum ContentType {
+	CT_GLTF_GLB = 1,
+	CT_TEXTURE = 2,
+	CT_WEARABLE_EMOTE = 3,
+	CT_MESHES_MATERIAL = 4,
+	CT_INSTACE_GLTF = 5
+}
 
 var loading_content: Array[Dictionary] = []
 var pending_content: Array[Dictionary] = []
@@ -90,6 +97,31 @@ func duplicate_materials(target_meshes: Array[Dictionary]) -> int:
 
 	pending_content.push_back(
 		{"id": id, "content_type": ContentType.CT_MESHES_MATERIAL, "target_meshes": target_meshes}
+	)
+
+	return id
+
+
+func instance_gltf_colliders(
+	gltf_node: Node,
+	dcl_visible_cmask: int,
+	dcl_invisible_cmask: int,
+	dcl_scene_id: int,
+	dcl_entity_id: int
+) -> int:
+	var id = request_monotonic_counter + 1
+	request_monotonic_counter = id
+
+	pending_content.push_back(
+		{
+			"id": id,
+			"content_type": ContentType.CT_INSTACE_GLTF,
+			"gltf_node": gltf_node,
+			"dcl_visible_cmask": dcl_visible_cmask,
+			"dcl_invisible_cmask": dcl_invisible_cmask,
+			"dcl_scene_id": dcl_scene_id,
+			"dcl_entity_id": dcl_entity_id
+		}
 	)
 
 	return id
@@ -185,6 +217,10 @@ func _th_poll():
 
 			ContentType.CT_MESHES_MATERIAL:
 				if not _process_meshes_material(content):
+					_th_to_delete.push_back(content)
+
+			ContentType.CT_INSTACE_GLTF:
+				if not _process_instance_gltf(content):
 					_th_to_delete.push_back(content)
 
 			_:
@@ -407,8 +443,7 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 			var node = new_gltf.generate_scene(new_gltf_state)
 			if node != null:
 				node.rotate_y(PI)
-				_hide_colliders(node)
-				split_animations(node)
+				create_colliders(node)
 				if err != OK:
 					push_warning("resource with errors ", file_path, " : ", err)
 			else:
@@ -520,3 +555,118 @@ func _hide_colliders(gltf_node):
 
 		if maybe_collider is Node:
 			_hide_colliders(maybe_collider)
+
+
+func create_colliders(node_to_inspect: Node):
+	for node in node_to_inspect.get_children():
+		if node is MeshInstance3D:
+			var invisible_mesh = node.name.find("_collider") != -1
+			var static_body_3d: StaticBody3D = get_collider(node)
+			if static_body_3d == null:
+				node.create_trimesh_collision()
+				static_body_3d = get_collider(node)
+				static_body_3d.name = node.name + "_colgen"
+
+			if static_body_3d != null:
+				var parent = static_body_3d.get_parent()
+				var new_animatable = AnimatableBody3D.new()
+				parent.add_child(new_animatable)
+				parent.remove_child(static_body_3d)
+
+				for child in static_body_3d.get_children(true):
+					static_body_3d.remove_child(child)
+					new_animatable.add_child(child)
+					if child is CollisionShape3D and child.shape is ConcavePolygonShape3D:
+						# TODO: workaround, the face's normals probably need to be inverted in some meshes
+						child.shape.backface_collision = true
+
+				new_animatable.sync_to_physics = false
+				new_animatable.process_mode = Node.PROCESS_MODE_DISABLED
+				new_animatable.collision_layer = 0
+
+				new_animatable.set_meta("invisible_mesh", invisible_mesh)
+
+			if invisible_mesh:
+				node.visible = false
+
+		if node is Node:
+			create_colliders(node)
+
+
+func _process_instance_gltf(content: Dictionary):
+	var gltf_node: Node = content.get("gltf_node")
+	var dcl_visible_cmask: int = content.get("dcl_visible_cmask")
+	var dcl_invisible_cmask: int = content.get("dcl_invisible_cmask")
+	var dcl_scene_id: int = content.get("dcl_scene_id")
+	var dcl_entity_id: int = content.get("dcl_entity_id")
+
+	gltf_node = gltf_node.duplicate()
+
+	var to_remove_nodes = []
+	update_set_mask_colliders(
+		gltf_node,
+		dcl_visible_cmask,
+		dcl_invisible_cmask,
+		dcl_scene_id,
+		dcl_entity_id,
+		to_remove_nodes
+	)
+
+	for node in to_remove_nodes:
+		node.get_parent().remove_child(node)
+
+	self.emit_signal.call_deferred("gltf_node_collider_finishes", content["id"], gltf_node)
+	return false
+
+
+func get_collider(mesh_instance: MeshInstance3D):
+	for maybe_static_body in mesh_instance.get_children():
+		if maybe_static_body is StaticBody3D:
+			return maybe_static_body
+	return null
+
+
+func update_set_mask_colliders(
+	node_to_inspect: Node,
+	dcl_visible_cmask: int,
+	dcl_invisible_cmask: int,
+	dcl_scene_id: int,
+	dcl_entity_id: int,
+	to_remove_nodes: Array
+):
+	for node in node_to_inspect.get_children():
+		if node is AnimatableBody3D:
+			var mask: int = 0
+			var invisible_mesh = node.has_meta("invisible_mesh") and node.get_meta("invisible_mesh")
+			if invisible_mesh:
+				mask = dcl_invisible_cmask
+			else:
+				mask = dcl_visible_cmask
+
+			var resolved_node = node
+			if not node.has_meta("dcl_scene_id"):
+				var parent = node.get_parent()
+				resolved_node = node.duplicate()
+				resolved_node.name = node.name + "_instanced"
+				resolved_node.set_meta("dcl_scene_id", dcl_scene_id)
+				resolved_node.set_meta("dcl_entity_id", dcl_entity_id)
+
+				parent.add_child(resolved_node)
+				to_remove_nodes.push_back(node)
+
+			if mask == 0:
+				resolved_node.process_mode = Node.PROCESS_MODE_DISABLED
+				resolved_node.collision_layer = 0
+			else:
+				resolved_node.process_mode = Node.PROCESS_MODE_INHERIT
+				resolved_node.collision_layer = mask
+
+		if node is Node:
+			update_set_mask_colliders(
+				node,
+				dcl_visible_cmask,
+				dcl_invisible_cmask,
+				dcl_scene_id,
+				dcl_entity_id,
+				to_remove_nodes
+			)
