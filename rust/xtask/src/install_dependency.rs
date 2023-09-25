@@ -160,23 +160,23 @@ fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> io::Resu
     let src_path = src.as_ref();
     let dest_path = dest.as_ref();
 
-    // Obtener los metadatos del archivo de origen y destino
+    // Obtain the metadata of the source and destination file
     let metadata_src = fs::metadata(src_path);
     let metadata_dest = fs::metadata(dest_path);
 
-    // Si ambos archivos existen, comparamos sus tiempos de modificación
+    // If both files exist, we compare their modification times
     if metadata_src.is_ok() && metadata_dest.is_ok() {
         let time_src = metadata_src?.modified()?;
         let time_dest = metadata_dest?.modified()?;
         
-        // Si el archivo de destino es más reciente o igual al de origen, no copiamos
+        // If the destination file is more recent or equal to the source file, we do not copy
         if time_dest >= time_src {
             println!("Skip copy, equal file {}", dest_path.to_string_lossy());
             return Ok(());
         }
     }
 
-    // Si el archivo de destino no existe o es más antiguo, copiamos el archivo de origen al destino
+    // If the destination file does not exist or is older, we copy the source file to the destination
     fs::copy(src_path, dest_path).map(|_| println!("Copying {}", dest_path.to_string_lossy()))?;
     Ok(())
 }
