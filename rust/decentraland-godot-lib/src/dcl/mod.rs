@@ -3,6 +3,8 @@ pub mod crdt;
 pub mod js;
 pub mod serialization;
 
+use crate::wallet::Wallet;
+
 use self::{
     components::{SceneComponentId, SceneEntityId},
     crdt::SceneCrdtState,
@@ -77,6 +79,7 @@ impl DclScene {
         content_mapping: HashMap<String, String>,
         base_url: String,
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
+        wallet: Wallet,
     ) -> Self {
         let (main_sender_to_thread, thread_receive_from_renderer) =
             tokio::sync::mpsc::channel::<RendererResponse>(1);
@@ -95,6 +98,7 @@ impl DclScene {
                     thread_sender_to_main,
                     thread_receive_from_renderer,
                     thread_scene_crdt,
+                    wallet,
                 )
             })
             .unwrap();
