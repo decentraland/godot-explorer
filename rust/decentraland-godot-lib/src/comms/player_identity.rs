@@ -1,6 +1,8 @@
 use godot::prelude::Dictionary;
 
-use super::{profile::UserProfile, wallet::Wallet};
+use crate::wallet::Wallet;
+
+use super::profile::UserProfile;
 
 #[derive(Clone)]
 pub struct PlayerIdentity {

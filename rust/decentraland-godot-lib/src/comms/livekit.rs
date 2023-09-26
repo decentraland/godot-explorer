@@ -16,8 +16,8 @@ use livekit::{
 use prost::Message;
 
 use crate::{
-    avatars::avatar_scene::AvatarScene, comms::wallet::AsH160,
-    dcl::components::proto_components::kernel::comms::rfc4,
+    avatars::avatar_scene::AvatarScene, dcl::components::proto_components::kernel::comms::rfc4,
+    wallet::AsH160,
 };
 
 use super::{
