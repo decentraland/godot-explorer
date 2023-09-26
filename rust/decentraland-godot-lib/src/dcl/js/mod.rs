@@ -101,6 +101,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
 }
 
 // main scene processing thread - constructs an isolate and runs the scene
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn scene_thread(
     scene_id: SceneId,
     scene_definition: SceneDefinition,
