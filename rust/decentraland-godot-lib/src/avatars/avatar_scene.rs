@@ -4,7 +4,7 @@ use ethers::types::H160;
 use godot::prelude::*;
 
 use crate::{
-    comms::{profile::SerializedProfile, wallet::AsH160},
+    comms::profile::SerializedProfile,
     dcl::{
         components::{
             proto_components::kernel::comms::rfc4, transform_and_parent::DclTransformAndParent,
@@ -12,6 +12,7 @@ use crate::{
         },
         crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
     },
+    wallet::AsH160,
 };
 
 #[derive(GodotClass)]
