@@ -25,23 +25,27 @@ async fn request_pool(
     sender_to_parent: Sender<Result<RequestResponse, String>>,
     mut receiver_from_parent: Receiver<RequestOption>,
 ) {
-    let client = reqwest::Client::new();
     while let Some(request_option) = receiver_from_parent.recv().await {
-        let url = request_option.url.clone();
-        let response = HttpRequester::do_request(&client, request_option).await;
-        if response.is_err() {
-            tracing::info!("Error in request: {url:?}");
-        } else {
-            // tracing::info!("Ok in request: {:?}", url);
-        }
-        match sender_to_parent.send(response).await {
-            Ok(_) => {
-                // tracing::info!("Ok sending reqsuest: {:?}", url);
+        let sender = sender_to_parent.clone();
+        // TODO: limit the concurrent requests
+        tokio::spawn(async move {
+            let client = reqwest::Client::new();
+            let url = request_option.url.clone();
+            let response = HttpRequester::do_request(&client, request_option).await;
+            if response.is_err() {
+                tracing::info!("Error in request: {url:?}");
+            } else {
+                // tracing::info!("Ok in request: {:?}", url);
             }
-            Err(_) => {
-                panic!("Failed to send response");
+            match sender.send(response).await {
+                Ok(_) => {
+                    // tracing::info!("Ok sending reqsuest: {:?}", url);
+                }
+                Err(_) => {
+                    panic!("Failed to send response");
+                }
             }
-        }
+        });
     }
 }
 
@@ -144,7 +148,7 @@ fn test() {
     // requester.send_request(RequestOption::new(
     //     0,
     //     "https://sdk-test-scenes.decentraland.zone/aboudt".to_string(),
-    //     reqwest::Method::GET,
+    //     http::Method::GET,
     //     ResponseType::AsString,
     //     None,
     //     None,
@@ -153,7 +157,7 @@ fn test() {
     // requester.send_request(RequestOption::new(
     //     0,
     //     "https://sdk-test-scenes.decentraland.zone/about".to_string(),
-    //     reqwest::Method::GET,
+    //     http::Method::GET,
     //     ResponseType::AsString,
     //     None,
     //     None,
@@ -162,7 +166,7 @@ fn test() {
     // requester.send_request(RequestOption::new(
     //     0,
     //     "https://sdk-test-scenes.decentraland.zone/aboudt".to_string(),
-    //     reqwest::Method::GET,
+    //     http::Method::GET,
     //     ResponseType::AsBytes,
     //     None,
     //     None,
@@ -171,7 +175,7 @@ fn test() {
     // requester.send_request(RequestOption::new(
     //     0,
     //     "https://sdk-test-scenes.decentraland.zone/about".to_string(),
-    //     reqwest::Method::GET,
+    //     http::Method::GET,
     //     ResponseType::AsBytes,
     //     None,
     //     None,
@@ -180,7 +184,7 @@ fn test() {
     // requester.send_request(RequestOption::new(
     //     0,
     //     "https://sdk-test-scenes.decentraland.zone/aboudt".to_string(),
-    //     reqwest::Method::GET,
+    //     http::Method::GET,
     //     ResponseType::ToFile("test.txt".to_string()),
     //     None,
     //     None,
@@ -189,7 +193,7 @@ fn test() {
     // requester.send_request(RequestOption::new(
     //     0,
     //     "https://sdk-test-scenes.decentraland.zone/about".to_string(),
-    //     reqwest::Method::GET,
+    //     http::Method::GET,
     //     ResponseType::ToFile("test.txt".to_string()),
     //     None,
     //     None,
@@ -198,7 +202,7 @@ fn test() {
     requester.send_request(RequestOption::new(
         0,
         "https://sdk-test-scenes.decentraland.zone/content/entities/active".to_string(),
-        reqwest::Method::POST,
+        http::Method::POST,
         ResponseType::AsString,
         Some("{\"pointers\":[\"0,0\"]}".as_bytes().to_vec()),
         Some(vec!["Content-Type: application/json".to_string()]),

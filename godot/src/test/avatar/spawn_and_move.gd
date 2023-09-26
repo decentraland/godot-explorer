@@ -64,7 +64,7 @@ func _process(dt):
 		)
 		var transform = Transform3D(Basis.IDENTITY, initial_position)
 		var alias = 10000 + spawning_i
-		avatar_scene.add_avatar(alias)
+		avatar_scene.add_avatar(alias, "")
 		avatar_scene.update_avatar_profile(alias, avatar_data)
 		avatar_scene.update_avatar_transform(alias, transform)
 

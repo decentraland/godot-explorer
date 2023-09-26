@@ -632,6 +632,25 @@ impl NodeVirtual for SceneManager {
             self.base.emit_signal("pointer_tooltip_changed".into(), &[]);
         }
 
+        // TODO: should only update the current scnes + globals
+        for (_, scene) in self.scenes.iter_mut() {
+            if let Some(player_node_entity) =
+                scene.godot_dcl_scene.get_node_mut(&SceneEntityId::PLAYER)
+            {
+                player_node_entity
+                    .base
+                    .set_global_transform(self.player_node.get_global_transform());
+            }
+
+            if let Some(camera_node_entity) =
+                scene.godot_dcl_scene.get_node_mut(&SceneEntityId::CAMERA)
+            {
+                camera_node_entity
+                    .base
+                    .set_global_transform(self.player_node.get_global_transform());
+            }
+        }
+
         self.last_raycast_result = current_pointer_raycast_result;
         self.global_tick_number += 1;
     }

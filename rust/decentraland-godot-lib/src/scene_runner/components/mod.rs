@@ -1,4 +1,5 @@
 pub mod animator;
+pub mod avatar_attach;
 pub mod avatar_shape;
 pub mod billboard;
 pub mod gltf_container;

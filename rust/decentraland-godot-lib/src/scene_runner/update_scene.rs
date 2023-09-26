@@ -4,7 +4,8 @@ use godot::prelude::Transform3D;
 
 use super::{
     components::{
-        animator::update_animator, avatar_shape::update_avatar_shape, billboard::update_billboard,
+        animator::update_animator, avatar_attach::update_avatar_attach,
+        avatar_shape::update_avatar_shape, billboard::update_billboard,
         gltf_container::update_gltf_container, material::update_material,
         mesh_collider::update_mesh_collider, mesh_renderer::update_mesh_renderer,
         pointer_events::update_scene_pointer_events, raycast::update_raycasts,
@@ -67,6 +68,7 @@ pub fn update_scene(
     update_avatar_shape(scene, crdt_state);
     update_raycasts(scene, crdt_state);
     update_video_player(scene, crdt_state);
+    update_avatar_attach(scene, crdt_state);
 
     let camera_transform = DclTransformAndParent::from_godot(
         camera_global_transform,

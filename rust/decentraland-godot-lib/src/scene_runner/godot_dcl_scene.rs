@@ -144,6 +144,10 @@ impl GodotDclScene {
         self.entities.get(entity)
     }
 
+    pub fn get_node_mut(&mut self, entity: &SceneEntityId) -> Option<&mut Node3DEntity> {
+        self.entities.get_mut(entity)
+    }
+
     #[allow(dead_code)]
     pub fn exist_node(&self, entity: &SceneEntityId) -> bool {
         self.entities.get(entity).is_some()

@@ -188,7 +188,7 @@ impl SceneEntityCoordinator {
             let request = RequestOption::new(
                 Self::REQUEST_TYPE_SCENE_POINTERS,
                 self.entities_active_url.to_string(),
-                reqwest::Method::POST,
+                http::Method::POST,
                 ResponseType::AsJson,
                 Some(request_body.as_bytes().to_vec()),
                 Some(vec!["Content-Type: application/json".to_string()]),
@@ -381,7 +381,7 @@ impl SceneEntityCoordinator {
             let request = RequestOption::new(
                 Self::REQUEST_TYPE_SCENE_DATA,
                 url,
-                reqwest::Method::GET,
+                http::Method::GET,
                 ResponseType::AsJson,
                 None,
                 None,

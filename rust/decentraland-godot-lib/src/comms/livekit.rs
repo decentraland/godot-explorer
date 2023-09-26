@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use ethers::types::H160;
 use futures_util::StreamExt;
-use godot::prelude::{Gd, PackedVector2Array};
+use godot::prelude::{Gd, PackedVector2Array, GodotString};
 use http::Uri;
 use livekit::{
     options::TrackPublishOptions,
@@ -116,7 +116,10 @@ impl LivekitRoom {
                                 announced_version: None,
                             },
                         );
-                        avatar_scene.add_avatar(self.peer_alias_counter);
+                        avatar_scene.add_avatar(
+                            self.peer_alias_counter,
+                            GodotString::from(message.address.to_string()),
+                        );
                         self.peer_identities.get_mut(&message.address).unwrap()
                     };
 

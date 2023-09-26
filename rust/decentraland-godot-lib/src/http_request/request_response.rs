@@ -1,5 +1,4 @@
 use godot::prelude::{GodotString, Variant};
-use reqwest::StatusCode;
 
 #[derive(Debug)]
 pub enum ResponseEnum {
@@ -26,7 +25,7 @@ pub struct RequestOption {
     pub id: u32,
     pub reference_id: u32,
     pub url: String,
-    pub method: reqwest::Method,
+    pub method: http::Method,
     pub body: Option<Vec<u8>>,
     pub headers: Option<Vec<String>>,
     pub response_type: ResponseType,
@@ -36,7 +35,7 @@ impl RequestOption {
     pub fn new(
         reference_id: u32,
         url: String,
-        method: reqwest::Method,
+        method: http::Method,
         response_type: ResponseType,
         body: Option<Vec<u8>>,
         headers: Option<Vec<String>>,
@@ -56,7 +55,7 @@ impl RequestOption {
 #[derive(Debug, godot::prelude::GodotClass)]
 pub struct RequestResponse {
     pub request_option: RequestOption,
-    pub status_code: StatusCode,
+    pub status_code: http::StatusCode,
     pub response_data: Result<ResponseEnum, String>,
 }
 

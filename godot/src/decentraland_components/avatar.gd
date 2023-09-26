@@ -187,7 +187,8 @@ func try_to_set_body_shape(body_shape_hash):
 
 	add_child(body_shape_skeleton_3d)
 	body_shape_skeleton_3d.visible = false
-
+	
+	_add_attach_points()
 
 func load_wearables():
 	if content_waiting_hash_signal_connected:
@@ -427,3 +428,32 @@ func push_voice_frame(frame):
 		audio_stream_player.play()
 
 	audio_stream_player.get_stream_playback().push_buffer(frame)
+
+var generate_attach_points: bool = false
+var right_hand_idx: int = -1
+var right_hand_position: Transform3D
+var left_hand_idx: int = -1 
+var left_hand_position: Transform3D
+
+func activate_attach_points():
+	generate_attach_points = true
+	_add_attach_points()
+	
+func _add_attach_points():
+	if not generate_attach_points:
+		return
+		
+	if body_shape_skeleton_3d == null:
+		return
+	
+	right_hand_idx = body_shape_skeleton_3d.find_bone("Avatar_RightHand")
+	left_hand_idx = body_shape_skeleton_3d.find_bone("Avatar_LeftHand")
+	body_shape_skeleton_3d.bone_pose_changed.connect(self._attach_point_bone_pose_changed)
+	
+
+func _attach_point_bone_pose_changed(bone_idx: int):
+	match bone_idx:
+		right_hand_idx:
+			right_hand_position = body_shape_skeleton_3d.get_bone_pose(bone_idx) 
+		left_hand_idx:
+			left_hand_position = body_shape_skeleton_3d.get_bone_pose(bone_idx)

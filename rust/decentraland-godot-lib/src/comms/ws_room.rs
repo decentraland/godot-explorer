@@ -318,8 +318,11 @@ impl WebSocketRoom {
                                 );
 
                                 self.avatars.bind_mut().clean();
-                                for (alias, _) in self.peer_identities.iter() {
-                                    self.avatars.bind_mut().add_avatar(*alias);
+                                for (alias, peer) in self.peer_identities.iter() {
+                                    self.avatars.bind_mut().add_avatar(
+                                        *alias,
+                                        GodotString::from(peer.address.to_string()),
+                                    );
                                 }
                             }
                             _ => {
@@ -370,7 +373,9 @@ impl WebSocketRoom {
                 ws_packet::Message::PeerJoinMessage(peer) => {
                     if let Some(h160) = peer.address.as_h160() {
                         self.peer_identities.insert(peer.alias, Peer::new(h160));
-                        self.avatars.bind_mut().add_avatar(peer.alias);
+                        self.avatars
+                            .bind_mut()
+                            .add_avatar(peer.alias, GodotString::from(h160.to_string()));
                         // TODO: message XXX joined
                     } else {
                         // TODO: Invalid address
