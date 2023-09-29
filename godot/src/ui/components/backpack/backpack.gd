@@ -84,11 +84,17 @@ func _update_avatar():
 		"emotes": avatar_emotes
 	}
 
+	var wearable_body_shape = Global.content_manager.get_wearable(avatar_body_shape)
+
 	# TODO: make this more performant
 	for wearable_button in wearable_buttons:
-		for wearable in avatar_wearables:
-			wearable_button.set_wearable(Global.content_manager.get_wearable(wearable))
-		wearable_button.set_wearable(Global.content_manager.get_wearable(avatar_body_shape))
+		for wearable_hash in avatar_wearables:
+			var wearable = Global.content_manager.get_wearable(wearable_hash)
+			if wearable != null:
+				wearable_button.set_wearable(wearable)
+
+		if wearable_body_shape != null:
+			wearable_button.set_wearable(wearable_body_shape)
 
 	avatar_preview.avatar.update_avatar(renderer_avatar_dictionary)
 	button_save_profile.disabled = false

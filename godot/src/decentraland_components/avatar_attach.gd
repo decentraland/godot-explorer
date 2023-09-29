@@ -16,7 +16,23 @@ var attach_point: int = -1
 
 
 func _ready():
-	process_priority = 1
+	process_priority = 0
+
+
+func _set_children_physics(node: Node, enable: bool):
+	for child in node.get_children():
+		_set_children_physics(child, enable)
+
+		if "collision_layer" in child:
+			child.collision_layer = 0
+
+
+func _exit_tree():
+	_set_children_physics(self.get_parent(), true)
+
+
+func _enter_tree():
+	_set_children_physics(self.get_parent(), false)
 
 
 func _process(delta):
@@ -34,11 +50,15 @@ func _process(delta):
 		1:
 			p.global_transform = _player_node.label_3d_name.global_transform
 		2:
-			p.global_transform = _player_node.global_transform * _player_node.left_hand_position
+			p.global_transform = (
+				_player_node.body_shape_skeleton_3d.global_transform
+				* _player_node.left_hand_position
+			)
 		3:
-			var pg = _player_node.global_transform
-			var rg = _player_node.right_hand_position
-			p.global_transform = pg * rg
+			p.global_transform = (
+				_player_node.body_shape_skeleton_3d.global_transform
+				* _player_node.right_hand_position
+			)
 		_:
 			p.transform = Transform3D.IDENTITY
 
