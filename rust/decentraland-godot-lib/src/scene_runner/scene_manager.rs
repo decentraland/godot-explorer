@@ -11,10 +11,7 @@ use crate::{
     },
     wallet::Wallet,
 };
-use godot::{
-    engine::PhysicsRayQueryParameters3D,
-    prelude::*,
-};
+use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
 use std::{
     collections::{HashMap, HashSet},
     time::Instant,
