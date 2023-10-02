@@ -2,7 +2,6 @@
 class_name XRToolsMovementPhysicalJump
 extends XRToolsMovementProvider
 
-
 ## XR Tools Movement Provider for Player Physical Jump Detection
 ##
 ## This script can detect jumping based on either the players body jumping,
@@ -18,36 +17,33 @@ extends XRToolsMovementProvider
 ## average Y velocities exceed a threshold parameter then the player has
 ## jumped.
 
-
 ## Movement provider order
-@export var order : int = 20
+@export var order: int = 20
 
 ## If true, jumps are detected via the players body (through the camera)
-@export var body_jump_enable : bool = true
+@export var body_jump_enable: bool = true
 
 ## If true, the player jump is as high as the physical jump(no ground physics)
-@export var body_jump_player_only : bool = false
+@export var body_jump_player_only: bool = false
 
 ## Body jump detection threshold (M/S^2)
-@export var body_jump_threshold : float = 2.5
+@export var body_jump_threshold: float = 2.5
 
 ## If true, jumps are detected via the players arms (through the controllers)
-@export var arms_jump_enable : bool = false
+@export var arms_jump_enable: bool = false
 
 ## Arms jump detection threshold (M/S^2)
-@export var arms_jump_threshold : float = 5.0
-
+@export var arms_jump_threshold: float = 5.0
 
 # Node Positions
-var _camera_position : float = 0.0
-var _controller_left_position : float = 0.0
-var _controller_right_position : float = 0.0
+var _camera_position: float = 0.0
+var _controller_left_position: float = 0.0
+var _controller_right_position: float = 0.0
 
 # Node Velocities
-var _camera_velocity : SlidingAverage = SlidingAverage.new(5)
-var _controller_left_velocity : SlidingAverage = SlidingAverage.new(5)
-var _controller_right_velocity : SlidingAverage = SlidingAverage.new(5)
-
+var _camera_velocity: SlidingAverage = SlidingAverage.new(5)
+var _controller_left_velocity: SlidingAverage = SlidingAverage.new(5)
+var _controller_right_velocity: SlidingAverage = SlidingAverage.new(5)
 
 # Node references
 @onready var _origin_node := XRHelpers.get_xr_origin(self)
@@ -84,7 +80,7 @@ class SlidingAverage:
 		_sum -= _data[_pos]
 
 		# Store the new entry in the array and circularly advance the index
-		_data[_pos] = entry;
+		_data[_pos] = entry
 		_pos = (_pos + 1) % _size
 
 		# Return the average
@@ -92,7 +88,7 @@ class SlidingAverage:
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMovementPhysicalJump" or super(name)
 
 
@@ -140,7 +136,7 @@ func _detect_body_jump(delta: float, player_body: XRToolsPlayerBody) -> void:
 
 	# Ignore zero moves (either not tracking, or no update since last physics)
 	if abs(camera_vel) < 0.001:
-		return;
+		return
 
 	# Correct for world-scale (convert to player units)
 	camera_vel /= XRServer.world_scale
@@ -180,13 +176,11 @@ func _detect_arms_jump(delta: float, player_body: XRToolsPlayerBody) -> void:
 
 	# Clamp the controller instantaneous velocity to +/- 2x the jump threshold
 	controller_left_vel = clamp(
-			controller_left_vel,
-			-2.0 * arms_jump_threshold,
-			2.0 * arms_jump_threshold)
+		controller_left_vel, -2.0 * arms_jump_threshold, 2.0 * arms_jump_threshold
+	)
 	controller_right_vel = clamp(
-			controller_right_vel,
-			-2.0 * arms_jump_threshold,
-			2.0 * arms_jump_threshold)
+		controller_right_vel, -2.0 * arms_jump_threshold, 2.0 * arms_jump_threshold
+	)
 
 	# Get the averaged velocity
 	controller_left_vel = _controller_left_velocity.update(controller_left_vel)

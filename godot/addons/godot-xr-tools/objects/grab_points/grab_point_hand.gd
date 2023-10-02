@@ -2,26 +2,23 @@
 class_name XRToolsGrabPointHand
 extends XRToolsGrabPoint
 
-
 ## XR Tools Grab Point Hand Script
 ##
 ## This script allows specifying a grab point for a specific hand. Additionally
 ## the grab point can be used to control the pose of the hand, and to allow the
 ## grab point position to be fine-tuned in the editor.
 
-
 ## Hand for this grab point
 enum Hand {
-	LEFT,	## Left hand
-	RIGHT,	## Right hand
+	LEFT,  ## Left hand
+	RIGHT,  ## Right hand
 }
 
 ## Hand preview option
 enum PreviewMode {
-	CLOSED,	## Preview hand closed
-	OPEN,	## Preview hand open
+	CLOSED,  ## Preview hand closed
+	OPEN,  ## Preview hand open
 }
-
 
 ## Left hand scene path (for editor preview)
 const LEFT_HAND_PATH := "res://addons/godot-xr-tools/hands/scenes/lowpoly/left_hand_low.tscn"
@@ -29,19 +26,20 @@ const LEFT_HAND_PATH := "res://addons/godot-xr-tools/hands/scenes/lowpoly/left_h
 ## Right hand scene path (for editor preview)
 const RIGHT_HAND_PATH := "res://addons/godot-xr-tools/hands/scenes/lowpoly/right_hand_low.tscn"
 
-
 ## Which hand this grab point is for
-@export var hand : Hand: set = _set_hand
+@export var hand: Hand:
+	set = _set_hand
 
 ## Hand pose
-@export var hand_pose : XRToolsHandPoseSettings: set = _set_hand_pose
+@export var hand_pose: XRToolsHandPoseSettings:
+	set = _set_hand_pose
 
 ## If true, the hand is shown in the editor
-@export var editor_preview_mode : PreviewMode = PreviewMode.CLOSED: set = _set_editor_preview_mode
-
+@export var editor_preview_mode: PreviewMode = PreviewMode.CLOSED:
+	set = _set_editor_preview_mode
 
 ## Hand to use for editor preview
-var _editor_preview_hand : XRToolsHand
+var _editor_preview_hand: XRToolsHand
 
 
 ## Called when the node enters the scene tree for the first time.
@@ -52,7 +50,7 @@ func _ready():
 
 
 ## Test if a grabber can grab by this grab-point
-func can_grab(_grabber : Node) -> bool:
+func can_grab(_grabber: Node) -> bool:
 	# Skip if not enabled
 	if not enabled:
 		return false
@@ -74,19 +72,19 @@ func can_grab(_grabber : Node) -> bool:
 	return true
 
 
-func _set_hand(new_value : Hand) -> void:
+func _set_hand(new_value: Hand) -> void:
 	hand = new_value
 	if Engine.is_editor_hint():
 		_update_editor_preview()
 
 
-func _set_hand_pose(new_value : XRToolsHandPoseSettings) -> void:
+func _set_hand_pose(new_value: XRToolsHandPoseSettings) -> void:
 	hand_pose = new_value
 	if Engine.is_editor_hint():
 		_update_editor_preview()
 
 
-func _set_editor_preview_mode(new_value : PreviewMode) -> void:
+func _set_editor_preview_mode(new_value: PreviewMode) -> void:
 	editor_preview_mode = new_value
 	if Engine.is_editor_hint():
 		_update_editor_preview()
@@ -101,7 +99,7 @@ func _update_editor_preview() -> void:
 
 	# Pick the hand scene
 	var hand_path := LEFT_HAND_PATH if hand == Hand.LEFT else RIGHT_HAND_PATH
-	var hand_scene : PackedScene = load(hand_path)
+	var hand_scene: PackedScene = load(hand_path)
 	if !hand_scene:
 		return
 
@@ -123,7 +121,7 @@ func _update_editor_preview() -> void:
 
 
 # Get the controller associated with a grabber
-static func _get_grabber_controller(_grabber : Node) -> XRController3D:
+static func _get_grabber_controller(_grabber: Node) -> XRController3D:
 	# Ensure the grabber is valid
 	if not is_instance_valid(_grabber):
 		return null
@@ -135,4 +133,3 @@ static func _get_grabber_controller(_grabber : Node) -> XRController3D:
 
 	# Get the controller associated with the pickup
 	return pickup.get_controller()
-

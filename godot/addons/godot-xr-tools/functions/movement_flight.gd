@@ -2,7 +2,6 @@
 class_name XRToolsMovementFlight
 extends XRToolsMovementProvider
 
-
 ## XR Tools Movement Provider for Flying
 ##
 ## This script provides flying movement for the player. The control parameters
@@ -28,74 +27,69 @@ extends XRToolsMovementProvider
 ## physics effects after flying) or whether additional effects such as
 ## the default player gravity are applied.
 
-
 ## Signal emitted when flight starts
-signal flight_started()
+signal flight_started
 
 ## Signal emitted when flight finishes
-signal flight_finished()
-
+signal flight_finished
 
 ## Enumeration of controller to use for flight
 enum FlightController {
-	LEFT,		## Use left controller
-	RIGHT,		## Use right controler
+	LEFT,  ## Use left controller
+	RIGHT,  ## Use right controler
 }
 
 ## Enumeration of pitch control input
 enum FlightPitch {
-	HEAD,		## Head controls pitch
-	CONTROLLER,	## Controller controls pitch
+	HEAD,  ## Head controls pitch
+	CONTROLLER,  ## Controller controls pitch
 }
 
 ## Enumeration of bearing control input
 enum FlightBearing {
-	HEAD,		## Head controls bearing
-	CONTROLLER,	## Controller controls bearing
-	BODY,		## Body controls bearing
+	HEAD,  ## Head controls bearing
+	CONTROLLER,  ## Controller controls bearing
+	BODY,  ## Body controls bearing
 }
 
-
 ## Movement provider order
-@export var order : int = 30
+@export var order: int = 30
 
 ## Flight controller
-@export var controller : FlightController = FlightController.LEFT
+@export var controller: FlightController = FlightController.LEFT
 
 ## Flight toggle button
-@export var flight_button : String = "by_button"
+@export var flight_button: String = "by_button"
 
 ## Flight pitch control
-@export var pitch : FlightPitch = FlightPitch.CONTROLLER
+@export var pitch: FlightPitch = FlightPitch.CONTROLLER
 
 ## Flight bearing control
-@export var bearing : FlightBearing = FlightBearing.CONTROLLER
+@export var bearing: FlightBearing = FlightBearing.CONTROLLER
 
 ## Flight speed from control
-@export var speed_scale : float = 5.0
+@export var speed_scale: float = 5.0
 
 ## Flight traction pulling flight velocity towards the controlled speed
-@export var speed_traction : float = 3.0
+@export var speed_traction: float = 3.0
 
 ## Flight acceleration from control
-@export var acceleration_scale : float = 0.0
+@export var acceleration_scale: float = 0.0
 
 ## Flight drag
-@export var drag : float = 0.1
+@export var drag: float = 0.1
 
 ## Guidance effect (virtual fins/wings)
-@export var guidance : float = 0.0
+@export var guidance: float = 0.0
 
 ## If true, flight movement is exclusive preventing further movement functions
-@export var exclusive : bool = true
-
+@export var exclusive: bool = true
 
 ## Flight button state
-var _flight_button : bool = false
+var _flight_button: bool = false
 
 ## Flight controller
-var _controller : XRController3D
-
+var _controller: XRController3D
 
 # Node references
 @onready var _camera := XRHelpers.get_xr_camera(self)
@@ -104,7 +98,7 @@ var _controller : XRController3D
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMovementFlight" or super(name)
 
 
@@ -149,20 +143,18 @@ func physics_movement(delta: float, player_body: XRToolsPlayerBody, disabled: bo
 	var bearing_vector: Vector3
 	if bearing == FlightBearing.HEAD:
 		# Use the horizontal part of the 'head' forwards vector
-		bearing_vector = -_camera.global_transform.basis.z \
-				.slide(player_body.up_player)
+		bearing_vector = -_camera.global_transform.basis.z.slide(player_body.up_player)
 	elif bearing == FlightBearing.CONTROLLER:
 		# Use the horizontal part of the 'controller' forwards vector
-		bearing_vector = -_controller.global_transform.basis.z \
-				.slide(player_body.up_player)
+		bearing_vector = -_controller.global_transform.basis.z.slide(player_body.up_player)
 	else:
 		# Use the horizontal part of the 'body' forwards vector
 		var left := _left_controller.global_transform.origin
 		var right := _right_controller.global_transform.origin
 		var left_to_right := right - left
-		bearing_vector = left_to_right \
-				.rotated(player_body.up_player, PI/2) \
-				.slide(player_body.up_player)
+		bearing_vector = left_to_right.rotated(player_body.up_player, PI / 2).slide(
+			player_body.up_player
+		)
 
 	# Construct the flight bearing
 	var forwards := (bearing_vector.normalized() + pitch_vector).normalized()

@@ -3,25 +3,23 @@
 class_name XRToolsPickableAudio
 extends AudioStreamPlayer3D
 
-
 ## XRTools Pickable Audio
 ##
 ## This node is attached as a child of a Pickable,
 ## it plays audio for drop and hit based on velocity,
 ## along with a audio for when the object is being picked up.
 
-
 ## XRToolsPickableAudioType to associate with this pickable
-@export var pickable_audio_type  : XRToolsPickableAudioType
+@export var pickable_audio_type: XRToolsPickableAudioType
 
 ## delta throttle is 1/10 of delta
-@onready var delta_throttle : float = 0.1
+@onready var delta_throttle: float = 0.1
 
-@onready var _pickable : XRToolsPickable = get_parent()
+@onready var _pickable: XRToolsPickable = get_parent()
 
 
 # Add support for is_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsPickableAudio"
 
 
@@ -60,7 +58,7 @@ func _on_dropped(_pickable) -> void:
 
 func _on_body_entered(_body):
 	if playing:
-			stop()
+		stop()
 	if _pickable.is_picked_up():
 		stream = pickable_audio_type.hit_sound
 	else:

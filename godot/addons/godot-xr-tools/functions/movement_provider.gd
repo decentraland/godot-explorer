@@ -3,7 +3,6 @@
 class_name XRToolsMovementProvider
 extends Node
 
-
 ## XR Tools Movement Provider base class
 ##
 ## This movement provider class is the base class of all movement providers.
@@ -14,14 +13,11 @@ extends Node
 ##  - Export an 'order' integer to control order of processing
 ##  - Override the physics_movement method to impelment motion
 
-
 ## Player body scene
 const PLAYER_BODY := preload("res://addons/godot-xr-tools/player/player_body.tscn")
 
-
 ## Enable movement provider
-@export var enabled : bool = true
-
+@export var enabled: bool = true
 
 ## If true, the movement provider is actively performing a move
 var is_active := false
@@ -45,7 +41,7 @@ func _create_player_body_node():
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMovementProvider"
 
 

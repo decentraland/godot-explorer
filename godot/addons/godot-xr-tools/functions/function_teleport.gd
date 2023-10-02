@@ -3,14 +3,12 @@
 class_name XRToolsFunctionTeleport
 extends Node3D
 
-
 ## XR Tools Function Teleport Script
 ##
 ## This script provides teleport functionality.
 ##
 ## Add this scene as a sub scene of your [XRController3D] node to implement
 ## a teleport function on that controller.
-
 
 # Default teleport collision mask of all
 const DEFAULT_MASK := 0b1111_1111_1111_1111_1111_1111_1111_1111
@@ -19,89 +17,89 @@ const DEFAULT_MASK := 0b1111_1111_1111_1111_1111_1111_1111_1111
 # gdlint:ignore = load-constant-name
 const _DefaultMaterial := preload("res://addons/godot-xr-tools/materials/capsule.tres")
 
-
 ## If true, teleporting is enabled
-@export var enabled : bool = true: set = set_enabled
+@export var enabled: bool = true:
+	set = set_enabled
 
 ## Teleport button action
-@export var teleport_button_action : String = "trigger_click"
+@export var teleport_button_action: String = "trigger_click"
 
 ## Teleport rotation action
-@export var rotation_action : String = "primary"
+@export var rotation_action: String = "primary"
 
 # Teleport Path Group
 @export_group("Visuals")
 
 ## Teleport allowed color property
-@export var can_teleport_color : Color = Color(0.0, 1.0, 0.0, 1.0)
+@export var can_teleport_color: Color = Color(0.0, 1.0, 0.0, 1.0)
 
 ## Teleport denied color property
-@export var cant_teleport_color : Color = Color(1.0, 0.0, 0.0, 1.0)
+@export var cant_teleport_color: Color = Color(1.0, 0.0, 0.0, 1.0)
 
 ## Teleport no-collision color property
-@export var no_collision_color : Color = Color(45.0 / 255.0, 80.0 / 255.0, 220.0 / 255.0, 1.0)
+@export var no_collision_color: Color = Color(45.0 / 255.0, 80.0 / 255.0, 220.0 / 255.0, 1.0)
 
 ## Teleport-arc strength
-@export var strength : float = 5.0
+@export var strength: float = 5.0
 
 ## Teleport texture
-@export var arc_texture : Texture2D \
-	= preload("res://addons/godot-xr-tools/images/teleport_arrow.png") \
-	: set = set_arc_texture
+@export
+var arc_texture: Texture2D = preload("res://addons/godot-xr-tools/images/teleport_arrow.png"):
+	set = set_arc_texture
 
 ## Target texture
-@export var target_texture : Texture2D \
-	= preload("res://addons/godot-xr-tools/images/teleport_target.png") \
-	: set = set_target_texture
+@export
+var target_texture: Texture2D = preload("res://addons/godot-xr-tools/images/teleport_target.png"):
+	set = set_target_texture
 
 # Player Group
 @export_group("Player")
 
 ## Player height property
-@export var player_height : float = 1.8: set = set_player_height
+@export var player_height: float = 1.8:
+	set = set_player_height
 
 ## Player radius property
-@export var player_radius : float = 0.4: set = set_player_radius
+@export var player_radius: float = 0.4:
+	set = set_player_radius
 
 ## Player scene
-@export var player_scene : PackedScene: set = set_player_scene
+@export var player_scene: PackedScene:
+	set = set_player_scene
 
 # Target Group
 @export_group("Collision")
 
 ## Maximum floor slope
-@export var max_slope : float = 20.0
+@export var max_slope: float = 20.0
 
 ## Collision mask
-@export_flags_3d_physics var collision_mask : int = 1023
+@export_flags_3d_physics var collision_mask: int = 1023
 
 ## Valid teleport layer mask
-@export_flags_3d_physics var valid_teleport_mask : int = DEFAULT_MASK
-
+@export_flags_3d_physics var valid_teleport_mask: int = DEFAULT_MASK
 
 ## Player capsule material (ignored for custom player scenes)
-var player_material : StandardMaterial3D = _DefaultMaterial :  set = set_player_material
+var player_material: StandardMaterial3D = _DefaultMaterial:
+	set = set_player_material
 
-
-var is_on_floor : bool = true
-var is_teleporting : bool = false
-var can_teleport : bool = true
-var teleport_rotation : float = 0.0;
-var floor_normal : Vector3 = Vector3.UP
-var last_target_transform : Transform3D = Transform3D()
-var collision_shape : Shape3D
-var step_size : float = 0.5
-
+var is_on_floor: bool = true
+var is_teleporting: bool = false
+var can_teleport: bool = true
+var teleport_rotation: float = 0.0
+var floor_normal: Vector3 = Vector3.UP
+var last_target_transform: Transform3D = Transform3D()
+var collision_shape: Shape3D
+var step_size: float = 0.5
 
 # Custom player scene
-var player : Node3D
-
+var player: Node3D
 
 # World scale
-@onready var ws : float = XRServer.world_scale
+@onready var ws: float = XRServer.world_scale
 
 ## Capsule shown when not using a custom player mesh
-@onready var capsule : MeshInstance3D = $Target/Player_figure/Capsule
+@onready var capsule: MeshInstance3D = $Target/Player_figure/Capsule
 
 ## [XRToolsPlayerBody] node.
 @onready var player_body := XRToolsPlayerBody.find_instance(self)
@@ -111,7 +109,7 @@ var player : Node3D
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsFunctionTeleport"
 
 
@@ -154,7 +152,7 @@ func _physics_process(delta):
 	# if we're not enabled no point in doing mode
 	if !enabled:
 		# reset these
-		is_teleporting = false;
+		is_teleporting = false
 		$Teleport.visible = false
 		$Target.visible = false
 
@@ -170,8 +168,11 @@ func _physics_process(delta):
 		$Target.mesh.size = Vector2(ws, ws)
 		$Target/Player_figure.scale = Vector3(ws, ws, ws)
 
-	if controller and controller.get_is_active() and \
-			controller.is_button_pressed(teleport_button_action):
+	if (
+		controller
+		and controller.get_is_active()
+		and controller.is_button_pressed(teleport_button_action)
+	):
 		if !is_teleporting:
 			is_teleporting = true
 			$Teleport.visible = true
@@ -189,12 +190,10 @@ func _physics_process(delta):
 
 		# make a transform for offsetting our shape, it's always
 		# lying on its side by default...
-		var shape_transform := Transform3D(
-				Basis(),
-				Vector3(0.0, player_height / 2.0, 0.0))
+		var shape_transform := Transform3D(Basis(), Vector3(0.0, player_height / 2.0, 0.0))
 
 		# update location
-		var teleport_global_transform : Transform3D = $Teleport.global_transform
+		var teleport_global_transform: Transform3D = $Teleport.global_transform
 		var target_global_origin := teleport_global_transform.origin
 		var up := player_body.up_player
 		var down := -up.normalized() / ws
@@ -209,7 +208,7 @@ func _physics_process(delta):
 		var fine_tune := 1.0
 		var hit_something := false
 		var max_slope_cos := cos(deg_to_rad(max_slope))
-		for i in range(1,26):
+		for i in range(1, 26):
 			var new_cast_length := cast_length + (step_size / fine_tune)
 			var global_target := Vector3(0.0, 0.0, -new_cast_length)
 
@@ -224,15 +223,15 @@ func _physics_process(delta):
 			global_target += down * t2
 
 			# test our new location for collisions
-			query.transform = Transform3D(
-				player_body.global_transform.basis,
-				global_target) * shape_transform
+			query.transform = (
+				Transform3D(player_body.global_transform.basis, global_target) * shape_transform
+			)
 			var cast_result := state.collide_shape(query, 10)
 			if cast_result.is_empty():
 				# we didn't collide with anything so check our next section...
 				cast_length = new_cast_length
 				target_global_origin = global_target
-			elif (fine_tune <= 16.0):
+			elif fine_tune <= 16.0:
 				# try again with a small step size
 				fine_tune *= 2.0
 			else:
@@ -267,13 +266,13 @@ func _physics_process(delta):
 
 						# Update our collision point if it's moved enough, this
 						# solves a little bit of jittering
-						var diff : Vector3 = collided_at - intersects["position"]
+						var diff: Vector3 = collided_at - intersects["position"]
 
 						if diff.length() > 0.1:
 							collided_at = intersects["position"]
 
 						# Fail if the hit target isn't in our valid mask
-						var collider_mask : int = intersects["collider"].collision_layer
+						var collider_mask: int = intersects["collider"].collision_layer
 						if not valid_teleport_mask & collider_mask:
 							is_on_floor = false
 
@@ -319,10 +318,11 @@ func _physics_process(delta):
 		else:
 			can_teleport = false
 			$Target.visible = false
-			$Teleport.get_surface_override_material(0).set_shader_parameter("mix_color", no_collision_color)
+			$Teleport.get_surface_override_material(0).set_shader_parameter(
+				"mix_color", no_collision_color
+			)
 	elif is_teleporting:
 		if can_teleport:
-
 			# Make our target using the players up vector
 			var new_transform := last_target_transform
 			new_transform.basis.y = player_body.up_player
@@ -333,7 +333,7 @@ func _physics_process(delta):
 			player_body.teleport(new_transform)
 
 		# and disable
-		is_teleporting = false;
+		is_teleporting = false
 		$Teleport.visible = false
 		$Target.visible = false
 
@@ -357,35 +357,31 @@ func _get_configuration_warnings() -> PackedStringArray:
 # Provide custom property information
 func _get_property_list() -> Array[Dictionary]:
 	return [
+		{"name": "Player", "type": TYPE_NIL, "usage": PROPERTY_USAGE_GROUP},
 		{
-			"name" : "Player",
-			"type" : TYPE_NIL,
-			"usage" : PROPERTY_USAGE_GROUP
-		},
-		{
-			"name" : "player_material",
-			"class_name" : "StandardMaterial3D",
-			"type" : TYPE_OBJECT,
-			"usage" : PROPERTY_USAGE_NO_EDITOR if player_scene else PROPERTY_USAGE_DEFAULT,
-			"hint" : PROPERTY_HINT_RESOURCE_TYPE,
-			"hint_string" : "StandardMaterial3D"
+			"name": "player_material",
+			"class_name": "StandardMaterial3D",
+			"type": TYPE_OBJECT,
+			"usage": PROPERTY_USAGE_NO_EDITOR if player_scene else PROPERTY_USAGE_DEFAULT,
+			"hint": PROPERTY_HINT_RESOURCE_TYPE,
+			"hint_string": "StandardMaterial3D"
 		}
 	]
 
 
 # Allow revert of custom properties
-func _property_can_revert(property : StringName) -> bool:
+func _property_can_revert(property: StringName) -> bool:
 	return property == "player_material"
 
 
 # Provide revert values for custom properties
-func _property_get_revert(property : StringName): # Variant
+func _property_get_revert(property: StringName):  # Variant
 	if property == "player_material":
 		return _DefaultMaterial
 
 
 # Set enabled property
-func set_enabled(new_value : bool) -> void:
+func set_enabled(new_value: bool) -> void:
 	enabled = new_value
 	if enabled:
 		# make sure our physics process is on
@@ -396,35 +392,35 @@ func set_enabled(new_value : bool) -> void:
 
 
 # Set the arc texture
-func set_arc_texture(p_arc_texture : Texture2D) -> void:
+func set_arc_texture(p_arc_texture: Texture2D) -> void:
 	arc_texture = p_arc_texture
 	if is_inside_tree():
 		_update_arc_texture()
 
 
 # Set the target texture
-func set_target_texture(p_target_texture : Texture2D) -> void:
+func set_target_texture(p_target_texture: Texture2D) -> void:
 	target_texture = p_target_texture
 	if is_inside_tree():
 		_update_target_texture()
 
 
 # Set player height property
-func set_player_height(p_height : float) -> void:
+func set_player_height(p_height: float) -> void:
 	player_height = p_height
 	if is_inside_tree():
 		_update_player_height()
 
 
 # Set player radius property
-func set_player_radius(p_radius : float) -> void:
+func set_player_radius(p_radius: float) -> void:
 	player_radius = p_radius
 	if is_inside_tree():
 		_update_player_radius()
 
 
 # Set the player scene
-func set_player_scene(p_player_scene : PackedScene) -> void:
+func set_player_scene(p_player_scene: PackedScene) -> void:
 	player_scene = p_player_scene
 	notify_property_list_changed()
 	if is_inside_tree():
@@ -432,7 +428,7 @@ func set_player_scene(p_player_scene : PackedScene) -> void:
 
 
 # Set the player material
-func set_player_material(p_player_material : StandardMaterial3D) -> void:
+func set_player_material(p_player_material: StandardMaterial3D) -> void:
 	player_material = p_player_material
 	if is_inside_tree():
 		_update_player_material()
@@ -440,14 +436,14 @@ func set_player_material(p_player_material : StandardMaterial3D) -> void:
 
 # Update arc texture
 func _update_arc_texture():
-	var material : ShaderMaterial = $Teleport.get_surface_override_material(0)
+	var material: ShaderMaterial = $Teleport.get_surface_override_material(0)
 	if material and arc_texture:
 		material.set_shader_parameter("arrow_texture", arc_texture)
 
 
 # Update target texture
 func _update_target_texture():
-	var material : StandardMaterial3D = $Target.get_surface_override_material(0)
+	var material: StandardMaterial3D = $Target.get_surface_override_material(0)
 	if material and target_texture:
 		material.albedo_texture = target_texture
 
@@ -459,7 +455,7 @@ func _update_player_height() -> void:
 
 	if capsule:
 		capsule.mesh.height = player_height
-		capsule.position = Vector3(0.0, player_height/2.0, 0.0)
+		capsule.position = Vector3(0.0, player_height / 2.0, 0.0)
 
 
 # Player radius update handler

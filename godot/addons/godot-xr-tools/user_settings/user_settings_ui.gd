@@ -8,6 +8,7 @@ signal player_height_changed(new_height)
 @onready var player_height_slider = $Player/PlayerVBox/PlayerHeight/PlayerHeightSlider
 @onready var webxr_primary_button = $WebXR/WebXRVBox/WebXR/WebXRPrimary
 
+
 func _update():
 	# Input
 	snap_turning_button.button_pressed = XRToolsUserSettings.snap_turning
@@ -63,6 +64,6 @@ func _on_web_xr_primary_item_selected(index: int) -> void:
 func _on_y_axis_dead_zone_slider_value_changed(value):
 	XRToolsUserSettings.y_axis_dead_zone = y_deadzone_slider.value
 
+
 func _on_x_axis_dead_zone_slider_value_changed(value):
 	XRToolsUserSettings.x_axis_dead_zone = x_deadzone_slider.value
-

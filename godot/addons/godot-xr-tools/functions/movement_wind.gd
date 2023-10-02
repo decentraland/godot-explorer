@@ -2,7 +2,6 @@
 class_name XRToolsMovementWind
 extends XRToolsMovementProvider
 
-
 ## XR Tools Movement Provider for Wind
 ##
 ## This script provides wind mechanics for the player. This script works
@@ -11,37 +10,34 @@ extends XRToolsMovementProvider
 ## When the player enters an [XRToolsWindArea], the wind pushes the player
 ## around, and can even lift the player into the air.
 
-
 ## Signal invoked when changing active wind areas
 signal wind_area_changed(active_wind_area)
-
 
 # Default wind area collision mask of 20:player-body
 const DEFAULT_MASK := 0b0000_0000_0000_1000_0000_0000_0000_0000
 
-
 ## Movement provider order
-@export var order : int = 25
+@export var order: int = 25
 
 ## Drag multiplier for the player
-@export var drag_multiplier : float = 1.0
+@export var drag_multiplier: float = 1.0
 
 # Set our collision mask
-@export_flags_3d_physics var collision_mask : int = DEFAULT_MASK: set = set_collision_mask
-
+@export_flags_3d_physics var collision_mask: int = DEFAULT_MASK:
+	set = set_collision_mask
 
 # Wind detection area
-var _sense_area : Area3D
+var _sense_area: Area3D
 
 # Array of wind areas the player is in
 var _in_wind_areas := Array()
 
 # Currently active wind area
-var _active_wind_area : XRToolsWindArea
+var _active_wind_area: XRToolsWindArea
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMovementWind" or super(name)
 
 

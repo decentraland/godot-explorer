@@ -2,7 +2,6 @@
 class_name XRToolsInteractableHandle
 extends XRToolsPickable
 
-
 ## XR Tools Interactable Handle script
 ##
 ## The interactable handle is a (usually invisible) object extending from
@@ -18,17 +17,15 @@ extends XRToolsPickable
 ## handle is pulled further than its snap distance, then the handle is
 ## automatically released.
 
-
 ## Distance from the handle origin to auto-snap the grab
-@export var snap_distance : float = 0.3
-
+@export var snap_distance: float = 0.3
 
 # Handle origin spatial node
 @onready var handle_origin: Node3D = get_parent()
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsInteractableHandle" or super(name)
 
 

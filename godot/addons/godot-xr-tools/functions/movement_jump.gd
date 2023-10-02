@@ -2,7 +2,6 @@
 class_name XRToolsMovementJump
 extends XRToolsMovementProvider
 
-
 ## XR Tools Movement Provider for Jumping
 ##
 ## This script provides jumping mechanics for the player. This script works
@@ -12,20 +11,18 @@ extends XRToolsMovementProvider
 ## child of the appropriate [XRController3D], then configuring the jump button
 ## and jump velocity.
 
-
 ## Movement provider order
-@export var order : int = 20
+@export var order: int = 20
 
 ## Button to trigger jump
-@export var jump_button_action : String = "trigger_click"
-
+@export var jump_button_action: String = "trigger_click"
 
 # Node references
 @onready var _controller := XRHelpers.get_xr_controller(self)
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMovementJump" or super(name)
 
 

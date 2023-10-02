@@ -2,7 +2,6 @@
 class_name XRToolsInteractableHandleDriven
 extends Node3D
 
-
 ## XR Tools Interactable Handle Driven script
 ##
 ## This is the base class for interactables driven by handles. It subscribes
@@ -12,20 +11,18 @@ extends Node3D
 ## When one or more handles are grabbed, the _process function is enabled
 ## to process the handle-driven movement.
 
-
 ## Signal called when this interactable is grabbed
 signal grabbed(interactable)
 
 ## Signal called when this interactable is released
 signal released(interactable)
 
-
 # Array of handles currently grabbed
 var grabbed_handles := Array()
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsInteractableHandleDriven"
 
 

@@ -2,7 +2,6 @@
 class_name XRToolsMovementSprint
 extends XRToolsMovementProvider
 
-
 ## XR Tools Movement Provider for Sprinting
 ##
 ## This script provides sprinting movement for the player. It assumes there is
@@ -12,56 +11,51 @@ extends XRToolsMovementProvider
 ## have any impact on the player.  This node should be a direct child of
 ## the [XROrigin3D] node rather than to a specific [XRController3D].
 
-
 ## Signal emitted when sprinting starts
-signal sprinting_started()
+signal sprinting_started
 
 ## Signal emitted when sprinting finishes
-signal sprinting_finished()
-
+signal sprinting_finished
 
 ## Enumeration of controller to use for triggering sprinting.  This allows the
 ## developer to assign the sprint button to either controller.
 enum SprintController {
-	LEFT,		## Use left controller
-	RIGHT,		## Use right controler
+	LEFT,  ## Use left controller
+	RIGHT,  ## Use right controler
 }
 
 ## Enumeration of sprinting modes - toggle or hold button
 enum SprintType {
-	HOLD_TO_SPRINT,	## Hold button to sprint
-	TOGGLE_SPRINT,	## Toggle sprinting on button press
+	HOLD_TO_SPRINT,  ## Hold button to sprint
+	TOGGLE_SPRINT,  ## Toggle sprinting on button press
 }
 
-
 ## Type of sprinting
-@export var sprint_type : SprintType = SprintType.HOLD_TO_SPRINT
+@export var sprint_type: SprintType = SprintType.HOLD_TO_SPRINT
 
 ## Sprint speed multiplier (multiplier from speed set by direct movement node(s))
-@export_range(1.0, 4.0) var sprint_speed_multiplier : float = 2.0
+@export_range(1.0, 4.0) var sprint_speed_multiplier: float = 2.0
 
 ## Movement provider order
-@export var order : int = 11
+@export var order: int = 11
 
 ## Sprint controller
-@export var controller : SprintController = SprintController.LEFT
+@export var controller: SprintController = SprintController.LEFT
 
 ## Sprint button
-@export var sprint_button : String = "primary_click"
-
+@export var sprint_button: String = "primary_click"
 
 # Sprint controller
-var _controller : XRController3D
+var _controller: XRController3D
 
 # Sprint button down state
-var _sprint_button_down : bool = false
+var _sprint_button_down: bool = false
 
 # Variable to hold left controller direct movement node original max speed
-var _left_controller_original_max_speed : float = 0.0
+var _left_controller_original_max_speed: float = 0.0
 
 # Variable to hold right controller direct movement node original max speed
-var _right_controller_original_max_speed : float = 0.0
-
+var _right_controller_original_max_speed: float = 0.0
 
 # Variable used to cache left controller direct movement function, if any
 @onready var _left_controller_direct_move := XRToolsMovementDirect.find_left(self)
@@ -70,9 +64,8 @@ var _right_controller_original_max_speed : float = 0.0
 @onready var _right_controller_direct_move := XRToolsMovementDirect.find_right(self)
 
 
-
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMovementSprint" or super(name)
 
 
@@ -140,11 +133,13 @@ func set_sprinting(active: bool) -> void:
 		# Set both controllers' direct movement functions, if appliable, to
 		# the sprinting speed
 		if _left_controller_direct_move:
-			_left_controller_direct_move.max_speed = \
-					_left_controller_original_max_speed * sprint_speed_multiplier
+			_left_controller_direct_move.max_speed = (
+				_left_controller_original_max_speed * sprint_speed_multiplier
+			)
 		if _right_controller_direct_move:
-			_right_controller_direct_move.max_speed = \
-					_right_controller_original_max_speed * sprint_speed_multiplier
+			_right_controller_direct_move.max_speed = (
+				_right_controller_original_max_speed * sprint_speed_multiplier
+			)
 	else:
 		# We are not sprinting
 		emit_signal("sprinting_finished")

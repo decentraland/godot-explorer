@@ -2,7 +2,6 @@
 class_name XRToolsMovementGrapple
 extends XRToolsMovementProvider
 
-
 ## XR Tools Movement Provider for Grapple Movement
 ##
 ## This script provide simple grapple based movement - "bat hook" style
@@ -10,21 +9,18 @@ extends XRToolsMovementProvider
 ## This script works with the [XRToolsPlayerBody] attached to the players
 ## [XROrigin3D].
 
-
 ## Signal emitted when grapple starts
-signal grapple_started()
+signal grapple_started
 
 ## Signal emitted when grapple finishes
-signal grapple_finished()
-
+signal grapple_finished
 
 ## Grapple state
 enum GrappleState {
-	IDLE,			## Grapple is idle
-	FIRED,			## Grapple is fired
-	WINCHING,		## Grapple is winching
+	IDLE,  ## Grapple is idle
+	FIRED,  ## Grapple is fired
+	WINCHING,  ## Grapple is winching
 }
-
 
 # Default grapple collision mask of 1-5 (world)
 const DEFAULT_COLLISION_MASK := 0b0000_0000_0000_0000_0000_0000_0001_1111
@@ -32,50 +28,49 @@ const DEFAULT_COLLISION_MASK := 0b0000_0000_0000_0000_0000_0000_0001_1111
 # Default grapple enable mask of 5:grapple-target
 const DEFAULT_ENABLE_MASK := 0b0000_0000_0000_0000_0000_0000_0001_0000
 
-
 ## Movement provider order
-@export var order : int = 20
+@export var order: int = 20
 
 ## Grapple length - use to adjust maximum distance for possible grapple hooking.
-@export var grapple_length : float = 15.0
+@export var grapple_length: float = 15.0
 
 ## Grapple collision mask
-@export_flags_3d_physics var grapple_collision_mask : int = DEFAULT_COLLISION_MASK:
+@export_flags_3d_physics var grapple_collision_mask: int = DEFAULT_COLLISION_MASK:
 	set = _set_grapple_collision_mask
 
 ## Grapple enable mask
-@export_flags_3d_physics var grapple_enable_mask : int = DEFAULT_ENABLE_MASK
+@export_flags_3d_physics var grapple_enable_mask: int = DEFAULT_ENABLE_MASK
 
 ## Impulse speed applied to the player on first grapple
-@export var impulse_speed : float = 10.0
+@export var impulse_speed: float = 10.0
 
 ## Winch speed applied to the player while the grapple is held
-@export var winch_speed : float = 2.0
+@export var winch_speed: float = 2.0
 
 ## Probably need to add export variables for line size, maybe line material at
 ## some point so dev does not need to make children editable to do this.
 ## For now, right click on grapple node and make children editable to edit these
 ## facets.
-@export var rope_width : float = 0.02
+@export var rope_width: float = 0.02
 
 ## Air friction while grappling
-@export var friction : float = 0.1
+@export var friction: float = 0.1
 
 ## Grapple button (triggers grappling movement).  Be sure this button does not
 ## conflict with other functions.
-@export var grapple_button_action : String = "trigger_click"
+@export var grapple_button_action: String = "trigger_click"
 
 # Hook related variables
-var hook_object : Node3D = null
-var hook_local := Vector3(0,0,0)
-var hook_point := Vector3(0,0,0)
+var hook_object: Node3D = null
+var hook_local := Vector3(0, 0, 0)
+var hook_point := Vector3(0, 0, 0)
 
 # Grapple button state
 var _grapple_button := false
 
 # Get line creation nodes
-@onready var _line_helper : Node3D = $LineHelper
-@onready var _line : CSGCylinder3D = $LineHelper/Line
+@onready var _line_helper: Node3D = $LineHelper
+@onready var _line: CSGCylinder3D = $LineHelper/Line
 
 # Get Controller node - consider way to universalize this if user wanted to
 # attach this to a gun instead of player's hand.  Could consider variable to
@@ -83,14 +78,14 @@ var _grapple_button := false
 @onready var _controller := XRHelpers.get_xr_controller(self)
 
 # Get Raycast node
-@onready var _grapple_raycast : RayCast3D = $Grapple_RayCast
+@onready var _grapple_raycast: RayCast3D = $Grapple_RayCast
 
 # Get Grapple Target Node
-@onready var _grapple_target : Node3D = $Grapple_Target
+@onready var _grapple_target: Node3D = $Grapple_Target
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMovementGrapple" or super(name)
 
 
@@ -135,7 +130,7 @@ func _process(_delta: float):
 
 	# Update grapple target
 	if enabled and !is_active and _is_raycast_valid():
-		_grapple_target.global_transform.origin  = _grapple_raycast.get_collision_point()
+		_grapple_target.global_transform.origin = _grapple_raycast.get_collision_point()
 		_grapple_target.global_transform = _grapple_target.global_transform.orthonormalized()
 		_grapple_target.visible = true
 	else:
@@ -209,7 +204,7 @@ func _set_grappling(active: bool) -> void:
 		return
 
 	# Update the is_active flag
-	is_active = active;
+	is_active = active
 
 	# Report transition
 	if is_active:
@@ -225,7 +220,7 @@ func _is_raycast_valid() -> bool:
 		return false
 
 	# Get the target of the raycast
-	var target : CollisionObject3D = _grapple_raycast.get_collider()
+	var target: CollisionObject3D = _grapple_raycast.get_collider()
 
 	# Check tartget layer
 	return true if target.collision_layer & grapple_enable_mask else false

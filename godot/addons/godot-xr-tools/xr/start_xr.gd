@@ -2,7 +2,6 @@
 class_name XRToolsStartXR
 extends Node
 
-
 ## XRTools Start XR Class
 ##
 ## This class supports both the OpenXR and WebXR interfaces, and handles
@@ -11,7 +10,6 @@ extends Node
 ##
 ## For OpenXR this class also supports passthrough on compatible devices such
 ## as the Meta Quest 1 and 2.
-
 
 ## This signal is emitted when XR becomes active. For OpenXR this corresponds
 ## with the 'openxr_focused_state' signal which occurs when the application
@@ -25,31 +23,30 @@ signal xr_started
 ## signal.
 signal xr_ended
 
-
 ## If true, the XR interface is automatically initialized
-@export var auto_initialize : bool = true
+@export var auto_initialize: bool = true
 
 ## Adjusts the pixel density on the rendering target
-@export var render_target_size_multiplier : float = 1.0
+@export var render_target_size_multiplier: float = 1.0
 
 ## If true, the XR passthrough is enabled (OpenXR only)
-@export var enable_passthrough : bool = false: set = _set_enable_passthrough
+@export var enable_passthrough: bool = false:
+	set = _set_enable_passthrough
 
 ## Physics rate multiplier compared to HMD frame rate
-@export var physics_rate_multiplier : int = 1
+@export var physics_rate_multiplier: int = 1
 
 ## If non-zero, specifies the target refresh rate
-@export var target_refresh_rate : float = 0
-
+@export var target_refresh_rate: float = 0
 
 ## Current XR interface
-var xr_interface : XRInterface
+var xr_interface: XRInterface
 
 ## XR active flag
-var xr_active : bool = false
+var xr_active: bool = false
 
 # Current refresh rate
-var _current_refresh_rate : float = 0
+var _current_refresh_rate: float = 0
 
 
 # Handle auto-initialization when ready
@@ -61,12 +58,12 @@ func _ready() -> void:
 ## Initialize the XR interface
 func initialize() -> bool:
 	# Check for OpenXR interface
-	xr_interface = XRServer.find_interface('OpenXR')
+	xr_interface = XRServer.find_interface("OpenXR")
 	if xr_interface:
 		return _setup_for_openxr()
 
 	# Check for WebXR interface
-	xr_interface = XRServer.find_interface('WebXR')
+	xr_interface = XRServer.find_interface("WebXR")
 	if xr_interface:
 		return _setup_for_webxr()
 
@@ -134,7 +131,7 @@ func _on_openxr_session_begun() -> void:
 
 	# Pick a desired refresh rate
 	var desired_rate := target_refresh_rate if target_refresh_rate > 0 else _current_refresh_rate
-	var available_rates : Array = xr_interface.get_available_display_refresh_rates()
+	var available_rates: Array = xr_interface.get_available_display_refresh_rates()
 	if available_rates.size() == 0:
 		print("OpenXR: Target does not support refresh rate extension")
 	elif available_rates.size() == 1:
@@ -173,7 +170,7 @@ func _on_openxr_focused_state() -> void:
 
 
 # Handle changes to the enable_passthrough property
-func _set_enable_passthrough(p_new_value : bool) -> void:
+func _set_enable_passthrough(p_new_value: bool) -> void:
 	# Save the new value
 	enable_passthrough = p_new_value
 
@@ -259,10 +256,10 @@ func _on_webxr_session_failed(message: String) -> void:
 # Handle the Enter VR button on the WebXR browser
 func _on_enter_webxr_button_pressed() -> void:
 	# Configure the WebXR interface
-	xr_interface.session_mode = 'immersive-vr'
-	xr_interface.requested_reference_space_types = 'bounded-floor, local-floor, local'
-	xr_interface.required_features = 'local-floor'
-	xr_interface.optional_features = 'bounded-floor'
+	xr_interface.session_mode = "immersive-vr"
+	xr_interface.requested_reference_space_types = "bounded-floor, local-floor, local"
+	xr_interface.required_features = "local-floor"
+	xr_interface.optional_features = "bounded-floor"
 
 	# Initialize the interface. This should trigger either _on_webxr_session_started
 	# or _on_webxr_session_failed
@@ -271,13 +268,13 @@ func _on_enter_webxr_button_pressed() -> void:
 
 
 # Find the closest value in the array to the target
-func _find_closest(values : Array, target : float) -> float:
+func _find_closest(values: Array, target: float) -> float:
 	# Return 0 if no values
 	if values.size() == 0:
 		return 0.0
 
 	# Find the closest value to the target
-	var best : float = values.front()
+	var best: float = values.front()
 	for v in values:
 		if abs(target - v) < abs(target - best):
 			best = v

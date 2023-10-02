@@ -2,7 +2,6 @@
 class_name XRToolsMovementCrouch
 extends XRToolsMovementProvider
 
-
 ## XR Tools Movement Provider for Crouching
 ##
 ## This script works with the [XRToolsPlayerBody] attached to the players
@@ -11,40 +10,36 @@ extends XRToolsMovementProvider
 ## While the player presses the crounch button, the height is overridden to
 ## the specified crouch height.
 
-
 ## Enumeration of crouching modes
 enum CrouchType {
-	HOLD_TO_CROUCH,	## Hold button to crouch
-	TOGGLE_CROUCH,	## Toggle crouching on button press
+	HOLD_TO_CROUCH,  ## Hold button to crouch
+	TOGGLE_CROUCH,  ## Toggle crouching on button press
 }
 
-
 ## Movement provider order
-@export var order : int = 10
+@export var order: int = 10
 
 ## Crouch height
-@export var crouch_height : float = 1.0
+@export var crouch_height: float = 1.0
 
 ## Crouch button
-@export var crouch_button_action : String = "primary_click"
+@export var crouch_button_action: String = "primary_click"
 
 ## Type of crouching
-@export var crouch_type : CrouchType = CrouchType.HOLD_TO_CROUCH
-
+@export var crouch_type: CrouchType = CrouchType.HOLD_TO_CROUCH
 
 ## Crouching flag
-var _crouching : bool = false
+var _crouching: bool = false
 
 ## Crouch button down state
-var _crouch_button_down : bool = false
-
+var _crouch_button_down: bool = false
 
 # Controller node
 @onready var _controller := XRHelpers.get_xr_controller(self)
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMovementCrouch" or super(name)
 
 

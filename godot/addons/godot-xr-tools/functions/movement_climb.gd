@@ -2,7 +2,6 @@
 class_name XRToolsMovementClimb
 extends XRToolsMovementProvider
 
-
 ## XR Tools Movement Provider for Climbing
 ##
 ## This script provides climbing movement for the player. To add climbing
@@ -18,40 +17,35 @@ extends XRToolsMovementProvider
 ## optional fling multiplier, so the player can fling themselves up walls if
 ## desired.
 
-
 ## Signal invoked when the player starts climing
 signal player_climb_start
 
 ## Signal invoked when the player ends climbing
 signal player_climb_end
 
-
 ## Distance at which grabs snap
-const SNAP_DISTANCE : float = 1.0
-
+const SNAP_DISTANCE: float = 1.0
 
 ## Movement provider order
-@export var order : int = 15
+@export var order: int = 15
 
 ## Push forward when flinging
-@export var forward_push : float = 1.0
+@export var forward_push: float = 1.0
 
 ## Velocity multiplier when flinging up walls
-@export var fling_multiplier : float = 1.0
+@export var fling_multiplier: float = 1.0
 
 ## Averages for velocity measurement
-@export var velocity_averages : int = 5
-
+@export var velocity_averages: int = 5
 
 # Left climbing handle
-var _left_handle : Node3D
+var _left_handle: Node3D
 
 # Right climbing handle
-var _right_handle : Node3D
+var _right_handle: Node3D
 
 # Dominant handle (moving the player)
-var _dominant : Node3D
-
+var _dominant: Node3D
 
 # Velocity averager
 @onready var _averager := XRToolsVelocityAveragerLinear.new(velocity_averages)
@@ -76,7 +70,7 @@ var _dominant : Node3D
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMovementClimb" or super(name)
 
 
@@ -174,9 +168,15 @@ func _set_climbing(active: bool, player_body: XRToolsPlayerBody) -> void:
 		emit_signal("player_climb_start")
 	else:
 		# Calculate the forward direction (based on camera-forward)
-		var dir_forward = -player_body.camera_node.global_transform.basis.z \
-				.slide(player_body.up_player) \
-				.normalized()
+		var dir_forward = -(
+			player_body
+			. camera_node
+			. global_transform
+			. basis
+			. z
+			. slide(player_body.up_player)
+			. normalized()
+		)
 
 		# Set player velocity based on averaged velocity, fling multiplier,
 		# and a forward push
@@ -188,7 +188,7 @@ func _set_climbing(active: bool, player_body: XRToolsPlayerBody) -> void:
 
 
 ## Handler for left controller picked up
-func _on_left_picked_up(what : Node3D) -> void:
+func _on_left_picked_up(what: Node3D) -> void:
 	# Get the climbable
 	var climbable = what as XRToolsClimbable
 	if not climbable:
@@ -208,7 +208,7 @@ func _on_left_picked_up(what : Node3D) -> void:
 
 
 ## Handler for right controller picked up
-func _on_right_picked_up(what : Node3D) -> void:
+func _on_right_picked_up(what: Node3D) -> void:
 	# Get the climbable
 	var climbable = what as XRToolsClimbable
 	if not climbable:

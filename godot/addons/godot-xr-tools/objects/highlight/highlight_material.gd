@@ -2,20 +2,18 @@
 class_name XRToolsHighlightMaterial
 extends Node
 
-
 ## Mesh to highlight
-@export var highlight_mesh_instance : NodePath
+@export var highlight_mesh_instance: NodePath
 
 ## Material to set
-@export var highlight_material : Resource
-
+@export var highlight_material: Resource
 
 var _original_materials = Array()
 var _highlight_mesh_instance: MeshInstance3D
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsHighlightMaterial"
 
 

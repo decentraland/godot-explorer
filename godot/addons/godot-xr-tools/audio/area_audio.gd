@@ -3,22 +3,20 @@
 class_name XRToolsAreaAudio
 extends AudioStreamPlayer3D
 
-
 ## XRTools Area Audio
 ##
 ## This node is attached as a child of a Area3D,
 ## since all the interactables are actualy Extensions of the Area3D,
 ## this node will work on those as well
 
-
 ## XRToolsAreaAudioType to associate with this Area Audio
-@export var area_audio_type : XRToolsAreaAudioType
+@export var area_audio_type: XRToolsAreaAudioType
 
-@onready var area : Area3D = get_parent()
+@onready var area: Area3D = get_parent()
 
 
 # Add support for is_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsAreaAudio"
 
 
@@ -39,7 +37,7 @@ func _on_body_entered(_body):
 
 func _on_body_exited(_body):
 	if playing:
-			stop()
+		stop()
 
 
 # This method checks for configuration issues.

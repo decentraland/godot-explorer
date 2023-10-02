@@ -2,7 +2,6 @@
 class_name XRToolsSceneBase
 extends Node3D
 
-
 ## XR Tools Scene Base Class
 ##
 ## This is our base scene for all our levels.  It ensures that we have all bits
@@ -10,7 +9,6 @@ extends Node3D
 ##
 ## Developers can customize scene transitions by extending from this class and
 ## overriding the [method scene_loaded] behavior.
-
 
 ## This signal is used to request the staging transition to the main-menu
 ## scene. Developers should use [method exit_to_main_menu] rather than
@@ -30,7 +28,6 @@ signal request_load_scene(p_scene_path, user_data)
 ## The [param user_data] parameter is passed through staging to the new scenes.
 signal request_reset_scene(user_data)
 
-
 # This file contains methods with parameters that are unused; however they are
 # documented and intended to be overridden in derived classes. As such unused
 # parameter warnings need to be disabled.
@@ -38,20 +35,20 @@ signal request_reset_scene(user_data)
 # warning-ignore:unused_parameter
 # gdlint:disable=unused-argument
 
-
 ## Interface
+
 
 func _ready() -> void:
 	pass
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsSceneBase"
 
 
 ## This method center the player on the [param p_transform] transform.
-func center_player_on(p_transform : Transform3D):
+func center_player_on(p_transform: Transform3D):
 	# In order to center our player so the players feet are at the location
 	# indicated by p_transform, and having our player looking in the required
 	# direction, we must offset this transform using the cameras transform.
@@ -64,7 +61,7 @@ func center_player_on(p_transform : Transform3D):
 	view_direction.y = 0
 
 	# Now create the transform that we will use to offset our input with
-	var transform : Transform3D
+	var transform: Transform3D
 	transform = transform.looking_at(-view_direction, Vector3.UP)
 	transform.origin = camera_transform.origin
 	transform.origin.y = 0
@@ -107,17 +104,17 @@ func scene_loaded(user_data = null):
 	# - String name of a Node3D to spawn at
 	# - Vector3 to spawn at
 	# - Transform3D to spawn at
-	var spawn_transform : Transform3D = $XROrigin3D.global_transform
+	var spawn_transform: Transform3D = $XROrigin3D.global_transform
 	match typeof(spawn_position):
-		TYPE_STRING: # Name of Node3D to spawn at
+		TYPE_STRING:  # Name of Node3D to spawn at
 			var node = find_child(spawn_position)
 			if node is Node3D:
 				spawn_transform = node.global_transform
 
-		TYPE_VECTOR3: # Vector3 to spawn at (rotation comes from XROrigin3D)
+		TYPE_VECTOR3:  # Vector3 to spawn at (rotation comes from XROrigin3D)
 			spawn_transform.origin = spawn_position
 
-		TYPE_TRANSFORM3D: # Transform3D spawn location
+		TYPE_TRANSFORM3D:  # Transform3D spawn location
 			spawn_transform = spawn_position
 
 	# Center the player on the spawn location
@@ -177,7 +174,7 @@ func exit_to_main_menu() -> void:
 ##
 ## See [method scene_loaded] for options to provide advanced scene-transition
 ## functionality.
-func load_scene(p_scene_path : String, user_data = null) -> void:
+func load_scene(p_scene_path: String, user_data = null) -> void:
 	emit_signal("request_load_scene", p_scene_path, user_data)
 
 

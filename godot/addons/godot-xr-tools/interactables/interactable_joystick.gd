@@ -2,7 +2,6 @@
 class_name XRToolsInteractableJoystick
 extends XRToolsInteractableHandleDriven
 
-
 ## XR Tools Interactable Joystick script
 ##
 ## The interactable joystick is a joystick transform node controlled by the
@@ -14,10 +13,8 @@ extends XRToolsInteractableHandleDriven
 ## The interactable joystick is not a [RigidBody3D], and as such will not react
 ## to any collisions.
 
-
 ## Signal for hinge moved
 signal joystick_moved(x_angle, y_angle)
-
 
 ## Constant for flattening a vector horizontally (X/Z only)
 const VECTOR_XZ := Vector3(1.0, 0.0, 1.0)
@@ -25,56 +22,64 @@ const VECTOR_XZ := Vector3(1.0, 0.0, 1.0)
 ## Constant for flattening a vector vertically (Y/Z only)
 const VECTOR_YZ := Vector3(0.0, 1.0, 1.0)
 
-
 ## Joystick X minimum limit
-@export var joystick_x_limit_min : float = -45.0: set = _set_joystick_x_limit_min
+@export var joystick_x_limit_min: float = -45.0:
+	set = _set_joystick_x_limit_min
 
 ## Joystick X maximum limit
-@export var joystick_x_limit_max : float = 45.0: set = _set_joystick_x_limit_max
+@export var joystick_x_limit_max: float = 45.0:
+	set = _set_joystick_x_limit_max
 
 ## Joystick Y minimum limit
-@export var joystick_y_limit_min : float = -45.0: set = _set_joystick_y_limit_min
+@export var joystick_y_limit_min: float = -45.0:
+	set = _set_joystick_y_limit_min
 
 ## Joystick Y maximum limit
-@export var joystick_y_limit_max : float = 45.0: set = _set_joystick_y_limit_max
+@export var joystick_y_limit_max: float = 45.0:
+	set = _set_joystick_y_limit_max
 
 ## Joystick X step size (zero for no steps)
-@export var joystick_x_steps : float = 0.0: set = _set_joystick_x_steps
+@export var joystick_x_steps: float = 0.0:
+	set = _set_joystick_x_steps
 
 ## Joystick Y step size (zero for no steps)
-@export var joystick_y_steps : float = 0.0: set = _set_joystick_y_steps
+@export var joystick_y_steps: float = 0.0:
+	set = _set_joystick_y_steps
 
 ## Joystick X position
-@export var joystick_x_position : float = 0.0: set = _set_joystick_x_position
+@export var joystick_x_position: float = 0.0:
+	set = _set_joystick_x_position
 
 ## Joystick Y position
-@export var joystick_y_position : float = 0.0: set = _set_joystick_y_position
+@export var joystick_y_position: float = 0.0:
+	set = _set_joystick_y_position
 
 ## Default X position
-@export var default_x_position : float = 0.0: set = _set_default_x_position
+@export var default_x_position: float = 0.0:
+	set = _set_default_x_position
 
 ## Default Y position
-@export var default_y_position : float = 0.0: set = _set_default_y_position
+@export var default_y_position: float = 0.0:
+	set = _set_default_y_position
 
 ## If true, the joystick moves to the default position when released
-@export var default_on_release : bool = false
-
+@export var default_on_release: bool = false
 
 # Joystick values in radians
-@onready var _joystick_x_limit_min_rad : float = deg_to_rad(joystick_x_limit_min)
-@onready var _joystick_x_limit_max_rad : float = deg_to_rad(joystick_x_limit_max)
-@onready var _joystick_y_limit_min_rad : float = deg_to_rad(joystick_y_limit_min)
-@onready var _joystick_y_limit_max_rad : float = deg_to_rad(joystick_y_limit_max)
-@onready var _joystick_x_steps_rad : float = deg_to_rad(joystick_x_steps)
-@onready var _joystick_y_steps_rad : float = deg_to_rad(joystick_y_steps)
-@onready var _joystick_x_position_rad : float = deg_to_rad(joystick_x_position)
-@onready var _joystick_y_position_rad : float = deg_to_rad(joystick_y_position)
-@onready var _default_x_position_rad : float = deg_to_rad(default_x_position)
-@onready var _default_y_position_rad : float = deg_to_rad(default_y_position)
+@onready var _joystick_x_limit_min_rad: float = deg_to_rad(joystick_x_limit_min)
+@onready var _joystick_x_limit_max_rad: float = deg_to_rad(joystick_x_limit_max)
+@onready var _joystick_y_limit_min_rad: float = deg_to_rad(joystick_y_limit_min)
+@onready var _joystick_y_limit_max_rad: float = deg_to_rad(joystick_y_limit_max)
+@onready var _joystick_x_steps_rad: float = deg_to_rad(joystick_x_steps)
+@onready var _joystick_y_steps_rad: float = deg_to_rad(joystick_y_steps)
+@onready var _joystick_x_position_rad: float = deg_to_rad(joystick_x_position)
+@onready var _joystick_y_position_rad: float = deg_to_rad(joystick_y_position)
+@onready var _default_x_position_rad: float = deg_to_rad(default_x_position)
+@onready var _default_y_position_rad: float = deg_to_rad(default_y_position)
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsInteractableJoystick" or super(name)
 
 
@@ -86,7 +91,8 @@ func _ready():
 	# Set the initial position to match the initial joystick position value
 	transform = Transform3D(
 		Basis.from_euler(Vector3(_joystick_y_position_rad, _joystick_x_position_rad, 0)),
-		Vector3.ZERO)
+		Vector3.ZERO
+	)
 
 	# Connect signals
 	if released.connect(_on_joystick_released):
@@ -109,7 +115,9 @@ func _process(_delta: float) -> void:
 	for item in grabbed_handles:
 		var handle := item as XRToolsInteractableHandle
 		var to_handle: Vector3 = handle.global_transform.origin * global_transform
-		var to_handle_origin: Vector3 = handle.handle_origin.global_transform.origin * global_transform
+		var to_handle_origin: Vector3 = (
+			handle.handle_origin.global_transform.origin * global_transform
+		)
 
 		var to_handle_x := to_handle * VECTOR_XZ
 		var to_handle_origin_x := to_handle_origin * VECTOR_XZ
@@ -124,9 +132,7 @@ func _process(_delta: float) -> void:
 	var offset_y := offset_y_sum / grabbed_handles.size()
 
 	# Move the joystick by the requested offset
-	move_joystick(
-		_joystick_x_position_rad + offset_x,
-		_joystick_y_position_rad + offset_y)
+	move_joystick(_joystick_x_position_rad + offset_x, _joystick_y_position_rad + offset_y)
 
 
 # Move the joystick to the specified position

@@ -2,32 +2,32 @@
 class_name XRToolsHoldButton
 extends Node3D
 
-
 signal pressed
 
-
 # Enable our button
-@export var enabled : bool = false: set = set_enabled
+@export var enabled: bool = false:
+	set = set_enabled
 
-@export var activate_action : String = "trigger_click"
+@export var activate_action: String = "trigger_click"
 
 # Countdown
-@export var hold_time : float = 2.0
+@export var hold_time: float = 2.0
 
 # Color our our visualisation
-@export var color : Color = Color(1.0, 1.0, 1.0, 1.0): set = set_color
+@export var color: Color = Color(1.0, 1.0, 1.0, 1.0):
+	set = set_color
 
 # Size
-@export var size : Vector2 = Vector2(1.0, 1.0): set = set_size
-
+@export var size: Vector2 = Vector2(1.0, 1.0):
+	set = set_size
 
 var time_held = 0.0
 
-var material : ShaderMaterial
+var material: ShaderMaterial
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsHoldButton"
 
 
@@ -52,7 +52,7 @@ func _process(delta):
 	# we check all trackers
 	var controllers = XRServer.get_trackers(XRServer.TRACKER_CONTROLLER)
 	for name in controllers:
-		var tracker : XRPositionalTracker = controllers[name]
+		var tracker: XRPositionalTracker = controllers[name]
 		if tracker.get_input(activate_action):
 			button_pressed = true
 
@@ -81,7 +81,7 @@ func _set_time_held(p_time_held):
 	time_held = p_time_held
 	if material:
 		$Visualise.visible = time_held > 0.0
-		material.set_shader_parameter("value", time_held/hold_time)
+		material.set_shader_parameter("value", time_held / hold_time)
 
 
 func set_size(p_size: Vector2):
@@ -90,8 +90,8 @@ func set_size(p_size: Vector2):
 
 
 func _update_size():
-	if material: # Note, material won't be set until after we setup our scene
-		var mesh : QuadMesh = $Visualise.mesh
+	if material:  # Note, material won't be set until after we setup our scene
+		var mesh: QuadMesh = $Visualise.mesh
 		if mesh.size != size:
 			mesh.size = size
 

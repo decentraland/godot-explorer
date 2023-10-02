@@ -1,7 +1,6 @@
 @tool
 class_name XRHelpers
 
-
 ## XR Tools Helper Rountines
 ##
 ## This script contains static functions to help find XR player nodes.
@@ -39,6 +38,7 @@ static func get_xr_origin(node: Node, path: NodePath = NodePath()) -> XROrigin3D
 	# Could not find origin
 	return null
 
+
 ## Find the [XRCamera3D] node.
 ##
 ## This function searches for the [XRCamera3D] from the provided node.
@@ -73,6 +73,7 @@ static func get_xr_camera(node: Node, path: NodePath = NodePath()) -> XRCamera3D
 	# Could not find camera
 	return null
 
+
 ## Find the [XRController3D] node.
 ##
 ## This function searches for the [XRController3D] from the provided node.
@@ -92,6 +93,7 @@ static func get_xr_controller(node: Node, path: NodePath = NodePath()) -> XRCont
 	# Search up from the node for the controller
 	return XRTools.find_xr_ancestor(node, "*", "XRController3D") as XRController3D
 
+
 ## Find the Left Hand [XRController3D] from a player node and an optional path
 static func get_left_controller(node: Node, path: NodePath = NodePath()) -> XRController3D:
 	return _get_controller(node, "LeftHandController", "left_hand", path)
@@ -104,10 +106,8 @@ static func get_right_controller(node: Node, path: NodePath = NodePath()) -> XRC
 
 ## Find an [XRController3D] given some search parameters
 static func _get_controller(
-		node: Node,
-		default_name: String,
-		tracker: String,
-		path: NodePath) -> XRController3D:
+	node: Node, default_name: String, tracker: String, path: NodePath
+) -> XRController3D:
 	var controller: XRController3D
 
 	# Try using the node path first
@@ -134,4 +134,3 @@ static func _get_controller(
 
 	# Could not find the controller
 	return null
-

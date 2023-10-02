@@ -2,7 +2,6 @@
 class_name XRToolsForceBody
 extends StaticBody3D
 
-
 ## XRTools Force Body script
 ##
 ## This script enhances StaticBody3D with move_and_slide and the ability
@@ -12,39 +11,39 @@ extends StaticBody3D
 ## Force Body Collision
 class ForceBodyCollision:
 	## Collider object
-	var collider : Node3D
+	var collider: Node3D
 
 	## Collision point
-	var position : Vector3
+	var position: Vector3
 
 	## Collision normal
-	var normal : Vector3
+	var normal: Vector3
 
 
 ## Enables or disables pushing bodies
-@export var push_bodies : bool = true
+@export var push_bodies: bool = true
 
 ## Control the stiffness of the body
-@export var stiffness : float = 10.0
+@export var stiffness: float = 10.0
 
 ## Control the maximum push force
-@export var maximum_force : float = 1.0
+@export var maximum_force: float = 1.0
 
 ## Maximum slides
-@export var max_slides : int = 4
+@export var max_slides: int = 4
 
 
 ## Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsForceBody"
 
 
 ## This function moves and slides along the [param move] vector. It returns
 ## information about the last collision, or null if no collision
-func move_and_slide(move : Vector3) -> ForceBodyCollision:
+func move_and_slide(move: Vector3) -> ForceBodyCollision:
 	# Loop performing the movement steps
 	var step_move := move
-	var ret : ForceBodyCollision = null
+	var ret: ForceBodyCollision = null
 	for step in max_slides:
 		# Take the next step
 		var collision := move_and_collide(step_move)
@@ -83,7 +82,8 @@ func move_and_slide(move : Vector3) -> ForceBodyCollision:
 				# Apply the lost momentum as an impulse to the body we hit
 				body.apply_impulse(
 					(lost_momentum * stiffness).limit_length(maximum_force),
-					position - body.global_position)
+					position - body.global_position
+				)
 
 		# Update the remaining movement
 		step_move = next_move

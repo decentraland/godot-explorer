@@ -1,6 +1,5 @@
 class_name XRToolsVelocityAverager
 
-
 ## XR Tools Velocity Averager class
 ##
 ## This class assists in calculating the velocity (both linear and angular)
@@ -10,7 +9,6 @@ class_name XRToolsVelocityAverager
 ##
 ## It provides the average velocity calculated from the total distance
 ## divided by the total time.
-
 
 # Count of averages to perform
 var _count: int
@@ -35,12 +33,14 @@ var _has_last_transform := false
 func _init(count: int):
 	_count = count
 
+
 ## Clear the averages
 func clear():
 	_time_deltas.clear()
 	_linear_distances.clear()
 	_angular_distances.clear()
 	_has_last_transform = false
+
 
 ## Add linear and angular distances to the averager
 func add_distance(delta: float, linear_distance: Vector3, angular_distance: Vector3):
@@ -57,6 +57,7 @@ func add_distance(delta: float, linear_distance: Vector3, angular_distance: Vect
 		_time_deltas.pop_front()
 		_linear_distances.pop_front()
 		_angular_distances.pop_front()
+
 
 ## Add a transform to the averager
 func add_transform(delta: float, transform: Transform3D):
@@ -78,6 +79,7 @@ func add_transform(delta: float, transform: Transform3D):
 	# Add distances
 	add_distance(delta, linear_distance, angular_distance)
 
+
 ## Calculate the average linear velocity
 func linear_velocity() -> Vector3:
 	# Skip if no averages
@@ -96,6 +98,7 @@ func linear_velocity() -> Vector3:
 
 	# Return the average cartesian-velocity
 	return total_linear / total_time
+
 
 ## Calculate the average angular velocity as a Vector3 euler-velocity
 func angular_velocity() -> Vector3:

@@ -1,16 +1,13 @@
 class_name XRToolsMoveTo
 extends Node
 
-
 ## XR Tools Move To Node
 ##
 ## This node moves a control node to the specified target node at a
 ## requested speed.
 
-
 ## Signal invoked when the move finishes
 signal move_complete
-
 
 # Spatial to control
 var _control: Node3D
@@ -32,7 +29,7 @@ var _time: float = 0.0
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMoveTo"
 
 
@@ -63,9 +60,7 @@ func _process(delta: float) -> void:
 		return
 
 	# Interpolate to the target
-	_control.global_transform = _start.interpolate_with(
-		destination,
-		_time / _duration)
+	_control.global_transform = _start.interpolate_with(destination, _time / _duration)
 
 
 ## Start the move

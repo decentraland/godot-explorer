@@ -2,22 +2,18 @@
 class_name XRToolsCollisionHand
 extends XRToolsForceBody
 
-
 ## XRTools Collision Hand Container Script
 ##
 ## This script implements logic for collision hands. Specifically it tracks
 ## its ancestor [XRController3D], and can act as a container for hand models
 ## and pickup functions.
 
-
 ## Modes for collision hand
 enum CollisionHandMode {
 	## Hand is disabled and must be moved externally
 	DISABLED,
-
 	## Hand teleports to controller
 	TELEPORT,
-
 	## Hand collides with world (based on mask)
 	COLLIDE
 }
@@ -39,37 +35,35 @@ const ORIENT_DISPLACEMENT := 0.05
 # Distance to teleport hands
 const TELEPORT_DISTANCE := 1.0
 
-
 ## Controls the hand collision mode
-@export var mode : CollisionHandMode = CollisionHandMode.COLLIDE
-
+@export var mode: CollisionHandMode = CollisionHandMode.COLLIDE
 
 # Controller to target (if no target overrides)
-var _controller : XRController3D
+var _controller: XRController3D
 
 # Sorted stack of TargetOverride
 var _target_overrides := []
 
 # Current target (controller or override)
-var _target : Node3D
+var _target: Node3D
 
 
 ## Target-override class
 class TargetOverride:
 	## Target of the override
-	var target : Node3D
+	var target: Node3D
 
 	## Target priority
-	var priority : int
+	var priority: int
 
 	## Target-override constructor
-	func _init(t : Node3D, p : int):
+	func _init(t: Node3D, p: int):
 		target = t
 		priority = p
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsCollisionHand"
 
 
@@ -102,7 +96,7 @@ func _physics_process(_delta):
 ## This function adds a target override. The collision hand will attempt to
 ## move to the highest priority target, or the [XRController3D] if no override
 ## is specified.
-func add_target_override(target : Node3D, priority : int) -> void:
+func add_target_override(target: Node3D, priority: int) -> void:
 	# Remove any existing target override from this source
 	var modified := _remove_target_override(target)
 
@@ -116,7 +110,7 @@ func add_target_override(target : Node3D, priority : int) -> void:
 
 
 ## This function remove a target override.
-func remove_target_override(target : Node3D) -> void:
+func remove_target_override(target: Node3D) -> void:
 	# Remove the target override
 	var modified := _remove_target_override(target)
 
@@ -127,29 +121,29 @@ func remove_target_override(target : Node3D) -> void:
 
 ## This function searches from the specified node for an [XRToolsCollisionHand]
 ## assuming the node is a sibling of the hand under an [XRController3D].
-static func find_instance(node : Node) -> XRToolsCollisionHand:
-	return XRTools.find_xr_child(
-		XRHelpers.get_xr_controller(node),
-		"*",
-		"XRToolsCollisionHand") as XRToolsCollisionHand
+static func find_instance(node: Node) -> XRToolsCollisionHand:
+	return (
+		XRTools.find_xr_child(XRHelpers.get_xr_controller(node), "*", "XRToolsCollisionHand")
+		as XRToolsCollisionHand
+	)
 
 
 ## This function searches from the specified node for the left controller
 ## [XRToolsCollisionHand] assuming the node is a sibling of the [XROrigin3D].
-static func find_left(node : Node) -> XRToolsCollisionHand:
-	return XRTools.find_xr_child(
-		XRHelpers.get_left_controller(node),
-		"*",
-		"XRToolsCollisionHand") as XRToolsCollisionHand
+static func find_left(node: Node) -> XRToolsCollisionHand:
+	return (
+		XRTools.find_xr_child(XRHelpers.get_left_controller(node), "*", "XRToolsCollisionHand")
+		as XRToolsCollisionHand
+	)
 
 
 ## This function searches from the specified node for the right controller
 ## [XRToolsCollisionHand] assuming the node is a sibling of the [XROrigin3D].
-static func find_right(node : Node) -> XRToolsCollisionHand:
-	return XRTools.find_xr_child(
-		XRHelpers.get_right_controller(node),
-		"*",
-		"XRToolsCollisionHand") as XRToolsCollisionHand
+static func find_right(node: Node) -> XRToolsCollisionHand:
+	return (
+		XRTools.find_xr_child(XRHelpers.get_right_controller(node), "*", "XRToolsCollisionHand")
+		as XRToolsCollisionHand
+	)
 
 
 # This function moves the collision hand to the target node.
@@ -175,14 +169,14 @@ func _move_to_target():
 
 # This function inserts a target override into the overrides list by priority
 # order.
-func _insert_target_override(target : Node3D, priority : int) -> void:
+func _insert_target_override(target: Node3D, priority: int) -> void:
 	# Construct the target override
 	var override := TargetOverride.new(target, priority)
 
 	# Iterate over all target overrides in the list
 	for pos in _target_overrides.size():
 		# Get the target override
-		var o : TargetOverride = _target_overrides[pos]
+		var o: TargetOverride = _target_overrides[pos]
 
 		# Insert as early as possible to not invalidate sorting
 		if o.priority <= priority:
@@ -194,7 +188,7 @@ func _insert_target_override(target : Node3D, priority : int) -> void:
 
 
 # This function removes a target from the overrides list
-func _remove_target_override(target : Node) -> bool:
+func _remove_target_override(target: Node) -> bool:
 	var pos := 0
 	var length := _target_overrides.size()
 	var modified := false
@@ -202,7 +196,7 @@ func _remove_target_override(target : Node) -> bool:
 	# Iterate over all pose overrides in the list
 	while pos < length:
 		# Get the target override
-		var o : TargetOverride = _target_overrides[pos]
+		var o: TargetOverride = _target_overrides[pos]
 
 		# Check for a match
 		if o.target == target:

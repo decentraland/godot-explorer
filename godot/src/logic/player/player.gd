@@ -56,6 +56,7 @@ func _on_param_changed(_param):
 @onready var camera_fade_out_audio = preload("res://assets/sfx/ui_fade_out.wav")
 @onready var audio_stream_player_camera = $AudioStreamPlayer_Camera
 
+
 func _set_first_person(value: bool, play_audio: bool = false):
 	if value:
 		first_person = true
@@ -70,10 +71,8 @@ func _set_first_person(value: bool, play_audio: bool = false):
 	else:
 		first_person = false
 		var tween_out = create_tween()
-		(
-			tween_out
-				.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25)
-				.set_ease(Tween.EASE_IN_OUT)
+		tween_out.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25).set_ease(
+			Tween.EASE_IN_OUT
 		)
 		avatar.show()
 		avatar.set_rotation(Vector3(0, 0, 0))

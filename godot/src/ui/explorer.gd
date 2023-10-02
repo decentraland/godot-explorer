@@ -27,7 +27,7 @@ var dirty_save_position: bool = false
 
 func _process(_dt):
 	var player_position = player.position
-	
+
 	parcel_position_real = Vector2(player_position.x * 0.0625, -player_position.y * 0.0625)
 	control_minimap.set_center_position(parcel_position_real)
 
@@ -49,7 +49,7 @@ func _ready():
 	player = $Player if !Global.is_xr else $XRPlayer
 	# Remove player that is not going to be used
 	remove_child($Player if Global.is_xr else $XRPlayer)
-	
+
 	if Global.is_xr:
 		mobile_ui.hide()
 		button_jump.hide()
@@ -222,7 +222,9 @@ var counter: int = 0
 
 
 func _on_timer_broadcast_position_timeout():
-	var transform: Transform3D = player.avatar.global_transform if !Global.is_xr else player.global_transform
+	var transform: Transform3D = (
+		player.avatar.global_transform if !Global.is_xr else player.global_transform
+	)
 	var position = transform.origin
 	var rotation = transform.basis.get_rotation_quaternion()
 

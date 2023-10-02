@@ -1,9 +1,7 @@
 extends Node
 
-
 ## Emitted when the WebXR primary is changed (either by the user or auto detected).
-signal webxr_primary_changed (value)
-
+signal webxr_primary_changed(value)
 
 enum WebXRPrimary {
 	AUTO,
@@ -11,31 +9,31 @@ enum WebXRPrimary {
 	TRACKPAD,
 }
 
-
 @export_group("Input")
 
 ## User setting for snap-turn
-@export var snap_turning : bool = true
+@export var snap_turning: bool = true
 
 ## User setting for y axis dead zone
-@export var y_axis_dead_zone : float = 0.1
+@export var y_axis_dead_zone: float = 0.1
 
 ## User setting for y axis dead zone
-@export var x_axis_dead_zone : float = 0.2
+@export var x_axis_dead_zone: float = 0.2
 
 @export_group("Player")
 
 ## User setting for player height
-@export var player_height : float = 1.85: set = set_player_height
+@export var player_height: float = 1.85:
+	set = set_player_height
 
 @export_group("WebXR")
 
 ## User setting for WebXR primary
-@export var webxr_primary : WebXRPrimary = WebXRPrimary.AUTO: set = set_webxr_primary
-
+@export var webxr_primary: WebXRPrimary = WebXRPrimary.AUTO:
+	set = set_webxr_primary
 
 ## Settings file name to persist user settings
-var settings_file_name : String = "user://xtools_user_settings.json"
+var settings_file_name: String = "user://xtools_user_settings.json"
 
 ## Records the first input to generate input (thumbstick or trackpad).
 var webxr_auto_primary := 0
@@ -61,12 +59,14 @@ func reset_to_defaults() -> void:
 	webxr_primary = WebXRPrimary.AUTO
 	webxr_auto_primary = 0
 
+
 ## Set the player height property
-func set_player_height(new_value : float) -> void:
+func set_player_height(new_value: float) -> void:
 	player_height = clamp(new_value, 1.0, 2.5)
 
+
 ## Set the WebXR primary
-func set_webxr_primary(new_value : WebXRPrimary) -> void:
+func set_webxr_primary(new_value: WebXRPrimary) -> void:
 	webxr_primary = new_value
 	if webxr_primary == WebXRPrimary.AUTO:
 		if webxr_auto_primary == 0:
@@ -89,16 +89,16 @@ func get_real_webxr_primary() -> WebXRPrimary:
 func save() -> void:
 	# Convert the settings to a dictionary
 	var settings := {
-		"input" : {
-			"default_snap_turning" : snap_turning,
-			"y_axis_dead_zone" : y_axis_dead_zone,
-			"x_axis_dead_zone" : x_axis_dead_zone
+		"input":
+		{
+			"default_snap_turning": snap_turning,
+			"y_axis_dead_zone": y_axis_dead_zone,
+			"x_axis_dead_zone": x_axis_dead_zone
 		},
-		"player" : {
-			"height" : player_height
-		},
-		"webxr" : {
-			"webxr_primary" : webxr_primary,
+		"player": {"height": player_height},
+		"webxr":
+		{
+			"webxr_primary": webxr_primary,
 		}
 	}
 
@@ -117,7 +117,7 @@ func save() -> void:
 
 
 ## Get the action associated with a WebXR primary choice
-static func get_webxr_primary_action(primary : WebXRPrimary) -> String:
+static func get_webxr_primary_action(primary: WebXRPrimary) -> String:
 	match primary:
 		WebXRPrimary.THUMBSTICK:
 			return "thumbstick"
@@ -155,9 +155,9 @@ func _load() -> void:
 		return
 
 	# Parse our input settings
-	var settings : Dictionary = settings_raw
+	var settings: Dictionary = settings_raw
 	if settings.has("input"):
-		var input : Dictionary = settings["input"]
+		var input: Dictionary = settings["input"]
 		if input.has("default_snap_turning"):
 			snap_turning = input["default_snap_turning"]
 		if input.has("y_axis_dead_zone"):
@@ -167,13 +167,13 @@ func _load() -> void:
 
 	# Parse our player settings
 	if settings.has("player"):
-		var player : Dictionary = settings["player"]
+		var player: Dictionary = settings["player"]
 		if player.has("height"):
 			player_height = player["height"]
 
 	# Parse our WebXR settings
 	if settings.has("webxr"):
-		var webxr : Dictionary = settings["webxr"]
+		var webxr: Dictionary = settings["webxr"]
 		if webxr.has("webxr_primary"):
 			webxr_primary = webxr["webxr_primary"]
 
@@ -197,6 +197,7 @@ func _on_webxr_vector2_changed(name: String, _vector: Vector2) -> void:
 			# Let the developer know which one is chosen.
 			webxr_primary_changed.emit(webxr_auto_primary)
 
+
 ## Helper function to remap input vector with deadzone values
 func get_adjusted_vector2(p_controller, p_input_action):
 	var vector = Vector2.ZERO
@@ -213,4 +214,3 @@ func get_adjusted_vector2(p_controller, p_input_action):
 			vector.x *= -1
 
 	return vector
-

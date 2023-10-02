@@ -3,35 +3,32 @@
 class_name XRToolsReturnToSnapZone
 extends Node
 
-
 ## XR Tools Return to Snap Zone
 ##
 ## This node can be added to an XRToolsPickable to make it return to a specified
 ## snap-zone when the object is dropped.
 
-
 ## Snap zone path
-@export var snap_zone_path : NodePath
+@export var snap_zone_path: NodePath
 
 ## Return delay
-@export var return_delay : float = 1.0
-
+@export var return_delay: float = 1.0
 
 # Pickable object to control
-var _pickable : XRToolsPickable
+var _pickable: XRToolsPickable
 
 # Snap zone to return to
-var _snap_zone : XRToolsSnapZone
+var _snap_zone: XRToolsSnapZone
 
 # Return counter
-var _return_counter : float = 0.0
+var _return_counter: float = 0.0
 
 # Is the pickable held
 var _held := false
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsReturnToSnapZone"
 
 
@@ -50,7 +47,7 @@ func _ready() -> void:
 
 
 # Handle the return counter
-func _process(delta : float) -> void:
+func _process(delta: float) -> void:
 	# Update return time and skip if still waiting
 	_return_counter += delta
 	if _return_counter < return_delay:
@@ -65,7 +62,7 @@ func _process(delta : float) -> void:
 
 
 # Set the snap-zone
-func set_snap_zone(snap_zone : XRToolsSnapZone) -> void:
+func set_snap_zone(snap_zone: XRToolsSnapZone) -> void:
 	# Set the snap zone
 	_snap_zone = snap_zone
 	_return_counter = 0.0

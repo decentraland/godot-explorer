@@ -2,7 +2,6 @@
 class_name XRToolsFallDamage
 extends XRToolsMovementProvider
 
-
 ## XR Tools Example Fall Damage Detector
 ##
 ## This example script detects the player falling to the ground and
@@ -26,30 +25,27 @@ extends XRToolsMovementProvider
 ## This file can handle simple demonstrations, but games will most likely
 ## want to modify it, for example to ignore damage on certain surfaces.
 
-
 ## Signal invoked when the player takes fall damage
 signal player_fall_damage(damage)
 
-
 ## Movement provider order
-@export var order : int = 1000
+@export var order: int = 1000
 
 ## Ignore damage if player is launched up
-@export var ignore_launch : bool = true
+@export var ignore_launch: bool = true
 
 ## Only take damage on ground
-@export var ground_only : bool = false
+@export var ground_only: bool = false
 
 ## Acceleration limit
-@export var damage_threshold : float = 8.0
-
+@export var damage_threshold: float = 8.0
 
 ## Previous velocity
-var _previous_velocity : Vector3 = Vector3.ZERO
+var _previous_velocity: Vector3 = Vector3.ZERO
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsFallDamage"
 
 
@@ -74,7 +70,7 @@ func physics_movement(_delta: float, player_body: XRToolsPlayerBody, disabled: b
 	# Ignore launching the player
 	if ignore_launch:
 		# Forgive "up" acceleration equal to our "up" speed
-		var forgive : float = max(0, min(accel_vec.y, player_body.velocity.y))
+		var forgive: float = max(0, min(accel_vec.y, player_body.velocity.y))
 		accel_vec.y -= forgive
 
 	# Handle ground-only collisions

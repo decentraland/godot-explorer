@@ -2,9 +2,10 @@ extends Node
 
 var xr_interface: XRInterface
 
+
 func _ready():
 	start.call_deferred()
-	
+
 	xr_interface = XRServer.find_interface("OpenXR")
 	if xr_interface and xr_interface.is_initialized():
 		print("OpenXR initialised successfully")

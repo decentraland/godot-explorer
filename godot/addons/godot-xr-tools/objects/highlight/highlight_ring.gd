@@ -4,7 +4,7 @@ extends MeshInstance3D
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsHighlightRing"
 
 

@@ -2,14 +2,8 @@
 class_name XRToolsVirtualKeyboard2D
 extends CanvasLayer
 
-
 ## Enumeration of keyboard view modes
-enum KeyboardMode {
-	LOWER_CASE,		## Lower-case keys mode
-	UPPER_CASE,		## Upper-case keys mode
-	ALTERNATE		## Alternate keys mode
-}
-
+enum KeyboardMode { LOWER_CASE, UPPER_CASE, ALTERNATE }  ## Lower-case keys mode  ## Upper-case keys mode  ## Alternate keys mode
 
 # Shift button down
 var _shift_down := false
@@ -25,7 +19,7 @@ var _mode: int = KeyboardMode.LOWER_CASE
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsVirtualKeyboard2D"
 
 

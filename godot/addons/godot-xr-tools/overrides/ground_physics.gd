@@ -2,7 +2,6 @@
 class_name XRToolsGroundPhysics
 extends Node
 
-
 ## XR Tools Ground Physics Data
 ##
 ## This script override the default ground physics settings of the
@@ -12,13 +11,12 @@ extends Node
 ## ground physics node to the object the player would stand on, then
 ## enable the appropriate flags and provide new values.
 
-
 ## XRToolsGroundPhysicsSettings to apply
-@export var physics : XRToolsGroundPhysicsSettings
+@export var physics: XRToolsGroundPhysicsSettings
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsGroundPhysics"
 
 
@@ -34,8 +32,9 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 	return warnings
 
+
 # Get the physics from a ground physics node
 static func get_physics(
-		node: XRToolsGroundPhysics,
-		default: XRToolsGroundPhysicsSettings) -> XRToolsGroundPhysicsSettings:
+	node: XRToolsGroundPhysics, default: XRToolsGroundPhysicsSettings
+) -> XRToolsGroundPhysicsSettings:
 	return node.physics as XRToolsGroundPhysicsSettings if node else default

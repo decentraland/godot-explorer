@@ -1,27 +1,24 @@
 @tool
 extends XRToolsForceBody
 
-
 ## Signal called when we start to contact an object
 signal body_contact_start(node)
 
 ## Signal called when we end contact with an object
 signal body_contact_end(node)
 
-
 ## Distance at which we teleport our poke body
-@export var teleport_distance : float = 0.1
-
+@export var teleport_distance: float = 0.1
 
 # Node currently in contact with
-var _contact : Node3D = null
+var _contact: Node3D = null
 
 # Target XRToolsPoke
-@onready var _target : XRToolsPoke = get_parent()
+@onready var _target: XRToolsPoke = get_parent()
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsPokeBody" or super(name)
 
 

@@ -2,7 +2,6 @@
 class_name XRToolsSnapZone
 extends Area3D
 
-
 ## Signal emitted when the snap-zone picks something up
 signal has_picked_up(what)
 
@@ -15,54 +14,53 @@ signal highlight_updated(pickable, enable)
 # Signal emitted when the highlight state changes
 signal close_highlight_updated(pickable, enable)
 
-
 ## Enumeration of snap mode
 enum SnapMode {
-	DROPPED,	## Snap only when the object is dropped
-	RANGE,		## Snap whenever an object is in range
+	DROPPED,  ## Snap only when the object is dropped
+	RANGE,  ## Snap whenever an object is in range
 }
 
-
 ## Enable or disable snap-zone
-@export var enabled : bool = true: set = _set_enabled
+@export var enabled: bool = true:
+	set = _set_enabled
 
 ## Optional audio stream to play when a object snaps to the zone
-@export var stash_sound : AudioStream
+@export var stash_sound: AudioStream
 
 ## Grab distance
-@export var grab_distance : float = 0.3: set = _set_grab_distance
+@export var grab_distance: float = 0.3:
+	set = _set_grab_distance
 
 ## Snap mode
-@export var snap_mode : SnapMode = SnapMode.DROPPED: set = _set_snap_mode
+@export var snap_mode: SnapMode = SnapMode.DROPPED:
+	set = _set_snap_mode
 
 ## Require snap items to be in specified group
-@export var snap_require : String = ""
+@export var snap_require: String = ""
 
 ## Deny snapping items in the specified group
-@export var snap_exclude : String = ""
+@export var snap_exclude: String = ""
 
 ## Require grab-by to be in the specified group
-@export var grab_require : String = ""
+@export var grab_require: String = ""
 
 ## Deny grab-by
-@export var grab_exclude : String= ""
+@export var grab_exclude: String = ""
 
 ## Initial object in snap zone
-@export var initial_object : NodePath
-
+@export var initial_object: NodePath
 
 # Public fields
-var closest_object : Node3D = null
-var picked_up_object : Node3D = null
-var picked_up_ranged : bool = true
-
+var closest_object: Node3D = null
+var picked_up_object: Node3D = null
+var picked_up_ranged: bool = true
 
 # Private fields
 var _object_in_grab_area = Array()
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsSnapZone"
 
 
@@ -136,7 +134,7 @@ func action():
 
 
 # Ignore highlighting requests from XRToolsFunctionPickup
-func request_highlight(from : Node, on : bool = true) -> void:
+func request_highlight(from: Node, on: bool = true) -> void:
 	if picked_up_object:
 		picked_up_object.request_highlight(from, on)
 
@@ -181,7 +179,7 @@ func _on_snap_zone_body_entered(target: Node3D) -> void:
 		return
 
 	# Reject objects which don't support picking up
-	if not target.has_method('pick_up'):
+	if not target.has_method("pick_up"):
 		return
 
 	# Reject objects not in the required snap group
@@ -263,9 +261,7 @@ func pick_up_object(target: Node3D) -> void:
 func _set_enabled(p_enabled: bool) -> void:
 	enabled = p_enabled
 	if is_inside_tree:
-		highlight_updated.emit(
-			self,
-			enabled and not is_instance_valid(picked_up_object))
+		highlight_updated.emit(self, enabled and not is_instance_valid(picked_up_object))
 
 
 # Called when the grab distance has been modified

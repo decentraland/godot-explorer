@@ -2,7 +2,6 @@
 class_name XRToolsHandPhysicsBone
 extends BoneAttachment3D
 
-
 ## XR Tools Physics Hand Bone
 ##
 ## This script adds a physics-bone to a godot-xr-tools physics hand.
@@ -23,32 +22,30 @@ extends BoneAttachment3D
 ## There are additional collision and group settings for this specific
 ## bone, which allows per-bone collision detection.
 
-
 ## Length of the physics-bone
-@export var length : float = 0.03
+@export var length: float = 0.03
 
 ## Ratio of bone length to width
-@export var width_ratio : float = 0.3
+@export var width_ratio: float = 0.3
 
 ## Additional collision layer for this one bone
-@export_flags_3d_physics var collision_layer : int = 0
+@export_flags_3d_physics var collision_layer: int = 0
 
 ## Additional bone group for this one bone
-@export var bone_group : String = ""
-
+@export var bone_group: String = ""
 
 # Physics-bone collider shape
-var _bone_shape : CapsuleShape3D
+var _bone_shape: CapsuleShape3D
 
 # Physics-bone body node
-var _physics_bone : CharacterBody3D
+var _physics_bone: CharacterBody3D
 
 # Node attached to the skeletal-bone, and the target of the physics-bone
-var _skeletal_bone : Node3D
+var _skeletal_bone: Node3D
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsHandPhysicsBone"
 
 
@@ -130,8 +127,8 @@ func _teleport_bone() -> void:
 
 	# Set the bone position
 	_physics_bone.global_transform = Transform3D(
-		Basis(bone_xform.basis.get_rotation_quaternion()),
-		bone_xform.origin)
+		Basis(bone_xform.basis.get_rotation_quaternion()), bone_xform.origin
+	)
 
 
 # This method handles changes to the hand scale by adjusting the

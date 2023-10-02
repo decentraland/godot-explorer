@@ -2,7 +2,6 @@
 class_name XRToolsVirtualKeyChar
 extends XRToolsVirtualKey
 
-
 ## Godot scan-code text
 @export var scan_code_text := ""
 
@@ -12,9 +11,8 @@ extends XRToolsVirtualKey
 ## Shift modifier
 @export var shift_modifier := false
 
-
 # Keyboard associated with this button
-var _keyboard : XRToolsVirtualKeyboard2D
+var _keyboard: XRToolsVirtualKeyboard2D
 
 
 # Called when the node enters the scene tree for the first time.
@@ -23,10 +21,7 @@ func _ready():
 	super()
 
 	# Find the keyboard
-	_keyboard = XRTools.find_xr_ancestor(
-		self,
-		"*",
-		"XRToolsVirtualKeyboard2D")
+	_keyboard = XRTools.find_xr_ancestor(self, "*", "XRToolsVirtualKeyboard2D")
 
 	# Handle button presses
 	pressed.connect(_on_pressed)

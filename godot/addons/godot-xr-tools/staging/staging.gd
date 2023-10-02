@@ -2,7 +2,6 @@
 class_name XRToolsStaging
 extends Node3D
 
-
 ## XR Tools Staging Class
 ##
 ## When creating a game with multiple levels where you want to
@@ -26,7 +25,6 @@ extends Node3D
 ## simplify things. Check out the demo included in the source
 ## repository for the OpenXR plugin and then use the techniques
 ## explained in individual demos found here.
-
 
 ## This signal is emitted when the current scene starts to be unloaded. The
 ## [param scene] parameter is the path of the current scene, and the
@@ -60,28 +58,26 @@ signal xr_started
 ## emitted.
 signal xr_ended
 
-
 ## Main scene file
-@export_file('*.tscn') var main_scene : String
+@export_file("*.tscn") var main_scene: String
 
 ## If true, the player is prompted to continue
-@export var prompt_for_continue : bool = true
-
+@export var prompt_for_continue: bool = true
 
 ## The current scene
-var current_scene : XRToolsSceneBase
+var current_scene: XRToolsSceneBase
 
 ## The current scene path
-var current_scene_path : String
+var current_scene_path: String
 
 # Tween for fading
-var _tween : Tween
+var _tween: Tween
 
 ## The [XROrigin3D] node used while staging
-@onready var xr_origin : XROrigin3D = XRHelpers.get_xr_origin(self)
+@onready var xr_origin: XROrigin3D = XRHelpers.get_xr_origin(self)
 
 ## The [XRCamera3D] node used while staging
-@onready var xr_camera : XRCamera3D = XRHelpers.get_xr_camera(self)
+@onready var xr_camera: XRCamera3D = XRHelpers.get_xr_camera(self)
 
 
 func _ready():
@@ -102,12 +98,12 @@ func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 
 	# Report missing XR Origin
-	var test_origin : XROrigin3D = XRHelpers.get_xr_origin(self)
+	var test_origin: XROrigin3D = XRHelpers.get_xr_origin(self)
 	if !test_origin:
 		warnings.append("No XROrigin3D node found, please add one")
 
 	# Report missing XR Camera
-	var test_camera : XRCamera3D = XRHelpers.get_xr_camera(self)
+	var test_camera: XRCamera3D = XRHelpers.get_xr_camera(self)
 	if !test_camera:
 		warnings.append("No XRCamera3D node found, please add one to your XROrigin3D node")
 
@@ -124,7 +120,7 @@ func _get_configuration_warnings() -> PackedStringArray:
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsStaging"
 
 
@@ -135,7 +131,7 @@ func is_xr_class(name : String) -> bool:
 ##
 ## See [method XRToolsSceneBase.scene_loaded] for details on how to implement
 ## advanced scene-switching.
-func load_scene(p_scene_path : String, user_data = null) -> void:
+func load_scene(p_scene_path: String, user_data = null) -> void:
 	# Do not load if in the editor
 	if Engine.is_editor_hint():
 		return
@@ -187,7 +183,7 @@ func load_scene(p_scene_path : String, user_data = null) -> void:
 		await _tween.finished
 
 	# Load the new scene
-	var new_scene : PackedScene
+	var new_scene: PackedScene
 	if ResourceLoader.has_cached(p_scene_path):
 		# Load cached scene
 		new_scene = ResourceLoader.load(p_scene_path)
@@ -200,7 +196,7 @@ func load_scene(p_scene_path : String, user_data = null) -> void:
 			var progress := []
 			var res := ResourceLoader.load_threaded_get_status(p_scene_path, progress)
 			if res != ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-				break;
+				break
 
 			$LoadingScreen.progress = progress[0]
 			await get_tree().create_timer(0.1).timeout
@@ -257,23 +253,23 @@ func load_scene(p_scene_path : String, user_data = null) -> void:
 ## Our fade object allows us to black out the screen for transitions.
 ## Note that our AABB is set to HUGE so it should always be rendered
 ## unless hidden.
-func set_fade(p_value : float):
+func set_fade(p_value: float):
 	if p_value == 0.0:
 		$Fade.visible = false
 	else:
-		var material : ShaderMaterial = $Fade.get_surface_override_material(0)
+		var material: ShaderMaterial = $Fade.get_surface_override_material(0)
 		if material:
 			material.set_shader_parameter("alpha", p_value)
 		$Fade.visible = true
 
 
-func _add_signals(p_scene : XRToolsSceneBase):
+func _add_signals(p_scene: XRToolsSceneBase):
 	p_scene.connect("request_exit_to_main_menu", _on_exit_to_main_menu)
 	p_scene.connect("request_load_scene", _on_load_scene)
 	p_scene.connect("request_reset_scene", _on_reset_scene)
 
 
-func _remove_signals(p_scene : XRToolsSceneBase):
+func _remove_signals(p_scene: XRToolsSceneBase):
 	p_scene.disconnect("request_exit_to_main_menu", _on_exit_to_main_menu)
 	p_scene.disconnect("request_load_scene", _on_load_scene)
 	p_scene.disconnect("request_reset_scene", _on_reset_scene)
@@ -283,7 +279,7 @@ func _on_exit_to_main_menu():
 	load_scene(main_scene)
 
 
-func _on_load_scene(p_scene_path : String, user_data):
+func _on_load_scene(p_scene_path: String, user_data):
 	load_scene(p_scene_path, user_data)
 
 

@@ -2,7 +2,6 @@
 class_name XRToolsInteractableSlider
 extends XRToolsInteractableHandleDriven
 
-
 ## XR Tools Interactable Slider script
 ##
 ## The interactable slider is a slider transform node controlled by the
@@ -14,32 +13,31 @@ extends XRToolsInteractableHandleDriven
 ## The interactable slider is not a [RigidBody3D], and as such will not react
 ## to any collisions.
 
-
 ## Signal for slider moved
 signal slider_moved(position)
 
-
 ## Slider minimum limit
-@export var slider_limit_min : float = 0.0
+@export var slider_limit_min: float = 0.0
 
 ## Slider maximum limit
-@export var slider_limit_max : float = 1.0
+@export var slider_limit_max: float = 1.0
 
 ## Slider step size (zero for no steps)
-@export var slider_steps : float = 0.0
+@export var slider_steps: float = 0.0
 
 ## Slider position
-@export var slider_position : float = 0.0: set = _set_slider_position
+@export var slider_position: float = 0.0:
+	set = _set_slider_position
 
 ## Default position
-@export var default_position : float = 0.0
+@export var default_position: float = 0.0
 
 ## If true, the slider moves to the default position when released
-@export var default_on_release : bool = false
+@export var default_on_release: bool = false
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsInteractableSlider" or super(name)
 
 
@@ -49,10 +47,7 @@ func _ready() -> void:
 	super()
 
 	# Set the initial position to match the initial slider position value
-	transform = Transform3D(
-		Basis.IDENTITY,
-		Vector3(slider_position, 0.0, 0.0)
-	)
+	transform = Transform3D(Basis.IDENTITY, Vector3(slider_position, 0.0, 0.0))
 
 	# Connect signals
 	if released.connect(_on_slider_released):

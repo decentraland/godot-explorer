@@ -2,49 +2,41 @@
 class_name XRToolsMovementTurn
 extends XRToolsMovementProvider
 
-
 ## XR Tools Movement Provider for Turning
 ##
 ## This script provides turning support for the player. This script works
 ## with the PlayerBody attached to the players XROrigin3D.
 
-
 ## Movement mode
-enum TurnMode {
-	DEFAULT,	## Use turn mode from project/user settings
-	SNAP,		## Use snap-turning
-	SMOOTH		## Use smooth-turning
-}
-
+enum TurnMode { DEFAULT, SNAP, SMOOTH }  ## Use turn mode from project/user settings  ## Use snap-turning  ## Use smooth-turning
 
 ## Movement provider order
-@export var order : int = 5
+@export var order: int = 5
 
 ## Movement mode property
-@export var turn_mode : TurnMode = TurnMode.DEFAULT
+@export var turn_mode: TurnMode = TurnMode.DEFAULT
 
 ## Smooth turn speed in radians per second
-@export var smooth_turn_speed : float = 2.0
+@export var smooth_turn_speed: float = 2.0
 
 ## Seconds per step (at maximum turn rate)
-@export var step_turn_delay : float = 0.2
+@export var step_turn_delay: float = 0.2
 
 ## Step turn angle in degrees
-@export var step_turn_angle : float = 20.0
+@export var step_turn_angle: float = 20.0
 
 ## Our directional input
-@export var input_action : String = "primary"
+@export var input_action: String = "primary"
 
 # Turn step accumulator
-var _turn_step : float = 0.0
-
+var _turn_step: float = 0.0
 
 # Controller node
 @onready var _controller := XRHelpers.get_xr_controller(self)
 
 
 # Add support for is_xr_class on XRTools classes
-func is_xr_class(name : String) -> bool:
+func is_xr_class(name: String) -> bool:
 	return name == "XRToolsMovementTurn" or super(name)
 
 

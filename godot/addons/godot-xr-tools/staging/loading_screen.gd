@@ -1,7 +1,6 @@
 @tool
 extends Node3D
 
-
 ## XR Tools Loading Screen
 ##
 ## The loading screen is shown while the player is waiting
@@ -16,35 +15,36 @@ extends Node3D
 ##
 ## Note also that our background is pitch black.
 
-
 ## User pressed the continue
 signal continue_pressed
 
-
 ## If true, the screen follows the camera
-@export var follow_camera : bool = true: set = set_follow_camera
+@export var follow_camera: bool = true:
+	set = set_follow_camera
 
 ## Curve for following the camera
-@export var follow_speed : Curve
+@export var follow_speed: Curve
 
 ## Splash screen texture
-@export var splash_screen : Texture2D: set = set_splash_screen
+@export var splash_screen: Texture2D:
+	set = set_splash_screen
 
 ## Progress bar
-@export_range(0.0, 1.0, 0.01) var progress : float = 0.5: set = set_progress_bar
+@export_range(0.0, 1.0, 0.01) var progress: float = 0.5:
+	set = set_progress_bar
 
 ## If true, the contine message is shown, if false the progress bar is visible.
-@export var enable_press_to_continue : bool = false: set = set_enable_press_to_continue
-
+@export var enable_press_to_continue: bool = false:
+	set = set_enable_press_to_continue
 
 # Camera to track
-var _camera : XRCamera3D
+var _camera: XRCamera3D
 
 # Splash screen material
-var _splash_screen_material : StandardMaterial3D
+var _splash_screen_material: StandardMaterial3D
 
 # Progress material
-var _progress_material : ShaderMaterial
+var _progress_material: ShaderMaterial
 
 
 func _ready():
@@ -82,38 +82,40 @@ func _process(delta):
 		return
 
 	# Do rotation based on the curve
-	global_transform.basis = global_transform.basis.rotated(
-			Vector3.UP * sign(angle),
-			follow_speed.sample_baked(abs(angle) / PI) * delta
-	).orthonormalized()
+	global_transform.basis = (
+		global_transform
+		. basis
+		. rotated(Vector3.UP * sign(angle), follow_speed.sample_baked(abs(angle) / PI) * delta)
+		. orthonormalized()
+	)
 
 
 ## Set the camera to track
-func set_camera(p_camera : XRCamera3D) -> void:
+func set_camera(p_camera: XRCamera3D) -> void:
 	_camera = p_camera
 	_update_follow_camera()
 
 
 ## Set the follow_camera property
-func set_follow_camera(p_enabled : bool) -> void:
+func set_follow_camera(p_enabled: bool) -> void:
 	follow_camera = p_enabled
 	_update_follow_camera()
 
 
 ## Set the splash_screen texture property
-func set_splash_screen(p_splash_screen : Texture2D) -> void:
+func set_splash_screen(p_splash_screen: Texture2D) -> void:
 	splash_screen = p_splash_screen
 	_update_splash_screen()
 
 
 ## Set the progress property
-func set_progress_bar(p_progress : float) -> void:
+func set_progress_bar(p_progress: float) -> void:
 	progress = p_progress
 	_update_progress_bar()
 
 
 ## Set the enable_press_to_continue property
-func set_enable_press_to_continue(p_enable : bool) -> void:
+func set_enable_press_to_continue(p_enable: bool) -> void:
 	enable_press_to_continue = p_enable
 	_update_enable_press_to_continue()
 

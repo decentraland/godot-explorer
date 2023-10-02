@@ -1,32 +1,28 @@
 @tool
 extends Node3D
 
-
 ## XR ToolsViewport 2D in 3D
 ##
 ## This script manages a 2D scene rendered as a texture on a 3D quad.
 ##
 ## Pointer and keyboard input are mapped into the 2D scene.
 
-
 ## Signal for pointer events
 signal pointer_event(event)
 
-
 ## Transparent property
 enum TransparancyMode {
-	OPAQUE,				## Render opaque
-	TRANSPARENT,		## Render transparent
-	SCISSOR,			## Render using alpha-scissor
+	OPAQUE,  ## Render opaque
+	TRANSPARENT,  ## Render transparent
+	SCISSOR,  ## Render using alpha-scissor
 }
 
 ## Viewport Update Mode
 enum UpdateMode {
-	UPDATE_ONCE, 		## Update once (redraw triggered if set again to UPDATE_ONCE)
-	UPDATE_ALWAYS,		## Update on every frame
-	UPDATE_THROTTLED,	## Update at throttled rate
+	UPDATE_ONCE,  ## Update once (redraw triggered if set again to UPDATE_ONCE)
+	UPDATE_ALWAYS,  ## Update on every frame
+	UPDATE_THROTTLED,  ## Update at throttled rate
 }
-
 
 # The following dirty flags are private (leading _) to suppress them in the
 # generated documentation. Unfortunately gdlint complaints on private constants
@@ -35,75 +31,84 @@ enum UpdateMode {
 # gdlint: disable=constant-name
 
 # State dirty flags
-const _DIRTY_NONE			:= 0x0000	# Everything up to date
-const _DIRTY_MATERIAL		:= 0x0001	# Material needs update
-const _DIRTY_SCENE			:= 0x0002	# Scene needs update
-const _DIRTY_SIZE			:= 0x0004	# Viewport size needs update
-const _DIRTY_ALBEDO			:= 0x0008	# Albedo texture needs update
-const _DIRTY_UPDATE			:= 0x0010	# Update mode needs update
-const _DIRTY_TRANSPARENCY	:= 0x0020	# Transparency needs update
-const _DIRTY_ALPHA_SCISSOR	:= 0x0040	# Alpha scissor needs update
-const _DIRTY_UNSHADED		:= 0x0080	# Shade mode needs update
-const _DIRTY_FILTERED		:= 0x0100	# Filter mode needs update
-const _DIRTY_SURFACE		:= 0x0200	# Surface material needs update
-const _DIRTY_REDRAW			:= 0x0400	# Redraw required
-const _DIRTY_ALL			:= 0x07FF	# All dirty
+const _DIRTY_NONE := 0x0000  # Everything up to date
+const _DIRTY_MATERIAL := 0x0001  # Material needs update
+const _DIRTY_SCENE := 0x0002  # Scene needs update
+const _DIRTY_SIZE := 0x0004  # Viewport size needs update
+const _DIRTY_ALBEDO := 0x0008  # Albedo texture needs update
+const _DIRTY_UPDATE := 0x0010  # Update mode needs update
+const _DIRTY_TRANSPARENCY := 0x0020  # Transparency needs update
+const _DIRTY_ALPHA_SCISSOR := 0x0040  # Alpha scissor needs update
+const _DIRTY_UNSHADED := 0x0080  # Shade mode needs update
+const _DIRTY_FILTERED := 0x0100  # Filter mode needs update
+const _DIRTY_SURFACE := 0x0200  # Surface material needs update
+const _DIRTY_REDRAW := 0x0400  # Redraw required
+const _DIRTY_ALL := 0x07FF  # All dirty
 
 # Default layer of 1:static-world, 21:pointable, 23:ui-objects
 const DEFAULT_LAYER := 0b0000_0000_0101_0000_0000_0000_0000_0001
-
 
 # Physics property group
 @export_group("Physics")
 
 ## Physical screen size property
-@export var screen_size : Vector2 = Vector2(3.0, 2.0): set = set_screen_size
+@export var screen_size: Vector2 = Vector2(3.0, 2.0):
+	set = set_screen_size
 
 ## Viewport collision enabled property
-@export var enabled : bool = true: set = set_enabled
+@export var enabled: bool = true:
+	set = set_enabled
 
 ## Collision layer
-@export_flags_3d_physics var collision_layer : int = DEFAULT_LAYER: set = set_collision_layer
+@export_flags_3d_physics var collision_layer: int = DEFAULT_LAYER:
+	set = set_collision_layer
 
 # Content property group
 @export_group("Content")
 
 ## Scene property
-@export var scene : PackedScene: set = set_scene
+@export var scene: PackedScene:
+	set = set_scene
 
 ## Viewport size property
-@export var viewport_size : Vector2 = Vector2(300.0, 200.0): set = set_viewport_size
+@export var viewport_size: Vector2 = Vector2(300.0, 200.0):
+	set = set_viewport_size
 
 ## Update Mode property
-@export var update_mode : UpdateMode = UpdateMode.UPDATE_ALWAYS: set = set_update_mode
+@export var update_mode: UpdateMode = UpdateMode.UPDATE_ALWAYS:
+	set = set_update_mode
 
 ## Update throttle property
-@export var throttle_fps : float = 30.0
+@export var throttle_fps: float = 30.0
 
 # Rendering property group
 @export_group("Rendering")
 
 ## Custom material template
-@export var material : StandardMaterial3D = null: set = set_material
+@export var material: StandardMaterial3D = null:
+	set = set_material
 
 ## Transparent property
-@export var transparent : TransparancyMode = TransparancyMode.TRANSPARENT: set = set_transparent
+@export var transparent: TransparancyMode = TransparancyMode.TRANSPARENT:
+	set = set_transparent
 
 ## Alpha Scissor Threshold property (ignored when custom material provided)
-var alpha_scissor_threshold : float = 0.25: set = set_alpha_scissor_threshold
+var alpha_scissor_threshold: float = 0.25:
+	set = set_alpha_scissor_threshold
 
 ## Unshaded flag (ignored when custom material provided)
-var unshaded : bool = false: set = set_unshaded
+var unshaded: bool = false:
+	set = set_unshaded
 
 ## Filtering flag (ignored when custom material provided)
-var filter : bool = true: set = set_filter
+var filter: bool = true:
+	set = set_filter
 
-
-var is_ready : bool = false
-var scene_node : Node
-var viewport_texture : ViewportTexture
-var time_since_last_update : float = 0.0
-var _screen_material : StandardMaterial3D
+var is_ready: bool = false
+var scene_node: Node
+var viewport_texture: ViewportTexture
+var time_since_last_update: float = 0.0
+var _screen_material: StandardMaterial3D
 var _dirty := _DIRTY_ALL
 
 
@@ -132,11 +137,7 @@ func _get_property_list() -> Array[Dictionary]:
 
 	# Return extra properties
 	return [
-		{
-			name = "Rendering",
-			type = TYPE_NIL,
-			usage = PROPERTY_USAGE_GROUP
-		},
+		{name = "Rendering", type = TYPE_NIL, usage = PROPERTY_USAGE_GROUP},
 		{
 			name = "alpha_scissor_threshold",
 			type = TYPE_FLOAT,
@@ -158,7 +159,7 @@ func _get_property_list() -> Array[Dictionary]:
 
 
 # Allow revert of custom properties
-func _property_can_revert(property : StringName) -> bool:
+func _property_can_revert(property: StringName) -> bool:
 	match property:
 		"alpha_scissor_threshold":
 			return true
@@ -171,7 +172,7 @@ func _property_can_revert(property : StringName) -> bool:
 
 
 # Provide revert values for custom properties
-func _property_get_revert(property : StringName): # Variant
+func _property_get_revert(property: StringName):  # Variant
 	match property:
 		"alpha_scissor_threshold":
 			return 0.25
@@ -187,13 +188,13 @@ func get_scene_instance() -> Node:
 
 
 ## Connect a 2D scene signal
-func connect_scene_signal(which : String, callback : Callable, flags : int = 0):
+func connect_scene_signal(which: String, callback: Callable, flags: int = 0):
 	if scene_node:
 		scene_node.connect(which, callback, flags)
 
 
 # Handle pointer event from screen-body
-func _on_pointer_event(event : XRToolsPointerEvent) -> void:
+func _on_pointer_event(event: XRToolsPointerEvent) -> void:
 	pointer_event.emit(event)
 
 
@@ -299,7 +300,7 @@ func set_alpha_scissor_threshold(new_threshold: float) -> void:
 
 
 ## Set the unshaded property
-func set_unshaded(new_unshaded : bool) -> void:
+func set_unshaded(new_unshaded: bool) -> void:
 	unshaded = new_unshaded
 	_dirty |= _DIRTY_UNSHADED
 	if is_ready:
@@ -319,9 +320,8 @@ func _update_screen_size() -> void:
 	$Screen.mesh.size = screen_size
 	$StaticBody3D.screen_size = screen_size
 	$StaticBody3D/CollisionShape3D.shape.extents = Vector3(
-			screen_size.x * 0.5,
-			screen_size.y * 0.5,
-			0.01)
+		screen_size.x * 0.5, screen_size.y * 0.5, 0.01
+	)
 
 
 # Enabled update handler
@@ -356,10 +356,7 @@ func _update_render() -> void:
 			_screen_material.params_cull_mode = StandardMaterial3D.CULL_DISABLED
 
 			# Ensure local material is configured
-			_dirty |= _DIRTY_TRANSPARENCY |	\
-					_DIRTY_ALPHA_SCISSOR |	\
-					_DIRTY_UNSHADED |		\
-					_DIRTY_FILTERED
+			_dirty |= _DIRTY_TRANSPARENCY | _DIRTY_ALPHA_SCISSOR | _DIRTY_UNSHADED | _DIRTY_FILTERED
 
 		# Ensure new material renders viewport onto surface
 		_dirty |= _DIRTY_ALBEDO | _DIRTY_SURFACE
@@ -458,8 +455,10 @@ func _update_render() -> void:
 		# If using a temporary material then update the shading mode and force a redraw
 		if _screen_material and not material:
 			_screen_material.shading_mode = (
-				BaseMaterial3D.SHADING_MODE_UNSHADED if unshaded else
-				BaseMaterial3D.SHADING_MODE_PER_PIXEL)
+				BaseMaterial3D.SHADING_MODE_UNSHADED
+				if unshaded
+				else BaseMaterial3D.SHADING_MODE_PER_PIXEL
+			)
 			#_dirty |= _DIRTY_REDRAW
 
 	# Handle filter update
@@ -469,8 +468,10 @@ func _update_render() -> void:
 		# If using a temporary material then update the filter mode and force a redraw
 		if _screen_material and not material:
 			_screen_material.texture_filter = (
-				BaseMaterial3D.TEXTURE_FILTER_LINEAR if filter else
-				BaseMaterial3D.TEXTURE_FILTER_NEAREST)
+				BaseMaterial3D.TEXTURE_FILTER_LINEAR
+				if filter
+				else BaseMaterial3D.TEXTURE_FILTER_NEAREST
+			)
 			#_dirty |= _DIRTY_REDRAW
 
 	# Handle surface material update
