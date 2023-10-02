@@ -187,6 +187,9 @@ func load_from_settings_file():
 		"user", "last_realm_joined", data_default.last_realm_joined
 	)
 
+	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+	self.last_parcel_position = Vector2i(72, -10)
+
 
 func save_to_settings_file():
 	var settings_file: ConfigFile = ConfigFile.new()

@@ -1,9 +1,10 @@
-[gd_scene load_steps=17 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=18 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/FloorBaseGrass_01/Floor_Grass01.png.png" id="2_7jksa"]
 [ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://src/logic/player/player.tscn" id="3_fr1df"]
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
+[ext_resource type="PackedScene" uid="uid://c0xeht6p3x0lv" path="res://src/xr/xr_player.tscn" id="4_o54wl"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 [ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
 [ext_resource type="PackedScene" uid="uid://c6a0rjrc13kel" path="res://src/ui/components/line_edit_command/line_edit_command.tscn" id="9_5u55i"]
@@ -27,7 +28,7 @@ texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_gkn7s"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_k6clx"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
@@ -44,6 +45,8 @@ mesh = SubResource("PlaneMesh_x854j")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
 
 [node name="Player" parent="." instance=ExtResource("3_fr1df")]
+
+[node name="XRPlayer" parent="." instance=ExtResource("4_o54wl")]
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3
@@ -172,7 +175,7 @@ layout_mode = 2
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_gkn7s")
+group = SubResource("ButtonGroup_k6clx")
 
 [node name="Timer_BroadcastPosition" type="Timer" parent="."]
 wait_time = 0.1

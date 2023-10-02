@@ -31,6 +31,8 @@ mkdir -p ../../godot/lib/android/
 cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/lib/android/libdecentraland_godot_lib.so
 cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/android/build/libs/debug/arm64-v8a/libdecentraland_godot_lib.so
 
+rsync -avu ${FFMPEG_DIR}/lib/*.so ../../godot/lib/android/
+rsync -avu ${FFMPEG_DIR}/lib/*.so ../../godot/android/build/libs/debug/arm64-v8a/
 # Dependencies 
 # - from web-rtc: libwebrtc.jar 
 # - from ffmpeg: libavcodec, libavfilter, libavdevice, libavformat, libavutil, libswresample, libswscale

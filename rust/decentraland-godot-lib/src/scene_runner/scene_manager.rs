@@ -12,7 +12,7 @@ use crate::{
     wallet::Wallet,
 };
 use godot::{
-    engine::{CharacterBody3D, PhysicsRayQueryParameters3D},
+    engine::PhysicsRayQueryParameters3D,
     prelude::*,
 };
 use std::{
@@ -36,7 +36,7 @@ pub struct SceneManager {
     scenes: HashMap<SceneId, Scene>,
 
     camera_node: Gd<Camera3D>,
-    player_node: Gd<CharacterBody3D>,
+    player_node: Gd<Node3D>,
 
     console: Callable,
 
@@ -123,7 +123,7 @@ impl SceneManager {
     fn set_camera_and_player_node(
         &mut self,
         camera_node: Gd<Camera3D>,
-        player_node: Gd<CharacterBody3D>,
+        player_node: Gd<Node3D>,
         console: Callable,
     ) {
         self.camera_node = camera_node.clone();
@@ -551,7 +551,7 @@ impl NodeVirtual for SceneManager {
             thread_sender_to_main,
 
             camera_node: Camera3D::new_alloc(),
-            player_node: CharacterBody3D::new_alloc(),
+            player_node: Node3D::new_alloc(),
 
             player_position: Vector2i::new(-1000, -1000),
 

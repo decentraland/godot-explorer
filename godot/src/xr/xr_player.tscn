@@ -1,0 +1,46 @@
+[gd_scene load_steps=10 format=3 uid="uid://c0xeht6p3x0lv"]
+
+[ext_resource type="PackedScene" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="1_7p8mt"]
+[ext_resource type="Script" path="res://src/xr/xr_player.gd" id="1_mlkhy"]
+[ext_resource type="PackedScene" uid="uid://hpr0v012ghsb" path="res://addons/godot-xr-tools/hands/scenes/highpoly/left_tac_glove.tscn" id="2_ycqko"]
+[ext_resource type="PackedScene" uid="uid://fiul51tsyoop" path="res://addons/godot-xr-tools/functions/function_teleport.tscn" id="3_3vd4i"]
+[ext_resource type="PackedScene" uid="uid://dup2vp8v5rpi5" path="res://addons/godot-xr-tools/hands/scenes/highpoly/right_tac_glove.tscn" id="4_m6kxg"]
+[ext_resource type="PackedScene" uid="uid://bl2nuu3qhlb5k" path="res://addons/godot-xr-tools/functions/movement_direct.tscn" id="5_3acvu"]
+[ext_resource type="PackedScene" uid="uid://b6bk2pj8vbj28" path="res://addons/godot-xr-tools/functions/movement_turn.tscn" id="6_e7gam"]
+[ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="7_3yl1i"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_bk4aw"]
+radius = 0.2
+height = 1.4
+
+[node name="XRPlayer" type="XROrigin3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
+world_scale = 2.0
+script = ExtResource("1_mlkhy")
+
+[node name="XRCamera3D" type="XRCamera3D" parent="."]
+current = true
+
+[node name="VRCommonShaderCache" parent="XRCamera3D" instance=ExtResource("1_7p8mt")]
+
+[node name="LeftHand" type="XRController3D" parent="."]
+tracker = &"left_hand"
+
+[node name="LeftHand" parent="LeftHand" instance=ExtResource("2_ycqko")]
+
+[node name="FunctionTeleport" parent="LeftHand" instance=ExtResource("3_3vd4i")]
+
+[node name="RightHand" type="XRController3D" parent="."]
+tracker = &"right_hand"
+
+[node name="RightHand" parent="RightHand" instance=ExtResource("4_m6kxg")]
+
+[node name="MovementDirect" parent="RightHand" instance=ExtResource("5_3acvu")]
+
+[node name="MovementTurn" parent="RightHand" instance=ExtResource("6_e7gam")]
+
+[node name="PlayerBody" parent="." instance=ExtResource("7_3yl1i")]
+
+[node name="_CollisionShape3D_24554" type="CollisionShape3D" parent="PlayerBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("CapsuleShape3D_bk4aw")

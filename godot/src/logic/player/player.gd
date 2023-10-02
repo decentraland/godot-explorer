@@ -30,14 +30,7 @@ func _ready():
 	# if captured:
 	# 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
-	first_person = false
-	var tween_out = create_tween()
-	tween_out.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25).set_ease(
-		Tween.EASE_IN_OUT
-	)
-
-	first_person = false
-	avatar.show()
+	_set_first_person(true, false)
 
 	floor_snap_length = 0.2
 
@@ -62,6 +55,31 @@ func _on_param_changed(_param):
 @onready var camera_fade_in_audio = preload("res://assets/sfx/ui_fade_in.wav")
 @onready var camera_fade_out_audio = preload("res://assets/sfx/ui_fade_out.wav")
 @onready var audio_stream_player_camera = $AudioStreamPlayer_Camera
+
+func _set_first_person(value: bool, play_audio: bool = false):
+	if value:
+		first_person = true
+		var tween_in = create_tween()
+		tween_in.tween_property(camera, "position", Vector3(0, 0, -0.2), 0.25).set_ease(
+			Tween.EASE_IN_OUT
+		)
+		avatar.hide()
+		if play_audio:
+			audio_stream_player_camera.stream = camera_fade_in_audio
+			audio_stream_player_camera.play()
+	else:
+		first_person = false
+		var tween_out = create_tween()
+		(
+			tween_out
+				.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25)
+				.set_ease(Tween.EASE_IN_OUT)
+		)
+		avatar.show()
+		avatar.set_rotation(Vector3(0, 0, 0))
+		if play_audio:
+			audio_stream_player_camera.stream = camera_fade_out_audio
+			audio_stream_player_camera.play()
 
 
 func _input(event):
@@ -106,29 +124,10 @@ func _input(event):
 		# Toggle first or third person camera
 		if event is InputEventMouseButton:
 			if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				if first_person == true:
-					first_person = false
-					var tween_out = create_tween()
-					(
-						tween_out
-						. tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25)
-						. set_ease(Tween.EASE_IN_OUT)
-					)
-					avatar.show()
-					avatar.set_rotation(Vector3(0, 0, 0))
-					audio_stream_player_camera.stream = camera_fade_out_audio
-					audio_stream_player_camera.play()
+				_set_first_person(false, true)
 
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				if first_person == false:
-					first_person = true
-					var tween_in = create_tween()
-					tween_in.tween_property(camera, "position", Vector3(0, 0, -0.2), 0.25).set_ease(
-						Tween.EASE_IN_OUT
-					)
-					avatar.hide()
-					audio_stream_player_camera.stream = camera_fade_in_audio
-					audio_stream_player_camera.play()
+				_set_first_person(true, true)
 
 
 var current_direction: Vector3 = Vector3()

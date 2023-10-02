@@ -13,10 +13,10 @@ var parcel_manager: ParcelManager = null
 @onready var label_ram = %Label_RAM
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
-@onready var player := $Player
 @onready var mobile_ui = $UI/MobileUI
 @onready var v_box_container_chat = $UI/VBoxContainer_Chat
 @onready var button_jump = $UI/Button_Jump
+var player: Node3D = null
 
 var parcel_position: Vector2i
 var _last_parcel_position: Vector2i
@@ -26,7 +26,9 @@ var dirty_save_position: bool = false
 
 
 func _process(_dt):
-	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
+	var player_position = player.position
+	
+	parcel_position_real = Vector2(player_position.x * 0.0625, -player_position.y * 0.0625)
 	control_minimap.set_center_position(parcel_position_real)
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
@@ -43,7 +45,15 @@ func _on_parcels_procesed(parcels, empty):
 
 
 func _ready():
-	if Global.is_mobile:
+	# Set the player with XR or not
+	player = $Player if !Global.is_xr else $XRPlayer
+	# Remove player that is not going to be used
+	remove_child($Player if Global.is_xr else $XRPlayer)
+	
+	if Global.is_xr:
+		mobile_ui.hide()
+		button_jump.hide()
+	elif Global.is_mobile:
 		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_BEGIN
 		mobile_ui.show()
 		label_crosshair.show()
@@ -67,7 +77,8 @@ func _ready():
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
-	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
+	if !Global.is_xr:
+		player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
 	scene_runner = get_tree().root.get_node("scene_runner")
 	scene_runner.set_camera_and_player_node(player.camera, player, self._on_scene_console_message)
@@ -211,7 +222,7 @@ var counter: int = 0
 
 
 func _on_timer_broadcast_position_timeout():
-	var transform: Transform3D = player.avatar.global_transform
+	var transform: Transform3D = player.avatar.global_transform if !Global.is_xr else player.global_transform
 	var position = transform.origin
 	var rotation = transform.basis.get_rotation_quaternion()
 

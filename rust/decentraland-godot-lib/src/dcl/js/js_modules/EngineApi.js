@@ -18,3 +18,9 @@ module.exports.crdtGetState = async function () {
         data: data
     };
 }
+
+module.exports.isServer = async function () {
+    return {
+        isServer: false
+    }
+}

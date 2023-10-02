@@ -26,6 +26,7 @@ driver/mix_rate=48000
 [autoload]
 
 Global="*res://src/global.gd"
+XRToolsUserSettings="*res://addons/godot-xr-tools/user_settings/user_settings.gd"
 
 [debug]
 
@@ -36,6 +37,10 @@ gdscript/warnings/redundant_await=false
 window/size/viewport_width=1280
 window/size/viewport_height=720
 window/size/resizable=false
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot-xr-tools/plugin.cfg")
 
 [gui]
 
@@ -159,3 +164,8 @@ limits/debugger/max_chars_per_second=3276800
 
 textures/vram_compression/import_etc2_astc=true
 vulkan/rendering/back_end=1
+
+[xr]
+
+openxr/enabled.xr=true
+shaders/enabled.xr=true
