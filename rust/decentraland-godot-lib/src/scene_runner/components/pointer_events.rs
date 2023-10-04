@@ -124,7 +124,7 @@ pub fn pointer_events_system(
                         button: InputAction::IaAny as i32,
                         hit: None,
                         state: PointerEventType::PetHoverLeave as i32,
-                        timestamp: 0,
+                        timestamp: global_tick_number,
                         analog: None,
                         tick_number: global_tick_number,
                     };
@@ -148,7 +148,7 @@ pub fn pointer_events_system(
                         button: InputAction::IaAny as i32,
                         hit: None,
                         state: PointerEventType::PetHoverEnter as i32,
-                        timestamp: 0,
+                        timestamp: global_tick_number,
                         analog: None,
                         tick_number: global_tick_number,
                     };

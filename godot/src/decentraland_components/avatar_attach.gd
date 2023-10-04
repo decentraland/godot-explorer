@@ -23,8 +23,11 @@ func _set_children_physics(node: Node, enable: bool):
 	for child in node.get_children():
 		_set_children_physics(child, enable)
 
-		if "collision_layer" in child:
-			child.collision_layer = 0
+		if child.has_meta("dcl_col"):
+			if enable:
+				child.collision_layer = child.get_meta("dcl_col")
+			else:
+				child.collision_layer = 0
 
 
 func _exit_tree():
