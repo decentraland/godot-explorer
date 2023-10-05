@@ -47,7 +47,7 @@ impl RustHttpRequester {
         let request_option = crate::http_request::request_response::RequestOption::new(
             reference_id,
             url.to_string(),
-            reqwest::Method::GET,
+            http::Method::GET,
             crate::http_request::request_response::ResponseType::ToFile(absolute_path.to_string()),
             None,
             None,
@@ -69,8 +69,8 @@ impl RustHttpRequester {
         tracing::info!("Requesting json: {:?}", url.to_string());
 
         let method = match method {
-            godot::engine::http_client::Method::METHOD_POST => reqwest::Method::POST,
-            _ => reqwest::Method::GET,
+            godot::engine::http_client::Method::METHOD_POST => http::Method::POST,
+            _ => http::Method::GET,
         };
 
         let body = match body.to_string().as_str() {

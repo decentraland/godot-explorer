@@ -92,6 +92,7 @@ pub fn create_or_update_mesh(
 
     collision_shape.set_shape(godot_shape);
     animatable_body_3d.set_collision_layer(collision_mask);
+    animatable_body_3d.set_collision_mask(0);
 }
 
 pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {

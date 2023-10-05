@@ -37,6 +37,7 @@ func _ready():
 	)
 
 	first_person = false
+	avatar.activate_attach_points()
 	avatar.show()
 
 	floor_snap_length = 0.2

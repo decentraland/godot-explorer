@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://vosguwqyk4xv"]
+
+[ext_resource type="Script" path="res://src/decentraland_components/avatar_attach.gd" id="1_k7tt6"]
+
+[node name="avatar_attach" type="Node"]
+script = ExtResource("1_k7tt6")

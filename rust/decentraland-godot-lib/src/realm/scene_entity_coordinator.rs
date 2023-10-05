@@ -188,7 +188,7 @@ impl SceneEntityCoordinator {
             let request = RequestOption::new(
                 Self::REQUEST_TYPE_SCENE_POINTERS,
                 self.entities_active_url.to_string(),
-                reqwest::Method::POST,
+                http::Method::POST,
                 ResponseType::AsJson,
                 Some(request_body.as_bytes().to_vec()),
                 Some(vec!["Content-Type: application/json".to_string()]),
@@ -381,7 +381,7 @@ impl SceneEntityCoordinator {
             let request = RequestOption::new(
                 Self::REQUEST_TYPE_SCENE_DATA,
                 url,
-                reqwest::Method::GET,
+                http::Method::GET,
                 ResponseType::AsJson,
                 None,
                 None,
@@ -646,9 +646,10 @@ mod tests {
             "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main/contents".to_string();
 
         let mut scene_entity_coordinator =
-            SceneEntityCoordinator::new(entities_active_url, content_url, true);
+            SceneEntityCoordinator::new(entities_active_url.clone(), content_url.clone(), false);
 
         // Test scenes
+        scene_entity_coordinator.set_scene_radius(0);
         scene_entity_coordinator.set_current_position(74, -7);
         scene_entity_coordinator._set_fixed_desired_entities_urns(vec![
             TEST_URN.to_string(),
@@ -664,7 +665,11 @@ mod tests {
             .contains(&TEST_POINTER_O_O_ID.to_string()));
 
         // Test parcels
+
+        let mut scene_entity_coordinator =
+            SceneEntityCoordinator::new(entities_active_url, content_url, true);
         scene_entity_coordinator.update_position(0, 0);
+
         assert!(wait_update_or_timeout(&mut scene_entity_coordinator, 10000));
         assert!(!scene_entity_coordinator
             .get_loadable_scenes()

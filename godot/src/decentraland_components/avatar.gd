@@ -1,9 +1,10 @@
 extends Node3D
 
 @export var skip_process: bool = false
-@onready var animation_player = $AnimationPlayer
+@onready var animation_player = $Armature/AnimationPlayer
 @onready var label_3d_name = $Label3D_Name
-@onready var body_shape_skeleton_3d: Skeleton3D = $Skeleton3D
+@onready var body_shape_root: Node3D = $Armature
+@onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
 
 # Position Lerp
 var last_position: Vector3 = Vector3.ZERO
@@ -172,21 +173,24 @@ func try_to_set_body_shape(body_shape_hash):
 	if skeleton == null:
 		return
 
-	if body_shape_skeleton_3d != null:
-		remove_child(body_shape_skeleton_3d)
-		_free_old_skeleton.call_deferred(body_shape_skeleton_3d)
+	if body_shape_root != null:
+		body_shape_root.remove_child(animation_player)
+		remove_child(body_shape_root)
+		_free_old_skeleton.call_deferred(body_shape_root)
 
-	body_shape_skeleton_3d = skeleton.duplicate()
-	body_shape_skeleton_3d.name = "Skeleton3D"
-	body_shape_skeleton_3d.scale = 0.01 * Vector3.ONE
-	body_shape_skeleton_3d.rotate_y(-PI)
-	body_shape_skeleton_3d.rotate_x(-PI / 2)
+	body_shape_root = body_shape.duplicate()
+	body_shape_root.name = "BodyShape"
+
+	body_shape_skeleton_3d = body_shape_root.find_child("Skeleton3D", true, false)
+	body_shape_skeleton_3d.get_parent().add_child(animation_player)
 
 	for child in body_shape_skeleton_3d.get_children():
 		child.name = child.name.to_lower()
 
-	add_child(body_shape_skeleton_3d)
 	body_shape_skeleton_3d.visible = false
+	add_child(body_shape_root)
+
+	_add_attach_points()
 
 
 func load_wearables():
@@ -427,3 +431,38 @@ func push_voice_frame(frame):
 		audio_stream_player.play()
 
 	audio_stream_player.get_stream_playback().push_buffer(frame)
+
+
+var generate_attach_points: bool = false
+var right_hand_idx: int = -1
+var right_hand_position: Transform3D
+var left_hand_idx: int = -1
+var left_hand_position: Transform3D
+
+
+func activate_attach_points():
+	generate_attach_points = true
+	_add_attach_points()
+
+
+func _add_attach_points():
+	if not generate_attach_points:
+		return
+
+	if body_shape_skeleton_3d == null:
+		return
+
+	right_hand_idx = body_shape_skeleton_3d.find_bone("Avatar_RightHand")
+	left_hand_idx = body_shape_skeleton_3d.find_bone("Avatar_LeftHand")
+	body_shape_skeleton_3d.bone_pose_changed.connect(self._attach_point_bone_pose_changed)
+
+
+func _attach_point_bone_pose_changed(bone_idx: int):
+	match bone_idx:
+		left_hand_idx:
+			left_hand_position = body_shape_skeleton_3d.get_bone_global_pose(bone_idx)
+			left_hand_position.basis = left_hand_position.basis.scaled(100.0 * Vector3.ONE)
+
+		right_hand_idx:
+			right_hand_position = body_shape_skeleton_3d.get_bone_global_pose(bone_idx)
+			right_hand_position.basis = right_hand_position.basis.scaled(100.0 * Vector3.ONE)

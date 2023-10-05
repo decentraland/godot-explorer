@@ -582,7 +582,10 @@ func create_colliders(node_to_inspect: Node):
 
 				new_animatable.sync_to_physics = false
 				new_animatable.process_mode = Node.PROCESS_MODE_DISABLED
+
+				new_animatable.set_meta("dcl_col", 0)
 				new_animatable.collision_layer = 0
+				new_animatable.collision_mask = 0
 
 				new_animatable.set_meta("invisible_mesh", invisible_mesh)
 
@@ -654,12 +657,13 @@ func update_set_mask_colliders(
 				parent.add_child(resolved_node)
 				to_remove_nodes.push_back(node)
 
+			resolved_node.set_meta("dcl_col", mask)
+			resolved_node.collision_layer = mask
+			resolved_node.collision_mask = 0
 			if mask == 0:
 				resolved_node.process_mode = Node.PROCESS_MODE_DISABLED
-				resolved_node.collision_layer = 0
 			else:
 				resolved_node.process_mode = Node.PROCESS_MODE_INHERIT
-				resolved_node.collision_layer = mask
 
 		if node is Node:
 			update_set_mask_colliders(

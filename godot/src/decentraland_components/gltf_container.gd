@@ -97,12 +97,13 @@ func update_mask_colliders(node_to_inspect: Node):
 
 			var animatable_body_3d = get_animatable_body_3d(node)
 			if animatable_body_3d != null:
+				animatable_body_3d.collision_layer = mask
+				animatable_body_3d.collision_mask = 0
+				animatable_body_3d.set_meta("dcl_col", mask)
 				if mask == 0:
 					animatable_body_3d.process_mode = Node.PROCESS_MODE_DISABLED
-					animatable_body_3d.mask = 0
 				else:
 					animatable_body_3d.process_mode = Node.PROCESS_MODE_INHERIT
-					animatable_body_3d.mask = mask
 
 		if node is Node:
 			update_mask_colliders(node)

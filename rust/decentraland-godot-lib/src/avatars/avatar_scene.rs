@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use ethers::types::H160;
 use godot::prelude::*;
 
 use crate::{
@@ -11,6 +12,7 @@ use crate::{
         },
         crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
     },
+    wallet::AsH160,
 };
 
 #[derive(GodotClass)]
@@ -22,6 +24,7 @@ pub struct AvatarScene {
     // map alias to the entity_id
     avatar_entity: HashMap<u32, SceneEntityId>,
     avatar_godot_scene: HashMap<SceneEntityId, Gd<Node3D>>,
+    avatar_address: HashMap<H160, u32>,
 
     // scenes_dirty: HashMap<SceneId, HashMap<SceneEntityId, SceneComponentId>>,
     //
@@ -35,8 +38,8 @@ impl NodeVirtual for AvatarScene {
             base,
             avatar_entity: HashMap::new(),
             crdt: SceneCrdtState::from_proto(),
-            // scenes_dirty: HashMap::new(),
             avatar_godot_scene: HashMap::new(),
+            avatar_address: HashMap::new(),
         }
     }
 }
@@ -84,7 +87,7 @@ impl AvatarScene {
     }
 
     #[func]
-    pub fn add_avatar(&mut self, alias: u32) {
+    pub fn add_avatar(&mut self, alias: u32, address: GodotString) {
         // TODO: the entity Self::MAX_ENTITY_ID + 1 would be a buggy avatar
         let entity_id = self
             .get_next_entity_id()
@@ -99,8 +102,24 @@ impl AvatarScene {
                 .unwrap()
                 .cast::<Node3D>();
 
+        if let Some(address) = address.to_string().as_h160() {
+            self.avatar_address.insert(address, alias);
+        }
+
         self.base.add_child(new_avatar.clone().upcast());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
+    }
+
+    #[func]
+    pub fn get_avatar_by_address(&mut self, address: GodotString) -> Option<Gd<Node3D>> {
+        if let Some(address) = address.to_string().as_h160() {
+            if let Some(alias) = self.avatar_address.get(&address) {
+                if let Some(entity_id) = self.avatar_entity.get(alias) {
+                    return self.avatar_godot_scene.get(entity_id).cloned();
+                }
+            }
+        }
+        None
     }
 }
 
@@ -137,6 +156,9 @@ impl AvatarScene {
             self.crdt.kill_entity(&entity_id);
             let mut avatar = self.avatar_godot_scene.remove(&entity_id).unwrap();
             self.base.remove_child(avatar.clone().upcast());
+
+            self.avatar_address.retain(|_, v| *v != alias);
+
             avatar.queue_free();
         }
     }
