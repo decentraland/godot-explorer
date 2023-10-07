@@ -128,7 +128,7 @@ jobs:
     strategy:
       matrix:
         # os: [ubuntu-latest, [self-hosted, Windows], macos-latest]
-        os: [[self-hosted, Windows]]
+        os: [self-hosted-windows]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -180,7 +180,7 @@ jobs:
         
       # => Windows
       - name: set CLANG path for ffmpeg deps (windows)
-        if: runner.os == 'windows'
+        if: runner.os == 'windows' && matrix.os != 'self-hosted-windows'
         run: |
           $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
           Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
