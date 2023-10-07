@@ -40,7 +40,7 @@ pub fn export() -> Result<(), anyhow::Error> {
     fs::create_dir(EXPORTS_FOLDER)?;
 
     // Do imports and one project open
-    let args = vec!["-e", "--headless", "--quit"];
+    let args = vec!["-e", "--headless", "--rendering-driver", "opengl3", "--quit"];
     let status1 = std::process::Command::new(program.as_str())
         .args(&args)
         .current_dir(adjust_canonicalization(
@@ -83,6 +83,7 @@ pub fn export() -> Result<(), anyhow::Error> {
     let args = vec![
         "-e",
         "--quit",
+        "--rendering-driver", "opengl3",
         "--headless",
         "--export-release",
         target,

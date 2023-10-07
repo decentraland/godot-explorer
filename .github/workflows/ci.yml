@@ -238,14 +238,14 @@ jobs:
 
       # => Linux/MacOS (unix)
       - name: Copy library (linux/macos)
-        if: ${{ matrix.os != 'windows-latest' }}
+        if: runner.os != 'windows'
         run: |
             cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.so godot/lib/ || true
             cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.dylib godot/lib/ || true
 
       # => Windows
       - name: Copy library (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: runner.os == 'windows'
         run: |
             cp rust/decentraland-godot-lib/target/release/decentraland_godot_lib.dll godot/lib/
             cp .bin/ffmpeg/ffmpeg-6.0-full_build-shared/bin/*.dll godot/lib/
