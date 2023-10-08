@@ -10,7 +10,7 @@ use super::{
         mesh_collider::update_mesh_collider, mesh_renderer::update_mesh_renderer,
         pointer_events::update_scene_pointer_events, raycast::update_raycasts,
         text_shape::update_text_shape, transform_and_parent::update_transform_and_parent,
-        video_player::update_video_player,
+        video_player::update_video_player, visibility::update_visibility,
     },
     scene::Scene,
 };
@@ -57,6 +57,7 @@ pub fn update_scene(
 
     update_deleted_entities(scene);
     update_transform_and_parent(scene, crdt_state);
+    update_visibility(scene, crdt_state);
     update_mesh_renderer(scene, crdt_state);
     update_scene_pointer_events(scene, crdt_state);
     update_material(scene, crdt_state);
