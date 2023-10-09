@@ -1,16 +1,24 @@
-use crate::{scene_runner::scene::Scene, dcl::crdt::{SceneCrdtState, SceneCrdtStateProtoComponents}};
+use crate::{scene_runner::scene::Scene, dcl::{crdt::{SceneCrdtState, SceneCrdtStateProtoComponents, last_write_wins::LastWriteWinsComponentOperation}, components::SceneComponentId}};
 
 pub fn update_visibility(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    let godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let dirty_lww_components = &scene.current_dirty.lww_components;
     let visibility_component = SceneCrdtStateProtoComponents::get_visibility_component(crdt_state);
 
-    for (entity, entry) in visibility_component.values.iter() {
-        if let Some(_visibility) = entry.value.as_ref() {
-            let node = scene.godot_dcl_scene.ensure_node_mut(entity);
-            if _visibility.visible() {
-                node.base.show();
-            } else {
-                node.base.hide();
-            }
+    let Some(visibility_dirty) = dirty_lww_components.get(&SceneComponentId::VISIBILITY_COMPONENT) else { return; };
+
+    for entity in visibility_dirty {
+        let new_value = visibility_component.get(*entity);
+
+        let Some(new_value) = new_value else { continue; };        
+
+        let Some(new_value) = new_value.value.clone() else { continue; };
+
+        let node = godot_dcl_scene.ensure_node_mut(entity);
+        if new_value.visible() {
+            node.base.show();
+        } else {
+            node.base.hide();
         }
     }
 }
