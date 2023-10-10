@@ -16,7 +16,7 @@ pub fn run(
             BIN_FOLDER,
             install_dependency::get_godot_executable_path().unwrap()
         ))
-        .expect("Did you executed `cargo run -- install`?")
+        .expect("Did you executed `cargo run -- install`?"),
     );
 
     std::env::set_var("GODOT4_BIN", program.clone());

@@ -16,8 +16,9 @@ use super::{
 };
 use crate::dcl::{
     components::{
-        proto_components::sdk::components::{PbEngineInfo, PbCameraMode},
-        transform_and_parent::DclTransformAndParent, SceneEntityId,
+        proto_components::sdk::components::{PbCameraMode, PbEngineInfo},
+        transform_and_parent::DclTransformAndParent,
+        SceneEntityId,
     },
     crdt::{
         grow_only_set::GenericGrowOnlySetComponentOperation,
@@ -90,8 +91,7 @@ pub fn update_scene(
     // update camera mode
     if let Some(camera_mode) = camera_mode {
         let camera_mode_component = PbCameraMode { mode: camera_mode };
-        SceneCrdtStateProtoComponents
-            ::get_camera_mode_mut(crdt_state)
+        SceneCrdtStateProtoComponents::get_camera_mode_mut(crdt_state)
             .put(SceneEntityId::CAMERA, Some(camera_mode_component));
     }
 

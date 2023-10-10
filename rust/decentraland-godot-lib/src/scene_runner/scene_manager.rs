@@ -9,12 +9,10 @@ use crate::{
         js::SceneLogLevel,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
-    wallet::Wallet, godot_classes::dcl_camera_3d::DCLCamera3D,
+    godot_classes::dcl_camera_3d::DCLCamera3D,
+    wallet::Wallet,
 };
-use godot::{
-    engine::PhysicsRayQueryParameters3D,
-    prelude::*,
-};
+use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
 use std::{
     collections::{HashMap, HashSet},
     time::Instant,
@@ -283,9 +281,13 @@ impl SceneManager {
                     let camera_mode = self.camera_node.bind().get_camera_mode();
                     let new_camera_mode: Option<i32> = match self.last_camera_mode {
                         Some(val) => {
-                            if val == camera_mode { Some(camera_mode) } else { None }
-                        },
-                        None => Some(camera_mode)
+                            if val == camera_mode {
+                                Some(camera_mode)
+                            } else {
+                                None
+                            }
+                        }
+                        None => Some(camera_mode),
                     };
 
                     super::update_scene::update_scene(
