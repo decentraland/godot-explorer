@@ -9,10 +9,10 @@ use crate::{
         js::SceneLogLevel,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
-    wallet::Wallet,
+    wallet::Wallet, godot_classes::dcl_camera_3d::DCLCamera3D,
 };
 use godot::{
-    engine::{CharacterBody3D, PhysicsRayQueryParameters3D},
+    engine::PhysicsRayQueryParameters3D,
     prelude::*,
 };
 use std::{
@@ -35,8 +35,8 @@ pub struct SceneManager {
     base: Base<Node>,
     scenes: HashMap<SceneId, Scene>,
 
-    camera_node: Gd<Camera3D>,
-    player_node: Gd<CharacterBody3D>,
+    camera_node: Gd<DCLCamera3D>,
+    player_node: Gd<Node3D>,
 
     console: Callable,
 
@@ -57,6 +57,8 @@ pub struct SceneManager {
     global_tick_number: u32,
 
     pointer_tooltips: VariantArray,
+
+    last_camera_mode: Option<i32>,
 }
 
 #[godot_api]
@@ -122,8 +124,8 @@ impl SceneManager {
     #[func]
     fn set_camera_and_player_node(
         &mut self,
-        camera_node: Gd<Camera3D>,
-        player_node: Gd<CharacterBody3D>,
+        camera_node: Gd<DCLCamera3D>,
+        player_node: Gd<Node3D>,
         console: Callable,
     ) {
         self.camera_node = camera_node.clone();
@@ -277,6 +279,15 @@ impl SceneManager {
                         continue;
                     };
 
+                    // If there is a new camera mode, we send the new value, otherwise send a `None` and don't update it
+                    let camera_mode = self.camera_node.bind().get_camera_mode();
+                    let new_camera_mode: Option<i32> = match self.last_camera_mode {
+                        Some(val) => {
+                            if val == camera_mode { Some(camera_mode) } else { None }
+                        },
+                        None => Some(camera_mode)
+                    };
+
                     super::update_scene::update_scene(
                         delta,
                         scene,
@@ -284,6 +295,7 @@ impl SceneManager {
                         &camera_global_transform,
                         &player_global_transform,
                         frames_count,
+                        new_camera_mode,
                     );
 
                     // enable logs
@@ -550,8 +562,8 @@ impl NodeVirtual for SceneManager {
             main_receiver_from_thread,
             thread_sender_to_main,
 
-            camera_node: Camera3D::new_alloc(),
-            player_node: CharacterBody3D::new_alloc(),
+            camera_node: Gd::new_default(),
+            player_node: Node3D::new_alloc(),
 
             player_position: Vector2i::new(-1000, -1000),
 
@@ -562,6 +574,7 @@ impl NodeVirtual for SceneManager {
             last_raycast_result: None,
             global_tick_number: 0,
             pointer_tooltips: VariantArray::new(),
+            last_camera_mode: None,
         }
     }
 

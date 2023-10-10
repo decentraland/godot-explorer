@@ -16,7 +16,7 @@ use super::{
 };
 use crate::dcl::{
     components::{
-        proto_components::sdk::components::PbEngineInfo,
+        proto_components::sdk::components::{PbEngineInfo, PbCameraMode},
         transform_and_parent::DclTransformAndParent, SceneEntityId,
     },
     crdt::{
@@ -33,6 +33,7 @@ pub fn update_scene(
     camera_global_transform: &Transform3D,
     player_global_transform: &Transform3D,
     frames_count: u64,
+    camera_mode: Option<i32>,
 ) {
     scene.waiting_for_updates = false;
 
@@ -85,6 +86,14 @@ pub fn update_scene(
     crdt_state
         .get_transform_mut()
         .put(SceneEntityId::CAMERA, Some(camera_transform));
+
+    // update camera mode
+    if let Some(camera_mode) = camera_mode {
+        let camera_mode_component = PbCameraMode { mode: camera_mode };
+        SceneCrdtStateProtoComponents
+            ::get_camera_mode_mut(crdt_state)
+            .put(SceneEntityId::CAMERA, Some(camera_mode_component));
+    }
 
     let pointer_events_result_component =
         SceneCrdtStateProtoComponents::get_pointer_events_result_mut(crdt_state);
