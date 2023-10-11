@@ -9,12 +9,10 @@ use crate::{
         js::SceneLogLevel,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
+    godot_classes::dcl_camera_3d::DCLCamera3D,
     wallet::Wallet,
 };
-use godot::{
-    engine::{CharacterBody3D, PhysicsRayQueryParameters3D},
-    prelude::*,
-};
+use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
 use std::{
     collections::{HashMap, HashSet},
     time::Instant,
@@ -36,8 +34,8 @@ pub struct SceneManager {
     base: Base<Node>,
     scenes: HashMap<SceneId, Scene>,
 
-    camera_node: Gd<Camera3D>,
-    player_node: Gd<CharacterBody3D>,
+    camera_node: Gd<DCLCamera3D>,
+    player_node: Gd<Node3D>,
 
     console: Callable,
 
@@ -123,8 +121,8 @@ impl SceneManager {
     #[func]
     fn set_camera_and_player_node(
         &mut self,
-        camera_node: Gd<Camera3D>,
-        player_node: Gd<CharacterBody3D>,
+        camera_node: Gd<DCLCamera3D>,
+        player_node: Gd<Node3D>,
         console: Callable,
     ) {
         self.camera_node = camera_node.clone();
@@ -189,6 +187,7 @@ impl SceneManager {
 
         let camera_global_transform = self.camera_node.get_global_transform();
         let player_global_transform = self.player_node.get_global_transform();
+        let camera_mode = self.camera_node.bind().get_camera_mode();
 
         let frames_count = godot::engine::Engine::singleton().get_physics_frames();
 
@@ -256,6 +255,7 @@ impl SceneManager {
                     frames_count,
                     &camera_global_transform,
                     &player_global_transform,
+                    camera_mode,
                     &self.begin_time,
                 ) {
                     current_time_us =
@@ -489,8 +489,8 @@ impl NodeVirtual for SceneManager {
             main_receiver_from_thread,
             thread_sender_to_main,
 
-            camera_node: Camera3D::new_alloc(),
-            player_node: CharacterBody3D::new_alloc(),
+            camera_node: Gd::new_default(),
+            player_node: Node3D::new_alloc(),
 
             player_position: Vector2i::new(-1000, -1000),
 

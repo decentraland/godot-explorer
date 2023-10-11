@@ -168,7 +168,7 @@ fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> io::Resu
     if metadata_src.is_ok() && metadata_dest.is_ok() {
         let time_src = metadata_src?.modified()?;
         let time_dest = metadata_dest?.modified()?;
-        
+
         // If the destination file is more recent or equal to the source file, we do not copy
         if time_dest >= time_src {
             println!("Skip copy, equal file {}", dest_path.to_string_lossy());

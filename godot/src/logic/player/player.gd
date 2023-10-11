@@ -1,11 +1,16 @@
 extends CharacterBody3D
 
+enum CameraMode {
+	FIRST_PERSON = 0,
+	THIRD_PERSON = 1,
+	CINEMATIC = 2,
+}
+
 @onready var mount_camera := $Mount
-@onready var camera: Camera3D = $Mount/Camera3D
+@onready var camera: DCLCamera3D = $Mount/Camera3D
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 
-var first_person: bool = true
 var _mouse_position = Vector2(0.0, 0.0)
 var _touch_position = Vector2(0.0, 0.0)
 var captured: bool = true
@@ -30,13 +35,12 @@ func _ready():
 	# if captured:
 	# 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
-	first_person = false
 	var tween_out = create_tween()
 	tween_out.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25).set_ease(
 		Tween.EASE_IN_OUT
 	)
 
-	first_person = false
+	camera.set_camera_mode(CameraMode.THIRD_PERSON)
 	avatar.activate_attach_points()
 	avatar.show()
 
@@ -73,11 +77,11 @@ func _input(event):
 			rotate_y(deg_to_rad(-_touch_position.x) * horizontal_sens)
 			avatar.rotate_y(deg_to_rad(_touch_position.x) * horizontal_sens)
 			mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * vertical_sens)
-			if first_person:
+			if camera.get_camera_mode() == CameraMode.FIRST_PERSON:
 				mount_camera.rotation.x = clamp(
 					mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90)
 				)
-			else:
+			elif camera.get_camera_mode() == CameraMode.THIRD_PERSON:
 				mount_camera.rotation.x = clamp(
 					mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45)
 				)
@@ -90,11 +94,11 @@ func _input(event):
 			avatar.rotate_y(deg_to_rad(_mouse_position.x) * horizontal_sens)
 			mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * vertical_sens)
 
-		if first_person:
+		if camera.get_camera_mode() == CameraMode.FIRST_PERSON:
 			mount_camera.rotation.x = clamp(
 				mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90)
 			)
-		else:
+		elif camera.get_camera_mode() == CameraMode.THIRD_PERSON:
 			mount_camera.rotation.x = clamp(
 				mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45)
 			)
@@ -107,8 +111,8 @@ func _input(event):
 		# Toggle first or third person camera
 		if event is InputEventMouseButton:
 			if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				if first_person == true:
-					first_person = false
+				if camera.get_camera_mode() == CameraMode.FIRST_PERSON:
+					camera.set_camera_mode(CameraMode.THIRD_PERSON)
 					var tween_out = create_tween()
 					(
 						tween_out
@@ -121,8 +125,8 @@ func _input(event):
 					audio_stream_player_camera.play()
 
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				if first_person == false:
-					first_person = true
+				if camera.get_camera_mode() == CameraMode.THIRD_PERSON:
+					camera.set_camera_mode(CameraMode.FIRST_PERSON)
 					var tween_in = create_tween()
 					tween_in.tween_property(camera, "position", Vector3(0, 0, -0.2), 0.25).set_ease(
 						Tween.EASE_IN_OUT

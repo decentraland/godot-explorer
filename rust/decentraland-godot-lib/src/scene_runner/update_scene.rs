@@ -10,15 +10,16 @@ use super::{
         mesh_collider::update_mesh_collider, mesh_renderer::update_mesh_renderer,
         pointer_events::update_scene_pointer_events, raycast::update_raycasts,
         text_shape::update_text_shape, transform_and_parent::update_transform_and_parent,
-        video_player::update_video_player,
+        video_player::update_video_player, visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
     scene::{Dirty, Scene, SceneUpdateState},
 };
 use crate::dcl::{
     components::{
-        proto_components::sdk::components::PbEngineInfo,
-        transform_and_parent::DclTransformAndParent, SceneEntityId,
+        proto_components::sdk::components::{PbCameraMode, PbEngineInfo},
+        transform_and_parent::DclTransformAndParent,
+        SceneEntityId,
     },
     crdt::{
         grow_only_set::GenericGrowOnlySetComponentOperation,
@@ -34,6 +35,7 @@ pub fn _process_scene(
     frames_count: u64,
     camera_global_transform: &Transform3D,
     player_global_transform: &Transform3D,
+    camera_mode: i32,
     ref_time: &Instant,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
@@ -85,6 +87,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::TransformAndParent => {
                 update_transform_and_parent(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::VisibilityComponent => {
+                update_visibility(scene, crdt_state);
                 false
             }
             SceneUpdateState::MeshRenderer => {
@@ -150,6 +156,28 @@ pub fn _process_scene(
                 crdt_state
                     .get_transform_mut()
                     .put(SceneEntityId::CAMERA, Some(camera_transform));
+
+                let maybe_current_camera_mode = {
+                    if let Some(camera_mode_value) =
+                        SceneCrdtStateProtoComponents::get_camera_mode(crdt_state)
+                            .get(SceneEntityId::CAMERA)
+                    {
+                        camera_mode_value
+                            .value
+                            .as_ref()
+                            .map(|camera_mode_value| camera_mode_value.mode)
+                    } else {
+                        None
+                    }
+                };
+
+                if maybe_current_camera_mode.is_none()
+                    || maybe_current_camera_mode.unwrap() != camera_mode
+                {
+                    let camera_mode_component = PbCameraMode { mode: camera_mode };
+                    SceneCrdtStateProtoComponents::get_camera_mode_mut(crdt_state)
+                        .put(SceneEntityId::CAMERA, Some(camera_mode_component));
+                }
 
                 let pointer_events_result_component =
                     SceneCrdtStateProtoComponents::get_pointer_events_result_mut(crdt_state);
