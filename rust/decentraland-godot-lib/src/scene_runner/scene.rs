@@ -50,6 +50,7 @@ pub struct MaterialItem {
 #[derive(Clone, Copy, Debug)]
 pub enum SceneUpdateState {
     None,
+    PrintLogs,
     DeletedEntities,
     TransformAndParent,
     VisibilityComponent,
@@ -65,6 +66,7 @@ pub enum SceneUpdateState {
     Raycasts,
     AvatarAttach,
     VideoPlayer,
+    AudioSource,
     ComputeCrdtState,
     SendToThread,
     Processed,
@@ -73,7 +75,8 @@ pub enum SceneUpdateState {
 impl SceneUpdateState {
     pub fn next(self) -> Self {
         match self {
-            Self::None => Self::DeletedEntities,
+            Self::None => Self::PrintLogs,
+            Self::PrintLogs => Self::DeletedEntities,
             Self::DeletedEntities => Self::TransformAndParent,
             Self::TransformAndParent => Self::VisibilityComponent,
             Self::VisibilityComponent => Self::MeshRenderer,
@@ -87,7 +90,8 @@ impl SceneUpdateState {
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::Raycasts,
             Self::Raycasts => Self::VideoPlayer,
-            Self::VideoPlayer => Self::AvatarAttach,
+            Self::VideoPlayer => Self::AudioSource,
+            Self::AudioSource => Self::AvatarAttach,
             Self::AvatarAttach => Self::ComputeCrdtState,
             Self::ComputeCrdtState => Self::SendToThread,
             Self::SendToThread => Self::Processed,

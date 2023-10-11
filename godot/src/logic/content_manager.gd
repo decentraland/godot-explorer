@@ -11,7 +11,8 @@ enum ContentType {
 	CT_TEXTURE = 2,
 	CT_WEARABLE_EMOTE = 3,
 	CT_MESHES_MATERIAL = 4,
-	CT_INSTACE_GLTF = 5
+	CT_INSTACE_GLTF = 5,
+	CT_AUDIO = 6
 }
 
 var loading_content: Array[Dictionary] = []
@@ -180,6 +181,29 @@ func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
 	return true
 
 
+func fetch_audio(file_path: String, content_mapping: Dictionary):
+	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+	var content_cached = content_cache_map.get(file_hash)
+	if content_cached != null:
+		return not content_cached.get("loaded")
+
+	content_cache_map[file_hash] = {
+		"loaded": false,
+	}
+
+	pending_content.push_back(
+		{
+			"file_path": file_path,
+			"file_hash": file_hash,
+			"content_type": ContentType.CT_AUDIO,
+			"content_mapping": content_mapping,
+			"stage": 0
+		}
+	)
+
+	return true
+
+
 func _process(_dt: float) -> void:
 	_th_poll()
 
@@ -209,6 +233,10 @@ func _th_poll():
 
 			ContentType.CT_TEXTURE:
 				if not _process_loading_texture(content, _th_finished_downloads):
+					_th_to_delete.push_back(content)
+
+			ContentType.CT_AUDIO:
+				if not _process_loading_audio(content, _th_finished_downloads):
 					_th_to_delete.push_back(content)
 
 			ContentType.CT_WEARABLE_EMOTE:
@@ -515,6 +543,80 @@ func _process_loading_texture(
 
 			content_cache_map[file_hash]["image"] = image
 			content_cache_map[file_hash]["resource"] = ImageTexture.create_from_image(image)
+			content_cache_map[file_hash]["loaded"] = true
+			content_cache_map[file_hash]["stage"] = 3
+			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			return false
+		_:
+			printerr("unknown stage ", file_hash)
+			return false
+
+	return true
+
+
+func _process_loading_audio(
+	content: Dictionary, finished_downloads: Array[RequestResponse]
+) -> bool:
+	var content_mapping = content.get("content_mapping")
+	var file_hash: String = content.get("file_hash")
+	var base_url: String = content_mapping.get("base_url", "")
+	var local_audio_path = "user://content/" + file_hash
+	var stage = content.get("stage", 0)
+
+	match stage:
+		# Stage 0 => request png file
+		0:
+			if FileAccess.file_exists(local_audio_path):
+				content["stage"] = 2
+			else:
+				if file_hash.is_empty() or base_url.is_empty():
+					printerr("hash or base_url is empty")
+					return false
+
+				var absolute_file_path = local_audio_path.replace("user:/", OS.get_user_data_dir())
+				content["stage"] = 1
+				content["request_id"] = http_requester.request_file(
+					0, base_url + file_hash, absolute_file_path
+				)
+
+		# Stage 1 => wait for the file
+		1:
+			for item in finished_downloads:
+				if item.id() == content["request_id"]:
+					if item.is_error():
+						printerr("audio download is_error() == true!")
+						return false
+					else:
+						content["stage"] = 2
+
+		# Stage 2 => process texture
+		2:
+			var file := FileAccess.open(local_audio_path, FileAccess.READ)
+			if file == null:
+				printerr("audio download fails")
+				return false
+
+			var file_path: String = content.get("file_path")
+			var bytes = file.get_buffer(file.get_length())
+			var audio_stream = null
+
+			if file_path.ends_with(".wav"):
+				audio_stream = AudioStreamWAV.new()
+				audio_stream.data = bytes
+			elif file_path.ends_with(".ogg"):
+				audio_stream = AudioStreamOggVorbis.new()
+				audio_stream.data = bytes
+			elif file_path.ends_with(".mp3"):
+				audio_stream = AudioStreamMP3.new()
+				audio_stream.data = bytes
+
+			if audio_stream == null:
+				printerr(
+					"Audio " + base_url + file_hash + " unrecognized format (infered by file path)"
+				)
+				return false
+
+			content_cache_map[file_hash]["resource"] = audio_stream
 			content_cache_map[file_hash]["loaded"] = true
 			content_cache_map[file_hash]["stage"] = 3
 			self.emit_signal.call_deferred("content_loading_finished", file_hash)

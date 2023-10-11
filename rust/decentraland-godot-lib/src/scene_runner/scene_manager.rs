@@ -256,6 +256,7 @@ impl SceneManager {
                     &camera_global_transform,
                     &player_global_transform,
                     camera_mode,
+                    self.console.clone(),
                     &self.begin_time,
                 ) {
                     current_time_us =
