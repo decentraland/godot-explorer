@@ -56,8 +56,6 @@ pub struct SceneManager {
     global_tick_number: u32,
 
     pointer_tooltips: VariantArray,
-
-    last_camera_mode: Option<i32>,
 }
 
 #[godot_api]
@@ -503,7 +501,6 @@ impl NodeVirtual for SceneManager {
             last_raycast_result: None,
             global_tick_number: 0,
             pointer_tooltips: VariantArray::new(),
-            last_camera_mode: None,
         }
     }
 

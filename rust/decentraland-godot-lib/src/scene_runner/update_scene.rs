@@ -56,13 +56,6 @@ pub fn _process_scene(
 
     let mut current_time_us;
 
-    // update camera mode
-    if let Some(camera_mode) = camera_mode {
-        let camera_mode_component = PbCameraMode { mode: camera_mode };
-        SceneCrdtStateProtoComponents::get_camera_mode_mut(crdt_state)
-            .put(SceneEntityId::CAMERA, Some(camera_mode_component));
-    }
-
     loop {
         let should_break = match scene.current_dirty.update_state {
             SceneUpdateState::None => {
@@ -94,6 +87,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::TransformAndParent => {
                 update_transform_and_parent(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::VisibilityComponent => {
+                update_visibility(scene, crdt_state);
                 false
             }
             SceneUpdateState::MeshRenderer => {

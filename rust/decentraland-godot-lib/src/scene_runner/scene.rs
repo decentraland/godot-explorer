@@ -52,6 +52,7 @@ pub enum SceneUpdateState {
     None,
     DeletedEntities,
     TransformAndParent,
+    VisibilityComponent,
     MeshRenderer,
     ScenePointerEvents,
     Material,
@@ -74,7 +75,8 @@ impl SceneUpdateState {
         match self {
             Self::None => Self::DeletedEntities,
             Self::DeletedEntities => Self::TransformAndParent,
-            Self::TransformAndParent => Self::MeshRenderer,
+            Self::TransformAndParent => Self::VisibilityComponent,
+            Self::VisibilityComponent => Self::MeshRenderer,
             Self::MeshRenderer => Self::ScenePointerEvents,
             Self::ScenePointerEvents => Self::Material,
             Self::Material => Self::TextShape,
