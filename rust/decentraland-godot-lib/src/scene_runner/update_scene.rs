@@ -12,7 +12,8 @@ use super::{
         text_shape::update_text_shape, transform_and_parent::update_transform_and_parent,
         video_player::update_video_player,
     },
-    scene::Scene,
+    deleted_entities::update_deleted_entities,
+    scene::{Dirty, Scene, SceneUpdateState},
 };
 use crate::dcl::{
     components::{
@@ -21,102 +22,192 @@ use crate::dcl::{
     },
     crdt::{
         grow_only_set::GenericGrowOnlySetComponentOperation,
-        last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
-        SceneCrdtStateProtoComponents,
+        last_write_wins::LastWriteWinsComponentOperation, SceneCrdtStateProtoComponents,
     },
+    RendererResponse,
 };
 
-pub fn update_scene(
-    _dt: f64,
+// @returns true if the scene was full processed, or false if it remains something to process
+pub fn _process_scene(
     scene: &mut Scene,
-    crdt_state: &mut SceneCrdtState,
+    end_time_us: i64,
+    frames_count: u64,
     camera_global_transform: &Transform3D,
     player_global_transform: &Transform3D,
-    frames_count: u64,
-) {
-    scene.waiting_for_updates = false;
-
-    let engine_info_component = SceneCrdtStateProtoComponents::get_engine_info_mut(crdt_state);
-    let tick_number = if let Some(entry) = engine_info_component.get(SceneEntityId::ROOT) {
-        if let Some(value) = entry.value.as_ref() {
-            value.tick_number + 1
-        } else {
-            0
-        }
-    } else {
-        0
+    ref_time: &Instant,
+) -> bool {
+    let crdt = scene.dcl_scene.scene_crdt.clone();
+    let Ok(mut crdt_state) = crdt.try_lock() else {
+        return false;
     };
-    engine_info_component.put(
-        SceneEntityId::ROOT,
-        Some(PbEngineInfo {
-            tick_number,
-            frame_number: frames_count as u32,
-            total_runtime: (Instant::now() - scene.start_time).as_secs_f32(),
-        }),
-    );
+    let crdt_state = &mut crdt_state;
 
-    update_deleted_entities(scene);
-    update_transform_and_parent(scene, crdt_state);
-    update_mesh_renderer(scene, crdt_state);
-    update_scene_pointer_events(scene, crdt_state);
-    update_material(scene, crdt_state);
-    update_text_shape(scene, crdt_state);
-    update_billboard(scene, crdt_state, camera_global_transform);
-    update_mesh_collider(scene, crdt_state);
-    update_gltf_container(scene, crdt_state);
-    update_animator(scene, crdt_state);
-    update_avatar_shape(scene, crdt_state);
-    update_raycasts(scene, crdt_state);
-    update_video_player(scene, crdt_state);
-    update_avatar_attach(scene, crdt_state);
+    // enable logs
+    // for log in &scene.current_dirty.logs {
+    //     let mut arguments = VariantArray::new();
+    //     arguments.push((scene_id.0 as i32).to_variant());
+    //     arguments.push((log.level as i32).to_variant());
+    //     arguments.push((log.timestamp as f32).to_variant());
+    //     arguments.push(GodotString::from(&log.message).to_variant());
+    //     self.console.callv(arguments);
+    // }
 
-    let camera_transform = DclTransformAndParent::from_godot(
-        camera_global_transform,
-        scene.godot_dcl_scene.root_node.get_position(),
-    );
-    let player_transform = DclTransformAndParent::from_godot(
-        player_global_transform,
-        scene.godot_dcl_scene.root_node.get_position(),
-    );
-    crdt_state
-        .get_transform_mut()
-        .put(SceneEntityId::PLAYER, Some(player_transform));
-    crdt_state
-        .get_transform_mut()
-        .put(SceneEntityId::CAMERA, Some(camera_transform));
+    let mut current_time_us;
 
-    let pointer_events_result_component =
-        SceneCrdtStateProtoComponents::get_pointer_events_result_mut(crdt_state);
+    loop {
+        let should_break = match scene.current_dirty.update_state {
+            SceneUpdateState::None => {
+                let engine_info_component =
+                    SceneCrdtStateProtoComponents::get_engine_info_mut(crdt_state);
+                let tick_number =
+                    if let Some(entry) = engine_info_component.get(SceneEntityId::ROOT) {
+                        if let Some(value) = entry.value.as_ref() {
+                            value.tick_number + 1
+                        } else {
+                            0
+                        }
+                    } else {
+                        0
+                    };
+                engine_info_component.put(
+                    SceneEntityId::ROOT,
+                    Some(PbEngineInfo {
+                        tick_number,
+                        frame_number: frames_count as u32,
+                        total_runtime: (Instant::now() - scene.start_time).as_secs_f32(),
+                    }),
+                );
+                false
+            }
+            SceneUpdateState::DeletedEntities => {
+                update_deleted_entities(scene);
+                false
+            }
+            SceneUpdateState::TransformAndParent => {
+                update_transform_and_parent(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::MeshRenderer => {
+                update_mesh_renderer(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::ScenePointerEvents => {
+                update_scene_pointer_events(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::Material => {
+                update_material(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::TextShape => {
+                update_text_shape(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::Billboard => {
+                update_billboard(scene, crdt_state, camera_global_transform);
+                false
+            }
+            SceneUpdateState::MeshCollider => {
+                update_mesh_collider(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::GltfContainer => {
+                update_gltf_container(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::Animator => {
+                update_animator(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::AvatarShape => {
+                update_avatar_shape(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::Raycasts => {
+                update_raycasts(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::AvatarAttach => {
+                update_avatar_attach(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::VideoPlayer => {
+                update_video_player(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::ComputeCrdtState => {
+                let camera_transform = DclTransformAndParent::from_godot(
+                    camera_global_transform,
+                    scene.godot_dcl_scene.root_node.get_position(),
+                );
+                let player_transform = DclTransformAndParent::from_godot(
+                    player_global_transform,
+                    scene.godot_dcl_scene.root_node.get_position(),
+                );
+                crdt_state
+                    .get_transform_mut()
+                    .put(SceneEntityId::PLAYER, Some(player_transform));
+                crdt_state
+                    .get_transform_mut()
+                    .put(SceneEntityId::CAMERA, Some(camera_transform));
 
-    let results = scene.pointer_events_result.drain(0..);
-    for (entity, value) in results {
-        pointer_events_result_component.append(entity, value);
-    }
-}
+                let pointer_events_result_component =
+                    SceneCrdtStateProtoComponents::get_pointer_events_result_mut(crdt_state);
 
-fn update_deleted_entities(scene: &mut Scene) {
-    if scene.current_dirty.entities.died.is_empty() {
-        return;
-    }
+                let results = scene.pointer_events_result.drain(0..);
+                for (entity, value) in results {
+                    pointer_events_result_component.append(entity, value);
+                }
 
-    let godot_dcl_scene = &mut scene.godot_dcl_scene;
-    let died = &scene.current_dirty.entities.died;
+                let dirty = crdt_state.take_dirty();
+                scene.current_dirty.renderer_response = Some(RendererResponse::Ok(dirty));
+                false
+            }
+            SceneUpdateState::SendToThread => {
+                // The scene is already processed, but the message was not sent to the thread yet
+                if scene.dcl_scene.main_sender_to_thread.capacity() > 0 {
+                    let response = scene.current_dirty.renderer_response.take().unwrap();
+                    if let Err(_err) = scene
+                        .dcl_scene
+                        .main_sender_to_thread
+                        .blocking_send(response)
+                    {
+                        // TODO: handle fail sending to thread
+                    }
 
-    for (entity_id, node) in godot_dcl_scene.entities.iter_mut() {
-        if died.contains(&node.computed_parent) && *entity_id != node.computed_parent {
-            node.base
-                .reparent_ex(godot_dcl_scene.root_node.clone().upcast())
-                .keep_global_transform(false)
-                .done();
-            node.computed_parent = SceneEntityId::ROOT;
-            godot_dcl_scene.unparented_entities.insert(*entity_id);
-            godot_dcl_scene.hierarchy_dirty = true;
+                    scene.current_dirty = scene.enqueued_dirty.pop().unwrap_or(Dirty {
+                        waiting_process: false,
+                        entities: Default::default(),
+                        lww_components: Default::default(),
+                        gos_components: Default::default(),
+                        logs: Vec::new(),
+                        renderer_response: None,
+                        update_state: SceneUpdateState::Processed,
+                    });
+
+                    return true;
+                }
+                return false;
+            }
+            SceneUpdateState::Processed => {
+                return true;
+            }
+        };
+
+        if should_break {
+            return false;
         }
-    }
 
-    for deleted_entity in died.iter() {
-        let node = godot_dcl_scene.ensure_node_mut(deleted_entity);
-        node.base.clone().free();
-        godot_dcl_scene.entities.remove(deleted_entity);
+        // let prev = scene.current_dirty.update_state;
+        scene.current_dirty.update_state = scene.current_dirty.update_state.next();
+
+        current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
+        if current_time_us > end_time_us {
+            // let diff = current_time_us - end_time_us;
+            // if diff > 3000 {
+            //     println!("exceed time limit by {:?} in the state {:?}", diff, prev);
+            // }
+            return false;
+        }
     }
 }

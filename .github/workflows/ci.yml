@@ -127,7 +127,7 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }} 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [self-hosted-windows, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -179,7 +179,7 @@ jobs:
         
       # => Windows
       - name: set CLANG path for ffmpeg deps (windows)
-        if: runner.os == 'windows'
+        if: runner.os == 'windows' && matrix.os != 'self-hosted-windows'
         run: |
           $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
           Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
@@ -217,14 +217,8 @@ jobs:
       #     args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=aarch64-apple-darwin
 
       - name: cargo test
-        if: runner.os == 'windows'
         working-directory: rust/decentraland-godot-lib
         run: cargo test --release
-
-      - name: cargo test
-        if: runner.os != 'windows'
-        working-directory: rust/decentraland-godot-lib
-        run: cargo test
 
       # TODO: cross-build deprecated with the ffmpeg integration 
       # Package section
@@ -237,14 +231,14 @@ jobs:
 
       # => Linux/MacOS (unix)
       - name: Copy library (linux/macos)
-        if: ${{ matrix.os != 'windows-latest' }}
+        if: runner.os != 'windows'
         run: |
             cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.so godot/lib/ || true
             cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.dylib godot/lib/ || true
 
       # => Windows
       - name: Copy library (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: runner.os == 'windows'
         run: |
             cp rust/decentraland-godot-lib/target/release/decentraland_godot_lib.dll godot/lib/
             cp .bin/ffmpeg/ffmpeg-6.0-full_build-shared/bin/*.dll godot/lib/

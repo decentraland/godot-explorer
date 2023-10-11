@@ -49,6 +49,8 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
     process_many_messages(&mut stream, &mut scene_crdt_state);
 
     let dirty = scene_crdt_state.take_dirty();
+
+    // This drop unlock the mutex
     drop(scene_crdt_state);
     drop(cloned_scene_crdt);
 
