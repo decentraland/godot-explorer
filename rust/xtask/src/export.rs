@@ -37,10 +37,19 @@ pub fn export() -> Result<(), anyhow::Error> {
     if std::path::Path::new(EXPORTS_FOLDER).exists() {
         fs::remove_dir_all(EXPORTS_FOLDER)?;
     }
+    std::thread::sleep(std::time::Duration::from_secs(1));
     fs::create_dir(EXPORTS_FOLDER)?;
+    std::thread::sleep(std::time::Duration::from_secs(1));
 
     // Do imports and one project open
-    let args = vec!["-e", "--headless", "--rendering-driver", "opengl3", "--quit"];
+    let args = vec![
+        "-e",
+        "--headless",
+        "--rendering-driver",
+        "opengl3",
+        "--quit-after",
+        "1000",
+    ];
     let status1 = std::process::Command::new(program.as_str())
         .args(&args)
         .current_dir(adjust_canonicalization(
@@ -82,8 +91,8 @@ pub fn export() -> Result<(), anyhow::Error> {
     let output_path_godot_param = format!("../exports/{output_file_name}");
     let args = vec![
         "-e",
-        "--quit",
-        "--rendering-driver", "opengl3",
+        "--rendering-driver",
+        "opengl3",
         "--headless",
         "--export-release",
         target,
