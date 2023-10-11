@@ -127,8 +127,7 @@ jobs:
     # if: ${{ github.ref == 'refs/heads/main' }} 
     strategy:
       matrix:
-        # os: [ubuntu-latest, [self-hosted, Windows], macos-latest]
-        os: [self-hosted-windows]
+        os: [self-hosted-windows, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
