@@ -202,16 +202,19 @@ impl SceneManager {
             self.player_position = player_parcel_position;
         }
 
-        //
+        // TODO: review to define a better behavior
         self.sorted_scene_ids.sort_by_key(|&scene_id| {
             let scene = self.scenes.get_mut(&scene_id).unwrap();
             if !scene.current_dirty.waiting_process {
                 scene.next_tick_us = start_time_us + 120000;
+                // Set at the end of the queue: scenes without processing from scene-runtime, wait until something comes
             } else if scene_id == self.current_parcel_scene_id {
-                scene.next_tick_us = 1;
+                scene.next_tick_us = 1; // hardcoded priority for current parcel
             } else {
-                scene.next_tick_us = scene.last_tick_us
-                    + (20000.0 * scene.distance).max(10000.0).min(100000.0) as i64;
+                scene.next_tick_us =
+                    scene.last_tick_us + (20000.0 * scene.distance).clamp(10000.0, 100000.0) as i64;
+
+                // TODO: distance in meters or in parcels
             }
             scene.next_tick_us
         });
@@ -247,90 +250,6 @@ impl SceneManager {
             }
 
             if let SceneState::Alive = scene.state {
-                // <<<<<<< HEAD
-                // if scene.current_dirty.renderer_response.is_some() {
-                //     if scene.dcl_scene.main_sender_to_thread.capacity() > 0 {
-                //         let response = scene.current_dirty.renderer_response.take().unwrap();
-                //         if let Err(_err) = scene
-                //             .dcl_scene
-                //             .main_sender_to_thread
-                //             .blocking_send(response)
-                //         {
-                //             // TODO: handle fail sending to thread
-                //         }
-
-                //         scene.current_dirty = scene.enqueued_dirty.pop().unwrap_or(Dirty {
-                //             waiting_process: false,
-                //             entities: Default::default(),
-                //             lww_components: Default::default(),
-                //             gos_components: Default::default(),
-                //             logs: Vec::new(),
-                //             renderer_response: None,
-                //         });
-
-                //         current_time_us =
-                //             (std::time::Instant::now() - self.begin_time).as_micros() as i64;
-                //         scene.last_tick_us = current_time_us;
-                //         if current_time_us > end_time_us {
-                //             break;
-                //         }
-                //     }
-                // } else {
-                //     let crdt = scene.dcl_scene.scene_crdt.clone();
-                //     let Ok(mut crdt_state) = crdt.try_lock() else {
-                //         continue;
-                //     };
-
-                //     super::update_scene::update_scene(
-                //         delta,
-                //         scene,
-                //         &mut crdt_state,
-                //         &camera_global_transform,
-                //         &player_global_transform,
-                //         frames_count,
-                //     );
-
-                //     // enable logs
-                //     for log in &scene.current_dirty.logs {
-                //         let mut arguments = VariantArray::new();
-                //         arguments.push((scene_id.0 as i32).to_variant());
-                //         arguments.push((log.level as i32).to_variant());
-                //         arguments.push((log.timestamp as f32).to_variant());
-                //         arguments.push(GodotString::from(&log.message).to_variant());
-                //         self.console.callv(arguments);
-                //     }
-
-                //     let dirty = crdt_state.take_dirty();
-                //     drop(crdt_state);
-
-                //     scene.current_dirty.renderer_response = Some(RendererResponse::Ok(dirty));
-
-                //     if scene.dcl_scene.main_sender_to_thread.capacity() > 0 {
-                //         let response = scene.current_dirty.renderer_response.take().unwrap();
-                //         if let Err(_err) = scene
-                //             .dcl_scene
-                //             .main_sender_to_thread
-                //             .blocking_send(response)
-                //         {
-                //             // TODO: handle fail sending to thread
-                //         }
-
-                //         scene.current_dirty = scene.enqueued_dirty.pop().unwrap_or(Dirty {
-                //             waiting_process: false,
-                //             entities: Default::default(),
-                //             lww_components: Default::default(),
-                //             gos_components: Default::default(),
-                //             logs: Vec::new(),
-                //             renderer_response: None,
-                //         });
-
-                //         current_time_us =
-                //             (std::time::Instant::now() - self.begin_time).as_micros() as i64;
-                //         scene.last_tick_us = current_time_us;
-                //         if current_time_us > end_time_us {
-                //             break;
-                //         }
-                // =======
                 if _process_scene(
                     scene,
                     end_time_us,
@@ -344,7 +263,6 @@ impl SceneManager {
                     scene.last_tick_us = current_time_us;
                     if current_time_us > end_time_us {
                         break;
-                        // >>>>>>> vr-test
                     }
                 }
             }

@@ -25,20 +25,20 @@ impl TestRunnerSuite {
         allow_focus: bool,
         scene_tree: Gd<Node>,
     ) -> bool {
-        tracing::info!("{}Run{} Godot integration tests...", FMT_CYAN_BOLD, FMT_END);
+        println!("{}Run{} Godot integration tests...", FMT_CYAN_BOLD, FMT_END);
 
         let (rust_tests, rust_file_count, focus_run) = crate::framework::collect_rust_tests();
         self.focus_run = focus_run;
         if focus_run {
-            tracing::info!("  {FMT_CYAN}Focused run{FMT_END} -- execute only selected Rust tests.")
+            println!("  {FMT_CYAN}Focused run{FMT_END} -- execute only selected Rust tests.")
         }
-        tracing::info!(
+        println!(
             "  Rust: found {} tests in {} files.",
             rust_tests.len(),
             rust_file_count
         );
         if !focus_run {
-            tracing::info!(
+            println!(
                 "  GDScript: found {} tests in {} files.",
                 gdscript_tests.len(),
                 gdscript_file_count
@@ -132,18 +132,18 @@ impl TestRunnerSuite {
             "".to_string()
         };
 
-        tracing::info!("\nTest result: {outcome}. {passed} passed; {failed} failed{extra}.");
+        println!("\nTest result: {outcome}. {passed} passed; {failed} failed{extra}.");
         if let Some(gdscript_time) = gdscript_time {
             let total_time = rust_time + gdscript_time;
-            tracing::info!(
+            println!(
                 "  Time: {total_time:.2}s.  (Rust {rust_time:.2}s, GDScript {gdscript_time:.2}s)"
             );
         } else {
-            tracing::info!("  Time: {rust_time:.2}s.");
+            println!("  Time: {rust_time:.2}s.");
         }
 
         if focused_run && !allow_focus {
-            tracing::info!("  {FMT_YELLOW}Focus run disallowed; return failure.{FMT_END}");
+            println!("  {FMT_YELLOW}Focus run disallowed; return failure.{FMT_END}");
             false
         } else {
             all_passed
@@ -209,7 +209,7 @@ fn print_test_pre(test_case: &str, test_file: String, last_file: &mut Option<Str
             test_file.as_str()
         };
 
-        tracing::info!("\n   {file_subtitle}:");
+        println!("\n   {file_subtitle}:");
     }
 
     print!("   -- {test_case} ... ");
@@ -230,9 +230,9 @@ fn print_test_pre(test_case: &str, test_file: String, last_file: &mut Option<Str
 fn print_test_post(test_case: &str, outcome: TestOutcome) {
     // If test failed, something was printed (e.g. assertion), so we can print the entire line again; otherwise just outcome on same line.
     if matches!(outcome, TestOutcome::Failed) {
-        tracing::info!("   -- {test_case} ... {outcome}");
+        println!("   -- {test_case} ... {outcome}");
     } else {
-        tracing::info!("{outcome}");
+        println!("{outcome}");
     }
 }
 
@@ -251,7 +251,7 @@ fn get_execution_time(test: &Variant) -> Option<Duration> {
 fn get_errors(test: &Variant) -> Array<GodotString> {
     test.call("get", &["errors".to_variant()])
         .try_to::<Array<GodotString>>()
-        .unwrap_or(Array::new())
+        .unwrap_or_default()
 }
 
 enum TestOutcome {

@@ -37,7 +37,9 @@ pub fn _process_scene(
     ref_time: &Instant,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
-    let Ok(mut crdt_state) = crdt.try_lock() else { return false; };
+    let Ok(mut crdt_state) = crdt.try_lock() else {
+        return false;
+    };
     let crdt_state = &mut crdt_state;
 
     // enable logs
