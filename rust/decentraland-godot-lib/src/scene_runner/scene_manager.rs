@@ -22,7 +22,8 @@ use tracing::info;
 use super::{
     components::pointer_events::{get_entity_pointer_event, pointer_events_system},
     input::InputState,
-    scene::{Dirty, GodotDclRaycastResult, Scene, SceneState},
+    scene::{Dirty, GodotDclRaycastResult, Scene, SceneState, SceneUpdateState},
+    update_scene::_process_scene,
 };
 
 // Deriving GodotClass makes the class available to Godot
@@ -178,12 +179,17 @@ impl SceneManager {
         if self.pause {
             return;
         }
+
+        let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+        let end_time_us = start_time_us + 1000;
+
         self.total_time_seconds_time += delta as f32;
 
         self.receive_from_thread();
 
         let camera_global_transform = self.camera_node.get_global_transform();
         let player_global_transform = self.player_node.get_global_transform();
+        let camera_mode = self.camera_node.bind().get_camera_mode();
 
         let frames_count = godot::engine::Engine::singleton().get_physics_frames();
 
@@ -197,19 +203,19 @@ impl SceneManager {
             self.player_position = player_parcel_position;
         }
 
-        let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
-        let end_time_us = start_time_us + 1000;
-
-        //
+        // TODO: review to define a better behavior
         self.sorted_scene_ids.sort_by_key(|&scene_id| {
             let scene = self.scenes.get_mut(&scene_id).unwrap();
             if !scene.current_dirty.waiting_process {
                 scene.next_tick_us = start_time_us + 120000;
+                // Set at the end of the queue: scenes without processing from scene-runtime, wait until something comes
             } else if scene_id == self.current_parcel_scene_id {
-                scene.next_tick_us = 0;
+                scene.next_tick_us = 1; // hardcoded priority for current parcel
             } else {
-                scene.next_tick_us = scene.last_tick_us
-                    + (20000.0 * scene.distance).max(10000.0).min(100000.0) as i64;
+                scene.next_tick_us =
+                    scene.last_tick_us + (20000.0 * scene.distance).clamp(10000.0, 100000.0) as i64;
+
+                // TODO: distance in meters or in parcels
             }
             scene.next_tick_us
         });
@@ -237,109 +243,28 @@ impl SceneManager {
 
         let mut current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         for scene_id in self.sorted_scene_ids.iter() {
-            let scene = self.scenes.get_mut(scene_id).unwrap();
+            let scene: &mut Scene = self.scenes.get_mut(scene_id).unwrap();
 
+            current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
             if scene.next_tick_us > current_time_us {
                 break;
             }
 
             if let SceneState::Alive = scene.state {
-                if scene.current_dirty.renderer_response.is_some() {
-                    if scene.dcl_scene.main_sender_to_thread.capacity() > 0 {
-                        let response = scene.current_dirty.renderer_response.take().unwrap();
-                        if let Err(_err) = scene
-                            .dcl_scene
-                            .main_sender_to_thread
-                            .blocking_send(response)
-                        {
-                            // TODO: handle fail sending to thread
-                        }
-
-                        scene.current_dirty = scene.enqueued_dirty.pop().unwrap_or(Dirty {
-                            waiting_process: false,
-                            entities: Default::default(),
-                            lww_components: Default::default(),
-                            gos_components: Default::default(),
-                            logs: Vec::new(),
-                            renderer_response: None,
-                        });
-
-                        current_time_us =
-                            (std::time::Instant::now() - self.begin_time).as_micros() as i64;
-                        scene.last_tick_us = current_time_us;
-                        if current_time_us > end_time_us {
-                            break;
-                        }
-                    }
-                } else {
-                    let crdt = scene.dcl_scene.scene_crdt.clone();
-                    let Ok(mut crdt_state) = crdt.try_lock() else {
-                        continue;
-                    };
-
-                    // If there is a new camera mode, we send the new value, otherwise send a `None` and don't update it
-                    let camera_mode = self.camera_node.bind().get_camera_mode();
-                    let new_camera_mode: Option<i32> = match self.last_camera_mode {
-                        Some(val) => {
-                            if val == camera_mode {
-                                Some(camera_mode)
-                            } else {
-                                None
-                            }
-                        }
-                        None => Some(camera_mode),
-                    };
-
-                    super::update_scene::update_scene(
-                        delta,
-                        scene,
-                        &mut crdt_state,
-                        &camera_global_transform,
-                        &player_global_transform,
-                        frames_count,
-                        new_camera_mode,
-                    );
-
-                    // enable logs
-                    for log in &scene.current_dirty.logs {
-                        let mut arguments = VariantArray::new();
-                        arguments.push((scene_id.0 as i32).to_variant());
-                        arguments.push((log.level as i32).to_variant());
-                        arguments.push((log.timestamp as f32).to_variant());
-                        arguments.push(GodotString::from(&log.message).to_variant());
-                        self.console.callv(arguments);
-                    }
-
-                    let dirty = crdt_state.take_dirty();
-                    drop(crdt_state);
-
-                    scene.current_dirty.renderer_response = Some(RendererResponse::Ok(dirty));
-
-                    if scene.dcl_scene.main_sender_to_thread.capacity() > 0 {
-                        let response = scene.current_dirty.renderer_response.take().unwrap();
-                        if let Err(_err) = scene
-                            .dcl_scene
-                            .main_sender_to_thread
-                            .blocking_send(response)
-                        {
-                            // TODO: handle fail sending to thread
-                        }
-
-                        scene.current_dirty = scene.enqueued_dirty.pop().unwrap_or(Dirty {
-                            waiting_process: false,
-                            entities: Default::default(),
-                            lww_components: Default::default(),
-                            gos_components: Default::default(),
-                            logs: Vec::new(),
-                            renderer_response: None,
-                        });
-
-                        current_time_us =
-                            (std::time::Instant::now() - self.begin_time).as_micros() as i64;
-                        scene.last_tick_us = current_time_us;
-                        if current_time_us > end_time_us {
-                            break;
-                        }
+                if _process_scene(
+                    scene,
+                    end_time_us,
+                    frames_count,
+                    &camera_global_transform,
+                    &player_global_transform,
+                    camera_mode,
+                    &self.begin_time,
+                ) {
+                    current_time_us =
+                        (std::time::Instant::now() - self.begin_time).as_micros() as i64;
+                    scene.last_tick_us = current_time_us;
+                    if current_time_us > end_time_us {
+                        break;
                     }
                 }
             }
@@ -426,6 +351,7 @@ impl SceneManager {
                                     gos_components: dirty_gos_components,
                                     logs,
                                     renderer_response: None,
+                                    update_state: SceneUpdateState::None,
                                 };
                             } else {
                                 scene.enqueued_dirty.push(Dirty {
@@ -435,6 +361,7 @@ impl SceneManager {
                                     gos_components: dirty_gos_components,
                                     logs,
                                     renderer_response: None,
+                                    update_state: SceneUpdateState::None,
                                 });
                             }
                         }

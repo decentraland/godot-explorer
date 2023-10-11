@@ -1,4 +1,5 @@
 mod components;
+mod deleted_entities;
 mod godot_dcl_scene;
 mod input;
 pub mod scene;

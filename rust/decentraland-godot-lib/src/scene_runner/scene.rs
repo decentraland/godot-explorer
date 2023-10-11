@@ -31,6 +31,7 @@ pub struct Dirty {
     pub gos_components: DirtyGosComponents,
     pub logs: Vec<SceneLogMessage>,
     pub renderer_response: Option<RendererResponse>,
+    pub update_state: SceneUpdateState,
 }
 
 pub enum SceneState {
@@ -46,13 +47,59 @@ pub struct MaterialItem {
     pub alive: bool,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum SceneUpdateState {
+    None,
+    DeletedEntities,
+    TransformAndParent,
+    MeshRenderer,
+    ScenePointerEvents,
+    Material,
+    TextShape,
+    Billboard,
+    MeshCollider,
+    GltfContainer,
+    Animator,
+    AvatarShape,
+    Raycasts,
+    AvatarAttach,
+    VideoPlayer,
+    ComputeCrdtState,
+    SendToThread,
+    Processed,
+}
+
+impl SceneUpdateState {
+    pub fn next(self) -> Self {
+        match self {
+            Self::None => Self::DeletedEntities,
+            Self::DeletedEntities => Self::TransformAndParent,
+            Self::TransformAndParent => Self::MeshRenderer,
+            Self::MeshRenderer => Self::ScenePointerEvents,
+            Self::ScenePointerEvents => Self::Material,
+            Self::Material => Self::TextShape,
+            Self::TextShape => Self::Billboard,
+            Self::Billboard => Self::MeshCollider,
+            Self::MeshCollider => Self::GltfContainer,
+            Self::GltfContainer => Self::Animator,
+            Self::Animator => Self::AvatarShape,
+            Self::AvatarShape => Self::Raycasts,
+            Self::Raycasts => Self::VideoPlayer,
+            Self::VideoPlayer => Self::AvatarAttach,
+            Self::AvatarAttach => Self::ComputeCrdtState,
+            Self::ComputeCrdtState => Self::SendToThread,
+            Self::SendToThread => Self::Processed,
+            Self::Processed => Self::Processed,
+        }
+    }
+}
+
 pub struct Scene {
     pub scene_id: SceneId,
     pub godot_dcl_scene: GodotDclScene,
     pub dcl_scene: DclScene,
     pub definition: SceneDefinition,
 
-    pub waiting_for_updates: bool,
     pub state: SceneState,
 
     pub content_mapping: Dictionary,
@@ -125,7 +172,6 @@ impl Scene {
             godot_dcl_scene,
             definition: scene_definition,
             dcl_scene,
-            waiting_for_updates: false,
             state: SceneState::Alive,
 
             content_mapping,
@@ -136,6 +182,7 @@ impl Scene {
                 gos_components: DirtyGosComponents::default(),
                 logs: Vec::new(),
                 renderer_response: None,
+                update_state: SceneUpdateState::None,
             },
             enqueued_dirty: Vec::new(),
             distance: 0.0,
@@ -172,7 +219,6 @@ impl Scene {
             godot_dcl_scene,
             definition: scene_definition,
             dcl_scene,
-            waiting_for_updates: false,
             state: SceneState::Alive,
             enqueued_dirty: Vec::new(),
             content_mapping,
@@ -183,6 +229,7 @@ impl Scene {
                 gos_components: DirtyGosComponents::default(),
                 logs: Vec::new(),
                 renderer_response: None,
+                update_state: SceneUpdateState::None,
             },
             distance: 0.0,
             next_tick_us: 0,
