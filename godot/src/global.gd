@@ -74,7 +74,7 @@ func _ready():
 	# TODO: enable raycast debugger
 	add_child(raycast_debugger)
 
-	DCLMeshRenderer._init_primitive_shapes()
+	DclMeshRenderer._init_primitive_shapes()
 
 
 func add_raycast(_id: int, _time: float, _from: Vector3, _to: Vector3) -> void:

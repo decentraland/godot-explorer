@@ -22,7 +22,7 @@ use tracing::info;
 use super::{
     components::pointer_events::{get_entity_pointer_event, pointer_events_system},
     input::InputState,
-    scene::{Dirty, GodotDclRaycastResult, Scene, SceneState, SceneUpdateState},
+    scene::{Dirty, GodotDclRaycastResult, Scene, SceneState, SceneType, SceneUpdateState},
     update_scene::_process_scene,
 };
 
@@ -34,13 +34,18 @@ pub struct SceneManager {
     base: Base<Node>,
     scenes: HashMap<SceneId, Scene>,
 
+    #[export]
     camera_node: Gd<DclCamera3D>,
+
+    #[export]
     player_node: Gd<Node3D>,
 
+    #[var]
     console: Callable,
 
     player_position: Vector2i,
     current_parcel_scene_id: SceneId,
+    last_current_parcel_scene_id: SceneId,
 
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     main_receiver_from_thread: std::sync::mpsc::Receiver<SceneResponse>,
@@ -55,6 +60,7 @@ pub struct SceneManager {
     last_raycast_result: Option<GodotDclRaycastResult>,
     global_tick_number: u32,
 
+    #[export]
     pointer_tooltips: VariantArray,
 }
 
@@ -93,7 +99,13 @@ impl SceneManager {
             wallet,
         );
 
-        let new_scene = Scene::new(new_scene_id, scene_definition, dcl_scene, content_mapping);
+        let new_scene = Scene::new(
+            new_scene_id,
+            scene_definition,
+            dcl_scene,
+            content_mapping,
+            SceneType::Parcel,
+        );
 
         self.base
             .add_child(new_scene.godot_dcl_scene.root_node.clone().upcast());
@@ -155,6 +167,8 @@ impl SceneManager {
     }
 
     fn compute_scene_distance(&mut self) {
+        self.current_parcel_scene_id = SceneId(u32::MAX);
+
         let mut player_global_position = self.player_node.get_global_transform().origin;
         player_global_position.x *= 0.0625;
         player_global_position.y *= 0.0625;
@@ -168,7 +182,9 @@ impl SceneManager {
             let (distance, inside_scene) = scene.min_distance(&player_parcel_position);
             scene.distance = distance;
             if inside_scene {
-                self.current_parcel_scene_id = *id;
+                if let SceneType::Parcel = scene.scene_type {
+                    self.current_parcel_scene_id = *id;
+                }
             }
         }
     }
@@ -220,6 +236,26 @@ impl SceneManager {
 
         let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
 
+        if self.current_parcel_scene_id != self.last_current_parcel_scene_id {
+            if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
+                for (_, audio_source_node) in scene.audio_sources.iter() {
+                    let mut audio_source_node = audio_source_node.clone();
+                    audio_source_node.bind_mut().set_dcl_enable(false);
+                    audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+                }
+            }
+
+            if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
+                for (_, audio_source_node) in scene.audio_sources.iter() {
+                    let mut audio_source_node = audio_source_node.clone();
+                    audio_source_node.bind_mut().set_dcl_enable(true);
+                    audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+                }
+            }
+
+            self.last_current_parcel_scene_id = self.current_parcel_scene_id;
+        }
+
         // TODO: this is debug information, very useful to see the scene priority
         // if self.total_time_seconds_time > 1.0 {
         //     self.total_time_seconds_time = 0.0;
@@ -256,6 +292,8 @@ impl SceneManager {
                     &camera_global_transform,
                     &player_global_transform,
                     camera_mode,
+                    self.console.clone(),
+                    &self.current_parcel_scene_id,
                     &self.begin_time,
                 ) {
                     current_time_us =
@@ -452,11 +490,6 @@ impl SceneManager {
         })
     }
 
-    #[func]
-    fn get_tooltips(&self) -> VariantArray {
-        self.pointer_tooltips.clone()
-    }
-
     #[signal]
     fn pointer_tooltip_changed() {}
 }
@@ -485,6 +518,7 @@ impl NodeVirtual for SceneManager {
             sorted_scene_ids: vec![],
             dying_scene_ids: vec![],
             current_parcel_scene_id: SceneId(0),
+            last_current_parcel_scene_id: SceneId(u32::MAX),
 
             main_receiver_from_thread,
             thread_sender_to_main,
@@ -576,7 +610,7 @@ impl NodeVirtual for SceneManager {
                 }
             }
 
-            self.pointer_tooltips = tooltips;
+            self.set_pointer_tooltips(tooltips);
             self.base.emit_signal("pointer_tooltip_changed".into(), &[]);
         }
 

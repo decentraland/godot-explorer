@@ -1,4 +1,5 @@
 pub mod animator;
+pub mod audio_source;
 pub mod avatar_attach;
 pub mod avatar_shape;
 pub mod billboard;

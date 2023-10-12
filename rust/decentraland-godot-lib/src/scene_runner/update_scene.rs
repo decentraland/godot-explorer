@@ -1,12 +1,12 @@
 use std::time::Instant;
 
-use godot::prelude::Transform3D;
+use godot::prelude::{Callable, GodotString, ToVariant, Transform3D, VariantArray};
 
 use super::{
     components::{
-        animator::update_animator, avatar_attach::update_avatar_attach,
-        avatar_shape::update_avatar_shape, billboard::update_billboard,
-        camera_mode_area::update_camera_mode_area, gltf_container::update_gltf_container,
+        animator::update_animator, audio_source::update_audio_source,
+        avatar_attach::update_avatar_attach, avatar_shape::update_avatar_shape,
+        billboard::update_billboard, gltf_container::update_gltf_container,
         material::update_material, mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer, pointer_events::update_scene_pointer_events,
         raycast::update_raycasts, text_shape::update_text_shape,
@@ -26,10 +26,11 @@ use crate::dcl::{
         grow_only_set::GenericGrowOnlySetComponentOperation,
         last_write_wins::LastWriteWinsComponentOperation, SceneCrdtStateProtoComponents,
     },
-    RendererResponse,
+    RendererResponse, SceneId,
 };
 
 // @returns true if the scene was full processed, or false if it remains something to process
+#[allow(clippy::too_many_arguments)]
 pub fn _process_scene(
     scene: &mut Scene,
     end_time_us: i64,
@@ -37,6 +38,8 @@ pub fn _process_scene(
     camera_global_transform: &Transform3D,
     player_global_transform: &Transform3D,
     camera_mode: i32,
+    console: Callable,
+    current_parcel_scene_id: &SceneId,
     ref_time: &Instant,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
@@ -44,17 +47,6 @@ pub fn _process_scene(
         return false;
     };
     let crdt_state = &mut crdt_state;
-
-    // enable logs
-    // for log in &scene.current_dirty.logs {
-    //     let mut arguments = VariantArray::new();
-    //     arguments.push((scene_id.0 as i32).to_variant());
-    //     arguments.push((log.level as i32).to_variant());
-    //     arguments.push((log.timestamp as f32).to_variant());
-    //     arguments.push(GodotString::from(&log.message).to_variant());
-    //     self.console.callv(arguments);
-    // }
-
     let mut current_time_us;
 
     loop {
@@ -80,6 +72,18 @@ pub fn _process_scene(
                         total_runtime: (Instant::now() - scene.start_time).as_secs_f32(),
                     }),
                 );
+                false
+            }
+            SceneUpdateState::PrintLogs => {
+                // enable logs
+                for log in &scene.current_dirty.logs {
+                    let mut arguments = VariantArray::new();
+                    arguments.push((scene.scene_id.0 as i32).to_variant());
+                    arguments.push((log.level as i32).to_variant());
+                    arguments.push((log.timestamp as f32).to_variant());
+                    arguments.push(GodotString::from(&log.message).to_variant());
+                    console.callv(arguments);
+                }
                 false
             }
             SceneUpdateState::DeletedEntities => {
@@ -144,6 +148,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::CameraModeArea => {
                 update_camera_mode_area(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::AudioSource => {
+                update_audio_source(scene, crdt_state, current_parcel_scene_id);
                 false
             }
             SceneUpdateState::ComputeCrdtState => {
