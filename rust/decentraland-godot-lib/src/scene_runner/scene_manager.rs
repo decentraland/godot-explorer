@@ -34,9 +34,13 @@ pub struct SceneManager {
     base: Base<Node>,
     scenes: HashMap<SceneId, Scene>,
 
+    #[export]
     camera_node: Gd<DCLCamera3D>,
+
+    #[export]
     player_node: Gd<Node3D>,
 
+    #[var]
     console: Callable,
 
     player_position: Vector2i,
@@ -55,6 +59,7 @@ pub struct SceneManager {
     last_raycast_result: Option<GodotDclRaycastResult>,
     global_tick_number: u32,
 
+    #[export]
     pointer_tooltips: VariantArray,
 }
 
@@ -451,11 +456,6 @@ impl SceneManager {
             entity_id: SceneEntityId::from_i32(dcl_entity_id),
             hit: raycast_data,
         })
-    }
-
-    #[func]
-    fn get_tooltips(&self) -> VariantArray {
-        self.pointer_tooltips.clone()
     }
 
     #[signal]

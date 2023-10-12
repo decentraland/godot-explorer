@@ -4,7 +4,7 @@ use godot::prelude::*;
 #[derive(GodotClass)]
 #[class(init, base=Camera3D)]
 pub struct DCLCamera3D {
-    #[export]
+    #[var]
     camera_mode: i32,
 
     #[base]

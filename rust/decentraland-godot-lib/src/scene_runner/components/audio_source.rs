@@ -6,7 +6,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    godot_classes::audio_source::DCLAudioSource,
+    godot_classes::dcl_audio_source::DCLAudioSource,
     scene_runner::scene::Scene,
 };
 use godot::prelude::*;

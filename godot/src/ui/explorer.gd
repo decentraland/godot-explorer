@@ -1,6 +1,6 @@
 extends Node
 
-var scene_runner: SceneManager = null
+var scene_runner: SceneManager
 var realm: Realm = null
 var parcel_manager: ParcelManager = null
 
@@ -69,14 +69,16 @@ func _ready():
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
-	scene_runner = get_tree().root.get_node("scene_runner")
-	scene_runner.set_camera_and_player_node(player.camera, player, self._on_scene_console_message)
-	scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
+	self.scene_runner = get_tree().root.get_node("scene_runner")
+	scene_runner.camera_node = player.camera
+	scene_runner.player_node = player
+	scene_runner.console = self._on_pointer_tooltip_changed
 
-	realm = get_tree().root.get_node("realm")
+	self.realm = get_tree().root.get_node("realm")
 
 	parcel_manager = ParcelManager.new()
 	add_child(parcel_manager)
+
 	parcel_manager.connect("parcels_processed", self._on_parcels_procesed)
 
 	if Global.config.last_realm_joined.is_empty():
@@ -106,10 +108,8 @@ func _on_pointer_tooltip_changed():
 
 
 func change_tooltips():
-	var tooltips = scene_runner.get_tooltips()
-
-	if not tooltips.is_empty():
-		control_pointer_tooltip.set_pointer_data(tooltips)
+	if not scene_runner.pointer_tooltips.is_empty():
+		control_pointer_tooltip.set_pointer_data(scene_runner.pointer_tooltips)
 		control_pointer_tooltip.show()
 	else:
 		control_pointer_tooltip.hide()

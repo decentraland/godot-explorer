@@ -11,15 +11,17 @@ func _apply_props():
 
 	self.pitch_scale = dcl_pitch
 
-	if dcl_volume == 0.0:
-		self.stop()
+	if dcl_enable:
+		self.volume_db = -80
 	else:
-		self.volume_db = log(dcl_volume)
+		# TODO: Check if it should be 10 instead 20 to talk in terms of power
+		self.volume_db = 20 * log(dcl_volume)
+		# -80 = 20 log 0.00001, so muted is when (volume <= 0.00001)
 
-		if self.playing and not dcl_playing:
-			self.stop()
-		elif not self.playing and dcl_playing:
-			self.play()
+	if self.playing and not dcl_playing:
+		self.stop()
+	elif not self.playing and dcl_playing:
+		self.play()
 
 
 func _refresh_data():
@@ -47,8 +49,6 @@ func _refresh_data():
 			Global.content_manager.content_loading_finished.connect(
 				self._content_manager_resource_loaded
 			)
-
-		prints(dcl_audio_clip_url, dcl_loop_activated, dcl_pitch, dcl_volume, dcl_playing)
 
 
 func _content_manager_resource_loaded(resource_hash: String):
