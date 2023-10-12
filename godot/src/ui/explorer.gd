@@ -74,7 +74,7 @@ func _ready():
 	scene_runner.player_node = player
 	scene_runner.console = self._on_scene_console_message
 	scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
-	
+
 	self.realm = get_tree().root.get_node("realm")
 
 	parcel_manager = ParcelManager.new()

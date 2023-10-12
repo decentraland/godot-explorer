@@ -49,10 +49,11 @@ func load_gltf():
 func _content_manager_resource_loaded(resource_hash: String):
 	_on_gltf_loaded(resource_hash, true)
 
+
 func _on_gltf_loaded(resource_hash: String, from_signal: bool = false):
 	if resource_hash != file_hash:
 		return
-		
+
 	if from_signal:
 		Global.content_manager.content_loading_finished.disconnect(
 			self._content_manager_resource_loaded
