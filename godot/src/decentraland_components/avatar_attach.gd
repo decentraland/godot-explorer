@@ -38,7 +38,7 @@ func _enter_tree():
 	_set_children_physics(self.get_parent(), false)
 
 
-func _process(delta):
+func _process(_delta):
 	var p: Node3D = get_parent()
 	if p == null:
 		return

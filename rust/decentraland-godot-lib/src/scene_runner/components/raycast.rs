@@ -55,13 +55,16 @@ pub fn update_raycasts(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         .chain(scene.continuos_raycast.iter());
     let mut raycast_results = Vec::new();
     for entity in raycasts {
-        let entity_node = scene.godot_dcl_scene.get_node(entity).unwrap();
-        let raycast = raycast_component
-            .get(*entity)
-            .unwrap()
-            .value
-            .as_ref()
-            .unwrap();
+        let Some(entity_node) = scene.godot_dcl_scene.get_node(entity) else {
+            continue;
+        };
+        let Some(raycast) = raycast_component.get(*entity) else {
+            continue;
+        };
+
+        let Some(raycast) = raycast.value.as_ref() else {
+            continue;
+        };
 
         let result = do_raycast(scene, entity_node, raycast);
         raycast_results.push((entity, result));

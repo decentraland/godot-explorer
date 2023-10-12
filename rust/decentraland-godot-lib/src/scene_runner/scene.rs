@@ -3,23 +3,26 @@ use std::{
     time::Instant,
 };
 
-use godot::prelude::Dictionary;
+use godot::prelude::{Dictionary, Gd};
 
-use crate::dcl::{
-    components::{
-        material::DclMaterial,
-        proto_components::sdk::components::{common::RaycastHit, PbPointerEventsResult},
-        SceneEntityId,
+use crate::{
+    dcl::{
+        components::{
+            material::DclMaterial,
+            proto_components::sdk::components::{common::RaycastHit, PbPointerEventsResult},
+            SceneEntityId,
+        },
+        js::SceneLogMessage,
+        // js::js_runtime::SceneLogMessage,
+        DclScene,
+        DirtyEntities,
+        DirtyGosComponents,
+        DirtyLwwComponents,
+        RendererResponse,
+        SceneDefinition,
+        SceneId,
     },
-    js::SceneLogMessage,
-    // js::js_runtime::SceneLogMessage,
-    DclScene,
-    DirtyEntities,
-    DirtyGosComponents,
-    DirtyLwwComponents,
-    RendererResponse,
-    SceneDefinition,
-    SceneId,
+    godot_classes::dcl_audio_source::DclAudioSource,
 };
 
 use super::godot_dcl_scene::GodotDclScene;
@@ -50,6 +53,7 @@ pub struct MaterialItem {
 #[derive(Clone, Copy, Debug)]
 pub enum SceneUpdateState {
     None,
+    PrintLogs,
     DeletedEntities,
     TransformAndParent,
     VisibilityComponent,
@@ -65,6 +69,7 @@ pub enum SceneUpdateState {
     Raycasts,
     AvatarAttach,
     VideoPlayer,
+    AudioSource,
     ComputeCrdtState,
     SendToThread,
     Processed,
@@ -73,7 +78,8 @@ pub enum SceneUpdateState {
 impl SceneUpdateState {
     pub fn next(self) -> Self {
         match self {
-            Self::None => Self::DeletedEntities,
+            Self::None => Self::PrintLogs,
+            Self::PrintLogs => Self::DeletedEntities,
             Self::DeletedEntities => Self::TransformAndParent,
             Self::TransformAndParent => Self::VisibilityComponent,
             Self::VisibilityComponent => Self::MeshRenderer,
@@ -87,13 +93,20 @@ impl SceneUpdateState {
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::Raycasts,
             Self::Raycasts => Self::VideoPlayer,
-            Self::VideoPlayer => Self::AvatarAttach,
+            Self::VideoPlayer => Self::AudioSource,
+            Self::AudioSource => Self::AvatarAttach,
             Self::AvatarAttach => Self::ComputeCrdtState,
             Self::ComputeCrdtState => Self::SendToThread,
             Self::SendToThread => Self::Processed,
             Self::Processed => Self::Processed,
         }
     }
+}
+
+pub enum SceneType {
+    Parcel,
+    Global,
+    PortableExperience,
 }
 
 pub struct Scene {
@@ -120,6 +133,9 @@ pub struct Scene {
 
     pub materials: HashMap<DclMaterial, MaterialItem>,
     pub dirty_materials: bool,
+
+    pub scene_type: SceneType,
+    pub audio_sources: HashMap<SceneEntityId, Gd<DclAudioSource>>,
 }
 
 #[derive(Debug)]
@@ -166,6 +182,7 @@ impl Scene {
         scene_definition: SceneDefinition,
         dcl_scene: DclScene,
         content_mapping: Dictionary,
+        scene_type: SceneType,
     ) -> Self {
         let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id);
 
@@ -196,6 +213,8 @@ impl Scene {
             start_time: Instant::now(),
             materials: HashMap::new(),
             dirty_materials: false,
+            audio_sources: HashMap::new(),
+            scene_type,
         }
     }
 
@@ -242,6 +261,8 @@ impl Scene {
             start_time: Instant::now(),
             materials: HashMap::new(),
             dirty_materials: false,
+            scene_type: SceneType::Parcel,
+            audio_sources: HashMap::new(),
         }
     }
 }

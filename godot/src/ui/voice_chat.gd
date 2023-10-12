@@ -9,8 +9,8 @@ var _prev_frame_recording = false
 
 
 func _ready():
-	var devices = AudioServer.get_input_device_list()
-	print(AudioServer.get_input_device_list())
+#	var devices = AudioServer.get_input_device_list()
+#	print(AudioServer.get_input_device_list())
 #	AudioServer.input_device = devices[1]
 
 	var idx = AudioServer.get_bus_index("Capture")
@@ -20,7 +20,7 @@ func _ready():
 	audio_stream_player.bus = "Capture"
 
 
-func _process(delta):
+func _process(_delta):
 	if recording:
 		var stereo_data: PackedVector2Array = _effect_capture.get_buffer(
 			_effect_capture.get_frames_available()
