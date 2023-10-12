@@ -1,4 +1,4 @@
-extends DCLCameraModeArea3D
+extends DclCameraModeArea3D
 
 @onready var collision_shape_3d = $CollisionShape3D
 

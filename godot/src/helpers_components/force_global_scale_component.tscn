@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://ksn0qud7g0lq"]
+
+[ext_resource type="Script" path="res://src/helpers_components/force_global_scale_component.gd" id="1_wh075"]
+
+[node name="ForceGlobalScaleComponent" type="Node3D"]
+script = ExtResource("1_wh075")

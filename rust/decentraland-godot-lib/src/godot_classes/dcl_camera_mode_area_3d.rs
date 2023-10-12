@@ -3,7 +3,7 @@ use godot::prelude::*;
 
 #[derive(GodotClass)]
 #[class(init, base=Area3D)]
-pub struct DCLCameraModeArea3D {
+pub struct DclCameraModeArea3D {
     #[export]
     forced_camera_mode: i32,
 
@@ -15,4 +15,4 @@ pub struct DCLCameraModeArea3D {
 }
 
 #[godot_api]
-impl DCLCameraModeArea3D {}
+impl DclCameraModeArea3D {}

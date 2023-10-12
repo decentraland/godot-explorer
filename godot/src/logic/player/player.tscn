@@ -28,7 +28,7 @@ shape = SubResource("SeparationRayShape3D_3217e")
 [node name="Mount" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
 
-[node name="Camera3D" type="DCLCamera3D" parent="Mount"]
+[node name="Camera3D" type="DclCamera3D" parent="Mount"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.85493e-08, 0, -0.212179)
 current = true
 

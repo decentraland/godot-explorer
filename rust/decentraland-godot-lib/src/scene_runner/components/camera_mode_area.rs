@@ -6,7 +6,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    godot_classes::dcl_camera_mode_area_3d::DCLCameraModeArea3D,
+    godot_classes::dcl_camera_mode_area_3d::DclCameraModeArea3D,
     scene_runner::scene::Scene,
 };
 use godot::prelude::*;
@@ -47,7 +47,7 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
 
                 if let Some(camera_mode_area_node) = existing {
                     let mut camera_mode_area_3d =
-                        camera_mode_area_node.cast::<DCLCameraModeArea3D>();
+                        camera_mode_area_node.cast::<DclCameraModeArea3D>();
 
                     camera_mode_area_3d
                         .bind_mut()
@@ -61,7 +61,7 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
                     )
                     .instantiate()
                     .unwrap()
-                    .cast::<DCLCameraModeArea3D>();
+                    .cast::<DclCameraModeArea3D>();
 
                     camera_mode_area_3d
                         .bind_mut()

@@ -1,7 +1,7 @@
 extends CharacterBody3D
 
 @onready var mount_camera := $Mount
-@onready var camera: DCLCamera3D = $Mount/Camera3D
+@onready var camera: DclCamera3D = $Mount/Camera3D
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 
@@ -25,8 +25,10 @@ var stored_camera_mode_before_block: Global.CameraMode
 
 
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
-	stored_camera_mode_before_block = camera.get_camera_mode()
-	camera_mode_change_blocked = true
+	if !camera_mode_change_blocked: # if it's already blocked, we don't store the state again...
+		stored_camera_mode_before_block = camera.get_camera_mode()
+		camera_mode_change_blocked = true
+
 	set_camera_mode(forced_mode, false)
 
 

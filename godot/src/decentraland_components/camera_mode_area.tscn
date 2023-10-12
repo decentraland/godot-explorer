@@ -1,10 +1,11 @@
-[gd_scene load_steps=3 format=3 uid="uid://b18cq0sobskjn"]
+[gd_scene load_steps=4 format=3 uid="uid://b18cq0sobskjn"]
 
 [ext_resource type="Script" path="res://src/decentraland_components/camera_mode_area.gd" id="1_bo2c6"]
+[ext_resource type="PackedScene" uid="uid://ksn0qud7g0lq" path="res://src/helpers_components/force_global_scale_component.tscn" id="2_76k0e"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_dvgte"]
 
-[node name="camera_mode_area" type="DCLCameraModeArea3D"]
+[node name="camera_mode_area" type="DclCameraModeArea3D"]
 collision_layer = 256
 collision_mask = 256
 input_ray_pickable = false
@@ -13,3 +14,6 @@ script = ExtResource("1_bo2c6")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_dvgte")
+
+[node name="ForceGlobalScaleComponent" parent="." node_paths=PackedStringArray("target") instance=ExtResource("2_76k0e")]
+target = NodePath("..")
