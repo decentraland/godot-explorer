@@ -1,26 +1,30 @@
 extends Area3D
 
 signal block_camera_mode(mode: Global.CameraMode)
-signal unblock_camera_mode()
+signal unblock_camera_mode
+
 
 func _on_area_entered(area):
 	if area is DCLCameraModeArea3D:
 		check_areas()
 
+
 func _on_area_exited(area):
 	if area is DCLCameraModeArea3D:
 		check_areas()
+
 
 func get_first_dcl_camera_mode_area_3d() -> DCLCameraModeArea3D:
 	for area in get_overlapping_areas():
 		if area is DCLCameraModeArea3D:
 			return area
-	
+
 	return null
+
 
 func check_areas():
 	if has_overlapping_areas():
-		var first_area = get_first_dcl_camera_mode_area_3d() # get first
+		var first_area = get_first_dcl_camera_mode_area_3d()  # get first
 		if first_area != null:
 			block_camera_mode.emit(first_area.forced_camera_mode)
 	else:

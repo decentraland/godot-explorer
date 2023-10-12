@@ -23,31 +23,32 @@ var THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
 
+
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
 	stored_camera_mode_before_block = camera.get_camera_mode()
 	camera_mode_change_blocked = true
 	set_camera_mode(forced_mode, false)
 
+
 func _on_camera_mode_area_detector_unblock_camera_mode():
 	camera_mode_change_blocked = false
 	set_camera_mode(stored_camera_mode_before_block, false)
 
+
 func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 	camera.set_camera_mode(mode)
-	
+
 	if mode == Global.CameraMode.THIRD_PERSON:
 		var tween_out = create_tween()
-		(
-			tween_out
-			. tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25)
-			. set_ease(Tween.EASE_IN_OUT)
+		tween_out.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25).set_ease(
+			Tween.EASE_IN_OUT
 		)
 		avatar.show()
 		avatar.set_rotation(Vector3(0, 0, 0))
 		if play_sound:
 			audio_stream_player_camera.stream = camera_fade_out_audio
 			audio_stream_player_camera.play()
-	elif mode == Global.CameraMode.FIRST_PERSON:		
+	elif mode == Global.CameraMode.FIRST_PERSON:
 		var tween_in = create_tween()
 		tween_in.tween_property(camera, "position", Vector3(0, 0, -0.2), 0.25).set_ease(
 			Tween.EASE_IN_OUT
@@ -56,6 +57,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		if play_sound:
 			audio_stream_player_camera.stream = camera_fade_in_audio
 			audio_stream_player_camera.play()
+
 
 func _ready():
 	camera.current = true
