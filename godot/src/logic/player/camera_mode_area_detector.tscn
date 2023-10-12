@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3 uid="uid://cbtq7kaarx6mp"]
+
+[ext_resource type="Script" path="res://src/logic/player/camera_mode_area_detector.gd" id="1_wchgk"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_40kco"]
+size = Vector3(0.5, 1.5, 0.5)
+
+[node name="camera_mode_area_detector" type="Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.10603, 0)
+collision_layer = 256
+collision_mask = 256
+input_ray_pickable = false
+monitorable = false
+script = ExtResource("1_wchgk")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_40kco")
+
+[connection signal="area_entered" from="." to="." method="_on_area_entered"]
+[connection signal="area_exited" from="." to="." method="_on_area_exited"]

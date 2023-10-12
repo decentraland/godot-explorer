@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://b18cq0sobskjn"]
+
+[ext_resource type="Script" path="res://src/decentraland_components/camera_mode_area.gd" id="1_bo2c6"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_dvgte"]
+
+[node name="camera_mode_area" type="DCLCameraModeArea3D"]
+collision_layer = 256
+collision_mask = 256
+input_ray_pickable = false
+monitoring = false
+script = ExtResource("1_bo2c6")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_dvgte")

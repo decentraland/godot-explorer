@@ -1,11 +1,5 @@
 extends CharacterBody3D
 
-enum CameraMode {
-	FIRST_PERSON = 0,
-	THIRD_PERSON = 1,
-	CINEMATIC = 2,
-}
-
 @onready var mount_camera := $Mount
 @onready var camera: DCLCamera3D = $Mount/Camera3D
 @onready var direction: Vector3 = Vector3(0, 0, 0)
@@ -26,7 +20,42 @@ var GRAVITY := 55.0
 var JUMP_VELOCITY_0 := 12.0
 
 var THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
+var camera_mode_change_blocked: bool = false
+var stored_camera_mode_before_block: Global.CameraMode
 
+func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
+	stored_camera_mode_before_block = camera.get_camera_mode()
+	camera_mode_change_blocked = true
+	set_camera_mode(forced_mode, false)
+
+func _on_camera_mode_area_detector_unblock_camera_mode():
+	camera_mode_change_blocked = false
+	set_camera_mode(stored_camera_mode_before_block, false)
+
+func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
+	camera.set_camera_mode(mode)
+	
+	if mode == Global.CameraMode.THIRD_PERSON:
+		var tween_out = create_tween()
+		(
+			tween_out
+			. tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25)
+			. set_ease(Tween.EASE_IN_OUT)
+		)
+		avatar.show()
+		avatar.set_rotation(Vector3(0, 0, 0))
+		if play_sound:
+			audio_stream_player_camera.stream = camera_fade_out_audio
+			audio_stream_player_camera.play()
+	elif mode == Global.CameraMode.FIRST_PERSON:		
+		var tween_in = create_tween()
+		tween_in.tween_property(camera, "position", Vector3(0, 0, -0.2), 0.25).set_ease(
+			Tween.EASE_IN_OUT
+		)
+		avatar.hide()
+		if play_sound:
+			audio_stream_player_camera.stream = camera_fade_in_audio
+			audio_stream_player_camera.play()
 
 func _ready():
 	camera.current = true
@@ -34,15 +63,8 @@ func _ready():
 	# TODO: auto capture mouse
 	# if captured:
 	# 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-
-	var tween_out = create_tween()
-	tween_out.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25).set_ease(
-		Tween.EASE_IN_OUT
-	)
-
-	camera.set_camera_mode(CameraMode.THIRD_PERSON)
+	set_camera_mode(Global.CameraMode.THIRD_PERSON)
 	avatar.activate_attach_points()
-	avatar.show()
 
 	floor_snap_length = 0.2
 
@@ -77,11 +99,11 @@ func _input(event):
 			rotate_y(deg_to_rad(-_touch_position.x) * horizontal_sens)
 			avatar.rotate_y(deg_to_rad(_touch_position.x) * horizontal_sens)
 			mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * vertical_sens)
-			if camera.get_camera_mode() == CameraMode.FIRST_PERSON:
+			if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
 				mount_camera.rotation.x = clamp(
 					mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90)
 				)
-			elif camera.get_camera_mode() == CameraMode.THIRD_PERSON:
+			elif camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
 				mount_camera.rotation.x = clamp(
 					mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45)
 				)
@@ -94,11 +116,11 @@ func _input(event):
 			avatar.rotate_y(deg_to_rad(_mouse_position.x) * horizontal_sens)
 			mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * vertical_sens)
 
-		if camera.get_camera_mode() == CameraMode.FIRST_PERSON:
+		if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
 			mount_camera.rotation.x = clamp(
 				mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90)
 			)
-		elif camera.get_camera_mode() == CameraMode.THIRD_PERSON:
+		elif camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
 			mount_camera.rotation.x = clamp(
 				mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45)
 			)
@@ -110,30 +132,14 @@ func _input(event):
 
 		# Toggle first or third person camera
 		if event is InputEventMouseButton:
-			if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				if camera.get_camera_mode() == CameraMode.FIRST_PERSON:
-					camera.set_camera_mode(CameraMode.THIRD_PERSON)
-					var tween_out = create_tween()
-					(
-						tween_out
-						. tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25)
-						. set_ease(Tween.EASE_IN_OUT)
-					)
-					avatar.show()
-					avatar.set_rotation(Vector3(0, 0, 0))
-					audio_stream_player_camera.stream = camera_fade_out_audio
-					audio_stream_player_camera.play()
+			if !camera_mode_change_blocked:
+				if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+					if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
+						set_camera_mode(Global.CameraMode.THIRD_PERSON)
 
-			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				if camera.get_camera_mode() == CameraMode.THIRD_PERSON:
-					camera.set_camera_mode(CameraMode.FIRST_PERSON)
-					var tween_in = create_tween()
-					tween_in.tween_property(camera, "position", Vector3(0, 0, -0.2), 0.25).set_ease(
-						Tween.EASE_IN_OUT
-					)
-					avatar.hide()
-					audio_stream_player_camera.stream = camera_fade_in_audio
-					audio_stream_player_camera.play()
+				if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+					if camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
+						set_camera_mode(Global.CameraMode.FIRST_PERSON)
 
 
 var current_direction: Vector3 = Vector3()

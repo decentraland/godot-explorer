@@ -18,6 +18,11 @@ var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd
 
 var standalone = false
 
+enum CameraMode {
+	FIRST_PERSON = 0,
+	THIRD_PERSON = 1,
+	CINEMATIC = 2,
+}
 
 func _ready():
 	var tokio_runtime = TokioRuntime.new()
