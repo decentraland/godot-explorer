@@ -26,7 +26,7 @@ use crate::dcl::{
         grow_only_set::GenericGrowOnlySetComponentOperation,
         last_write_wins::LastWriteWinsComponentOperation, SceneCrdtStateProtoComponents,
     },
-    RendererResponse,
+    RendererResponse, SceneId,
 };
 
 // @returns true if the scene was full processed, or false if it remains something to process
@@ -39,6 +39,7 @@ pub fn _process_scene(
     player_global_transform: &Transform3D,
     camera_mode: i32,
     console: Callable,
+    current_parcel_scene_id: &SceneId,
     ref_time: &Instant,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
@@ -146,7 +147,7 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::AudioSource => {
-                update_audio_source(scene, crdt_state);
+                update_audio_source(scene, crdt_state, current_parcel_scene_id);
                 false
             }
             SceneUpdateState::ComputeCrdtState => {

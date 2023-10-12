@@ -47,16 +47,16 @@ func load_gltf():
 
 
 func _content_manager_resource_loaded(resource_hash: String):
-	_on_gltf_loaded(resource_hash)
+	_on_gltf_loaded(resource_hash, true)
 
-
-func _on_gltf_loaded(resource_hash: String):
+func _on_gltf_loaded(resource_hash: String, from_signal: bool = false):
 	if resource_hash != file_hash:
 		return
-
-	Global.content_manager.content_loading_finished.disconnect(
-		self._content_manager_resource_loaded
-	)
+		
+	if from_signal:
+		Global.content_manager.content_loading_finished.disconnect(
+			self._content_manager_resource_loaded
+		)
 
 	var node = Global.content_manager.get_resource_from_hash(file_hash)
 	if node == null:

@@ -3,23 +3,26 @@ use std::{
     time::Instant,
 };
 
-use godot::prelude::Dictionary;
+use godot::prelude::{Dictionary, Gd};
 
-use crate::dcl::{
-    components::{
-        material::DclMaterial,
-        proto_components::sdk::components::{common::RaycastHit, PbPointerEventsResult},
-        SceneEntityId,
+use crate::{
+    dcl::{
+        components::{
+            material::DclMaterial,
+            proto_components::sdk::components::{common::RaycastHit, PbPointerEventsResult},
+            SceneEntityId,
+        },
+        js::SceneLogMessage,
+        // js::js_runtime::SceneLogMessage,
+        DclScene,
+        DirtyEntities,
+        DirtyGosComponents,
+        DirtyLwwComponents,
+        RendererResponse,
+        SceneDefinition,
+        SceneId,
     },
-    js::SceneLogMessage,
-    // js::js_runtime::SceneLogMessage,
-    DclScene,
-    DirtyEntities,
-    DirtyGosComponents,
-    DirtyLwwComponents,
-    RendererResponse,
-    SceneDefinition,
-    SceneId,
+    godot_classes::dcl_audio_source::DclAudioSource,
 };
 
 use super::godot_dcl_scene::GodotDclScene;
@@ -100,6 +103,12 @@ impl SceneUpdateState {
     }
 }
 
+pub enum SceneType {
+    Parcel,
+    Global,
+    PortableExperience,
+}
+
 pub struct Scene {
     pub scene_id: SceneId,
     pub godot_dcl_scene: GodotDclScene,
@@ -124,6 +133,9 @@ pub struct Scene {
 
     pub materials: HashMap<DclMaterial, MaterialItem>,
     pub dirty_materials: bool,
+
+    pub scene_type: SceneType,
+    pub audio_sources: HashMap<SceneEntityId, Gd<DclAudioSource>>,
 }
 
 #[derive(Debug)]
@@ -170,6 +182,7 @@ impl Scene {
         scene_definition: SceneDefinition,
         dcl_scene: DclScene,
         content_mapping: Dictionary,
+        scene_type: SceneType,
     ) -> Self {
         let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id);
 
@@ -200,6 +213,8 @@ impl Scene {
             start_time: Instant::now(),
             materials: HashMap::new(),
             dirty_materials: false,
+            audio_sources: HashMap::new(),
+            scene_type,
         }
     }
 
@@ -246,6 +261,8 @@ impl Scene {
             start_time: Instant::now(),
             materials: HashMap::new(),
             dirty_materials: false,
+            scene_type: SceneType::Parcel,
+            audio_sources: HashMap::new(),
         }
     }
 }

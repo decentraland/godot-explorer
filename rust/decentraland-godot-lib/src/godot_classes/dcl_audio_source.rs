@@ -3,7 +3,7 @@ use godot::prelude::*;
 
 #[derive(GodotClass)]
 #[class(init, base=AudioStreamPlayer3D)]
-pub struct DCLAudioSource {
+pub struct DclAudioSource {
     #[var]
     dcl_enable: bool,
 
@@ -35,4 +35,4 @@ pub struct DCLAudioSource {
 }
 
 #[godot_api]
-impl DCLAudioSource {}
+impl DclAudioSource {}

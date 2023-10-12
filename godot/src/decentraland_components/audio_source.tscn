@@ -2,5 +2,5 @@
 
 [ext_resource type="Script" path="res://src/decentraland_components/audio_source.gd" id="1_hwkbw"]
 
-[node name="audio_source" type="DCLAudioSource"]
+[node name="audio_source" type="DclAudioSource"]
 script = ExtResource("1_hwkbw")

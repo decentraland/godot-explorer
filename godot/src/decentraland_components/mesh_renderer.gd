@@ -1,5 +1,5 @@
 extends MeshInstance3D
-class_name DCLMeshRenderer
+class_name DclMeshRenderer
 
 enum MeshRendererPrimitiveType { NONE, MRPT_BOX, MRPT_CYLINDER, MRPT_SPHERE, MRPT_PLANE }
 
@@ -7,7 +7,7 @@ var current_type: MeshRendererPrimitiveType = MeshRendererPrimitiveType.NONE
 
 
 func _ready():
-	_init_primitive_shapes()
+	DclMeshRenderer._init_primitive_shapes()
 
 
 func set_box(uvs):
@@ -17,7 +17,7 @@ func set_box(uvs):
 	else:
 		self.mesh.clear_surfaces()
 
-	var data_array = get_cube_arrays()
+	var data_array = DclMeshRenderer.get_cube_arrays()
 	var N = min(floor(uvs.size() / 2), 8)
 	for i in range(N):
 		data_array[4][i] = Vector2(uvs[i * 2], -uvs[i * 2 + 1])
@@ -32,8 +32,8 @@ func set_plane(uvs: Array):
 	else:
 		self.mesh.clear_surfaces()
 
-	var data_array = get_plane_arrays()
-	var N = min(floor(uvs.size() / 2), 8)
+	var data_array = DclMeshRenderer.get_plane_arrays()
+	var N = min(floor(float(uvs.size()) / 2.0), 8)
 	for i in range(N):
 		data_array[4][i] = Vector2(uvs[i * 2], -uvs[i * 2 + 1])
 
@@ -55,7 +55,7 @@ func set_cylinder(top_radius: float, bottom_radius: float):
 	else:
 		self.mesh.clear_surfaces()
 
-	var data_array = build_cylinder_arrays(top_radius, bottom_radius)
+	var data_array = DclMeshRenderer.build_cylinder_arrays(top_radius, bottom_radius)
 	self.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, data_array)
 
 
@@ -320,16 +320,13 @@ static func build_cube_arrays() -> Array:
 
 static func build_cylinder_arrays(radius_top: float, radius_bottom: float) -> Array:
 	var uvs = PackedVector2Array()
-	var uvs2 = PackedVector2Array()
 	var vertices = PackedVector3Array()
 	var normals = PackedVector3Array()
 	var triangles = PackedInt32Array()
-	var start: Vector3
 	var num_vertices = 50
 	var length = 1.0
 	var offset_pos = Vector3(0, -0.5, 0)
 	var num_vertices_plus_one = num_vertices + 1
-	var offset = 0
 
 	vertices.resize(2 * num_vertices_plus_one + (num_vertices + 1) + (num_vertices + 1))
 	normals.resize(2 * num_vertices_plus_one + (num_vertices + 1) + (num_vertices + 1))
