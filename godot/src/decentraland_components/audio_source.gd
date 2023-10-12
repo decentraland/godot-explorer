@@ -73,3 +73,8 @@ func _on_audio_loaded(file_hash: String):
 	valid = true
 
 	apply_audio_props(true)
+
+
+func _on_finished():
+	if dcl_loop_activated:
+		play()

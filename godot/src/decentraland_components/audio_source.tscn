@@ -4,3 +4,5 @@
 
 [node name="audio_source" type="DclAudioSource"]
 script = ExtResource("1_hwkbw")
+
+[connection signal="finished" from="." to="." method="_on_finished"]
