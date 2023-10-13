@@ -6,8 +6,8 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_dvgte"]
 
 [node name="camera_mode_area" type="DclCameraModeArea3D"]
-collision_layer = 256
-collision_mask = 256
+collision_layer = 2147483648
+collision_mask = 2147483648
 input_ray_pickable = false
 monitoring = false
 script = ExtResource("1_bo2c6")
