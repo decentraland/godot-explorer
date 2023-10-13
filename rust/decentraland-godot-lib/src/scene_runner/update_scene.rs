@@ -6,12 +6,12 @@ use super::{
     components::{
         animator::update_animator, audio_source::update_audio_source,
         avatar_attach::update_avatar_attach, avatar_shape::update_avatar_shape,
-        billboard::update_billboard, gltf_container::update_gltf_container,
-        material::update_material, mesh_collider::update_mesh_collider,
-        mesh_renderer::update_mesh_renderer, pointer_events::update_scene_pointer_events,
-        raycast::update_raycasts, text_shape::update_text_shape,
-        transform_and_parent::update_transform_and_parent, video_player::update_video_player,
-        visibility::update_visibility,
+        billboard::update_billboard, camera_mode_area::update_camera_mode_area,
+        gltf_container::update_gltf_container, material::update_material,
+        mesh_collider::update_mesh_collider, mesh_renderer::update_mesh_renderer,
+        pointer_events::update_scene_pointer_events, raycast::update_raycasts,
+        text_shape::update_text_shape, transform_and_parent::update_transform_and_parent,
+        video_player::update_video_player, visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
     scene::{Dirty, Scene, SceneUpdateState},
@@ -144,6 +144,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::VideoPlayer => {
                 update_video_player(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::CameraModeArea => {
+                update_camera_mode_area(scene, crdt_state);
                 false
             }
             SceneUpdateState::AudioSource => {

@@ -9,7 +9,7 @@ use crate::{
         js::SceneLogLevel,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
-    godot_classes::dcl_camera_3d::DCLCamera3D,
+    godot_classes::dcl_camera_3d::DclCamera3D,
     wallet::Wallet,
 };
 use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
@@ -35,7 +35,7 @@ pub struct SceneManager {
     scenes: HashMap<SceneId, Scene>,
 
     #[export]
-    camera_node: Gd<DCLCamera3D>,
+    camera_node: Gd<DclCamera3D>,
 
     #[export]
     player_node: Gd<Node3D>,
@@ -133,7 +133,7 @@ impl SceneManager {
     #[func]
     fn set_camera_and_player_node(
         &mut self,
-        camera_node: Gd<DCLCamera3D>,
+        camera_node: Gd<DclCamera3D>,
         player_node: Gd<Node3D>,
         console: Callable,
     ) {
