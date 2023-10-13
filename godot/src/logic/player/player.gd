@@ -25,7 +25,7 @@ var stored_camera_mode_before_block: Global.CameraMode
 
 
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
-	if !camera_mode_change_blocked: # if it's already blocked, we don't store the state again...
+	if !camera_mode_change_blocked:  # if it's already blocked, we don't store the state again...
 		stored_camera_mode_before_block = camera.get_camera_mode()
 		camera_mode_change_blocked = true
 

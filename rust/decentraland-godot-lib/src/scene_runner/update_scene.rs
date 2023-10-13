@@ -11,7 +11,7 @@ use super::{
         mesh_renderer::update_mesh_renderer, pointer_events::update_scene_pointer_events,
         raycast::update_raycasts, text_shape::update_text_shape,
         transform_and_parent::update_transform_and_parent, video_player::update_video_player,
-        visibility::update_visibility,
+        visibility::update_visibility, camera_mode_area::update_camera_mode_area,
     },
     deleted_entities::update_deleted_entities,
     scene::{Dirty, Scene, SceneUpdateState},

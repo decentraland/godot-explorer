@@ -2,8 +2,9 @@ extends Node3D
 
 @export var target: Node3D
 
+
 func _process(dt):
-	# Obtain the global scale	
+	# Obtain the global scale
 	var current_global_scale = target.get_global_transform().basis.get_scale()
 
 	# If the global scale is not 1,1,1, adjust the local scale
