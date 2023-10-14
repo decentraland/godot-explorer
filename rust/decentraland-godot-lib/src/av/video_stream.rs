@@ -98,7 +98,7 @@ fn av_thread(
     tex: Option<InstanceId>,
     audio_stream: InstanceId,
 ) {
-    let tex = tex.map(|tex| Gd::from_instance_id(tex));
+    let tex = tex.map(Gd::from_instance_id);
     let audio_stream_player: Gd<AudioStreamPlayer> = Gd::from_instance_id(audio_stream);
     if let Err(error) = av_thread_inner(commands, path, tex, audio_stream_player) {
         warn!("av error: {error}");

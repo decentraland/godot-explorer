@@ -7,6 +7,7 @@ func stream_buffer(data: PackedVector2Array):
 
 	self.get_stream_playback().push_buffer(data)
 
+
 func set_mute(value: bool):
 	if value:
 		self.volume_db = 0
