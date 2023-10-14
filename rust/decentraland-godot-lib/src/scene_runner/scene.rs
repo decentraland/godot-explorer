@@ -3,7 +3,7 @@ use std::{
     time::Instant,
 };
 
-use godot::prelude::{Dictionary, Gd};
+use godot::prelude::{AudioStreamPlayer, Dictionary, Gd};
 
 use crate::{
     dcl::{
@@ -69,6 +69,7 @@ pub enum SceneUpdateState {
     Raycasts,
     AvatarAttach,
     VideoPlayer,
+    AudioStream,
     CameraModeArea,
     AudioSource,
     ComputeCrdtState,
@@ -94,7 +95,8 @@ impl SceneUpdateState {
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::Raycasts,
             Self::Raycasts => Self::VideoPlayer,
-            Self::VideoPlayer => Self::CameraModeArea,
+            Self::VideoPlayer => Self::AudioStream,
+            Self::AudioStream => Self::CameraModeArea,
             Self::CameraModeArea => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,
             Self::AvatarAttach => Self::ComputeCrdtState,
@@ -138,6 +140,10 @@ pub struct Scene {
 
     pub scene_type: SceneType,
     pub audio_sources: HashMap<SceneEntityId, Gd<DclAudioSource>>,
+
+    // Used by VideoPlayer and AudioStream
+    pub audio_streams: HashMap<SceneEntityId, Gd<AudioStreamPlayer>>,
+    pub audio_video_players: HashMap<SceneEntityId, Gd<AudioStreamPlayer>>,
 }
 
 #[derive(Debug)]
@@ -216,6 +222,8 @@ impl Scene {
             materials: HashMap::new(),
             dirty_materials: false,
             audio_sources: HashMap::new(),
+            audio_streams: HashMap::new(),
+            audio_video_players: HashMap::new(),
             scene_type,
         }
     }
@@ -265,6 +273,8 @@ impl Scene {
             dirty_materials: false,
             scene_type: SceneType::Parcel,
             audio_sources: HashMap::new(),
+            audio_streams: HashMap::new(),
+            audio_video_players: HashMap::new(),
         }
     }
 }

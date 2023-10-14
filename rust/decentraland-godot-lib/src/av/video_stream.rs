@@ -21,7 +21,7 @@ pub enum AudioDecoderError {
 pub struct VideoSink {
     pub source: String,
     pub command_sender: tokio::sync::mpsc::Sender<AVCommand>,
-    pub tex: Gd<ImageTexture>,
+    pub texture: Gd<ImageTexture>,
     pub size: (u32, u32),
     pub current_time: f64,
     pub length: Option<f64>,
@@ -30,20 +30,18 @@ pub struct VideoSink {
 
 pub fn av_sinks(
     source: String,
-    tex: Gd<ImageTexture>,
+    texture: Option<Gd<ImageTexture>>,
     audio_stream_player: Gd<AudioStreamPlayer>,
     volume: f32,
     playing: bool,
     repeat: bool,
-) -> (VideoSink, AudioSink) {
+) -> (Option<VideoSink>, AudioSink) {
     let (command_sender, command_receiver) = tokio::sync::mpsc::channel(10);
 
     spawn_av_thread(
         command_receiver,
-        // video_sender,
-        // audio_sender,
         source.clone(),
-        tex.clone(),
+        texture.clone(),
         audio_stream_player,
     );
 
@@ -55,15 +53,15 @@ pub fn av_sinks(
         .unwrap();
 
     (
-        VideoSink {
+        texture.map(|texture| VideoSink {
             source,
             command_sender: command_sender.clone(),
             size: (0, 0),
-            tex,
+            texture,
             current_time: 0.0,
             length: None,
             rate: None,
-        },
+        }),
         AudioSink {
             volume,
             command_sender,
@@ -74,10 +72,10 @@ pub fn av_sinks(
 pub fn spawn_av_thread(
     commands: tokio::sync::mpsc::Receiver<AVCommand>,
     path: String,
-    tex: Gd<ImageTexture>,
+    tex: Option<Gd<ImageTexture>>,
     audio_stream_player: Gd<AudioStreamPlayer>,
 ) {
-    let video_instance_id = tex.instance_id();
+    let video_instance_id = tex.map(|value| value.instance_id());
     let audio_stream_player_instance_id = audio_stream_player.instance_id();
     std::thread::Builder::new()
         .name("av thread".to_string())
@@ -97,10 +95,10 @@ fn av_thread(
     // frames: tokio::sync::mpsc::Sender<VideoData>,
     // audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
     path: String,
-    tex: InstanceId,
+    tex: Option<InstanceId>,
     audio_stream: InstanceId,
 ) {
-    let tex = Gd::from_instance_id(tex);
+    let tex = tex.map(|tex| Gd::from_instance_id(tex));
     let audio_stream_player: Gd<AudioStreamPlayer> = Gd::from_instance_id(audio_stream);
     if let Err(error) = av_thread_inner(commands, path, tex, audio_stream_player) {
         warn!("av error: {error}");
@@ -112,21 +110,25 @@ fn av_thread(
 pub fn av_thread_inner(
     commands: tokio::sync::mpsc::Receiver<AVCommand>,
     path: String,
-    tex: Gd<ImageTexture>,
+    texture: Option<Gd<ImageTexture>>,
     audio_stream_player: Gd<AudioStreamPlayer>,
 ) -> Result<(), String> {
     let input_context = input(&path).map_err(|e| format!("{:?} on line {}", e, line!()))?;
 
     // try and get a video context
     let video_context: Option<VideoContext> = {
-        match VideoContext::init(&input_context, tex) {
-            Ok(vc) => Some(vc),
-            Err(VideoError::BadPixelFormat) => {
-                return Err("bad pixel format".to_string());
+        if let Some(texture) = texture {
+            match VideoContext::init(&input_context, texture) {
+                Ok(vc) => Some(vc),
+                Err(VideoError::BadPixelFormat) => {
+                    return Err("bad pixel format".to_string());
+                }
+                Err(VideoError::NoStream) => None,
+                Err(VideoError::Failed(ffmpeg_err)) => return Err(ffmpeg_err.to_string()),
+                Err(VideoError::ChannelClosed) => return Ok(()),
             }
-            Err(VideoError::NoStream) => None,
-            Err(VideoError::Failed(ffmpeg_err)) => return Err(ffmpeg_err.to_string()),
-            Err(VideoError::ChannelClosed) => return Ok(()),
+        } else {
+            None
         }
     };
 

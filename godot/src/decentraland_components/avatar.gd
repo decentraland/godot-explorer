@@ -172,9 +172,13 @@ func try_to_set_body_shape(body_shape_hash):
 	var skeleton = body_shape.find_child("Skeleton3D")
 	if skeleton == null:
 		return
+		
+		
+	var animation_player_parent = animation_player.get_parent()
+	if animation_player_parent != null:
+		animation_player_parent.remove_child(animation_player)
 
 	if body_shape_root != null:
-		body_shape_root.remove_child(animation_player)
 		remove_child(body_shape_root)
 		_free_old_skeleton.call_deferred(body_shape_root)
 

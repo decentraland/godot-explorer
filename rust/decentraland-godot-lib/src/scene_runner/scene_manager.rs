@@ -243,6 +243,12 @@ impl SceneManager {
                     audio_source_node.bind_mut().set_dcl_enable(false);
                     audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
                 }
+                for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
+                    audio_stream_node.set_volume_db(-80.0);
+                }
+                for (_, audio_stream_node) in scene.audio_video_players.iter_mut() {
+                    audio_stream_node.set_volume_db(-80.0);
+                }
             }
 
             if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
@@ -250,6 +256,12 @@ impl SceneManager {
                     let mut audio_source_node = audio_source_node.clone();
                     audio_source_node.bind_mut().set_dcl_enable(true);
                     audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+                }
+                for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
+                    audio_stream_node.set_volume_db(0.0);
+                }
+                for (_, audio_stream_node) in scene.audio_video_players.iter_mut() {
+                    audio_stream_node.set_volume_db(0.0);
                 }
             }
 
