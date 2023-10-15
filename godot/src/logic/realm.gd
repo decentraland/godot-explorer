@@ -128,6 +128,7 @@ func set_realm(new_realm_string: String) -> void:
 		ABOUT_REQUEST, realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
 
+
 func scene_request_change_realm(new_realm_string: String, message: String = "") -> bool:
 	# TODO: Prompt to ask to user if he wants to change realm
 	set_realm(new_realm_string)

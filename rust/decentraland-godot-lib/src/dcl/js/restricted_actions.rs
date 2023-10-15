@@ -1,8 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use deno_core::{OpState, op, OpDecl, Op};
+use deno_core::{op, Op, OpDecl, OpState};
 
-use crate::common::rpc::{RpcCalls, RpcCall};
+use crate::common::rpc::{RpcCall, RpcCalls};
 
 pub fn ops() -> Vec<OpDecl> {
     vec![op_change_realm::DECL]

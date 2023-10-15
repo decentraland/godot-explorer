@@ -38,7 +38,7 @@ pub enum RpcCall {
         to: String,
         message: Option<String>,
         response: RpcResultSender<Result<(), String>>,
-    }
+    },
 }
 
 pub type RpcCalls = Vec<RpcCall>;

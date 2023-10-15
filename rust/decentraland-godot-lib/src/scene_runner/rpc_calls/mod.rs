@@ -1,6 +1,6 @@
 mod handle_restricted_actions;
 
-use crate::common::rpc::{RpcCalls, RpcCall};
+use crate::common::rpc::{RpcCall, RpcCalls};
 
 use self::handle_restricted_actions::change_realm;
 

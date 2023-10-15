@@ -14,20 +14,24 @@ use super::{
         video_player::update_video_player, visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
-    scene::{Dirty, Scene, SceneUpdateState}, rpc_calls::process_rpcs,
+    rpc_calls::process_rpcs,
+    scene::{Dirty, Scene, SceneUpdateState},
 };
-use crate::{dcl::{
-    components::{
-        proto_components::sdk::components::{PbCameraMode, PbEngineInfo},
-        transform_and_parent::DclTransformAndParent,
-        SceneEntityId,
+use crate::{
+    common::rpc::RpcCalls,
+    dcl::{
+        components::{
+            proto_components::sdk::components::{PbCameraMode, PbEngineInfo},
+            transform_and_parent::DclTransformAndParent,
+            SceneEntityId,
+        },
+        crdt::{
+            grow_only_set::GenericGrowOnlySetComponentOperation,
+            last_write_wins::LastWriteWinsComponentOperation, SceneCrdtStateProtoComponents,
+        },
+        RendererResponse, SceneId,
     },
-    crdt::{
-        grow_only_set::GenericGrowOnlySetComponentOperation,
-        last_write_wins::LastWriteWinsComponentOperation, SceneCrdtStateProtoComponents,
-    },
-    RendererResponse, SceneId,
-}, common::rpc::RpcCalls};
+};
 
 // @returns true if the scene was full processed, or false if it remains something to process
 #[allow(clippy::too_many_arguments)]

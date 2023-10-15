@@ -1,8 +1,8 @@
 pub mod engine;
 pub mod fetch;
+pub mod restricted_actions;
 pub mod runtime;
 pub mod websocket;
-pub mod restricted_actions;
 
 use crate::common::rpc::RpcCalls;
 use crate::wallet::Wallet;
@@ -135,7 +135,13 @@ pub(crate) fn scene_thread(
 
             let dirty = scene_crdt_state.take_dirty();
             thread_sender_to_main
-                .send(SceneResponse::Ok(scene_id, dirty, Vec::new(), 0.0, RpcCalls::default()))
+                .send(SceneResponse::Ok(
+                    scene_id,
+                    dirty,
+                    Vec::new(),
+                    0.0,
+                    RpcCalls::default(),
+                ))
                 .expect("error sending scene response!!");
 
             scene_main_crdt = Some(buf);

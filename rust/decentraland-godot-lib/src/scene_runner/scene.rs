@@ -6,6 +6,7 @@ use std::{
 use godot::prelude::{Dictionary, Gd};
 
 use crate::{
+    common::rpc::RpcCalls,
     dcl::{
         components::{
             material::DclMaterial,
@@ -22,7 +23,7 @@ use crate::{
         SceneDefinition,
         SceneId,
     },
-    godot_classes::dcl_audio_source::DclAudioSource, common::rpc::RpcCalls,
+    godot_classes::dcl_audio_source::DclAudioSource,
 };
 
 use super::godot_dcl_scene::GodotDclScene;

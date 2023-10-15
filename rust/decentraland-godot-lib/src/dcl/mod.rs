@@ -3,7 +3,7 @@ pub mod crdt;
 pub mod js;
 pub mod serialization;
 
-use crate::{wallet::Wallet, common::rpc::RpcCalls};
+use crate::{common::rpc::RpcCalls, wallet::Wallet};
 
 use self::{
     components::{SceneComponentId, SceneEntityId},

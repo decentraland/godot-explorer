@@ -8,6 +8,7 @@ use godot::prelude::*;
 
 pub mod av;
 pub mod avatars;
+pub mod common;
 pub mod comms;
 pub mod dcl;
 pub mod godot_classes;
@@ -16,7 +17,6 @@ pub mod realm;
 pub mod scene_runner;
 pub mod test_runner;
 pub mod wallet;
-pub mod common;
 struct DecentralandGodotLibrary;
 
 #[gdextension]

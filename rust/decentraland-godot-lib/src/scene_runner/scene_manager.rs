@@ -380,7 +380,6 @@ impl SceneManager {
                         rpc_calls,
                     ) => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
-
                             let dirty = Dirty {
                                 waiting_process: true,
                                 entities: dirty_entities,
