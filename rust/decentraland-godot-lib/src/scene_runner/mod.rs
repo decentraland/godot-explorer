@@ -6,3 +6,4 @@ pub mod scene;
 mod scene_manager;
 pub mod tokio_runtime;
 mod update_scene;
+mod rpc_calls;

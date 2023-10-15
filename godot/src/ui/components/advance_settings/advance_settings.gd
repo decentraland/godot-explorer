@@ -64,7 +64,6 @@ func _on_h_slider_process_tick_quota_value_changed(value):
 func _on_option_button_realm_item_selected(index):
 	Global.realm.set_realm(option_button_realm.get_item_text(index))
 
-
 func _on_h_slider_scene_radius_drag_ended(value_changed):
 	if value_changed:
 		Global.config.scene_radius = h_slider_scene_radius.value

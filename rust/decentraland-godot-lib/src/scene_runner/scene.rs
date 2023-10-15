@@ -22,7 +22,7 @@ use crate::{
         SceneDefinition,
         SceneId,
     },
-    godot_classes::dcl_audio_source::DclAudioSource,
+    godot_classes::dcl_audio_source::DclAudioSource, common::rpc::RpcCalls,
 };
 
 use super::godot_dcl_scene::GodotDclScene;
@@ -35,6 +35,7 @@ pub struct Dirty {
     pub logs: Vec<SceneLogMessage>,
     pub renderer_response: Option<RendererResponse>,
     pub update_state: SceneUpdateState,
+    pub rpc_calls: RpcCalls,
 }
 
 pub enum SceneState {
@@ -71,6 +72,7 @@ pub enum SceneUpdateState {
     VideoPlayer,
     CameraModeArea,
     AudioSource,
+    ProcessRpcs,
     ComputeCrdtState,
     SendToThread,
     Processed,
@@ -97,7 +99,8 @@ impl SceneUpdateState {
             Self::VideoPlayer => Self::CameraModeArea,
             Self::CameraModeArea => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,
-            Self::AvatarAttach => Self::ComputeCrdtState,
+            Self::AvatarAttach => Self::ProcessRpcs,
+            Self::ProcessRpcs => Self::ComputeCrdtState,
             Self::ComputeCrdtState => Self::SendToThread,
             Self::SendToThread => Self::Processed,
             Self::Processed => Self::Processed,
@@ -204,6 +207,7 @@ impl Scene {
                 logs: Vec::new(),
                 renderer_response: None,
                 update_state: SceneUpdateState::None,
+                rpc_calls: RpcCalls::default(),
             },
             enqueued_dirty: Vec::new(),
             distance: 0.0,
@@ -253,6 +257,7 @@ impl Scene {
                 logs: Vec::new(),
                 renderer_response: None,
                 update_state: SceneUpdateState::None,
+                rpc_calls: RpcCalls::default(),
             },
             distance: 0.0,
             next_tick_us: 0,

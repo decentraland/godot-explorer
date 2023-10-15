@@ -2,7 +2,9 @@ pub mod engine;
 pub mod fetch;
 pub mod runtime;
 pub mod websocket;
+pub mod restricted_actions;
 
+use crate::common::rpc::RpcCalls;
 use crate::wallet::Wallet;
 
 use super::{
@@ -59,11 +61,12 @@ pub fn create_runtime() -> deno_core::JsRuntime {
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 4] = [
+    let op_sets: [Vec<deno_core::OpDecl>; 5] = [
         engine::ops(),
         runtime::ops(),
         fetch::ops(),
         websocket::ops(),
+        restricted_actions::ops(),
     ];
 
     let mut op_map = HashMap::new();
@@ -114,6 +117,8 @@ pub(crate) fn scene_thread(
 ) {
     let mut scene_main_crdt = None;
     let main_crdt_file_path = scene_definition.main_crdt_path;
+
+    // on main.crdt detected
     if !main_crdt_file_path.is_empty() {
         let file = godot::engine::FileAccess::open(
             godot::prelude::GodotString::from(main_crdt_file_path),
@@ -130,7 +135,7 @@ pub(crate) fn scene_thread(
 
             let dirty = scene_crdt_state.take_dirty();
             thread_sender_to_main
-                .send(SceneResponse::Ok(scene_id, dirty, Vec::new(), 0.0))
+                .send(SceneResponse::Ok(scene_id, dirty, Vec::new(), 0.0, RpcCalls::default()))
                 .expect("error sending scene response!!");
 
             scene_main_crdt = Some(buf);
@@ -173,6 +178,8 @@ pub(crate) fn scene_thread(
     state.borrow_mut().put(scene_crdt);
 
     state.borrow_mut().put(wallet);
+
+    state.borrow_mut().put(RpcCalls::default());
 
     if let Some(scene_main_crdt) = scene_main_crdt {
         state.borrow_mut().put(scene_main_crdt);

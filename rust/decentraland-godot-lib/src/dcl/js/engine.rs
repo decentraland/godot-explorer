@@ -6,7 +6,7 @@ use std::{
 
 use deno_core::{op, Op, OpDecl, OpState};
 
-use crate::dcl::{
+use crate::{dcl::{
     crdt::{
         message::{append_gos_component, process_many_messages, put_or_delete_lww_component},
         SceneCrdtState,
@@ -14,7 +14,7 @@ use crate::dcl::{
     js::{SceneDying, SceneMainCrdtFileContent},
     serialization::{reader::DclReader, writer::DclWriter},
     RendererResponse, SceneId, SceneResponse, SharedSceneCrdtState,
-};
+}, common::rpc::RpcCalls};
 
 use super::{SceneElapsedTime, SceneLogs};
 
@@ -57,9 +57,12 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
     op_state.put(mutex_scene_crdt_state);
     op_state.put(scene_id);
 
+    let rpc_calls = std::mem::take(op_state.borrow_mut::<RpcCalls>());
+
     let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
+
     sender
-        .send(SceneResponse::Ok(scene_id, dirty, logs.0, elapsed_time))
+        .send(SceneResponse::Ok(scene_id, dirty, logs.0, elapsed_time, rpc_calls))
         .expect("error sending scene response!!")
 }
 

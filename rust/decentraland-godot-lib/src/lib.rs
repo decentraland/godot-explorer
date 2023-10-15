@@ -16,6 +16,7 @@ pub mod realm;
 pub mod scene_runner;
 pub mod test_runner;
 pub mod wallet;
+pub mod common;
 struct DecentralandGodotLibrary;
 
 #[gdextension]

@@ -3,7 +3,7 @@ pub mod crdt;
 pub mod js;
 pub mod serialization;
 
-use crate::wallet::Wallet;
+use crate::{wallet::Wallet, common::rpc::RpcCalls};
 
 use self::{
     components::{SceneComponentId, SceneEntityId},
@@ -59,6 +59,7 @@ pub enum SceneResponse {
         (DirtyEntities, DirtyLwwComponents, DirtyGosComponents),
         Vec<SceneLogMessage>,
         f32,
+        RpcCalls,
     ),
     RemoveGodotScene(SceneId, Vec<SceneLogMessage>),
 }

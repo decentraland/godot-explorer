@@ -14,9 +14,9 @@ use super::{
         video_player::update_video_player, visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
-    scene::{Dirty, Scene, SceneUpdateState},
+    scene::{Dirty, Scene, SceneUpdateState}, rpc_calls::process_rpcs,
 };
-use crate::dcl::{
+use crate::{dcl::{
     components::{
         proto_components::sdk::components::{PbCameraMode, PbEngineInfo},
         transform_and_parent::DclTransformAndParent,
@@ -27,7 +27,7 @@ use crate::dcl::{
         last_write_wins::LastWriteWinsComponentOperation, SceneCrdtStateProtoComponents,
     },
     RendererResponse, SceneId,
-};
+}, common::rpc::RpcCalls};
 
 // @returns true if the scene was full processed, or false if it remains something to process
 #[allow(clippy::too_many_arguments)]
@@ -204,6 +204,10 @@ pub fn _process_scene(
                 scene.current_dirty.renderer_response = Some(RendererResponse::Ok(dirty));
                 false
             }
+            SceneUpdateState::ProcessRpcs => {
+                process_rpcs(scene, &scene.current_dirty.rpc_calls);
+                false
+            }
             SceneUpdateState::SendToThread => {
                 // The scene is already processed, but the message was not sent to the thread yet
                 if scene.dcl_scene.main_sender_to_thread.capacity() > 0 {
@@ -224,6 +228,7 @@ pub fn _process_scene(
                         logs: Vec::new(),
                         renderer_response: None,
                         update_state: SceneUpdateState::Processed,
+                        rpc_calls: RpcCalls::default(),
                     });
 
                     return true;
