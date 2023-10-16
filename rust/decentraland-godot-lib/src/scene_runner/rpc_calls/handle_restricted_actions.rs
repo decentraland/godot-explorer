@@ -1,6 +1,9 @@
-use std::{rc::Rc, cell::RefCell};
+use std::{cell::RefCell, rc::Rc};
 
-use crate::{common::rpc::RpcCall, scene_runner::scene::Scene, godot_classes::dcl_confirm_dialog::DclConfirmDialog};
+use crate::{
+    common::rpc::RpcCall, godot_classes::dcl_confirm_dialog::DclConfirmDialog,
+    scene_runner::scene::Scene,
+};
 
 use godot::prelude::{GodotString, Variant};
 
@@ -34,7 +37,12 @@ pub fn change_realm(
             }
         );
 
-        confirm_dialog.set_texts("Change Realm", description.as_str(), "Let's go!", "No thanks");      
+        confirm_dialog.set_texts(
+            "Change Realm",
+            description.as_str(),
+            "Let's go!",
+            "No thanks",
+        );
 
         if let Some(realm) = scene
             .godot_dcl_scene
