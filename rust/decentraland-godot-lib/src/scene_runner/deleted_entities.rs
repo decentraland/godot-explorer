@@ -26,8 +26,13 @@ pub fn update_deleted_entities(scene: &mut Scene) {
         let node = godot_dcl_scene.ensure_node_mut(deleted_entity);
         node.base.clone().free();
         godot_dcl_scene.entities.remove(deleted_entity);
+
         scene.audio_sources.remove(deleted_entity);
         scene.audio_streams.remove(deleted_entity);
-        scene.audio_video_players.remove(deleted_entity);
+        scene.video_players.remove(deleted_entity);
+
+        // TODO: clean continuos_raycast
+        // TODO: clean gltf_loading
+        // TODO: clean pointer_events_result
     }
 }

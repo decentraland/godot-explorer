@@ -17,7 +17,6 @@ pub enum AudioDecoderError {
     StreamClosed,
     Other(String),
 }
-
 pub struct VideoSink {
     pub source: String,
     pub command_sender: tokio::sync::mpsc::Sender<AVCommand>,
@@ -32,7 +31,6 @@ pub fn av_sinks(
     source: String,
     texture: Option<Gd<ImageTexture>>,
     audio_stream_player: Gd<AudioStreamPlayer>,
-    volume: f32,
     playing: bool,
     repeat: bool,
 ) -> (Option<VideoSink>, AudioSink) {
@@ -62,10 +60,7 @@ pub fn av_sinks(
             length: None,
             rate: None,
         }),
-        AudioSink {
-            volume,
-            command_sender,
-        },
+        AudioSink { command_sender },
     )
 }
 
@@ -92,8 +87,6 @@ pub fn spawn_av_thread(
 
 fn av_thread(
     commands: tokio::sync::mpsc::Receiver<AVCommand>,
-    // frames: tokio::sync::mpsc::Sender<VideoData>,
-    // audio: tokio::sync::mpsc::Sender<StreamingSoundData<AudioDecoderError>>,
     path: String,
     tex: Option<InstanceId>,
     audio_stream: InstanceId,

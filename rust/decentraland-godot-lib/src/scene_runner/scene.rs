@@ -22,7 +22,10 @@ use crate::{
         SceneDefinition,
         SceneId,
     },
-    godot_classes::dcl_audio_source::DclAudioSource,
+    godot_classes::{
+        dcl_audio_source::DclAudioSource, dcl_audio_stream::DclAudioStream,
+        dcl_video_player::DclVideoPlayer,
+    },
 };
 
 use super::godot_dcl_scene::GodotDclScene;
@@ -142,8 +145,8 @@ pub struct Scene {
     pub audio_sources: HashMap<SceneEntityId, Gd<DclAudioSource>>,
 
     // Used by VideoPlayer and AudioStream
-    pub audio_streams: HashMap<SceneEntityId, Gd<AudioStreamPlayer>>,
-    pub audio_video_players: HashMap<SceneEntityId, Gd<AudioStreamPlayer>>,
+    pub audio_streams: HashMap<SceneEntityId, Gd<DclAudioStream>>,
+    pub video_players: HashMap<SceneEntityId, Gd<DclVideoPlayer>>,
 }
 
 #[derive(Debug)]
@@ -223,7 +226,7 @@ impl Scene {
             dirty_materials: false,
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
-            audio_video_players: HashMap::new(),
+            video_players: HashMap::new(),
             scene_type,
         }
     }
@@ -274,7 +277,7 @@ impl Scene {
             scene_type: SceneType::Parcel,
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
-            audio_video_players: HashMap::new(),
+            video_players: HashMap::new(),
         }
     }
 }

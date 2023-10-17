@@ -32,7 +32,7 @@ pub struct Node3DEntity {
     pub material: Option<DclMaterial>,
     pub pointer_events: Option<proto_components::sdk::components::PbPointerEvents>,
     pub video_player_data: Option<VideoPlayerData>,
-    pub audio_stream: Option<AudioSink>,
+    pub audio_stream: Option<(String, AudioSink)>,
 }
 
 impl SceneDefinition {

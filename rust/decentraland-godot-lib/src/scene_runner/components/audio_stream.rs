@@ -8,9 +8,15 @@ use crate::{
         },
         SceneId,
     },
+    godot_classes::dcl_audio_stream::DclAudioStream,
     scene_runner::scene::{Scene, SceneType},
 };
 use godot::{engine::AudioStreamGenerator, prelude::*};
+enum AudioUpdateMode {
+    OnlyChangeValues,
+    ChangeAudio,
+    FirstSpawnAudio,
+}
 
 pub fn update_audio_stream(
     scene: &mut Scene,
@@ -23,81 +29,142 @@ pub fn update_audio_stream(
 
     if let Some(audio_stream_dirty) = dirty_lww_components.get(&SceneComponentId::AUDIO_STREAM) {
         for entity in audio_stream_dirty {
-            let new_value = audio_stream_component.get(*entity);
-            if new_value.is_none() {
-                continue;
-            }
+            let exist_current_node = godot_dcl_scene.get_node(entity).is_some();
 
-            let new_value = new_value.unwrap();
-            let node = godot_dcl_scene.ensure_node_mut(entity);
+            let next_value = if let Some(new_value) = audio_stream_component.get(*entity) {
+                new_value.value.as_ref()
+            } else {
+                None
+            };
 
-            let new_value = new_value.value.clone();
-            // let existing = node
-            //     .base
-            //     .try_get_node_as::<AnimatableBody3D>(NodePath::from("MeshCollider"));
+            if let Some(next_value) = next_value {
+                let start_muted = if let SceneType::Parcel = scene.scene_type {
+                    scene.scene_id != *current_parcel_scene_id
+                } else {
+                    true
+                };
 
-            if new_value.is_none() {
+                let dcl_volume = next_value.volume.unwrap_or(1.0).clamp(0.0, 1.0);
+                let volume_db = if start_muted {
+                    -80.0
+                } else {
+                    20.0 * f32::log10(dcl_volume)
+                };
+
+                let playing = next_value.playing.unwrap_or(true);
+
+                let node = godot_dcl_scene.ensure_node_mut(entity);
+                let update_mode = if let Some((url, _)) = node.audio_stream.as_ref() {
+                    if next_value.url != *url {
+                        AudioUpdateMode::ChangeAudio
+                    } else {
+                        AudioUpdateMode::OnlyChangeValues
+                    }
+                } else {
+                    AudioUpdateMode::FirstSpawnAudio
+                };
+
+                match update_mode {
+                    AudioUpdateMode::OnlyChangeValues => {
+                        let audio_stream_data = node
+                            .audio_stream
+                            .as_ref()
+                            .expect("audio_stream_data not found in node");
+
+                        let mut audio_stream_node = node
+                            .base
+                            .get_node("AudioStream".into())
+                            .expect("enters on change audio branch but a AudioStream wasn't found there")
+                            .try_cast::<DclAudioStream>()
+                            .expect("the expected AudioStream wasn't a DclAudioStream");
+
+                        audio_stream_node.bind_mut().set_dcl_volume(dcl_volume);
+                        audio_stream_node.set_volume_db(volume_db);
+
+                        if next_value.playing.unwrap_or(true) {
+                            let _ = audio_stream_data
+                                .1
+                                .command_sender
+                                .blocking_send(AVCommand::Play);
+                        } else {
+                            let _ = audio_stream_data
+                                .1
+                                .command_sender
+                                .blocking_send(AVCommand::Pause);
+                        }
+                    }
+                    AudioUpdateMode::ChangeAudio => {
+                        if let Some(audio_stream_data) = node.audio_stream.as_ref() {
+                            let _ = audio_stream_data
+                                .1
+                                .command_sender
+                                .blocking_send(AVCommand::Dispose);
+                        }
+
+                        let mut audio_stream_node = node.base.get_node("AudioStream".into()).expect(
+                            "enters on change audio branch but a AudioStream wasn't found there",
+                        ).try_cast::<DclAudioStream>().expect("the expected AudioStream wasn't a DclAudioStream");
+
+                        audio_stream_node.bind_mut().set_dcl_volume(dcl_volume);
+                        audio_stream_node.set_volume_db(volume_db);
+
+                        let (_, audio_sink) = av_sinks(
+                            next_value.url.clone(),
+                            None,
+                            audio_stream_node.clone().upcast::<AudioStreamPlayer>(),
+                            playing,
+                            false,
+                        );
+
+                        node.audio_stream = Some((next_value.url.clone(), audio_sink));
+                    }
+                    AudioUpdateMode::FirstSpawnAudio => {
+                        let mut audio_stream_node = godot::engine::load::<PackedScene>(
+                            "res://src/decentraland_components/audio_stream.tscn",
+                        )
+                        .instantiate()
+                        .unwrap()
+                        .cast::<DclAudioStream>();
+
+                        audio_stream_node.set_name("AudioStream".into());
+
+                        let audio_stream_generator = AudioStreamGenerator::new();
+                        audio_stream_node.set_stream(audio_stream_generator.upcast());
+
+                        node.base.add_child(audio_stream_node.clone().upcast());
+                        audio_stream_node.play();
+
+                        audio_stream_node.bind_mut().set_dcl_volume(dcl_volume);
+                        audio_stream_node.set_volume_db(volume_db);
+
+                        let (_, audio_sink) = av_sinks(
+                            next_value.url.clone(),
+                            None,
+                            audio_stream_node.clone().upcast::<AudioStreamPlayer>(),
+                            playing,
+                            false,
+                        );
+
+                        node.audio_stream = Some((next_value.url.clone(), audio_sink));
+
+                        scene
+                            .audio_streams
+                            .insert(*entity, audio_stream_node.clone());
+                    }
+                }
+            } else if exist_current_node {
+                let Some(node) = godot_dcl_scene.get_node_mut(entity) else {
+                    continue;
+                };
+
                 if let Some(audio_stream_data) = node.audio_stream.as_ref() {
                     let _ = audio_stream_data
+                        .1
                         .command_sender
                         .blocking_send(AVCommand::Dispose);
                 }
-            } else if let Some(new_value) = new_value {
-                if let Some(audio_stream_data) = node.audio_stream.as_ref() {
-                    new_value.volume.unwrap_or(1.0);
 
-                    new_value.playing.unwrap_or(true);
-
-                    if new_value.playing.unwrap_or(true) {
-                        let _ = audio_stream_data
-                            .command_sender
-                            .blocking_send(AVCommand::Play);
-                    } else {
-                        let _ = audio_stream_data
-                            .command_sender
-                            .blocking_send(AVCommand::Pause);
-                    }
-                    // let _ = audio_stream_data
-                    //     .command_sender
-                    //     .blocking_send(AVCommand::Repeat(new_value..unwrap_or(false)));
-                } else {
-                    let mut audio_stream_player = godot::engine::load::<PackedScene>(
-                        "res://src/decentraland_components/audio_streaming.tscn",
-                    )
-                    .instantiate()
-                    .unwrap()
-                    .cast::<AudioStreamPlayer>();
-                    let audio_stream_generator = AudioStreamGenerator::new();
-
-                    audio_stream_player.set_stream(audio_stream_generator.upcast());
-                    node.base.add_child(audio_stream_player.clone().upcast());
-                    audio_stream_player.play();
-
-                    let start_muted = if let SceneType::Parcel = scene.scene_type {
-                        &scene.scene_id == current_parcel_scene_id
-                    } else {
-                        true
-                    };
-
-                    if start_muted {
-                        audio_stream_player.set_volume_db(0.0);
-                    }
-
-                    let (_, audio_sink) = av_sinks(
-                        new_value.url.clone(),
-                        None,
-                        audio_stream_player.clone(),
-                        new_value.volume.unwrap_or(1.0),
-                        new_value.playing.unwrap_or(true),
-                        true,
-                    );
-
-                    node.audio_stream = Some(audio_sink);
-
-                    scene
-                        .audio_video_players
-                        .insert(*entity, audio_stream_player.clone());
-                }
+                node.audio_stream = None;
             }
         }
     }

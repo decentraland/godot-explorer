@@ -1,5 +1,4 @@
-extends AudioStreamPlayer
-
+extends DclAudioStream
 
 func stream_buffer(data: PackedVector2Array):
 	if not self.playing:
@@ -15,9 +14,9 @@ func set_mute(value: bool):
 		self.volume_db = -80
 
 
-func init(frame_rate, frames, length, format, bit_rate, frame_size, channels):
+func init_audio(frame_rate, frames, length, format, bit_rate, frame_size, channels):
 	print(
-		"audio_streaming debug init ",
+		"audio_stream debug init ",
 		frame_rate,
 		" - ",
 		frames,
