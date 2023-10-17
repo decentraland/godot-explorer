@@ -15,7 +15,7 @@ use crate::{
     },
 };
 use godot::{
-    engine::{image::Format, AudioStreamGenerator, AudioStreamPlayer3D, Image, ImageTexture},
+    engine::{image::Format, AudioStreamGenerator, Image, ImageTexture},
     prelude::*,
 };
 

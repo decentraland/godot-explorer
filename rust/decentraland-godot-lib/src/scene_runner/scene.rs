@@ -3,7 +3,7 @@ use std::{
     time::Instant,
 };
 
-use godot::prelude::{AudioStreamPlayer, Dictionary, Gd};
+use godot::prelude::{Dictionary, Gd};
 
 use crate::{
     dcl::{

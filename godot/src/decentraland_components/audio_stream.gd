@@ -1,5 +1,6 @@
 extends DclAudioStream
 
+
 func stream_buffer(data: PackedVector2Array):
 	if not self.playing:
 		self.play()
