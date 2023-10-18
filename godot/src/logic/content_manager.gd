@@ -12,7 +12,8 @@ enum ContentType {
 	CT_WEARABLE_EMOTE = 3,
 	CT_MESHES_MATERIAL = 4,
 	CT_INSTACE_GLTF = 5,
-	CT_AUDIO = 6
+	CT_AUDIO = 6,
+	CT_VIDEO = 7
 }
 
 var loading_content: Array[Dictionary] = []
@@ -204,6 +205,29 @@ func fetch_audio(file_path: String, content_mapping: Dictionary):
 	return true
 
 
+# Public function
+# @returns true if the resource was added to queue to fetch, false if it had already been fetched
+func fetch_video(file_hash: String, content_mapping: Dictionary):
+	var content_cached = content_cache_map.get(file_hash)
+	if content_cached != null:
+		return not content_cached.get("loaded")
+
+	content_cache_map[file_hash] = {
+		"loaded": false,
+	}
+
+	pending_content.push_back(
+		{
+			"content_mapping": content_mapping,
+			"file_hash": file_hash,
+			"content_type": ContentType.CT_VIDEO,
+			"stage": 0
+		}
+	)
+
+	return true
+
+
 func _process(_dt: float) -> void:
 	_th_poll()
 
@@ -249,6 +273,10 @@ func _th_poll():
 
 			ContentType.CT_INSTACE_GLTF:
 				if not _process_instance_gltf(content):
+					_th_to_delete.push_back(content)
+
+			ContentType.CT_VIDEO:
+				if not _process_loading_video(content, _th_finished_downloads):
 					_th_to_delete.push_back(content)
 
 			_:
@@ -617,6 +645,59 @@ func _process_loading_audio(
 				return false
 
 			content_cache_map[file_hash]["resource"] = audio_stream
+			content_cache_map[file_hash]["loaded"] = true
+			content_cache_map[file_hash]["stage"] = 3
+			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			return false
+		_:
+			printerr("unknown stage ", file_hash)
+			return false
+
+	return true
+
+
+func _process_loading_video(
+	content: Dictionary, finished_downloads: Array[RequestResponse]
+) -> bool:
+	var content_mapping = content.get("content_mapping")
+	var file_hash: String = content.get("file_hash")
+	var base_url: String = content_mapping.get("base_url", "")
+	var local_video_path = "user://content/" + file_hash
+	var stage = content.get("stage", 0)
+
+	match stage:
+		# Stage 0 => request png file
+		0:
+			if FileAccess.file_exists(local_video_path):
+				content["stage"] = 2
+			else:
+				if file_hash.is_empty() or base_url.is_empty():
+					printerr("hash or base_url is empty")
+					return false
+
+				var absolute_file_path = local_video_path.replace("user:/", OS.get_user_data_dir())
+				content["stage"] = 1
+				content["request_id"] = http_requester.request_file(
+					0, base_url + file_hash, absolute_file_path
+				)
+
+		# Stage 1 => wait for the file
+		1:
+			for item in finished_downloads:
+				if item.id() == content["request_id"]:
+					if item.is_error():
+						printerr("video download is_error() == true!")
+						return false
+					else:
+						content["stage"] = 2
+
+		# Stage 2 => process texture
+		2:
+			var file := FileAccess.open(local_video_path, FileAccess.READ)
+			if file == null:
+				printerr("video download fails")
+				return false
+
 			content_cache_map[file_hash]["loaded"] = true
 			content_cache_map[file_hash]["stage"] = 3
 			self.emit_signal.call_deferred("content_loading_finished", file_hash)

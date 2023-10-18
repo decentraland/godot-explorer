@@ -1,4 +1,14 @@
-module.exports.getRealm = async function (body) { return {} }
+module.exports.getRealm = async function (body) {
+    return {
+        realmInfo: {
+            baseUrl: "https://localhost:8000",
+            realName: "LocalPreview",
+            networkId: 1,
+            commsAdapter: "offline",
+            isPreview: true,
+        }
+    }
+}
 module.exports.getWorldTime = async function (body) { return {} }
 
 // sync implementation

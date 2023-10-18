@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://de7563ke1agyk"]
+
+[ext_resource type="Script" path="res://src/decentraland_components/audio_stream.gd" id="1_oqq6w"]
+
+[node name="audio_stream" type="DclAudioStream"]
+script = ExtResource("1_oqq6w")

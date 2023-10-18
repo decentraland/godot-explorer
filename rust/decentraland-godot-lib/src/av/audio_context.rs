@@ -10,7 +10,6 @@ use super::stream_processor::AVCommand;
 use super::stream_processor::FfmpegContext;
 
 pub struct AudioSink {
-    pub volume: f32,
     pub command_sender: tokio::sync::mpsc::Sender<AVCommand>,
 }
 
@@ -160,7 +159,7 @@ impl AudioContext {
         );
 
         audio_stream_player.call_deferred(
-            "init".into(),
+            "init_audio".into(),
             &[
                 frame_rate.to_variant(),
                 input_stream.frames().to_variant(),
