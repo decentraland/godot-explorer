@@ -27,7 +27,7 @@ enum VideoUpdateMode {
 
 fn get_local_file_hash_future(
     content_mapping: &Dictionary,
-    file_path: &String,
+    file_path: &str,
 ) -> Option<(
     tokio::sync::oneshot::Sender<String>,
     tokio::sync::oneshot::Receiver<String>,

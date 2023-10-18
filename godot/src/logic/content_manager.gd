@@ -204,6 +204,7 @@ func fetch_audio(file_path: String, content_mapping: Dictionary):
 
 	return true
 
+
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
 func fetch_video(file_hash: String, content_mapping: Dictionary):
@@ -225,6 +226,7 @@ func fetch_video(file_hash: String, content_mapping: Dictionary):
 	)
 
 	return true
+
 
 func _process(_dt: float) -> void:
 	_th_poll()
@@ -652,6 +654,7 @@ func _process_loading_audio(
 			return false
 
 	return true
+
 
 func _process_loading_video(
 	content: Dictionary, finished_downloads: Array[RequestResponse]
