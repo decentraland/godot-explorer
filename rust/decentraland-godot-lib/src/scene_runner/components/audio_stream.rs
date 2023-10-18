@@ -114,6 +114,7 @@ pub fn update_audio_stream(
                             audio_stream_node.clone().upcast::<AudioStreamPlayer>(),
                             playing,
                             false,
+                            None,
                         );
 
                         node.audio_stream = Some((next_value.url.clone(), audio_sink));
@@ -143,6 +144,7 @@ pub fn update_audio_stream(
                             audio_stream_node.clone().upcast::<AudioStreamPlayer>(),
                             playing,
                             false,
+                            None,
                         );
 
                         node.audio_stream = Some((next_value.url.clone(), audio_sink));

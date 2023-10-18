@@ -33,6 +33,7 @@ pub fn av_sinks(
     audio_stream_player: Gd<AudioStreamPlayer>,
     playing: bool,
     repeat: bool,
+    wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,
 ) -> (Option<VideoSink>, AudioSink) {
     let (command_sender, command_receiver) = tokio::sync::mpsc::channel(10);
 
@@ -41,6 +42,7 @@ pub fn av_sinks(
         source.clone(),
         texture.clone(),
         audio_stream_player,
+        wait_for_resource,
     );
 
     if playing {
@@ -69,6 +71,7 @@ pub fn spawn_av_thread(
     path: String,
     tex: Option<Gd<ImageTexture>>,
     audio_stream_player: Gd<AudioStreamPlayer>,
+    wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,
 ) {
     let video_instance_id = tex.map(|value| value.instance_id());
     let audio_stream_player_instance_id = audio_stream_player.instance_id();
@@ -80,6 +83,7 @@ pub fn spawn_av_thread(
                 path,
                 video_instance_id,
                 audio_stream_player_instance_id,
+                wait_for_resource,
             )
         })
         .unwrap();
@@ -90,10 +94,12 @@ fn av_thread(
     path: String,
     tex: Option<InstanceId>,
     audio_stream: InstanceId,
+    wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,
 ) {
     let tex = tex.map(Gd::from_instance_id);
     let audio_stream_player: Gd<AudioStreamPlayer> = Gd::from_instance_id(audio_stream);
-    if let Err(error) = av_thread_inner(commands, path, tex, audio_stream_player) {
+    if let Err(error) = av_thread_inner(commands, path, tex, audio_stream_player, wait_for_resource)
+    {
         warn!("av error: {error}");
     } else {
         debug!("av closed");
@@ -102,10 +108,23 @@ fn av_thread(
 
 pub fn av_thread_inner(
     commands: tokio::sync::mpsc::Receiver<AVCommand>,
-    path: String,
+    mut path: String,
     texture: Option<Gd<ImageTexture>>,
     audio_stream_player: Gd<AudioStreamPlayer>,
+    wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,
 ) -> Result<(), String> {
+    if let Some(wait_for_resource_receiver) = wait_for_resource {
+        match wait_for_resource_receiver.blocking_recv() {
+            Ok(file_source) => {
+                if file_source.is_empty() {
+                    return Err(format!("failed to get resource: {:?}", path));
+                }
+                path = file_source;
+            }
+            Err(err) => return Err(format!("failed to get resource: {:?}", err)),
+        }
+    }
+
     let input_context = input(&path).map_err(|e| format!("{:?} on line {}", e, line!()))?;
 
     // try and get a video context

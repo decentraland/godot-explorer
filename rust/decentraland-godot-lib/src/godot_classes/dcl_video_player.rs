@@ -16,7 +16,20 @@ pub struct DclVideoPlayer {
 
     #[base]
     _base: Base<AudioStreamPlayer>,
+
+    #[var]
+    dcl_scene_id: u32,
+
+    pub resolve_resource_sender: Option<tokio::sync::oneshot::Sender<String>>,
 }
 
 #[godot_api]
-impl DclVideoPlayer {}
+impl DclVideoPlayer {
+    #[func]
+    fn resolve_resource(&mut self, file_path: GodotString) {
+        let Some(sender) = self.resolve_resource_sender.take() else {
+            return;
+        };
+        let _ = sender.send(file_path.to_string());
+    }
+}

@@ -25,6 +25,23 @@ enum VideoUpdateMode {
     FirstSpawnVideo,
 }
 
+fn get_local_file_hash_future(
+    content_mapping: &Dictionary,
+    file_path: &String,
+) -> Option<(
+    tokio::sync::oneshot::Sender<String>,
+    tokio::sync::oneshot::Receiver<String>,
+    String,
+)> {
+    let file_path = file_path.to_lowercase();
+    let dict = content_mapping.get("content".to_variant())?;
+    let file_hash = Dictionary::from_variant(&dict)
+        .get(file_path.to_variant())?
+        .to_string();
+    let (sx, rx) = tokio::sync::oneshot::channel::<String>();
+    Some((sx, rx, file_hash))
+}
+
 pub fn update_video_player(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
@@ -126,12 +143,29 @@ pub fn update_video_player(
                             .get_dcl_texture()
                             .expect("there should be a texture in the VideoPlayer node");
 
+                        let (wait_for_resource_sender, wait_for_resource_receiver, file_hash) =
+                            if let Some(local_scene_resource) =
+                                get_local_file_hash_future(&scene.content_mapping, &next_value.src)
+                            {
+                                (
+                                    Some(local_scene_resource.0),
+                                    Some(local_scene_resource.1),
+                                    local_scene_resource.2,
+                                )
+                            } else {
+                                (None, None, "".to_string())
+                            };
+
+                        video_player_node.bind_mut().resolve_resource_sender =
+                            wait_for_resource_sender;
+
                         let (video_sink, audio_sink) = av_sinks(
                             next_value.src.clone(),
                             Some(texture.clone()),
                             video_player_node.clone().upcast::<AudioStreamPlayer>(),
                             playing,
                             looping,
+                            wait_for_resource_receiver,
                         );
 
                         let Some(video_sink) = video_sink else {
@@ -143,6 +177,11 @@ pub fn update_video_player(
                             video_sink,
                             audio_sink,
                         });
+
+                        if !file_hash.is_empty() {
+                            video_player_node
+                                .call_deferred("request_video".into(), &[file_hash.to_variant()]);
+                        }
                     }
                     VideoUpdateMode::FirstSpawnVideo => {
                         let image = Image::create(8, 8, false, Format::FORMAT_RGBA8)
@@ -156,6 +195,25 @@ pub fn update_video_player(
                         .instantiate()
                         .unwrap()
                         .cast::<DclVideoPlayer>();
+
+                        let (wait_for_resource_sender, wait_for_resource_receiver, file_hash) =
+                            if let Some(local_scene_resource) =
+                                get_local_file_hash_future(&scene.content_mapping, &next_value.src)
+                            {
+                                (
+                                    Some(local_scene_resource.0),
+                                    Some(local_scene_resource.1),
+                                    local_scene_resource.2,
+                                )
+                            } else {
+                                (None, None, "".to_string())
+                            };
+
+                        video_player_node
+                            .bind_mut()
+                            .set_dcl_scene_id(scene.scene_id.0);
+                        video_player_node.bind_mut().resolve_resource_sender =
+                            wait_for_resource_sender;
 
                         video_player_node.set_name("VideoPlayer".into());
 
@@ -178,6 +236,7 @@ pub fn update_video_player(
                             video_player_node.clone().upcast::<AudioStreamPlayer>(),
                             playing,
                             looping,
+                            wait_for_resource_receiver,
                         );
 
                         let Some(video_sink) = video_sink else {
@@ -192,6 +251,11 @@ pub fn update_video_player(
                         scene
                             .video_players
                             .insert(*entity, video_player_node.clone());
+
+                        if !file_hash.is_empty() {
+                            video_player_node
+                                .call_deferred("request_video".into(), &[file_hash.to_variant()]);
+                        }
                     }
                 }
             } else if exist_current_node {
