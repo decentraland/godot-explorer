@@ -8,6 +8,7 @@ use godot::prelude::*;
 
 pub mod av;
 pub mod avatars;
+pub mod common;
 pub mod comms;
 pub mod dcl;
 pub mod godot_classes;
