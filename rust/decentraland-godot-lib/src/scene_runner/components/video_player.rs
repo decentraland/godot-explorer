@@ -62,19 +62,13 @@ pub fn update_video_player(
             };
 
             if let Some(next_value) = next_value {
-                let start_muted = if let SceneType::Parcel = scene.scene_type {
+                let muted_by_current_scene = if let SceneType::Parcel = scene.scene_type {
                     scene.scene_id != *current_parcel_scene_id
                 } else {
                     true
                 };
 
                 let dcl_volume = next_value.volume.unwrap_or(1.0).clamp(0.0, 1.0);
-                let volume_db = if start_muted {
-                    -80.0
-                } else {
-                    20.0 * f32::log10(dcl_volume)
-                };
-
                 let playing = next_value.playing.unwrap_or(true);
                 let looping = next_value.r#loop.unwrap_or(false);
 
@@ -104,7 +98,9 @@ pub fn update_video_player(
                             .expect("the expected VideoPlayer wasn't a DclVideoPlayer");
 
                         video_player_node.bind_mut().set_dcl_volume(dcl_volume);
-                        video_player_node.set_volume_db(volume_db);
+                        video_player_node
+                            .bind_mut()
+                            .set_muted(muted_by_current_scene);
 
                         if next_value.playing.unwrap_or(true) {
                             let _ = video_player_data
@@ -136,7 +132,9 @@ pub fn update_video_player(
                         ).try_cast::<DclVideoPlayer>().expect("the expected VideoPlayer wasn't a DclVideoPlayer");
 
                         video_player_node.bind_mut().set_dcl_volume(dcl_volume);
-                        video_player_node.set_volume_db(volume_db);
+                        video_player_node
+                            .bind_mut()
+                            .set_muted(muted_by_current_scene);
 
                         let texture = video_player_node
                             .bind()
@@ -228,7 +226,9 @@ pub fn update_video_player(
                         video_player_node.play();
 
                         video_player_node.bind_mut().set_dcl_volume(dcl_volume);
-                        video_player_node.set_volume_db(volume_db);
+                        video_player_node
+                            .bind_mut()
+                            .set_muted(muted_by_current_scene);
 
                         let (video_sink, audio_sink) = av_sinks(
                             next_value.src.clone(),

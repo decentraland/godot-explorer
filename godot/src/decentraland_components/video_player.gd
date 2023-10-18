@@ -10,13 +10,6 @@ func stream_buffer(data: PackedVector2Array):
 	self.get_stream_playback().push_buffer(data)
 
 
-func set_mute(value: bool):
-	if value:
-		self.volume_db = 0
-	else:
-		self.volume_db = -80
-
-
 func request_video(_file_hash):
 	var content_mapping = Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 	self.file_hash = _file_hash

@@ -38,19 +38,13 @@ pub fn update_audio_stream(
             };
 
             if let Some(next_value) = next_value {
-                let start_muted = if let SceneType::Parcel = scene.scene_type {
+                let muted_by_current_scene = if let SceneType::Parcel = scene.scene_type {
                     scene.scene_id != *current_parcel_scene_id
                 } else {
                     true
                 };
 
                 let dcl_volume = next_value.volume.unwrap_or(1.0).clamp(0.0, 1.0);
-                let volume_db = if start_muted {
-                    -80.0
-                } else {
-                    20.0 * f32::log10(dcl_volume)
-                };
-
                 let playing = next_value.playing.unwrap_or(true);
 
                 let node = godot_dcl_scene.ensure_node_mut(entity);
@@ -79,7 +73,9 @@ pub fn update_audio_stream(
                             .expect("the expected AudioStream wasn't a DclAudioStream");
 
                         audio_stream_node.bind_mut().set_dcl_volume(dcl_volume);
-                        audio_stream_node.set_volume_db(volume_db);
+                        audio_stream_node
+                            .bind_mut()
+                            .set_muted(muted_by_current_scene);
 
                         if next_value.playing.unwrap_or(true) {
                             let _ = audio_stream_data
@@ -106,7 +102,9 @@ pub fn update_audio_stream(
                         ).try_cast::<DclAudioStream>().expect("the expected AudioStream wasn't a DclAudioStream");
 
                         audio_stream_node.bind_mut().set_dcl_volume(dcl_volume);
-                        audio_stream_node.set_volume_db(volume_db);
+                        audio_stream_node
+                            .bind_mut()
+                            .set_muted(muted_by_current_scene);
 
                         let (_, audio_sink) = av_sinks(
                             next_value.url.clone(),
@@ -136,7 +134,9 @@ pub fn update_audio_stream(
                         audio_stream_node.play();
 
                         audio_stream_node.bind_mut().set_dcl_volume(dcl_volume);
-                        audio_stream_node.set_volume_db(volume_db);
+                        audio_stream_node
+                            .bind_mut()
+                            .set_muted(muted_by_current_scene);
 
                         let (_, audio_sink) = av_sinks(
                             next_value.url.clone(),

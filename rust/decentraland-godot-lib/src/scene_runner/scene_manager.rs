@@ -244,10 +244,10 @@ impl SceneManager {
                     audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
                 }
                 for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
-                    audio_stream_node.set_volume_db(-80.0);
+                    audio_stream_node.bind_mut().set_muted(true);
                 }
-                for (_, audio_stream_node) in scene.video_players.iter_mut() {
-                    audio_stream_node.set_volume_db(-80.0);
+                for (_, video_player_node) in scene.video_players.iter_mut() {
+                    video_player_node.bind_mut().set_muted(true);
                 }
             }
 
@@ -258,12 +258,10 @@ impl SceneManager {
                     audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
                 }
                 for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
-                    let db_volume = 20.0 * f32::log10(audio_stream_node.bind().get_dcl_volume());
-                    audio_stream_node.set_volume_db(db_volume);
+                    audio_stream_node.bind_mut().set_muted(false);
                 }
                 for (_, video_player_node) in scene.video_players.iter_mut() {
-                    let db_volume = 20.0 * f32::log10(video_player_node.bind().get_dcl_volume());
-                    video_player_node.set_volume_db(db_volume);
+                    video_player_node.bind_mut().set_muted(false);
                 }
             }
 
