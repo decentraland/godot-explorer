@@ -391,28 +391,24 @@ impl SceneManager {
                         (dirty_entities, dirty_lww_components, dirty_gos_components),
                         logs,
                         _,
+                        rpc_calls,
                     ) => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
+                            let dirty = Dirty {
+                                waiting_process: true,
+                                entities: dirty_entities,
+                                lww_components: dirty_lww_components,
+                                gos_components: dirty_gos_components,
+                                logs,
+                                renderer_response: None,
+                                update_state: SceneUpdateState::None,
+                                rpc_calls,
+                            };
+
                             if !scene.current_dirty.waiting_process {
-                                scene.current_dirty = Dirty {
-                                    waiting_process: true,
-                                    entities: dirty_entities,
-                                    lww_components: dirty_lww_components,
-                                    gos_components: dirty_gos_components,
-                                    logs,
-                                    renderer_response: None,
-                                    update_state: SceneUpdateState::None,
-                                };
+                                scene.current_dirty = dirty;
                             } else {
-                                scene.enqueued_dirty.push(Dirty {
-                                    waiting_process: true,
-                                    entities: dirty_entities,
-                                    lww_components: dirty_lww_components,
-                                    gos_components: dirty_gos_components,
-                                    logs,
-                                    renderer_response: None,
-                                    update_state: SceneUpdateState::None,
-                                });
+                                scene.enqueued_dirty.push(dirty);
                             }
                         }
                     }

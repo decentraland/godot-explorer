@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=18 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/FloorBaseGrass_01/Floor_Grass01.png.png" id="2_7jksa"]
@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://c6a0rjrc13kel" path="res://src/ui/components/line_edit_command/line_edit_command.tscn" id="9_5u55i"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
 [ext_resource type="PackedScene" uid="uid://wgrmvh6h51w3" path="res://src/ui/voice_chat.tscn" id="10_l3sp6"]
+[ext_resource type="PackedScene" uid="uid://rffmwq3dxlaq" path="res://src/ui/confirm_dialog/confirm_dialog.tscn" id="10_sldb0"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
@@ -27,7 +28,7 @@ texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_b41u8"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_osonw"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
@@ -172,7 +173,13 @@ layout_mode = 2
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_b41u8")
+group = SubResource("ButtonGroup_osonw")
+
+[node name="ConfirmDialog" parent="UI" instance=ExtResource("10_sldb0")]
+visible = false
+layout_mode = 1
+offset_left = -120.0
+offset_right = 120.0
 
 [node name="Timer_BroadcastPosition" type="Timer" parent="."]
 wait_time = 0.1
