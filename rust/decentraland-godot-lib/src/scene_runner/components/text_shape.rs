@@ -23,16 +23,14 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             }
 
             let new_value = new_value.unwrap();
-            let node = godot_dcl_scene.ensure_node_mut(entity);
+            let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node
-                .base
-                .try_get_node_as::<Label3D>(NodePath::from("TextShape"));
+            let existing = node_3d.try_get_node_as::<Label3D>(NodePath::from("TextShape"));
 
             if new_value.is_none() {
                 if let Some(text_shape_node) = existing {
-                    node.base.remove_child(text_shape_node.upcast());
+                    node_3d.remove_child(text_shape_node.upcast());
                 }
             } else if let Some(new_value) = new_value {
                 let (mut label_3d, add_to_base) = match existing {
@@ -46,7 +44,7 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 if add_to_base {
                     label_3d.set_name(GodotString::from("TextShape"));
-                    node.base.add_child(label_3d.upcast());
+                    node_3d.add_child(label_3d.upcast());
                 }
             }
         }

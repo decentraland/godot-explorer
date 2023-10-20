@@ -84,8 +84,8 @@ pub fn update_scene_pointer_events(scene: &mut Scene, crdt_state: &mut SceneCrdt
             }
 
             let new_value = new_value.unwrap();
-            let node = godot_dcl_scene.ensure_node_mut(entity);
-            node.pointer_events = new_value.value.clone();
+            let (godot_entity_node, node_3d) = godot_dcl_scene.ensure_node_3d(entity);
+            godot_entity_node.pointer_events = new_value.value.clone();
         }
     }
 }
@@ -102,7 +102,7 @@ pub fn get_entity_pointer_event<'a>(
     entity_id: &SceneEntityId,
 ) -> Option<&'a PbPointerEvents> {
     let scene = scenes.get(scene_id)?;
-    let entity = scene.godot_dcl_scene.get_node(entity_id)?;
+    let entity = scene.godot_dcl_scene.get_godot_entity_node(entity_id)?;
     let pointer_events = entity.pointer_events.as_ref()?;
     Some(pointer_events)
 }

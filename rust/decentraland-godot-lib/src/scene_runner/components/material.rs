@@ -23,7 +23,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let dirty_lww_components = &scene.current_dirty.lww_components;
     let material_component = SceneCrdtStateProtoComponents::get_material(crdt_state);
     let mut content_manager = godot_dcl_scene
-        .root_node
+        .root_node_3d
         .get_node("/root/content_manager".into())
         .unwrap()
         .clone();
@@ -50,10 +50,10 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 None
             };
 
-            let node = godot_dcl_scene.ensure_node_mut(entity);
+            let (godot_entity_node, node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             if let Some(dcl_material) = dcl_material {
-                let previous_dcl_material = node.material.as_ref();
+                let previous_dcl_material = godot_entity_node.material.as_ref();
                 if let Some(previous_dcl_material) = previous_dcl_material {
                     if previous_dcl_material.eq(&dcl_material) {
                         continue;
@@ -137,24 +137,22 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     }
                 }
 
-                let mesh_renderer = node
-                    .base
-                    .try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
+                let mesh_renderer =
+                    node_3d.try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
 
                 if let Some(mut mesh_renderer) = mesh_renderer {
                     mesh_renderer.set_surface_override_material(0, godot_material.upcast());
                 }
             } else {
-                let mesh_renderer = node
-                    .base
-                    .try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
+                let mesh_renderer =
+                    node_3d.try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
 
                 if let Some(mut mesh_renderer) = mesh_renderer {
                     mesh_renderer.call(
                         "set_surface_override_material".into(),
                         &[0.to_variant(), Variant::nil()],
                     );
-                    node.material.take();
+                    godot_entity_node.material.take();
                 }
             }
         }
@@ -281,7 +279,7 @@ fn check_texture(
             // TODO: implement load avatar texture
         }
         DclSourceTex::VideoTexture(video_entity_id) => {
-            if let Some(node) = scene.godot_dcl_scene.get_node(video_entity_id) {
+            if let Some(node) = scene.godot_dcl_scene.get_godot_entity_node(video_entity_id) {
                 if let Some(data) = &node.video_player_data {
                     material.set_texture(param, data.video_sink.texture.clone().upcast());
                     return true;

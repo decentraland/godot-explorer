@@ -27,17 +27,15 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
                 continue; // no value, continue
             };
 
-            let node = godot_dcl_scene.ensure_node_mut(entity);
+            let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
 
-            let existing = node
-                .base
-                .try_get_node_as::<Node>(NodePath::from("DCLCameraModeArea3D"));
+            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("DCLCameraModeArea3D"));
 
             if new_value.is_none() {
                 if let Some(camera_mode_area_node) = existing {
-                    node.base.remove_child(camera_mode_area_node);
+                    node_3d.remove_child(camera_mode_area_node);
                 }
             } else if let Some(new_value) = new_value {
                 let area = new_value
@@ -70,7 +68,7 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
                         .bind_mut()
                         .set_forced_camera_mode(forced_camera_mode);
                     camera_mode_area_3d.set_name(GodotString::from("DCLCameraModeArea3D"));
-                    node.base.add_child(camera_mode_area_3d.clone().upcast());
+                    node_3d.add_child(camera_mode_area_3d.clone().upcast());
                 }
             }
         }

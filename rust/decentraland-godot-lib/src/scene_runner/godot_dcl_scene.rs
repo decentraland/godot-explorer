@@ -9,15 +9,19 @@ use crate::{
         SceneDefinition, SceneId,
     },
 };
-use godot::prelude::*;
+use godot::{engine::Control, prelude::*};
 use std::collections::{HashMap, HashSet};
 
 pub struct GodotDclScene {
-    pub entities: HashMap<SceneEntityId, Node3DEntity>,
-    pub root_node: Gd<Node3D>,
+    pub entities: HashMap<SceneEntityId, GodotEntityNode>,
 
-    pub hierarchy_dirty: bool,
-    pub unparented_entities: HashSet<SceneEntityId>,
+    pub root_node_3d: Gd<Node3D>,
+    pub hierarchy_dirty_3d: bool,
+    pub unparented_entities_3d: HashSet<SceneEntityId>,
+
+    pub root_node_ui: Gd<Control>,
+    pub hierarchy_dirty_ui: bool,
+    pub unparented_entities_ui: HashSet<SceneEntityId>,
 }
 
 pub struct VideoPlayerData {
@@ -25,14 +29,18 @@ pub struct VideoPlayerData {
     pub audio_sink: AudioSink,
 }
 
-pub struct Node3DEntity {
-    pub base: Gd<Node3D>,
-    pub desired_parent: SceneEntityId,
-    pub computed_parent: SceneEntityId,
+pub struct GodotEntityNode {
+    pub base_3d: Option<Gd<Node3D>>,
+    pub desired_parent_3d: SceneEntityId,
+    pub computed_parent_3d: SceneEntityId,
     pub material: Option<DclMaterial>,
     pub pointer_events: Option<proto_components::sdk::components::PbPointerEvents>,
     pub video_player_data: Option<VideoPlayerData>,
     pub audio_stream: Option<(String, AudioSink)>,
+
+    pub base_ui: Option<Gd<Control>>,
+    pub desired_parent_ui: SceneEntityId,
+    pub computed_parent_ui: SceneEntityId,
 }
 
 impl SceneDefinition {
@@ -87,12 +95,17 @@ impl SceneDefinition {
     }
 }
 
-impl Node3DEntity {
-    fn new(base: Gd<Node3D>) -> Self {
+impl GodotEntityNode {
+    fn new(base_3d: Option<Gd<Node3D>>, base_ui: Option<Gd<Control>>) -> Self {
         Self {
-            base,
-            desired_parent: SceneEntityId::new(0, 0),
-            computed_parent: SceneEntityId::new(0, 0),
+            base_3d,
+            desired_parent_3d: SceneEntityId::new(0, 0),
+            computed_parent_3d: SceneEntityId::new(0, 0),
+
+            base_ui,
+            desired_parent_ui: SceneEntityId::new(0, 0),
+            computed_parent_ui: SceneEntityId::new(0, 0),
+
             material: None,
             pointer_events: None,
             video_player_data: None,
@@ -103,52 +116,119 @@ impl Node3DEntity {
 
 impl GodotDclScene {
     pub fn new(scene_definition: &SceneDefinition, scene_id: &SceneId) -> Self {
-        let mut root_node = Node3D::new_alloc();
-        root_node.set_position(Vector3 {
+        let mut root_node_3d = Node3D::new_alloc();
+        root_node_3d.set_position(Vector3 {
             x: 16.0 * scene_definition.base.x as f32,
             y: 0.0,
             z: 16.0 * -scene_definition.base.y as f32,
         });
-        root_node.set_name(GodotString::from(format!("scene_id_{:?}", scene_id.0)));
+        root_node_3d.set_name(GodotString::from(format!("scene_id_{:?}", scene_id.0)));
+
+        let mut root_node_ui = Control::new_alloc();
+        root_node_ui.set_name(GodotString::from(format!("ui_scene_id_{:?}", scene_id.0)));
 
         let entities = HashMap::from([(
             SceneEntityId::new(0, 0),
-            Node3DEntity::new(root_node.clone()),
+            GodotEntityNode::new(Some(root_node_3d.clone()), Some(root_node_ui.clone())),
         )]);
 
         GodotDclScene {
             entities,
-            root_node,
 
-            hierarchy_dirty: false,
-            unparented_entities: HashSet::new(),
+            root_node_3d,
+            hierarchy_dirty_3d: false,
+            unparented_entities_3d: HashSet::new(),
+
+            root_node_ui,
+            hierarchy_dirty_ui: false,
+            unparented_entities_ui: HashSet::new(),
         }
     }
 
-    pub fn ensure_node_mut(&mut self, entity: &SceneEntityId) -> &mut Node3DEntity {
-        let maybe_node = self.entities.get(entity);
-        if maybe_node.is_none() {
-            let mut new_node = Node3DEntity::new(Node3D::new_alloc());
+    pub fn get_godot_entity_node(&self, entity: &SceneEntityId) -> Option<&GodotEntityNode> {
+        self.entities.get(entity)
+    }
 
-            new_node.base.set_name(GodotString::from(format!(
-                "e{:?}_{:?}",
-                entity.number, entity.version
-            )));
+    pub fn get_godot_entity_node_mut(
+        &mut self,
+        entity: &SceneEntityId,
+    ) -> Option<&mut GodotEntityNode> {
+        self.entities.get_mut(entity)
+    }
 
-            self.root_node.add_child(new_node.base.clone().upcast());
-            self.entities.insert(*entity, new_node);
+    pub fn ensure_godot_entity_node(&mut self, entity: &SceneEntityId) -> &mut GodotEntityNode {
+        if !self.entities.contains_key(entity) {
+            self.entities
+                .insert(*entity, GodotEntityNode::new(None, None));
         }
 
         self.entities.get_mut(entity).unwrap()
     }
 
-    pub fn get_node(&self, entity: &SceneEntityId) -> Option<&Node3DEntity> {
-        self.entities.get(entity)
+    pub fn get_node_3d(&self, entity: &SceneEntityId) -> Option<&Gd<Node3D>> {
+        self.entities.get(entity)?.base_3d.as_ref()
     }
 
-    pub fn get_node_mut(&mut self, entity: &SceneEntityId) -> Option<&mut Node3DEntity> {
-        self.entities.get_mut(entity)
+    pub fn get_node_3d_mut(&mut self, entity: &SceneEntityId) -> Option<&mut Gd<Node3D>> {
+        self.entities.get_mut(entity)?.base_3d.as_mut()
     }
+
+    pub fn ensure_node_3d(&mut self, entity: &SceneEntityId) -> (&mut GodotEntityNode, Gd<Node3D>) {
+        if !self.entities.contains_key(entity) {
+            self.entities
+                .insert(*entity, GodotEntityNode::new(None, None));
+        }
+
+        let godot_entity_node = self.entities.get_mut(entity).unwrap();
+        if godot_entity_node.base_3d.is_none() {
+            let mut new_node_3d = Node3D::new_alloc();
+            new_node_3d.set_name(GodotString::from(format!(
+                "e{:?}_{:?}",
+                entity.number, entity.version
+            )));
+
+            self.root_node_3d.add_child(new_node_3d.clone().upcast());
+            godot_entity_node.base_3d = Some(new_node_3d);
+        }
+
+        let node_3d = godot_entity_node.base_3d.as_ref().unwrap().clone();
+
+        (godot_entity_node, node_3d)
+    }
+
+    pub fn ensure_ui_node(
+        &mut self,
+        entity: &SceneEntityId,
+    ) -> (&mut GodotEntityNode, Gd<Control>) {
+        if !self.entities.contains_key(entity) {
+            self.entities
+                .insert(*entity, GodotEntityNode::new(None, None));
+        }
+
+        let godot_entity_node = self.entities.get_mut(entity).unwrap();
+        if godot_entity_node.base_ui.is_none() {
+            let mut new_node_ui = Control::new_alloc();
+            new_node_ui.set_name(GodotString::from(format!(
+                "e{:?}_{:?}",
+                entity.number, entity.version
+            )));
+
+            self.root_node_ui.add_child(new_node_ui.clone().upcast());
+            godot_entity_node.base_ui = Some(new_node_ui);
+        }
+
+        let node_ui = godot_entity_node.base_ui.as_ref().unwrap().clone();
+
+        (godot_entity_node, node_ui)
+    }
+
+    // pub fn get_node(&self, entity: &SceneEntityId) -> Option<&GodotEntityNode> {
+    //     self.entities.get(entity)
+    // }
+
+    // pub fn get_node_mut(&mut self, entity: &SceneEntityId) -> Option<&mut GodotEntityNode> {
+    //     self.entities.get_mut(entity)
+    // }
 
     #[allow(dead_code)]
     pub fn exist_node(&self, entity: &SceneEntityId) -> bool {

@@ -30,16 +30,14 @@ pub fn update_audio_source(
             }
 
             let new_value = new_value.unwrap();
-            let node = godot_dcl_scene.ensure_node_mut(entity);
+            let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node
-                .base
-                .try_get_node_as::<Node>(NodePath::from("AudioSource"));
+            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AudioSource"));
 
             if new_value.is_none() {
                 if let Some(audio_source_node) = existing {
-                    node.base.remove_child(audio_source_node);
+                    node_3d.remove_child(audio_source_node);
                 }
                 scene.audio_sources.remove(entity);
             } else if let Some(new_value) = new_value {
@@ -54,7 +52,7 @@ pub fn update_audio_source(
                     .cast::<DclAudioSource>();
 
                     new_audio_source.set_name(GodotString::from("AudioSource"));
-                    node.base.add_child(new_audio_source.clone().upcast());
+                    node_3d.add_child(new_audio_source.clone().upcast());
                     scene
                         .audio_sources
                         .insert(*entity, new_audio_source.clone());

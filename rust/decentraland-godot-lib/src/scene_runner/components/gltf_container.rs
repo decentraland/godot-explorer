@@ -35,16 +35,14 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
             }
 
             let new_value = new_value.unwrap();
-            let node = godot_dcl_scene.ensure_node_mut(entity);
+            let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node
-                .base
-                .try_get_node_as::<Node>(NodePath::from("GltfContainer"));
+            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("GltfContainer"));
 
             if new_value.is_none() {
                 if let Some(gltf_node) = existing {
-                    node.base.remove_child(gltf_node);
+                    node_3d.remove_child(gltf_node);
                     scene.gltf_loading.remove(entity);
                 }
             } else if let Some(new_value) = new_value {
@@ -89,7 +87,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                         Variant::from(invisible_meshes_collision_mask),
                     );
                     new_gltf.set_name(GodotString::from("GltfContainer"));
-                    node.base.add_child(new_gltf.clone().upcast());
+                    node_3d.add_child(new_gltf.clone().upcast());
 
                     scene.gltf_loading.insert(*entity);
                 }
@@ -102,8 +100,8 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
 
     for entity in scene.gltf_loading.clone().iter() {
         let gltf_node = godot_dcl_scene
-            .ensure_node_mut(entity)
-            .base
+            .ensure_node_3d(entity)
+            .1
             .try_get_node_as::<Node>(NodePath::from("GltfContainer"));
 
         let current_state = match gltf_container_loading_state_component.get(*entity) {

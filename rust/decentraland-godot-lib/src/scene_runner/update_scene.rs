@@ -166,11 +166,11 @@ pub fn _process_scene(
             SceneUpdateState::ComputeCrdtState => {
                 let camera_transform = DclTransformAndParent::from_godot(
                     camera_global_transform,
-                    scene.godot_dcl_scene.root_node.get_position(),
+                    scene.godot_dcl_scene.root_node_3d.get_position(),
                 );
                 let player_transform = DclTransformAndParent::from_godot(
                     player_global_transform,
-                    scene.godot_dcl_scene.root_node.get_position(),
+                    scene.godot_dcl_scene.root_node_3d.get_position(),
                 );
                 crdt_state
                     .get_transform_mut()

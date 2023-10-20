@@ -108,7 +108,7 @@ impl SceneManager {
         );
 
         self.base
-            .add_child(new_scene.godot_dcl_scene.root_node.clone().upcast());
+            .add_child(new_scene.godot_dcl_scene.root_node_3d.clone().upcast());
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
         self.sorted_scene_ids.push(new_scene_id);
@@ -359,12 +359,12 @@ impl SceneManager {
             let mut scene = self.scenes.remove(scene_id).unwrap();
             let node = scene
                 .godot_dcl_scene
-                .root_node
+                .root_node_3d
                 .clone()
                 .upcast::<Node>()
                 .clone();
             self.base.remove_child(node);
-            scene.godot_dcl_scene.root_node.queue_free();
+            scene.godot_dcl_scene.root_node_3d.queue_free();
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);
             self.scenes.remove(scene_id);
@@ -483,7 +483,7 @@ impl SceneManager {
             .to::<i32>();
 
         let scene = self.scenes.get(&SceneId(dcl_scene_id as u32))?;
-        let scene_position = scene.godot_dcl_scene.root_node.get_position();
+        let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
         let raycast_data = RaycastHit::from_godot_raycast(
             scene_position,
             raycast_from,
@@ -622,22 +622,22 @@ impl NodeVirtual for SceneManager {
             self.base.emit_signal("pointer_tooltip_changed".into(), &[]);
         }
 
-        // TODO: should only update the current scnes + globals
+        // This update the mirror node that copies every frame the global transform of the player/camera
+        //  every entity attached to the player/camera is really attached to these mirror nodes
+        // TODO: should only update the current scnes + globals?
         for (_, scene) in self.scenes.iter_mut() {
-            if let Some(player_node_entity) =
-                scene.godot_dcl_scene.get_node_mut(&SceneEntityId::PLAYER)
+            if let Some(mut player_node) = scene
+                .godot_dcl_scene
+                .get_node_3d_mut(&SceneEntityId::PLAYER)
             {
-                player_node_entity
-                    .base
-                    .set_global_transform(self.player_node.get_global_transform());
+                player_node.set_global_transform(self.player_node.get_global_transform());
             }
 
-            if let Some(camera_node_entity) =
-                scene.godot_dcl_scene.get_node_mut(&SceneEntityId::CAMERA)
+            if let Some(mut camera_node) = scene
+                .godot_dcl_scene
+                .get_node_3d_mut(&SceneEntityId::CAMERA)
             {
-                camera_node_entity
-                    .base
-                    .set_global_transform(self.player_node.get_global_transform());
+                camera_node.set_global_transform(self.player_node.get_global_transform());
             }
         }
 

@@ -14,16 +14,15 @@ pub fn update_billboard(
 
     for (entity, entry) in billboard_component.values.iter() {
         if let Some(_billboard) = entry.value.as_ref() {
-            let node = scene.godot_dcl_scene.ensure_node_mut(entity);
-            let original_scale = node.base.get_scale();
-            let origin = node.base.get_global_position();
-            let direction = node.base.get_global_position() - camera_position;
+            let (_, mut node_3d) = scene.godot_dcl_scene.ensure_node_3d(entity);
+            let original_scale = node_3d.get_scale();
+            let origin = node_3d.get_global_position();
+            let direction = node_3d.get_global_position() - camera_position;
 
             let basis = Basis::new_looking_at(direction, Vector3::UP, false);
-            node.base
-                .set_global_transform(Transform3D { basis, origin });
+            node_3d.set_global_transform(Transform3D { basis, origin });
 
-            node.base.set_scale(original_scale);
+            node_3d.set_scale(original_scale);
 
             // TODO: implement billboard mode
         }
@@ -54,7 +53,7 @@ mod test {
         scene_context
             .scene_tree
             .clone()
-            .add_child(scene.godot_dcl_scene.root_node.clone().upcast());
+            .add_child(scene.godot_dcl_scene.root_node_3d.clone().upcast());
 
         let camera_global_transform = Transform3D::IDENTITY;
         update_billboard(&mut scene, &mut crdt_state, &camera_global_transform);
@@ -68,13 +67,13 @@ mod test {
         scene_context
             .scene_tree
             .clone()
-            .add_child(scene.godot_dcl_scene.root_node.clone().upcast());
+            .add_child(scene.godot_dcl_scene.root_node_3d.clone().upcast());
 
         let camera_global_transform =
             Transform3D::new(Basis::IDENTITY, Vector3::new(1.0, 0.0, 1.0));
 
         let entity = SceneEntityId::new(1333, 0);
-        scene.godot_dcl_scene.ensure_node_mut(&entity);
+        scene.godot_dcl_scene.ensure_node_3d(&entity);
         SceneCrdtStateProtoComponents::get_billboard_mut(&mut crdt_state).put(
             entity,
             Some(PbBillboard {
@@ -84,9 +83,9 @@ mod test {
 
         update_billboard(&mut scene, &mut crdt_state, &camera_global_transform);
 
-        let node = scene.godot_dcl_scene.get_node(&entity).unwrap();
+        let node = scene.godot_dcl_scene.get_node_3d(&entity).unwrap();
         assert_eq!(
-            node.base.get_global_rotation(),
+            node.get_global_rotation(),
             Vector3 {
                 x: 0.0,
                 y: std::f32::consts::FRAC_PI_4,

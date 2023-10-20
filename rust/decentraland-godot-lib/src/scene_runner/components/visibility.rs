@@ -30,11 +30,11 @@ pub fn update_visibility(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             continue;
         };
 
-        let node = godot_dcl_scene.ensure_node_mut(entity);
+        let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
         if new_value.visible() {
-            node.base.show();
+            node_3d.show();
         } else {
-            node.base.hide();
+            node_3d.hide();
         }
     }
 }

@@ -14,7 +14,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::{godot_dcl_scene::Node3DEntity, scene::Scene},
+    scene_runner::{godot_dcl_scene::GodotEntityNode, scene::Scene},
 };
 use godot::{
     engine::{PhysicsDirectSpaceState3D, PhysicsRayQueryParameters3D},
@@ -55,7 +55,7 @@ pub fn update_raycasts(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         .chain(scene.continuos_raycast.iter());
     let mut raycast_results = Vec::new();
     for entity in raycasts {
-        let Some(entity_node) = scene.godot_dcl_scene.get_node(entity) else {
+        let Some(entity_node) = scene.godot_dcl_scene.get_node_3d(entity) else {
             continue;
         };
         let Some(raycast) = raycast_component.get(*entity) else {
@@ -78,7 +78,7 @@ pub fn update_raycasts(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     }
 }
 
-fn do_raycast(scene: &Scene, node: &Node3DEntity, raycast: &PbRaycast) -> PbRaycastResult {
+fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRaycastResult {
     let tick_number = 0;
     let query_type = match RaycastQueryType::from_i32(raycast.query_type) {
         Some(query_type) => {
@@ -93,8 +93,8 @@ fn do_raycast(scene: &Scene, node: &Node3DEntity, raycast: &PbRaycast) -> PbRayc
         }
     };
 
-    let scene_position = scene.godot_dcl_scene.root_node.get_global_position();
-    let raycast_from = node.base.get_global_position()
+    let scene_position = scene.godot_dcl_scene.root_node_3d.get_global_position();
+    let raycast_from = node_3d.get_global_position()
         + if let Some(offset) = raycast.origin_offset.as_ref() {
             Vector3::new(offset.x, offset.y, -offset.z)
         } else {
@@ -108,7 +108,7 @@ fn do_raycast(scene: &Scene, node: &Node3DEntity, raycast: &PbRaycast) -> PbRayc
                     Vector3::new(local_direction.x, local_direction.y, -local_direction.z);
 
                 quaternion_multiply_vector(
-                    &node.base.get_global_transform().basis.to_quat(),
+                    &node_3d.get_global_transform().basis.to_quat(),
                     &local_direction,
                 )
             }
@@ -122,8 +122,10 @@ fn do_raycast(scene: &Scene, node: &Node3DEntity, raycast: &PbRaycast) -> PbRayc
             }
             pb_raycast::Direction::TargetEntity(target_entity) => {
                 let target_entity: SceneEntityId = SceneEntityId::from_i32(*target_entity as i32);
-                if let Some(target_entity_node) = scene.godot_dcl_scene.get_node(&target_entity) {
-                    target_entity_node.base.get_global_position() - raycast_from
+                if let Some(target_entity_node_3d) =
+                    scene.godot_dcl_scene.get_node_3d(&target_entity)
+                {
+                    target_entity_node_3d.get_global_position() - raycast_from
                 } else {
                     scene_position - raycast_from
                 }
@@ -136,8 +138,7 @@ fn do_raycast(scene: &Scene, node: &Node3DEntity, raycast: &PbRaycast) -> PbRayc
     let raycast_to = raycast_from + direction * raycast_distance;
 
     // TODO: check unwrap
-    let space = node
-        .base
+    let space = node_3d
         .get_world_3d()
         .unwrap()
         .get_direct_space_state()
@@ -150,8 +151,8 @@ fn do_raycast(scene: &Scene, node: &Node3DEntity, raycast: &PbRaycast) -> PbRayc
     raycast_query.set_collision_mask(collision_mask);
 
     // debug drawing the ray
-    if let Some(mut global) = node.base.get_node("/root/Global".into()) {
-        let id: i64 = node.base.instance_id().to_i64();
+    if let Some(mut global) = node_3d.get_node("/root/Global".into()) {
+        let id: i64 = node_3d.instance_id().to_i64();
         global.call_deferred(
             "add_raycast".into(),
             &[
@@ -255,7 +256,7 @@ fn get_raycast_hit(
         return None;
     }
 
-    let scene_position = scene.godot_dcl_scene.root_node.get_global_position();
+    let scene_position = scene.godot_dcl_scene.root_node_3d.get_global_position();
     let raycast_data: RaycastHit = RaycastHit::from_godot_raycast(
         scene_position,
         raycast_query.get_from(),

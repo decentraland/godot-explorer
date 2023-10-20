@@ -23,16 +23,14 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             }
 
             let new_value = new_value.unwrap();
-            let node = godot_dcl_scene.ensure_node_mut(entity);
+            let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node
-                .base
-                .try_get_node_as::<Node>(NodePath::from("AvatarShape"));
+            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarShape"));
 
             if new_value.is_none() {
                 if let Some(avatar_node) = existing {
-                    node.base.remove_child(avatar_node);
+                    node_3d.remove_child(avatar_node);
                 }
             } else if let Some(new_value) = new_value {
                 let mut dictionary = Dictionary::new();
@@ -142,7 +140,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     new_avatar_shape.set(StringName::from("skip_process"), Variant::from(true));
 
                     new_avatar_shape.set_name(GodotString::from("AvatarShape"));
-                    node.base.add_child(new_avatar_shape.clone().upcast());
+                    node_3d.add_child(new_avatar_shape.clone().upcast());
 
                     new_avatar_shape.call_deferred(
                         StringName::from(GodotString::from("update_avatar")),

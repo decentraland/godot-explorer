@@ -53,7 +53,7 @@ pub fn update_video_player(
 
     if let Some(video_player_dirty) = dirty_lww_components.get(&SceneComponentId::VIDEO_PLAYER) {
         for entity in video_player_dirty {
-            let exist_current_node = godot_dcl_scene.get_node(entity).is_some();
+            let exist_current_node = godot_dcl_scene.get_godot_entity_node(entity).is_some();
 
             let next_value = if let Some(new_value) = video_player_component.get(*entity) {
                 new_value.value.as_ref()
@@ -72,26 +72,26 @@ pub fn update_video_player(
                 let playing = next_value.playing.unwrap_or(true);
                 let looping = next_value.r#loop.unwrap_or(false);
 
-                let node = godot_dcl_scene.ensure_node_mut(entity);
-                let update_mode = if let Some(video_player_data) = node.video_player_data.as_ref() {
-                    if next_value.src != video_player_data.video_sink.source {
-                        VideoUpdateMode::ChangeVideo
+                let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
+                let update_mode =
+                    if let Some(video_player_data) = godot_entity_node.video_player_data.as_ref() {
+                        if next_value.src != video_player_data.video_sink.source {
+                            VideoUpdateMode::ChangeVideo
+                        } else {
+                            VideoUpdateMode::OnlyChangeValues
+                        }
                     } else {
-                        VideoUpdateMode::OnlyChangeValues
-                    }
-                } else {
-                    VideoUpdateMode::FirstSpawnVideo
-                };
+                        VideoUpdateMode::FirstSpawnVideo
+                    };
 
                 match update_mode {
                     VideoUpdateMode::OnlyChangeValues => {
-                        let video_player_data = node
+                        let video_player_data = godot_entity_node
                             .video_player_data
                             .as_ref()
                             .expect("video_player_data not found in node");
 
-                        let mut video_player_node = node
-                            .base
+                        let mut video_player_node: Gd<DclVideoPlayer> = node_3d
                             .get_node("VideoPlayer".into())
                             .expect("enters on change video branch but a VideoPlayer wasn't found there")
                             .try_cast::<DclVideoPlayer>()
@@ -120,14 +120,16 @@ pub fn update_video_player(
                             .blocking_send(AVCommand::Repeat(next_value.r#loop.unwrap_or(false)));
                     }
                     VideoUpdateMode::ChangeVideo => {
-                        if let Some(video_player_data) = node.video_player_data.as_ref() {
+                        if let Some(video_player_data) =
+                            godot_entity_node.video_player_data.as_ref()
+                        {
                             let _ = video_player_data
                                 .video_sink
                                 .command_sender
                                 .blocking_send(AVCommand::Dispose);
                         }
 
-                        let mut video_player_node = node.base.get_node("VideoPlayer".into()).expect(
+                        let mut video_player_node = node_3d.get_node("VideoPlayer".into()).expect(
                             "enters on change video branch but a VideoPlayer wasn't found there",
                         ).try_cast::<DclVideoPlayer>().expect("the expected VideoPlayer wasn't a DclVideoPlayer");
 
@@ -171,7 +173,7 @@ pub fn update_video_player(
                             continue;
                         };
 
-                        node.video_player_data = Some(VideoPlayerData {
+                        godot_entity_node.video_player_data = Some(VideoPlayerData {
                             video_sink,
                             audio_sink,
                         });
@@ -222,7 +224,7 @@ pub fn update_video_player(
                         let audio_stream_generator = AudioStreamGenerator::new();
                         video_player_node.set_stream(audio_stream_generator.upcast());
 
-                        node.base.add_child(video_player_node.clone().upcast());
+                        node_3d.add_child(video_player_node.clone().upcast());
                         video_player_node.play();
 
                         video_player_node.bind_mut().set_dcl_volume(dcl_volume);
@@ -244,7 +246,7 @@ pub fn update_video_player(
                             continue;
                         };
 
-                        node.video_player_data = Some(VideoPlayerData {
+                        godot_entity_node.video_player_data = Some(VideoPlayerData {
                             video_sink,
                             audio_sink,
                         });
@@ -259,7 +261,7 @@ pub fn update_video_player(
                     }
                 }
             } else if exist_current_node {
-                let Some(node) = godot_dcl_scene.get_node_mut(entity) else {
+                let Some(node) = godot_dcl_scene.get_godot_entity_node_mut(entity) else {
                     continue;
                 };
 
