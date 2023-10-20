@@ -12,7 +12,10 @@ use crate::{
     godot_classes::dcl_camera_3d::DclCamera3D,
     wallet::Wallet,
 };
-use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
+use godot::{
+    engine::{Control, PhysicsRayQueryParameters3D},
+    prelude::*,
+};
 use std::{
     collections::{HashMap, HashSet},
     time::Instant,
@@ -32,6 +35,8 @@ use super::{
 pub struct SceneManager {
     #[base]
     base: Base<Node>,
+
+    base_ui: Gd<Control>,
     scenes: HashMap<SceneId, Scene>,
 
     #[export]
@@ -109,6 +114,8 @@ impl SceneManager {
 
         self.base
             .add_child(new_scene.godot_dcl_scene.root_node_3d.clone().upcast());
+        self.base_ui
+            .add_child(new_scene.godot_dcl_scene.root_node_ui.clone().upcast());
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
         self.sorted_scene_ids.push(new_scene_id);
@@ -357,13 +364,20 @@ impl SceneManager {
 
         for scene_id in scene_to_remove.iter() {
             let mut scene = self.scenes.remove(scene_id).unwrap();
-            let node = scene
+            let node_3d = scene
                 .godot_dcl_scene
                 .root_node_3d
                 .clone()
                 .upcast::<Node>()
                 .clone();
-            self.base.remove_child(node);
+            let node_ui = scene
+                .godot_dcl_scene
+                .root_node_3d
+                .clone()
+                .upcast::<Node>()
+                .clone();
+            self.base.remove_child(node_3d);
+            self.base_ui.remove_child(node_ui);
             scene.godot_dcl_scene.root_node_3d.queue_free();
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);
@@ -518,8 +532,11 @@ impl NodeVirtual for SceneManager {
 
         log_panics::init();
 
+        let base_ui = Control::new_alloc();
+
         SceneManager {
             base,
+            base_ui,
 
             scenes: HashMap::new(),
             pause: false,
@@ -544,6 +561,14 @@ impl NodeVirtual for SceneManager {
             global_tick_number: 0,
             pointer_tooltips: VariantArray::new(),
         }
+    }
+
+    fn ready(&mut self) {
+        self.base_ui.set_name("scenes_ui".into());
+        self.base
+            .get_parent()
+            .unwrap()
+            .add_child(self.base_ui.clone().upcast());
     }
 
     fn process(&mut self, delta: f64) {

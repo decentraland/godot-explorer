@@ -11,6 +11,7 @@ pub mod mesh_collider;
 pub mod mesh_renderer;
 pub mod pointer_events;
 pub mod raycast;
+pub mod scene_ui;
 pub mod text_shape;
 pub mod transform_and_parent;
 pub mod video_player;

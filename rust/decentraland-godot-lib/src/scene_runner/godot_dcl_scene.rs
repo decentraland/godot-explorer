@@ -196,7 +196,7 @@ impl GodotDclScene {
         (godot_entity_node, node_3d)
     }
 
-    pub fn ensure_ui_node(
+    pub fn ensure_node_ui(
         &mut self,
         entity: &SceneEntityId,
     ) -> (&mut GodotEntityNode, Gd<Control>) {
