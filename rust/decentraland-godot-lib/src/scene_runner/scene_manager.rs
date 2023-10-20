@@ -626,14 +626,14 @@ impl NodeVirtual for SceneManager {
         //  every entity attached to the player/camera is really attached to these mirror nodes
         // TODO: should only update the current scnes + globals?
         for (_, scene) in self.scenes.iter_mut() {
-            if let Some(mut player_node) = scene
+            if let Some(player_node) = scene
                 .godot_dcl_scene
                 .get_node_3d_mut(&SceneEntityId::PLAYER)
             {
                 player_node.set_global_transform(self.player_node.get_global_transform());
             }
 
-            if let Some(mut camera_node) = scene
+            if let Some(camera_node) = scene
                 .godot_dcl_scene
                 .get_node_3d_mut(&SceneEntityId::CAMERA)
             {

@@ -27,7 +27,7 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
                 continue; // no value, continue
             };
 
-            let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
+            let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
 

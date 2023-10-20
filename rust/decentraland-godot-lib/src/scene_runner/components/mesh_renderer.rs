@@ -76,7 +76,7 @@ pub fn update_mesh_renderer(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             }
 
             let new_value = new_value.unwrap();
-            let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
+            let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
             let existing =

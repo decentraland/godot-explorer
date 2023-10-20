@@ -34,7 +34,7 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 continue;
             }
 
-            let (godot_entity_node, node_3d) = godot_dcl_scene.ensure_node_3d(entity);
+            let (godot_entity_node, _node_3d) = godot_dcl_scene.ensure_node_3d(entity);
             let animation_player = get_animation_player(godot_entity_node);
 
             if animation_player.is_none() {

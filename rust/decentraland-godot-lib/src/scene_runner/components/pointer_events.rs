@@ -84,7 +84,7 @@ pub fn update_scene_pointer_events(scene: &mut Scene, crdt_state: &mut SceneCrdt
             }
 
             let new_value = new_value.unwrap();
-            let (godot_entity_node, node_3d) = godot_dcl_scene.ensure_node_3d(entity);
+            let (godot_entity_node, _node_3d) = godot_dcl_scene.ensure_node_3d(entity);
             godot_entity_node.pointer_events = new_value.value.clone();
         }
     }

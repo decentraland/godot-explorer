@@ -30,7 +30,7 @@ pub fn update_audio_source(
             }
 
             let new_value = new_value.unwrap();
-            let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
+            let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
             let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AudioSource"));
