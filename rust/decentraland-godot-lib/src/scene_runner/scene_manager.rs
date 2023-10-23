@@ -372,7 +372,7 @@ impl SceneManager {
                 .clone();
             let node_ui = scene
                 .godot_dcl_scene
-                .root_node_3d
+                .root_node_ui
                 .clone()
                 .upcast::<Node>()
                 .clone();

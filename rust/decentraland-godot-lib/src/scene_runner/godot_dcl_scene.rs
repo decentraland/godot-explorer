@@ -20,13 +20,25 @@ pub struct GodotDclScene {
     pub unparented_entities_3d: HashSet<SceneEntityId>,
 
     pub root_node_ui: Gd<Control>,
-    pub hierarchy_dirty_ui: bool,
-    pub unparented_entities_ui: HashSet<SceneEntityId>,
+    pub ui_entities: HashSet<SceneEntityId>,
+    pub taffy: taffy::Taffy,
 }
 
 pub struct VideoPlayerData {
     pub video_sink: VideoSink,
     pub audio_sink: AudioSink,
+}
+
+// #[derive()]
+pub struct UiNode {
+    pub base_control: Gd<Control>,
+    pub layout: taffy::node::Node,
+    // &UiTransform,
+    // Option<&UiBackground>,
+    // Option<&UiText>,
+    // Option<&PointerEvents>,
+    // Option<&UiInput>,
+    // Option<&UiDropdown>,
 }
 
 pub struct GodotEntityNode {
@@ -38,9 +50,7 @@ pub struct GodotEntityNode {
     pub video_player_data: Option<VideoPlayerData>,
     pub audio_stream: Option<(String, AudioSink)>,
 
-    pub base_ui: Option<Gd<Control>>,
-    pub desired_parent_ui: SceneEntityId,
-    pub computed_parent_ui: SceneEntityId,
+    pub base_ui: Option<UiNode>,
 }
 
 impl SceneDefinition {
@@ -96,16 +106,15 @@ impl SceneDefinition {
 }
 
 impl GodotEntityNode {
-    fn new(base_3d: Option<Gd<Node3D>>, base_ui: Option<Gd<Control>>) -> Self {
+    fn new(base_3d: Option<Gd<Node3D>>, base_ui: Option<UiNode>) -> Self {
         Self {
             base_3d,
             desired_parent_3d: SceneEntityId::new(0, 0),
             computed_parent_3d: SceneEntityId::new(0, 0),
 
             base_ui,
-            desired_parent_ui: SceneEntityId::new(0, 0),
-            computed_parent_ui: SceneEntityId::new(0, 0),
-
+            // desired_parent_ui: SceneEntityId::new(0, 0),
+            // computed_parent_ui: SceneEntityId::new(0, 0),
             material: None,
             pointer_events: None,
             video_player_data: None,
@@ -124,12 +133,22 @@ impl GodotDclScene {
         });
         root_node_3d.set_name(GodotString::from(format!("scene_id_{:?}", scene_id.0)));
 
-        let mut root_node_ui = Control::new_alloc();
-        root_node_ui.set_name(GodotString::from(format!("ui_scene_id_{:?}", scene_id.0)));
+        let mut root_node_ui_control = Control::new_alloc();
+        root_node_ui_control.set_name(GodotString::from(format!("ui_scene_id_{:?}", scene_id.0)));
+
+        let mut taffy = taffy::Taffy::new();
+        let root_node_ui = UiNode {
+            base_control: root_node_ui_control.clone(),
+            layout: taffy
+                .new_leaf(taffy::style::Style {
+                    ..Default::default()
+                })
+                .unwrap(),
+        };
 
         let entities = HashMap::from([(
             SceneEntityId::new(0, 0),
-            GodotEntityNode::new(Some(root_node_3d.clone()), Some(root_node_ui.clone())),
+            GodotEntityNode::new(Some(root_node_3d.clone()), Some(root_node_ui)),
         )]);
 
         GodotDclScene {
@@ -139,9 +158,9 @@ impl GodotDclScene {
             hierarchy_dirty_3d: false,
             unparented_entities_3d: HashSet::new(),
 
-            root_node_ui,
-            hierarchy_dirty_ui: false,
-            unparented_entities_ui: HashSet::new(),
+            root_node_ui: root_node_ui_control,
+            ui_entities: HashSet::new(),
+            taffy: taffy::Taffy::new(),
         }
     }
 
@@ -196,10 +215,7 @@ impl GodotDclScene {
         (godot_entity_node, node_3d)
     }
 
-    pub fn ensure_node_ui(
-        &mut self,
-        entity: &SceneEntityId,
-    ) -> (&mut GodotEntityNode, Gd<Control>) {
+    pub fn ensure_node_ui(&mut self, entity: &SceneEntityId) -> &mut GodotEntityNode {
         if !self.entities.contains_key(entity) {
             self.entities
                 .insert(*entity, GodotEntityNode::new(None, None));
@@ -213,13 +229,17 @@ impl GodotDclScene {
                 entity.number, entity.version
             )));
 
+            let layout = self.taffy.new_leaf(taffy::style::Style::default()).unwrap();
+
             self.root_node_ui.add_child(new_node_ui.clone().upcast());
-            godot_entity_node.base_ui = Some(new_node_ui);
+            godot_entity_node.base_ui = Some(UiNode {
+                base_control: new_node_ui,
+                layout,
+            });
+            self.ui_entities.insert(*entity);
         }
 
-        let node_ui = godot_entity_node.base_ui.as_ref().unwrap().clone();
-
-        (godot_entity_node, node_ui)
+        godot_entity_node
     }
 
     // pub fn get_node(&self, entity: &SceneEntityId) -> Option<&GodotEntityNode> {
