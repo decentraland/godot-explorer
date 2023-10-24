@@ -1,14 +1,16 @@
 use std::collections::HashMap;
 
-use godot::engine::{ColorRect, Label};
-use taffy::{prelude::*, Taffy};
+use godot::engine::{
+    global::{HorizontalAlignment, VerticalAlignment},
+    ColorRect, Label,
+};
 
 use crate::{
     dcl::{
         components::{
             proto_components::sdk::components::{
-                PbUiTransform, YgAlign, YgDisplay, YgFlexDirection, YgJustify, YgPositionType,
-                YgUnit, YgWrap,
+                common::TextAlignMode, PbUiTransform, YgAlign, YgDisplay, YgFlexDirection,
+                YgJustify, YgPositionType, YgUnit, YgWrap,
             },
             SceneComponentId, SceneEntityId,
         },
@@ -17,7 +19,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::{godot_dcl_scene::GodotDclScene, scene::Scene},
 };
 
 // macro helpers to convert proto format to bevy format for val, size, rect
@@ -27,7 +29,7 @@ macro_rules! val {
             YgUnit::YguUndefined => $d,
             YgUnit::YguAuto => taffy::style::$t::Auto,
             YgUnit::YguPoint => taffy::style::$t::Points($pb.$v),
-            YgUnit::YguPercent => taffy::style::$t::Percent($pb.$v),
+            YgUnit::YguPercent => taffy::style::$t::Percent($pb.$v / 100.0),
         }
     };
 }
@@ -36,7 +38,7 @@ macro_rules! val_a {
         match $pb.$u() {
             YgUnit::YguAuto | YgUnit::YguUndefined => $d,
             YgUnit::YguPoint => taffy::style::$t::Points($pb.$v),
-            YgUnit::YguPercent => taffy::style::$t::Percent($pb.$v),
+            YgUnit::YguPercent => taffy::style::$t::Percent($pb.$v / 100.0),
         }
     };
 }
@@ -244,15 +246,19 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(dirty_transform) = dirty_lww_components.get(&SceneComponentId::UI_TRANSFORM) {
         for entity in dirty_transform {
-            let value = if let Some(entry) = ui_transform_component.get(*entity) {
-                entry.value.clone()
+            let new_parent = if let Some(entry) = ui_transform_component.get(*entity) {
+                SceneEntityId::from_i32(entry.value.as_ref().unwrap().parent)
             } else {
-                None
+                SceneEntityId::ROOT
             };
 
-            godot_dcl_scene.ensure_node_ui(entity);
+            let _ = godot_dcl_scene.ensure_node_ui(entity);
         }
     }
+    let mut root_node_ui = godot_dcl_scene
+        .root_node_ui
+        .clone()
+        .upcast::<godot::prelude::Node>();
 
     if let Some(dirty_ui_background) = dirty_lww_components.get(&SceneComponentId::UI_BACKGROUND) {
         for entity in dirty_ui_background {
@@ -262,7 +268,7 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 None
             };
 
-            let mut existing_ui_background = godot_dcl_scene
+            let existing_ui_background = godot_dcl_scene
                 .ensure_node_ui(entity)
                 .base_ui
                 .as_mut()
@@ -291,6 +297,9 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 existing_ui_background
                     .base_control
                     .add_child(node.clone().upcast());
+                existing_ui_background
+                    .base_control
+                    .move_child(node.clone().upcast(), 0);
                 node
             };
 
@@ -308,15 +317,15 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         }
     }
 
-    if let Some(dity_ui_text) = dirty_lww_components.get(&SceneComponentId::UI_TEXT) {
-        for entity in dity_ui_text {
+    if let Some(dirty_ui_text) = dirty_lww_components.get(&SceneComponentId::UI_TEXT) {
+        for entity in dirty_ui_text {
             let value = if let Some(entry) = ui_text_component.get(*entity) {
                 entry.value.clone()
             } else {
                 None
             };
 
-            let mut existing_ui_text = godot_dcl_scene
+            let existing_ui_text = godot_dcl_scene
                 .ensure_node_ui(entity)
                 .base_ui
                 .as_mut()
@@ -345,51 +354,107 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 existing_ui_text
                     .base_control
                     .add_child(node.clone().upcast());
+                existing_ui_text
+                    .base_control
+                    .move_child(node.clone().upcast(), 1);
                 node
             };
+            existing_ui_text_control
+                .add_theme_font_size_override("font_size".into(), value.font_size.unwrap_or(10));
+            let font_color = value
+                .color
+                .as_ref()
+                .map(|v| godot::prelude::Color {
+                    r: v.r,
+                    g: v.g,
+                    b: v.b,
+                    a: v.a,
+                })
+                .unwrap_or(godot::prelude::Color::WHITE);
+            existing_ui_text_control.add_theme_color_override("font_color".into(), font_color);
 
-            // let color = value.set_color(color);
+            let text_align = value
+                .text_align
+                .map(TextAlignMode::from_i32)
+                .unwrap_or(Some(TextAlignMode::TamMiddleCenter))
+                .unwrap();
+
+            let (hor_align, vert_align) = match text_align {
+                TextAlignMode::TamTopLeft => (
+                    HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
+                    VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
+                ),
+                TextAlignMode::TamTopCenter => (
+                    HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
+                    VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
+                ),
+                TextAlignMode::TamTopRight => (
+                    HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
+                    VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
+                ),
+                TextAlignMode::TamMiddleLeft => (
+                    HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
+                    VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
+                ),
+                TextAlignMode::TamMiddleCenter => (
+                    HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
+                    VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
+                ),
+                TextAlignMode::TamMiddleRight => (
+                    HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
+                    VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
+                ),
+                TextAlignMode::TamBottomLeft => (
+                    HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
+                    VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
+                ),
+                TextAlignMode::TamBottomCenter => (
+                    HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
+                    VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
+                ),
+                TextAlignMode::TamBottomRight => (
+                    HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
+                    VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
+                ),
+            };
+
+            existing_ui_text_control.set_vertical_alignment(vert_align);
+            existing_ui_text_control.set_horizontal_alignment(hor_align);
             existing_ui_text_control.set_text(value.value.clone().into());
         }
     }
 
     let mut unprocessed_uis = godot_dcl_scene.ui_entities.clone();
-    let mut processed_nodes = HashMap::new();
+    let mut processed_nodes = HashMap::with_capacity(unprocessed_uis.len());
+    let mut processed_nodes_sorted = Vec::with_capacity(unprocessed_uis.len());
 
     let width = 800.0;
     let height = 600.0;
     let mut taffy = taffy::Taffy::new();
+
+    let viewport_style = taffy::style::Style {
+        display: taffy::style::Display::Grid,
+        // Note: Taffy percentages are floats ranging from 0.0 to 1.0.
+        // So this is setting width:100% and height:100%
+        size: taffy::geometry::Size {
+            width: taffy::style::Dimension::Percent(1.0),
+            height: taffy::style::Dimension::Percent(1.0),
+        },
+        align_items: Some(taffy::style::AlignItems::Start),
+        justify_items: Some(taffy::style::JustifyItems::Start),
+        ..Default::default()
+    };
+
     let root_node = taffy
-        .new_leaf(taffy::style::Style {
-            display: Display::Flex,
-            size: Size {
-                width: Dimension::Points(width),
-                height: Dimension::Points(height),
-            },
-            ..Default::default()
-        })
+        .new_leaf(viewport_style)
         .expect("failed to create root node");
 
-    // {
-    //     let Some(root_ui_node) = scene
-    //         .godot_dcl_scene
-    //         .ensure_node_ui(&SceneEntityId::ROOT)
-    //         .base_ui
-    //     else {
-    //         ;
-    //     };
-    //     root_ui_node;
-    // }
-
     processed_nodes.insert(SceneEntityId::ROOT, root_node);
-    let mut number_of_it_a = 0;
-    let mut number_of_it_b = 0;
+
     let mut modified = true;
     while modified && !unprocessed_uis.is_empty() {
-        number_of_it_a += 1;
         modified = false;
         unprocessed_uis.retain(|entity| {
-            number_of_it_b += 1;
             let Some(ui_transform) = ui_transform_component.values.get(entity) else {
                 return true;
             };
@@ -420,6 +485,7 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             let _ = taffy.add_child(*parent, child).unwrap();
             processed_nodes.insert(*entity, child);
+            processed_nodes_sorted.push((*entity, child));
 
             // mark to continue and remove from unprocessed
             modified = true;
@@ -427,48 +493,46 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         })
     }
 
-    let size = Size {
-        width: AvailableSpace::Definite(width),
-        height: AvailableSpace::Definite(height),
+    let size = taffy::prelude::Size {
+        width: taffy::style::AvailableSpace::Definite(width),
+        height: taffy::style::AvailableSpace::Definite(height),
     };
 
     let _ = taffy
         .compute_layout(root_node, size)
         .expect("failed to compute layout");
 
-    tracing::info!(
-        "number of node to process {} - total it {} - sub it {}",
-        processed_nodes.len(),
-        number_of_it_b,
-        number_of_it_a
-    );
+    tracing::debug!("number of node to process {}", processed_nodes.len());
 
-    let mut index = 0;
-    for (entity, key_node) in processed_nodes {
-        let ui_node = godot_dcl_scene.ensure_node_ui(&entity);
-        let ui_node = ui_node.base_ui.as_mut().unwrap();
+    let mut idx = 0;
+    for (entity, key_node) in processed_nodes_sorted {
+        let ui_node = godot_dcl_scene.get_godot_entity_node(&entity).unwrap();
+        let parent_position =
+            if let Some(parent) = godot_dcl_scene.get_godot_entity_node(&ui_node.parent_ui) {
+                parent.base_ui.as_ref().unwrap().base_control.get_position()
+            } else {
+                godot::prelude::Vector2::new(0.0, 0.0)
+            };
+
+        let ui_node = ui_node.base_ui.as_ref().unwrap();
         let mut control = ui_node.base_control.clone();
 
         let layout = taffy.layout(key_node).unwrap();
-        control.set_position(godot::prelude::Vector2 {
-            x: layout.location.x,
-            y: layout.location.y,
-        });
+
+        control.set_position(
+            parent_position
+                + godot::prelude::Vector2 {
+                    x: layout.location.x,
+                    y: layout.location.y,
+                },
+        );
         control.set_size(godot::prelude::Vector2 {
             x: layout.size.width,
             y: layout.size.height,
         });
-
-        godot_dcl_scene
-            .root_node_ui
-            .move_child(control.clone().upcast(), index);
-        index += 1;
-
-        tracing::info!(
-            "node {:?} with layout {:#?} and style {:#?}",
-            key_node,
-            layout,
-            taffy.style(key_node).unwrap()
-        );
+        if entity != SceneEntityId::ROOT {
+            root_node_ui.move_child(control.upcast(), idx);
+            idx += 1;
+        }
     }
 }

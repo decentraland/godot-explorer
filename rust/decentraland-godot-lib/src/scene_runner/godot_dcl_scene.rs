@@ -22,6 +22,8 @@ pub struct GodotDclScene {
     pub root_node_ui: Gd<Control>,
     pub ui_entities: HashSet<SceneEntityId>,
     pub taffy: taffy::Taffy,
+    pub hierarchy_dirty_ui: bool,
+    pub unparented_entities_ui: HashSet<SceneEntityId>,
 }
 
 pub struct VideoPlayerData {
@@ -51,6 +53,7 @@ pub struct GodotEntityNode {
     pub audio_stream: Option<(String, AudioSink)>,
 
     pub base_ui: Option<UiNode>,
+    pub parent_ui: SceneEntityId,
 }
 
 impl SceneDefinition {
@@ -109,12 +112,12 @@ impl GodotEntityNode {
     fn new(base_3d: Option<Gd<Node3D>>, base_ui: Option<UiNode>) -> Self {
         Self {
             base_3d,
-            desired_parent_3d: SceneEntityId::new(0, 0),
-            computed_parent_3d: SceneEntityId::new(0, 0),
+            desired_parent_3d: SceneEntityId::ROOT,
+            computed_parent_3d: SceneEntityId::ROOT,
 
             base_ui,
-            // desired_parent_ui: SceneEntityId::new(0, 0),
-            // computed_parent_ui: SceneEntityId::new(0, 0),
+            parent_ui: SceneEntityId::ROOT,
+
             material: None,
             pointer_events: None,
             video_player_data: None,
@@ -161,6 +164,8 @@ impl GodotDclScene {
             root_node_ui: root_node_ui_control,
             ui_entities: HashSet::new(),
             taffy: taffy::Taffy::new(),
+            hierarchy_dirty_ui: false,
+            unparented_entities_ui: HashSet::new(),
         }
     }
 
@@ -242,13 +247,19 @@ impl GodotDclScene {
         godot_entity_node
     }
 
-    // pub fn get_node(&self, entity: &SceneEntityId) -> Option<&GodotEntityNode> {
-    //     self.entities.get(entity)
-    // }
-
-    // pub fn get_node_mut(&mut self, entity: &SceneEntityId) -> Option<&mut GodotEntityNode> {
-    //     self.entities.get_mut(entity)
-    // }
+    pub fn ensure_node_ui_with_control(
+        &mut self,
+        entity: &SceneEntityId,
+    ) -> (&mut GodotEntityNode, Gd<Control>) {
+        let godot_entity_node = self.ensure_node_ui(entity);
+        let control = godot_entity_node
+            .base_ui
+            .as_ref()
+            .unwrap()
+            .base_control
+            .clone();
+        (godot_entity_node, control)
+    }
 
     #[allow(dead_code)]
     pub fn exist_node(&self, entity: &SceneEntityId) -> bool {
