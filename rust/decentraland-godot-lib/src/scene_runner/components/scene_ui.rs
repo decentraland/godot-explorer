@@ -256,7 +256,8 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 SceneEntityId::ROOT
             };
 
-            let _ = godot_dcl_scene.ensure_node_ui(entity);
+            let node = godot_dcl_scene.ensure_node_ui(entity);
+            node.parent_ui = new_parent;
         }
     }
     let mut root_node_ui = godot_dcl_scene
@@ -461,18 +462,12 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             // if our rightof is not added, we can't process this node
             if !processed_nodes.contains_key(&SceneEntityId::from_i32(ui_transform.right_of)) {
-                // tracing::debug!("can't place {} with ro {}", scene_id, ui_transform.right_of);
                 return true;
             }
 
             // if our parent is not added, we can't process this node
             let Some(parent) = processed_nodes.get(&SceneEntityId::from_i32(ui_transform.parent))
             else {
-                // tracing::debug!(
-                //     "can't place {} with parent {}",
-                //     scene_id,
-                //     ui_transform.parent
-                // );
                 return true;
             };
 
@@ -515,14 +510,13 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         let mut control = ui_node.base_control.clone();
 
         let layout = taffy.layout(key_node).unwrap();
+        let computed_position = parent_position
+            + godot::prelude::Vector2 {
+                x: layout.location.x,
+                y: layout.location.y,
+            };
 
-        control.set_position(
-            parent_position
-                + godot::prelude::Vector2 {
-                    x: layout.location.x,
-                    y: layout.location.y,
-                },
-        );
+        control.set_position(computed_position);
         control.set_size(godot::prelude::Vector2 {
             x: layout.size.width,
             y: layout.size.height,
