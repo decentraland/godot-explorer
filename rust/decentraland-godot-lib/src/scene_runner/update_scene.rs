@@ -10,9 +10,9 @@ use super::{
         camera_mode_area::update_camera_mode_area, gltf_container::update_gltf_container,
         material::update_material, mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer, pointer_events::update_scene_pointer_events,
-        raycast::update_raycasts, scene_ui::update_scene_ui, text_shape::update_text_shape,
+        raycast::update_raycasts, text_shape::update_text_shape,
         transform_and_parent::update_transform_and_parent, video_player::update_video_player,
-        visibility::update_visibility,
+        visibility::update_visibility, ui::scene_ui::update_scene_ui,
     },
     deleted_entities::update_deleted_entities,
     rpc_calls::process_rpcs,
@@ -22,7 +22,9 @@ use crate::{
     common::rpc::RpcCalls,
     dcl::{
         components::{
-            proto_components::sdk::components::{PbCameraMode, PbEngineInfo},
+            proto_components::sdk::components::{
+                PbCameraMode, PbEngineInfo, PbUiCanvasInformation,
+            },
             transform_and_parent::DclTransformAndParent,
             SceneEntityId,
         },
@@ -46,6 +48,7 @@ pub fn _process_scene(
     console: Callable,
     current_parcel_scene_id: &SceneId,
     ref_time: &Instant,
+    ui_canvas_information: &PbUiCanvasInformation,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
     let Ok(mut crdt_state) = crdt.try_lock() else {
@@ -164,7 +167,7 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::SceneUi => {
-                update_scene_ui(scene, crdt_state);
+                update_scene_ui(scene, crdt_state, ui_canvas_information);
                 false
             }
             SceneUpdateState::ComputeCrdtState => {

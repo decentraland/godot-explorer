@@ -1,8 +1,12 @@
 use crate::{
     dcl::{
         components::{
-            proto_components::sdk::components::common::{
-                InputAction, PointerEventType, RaycastHit,
+            proto_components::{
+                common::BorderRect,
+                sdk::components::{
+                    common::{InputAction, PointerEventType, RaycastHit},
+                    PbUiCanvasInformation,
+                },
             },
             SceneEntityId,
         },
@@ -37,6 +41,8 @@ pub struct SceneManager {
     base: Base<Node>,
 
     base_ui: Gd<Control>,
+    ui_canvas_information: PbUiCanvasInformation,
+
     scenes: HashMap<SceneId, Scene>,
 
     #[export]
@@ -314,6 +320,7 @@ impl SceneManager {
                     self.console.clone(),
                     &self.current_parcel_scene_id,
                     &self.begin_time,
+                    &self.ui_canvas_information,
                 ) {
                     current_time_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
@@ -514,6 +521,27 @@ impl SceneManager {
 
     #[signal]
     fn pointer_tooltip_changed() {}
+
+    fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
+        let canvas_size = self.base_ui.get_size();
+        let device_pixel_ratio = godot::engine::DisplayServer::singleton().screen_get_dpi() as f32;
+        PbUiCanvasInformation {
+            device_pixel_ratio,
+            width: canvas_size.x as i32,
+            height: canvas_size.y as i32,
+            interactable_area: Some(BorderRect {
+                top: 0.0,
+                left: 0.0,
+                right: canvas_size.x,
+                bottom: canvas_size.y,
+            }),
+        }
+    }
+
+    #[func]
+    fn _on_ui_resize(&mut self) {
+        self.ui_canvas_information = self.create_ui_canvas_information();
+    }
 }
 
 #[godot_api]
@@ -537,6 +565,7 @@ impl NodeVirtual for SceneManager {
         SceneManager {
             base,
             base_ui,
+            ui_canvas_information: PbUiCanvasInformation::default(),
 
             scenes: HashMap::new(),
             pause: false,
@@ -564,6 +593,9 @@ impl NodeVirtual for SceneManager {
     }
 
     fn ready(&mut self) {
+        let callable = self.base.get("_on_ui_resize".into()).to::<Callable>();
+        self.base_ui.connect("resized".into(), callable);
+
         self.base_ui.set_name("scenes_ui".into());
         self.base
             .get_parent()
