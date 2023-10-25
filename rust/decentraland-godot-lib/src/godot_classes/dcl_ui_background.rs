@@ -15,7 +15,6 @@ pub struct DclUiBackground {
     base: Base<NinePatchRect>,
 
     current_value: PbUiBackground,
-    current_texture: DclTexture,
 
     signal_content_connected: bool,
     waiting_hash: GodotString,
@@ -28,7 +27,6 @@ impl NodeVirtual for DclUiBackground {
         Self {
             base,
             current_value: PbUiBackground::default(),
-            current_texture: DclTexture::default(),
             signal_content_connected: false,
             waiting_hash: GodotString::default(),
             texture_loaded: false,
@@ -299,7 +297,7 @@ impl DclUiBackground {
                 self.base.set_texture(load("res://assets/white_pixel.png"));
             }
 
-            if !self.current_value.texture.is_some() {
+            if self.current_value.texture.is_none() {
                 self.base
                     .set_anchors_preset(godot::engine::control::LayoutPreset::PRESET_FULL_RECT);
                 self.base

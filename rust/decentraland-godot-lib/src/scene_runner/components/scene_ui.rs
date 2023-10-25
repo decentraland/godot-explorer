@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use godot::{
     engine::{
         global::{HorizontalAlignment, VerticalAlignment},
-        ColorRect, Label,
+        Label,
     },
     prelude::Gd,
 };
@@ -23,7 +23,7 @@ use crate::{
         },
     },
     godot_classes::dcl_ui_background::DclUiBackground,
-    scene_runner::{godot_dcl_scene::GodotDclScene, scene::Scene},
+    scene_runner::scene::Scene,
 };
 
 // macro helpers to convert proto format to bevy format for val, size, rect
@@ -231,9 +231,9 @@ impl From<&PbUiTransform> for taffy::style::Style {
 pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
-    let ui_transform_component = SceneCrdtStateProtoComponents::get_ui_transform(&crdt_state);
-    let ui_background_component = SceneCrdtStateProtoComponents::get_ui_background(&crdt_state);
-    let ui_text_component = SceneCrdtStateProtoComponents::get_ui_text(&crdt_state);
+    let ui_transform_component = SceneCrdtStateProtoComponents::get_ui_transform(crdt_state);
+    let ui_background_component = SceneCrdtStateProtoComponents::get_ui_background(crdt_state);
+    let ui_text_component = SceneCrdtStateProtoComponents::get_ui_text(crdt_state);
 
     let need_skip = dirty_lww_components
         .get(&SceneComponentId::UI_TRANSFORM)
@@ -475,7 +475,7 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 .new_leaf(ui_transform.into())
                 .expect("failed to create node");
 
-            let _ = taffy.add_child(*parent, child).unwrap();
+            taffy.add_child(*parent, child).unwrap();
             processed_nodes.insert(*entity, child);
             processed_nodes_sorted.push((*entity, child));
 
@@ -490,7 +490,7 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         height: taffy::style::AvailableSpace::Definite(height),
     };
 
-    let _ = taffy
+    taffy
         .compute_layout(root_node, size)
         .expect("failed to compute layout");
 
