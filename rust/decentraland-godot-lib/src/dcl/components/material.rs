@@ -97,7 +97,13 @@ pub enum DclSourceTex {
     VideoTexture(SceneEntityId),
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+impl Default for DclSourceTex {
+    fn default() -> DclSourceTex {
+        DclSourceTex::Texture("".to_string())
+    }
+}
+
+#[derive(Clone, Hash, PartialEq, Eq, Default)]
 pub struct DclTexture {
     pub wrap_mode: TextureWrapMode,
     pub filter_mode: TextureFilterMode,
@@ -180,7 +186,7 @@ impl DclTexture {
         }
     }
 
-    fn from_proto_with_hash(
+    pub fn from_proto_with_hash(
         texture: &Option<TextureUnion>,
         content_mapping_files: &godot::prelude::Dictionary,
     ) -> Option<Self> {

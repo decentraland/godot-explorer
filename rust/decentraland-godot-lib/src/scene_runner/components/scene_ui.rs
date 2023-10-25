@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
-use godot::engine::{
-    global::{HorizontalAlignment, VerticalAlignment},
-    ColorRect, Label,
+use godot::{
+    engine::{
+        global::{HorizontalAlignment, VerticalAlignment},
+        ColorRect, Label,
+    },
+    prelude::Gd,
 };
 
 use crate::{
@@ -19,6 +22,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
+    godot_classes::dcl_ui_background::DclUiBackground,
     scene_runner::{godot_dcl_scene::GodotDclScene, scene::Scene},
 };
 
@@ -288,9 +292,10 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 .base_control
                 .get_node_or_null("bkg".into())
             {
-                node.cast::<ColorRect>()
+                node.cast::<DclUiBackground>()
             } else {
-                let mut node = ColorRect::new_alloc();
+                // let mut node = Gd::ne<DclUiBackground>::new_alloc();
+                let mut node: Gd<DclUiBackground> = Gd::new_default();
                 node.set_name("bkg".into());
                 node.set_anchors_preset(godot::engine::control::LayoutPreset::PRESET_FULL_RECT);
 
@@ -303,17 +308,9 @@ pub fn update_scene_ui(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 node
             };
 
-            let color = value
-                .color
-                .as_ref()
-                .map(|v| godot::prelude::Color {
-                    r: v.r,
-                    g: v.g,
-                    b: v.b,
-                    a: v.a,
-                })
-                .unwrap_or_default();
-            existing_ui_background_control.set_color(color);
+            existing_ui_background_control
+                .bind_mut()
+                .change_value(value.clone(), &scene.content_mapping);
         }
     }
 
