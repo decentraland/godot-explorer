@@ -38,9 +38,11 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     existing_ui_text.base_control.remove_child(node);
                 }
 
+                existing_ui_text.has_text = false;
                 continue;
             }
 
+            existing_ui_text.has_text = true;
             let value = value.as_ref().unwrap();
 
             let mut existing_ui_text_control = if let Some(node) = existing_ui_text

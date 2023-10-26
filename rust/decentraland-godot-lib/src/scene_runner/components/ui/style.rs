@@ -12,7 +12,7 @@ macro_rules! val {
         match $pb.$u() {
             YgUnit::YguUndefined => $d,
             YgUnit::YguAuto => taffy::style::$t::Auto,
-            YgUnit::YguPoint => taffy::style::$t::Points($pb.$v),
+            YgUnit::YguPoint => taffy::style::$t::Length($pb.$v),
             YgUnit::YguPercent => taffy::style::$t::Percent($pb.$v / 100.0),
         }
     };
@@ -21,7 +21,7 @@ macro_rules! val_a {
     ($pb:ident, $u:ident, $v:ident, $d:expr, $t:ident) => {
         match $pb.$u() {
             YgUnit::YguAuto | YgUnit::YguUndefined => $d,
-            YgUnit::YguPoint => taffy::style::$t::Points($pb.$v),
+            YgUnit::YguPoint => taffy::style::$t::Length($pb.$v),
             YgUnit::YguPercent => taffy::style::$t::Percent($pb.$v / 100.0),
         }
     };
@@ -72,6 +72,20 @@ impl From<&PbUiTransform> for UiTransform {
             right_of: SceneEntityId::from_i32(value.right_of),
             overflow: value.overflow(),
             taffy_style: taffy::style::Style {
+                overflow: match value.overflow() {
+                    YgOverflow::YgoVisible => taffy::geometry::Point::<taffy::style::Overflow> {
+                        x: taffy::style::Overflow::Visible,
+                        y: taffy::style::Overflow::Visible,
+                    },
+                    YgOverflow::YgoScroll => taffy::geometry::Point::<taffy::style::Overflow> {
+                        x: taffy::style::Overflow::Scroll,
+                        y: taffy::style::Overflow::Scroll,
+                    },
+                    YgOverflow::YgoHidden => taffy::geometry::Point::<taffy::style::Overflow> {
+                        x: taffy::style::Overflow::Hidden,
+                        y: taffy::style::Overflow::Hidden,
+                    },
+                },
                 display: match value.display() {
                     YgDisplay::YgdFlex => taffy::style::Display::Flex,
                     YgDisplay::YgdNone => taffy::style::Display::None,
@@ -189,7 +203,7 @@ impl From<&PbUiTransform> for UiTransform {
                     margin_top,
                     margin_bottom_unit,
                     margin_bottom,
-                    taffy::style::LengthPercentageAuto::Points(0.0),
+                    taffy::style::LengthPercentageAuto::Length(0.0),
                     LengthPercentageAuto
                 ),
                 padding: rect_a!(
@@ -202,7 +216,7 @@ impl From<&PbUiTransform> for UiTransform {
                     padding_top,
                     padding_bottom_unit,
                     padding_bottom,
-                    taffy::style::LengthPercentage::Points(0.0),
+                    taffy::style::LengthPercentage::Length(0.0),
                     LengthPercentage
                 ),
                 ..Default::default()

@@ -35,9 +35,11 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 if let Some(node) = existing_ui_background.base_control.get_node("bkg".into()) {
                     existing_ui_background.base_control.remove_child(node);
                 }
-
+                existing_ui_background.has_background = false;
                 continue;
             }
+
+            existing_ui_background.has_background = true;
 
             let value = value.as_ref().unwrap();
 

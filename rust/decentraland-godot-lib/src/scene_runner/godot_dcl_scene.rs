@@ -36,6 +36,15 @@ pub struct VideoPlayerData {
 pub struct UiNode {
     pub base_control: Gd<Control>,
     pub ui_transform: UiTransform,
+    pub computed_parent: SceneEntityId,
+    pub has_background: bool,
+    pub has_text: bool,
+}
+
+impl UiNode {
+    pub fn control_offset(&self) -> i32 {
+        (if self.has_background { 1 } else { 0 }) + (if self.has_text { 1 } else { 0 })
+    }
 }
 
 pub struct GodotEntityNode {
@@ -139,6 +148,9 @@ impl GodotDclScene {
         let root_node_ui = UiNode {
             base_control: root_node_ui_control.clone(),
             ui_transform: UiTransform::default(),
+            computed_parent: SceneEntityId::ROOT,
+            has_background: false,
+            has_text: false,
         };
 
         let entities = HashMap::from([(
@@ -238,6 +250,9 @@ impl GodotDclScene {
             godot_entity_node.base_ui = Some(UiNode {
                 base_control: new_node_ui,
                 ui_transform: UiTransform::default(),
+                computed_parent: SceneEntityId::ROOT,
+                has_background: false,
+                has_text: false,
             });
             self.ui_entities.insert(*entity);
         }

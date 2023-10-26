@@ -1,6 +1,6 @@
 use crate::{
     dcl::{
-        components::{SceneComponentId},
+        components::SceneComponentId,
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
@@ -32,6 +32,9 @@ pub fn update_ui_transform(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     .unwrap();
 
                 node.ui_transform = UiTransform::from(pb_ui_transform);
+                node.base_control.set_clip_contents(
+                    node.ui_transform.overflow == crate::dcl::components::proto_components::sdk::components::YgOverflow::YgoHidden,
+                );
             }
         }
     }

@@ -50,7 +50,7 @@ futures-util = "*"
 
 livekit = { git = "https://github.com/robtfm/client-sdk-rust", branch="h264-false", features=["rustls-tls-webpki-roots"] }
 
-taffy = { version = "0.3.16", features = [] }
+taffy = { git = "https://github.com/DioxusLabs/taffy", branch="main" }
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "0.21.1", features = ["invocation"] }

@@ -48,7 +48,7 @@ impl NodeVirtual for DclUiBackground {
 #[godot_api]
 impl DclUiBackground {
     fn update_layout_for_center(&mut self) -> Option<()> {
-        tracing::info!("update_layout_for_center");
+        tracing::debug!("update_layout_for_center");
 
         let parent_size = self
             .base

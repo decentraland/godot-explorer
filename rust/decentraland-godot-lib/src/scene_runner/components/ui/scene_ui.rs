@@ -32,35 +32,16 @@ const UI_COMPONENT_IDS: [SceneComponentId; 5] = [
 fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformation) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
 
-    let mut root_node_ui = godot_dcl_scene
-        .root_node_ui
-        .clone()
-        .upcast::<godot::prelude::Node>();
-
     let mut unprocessed_uis = godot_dcl_scene.ui_entities.clone();
     let mut processed_nodes = HashMap::with_capacity(unprocessed_uis.len());
     let mut processed_nodes_sorted = Vec::with_capacity(unprocessed_uis.len());
 
-    let mut taffy = taffy::Taffy::new();
-
-    let viewport_style = taffy::style::Style {
-        display: taffy::style::Display::Grid,
-        // Note: Taffy percentages are floats ranging from 0.0 to 1.0.
-        // So this is setting width:100% and height:100%
-        size: taffy::geometry::Size {
-            width: taffy::style::Dimension::Percent(1.0),
-            height: taffy::style::Dimension::Percent(1.0),
-        },
-        align_items: Some(taffy::style::AlignItems::Start),
-        justify_items: Some(taffy::style::JustifyItems::Start),
-        ..Default::default()
-    };
-
+    let mut taffy: taffy::Taffy<()> = taffy::Taffy::new();
     let root_node = taffy
-        .new_leaf(viewport_style)
+        .new_leaf(taffy::style::Style::default())
         .expect("failed to create root node");
 
-    processed_nodes.insert(SceneEntityId::ROOT, root_node);
+    processed_nodes.insert(SceneEntityId::ROOT, (root_node, 0));
 
     let mut modified = true;
     while modified && !unprocessed_uis.is_empty() {
@@ -83,18 +64,34 @@ fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformatio
                 return true;
             };
 
+            if ui_node.computed_parent != ui_node.ui_transform.parent {
+                if let Some(new_parent) = godot_dcl_scene.get_node_ui(&ui_node.ui_transform.parent)
+                {
+                    ui_node
+                        .base_control
+                        .clone()
+                        .reparent(new_parent.base_control.clone().upcast());
+                }
+            }
+
             let child = taffy
                 .new_leaf(ui_node.ui_transform.taffy_style.clone())
                 .expect("failed to create node");
 
-            taffy.add_child(*parent, child).unwrap();
-            processed_nodes.insert(*entity, child);
+            taffy.add_child(parent.0, child).unwrap();
+            processed_nodes.insert(*entity, (child, 0));
             processed_nodes_sorted.push((*entity, child));
 
             // mark to continue and remove from unprocessed
             modified = true;
             false
         })
+    }
+
+    for unprocessed_entity in unprocessed_uis.iter() {
+        if let Some(ui_node) = godot_dcl_scene.get_node_ui_mut(unprocessed_entity) {
+            ui_node.base_control.hide();
+        }
     }
 
     let size = taffy::prelude::Size {
@@ -108,34 +105,40 @@ fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformatio
 
     tracing::debug!("number of node to process {}", processed_nodes.len());
 
-    let mut idx = 0;
-    for (entity, key_node) in processed_nodes_sorted {
-        let ui_node = godot_dcl_scene.get_node_ui(&entity).unwrap();
-        let parent_position =
-            if let Some(parent) = godot_dcl_scene.get_node_ui(&ui_node.ui_transform.parent) {
-                parent.base_control.get_position()
-            } else {
-                godot::prelude::Vector2::new(0.0, 0.0)
-            };
+    for (entity, key_node) in processed_nodes_sorted.iter() {
+        let ui_node = godot_dcl_scene.get_node_ui(entity).unwrap();
+        let parent_node = processed_nodes
+            .get_mut(&ui_node.ui_transform.parent)
+            .expect("parent not found, it was processed before");
+
+        tracing::debug!(
+            "entity {} was parented to {} as child index {} ",
+            entity,
+            ui_node.ui_transform.parent,
+            parent_node.1
+        );
+
+        if let Some(parent) = godot_dcl_scene.get_node_ui(&ui_node.ui_transform.parent) {
+            parent.base_control.clone().move_child(
+                ui_node.base_control.clone().upcast(),
+                parent_node.1 + parent.control_offset(),
+            );
+            parent_node.1 += 1;
+        }
+
+        let ui_node = godot_dcl_scene.get_node_ui_mut(entity).unwrap();
+        ui_node.computed_parent = ui_node.ui_transform.parent;
 
         let mut control = ui_node.base_control.clone();
-
-        let layout = taffy.layout(key_node).unwrap();
-        let computed_position = parent_position
-            + godot::prelude::Vector2 {
-                x: layout.location.x,
-                y: layout.location.y,
-            };
-
-        control.set_position(computed_position);
+        let layout = taffy.layout(*key_node).unwrap();
+        control.set_position(godot::prelude::Vector2 {
+            x: layout.location.x,
+            y: layout.location.y,
+        });
         control.set_size(godot::prelude::Vector2 {
             x: layout.size.width,
             y: layout.size.height,
         });
-        if entity != SceneEntityId::ROOT {
-            root_node_ui.move_child(control.upcast(), idx);
-            idx += 1;
-        }
     }
 }
 
