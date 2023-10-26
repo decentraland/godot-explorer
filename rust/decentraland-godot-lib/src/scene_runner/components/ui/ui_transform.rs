@@ -1,6 +1,6 @@
 use crate::{
     dcl::{
-        components::{SceneComponentId, SceneEntityId},
+        components::{SceneComponentId},
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
