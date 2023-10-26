@@ -17,7 +17,7 @@ pub fn change_realm(
 ) {
     if let Some(confirm_dialog) = scene
         .godot_dcl_scene
-        .root_node
+        .root_node_3d
         .get_node("/root/explorer/UI/ConfirmDialog".into())
     {
         let mut confirm_dialog = confirm_dialog.cast::<DclConfirmDialog>();
@@ -46,7 +46,7 @@ pub fn change_realm(
 
         if let Some(realm) = scene
             .godot_dcl_scene
-            .root_node
+            .root_node_3d
             .get_node("/root/realm".into())
         {
             // clone data that is going to the callback

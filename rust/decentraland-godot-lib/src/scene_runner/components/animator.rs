@@ -6,15 +6,17 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::{godot_dcl_scene::Node3DEntity, scene::Scene},
+    scene_runner::{godot_dcl_scene::GodotEntityNode, scene::Scene},
 };
 use godot::{
     engine::{animation::LoopMode, AnimationPlayer},
     prelude::*,
 };
 
-fn get_animation_player(node: &mut Node3DEntity) -> Option<Gd<AnimationPlayer>> {
-    node.base
+fn get_animation_player(godot_entity_node: &mut GodotEntityNode) -> Option<Gd<AnimationPlayer>> {
+    godot_entity_node
+        .base_3d
+        .as_ref()?
         .try_get_node_as::<Node>(NodePath::from("GltfContainer"))?
         .get_child(0)?
         .try_get_node_as::<AnimationPlayer>("AnimationPlayer")
@@ -32,8 +34,8 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 continue;
             }
 
-            let node = godot_dcl_scene.ensure_node_mut(entity);
-            let animation_player = get_animation_player(node);
+            let (godot_entity_node, _node_3d) = godot_dcl_scene.ensure_node_3d(entity);
+            let animation_player = get_animation_player(godot_entity_node);
 
             if animation_player.is_none() {
                 continue;

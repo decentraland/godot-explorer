@@ -108,16 +108,15 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             }
 
             let new_value = new_value.unwrap();
-            let node = godot_dcl_scene.ensure_node_mut(entity);
+            let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node
-                .base
-                .try_get_node_as::<AnimatableBody3D>(NodePath::from("MeshCollider"));
+            let existing =
+                node_3d.try_get_node_as::<AnimatableBody3D>(NodePath::from("MeshCollider"));
 
             if new_value.is_none() {
                 if let Some(mesh_collider_node) = existing {
-                    node.base.remove_child(mesh_collider_node.upcast());
+                    node_3d.remove_child(mesh_collider_node.upcast());
                 }
             } else if let Some(new_value) = new_value {
                 let (mut animatable_body_3d, add_to_base) = match existing {
@@ -145,7 +144,7 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                         (scene.scene_id.0 as i32).to_variant(),
                     );
 
-                    node.base.add_child(animatable_body_3d.upcast());
+                    node_3d.add_child(animatable_body_3d.upcast());
                 }
             }
         }

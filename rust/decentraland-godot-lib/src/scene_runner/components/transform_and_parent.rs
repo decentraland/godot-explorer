@@ -46,9 +46,9 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
             } else {
                 None
             };
-            let node = godot_dcl_scene.ensure_node_mut(entity);
+            let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
-            let old_parent = node.desired_parent;
+            let old_parent = godot_entity_node.desired_parent_3d;
             let mut transform = value.unwrap_or_default();
             if !transform.rotation.is_normalized() {
                 if transform.rotation.length_squared() == 0.0 {
@@ -58,77 +58,79 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 }
             }
 
-            // node.base.set_position(transform.translation);
-            // node.base
+            // node_3d.set_position(transform.translation);
+            // node_3d
             //     .set_rotation(transform.rotation.to_euler(godot::prelude::EulerOrder::XYZ));
 
             // TODO: the scale seted in the transform is local
-            node.base.set_transform(transform.to_godot_transform_3d());
-            node.base.set_scale(transform.scale);
+            node_3d.set_transform(transform.to_godot_transform_3d());
+            node_3d.set_scale(transform.scale);
 
-            node.desired_parent = transform.parent;
-            if node.desired_parent != old_parent {
-                godot_dcl_scene.unparented_entities.insert(*entity);
-                godot_dcl_scene.hierarchy_dirty = true;
+            godot_entity_node.desired_parent_3d = transform.parent;
+            if godot_entity_node.desired_parent_3d != old_parent {
+                godot_dcl_scene.unparented_entities_3d.insert(*entity);
+                godot_dcl_scene.hierarchy_dirty_3d = true;
             }
         }
     }
 
-    let root_node = godot_dcl_scene.root_node.clone().upcast::<Node>();
-    while godot_dcl_scene.hierarchy_dirty {
-        godot_dcl_scene.hierarchy_dirty = false;
+    let root_node = godot_dcl_scene.root_node_3d.clone().upcast::<Node>();
+    while godot_dcl_scene.hierarchy_dirty_3d {
+        godot_dcl_scene.hierarchy_dirty_3d = false;
 
         let unparented = godot_dcl_scene
-            .unparented_entities
+            .unparented_entities_3d
             .iter()
             .copied()
             .collect::<Vec<SceneEntityId>>();
 
         for entity in unparented {
-            let desired_parent = if let Some(node) = godot_dcl_scene.get_node(&entity) {
-                node.desired_parent
-            } else {
-                godot_dcl_scene.ensure_node_mut(&entity).desired_parent
-            };
+            let desired_parent_3d =
+                if let Some(node) = godot_dcl_scene.get_godot_entity_node(&entity) {
+                    node.desired_parent_3d
+                } else {
+                    godot_dcl_scene.ensure_node_3d(&entity).0.desired_parent_3d
+                };
 
-            // cancel if the desired_parent is the entity itself
-            if desired_parent == entity {
+            // cancel if the desired_parent_3d is the entity itself
+            if desired_parent_3d == entity {
                 continue;
             }
 
             // if parent doens't exist cause it's dead, we remap to the root entity
-            if crdt_state.entities.is_dead(&desired_parent) {
-                let current_node = godot_dcl_scene.ensure_node_mut(&entity);
-                current_node
-                    .base
+            if crdt_state.entities.is_dead(&desired_parent_3d) {
+                let (current_godot_entity_node, mut current_node_3d) =
+                    godot_dcl_scene.ensure_node_3d(&entity);
+
+                current_node_3d
                     .reparent_ex(root_node.clone())
                     .keep_global_transform(false)
                     .done();
-                current_node.computed_parent = SceneEntityId::ROOT;
+                current_godot_entity_node.computed_parent_3d = SceneEntityId::ROOT;
 
-                godot_dcl_scene.ensure_node_mut(&entity).desired_parent = SceneEntityId::ROOT;
-                godot_dcl_scene.hierarchy_dirty = true;
+                godot_dcl_scene.ensure_node_3d(&entity).0.desired_parent_3d = SceneEntityId::ROOT;
+                godot_dcl_scene.hierarchy_dirty_3d = true;
             } else {
                 let has_cycle =
-                    detect_entity_id_in_parent_chain(godot_dcl_scene, desired_parent, entity);
+                    detect_entity_id_in_parent_chain(godot_dcl_scene, desired_parent_3d, entity);
 
                 if !has_cycle {
                     let parent_node = godot_dcl_scene
-                        .ensure_node_mut(&desired_parent)
-                        .base
-                        .clone()
+                        .ensure_node_3d(&desired_parent_3d)
+                        .1
                         .upcast::<Node>();
 
-                    let current_node = godot_dcl_scene.ensure_node_mut(&entity);
-                    current_node
-                        .base
+                    let (current_godot_entity_node, mut current_node_3d) =
+                        godot_dcl_scene.ensure_node_3d(&entity);
+
+                    current_node_3d
                         .reparent_ex(parent_node)
                         .keep_global_transform(false)
                         .done();
-                    current_node.computed_parent = desired_parent;
+                    current_godot_entity_node.computed_parent_3d = desired_parent_3d;
 
-                    godot_dcl_scene.hierarchy_dirty = true;
-                    godot_dcl_scene.unparented_entities.remove(&entity);
+                    godot_dcl_scene.hierarchy_dirty_3d = true;
+                    godot_dcl_scene.unparented_entities_3d.remove(&entity);
                 }
             }
         }
@@ -140,15 +142,15 @@ fn detect_entity_id_in_parent_chain(
     mut current_entity: SceneEntityId,
     search_entity: SceneEntityId,
 ) -> bool {
-    while let Some(node) = godot_dcl_scene.get_node(&current_entity) {
+    while let Some(node) = godot_dcl_scene.get_godot_entity_node(&current_entity) {
         if current_entity == SceneEntityId::ROOT {
             return false;
         }
 
-        if node.desired_parent == search_entity {
+        if node.desired_parent_3d == search_entity {
             return true;
         }
-        current_entity = node.desired_parent;
+        current_entity = node.desired_parent_3d;
     }
 
     false

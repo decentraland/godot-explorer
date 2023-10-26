@@ -3,7 +3,10 @@ use std::{
     time::Instant,
 };
 
-use godot::prelude::{Dictionary, Gd};
+use godot::{
+    engine::Control,
+    prelude::{Dictionary, Gd},
+};
 
 use crate::{
     common::rpc::RpcCalls,
@@ -73,6 +76,7 @@ pub enum SceneUpdateState {
     AvatarShape,
     Raycasts,
     AvatarAttach,
+    SceneUi,
     VideoPlayer,
     AudioStream,
     CameraModeArea,
@@ -105,7 +109,8 @@ impl SceneUpdateState {
             Self::AudioStream => Self::CameraModeArea,
             Self::CameraModeArea => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,
-            Self::AvatarAttach => Self::ProcessRpcs,
+            Self::AvatarAttach => Self::SceneUi,
+            Self::SceneUi => Self::ProcessRpcs,
             Self::ProcessRpcs => Self::ComputeCrdtState,
             Self::ComputeCrdtState => Self::SendToThread,
             Self::SendToThread => Self::Processed,
@@ -198,8 +203,9 @@ impl Scene {
         dcl_scene: DclScene,
         content_mapping: Dictionary,
         scene_type: SceneType,
+        parent_ui_node: Gd<Control>,
     ) -> Self {
-        let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id);
+        let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id, parent_ui_node);
 
         Self {
             scene_id,
@@ -251,7 +257,8 @@ impl Scene {
         let scene_id = Scene::new_id();
         let dcl_scene = DclScene::spawn_new_test_scene(scene_id);
         let content_mapping = Dictionary::default();
-        let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id);
+        let godot_dcl_scene =
+            GodotDclScene::new(&scene_definition, &scene_id, Control::new_alloc());
 
         Self {
             scene_id,

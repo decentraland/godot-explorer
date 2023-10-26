@@ -11,8 +11,8 @@ use super::{
         material::update_material, mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer, pointer_events::update_scene_pointer_events,
         raycast::update_raycasts, text_shape::update_text_shape,
-        transform_and_parent::update_transform_and_parent, video_player::update_video_player,
-        visibility::update_visibility,
+        transform_and_parent::update_transform_and_parent, ui::scene_ui::update_scene_ui,
+        video_player::update_video_player, visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
     rpc_calls::process_rpcs,
@@ -22,7 +22,9 @@ use crate::{
     common::rpc::RpcCalls,
     dcl::{
         components::{
-            proto_components::sdk::components::{PbCameraMode, PbEngineInfo},
+            proto_components::sdk::components::{
+                PbCameraMode, PbEngineInfo, PbUiCanvasInformation,
+            },
             transform_and_parent::DclTransformAndParent,
             SceneEntityId,
         },
@@ -46,6 +48,7 @@ pub fn _process_scene(
     console: Callable,
     current_parcel_scene_id: &SceneId,
     ref_time: &Instant,
+    ui_canvas_information: &PbUiCanvasInformation,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
     let Ok(mut crdt_state) = crdt.try_lock() else {
@@ -163,14 +166,23 @@ pub fn _process_scene(
                 update_audio_source(scene, crdt_state, current_parcel_scene_id);
                 false
             }
+            SceneUpdateState::SceneUi => {
+                update_scene_ui(
+                    scene,
+                    crdt_state,
+                    ui_canvas_information,
+                    current_parcel_scene_id,
+                );
+                false
+            }
             SceneUpdateState::ComputeCrdtState => {
                 let camera_transform = DclTransformAndParent::from_godot(
                     camera_global_transform,
-                    scene.godot_dcl_scene.root_node.get_position(),
+                    scene.godot_dcl_scene.root_node_3d.get_position(),
                 );
                 let player_transform = DclTransformAndParent::from_godot(
                     player_global_transform,
-                    scene.godot_dcl_scene.root_node.get_position(),
+                    scene.godot_dcl_scene.root_node_3d.get_position(),
                 );
                 crdt_state
                     .get_transform_mut()
