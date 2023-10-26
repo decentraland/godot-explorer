@@ -209,7 +209,7 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::ProcessRpcs => {
-                process_rpcs(scene, &scene.current_dirty.rpc_calls);
+                process_rpcs(scene, crdt_state, &scene.current_dirty.rpc_calls);
                 false
             }
             SceneUpdateState::SendToThread => {
