@@ -11,8 +11,8 @@ use super::{
         material::update_material, mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer, pointer_events::update_scene_pointer_events,
         raycast::update_raycasts, text_shape::update_text_shape,
-        transform_and_parent::update_transform_and_parent, video_player::update_video_player,
-        visibility::update_visibility, ui::scene_ui::update_scene_ui,
+        transform_and_parent::update_transform_and_parent, ui::scene_ui::update_scene_ui,
+        video_player::update_video_player, visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
     rpc_calls::process_rpcs,
@@ -167,7 +167,12 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::SceneUi => {
-                update_scene_ui(scene, crdt_state, ui_canvas_information);
+                update_scene_ui(
+                    scene,
+                    crdt_state,
+                    ui_canvas_information,
+                    current_parcel_scene_id,
+                );
                 false
             }
             SceneUpdateState::ComputeCrdtState => {

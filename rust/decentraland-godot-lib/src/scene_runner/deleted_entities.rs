@@ -22,18 +22,6 @@ pub fn update_deleted_entities(scene: &mut Scene) {
             godot_dcl_scene.unparented_entities_3d.insert(*entity_id);
             godot_dcl_scene.hierarchy_dirty_3d = true;
         }
-
-        // if died.contains(&node.computed_parent_ui) && *entity_id != node.computed_parent_ui {
-        //     if let Some(node_ui) = node.base_ui.as_mut() {
-        //         node_ui
-        //             .reparent_ex(godot_dcl_scene.root_node_ui.clone().upcast())
-        //             .keep_global_transform(false)
-        //             .done();
-        //     }
-        //     node.computed_parent_ui = SceneEntityId::ROOT;
-        //     godot_dcl_scene.unparented_entities_ui.insert(*entity_id);
-        //     godot_dcl_scene.hierarchy_dirty_ui = true;
-        // }
     }
 
     for deleted_entity in died.iter() {

@@ -116,12 +116,11 @@ impl SceneManager {
             dcl_scene,
             content_mapping,
             SceneType::Parcel,
+            self.base_ui.clone(),
         );
 
         self.base
             .add_child(new_scene.godot_dcl_scene.root_node_3d.clone().upcast());
-        self.base_ui
-            .add_child(new_scene.godot_dcl_scene.root_node_ui.clone().upcast());
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
         self.sorted_scene_ids.push(new_scene_id);
@@ -250,35 +249,7 @@ impl SceneManager {
         let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
 
         if self.current_parcel_scene_id != self.last_current_parcel_scene_id {
-            if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
-                for (_, audio_source_node) in scene.audio_sources.iter() {
-                    let mut audio_source_node = audio_source_node.clone();
-                    audio_source_node.bind_mut().set_dcl_enable(false);
-                    audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
-                }
-                for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
-                    audio_stream_node.bind_mut().set_muted(true);
-                }
-                for (_, video_player_node) in scene.video_players.iter_mut() {
-                    video_player_node.bind_mut().set_muted(true);
-                }
-            }
-
-            if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
-                for (_, audio_source_node) in scene.audio_sources.iter() {
-                    let mut audio_source_node = audio_source_node.clone();
-                    audio_source_node.bind_mut().set_dcl_enable(true);
-                    audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
-                }
-                for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
-                    audio_stream_node.bind_mut().set_muted(false);
-                }
-                for (_, video_player_node) in scene.video_players.iter_mut() {
-                    video_player_node.bind_mut().set_muted(false);
-                }
-            }
-
-            self.last_current_parcel_scene_id = self.current_parcel_scene_id;
+            self.on_current_parcel_scene_changed();
         }
 
         // TODO: this is debug information, very useful to see the scene priority
@@ -541,6 +512,44 @@ impl SceneManager {
     #[func]
     fn _on_ui_resize(&mut self) {
         self.ui_canvas_information = self.create_ui_canvas_information();
+    }
+
+    fn on_current_parcel_scene_changed(&mut self) {
+        if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
+            for (_, audio_source_node) in scene.audio_sources.iter() {
+                let mut audio_source_node = audio_source_node.clone();
+                audio_source_node.bind_mut().set_dcl_enable(false);
+                audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+            }
+            for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
+                audio_stream_node.bind_mut().set_muted(true);
+            }
+            for (_, video_player_node) in scene.video_players.iter_mut() {
+                video_player_node.bind_mut().set_muted(true);
+            }
+
+            self.base_ui
+                .remove_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
+        }
+
+        if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
+            for (_, audio_source_node) in scene.audio_sources.iter() {
+                let mut audio_source_node = audio_source_node.clone();
+                audio_source_node.bind_mut().set_dcl_enable(true);
+                audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+            }
+            for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
+                audio_stream_node.bind_mut().set_muted(false);
+            }
+            for (_, video_player_node) in scene.video_players.iter_mut() {
+                video_player_node.bind_mut().set_muted(false);
+            }
+
+            self.base_ui
+                .add_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
+        }
+
+        self.last_current_parcel_scene_id = self.current_parcel_scene_id;
     }
 }
 

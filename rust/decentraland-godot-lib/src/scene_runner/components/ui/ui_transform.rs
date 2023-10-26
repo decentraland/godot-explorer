@@ -9,6 +9,8 @@ use crate::{
     scene_runner::scene::Scene,
 };
 
+use super::style::UiTransform;
+
 pub fn update_ui_transform(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
@@ -16,14 +18,21 @@ pub fn update_ui_transform(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(dirty_transform) = dirty_lww_components.get(&SceneComponentId::UI_TRANSFORM) {
         for entity in dirty_transform {
-            let new_parent = if let Some(entry) = ui_transform_component.get(*entity) {
-                SceneEntityId::from_i32(entry.value.as_ref().unwrap().parent)
+            let ui_transform = if let Some(entry) = ui_transform_component.get(*entity) {
+                entry.value.as_ref()
             } else {
-                SceneEntityId::ROOT
+                None
             };
 
-            let node = godot_dcl_scene.ensure_node_ui(entity);
-            node.parent_ui = new_parent;
+            if let Some(pb_ui_transform) = ui_transform {
+                let node = godot_dcl_scene
+                    .ensure_node_ui(entity)
+                    .base_ui
+                    .as_mut()
+                    .unwrap();
+
+                node.ui_transform = UiTransform::from(pb_ui_transform);
+            }
         }
     }
 }

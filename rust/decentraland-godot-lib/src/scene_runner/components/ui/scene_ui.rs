@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     dcl::{
@@ -10,22 +10,26 @@ use crate::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
+        SceneId,
     },
     scene_runner::{
         components::ui::{
             ui_background::update_ui_background, ui_text::update_ui_text,
             ui_transform::update_ui_transform,
         },
-        scene::Scene,
+        scene::{Scene, SceneType},
     },
 };
 
-fn update_layout(
-    scene: &mut Scene,
-    crdt_state: &mut SceneCrdtState,
-    ui_canvas_information: &PbUiCanvasInformation,
-) {
-    let ui_transform_component = SceneCrdtStateProtoComponents::get_ui_transform(crdt_state);
+const UI_COMPONENT_IDS: [SceneComponentId; 5] = [
+    SceneComponentId::UI_TRANSFORM,
+    SceneComponentId::UI_TEXT,
+    SceneComponentId::UI_INPUT,
+    SceneComponentId::UI_DROPDOWN,
+    SceneComponentId::UI_BACKGROUND,
+];
+
+fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformation) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
 
     let mut root_node_ui = godot_dcl_scene
@@ -62,26 +66,25 @@ fn update_layout(
     while modified && !unprocessed_uis.is_empty() {
         modified = false;
         unprocessed_uis.retain(|entity| {
-            let Some(ui_transform) = ui_transform_component.values.get(entity) else {
+            let Some(entity_node) = godot_dcl_scene.get_godot_entity_node(entity) else {
                 return true;
             };
-            let Some(ui_transform) = ui_transform.value.as_ref() else {
+            let Some(ui_node) = entity_node.base_ui.as_ref() else {
                 return true;
             };
 
             // if our rightof is not added, we can't process this node
-            if !processed_nodes.contains_key(&SceneEntityId::from_i32(ui_transform.right_of)) {
+            if !processed_nodes.contains_key(&ui_node.ui_transform.right_of) {
                 return true;
             }
 
             // if our parent is not added, we can't process this node
-            let Some(parent) = processed_nodes.get(&SceneEntityId::from_i32(ui_transform.parent))
-            else {
+            let Some(parent) = processed_nodes.get(&ui_node.ui_transform.parent) else {
                 return true;
             };
 
             let child = taffy
-                .new_leaf(ui_transform.into())
+                .new_leaf(ui_node.ui_transform.taffy_style.clone())
                 .expect("failed to create node");
 
             taffy.add_child(*parent, child).unwrap();
@@ -107,15 +110,14 @@ fn update_layout(
 
     let mut idx = 0;
     for (entity, key_node) in processed_nodes_sorted {
-        let ui_node = godot_dcl_scene.get_godot_entity_node(&entity).unwrap();
+        let ui_node = godot_dcl_scene.get_node_ui(&entity).unwrap();
         let parent_position =
-            if let Some(parent) = godot_dcl_scene.get_godot_entity_node(&ui_node.parent_ui) {
-                parent.base_ui.as_ref().unwrap().base_control.get_position()
+            if let Some(parent) = godot_dcl_scene.get_node_ui(&ui_node.ui_transform.parent) {
+                parent.base_control.get_position()
             } else {
                 godot::prelude::Vector2::new(0.0, 0.0)
             };
 
-        let ui_node = ui_node.base_ui.as_ref().unwrap();
         let mut control = ui_node.base_control.clone();
 
         let layout = taffy.layout(key_node).unwrap();
@@ -141,9 +143,51 @@ pub fn update_scene_ui(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
     ui_canvas_information: &PbUiCanvasInformation,
+    current_parcel_scene_id: &SceneId,
 ) {
+    let ui_is_visible = if let SceneType::Parcel = scene.scene_type {
+        &scene.scene_id == current_parcel_scene_id
+    } else {
+        true
+    };
+
+    if !ui_is_visible {
+        for component_id in UI_COMPONENT_IDS {
+            if let Some(dirty) = scene.current_dirty.lww_components.get(&component_id) {
+                let hidden_dirty = scene
+                    .godot_dcl_scene
+                    .hidden_dirty
+                    .entry(component_id)
+                    .or_insert(HashSet::with_capacity(dirty.len()));
+
+                dirty.iter().for_each(|entity_id| {
+                    hidden_dirty.insert(*entity_id);
+                });
+            }
+        }
+        return;
+    } else if !scene.godot_dcl_scene.hidden_dirty.is_empty() {
+        for component_id in UI_COMPONENT_IDS {
+            if let Some(hidden_dirty) = scene.godot_dcl_scene.hidden_dirty.get(&component_id) {
+                let dirty = scene
+                    .current_dirty
+                    .lww_components
+                    .entry(component_id)
+                    .or_insert(HashSet::with_capacity(hidden_dirty.len()));
+
+                hidden_dirty.iter().for_each(|entity_id| {
+                    if !crdt_state.entities.is_dead(entity_id) {
+                        dirty.insert(*entity_id);
+                    }
+                });
+            }
+        }
+
+        scene.godot_dcl_scene.hidden_dirty.clear();
+    }
+
     let dirty_lww_components = &scene.current_dirty.lww_components;
-    let need_skip = dirty_lww_components
+    let need_skip: bool = dirty_lww_components
         .get(&SceneComponentId::UI_TRANSFORM)
         .is_none()
         && dirty_lww_components
@@ -181,5 +225,5 @@ pub fn update_scene_ui(
     update_ui_transform(scene, crdt_state);
     update_ui_background(scene, crdt_state);
     update_ui_text(scene, crdt_state);
-    update_layout(scene, crdt_state, ui_canvas_information);
+    update_layout(scene, ui_canvas_information);
 }
