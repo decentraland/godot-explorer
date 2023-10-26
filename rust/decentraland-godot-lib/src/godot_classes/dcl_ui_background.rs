@@ -184,6 +184,8 @@ impl DclUiBackground {
                     godot::engine::nine_patch_rect::AxisStretchMode::AXIS_STRETCH_MODE_STRETCH,
                 );
 
+                // TODO: BackgroundTextureMode::Stretch
+
                 // let image_size = godot_texture.get_size();
                 // if self.current_value.uvs.len() == 8 {
                 //     /// default=\[0,0,0,1,1,0,1,0\]: starting from bottom-left vertex clock-wise
@@ -287,10 +289,10 @@ impl DclUiBackground {
                         }
                     }
                     DclSourceTex::VideoTexture(_) => {
-                        // self.base.set_texture(t);
+                        // TODO: implement video texture
                     }
                     DclSourceTex::AvatarTexture(_) => {
-                        // self.base.set_texture(t);
+                        // TODO: implement avatar texture
                     }
                 }
             } else {
