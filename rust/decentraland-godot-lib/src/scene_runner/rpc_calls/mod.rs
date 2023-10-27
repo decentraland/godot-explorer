@@ -30,7 +30,7 @@ pub fn process_rpcs(scene: &Scene, crdt_state: &mut SceneCrdtState, rpc_calls: &
                 world_coordinates,
                 response,
             } => {
-                teleport_to(scene, world_coordinates, response)
+                teleport_to(scene, crdt_state, world_coordinates, response)
             }
         }
     }

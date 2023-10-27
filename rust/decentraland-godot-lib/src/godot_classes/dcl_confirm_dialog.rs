@@ -12,23 +12,15 @@ pub struct DclConfirmDialog {
     ok_button: Option<Gd<Button>>,
     reject_button: Option<Gd<Button>>,
 
-    ok_callback: Option<Box<dyn Fn()>>,
-    reject_callback: Option<Box<dyn Fn()>>,
+    confirm_callback: Option<Box<dyn FnOnce(bool)>>,
 }
 
 impl DclConfirmDialog {
-    pub fn set_ok_callback<F>(&mut self, ok_callback: F)
+    pub fn set_confirm_callback<F>(&mut self, confirm_callback: F)
     where
-        F: Fn() + 'static,
+        F: FnOnce(bool) + 'static,
     {
-        self.ok_callback = Some(Box::new(ok_callback));
-    }
-
-    pub fn set_reject_callback<F>(&mut self, reject_callback: F)
-    where
-        F: Fn() + 'static,
-    {
-        self.reject_callback = Some(Box::new(reject_callback));
+        self.confirm_callback = Some(Box::new(confirm_callback));
     }
 
     pub fn set_texts(
@@ -60,16 +52,16 @@ impl DclConfirmDialog {
 impl DclConfirmDialog {
     #[func]
     fn _on_ok_pressed(&mut self) {
-        if let Some(ref ok_callback) = self.ok_callback {
-            ok_callback();
+        if let Some(confirm_callback) = self.confirm_callback.take() {
+            confirm_callback(true);
         }
         self.base.hide();
     }
 
     #[func]
     fn _on_reject_pressed(&mut self) {
-        if let Some(ref reject_callback) = self.reject_callback {
-            reject_callback();
+        if let Some(confirm_callback) = self.confirm_callback.take() {
+            confirm_callback(false);
         }
         self.base.hide();
     }
@@ -80,8 +72,7 @@ impl PanelVirtual for DclConfirmDialog {
     fn init(base: Base<Panel>) -> Self {
         Self {
             base,
-            ok_callback: None,
-            reject_callback: None,
+            confirm_callback: None,
             title_label: None,
             description_label: None,
             ok_button: None,
