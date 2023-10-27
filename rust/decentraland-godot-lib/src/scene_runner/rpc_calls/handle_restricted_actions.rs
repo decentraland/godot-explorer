@@ -12,7 +12,7 @@ use godot::prelude::{GodotString, PackedScene, Variant, Vector2i, Vector3};
 
 pub fn change_realm(
     scene: &Scene,
-    to: &String,
+    to: &str,
     message: &Option<String>,
     response: &RpcResultSender<Result<(), String>>,
 ) {
@@ -44,9 +44,9 @@ pub fn change_realm(
     );
 
     // clone data that is going to the callback
-    let to = to.clone();
-
+    let to = GodotString::from(to);
     let response = response.clone();
+
     confirm_dialog.setup(
         "Change Realm",
         description.as_str(),
@@ -54,10 +54,7 @@ pub fn change_realm(
         "No thanks",
         move |ok| {
             if ok {
-                realm_node.call(
-                    "set_realm".into(),
-                    &[Variant::from(GodotString::from(to.clone()))],
-                );
+                realm_node.call("set_realm".into(), &[Variant::from(to)]);
                 response.send(Ok(()));
             } else {
                 response.send(Err("User rejected to change realm".to_string()));
@@ -84,7 +81,7 @@ pub fn move_player_to(
     response: &RpcResultSender<Result<(), String>>,
 ) {
     // Check if player is inside the scene that requested the move
-    if !_player_is_inside_scene(&scene, &current_parcel_scene_id) {
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
         response.send(Err("Player position is outside the scene".to_string()));
         return;
     }
@@ -137,7 +134,7 @@ pub fn teleport_to(
     response: &RpcResultSender<Result<(), String>>,
 ) {
     // Check if player is inside the scene that requested the move
-    if !_player_is_inside_scene(&scene, &current_parcel_scene_id) {
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
         response.send(Err("Player position is outside the scene".to_string()));
         return;
     }
