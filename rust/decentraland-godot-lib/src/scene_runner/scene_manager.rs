@@ -1,8 +1,12 @@
 use crate::{
     dcl::{
         components::{
-            proto_components::sdk::components::common::{
-                InputAction, PointerEventType, RaycastHit,
+            proto_components::{
+                common::BorderRect,
+                sdk::components::{
+                    common::{InputAction, PointerEventType, RaycastHit},
+                    PbUiCanvasInformation,
+                },
             },
             SceneEntityId,
         },
@@ -12,7 +16,10 @@ use crate::{
     godot_classes::dcl_camera_3d::DclCamera3D,
     wallet::Wallet,
 };
-use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
+use godot::{
+    engine::{Control, PhysicsRayQueryParameters3D},
+    prelude::*,
+};
 use std::{
     collections::{HashMap, HashSet},
     time::Instant,
@@ -32,6 +39,10 @@ use super::{
 pub struct SceneManager {
     #[base]
     base: Base<Node>,
+
+    base_ui: Gd<Control>,
+    ui_canvas_information: PbUiCanvasInformation,
+
     scenes: HashMap<SceneId, Scene>,
 
     #[export]
@@ -105,10 +116,11 @@ impl SceneManager {
             dcl_scene,
             content_mapping,
             SceneType::Parcel,
+            self.base_ui.clone(),
         );
 
         self.base
-            .add_child(new_scene.godot_dcl_scene.root_node.clone().upcast());
+            .add_child(new_scene.godot_dcl_scene.root_node_3d.clone().upcast());
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
         self.sorted_scene_ids.push(new_scene_id);
@@ -237,23 +249,7 @@ impl SceneManager {
         let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
 
         if self.current_parcel_scene_id != self.last_current_parcel_scene_id {
-            if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
-                for (_, audio_source_node) in scene.audio_sources.iter() {
-                    let mut audio_source_node = audio_source_node.clone();
-                    audio_source_node.bind_mut().set_dcl_enable(false);
-                    audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
-                }
-            }
-
-            if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
-                for (_, audio_source_node) in scene.audio_sources.iter() {
-                    let mut audio_source_node = audio_source_node.clone();
-                    audio_source_node.bind_mut().set_dcl_enable(true);
-                    audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
-                }
-            }
-
-            self.last_current_parcel_scene_id = self.current_parcel_scene_id;
+            self.on_current_parcel_scene_changed();
         }
 
         // TODO: this is debug information, very useful to see the scene priority
@@ -295,6 +291,7 @@ impl SceneManager {
                     self.console.clone(),
                     &self.current_parcel_scene_id,
                     &self.begin_time,
+                    &self.ui_canvas_information,
                 ) {
                     current_time_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
@@ -345,14 +342,21 @@ impl SceneManager {
 
         for scene_id in scene_to_remove.iter() {
             let mut scene = self.scenes.remove(scene_id).unwrap();
-            let node = scene
+            let node_3d = scene
                 .godot_dcl_scene
-                .root_node
+                .root_node_3d
                 .clone()
                 .upcast::<Node>()
                 .clone();
-            self.base.remove_child(node);
-            scene.godot_dcl_scene.root_node.queue_free();
+            let node_ui = scene
+                .godot_dcl_scene
+                .root_node_ui
+                .clone()
+                .upcast::<Node>()
+                .clone();
+            self.base.remove_child(node_3d);
+            self.base_ui.remove_child(node_ui);
+            scene.godot_dcl_scene.root_node_3d.queue_free();
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);
             self.scenes.remove(scene_id);
@@ -471,7 +475,7 @@ impl SceneManager {
             .to::<i32>();
 
         let scene = self.scenes.get(&SceneId(dcl_scene_id as u32))?;
-        let scene_position = scene.godot_dcl_scene.root_node.get_position();
+        let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
         let raycast_data = RaycastHit::from_godot_raycast(
             scene_position,
             raycast_from,
@@ -488,6 +492,65 @@ impl SceneManager {
 
     #[signal]
     fn pointer_tooltip_changed() {}
+
+    fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
+        let canvas_size = self.base_ui.get_size();
+        let device_pixel_ratio = godot::engine::DisplayServer::singleton().screen_get_dpi() as f32;
+        PbUiCanvasInformation {
+            device_pixel_ratio,
+            width: canvas_size.x as i32,
+            height: canvas_size.y as i32,
+            interactable_area: Some(BorderRect {
+                top: 0.0,
+                left: 0.0,
+                right: canvas_size.x,
+                bottom: canvas_size.y,
+            }),
+        }
+    }
+
+    #[func]
+    fn _on_ui_resize(&mut self) {
+        self.ui_canvas_information = self.create_ui_canvas_information();
+    }
+
+    fn on_current_parcel_scene_changed(&mut self) {
+        if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
+            for (_, audio_source_node) in scene.audio_sources.iter() {
+                let mut audio_source_node = audio_source_node.clone();
+                audio_source_node.bind_mut().set_dcl_enable(false);
+                audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+            }
+            for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
+                audio_stream_node.bind_mut().set_muted(true);
+            }
+            for (_, video_player_node) in scene.video_players.iter_mut() {
+                video_player_node.bind_mut().set_muted(true);
+            }
+
+            self.base_ui
+                .remove_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
+        }
+
+        if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
+            for (_, audio_source_node) in scene.audio_sources.iter() {
+                let mut audio_source_node = audio_source_node.clone();
+                audio_source_node.bind_mut().set_dcl_enable(true);
+                audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+            }
+            for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
+                audio_stream_node.bind_mut().set_muted(false);
+            }
+            for (_, video_player_node) in scene.video_players.iter_mut() {
+                video_player_node.bind_mut().set_muted(false);
+            }
+
+            self.base_ui
+                .add_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
+        }
+
+        self.last_current_parcel_scene_id = self.current_parcel_scene_id;
+    }
 }
 
 #[godot_api]
@@ -506,8 +569,12 @@ impl NodeVirtual for SceneManager {
 
         log_panics::init();
 
+        let base_ui = Control::new_alloc();
+
         SceneManager {
             base,
+            base_ui,
+            ui_canvas_information: PbUiCanvasInformation::default(),
 
             scenes: HashMap::new(),
             pause: false,
@@ -532,6 +599,17 @@ impl NodeVirtual for SceneManager {
             global_tick_number: 0,
             pointer_tooltips: VariantArray::new(),
         }
+    }
+
+    fn ready(&mut self) {
+        let callable = self.base.get("_on_ui_resize".into()).to::<Callable>();
+        self.base_ui.connect("resized".into(), callable);
+
+        self.base_ui.set_name("scenes_ui".into());
+        self.base
+            .get_parent()
+            .unwrap()
+            .add_child(self.base_ui.clone().upcast());
     }
 
     fn process(&mut self, delta: f64) {
@@ -610,22 +688,22 @@ impl NodeVirtual for SceneManager {
             self.base.emit_signal("pointer_tooltip_changed".into(), &[]);
         }
 
-        // TODO: should only update the current scnes + globals
+        // This update the mirror node that copies every frame the global transform of the player/camera
+        //  every entity attached to the player/camera is really attached to these mirror nodes
+        // TODO: should only update the current scnes + globals?
         for (_, scene) in self.scenes.iter_mut() {
-            if let Some(player_node_entity) =
-                scene.godot_dcl_scene.get_node_mut(&SceneEntityId::PLAYER)
+            if let Some(player_node) = scene
+                .godot_dcl_scene
+                .get_node_3d_mut(&SceneEntityId::PLAYER)
             {
-                player_node_entity
-                    .base
-                    .set_global_transform(self.player_node.get_global_transform());
+                player_node.set_global_transform(self.player_node.get_global_transform());
             }
 
-            if let Some(camera_node_entity) =
-                scene.godot_dcl_scene.get_node_mut(&SceneEntityId::CAMERA)
+            if let Some(camera_node) = scene
+                .godot_dcl_scene
+                .get_node_3d_mut(&SceneEntityId::CAMERA)
             {
-                camera_node_entity
-                    .base
-                    .set_global_transform(self.player_node.get_global_transform());
+                camera_node.set_global_transform(self.player_node.get_global_transform());
             }
         }
 

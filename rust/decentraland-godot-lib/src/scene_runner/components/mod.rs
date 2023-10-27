@@ -1,5 +1,6 @@
 pub mod animator;
 pub mod audio_source;
+pub mod audio_stream;
 pub mod avatar_attach;
 pub mod avatar_shape;
 pub mod billboard;
@@ -12,5 +13,6 @@ pub mod pointer_events;
 pub mod raycast;
 pub mod text_shape;
 pub mod transform_and_parent;
+pub mod ui;
 pub mod video_player;
 pub mod visibility;

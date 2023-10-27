@@ -23,16 +23,14 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             }
 
             let new_value = new_value.unwrap();
-            let node = godot_dcl_scene.ensure_node_mut(entity);
+            let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node
-                .base
-                .try_get_node_as::<Node>(NodePath::from("AvatarAttach"));
+            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarAttach"));
 
             if new_value.is_none() {
                 if let Some(avatar_attach_node) = existing {
-                    node.base.remove_child(avatar_attach_node);
+                    node_3d.remove_child(avatar_attach_node);
                     // TODO: resolve the current transform
                 }
             } else if let Some(new_value) = new_value {
@@ -58,7 +56,7 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
                 avatar_attach_node.set_name(GodotString::from("AvatarAttach"));
 
-                node.base.add_child(avatar_attach_node);
+                node_3d.add_child(avatar_attach_node);
             }
         }
     }

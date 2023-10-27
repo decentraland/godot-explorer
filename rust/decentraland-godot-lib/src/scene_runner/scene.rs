@@ -3,7 +3,10 @@ use std::{
     time::Instant,
 };
 
-use godot::prelude::{Dictionary, Gd};
+use godot::{
+    engine::Control,
+    prelude::{Dictionary, Gd},
+};
 
 use crate::{
     common::rpc::RpcCalls,
@@ -23,7 +26,10 @@ use crate::{
         SceneDefinition,
         SceneId,
     },
-    godot_classes::dcl_audio_source::DclAudioSource,
+    godot_classes::{
+        dcl_audio_source::DclAudioSource, dcl_audio_stream::DclAudioStream,
+        dcl_video_player::DclVideoPlayer,
+    },
 };
 
 use super::godot_dcl_scene::GodotDclScene;
@@ -70,7 +76,9 @@ pub enum SceneUpdateState {
     AvatarShape,
     Raycasts,
     AvatarAttach,
+    SceneUi,
     VideoPlayer,
+    AudioStream,
     CameraModeArea,
     AudioSource,
     ProcessRpcs,
@@ -97,10 +105,12 @@ impl SceneUpdateState {
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::Raycasts,
             Self::Raycasts => Self::VideoPlayer,
-            Self::VideoPlayer => Self::CameraModeArea,
+            Self::VideoPlayer => Self::AudioStream,
+            Self::AudioStream => Self::CameraModeArea,
             Self::CameraModeArea => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,
-            Self::AvatarAttach => Self::ProcessRpcs,
+            Self::AvatarAttach => Self::SceneUi,
+            Self::SceneUi => Self::ProcessRpcs,
             Self::ProcessRpcs => Self::ComputeCrdtState,
             Self::ComputeCrdtState => Self::SendToThread,
             Self::SendToThread => Self::Processed,
@@ -142,6 +152,10 @@ pub struct Scene {
 
     pub scene_type: SceneType,
     pub audio_sources: HashMap<SceneEntityId, Gd<DclAudioSource>>,
+
+    // Used by VideoPlayer and AudioStream
+    pub audio_streams: HashMap<SceneEntityId, Gd<DclAudioStream>>,
+    pub video_players: HashMap<SceneEntityId, Gd<DclVideoPlayer>>,
 }
 
 #[derive(Debug)]
@@ -189,8 +203,9 @@ impl Scene {
         dcl_scene: DclScene,
         content_mapping: Dictionary,
         scene_type: SceneType,
+        parent_ui_node: Gd<Control>,
     ) -> Self {
-        let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id);
+        let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id, parent_ui_node);
 
         Self {
             scene_id,
@@ -221,6 +236,8 @@ impl Scene {
             materials: HashMap::new(),
             dirty_materials: false,
             audio_sources: HashMap::new(),
+            audio_streams: HashMap::new(),
+            video_players: HashMap::new(),
             scene_type,
         }
     }
@@ -240,7 +257,8 @@ impl Scene {
         let scene_id = Scene::new_id();
         let dcl_scene = DclScene::spawn_new_test_scene(scene_id);
         let content_mapping = Dictionary::default();
-        let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id);
+        let godot_dcl_scene =
+            GodotDclScene::new(&scene_definition, &scene_id, Control::new_alloc());
 
         Self {
             scene_id,
@@ -271,6 +289,8 @@ impl Scene {
             dirty_materials: false,
             scene_type: SceneType::Parcel,
             audio_sources: HashMap::new(),
+            audio_streams: HashMap::new(),
+            video_players: HashMap::new(),
         }
     }
 }
