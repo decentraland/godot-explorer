@@ -21,7 +21,7 @@ async fn op_change_realm(
     op_state: Rc<RefCell<OpState>>,
     realm: String,
     message: Option<String>,
-) -> bool {
+) -> Result<(), AnyError> {
     let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
 
     op_state
@@ -33,7 +33,9 @@ async fn op_change_realm(
             response: sx.into(),
         });
 
-    matches!(rx.await, Ok(Ok(_)))
+    rx.await
+        .map_err(|e| anyhow::anyhow!(e))?
+        .map_err(|e| anyhow!(e))
 }
 
 #[op]
@@ -72,8 +74,11 @@ async fn op_teleport_to(
             world_coordinates,
             response: sx.into(),
         });
-
-    rx.await
+    println!("TeleportTo await starts...");
+    let res = rx.await
         .map_err(|e| anyhow::anyhow!(e))?
-        .map_err(|e| anyhow!(e))
+        .map_err(|e| anyhow!(e));
+
+    println!("TeleportTo await finish...");
+    res
 }

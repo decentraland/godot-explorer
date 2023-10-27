@@ -174,6 +174,14 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 func avatar_look_at(target_position: Vector3):
-	# TODO Implement
+	var direction = target_position - get_global_position()
+	direction = direction.normalized()
+	
+	var y_rot = atan2(direction.x, direction.z)
+	var x_rot = atan2(direction.y, sqrt(direction.x * direction.x + direction.z * direction.z))
+
+	rotation.y = y_rot + PI
+	avatar.set_rotation(Vector3(0, 0, 0))
+	mount_camera.rotation.x = x_rot
 
 	_clamp_camera_rotation()

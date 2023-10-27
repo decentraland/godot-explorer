@@ -285,7 +285,6 @@ func _on_button_jump_gui_input(event):
 		Input.action_press("ia_jump")
 
 func move_to(position: Vector3):
-	print("Move to!", position)
 	player.set_position(position)
 
 func teleport_to(parcel: Vector2i):

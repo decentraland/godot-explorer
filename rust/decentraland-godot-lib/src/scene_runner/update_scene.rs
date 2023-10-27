@@ -226,7 +226,7 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::ProcessRpcs => {
-                process_rpcs(scene, crdt_state, &scene.current_dirty.rpc_calls);
+                process_rpcs(scene, current_parcel_scene_id, &scene.current_dirty.rpc_calls);
                 false
             }
             SceneUpdateState::SendToThread => {

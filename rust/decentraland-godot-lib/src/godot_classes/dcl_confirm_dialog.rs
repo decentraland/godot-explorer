@@ -16,20 +16,18 @@ pub struct DclConfirmDialog {
 }
 
 impl DclConfirmDialog {
-    pub fn set_confirm_callback<F>(&mut self, confirm_callback: F)
-    where
-        F: FnOnce(bool) + 'static,
-    {
-        self.confirm_callback = Some(Box::new(confirm_callback));
-    }
-
-    pub fn set_texts(
+    pub fn setup<F>(
         &mut self,
         title: &str,
         description: &str,
         ok_button_text: &str,
         reject_button_text: &str,
-    ) {
+        confirm_callback: F,
+    ) where
+        F: FnOnce(bool) + 'static,
+    {
+        self.confirm_callback = Some(Box::new(confirm_callback));
+
         if let Some(title_label) = &mut self.title_label {
             title_label.set_text(GodotString::from(title));
         }
@@ -45,6 +43,8 @@ impl DclConfirmDialog {
         if let Some(reject_button) = &mut self.reject_button {
             reject_button.set_text(GodotString::from(reject_button_text));
         }
+
+        self.base.show();
     }
 }
 
