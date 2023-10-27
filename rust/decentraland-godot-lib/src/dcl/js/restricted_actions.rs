@@ -74,11 +74,10 @@ async fn op_teleport_to(
             world_coordinates,
             response: sx.into(),
         });
-    println!("TeleportTo await starts...");
+
     let res = rx.await
         .map_err(|e| anyhow::anyhow!(e))?
         .map_err(|e| anyhow!(e));
 
-    println!("TeleportTo await finish...");
     res
 }

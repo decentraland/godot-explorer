@@ -29,7 +29,9 @@ impl DclConfirmDialog {
         self.confirm_callback = Some(Box::new(confirm_callback));
 
         if let Some(title_label) = &mut self.title_label {
-            title_label.set_text(GodotString::from(title));
+            let title = GodotString::from(title);
+            self.base.set_name(title.clone());
+            title_label.set_text(title);
         }
 
         if let Some(description_label) = &mut self.description_label {
@@ -55,7 +57,7 @@ impl DclConfirmDialog {
         if let Some(confirm_callback) = self.confirm_callback.take() {
             confirm_callback(true);
         }
-        self.base.hide();
+        self.base.queue_free();
     }
 
     #[func]
@@ -63,7 +65,7 @@ impl DclConfirmDialog {
         if let Some(confirm_callback) = self.confirm_callback.take() {
             confirm_callback(false);
         }
-        self.base.hide();
+        self.base.queue_free();
     }
 }
 

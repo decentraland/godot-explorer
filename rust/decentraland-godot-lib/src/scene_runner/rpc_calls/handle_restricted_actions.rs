@@ -2,10 +2,10 @@ use crate::{
     common::rpc::RpcResultSender,
     dcl::SceneId,
     godot_classes::dcl_confirm_dialog::DclConfirmDialog,
-    scene_runner::scene::{Scene, SceneType},
+    scene_runner::{scene::{Scene, SceneType}, global_get_node_helper::{get_explorer_node, get_dialog_stack_node, get_realm_node}},
 };
 
-use godot::prelude::{GodotString, Variant, Vector2i, Vector3};
+use godot::prelude::{GodotString, PackedScene, Variant, Vector2i, Vector3};
 
 pub fn change_realm(
     scene: &Scene,
@@ -14,20 +14,20 @@ pub fn change_realm(
     response: &RpcResultSender<Result<(), String>>,
 ) {
     // Get nodes
-    let mut confirm_dialog = scene
-        .godot_dcl_scene
-        .root_node_3d
-        .get_node("/root/explorer/UI/ConfirmDialog".into())
-        .expect("ConfirmDialog not found")
-        .cast::<DclConfirmDialog>();
+    let mut dialog_stack = get_dialog_stack_node(scene);
 
-    let mut realm_node = scene
-        .godot_dcl_scene
-        .root_node_3d
-        .get_node("/root/realm".into())
-        .expect("Missing realm node");
+    let mut realm_node = get_realm_node(scene);
+
+    let confirm_dialog =
+        godot::engine::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
+            .instantiate()
+            .expect("ConfirmDialog instantiate error");
 
     // Setup confirm dialog
+    dialog_stack.add_child(confirm_dialog.clone());
+
+    // Setup confirm Dialog
+    let mut confirm_dialog = confirm_dialog.cast::<DclConfirmDialog>();
     let mut confirm_dialog = confirm_dialog.bind_mut();
 
     let description = format!(
@@ -86,11 +86,7 @@ pub fn move_player_to(
         return;
     }
 
-    let mut explorer_node = scene
-        .godot_dcl_scene
-        .root_node_3d
-        .get_node("/root/explorer".into())
-        .expect("Missing explorer node.");
+    let mut explorer_node = get_explorer_node(scene);
 
     let base_parcel = scene.definition.base;
     let scene_position = Vector3::new(
@@ -144,21 +140,20 @@ pub fn teleport_to(
     }
 
     // Get Nodes
-    let explorer_node = scene
-        .godot_dcl_scene
-        .root_node_3d
-        .get_node("/root/explorer".into())
-        .expect("Missing explorer node.");
+    let explorer_node = get_explorer_node(scene);
+
+    let mut dialog_stack = get_dialog_stack_node(scene);
 
     // TODO: We should implement a new Dialog, that shows the thumbnail of the destination
-    let mut confirm_dialog = scene
-        .godot_dcl_scene
-        .root_node_3d
-        .get_node("/root/explorer/UI/ConfirmDialog".into())
-        .expect("ConfirmDialog not found")
-        .cast::<DclConfirmDialog>();
+    let confirm_dialog =
+        godot::engine::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
+            .instantiate()
+            .expect("ConfirmDialog instantiate error");
+
+    dialog_stack.add_child(confirm_dialog.clone());
 
     // Setup confirm Dialog
+    let mut confirm_dialog = confirm_dialog.cast::<DclConfirmDialog>();
     let mut confirm_dialog = confirm_dialog.bind_mut();
 
     let description = format!(
@@ -180,10 +175,8 @@ pub fn teleport_to(
                 explorer_node.call("teleport_to".into(), &[Variant::from(target_parcel)]);
 
                 response.send(Ok(()));
-                println!("TeleportTo Send ok...");
             } else {
                 response.send(Err("User rejected to teleport".to_string()));
-                println!("TeleportTo Rejected...");
             }
         },
     );
