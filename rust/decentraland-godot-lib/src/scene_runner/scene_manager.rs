@@ -13,7 +13,7 @@ use crate::{
         js::SceneLogLevel,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
-    godot_classes::dcl_camera_3d::DclCamera3D,
+    godot_classes::{dcl_camera_3d::DclCamera3D, dcl_ui_control::DclUiControl},
     wallet::Wallet,
 };
 use godot::{
@@ -22,6 +22,7 @@ use godot::{
 };
 use std::{
     collections::{HashMap, HashSet},
+    sync::atomic::AtomicU64,
     time::Instant,
 };
 use tracing::info;
@@ -40,7 +41,7 @@ pub struct SceneManager {
     #[base]
     base: Base<Node>,
 
-    base_ui: Gd<Control>,
+    base_ui: Gd<DclUiControl>,
     ui_canvas_information: PbUiCanvasInformation,
 
     scenes: HashMap<SceneId, Scene>,
@@ -69,11 +70,12 @@ pub struct SceneManager {
 
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
-    global_tick_number: u32,
 
     #[export]
     pointer_tooltips: VariantArray,
 }
+
+pub static GLOBAL_TICK_NUMBER: AtomicU64 = AtomicU64::new(0);
 
 #[godot_api]
 impl SceneManager {
@@ -569,11 +571,9 @@ impl NodeVirtual for SceneManager {
 
         log_panics::init();
 
-        let base_ui = Control::new_alloc();
-
         SceneManager {
             base,
-            base_ui,
+            base_ui: DclUiControl::new_alloc(),
             ui_canvas_information: PbUiCanvasInformation::default(),
 
             scenes: HashMap::new(),
@@ -596,7 +596,6 @@ impl NodeVirtual for SceneManager {
             console: Callable::invalid(),
             input_state: InputState::default(),
             last_raycast_result: None,
-            global_tick_number: 0,
             pointer_tooltips: VariantArray::new(),
         }
     }
@@ -619,7 +618,6 @@ impl NodeVirtual for SceneManager {
         let current_pointer_raycast_result = self.get_current_mouse_entity();
 
         pointer_events_system(
-            self.global_tick_number,
             &mut self.scenes,
             &changed_inputs,
             &self.last_raycast_result,
@@ -708,7 +706,7 @@ impl NodeVirtual for SceneManager {
         }
 
         self.last_raycast_result = current_pointer_raycast_result;
-        self.global_tick_number += 1;
+        GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 }
 

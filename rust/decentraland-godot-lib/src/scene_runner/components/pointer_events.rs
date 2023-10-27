@@ -15,7 +15,10 @@ use crate::{
         },
         SceneId,
     },
-    scene_runner::scene::{GodotDclRaycastResult, Scene},
+    scene_runner::{
+        scene::{GodotDclRaycastResult, Scene},
+        scene_manager::GLOBAL_TICK_NUMBER,
+    },
 };
 
 impl crate::dcl::components::proto_components::sdk::components::common::RaycastHit {
@@ -79,13 +82,22 @@ pub fn update_scene_pointer_events(scene: &mut Scene, crdt_state: &mut SceneCrdt
 
         for entity in pointer_events_dirty {
             let new_value = pointer_events_component.get(*entity);
-            if new_value.is_none() {
-                continue;
+            let new_value = if let Some(value) = new_value {
+                value.value.clone()
+            } else {
+                None
+            };
+
+            let godot_entity_node = godot_dcl_scene.ensure_godot_entity_node(entity);
+
+            if let Some(base_ui) = godot_entity_node.base_ui.as_mut() {
+                base_ui
+                    .base_control
+                    .bind_mut()
+                    .set_pointer_events(&new_value);
             }
 
-            let new_value = new_value.unwrap();
-            let (godot_entity_node, _node_3d) = godot_dcl_scene.ensure_node_3d(entity);
-            godot_entity_node.pointer_events = new_value.value.clone();
+            godot_entity_node.pointer_events = new_value;
         }
     }
 }
@@ -108,12 +120,13 @@ pub fn get_entity_pointer_event<'a>(
 }
 
 pub fn pointer_events_system(
-    global_tick_number: u32,
     scenes: &mut HashMap<SceneId, Scene>,
     changed_inputs: &HashSet<(InputAction, bool)>,
     previous_raycast: &Option<GodotDclRaycastResult>,
     current_raycast: &Option<GodotDclRaycastResult>,
 ) {
+    let global_tick_number = unsafe { *GLOBAL_TICK_NUMBER.as_ptr().clone() as u32 };
+
     if !GodotDclRaycastResult::eq_key(current_raycast, previous_raycast) {
         if let Some(raycast) = previous_raycast.as_ref() {
             if let Some(pointer_event) =

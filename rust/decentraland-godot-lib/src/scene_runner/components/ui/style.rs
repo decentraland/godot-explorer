@@ -1,7 +1,7 @@
 use crate::dcl::components::{
     proto_components::sdk::components::{
-        PbUiTransform, YgAlign, YgDisplay, YgFlexDirection, YgJustify, YgOverflow, YgPositionType,
-        YgUnit, YgWrap,
+        PbUiTransform, PointerFilterMode, YgAlign, YgDisplay, YgFlexDirection, YgJustify,
+        YgOverflow, YgPositionType, YgUnit, YgWrap,
     },
     SceneEntityId,
 };
@@ -62,6 +62,7 @@ pub struct UiTransform {
     pub parent: SceneEntityId,
     pub right_of: SceneEntityId,
     pub overflow: YgOverflow,
+    pub pointer_filter_mode: PointerFilterMode,
     pub taffy_style: taffy::style::Style,
 }
 
@@ -71,6 +72,7 @@ impl From<&PbUiTransform> for UiTransform {
             parent: SceneEntityId::from_i32(value.parent),
             right_of: SceneEntityId::from_i32(value.right_of),
             overflow: value.overflow(),
+            pointer_filter_mode: value.pointer_filter(),
             taffy_style: taffy::style::Style {
                 overflow: match value.overflow() {
                     YgOverflow::YgoVisible => taffy::geometry::Point::<taffy::style::Overflow> {

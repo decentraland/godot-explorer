@@ -1,10 +1,16 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 use crate::{
     dcl::{
         components::{
-            proto_components::sdk::components::PbUiCanvasInformation, SceneComponentId,
-            SceneEntityId,
+            proto_components::sdk::components::{
+                PbPointerEventsResult, PbUiCanvasInformation, PbUiDropdownResult, PbUiInputResult,
+            },
+            SceneComponentId, SceneEntityId,
         },
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
@@ -20,6 +26,22 @@ use crate::{
         scene::{Scene, SceneType},
     },
 };
+
+pub struct UiResults {
+    pub pointer_event_results: Vec<(SceneEntityId, PbPointerEventsResult)>,
+    pub input_results: HashMap<SceneEntityId, PbUiInputResult>,
+    pub dropdown_results: HashMap<SceneEntityId, PbUiDropdownResult>,
+}
+
+impl UiResults {
+    pub fn new_shared() -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self {
+            pointer_event_results: Vec::new(),
+            input_results: HashMap::new(),
+            dropdown_results: HashMap::new(),
+        }))
+    }
+}
 
 const UI_COMPONENT_IDS: [SceneComponentId; 5] = [
     SceneComponentId::UI_TRANSFORM,

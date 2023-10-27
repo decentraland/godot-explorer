@@ -121,11 +121,12 @@ func _on_check_button_toggled(button_pressed):
 
 
 func _on_ui_gui_input(event):
-	if not Global.is_mobile:
-		if event is InputEventMouseButton and event.pressed:
-			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-				label_crosshair.show()
+	pass
+#	if not Global.is_mobile:
+#		if event is InputEventMouseButton and event.pressed:
+#			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+#				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+#				label_crosshair.show()
 
 
 @onready var line_edit_command = $UI/LineEdit_Command

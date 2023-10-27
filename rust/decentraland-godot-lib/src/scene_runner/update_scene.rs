@@ -221,6 +221,12 @@ pub fn _process_scene(
                     pointer_events_result_component.append(entity, value);
                 }
 
+                let mut ui_results = scene.godot_dcl_scene.ui_results.borrow_mut();
+                let results = ui_results.pointer_event_results.drain(0..);
+                for (entity, value) in results {
+                    pointer_events_result_component.append(entity, value);
+                }
+
                 let dirty = crdt_state.take_dirty();
                 scene.current_dirty.renderer_response = Some(RendererResponse::Ok(dirty));
                 false

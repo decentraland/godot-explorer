@@ -3,16 +3,21 @@ use crate::{
     dcl::{
         components::{
             material::DclMaterial,
-            proto_components::{self},
+            proto_components::{self, sdk::components::PbPointerEventsResult},
             SceneComponentId, SceneEntityId,
         },
         SceneDefinition, SceneId,
     },
+    godot_classes::dcl_ui_control::DclUiControl,
 };
-use godot::{engine::Control, prelude::*};
-use std::collections::{HashMap, HashSet};
+use godot::prelude::*;
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
-use super::components::ui::style::UiTransform;
+use super::components::ui::{scene_ui::UiResults, style::UiTransform};
 
 pub struct GodotDclScene {
     pub entities: HashMap<SceneEntityId, GodotEntityNode>,
@@ -21,11 +26,13 @@ pub struct GodotDclScene {
     pub hierarchy_dirty_3d: bool,
     pub unparented_entities_3d: HashSet<SceneEntityId>,
 
-    pub parent_node_ui: Gd<Control>,
-    pub root_node_ui: Gd<Control>,
+    pub parent_node_ui: Gd<DclUiControl>,
+    pub root_node_ui: Gd<DclUiControl>,
     pub ui_entities: HashSet<SceneEntityId>,
     pub hidden_dirty: HashMap<SceneComponentId, HashSet<SceneEntityId>>,
     pub ui_visible: bool,
+
+    pub ui_results: Rc<RefCell<UiResults>>,
 }
 
 pub struct VideoPlayerData {
@@ -34,7 +41,7 @@ pub struct VideoPlayerData {
 }
 
 pub struct UiNode {
-    pub base_control: Gd<Control>,
+    pub base_control: Gd<DclUiControl>,
     pub ui_transform: UiTransform,
     pub computed_parent: SceneEntityId,
     pub has_background: bool,
@@ -132,7 +139,7 @@ impl GodotDclScene {
     pub fn new(
         scene_definition: &SceneDefinition,
         scene_id: &SceneId,
-        parent_node_ui: Gd<Control>,
+        parent_node_ui: Gd<DclUiControl>,
     ) -> Self {
         let mut root_node_3d = Node3D::new_alloc();
         root_node_3d.set_position(Vector3 {
@@ -142,7 +149,7 @@ impl GodotDclScene {
         });
         root_node_3d.set_name(GodotString::from(format!("scene_id_{:?}", scene_id.0)));
 
-        let mut root_node_ui_control = Control::new_alloc();
+        let mut root_node_ui_control = DclUiControl::new_alloc();
         root_node_ui_control.set_name(GodotString::from(format!("ui_scene_id_{:?}", scene_id.0)));
 
         let root_node_ui = UiNode {
@@ -170,6 +177,7 @@ impl GodotDclScene {
             hidden_dirty: HashMap::new(),
             ui_visible: false,
             parent_node_ui,
+            ui_results: UiResults::new_shared(),
         }
     }
 
@@ -240,11 +248,18 @@ impl GodotDclScene {
 
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_ui.is_none() {
-            let mut new_node_ui = Control::new_alloc();
+            let mut new_node_ui = DclUiControl::new_alloc();
             new_node_ui.set_name(GodotString::from(format!(
                 "e{:?}_{:?}",
                 entity.number, entity.version
             )));
+            new_node_ui
+                .bind_mut()
+                .set_pointer_events(&godot_entity_node.pointer_events);
+            new_node_ui
+                .bind_mut()
+                .set_ui_result(self.ui_results.clone());
+            new_node_ui.bind_mut().set_dcl_entity_id(entity.as_i32());
 
             self.root_node_ui.add_child(new_node_ui.clone().upcast());
             godot_entity_node.base_ui = Some(UiNode {
@@ -263,7 +278,7 @@ impl GodotDclScene {
     pub fn ensure_node_ui_with_control(
         &mut self,
         entity: &SceneEntityId,
-    ) -> (&mut GodotEntityNode, Gd<Control>) {
+    ) -> (&mut GodotEntityNode, Gd<DclUiControl>) {
         let godot_entity_node = self.ensure_node_ui(entity);
         let control = godot_entity_node
             .base_ui

@@ -13,25 +13,15 @@ use crate::dcl::components::proto_components::sdk::components::{
 
 #[derive(GodotClass)]
 #[class(base=Label)]
-pub struct DclUiText {
+pub struct DclUiInput {
     #[base]
     base: Base<Label>,
 
     current_font: Font,
 }
 
-impl Font {
-    pub fn get_font_path(self) -> &'static str {
-        match self {
-            Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-Regular.ttf",
-            Font::FSerif => "res://assets/themes/fonts/noto/NotoSerif-Regular.ttf",
-            Font::FMonospace => "res://assets/themes/fonts/noto/NotoSansMono-Regular.ttf",
-        }
-    }
-}
-
 #[godot_api]
-impl NodeVirtual for DclUiText {
+impl NodeVirtual for DclUiInput {
     fn init(base: Base<Label>) -> Self {
         Self {
             base,
@@ -47,7 +37,7 @@ impl NodeVirtual for DclUiText {
 }
 
 #[godot_api]
-impl DclUiText {
+impl DclUiInput {
     pub fn change_value(&mut self, new_value: &PbUiText) {
         self.base
             .add_theme_font_size_override("font_size".into(), new_value.font_size.unwrap_or(10));
