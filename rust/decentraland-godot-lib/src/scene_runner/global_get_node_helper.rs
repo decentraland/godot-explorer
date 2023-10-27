@@ -1,5 +1,5 @@
 use godot::{
-    engine::{PanelContainer},
+    engine::PanelContainer,
     prelude::{Gd, Node},
 };
 

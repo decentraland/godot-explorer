@@ -75,7 +75,8 @@ async fn op_teleport_to(
             response: sx.into(),
         });
 
-    let res = rx.await
+    let res = rx
+        .await
         .map_err(|e| anyhow::anyhow!(e))?
         .map_err(|e| anyhow!(e));
 

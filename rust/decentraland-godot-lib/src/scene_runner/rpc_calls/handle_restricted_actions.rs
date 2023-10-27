@@ -2,7 +2,10 @@ use crate::{
     common::rpc::RpcResultSender,
     dcl::SceneId,
     godot_classes::dcl_confirm_dialog::DclConfirmDialog,
-    scene_runner::{scene::{Scene, SceneType}, global_get_node_helper::{get_explorer_node, get_dialog_stack_node, get_realm_node}},
+    scene_runner::{
+        global_get_node_helper::{get_dialog_stack_node, get_explorer_node, get_realm_node},
+        scene::{Scene, SceneType},
+    },
 };
 
 use godot::prelude::{GodotString, PackedScene, Variant, Vector2i, Vector3};

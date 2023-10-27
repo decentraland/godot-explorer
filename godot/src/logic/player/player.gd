@@ -94,16 +94,14 @@ func _on_param_changed(_param):
 @onready var camera_fade_out_audio = preload("res://assets/sfx/ui_fade_out.wav")
 @onready var audio_stream_player_camera = $AudioStreamPlayer_Camera
 
+
 func _clamp_camera_rotation():
 	# Maybe mobile wants a requires values
 	if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
-		mount_camera.rotation.x = clamp(
-			mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90)
-		)
+		mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90))
 	elif camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
-		mount_camera.rotation.x = clamp(
-			mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45)
-		)
+		mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45))
+
 
 func _input(event):
 	# Receives touchscreen motion
@@ -173,10 +171,11 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+
 func avatar_look_at(target_position: Vector3):
 	var direction = target_position - get_global_position()
 	direction = direction.normalized()
-	
+
 	var y_rot = atan2(direction.x, direction.z)
 	var x_rot = atan2(direction.y, sqrt(direction.x * direction.x + direction.z * direction.z))
 
