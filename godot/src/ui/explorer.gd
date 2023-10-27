@@ -292,6 +292,4 @@ func teleport_to(parcel: Vector2i):
 	player.set_position(Vector3i(parcel.x * 16, 3, -parcel.y * 16))
 		
 func player_look_at(look_at_position: Vector3):
-	#player.look_at(look_at_position)
-	pass
-	# TODO: Change camera position
+	player.avatar_look_at(look_at_position)

@@ -86,7 +86,7 @@ pub fn move_player_to(
 ) {
     let mut explorer_node = scene
         .godot_dcl_scene
-        .root_node
+        .root_node_3d
         .get_node("/root/explorer".into())
         .expect("Missing explorer node.");
 
@@ -97,7 +97,6 @@ pub fn move_player_to(
     let position_target = Vector3::new(position_target[0], position_target[1], -position_target[2]);
 
     let position_target = position_target - scene_position;
-
     // Check if player is inside the scene that requested the move
     let player_translation = crdt_state
         .get_transform()
@@ -137,7 +136,10 @@ pub fn move_player_to(
 
     // Set camera to look at camera target position
     if let Some(camera_target) = camera_target {
-        let camera_target = Vector3::new(camera_target[0], camera_target[1], camera_target[2]);
+        let camera_target = Vector3::new(camera_target[0], camera_target[1], -camera_target[2]);
+
+        let camera_target = camera_target - scene_position;
+    
         explorer_node.call("player_look_at".into(), &[Variant::from(camera_target)]);
     }
 
@@ -152,7 +154,7 @@ pub fn teleport_to(
 ) {
     let mut confirm_dialog = scene
         .godot_dcl_scene
-        .root_node
+        .root_node_3d
         .get_node("/root/explorer/UI/ConfirmDialog".into())
         .expect("ConfirmDialog not found")
         .cast::<DclConfirmDialog>();
@@ -179,7 +181,7 @@ pub fn teleport_to(
 
     let explorer_node = scene
         .godot_dcl_scene
-        .root_node
+        .root_node_3d
         .get_node("/root/explorer".into())
         .expect("Missing explorer node.");
 

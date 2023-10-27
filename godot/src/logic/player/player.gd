@@ -94,6 +94,16 @@ func _on_param_changed(_param):
 @onready var camera_fade_out_audio = preload("res://assets/sfx/ui_fade_out.wav")
 @onready var audio_stream_player_camera = $AudioStreamPlayer_Camera
 
+func _clamp_camera_rotation():
+	# Maybe mobile wants a requires values
+	if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
+		mount_camera.rotation.x = clamp(
+			mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90)
+		)
+	elif camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
+		mount_camera.rotation.x = clamp(
+			mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45)
+		)
 
 func _input(event):
 	# Receives touchscreen motion
@@ -103,14 +113,7 @@ func _input(event):
 			rotate_y(deg_to_rad(-_touch_position.x) * horizontal_sens)
 			avatar.rotate_y(deg_to_rad(_touch_position.x) * horizontal_sens)
 			mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * vertical_sens)
-			if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
-				mount_camera.rotation.x = clamp(
-					mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90)
-				)
-			elif camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
-				mount_camera.rotation.x = clamp(
-					mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45)
-				)
+			_clamp_camera_rotation()
 
 	# Receives mouse motion
 	if not Global.is_mobile && event:
@@ -119,15 +122,7 @@ func _input(event):
 			rotate_y(deg_to_rad(-_mouse_position.x) * horizontal_sens)
 			avatar.rotate_y(deg_to_rad(_mouse_position.x) * horizontal_sens)
 			mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * vertical_sens)
-
-		if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
-			mount_camera.rotation.x = clamp(
-				mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90)
-			)
-		elif camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
-			mount_camera.rotation.x = clamp(
-				mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45)
-			)
+			_clamp_camera_rotation()
 
 		# Release mouse
 		if event is InputEventKey:
@@ -177,3 +172,8 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, WALK_SPEED)
 
 	move_and_slide()
+
+func avatar_look_at(target_position: Vector3):
+	# TODO Implement
+
+	_clamp_camera_rotation()
