@@ -104,7 +104,11 @@ impl SceneDefinition {
             return Err("couldn't get parcels as Vector2".to_string());
         }
 
-        let parcels = parcels.map(|v| v.unwrap()).collect();
+        let mut parcels: Vec<Vector2i> = parcels.map(|v| v.unwrap()).collect();
+
+        if !parcels.contains(&base) {
+            parcels.push(base);
+        }
 
         Ok(Self {
             main_crdt_path: main_crdt_path.to::<GodotString>().to_string(),

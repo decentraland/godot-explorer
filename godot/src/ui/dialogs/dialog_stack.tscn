@@ -1,0 +1,30 @@
+[gd_scene load_steps=2 format=3 uid="uid://bx1gqvqo2q04b"]
+
+[ext_resource type="Script" path="res://src/ui/dialogs/dialog_stack.gd" id="1_s4mqx"]
+
+[node name="DialogStack" type="PanelContainer"]
+custom_minimum_size = Vector2(360, 280)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -24.0
+offset_top = -11.5
+offset_right = 24.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_s4mqx")
+
+[node name="Counter" type="Label" parent="."]
+unique_name_in_owner = true
+z_index = 1
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+text = "Tabs: 5"
+
+[connection signal="child_order_changed" from="." to="." method="_on_child_order_changed"]

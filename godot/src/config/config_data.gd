@@ -111,7 +111,7 @@ func load_from_default():
 	self.scene_radius = 4
 	self.limit_fps = 0
 
-	if OS.get_name() == "Android":
+	if OS.has_feature("mobile"):
 		self.skybox = 0
 	else:
 		self.skybox = 1
