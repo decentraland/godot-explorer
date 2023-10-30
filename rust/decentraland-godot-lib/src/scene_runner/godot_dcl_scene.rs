@@ -3,7 +3,7 @@ use crate::{
     dcl::{
         components::{
             material::DclMaterial,
-            proto_components::{self, sdk::components::PbPointerEventsResult},
+            proto_components::{self},
             SceneComponentId, SceneEntityId,
         },
         SceneDefinition, SceneId,

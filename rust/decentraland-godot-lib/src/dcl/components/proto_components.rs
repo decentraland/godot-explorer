@@ -75,6 +75,70 @@ pub mod common {
     }
 }
 
+pub trait WrapToGodot<T> {
+    fn to_godot_or_else(&self, default: T) -> T;
+}
+
+impl WrapToGodot<godot::prelude::Color> for Option<common::Color4> {
+    fn to_godot_or_else(&self, default: godot::prelude::Color) -> godot::prelude::Color {
+        self.as_ref().map(|v| v.to_godot()).unwrap_or(default)
+    }
+}
+
+impl WrapToGodot<godot::prelude::Color> for Option<common::Color3> {
+    fn to_godot_or_else(&self, default: godot::prelude::Color) -> godot::prelude::Color {
+        self.as_ref().map(|v| v.to_godot()).unwrap_or(default)
+    }
+}
+
+impl sdk::components::common::TextAlignMode {
+    pub fn to_godot(
+        &self,
+    ) -> (
+        godot::engine::global::HorizontalAlignment,
+        godot::engine::global::VerticalAlignment,
+    ) {
+        match self {
+            sdk::components::common::TextAlignMode::TamTopLeft => (
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
+            ),
+            sdk::components::common::TextAlignMode::TamTopCenter => (
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
+            ),
+            sdk::components::common::TextAlignMode::TamTopRight => (
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
+            ),
+            sdk::components::common::TextAlignMode::TamMiddleLeft => (
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
+            ),
+            sdk::components::common::TextAlignMode::TamMiddleCenter => (
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
+            ),
+            sdk::components::common::TextAlignMode::TamMiddleRight => (
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
+            ),
+            sdk::components::common::TextAlignMode::TamBottomLeft => (
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
+            ),
+            sdk::components::common::TextAlignMode::TamBottomCenter => (
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
+            ),
+            sdk::components::common::TextAlignMode::TamBottomRight => (
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
+            ),
+        }
+    }
+}
+
 pub mod kernel {
     #[allow(clippy::all)]
     pub mod comms {

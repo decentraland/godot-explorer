@@ -27,6 +27,8 @@ use crate::{
     },
 };
 
+use super::{ui_dropdown::update_ui_dropdown, ui_input::update_ui_input};
+
 pub struct UiResults {
     pub pointer_event_results: Vec<(SceneEntityId, PbPointerEventsResult)>,
     pub input_results: HashMap<SceneEntityId, PbUiInputResult>,
@@ -244,11 +246,32 @@ pub fn update_scene_ui(
     }
 
     if need_skip {
-        return;
+        update_input_result(scene, crdt_state);
+    } else {
+        update_ui_transform(scene, crdt_state);
+        update_ui_background(scene, crdt_state);
+        update_ui_text(scene, crdt_state);
+        update_ui_input(scene, crdt_state);
+        update_ui_dropdown(scene, crdt_state);
+        update_layout(scene, ui_canvas_information);
+
+        update_input_result(scene, crdt_state);
+    }
+}
+
+fn update_input_result(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    let mut ui_results = scene.godot_dcl_scene.ui_results.borrow_mut();
+
+    let input_results = ui_results.input_results.drain();
+    let ui_input_result_mut = SceneCrdtStateProtoComponents::get_ui_input_result_mut(crdt_state);
+    for (entity, value) in input_results {
+        ui_input_result_mut.put(entity, Some(value));
     }
 
-    update_ui_transform(scene, crdt_state);
-    update_ui_background(scene, crdt_state);
-    update_ui_text(scene, crdt_state);
-    update_layout(scene, ui_canvas_information);
+    let input_results = ui_results.dropdown_results.drain();
+    let ui_dropdown_result_mut =
+        SceneCrdtStateProtoComponents::get_ui_dropdown_result_mut(crdt_state);
+    for (entity, value) in input_results {
+        ui_dropdown_result_mut.put(entity, Some(value));
+    }
 }

@@ -3,10 +3,7 @@ use std::{
     time::Instant,
 };
 
-use godot::{
-    engine::Control,
-    prelude::{Dictionary, Gd},
-};
+use godot::prelude::{Dictionary, Gd};
 
 use crate::{
     common::rpc::RpcCalls,

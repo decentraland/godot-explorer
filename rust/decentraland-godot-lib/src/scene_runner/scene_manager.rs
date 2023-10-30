@@ -16,10 +16,7 @@ use crate::{
     godot_classes::{dcl_camera_3d::DclCamera3D, dcl_ui_control::DclUiControl},
     wallet::Wallet,
 };
-use godot::{
-    engine::{Control, PhysicsRayQueryParameters3D},
-    prelude::*,
-};
+use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
 use std::{
     collections::{HashMap, HashSet},
     sync::atomic::AtomicU64,

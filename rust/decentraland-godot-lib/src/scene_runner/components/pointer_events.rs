@@ -125,7 +125,7 @@ pub fn pointer_events_system(
     previous_raycast: &Option<GodotDclRaycastResult>,
     current_raycast: &Option<GodotDclRaycastResult>,
 ) {
-    let global_tick_number = unsafe { *GLOBAL_TICK_NUMBER.as_ptr().clone() as u32 };
+    let global_tick_number = unsafe { *GLOBAL_TICK_NUMBER.as_ptr() as u32 };
 
     if !GodotDclRaycastResult::eq_key(current_raycast, previous_raycast) {
         if let Some(raycast) = previous_raycast.as_ref() {

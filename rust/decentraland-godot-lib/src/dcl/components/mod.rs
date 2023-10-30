@@ -24,7 +24,7 @@ impl Property for SceneEntityId {
     }
 
     fn set_property(&mut self, value: Self::Intermediate) {
-        *self = Self::from_i32(value as i32);
+        *self = Self::from_i32(value);
     }
 }
 

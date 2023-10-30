@@ -65,7 +65,7 @@ impl DclUiControl {
 
     #[func]
     pub fn _on_gui_input(&mut self, input: Gd<InputEvent>) {
-        let global_tick_number = unsafe { *GLOBAL_TICK_NUMBER.as_ptr().clone() as u32 };
+        let global_tick_number = unsafe { *GLOBAL_TICK_NUMBER.as_ptr() as u32 };
         if let Some(event) = input.try_cast::<InputEventMouseButton>() {
             let is_left_button = event.get_button_index() == MouseButton::MOUSE_BUTTON_LEFT;
             let down_event = event.is_pressed();
@@ -73,7 +73,7 @@ impl DclUiControl {
             if self.listening_mouse_down && is_left_button && down_event {
                 if let Some(ui_result) = self.ui_result.as_ref() {
                     ui_result.borrow_mut().pointer_event_results.push((
-                        self.dcl_entity_id.clone(),
+                        self.dcl_entity_id,
                         PbPointerEventsResult {
                             button: InputAction::IaPointer as i32,
                             hit: None,
@@ -87,7 +87,7 @@ impl DclUiControl {
             } else if self.listening_mouse_up && is_left_button && !down_event {
                 if let Some(ui_result) = self.ui_result.as_ref() {
                     ui_result.borrow_mut().pointer_event_results.push((
-                        self.dcl_entity_id.clone(),
+                        self.dcl_entity_id,
                         PbPointerEventsResult {
                             button: InputAction::IaPointer as i32,
                             hit: None,
@@ -141,31 +141,23 @@ impl DclUiControl {
             return;
         };
 
-        self.listening_mouse_down = pb_pointer_events
-            .pointer_events
-            .iter()
-            .find(|pe| {
-                pe.event_type() == PointerEventType::PetDown
-                    && pe
-                        .event_info
-                        .as_ref()
-                        .map(|ei| ei.button() == InputAction::IaPointer)
-                        .unwrap_or(false)
-            })
-            .is_some();
+        self.listening_mouse_down = pb_pointer_events.pointer_events.iter().any(|pe| {
+            pe.event_type() == PointerEventType::PetDown
+                && pe
+                    .event_info
+                    .as_ref()
+                    .map(|ei| ei.button() == InputAction::IaPointer)
+                    .unwrap_or(false)
+        });
 
-        self.listening_mouse_up = pb_pointer_events
-            .pointer_events
-            .iter()
-            .find(|pe| {
-                pe.event_type() == PointerEventType::PetUp
-                    && pe
-                        .event_info
-                        .as_ref()
-                        .map(|ei| ei.button() == InputAction::IaPointer)
-                        .unwrap_or(false)
-            })
-            .is_some();
+        self.listening_mouse_up = pb_pointer_events.pointer_events.iter().any(|pe| {
+            pe.event_type() == PointerEventType::PetUp
+                && pe
+                    .event_info
+                    .as_ref()
+                    .map(|ei| ei.button() == InputAction::IaPointer)
+                    .unwrap_or(false)
+        });
 
         self.set_connect_gui_input(self.listening_mouse_down || self.listening_mouse_up);
     }
