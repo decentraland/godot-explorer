@@ -38,6 +38,7 @@ pub struct SceneManager {
     #[base]
     base: Base<Node>,
 
+    #[var]
     base_ui: Gd<DclUiControl>,
     ui_canvas_information: PbUiCanvasInformation,
 
@@ -72,6 +73,7 @@ pub struct SceneManager {
     pointer_tooltips: VariantArray,
 }
 
+// This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
 pub static GLOBAL_TICK_NUMBER: AtomicU64 = AtomicU64::new(0);
 
 #[godot_api]
@@ -600,12 +602,7 @@ impl NodeVirtual for SceneManager {
     fn ready(&mut self) {
         let callable = self.base.get("_on_ui_resize".into()).to::<Callable>();
         self.base_ui.connect("resized".into(), callable);
-
         self.base_ui.set_name("scenes_ui".into());
-        self.base
-            .get_parent()
-            .unwrap()
-            .add_child(self.base_ui.clone().upcast());
     }
 
     fn process(&mut self, delta: f64) {

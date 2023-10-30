@@ -28,7 +28,7 @@ texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_y5cd3"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_a8iva"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
@@ -53,7 +53,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
+mouse_filter = 1
 theme = SubResource("Theme_1ufu0")
 
 [node name="Timer_FPSLabel" type="Timer" parent="UI"]
@@ -173,7 +173,7 @@ layout_mode = 2
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_y5cd3")
+group = SubResource("ButtonGroup_a8iva")
 
 [node name="ConfirmDialog" parent="UI" instance=ExtResource("10_sldb0")]
 visible = false
@@ -197,8 +197,8 @@ offset_right = 100.0
 offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 0
+mouse_filter = 1
 
-[connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_timeout"]
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
 [connection signal="submit_message" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_submit_message"]
