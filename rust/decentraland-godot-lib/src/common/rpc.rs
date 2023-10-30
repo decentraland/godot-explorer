@@ -39,6 +39,15 @@ pub enum RpcCall {
         message: Option<String>,
         response: RpcResultSender<Result<(), String>>,
     },
+    MovePlayerTo {
+        position_target: [f32; 3],
+        camera_target: Option<[f32; 3]>,
+        response: RpcResultSender<Result<(), String>>,
+    },
+    TeleportTo {
+        world_coordinates: [i32; 2],
+        response: RpcResultSender<Result<(), String>>,
+    },
 }
 
 pub type RpcCalls = Vec<RpcCall>;

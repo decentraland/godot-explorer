@@ -2,7 +2,7 @@ extends Node
 
 signal config_changed
 
-@onready var is_mobile = OS.get_name() == "Android" || OS.get_name() == "iOS"
+@onready var is_mobile = OS.has_feature("mobile")
 #@onready var is_mobile = true
 
 ## Global classes (singleton pattern)

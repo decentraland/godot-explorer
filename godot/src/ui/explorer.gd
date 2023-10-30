@@ -283,3 +283,15 @@ func _on_control_menu_request_pause_scenes(enabled):
 func _on_button_jump_gui_input(event):
 	if event is InputEventScreenTouch:
 		Input.action_press("ia_jump")
+
+
+func move_to(position: Vector3):
+	player.set_position(position)
+
+
+func teleport_to(parcel: Vector2i):
+	player.set_position(Vector3i(parcel.x * 16, 3, -parcel.y * 16))
+
+
+func player_look_at(look_at_position: Vector3):
+	player.avatar_look_at(look_at_position)

@@ -1,5 +1,6 @@
 mod components;
 mod deleted_entities;
+pub mod global_get_node_helper;
 mod godot_dcl_scene;
 mod input;
 mod rpc_calls;
