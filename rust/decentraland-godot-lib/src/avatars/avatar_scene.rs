@@ -213,13 +213,10 @@ impl AvatarScene {
         };
 
         // Avoid updating avatar with the same data
-        match self.last_updated_profile.get(&entity_id) {
-            Some(val) => {
-                if profile.eq(val) {
-                    return;
-                }
+        if let Some(val) = self.last_updated_profile.get(&entity_id) {
+            if profile.eq(val) {
+                return;
             }
-            None => {}
         }
         self.last_updated_profile.insert(entity_id, profile.clone());
 

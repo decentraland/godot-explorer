@@ -217,7 +217,7 @@ pub fn trigger_scene_emote(
     let mut avatar_node = get_avatar_node(scene);
     avatar_node.call(
         "play_remote_emote".into(),
-        &[Variant::from(emote_src), Variant::from(looping.clone())],
+        &[Variant::from(emote_src), Variant::from(*looping)],
     );
     avatar_node.call("broadcast_avatar_animation".into(), &[]);
 }
