@@ -136,7 +136,6 @@ impl LivekitRoom {
                                     address.clone()
                                 }
                             };
-                            println!("LiveKit Room: {}", address.clone());
                             self.chats.push((address, peer_name, chat));
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileVersion(

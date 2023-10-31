@@ -419,7 +419,6 @@ impl WebSocketRoom {
                                     address.clone()
                                 }
                             };
-                            println!("WS Room: {}", address.clone());
                             self.chats.push((address, peer_name, chat));
                         }
                         rfc4::packet::Message::ProfileVersion(announce_profile_version) => {
