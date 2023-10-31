@@ -15,6 +15,7 @@ var avatars: AvatarScene
 var config: ConfigData
 
 var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
+var animation_importer: AnimationImporter = AnimationImporter.new()
 
 var standalone = false
 

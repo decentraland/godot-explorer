@@ -52,7 +52,7 @@ func update_avatar(avatar: Dictionary):
 	var wearable_to_request := PackedStringArray(current_wearables)
 	wearable_to_request.push_back(current_body_shape)
 
-	# TODO: load emotes
+	_load_default_emotes()
 
 	finish_loading = false
 
@@ -62,6 +62,13 @@ func update_avatar(avatar: Dictionary):
 	if last_request_id == -1:
 		fetch_wearables()
 
+@onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
+func _add_animation(animation_name: String):
+	var animation = Global.animation_importer.get_animation_from_gltf(animation_name)
+	global_animation_library.add_animation(animation_name, animation)
+
+func _load_default_emotes():
+	_add_animation("angry")
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
 	current_eyes_color = eyes_color
@@ -399,8 +406,8 @@ func _process(delta):
 
 
 func set_walking():
-	if animation_player.current_animation != "Walk":
-		animation_player.play("Walk")
+	if animation_player.current_animation != "Walking":
+		animation_player.play("Walking")
 
 
 func set_running():
