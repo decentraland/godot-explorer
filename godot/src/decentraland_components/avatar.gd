@@ -51,7 +51,6 @@ func update_avatar(avatar: Dictionary):
 	set_idle()
 
 	avatar_name = avatar.get("name")
-	print("Update profile ", avatar_name, avatar)
 	label_3d_name.text = avatar_name
 	current_wearables = avatar.get("wearables")
 	current_body_shape = avatar.get("body_shape")

@@ -29,6 +29,8 @@ pub struct AvatarScene {
     // scenes_dirty: HashMap<SceneId, HashMap<SceneEntityId, SceneComponentId>>,
     //
     crdt: SceneCrdtState,
+
+    last_updated_profile: HashMap<SceneEntityId, SerializedProfile>,
 }
 
 #[godot_api]
@@ -40,6 +42,7 @@ impl NodeVirtual for AvatarScene {
             crdt: SceneCrdtState::from_proto(),
             avatar_godot_scene: HashMap::new(),
             avatar_address: HashMap::new(),
+            last_updated_profile: HashMap::new(),
         }
     }
 }
@@ -208,6 +211,17 @@ impl AvatarScene {
             // TODO: handle this condition
             return;
         };
+
+        // Avoid updating avatar with the same data
+        match self.last_updated_profile.get(&entity_id) {
+            Some(val) => {
+                if profile.eq(val) {
+                    return;
+                }
+            }
+            None => {}
+        }
+        self.last_updated_profile.insert(entity_id, profile.clone());
 
         self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
             "update_avatar".into(),
