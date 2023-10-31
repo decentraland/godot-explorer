@@ -3,7 +3,7 @@ use crate::{
     dcl::SceneId,
     godot_classes::dcl_confirm_dialog::DclConfirmDialog,
     scene_runner::{
-        global_get_node_helper::{get_dialog_stack_node, get_explorer_node, get_realm_node},
+        global_get_node_helper::{get_dialog_stack_node, get_explorer_node, get_realm_node, get_avatar_node},
         scene::{Scene, SceneType},
     },
 };
@@ -180,4 +180,39 @@ pub fn teleport_to(
             }
         },
     );
+}
+
+pub fn trigger_emote(
+    scene: &Scene,
+    current_parcel_scene_id: &SceneId,
+    emote_id: &str,
+    response: &RpcResultSender<Result<(), String>>,
+) {
+    // Check if player is inside the scene that requested the move
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+        response.send(Err("Player position is outside the scene".to_string()));
+        return;
+    }
+
+    let mut avatar_node = get_avatar_node(scene);
+    avatar_node.call("play_emote".into(), &[Variant::from(emote_id)]);
+    avatar_node.call("broadcast_avatar_animation".into(), &[]);
+}
+
+pub fn trigger_scene_emote(
+    scene: &Scene,
+    current_parcel_scene_id: &SceneId,
+    emote_src: &str,
+    looping: &bool,
+    response: &RpcResultSender<Result<(), String>>,
+) {
+    // Check if player is inside the scene that requested the move
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+        response.send(Err("Player position is outside the scene".to_string()));
+        return;
+    }
+
+    let mut avatar_node = get_avatar_node(scene);
+    avatar_node.call("play_remote_emote".into(), &[Variant::from(emote_src), Variant::from(looping.clone())]);
+    avatar_node.call("broadcast_avatar_animation".into(), &[]);
 }

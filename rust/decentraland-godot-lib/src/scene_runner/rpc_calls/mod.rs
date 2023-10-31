@@ -5,7 +5,7 @@ use crate::{
     dcl::SceneId,
 };
 
-use self::handle_restricted_actions::{change_realm, move_player_to, teleport_to};
+use self::handle_restricted_actions::{change_realm, move_player_to, teleport_to, trigger_emote, trigger_scene_emote};
 
 use super::scene::Scene;
 
@@ -36,6 +36,15 @@ pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls:
                 world_coordinates,
                 response,
             } => teleport_to(scene, current_parcel_scene_id, world_coordinates, response),
+            RpcCall::TriggerEmote {
+                emote_id,
+                response,
+            } => trigger_emote(scene, current_parcel_scene_id, emote_id, response),
+            RpcCall::TriggerSceneEmote {
+                emote_src,
+                looping,
+                response,
+            } => trigger_scene_emote(scene, current_parcel_scene_id, emote_src, looping, response),
         }
     }
 }

@@ -111,14 +111,20 @@ func play_emote(emote_id: String):
 		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_name])
 	playing_emote = true
 
+func play_remote_emote(emote_src: String):
+	# TODO: Implement downloading emote from the scene content, adding to the avatar and then playing the emote
+	# Test scene: https://github.com/decentraland/unity-renderer/pull/5501
+	pass
 
-func play_emote_by_index_and_send(index: int):
+func play_emote_by_index(index: int):
 	# Play emote
 	var emote_id: String = index_to_animation_name[index]
 	play_emote(emote_id)
+
+func broadcast_avatar_animation():
 	# Send emote
 	var timestamp = Time.get_unix_time_from_system() * 1000
-	Global.comms.send_chat("␐%s %d" % [emote_id, timestamp])
+	Global.comms.send_chat("␐%s %d" % [animation_player.current_animation, timestamp])
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:

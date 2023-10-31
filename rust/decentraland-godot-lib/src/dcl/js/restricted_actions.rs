@@ -13,6 +13,8 @@ pub fn ops() -> Vec<OpDecl> {
         op_change_realm::DECL,
         op_move_player_to::DECL,
         op_teleport_to::DECL,
+        op_trigger_emote::DECL,
+        op_trigger_scene_emote::DECL,
     ]
 }
 
@@ -72,6 +74,48 @@ async fn op_teleport_to(
         .borrow_mut::<RpcCalls>()
         .push(RpcCall::TeleportTo {
             world_coordinates,
+            response: sx.into(),
+        });
+
+    rx.await
+        .map_err(|e| anyhow::anyhow!(e))?
+        .map_err(|e| anyhow!(e))
+}
+
+#[op]
+async fn op_trigger_emote(
+    op_state: Rc<RefCell<OpState>>,
+    emote_id: String,
+) -> Result<(), AnyError> {
+    let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
+
+    op_state
+        .borrow_mut()
+        .borrow_mut::<RpcCalls>()
+        .push(RpcCall::TriggerEmote {
+            emote_id,
+            response: sx.into(),
+        });
+
+    rx.await
+        .map_err(|e| anyhow::anyhow!(e))?
+        .map_err(|e| anyhow!(e))
+}
+
+#[op]
+async fn op_trigger_scene_emote(
+    op_state: Rc<RefCell<OpState>>,
+    emote_src: String,
+    looping: bool,
+) -> Result<(), AnyError> {
+    let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
+
+    op_state
+        .borrow_mut()
+        .borrow_mut::<RpcCalls>()
+        .push(RpcCall::TriggerSceneEmote {
+            emote_src,
+            looping,
             response: sx.into(),
         });
 

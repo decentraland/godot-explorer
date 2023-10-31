@@ -29,3 +29,11 @@ pub fn get_realm_node(scene: &Scene) -> Gd<Node> {
         .get_node("/root/realm".into())
         .expect("Missing realm node")
 }
+
+pub fn get_avatar_node(scene: &Scene) -> Gd<Node> {
+    scene
+        .godot_dcl_scene
+        .root_node_3d
+        .get_node("/root/explorer/Player/Avatar".into())
+        .expect("Missing Player Avatar Node")
+}

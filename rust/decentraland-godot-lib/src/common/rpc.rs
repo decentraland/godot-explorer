@@ -48,6 +48,15 @@ pub enum RpcCall {
         world_coordinates: [i32; 2],
         response: RpcResultSender<Result<(), String>>,
     },
+    TriggerEmote {
+        emote_id: String,
+        response: RpcResultSender<Result<(), String>>,
+    },
+    TriggerSceneEmote {
+        emote_src: String,
+        looping: bool,
+        response: RpcResultSender<Result<(), String>>,
+    },
 }
 
 pub type RpcCalls = Vec<RpcCall>;
