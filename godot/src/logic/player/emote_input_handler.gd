@@ -5,6 +5,7 @@ extends Node
 # Avoid multiple animations being executed
 var animation_key_pressed = false
 
+
 func _input(event):
 	# Receives mouse motion
 	if not Global.is_mobile && event:

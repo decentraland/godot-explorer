@@ -1,6 +1,7 @@
 extends Node3D
 class_name AnimationImporter
 
+
 func get_animation_from_gltf(animation_name: String) -> Animation:
 	var path := "res://assets/animations/%s.glb" % animation_name
 	var gltf := GLTFDocument.new()
@@ -16,18 +17,18 @@ func get_animation_from_gltf(animation_name: String) -> Animation:
 	if node == null:
 		printerr("Node failure!")
 		return null
-		
+
 	var animation_player: AnimationPlayer = node.get_node("AnimationPlayer")
 	var animations_names: PackedStringArray = animation_player.get_animation_list()
 	if animations_names.is_empty():
 		printerr("No animations!")
 		return null
-		
+
 	var animation: Animation = animation_player.get_animation(animations_names[0])
 	if animation == null:
 		printerr("Invalid animation")
 		return
-		
+
 	for track_idx in range(animation.get_track_count()):
 		var track_path = animation.track_get_path(track_idx)
 		if track_path.get_concatenated_names().contains("Skeleton3D") == false:

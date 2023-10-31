@@ -23,6 +23,7 @@ var THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
 
+
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
 	if !camera_mode_change_blocked:  # if it's already blocked, we don't store the state again...
 		stored_camera_mode_before_block = camera.get_camera_mode()
@@ -125,7 +126,6 @@ func _input(event):
 		if event is InputEventKey:
 			if event.keycode == KEY_TAB:
 				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-						
 
 		# Toggle first or third person camera
 		if event is InputEventMouseButton:
