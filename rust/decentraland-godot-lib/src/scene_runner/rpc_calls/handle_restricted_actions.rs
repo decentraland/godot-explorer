@@ -3,7 +3,9 @@ use crate::{
     dcl::SceneId,
     godot_classes::dcl_confirm_dialog::DclConfirmDialog,
     scene_runner::{
-        global_get_node_helper::{get_dialog_stack_node, get_explorer_node, get_realm_node, get_avatar_node},
+        global_get_node_helper::{
+            get_avatar_node, get_dialog_stack_node, get_explorer_node, get_realm_node,
+        },
         scene::{Scene, SceneType},
     },
 };
@@ -213,6 +215,9 @@ pub fn trigger_scene_emote(
     }
 
     let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("play_remote_emote".into(), &[Variant::from(emote_src), Variant::from(looping.clone())]);
+    avatar_node.call(
+        "play_remote_emote".into(),
+        &[Variant::from(emote_src), Variant::from(looping.clone())],
+    );
     avatar_node.call("broadcast_avatar_animation".into(), &[]);
 }
