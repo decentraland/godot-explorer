@@ -111,7 +111,7 @@ impl AvatarScene {
     }
 
     #[func]
-    pub fn get_avatar_by_address(&mut self, address: GodotString) -> Option<Gd<Node3D>> {
+    pub fn get_avatar_by_address(&self, address: GodotString) -> Option<Gd<Node3D>> {
         if let Some(address) = address.to_string().as_h160() {
             if let Some(alias) = self.avatar_address.get(&address) {
                 if let Some(entity_id) = self.avatar_entity.get(alias) {

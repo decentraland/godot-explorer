@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dxop83nrp1ikn"
-path="res://.godot/imported/shrug.glb-58fc3c4bc3561eb13259cc18020ba712.scn"
+uid="uid://bsda7dpvrc81c"
+path="res://.godot/imported/money.glb-440299e6315982cab214607f5d24d610.scn"
 
 [deps]
 
-source_file="res://assets/animations/shrug.glb"
-dest_files=["res://.godot/imported/shrug.glb-58fc3c4bc3561eb13259cc18020ba712.scn"]
+source_file="res://assets/animations/money.glb"
+dest_files=["res://.godot/imported/money.glb-440299e6315982cab214607f5d24d610.scn"]
 
 [params]
 

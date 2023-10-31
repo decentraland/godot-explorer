@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dxop83nrp1ikn"
-path="res://.godot/imported/shrug.glb-58fc3c4bc3561eb13259cc18020ba712.scn"
+uid="uid://dlbdvedkqahul"
+path="res://.godot/imported/headexplode.glb-b2e99a7aff62d93a527958adbee42f8f.scn"
 
 [deps]
 
-source_file="res://assets/animations/shrug.glb"
-dest_files=["res://.godot/imported/shrug.glb-58fc3c4bc3561eb13259cc18020ba712.scn"]
+source_file="res://assets/animations/headexplode.glb"
+dest_files=["res://.godot/imported/headexplode.glb-b2e99a7aff62d93a527958adbee42f8f.scn"]
 
 [params]
 

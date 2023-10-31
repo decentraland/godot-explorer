@@ -59,7 +59,7 @@ pub struct LivekitRoom {
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
     last_profile_version_announced: u32,
-    chats: Vec<(String, rfc4::Chat)>,
+    chats: Vec<(String, String, rfc4::Chat)>,
 }
 
 impl LivekitRoom {
@@ -118,7 +118,7 @@ impl LivekitRoom {
                         );
                         avatar_scene.add_avatar(
                             self.peer_alias_counter,
-                            GodotString::from(message.address.to_string()),
+                            GodotString::from(format!("{:#x}", message.address)),
                         );
                         self.peer_identities.get_mut(&message.address).unwrap()
                     };
@@ -128,14 +128,16 @@ impl LivekitRoom {
                             avatar_scene.update_transform(peer.alias, &position);
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Chat(chat)) => {
+                            let address = format!("{:#x}", message.address);
                             let peer_name = {
                                 if let Some(profile) = peer.profile.as_ref() {
                                     profile.content.name.clone()
                                 } else {
-                                    message.address.to_string()
+                                    address.clone()
                                 }
                             };
-                            self.chats.push((peer_name, chat));
+                            println!("LiveKit Room: {}", address.clone());
+                            self.chats.push((address, peer_name, chat));
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileVersion(
                             announce_profile_version,
@@ -317,7 +319,7 @@ impl LivekitRoom {
         self.player_identity = new_profile;
     }
 
-    pub fn consume_chats(&mut self) -> Vec<(String, rfc4::Chat)> {
+    pub fn consume_chats(&mut self) -> Vec<(String, String, rfc4::Chat)> {
         std::mem::take(&mut self.chats)
     }
 

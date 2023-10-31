@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dxop83nrp1ikn"
-path="res://.godot/imported/shrug.glb-58fc3c4bc3561eb13259cc18020ba712.scn"
+uid="uid://dk7gyqa2r2mvf"
+path="res://.godot/imported/fistpump.glb-04359638efdfa6f8717f13973fe5f971.scn"
 
 [deps]
 
-source_file="res://assets/animations/shrug.glb"
-dest_files=["res://.godot/imported/shrug.glb-58fc3c4bc3561eb13259cc18020ba712.scn"]
+source_file="res://assets/animations/fistpump.glb"
+dest_files=["res://.godot/imported/fistpump.glb-04359638efdfa6f8717f13973fe5f971.scn"]
 
 [params]
 

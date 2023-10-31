@@ -1,10 +1,15 @@
 extends Node3D
+class_name Avatar
 
 @export var skip_process: bool = false
 @onready var animation_player = $Armature/AnimationPlayer
 @onready var label_3d_name = $Label3D_Name
 @onready var body_shape_root: Node3D = $Armature
 @onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
+
+# Public
+var avatar_name: String = ""
+var playing_emote = false
 
 # Position Lerp
 var last_position: Vector3 = Vector3.ZERO
@@ -36,13 +41,17 @@ func _ready():
 	Global.content_manager.wearable_data_loaded.connect(self._on_wearable_data_loaded)
 	Global.content_manager.meshes_material_finished.connect(self._on_meshes_material_finished)
 
-
 func update_avatar(avatar: Dictionary):
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
 		current_content_url = Global.realm.content_base_url
 
-	label_3d_name.text = avatar.get("name")
+	playing_emote = false
+	set_idle()
+
+	avatar_name = avatar.get("name")
+	print("Update profile ", avatar_name, avatar)
+	label_3d_name.text = avatar_name
 	current_wearables = avatar.get("wearables")
 	current_body_shape = avatar.get("body_shape")
 	current_eyes_color = avatar.get("eyes")
@@ -63,12 +72,46 @@ func update_avatar(avatar: Dictionary):
 		fetch_wearables()
 
 @onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
-func _add_animation(animation_name: String):
+var index_to_animation_name: Dictionary = {}
+func _add_animation(index: int, animation_name: String):
 	var animation = Global.animation_importer.get_animation_from_gltf(animation_name)
 	global_animation_library.add_animation(animation_name, animation)
+	index_to_animation_name[index] = animation_name
+
+func _clear_animations():
+	for index in index_to_animation_name:
+		var animation_name = index_to_animation_name[index]
+		global_animation_library.remove_animation(animation_name)
+	index_to_animation_name.clear()
 
 func _load_default_emotes():
-	_add_animation("angry")
+	_clear_animations()
+	_add_animation(0, "handsair")
+	_add_animation(1, "wave")
+	_add_animation(2, "fistpump")
+	_add_animation(3, "dance")
+	_add_animation(4, "raiseHand")
+	_add_animation(5, "clap")
+	_add_animation(6, "money")
+	_add_animation(7, "kiss")
+	_add_animation(8, "shrug")
+	_add_animation(9, "headexplode")
+
+func play_emote(emote_id: String):
+	if animation_player.has_animation(emote_id):
+		animation_player.stop()
+		animation_player.play(emote_id)
+	else:
+		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_name])
+	playing_emote = true
+	
+func play_emote_by_index_and_send(index: int):
+	# Play emote
+	var emote_id: String = index_to_animation_name[index]
+	play_emote(emote_id)
+	# Send emote
+	var timestamp = Time.get_unix_time_from_system() * 1000
+	Global.comms.send_chat("␐%s %d" % [emote_id, timestamp])
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
 	current_eyes_color = eyes_color
@@ -406,17 +449,19 @@ func _process(delta):
 
 
 func set_walking():
-	if animation_player.current_animation != "Walking":
-		animation_player.play("Walking")
+	if animation_player.current_animation != "Walk":
+		animation_player.play("Walk")
+		playing_emote = false
 
 
 func set_running():
 	if animation_player.current_animation != "Run":
 		animation_player.play("Run")
+		playing_emote = false
 
 
 func set_idle():
-	if animation_player.current_animation != "Idle":
+	if animation_player.current_animation != "Idle" and playing_emote == false:
 		animation_player.play("Idle")
 
 

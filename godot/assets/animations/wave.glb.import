@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dxop83nrp1ikn"
-path="res://.godot/imported/shrug.glb-58fc3c4bc3561eb13259cc18020ba712.scn"
+uid="uid://cg1m2ryguyjq3"
+path="res://.godot/imported/wave.glb-4cfb071d694e2adbcd123af9c990f2da.scn"
 
 [deps]
 
-source_file="res://assets/animations/shrug.glb"
-dest_files=["res://.godot/imported/shrug.glb-58fc3c4bc3561eb13259cc18020ba712.scn"]
+source_file="res://assets/animations/wave.glb"
+dest_files=["res://.godot/imported/wave.glb-4cfb071d694e2adbcd123af9c990f2da.scn"]
 
 [params]
 

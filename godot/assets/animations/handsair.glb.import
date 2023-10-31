@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dxop83nrp1ikn"
-path="res://.godot/imported/shrug.glb-58fc3c4bc3561eb13259cc18020ba712.scn"
+uid="uid://bckf86vt3sv80"
+path="res://.godot/imported/handsair.glb-4e3d8cf2ffb1b86f1bcf1bd6bba27c5c.scn"
 
 [deps]
 
-source_file="res://assets/animations/shrug.glb"
-dest_files=["res://.godot/imported/shrug.glb-58fc3c4bc3561eb13259cc18020ba712.scn"]
+source_file="res://assets/animations/handsair.glb"
+dest_files=["res://.godot/imported/handsair.glb-4e3d8cf2ffb1b86f1bcf1bd6bba27c5c.scn"]
 
 [params]
 
