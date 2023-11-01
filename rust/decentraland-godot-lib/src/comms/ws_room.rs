@@ -67,7 +67,7 @@ pub struct WebSocketRoom {
 
     // Trade-off with other peers
     avatars: Gd<AvatarScene>,
-    chats: Vec<(String, rfc4::Chat)>,
+    chats: Vec<(String, String, rfc4::Chat)>,
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
     last_profile_version_announced: u32,
@@ -111,7 +111,7 @@ impl WebSocketRoom {
         }
     }
 
-    pub fn consume_chats(&mut self) -> Vec<(String, rfc4::Chat)> {
+    pub fn consume_chats(&mut self) -> Vec<(String, String, rfc4::Chat)> {
         std::mem::take(&mut self.chats)
     }
 
@@ -321,7 +321,7 @@ impl WebSocketRoom {
                                 for (alias, peer) in self.peer_identities.iter() {
                                     self.avatars.bind_mut().add_avatar(
                                         *alias,
-                                        GodotString::from(peer.address.to_string()),
+                                        GodotString::from(format!("{:#x}", peer.address)),
                                     );
                                 }
                             }
@@ -375,7 +375,7 @@ impl WebSocketRoom {
                         self.peer_identities.insert(peer.alias, Peer::new(h160));
                         self.avatars
                             .bind_mut()
-                            .add_avatar(peer.alias, GodotString::from(h160.to_string()));
+                            .add_avatar(peer.alias, GodotString::from(format!("{:#x}", h160)));
                         // TODO: message XXX joined
                     } else {
                         // TODO: Invalid address
@@ -411,14 +411,15 @@ impl WebSocketRoom {
                                 .update_transform(update.from_alias, &position);
                         }
                         rfc4::packet::Message::Chat(chat) => {
+                            let address = format!("{:#x}", peer.address);
                             let peer_name = {
                                 if let Some(profile) = peer.profile.as_ref() {
                                     profile.content.name.clone()
                                 } else {
-                                    peer.address.to_string()
+                                    address.clone()
                                 }
                             };
-                            self.chats.push((peer_name, chat));
+                            self.chats.push((address, peer_name, chat));
                         }
                         rfc4::packet::Message::ProfileVersion(announce_profile_version) => {
                             self.peer_identities

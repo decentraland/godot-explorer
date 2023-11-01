@@ -1,32 +1,33 @@
-[gd_scene load_steps=6 format=3 uid="uid://blv7r5folt1d5"]
+[gd_scene load_steps=7 format=3 uid="uid://blv7r5folt1d5"]
 
 [ext_resource type="Script" path="res://src/logic/player/player.gd" id="1_5bfm2"]
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar.tscn" id="2_n22nx"]
 [ext_resource type="PackedScene" uid="uid://cbtq7kaarx6mp" path="res://src/logic/player/camera_mode_area_detector.tscn" id="2_rco65"]
+[ext_resource type="Script" path="res://src/logic/player/emote_input_handler.gd" id="4_wtb62"]
+
+[sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
+length = 1.0779
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pxti1"]
 margin = 0.05
 radius = 0.25
 height = 1.5
 
-[sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
-length = 1.0779
-
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 0
 script = ExtResource("1_5bfm2")
-
-[node name="CollisionShape3D_Body" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.153, 0)
-shape = SubResource("CapsuleShape3D_pxti1")
 
 [node name="CollisionShape3D_ContactPoint" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 1.1, 0)
 shape = SubResource("SeparationRayShape3D_3217e")
 
+[node name="CollisionShape3D_Body" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.153, 0)
+shape = SubResource("CapsuleShape3D_pxti1")
+
 [node name="camera_mode_area_detector" parent="." instance=ExtResource("2_rco65")]
-collision_layer = 2147483648
-collision_mask = 2147483648
+collision_layer = 2147483904
+collision_mask = 2147483904
 
 [node name="Mount" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
@@ -39,6 +40,10 @@ current = true
 skip_process = true
 
 [node name="AudioStreamPlayer_Camera" type="AudioStreamPlayer" parent="."]
+
+[node name="emote_input_handler" type="Node" parent="." node_paths=PackedStringArray("avatar")]
+script = ExtResource("4_wtb62")
+avatar = NodePath("../Avatar")
 
 [connection signal="block_camera_mode" from="camera_mode_area_detector" to="." method="_on_camera_mode_area_detector_block_camera_mode"]
 [connection signal="unblock_camera_mode" from="camera_mode_area_detector" to="." method="_on_camera_mode_area_detector_unblock_camera_mode"]

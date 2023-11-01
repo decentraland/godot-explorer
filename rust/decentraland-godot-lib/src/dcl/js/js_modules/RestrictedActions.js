@@ -20,7 +20,10 @@ module.exports.teleportTo = async function (body) {
   ]);
 };
 module.exports.triggerEmote = async function (body) {
-  return {};
+  return await Deno.core.ops.op_trigger_emote(body.predefinedEmote);
+};
+module.exports.triggerSceneEmote = async function (body) {
+  return await Deno.core.ops.op_trigger_scene_emote(body.src, body.looping);
 };
 module.exports.changeRealm = async function (body) {
   const response = await Deno.core.ops.op_change_realm(

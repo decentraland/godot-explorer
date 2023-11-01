@@ -58,10 +58,10 @@ impl NodeVirtual for CommunicationManager {
                 let chats = ws_room.consume_chats();
                 if !chats.is_empty() {
                     let mut chats_variant_array = VariantArray::new();
-                    for (addr, chat) in chats {
+                    for (address, profile_name, chat) in chats {
                         let mut chat_arr = VariantArray::new();
-                        // TODO: change to the name?
-                        chat_arr.push(addr.to_string().to_variant());
+                        chat_arr.push(address.to_variant());
+                        chat_arr.push(profile_name.to_variant());
                         chat_arr.push(chat.timestamp.to_variant());
                         chat_arr.push(chat.message.to_variant());
 
@@ -86,10 +86,11 @@ impl NodeVirtual for CommunicationManager {
                     let chats = livekit_room.consume_chats();
                     if !chats.is_empty() {
                         let mut chats_variant_array = VariantArray::new();
-                        for (addr, chat) in chats {
+                        for (address, profile_name, chat) in chats {
                             let mut chat_arr = VariantArray::new();
                             // TODO: change to the name?
-                            chat_arr.push(addr.to_string().to_variant());
+                            chat_arr.push(address.to_string().to_variant());
+                            chat_arr.push(profile_name.to_string().to_variant());
                             chat_arr.push(chat.timestamp.to_variant());
                             chat_arr.push(chat.message.to_variant());
 
