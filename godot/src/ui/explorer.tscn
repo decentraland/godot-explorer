@@ -194,8 +194,8 @@ offset_right = 100.0
 offset_bottom = -8.0
 grow_horizontal = 2
 grow_vertical = 0
+mouse_filter = 1
 
-[connection signal="gui_input" from="UI" to="." method="_on_ui_gui_input"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_timeout"]
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
 [connection signal="submit_message" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_submit_message"]

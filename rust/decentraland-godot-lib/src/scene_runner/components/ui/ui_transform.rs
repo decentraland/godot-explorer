@@ -35,6 +35,9 @@ pub fn update_ui_transform(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 node.base_control.set_clip_contents(
                     node.ui_transform.overflow == crate::dcl::components::proto_components::sdk::components::YgOverflow::YgoHidden,
                 );
+                node.base_control
+                    .bind_mut()
+                    .set_pointer_filter(node.ui_transform.pointer_filter_mode);
             }
         }
     }

@@ -3,10 +3,7 @@ use std::{
     time::Instant,
 };
 
-use godot::{
-    engine::Control,
-    prelude::{Dictionary, Gd},
-};
+use godot::prelude::{Dictionary, Gd};
 
 use crate::{
     common::rpc::RpcCalls,
@@ -28,7 +25,7 @@ use crate::{
     },
     godot_classes::{
         dcl_audio_source::DclAudioSource, dcl_audio_stream::DclAudioStream,
-        dcl_video_player::DclVideoPlayer,
+        dcl_ui_control::DclUiControl, dcl_video_player::DclVideoPlayer,
     },
 };
 
@@ -203,7 +200,7 @@ impl Scene {
         dcl_scene: DclScene,
         content_mapping: Dictionary,
         scene_type: SceneType,
-        parent_ui_node: Gd<Control>,
+        parent_ui_node: Gd<DclUiControl>,
     ) -> Self {
         let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id, parent_ui_node);
 
@@ -258,7 +255,7 @@ impl Scene {
         let dcl_scene = DclScene::spawn_new_test_scene(scene_id);
         let content_mapping = Dictionary::default();
         let godot_dcl_scene =
-            GodotDclScene::new(&scene_definition, &scene_id, Control::new_alloc());
+            GodotDclScene::new(&scene_definition, &scene_id, DclUiControl::new_alloc());
 
         Self {
             scene_id,

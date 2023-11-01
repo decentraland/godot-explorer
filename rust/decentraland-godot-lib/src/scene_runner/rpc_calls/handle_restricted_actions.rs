@@ -37,7 +37,7 @@ pub fn change_realm(
 
     let description = format!(
         "The scene wants to move you to a new realm\nTo: `{}`\nScene message: {}",
-        to.clone(),
+        to,
         if let Some(message) = message {
             message
         } else {

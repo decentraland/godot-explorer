@@ -4,6 +4,8 @@ var scene_runner: SceneManager
 var realm: Realm = null
 var parcel_manager: ParcelManager = null
 
+@onready var ui_root = $UI
+
 @onready var label_crosshair = $UI/Label_Crosshair
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
 
@@ -74,6 +76,8 @@ func _ready():
 	scene_runner.player_node = player
 	scene_runner.console = self._on_scene_console_message
 	scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
+	ui_root.add_child(scene_runner.base_ui)
+	ui_root.move_child(scene_runner.base_ui, label_crosshair.get_index() + 1)
 
 	self.realm = get_tree().root.get_node("realm")
 
@@ -120,19 +124,16 @@ func _on_check_button_toggled(button_pressed):
 	scene_runner.set_pause(button_pressed)
 
 
-func _on_ui_gui_input(event):
+@onready var line_edit_command = $UI/LineEdit_Command
+
+
+func _unhandled_input(event):
 	if not Global.is_mobile:
 		if event is InputEventMouseButton and event.pressed:
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 				label_crosshair.show()
 
-
-@onready var line_edit_command = $UI/LineEdit_Command
-
-
-func _unhandled_input(event):
-	if not Global.is_mobile:
 		if event is InputEventKey:
 			if event.pressed and event.keycode == KEY_TAB:
 				if not control_menu.visible:

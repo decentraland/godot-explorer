@@ -91,7 +91,6 @@ func get_animatable_body_3d(mesh_instance: MeshInstance3D):
 
 
 func update_mask_colliders(node_to_inspect: Node):
-	print("updating mask colliders")
 	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
 			var mask: int = 0

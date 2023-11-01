@@ -13,15 +13,13 @@ use crate::{
         js::SceneLogLevel,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
-    godot_classes::dcl_camera_3d::DclCamera3D,
+    godot_classes::{dcl_camera_3d::DclCamera3D, dcl_ui_control::DclUiControl},
     wallet::Wallet,
 };
-use godot::{
-    engine::{Control, PhysicsRayQueryParameters3D},
-    prelude::*,
-};
+use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
 use std::{
     collections::{HashMap, HashSet},
+    sync::atomic::AtomicU32,
     time::Instant,
 };
 use tracing::info;
@@ -40,7 +38,8 @@ pub struct SceneManager {
     #[base]
     base: Base<Node>,
 
-    base_ui: Gd<Control>,
+    #[var]
+    base_ui: Gd<DclUiControl>,
     ui_canvas_information: PbUiCanvasInformation,
 
     scenes: HashMap<SceneId, Scene>,
@@ -69,11 +68,13 @@ pub struct SceneManager {
 
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
-    global_tick_number: u32,
 
     #[export]
     pointer_tooltips: VariantArray,
 }
+
+// This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
+pub static GLOBAL_TICK_NUMBER: AtomicU32 = AtomicU32::new(0);
 
 #[godot_api]
 impl SceneManager {
@@ -569,11 +570,9 @@ impl NodeVirtual for SceneManager {
 
         log_panics::init();
 
-        let base_ui = Control::new_alloc();
-
         SceneManager {
             base,
-            base_ui,
+            base_ui: DclUiControl::new_alloc(),
             ui_canvas_information: PbUiCanvasInformation::default(),
 
             scenes: HashMap::new(),
@@ -596,7 +595,6 @@ impl NodeVirtual for SceneManager {
             console: Callable::invalid(),
             input_state: InputState::default(),
             last_raycast_result: None,
-            global_tick_number: 0,
             pointer_tooltips: VariantArray::new(),
         }
     }
@@ -604,12 +602,7 @@ impl NodeVirtual for SceneManager {
     fn ready(&mut self) {
         let callable = self.base.get("_on_ui_resize".into()).to::<Callable>();
         self.base_ui.connect("resized".into(), callable);
-
         self.base_ui.set_name("scenes_ui".into());
-        self.base
-            .get_parent()
-            .unwrap()
-            .add_child(self.base_ui.clone().upcast());
     }
 
     fn process(&mut self, delta: f64) {
@@ -619,7 +612,6 @@ impl NodeVirtual for SceneManager {
         let current_pointer_raycast_result = self.get_current_mouse_entity();
 
         pointer_events_system(
-            self.global_tick_number,
             &mut self.scenes,
             &changed_inputs,
             &self.last_raycast_result,
@@ -708,7 +700,7 @@ impl NodeVirtual for SceneManager {
         }
 
         self.last_raycast_result = current_pointer_raycast_result;
-        self.global_tick_number += 1;
+        GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 }
 
