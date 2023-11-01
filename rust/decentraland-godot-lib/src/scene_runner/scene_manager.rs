@@ -19,7 +19,7 @@ use crate::{
 use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
 use std::{
     collections::{HashMap, HashSet},
-    sync::atomic::AtomicU64,
+    sync::atomic::AtomicU32,
     time::Instant,
 };
 use tracing::info;
@@ -74,7 +74,7 @@ pub struct SceneManager {
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
-pub static GLOBAL_TICK_NUMBER: AtomicU64 = AtomicU64::new(0);
+pub static GLOBAL_TICK_NUMBER: AtomicU32 = AtomicU32::new(0);
 
 #[godot_api]
 impl SceneManager {

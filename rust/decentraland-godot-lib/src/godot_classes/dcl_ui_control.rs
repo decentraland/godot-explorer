@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, sync::atomic::Ordering};
 
 use godot::{
     engine::{
@@ -65,7 +65,7 @@ impl DclUiControl {
 
     #[func]
     pub fn _on_gui_input(&mut self, input: Gd<InputEvent>) {
-        let global_tick_number = unsafe { *GLOBAL_TICK_NUMBER.as_ptr() as u32 };
+        let global_tick_number = GLOBAL_TICK_NUMBER.load(Ordering::Relaxed);
         if let Some(event) = input.try_cast::<InputEventMouseButton>() {
             let is_left_button = event.get_button_index() == MouseButton::MOUSE_BUTTON_LEFT;
             let down_event = event.is_pressed();
