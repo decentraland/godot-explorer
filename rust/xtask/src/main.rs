@@ -57,6 +57,7 @@ fn main() -> Result<(), anyhow::Error> {
                     .takes_value(false),
             ),
         )
+        .subcommand(Command::new("update-protocol"))
         .subcommand(Command::new("export"))
         .subcommand(
             Command::new("run")
@@ -100,6 +101,7 @@ fn main() -> Result<(), anyhow::Error> {
     let root = xtaskops::ops::root_dir();
     let res = match subcommand {
         ("install", sm) => install_dependency::install(sm.is_present("no-templates")),
+        ("update-protocol", _) => install_dependency::install_dcl_protocol(),
         ("run", sm) => run::run(
             sm.is_present("editor"),
             sm.is_present("release"),

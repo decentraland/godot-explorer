@@ -4,10 +4,37 @@ pub mod transform_and_parent;
 
 use std::hash::Hash;
 
+use godot::{
+    bind::property::ExportInfo,
+    engine::global::PropertyHint,
+    prelude::{Export, Property},
+};
+
 #[derive(PartialEq, Eq, Hash, PartialOrd, Ord, Debug, Clone, Copy, Default)]
 pub struct SceneEntityId {
     pub number: u16,
     pub version: u16,
+}
+
+impl Property for SceneEntityId {
+    type Intermediate = i32;
+
+    fn get_property(&self) -> Self::Intermediate {
+        self.as_i32()
+    }
+
+    fn set_property(&mut self, value: Self::Intermediate) {
+        *self = Self::from_i32(value);
+    }
+}
+
+impl Export for SceneEntityId {
+    fn default_export_info() -> ExportInfo {
+        ExportInfo {
+            hint: PropertyHint::PROPERTY_HINT_NONE,
+            hint_string: "Entity ID in the owner scene".into(),
+        }
+    }
 }
 
 impl SceneEntityId {
@@ -30,8 +57,8 @@ impl SceneEntityId {
     pub const PLAYER: SceneEntityId = Self::reserved(1);
     pub const CAMERA: SceneEntityId = Self::reserved(2);
 
-    pub fn as_proto_u32(&self) -> Option<u32> {
-        Some((self.version as u32) << 16 | self.number as u32)
+    pub fn as_i32(&self) -> i32 {
+        ((self.version as u32) << 16 | self.number as u32) as i32
     }
 
     pub fn as_usize(&self) -> usize {

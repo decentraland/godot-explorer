@@ -21,7 +21,7 @@ pub struct DclUiText {
 }
 
 impl Font {
-    fn get_font_path(self) -> &'static str {
+    pub fn get_font_path(self) -> &'static str {
         match self {
             Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-Regular.ttf",
             Font::FSerif => "res://assets/themes/fonts/noto/NotoSerif-Regular.ttf",
