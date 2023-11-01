@@ -156,6 +156,35 @@ func fetch_gltf(file_path: String, content_mapping: Dictionary):
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
+func fetch_gltf_loader(file_path: String, content_mapping: Dictionary) -> GltfLoader:
+	var gltf_loader = GltfLoader.new()
+	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+	var content_cached = content_cache_map.get(file_hash)
+	if content_cached != null:
+		if not content_cached.get("loaded"):
+			return content_cached.get("gltf_loader")
+		else:
+			return null
+
+	content_cache_map[file_hash] = {
+		"loaded": false,
+		"gltf_loader": gltf_loader
+	}
+
+	pending_content.push_back(
+		{
+			"file_path": file_path,
+			"file_hash": file_hash,
+			"content_type": ContentType.CT_GLTF_GLB,
+			"content_mapping": content_mapping,
+			"stage": 0
+		}
+	)
+
+	return gltf_loader
+
+# Public function
+# @returns true if the resource was added to queue to fetch, false if it had already been fetched
 func fetch_texture(file_path: String, content_mapping: Dictionary):
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	return fetch_texture_by_hash(file_hash, content_mapping)
@@ -507,6 +536,10 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 
 			content_cache_map[file_hash]["resource"] = node
 			content_cache_map[file_hash]["loaded"] = true
+			var gltf_loader: GltfLoader = content_cache_map[file_hash].get("gltf_loader", null)
+			if gltf_loader != null:
+				gltf_loader.emit_signal.call_deferred("on_loaded")
+			
 			self.emit_signal.call_deferred("content_loading_finished", file_hash)
 			return false
 		_:

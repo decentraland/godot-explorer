@@ -4,8 +4,8 @@ use godot::{engine::TlsOptions, prelude::*};
 use http::Uri;
 
 use crate::{
-    avatars::avatar_scene::AvatarScene, comms::signed_login::SignedLoginMeta,
-    dcl::components::proto_components::kernel::comms::rfc4,
+    comms::signed_login::SignedLoginMeta, dcl::components::proto_components::kernel::comms::rfc4,
+    godot_classes::dcl_global::DclGlobal,
 };
 
 use super::{
@@ -201,11 +201,7 @@ impl CommunicationManager {
         realm.connect("realm_changed".into(), on_realm_changed);
 
         if self.tls_client.is_none() {
-            let tls_client = self
-                .base
-                .get_node("/root/Global".into())
-                .unwrap()
-                .call("get_tls_client".into(), &[]);
+            let tls_client = DclGlobal::singleton().call("get_tls_client".into(), &[]);
             let tls_client: Gd<TlsOptions> = Gd::from_variant(&tls_client);
             self.tls_client = Some(tls_client);
         }
@@ -260,11 +256,7 @@ impl CommunicationManager {
             return;
         };
 
-        let avatar_scene = self
-            .base
-            .get_node("/root/avatars".into())
-            .unwrap()
-            .cast::<AvatarScene>();
+        let avatar_scene = DclGlobal::singleton().bind().get_avatars();
         self.current_adapter = Adapter::None;
 
         tracing::info!("change_adapter to protocol {protocol} and address {address}");
