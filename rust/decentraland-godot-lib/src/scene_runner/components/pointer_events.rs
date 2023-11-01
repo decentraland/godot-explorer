@@ -1,4 +1,7 @@
-use std::{collections::{HashMap, HashSet}, sync::atomic::Ordering};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::atomic::Ordering,
+};
 
 use crate::{
     dcl::{
