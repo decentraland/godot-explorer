@@ -393,7 +393,7 @@ func _process_loading_wearable(
 					wearable_cache_map[pointer]["data"] = null
 
 			var promise: Promise = content["promise"]
-			promise.resolve()
+			promise.call_deferred("resolve")
 			return false
 		_:
 			return false
@@ -521,7 +521,7 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 			content_cache_map[file_hash]["resource"] = node
 			content_cache_map[file_hash]["loaded"] = true
 			var promise: Promise = content_cache_map[file_hash].get("promise", null)
-			promise.resolve()
+			promise.call_deferred("resolve")
 
 			return false
 		_:
@@ -591,7 +591,7 @@ func _process_loading_texture(
 			content_cache["stage"] = 3
 
 			var promise: Promise = content_cache["promise"]
-			promise.resolve()
+			promise.call_deferred("resolve")
 			return false
 		_:
 			printerr("unknown stage ", file_hash)
@@ -667,7 +667,7 @@ func _process_loading_audio(
 			content_cache["loaded"] = true
 			content_cache["stage"] = 3
 			var promise: Promise = content_cache["promise"]
-			promise.resolve()
+			promise.call_deferred("resolve")
 			return false
 		_:
 			printerr("unknown stage ", file_hash)
@@ -722,7 +722,7 @@ func _process_loading_video(
 			content_cache["loaded"] = true
 			content_cache["stage"] = 3
 			var promise: Promise = content_cache["promise"]
-			promise.resolve()
+			promise.call_deferred("resolve")
 			return false
 		_:
 			printerr("unknown stage ", file_hash)

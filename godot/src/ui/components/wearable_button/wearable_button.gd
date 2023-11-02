@@ -29,7 +29,7 @@ enum WearableCategoryEnum {
 		_update_category_icon()
 		filter_category = new_value
 
-signal filter_type
+signal filter_type(type: String)
 signal clear_filter
 
 @onready var texture_rect_icon = $HBoxContainer/Control/TextureRect_Icon

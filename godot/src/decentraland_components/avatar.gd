@@ -185,9 +185,7 @@ func fetch_wearables_dependencies():
 		for file_name in content_to_fetch:
 			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
 
-	prints("BEGIN Awaiter...", get_path())
 	await Awaiter.all(async_calls)
-	prints("END Awaiter...", get_path())
 
 	load_wearables()
 

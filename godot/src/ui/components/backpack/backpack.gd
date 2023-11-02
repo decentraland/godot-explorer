@@ -40,7 +40,7 @@ func _ready():
 		# TODO: check if it's a wearable_button
 		for wearable_button in child.get_children():
 			wearable_button.filter_type.connect(self._on_wearable_button_filter_type)
-			wearable_button.filter_type.connect(self._on_wearable_button_clear_filter)
+			wearable_button.clear_filter.connect(self._on_wearable_button_clear_filter)
 			wearable_buttons.push_back(wearable_button)
 
 	for wearable_id in Wearables.BASE_WEARABLES:
@@ -58,8 +58,8 @@ func _ready():
 	var promise = Global.content_manager.fetch_wearables(
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
 	)
-
-	await promise.awaiter()
+	if promise != null:
+		await promise.awaiter()
 
 	for wearable_id in wearable_data:
 		wearable_data[wearable_id] = Global.content_manager.get_wearable(wearable_id)
@@ -163,7 +163,7 @@ func _on_wearable_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func _on_wearable_button_clear_filter(_):
+func _on_wearable_button_clear_filter(type):
 	filtered_data = []
 	show_wearables()
 
