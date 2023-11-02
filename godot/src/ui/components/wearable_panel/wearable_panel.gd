@@ -86,9 +86,10 @@ func set_wearable(wearable: Dictionary, _wearable_id: String):
 				"content": wearable.get("content", {}),
 				"base_url": "https://peer.decentraland.org/content/contents/"
 			}
-			var request_state = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
-			await request_state.on_finish
+			var promise = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
+			await promise.awaiter()
 		load_thumbnail(thumbnail_hash)
+
 
 func set_equipable_and_equip(equipable: bool, equipped: bool):
 	button_equip.disabled = not equipable

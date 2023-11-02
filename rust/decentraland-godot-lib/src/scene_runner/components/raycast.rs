@@ -14,7 +14,8 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene, godot_classes::dcl_global::DclGlobal,
+    godot_classes::dcl_global::DclGlobal,
+    scene_runner::scene::Scene,
 };
 use godot::{
     engine::{PhysicsDirectSpaceState3D, PhysicsRayQueryParameters3D},

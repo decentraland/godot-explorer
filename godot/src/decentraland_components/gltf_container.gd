@@ -37,11 +37,12 @@ func load_gltf():
 #	# TODO: should we set a timeout?
 	gltf_state = GodotGltfState.Loading
 
-	var request_state = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
-	if request_state != null:
-		await request_state.on_finish
-		
+	var promise = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
+	if promise != null:
+		await promise.awaiter()
+
 	_on_gltf_loaded()
+
 
 func _on_gltf_loaded():
 	var node = Global.content_manager.get_resource_from_hash(file_hash)

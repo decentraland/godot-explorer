@@ -54,13 +54,13 @@ func _ready():
 	avatar_skin_color = Global.config.avatar_profile.skin
 	avatar_emotes = Global.config.avatar_profile.emotes
 	line_edit_name.text = Global.config.avatar_profile.name
-	
-	var request_state = Global.content_manager.fetch_wearables(
+
+	var promise = Global.content_manager.fetch_wearables(
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
 	)
-	
-	await request_state.on_finish
-	
+
+	await promise.awaiter()
+
 	for wearable_id in wearable_data:
 		wearable_data[wearable_id] = Global.content_manager.get_wearable(wearable_id)
 
@@ -163,7 +163,7 @@ func _on_wearable_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func _on_wearable_button_clear_filter():
+func _on_wearable_button_clear_filter(_):
 	filtered_data = []
 	show_wearables()
 

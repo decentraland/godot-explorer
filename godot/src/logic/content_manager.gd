@@ -93,10 +93,11 @@ func instance_gltf_colliders(
 
 	return id
 
+
 # Public function
 # @returns $id if the resource was added to queue to fetch, -1 if it had already been fetched
-func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> DclRequestState:
-	var request_state = DclRequestState.new()
+func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> Promise:
+	var promise = Promise.new()
 
 	var new_wearables: PackedStringArray = []
 	var new_id: int = request_monotonic_counter + 1
@@ -115,35 +116,36 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 		return null
 
 	request_monotonic_counter = new_id
-	pending_content.push_back(
-		{
-			"id": new_id,
-			"content_type": ContentType.CT_WEARABLE_EMOTE,
-			"stage": 0,
-			"new_wearables": new_wearables,
-			"content_base_url": content_base_url,
-			"request_state": request_state,
-		}
+	(
+		pending_content
+		. push_back(
+			{
+				"id": new_id,
+				"content_type": ContentType.CT_WEARABLE_EMOTE,
+				"stage": 0,
+				"new_wearables": new_wearables,
+				"content_base_url": content_base_url,
+				"promise": promise,
+			}
+		)
 	)
 
-	return request_state
+	return promise
+
 
 # Public function
 # @returns request state on success, null if it had already been fetched
-func fetch_gltf(file_path: String, content_mapping: Dictionary) -> DclRequestState:
-	var request_state = DclRequestState.new()
+func fetch_gltf(file_path: String, content_mapping: Dictionary) -> Promise:
+	var promise = Promise.new()
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		if not content_cached.get("loaded"):
-			return content_cached.get("request_state")
+			return content_cached.get("promise")
 		else:
 			return null
 
-	content_cache_map[file_hash] = {
-		"loaded": false,
-		"request_state": request_state
-	}
+	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
 	pending_content.push_back(
 		{
@@ -155,27 +157,26 @@ func fetch_gltf(file_path: String, content_mapping: Dictionary) -> DclRequestSta
 		}
 	)
 
-	return request_state
+	return promise
+
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_texture(file_path: String, content_mapping: Dictionary) -> DclRequestState:
+func fetch_texture(file_path: String, content_mapping: Dictionary) -> Promise:
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	return fetch_texture_by_hash(file_hash, content_mapping)
 
+
 func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
-	var request_state = DclRequestState.new()
+	var promise = Promise.new()
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		if not content_cached.get("loaded"):
-			return content_cached.get("request_state")
+			return content_cached.get("promise")
 		else:
 			return null
 
-	content_cache_map[file_hash] = {
-		"loaded": false,
-		"request_state": request_state
-	}
+	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
 	pending_content.push_back(
 		{
@@ -186,23 +187,20 @@ func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
 		}
 	)
 
-	return request_state
+	return promise
 
 
-func fetch_audio(file_path: String, content_mapping: Dictionary) -> DclRequestState:
-	var request_state = DclRequestState.new()
+func fetch_audio(file_path: String, content_mapping: Dictionary) -> Promise:
+	var promise = Promise.new()
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		if not content_cached.get("loaded"):
-			return content_cached.get("request_state")
+			return content_cached.get("promise")
 		else:
 			return null
 
-	content_cache_map[file_hash] = {
-		"loaded": false,
-		"request_state": request_state
-	}
+	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
 	pending_content.push_back(
 		{
@@ -214,24 +212,21 @@ func fetch_audio(file_path: String, content_mapping: Dictionary) -> DclRequestSt
 		}
 	)
 
-	return request_state
+	return promise
 
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_video(file_hash: String, content_mapping: Dictionary) -> DclRequestState:
-	var request_state = DclRequestState.new()
+func fetch_video(file_hash: String, content_mapping: Dictionary) -> Promise:
+	var promise = Promise.new()
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		if not content_cached.get("loaded"):
-			return content_cached.get("request_state")
+			return content_cached.get("promise")
 		else:
 			return null
 
-	content_cache_map[file_hash] = {
-		"loaded": false,
-		"request_state": request_state
-	}
+	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
 	pending_content.push_back(
 		{
@@ -242,7 +237,7 @@ func fetch_video(file_hash: String, content_mapping: Dictionary) -> DclRequestSt
 		}
 	)
 
-	return request_state
+	return promise
 
 
 func _process(_dt: float) -> void:
@@ -397,8 +392,8 @@ func _process_loading_wearable(
 					wearable_cache_map[pointer]["loaded"] = true
 					wearable_cache_map[pointer]["data"] = null
 
-			var request_state: DclRequestState = content["request_state"]
-			request_state.emit_signal.call_deferred("on_finish")
+			var promise: Promise = content["promise"]
+			promise.resolve()
 			return false
 		_:
 			return false
@@ -525,9 +520,8 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 
 			content_cache_map[file_hash]["resource"] = node
 			content_cache_map[file_hash]["loaded"] = true
-			var request_state: DclRequestState = content_cache_map[file_hash].get("request_state", null)
-			if request_state != null:
-				request_state.emit_signal.call_deferred("on_finish")
+			var promise: Promise = content_cache_map[file_hash].get("promise", null)
+			promise.resolve()
 
 			return false
 		_:
@@ -596,8 +590,8 @@ func _process_loading_texture(
 			content_cache["loaded"] = true
 			content_cache["stage"] = 3
 
-			var request_state: DclRequestState = content_cache["request_state"]
-			request_state.emit_signal.call_deferred("on_finish")
+			var promise: Promise = content_cache["promise"]
+			promise.resolve()
 			return false
 		_:
 			printerr("unknown stage ", file_hash)
@@ -672,8 +666,8 @@ func _process_loading_audio(
 			content_cache["resource"] = audio_stream
 			content_cache["loaded"] = true
 			content_cache["stage"] = 3
-			var request_state: DclRequestState = content_cache["request_state"]
-			request_state.emit_signal.call_deferred("on_finish")
+			var promise: Promise = content_cache["promise"]
+			promise.resolve()
 			return false
 		_:
 			printerr("unknown stage ", file_hash)
@@ -727,8 +721,8 @@ func _process_loading_video(
 			var content_cache = content_cache_map[file_hash]
 			content_cache["loaded"] = true
 			content_cache["stage"] = 3
-			var request_state: DclRequestState = content_cache["request_state"]
-			request_state.emit_signal.call_deferred("on_finish")
+			var promise: Promise = content_cache["promise"]
+			promise.resolve()
 			return false
 		_:
 			printerr("unknown stage ", file_hash)

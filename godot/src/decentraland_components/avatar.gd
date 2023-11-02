@@ -60,11 +60,9 @@ func update_avatar(avatar: Dictionary):
 
 	finish_loading = false
 
-	var request_state = Global.content_manager.fetch_wearables(
-		wearable_to_request, current_content_url
-	)
-	if request_state != null:
-		await request_state.on_finish
+	var promise = Global.content_manager.fetch_wearables(wearable_to_request, current_content_url)
+	if promise != null:
+		await promise.awaiter()
 	fetch_wearables_dependencies()
 
 
@@ -134,6 +132,7 @@ func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> v
 	if finish_loading:
 		apply_color_and_facial()
 
+
 func get_representation(representation_array: Array, desired_body_shape: String) -> Dictionary:
 	for representation in representation_array:
 		var index = representation.get("bodyShapes", []).find(desired_body_shape)
@@ -152,7 +151,7 @@ func fetch_wearables_dependencies():
 	for item in current_wearables:
 		wearables_dict[item] = Global.content_manager.get_wearable(item)
 
-	var request_state_array: Array[DclRequestState] = []
+	var async_calls: Array = []
 	for wearable_key in wearables_dict.keys():
 		if not wearables_dict[wearable_key] is Dictionary:
 			printerr("wearable ", wearable_key, " not dictionary")
@@ -184,17 +183,26 @@ func fetch_wearables_dependencies():
 		}
 
 		for file_name in content_to_fetch:
-			var request_state: DclRequestState
-			# TODO: should be there more extensions?
-			if file_name.ends_with(".png"):
-				request_state = Global.content_manager.fetch_texture(file_name, content_mapping)
-			else:
-				request_state = Global.content_manager.fetch_gltf(file_name, content_mapping)
+			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
 
-			if request_state != null:
-				await request_state.on_finish # TODO: Not paralel promises...
-		
-	load_wearables() # maybe, call_defered?
+	prints("BEGIN Awaiter...", get_path())
+	await Awaiter.all(async_calls)
+	prints("END Awaiter...", get_path())
+
+	load_wearables()
+
+
+func _fetch_texture_or_gltf(file_name, content_mapping):
+	var promise: Promise
+
+	if file_name.ends_with(".png"):
+		promise = Global.content_manager.fetch_texture(file_name, content_mapping)
+	else:
+		promise = Global.content_manager.fetch_gltf(file_name, content_mapping)
+
+	return promise
+
+	prints("_fetch_texture_or_gltf", file_name, get_path())
 
 
 func _free_old_skeleton(skeleton: Node):

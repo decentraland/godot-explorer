@@ -49,9 +49,10 @@ func set_wearable(wearable: Dictionary):
 				"content": wearable.get("content", {}),
 				"base_url": "https://peer.decentraland.org/content/contents/"
 			}
-			var request_state = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
-			await request_state.on_finish
+			var promise = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
+			await promise.awaiter()
 		load_thumbnail(thumbnail_hash)
+
 
 func load_thumbnail(thumbnail_hash):
 	texture_rect_preview.texture = Global.content_manager.get_resource_from_hash(thumbnail_hash)
