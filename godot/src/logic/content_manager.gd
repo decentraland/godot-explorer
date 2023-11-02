@@ -22,7 +22,7 @@ var http_requester = RustHttpRequester.new()
 var wearable_cache_map: Dictionary = {}
 var request_monotonic_counter: int = 0
 
-var use_thread = false
+var use_thread = true
 
 
 func _ready():
