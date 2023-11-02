@@ -1,8 +1,6 @@
 extends Node
 class_name ContentManager
 
-signal content_loading_finished(hash: String)
-signal wearable_data_loaded(id: String)
 signal meshes_material_finished(id: int)
 signal gltf_node_collider_finishes(id: int, gltf_node: Node)
 
@@ -24,7 +22,7 @@ var http_requester = RustHttpRequester.new()
 var wearable_cache_map: Dictionary = {}
 var request_monotonic_counter: int = 0
 
-var use_thread = true
+var use_thread = false
 
 
 func _ready():
@@ -58,39 +56,6 @@ func get_wearable(id: String):
 	if wearable_cached != null and wearable_cached.get("loaded"):
 		return wearable_cached.get("data")
 	return null
-
-
-# Public function
-# @returns $id if the resource was added to queue to fetch, -1 if it had already been fetched
-func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> int:
-	var new_wearables: PackedStringArray = []
-	var new_id: int = request_monotonic_counter + 1
-
-	for wearable in wearables:
-		var wearable_lower = wearable.to_lower()
-		var wearable_cached = wearable_cache_map.get(wearable_lower)
-		if wearable_cached == null:
-			wearable_cache_map[wearable_lower] = {
-				"id": new_id,
-				"loaded": false,
-			}
-			new_wearables.append(wearable_lower)
-
-	if new_wearables.is_empty():
-		return -1
-
-	request_monotonic_counter = new_id
-	pending_content.push_back(
-		{
-			"id": new_id,
-			"content_type": ContentType.CT_WEARABLE_EMOTE,
-			"stage": 0,
-			"new_wearables": new_wearables,
-			"content_base_url": content_base_url
-		}
-	)
-
-	return new_id
 
 
 func duplicate_materials(target_meshes: Array[Dictionary]) -> int:
@@ -128,47 +93,56 @@ func instance_gltf_colliders(
 
 	return id
 
-
 # Public function
-# @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_gltf(file_path: String, content_mapping: Dictionary):
-	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
-	var content_cached = content_cache_map.get(file_hash)
-	if content_cached != null:
-		return not content_cached.get("loaded")
+# @returns $id if the resource was added to queue to fetch, -1 if it had already been fetched
+func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> DclRequestState:
+	var request_state = DclRequestState.new()
 
-	content_cache_map[file_hash] = {
-		"loaded": false,
-	}
+	var new_wearables: PackedStringArray = []
+	var new_id: int = request_monotonic_counter + 1
 
+	for wearable in wearables:
+		var wearable_lower = wearable.to_lower()
+		var wearable_cached = wearable_cache_map.get(wearable_lower)
+		if wearable_cached == null:
+			wearable_cache_map[wearable_lower] = {
+				"id": new_id,
+				"loaded": false,
+			}
+			new_wearables.append(wearable_lower)
+
+	if new_wearables.is_empty():
+		return null
+
+	request_monotonic_counter = new_id
 	pending_content.push_back(
 		{
-			"file_path": file_path,
-			"file_hash": file_hash,
-			"content_type": ContentType.CT_GLTF_GLB,
-			"content_mapping": content_mapping,
-			"stage": 0
+			"id": new_id,
+			"content_type": ContentType.CT_WEARABLE_EMOTE,
+			"stage": 0,
+			"new_wearables": new_wearables,
+			"content_base_url": content_base_url,
+			"request_state": request_state,
 		}
 	)
 
-	return true
-
+	return request_state
 
 # Public function
-# @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_gltf_loader(file_path: String, content_mapping: Dictionary) -> GltfLoader:
-	var gltf_loader = GltfLoader.new()
+# @returns request state on success, null if it had already been fetched
+func fetch_gltf(file_path: String, content_mapping: Dictionary) -> DclRequestState:
+	var request_state = DclRequestState.new()
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		if not content_cached.get("loaded"):
-			return content_cached.get("gltf_loader")
+			return content_cached.get("request_state")
 		else:
 			return null
 
 	content_cache_map[file_hash] = {
 		"loaded": false,
-		"gltf_loader": gltf_loader
+		"request_state": request_state
 	}
 
 	pending_content.push_back(
@@ -181,22 +155,26 @@ func fetch_gltf_loader(file_path: String, content_mapping: Dictionary) -> GltfLo
 		}
 	)
 
-	return gltf_loader
+	return request_state
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_texture(file_path: String, content_mapping: Dictionary):
+func fetch_texture(file_path: String, content_mapping: Dictionary) -> DclRequestState:
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	return fetch_texture_by_hash(file_hash, content_mapping)
 
-
 func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
+	var request_state = DclRequestState.new()
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
-		return not content_cached.get("loaded")
+		if not content_cached.get("loaded"):
+			return content_cached.get("request_state")
+		else:
+			return null
 
 	content_cache_map[file_hash] = {
 		"loaded": false,
+		"request_state": request_state
 	}
 
 	pending_content.push_back(
@@ -208,17 +186,22 @@ func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
 		}
 	)
 
-	return true
+	return request_state
 
 
-func fetch_audio(file_path: String, content_mapping: Dictionary):
+func fetch_audio(file_path: String, content_mapping: Dictionary) -> DclRequestState:
+	var request_state = DclRequestState.new()
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
-		return not content_cached.get("loaded")
+		if not content_cached.get("loaded"):
+			return content_cached.get("request_state")
+		else:
+			return null
 
 	content_cache_map[file_hash] = {
 		"loaded": false,
+		"request_state": request_state
 	}
 
 	pending_content.push_back(
@@ -231,18 +214,23 @@ func fetch_audio(file_path: String, content_mapping: Dictionary):
 		}
 	)
 
-	return true
+	return request_state
 
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_video(file_hash: String, content_mapping: Dictionary):
+func fetch_video(file_hash: String, content_mapping: Dictionary) -> DclRequestState:
+	var request_state = DclRequestState.new()
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
-		return not content_cached.get("loaded")
+		if not content_cached.get("loaded"):
+			return content_cached.get("request_state")
+		else:
+			return null
 
 	content_cache_map[file_hash] = {
 		"loaded": false,
+		"request_state": request_state
 	}
 
 	pending_content.push_back(
@@ -254,7 +242,7 @@ func fetch_video(file_hash: String, content_mapping: Dictionary):
 		}
 	)
 
-	return true
+	return request_state
 
 
 func _process(_dt: float) -> void:
@@ -409,7 +397,8 @@ func _process_loading_wearable(
 					wearable_cache_map[pointer]["loaded"] = true
 					wearable_cache_map[pointer]["data"] = null
 
-			self.emit_signal.call_deferred("wearable_data_loaded", content["id"])
+			var request_state: DclRequestState = content["request_state"]
+			request_state.emit_signal.call_deferred("on_finish")
 			return false
 		_:
 			return false
@@ -536,11 +525,10 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 
 			content_cache_map[file_hash]["resource"] = node
 			content_cache_map[file_hash]["loaded"] = true
-			var gltf_loader: GltfLoader = content_cache_map[file_hash].get("gltf_loader", null)
-			if gltf_loader != null:
-				gltf_loader.emit_signal.call_deferred("on_loaded")
-			
-			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			var request_state: DclRequestState = content_cache_map[file_hash].get("request_state", null)
+			if request_state != null:
+				request_state.emit_signal.call_deferred("on_finish")
+
 			return false
 		_:
 			printerr("unknown stage ", file_path)
@@ -602,11 +590,14 @@ func _process_loading_texture(
 				)
 				return false
 
-			content_cache_map[file_hash]["image"] = image
-			content_cache_map[file_hash]["resource"] = ImageTexture.create_from_image(image)
-			content_cache_map[file_hash]["loaded"] = true
-			content_cache_map[file_hash]["stage"] = 3
-			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			var content_cache = content_cache_map[file_hash]
+			content_cache["image"] = image
+			content_cache["resource"] = ImageTexture.create_from_image(image)
+			content_cache["loaded"] = true
+			content_cache["stage"] = 3
+
+			var request_state: DclRequestState = content_cache["request_state"]
+			request_state.emit_signal.call_deferred("on_finish")
 			return false
 		_:
 			printerr("unknown stage ", file_hash)
@@ -677,10 +668,12 @@ func _process_loading_audio(
 				)
 				return false
 
-			content_cache_map[file_hash]["resource"] = audio_stream
-			content_cache_map[file_hash]["loaded"] = true
-			content_cache_map[file_hash]["stage"] = 3
-			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			var content_cache = content_cache_map[file_hash]
+			content_cache["resource"] = audio_stream
+			content_cache["loaded"] = true
+			content_cache["stage"] = 3
+			var request_state: DclRequestState = content_cache["request_state"]
+			request_state.emit_signal.call_deferred("on_finish")
 			return false
 		_:
 			printerr("unknown stage ", file_hash)
@@ -731,9 +724,11 @@ func _process_loading_video(
 				printerr("video download fails")
 				return false
 
-			content_cache_map[file_hash]["loaded"] = true
-			content_cache_map[file_hash]["stage"] = 3
-			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			var content_cache = content_cache_map[file_hash]
+			content_cache["loaded"] = true
+			content_cache["stage"] = 3
+			var request_state: DclRequestState = content_cache["request_state"]
+			request_state.emit_signal.call_deferred("on_finish")
 			return false
 		_:
 			printerr("unknown stage ", file_hash)

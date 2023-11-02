@@ -18,10 +18,7 @@ var t: float = 0.0
 var target_distance: float = 0.0
 
 # Wearable requesting
-var last_request_id: int = -1
 var current_content_url: String = ""
-var content_waiting_hash: Array = []
-var content_waiting_hash_signal_connected: bool = false
 
 # Current wearables equippoed
 var current_wearables: PackedStringArray
@@ -33,12 +30,10 @@ var wearables_dict: Dictionary = {}
 
 var finish_loading = false
 var wearables_by_category
-var should_load_wearables: bool = false
 var duplicate_materials_request_id: int = -1
 
 
 func _ready():
-	Global.content_manager.wearable_data_loaded.connect(self._on_wearable_data_loaded)
 	Global.content_manager.meshes_material_finished.connect(self._on_meshes_material_finished)
 
 
@@ -65,11 +60,12 @@ func update_avatar(avatar: Dictionary):
 
 	finish_loading = false
 
-	last_request_id = Global.content_manager.fetch_wearables(
+	var request_state = Global.content_manager.fetch_wearables(
 		wearable_to_request, current_content_url
 	)
-	if last_request_id == -1:
-		fetch_wearables()
+	if request_state != null:
+		await request_state.on_finish
+	fetch_wearables_dependencies()
 
 
 @onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
@@ -138,14 +134,6 @@ func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> v
 	if finish_loading:
 		apply_color_and_facial()
 
-
-func _on_wearable_data_loaded(id: int):
-	if id == -1 or id != last_request_id:
-		return
-
-	fetch_wearables()
-
-
 func get_representation(representation_array: Array, desired_body_shape: String) -> Dictionary:
 	for representation in representation_array:
 		var index = representation.get("bodyShapes", []).find(desired_body_shape)
@@ -155,7 +143,7 @@ func get_representation(representation_array: Array, desired_body_shape: String)
 	return representation_array[0]
 
 
-func fetch_wearables():
+func fetch_wearables_dependencies():
 	# Clear last equipped werarables
 	wearables_dict.clear()
 
@@ -164,7 +152,7 @@ func fetch_wearables():
 	for item in current_wearables:
 		wearables_dict[item] = Global.content_manager.get_wearable(item)
 
-	content_waiting_hash = []
+	var request_state_array: Array[DclRequestState] = []
 	for wearable_key in wearables_dict.keys():
 		if not wearables_dict[wearable_key] is Dictionary:
 			printerr("wearable ", wearable_key, " not dictionary")
@@ -196,28 +184,17 @@ func fetch_wearables():
 		}
 
 		for file_name in content_to_fetch:
-			var fetching_resource: bool
+			var request_state: DclRequestState
 			# TODO: should be there more extensions?
 			if file_name.ends_with(".png"):
-				fetching_resource = Global.content_manager.fetch_texture(file_name, content_mapping)
+				request_state = Global.content_manager.fetch_texture(file_name, content_mapping)
 			else:
-				fetching_resource = Global.content_manager.fetch_gltf(file_name, content_mapping)
+				request_state = Global.content_manager.fetch_gltf(file_name, content_mapping)
 
-			if fetching_resource:
-				content_waiting_hash.push_back(content_to_fetch[file_name])
-
-	if content_waiting_hash.is_empty():
-		should_load_wearables = true
-	else:
-		content_waiting_hash_signal_connected = true
-		Global.content_manager.content_loading_finished.connect(self._on_content_loading_finished)
-
-
-func _on_content_loading_finished(resource_hash: String):
-	if resource_hash in content_waiting_hash:
-		content_waiting_hash.erase(resource_hash)
-		if content_waiting_hash.is_empty():
-			should_load_wearables = true
+			if request_state != null:
+				await request_state.on_finish # TODO: Not paralel promises...
+		
+	load_wearables() # maybe, call_defered?
 
 
 func _free_old_skeleton(skeleton: Node):
@@ -264,12 +241,6 @@ func try_to_set_body_shape(body_shape_hash):
 
 
 func load_wearables():
-	if content_waiting_hash_signal_connected:
-		content_waiting_hash_signal_connected = false
-		Global.content_manager.content_loading_finished.disconnect(
-			self._on_content_loading_finished
-		)
-
 	var curated_wearables = Wearables.get_curated_wearable_list(
 		current_body_shape, current_wearables, []
 	)
@@ -441,10 +412,6 @@ func set_target(target: Transform3D) -> void:
 
 
 func _process(delta):
-	if should_load_wearables:
-		load_wearables()
-		should_load_wearables = false
-
 	if skip_process:
 		return
 

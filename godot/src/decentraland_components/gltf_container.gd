@@ -33,43 +33,17 @@ func load_gltf():
 	if self.file_hash.is_empty():
 		gltf_state = GodotGltfState.NotFound
 		return
-#
-#	var fetching_resource = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
-#
+
 #	# TODO: should we set a timeout?
 	gltf_state = GodotGltfState.Loading
-#
-#	if not fetching_resource:
-#		self._on_gltf_loaded.call_deferred(self.file_hash)
-#	else:
-#		Global.content_manager.content_loading_finished.connect(
-#			self._content_manager_resource_loaded
-#		)
 
-	
-	prints ("first current thread?", OS.get_thread_caller_id())
-	var maybe_gltf_loader = Global.content_manager.fetch_gltf_loader(dcl_gltf_src, content_mapping)
-	if maybe_gltf_loader != null:
-		await maybe_gltf_loader.on_loaded
+	var request_state = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
+	if request_state != null:
+		await request_state.on_finish
 		
 	_on_gltf_loaded()
-		
-#
-#func _content_manager_resource_loaded(resource_hash: String):
-#	_on_gltf_loaded(resource_hash, true)
-
-#func _on_gltf_loaded(resource_hash: String, from_signal: bool = false):
-#	if resource_hash != file_hash:
-#		return
-#
-#	if from_signal:
-#		Global.content_manager.content_loading_finished.disconnect(
-#			self._content_manager_resource_loaded
-#		)
 
 func _on_gltf_loaded():
-	prints ("_on_gltf_loaded current thread?", OS.get_thread_caller_id())
-	
 	var node = Global.content_manager.get_resource_from_hash(file_hash)
 	if node == null:
 		gltf_state = GodotGltfState.FinishedWithError
