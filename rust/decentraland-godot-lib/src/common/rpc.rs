@@ -1,5 +1,7 @@
 use std::sync::{Arc, RwLock};
 
+use serde::Serialize;
+
 #[derive(Debug, Clone)]
 pub struct RpcResultSender<T>(Arc<RwLock<Option<tokio::sync::oneshot::Sender<T>>>>);
 
@@ -33,6 +35,21 @@ impl<T: 'static> From<tokio::sync::oneshot::Sender<T>> for RpcResultSender<T> {
 }
 
 #[derive(Debug)]
+pub enum PortableLocation {
+    Urn(String),
+    Ens(String),
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SpawnResponse {
+    pub pid: String,
+    pub parent_cid: String,
+    pub name: String,
+    pub ens: Option<String>,
+}
+
+#[derive(Debug)]
 pub enum RpcCall {
     ChangeRealm {
         to: String,
@@ -56,6 +73,17 @@ pub enum RpcCall {
         emote_src: String,
         looping: bool,
         response: RpcResultSender<Result<(), String>>,
+    },
+    SpawnPortable {
+        location: PortableLocation,
+        response: RpcResultSender<Result<SpawnResponse, String>>,
+    },
+    KillPortable {
+        location: PortableLocation,
+        response: RpcResultSender<bool>,
+    },
+    ListPortables {
+        response: RpcResultSender<Vec<SpawnResponse>>,
     },
 }
 

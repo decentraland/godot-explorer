@@ -1,3 +1,4 @@
+mod handle_portables;
 mod handle_restricted_actions;
 
 use crate::{
@@ -46,6 +47,9 @@ pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls:
                 looping,
                 response,
             } => trigger_scene_emote(scene, current_parcel_scene_id, emote_src, looping, response),
+            RpcCall::SpawnPortable { location, response } => {}
+            RpcCall::KillPortable { location, response } => {}
+            RpcCall::ListPortables { response } => {}
         }
     }
 }
