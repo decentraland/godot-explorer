@@ -18,10 +18,7 @@ var t: float = 0.0
 var target_distance: float = 0.0
 
 # Wearable requesting
-var last_request_id: int = -1
 var current_content_url: String = ""
-var content_waiting_hash: Array = []
-var content_waiting_hash_signal_connected: bool = false
 
 # Current wearables equippoed
 var current_wearables: PackedStringArray
@@ -33,13 +30,6 @@ var wearables_dict: Dictionary = {}
 
 var finish_loading = false
 var wearables_by_category
-var should_load_wearables: bool = false
-var duplicate_materials_request_id: int = -1
-
-
-func _ready():
-	Global.content_manager.wearable_data_loaded.connect(self._on_wearable_data_loaded)
-	Global.content_manager.meshes_material_finished.connect(self._on_meshes_material_finished)
 
 
 func update_avatar(avatar: Dictionary):
@@ -65,11 +55,10 @@ func update_avatar(avatar: Dictionary):
 
 	finish_loading = false
 
-	last_request_id = Global.content_manager.fetch_wearables(
-		wearable_to_request, current_content_url
-	)
-	if last_request_id == -1:
-		fetch_wearables()
+	var promise = Global.content_manager.fetch_wearables(wearable_to_request, current_content_url)
+	if promise != null:
+		await promise.awaiter()
+	fetch_wearables_dependencies()
 
 
 @onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
@@ -112,7 +101,7 @@ func play_emote(emote_id: String):
 	playing_emote = true
 
 
-func play_remote_emote(emote_src: String):
+func play_remote_emote(emote_src: String, looping: bool):
 	# TODO: Implement downloading emote from the scene content, adding to the avatar and then playing the emote
 	# Test scene: https://github.com/decentraland/unity-renderer/pull/5501
 	pass
@@ -139,13 +128,6 @@ func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> v
 		apply_color_and_facial()
 
 
-func _on_wearable_data_loaded(id: int):
-	if id == -1 or id != last_request_id:
-		return
-
-	fetch_wearables()
-
-
 func get_representation(representation_array: Array, desired_body_shape: String) -> Dictionary:
 	for representation in representation_array:
 		var index = representation.get("bodyShapes", []).find(desired_body_shape)
@@ -155,7 +137,7 @@ func get_representation(representation_array: Array, desired_body_shape: String)
 	return representation_array[0]
 
 
-func fetch_wearables():
+func fetch_wearables_dependencies():
 	# Clear last equipped werarables
 	wearables_dict.clear()
 
@@ -164,7 +146,7 @@ func fetch_wearables():
 	for item in current_wearables:
 		wearables_dict[item] = Global.content_manager.get_wearable(item)
 
-	content_waiting_hash = []
+	var async_calls: Array = []
 	for wearable_key in wearables_dict.keys():
 		if not wearables_dict[wearable_key] is Dictionary:
 			printerr("wearable ", wearable_key, " not dictionary")
@@ -196,28 +178,24 @@ func fetch_wearables():
 		}
 
 		for file_name in content_to_fetch:
-			var fetching_resource: bool
-			# TODO: should be there more extensions?
-			if file_name.ends_with(".png"):
-				fetching_resource = Global.content_manager.fetch_texture(file_name, content_mapping)
-			else:
-				fetching_resource = Global.content_manager.fetch_gltf(file_name, content_mapping)
+			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
 
-			if fetching_resource:
-				content_waiting_hash.push_back(content_to_fetch[file_name])
+	await Awaiter.all(async_calls)
 
-	if content_waiting_hash.is_empty():
-		should_load_wearables = true
+	load_wearables()
+
+
+func _fetch_texture_or_gltf(file_name, content_mapping):
+	var promise: Promise
+
+	if file_name.ends_with(".png"):
+		promise = Global.content_manager.fetch_texture(file_name, content_mapping)
 	else:
-		content_waiting_hash_signal_connected = true
-		Global.content_manager.content_loading_finished.connect(self._on_content_loading_finished)
+		promise = Global.content_manager.fetch_gltf(file_name, content_mapping)
 
+	return promise
 
-func _on_content_loading_finished(resource_hash: String):
-	if resource_hash in content_waiting_hash:
-		content_waiting_hash.erase(resource_hash)
-		if content_waiting_hash.is_empty():
-			should_load_wearables = true
+	prints("_fetch_texture_or_gltf", file_name, get_path())
 
 
 func _free_old_skeleton(skeleton: Node):
@@ -264,12 +242,6 @@ func try_to_set_body_shape(body_shape_hash):
 
 
 func load_wearables():
-	if content_waiting_hash_signal_connected:
-		content_waiting_hash_signal_connected = false
-		Global.content_manager.content_loading_finished.disconnect(
-			self._on_content_loading_finished
-		)
-
 	var curated_wearables = Wearables.get_curated_wearable_list(
 		current_body_shape, current_wearables, []
 	)
@@ -347,14 +319,11 @@ func load_wearables():
 			child.mesh = child.mesh.duplicate(true)
 			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
 
-	duplicate_materials_request_id = Global.content_manager.duplicate_materials(meshes)
-
-
-func _on_meshes_material_finished(id: int):
-	if duplicate_materials_request_id == id:
-		apply_color_and_facial()
-		body_shape_skeleton_3d.visible = true
-		finish_loading = true
+	var promise = Global.content_manager.duplicate_materials(meshes)
+	await promise.awaiter()
+	apply_color_and_facial()
+	body_shape_skeleton_3d.visible = true
+	finish_loading = true
 
 
 func apply_color_and_facial():
@@ -441,10 +410,6 @@ func set_target(target: Transform3D) -> void:
 
 
 func _process(delta):
-	if should_load_wearables:
-		load_wearables()
-		should_load_wearables = false
-
 	if skip_process:
 		return
 

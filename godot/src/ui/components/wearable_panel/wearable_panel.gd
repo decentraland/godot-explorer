@@ -86,20 +86,9 @@ func set_wearable(wearable: Dictionary, _wearable_id: String):
 				"content": wearable.get("content", {}),
 				"base_url": "https://peer.decentraland.org/content/contents/"
 			}
-			Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
-			Global.content_manager.content_loading_finished.connect(
-				self._on_content_loading_finished
-			)
-		else:
-			load_thumbnail()
-
-
-func _on_content_loading_finished(content_hash: String):
-	if content_hash != thumbnail_hash:
-		return
-
-	Global.content_manager.content_loading_finished.disconnect(self._on_content_loading_finished)
-	load_thumbnail()
+			var promise = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
+			await promise.awaiter()
+		load_thumbnail(thumbnail_hash)
 
 
 func set_equipable_and_equip(equipable: bool, equipped: bool):
@@ -115,7 +104,7 @@ func set_equipable_and_equip(equipable: bool, equipped: bool):
 		button_equip.button_pressed = false
 
 
-func load_thumbnail():
+func load_thumbnail(thumbnail_hash):
 	texture_rect_preview.texture = Global.content_manager.get_resource_from_hash(thumbnail_hash)
 
 

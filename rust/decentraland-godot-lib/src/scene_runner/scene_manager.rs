@@ -22,7 +22,6 @@ use std::{
     sync::atomic::AtomicU32,
     time::Instant,
 };
-use tracing::info;
 
 use super::{
     components::pointer_events::{get_entity_pointer_event, pointer_events_system},
@@ -559,16 +558,6 @@ impl NodeVirtual for SceneManager {
     fn init(base: Base<Node>) -> Self {
         let (thread_sender_to_main, main_receiver_from_thread) =
             std::sync::mpsc::sync_channel(1000);
-
-        #[cfg(target_os = "android")]
-        android::init_logger();
-
-        #[cfg(not(target_os = "android"))]
-        tracing_subscriber::fmt::init();
-
-        info!("SceneManager started");
-
-        log_panics::init();
 
         SceneManager {
             base,

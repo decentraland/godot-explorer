@@ -29,7 +29,7 @@ enum WearableCategoryEnum {
 		_update_category_icon()
 		filter_category = new_value
 
-signal filter_type
+signal filter_type(type: String)
 signal clear_filter
 
 @onready var texture_rect_icon = $HBoxContainer/Control/TextureRect_Icon
@@ -135,21 +135,11 @@ func set_wearable(wearable: Dictionary):
 				"content": wearable.get("content", {}),
 				"base_url": "https://peer.decentraland.org/content/contents/"
 			}
-			Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
-			Global.content_manager.content_loading_finished.connect(
-				self._on_content_loading_finished
-			)
-		else:
-			load_thumbnail()
+			var promise = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
+			await promise.awaiter()
+
+		load_thumbnail(thumbnail_hash)
 
 
-func _on_content_loading_finished(content_hash: String):
-	if content_hash != thumbnail_hash:
-		return
-
-	Global.content_manager.content_loading_finished.disconnect(self._on_content_loading_finished)
-	load_thumbnail()
-
-
-func load_thumbnail():
+func load_thumbnail(thumbnail_hash):
 	texture_rect_preview.texture = Global.content_manager.get_resource_from_hash(thumbnail_hash)

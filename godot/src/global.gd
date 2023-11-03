@@ -1,4 +1,4 @@
-extends Node
+extends DclGlobal
 
 signal config_changed
 
@@ -7,11 +7,8 @@ signal config_changed
 
 ## Global classes (singleton pattern)
 
-var scene_runner: SceneManager
 var realm: Realm
 var content_manager: ContentManager
-var comms: CommunicationManager
-var avatars: AvatarScene
 var config: ConfigData
 
 var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
@@ -27,12 +24,7 @@ enum CameraMode {
 
 
 func _ready():
-	var tokio_runtime = TokioRuntime.new()
-	tokio_runtime.name = "tokio_runtime"
-	add_child(tokio_runtime)
-
 	var args := OS.get_cmdline_args()
-
 	if args.size() == 1 and args[0].begins_with("res://"):
 		if args[0] != "res://src/main.tscn":
 			self.standalone = true
@@ -50,21 +42,11 @@ func _ready():
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
-	self.scene_runner = SceneManager.new()
-	self.scene_runner.set_name("scene_runner")
-	self.scene_runner.process_mode = Node.PROCESS_MODE_DISABLED
-
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 
 	self.content_manager = ContentManager.new()
 	self.content_manager.set_name("content_manager")
-
-	self.comms = CommunicationManager.new()
-	self.comms.set_name("comms")
-
-	self.avatars = AvatarScene.new()
-	self.avatars.set_name("avatars")
 
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)

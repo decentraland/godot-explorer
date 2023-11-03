@@ -40,18 +40,12 @@ func _ready():
 		# TODO: check if it's a wearable_button
 		for wearable_button in child.get_children():
 			wearable_button.filter_type.connect(self._on_wearable_button_filter_type)
-			wearable_button.filter_type.connect(self._on_wearable_button_clear_filter)
+			wearable_button.clear_filter.connect(self._on_wearable_button_clear_filter)
 			wearable_buttons.push_back(wearable_button)
-
-	Global.content_manager.wearable_data_loaded.connect(self._on_wearable_data_loaded)
 
 	for wearable_id in Wearables.BASE_WEARABLES:
 		var key = "urn:decentraland:off-chain:base-avatars:" + wearable_id
 		wearable_data[key] = null
-
-	base_wearable_request_id = Global.content_manager.fetch_wearables(
-		wearable_data.keys(), "https://peer.decentraland.org/content/"
-	)
 
 	avatar_body_shape = Global.config.avatar_profile.body_shape
 	avatar_wearables = Global.config.avatar_profile.wearables
@@ -61,10 +55,11 @@ func _ready():
 	avatar_emotes = Global.config.avatar_profile.emotes
 	line_edit_name.text = Global.config.avatar_profile.name
 
-
-func _on_wearable_data_loaded(req_id: int):
-	if base_wearable_request_id == -1 or req_id != base_wearable_request_id:
-		return
+	var promise = Global.content_manager.fetch_wearables(
+		wearable_data.keys(), "https://peer.decentraland.org/content/"
+	)
+	if promise != null:
+		await promise.awaiter()
 
 	for wearable_id in wearable_data:
 		wearable_data[wearable_id] = Global.content_manager.get_wearable(wearable_id)
@@ -168,7 +163,7 @@ func _on_wearable_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func _on_wearable_button_clear_filter():
+func _on_wearable_button_clear_filter(type):
 	filtered_data = []
 	show_wearables()
 

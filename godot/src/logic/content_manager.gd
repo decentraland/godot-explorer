@@ -1,11 +1,6 @@
 extends Node
 class_name ContentManager
 
-signal content_loading_finished(hash: String)
-signal wearable_data_loaded(id: String)
-signal meshes_material_finished(id: int)
-signal gltf_node_collider_finishes(id: int, gltf_node: Node)
-
 enum ContentType {
 	CT_GLTF_GLB = 1,
 	CT_TEXTURE = 2,
@@ -60,9 +55,55 @@ func get_wearable(id: String):
 	return null
 
 
+func duplicate_materials(target_meshes: Array[Dictionary]) -> Promise:
+	var promise = Promise.new()
+
+	(
+		pending_content
+		. push_back(
+			{
+				"content_type": ContentType.CT_MESHES_MATERIAL,
+				"target_meshes": target_meshes,
+				"promise": promise,
+			}
+		)
+	)
+
+	return promise
+
+
+func instance_gltf_colliders(
+	gltf_node: Node,
+	dcl_visible_cmask: int,
+	dcl_invisible_cmask: int,
+	dcl_scene_id: int,
+	dcl_entity_id: int
+) -> Promise:
+	var promise = Promise.new()
+
+	(
+		pending_content
+		. push_back(
+			{
+				"content_type": ContentType.CT_INSTACE_GLTF,
+				"gltf_node": gltf_node,
+				"dcl_visible_cmask": dcl_visible_cmask,
+				"dcl_invisible_cmask": dcl_invisible_cmask,
+				"dcl_scene_id": dcl_scene_id,
+				"dcl_entity_id": dcl_entity_id,
+				"promise": promise,
+			}
+		)
+	)
+
+	return promise
+
+
 # Public function
 # @returns $id if the resource was added to queue to fetch, -1 if it had already been fetched
-func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> int:
+func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> Promise:
+	var promise = Promise.new()
+
 	var new_wearables: PackedStringArray = []
 	var new_id: int = request_monotonic_counter + 1
 
@@ -77,69 +118,39 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 			new_wearables.append(wearable_lower)
 
 	if new_wearables.is_empty():
-		return -1
+		return null
 
 	request_monotonic_counter = new_id
-	pending_content.push_back(
-		{
-			"id": new_id,
-			"content_type": ContentType.CT_WEARABLE_EMOTE,
-			"stage": 0,
-			"new_wearables": new_wearables,
-			"content_base_url": content_base_url
-		}
+	(
+		pending_content
+		. push_back(
+			{
+				"id": new_id,
+				"content_type": ContentType.CT_WEARABLE_EMOTE,
+				"stage": 0,
+				"new_wearables": new_wearables,
+				"content_base_url": content_base_url,
+				"promise": promise,
+			}
+		)
 	)
 
-	return new_id
-
-
-func duplicate_materials(target_meshes: Array[Dictionary]) -> int:
-	var id = request_monotonic_counter + 1
-	request_monotonic_counter = id
-
-	pending_content.push_back(
-		{"id": id, "content_type": ContentType.CT_MESHES_MATERIAL, "target_meshes": target_meshes}
-	)
-
-	return id
-
-
-func instance_gltf_colliders(
-	gltf_node: Node,
-	dcl_visible_cmask: int,
-	dcl_invisible_cmask: int,
-	dcl_scene_id: int,
-	dcl_entity_id: int
-) -> int:
-	var id = request_monotonic_counter + 1
-	request_monotonic_counter = id
-
-	pending_content.push_back(
-		{
-			"id": id,
-			"content_type": ContentType.CT_INSTACE_GLTF,
-			"gltf_node": gltf_node,
-			"dcl_visible_cmask": dcl_visible_cmask,
-			"dcl_invisible_cmask": dcl_invisible_cmask,
-			"dcl_scene_id": dcl_scene_id,
-			"dcl_entity_id": dcl_entity_id
-		}
-	)
-
-	return id
+	return promise
 
 
 # Public function
-# @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_gltf(file_path: String, content_mapping: Dictionary):
+# @returns request state on success, null if it had already been fetched
+func fetch_gltf(file_path: String, content_mapping: Dictionary) -> Promise:
+	var promise = Promise.new()
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
-		return not content_cached.get("loaded")
+		if not content_cached.get("loaded"):
+			return content_cached.get("promise")
+		else:
+			return null
 
-	content_cache_map[file_hash] = {
-		"loaded": false,
-	}
+	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
 	pending_content.push_back(
 		{
@@ -151,24 +162,26 @@ func fetch_gltf(file_path: String, content_mapping: Dictionary):
 		}
 	)
 
-	return true
+	return promise
 
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_texture(file_path: String, content_mapping: Dictionary):
+func fetch_texture(file_path: String, content_mapping: Dictionary) -> Promise:
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	return fetch_texture_by_hash(file_hash, content_mapping)
 
 
 func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
+	var promise = Promise.new()
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
-		return not content_cached.get("loaded")
+		if not content_cached.get("loaded"):
+			return content_cached.get("promise")
+		else:
+			return null
 
-	content_cache_map[file_hash] = {
-		"loaded": false,
-	}
+	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
 	pending_content.push_back(
 		{
@@ -179,18 +192,20 @@ func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
 		}
 	)
 
-	return true
+	return promise
 
 
-func fetch_audio(file_path: String, content_mapping: Dictionary):
+func fetch_audio(file_path: String, content_mapping: Dictionary) -> Promise:
+	var promise = Promise.new()
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
-		return not content_cached.get("loaded")
+		if not content_cached.get("loaded"):
+			return content_cached.get("promise")
+		else:
+			return null
 
-	content_cache_map[file_hash] = {
-		"loaded": false,
-	}
+	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
 	pending_content.push_back(
 		{
@@ -202,19 +217,21 @@ func fetch_audio(file_path: String, content_mapping: Dictionary):
 		}
 	)
 
-	return true
+	return promise
 
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_video(file_hash: String, content_mapping: Dictionary):
+func fetch_video(file_hash: String, content_mapping: Dictionary) -> Promise:
+	var promise = Promise.new()
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
-		return not content_cached.get("loaded")
+		if not content_cached.get("loaded"):
+			return content_cached.get("promise")
+		else:
+			return null
 
-	content_cache_map[file_hash] = {
-		"loaded": false,
-	}
+	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
 	pending_content.push_back(
 		{
@@ -225,7 +242,7 @@ func fetch_video(file_hash: String, content_mapping: Dictionary):
 		}
 	)
 
-	return true
+	return promise
 
 
 func _process(_dt: float) -> void:
@@ -297,8 +314,8 @@ func _process_meshes_material(content: Dictionary):
 			var material = mesh.surface_get_material(i).duplicate(true)
 			mesh.surface_set_material(i, material)
 
-	self.emit_signal.call_deferred("meshes_material_finished", content["id"])
-
+	var promise: Promise = content["promise"]
+	promise.call_deferred("resolve")
 	return false
 
 
@@ -380,7 +397,8 @@ func _process_loading_wearable(
 					wearable_cache_map[pointer]["loaded"] = true
 					wearable_cache_map[pointer]["data"] = null
 
-			self.emit_signal.call_deferred("wearable_data_loaded", content["id"])
+			var promise: Promise = content["promise"]
+			promise.call_deferred("resolve")
 			return false
 		_:
 			return false
@@ -507,7 +525,9 @@ func _process_loading_gltf(content: Dictionary, finished_downloads: Array[Reques
 
 			content_cache_map[file_hash]["resource"] = node
 			content_cache_map[file_hash]["loaded"] = true
-			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			var promise: Promise = content_cache_map[file_hash].get("promise", null)
+			promise.call_deferred("resolve")
+
 			return false
 		_:
 			printerr("unknown stage ", file_path)
@@ -569,11 +589,14 @@ func _process_loading_texture(
 				)
 				return false
 
-			content_cache_map[file_hash]["image"] = image
-			content_cache_map[file_hash]["resource"] = ImageTexture.create_from_image(image)
-			content_cache_map[file_hash]["loaded"] = true
-			content_cache_map[file_hash]["stage"] = 3
-			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			var content_cache = content_cache_map[file_hash]
+			content_cache["image"] = image
+			content_cache["resource"] = ImageTexture.create_from_image(image)
+			content_cache["loaded"] = true
+			content_cache["stage"] = 3
+
+			var promise: Promise = content_cache["promise"]
+			promise.call_deferred("resolve")
 			return false
 		_:
 			printerr("unknown stage ", file_hash)
@@ -644,10 +667,12 @@ func _process_loading_audio(
 				)
 				return false
 
-			content_cache_map[file_hash]["resource"] = audio_stream
-			content_cache_map[file_hash]["loaded"] = true
-			content_cache_map[file_hash]["stage"] = 3
-			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			var content_cache = content_cache_map[file_hash]
+			content_cache["resource"] = audio_stream
+			content_cache["loaded"] = true
+			content_cache["stage"] = 3
+			var promise: Promise = content_cache["promise"]
+			promise.call_deferred("resolve")
 			return false
 		_:
 			printerr("unknown stage ", file_hash)
@@ -698,9 +723,11 @@ func _process_loading_video(
 				printerr("video download fails")
 				return false
 
-			content_cache_map[file_hash]["loaded"] = true
-			content_cache_map[file_hash]["stage"] = 3
-			self.emit_signal.call_deferred("content_loading_finished", file_hash)
+			var content_cache = content_cache_map[file_hash]
+			content_cache["loaded"] = true
+			content_cache["stage"] = 3
+			var promise: Promise = content_cache["promise"]
+			promise.call_deferred("resolve")
 			return false
 		_:
 			printerr("unknown stage ", file_hash)
@@ -801,7 +828,8 @@ func _process_instance_gltf(content: Dictionary):
 	for node in to_remove_nodes:
 		node.get_parent().remove_child(node)
 
-	self.emit_signal.call_deferred("gltf_node_collider_finishes", content["id"], gltf_node)
+	var promise: Promise = content["promise"]
+	promise.call_deferred("resolve_with_data", gltf_node)
 	return false
 
 
