@@ -30,11 +30,6 @@ var wearables_dict: Dictionary = {}
 
 var finish_loading = false
 var wearables_by_category
-var duplicate_materials_request_id: int = -1
-
-
-func _ready():
-	Global.content_manager.meshes_material_finished.connect(self._on_meshes_material_finished)
 
 
 func update_avatar(avatar: Dictionary):
@@ -106,7 +101,7 @@ func play_emote(emote_id: String):
 	playing_emote = true
 
 
-func play_remote_emote(emote_src: String):
+func play_remote_emote(emote_src: String, looping: bool):
 	# TODO: Implement downloading emote from the scene content, adding to the avatar and then playing the emote
 	# Test scene: https://github.com/decentraland/unity-renderer/pull/5501
 	pass
@@ -324,15 +319,11 @@ func load_wearables():
 			child.mesh = child.mesh.duplicate(true)
 			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
 
-	duplicate_materials_request_id = Global.content_manager.duplicate_materials(meshes)
-
-
-func _on_meshes_material_finished(id: int):
-	if duplicate_materials_request_id == id:
-		apply_color_and_facial()
-		body_shape_skeleton_3d.visible = true
-		finish_loading = true
-
+	var promise = Global.content_manager.duplicate_materials(meshes)
+	await promise.awaiter()
+	apply_color_and_facial()
+	body_shape_skeleton_3d.visible = true
+	finish_loading = true
 
 func apply_color_and_facial():
 	for child in body_shape_skeleton_3d.get_children():

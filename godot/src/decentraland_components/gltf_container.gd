@@ -17,7 +17,6 @@ const GodotGltfState = {
 	Finished = 4,
 }
 var gltf_state: int = 0
-var gltf_instance_req_id: int = 0
 
 
 func _ready():
@@ -50,19 +49,13 @@ func _on_gltf_loaded():
 		gltf_state = GodotGltfState.FinishedWithError
 		return
 
-	gltf_instance_req_id = Global.content_manager.instance_gltf_colliders(
+	var promise: Promise = Global.content_manager.instance_gltf_colliders(
 		node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
 	)
-	Global.content_manager.gltf_node_collider_finishes.connect(self._on_gltf_instanced)
+	
+	await promise.awaiter()
 
-
-func _on_gltf_instanced(req_id: int, node: Node):
-	if req_id != gltf_instance_req_id:
-		return
-
-	Global.content_manager.gltf_node_collider_finishes.disconnect(self._on_gltf_instanced)
-
-	gltf_node = node
+	gltf_node = promise.get_data()
 	gltf_state = GodotGltfState.Finished
 
 	add_child.call_deferred(gltf_node)

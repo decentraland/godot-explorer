@@ -1,9 +1,6 @@
 extends Node
 class_name ContentManager
 
-signal meshes_material_finished(id: int)
-signal gltf_node_collider_finishes(id: int, gltf_node: Node)
-
 enum ContentType {
 	CT_GLTF_GLB = 1,
 	CT_TEXTURE = 2,
@@ -58,15 +55,18 @@ func get_wearable(id: String):
 	return null
 
 
-func duplicate_materials(target_meshes: Array[Dictionary]) -> int:
-	var id = request_monotonic_counter + 1
-	request_monotonic_counter = id
+func duplicate_materials(target_meshes: Array[Dictionary]) -> Promise:
+	var promise = Promise.new()
 
 	pending_content.push_back(
-		{"id": id, "content_type": ContentType.CT_MESHES_MATERIAL, "target_meshes": target_meshes}
+		{
+			"content_type": ContentType.CT_MESHES_MATERIAL,
+			"target_meshes": target_meshes,
+			"promise": promise,
+		}
 	)
 
-	return id
+	return promise
 
 
 func instance_gltf_colliders(
@@ -75,23 +75,22 @@ func instance_gltf_colliders(
 	dcl_invisible_cmask: int,
 	dcl_scene_id: int,
 	dcl_entity_id: int
-) -> int:
-	var id = request_monotonic_counter + 1
-	request_monotonic_counter = id
+) -> Promise:
+	var promise = Promise.new()
 
 	pending_content.push_back(
 		{
-			"id": id,
 			"content_type": ContentType.CT_INSTACE_GLTF,
 			"gltf_node": gltf_node,
 			"dcl_visible_cmask": dcl_visible_cmask,
 			"dcl_invisible_cmask": dcl_invisible_cmask,
 			"dcl_scene_id": dcl_scene_id,
-			"dcl_entity_id": dcl_entity_id
+			"dcl_entity_id": dcl_entity_id,
+			"promise": promise,
 		}
 	)
 
-	return id
+	return promise
 
 
 # Public function
@@ -309,8 +308,8 @@ func _process_meshes_material(content: Dictionary):
 			var material = mesh.surface_get_material(i).duplicate(true)
 			mesh.surface_set_material(i, material)
 
-	self.emit_signal.call_deferred("meshes_material_finished", content["id"])
-
+	var promise: Promise = content["promise"]
+	promise.call_deferred("resolve")
 	return false
 
 
@@ -823,7 +822,8 @@ func _process_instance_gltf(content: Dictionary):
 	for node in to_remove_nodes:
 		node.get_parent().remove_child(node)
 
-	self.emit_signal.call_deferred("gltf_node_collider_finishes", content["id"], gltf_node)
+	var promise: Promise = content["promise"]
+	promise.call_deferred("resolve_with_data", gltf_node)
 	return false
 
 
