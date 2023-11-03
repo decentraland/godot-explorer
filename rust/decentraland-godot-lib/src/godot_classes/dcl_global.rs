@@ -9,19 +9,23 @@ use crate::{
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
 };
 
+use super::dcl_realm::DclRealm;
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclGlobal {
     #[base]
     _base: Base<Node>,
     #[var]
-    scene_runner: Gd<SceneManager>,
+    pub scene_runner: Gd<SceneManager>,
     #[var]
-    comms: Gd<CommunicationManager>,
+    pub comms: Gd<CommunicationManager>,
     #[var]
-    avatars: Gd<AvatarScene>,
+    pub avatars: Gd<AvatarScene>,
     #[var]
-    tokio_runtime: Gd<TokioRuntime>,
+    pub tokio_runtime: Gd<TokioRuntime>,
+    #[var]
+    pub realm: Gd<DclRealm>,
 }
 
 #[godot_api]
@@ -55,6 +59,7 @@ impl NodeVirtual for DclGlobal {
             comms,
             avatars,
             tokio_runtime,
+            realm: Gd::new_default(),
         }
     }
 }

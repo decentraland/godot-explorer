@@ -1,6 +1,6 @@
 extends Node
 
-class_name ParcelManager
+class_name SceneFetcher
 
 signal parcels_processed(parcel_filled, empty)
 
@@ -10,9 +10,6 @@ const ADAPTATION_LAYER_JS_FILE_REQUEST = 102
 
 var adaptation_layer_js_request: int = -1
 var adaptation_layer_js_local_path: String = "user://sdk-adaptation-layer.js"
-
-var scene_runner: SceneManager = null
-var realm: Realm = null
 
 var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
 
@@ -24,10 +21,7 @@ var last_version_updated: int = -1
 
 
 func _ready():
-	scene_runner = get_tree().root.get_node("scene_runner")
-	realm = get_tree().root.get_node("realm")
-
-	realm.realm_changed.connect(self._on_realm_changed)
+	Global.realm.realm_changed.connect(self._on_realm_changed)
 	http_requester.request_completed.connect(self._on_requested_completed)
 
 	scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
@@ -59,7 +53,7 @@ func _process(_dt):
 	http_requester.poll()
 	scene_entity_coordinator.update()
 	if scene_entity_coordinator.get_version() != last_version_updated:
-		_on_desired_parsel_manager_update()
+		_on_desired_scene_changed()
 		last_version_updated = scene_entity_coordinator.get_version()
 
 
@@ -79,7 +73,7 @@ var empty_scenes = [
 ]
 
 
-func _on_desired_parsel_manager_update():
+func _on_desired_scene_changed():
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
 	var keep_alive_scenes = d.get("keep_alive_scenes", [])
@@ -99,7 +93,7 @@ func _on_desired_parsel_manager_update():
 			var scene = loaded_scenes[scene_id]
 			var scene_number_id: int = scene.get("scene_number_id", -1)
 			if scene_number_id != -1:
-				scene_runner.kill_scene(scene_number_id)
+				Global.scene_runner.kill_scene(scene_number_id)
 				to_remove.push_back(scene_id)
 
 	for scene_id in to_remove:
@@ -129,25 +123,26 @@ func _on_desired_parsel_manager_update():
 
 func _on_realm_changed():
 	var should_load_city_pointers = true
-	var content_base_url = realm.content_base_url
+	var content_base_url = Global.realm.content_base_url
 
-	if not realm.realm_city_loader_content_base_url.is_empty():
-		content_base_url = realm.realm_city_loader_content_base_url
+	if not Global.realm.realm_city_loader_content_base_url.is_empty():
+		content_base_url = Global.realm.realm_city_loader_content_base_url
 
-	if realm.realm_scene_urns.size() > 0 and realm.realm_city_loader_content_base_url.is_empty():
+	if Global.realm.realm_scene_urns.size() > 0 and Global.realm.realm_city_loader_content_base_url.is_empty():
 		should_load_city_pointers = false
 
 	scene_entity_coordinator.config(
 		content_base_url + "entities/active", content_base_url, should_load_city_pointers
 	)
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
-	var scenes_urns: Array = realm.realm_about.get("configurations", {}).get("scenesUrn", [])
+	var scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get("scenesUrn", [])
 	scene_entity_coordinator.set_fixed_desired_entities_urns(scenes_urns)
+	scene_entity_coordinator.set_fixed_desired_entities_global_urns(["urn:decentraland:entity:bafkreigl5uuwemnv6xmatgd4z7kb4rxirdf7v6wzdze6a5fv4rk2vetlu4?=&baseUrl=https://sdilauro.github.io/dae-unit-tests/"])
 
 	for scene in loaded_scenes.values():
 		var scene_number_id: int = scene.get("scene_number_id", -1)
 		if scene_number_id != -1:
-			scene_runner.kill_scene(scene_number_id)
+			Global.scene_runner.kill_scene(scene_number_id)
 
 	for parcel in loaded_empty_scenes:
 		remove_child(loaded_empty_scenes[parcel])
@@ -224,6 +219,7 @@ func update_position(new_position: Vector2i) -> void:
 
 func load_scene(scene_entity_id: String, entity: Dictionary):
 	var metadata = entity.get("metadata", {})
+	var is_global = entity.get("is_global", false)
 
 	var parcels_str = metadata.get("scene", {}).get("parcels", [])
 	var parcels = []
@@ -232,7 +228,11 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 		parcels.push_back(Vector2i(int(p[0]), int(p[1])))
 
 	loaded_scenes[scene_entity_id] = {
-		"id": scene_entity_id, "entity": entity, "scene_number_id": -1, "parcels": parcels
+		"id": scene_entity_id, 
+		"entity": entity, 
+		"scene_number_id": -1, 
+		"parcels": parcels,
+		"is_global": is_global
 	}
 
 	var is_sdk7 = metadata.get("runtimeVersion", null) == "7"
@@ -337,7 +337,7 @@ func _on_try_spawn_scene(scene):
 
 	var scene_definition: Dictionary = {
 		"base": Vector2i(base_parcel[0], base_parcel[1]),
-		"is_global": false,
+		"is_global": scene.is_global,
 		"path": local_main_js_path,
 		"main_crdt_path": local_main_crdt_path,
 		"visible": true,
@@ -345,7 +345,7 @@ func _on_try_spawn_scene(scene):
 		"title": title
 	}
 
-	var scene_number_id: int = scene_runner.start_scene(scene_definition, content_mapping)
+	var scene_number_id: int = Global.scene_runner.start_scene(scene_definition, content_mapping)
 	scene.scene_number_id = scene_number_id
 
 	return true
@@ -356,7 +356,16 @@ func reload_scene(scene_id: String) -> void:
 	if scene != null:
 		var scene_number_id: int = scene.get("scene_number_id", -1)
 		if scene_number_id != -1:
-			scene_runner.kill_scene(scene_number_id)
+			Global.scene_runner.kill_scene(scene_number_id)
 
 		loaded_scenes.erase(scene_id)
 		scene_entity_coordinator.reload_scene_data(scene_id)
+		
+	var dict = scene_entity_coordinator.get_scene_dict(scene_id)
+	if dict.size() > 0:
+		var content_dict: Dictionary = dict.get("content", {})
+		for file_hash in content_dict.values():
+			print("todo clean file hash ", file_hash)
+#			Global.content_manager.remove_file_hash(file_hash)
+		
+
