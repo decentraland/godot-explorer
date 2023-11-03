@@ -8,8 +8,9 @@ func _ready():
 func _on_child_order_changed():
 	set_visible(get_child_count() > 1)
 
-	if get_child_count() > 2:
-		%Counter.set_text("Tabs: %d" % (get_child_count() - 1))
-		%Counter.show()
-	else:
-		%Counter.hide()
+	if %Counter:
+		if get_child_count() > 2:
+			%Counter.set_text("Tabs: %d" % (get_child_count() - 1))
+			%Counter.show()
+		else:
+			%Counter.hide()

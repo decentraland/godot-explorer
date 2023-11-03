@@ -37,7 +37,6 @@ func get_random_wearable(category: String, body_shape_id: String):
 
 
 func _process(dt):
-	var avatar_scene: AvatarScene = get_node("/root/avatars")
 	if spawning_avatars and spawning_i < test_avatar_N:
 		var body_shape_id = get_random_body()
 		var avatar_data = {
@@ -64,9 +63,9 @@ func _process(dt):
 		)
 		var transform = Transform3D(Basis.IDENTITY, initial_position)
 		var alias = 10000 + spawning_i
-		avatar_scene.add_avatar(alias, "")
-		avatar_scene.update_avatar_profile(alias, avatar_data)
-		avatar_scene.update_avatar_transform(alias, transform)
+		Global.avatars.add_avatar(alias, "")
+		Global.avatars.update_avatar_profile(alias, avatar_data)
+		Global.avatars.update_avatar_transform(alias, transform)
 
 		spawning_position.append(initial_position)
 
@@ -92,4 +91,4 @@ func _process(dt):
 
 				spawning_position[i] = target_position
 				var alias = 10000 + i
-				avatar_scene.update_avatar_transform(alias, transform)
+				Global.avatars.update_avatar_transform(alias, transform)

@@ -17,7 +17,6 @@ const GodotGltfState = {
 	Finished = 4,
 }
 var gltf_state: int = 0
-var gltf_instance_req_id: int = 0
 
 
 func _ready():
@@ -33,50 +32,30 @@ func load_gltf():
 	if self.file_hash.is_empty():
 		gltf_state = GodotGltfState.NotFound
 		return
-	var fetching_resource = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
 
-	# TODO: should we set a timeout?
+#	# TODO: should we set a timeout?
 	gltf_state = GodotGltfState.Loading
 
-	if not fetching_resource:
-		self._on_gltf_loaded.call_deferred(self.file_hash)
-	else:
-		Global.content_manager.content_loading_finished.connect(
-			self._content_manager_resource_loaded
-		)
+	var promise = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
+	if promise != null:
+		await promise.awaiter()
+
+	_on_gltf_loaded()
 
 
-func _content_manager_resource_loaded(resource_hash: String):
-	_on_gltf_loaded(resource_hash, true)
-
-
-func _on_gltf_loaded(resource_hash: String, from_signal: bool = false):
-	if resource_hash != file_hash:
-		return
-
-	if from_signal:
-		Global.content_manager.content_loading_finished.disconnect(
-			self._content_manager_resource_loaded
-		)
-
+func _on_gltf_loaded():
 	var node = Global.content_manager.get_resource_from_hash(file_hash)
 	if node == null:
 		gltf_state = GodotGltfState.FinishedWithError
 		return
 
-	gltf_instance_req_id = Global.content_manager.instance_gltf_colliders(
+	var promise: Promise = Global.content_manager.instance_gltf_colliders(
 		node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
 	)
-	Global.content_manager.gltf_node_collider_finishes.connect(self._on_gltf_instanced)
 
+	await promise.awaiter()
 
-func _on_gltf_instanced(req_id: int, node: Node):
-	if req_id != gltf_instance_req_id:
-		return
-
-	Global.content_manager.gltf_node_collider_finishes.disconnect(self._on_gltf_instanced)
-
-	gltf_node = node
+	gltf_node = promise.get_data()
 	gltf_state = GodotGltfState.Finished
 
 	add_child.call_deferred(gltf_node)
