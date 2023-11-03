@@ -58,12 +58,15 @@ func get_wearable(id: String):
 func duplicate_materials(target_meshes: Array[Dictionary]) -> Promise:
 	var promise = Promise.new()
 
-	pending_content.push_back(
-		{
-			"content_type": ContentType.CT_MESHES_MATERIAL,
-			"target_meshes": target_meshes,
-			"promise": promise,
-		}
+	(
+		pending_content
+		. push_back(
+			{
+				"content_type": ContentType.CT_MESHES_MATERIAL,
+				"target_meshes": target_meshes,
+				"promise": promise,
+			}
+		)
 	)
 
 	return promise
@@ -78,16 +81,19 @@ func instance_gltf_colliders(
 ) -> Promise:
 	var promise = Promise.new()
 
-	pending_content.push_back(
-		{
-			"content_type": ContentType.CT_INSTACE_GLTF,
-			"gltf_node": gltf_node,
-			"dcl_visible_cmask": dcl_visible_cmask,
-			"dcl_invisible_cmask": dcl_invisible_cmask,
-			"dcl_scene_id": dcl_scene_id,
-			"dcl_entity_id": dcl_entity_id,
-			"promise": promise,
-		}
+	(
+		pending_content
+		. push_back(
+			{
+				"content_type": ContentType.CT_INSTACE_GLTF,
+				"gltf_node": gltf_node,
+				"dcl_visible_cmask": dcl_visible_cmask,
+				"dcl_invisible_cmask": dcl_invisible_cmask,
+				"dcl_scene_id": dcl_scene_id,
+				"dcl_entity_id": dcl_entity_id,
+				"promise": promise,
+			}
+		)
 	)
 
 	return promise

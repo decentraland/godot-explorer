@@ -325,6 +325,7 @@ func load_wearables():
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
 
+
 func apply_color_and_facial():
 	for child in body_shape_skeleton_3d.get_children():
 		if child.visible and child is MeshInstance3D:

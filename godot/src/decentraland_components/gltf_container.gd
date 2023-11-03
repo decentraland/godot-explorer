@@ -52,7 +52,7 @@ func _on_gltf_loaded():
 	var promise: Promise = Global.content_manager.instance_gltf_colliders(
 		node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
 	)
-	
+
 	await promise.awaiter()
 
 	gltf_node = promise.get_data()
