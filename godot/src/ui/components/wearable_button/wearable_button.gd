@@ -130,16 +130,13 @@ func set_wearable(wearable: Dictionary):
 	# TODO: loading?
 
 	if not thumbnail_hash.is_empty():
-		if Global.content_manager.get_resource_from_hash(thumbnail_hash) == null:
-			var content_mapping: Dictionary = {
-				"content": wearable.get("content", {}),
-				"base_url": "https://peer.decentraland.org/content/contents/"
-			}
-			var promise = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
-			await promise.awaiter()
-
-		load_thumbnail(thumbnail_hash)
-
-
-func load_thumbnail(thumbnail_hash):
-	texture_rect_preview.texture = Global.content_manager.get_resource_from_hash(thumbnail_hash)
+		var content_mapping: Dictionary = {
+			"content": wearable.get("content", {}),
+			"base_url": "https://peer.decentraland.org/content/contents/"
+		}
+		var promise = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
+		var res = await promise.awaiter()
+		if res is PromiseError:
+			printerr("Fetch texture error on ", wearable_thumbnail)
+		else:
+			texture_rect_preview.texture = res

@@ -13,6 +13,8 @@ var config: ConfigData
 var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
 var animation_importer: AnimationImporter = AnimationImporter.new()
 
+var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
+
 var standalone = false
 
 enum CameraMode {
@@ -73,3 +75,6 @@ func print_node_tree(node: Node, prefix = ""):
 	for child in node.get_children():
 		if child is Node:
 			print_node_tree(child, prefix + node.name + "/")
+
+func _process(dt: float):
+	http_requester.poll()

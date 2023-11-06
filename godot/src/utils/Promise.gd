@@ -3,10 +3,8 @@ class_name Promise
 
 signal _on_resolved
 
-var _resolved = false
-var _error: String = ""
-var _rejected = false
-var _data = null
+var _resolved: bool = false
+var _data: Variant = null
 
 
 func resolve():
@@ -24,8 +22,7 @@ func get_data():
 
 
 func reject(reason: String):
-	_rejected = true
-	_error = reason
+	_data = PromiseError.create(reason)
 	printerr("Promise rejected, reason: ", reason)
 	resolve()
 
@@ -34,11 +31,7 @@ func is_resolved() -> bool:
 	return _resolved
 
 
-func awaiter() -> bool:
+func awaiter() -> Variant:
 	if !_resolved:
 		await _on_resolved
-	return !_rejected
-
-
-func get_error() -> String:
-	return _error
+	return _data

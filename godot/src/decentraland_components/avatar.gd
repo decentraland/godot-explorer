@@ -56,8 +56,7 @@ func update_avatar(avatar: Dictionary):
 	finish_loading = false
 
 	var promise = Global.content_manager.fetch_wearables(wearable_to_request, current_content_url)
-	if promise != null:
-		await promise.awaiter()
+	await promise.awaiter()
 	fetch_wearables_dependencies()
 
 

@@ -4,7 +4,7 @@ use godot::prelude::{GodotString, Variant};
 pub enum ResponseEnum {
     String(String),
     Bytes(Vec<u8>),
-    ToFile(Result<(), std::io::Error>),
+    ToFile(Result<String, std::io::Error>),
     Json(Result<serde_json::Value, serde_json::Error>),
 }
 
@@ -73,7 +73,7 @@ impl RequestResponse {
 
     #[func]
     pub fn get_error(&self) -> GodotString {
-        GodotString::from(self.response_data.unwrap_err())
+        GodotString::from(self.response_data.as_ref().unwrap_err())
     }
 
     #[func]
@@ -95,6 +95,38 @@ impl RequestResponse {
                 godot::engine::Json::parse_string(GodotString::from(string))
             }
             _ => Variant::default(),
+        }
+    }
+
+    #[func]
+    pub fn get_response_as_string(&mut self) -> Variant {
+        let response = self.response_data.as_ref().unwrap();
+
+        match response {
+            ResponseEnum::String(string) => {
+                Variant::from(GodotString::from(string))
+            }
+            ResponseEnum::Json(json) => {
+                if let Ok(result) = json {
+                    Variant::from(GodotString::from(result.to_string()))
+                } else {
+                    Variant::nil()
+                }
+            }
+            ResponseEnum::ToFile(path) => {
+                if let Ok(result) = path {
+                    Variant::from(GodotString::from(result))
+                } else {
+                    Variant::nil()
+                }
+            }
+            ResponseEnum::Bytes(bytes) => {
+                if let Ok(result) = String::from_utf8(bytes.to_vec()) {
+                    Variant::from(GodotString::from(result))
+                } else {
+                    Variant::nil()
+                }
+            }
         }
     }
 }

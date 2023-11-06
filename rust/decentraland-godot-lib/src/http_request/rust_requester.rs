@@ -109,7 +109,7 @@ impl RustHttpRequester {
 
 #[godot_api]
 impl NodeVirtual for RustHttpRequester {
-    fn init(base: Base<Node>) -> Self {
+    fn init(_base: Base<Node>) -> Self {
         RustHttpRequester {
             http_requester: super::http_requester::HttpRequester::new(
                 TokioRuntime::static_clone_handle(),

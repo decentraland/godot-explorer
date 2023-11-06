@@ -123,8 +123,9 @@ impl HttpRequester {
             }
             ResponseType::ToFile(file_path) => {
                 let content = response.bytes().await.map_err(map_err_func)?.to_vec();
-                let mut file = std::fs::File::create(file_path).map_err(|e| RequestResponseError { id: request_option.id, error_message: e.to_string() })?;
+                let mut file = std::fs::File::create(file_path.clone()).map_err(|e| RequestResponseError { id: request_option.id, error_message: e.to_string() })?;
                 let result = std::io::Write::write_all(&mut file, &content);
+                let result = result.map(|_| file_path);
                 ResponseEnum::ToFile(result)
             }
             ResponseType::AsJson => {

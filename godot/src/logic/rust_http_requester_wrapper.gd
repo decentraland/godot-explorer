@@ -60,23 +60,19 @@ func is_success_status_code(status_code: int) -> bool:
 	# Checks if the given status code is within the success range (200-299)
 	return 200 <= status_code and status_code <= 299
 
-func request_file(reference_id: int, url: String, absolute_path: String):
-	var id = _requester.request_file(reference_id, url, absolute_path)
+func request_file(url: String, absolute_path: String):
+	var id = _requester.request_file(0, url, absolute_path)
 
 	var promise = Promise.new()
 	promises[id] = promise
 	return promise
 	
-func request_json(reference_id: int, url: String, method: int, body: String, headers: Array):
-	var id = _requester.request_json(reference_id, url, method, body, headers)
+func request_json(url: String, method: int, body: String, headers: Array):
+	var id = _requester.request_json(0, url, method, body, headers)
 
 	var promise = Promise.new()
 	promises[id] = promise
 	return promise
-
-func _ready():
-	self.on_completed.connect(self._on_completed)
-	self.on_error.connect(self._on_error)
 	
 func poll():
 	var res = _requester.poll()
@@ -89,7 +85,7 @@ func poll():
 		elif !is_success_status_code(response.status_code()):
 			promise.reject(get_status_description(response.status_code()))
 		else:
-			promise.resolve_with_data(response.get_string_response_as_json())
+			promise.resolve_with_data(response)
 		promises.erase(id)
 	elif res is RequestResponseError:
 		var error: RequestResponseError = res
@@ -97,3 +93,6 @@ func poll():
 		var promise: Promise = promises[id]
 		promise.reject(error.get_error_message())
 		promises.erase(id)
+
+	if res != null:
+		poll()

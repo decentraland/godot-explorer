@@ -1,62 +1,9 @@
 extends DclRealm
 class_name Realm
 
-var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
-const ABOUT_REQUEST = 1
+var http_requester: RustHttpRequesterWrapper = Global.http_requester
 
 signal realm_changed
-
-
-func _process(_delta):
-	http_requester.poll()
-
-
-func _ready():
-	http_requester.request_completed.connect(self._on_request_completed)
-
-
-func _on_request_completed(response: RequestResponse):
-	var status_code = response.status_code()
-	if response.is_error() or status_code < 200 or status_code > 299:
-		return null
-
-	var json = response.get_string_response_as_json()
-	if json == null:
-		printerr("do_request_json failed because json_string is not a valid json")
-		return
-
-	var about_response = json
-	if about_response == null or not about_response is Dictionary:
-		printerr("Failed setting new realm " + realm_string)
-		return
-
-	realm_about = about_response
-
-	var configuration = realm_about.get("configurations", {})
-
-	realm_scene_urns.clear()
-	for urn in configuration.get("scenesUrn", []):
-		var parsed_urn = parse_urn(urn)
-		if parsed_urn != null:
-			realm_scene_urns.push_back(parsed_urn)
-
-	realm_global_scene_urns.clear()
-	for urn in configuration.get("globalScenesUrn", []):
-		var parsed_urn = parse_urn(urn)
-		if parsed_urn != null:
-			realm_global_scene_urns.push_back(parsed_urn)
-
-	realm_city_loader_content_base_url = configuration.get("cityLoaderContentServer", "")
-
-	realm_name = configuration.get("realmName", "no_realm_name")
-
-	content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
-
-	Global.config.last_realm_joined = realm_url
-	Global.config.save_to_settings_file()
-
-	emit_signal("realm_changed")
-
 
 func is_dcl_ens(str_param: String) -> bool:
 	var regex = RegEx.new()
@@ -112,6 +59,49 @@ func parse_urn(urn: String):
 func set_realm(new_realm_string: String) -> void:
 	realm_string = new_realm_string
 	realm_url = ensure_ends_with_slash(resolve_realm_url(realm_string))
-	http_requester._requester.request_json(
-		ABOUT_REQUEST, realm_url + "about", HTTPClient.METHOD_GET, "", []
+	var promise: Promise = http_requester.request_json(
+		realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
+	
+	var res = await promise.awaiter()
+	if res is PromiseError:
+		printerr("Rejected request change realm to: ", new_realm_string, " error message: ", res.get_error())
+	elif res is RequestResponse:
+		var response: RequestResponse = res
+
+		var json = response.get_string_response_as_json()
+		if json == null:
+			printerr("do_request_json failed because json_string is not a valid json")
+			return
+
+		var about_response = json
+		if about_response == null or not about_response is Dictionary:
+			printerr("Failed setting new realm " + realm_string)
+			return
+
+		realm_about = about_response
+
+		var configuration = realm_about.get("configurations", {})
+
+		realm_scene_urns.clear()
+		for urn in configuration.get("scenesUrn", []):
+			var parsed_urn = parse_urn(urn)
+			if parsed_urn != null:
+				realm_scene_urns.push_back(parsed_urn)
+
+		realm_global_scene_urns.clear()
+		for urn in configuration.get("globalScenesUrn", []):
+			var parsed_urn = parse_urn(urn)
+			if parsed_urn != null:
+				realm_global_scene_urns.push_back(parsed_urn)
+
+		realm_city_loader_content_base_url = configuration.get("cityLoaderContentServer", "")
+
+		realm_name = configuration.get("realmName", "no_realm_name")
+
+		content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
+
+		Global.config.last_realm_joined = realm_url
+		Global.config.save_to_settings_file()
+
+		emit_signal("realm_changed")
