@@ -103,9 +103,7 @@ impl RequestResponse {
         let response = self.response_data.as_ref().unwrap();
 
         match response {
-            ResponseEnum::String(string) => {
-                Variant::from(GodotString::from(string))
-            }
+            ResponseEnum::String(string) => Variant::from(GodotString::from(string)),
             ResponseEnum::Json(json) => {
                 if let Ok(result) = json {
                     Variant::from(GodotString::from(result.to_string()))
@@ -134,7 +132,7 @@ impl RequestResponse {
 #[derive(Debug, godot::prelude::GodotClass)]
 pub struct RequestResponseError {
     pub id: u32,
-    pub error_message: String
+    pub error_message: String,
 }
 
 #[godot::prelude::godot_api]

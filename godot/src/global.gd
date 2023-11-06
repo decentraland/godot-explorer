@@ -76,5 +76,6 @@ func print_node_tree(node: Node, prefix = ""):
 		if child is Node:
 			print_node_tree(child, prefix + node.name + "/")
 
+
 func _process(dt: float):
 	http_requester.poll()

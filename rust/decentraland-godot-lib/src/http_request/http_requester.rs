@@ -6,7 +6,8 @@ use super::request_response::*;
 
 pub struct HttpRequester {
     sender_to_thread: tokio::sync::mpsc::Sender<RequestOption>,
-    receiver_from_thread: tokio::sync::mpsc::Receiver<Result<RequestResponse, RequestResponseError>>,
+    receiver_from_thread:
+        tokio::sync::mpsc::Receiver<Result<RequestResponse, RequestResponseError>>,
 }
 
 impl Debug for HttpRequester {
@@ -109,7 +110,10 @@ impl HttpRequester {
             }
         }
 
-        let map_err_func = |e: reqwest::Error| RequestResponseError { id: request_option.id, error_message: e.to_string() };
+        let map_err_func = |e: reqwest::Error| RequestResponseError {
+            id: request_option.id,
+            error_message: e.to_string(),
+        };
 
         let response = request.send().await.map_err(map_err_func)?;
         let status_code = response.status();
@@ -123,7 +127,11 @@ impl HttpRequester {
             }
             ResponseType::ToFile(file_path) => {
                 let content = response.bytes().await.map_err(map_err_func)?.to_vec();
-                let mut file = std::fs::File::create(file_path.clone()).map_err(|e| RequestResponseError { id: request_option.id, error_message: e.to_string() })?;
+                let mut file =
+                    std::fs::File::create(file_path.clone()).map_err(|e| RequestResponseError {
+                        id: request_option.id,
+                        error_message: e.to_string(),
+                    })?;
                 let result = std::io::Write::write_all(&mut file, &content);
                 let result = result.map(|_| file_path);
                 ResponseEnum::ToFile(result)

@@ -5,6 +5,7 @@ var http_requester: RustHttpRequesterWrapper = Global.http_requester
 
 signal realm_changed
 
+
 func is_dcl_ens(str_param: String) -> bool:
 	var regex = RegEx.new()
 	regex.compile("^[a-zA-Z0-9]+\\.dcl\\.eth$")
@@ -62,10 +63,15 @@ func set_realm(new_realm_string: String) -> void:
 	var promise: Promise = http_requester.request_json(
 		realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
-	
+
 	var res = await promise.awaiter()
 	if res is PromiseError:
-		printerr("Rejected request change realm to: ", new_realm_string, " error message: ", res.get_error())
+		printerr(
+			"Rejected request change realm to: ",
+			new_realm_string,
+			" error message: ",
+			res.get_error()
+		)
 	elif res is RequestResponse:
 		var response: RequestResponse = res
 

@@ -25,7 +25,11 @@ impl RustHttpRequester {
                         Variant::from(Gd::new(response))
                     }
                     Err(error) => {
-                        tracing::info!("error polling http_requester id={} msg={}", error.id, error.error_message);
+                        tracing::info!(
+                            "error polling http_requester id={} msg={}",
+                            error.id,
+                            error.error_message
+                        );
 
                         Variant::from(Gd::new(error))
                     }

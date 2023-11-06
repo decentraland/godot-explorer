@@ -205,13 +205,17 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 		if not FileAccess.file_exists(local_main_js_path) or main_js_file_hash.begins_with("b64"):
 			var main_js_file_url: String = entity.baseUrl + main_js_file_hash
 			var promise: Promise = http_requester.request_file(
-				main_js_file_url,
-				local_main_js_path.replace("user:/", OS.get_user_data_dir())
+				main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir())
 			)
-			
+
 			var res = await promise.awaiter()
 			if res is PromiseError:
-				printerr("Scene ", scene_entity_id, " fail getting the script code content, error message: ", res.get_error())
+				printerr(
+					"Scene ",
+					scene_entity_id,
+					" fail getting the script code content, error message: ",
+					res.get_error()
+				)
 				return false
 	else:
 		local_main_js_path = String(adaptation_layer_js_local_path)
@@ -222,7 +226,12 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 			)
 			var res = await promise.awaiter()
 			if res is PromiseError:
-				printerr("Scene ", scene_entity_id, " fail getting the adaptation layer content, error message: ", res.get_error())
+				printerr(
+					"Scene ",
+					scene_entity_id,
+					" fail getting the adaptation layer content, error message: ",
+					res.get_error()
+				)
 				return false
 
 	var main_crdt_file_hash = entity.get("content", {}).get("main.crdt", null)
@@ -231,25 +240,32 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 		local_main_crdt_path = "user://content/" + main_crdt_file_hash
 		var main_crdt_file_url: String = entity.baseUrl + main_crdt_file_hash
 		var promise: Promise = http_requester.request_file(
-			main_crdt_file_url,
-			local_main_crdt_path.replace("user:/", OS.get_user_data_dir())
+			main_crdt_file_url, local_main_crdt_path.replace("user:/", OS.get_user_data_dir())
 		)
-		
+
 		var res = await promise.awaiter()
 		if res is PromiseError:
-			printerr("Scene ", scene_entity_id, " fail getting the main crdt content, error message: ", res.get_error())
+			printerr(
+				"Scene ",
+				scene_entity_id,
+				" fail getting the main crdt content, error message: ",
+				res.get_error()
+			)
 			return false
 
 	if is_sdk7:
-		_on_try_spawn_scene(loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path)
+		_on_try_spawn_scene(
+			loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path
+		)
 	else:
 		# SDK6 scenes don't have crdt file, and if they'd have, there is no mechanism to make a clean spawn of both
-		_on_try_spawn_scene(loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path)
+		_on_try_spawn_scene(
+			loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path
+		)
 	return true
 
 
 func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):
-
 	if not FileAccess.file_exists(local_main_js_path):
 		printerr("Couldn't get main.js file")
 		local_main_js_path = ""

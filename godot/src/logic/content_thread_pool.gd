@@ -22,15 +22,20 @@ var request_monotonic_counter: int = 0
 var wearable_cache_map: Dictionary = {}
 var content_cache_map: Dictionary = {}
 
+
 func get_best_content_thread() -> ContentThread:
 	var best_content_thread: ContentThread = content_threads[0]
 	for i in range(1, content_threads.size()):
 		var content_thread: ContentThread = content_threads[i]
-		if best_content_thread.content_processing_count() > content_thread.content_processing_count():
+		if (
+			best_content_thread.content_processing_count()
+			> content_thread.content_processing_count()
+		):
 			best_content_thread = content_thread
 
 	return best_content_thread
-	
+
+
 func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
@@ -39,7 +44,7 @@ func _ready():
 		self.process_mode = Node.PROCESS_MODE_DISABLED
 		for id in range(max_threads):
 			var thread = Thread.new()
-			var content_thread = ContentThread.new((id+1), thread) # id=0 reserved for main thread
+			var content_thread = ContentThread.new(id + 1, thread)  # id=0 reserved for main thread
 			thread.start(self.process_thread.bind(content_thread))
 			content_threads.push_back(content_thread)
 	else:
@@ -74,11 +79,16 @@ func get_wearable(id: String):
 func duplicate_materials(target_meshes: Array[Dictionary]) -> Promise:
 	var promise = Promise.new()
 
-	get_best_content_thread().append_content({
+	(
+		get_best_content_thread()
+		. append_content(
+			{
 				"content_type": ContentType.CT_MESHES_MATERIAL,
 				"target_meshes": target_meshes,
 				"promise": promise,
-			})
+			}
+		)
+	)
 
 	return promise
 
@@ -91,7 +101,9 @@ func instance_gltf_colliders(
 	dcl_entity_id: int
 ) -> Promise:
 	var promise = Promise.new()
-	get_best_content_thread().append_content(
+	(
+		get_best_content_thread()
+		. append_content(
 			{
 				"content_type": ContentType.CT_INSTACE_GLTF,
 				"gltf_node": gltf_node,
@@ -102,6 +114,7 @@ func instance_gltf_colliders(
 				"promise": promise,
 			}
 		)
+	)
 
 	return promise
 
@@ -128,12 +141,13 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 		else:
 			last_wearable_promise = wearable_cached["promise"]
 
-
 	if new_wearables.is_empty():
 		return last_wearable_promise
 
 	request_monotonic_counter = new_id
-	get_best_content_thread().append_content(
+	(
+		get_best_content_thread()
+		. append_content(
 			{
 				"id": new_id,
 				"content_type": ContentType.CT_WEARABLE_EMOTE,
@@ -142,6 +156,7 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 				"promise": promise,
 			}
 		)
+	)
 
 	return promise
 
@@ -157,13 +172,16 @@ func fetch_gltf(file_path: String, content_mapping: Dictionary) -> Promise:
 
 	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
-	get_best_content_thread().append_content(
-		{
-			"file_path": file_path,
-			"file_hash": file_hash,
-			"content_type": ContentType.CT_GLTF_GLB,
-			"content_mapping": content_mapping,
-		}
+	(
+		get_best_content_thread()
+		. append_content(
+			{
+				"file_path": file_path,
+				"file_hash": file_hash,
+				"content_type": ContentType.CT_GLTF_GLB,
+				"content_mapping": content_mapping,
+			}
+		)
 	)
 
 	return promise
@@ -184,12 +202,15 @@ func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
 
 	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
-	get_best_content_thread().append_content(
-		{
-			"file_hash": file_hash,
-			"content_type": ContentType.CT_TEXTURE,
-			"content_mapping": content_mapping,
-		}
+	(
+		get_best_content_thread()
+		. append_content(
+			{
+				"file_hash": file_hash,
+				"content_type": ContentType.CT_TEXTURE,
+				"content_mapping": content_mapping,
+			}
+		)
 	)
 
 	return promise
@@ -204,13 +225,16 @@ func fetch_audio(file_path: String, content_mapping: Dictionary) -> Promise:
 
 	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
-	get_best_content_thread().append_content(
-		{
-			"file_path": file_path,
-			"file_hash": file_hash,
-			"content_type": ContentType.CT_AUDIO,
-			"content_mapping": content_mapping,
-		}
+	(
+		get_best_content_thread()
+		. append_content(
+			{
+				"file_path": file_path,
+				"file_hash": file_hash,
+				"content_type": ContentType.CT_AUDIO,
+				"content_mapping": content_mapping,
+			}
+		)
 	)
 
 	return promise
@@ -226,12 +250,15 @@ func fetch_video(file_hash: String, content_mapping: Dictionary) -> Promise:
 
 	content_cache_map[file_hash] = {"loaded": false, "promise": promise}
 
-	get_best_content_thread().append_content(
-		{
-			"content_mapping": content_mapping,
-			"file_hash": file_hash,
-			"content_type": ContentType.CT_VIDEO,
-		}
+	(
+		get_best_content_thread()
+		. append_content(
+			{
+				"content_mapping": content_mapping,
+				"file_hash": file_hash,
+				"content_type": ContentType.CT_VIDEO,
+			}
+		)
 	)
 
 	return promise
@@ -242,6 +269,7 @@ func _process(_dt: float) -> void:
 	# Main thread
 	if use_thread == false:
 		content_threads[0].process(content_cache_map, wearable_cache_map)
+
 
 func process_thread(content_thread: ContentThread):
 	while true:
@@ -269,6 +297,7 @@ func split_animations(_gltf_node: Node) -> void:
 #		index += 1
 #
 #	gltf_node.remove_child(animation_player)
+
 
 # TODO(Mateo): Looks like more a helper than part of the ContentThreadPool
 func hide_colliders(gltf_node):

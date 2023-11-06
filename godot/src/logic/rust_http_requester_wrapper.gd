@@ -1,7 +1,7 @@
 extends RefCounted
 class_name RustHttpRequesterWrapper
 
-var _requester: = RustHttpRequester.new()
+var _requester := RustHttpRequester.new()
 var promises: Dictionary = {}
 
 # Dictionary mapping HTTP status codes to their descriptions.
@@ -39,7 +39,7 @@ var http_status_descriptions = {
 	415: "Unsupported Media Type",
 	416: "Range Not Satisfiable",
 	417: "Expectation Failed",
-	418: "I'm a teapot", # Easter egg status code
+	418: "I'm a teapot",  # Easter egg status code
 	426: "Upgrade Required",
 	429: "Too Many Requests",
 	451: "Unavailable For Legal Reasons",
@@ -51,14 +51,22 @@ var http_status_descriptions = {
 	505: "HTTP Version Not Supported"
 }
 
+
 func get_status_description(status_code: int) -> String:
 	# Returns the description for the given HTTP status code.
 	# If the status code is not found, returns an empty string or a default message.
-	return "Status Code " + str(status_code) + " " + http_status_descriptions.get(status_code, "Unknown Status Code")
+	return (
+		"Status Code "
+		+ str(status_code)
+		+ " "
+		+ http_status_descriptions.get(status_code, "Unknown Status Code")
+	)
+
 
 func is_success_status_code(status_code: int) -> bool:
 	# Checks if the given status code is within the success range (200-299)
 	return 200 <= status_code and status_code <= 299
+
 
 func request_file(url: String, absolute_path: String):
 	var id = _requester.request_file(0, url, absolute_path)
@@ -66,14 +74,16 @@ func request_file(url: String, absolute_path: String):
 	var promise = Promise.new()
 	promises[id] = promise
 	return promise
-	
+
+
 func request_json(url: String, method: int, body: String, headers: Array):
 	var id = _requester.request_json(0, url, method, body, headers)
 
 	var promise = Promise.new()
 	promises[id] = promise
 	return promise
-	
+
+
 func poll():
 	var res = _requester.poll()
 	if res is RequestResponse:

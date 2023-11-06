@@ -282,7 +282,8 @@ impl DclUiBackground {
 
                         self.waiting_hash = GodotString::from(texture_hash);
 
-                        let fetching_resource = promise.call("is_resolved".into(), &[]).to::<bool>();
+                        let fetching_resource =
+                            promise.call("is_resolved".into(), &[]).to::<bool>();
                         if fetching_resource {
                             self.set_content_connect_signal(true);
                         } else {

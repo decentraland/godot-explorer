@@ -13,18 +13,22 @@ enum ContentType {
 
 var pending_content: Array[Dictionary] = []
 var http_requester = RustHttpRequesterWrapper.new()
-var thread: Thread = null # null=main_thread
+var thread: Thread = null  # null=main_thread
 var id: int = -1
+
 
 func append_content(request: Dictionary):
 	pending_content.push_back(request)
 
+
 func content_processing_count():
 	return pending_content.size()
+
 
 func _init(id: int, thread: Thread):
 	self.thread = thread
 	self.id = id
+
 
 func process(content_cache_map: Dictionary, wearable_cache_map: Dictionary):
 	http_requester.poll()
@@ -73,13 +77,13 @@ func _process_meshes_material(content: Dictionary):
 	promise.call_deferred("resolve")
 	return false
 
+
 func _process_loading_wearable(
 	content: Dictionary,
 	wearable_cache_map: Dictionary,
 ) -> void:
 	var url: String = (
-		content.get("content_base_url", "https://peer.decentraland.org/content")
-		+ "entities/active"
+		content.get("content_base_url", "https://peer.decentraland.org/content") + "entities/active"
 	)
 	var wearables: PackedStringArray = content.get("new_wearables", [])
 	var json_payload: String = JSON.stringify({"pointers": wearables})
@@ -88,12 +92,12 @@ func _process_loading_wearable(
 	var promise: Promise = http_requester.request_json(
 		url, HTTPClient.METHOD_POST, json_payload, headers
 	)
-	
+
 	var content_result = await promise.awaiter()
 	if content_result is PromiseError:
 		printerr("Failing on loading wearable ", url, " reason: ", content_result.get_error())
 		return
-	
+
 	# TODO: Check promise is OK
 	var pointers_missing: Array = content["new_wearables"]
 	var pointer_fetched: Array = []
@@ -158,16 +162,15 @@ func _process_loading_gltf(content: Dictionary, content_cache_map: Dictionary) -
 
 	# If gltf doesn't exists locally, we request it
 	if !FileAccess.file_exists(local_gltf_path):
-
 		var absolute_file_path = local_gltf_path.replace("user:/", OS.get_user_data_dir())
-		
-		var request_promise = http_requester.request_file(
-			file_hash_path, absolute_file_path
-		)
-		
+
+		var request_promise = http_requester.request_file(file_hash_path, absolute_file_path)
+
 		var content_result = await request_promise.awaiter()
 		if content_result is PromiseError:
-			printerr("Failing on loading gltf ", file_hash_path, " reason: ", content_result.get_error())
+			printerr(
+				"Failing on loading gltf ", file_hash_path, " reason: ", content_result.get_error()
+			)
 			return
 
 	# We load the gltf from
@@ -199,16 +202,14 @@ func _process_loading_gltf(content: Dictionary, content_cache_map: Dictionary) -
 
 		var local_image_path = "user://content/" + image_hash
 		if not FileAccess.file_exists(local_image_path):
-			var absolute_file_path = local_image_path.replace(
-				"user:/", OS.get_user_data_dir()
-			)
+			var absolute_file_path = local_image_path.replace("user:/", OS.get_user_data_dir())
 			promises_dependencies.push_back(
 				http_requester.request_file(base_url + image_hash, absolute_file_path)
 			)
 		mappings[uri] = "content/" + image_hash
 
 	content["gltf_mappings"] = mappings
-	
+
 	Awaiter.all(promises_dependencies)
 
 	# final processing
@@ -217,9 +218,7 @@ func _process_loading_gltf(content: Dictionary, content_cache_map: Dictionary) -
 
 	new_gltf_state.set_additional_data("base_path", base_path)
 	new_gltf_state.set_additional_data("mappings", content["gltf_mappings"])
-	var err = new_gltf.append_from_file(
-		local_gltf_path, new_gltf_state, 0, OS.get_user_data_dir()
-	)
+	var err = new_gltf.append_from_file(local_gltf_path, new_gltf_state, 0, OS.get_user_data_dir())
 
 	var node = new_gltf.generate_scene(new_gltf_state)
 	if node != null:
@@ -247,21 +246,19 @@ func _process_loading_texture(
 	if file_hash.is_empty() or base_url.is_empty():
 		printerr("hash or base_url is empty")
 		return
-		
-	var file_hash_path = base_url + file_hash
-	
-	if !FileAccess.file_exists(local_texture_path):
-		var absolute_file_path = local_texture_path.replace(
-			"user:/", OS.get_user_data_dir()
-		)
 
-		var promise: Promise = http_requester.request_file(
-			file_hash_path, absolute_file_path
-		)
-		
+	var file_hash_path = base_url + file_hash
+
+	if !FileAccess.file_exists(local_texture_path):
+		var absolute_file_path = local_texture_path.replace("user:/", OS.get_user_data_dir())
+
+		var promise: Promise = http_requester.request_file(file_hash_path, absolute_file_path)
+
 		var content_result = await promise.awaiter()
 		if content_result is PromiseError:
-			printerr("Failing on loading gltf ", file_hash_path, " reason: ", content_result.get_error())
+			printerr(
+				"Failing on loading gltf ", file_hash_path, " reason: ", content_result.get_error()
+			)
 			return
 
 	var file = FileAccess.open(local_texture_path, FileAccess.READ)
@@ -273,9 +270,7 @@ func _process_loading_texture(
 	var image := Image.new()
 	var err = image.load_png_from_buffer(buf)
 	if err != OK:
-		printerr(
-			"Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err
-		)
+		printerr("Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err)
 		return
 
 	var content_cache = content_cache_map[file_hash]
@@ -305,12 +300,15 @@ func _process_loading_audio(
 	if !FileAccess.file_exists(local_audio_path):
 		var absolute_file_path = local_audio_path.replace("user:/", OS.get_user_data_dir())
 
-		var promise: Promise = http_requester.request_file(
-			file_hash_path, absolute_file_path
-		)
+		var promise: Promise = http_requester.request_file(file_hash_path, absolute_file_path)
 		var content_result = await promise.awaiter()
 		if content_result is PromiseError:
-			printerr("Failing on loading wearable ", file_hash_path, " reason: ", content_result.get_error())
+			printerr(
+				"Failing on loading wearable ",
+				file_hash_path,
+				" reason: ",
+				content_result.get_error()
+			)
 			return
 
 	var file := FileAccess.open(local_audio_path, FileAccess.READ)
@@ -333,9 +331,7 @@ func _process_loading_audio(
 		audio_stream.data = bytes
 
 	if audio_stream == null:
-		printerr(
-			"Audio " + base_url + file_hash + " unrecognized format (infered by file path)"
-		)
+		printerr("Audio " + base_url + file_hash + " unrecognized format (infered by file path)")
 		return
 
 	var content_cache = content_cache_map[file_hash]
@@ -362,14 +358,16 @@ func _process_loading_video(
 	var file_hash_path = base_url + file_hash
 
 	if !FileAccess.file_exists(local_video_path):
-
 		var absolute_file_path = local_video_path.replace("user:/", OS.get_user_data_dir())
-		var promise: Promise = http_requester.request_file(
-			base_url + file_hash, absolute_file_path
-		)
+		var promise: Promise = http_requester.request_file(base_url + file_hash, absolute_file_path)
 		var content_result = await promise.awaiter()
 		if content_result is PromiseError:
-			printerr("Failing on loading wearable ", file_hash_path, " reason: ", content_result.get_error())
+			printerr(
+				"Failing on loading wearable ",
+				file_hash_path,
+				" reason: ",
+				content_result.get_error()
+			)
 			return
 
 	# process texture
