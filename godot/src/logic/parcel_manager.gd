@@ -28,7 +28,6 @@ func _ready():
 	realm = get_tree().root.get_node("realm")
 
 	realm.realm_changed.connect(self._on_realm_changed)
-	http_requester.request_completed.connect(self._on_requested_completed)
 
 	scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
 	Global.config.param_changed.connect(self._on_config_changed)
@@ -250,7 +249,7 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 		if not FileAccess.file_exists(local_main_js_path) or main_js_file_hash.begins_with("b64"):
 			js_request_completed = false
 			var main_js_file_url: String = entity.baseUrl + main_js_file_hash
-			main_js_request_id = http_requester._requester.request_file(
+			var promise: Promise = http_requester.request_file(
 				MAIN_JS_FILE_REQUEST,
 				main_js_file_url,
 				local_main_js_path.replace("user:/", OS.get_user_data_dir())

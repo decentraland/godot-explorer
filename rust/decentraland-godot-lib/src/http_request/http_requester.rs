@@ -6,7 +6,7 @@ use super::request_response::*;
 
 pub struct HttpRequester {
     sender_to_thread: tokio::sync::mpsc::Sender<RequestOption>,
-    receiver_from_thread: tokio::sync::mpsc::Receiver<Result<RequestResponse, String>>,
+    receiver_from_thread: tokio::sync::mpsc::Receiver<Result<RequestResponse, RequestResponseError>>,
 }
 
 impl Debug for HttpRequester {
@@ -22,7 +22,7 @@ impl Default for HttpRequester {
 }
 
 async fn request_pool(
-    sender_to_parent: Sender<Result<RequestResponse, String>>,
+    sender_to_parent: Sender<Result<RequestResponse, RequestResponseError>>,
     mut receiver_from_parent: Receiver<RequestOption>,
 ) {
     while let Some(request_option) = receiver_from_parent.recv().await {
@@ -54,7 +54,7 @@ impl HttpRequester {
         let (sender_to_thread, receiver_from_parent) =
             tokio::sync::mpsc::channel::<RequestOption>(100);
         let (sender_to_parent, receiver_from_thread) =
-            tokio::sync::mpsc::channel::<Result<RequestResponse, String>>(100);
+            tokio::sync::mpsc::channel::<Result<RequestResponse, RequestResponseError>>(100);
 
         if let Some(rt) = runtime {
             rt.spawn(async move {
@@ -84,14 +84,14 @@ impl HttpRequester {
         self.sender_to_thread.try_send(req).is_ok()
     }
 
-    pub fn poll(&mut self) -> Option<Result<RequestResponse, String>> {
+    pub fn poll(&mut self) -> Option<Result<RequestResponse, RequestResponseError>> {
         self.receiver_from_thread.try_recv().ok()
     }
 
     pub async fn do_request(
         client: &reqwest::Client,
         mut request_option: RequestOption,
-    ) -> Result<RequestResponse, String> {
+    ) -> Result<RequestResponse, RequestResponseError> {
         let mut request = client
             .request(request_option.method.clone(), request_option.url.clone())
             .timeout(std::time::Duration::from_secs(10));
@@ -109,24 +109,26 @@ impl HttpRequester {
             }
         }
 
-        let response = request.send().await.map_err(|e| e.to_string())?;
+        let map_err_func = |e: reqwest::Error| RequestResponseError { id: request_option.id, error_message: e.to_string() };
+
+        let response = request.send().await.map_err(map_err_func)?;
         let status_code = response.status();
 
         let response_data = match request_option.response_type.clone() {
             ResponseType::AsString => {
-                ResponseEnum::String(response.text().await.map_err(|e| e.to_string())?)
+                ResponseEnum::String(response.text().await.map_err(map_err_func)?)
             }
             ResponseType::AsBytes => {
-                ResponseEnum::Bytes(response.bytes().await.map_err(|e| e.to_string())?.to_vec())
+                ResponseEnum::Bytes(response.bytes().await.map_err(map_err_func)?.to_vec())
             }
             ResponseType::ToFile(file_path) => {
-                let content = response.bytes().await.map_err(|e| e.to_string())?.to_vec();
-                let mut file = std::fs::File::create(file_path).map_err(|e| e.to_string())?;
+                let content = response.bytes().await.map_err(map_err_func)?.to_vec();
+                let mut file = std::fs::File::create(file_path).map_err(|e| RequestResponseError { id: request_option.id, error_message: e.to_string() })?;
                 let result = std::io::Write::write_all(&mut file, &content);
                 ResponseEnum::ToFile(result)
             }
             ResponseType::AsJson => {
-                let json_string = &response.text().await.map_err(|e| e.to_string())?;
+                let json_string = &response.text().await.map_err(map_err_func)?;
                 ResponseEnum::Json(serde_json::from_str(json_string))
             }
         };

@@ -12,23 +12,26 @@ pub struct RustHttpRequester {
 #[godot_api]
 impl RustHttpRequester {
     #[func]
-    fn poll(&mut self) -> Option<Gd<crate::http_request::request_response::RequestResponse>> {
+    fn poll(&mut self) -> Variant {
         match self.http_requester.poll() {
-            Some(response) => match response {
-                Ok(response) => {
-                    // tracing::info!(
-                    //     "response {:?} ok? {:?}",
-                    //     response.request_option.url.clone(),
-                    //     !response.is_error()
-                    // );
-                    Some(Gd::new(response))
+            Some(response) => {
+                match response {
+                    Ok(response) => {
+                        // tracing::info!(
+                        //     "response {:?} ok? {:?}",
+                        //     response.request_option.url.clone(),
+                        //     !response.is_error()
+                        // );
+                        Variant::from(Gd::new(response))
+                    }
+                    Err(error) => {
+                        tracing::info!("error polling http_requester id={} msg={}", error.id, error.error_message);
+
+                        Variant::from(Gd::new(error))
+                    }
                 }
-                Err(_error) => {
-                    tracing::info!("error polling http_requester {_error}");
-                    None
-                }
-            },
-            None => None,
+            }
+            _ => Variant::nil(),
         }
     }
 
@@ -106,13 +109,11 @@ impl RustHttpRequester {
 
 #[godot_api]
 impl NodeVirtual for RustHttpRequester {
-    fn init(_base: Base<Node>) -> Self {
+    fn init(base: Base<Node>) -> Self {
         RustHttpRequester {
             http_requester: super::http_requester::HttpRequester::new(
                 TokioRuntime::static_clone_handle(),
             ),
         }
     }
-
-    fn ready(&mut self) {}
 }

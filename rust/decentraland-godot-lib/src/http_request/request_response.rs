@@ -72,6 +72,11 @@ impl RequestResponse {
     }
 
     #[func]
+    pub fn get_error(&self) -> GodotString {
+        GodotString::from(self.response_data.unwrap_err())
+    }
+
+    #[func]
     pub fn id(&self) -> u32 {
         self.request_option.id
     }
@@ -91,5 +96,24 @@ impl RequestResponse {
             }
             _ => Variant::default(),
         }
+    }
+}
+
+#[derive(Debug, godot::prelude::GodotClass)]
+pub struct RequestResponseError {
+    pub id: u32,
+    pub error_message: String
+}
+
+#[godot::prelude::godot_api]
+impl RequestResponseError {
+    #[func]
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
+    #[func]
+    pub fn get_error_message(&self) -> GodotString {
+        GodotString::from(self.error_message.clone())
     }
 }
