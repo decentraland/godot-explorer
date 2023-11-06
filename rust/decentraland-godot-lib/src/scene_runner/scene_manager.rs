@@ -130,8 +130,7 @@ impl SceneManager {
         self.base
             .add_child(new_scene.godot_dcl_scene.root_node_3d.clone().upcast());
 
-        if let SceneType::Parcel = scene_type {
-        } else {
+        if let SceneType::Global(_) = scene_type {
             self.base_ui
                 .add_child(new_scene.godot_dcl_scene.root_node_ui.clone().upcast());
         }
