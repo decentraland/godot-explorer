@@ -103,7 +103,7 @@ func _on_desired_scene_changed():
 		if not loaded_empty_scenes.has(parcel):
 			var index = randi_range(0, 11)
 			var scene: Node3D = empty_scenes[index].instantiate()
-			Global.content_manager._hide_colliders(scene)
+			Global.content_manager.hide_colliders(scene)
 			add_child(scene)
 			scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
 			loaded_empty_scenes[parcel] = scene

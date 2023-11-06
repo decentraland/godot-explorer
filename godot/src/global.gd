@@ -49,10 +49,10 @@ func _ready():
 	self.content_manager = ContentManager.new()
 	self.content_manager.set_name("content_manager")
 
+	get_tree().root.add_child.call_deferred(self.content_manager)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
 	get_tree().root.add_child.call_deferred(self.comms)
-	get_tree().root.add_child.call_deferred(self.content_manager)
 	get_tree().root.add_child.call_deferred(self.avatars)
 
 	# TODO: enable raycast debugger
