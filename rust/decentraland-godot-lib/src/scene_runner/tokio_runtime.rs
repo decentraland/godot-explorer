@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
-use godot::{engine::Engine, prelude::*};
+use godot::prelude::*;
 use tokio::runtime::{Handle, Runtime};
+
+use crate::godot_classes::dcl_global::DclGlobal;
 
 #[derive(GodotClass)]
 #[class(base = Node)]
@@ -41,33 +43,14 @@ impl TokioRuntime {
 }
 
 impl TokioRuntime {
-    pub fn from_node(node: Gd<Node>) -> Option<Gd<Self>> {
-        let runtime = node
-            .get_node("/root/Global/tokio_runtime".into())?
-            .cast::<Self>();
-        Some(runtime)
-    }
-
-    pub fn from_base(base: Base<Node>) -> Option<Gd<Self>> {
-        let runtime = base
-            .get_node("/root/Global/tokio_runtime".into())?
-            .cast::<Self>();
-        Some(runtime)
-    }
-
-    pub fn from_singleton() -> Option<Gd<Self>> {
-        let engine_node = Engine::singleton()
-            .get_main_loop()?
-            .cast::<SceneTree>()
-            .get_root()?;
-
-        let global = engine_node.get_node("Global".into())?;
-        let tokio_runtime = global.get_node("tokio_runtime".into())?;
-
-        Some(tokio_runtime.cast::<Self>())
-    }
-
     pub fn static_clone_handle() -> Option<Handle> {
-        Some(Self::from_singleton()?.bind().try_get_handle()?.clone())
+        Some(
+            DclGlobal::try_singleton()?
+                .bind()
+                .tokio_runtime
+                .bind()
+                .try_get_handle()?
+                .clone(),
+        )
     }
 }

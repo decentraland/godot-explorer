@@ -116,9 +116,16 @@ impl SceneUpdateState {
     }
 }
 
+#[derive(Clone)]
 pub enum SceneType {
     Parcel,
-    Global,
+    Global(GlobalSceneType),
+}
+
+#[derive(Clone)]
+pub enum GlobalSceneType {
+    GlobalRealm,
+    SmartWearable,
     PortableExperience,
 }
 

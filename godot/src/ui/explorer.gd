@@ -1,9 +1,5 @@
 extends Node
 
-var scene_runner: SceneManager
-var realm: Realm = null
-var parcel_manager: ParcelManager = null
-
 @onready var ui_root = $UI
 
 @onready var label_crosshair = $UI/Label_Crosshair
@@ -26,6 +22,8 @@ var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
 
+var scene_fetcher: SceneFetcher = null
+
 
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
@@ -33,7 +31,7 @@ func _process(_dt):
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
-		parcel_manager.update_position(parcel_position)
+		scene_fetcher.update_position(parcel_position)
 		_last_parcel_position = parcel_position
 		Global.config.last_parcel_position = parcel_position
 		dirty_save_position = true
@@ -71,27 +69,24 @@ func _ready():
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
-	self.scene_runner = get_tree().root.get_node("scene_runner")
-	scene_runner.camera_node = player.camera
-	scene_runner.player_node = player
-	scene_runner.console = self._on_scene_console_message
-	scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
-	ui_root.add_child(scene_runner.base_ui)
-	ui_root.move_child(scene_runner.base_ui, label_crosshair.get_index() + 1)
+	Global.scene_runner.camera_node = player.camera
+	Global.scene_runner.player_node = player
+	Global.scene_runner.console = self._on_scene_console_message
+	Global.scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
+	ui_root.add_child(Global.scene_runner.base_ui)
+	ui_root.move_child(Global.scene_runner.base_ui, label_crosshair.get_index() + 1)
 
-	self.realm = get_tree().root.get_node("realm")
+	scene_fetcher = SceneFetcher.new()
+	add_child(scene_fetcher)
 
-	parcel_manager = ParcelManager.new()
-	add_child(parcel_manager)
-
-	parcel_manager.connect("parcels_processed", self._on_parcels_procesed)
+	scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
 
 	if Global.config.last_realm_joined.is_empty():
-		realm.set_realm("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main")
+		Global.realm.set_realm("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main")
 	else:
-		realm.set_realm(Global.config.last_realm_joined)
+		Global.realm.set_realm(Global.config.last_realm_joined)
 
-	self.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
+	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
 	control_menu.control_advance_settings.preview_hot_reload.connect(
 		self._on_panel_bottom_left_preview_hot_reload
@@ -103,8 +98,8 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 
 
 func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
-	var title: String = scene_runner.get_scene_title(scene_id)
-	title += str(scene_runner.get_scene_base_parcel(scene_id))
+	var title: String = Global.scene_runner.get_scene_title(scene_id)
+	title += str(Global.scene_runner.get_scene_base_parcel(scene_id))
 	control_menu.control_advance_settings._on_console_add(title, level, timestamp, text)
 
 
@@ -113,15 +108,15 @@ func _on_pointer_tooltip_changed():
 
 
 func change_tooltips():
-	if not scene_runner.pointer_tooltips.is_empty():
-		control_pointer_tooltip.set_pointer_data(scene_runner.pointer_tooltips)
+	if not Global.scene_runner.pointer_tooltips.is_empty():
+		control_pointer_tooltip.set_pointer_data(Global.scene_runner.pointer_tooltips)
 		control_pointer_tooltip.show()
 	else:
 		control_pointer_tooltip.hide()
 
 
 func _on_check_button_toggled(button_pressed):
-	scene_runner.set_pause(button_pressed)
+	Global.scene_runner.set_pause(button_pressed)
 
 
 @onready var line_edit_command = $UI/LineEdit_Command
@@ -205,7 +200,7 @@ func _on_control_menu_toggle_minimap(visibility):
 
 
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
-	parcel_manager.reload_scene(scene_id)
+	scene_fetcher.reload_scene(scene_id)
 
 
 var last_position_sent: Vector3 = Vector3.ZERO
@@ -268,7 +263,7 @@ func _on_line_edit_command_submit_message(message: String):
 			panel_chat.add_chat_message(
 				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
 			)
-			realm.set_realm(params[1])
+			Global.realm.set_realm(params[1])
 		else:
 			pass
 			# TODO: unknown command
@@ -278,7 +273,7 @@ func _on_line_edit_command_submit_message(message: String):
 
 
 func _on_control_menu_request_pause_scenes(enabled):
-	scene_runner.set_pause(enabled)
+	Global.scene_runner.set_pause(enabled)
 
 
 func _on_button_jump_gui_input(event):

@@ -1,17 +1,5 @@
-extends Node
+extends DclRealm
 class_name Realm
-
-var realm_about = null
-var realm_url: String = ""
-var realm_string: String = ""
-
-# Mirror realm_about.get("configuration")
-var realm_name: String = ""
-var realm_scene_urns: Array[Dictionary] = []
-var realm_global_scene_urns: Array[Dictionary] = []
-var realm_city_loader_content_base_url = ""
-
-var content_base_url: String = ""
 
 var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
 const ABOUT_REQUEST = 1
