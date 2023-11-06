@@ -26,7 +26,10 @@ use std::{
 use super::{
     components::pointer_events::{get_entity_pointer_event, pointer_events_system},
     input::InputState,
-    scene::{Dirty, GodotDclRaycastResult, Scene, SceneState, SceneType, SceneUpdateState},
+    scene::{
+        Dirty, GlobalSceneType, GodotDclRaycastResult, Scene, SceneState, SceneType,
+        SceneUpdateState,
+    },
     update_scene::_process_scene,
 };
 
@@ -94,6 +97,11 @@ impl SceneManager {
         let base_url =
             GodotString::from_variant(&content_mapping.get("base_url").unwrap()).to_string();
         let content_dictionary = Dictionary::from_variant(&content_mapping.get("content").unwrap());
+        let scene_type = if scene_definition.is_global {
+            SceneType::Global(GlobalSceneType::GlobalRealm)
+        } else {
+            SceneType::Parcel
+        };
 
         let content_mapping_hash_map: HashMap<String, String> = content_dictionary
             .iter_shared()
@@ -115,12 +123,17 @@ impl SceneManager {
             scene_definition,
             dcl_scene,
             content_mapping,
-            SceneType::Parcel,
+            scene_type.clone(),
             self.base_ui.clone(),
         );
 
         self.base
             .add_child(new_scene.godot_dcl_scene.root_node_3d.clone().upcast());
+
+        if let SceneType::Global(_) = scene_type {
+            self.base_ui
+                .add_child(new_scene.godot_dcl_scene.root_node_ui.clone().upcast());
+        }
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
         self.sorted_scene_ids.push(new_scene_id);

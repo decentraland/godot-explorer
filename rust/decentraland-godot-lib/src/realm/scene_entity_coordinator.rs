@@ -26,6 +26,7 @@ pub struct EntityDefinitionJson {
     pointers: Vec<String>,
     content: Vec<TypedIpfsRef>,
     metadata: Option<serde_json::Value>,
+    is_global: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -53,6 +54,11 @@ impl EntityDefinitionJson {
             Variant::from(self.base_url.as_ref().unwrap().clone()),
         );
 
+        dict.set(
+            GodotString::from("is_global"),
+            Variant::from(self.is_global.unwrap_or_default()),
+        );
+
         let mut content = Dictionary::new();
         for typed_ipfs_ref in self.content.iter() {
             content.set(
@@ -72,7 +78,7 @@ impl EntityDefinitionJson {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 struct EntityBase {
     hash: String,
     base_url: String,
@@ -123,7 +129,7 @@ struct SceneEntityCoordinator {
     requested_city_pointers: HashMap<u32, HashSet<Coord>>,
     cache_city_pointers: HashMap<Coord, String>, // coord to entity_id
 
-    fixed_desired_entities: Vec<String>,
+    global_desired_entities: Vec<EntityBase>,
     requested_entity: HashMap<u32, EntityBase>,
     cache_scene_data: HashMap<String, EntityDefinitionJson>, // entity_id to SceneData
 
@@ -166,7 +172,7 @@ impl SceneEntityCoordinator {
         self.content_url = content_url;
         self.current_position = Coord(-1000, -1000);
         self.should_load_city_scenes = should_load_city_scenes;
-        self.fixed_desired_entities.clear();
+        self.global_desired_entities.clear();
         self.cache_city_pointers.clear();
         self.cache_scene_data.clear();
         self.requested_city_pointers.clear();
@@ -217,17 +223,27 @@ impl SceneEntityCoordinator {
             return;
         }
 
+        let is_global_scene = self
+            .global_desired_entities
+            .iter()
+            .any(|value| *value == entity_base);
+
         let mut entity_definition = entity_definition.unwrap();
         entity_definition.id = Some(entity_base.hash.clone());
-        entity_definition.base_url = Some(entity_base.base_url);
+        entity_definition.base_url = Some(entity_base.base_url.clone());
+        entity_definition.is_global = Some(is_global_scene);
 
-        if let Some(metadata) = entity_definition.metadata.as_ref() {
-            if let Ok(metadata) = serde_json::from_value::<SceneJsonMetadata>(metadata.clone()) {
-                // TODO: global scenes should not fill this 'cache'
-                let entity_id = entity_definition.id.as_ref().unwrap().clone();
-                for pointer in metadata.scene.parcels.iter() {
-                    let coord = Coord::from(pointer);
-                    self.cache_city_pointers.insert(coord, entity_id.clone());
+        // If it's a global scene, it doesn't add the pointers to the cache
+        if !is_global_scene {
+            if let Some(metadata) = entity_definition.metadata.as_ref() {
+                if let Ok(metadata) = serde_json::from_value::<SceneJsonMetadata>(metadata.clone())
+                {
+                    let entity_id = entity_definition.id.as_ref().unwrap().clone();
+
+                    for pointer in metadata.scene.parcels.iter() {
+                        let coord = Coord::from(pointer);
+                        self.cache_city_pointers.insert(coord, entity_id.clone());
+                    }
                 }
             }
         }
@@ -259,6 +275,7 @@ impl SceneEntityCoordinator {
             let mut entity_definition = entity_definition.unwrap();
             let entity_id = entity_definition.id.as_ref().unwrap().clone();
             entity_definition.base_url = Some(format!("{}contents/", self.content_url));
+            entity_definition.is_global = Some(false);
 
             for pointer in entity_definition.pointers.iter() {
                 let coord = Coord::from(pointer);
@@ -355,11 +372,11 @@ impl SceneEntityCoordinator {
             }
         }
 
-        // for entity_id in self.fixed_desired_entities.iter() {
-        //     if self.cache_scene_data.contains_key(entity_id) {
-        //         self.loadable_scenes.insert(entity_id.clone());
-        //     }
-        // }
+        for entity_base in self.global_desired_entities.iter() {
+            if self.cache_scene_data.contains_key(&entity_base.hash) {
+                self.loadable_scenes.insert(entity_base.hash.clone());
+            }
+        }
     }
 
     pub fn _set_fixed_desired_entities_urns(&mut self, entities: Vec<String>) {
@@ -387,7 +404,39 @@ impl SceneEntityCoordinator {
                 None,
             );
 
-            self.fixed_desired_entities.push(entity_base.hash.clone());
+            self.requested_entity.insert(request.id, entity_base);
+            self.http_requester.send_request(request);
+        }
+    }
+
+    pub fn _set_fixed_desired_entities_global_urns(&mut self, entities: Vec<String>) {
+        if self.content_url.is_empty() {
+            return;
+        }
+
+        self.dirty_loadable_scenes = true;
+        self.global_desired_entities.clear();
+
+        for urn_str in entities.iter() {
+            let Some(entity_base) = EntityBase::from_urn(urn_str, &self.content_url) else {
+                continue;
+            };
+            if self.cache_scene_data.contains_key(urn_str) {
+                self.global_desired_entities.push(entity_base);
+                continue;
+            }
+
+            let url = format!("{}{}", entity_base.base_url, entity_base.hash);
+            let request = RequestOption::new(
+                Self::REQUEST_TYPE_SCENE_DATA,
+                url,
+                http::Method::GET,
+                ResponseType::AsJson,
+                None,
+                None,
+            );
+
+            self.global_desired_entities.push(entity_base.clone());
             self.requested_entity.insert(request.id, entity_base);
             self.http_requester.send_request(request);
         }
@@ -514,23 +563,6 @@ impl SceneEntityCoordinator {
         dict.set(GodotString::from("keep_alive_scenes"), keep_alive_scenes);
         dict.set(GodotString::from("empty_parcels"), empty_parcels);
 
-        let mut inside = Array::<Vector2i>::new();
-        let mut outside = Array::<Vector2i>::new();
-
-        self.parcel_radius_calculator
-            .get_inner_parcels()
-            .iter()
-            .for_each(|coord| {
-                inside.push(Vector2i::new(coord.0 as i32, coord.1 as i32));
-            });
-
-        self.parcel_radius_calculator
-            .get_outer_parcels()
-            .iter()
-            .for_each(|coord| {
-                outside.push(Vector2i::new(coord.0 as i32, coord.1 as i32));
-            });
-
         dict
     }
 
@@ -554,6 +586,15 @@ impl SceneEntityCoordinator {
             .map(|entity| entity.to_string())
             .collect::<Vec<_>>();
         self._set_fixed_desired_entities_urns(entities);
+    }
+
+    #[func]
+    pub fn set_fixed_desired_entities_global_urns(&mut self, entities: VariantArray) {
+        let entities = entities
+            .iter_shared()
+            .map(|entity| entity.to_string())
+            .collect::<Vec<_>>();
+        self._set_fixed_desired_entities_global_urns(entities);
     }
 
     #[func]

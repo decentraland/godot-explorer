@@ -7,7 +7,6 @@ signal config_changed
 
 ## Global classes (singleton pattern)
 
-var realm: Realm
 var content_manager: ContentManager
 var config: ConfigData
 
