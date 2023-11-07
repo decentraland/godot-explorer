@@ -3,6 +3,8 @@ extends Node
 class_name SceneFetcher
 
 signal parcels_processed(parcel_filled, empty)
+signal scene_spawned(entity_id: String, scene_id: int)
+signal scene_killed(entity_id: String, scene_id: int)
 
 const MAIN_JS_FILE_REQUEST = 100
 const MAIN_CRDT_FILE_REQUEST = 101
@@ -18,6 +20,8 @@ var loaded_scenes: Dictionary = {}
 var loaded_empty_scenes: Dictionary = {}
 var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.new()
 var last_version_updated: int = -1
+
+var desired_portable_experiences_urns: Array[String] = []
 
 
 func _ready():
@@ -141,10 +145,7 @@ func _on_realm_changed():
 	var scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get("scenesUrn", [])
 	scene_entity_coordinator.set_fixed_desired_entities_urns(scenes_urns)
 
-	var global_scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get(
-		"globalScenesUrn", []
-	)
-	scene_entity_coordinator.set_fixed_desired_entities_global_urns(global_scenes_urns)
+	set_portable_experiences_urns(self.desired_portable_experiences_urns)
 
 	for scene in loaded_scenes.values():
 		var scene_number_id: int = scene.get("scene_number_id", -1)
@@ -157,6 +158,15 @@ func _on_realm_changed():
 	loaded_empty_scenes.clear()
 
 	loaded_scenes = {}
+
+
+func set_portable_experiences_urns(urns: Array[String]) -> void:
+	var global_scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get(
+		"globalScenesUrn", []
+	)
+	desired_portable_experiences_urns = urns
+	global_scenes_urns.append_array(urns)
+	scene_entity_coordinator.set_fixed_desired_entities_global_urns(global_scenes_urns)
 
 
 func _on_requested_completed(response: RequestResponse):
@@ -349,7 +359,8 @@ func _on_try_spawn_scene(scene):
 		"main_crdt_path": local_main_crdt_path,
 		"visible": true,
 		"parcels": scene.parcels,
-		"title": title
+		"title": title,
+		"entity_id": scene.id
 	}
 
 	var scene_number_id: int = Global.scene_runner.start_scene(scene_definition, content_mapping)

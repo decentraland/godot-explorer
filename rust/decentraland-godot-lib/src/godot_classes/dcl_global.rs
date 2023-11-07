@@ -9,7 +9,7 @@ use crate::{
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
 };
 
-use super::dcl_realm::DclRealm;
+use super::{dcl_realm::DclRealm, portables::DclPortableExperienceController};
 
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -26,6 +26,8 @@ pub struct DclGlobal {
     pub tokio_runtime: Gd<TokioRuntime>,
     #[var]
     pub realm: Gd<DclRealm>,
+    #[var]
+    pub portable_experience_controller: Gd<DclPortableExperienceController>,
 }
 
 #[godot_api]
@@ -60,6 +62,7 @@ impl NodeVirtual for DclGlobal {
             avatars,
             tokio_runtime,
             realm: Gd::new_default(),
+            portable_experience_controller: Gd::new_default(),
         }
     }
 }

@@ -23,6 +23,7 @@ pub struct SceneId(pub u32);
 // scene metadata
 #[derive(Clone, Default, Debug)]
 pub struct SceneDefinition {
+    pub entity_id: String,
     pub path: String,
     pub main_crdt_path: String,
     pub base: godot::prelude::Vector2i,

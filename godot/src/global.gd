@@ -13,6 +13,8 @@ var config: ConfigData
 var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
 var animation_importer: AnimationImporter = AnimationImporter.new()
 
+var scene_fetcher: SceneFetcher = null
+
 var standalone = false
 
 enum CameraMode {
@@ -47,11 +49,19 @@ func _ready():
 	self.content_manager = ContentManager.new()
 	self.content_manager.set_name("content_manager")
 
+	self.scene_fetcher = SceneFetcher.new()
+	self.scene_fetcher.set_name("scene_fetcher")
+
+	self.portable_experience_controller = PortableExperienceController.new()
+	self.portable_experience_controller.set_name("portable_experience_controller")
+
+	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
 	get_tree().root.add_child.call_deferred(self.comms)
 	get_tree().root.add_child.call_deferred(self.content_manager)
 	get_tree().root.add_child.call_deferred(self.avatars)
+	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
 
 	# TODO: enable raycast debugger
 	add_child(raycast_debugger)

@@ -89,6 +89,9 @@ impl SceneDefinition {
         let Some(title) = dict.get("title") else {
             return Err("title not found".to_string());
         };
+        let Some(entity_id) = dict.get("entity_id") else {
+            return Err("entity_id not found".to_string());
+        };
 
         let base =
             Vector2i::try_from_variant(&base).map_err(|_op| "couldn't get offset as Vector2i")?;
@@ -118,6 +121,7 @@ impl SceneDefinition {
             parcels,
             is_global: is_global.to::<bool>(),
             title: title.to::<GodotString>().to_string(),
+            entity_id: entity_id.to::<GodotString>().to_string(),
         })
     }
 }

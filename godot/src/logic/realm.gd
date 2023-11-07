@@ -58,7 +58,7 @@ func _on_request_completed(response: RequestResponse):
 	emit_signal("realm_changed")
 
 
-func is_dcl_ens(str_param: String) -> bool:
+static func is_dcl_ens(str_param: String) -> bool:
 	var regex = RegEx.new()
 	regex.compile("^[a-zA-Z0-9]+\\.dcl\\.eth$")
 	return regex.search(str_param) != null
@@ -75,7 +75,7 @@ func ensure_ends_with_slash(str_param: String) -> String:
 
 
 func resolve_realm_url(value: String) -> String:
-	if is_dcl_ens(value):
+	if Realm.is_dcl_ens(value):
 		return dcl_world_url(value)
 	return value
 
