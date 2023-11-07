@@ -16,7 +16,10 @@
         }
       ],
       "externalConsole": true,
-      "preLaunchTask": "Build GDExtension Lib"
+      "preLaunchTask": "Build GDExtension Lib",
+      "sourceFileMap": {
+        "/rustc/cc66ad468955717ab92600c770da8c1601a4ff33": "${env:HOME}${env:USERPROFILE}\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust"
+      }
     },
     {
       "name": "(Windows) Run Test",

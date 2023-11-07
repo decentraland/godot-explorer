@@ -18,6 +18,7 @@ func _ready():
 func _on_request_completed(response: RequestResponse):
 	var status_code = response.status_code()
 	if response.is_error() or status_code < 200 or status_code > 299:
+		printerr("realm requested fail with ", status_code)
 		return null
 
 	var json = response.get_string_response_as_json()
@@ -52,10 +53,15 @@ func _on_request_completed(response: RequestResponse):
 
 	content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
 
-	Global.config.last_realm_joined = realm_url
-	Global.config.save_to_settings_file()
-
 	emit_signal("realm_changed")
+
+
+func set_realm(new_realm_string: String) -> void:
+	realm_string = new_realm_string
+	realm_url = ensure_ends_with_slash(resolve_realm_url(realm_string))
+	http_requester._requester.request_json(
+		ABOUT_REQUEST, realm_url + "about", HTTPClient.METHOD_GET, "", []
+	)
 
 
 static func is_dcl_ens(str_param: String) -> bool:
@@ -64,23 +70,23 @@ static func is_dcl_ens(str_param: String) -> bool:
 	return regex.search(str_param) != null
 
 
-func dcl_world_url(dcl_name: String) -> String:
+static func dcl_world_url(dcl_name: String) -> String:
 	return (
 		"https://worlds-content-server.decentraland.org/world/" + dcl_name.to_lower().uri_encode()
 	)
 
 
-func ensure_ends_with_slash(str_param: String) -> String:
+static func ensure_ends_with_slash(str_param: String) -> String:
 	return str_param.trim_suffix("/") + "/"
 
 
-func resolve_realm_url(value: String) -> String:
+static func resolve_realm_url(value: String) -> String:
 	if Realm.is_dcl_ens(value):
-		return dcl_world_url(value)
+		return Realm.dcl_world_url(value)
 	return value
 
 
-func get_params(url: String) -> Dictionary:
+static func get_params(url: String) -> Dictionary:
 	var ret: Dictionary = {}
 	var parts = url.split("?")
 	if parts.size() > 1:
@@ -96,7 +102,7 @@ func get_params(url: String) -> Dictionary:
 	return ret
 
 
-func parse_urn(urn: String):
+static func parse_urn(urn: String):
 	var regex = RegEx.new()
 	regex.compile("^(urn\\:decentraland\\:entity\\:(ba[a-zA-Z0-9]{57}))")
 	var matches = regex.search(urn)
@@ -107,11 +113,3 @@ func parse_urn(urn: String):
 	var base_url = get_params(urn).get("baseUrl", [""])[0]
 
 	return {"urn": matches.get_string(0), "entityId": matches.get_string(2), "baseUrl": base_url}
-
-
-func set_realm(new_realm_string: String) -> void:
-	realm_string = new_realm_string
-	realm_url = ensure_ends_with_slash(resolve_realm_url(realm_string))
-	http_requester._requester.request_json(
-		ABOUT_REQUEST, realm_url + "about", HTTPClient.METHOD_GET, "", []
-	)

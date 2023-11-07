@@ -208,23 +208,24 @@ impl DclPortableExperienceController {
     }
 
     #[func]
-    pub fn announce_killed_by_scene_id(&mut self, scene_id: u32) {
-        let scene_id = SceneId(scene_id);
+    pub fn announce_killed_by_scene_id(&mut self, killed_scene_id: u32) -> GodotString {
+        let killed_scene_id = SceneId(killed_scene_id);
         let Some(portable_experience) =
             self.portable_experiences
                 .iter_mut()
                 .find(
                     |(_, portable_experience)| match portable_experience.state.clone() {
-                        PortableExperienceState::Killing(killing_scene_id) => {
-                            killing_scene_id == scene_id
-                        }
+                        PortableExperienceState::Killing(scene_id)
+                        | PortableExperienceState::KillRequested(scene_id)
+                        | PortableExperienceState::Running(scene_id) => scene_id == killed_scene_id,
                         _ => false,
                     },
                 )
         else {
-            return;
+            return GodotString::default();
         };
 
+        let ret = GodotString::from(portable_experience.0);
         if portable_experience.1.persistent {
             match portable_experience.1.state.clone() {
                 PortableExperienceState::Killing(_) => {
@@ -238,6 +239,7 @@ impl DclPortableExperienceController {
             let pid = portable_experience.0.clone();
             let _ = self.portable_experiences.remove(&pid);
         }
+        ret
     }
 
     #[func]
