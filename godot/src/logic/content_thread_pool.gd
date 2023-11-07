@@ -19,7 +19,6 @@ const max_threads = 1
 var request_monotonic_counter: int = 0
 
 # shared memory...
-var wearable_cache_map: Dictionary = {}
 var content_cache_map: Dictionary = {}
 
 
@@ -70,7 +69,7 @@ func is_resource_from_hash_loaded(file_hash: String):
 
 
 func get_wearable(id: String):
-	var wearable_cached = wearable_cache_map.get(id.to_lower())
+	var wearable_cached = content_cache_map.get(id.to_lower())
 	if wearable_cached != null and wearable_cached.get("loaded"):
 		return wearable_cached.get("data")
 	return null
@@ -130,9 +129,9 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 
 	for wearable in wearables:
 		var wearable_lower = wearable.to_lower()
-		var wearable_cached = wearable_cache_map.get(wearable_lower)
+		var wearable_cached = content_cache_map.get(wearable_lower)
 		if wearable_cached == null:
-			wearable_cache_map[wearable_lower] = {
+			content_cache_map[wearable_lower] = {
 				"id": new_id,
 				"loaded": false,
 				"promise": promise,
@@ -268,13 +267,13 @@ func fetch_video(file_hash: String, content_mapping: Dictionary) -> Promise:
 func _process(_dt: float) -> void:
 	# Main thread
 	if use_thread == false:
-		content_threads[0].process(content_cache_map, wearable_cache_map)
+		content_threads[0].process(content_cache_map)
 
 
 func process_thread(content_thread: ContentThread):
 	while true:
-		content_thread.process(content_cache_map, wearable_cache_map)
-		OS.delay_msec(1)
+		content_thread.process(content_cache_map)
+		OS.delay_msec(16)
 
 
 func split_animations(_gltf_node: Node) -> void:

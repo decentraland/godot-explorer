@@ -11,18 +11,22 @@ enum ContentType {
 	CT_VIDEO = 7
 }
 
-var pending_content: Array[Dictionary] = []
-var http_requester = RustHttpRequesterWrapper.new()
+# Public
 var thread: Thread = null  # null=main_thread
 var id: int = -1
 
+# Private
+var _pending_content: Array[Dictionary] = []
+var _http_requester = RustHttpRequesterWrapper.new()
+var _processing = false
+
 
 func append_content(request: Dictionary):
-	pending_content.push_back(request)
+	_pending_content.push_back(request)
 
 
 func content_processing_count():
-	return pending_content.size()
+	return _pending_content.size()
 
 
 func _init(id: int, thread: Thread):
@@ -30,11 +34,20 @@ func _init(id: int, thread: Thread):
 	self.id = id
 
 
-func process(content_cache_map: Dictionary, wearable_cache_map: Dictionary):
-	http_requester.poll()
+func process(content_cache_map: Dictionary):
+	_http_requester.poll()
+	if !_processing:
+		_process_pending_content(content_cache_map)
+
+
+func _process_pending_content(content_cache_map: Dictionary):
+	if _pending_content.is_empty():
+		return
+	_processing = true
+
 	var loading_content: Array[Dictionary] = []
-	while pending_content.size() > 0:
-		loading_content.push_back(pending_content.pop_front())
+	while _pending_content.size() > 0:
+		loading_content.push_back(_pending_content.pop_front())
 
 	for content in loading_content:
 		var content_type: ContentType = content.get("content_type")
@@ -49,7 +62,7 @@ func process(content_cache_map: Dictionary, wearable_cache_map: Dictionary):
 				await _process_loading_audio(content, content_cache_map)
 
 			ContentType.CT_WEARABLE_EMOTE:
-				await _process_loading_wearable(content, wearable_cache_map)
+				await _process_loading_wearable(content, content_cache_map)
 
 			ContentType.CT_MESHES_MATERIAL:
 				await _process_meshes_material(content)
@@ -63,6 +76,8 @@ func process(content_cache_map: Dictionary, wearable_cache_map: Dictionary):
 			_:
 				printerr("Fetching invalid content type ", content_type)
 
+	_processing = false
+
 
 func _process_meshes_material(content: Dictionary):
 	var target_meshes: Array[Dictionary] = content.get("target_meshes")
@@ -75,12 +90,11 @@ func _process_meshes_material(content: Dictionary):
 
 	var promise: Promise = content["promise"]
 	promise.call_deferred("resolve")
-	return false
 
 
 func _process_loading_wearable(
 	content: Dictionary,
-	wearable_cache_map: Dictionary,
+	content_cache_map: Dictionary,
 ) -> void:
 	var url: String = (
 		content.get("content_base_url", "https://peer.decentraland.org/content") + "entities/active"
@@ -89,7 +103,7 @@ func _process_loading_wearable(
 	var json_payload: String = JSON.stringify({"pointers": wearables})
 	var headers = ["Content-Type: application/json"]
 
-	var promise: Promise = http_requester.request_json(
+	var promise: Promise = _http_requester.request_json(
 		url, HTTPClient.METHOD_POST, json_payload, headers
 	)
 
@@ -98,7 +112,6 @@ func _process_loading_wearable(
 		printerr("Failing on loading wearable ", url, " reason: ", content_result.get_error())
 		return
 
-	# TODO: Check promise is OK
 	var pointers_missing: Array = content["new_wearables"]
 	var pointer_fetched: Array = []
 
@@ -116,8 +129,8 @@ func _process_loading_wearable(
 		for pointer in pointers:
 			var lower_pointer_fetched = pointer.to_lower()
 			if pointers_missing.find(lower_pointer_fetched) != -1:
-				wearable_cache_map[lower_pointer_fetched]["data"] = item
-				wearable_cache_map[lower_pointer_fetched]["loaded"] = true
+				content_cache_map[lower_pointer_fetched]["data"] = item
+				content_cache_map[lower_pointer_fetched]["loaded"] = true
 				pointer_fetched.push_back(lower_pointer_fetched)
 
 		var wearable_content_dict: Dictionary = {}
@@ -132,8 +145,8 @@ func _process_loading_wearable(
 	if not pointers_missing.is_empty():
 		for pointer in pointers_missing:
 			printerr("Missing pointer ", pointer)
-			wearable_cache_map[pointer]["loaded"] = true
-			wearable_cache_map[pointer]["data"] = null
+			content_cache_map[pointer]["loaded"] = true
+			content_cache_map[pointer]["data"] = null
 
 	var result_promise: Promise = content["promise"]
 	result_promise.call_deferred("resolve")
@@ -164,7 +177,7 @@ func _process_loading_gltf(content: Dictionary, content_cache_map: Dictionary) -
 	if !FileAccess.file_exists(local_gltf_path):
 		var absolute_file_path = local_gltf_path.replace("user:/", OS.get_user_data_dir())
 
-		var request_promise = http_requester.request_file(file_hash_path, absolute_file_path)
+		var request_promise = _http_requester.request_file(file_hash_path, absolute_file_path)
 
 		var content_result = await request_promise.awaiter()
 		if content_result is PromiseError:
@@ -204,7 +217,7 @@ func _process_loading_gltf(content: Dictionary, content_cache_map: Dictionary) -
 		if not FileAccess.file_exists(local_image_path):
 			var absolute_file_path = local_image_path.replace("user:/", OS.get_user_data_dir())
 			promises_dependencies.push_back(
-				http_requester.request_file(base_url + image_hash, absolute_file_path)
+				_http_requester.request_file(base_url + image_hash, absolute_file_path)
 			)
 		mappings[uri] = "content/" + image_hash
 
@@ -252,7 +265,7 @@ func _process_loading_texture(
 	if !FileAccess.file_exists(local_texture_path):
 		var absolute_file_path = local_texture_path.replace("user:/", OS.get_user_data_dir())
 
-		var promise: Promise = http_requester.request_file(file_hash_path, absolute_file_path)
+		var promise: Promise = _http_requester.request_file(file_hash_path, absolute_file_path)
 
 		var content_result = await promise.awaiter()
 		if content_result is PromiseError:
@@ -300,7 +313,7 @@ func _process_loading_audio(
 	if !FileAccess.file_exists(local_audio_path):
 		var absolute_file_path = local_audio_path.replace("user:/", OS.get_user_data_dir())
 
-		var promise: Promise = http_requester.request_file(file_hash_path, absolute_file_path)
+		var promise: Promise = _http_requester.request_file(file_hash_path, absolute_file_path)
 		var content_result = await promise.awaiter()
 		if content_result is PromiseError:
 			printerr(
@@ -359,7 +372,9 @@ func _process_loading_video(
 
 	if !FileAccess.file_exists(local_video_path):
 		var absolute_file_path = local_video_path.replace("user:/", OS.get_user_data_dir())
-		var promise: Promise = http_requester.request_file(base_url + file_hash, absolute_file_path)
+		var promise: Promise = _http_requester.request_file(
+			base_url + file_hash, absolute_file_path
+		)
 		var content_result = await promise.awaiter()
 		if content_result is PromiseError:
 			printerr(
