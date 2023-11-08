@@ -1,5 +1,6 @@
 pub mod engine;
 pub mod fetch;
+pub mod portables;
 pub mod restricted_actions;
 pub mod runtime;
 pub mod websocket;
@@ -61,12 +62,13 @@ pub fn create_runtime() -> deno_core::JsRuntime {
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 5] = [
+    let op_sets: [Vec<deno_core::OpDecl>; 6] = [
         engine::ops(),
         runtime::ops(),
         fetch::ops(),
         websocket::ops(),
         restricted_actions::ops(),
+        portables::ops(),
     ];
 
     let mut op_map = HashMap::new();

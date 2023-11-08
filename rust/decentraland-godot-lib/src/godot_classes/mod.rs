@@ -11,3 +11,4 @@ pub mod dcl_ui_dropdown;
 pub mod dcl_ui_input;
 pub mod dcl_ui_text;
 pub mod dcl_video_player;
+pub mod portables;

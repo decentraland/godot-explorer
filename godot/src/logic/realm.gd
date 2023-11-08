@@ -6,29 +6,29 @@ var http_requester: RustHttpRequesterWrapper = Global.http_requester
 signal realm_changed
 
 
-func is_dcl_ens(str_param: String) -> bool:
+static func is_dcl_ens(str_param: String) -> bool:
 	var regex = RegEx.new()
 	regex.compile("^[a-zA-Z0-9]+\\.dcl\\.eth$")
 	return regex.search(str_param) != null
 
 
-func dcl_world_url(dcl_name: String) -> String:
+static func dcl_world_url(dcl_name: String) -> String:
 	return (
 		"https://worlds-content-server.decentraland.org/world/" + dcl_name.to_lower().uri_encode()
 	)
 
 
-func ensure_ends_with_slash(str_param: String) -> String:
+static func ensure_ends_with_slash(str_param: String) -> String:
 	return str_param.trim_suffix("/") + "/"
 
 
-func resolve_realm_url(value: String) -> String:
-	if is_dcl_ens(value):
-		return dcl_world_url(value)
+static func resolve_realm_url(value: String) -> String:
+	if Realm.is_dcl_ens(value):
+		return Realm.dcl_world_url(value)
 	return value
 
 
-func get_params(url: String) -> Dictionary:
+static func get_params(url: String) -> Dictionary:
 	var ret: Dictionary = {}
 	var parts = url.split("?")
 	if parts.size() > 1:
@@ -44,7 +44,7 @@ func get_params(url: String) -> Dictionary:
 	return ret
 
 
-func parse_urn(urn: String):
+static func parse_urn(urn: String):
 	var regex = RegEx.new()
 	regex.compile("^(urn\\:decentraland\\:entity\\:(ba[a-zA-Z0-9]{57}))")
 	var matches = regex.search(urn)
