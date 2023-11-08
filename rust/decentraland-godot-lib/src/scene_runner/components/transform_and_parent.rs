@@ -64,7 +64,11 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
 
             // TODO: the scale seted in the transform is local
             node_3d.set_transform(transform.to_godot_transform_3d());
-            node_3d.set_scale(transform.scale);
+            if transform.scale.is_zero_approx() {
+                node_3d.set_scale(Vector3::new(0.0001, 0.0001, 0.0001));
+            } else {
+                node_3d.set_scale(transform.scale);
+            }
 
             godot_entity_node.desired_parent_3d = transform.parent;
             if godot_entity_node.desired_parent_3d != old_parent {
