@@ -4,7 +4,7 @@ use godot::prelude::{GodotString, Variant};
 pub enum ResponseEnum {
     String(String),
     Bytes(Vec<u8>),
-    ToFile(Result<(), std::io::Error>),
+    ToFile(Result<String, std::io::Error>),
     Json(Result<serde_json::Value, serde_json::Error>),
 }
 
@@ -72,6 +72,11 @@ impl RequestResponse {
     }
 
     #[func]
+    pub fn get_error(&self) -> GodotString {
+        GodotString::from(self.response_data.as_ref().unwrap_err())
+    }
+
+    #[func]
     pub fn id(&self) -> u32 {
         self.request_option.id
     }
@@ -91,5 +96,54 @@ impl RequestResponse {
             }
             _ => Variant::default(),
         }
+    }
+
+    #[func]
+    pub fn get_response_as_string(&mut self) -> Variant {
+        let response = self.response_data.as_ref().unwrap();
+
+        match response {
+            ResponseEnum::String(string) => Variant::from(GodotString::from(string)),
+            ResponseEnum::Json(json) => {
+                if let Ok(result) = json {
+                    Variant::from(GodotString::from(result.to_string()))
+                } else {
+                    Variant::nil()
+                }
+            }
+            ResponseEnum::ToFile(path) => {
+                if let Ok(result) = path {
+                    Variant::from(GodotString::from(result))
+                } else {
+                    Variant::nil()
+                }
+            }
+            ResponseEnum::Bytes(bytes) => {
+                if let Ok(result) = String::from_utf8(bytes.to_vec()) {
+                    Variant::from(GodotString::from(result))
+                } else {
+                    Variant::nil()
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, godot::prelude::GodotClass)]
+pub struct RequestResponseError {
+    pub id: u32,
+    pub error_message: String,
+}
+
+#[godot::prelude::godot_api]
+impl RequestResponseError {
+    #[func]
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
+    #[func]
+    pub fn get_error_message(&self) -> GodotString {
+        GodotString::from(self.error_message.clone())
     }
 }

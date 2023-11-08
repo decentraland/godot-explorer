@@ -92,7 +92,7 @@ impl SignedLogin {
                         }
                     }
                 }
-                Err(e) => return SignedLoginPollStatus::Error(anyhow::anyhow!(e)),
+                Err(e) => return SignedLoginPollStatus::Error(anyhow::anyhow!(e.error_message)),
             }
 
             return SignedLoginPollStatus::Error(anyhow::anyhow!("unknown error"));

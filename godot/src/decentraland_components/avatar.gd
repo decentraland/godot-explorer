@@ -56,8 +56,7 @@ func update_avatar(avatar: Dictionary):
 	finish_loading = false
 
 	var promise = Global.content_manager.fetch_wearables(wearable_to_request, current_content_url)
-	if promise != null:
-		await promise.awaiter()
+	await promise.co_awaiter()
 	fetch_wearables_dependencies()
 
 
@@ -180,7 +179,7 @@ func fetch_wearables_dependencies():
 		for file_name in content_to_fetch:
 			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
 
-	await Awaiter.all(async_calls)
+	await Awaiter.co_all(async_calls)
 
 	load_wearables()
 
@@ -194,8 +193,6 @@ func _fetch_texture_or_gltf(file_name, content_mapping):
 		promise = Global.content_manager.fetch_gltf(file_name, content_mapping)
 
 	return promise
-
-	prints("_fetch_texture_or_gltf", file_name, get_path())
 
 
 func _free_old_skeleton(skeleton: Node):
@@ -320,7 +317,7 @@ func load_wearables():
 			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
 
 	var promise = Global.content_manager.duplicate_materials(meshes)
-	await promise.awaiter()
+	await promise.co_awaiter()
 	apply_color_and_facial()
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true

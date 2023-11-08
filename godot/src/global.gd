@@ -13,6 +13,8 @@ var config: ConfigData
 var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
 var animation_importer: AnimationImporter = AnimationImporter.new()
 
+var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
+
 var standalone = false
 
 enum CameraMode {
@@ -47,10 +49,10 @@ func _ready():
 	self.content_manager = ContentManager.new()
 	self.content_manager.set_name("content_manager")
 
+	get_tree().root.add_child.call_deferred(self.content_manager)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
 	get_tree().root.add_child.call_deferred(self.comms)
-	get_tree().root.add_child.call_deferred(self.content_manager)
 	get_tree().root.add_child.call_deferred(self.avatars)
 
 	# TODO: enable raycast debugger
@@ -73,3 +75,7 @@ func print_node_tree(node: Node, prefix = ""):
 	for child in node.get_children():
 		if child is Node:
 			print_node_tree(child, prefix + node.name + "/")
+
+
+func _process(dt: float):
+	http_requester.poll()
