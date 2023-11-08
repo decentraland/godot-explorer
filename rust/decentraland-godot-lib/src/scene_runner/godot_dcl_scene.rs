@@ -8,7 +8,7 @@ use crate::{
         },
         SceneDefinition, SceneId,
     },
-    godot_classes::dcl_ui_control::DclUiControl,
+    godot_classes::{dcl_scene_node::DclSceneNode, dcl_ui_control::DclUiControl},
 };
 use godot::prelude::*;
 use std::{
@@ -22,7 +22,7 @@ use super::components::ui::{scene_ui::UiResults, style::UiTransform};
 pub struct GodotDclScene {
     pub entities: HashMap<SceneEntityId, GodotEntityNode>,
 
-    pub root_node_3d: Gd<Node3D>,
+    pub root_node_3d: Gd<DclSceneNode>,
     pub hierarchy_dirty_3d: bool,
     pub unparented_entities_3d: HashSet<SceneEntityId>,
 
@@ -145,13 +145,13 @@ impl GodotDclScene {
         scene_id: &SceneId,
         parent_node_ui: Gd<DclUiControl>,
     ) -> Self {
-        let mut root_node_3d = Node3D::new_alloc();
+        let mut root_node_3d = DclSceneNode::new_alloc(scene_id.0, scene_definition.is_global);
+
         root_node_3d.set_position(Vector3 {
             x: 16.0 * scene_definition.base.x as f32,
             y: 0.0,
             z: 16.0 * -scene_definition.base.y as f32,
         });
-        root_node_3d.set_name(GodotString::from(format!("scene_id_{:?}", scene_id.0)));
 
         let mut root_node_ui_control = DclUiControl::new_alloc();
         root_node_ui_control.set_name(GodotString::from(format!("ui_scene_id_{:?}", scene_id.0)));
@@ -166,7 +166,10 @@ impl GodotDclScene {
 
         let entities = HashMap::from([(
             SceneEntityId::new(0, 0),
-            GodotEntityNode::new(Some(root_node_3d.clone()), Some(root_node_ui)),
+            GodotEntityNode::new(
+                Some(root_node_3d.clone().upcast::<Node3D>()),
+                Some(root_node_ui),
+            ),
         )]);
 
         GodotDclScene {
