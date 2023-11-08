@@ -39,8 +39,31 @@ func _on_parcels_procesed(parcels, empty):
 	control_minimap.control_map_shader.set_used_parcels(parcels, empty)
 	control_menu.control_map.control_map_shader.set_used_parcels(parcels, empty)
 
+# TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
+func get_params_from_cmd():
+	var args := OS.get_cmdline_args()
+	var realm_string = null
+	var location_vector = null
+	var realm_in_place := args.find("--realm")
+	var location_in_place := args.find("--location")
+	
+	if realm_in_place != -1 and args.size() > realm_in_place + 1:
+		realm_string = args[realm_in_place + 1]
+		
+	if location_in_place != -1 and args.size() > location_in_place + 1:
+		location_vector = args[location_in_place + 1]
+		location_vector = location_vector.split(',')
+		if location_vector.size() == 2:
+			location_vector = Vector2i(int(location_vector[0]), int(location_vector[1]))
+		else:
+			location_vector = null
+	return [realm_string, location_vector]
 
 func _ready():
+	var cmd_params = get_params_from_cmd()
+	var cmd_realm = cmd_params[0]
+	var cmd_location = cmd_params[1]
+	
 	if Global.is_mobile:
 		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_BEGIN
 		mobile_ui.show()
@@ -64,6 +87,8 @@ func _ready():
 
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)
+	if cmd_location != null:
+		start_parcel_position = cmd_location
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
@@ -76,10 +101,13 @@ func _ready():
 
 	Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
 
-	if Global.config.last_realm_joined.is_empty():
-		Global.realm.set_realm("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main")
+	if cmd_realm != null:
+		Global.realm.set_realm(cmd_realm)
 	else:
-		Global.realm.set_realm(Global.config.last_realm_joined)
+		if Global.config.last_realm_joined.is_empty():
+			Global.realm.set_realm("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main")
+		else:
+			Global.realm.set_realm(Global.config.last_realm_joined)
 
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 

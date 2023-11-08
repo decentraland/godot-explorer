@@ -8,12 +8,12 @@ sky_top_color = Color(1, 1, 1, 1)
 sky_horizon_color = Color(0.8, 0.79225, 0.78325, 1)
 ground_horizon_color = Color(0.8, 0.79225, 0.78325, 1)
 
-[sub_resource type="Sky" id="Sky_puthh"]
+[sub_resource type="Sky" id="Sky_0qr0h"]
 sky_material = SubResource("ProceduralSkyMaterial_6yihh")
 
 [sub_resource type="Environment" id="Environment_lhy6q"]
 background_mode = 2
-sky = SubResource("Sky_puthh")
+sky = SubResource("Sky_0qr0h")
 
 [node name="SubViewportContainer" type="SubViewportContainer"]
 size_flags_horizontal = 4

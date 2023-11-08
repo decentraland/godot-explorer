@@ -7,8 +7,6 @@ func _ready():
 
 func start():
 	var args = OS.get_cmdline_args()
-	print("starting with ", OS.get_cmdline_args())
-
 	if args.has("--test"):
 		return
 
@@ -32,7 +30,14 @@ func start():
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 	self._start.call_deferred()
-
+	
 
 func _start():
-	get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+	var args = OS.get_cmdline_args()
+	
+	if args.has("--avatar-renderer"):
+		get_tree().change_scene_to_file("res://src/tool/avatar_renderer/avatar_renderer_standalone.tscn")
+	elif args.has("--scene-renderer"):
+		get_tree().change_scene_to_file("res://src/tool/scene_renderer/scene.tscn")
+	else:
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")

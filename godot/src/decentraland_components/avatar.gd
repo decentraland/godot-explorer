@@ -1,6 +1,8 @@
 extends Node3D
 class_name Avatar
 
+signal avatar_loaded()
+
 @export var skip_process: bool = false
 @onready var animation_player = $Armature/AnimationPlayer
 @onready var label_3d_name = $Label3D_Name
@@ -321,6 +323,8 @@ func load_wearables():
 	apply_color_and_facial()
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
+	
+	emit_signal("avatar_loaded")
 
 
 func apply_color_and_facial():
