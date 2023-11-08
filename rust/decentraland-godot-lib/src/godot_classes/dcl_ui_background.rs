@@ -270,7 +270,7 @@ impl DclUiBackground {
                             .unwrap()
                             .clone();
 
-                        let fetching_resource = content_manager
+                        let mut promise = content_manager
                             .call(
                                 "fetch_texture_by_hash".into(),
                                 &[
@@ -278,10 +278,12 @@ impl DclUiBackground {
                                     content_mapping.to_variant(),
                                 ],
                             )
-                            .to::<bool>();
+                            .to::<Gd<RefCounted>>();
 
                         self.waiting_hash = GodotString::from(texture_hash);
 
+                        let fetching_resource =
+                            promise.call("is_resolved".into(), &[]).to::<bool>();
                         if fetching_resource {
                             self.set_content_connect_signal(true);
                         } else {

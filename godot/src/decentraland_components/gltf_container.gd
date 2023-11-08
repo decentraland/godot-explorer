@@ -38,7 +38,7 @@ func load_gltf():
 
 	var promise = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
 	if promise != null:
-		await promise.awaiter()
+		await promise.co_awaiter()
 
 	_on_gltf_loaded()
 
@@ -53,7 +53,7 @@ func _on_gltf_loaded():
 		node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
 	)
 
-	await promise.awaiter()
+	await promise.co_awaiter()
 
 	gltf_node = promise.get_data()
 	gltf_state = GodotGltfState.Finished

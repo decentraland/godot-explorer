@@ -12,10 +12,11 @@ func request_video(file_hash):
 	var content_mapping = Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
 	var promise = Global.content_manager.fetch_video(file_hash, content_mapping)
-	if promise != null:
-		await promise.awaiter()
-
-	_on_video_loaded(file_hash)
+	var res = await promise.co_awaiter()
+	if res is PromiseError:
+		printerr("Error on fetching video: ", res.get_error())
+	else:
+		_on_video_loaded(file_hash)
 
 
 func _on_video_loaded(file_hash: String):

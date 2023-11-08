@@ -45,19 +45,16 @@ func _refresh_data():
 		var promise: Promise = Global.content_manager.fetch_audio(
 			last_loaded_audio_clip, content_mapping
 		)
-		if promise != null:
-			await promise.awaiter()
+		var res = await promise.co_awaiter()
+		if res is PromiseError:
+			self.stop()
+			self.stream = null
+			printerr("Error on fetch audio: ", res.get_error())
+		else:
+			_on_audio_loaded(res)
 
-		_on_audio_loaded(audio_clip_file_hash)
 
-
-func _on_audio_loaded(file_hash: String):
-	var audio_stream = Global.content_manager.get_resource_from_hash(file_hash)
-	if audio_stream == null:
-		self.stop()
-		self.stream = null
-		return
-
+func _on_audio_loaded(audio_stream):
 	self.stream = audio_stream
 	valid = true
 

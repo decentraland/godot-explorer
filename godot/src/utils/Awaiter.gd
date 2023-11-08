@@ -4,11 +4,14 @@ class_name Awaiter
 
 class AllAwaiter:
 	var _mask: int
-	var _completed := false
-	var promise: Promise = Promise.new()
+	var _promise: Promise = Promise.new()
 
 	func _init(funcs: Array) -> void:
 		var size := funcs.size()
+		if size == 0:  # inmediate resolve, no funcs to await...
+			_promise.resolve()
+			return
+
 		assert(size < 64)
 		_mask = (1 << size) - 1
 		for i in size:
@@ -17,17 +20,16 @@ class AllAwaiter:
 	func _call_func(i: int, f) -> void:
 		@warning_ignore("redundant_await")
 		if f is Promise:
-			await f.awaiter()
+			await f.co_awaiter()
 		elif f is Callable:
 			var res: Promise = f.call()
 			if res != null:
-				await res.awaiter()
+				await res.co_awaiter()
 		_mask &= ~(1 << i)
 
-		if not _mask and not _completed:
-			_completed = true
-			promise.resolve()
+		if not _mask and not _promise.is_resolved():
+			_promise.resolve()
 
 
-static func all(funcs: Array) -> void:
-	await AllAwaiter.new(funcs).promise.awaiter()
+static func co_all(funcs: Array) -> void:
+	await AllAwaiter.new(funcs)._promise.co_awaiter()

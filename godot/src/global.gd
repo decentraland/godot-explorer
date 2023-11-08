@@ -14,6 +14,7 @@ var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd
 var animation_importer: AnimationImporter = AnimationImporter.new()
 
 var scene_fetcher: SceneFetcher = null
+var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
 
 var standalone = false
 
@@ -56,10 +57,10 @@ func _ready():
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
+	get_tree().root.add_child.call_deferred(self.content_manager)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
 	get_tree().root.add_child.call_deferred(self.comms)
-	get_tree().root.add_child.call_deferred(self.content_manager)
 	get_tree().root.add_child.call_deferred(self.avatars)
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
 
@@ -83,3 +84,7 @@ func print_node_tree(node: Node, prefix = ""):
 	for child in node.get_children():
 		if child is Node:
 			print_node_tree(child, prefix + node.name + "/")
+
+
+func _process(dt: float):
+	http_requester.poll()

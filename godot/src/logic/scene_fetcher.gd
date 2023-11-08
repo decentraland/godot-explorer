@@ -4,14 +4,10 @@ class_name SceneFetcher
 
 signal parcels_processed(parcel_filled, empty)
 
-const MAIN_JS_FILE_REQUEST = 100
-const MAIN_CRDT_FILE_REQUEST = 101
-const ADAPTATION_LAYER_JS_FILE_REQUEST = 102
-
 var adaptation_layer_js_request: int = -1
 var adaptation_layer_js_local_path: String = "user://sdk-adaptation-layer.js"
 
-var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
+var http_requester: RustHttpRequesterWrapper = Global.http_requester
 
 var current_position: Vector2i = Vector2i(-1000, -1000)
 var loaded_scenes: Dictionary = {}
@@ -24,7 +20,6 @@ var desired_portable_experiences_urns: Array[String] = []
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
-	http_requester.request_completed.connect(self._on_requested_completed)
 
 	scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
 	Global.config.param_changed.connect(self._on_config_changed)
@@ -63,7 +58,6 @@ func set_scene_radius(value: int):
 
 
 func _process(_dt):
-	http_requester.poll()
 	scene_entity_coordinator.update()
 	if scene_entity_coordinator.get_version() != last_version_updated:
 		_on_desired_scene_changed()
@@ -117,7 +111,7 @@ func _on_desired_scene_changed():
 		if not loaded_empty_scenes.has(parcel):
 			var index = randi_range(0, 11)
 			var scene: Node3D = empty_scenes[index].instantiate()
-			Global.content_manager._hide_colliders(scene)
+			Global.content_manager.hide_colliders(scene)
 			add_child(scene)
 			scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
 			loaded_empty_scenes[parcel] = scene
@@ -202,39 +196,6 @@ func get_scene_by_req_id(request_id: int):
 	return null
 
 
-func _on_main_crdt_file_requested_completed(response: RequestResponse):
-	var scene = get_scene_by_req_id(response.id())
-
-	# Probably the scene was unloaded
-	if scene == null:
-		return
-
-	scene.req.crdt_request_completed = true
-	if scene.req.js_request_completed and scene.req.crdt_request_completed:
-		_on_try_spawn_scene(scene)
-
-
-func _on_adaptation_layer_js_file_requested_completed(response: RequestResponse):
-	var request_id = response.id()
-	for scene in loaded_scenes.values():
-		var req = scene.get("req", {})
-		if req.get("js_request_id", -1) == request_id:
-			scene.req.js_request_completed = true
-			_on_try_spawn_scene(scene)
-
-
-func _on_main_js_file_requested_completed(response: RequestResponse):
-	var scene = get_scene_by_req_id(response.id())
-
-	# Probably the scene was unloaded
-	if scene == null:
-		return
-
-	scene.req.js_request_completed = true
-	if scene.req.js_request_completed and scene.req.crdt_request_completed:
-		_on_try_spawn_scene(scene)
-
-
 func update_position(new_position: Vector2i) -> void:
 	if current_position == new_position:
 		return
@@ -264,7 +225,6 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 	var is_sdk7 = metadata.get("runtimeVersion", null) == "7"
 	var main_js_request_id := -1
 	var local_main_js_path = ""
-	var js_request_completed = true
 
 	if is_sdk7:
 		var main_js_file_hash = entity.get("content", {}).get(metadata.get("main", ""), null)
@@ -274,66 +234,69 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 
 		local_main_js_path = "user://content/" + main_js_file_hash
 		if not FileAccess.file_exists(local_main_js_path) or main_js_file_hash.begins_with("b64"):
-			js_request_completed = false
 			var main_js_file_url: String = entity.baseUrl + main_js_file_hash
-			main_js_request_id = http_requester._requester.request_file(
-				MAIN_JS_FILE_REQUEST,
-				main_js_file_url,
-				local_main_js_path.replace("user:/", OS.get_user_data_dir())
+			var promise: Promise = http_requester.request_file(
+				main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir())
 			)
+
+			var res = await promise.co_awaiter()
+			if res is PromiseError:
+				printerr(
+					"Scene ",
+					scene_entity_id,
+					" fail getting the script code content, error message: ",
+					res.get_error()
+				)
+				return false
 	else:
 		local_main_js_path = String(adaptation_layer_js_local_path)
 		if not FileAccess.file_exists(local_main_js_path):
-			js_request_completed = false
-			if adaptation_layer_js_request == -1:
-				adaptation_layer_js_request = (
-					http_requester
-					. _requester
-					. request_file(
-						ADAPTATION_LAYER_JS_FILE_REQUEST,
-						"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.min.js",
-						local_main_js_path.replace("user:/", OS.get_user_data_dir())
-					)
+			var promise: Promise = http_requester.request_file(
+				"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.min.js",
+				local_main_js_path.replace("user:/", OS.get_user_data_dir())
+			)
+			var res = await promise.co_awaiter()
+			if res is PromiseError:
+				printerr(
+					"Scene ",
+					scene_entity_id,
+					" fail getting the adaptation layer content, error message: ",
+					res.get_error()
 				)
-			main_js_request_id = adaptation_layer_js_request
-
-	var req = {
-		"js_request_completed": js_request_completed,
-		"js_request_id": main_js_request_id,
-		"js_path": local_main_js_path,
-		"crdt_request_completed": true,
-		"crdt_request_id": -1,
-		"crdt_path": "",
-	}
+				return false
 
 	var main_crdt_file_hash = entity.get("content", {}).get("main.crdt", null)
+	var local_main_crdt_path = ""
 	if main_crdt_file_hash != null:
-		var local_main_crdt_path = "user://content/" + main_crdt_file_hash
+		local_main_crdt_path = "user://content/" + main_crdt_file_hash
 		var main_crdt_file_url: String = entity.baseUrl + main_crdt_file_hash
-		var main_crdt_request_id = http_requester._requester.request_file(
-			MAIN_CRDT_FILE_REQUEST,
-			main_crdt_file_url,
-			local_main_crdt_path.replace("user:/", OS.get_user_data_dir())
+		var promise: Promise = http_requester.request_file(
+			main_crdt_file_url, local_main_crdt_path.replace("user:/", OS.get_user_data_dir())
 		)
-		req["crdt_request_completed"] = false
-		req["crdt_request_id"] = main_crdt_request_id
-		req["crdt_path"] = local_main_crdt_path
 
-	loaded_scenes[scene_entity_id]["req"] = req
+		var res = await promise.co_awaiter()
+		if res is PromiseError:
+			printerr(
+				"Scene ",
+				scene_entity_id,
+				" fail getting the main crdt content, error message: ",
+				res.get_error()
+			)
+			return false
 
 	if is_sdk7:
-		if req.crdt_request_completed and req.js_request_completed:
-			_on_try_spawn_scene(loaded_scenes[scene_entity_id])
+		_on_try_spawn_scene(
+			loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path
+		)
 	else:
 		# SDK6 scenes don't have crdt file, and if they'd have, there is no mechanism to make a clean spawn of both
-		if req.js_request_completed:
-			_on_try_spawn_scene(loaded_scenes[scene_entity_id])
+		_on_try_spawn_scene(
+			loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path
+		)
+	return true
 
 
-func _on_try_spawn_scene(scene):
-	var local_main_js_path = scene.req.js_path
-	var local_main_crdt_path = scene.req.crdt_path
-
+func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):
 	if not FileAccess.file_exists(local_main_js_path):
 		printerr("Couldn't get main.js file")
 		local_main_js_path = ""
