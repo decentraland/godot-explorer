@@ -52,7 +52,8 @@ func spawn_portable_experience(pid: String) -> void:
 			remove_child(world_realm)
 
 			var urns: Array = world_realm.realm_about.get("configurations", {}).get("scenesUrn", [])
-			if world_realm.realm_scene_urns.is_empty():
+			if urns.size() != 1:
+				printerr("the portable experience world should have only one urn")
 				return
 
 			pid = urns[0]
@@ -82,7 +83,6 @@ func _on_scene_killed(scene_id: int, _entity_id: String):
 	var pid = self.announce_killed_by_scene_id(scene_id)
 	if not pid.is_empty():
 		var n = desired_portable_experiences.size()
-		prints("px _on_scene_killed", scene_id, pid, desired_portable_experiences)
 		desired_portable_experiences.erase(pid)
 		assert(desired_portable_experiences.size() == n - 1)
 
@@ -95,16 +95,13 @@ func _on_scene_killed(scene_id: int, _entity_id: String):
 
 func _on_scene_spawned(scene_id: int, entity_id: String):
 	if entity_id_to_pid.get(entity_id) == null:
-		prints("_on_scene_spawned entity_id not found ", entity_id, entity_id_to_pid)
 		return
 
 	var pid: String = entity_id_to_pid.get(entity_id)
 	if desired_portable_experiences.find(pid) == -1:
-		prints("_on_scene_spawned not found ", entity_id, desired_portable_experiences)
 		return
 
 	if pid_to_world.get(pid) != null:
 		pid = pid_to_world[pid]
 
-	prints("_on_scene_spawned found", entity_id, desired_portable_experiences)
 	self.announce_spawned(pid, true, "", scene_id)

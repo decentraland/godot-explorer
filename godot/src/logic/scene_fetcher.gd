@@ -172,18 +172,6 @@ func set_portable_experiences_urns(urns: Array[String]) -> void:
 	scene_entity_coordinator.set_fixed_desired_entities_global_urns(global_scenes_urns)
 
 
-func _on_requested_completed(response: RequestResponse):
-	match response.reference_id():
-		MAIN_JS_FILE_REQUEST:
-			_on_main_js_file_requested_completed(response)
-		MAIN_CRDT_FILE_REQUEST:
-			_on_main_crdt_file_requested_completed(response)
-		ADAPTATION_LAYER_JS_FILE_REQUEST:
-			_on_adaptation_layer_js_file_requested_completed(response)
-		_:
-			pass
-
-
 func get_scene_by_req_id(request_id: int):
 	for scene in loaded_scenes.values():
 		var req = scene.get("req", {})
