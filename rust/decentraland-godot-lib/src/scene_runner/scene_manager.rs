@@ -80,6 +80,12 @@ pub static GLOBAL_TICK_NUMBER: AtomicU32 = AtomicU32::new(0);
 
 #[godot_api]
 impl SceneManager {
+    #[signal]
+    fn scene_spawned(&self, scene_id: i32, entity_id: GodotString) {}
+
+    #[signal]
+    fn scene_killed(&self, scene_id: i32, entity_id: GodotString) {}
+
     // Testing a comment for the API
     #[func]
     fn start_scene(&mut self, scene_definition: Dictionary, content_mapping: Dictionary) -> u32 {
@@ -109,6 +115,7 @@ impl SceneManager {
             .collect();
 
         let new_scene_id = Scene::new_id();
+        let signal_data = (new_scene_id, scene_definition.entity_id.clone());
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(
             new_scene_id,
             scene_definition.clone(),
@@ -139,6 +146,10 @@ impl SceneManager {
         self.sorted_scene_ids.push(new_scene_id);
         self.compute_scene_distance();
 
+        self.base.emit_signal(
+            "scene_spawned".into(),
+            &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
+        );
         new_scene_id.0
     }
 
@@ -355,6 +366,7 @@ impl SceneManager {
 
         for scene_id in scene_to_remove.iter() {
             let mut scene = self.scenes.remove(scene_id).unwrap();
+            let signal_data = (*scene_id, scene.definition.entity_id);
             let node_3d = scene
                 .godot_dcl_scene
                 .root_node_3d
@@ -373,6 +385,11 @@ impl SceneManager {
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);
             self.scenes.remove(scene_id);
+
+            self.base.emit_signal(
+                "scene_killed".into(),
+                &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
+            );
         }
     }
 

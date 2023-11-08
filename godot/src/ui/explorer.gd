@@ -22,8 +22,6 @@ var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
 
-var scene_fetcher: SceneFetcher = null
-
 
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
@@ -31,7 +29,7 @@ func _process(_dt):
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
 	if _last_parcel_position != parcel_position:
-		scene_fetcher.update_position(parcel_position)
+		Global.scene_fetcher.update_position(parcel_position)
 		_last_parcel_position = parcel_position
 		Global.config.last_parcel_position = parcel_position
 		dirty_save_position = true
@@ -76,10 +74,7 @@ func _ready():
 	ui_root.add_child(Global.scene_runner.base_ui)
 	ui_root.move_child(Global.scene_runner.base_ui, label_crosshair.get_index() + 1)
 
-	scene_fetcher = SceneFetcher.new()
-	add_child(scene_fetcher)
-
-	scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
+	Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
 
 	if Global.config.last_realm_joined.is_empty():
 		Global.realm.set_realm("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main")
@@ -200,7 +195,7 @@ func _on_control_menu_toggle_minimap(visibility):
 
 
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
-	scene_fetcher.reload_scene(scene_id)
+	Global.scene_fetcher.reload_scene(scene_id)
 
 
 var last_position_sent: Vector3 = Vector3.ZERO

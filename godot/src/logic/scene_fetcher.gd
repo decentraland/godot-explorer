@@ -15,6 +15,8 @@ var loaded_empty_scenes: Dictionary = {}
 var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.new()
 var last_version_updated: int = -1
 
+var desired_portable_experiences_urns: Array[String] = []
+
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
@@ -24,6 +26,17 @@ func _ready():
 
 	if FileAccess.file_exists(adaptation_layer_js_local_path):
 		DirAccess.remove_absolute(adaptation_layer_js_local_path)
+
+	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
+
+
+func on_scene_killed(killed_scene_id, entity_id):
+	for scene_id in loaded_scenes.keys():
+		var scene = loaded_scenes[scene_id]
+		var scene_number_id: int = scene.get("scene_number_id", -1)
+		if scene_number_id == killed_scene_id:
+			loaded_scenes.erase(scene_id)
+			return
 
 
 func _on_config_changed(param: ConfigData.ConfigParams):
@@ -81,17 +94,12 @@ func _on_desired_scene_changed():
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")
 
-	var to_remove: Array[String] = []
 	for scene_id in loaded_scenes.keys():
 		if not loadable_scenes.has(scene_id) and not keep_alive_scenes.has(scene_id):
 			var scene = loaded_scenes[scene_id]
 			var scene_number_id: int = scene.get("scene_number_id", -1)
 			if scene_number_id != -1:
 				Global.scene_runner.kill_scene(scene_number_id)
-				to_remove.push_back(scene_id)
-
-	for scene_id in to_remove:
-		loaded_scenes.erase(scene_id)
 
 	var empty_parcels_coords = []
 	for parcel in empty_parcels:
@@ -119,6 +127,9 @@ func _on_realm_changed():
 	var should_load_city_pointers = true
 	var content_base_url = Global.realm.content_base_url
 
+	Global.config.last_realm_joined = Global.realm.realm_url
+	Global.config.save_to_settings_file()
+
 	if not Global.realm.realm_city_loader_content_base_url.is_empty():
 		content_base_url = Global.realm.realm_city_loader_content_base_url
 
@@ -135,14 +146,11 @@ func _on_realm_changed():
 	var scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get("scenesUrn", [])
 	scene_entity_coordinator.set_fixed_desired_entities_urns(scenes_urns)
 
-	var global_scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get(
-		"globalScenesUrn", []
-	)
-	scene_entity_coordinator.set_fixed_desired_entities_global_urns(global_scenes_urns)
+	set_portable_experiences_urns(self.desired_portable_experiences_urns)
 
 	for scene in loaded_scenes.values():
 		var scene_number_id: int = scene.get("scene_number_id", -1)
-		if scene_number_id != -1:
+		if not scene.is_global and scene_number_id != -1:
 			Global.scene_runner.kill_scene(scene_number_id)
 
 	for parcel in loaded_empty_scenes:
@@ -151,6 +159,17 @@ func _on_realm_changed():
 	loaded_empty_scenes.clear()
 
 	loaded_scenes = {}
+
+
+func set_portable_experiences_urns(urns: Array[String]) -> void:
+	var global_scenes_urns: Array = (
+		Global.realm.realm_about.get("configurations", {}).get("globalScenesUrn", []).duplicate()
+	)
+	prints("set_portable_experiences_urns ", global_scenes_urns, " with ", urns)
+
+	desired_portable_experiences_urns = urns
+	global_scenes_urns.append_array(desired_portable_experiences_urns)
+	scene_entity_coordinator.set_fixed_desired_entities_global_urns(global_scenes_urns)
 
 
 func get_scene_by_req_id(request_id: int):
@@ -300,7 +319,8 @@ func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):
 		"main_crdt_path": local_main_crdt_path,
 		"visible": true,
 		"parcels": scene.parcels,
-		"title": title
+		"title": title,
+		"entity_id": scene.id
 	}
 
 	var scene_number_id: int = Global.scene_runner.start_scene(scene_definition, content_mapping)
