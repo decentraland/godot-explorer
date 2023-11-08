@@ -45,7 +45,7 @@ func _refresh_data():
 		var promise: Promise = Global.content_manager.fetch_audio(
 			last_loaded_audio_clip, content_mapping
 		)
-		var res = await promise.awaiter()
+		var res = await promise.co_awaiter()
 		if res is PromiseError:
 			self.stop()
 			self.stream = null

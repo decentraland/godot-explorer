@@ -59,7 +59,7 @@ func _ready():
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
 	)
 	if promise != null:
-		await promise.awaiter()
+		await promise.co_awaiter()
 
 	for wearable_id in wearable_data:
 		wearable_data[wearable_id] = Global.content_manager.get_wearable(wearable_id)

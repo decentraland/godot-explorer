@@ -31,7 +31,7 @@ func is_resolved() -> bool:
 	return _resolved
 
 
-func awaiter() -> Variant:
+func co_awaiter() -> Variant:
 	if !_resolved:
 		await _on_resolved
 	return _data

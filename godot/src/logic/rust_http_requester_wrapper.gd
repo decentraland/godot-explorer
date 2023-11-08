@@ -68,7 +68,7 @@ func is_success_status_code(status_code: int) -> bool:
 	return 200 <= status_code and status_code <= 299
 
 
-func request_file(url: String, absolute_path: String):
+func request_file(url: String, absolute_path: String) -> Promise:
 	var id = _requester.request_file(0, url, absolute_path)
 
 	var promise = Promise.new()
@@ -76,7 +76,7 @@ func request_file(url: String, absolute_path: String):
 	return promise
 
 
-func request_json(url: String, method: int, body: String, headers: Array):
+func request_json(url: String, method: int, body: String, headers: Array) -> Promise:
 	var id = _requester.request_json(0, url, method, body, headers)
 
 	var promise = Promise.new()

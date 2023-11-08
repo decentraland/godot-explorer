@@ -208,7 +208,7 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 				main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir())
 			)
 
-			var res = await promise.awaiter()
+			var res = await promise.co_awaiter()
 			if res is PromiseError:
 				printerr(
 					"Scene ",
@@ -224,7 +224,7 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 				"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.min.js",
 				local_main_js_path.replace("user:/", OS.get_user_data_dir())
 			)
-			var res = await promise.awaiter()
+			var res = await promise.co_awaiter()
 			if res is PromiseError:
 				printerr(
 					"Scene ",
@@ -243,7 +243,7 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 			main_crdt_file_url, local_main_crdt_path.replace("user:/", OS.get_user_data_dir())
 		)
 
-		var res = await promise.awaiter()
+		var res = await promise.co_awaiter()
 		if res is PromiseError:
 			printerr(
 				"Scene ",

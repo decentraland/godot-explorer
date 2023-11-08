@@ -273,7 +273,7 @@ func _process(_dt: float) -> void:
 func process_thread(content_thread: ContentThread):
 	while true:
 		content_thread.process(content_cache_map)
-		OS.delay_msec(16)
+		OS.delay_msec(1)
 
 
 func split_animations(_gltf_node: Node) -> void:

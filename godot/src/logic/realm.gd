@@ -64,7 +64,7 @@ func set_realm(new_realm_string: String) -> void:
 		realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
 
-	var res = await promise.awaiter()
+	var res = await promise.co_awaiter()
 	if res is PromiseError:
 		printerr(
 			"Rejected request change realm to: ",
