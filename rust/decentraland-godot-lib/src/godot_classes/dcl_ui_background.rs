@@ -16,7 +16,6 @@ pub struct DclUiBackground {
 
     current_value: PbUiBackground,
 
-    signal_content_connected: bool,
     waiting_hash: GodotString,
     texture_loaded: bool,
 }
@@ -27,7 +26,6 @@ impl NodeVirtual for DclUiBackground {
         Self {
             base,
             current_value: PbUiBackground::default(),
-            signal_content_connected: false,
             waiting_hash: GodotString::default(),
             texture_loaded: false,
         }
@@ -92,8 +90,6 @@ impl DclUiBackground {
 
     #[func]
     fn _on_texture_loaded(&mut self) {
-        self.set_content_connect_signal(false);
-
         let mut content_manager = self
             .base
             .get_node("/root/content_manager".into())
@@ -201,40 +197,6 @@ impl DclUiBackground {
         }
     }
 
-    #[func]
-    fn _on_content_loading_finished(&mut self, file_hash: GodotString) {
-        if file_hash != self.waiting_hash {
-            return;
-        }
-
-        self._on_texture_loaded();
-        self.set_content_connect_signal(false);
-    }
-
-    fn set_content_connect_signal(&mut self, should_be_connected: bool) {
-        if self.signal_content_connected == should_be_connected {
-            return;
-        }
-
-        let mut content_manager = self
-            .base
-            .get_node("/root/content_manager".into())
-            .unwrap()
-            .clone();
-
-        let callable = self
-            .base
-            .get("_on_content_loading_finished".into())
-            .to::<Callable>();
-        if should_be_connected {
-            content_manager.connect("content_loading_finished".into(), callable);
-        } else {
-            content_manager.disconnect("content_loading_finished".into(), callable);
-        }
-
-        self.signal_content_connected = should_be_connected;
-    }
-
     fn _set_white_pixel(&mut self) {
         self.texture_loaded = false;
         self.base.set_texture(load("res://assets/white_pixel.png"));
@@ -284,8 +246,11 @@ impl DclUiBackground {
 
                         let fetching_resource =
                             promise.call("is_resolved".into(), &[]).to::<bool>();
+
                         if fetching_resource {
-                            self.set_content_connect_signal(true);
+                            let callable =
+                                self.base.get("_on_texture_loaded".into()).to::<Callable>();
+                            promise.connect("_on_resolved".into(), callable);
                         } else {
                             self.base.call_deferred("_on_texture_loaded".into(), &[]);
                         }
