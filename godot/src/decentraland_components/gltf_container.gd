@@ -1,22 +1,15 @@
-extends Node3D
-
-@export var dcl_gltf_src: String = ""
-@export var dcl_scene_id: int = -1
-@export var dcl_visible_cmask: int = 0
-@export var dcl_invisible_cmask: int = 3
-@export var dcl_entity_id: int = -1
+extends DclGltfContainer
 
 var file_hash: String = ""
 var gltf_node = null
 
-const GodotGltfState = {
+const GltfContainerLoadingState = {
 	Unknown = 0,
 	Loading = 1,
 	NotFound = 2,
 	FinishedWithError = 3,
 	Finished = 4,
 }
-var gltf_state: int = 0
 
 
 func _ready():
@@ -30,11 +23,11 @@ func load_gltf():
 	self.file_hash = content_mapping.get("content", {}).get(dcl_gltf_src, "")
 
 	if self.file_hash.is_empty():
-		gltf_state = GodotGltfState.NotFound
+		dcl_gltf_loading_state = GltfContainerLoadingState.NotFound
 		return
 
-#	# TODO: should we set a timeout?
-	gltf_state = GodotGltfState.Loading
+	# TODO: should we set a timeout?
+	dcl_gltf_loading_state = GltfContainerLoadingState.Loading
 
 	var promise = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
 	if promise != null:
@@ -46,7 +39,7 @@ func load_gltf():
 func _on_gltf_loaded():
 	var node = Global.content_manager.get_resource_from_hash(file_hash)
 	if node == null:
-		gltf_state = GodotGltfState.FinishedWithError
+		dcl_gltf_loading_state = GltfContainerLoadingState.FinishedWithError
 		return
 
 	var promise: Promise = Global.content_manager.instance_gltf_colliders(
@@ -56,9 +49,15 @@ func _on_gltf_loaded():
 	await promise.co_awaiter()
 
 	gltf_node = promise.get_data()
-	gltf_state = GodotGltfState.Finished
+	self.deferred_add_child.call_deferred(gltf_node)
 
-	add_child.call_deferred(gltf_node)
+
+func deferred_add_child(gltf_node):
+	add_child(gltf_node)
+	await get_tree().process_frame
+
+	# Colliders and rendering is ensured to be ready at this point
+	dcl_gltf_loading_state = GltfContainerLoadingState.Finished
 
 
 func get_animatable_body_3d(mesh_instance: MeshInstance3D):

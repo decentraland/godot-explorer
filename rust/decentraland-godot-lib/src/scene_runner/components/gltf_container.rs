@@ -6,19 +6,10 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
+    godot_classes::dcl_gltf_container::{DclGltfContainer, GltfContainerLoadingState},
     scene_runner::scene::Scene,
 };
 use godot::prelude::*;
-
-// see gltf_container.gd
-enum GodotGltfState {
-    Unknown = 0,
-    #[allow(dead_code)]
-    Loading = 1,
-    NotFound = 2,
-    FinishedWithError = 3,
-    Finished = 4,
-}
 
 pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
@@ -66,26 +57,21 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                         "res://src/decentraland_components/gltf_container.tscn",
                     )
                     .instantiate()
-                    .unwrap();
+                    .unwrap()
+                    .cast::<DclGltfContainer>();
 
-                    new_gltf.set(
-                        StringName::from("dcl_gltf_src"),
-                        Variant::from(GodotString::from(new_value.src)),
-                    );
+                    new_gltf
+                        .bind_mut()
+                        .set_dcl_gltf_src(GodotString::from(new_value.src));
+                    new_gltf.bind_mut().set_dcl_scene_id(scene_id as i32);
+                    new_gltf.bind_mut().set_dcl_entity_id(entity.as_i32());
+                    new_gltf
+                        .bind_mut()
+                        .set_dcl_visible_cmask(visible_meshes_collision_mask);
+                    new_gltf
+                        .bind_mut()
+                        .set_dcl_invisible_cmask(invisible_meshes_collision_mask);
 
-                    new_gltf.set(StringName::from("dcl_scene_id"), Variant::from(scene_id));
-                    new_gltf.set(
-                        StringName::from("dcl_entity_id"),
-                        Variant::from(entity.as_usize() as i32),
-                    );
-                    new_gltf.set(
-                        StringName::from("dcl_visible_cmask"),
-                        Variant::from(visible_meshes_collision_mask),
-                    );
-                    new_gltf.set(
-                        StringName::from("dcl_invisible_cmask"),
-                        Variant::from(invisible_meshes_collision_mask),
-                    );
                     new_gltf.set_name(GodotString::from("GltfContainer"));
                     node_3d.add_child(new_gltf.clone().upcast());
 
@@ -94,7 +80,11 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
             }
         }
     }
+}
 
+pub fn sync_gltf_loading_state(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    let godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let scene_id = scene.scene_id.0;
     let gltf_container_loading_state_component =
         SceneCrdtStateProtoComponents::get_gltf_container_loading_state_mut(crdt_state);
 
@@ -102,40 +92,40 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
         let gltf_node = godot_dcl_scene
             .ensure_node_3d(entity)
             .1
-            .try_get_node_as::<Node>(NodePath::from("GltfContainer"));
+            .try_get_node_as::<DclGltfContainer>(NodePath::from("GltfContainer"));
 
         let current_state = match gltf_container_loading_state_component.get(*entity) {
             Some(state) => match state.value.as_ref() {
-                Some(value) => value.current_state,
-                _ => GodotGltfState::Unknown as i32,
+                Some(value) => GltfContainerLoadingState::from_proto(value.current_state()),
+                _ => GltfContainerLoadingState::Unknown,
             },
-            None => GodotGltfState::Unknown as i32,
+            None => GltfContainerLoadingState::Unknown,
         };
 
         let current_state_godot = match gltf_node {
             Some(gltf_node) => {
-                let gltf_state = gltf_node.get(StringName::from(GodotString::from("gltf_state")));
-                let gltf_state = i32::try_from_variant(&gltf_state);
-                match gltf_state {
-                    Ok(gltf_state) => gltf_state,
-                    Err(err) => {
-                        tracing::info!("Error getting gltf_state: {:?}", err);
-                        GodotGltfState::Unknown as i32
-                    }
-                }
+                GltfContainerLoadingState::from_i32(gltf_node.bind().get_dcl_gltf_loading_state())
             }
-            None => GodotGltfState::Unknown as i32,
+            None => GltfContainerLoadingState::Unknown,
         };
 
-        if current_state_godot != current_state {
-            gltf_container_loading_state_component.put(*entity, Some(crate::dcl::components::proto_components::sdk::components::PbGltfContainerLoadingState { current_state: current_state_godot }));
+        tracing::info!(
+            " scene_id {:?} \t entity_id{:?} \t current_state {:?} \t current_state_godot: {:?}",
+            scene_id,
+            entity,
+            current_state,
+            current_state_godot
+        );
 
-            if current_state_godot == GodotGltfState::Finished as i32
-                || current_state_godot == GodotGltfState::FinishedWithError as i32
-                || current_state_godot == GodotGltfState::NotFound as i32
-            {
-                scene.gltf_loading.remove(entity);
-            }
+        if current_state_godot != current_state {
+            gltf_container_loading_state_component.put(*entity, Some(crate::dcl::components::proto_components::sdk::components::PbGltfContainerLoadingState { current_state: current_state_godot.to_i32() }));
+        }
+
+        if current_state_godot == GltfContainerLoadingState::Finished
+            || current_state_godot == GltfContainerLoadingState::FinishedWithError
+            || current_state_godot == GltfContainerLoadingState::NotFound
+        {
+            scene.gltf_loading.remove(entity);
         }
     }
 }

@@ -4,15 +4,24 @@ use godot::prelude::{Callable, GodotString, ToVariant, Transform3D, VariantArray
 
 use super::{
     components::{
-        animator::update_animator, audio_source::update_audio_source,
-        audio_stream::update_audio_stream, avatar_attach::update_avatar_attach,
-        avatar_shape::update_avatar_shape, billboard::update_billboard,
-        camera_mode_area::update_camera_mode_area, gltf_container::update_gltf_container,
-        material::update_material, mesh_collider::update_mesh_collider,
-        mesh_renderer::update_mesh_renderer, pointer_events::update_scene_pointer_events,
-        raycast::update_raycasts, text_shape::update_text_shape,
-        transform_and_parent::update_transform_and_parent, ui::scene_ui::update_scene_ui,
-        video_player::update_video_player, visibility::update_visibility,
+        animator::update_animator,
+        audio_source::update_audio_source,
+        audio_stream::update_audio_stream,
+        avatar_attach::update_avatar_attach,
+        avatar_shape::update_avatar_shape,
+        billboard::update_billboard,
+        camera_mode_area::update_camera_mode_area,
+        gltf_container::{sync_gltf_loading_state, update_gltf_container},
+        material::update_material,
+        mesh_collider::update_mesh_collider,
+        mesh_renderer::update_mesh_renderer,
+        pointer_events::update_scene_pointer_events,
+        raycast::update_raycasts,
+        text_shape::update_text_shape,
+        transform_and_parent::update_transform_and_parent,
+        ui::scene_ui::update_scene_ui,
+        video_player::update_video_player,
+        visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
     rpc_calls::process_rpcs,
@@ -72,6 +81,20 @@ pub fn _process_scene(
                     } else {
                         0
                     };
+
+                // fix: if the scene is loading, we need to wait until it finishes before spawn the next tick
+                // tick 0 => onStart() => tick=1 => first onUpdate() => tick=2 => second onUpdate() => tick= 3
+                if tick_number < 3 && !scene.gltf_loading.is_empty() {
+                    sync_gltf_loading_state(scene, crdt_state);
+                    return false;
+                }
+
+                scene
+                    .godot_dcl_scene
+                    .root_node_3d
+                    .bind_mut()
+                    .last_tick_number = tick_number as i32;
+
                 engine_info_component.put(
                     SceneEntityId::ROOT,
                     Some(PbEngineInfo {
@@ -132,6 +155,7 @@ pub fn _process_scene(
             }
             SceneUpdateState::GltfContainer => {
                 update_gltf_container(scene, crdt_state);
+                sync_gltf_loading_state(scene, crdt_state);
                 false
             }
             SceneUpdateState::Animator => {
