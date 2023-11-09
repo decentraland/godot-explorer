@@ -580,7 +580,14 @@ impl SceneManager {
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
+        self.base.emit_signal(
+            "on_change_scene_id".into(),
+            &[Variant::from(self.current_parcel_scene_id.0)],
+        );
     }
+
+    #[signal]
+    fn on_change_scene_id(scene_id: u32) {}
 }
 
 #[godot_api]
