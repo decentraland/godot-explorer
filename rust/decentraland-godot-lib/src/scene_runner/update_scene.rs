@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use godot::prelude::{Callable, GodotString, ToVariant, Transform3D, VariantArray};
+use godot::prelude::{Callable, GodotString, ToGodot, Transform3D, VariantArray};
 
 use super::{
     components::{

@@ -147,8 +147,8 @@ pub fn get_godot_executable_path() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("Godot_v4.1.1-stable_linux.x86_64".to_string()),
-        ("windows", "x86_64") => Some("Godot_v4.1.1-stable_win64.exe".to_string()),
+        ("linux", "x86_64") => Some("Godot_v4.1.3-stable_linux.x86_64".to_string()),
+        ("windows", "x86_64") => Some("Godot_v4.1.3-stable_win64.exe".to_string()),
         ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
         _ => None,
     }?;
