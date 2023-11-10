@@ -8,6 +8,8 @@ pub struct DclSceneNode {
 
     is_global: bool,
 
+    pub last_tick_number: i32,
+
     #[base]
     _base: Base<Node3D>,
 }
@@ -21,6 +23,7 @@ impl DclSceneNode {
                 _base,
                 scene_id,
                 is_global,
+                last_tick_number: -1,
             }
         });
         obj.set_name(GodotString::from(format!(

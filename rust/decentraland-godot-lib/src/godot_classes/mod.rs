@@ -4,6 +4,7 @@ pub mod dcl_camera_3d;
 pub mod dcl_camera_mode_area_3d;
 pub mod dcl_confirm_dialog;
 pub mod dcl_global;
+pub mod dcl_gltf_container;
 pub mod dcl_realm;
 pub mod dcl_scene_node;
 pub mod dcl_ui_background;
