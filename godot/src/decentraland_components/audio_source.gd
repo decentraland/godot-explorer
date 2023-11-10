@@ -46,7 +46,7 @@ func _refresh_data():
 			last_loaded_audio_clip, content_mapping
 		)
 		var res = await promise.co_awaiter()
-		if res is PromiseError:
+		if res is Promise.Error:
 			self.stop()
 			self.stream = null
 			printerr("Error on fetch audio: ", res.get_error())

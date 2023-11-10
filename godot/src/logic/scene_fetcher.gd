@@ -228,7 +228,7 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 			)
 
 			var res = await promise.co_awaiter()
-			if res is PromiseError:
+			if res is Promise.Error:
 				printerr(
 					"Scene ",
 					scene_entity_id,
@@ -244,7 +244,7 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 				local_main_js_path.replace("user:/", OS.get_user_data_dir())
 			)
 			var res = await promise.co_awaiter()
-			if res is PromiseError:
+			if res is Promise.Error:
 				printerr(
 					"Scene ",
 					scene_entity_id,
@@ -263,7 +263,7 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 		)
 
 		var res = await promise.co_awaiter()
-		if res is PromiseError:
+		if res is Promise.Error:
 			printerr(
 				"Scene ",
 				scene_entity_id,
