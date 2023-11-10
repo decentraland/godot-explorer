@@ -1,13 +1,3 @@
-FROM ubuntu:latest as builder
-
-RUN apt-get update && apt-get upgrade -y
-RUN apt-get install -y --no-install-recommends unzip
-
-WORKDIR /app
-
-COPY decentraland-godot-ubuntu-latest.zip /app
-RUN unzip decentraland-godot-ubuntu-latest.zip && chmod +x decentraland.godot.client.x86_64
-
 FROM ubuntu:latest
 
 RUN apt-get update && apt-get upgrade -y
@@ -19,7 +9,7 @@ RUN apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY --from=builder /app/decentraland.godot.client.x86_64 /app/decentraland.godot.client.pck /app/libdecentraland_godot_lib.so /app/
+COPY exports/decentraland.godot.client.x86_64 exports/decentraland.godot.client.pck exports/libdecentraland_godot_lib.so  /app/
 COPY avatars.json /app/
 
 RUN <<EOF
