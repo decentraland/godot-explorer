@@ -10,7 +10,6 @@ RUN apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY exports/decentraland.godot.client.x86_64 exports/decentraland.godot.client.pck exports/libdecentraland_godot_lib.so  /app/
-COPY avatars.json /app/
 
 RUN <<EOF
 echo "#!/bin/sh" > entry-point.sh
