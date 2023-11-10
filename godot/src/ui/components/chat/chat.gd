@@ -23,8 +23,8 @@ const ACK: String = "␆"
 func _on_chats_arrived(chats: Array):
 	for chat in chats:
 		var address: String = chat[0]
-		var profile_name: StringName = chat[1]
-		var timestamp: float = chat[2]
+		var _profile_name: StringName = chat[1]
+		var _timestamp: float = chat[2]
 		var message: StringName = chat[3]
 		var avatar = Global.avatars.get_avatar_by_address(address)
 

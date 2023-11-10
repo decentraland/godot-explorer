@@ -31,9 +31,9 @@ func content_processing_count():
 	return _pending_content.size()
 
 
-func _init(id: int, thread: Thread):
-	self.thread = thread
-	self.id = id
+func _init(param_id: int, param_thread: Thread):
+	self.thread = param_thread
+	self.id = param_id
 
 
 func process(content_cache_map: Dictionary):  # not a coroutine

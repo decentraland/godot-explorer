@@ -26,7 +26,7 @@ var stored_camera_mode_before_block: Global.CameraMode
 
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
 	if !camera_mode_change_blocked:  # if it's already blocked, we don't store the state again...
-		stored_camera_mode_before_block = camera.get_camera_mode()
+		stored_camera_mode_before_block = camera.get_camera_mode() as Global.CameraMode
 		camera_mode_change_blocked = true
 
 	set_camera_mode(forced_mode, false)
@@ -173,11 +173,14 @@ func _physics_process(delta: float) -> void:
 
 
 func avatar_look_at(target_position: Vector3):
-	var direction = target_position - get_global_position()
-	direction = direction.normalized()
+	var target_direction = target_position - get_global_position()
+	target_direction = direction.normalized()
 
-	var y_rot = atan2(direction.x, direction.z)
-	var x_rot = atan2(direction.y, sqrt(direction.x * direction.x + direction.z * direction.z))
+	var y_rot = atan2(target_direction.x, target_direction.z)
+	var x_rot = atan2(
+		target_direction.y,
+		sqrt(target_direction.x * target_direction.x + target_direction.z * target_direction.z)
+	)
 
 	rotation.y = y_rot + PI
 	avatar.set_rotation(Vector3(0, 0, 0))

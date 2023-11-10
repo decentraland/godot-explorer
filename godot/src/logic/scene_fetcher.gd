@@ -30,7 +30,7 @@ func _ready():
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
 
 
-func on_scene_killed(killed_scene_id, entity_id):
+func on_scene_killed(killed_scene_id, _entity_id):
 	for scene_id in loaded_scenes.keys():
 		var scene = loaded_scenes[scene_id]
 		var scene_number_id: int = scene.get("scene_number_id", -1)
@@ -211,7 +211,6 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 	}
 
 	var is_sdk7 = metadata.get("runtimeVersion", null) == "7"
-	var main_js_request_id := -1
 	var local_main_js_path = ""
 
 	if is_sdk7:

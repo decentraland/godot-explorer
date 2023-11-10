@@ -52,8 +52,8 @@ func _on_gltf_loaded():
 	self.deferred_add_child.call_deferred(gltf_node)
 
 
-func deferred_add_child(gltf_node):
-	add_child(gltf_node)
+func deferred_add_child(new_gltf_node):
+	add_child(new_gltf_node)
 	await get_tree().process_frame
 
 	# Colliders and rendering is ensured to be ready at this point

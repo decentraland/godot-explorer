@@ -86,5 +86,5 @@ func print_node_tree(node: Node, prefix = ""):
 			print_node_tree(child, prefix + node.name + "/")
 
 
-func _process(dt: float):
+func _process(_dt: float):
 	http_requester.poll()
