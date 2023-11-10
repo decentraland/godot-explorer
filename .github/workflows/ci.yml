@@ -255,7 +255,7 @@ jobs:
             exports/**/*
 
       - name: Build Docker Image
-        if: matrix.os != 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest'
         id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
