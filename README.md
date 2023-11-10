@@ -19,7 +19,7 @@
 
 2. Go to `rust/xtask` folder, and run `cargo run -- install`.
 
-## Running and editting the project
+## Running and editing the project
 
 1. Ensure you are in `rust/xtask` folder first
 2. You can run `cargo run -- run` to build the Rust library and execute the client. 
@@ -31,7 +31,7 @@
 When GD files are modified, they must be well-formated. You can autoformat all files running `gdformat godot/` (it requires [godot-gdscript-toolkit](https://github.com/Scony/godot-gdscript-toolkit) installed)
 
 ## Debugging the library
-This repos is set up to be opened with Visual Studio Code. In the section `Run and Debug` in the Activity bar, you can find the configuration for your platform.
+This repo is set up to be opened with Visual Studio Code. In the section `Run and Debug` in the Activity bar, you can find the configuration for your platform.
 
 ## Run test with coverage
 1. Ensure you are in `rust/xtask` folder first
