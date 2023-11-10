@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use ffmpeg_next::ffi::AVSampleFormat;
 use ffmpeg_next::{decoder, format::context::Input, media::Type, util::frame, Packet};
-use godot::prelude::{AudioStreamPlayer, Gd, PackedVector2Array, ToVariant, Vector2};
+use godot::prelude::{AudioStreamPlayer, Gd, PackedVector2Array, ToGodot, Vector2};
 use thiserror::Error;
 use tracing::{debug, error};
 
