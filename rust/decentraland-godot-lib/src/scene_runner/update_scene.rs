@@ -43,6 +43,7 @@ use crate::{
         },
         RendererResponse, SceneId,
     },
+    godot_classes::dcl_global::DclGlobal,
 };
 
 // @returns true if the scene was full processed, or false if it remains something to process
@@ -72,7 +73,7 @@ pub fn _process_scene(
                 let engine_info_component =
                     SceneCrdtStateProtoComponents::get_engine_info_mut(crdt_state);
                 let tick_number =
-                    if let Some(entry) = engine_info_component.get(SceneEntityId::ROOT) {
+                    if let Some(entry) = engine_info_component.get(&SceneEntityId::ROOT) {
                         if let Some(value) = entry.value.as_ref() {
                             value.tick_number + 1
                         } else {
@@ -200,6 +201,12 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::ComputeCrdtState => {
+                DclGlobal::singleton()
+                    .bind()
+                    .avatars
+                    .bind()
+                    .update_crdt_state(crdt_state);
+
                 let camera_transform = DclTransformAndParent::from_godot(
                     camera_global_transform,
                     scene.godot_dcl_scene.root_node_3d.get_position(),
@@ -218,7 +225,7 @@ pub fn _process_scene(
                 let maybe_current_camera_mode = {
                     if let Some(camera_mode_value) =
                         SceneCrdtStateProtoComponents::get_camera_mode(crdt_state)
-                            .get(SceneEntityId::CAMERA)
+                            .get(&SceneEntityId::CAMERA)
                     {
                         camera_mode_value
                             .value

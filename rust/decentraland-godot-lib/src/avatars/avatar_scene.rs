@@ -7,10 +7,17 @@ use crate::{
     comms::profile::SerializedProfile,
     dcl::{
         components::{
-            proto_components::kernel::comms::rfc4, transform_and_parent::DclTransformAndParent,
+            proto_components::{
+                kernel::comms::rfc4,
+                sdk::components::{PbAvatarBase, PbAvatarEquippedData, PbPlayerIdentityData},
+            },
+            transform_and_parent::DclTransformAndParent,
             SceneEntityId,
         },
-        crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
+        crdt::{
+            last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
+            SceneCrdtStateProtoComponents,
+        },
     },
     wallet::AsH160,
 };
@@ -45,6 +52,25 @@ impl NodeVirtual for AvatarScene {
             last_updated_profile: HashMap::new(),
         }
     }
+}
+
+macro_rules! sync_crdt_lww_component {
+    ($entity_id:ident, $target_component:ident, $local_component:ident) => {
+        let local_value_entry = $local_component.get($entity_id);
+
+        if let Some(value_entry) = local_value_entry {
+            let diff_timestamp = local_value_entry.map(|v| v.timestamp)
+                != $target_component.get($entity_id).map(|v| v.timestamp);
+
+            if diff_timestamp {
+                $target_component.set(
+                    *$entity_id,
+                    value_entry.timestamp,
+                    value_entry.value.clone(),
+                );
+            }
+        }
+    };
 }
 
 #[godot_api]
@@ -224,6 +250,41 @@ impl AvatarScene {
             "update_avatar".into(),
             &[profile.to_godot_dictionary(base_url).to_variant()],
         );
+
+        let new_avatar_base = Some(profile.to_pb_avatar_base());
+        let avatar_base_component = SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt);
+        let avatar_base_component_value = avatar_base_component
+            .get(&entity_id)
+            .map(|v| v.value.clone())
+            .flatten();
+        if avatar_base_component_value != new_avatar_base {
+            SceneCrdtStateProtoComponents::get_avatar_base_mut(&mut self.crdt)
+                .put(entity_id, new_avatar_base);
+        }
+
+        let new_avatar_equipped_data = Some(profile.to_pb_avatar_equipped_data());
+        let avatar_equipped_data_component =
+            SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt);
+        let avatar_equipped_data_value = avatar_equipped_data_component
+            .get(&entity_id)
+            .map(|v| v.value.clone())
+            .flatten();
+        if avatar_equipped_data_value != new_avatar_equipped_data {
+            SceneCrdtStateProtoComponents::get_avatar_equipped_data_mut(&mut self.crdt)
+                .put(entity_id, new_avatar_equipped_data);
+        }
+
+        let new_player_identity_data = Some(profile.to_pb_player_identity_data());
+        let player_identity_data_component =
+            SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt);
+        let player_identity_data_value = player_identity_data_component
+            .get(&entity_id)
+            .map(|v| v.value.clone())
+            .flatten();
+        if player_identity_data_value != new_player_identity_data {
+            SceneCrdtStateProtoComponents::get_player_identity_data_mut(&mut self.crdt)
+                .put(entity_id, new_player_identity_data);
+        }
     }
 
     pub fn spawn_voice_channel(
@@ -264,5 +325,61 @@ impl AvatarScene {
             .get_mut(&entity_id)
             .unwrap()
             .call("push_voice_frame".into(), &[frame.to_variant()]);
+    }
+
+    pub fn update_crdt_state(&self, target_crdt_state: &mut SceneCrdtState) {
+        for entity_number in Self::FROM_ENTITY_ID..Self::MAX_ENTITY_ID {
+            let (local_version, local_live) = self.crdt.entities.get_entity_stat(entity_number);
+            let (target_version, target_live) =
+                target_crdt_state.entities.get_entity_stat(entity_number);
+
+            if local_version != target_version || local_live != target_live {
+                if *local_live {
+                    target_crdt_state
+                        .entities
+                        .try_init(SceneEntityId::new(entity_number, *local_version));
+                } else {
+                    target_crdt_state
+                        .entities
+                        .kill(SceneEntityId::new(entity_number, *local_version - 1));
+                }
+            }
+        }
+
+        let local_transform_component = self.crdt.get_transform();
+        let local_player_identity_data =
+            SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt);
+        let local_avatar_equipped_data =
+            SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt);
+        let local_avatar_base = SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt);
+
+        for entity_id in self.avatar_godot_scene.keys() {
+            let target_transform_component = target_crdt_state.get_transform_mut();
+            sync_crdt_lww_component!(
+                entity_id,
+                target_transform_component,
+                local_transform_component
+            );
+
+            let target_player_identity_data =
+                SceneCrdtStateProtoComponents::get_player_identity_data_mut(target_crdt_state);
+            sync_crdt_lww_component!(
+                entity_id,
+                target_player_identity_data,
+                local_player_identity_data
+            );
+
+            let target_avatar_base =
+                SceneCrdtStateProtoComponents::get_avatar_base_mut(target_crdt_state);
+            sync_crdt_lww_component!(entity_id, target_avatar_base, local_avatar_base);
+
+            let target_avatar_equipped_data =
+                SceneCrdtStateProtoComponents::get_avatar_equipped_data_mut(target_crdt_state);
+            sync_crdt_lww_component!(
+                entity_id,
+                target_avatar_equipped_data,
+                local_avatar_equipped_data
+            );
+        }
     }
 }
