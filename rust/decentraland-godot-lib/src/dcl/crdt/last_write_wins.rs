@@ -28,7 +28,7 @@ pub trait LastWriteWinsComponentOperation<T> {
         value: Option<T>,
     ) -> bool;
     fn put(&mut self, entity: SceneEntityId, value: Option<T>) -> bool;
-    fn get(&self, entity: SceneEntityId) -> Option<&LWWEntry<T>>;
+    fn get(&self, entity: &SceneEntityId) -> Option<&LWWEntry<T>>;
 }
 
 // The generic trait is only applied to the component with the types that sastifies the implementation
@@ -83,8 +83,8 @@ impl<T> LastWriteWinsComponentOperation<T> for LastWriteWins<T> {
         true
     }
 
-    fn get(&self, entity: SceneEntityId) -> Option<&LWWEntry<T>> {
-        self.values.get(&entity)
+    fn get(&self, entity: &SceneEntityId) -> Option<&LWWEntry<T>> {
+        self.values.get(entity)
     }
 
     fn put(&mut self, entity: SceneEntityId, value: Option<T>) -> bool {
@@ -173,23 +173,23 @@ mod test {
             get_i32_component_and_helper();
 
         // 1) should not exist the entry
-        assert!(i32_component.get(entity).is_none());
+        assert!(i32_component.get(&entity).is_none());
 
         // 2) should put the initial value
         assert!(i32_component.set(entity, SceneCrdtTimestamp(0), Some(a_value)));
-        assert_eq!(i32_component.get(entity).unwrap().value, Some(a_value));
+        assert_eq!(i32_component.get(&entity).unwrap().value, Some(a_value));
 
         // 3) should not put a value with the same timestamp (should not update)
         assert!(!i32_component.set(entity, SceneCrdtTimestamp(0), Some(b_value)));
-        assert_eq!(i32_component.get(entity).unwrap().value, Some(a_value));
+        assert_eq!(i32_component.get(&entity).unwrap().value, Some(a_value));
 
         // 4) should put a value with a higher timestamp (should update)
         assert!(i32_component.set(entity, SceneCrdtTimestamp(1), Some(c_value)));
-        assert_eq!(i32_component.get(entity).unwrap().value, Some(c_value));
+        assert_eq!(i32_component.get(&entity).unwrap().value, Some(c_value));
 
         // 5) should not work if the timestamp is lower than the current one (should not update)
         assert!(!i32_component.set(entity, SceneCrdtTimestamp(0), Some(d_value)));
-        assert_eq!(i32_component.get(entity).unwrap().value, Some(c_value));
+        assert_eq!(i32_component.get(&entity).unwrap().value, Some(c_value));
     }
 
     #[test]
@@ -197,9 +197,9 @@ mod test {
         let (mut i32_component, entity, a_value, _, _, _) = get_i32_component_and_helper();
 
         assert!(i32_component.set(entity, SceneCrdtTimestamp(123), Some(a_value)));
-        assert_eq!(i32_component.get(entity).unwrap().value, Some(a_value));
+        assert_eq!(i32_component.get(&entity).unwrap().value, Some(a_value));
         assert!(i32_component.set_none(entity, SceneCrdtTimestamp(124)));
-        assert_eq!(i32_component.get(entity).unwrap().value, None);
+        assert_eq!(i32_component.get(&entity).unwrap().value, None);
     }
 
     #[test]
@@ -230,13 +230,13 @@ mod test {
         assert!(!i32_component.take_dirty().is_empty()); // clean the flag
 
         // Check that the entry is present
-        assert!(i32_component.get(entity).is_some());
+        assert!(i32_component.get(&entity).is_some());
 
         // Remove the entry without marking as dirty
         i32_component.remove_without_dirty(entity);
 
         // Check that the entry is not present
-        assert!(i32_component.get(entity).is_none());
+        assert!(i32_component.get(&entity).is_none());
 
         // Check that the dirty set is empty
         assert!(i32_component.take_dirty().is_empty());
@@ -250,13 +250,13 @@ mod test {
         assert!(i32_component.set(entity, SceneCrdtTimestamp(0), Some(a_value)));
 
         // Check that the entry is present
-        assert!(i32_component.get(entity).is_some());
+        assert!(i32_component.get(&entity).is_some());
 
         // Remove the entry
         i32_component.remove(entity);
 
         // Check that the entry is not present
-        assert!(i32_component.get(entity).is_none());
+        assert!(i32_component.get(&entity).is_none());
 
         // Check that the entity is marked as dirty
         let dirty_set = i32_component.take_dirty();
@@ -279,7 +279,7 @@ mod test {
         assert!(component.set_from_binary(entity, timestamp, &mut reader));
 
         // Check that the component has the correct value
-        let entry = component.get(entity).unwrap();
+        let entry = component.get(&entity).unwrap();
         assert_eq!(entry.timestamp, timestamp);
         assert_eq!(*entry.value.as_ref().unwrap(), data);
     }

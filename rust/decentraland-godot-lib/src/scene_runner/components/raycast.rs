@@ -29,7 +29,7 @@ pub fn update_raycasts(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(raycast_dirty) = dirty_lww_components.get(&SceneComponentId::RAYCAST) {
         for entity in raycast_dirty {
-            let new_value = raycast_component.get(*entity);
+            let new_value = raycast_component.get(entity);
             if new_value.is_none() {
                 scene.continuos_raycast.remove(entity);
                 continue;
@@ -59,7 +59,7 @@ pub fn update_raycasts(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         let Some(entity_node) = scene.godot_dcl_scene.get_node_3d(entity) else {
             continue;
         };
-        let Some(raycast) = raycast_component.get(*entity) else {
+        let Some(raycast) = raycast_component.get(entity) else {
             continue;
         };
 

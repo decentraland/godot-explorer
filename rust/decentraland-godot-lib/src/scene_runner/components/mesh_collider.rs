@@ -102,7 +102,7 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
         let mesh_collider_component = SceneCrdtStateProtoComponents::get_mesh_collider(crdt_state);
 
         for entity in mesh_collider_dirty {
-            let new_value = mesh_collider_component.get(*entity);
+            let new_value = mesh_collider_component.get(entity);
             if new_value.is_none() {
                 continue;
             }

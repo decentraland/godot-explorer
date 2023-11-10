@@ -17,7 +17,7 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         let text_shape_component = SceneCrdtStateProtoComponents::get_text_shape(crdt_state);
 
         for entity in text_shape_dirty {
-            let new_value = text_shape_component.get(*entity);
+            let new_value = text_shape_component.get(entity);
             if new_value.is_none() {
                 continue;
             }

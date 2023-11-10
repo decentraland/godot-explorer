@@ -29,7 +29,7 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         let animator_component = SceneCrdtStateProtoComponents::get_animator(crdt_state);
 
         for entity in animator_dirty {
-            let new_value = animator_component.get(*entity);
+            let new_value = animator_component.get(entity);
             if new_value.is_none() {
                 continue;
             }

@@ -23,7 +23,7 @@ pub fn update_audio_source(
 
     if let Some(audio_source_dirty) = dirty_lww_components.get(&SceneComponentId::AUDIO_SOURCE) {
         for entity in audio_source_dirty {
-            let new_value = audio_source_component.get(*entity);
+            let new_value = audio_source_component.get(entity);
             if new_value.is_none() {
                 scene.audio_sources.remove(entity);
                 continue;

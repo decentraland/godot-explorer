@@ -21,7 +21,7 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
         dirty_lww_components.get(&SceneComponentId::CAMERA_MODE_AREA)
     {
         for entity in camera_mode_area_dirty {
-            let new_value = camera_mode_area_component.get(*entity);
+            let new_value = camera_mode_area_component.get(entity);
 
             let Some(new_value) = new_value else {
                 continue; // no value, continue
