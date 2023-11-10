@@ -22,6 +22,16 @@ static func ensure_ends_with_slash(str_param: String) -> String:
 	return str_param.trim_suffix("/") + "/"
 
 
+static func ensure_starts_with_https(str_param: String) -> String:
+	if str_param.begins_with("https://"):
+		return str_param
+
+	if str_param.begins_with("http://"):
+		return str_param
+
+	return "https://" + str_param
+
+
 static func resolve_realm_url(value: String) -> String:
 	if Realm.is_dcl_ens(value):
 		return Realm.dcl_world_url(value)
@@ -60,6 +70,7 @@ static func parse_urn(urn: String):
 func set_realm(new_realm_string: String) -> void:
 	realm_string = new_realm_string
 	realm_url = ensure_ends_with_slash(resolve_realm_url(realm_string))
+	realm_url = ensure_starts_with_https(realm_url)
 	var promise: Promise = http_requester.request_json(
 		realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
