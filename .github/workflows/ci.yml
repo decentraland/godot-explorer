@@ -268,7 +268,7 @@ jobs:
             COMMIT_HASH=${{ github.sha }}
 
       - name: Push To quay.io
-        if: matrix.os != 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest'
         id: push-to-quay
         uses: redhat-actions/push-to-registry@v2
         with:
