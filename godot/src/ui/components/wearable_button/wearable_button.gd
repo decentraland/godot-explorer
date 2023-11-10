@@ -136,7 +136,7 @@ func set_wearable(wearable: Dictionary):
 		}
 		var promise = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
 		var res = await promise.co_awaiter()
-		if res is PromiseError:
+		if res is Promise.Error:
 			printerr("Fetch texture error on ", wearable_thumbnail)
 		else:
 			texture_rect_preview.texture = res
