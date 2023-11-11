@@ -148,6 +148,7 @@ pointing/emulate_touch_from_mouse=true
 3d_physics/layer_14="CL_CUSTOM6"
 3d_physics/layer_15="CL_CUSTOM7"
 3d_physics/layer_16="CL_CUSTOM8"
+3d_physics/layer_31="CL_AVATAR_MODIFIER_AREA"
 3d_physics/layer_32="CL_CAMERA_MODE_AREA"
 
 [network]

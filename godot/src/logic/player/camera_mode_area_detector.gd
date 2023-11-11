@@ -24,7 +24,7 @@ func get_last_dcl_camera_mode_area_3d() -> DclCameraModeArea3D:
 
 func check_areas():
 	if !overlapping_areas.is_empty():
-		var first_area = get_last_dcl_camera_mode_area_3d()  # get first
+		var first_area = get_last_dcl_camera_mode_area_3d()
 		if first_area != null:
 			block_camera_mode.emit(first_area.forced_camera_mode)
 	else:

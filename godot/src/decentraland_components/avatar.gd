@@ -11,6 +11,7 @@ signal avatar_loaded
 
 # Public
 var avatar_name: String = ""
+var avatar_id: String = ""
 var playing_emote = false
 
 # Position Lerp
@@ -34,6 +35,25 @@ var finish_loading = false
 var wearables_by_category
 
 
+func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
+	_unset_avatar_modifier_area() # Reset state
+
+	for exclude_id in area.exclude_ids:
+		if avatar_id == exclude_id:
+			return # the avatar is not going to be modified
+
+	for modifier in area.avatar_modifiers:
+		if modifier == 0: # hide avatar
+			hide()
+		elif modifier == 1: # disable passport
+			pass # TODO: Passport (disable functionality)
+
+
+func _unset_avatar_modifier_area():
+	show()
+	# TODO: Passport (enable functionality)
+	
+
 func update_avatar(avatar: Dictionary):
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
@@ -43,6 +63,7 @@ func update_avatar(avatar: Dictionary):
 	set_idle()
 
 	avatar_name = avatar.get("name")
+	avatar_id = avatar.get("userId", "")
 	label_3d_name.text = avatar_name
 	current_wearables = avatar.get("wearables")
 	current_body_shape = avatar.get("body_shape")

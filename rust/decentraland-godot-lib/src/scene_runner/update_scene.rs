@@ -21,7 +21,7 @@ use super::{
         transform_and_parent::update_transform_and_parent,
         ui::scene_ui::update_scene_ui,
         video_player::update_video_player,
-        visibility::update_visibility,
+        visibility::update_visibility, avatar_modifier_area::update_avatar_modifier_area,
     },
     deleted_entities::update_deleted_entities,
     rpc_calls::process_rpcs,
@@ -180,6 +180,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::AudioStream => {
                 update_audio_stream(scene, crdt_state, current_parcel_scene_id);
+                false
+            }
+            SceneUpdateState::AvatarModifierArea => {
+                update_avatar_modifier_area(scene, crdt_state);
                 false
             }
             SceneUpdateState::CameraModeArea => {
