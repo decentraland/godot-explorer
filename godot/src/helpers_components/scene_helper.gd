@@ -1,5 +1,6 @@
 class_name SceneHelper
 
+
 static func search_scene_node(target: Node3D) -> DclSceneNode:
 	if target is DclSceneNode:
 		return target

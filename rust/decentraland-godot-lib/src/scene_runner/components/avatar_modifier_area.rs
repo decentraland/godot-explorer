@@ -31,7 +31,8 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
 
             let new_value = new_value.value.clone();
 
-            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("DCLAvatarModifierArea3D"));
+            let existing =
+                node_3d.try_get_node_as::<Node>(NodePath::from("DCLAvatarModifierArea3D"));
 
             if new_value.is_none() {
                 if let Some(camera_mode_area_node) = existing {
@@ -42,7 +43,11 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                     .area
                     .unwrap_or(proto_components::common::Vector3::default());
                 let modifiers = new_value.modifiers.into_iter().collect();
-                let exclude_ids = new_value.exclude_ids.into_iter().map(GodotString::from).collect();
+                let exclude_ids = new_value
+                    .exclude_ids
+                    .into_iter()
+                    .map(GodotString::from)
+                    .collect();
 
                 if let Some(camera_mode_area_node) = existing {
                     let mut camera_mode_area_3d =
@@ -54,9 +59,7 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                     camera_mode_area_3d
                         .bind_mut()
                         .set_avatar_modifiers(modifiers);
-                    camera_mode_area_3d
-                        .bind_mut()
-                        .set_exclude_ids(exclude_ids);
+                    camera_mode_area_3d.bind_mut().set_exclude_ids(exclude_ids);
                 } else {
                     let mut camera_mode_area_3d = godot::engine::load::<PackedScene>(
                         "res://src/decentraland_components/avatar_modifier_area.tscn",
@@ -71,9 +74,7 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                     camera_mode_area_3d
                         .bind_mut()
                         .set_avatar_modifiers(modifiers);
-                    camera_mode_area_3d
-                        .bind_mut()
-                        .set_exclude_ids(exclude_ids);
+                    camera_mode_area_3d.bind_mut().set_exclude_ids(exclude_ids);
                     camera_mode_area_3d.set_name(GodotString::from("DCLAvatarModifierArea3D"));
                     node_3d.add_child(camera_mode_area_3d.clone().upcast());
                 }

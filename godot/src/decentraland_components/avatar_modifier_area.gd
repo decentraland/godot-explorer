@@ -4,6 +4,7 @@ extends DclAvatarModifierArea3D
 
 var scene_id: int = 0
 
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	scene_id = SceneHelper.search_scene_node(self).get_scene_id()

@@ -7,15 +7,18 @@ signal set_avatar_modifier_area(area: DclAvatarModifierArea3D)
 # we don't check if it's inside or not...
 # and when the avatar enters/exits the scene, it will check it
 
-signal unset_avatar_modifier_area()
+signal unset_avatar_modifier_area
 
 var overlapping_areas: Array[Area3D] = []
+
 
 func _ready():
 	avatar.change_scene_id.connect(self._on_avatar_change_scene_id)
 
+
 func _on_avatar_change_scene_id(new_scene_id: int):
 	check_areas()
+
 
 func _on_area_entered(area):
 	if area is DclAvatarModifierArea3D:
@@ -35,9 +38,9 @@ func get_last_dcl_avatar_modifier_area_3d(areas: Array[Area3D]) -> DclAvatarModi
 
 func check_areas():
 	var avatar_scene_id = avatar.scene_id
-	
+
 	# only areas that have the same scene id than the player...
-	var areas = overlapping_areas.filter(func (area): return area.scene_id == avatar_scene_id)
+	var areas = overlapping_areas.filter(func(area): return area.scene_id == avatar_scene_id)
 
 	if !areas.is_empty():
 		var first_area = get_last_dcl_avatar_modifier_area_3d(areas)
