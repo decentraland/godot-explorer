@@ -14,6 +14,14 @@ var avatar_name: String = ""
 var avatar_id: String = ""
 var playing_emote = false
 
+# Parcel Position
+var parcel_position: Vector2i = Vector2i.ZERO
+var last_parcel_position: Vector2i = Vector2i(Math.INT32_MAX,Math.INT32_MAX) # Vector2i.MAX is coming: https://github.com/godotengine/godot/pull/81741
+var scene_id: int = Math.INT32_MIN
+var last_scene_id: int = Math.INT32_MAX
+signal change_parcel_position(parcel_position: Vector2)
+signal change_scene_id(scene_id: Vector2)
+
 # Position Lerp
 var last_position: Vector3 = Vector3.ZERO
 var target_position: Vector3 = Vector3.ZERO
@@ -430,8 +438,20 @@ func set_target(target: Transform3D) -> void:
 
 	t = 0
 
+func _check_parcel_position():
+	parcel_position = Math.get_parcel_position_by_world_position(self.get_global_position())
+	
+	if last_parcel_position != parcel_position:
+		last_parcel_position = parcel_position
+		change_parcel_position.emit(parcel_position)
+		scene_id = Global.scene_runner.get_scene_id_by_parcel_position(parcel_position)
+		if last_scene_id != scene_id:
+			last_scene_id = scene_id
+			change_scene_id.emit(scene_id)
 
 func _process(delta):
+	_check_parcel_position()
+
 	if skip_process:
 		return
 
@@ -442,6 +462,7 @@ func _process(delta):
 				t = 1.0
 
 			self.global_position = last_position.lerp(target_position, t)
+			
 			if target_distance > 0:
 				if target_distance > 0.6:
 					set_running()
