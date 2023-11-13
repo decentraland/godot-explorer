@@ -9,15 +9,11 @@ RUN apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY exports/decentraland.godot.client.x86_64 exports/decentraland.godot.client.pck exports/libdecentraland_godot_lib.so  /app/
-
-RUN <<EOF
-echo "#!/bin/sh" > entry-point.sh
-echo "" >> entry-point.sh
-echo "/usr/bin/Xvfb -ac :99 -screen 0 1280x1024x24 &" >> entry-point.sh
-echo "export DISPLAY=:99" >> entry-point.sh
-echo "./decentraland.godot.client.x86_64 --rendering-driver opengl3 --avatar-renderer --avatars avatars.json" >> entry-point.sh
-EOF
+COPY exports/decentraland.godot.client.x86_64 \
+    exports/decentraland.godot.client.pck \
+    exports/libdecentraland_godot_lib.so  \
+    entry-point.sh \
+    /app/
 
 RUN chmod +x entry-point.sh
 
