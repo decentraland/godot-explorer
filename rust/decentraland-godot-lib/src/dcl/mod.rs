@@ -20,6 +20,10 @@ use std::{
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub struct SceneId(pub u32);
 
+impl SceneId {
+    pub const INVALID: u32 = 0xFFFF_FFFF;
+}
+
 // scene metadata
 #[derive(Clone, Default, Debug)]
 pub struct SceneDefinition {

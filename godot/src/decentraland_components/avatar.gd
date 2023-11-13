@@ -1,7 +1,9 @@
-extends Node3D
+extends DclAvatar
 class_name Avatar
 
 signal avatar_loaded
+signal change_parcel_position(parcel_position: Vector2)
+signal change_scene_id(scene_id: int)
 
 @export var skip_process: bool = false
 @onready var animation_player = $Armature/AnimationPlayer
@@ -17,10 +19,6 @@ var playing_emote = false
 # Parcel Position
 var parcel_position: Vector2i = Vector2i.ZERO
 var last_parcel_position: Vector2i = Vector2i(Math.INT32_MAX, Math.INT32_MAX)  # Vector2i.MAX is coming: https://github.com/godotengine/godot/pull/81741
-var scene_id: int = Math.INT32_MIN
-var last_scene_id: int = Math.INT32_MAX
-signal change_parcel_position(parcel_position: Vector2)
-signal change_scene_id(scene_id: Vector2)
 
 # Position Lerp
 var last_position: Vector3 = Vector3.ZERO
@@ -445,11 +443,16 @@ func _check_parcel_position():
 	if last_parcel_position != parcel_position:
 		last_parcel_position = parcel_position
 		change_parcel_position.emit(parcel_position)
-		scene_id = Global.scene_runner.get_scene_id_by_parcel_position(parcel_position)
-		if last_scene_id != scene_id:
-			last_scene_id = scene_id
+		var scene_id = Global.scene_runner.get_scene_id_by_parcel_position(parcel_position)
+		if current_parcel_scene_id != scene_id:
+			current_parcel_scene_id = scene_id
 			change_scene_id.emit(scene_id)
 
+	if current_parcel_scene_id == -1:
+		var scene_id = Global.scene_runner.get_scene_id_by_parcel_position(parcel_position)
+		if current_parcel_scene_id != scene_id:
+			current_parcel_scene_id = scene_id
+			change_scene_id.emit(scene_id)
 
 func _process(delta):
 	_check_parcel_position()

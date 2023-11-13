@@ -26,7 +26,7 @@ use super::{
     },
     deleted_entities::update_deleted_entities,
     rpc_calls::process_rpcs,
-    scene::{Dirty, Scene, SceneUpdateState},
+    scene::{Dirty, Scene, SceneType, SceneUpdateState},
 };
 use crate::{
     common::rpc::RpcCalls,
@@ -206,11 +206,17 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::ComputeCrdtState => {
+                let filter_by_scene_id = if let SceneType::Parcel = scene.scene_type {
+                    Some(*current_parcel_scene_id)
+                } else {
+                    None
+                };
+
                 DclGlobal::singleton()
                     .bind()
                     .avatars
                     .bind()
-                    .update_crdt_state(crdt_state);
+                    .update_crdt_state(crdt_state, filter_by_scene_id);
 
                 let camera_transform = DclTransformAndParent::from_godot(
                     camera_global_transform,

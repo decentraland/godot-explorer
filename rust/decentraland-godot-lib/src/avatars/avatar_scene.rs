@@ -7,18 +7,16 @@ use crate::{
     comms::profile::SerializedProfile,
     dcl::{
         components::{
-            proto_components::{
-                kernel::comms::rfc4,
-                sdk::components::{PbAvatarBase, PbAvatarEquippedData, PbPlayerIdentityData},
-            },
-            transform_and_parent::DclTransformAndParent,
-            SceneEntityId,
+            proto_components::kernel::comms::rfc4, transform_and_parent::DclTransformAndParent,
+            SceneCrdtTimestamp, SceneEntityId,
         },
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
+        SceneId,
     },
+    godot_classes::dcl_avatar::DclAvatar,
     wallet::AsH160,
 };
 
@@ -30,7 +28,7 @@ pub struct AvatarScene {
 
     // map alias to the entity_id
     avatar_entity: HashMap<u32, SceneEntityId>,
-    avatar_godot_scene: HashMap<SceneEntityId, Gd<Node3D>>,
+    avatar_godot_scene: HashMap<SceneEntityId, Gd<DclAvatar>>,
     avatar_address: HashMap<H160, u32>,
 
     // scenes_dirty: HashMap<SceneId, HashMap<SceneEntityId, SceneComponentId>>,
@@ -110,9 +108,17 @@ impl AvatarScene {
             &[dcl_transform.to_godot_transform_3d().to_variant()],
         );
 
+        let transform_component = self.crdt.get_transform_mut();
+        let new_timestamp = if let Some(entry) = transform_component.values.get(&entity_id) {
+            // In this case we go two by two, so null transform falls in the middle (odd values)
+            SceneCrdtTimestamp(entry.timestamp.0 + 2)
+        } else {
+            SceneCrdtTimestamp(2)
+        };
+
         self.crdt
             .get_transform_mut()
-            .put(entity_id, Some(dcl_transform));
+            .set(entity_id, new_timestamp, Some(dcl_transform));
     }
 
     #[func]
@@ -129,7 +135,7 @@ impl AvatarScene {
             godot::engine::load::<PackedScene>("res://src/decentraland_components/avatar.tscn")
                 .instantiate()
                 .unwrap()
-                .cast::<Node3D>();
+                .cast::<DclAvatar>();
 
         if let Some(address) = address.to_string().as_h160() {
             self.avatar_address.insert(address, alias);
@@ -140,7 +146,7 @@ impl AvatarScene {
     }
 
     #[func]
-    pub fn get_avatar_by_address(&self, address: GodotString) -> Option<Gd<Node3D>> {
+    pub fn get_avatar_by_address(&self, address: GodotString) -> Option<Gd<DclAvatar>> {
         if let Some(address) = address.to_string().as_h160() {
             if let Some(alias) = self.avatar_address.get(&address) {
                 if let Some(entity_id) = self.avatar_entity.get(alias) {
@@ -327,7 +333,11 @@ impl AvatarScene {
             .call("push_voice_frame".into(), &[frame.to_variant()]);
     }
 
-    pub fn update_crdt_state(&self, target_crdt_state: &mut SceneCrdtState) {
+    pub fn update_crdt_state(
+        &self,
+        target_crdt_state: &mut SceneCrdtState,
+        filter_by_scene_id: Option<SceneId>,
+    ) {
         for entity_number in Self::FROM_ENTITY_ID..Self::MAX_ENTITY_ID {
             let (local_version, local_live) = self.crdt.entities.get_entity_stat(entity_number);
             let (target_version, target_live) =
@@ -353,13 +363,29 @@ impl AvatarScene {
             SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt);
         let local_avatar_base = SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt);
 
-        for entity_id in self.avatar_godot_scene.keys() {
+        for (entity_id, avatar_scene) in self.avatar_godot_scene.iter() {
             let target_transform_component = target_crdt_state.get_transform_mut();
-            sync_crdt_lww_component!(
-                entity_id,
-                target_transform_component,
-                local_transform_component
-            );
+
+            let null_transform: bool = if let Some(scene_id_int) = filter_by_scene_id {
+                (scene_id_int.0 as i32) != avatar_scene.bind().get_current_parcel_scene_id()
+            } else {
+                false
+            };
+
+            if null_transform {
+                if let Some(value) = target_transform_component.get(entity_id) {
+                    if value.value.is_some() {
+                        target_transform_component.put(*entity_id, None);
+                    }
+                }
+            } else {
+                // todo: transform to local coordinates
+                sync_crdt_lww_component!(
+                    entity_id,
+                    target_transform_component,
+                    local_transform_component
+                );
+            }
 
             let target_player_identity_data =
                 SceneCrdtStateProtoComponents::get_player_identity_data_mut(target_crdt_state);

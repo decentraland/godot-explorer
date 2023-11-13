@@ -69,7 +69,7 @@ static func parse_urn(urn: String):
 
 func set_realm(new_realm_string: String) -> void:
 	realm_string = new_realm_string
-	realm_url = Realm.ensure_ends_with_slash(resolve_realm_url(realm_string))
+	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)
 	var promise: Promise = http_requester.request_json(
 		realm_url + "about", HTTPClient.METHOD_GET, "", []
