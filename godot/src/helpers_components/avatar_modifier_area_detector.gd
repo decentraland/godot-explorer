@@ -16,6 +16,10 @@ func _ready():
 	avatar.change_scene_id.connect(self._on_avatar_change_scene_id)
 
 
+func _on_tree_exiting():
+	avatar.change_scene_id.disconnect(self._on_avatar_change_scene_id)
+
+
 func _on_avatar_change_scene_id(new_scene_id: int):
 	check_areas()
 

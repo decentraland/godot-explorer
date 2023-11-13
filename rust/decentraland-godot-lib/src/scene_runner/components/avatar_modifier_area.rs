@@ -35,8 +35,8 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 node_3d.try_get_node_as::<Node>(NodePath::from("DCLAvatarModifierArea3D"));
 
             if new_value.is_none() {
-                if let Some(camera_mode_area_node) = existing {
-                    node_3d.remove_child(camera_mode_area_node);
+                if let Some(avatar_modifier_area_node) = existing {
+                    node_3d.remove_child(avatar_modifier_area_node);
                 }
             } else if let Some(new_value) = new_value {
                 let area = new_value
@@ -49,34 +49,36 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                     .map(GodotString::from)
                     .collect();
 
-                if let Some(camera_mode_area_node) = existing {
-                    let mut camera_mode_area_3d =
-                        camera_mode_area_node.cast::<DclAvatarModifierArea3D>();
+                if let Some(avatar_modifier_mode_area_node) = existing {
+                    let mut avatar_modifier_area_3d =
+                        avatar_modifier_mode_area_node.cast::<DclAvatarModifierArea3D>();
 
-                    camera_mode_area_3d
+                    avatar_modifier_area_3d
                         .bind_mut()
                         .set_area(Vector3::new(area.x, area.y, area.z));
-                    camera_mode_area_3d
+                    avatar_modifier_area_3d
                         .bind_mut()
                         .set_avatar_modifiers(modifiers);
-                    camera_mode_area_3d.bind_mut().set_exclude_ids(exclude_ids);
+                    avatar_modifier_area_3d
+                        .bind_mut()
+                        .set_exclude_ids(exclude_ids);
                 } else {
-                    let mut camera_mode_area_3d = godot::engine::load::<PackedScene>(
+                    let mut avatar_modifier_area = godot::engine::load::<PackedScene>(
                         "res://src/decentraland_components/avatar_modifier_area.tscn",
                     )
                     .instantiate()
                     .unwrap()
                     .cast::<DclAvatarModifierArea3D>();
 
-                    camera_mode_area_3d
+                    avatar_modifier_area
                         .bind_mut()
                         .set_area(Vector3::new(area.x, area.y, area.z));
-                    camera_mode_area_3d
+                    avatar_modifier_area
                         .bind_mut()
                         .set_avatar_modifiers(modifiers);
-                    camera_mode_area_3d.bind_mut().set_exclude_ids(exclude_ids);
-                    camera_mode_area_3d.set_name(GodotString::from("DCLAvatarModifierArea3D"));
-                    node_3d.add_child(camera_mode_area_3d.clone().upcast());
+                    avatar_modifier_area.bind_mut().set_exclude_ids(exclude_ids);
+                    avatar_modifier_area.set_name(GodotString::from("DCLAvatarModifierArea3D"));
+                    node_3d.add_child(avatar_modifier_area.clone().upcast());
                 }
             }
         }
