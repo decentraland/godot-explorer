@@ -17,6 +17,34 @@ pub struct SpawnResponse {
     pub ens: Option<String>,
 }
 
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct AvatarForUserData {
+    pub body_shape: String,
+    pub skin_color: String,
+    pub hair_color: String,
+    pub eye_color: String,
+    pub wearables: Vec<String>,
+    pub snapshots: Option<Snapshots>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Snapshots {
+    pub face256: String,
+    pub body: String,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct UserData {
+    pub display_name: String,
+    pub public_key: Option<String>,
+    pub has_connected_web3: bool,
+    pub user_id: String,
+    pub version: u32,
+    pub avatar: Option<AvatarForUserData>,
+}
+
 #[derive(Debug, Clone)]
 pub struct RpcResultSender<T>(Arc<RwLock<Option<tokio::sync::oneshot::Sender<T>>>>);
 
