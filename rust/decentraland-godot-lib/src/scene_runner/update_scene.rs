@@ -33,7 +33,7 @@ use crate::{
     dcl::{
         components::{
             proto_components::sdk::components::{
-                PbCameraMode, PbEngineInfo, PbUiCanvasInformation,
+                PbCameraMode, PbEngineInfo, PbPointerLock, PbUiCanvasInformation,
             },
             transform_and_parent::DclTransformAndParent,
             SceneEntityId,
@@ -205,6 +205,7 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::ComputeCrdtState => {
+                // Set transform
                 let camera_transform = DclTransformAndParent::from_godot(
                     camera_global_transform,
                     scene.godot_dcl_scene.root_node_3d.get_position(),
@@ -220,28 +221,40 @@ pub fn _process_scene(
                     .get_transform_mut()
                     .put(SceneEntityId::CAMERA, Some(camera_transform));
 
-                let maybe_current_camera_mode = {
-                    if let Some(camera_mode_value) =
-                        SceneCrdtStateProtoComponents::get_camera_mode(crdt_state)
-                            .get(SceneEntityId::CAMERA)
-                    {
-                        camera_mode_value
-                            .value
-                            .as_ref()
-                            .map(|camera_mode_value| camera_mode_value.mode)
-                    } else {
-                        None
-                    }
-                };
+                // Set camera mode
+                let maybe_current_camera_mode =
+                    SceneCrdtStateProtoComponents::get_camera_mode(crdt_state)
+                        .get(SceneEntityId::CAMERA)
+                        .and_then(|camera_mode_value| {
+                            camera_mode_value.value.as_ref().map(|v| v.mode)
+                        });
 
-                if maybe_current_camera_mode.is_none()
-                    || maybe_current_camera_mode.unwrap() != camera_mode
-                {
+                if maybe_current_camera_mode != Some(camera_mode) {
                     let camera_mode_component = PbCameraMode { mode: camera_mode };
                     SceneCrdtStateProtoComponents::get_camera_mode_mut(crdt_state)
                         .put(SceneEntityId::CAMERA, Some(camera_mode_component));
                 }
 
+                // Set PointerLock
+                let maybe_is_pointer_locked =
+                    SceneCrdtStateProtoComponents::get_pointer_lock(crdt_state)
+                        .get(SceneEntityId::CAMERA)
+                        .and_then(|pointer_lock_value| {
+                            pointer_lock_value
+                                .value
+                                .as_ref()
+                                .map(|v| v.is_pointer_locked)
+                        });
+
+                let is_pointer_locked = godot::prelude::Input::singleton().get_mouse_mode()
+                    == godot::engine::input::MouseMode::MOUSE_MODE_CAPTURED;
+                if maybe_is_pointer_locked != Some(is_pointer_locked) {
+                    let pointer_lock_component = PbPointerLock { is_pointer_locked };
+                    SceneCrdtStateProtoComponents::get_pointer_lock_mut(crdt_state)
+                        .put(SceneEntityId::CAMERA, Some(pointer_lock_component));
+                }
+
+                // Process pointer events
                 let pointer_events_result_component =
                     SceneCrdtStateProtoComponents::get_pointer_events_result_mut(crdt_state);
 
@@ -256,6 +269,7 @@ pub fn _process_scene(
                     pointer_events_result_component.append(entity, value);
                 }
 
+                // Set renderer response to the scene
                 let dirty = crdt_state.take_dirty();
                 scene.current_dirty.renderer_response = Some(RendererResponse::Ok(dirty));
                 false
