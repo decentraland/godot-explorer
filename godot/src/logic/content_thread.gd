@@ -112,7 +112,7 @@ func _co_process_loading_wearable(
 	)
 
 	var content_result = await promise.co_awaiter()
-	if content_result is PromiseError:
+	if content_result is Promise.Error:
 		printerr("Failing on loading wearable ", url, " reason: ", content_result.get_error())
 		return
 
@@ -184,7 +184,7 @@ func _co_process_loading_gltf(content: Dictionary, content_cache_map: Dictionary
 		var request_promise = _http_requester.request_file(file_hash_path, absolute_file_path)
 
 		var content_result = await request_promise.co_awaiter()
-		if content_result is PromiseError:
+		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading gltf ", file_hash_path, " reason: ", content_result.get_error()
 			)
@@ -227,7 +227,7 @@ func _co_process_loading_gltf(content: Dictionary, content_cache_map: Dictionary
 
 	content["gltf_mappings"] = mappings
 
-	await Awaiter.co_all(promises_dependencies)
+	await Promise.co_all(promises_dependencies)
 
 	# final processing
 	var new_gltf := GLTFDocument.new()
@@ -272,7 +272,7 @@ func _co_process_loading_texture(
 		var promise: Promise = _http_requester.request_file(file_hash_path, absolute_file_path)
 
 		var content_result = await promise.co_awaiter()
-		if content_result is PromiseError:
+		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading gltf ", file_hash_path, " reason: ", content_result.get_error()
 			)
@@ -319,7 +319,7 @@ func _co_process_loading_audio(
 
 		var promise: Promise = _http_requester.request_file(file_hash_path, absolute_file_path)
 		var content_result = await promise.co_awaiter()
-		if content_result is PromiseError:
+		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading wearable ",
 				file_hash_path,
@@ -380,7 +380,7 @@ func _co_process_loading_video(
 			base_url + file_hash, absolute_file_path
 		)
 		var content_result = await promise.co_awaiter()
-		if content_result is PromiseError:
+		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading wearable ",
 				file_hash_path,

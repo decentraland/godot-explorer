@@ -1,6 +1,7 @@
-[gd_scene load_steps=12 format=3 uid="uid://dvu5i0n51gph3"]
+[gd_scene load_steps=13 format=3 uid="uid://dvu5i0n51gph3"]
 
 [ext_resource type="Script" path="res://src/decentraland_components/avatar.gd" id="1_kkscc"]
+[ext_resource type="PackedScene" uid="uid://ci0fn7h7pxdmc" path="res://src/helpers_components/avatar_modifier_area_detector.tscn" id="2_8o107"]
 
 [sub_resource type="Animation" id="Animation_5gjhk"]
 resource_name = "Idle"
@@ -1645,3 +1646,9 @@ explosiveness = 1.0
 visibility_aabb = AABB(-4, -3.88281, -4, 8, 8, 8)
 process_material = SubResource("ParticleProcessMaterial_al8aw")
 draw_pass_1 = SubResource("SphereMesh_2nc0h")
+
+[node name="avatar_modifier_area_detector" parent="." node_paths=PackedStringArray("avatar") instance=ExtResource("2_8o107")]
+avatar = NodePath("..")
+
+[connection signal="set_avatar_modifier_area" from="avatar_modifier_area_detector" to="." method="_on_set_avatar_modifier_area"]
+[connection signal="unset_avatar_modifier_area" from="avatar_modifier_area_detector" to="." method="_unset_avatar_modifier_area"]

@@ -7,19 +7,8 @@ signal on_scene_active(active: bool)
 var _my_scene_id: int = 0
 
 
-func _search_scene_node(target: Node3D) -> DclSceneNode:
-	if target is DclSceneNode:
-		return target
-
-	var parent_node_3d = target.get_parent_node_3d()
-	if parent_node_3d == null:
-		return null
-
-	return _search_scene_node(parent_node_3d)
-
-
 func _ready():
-	var scene_node: DclSceneNode = _search_scene_node(self)
+	var scene_node: DclSceneNode = SceneHelper.search_scene_node(self)
 	if scene_node.is_global():
 		self.queue_free()
 		return

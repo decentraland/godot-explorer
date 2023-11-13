@@ -13,7 +13,7 @@ func request_video(file_hash):
 
 	var promise = Global.content_manager.fetch_video(file_hash, content_mapping)
 	var res = await promise.co_awaiter()
-	if res is PromiseError:
+	if res is Promise.Error:
 		printerr("Error on fetching video: ", res.get_error())
 	else:
 		_on_video_loaded(file_hash)
