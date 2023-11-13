@@ -8,6 +8,7 @@ use super::{
         audio_source::update_audio_source,
         audio_stream::update_audio_stream,
         avatar_attach::update_avatar_attach,
+        avatar_modifier_area::update_avatar_modifier_area,
         avatar_shape::update_avatar_shape,
         billboard::update_billboard,
         camera_mode_area::update_camera_mode_area,
@@ -180,6 +181,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::AudioStream => {
                 update_audio_stream(scene, crdt_state, current_parcel_scene_id);
+                false
+            }
+            SceneUpdateState::AvatarModifierArea => {
+                update_avatar_modifier_area(scene, crdt_state);
                 false
             }
             SceneUpdateState::CameraModeArea => {

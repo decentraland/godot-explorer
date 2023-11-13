@@ -195,6 +195,21 @@ impl SceneManager {
     }
 
     #[func]
+    fn get_scene_id_by_parcel_position(&self, parcel_position: Vector2i) -> i32 {
+        for scene in self.scenes.values() {
+            if let SceneType::Global(_) = scene.scene_type {
+                continue;
+            }
+
+            if scene.definition.parcels.contains(&parcel_position) {
+                return scene.scene_id.0 as i32;
+            }
+        }
+
+        -1
+    }
+
+    #[func]
     fn get_scene_base_parcel(&self, scene_id: i32) -> Vector2i {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
             return scene.definition.base;

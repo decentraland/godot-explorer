@@ -11,7 +11,16 @@ signal avatar_loaded
 
 # Public
 var avatar_name: String = ""
+var avatar_id: String = ""
 var playing_emote = false
+
+# Parcel Position
+var parcel_position: Vector2i = Vector2i.ZERO
+var last_parcel_position: Vector2i = Vector2i(Math.INT32_MAX, Math.INT32_MAX)  # Vector2i.MAX is coming: https://github.com/godotengine/godot/pull/81741
+var scene_id: int = Math.INT32_MIN
+var last_scene_id: int = Math.INT32_MAX
+signal change_parcel_position(parcel_position: Vector2)
+signal change_scene_id(scene_id: Vector2)
 
 # Position Lerp
 var last_position: Vector3 = Vector3.ZERO
@@ -34,6 +43,25 @@ var finish_loading = false
 var wearables_by_category
 
 
+func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
+	_unset_avatar_modifier_area()  # Reset state
+
+	for exclude_id in area.exclude_ids:
+		if avatar_id == exclude_id:
+			return  # the avatar is not going to be modified
+
+	for modifier in area.avatar_modifiers:
+		if modifier == 0:  # hide avatar
+			hide()
+		elif modifier == 1:  # disable passport
+			pass  # TODO: Passport (disable functionality)
+
+
+func _unset_avatar_modifier_area():
+	show()
+	# TODO: Passport (enable functionality)
+
+
 func update_avatar(avatar: Dictionary):
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
@@ -43,6 +71,7 @@ func update_avatar(avatar: Dictionary):
 	set_idle()
 
 	avatar_name = avatar.get("name")
+	avatar_id = avatar.get("userId", "")
 	label_3d_name.text = avatar_name
 	current_wearables = avatar.get("wearables")
 	current_body_shape = avatar.get("body_shape")
@@ -410,7 +439,21 @@ func set_target(target: Transform3D) -> void:
 	t = 0
 
 
+func _check_parcel_position():
+	parcel_position = Math.get_parcel_position_by_world_position(self.get_global_position())
+
+	if last_parcel_position != parcel_position:
+		last_parcel_position = parcel_position
+		change_parcel_position.emit(parcel_position)
+		scene_id = Global.scene_runner.get_scene_id_by_parcel_position(parcel_position)
+		if last_scene_id != scene_id:
+			last_scene_id = scene_id
+			change_scene_id.emit(scene_id)
+
+
 func _process(delta):
+	_check_parcel_position()
+
 	if skip_process:
 		return
 
@@ -421,6 +464,7 @@ func _process(delta):
 				t = 1.0
 
 			self.global_position = last_position.lerp(target_position, t)
+
 			if target_distance > 0:
 				if target_distance > 0.6:
 					set_running()

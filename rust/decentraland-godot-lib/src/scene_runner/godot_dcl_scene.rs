@@ -99,19 +99,11 @@ impl SceneDefinition {
         let parcels = VariantArray::try_from_variant(&parcels)
             .map_err(|_op| "couldn't get parcels as array")?;
 
-        let mut parcels = parcels
+        let parcels = parcels
             .iter_shared()
-            .map(|v| Vector2i::try_from_variant(&v));
-
-        if parcels.any(|v| v.is_err()) {
-            return Err("couldn't get parcels as Vector2".to_string());
-        }
-
-        let mut parcels: Vec<Vector2i> = parcels.map(|v| v.unwrap()).collect();
-
-        if !parcels.contains(&base) {
-            parcels.push(base);
-        }
+            .map(|v| Vector2i::try_from_variant(&v))
+            .collect::<Result<Vec<_>, VariantConversionError>>()
+            .map_err(|v| v.to_string())?;
 
         Ok(Self {
             main_crdt_path: main_crdt_path.to::<GodotString>().to_string(),

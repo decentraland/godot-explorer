@@ -2,6 +2,7 @@ pub mod animator;
 pub mod audio_source;
 pub mod audio_stream;
 pub mod avatar_attach;
+pub mod avatar_modifier_area;
 pub mod avatar_shape;
 pub mod billboard;
 pub mod camera_mode_area;
