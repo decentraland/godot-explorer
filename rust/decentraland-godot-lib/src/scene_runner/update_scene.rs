@@ -220,23 +220,14 @@ pub fn _process_scene(
                     .get_transform_mut()
                     .put(SceneEntityId::CAMERA, Some(camera_transform));
 
-                let maybe_current_camera_mode = {
-                    if let Some(camera_mode_value) =
-                        SceneCrdtStateProtoComponents::get_camera_mode(crdt_state)
-                            .get(SceneEntityId::CAMERA)
-                    {
-                        camera_mode_value
-                            .value
-                            .as_ref()
-                            .map(|camera_mode_value| camera_mode_value.mode)
-                    } else {
-                        None
-                    }
-                };
+                let maybe_current_camera_mode =
+                    SceneCrdtStateProtoComponents::get_camera_mode(crdt_state)
+                        .get(SceneEntityId::CAMERA)
+                        .and_then(|camera_mode_value| {
+                            camera_mode_value.value.as_ref().map(|v| v.mode)
+                        });
 
-                if maybe_current_camera_mode.is_none()
-                    || maybe_current_camera_mode.unwrap() != camera_mode
-                {
+                if maybe_current_camera_mode != Some(camera_mode) {
                     let camera_mode_component = PbCameraMode { mode: camera_mode };
                     SceneCrdtStateProtoComponents::get_camera_mode_mut(crdt_state)
                         .put(SceneEntityId::CAMERA, Some(camera_mode_component));
