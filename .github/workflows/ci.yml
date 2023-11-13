@@ -124,10 +124,10 @@ jobs:
   build:
     name: Build and test
     # Comment next line to test this job on PRs
-    if: ${{ github.ref == 'refs/heads/main' }} 
+    # if: ${{ github.ref == 'refs/heads/main' }} 
     strategy:
       matrix:
-        os: [self-hosted-windows, ubuntu-latest, macos-latest]
+        os: [self-hosted-windows, self-hosted-ubuntu, self-hosted-macos]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -155,18 +155,18 @@ jobs:
       # Depedencies section
       # => Linux 
       - name: Install alsa and udev
-        if: runner.os == 'linux'
+        if: runner.os == 'linux' && matrix.os != 'self-hosted-ubuntu'
         run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
       - name: install ffmpeg deps (linux)
         run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
-        if: runner.os == 'linux'
+        if: runner.os == 'linux' && matrix.os != 'self-hosted-ubuntu'
       - name: install livekit deps (linux)
         run: sudo apt update -y; sudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev
-        if: runner.os == 'linux'
+        if: runner.os == 'linux' && matrix.os != 'self-hosted-ubuntu'
 
       # => MacOS 
       - name: install ffmpeg deps (macOs)
-        if: runner.os == 'macos'
+        if: runner.os == 'macos' && matrix.os != 'self-hosted-macos'
         run: brew install ffmpeg pkg-config
         
       # TODO: cross-build deprecated with the ffmpeg integration           
