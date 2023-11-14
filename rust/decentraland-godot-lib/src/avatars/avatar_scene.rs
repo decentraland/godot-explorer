@@ -351,8 +351,7 @@ impl AvatarScene {
             SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt_state);
         let avatar_base_component_value = avatar_base_component
             .get(&entity_id)
-            .map(|v| v.value.clone())
-            .flatten();
+            .and_then(|v| v.value.clone());
         if avatar_base_component_value != new_avatar_base {
             // Push dirty state in all the scenes
             let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
@@ -372,8 +371,7 @@ impl AvatarScene {
             SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt_state);
         let avatar_equipped_data_value = avatar_equipped_data_component
             .get(&entity_id)
-            .map(|v| v.value.clone())
-            .flatten();
+            .and_then(|v| v.value.clone());
         if avatar_equipped_data_value != new_avatar_equipped_data {
             // Push dirty state in all the scenes
             let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
@@ -395,8 +393,7 @@ impl AvatarScene {
             SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt_state);
         let player_identity_data_value = player_identity_data_component
             .get(&entity_id)
-            .map(|v| v.value.clone())
-            .flatten();
+            .and_then(|v| v.value.clone());
         if player_identity_data_value != new_player_identity_data {
             // Push dirty state in all the scenes
             let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
