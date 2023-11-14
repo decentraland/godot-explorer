@@ -1,3 +1,4 @@
 extends Node3D
 
-# TODO...
+func set_type():
+	pass

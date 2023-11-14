@@ -1,6 +1,10 @@
-[gd_scene load_steps=2 format=3 uid="uid://dgd3ddpr402jq"]
+[gd_scene load_steps=3 format=3 uid="uid://dgd3ddpr402jq"]
 
 [ext_resource type="Script" path="res://src/decentraland_components/nft_shape.gd" id="1_adpol"]
+[ext_resource type="PackedScene" uid="uid://mt1on26448j0" path="res://assets/nftshape/Golden_01.glb" id="2_d37ib"]
 
 [node name="nft_shape" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0)
 script = ExtResource("1_adpol")
+
+[node name="Golden_01" parent="." instance=ExtResource("2_d37ib")]
