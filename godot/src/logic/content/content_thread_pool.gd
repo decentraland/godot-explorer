@@ -8,7 +8,7 @@ enum ContentType {
 	CT_MESHES_MATERIAL = 4,
 	CT_INSTACE_GLTF = 5,
 	CT_AUDIO = 6,
-	CT_VIDEO = 7
+	CT_VIDEO = 7,
 }
 
 var content_threads: Array[ContentThread] = []
