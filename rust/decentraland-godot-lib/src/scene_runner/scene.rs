@@ -10,7 +10,11 @@ use crate::{
     dcl::{
         components::{
             material::DclMaterial,
-            proto_components::sdk::components::{common::RaycastHit, PbPointerEventsResult},
+            proto_components::sdk::components::{
+                common::RaycastHit, PbAvatarBase, PbAvatarEmoteCommand, PbAvatarEquippedData,
+                PbPlayerIdentityData, PbPointerEventsResult,
+            },
+            transform_and_parent::DclTransformAndParent,
             SceneEntityId,
         },
         js::SceneLogMessage,
@@ -131,6 +135,16 @@ pub enum GlobalSceneType {
     PortableExperience,
 }
 
+#[derive(Default)]
+pub struct SceneAvatarUpdates {
+    transform: HashMap<SceneEntityId, DclTransformAndParent>,
+    player_identity_data: HashMap<SceneEntityId, PbPlayerIdentityData>,
+    avatar_base: HashMap<SceneEntityId, PbAvatarBase>,
+    avatar_equipped_data: HashMap<SceneEntityId, PbAvatarEquippedData>,
+    pointer_events_result: HashMap<SceneEntityId, Vec<PbPointerEventsResult>>,
+    avatar_emote_command: HashMap<SceneEntityId, Vec<PbAvatarEmoteCommand>>,
+}
+
 pub struct Scene {
     pub scene_id: SceneId,
     pub godot_dcl_scene: GodotDclScene,
@@ -162,6 +176,8 @@ pub struct Scene {
     // Used by VideoPlayer and AudioStream
     pub audio_streams: HashMap<SceneEntityId, Gd<DclAudioStream>>,
     pub video_players: HashMap<SceneEntityId, Gd<DclVideoPlayer>>,
+
+    pub avatar_scene_updates: SceneAvatarUpdates,
 }
 
 #[derive(Debug)]
@@ -245,6 +261,7 @@ impl Scene {
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
             scene_type,
+            avatar_scene_updates: Default::default(),
         }
     }
 
@@ -297,6 +314,7 @@ impl Scene {
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
+            avatar_scene_updates: Default::default(),
         }
     }
 }

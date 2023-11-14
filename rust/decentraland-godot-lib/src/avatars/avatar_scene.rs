@@ -17,6 +17,7 @@ use crate::{
         SceneId,
     },
     godot_classes::dcl_avatar::DclAvatar,
+    godot_classes::dcl_global::DclGlobal,
     wallet::AsH160,
 };
 
@@ -226,11 +227,16 @@ impl AvatarScene {
 
         // // TODO: the scale seted in the transform is local
         // avatar_scene.set_transform(dcl_transform.to_godot_transform_3d());
+        let current_avatar = self.avatar_godot_scene.get_mut(&entity_id);
+        
         self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
             "set_target".into(),
             &[dcl_transform.to_godot_transform_3d().to_variant()],
         );
 
+        let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+
+        scene_runner.bind_mut().get_global_scenes();
         self.crdt
             .get_transform_mut()
             .put(entity_id, Some(dcl_transform));
