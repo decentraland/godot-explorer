@@ -223,7 +223,7 @@ pub fn _process_scene(
             }
             SceneUpdateState::ComputeCrdtState => {
                 update_avatar_scene_updates(scene, crdt_state);
-
+              
                 // Set transform
                 let camera_transform = DclTransformAndParent::from_godot(
                     camera_global_transform,
