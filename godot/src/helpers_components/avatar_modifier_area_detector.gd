@@ -14,15 +14,14 @@ var overlapping_areas: Array[Area3D] = []
 
 func _ready():
 	avatar.change_scene_id.connect(self._on_avatar_change_scene_id)
-	
+
 	# Arbitrary order
 	for area in self.get_overlapping_areas():
 		_on_area_entered(area)
-		
+
 
 func _on_tree_exiting():
 	avatar.change_scene_id.disconnect(self._on_avatar_change_scene_id)
-	
 
 
 func _on_avatar_change_scene_id(_new_scene_id: int, _prev_scene_id: int):

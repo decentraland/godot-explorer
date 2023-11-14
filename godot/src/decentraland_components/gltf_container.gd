@@ -54,11 +54,11 @@ func _on_gltf_loaded():
 
 func deferred_add_child(new_gltf_node):
 	add_child(new_gltf_node)
-	
+
 	var main_tree = get_tree()
 	if not is_instance_valid(main_tree):
 		return
-		
+
 	await get_tree().process_frame
 
 	# Colliders and rendering is ensured to be ready at this point

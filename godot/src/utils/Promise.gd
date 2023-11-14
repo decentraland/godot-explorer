@@ -156,7 +156,8 @@ class RaceAwaiter:
 # Each function in the array is expected to be a coroutine or a function
 # that returns a promise.
 static func co_all(funcs: Array) -> Array:
-	if funcs.is_empty(): return []
+	if funcs.is_empty():
+		return []
 	return await AllAwaiter.new(funcs)._promise.co_awaiter()
 
 

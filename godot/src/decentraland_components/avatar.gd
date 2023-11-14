@@ -412,10 +412,12 @@ func apply_texture_and_mask(
 
 	mesh.mesh.surface_set_material(0, current_material)
 
+
 func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the Node3DVirtual, super(delta) doesn't work :/
 	self.process(delta)
-	
+
+
 func set_walking():
 	if animation_player.current_animation != "Walk":
 		animation_player.play("Walk")
