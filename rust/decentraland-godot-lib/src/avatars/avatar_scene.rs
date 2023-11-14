@@ -8,7 +8,7 @@ use crate::{
     dcl::{
         components::{
             proto_components::kernel::comms::rfc4, transform_and_parent::DclTransformAndParent,
-            SceneCrdtTimestamp, SceneEntityId,
+            SceneEntityId,
         },
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
@@ -16,7 +16,7 @@ use crate::{
         },
         SceneId,
     },
-    godot_classes::dcl_avatar::DclAvatar,
+    godot_classes::dcl_avatar::{AvatarMovementType, DclAvatar},
     godot_classes::dcl_global::DclGlobal,
     wallet::AsH160,
 };
@@ -32,9 +32,7 @@ pub struct AvatarScene {
     avatar_godot_scene: HashMap<SceneEntityId, Gd<DclAvatar>>,
     avatar_address: HashMap<H160, u32>,
 
-    // scenes_dirty: HashMap<SceneId, HashMap<SceneEntityId, SceneComponentId>>,
-    //
-    crdt: SceneCrdtState,
+    crdt_state: SceneCrdtState,
 
     last_updated_profile: HashMap<SceneEntityId, SerializedProfile>,
 }
@@ -45,7 +43,7 @@ impl NodeVirtual for AvatarScene {
         AvatarScene {
             base,
             avatar_entity: HashMap::new(),
-            crdt: SceneCrdtState::from_proto(),
+            crdt_state: SceneCrdtState::from_proto(),
             avatar_godot_scene: HashMap::new(),
             avatar_address: HashMap::new(),
             last_updated_profile: HashMap::new(),
@@ -90,7 +88,11 @@ impl AvatarScene {
     }
 
     #[func]
-    pub fn update_avatar_transform(&mut self, alias: u32, transform: Transform3D) {
+    pub fn update_avatar_transform_with_godot_transform(
+        &mut self,
+        alias: u32,
+        transform: Transform3D,
+    ) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
@@ -99,27 +101,7 @@ impl AvatarScene {
         };
 
         let dcl_transform = DclTransformAndParent::from_godot(&transform, Vector3::ZERO);
-
-        // let avatar_scene = self.avatar_godot_scene.get_mut(&entity_id).unwrap();
-
-        // // TODO: the scale seted in the transform is local
-        // avatar_scene.set_transform(dcl_transform.to_godot_transform_3d());
-        self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
-            "set_target".into(),
-            &[dcl_transform.to_godot_transform_3d().to_variant()],
-        );
-
-        let transform_component = self.crdt.get_transform_mut();
-        let new_timestamp = if let Some(entry) = transform_component.values.get(&entity_id) {
-            // In this case we go two by two, so null transform falls in the middle (odd values)
-            SceneCrdtTimestamp(entry.timestamp.0 + 2)
-        } else {
-            SceneCrdtTimestamp(2)
-        };
-
-        self.crdt
-            .get_transform_mut()
-            .set(entity_id, new_timestamp, Some(dcl_transform));
+        self._update_avatar_transform(&entity_id, dcl_transform);
     }
 
     #[func]
@@ -128,11 +110,11 @@ impl AvatarScene {
         let entity_id = self
             .get_next_entity_id()
             .unwrap_or(SceneEntityId::new(Self::MAX_ENTITY_ID + 1, 0));
-        self.crdt.entities.try_init(entity_id);
+        self.crdt_state.entities.try_init(entity_id);
 
         self.avatar_entity.insert(alias, entity_id);
 
-        let new_avatar =
+        let mut new_avatar: Gd<DclAvatar> =
             godot::engine::load::<PackedScene>("res://src/decentraland_components/avatar.tscn")
                 .instantiate()
                 .unwrap()
@@ -140,6 +122,31 @@ impl AvatarScene {
 
         if let Some(address) = address.to_string().as_h160() {
             self.avatar_address.insert(address, alias);
+        }
+
+        new_avatar
+            .bind_mut()
+            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
+
+        // TODO: when updating to 4.2, change this to Callable:from_custom
+        if self
+            .base
+            .has_method("_temp_get_custom_callable_on_avatar_changed".into())
+        {
+            // let on_change_scene_id_callable = self
+            //     .base
+            //     .get("on_avatar_changed_scene".into())
+            //     .to::<Callable>();
+
+            let on_change_scene_id_callable = self
+                .base
+                .call(
+                    "_temp_get_custom_callable_on_avatar_changed".into(),
+                    &[entity_id.as_i32().to_variant()],
+                )
+                .to::<Callable>();
+
+            new_avatar.connect("change_scene_id".into(), on_change_scene_id_callable);
         }
 
         self.base.add_child(new_avatar.clone().upcast());
@@ -157,17 +164,51 @@ impl AvatarScene {
         }
         None
     }
+
+    #[func]
+    fn on_avatar_changed_scene(&self, scene_id: i32, prev_scene_id: i32, avatar_entity_id: i32) {
+        tracing::info!(
+            "on_avatar_changed_scene {:?} {:?} {:?}",
+            scene_id,
+            prev_scene_id,
+            avatar_entity_id
+        );
+        let scene_id = SceneId(scene_id as u32);
+        let prev_scene_id = SceneId(prev_scene_id as u32);
+        let avatar_entity_id = SceneEntityId::from_i32(avatar_entity_id);
+
+        let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+        let mut scene_runner = scene_runner.bind_mut();
+        if let Some(prev_scene) = scene_runner.get_scene_mut(&prev_scene_id) {
+            prev_scene
+                .avatar_scene_updates
+                .transform
+                .insert(avatar_entity_id, None);
+        }
+
+        if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
+            let dcl_transform = DclTransformAndParent::default(); // TODO: get real transform with scene_offset
+
+            let mut avatar_scene_transform = dcl_transform.clone();
+            avatar_scene_transform.translation.x -= (scene.definition.base.x as f32) * 16.0;
+            avatar_scene_transform.translation.z -= (scene.definition.base.y as f32) * 16.0;
+
+            scene
+                .avatar_scene_updates
+                .transform
+                .insert(avatar_entity_id, Some(dcl_transform.clone()));
+        }
+    }
 }
 
 impl AvatarScene {
     const FROM_ENTITY_ID: u16 = 32;
     const MAX_ENTITY_ID: u16 = 256;
-    // const AVATAR_COMPONENTS: &[SceneComponentId] = &[SceneComponentId::AVATAR_ATTACH];
 
     // This function is not optimized, it will iterate over all the entities but this happens only when add an player
     fn get_next_entity_id(&self) -> Result<SceneEntityId, &'static str> {
         for entity_number in Self::FROM_ENTITY_ID..Self::MAX_ENTITY_ID {
-            let (version, live) = self.crdt.entities.get_entity_stat(entity_number);
+            let (version, live) = self.crdt_state.entities.get_entity_stat(entity_number);
 
             if !live {
                 let entity_id = SceneEntityId::new(entity_number, *version);
@@ -189,17 +230,75 @@ impl AvatarScene {
 
     pub fn remove_avatar(&mut self, alias: u32) {
         if let Some(entity_id) = self.avatar_entity.remove(&alias) {
-            self.crdt.kill_entity(&entity_id);
+            self.crdt_state.kill_entity(&entity_id);
             let mut avatar = self.avatar_godot_scene.remove(&entity_id).unwrap();
             self.base.remove_child(avatar.clone().upcast());
 
             self.avatar_address.retain(|_, v| *v != alias);
 
             avatar.queue_free();
+
+            // Push dirty state in all the scenes
+            let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+            let mut scene_runner = scene_runner.bind_mut();
+            for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                scene
+                    .avatar_scene_updates
+                    .deleted_entities
+                    .insert(entity_id);
+            }
         }
     }
 
-    pub fn update_transform(&mut self, alias: u32, transform: &rfc4::Position) {
+    fn _update_avatar_transform(
+        &mut self,
+        avatar_entity_id: &SceneEntityId,
+        dcl_transform: DclTransformAndParent,
+    ) {
+        let avatar_scene = self
+            .avatar_godot_scene
+            .get_mut(avatar_entity_id)
+            .expect("avatar not found");
+        avatar_scene
+            .bind_mut()
+            .set_target_position(dcl_transform.to_godot_transform_3d());
+
+        let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+        let mut scene_runner = scene_runner.bind_mut();
+
+        let avatar_current_parcel_scene_id = avatar_scene.bind().get_current_parcel_scene_id();
+        let avatar_active_scenes = {
+            let mut scenes = scene_runner.get_global_scenes();
+            if avatar_current_parcel_scene_id != -1 {
+                scenes.push(SceneId(avatar_current_parcel_scene_id as u32));
+            }
+            scenes
+        };
+
+        // Push dirty state only in active scenes
+        for scene_id in avatar_active_scenes {
+            if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
+                let mut avatar_scene_transform = dcl_transform.clone();
+                avatar_scene_transform.translation.x -= (scene.definition.base.x as f32) * 16.0;
+                avatar_scene_transform.translation.z -= (scene.definition.base.y as f32) * 16.0;
+
+                scene
+                    .avatar_scene_updates
+                    .transform
+                    .insert(*avatar_entity_id, Some(dcl_transform.clone()));
+            }
+        }
+
+        self.crdt_state
+            .get_transform_mut()
+            .put(*avatar_entity_id, Some(dcl_transform));
+    }
+
+    pub fn update_avatar_transform_with_rfc4_position(
+        &mut self,
+        alias: u32,
+        transform: &rfc4::Position,
+    ) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
@@ -223,23 +322,7 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        // let avatar_scene = self.avatar_godot_scene.get_mut(&entity_id).unwrap();
-
-        // // TODO: the scale seted in the transform is local
-        // avatar_scene.set_transform(dcl_transform.to_godot_transform_3d());
-        let current_avatar = self.avatar_godot_scene.get_mut(&entity_id);
-        
-        self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
-            "set_target".into(),
-            &[dcl_transform.to_godot_transform_3d().to_variant()],
-        );
-
-        let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-
-        scene_runner.bind_mut().get_global_scenes();
-        self.crdt
-            .get_transform_mut()
-            .put(entity_id, Some(dcl_transform));
+        self._update_avatar_transform(&entity_id, dcl_transform);
     }
 
     pub fn update_avatar(&mut self, alias: u32, profile: &SerializedProfile, base_url: &str) {
@@ -264,37 +347,70 @@ impl AvatarScene {
         );
 
         let new_avatar_base = Some(profile.to_pb_avatar_base());
-        let avatar_base_component = SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt);
+        let avatar_base_component =
+            SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt_state);
         let avatar_base_component_value = avatar_base_component
             .get(&entity_id)
             .map(|v| v.value.clone())
             .flatten();
         if avatar_base_component_value != new_avatar_base {
-            SceneCrdtStateProtoComponents::get_avatar_base_mut(&mut self.crdt)
+            // Push dirty state in all the scenes
+            let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+            let mut scene_runner = scene_runner.bind_mut();
+            for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                scene.avatar_scene_updates.avatar_base.insert(
+                    entity_id,
+                    new_avatar_base.clone().expect("value was assigned above"),
+                );
+            }
+            SceneCrdtStateProtoComponents::get_avatar_base_mut(&mut self.crdt_state)
                 .put(entity_id, new_avatar_base);
         }
 
         let new_avatar_equipped_data = Some(profile.to_pb_avatar_equipped_data());
         let avatar_equipped_data_component =
-            SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt);
+            SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt_state);
         let avatar_equipped_data_value = avatar_equipped_data_component
             .get(&entity_id)
             .map(|v| v.value.clone())
             .flatten();
         if avatar_equipped_data_value != new_avatar_equipped_data {
-            SceneCrdtStateProtoComponents::get_avatar_equipped_data_mut(&mut self.crdt)
+            // Push dirty state in all the scenes
+            let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+            let mut scene_runner = scene_runner.bind_mut();
+            for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                scene.avatar_scene_updates.avatar_equipped_data.insert(
+                    entity_id,
+                    new_avatar_equipped_data
+                        .clone()
+                        .expect("value was assigned above"),
+                );
+            }
+            SceneCrdtStateProtoComponents::get_avatar_equipped_data_mut(&mut self.crdt_state)
                 .put(entity_id, new_avatar_equipped_data);
         }
 
         let new_player_identity_data = Some(profile.to_pb_player_identity_data());
         let player_identity_data_component =
-            SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt);
+            SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt_state);
         let player_identity_data_value = player_identity_data_component
             .get(&entity_id)
             .map(|v| v.value.clone())
             .flatten();
         if player_identity_data_value != new_player_identity_data {
-            SceneCrdtStateProtoComponents::get_player_identity_data_mut(&mut self.crdt)
+            // Push dirty state in all the scenes
+            let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+            let mut scene_runner = scene_runner.bind_mut();
+            for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                scene.avatar_scene_updates.player_identity_data.insert(
+                    entity_id,
+                    new_player_identity_data
+                        .clone()
+                        .expect("value was assigned above"),
+                );
+            }
+
+            SceneCrdtStateProtoComponents::get_player_identity_data_mut(&mut self.crdt_state)
                 .put(entity_id, new_player_identity_data);
         }
     }
@@ -339,13 +455,15 @@ impl AvatarScene {
             .call("push_voice_frame".into(), &[frame.to_variant()]);
     }
 
-    pub fn update_crdt_state(
+    // This function should be only called in the first tick
+    pub fn first_sync_crdt_state(
         &self,
         target_crdt_state: &mut SceneCrdtState,
         filter_by_scene_id: Option<SceneId>,
     ) {
         for entity_number in Self::FROM_ENTITY_ID..Self::MAX_ENTITY_ID {
-            let (local_version, local_live) = self.crdt.entities.get_entity_stat(entity_number);
+            let (local_version, local_live) =
+                self.crdt_state.entities.get_entity_stat(entity_number);
             let (target_version, target_live) =
                 target_crdt_state.entities.get_entity_stat(entity_number);
 
@@ -362,12 +480,12 @@ impl AvatarScene {
             }
         }
 
-        let local_transform_component = self.crdt.get_transform();
+        let local_transform_component = self.crdt_state.get_transform();
         let local_player_identity_data =
-            SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt);
+            SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt_state);
         let local_avatar_equipped_data =
-            SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt);
-        let local_avatar_base = SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt);
+            SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt_state);
+        let local_avatar_base = SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt_state);
 
         for (entity_id, avatar_scene) in self.avatar_godot_scene.iter() {
             let target_transform_component = target_crdt_state.get_transform_mut();

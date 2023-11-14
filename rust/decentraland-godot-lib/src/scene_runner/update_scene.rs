@@ -8,6 +8,7 @@ use super::{
         audio_source::update_audio_source,
         audio_stream::update_audio_stream,
         avatar_attach::update_avatar_attach,
+        avatar_data::update_avatar_scene_updates,
         avatar_modifier_area::update_avatar_modifier_area,
         avatar_shape::update_avatar_shape,
         billboard::update_billboard,
@@ -105,6 +106,21 @@ pub fn _process_scene(
                         total_runtime: (Instant::now() - scene.start_time).as_secs_f32(),
                     }),
                 );
+
+                if tick_number == 0 {
+                    let filter_by_scene_id = if let SceneType::Parcel = scene.scene_type {
+                        Some(*current_parcel_scene_id)
+                    } else {
+                        None
+                    };
+
+                    DclGlobal::singleton()
+                        .bind()
+                        .avatars
+                        .bind()
+                        .first_sync_crdt_state(crdt_state, filter_by_scene_id);
+                }
+
                 false
             }
             SceneUpdateState::PrintLogs => {
@@ -206,17 +222,7 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::ComputeCrdtState => {
-                let filter_by_scene_id = if let SceneType::Parcel = scene.scene_type {
-                    Some(*current_parcel_scene_id)
-                } else {
-                    None
-                };
-
-                DclGlobal::singleton()
-                    .bind()
-                    .avatars
-                    .bind()
-                    .update_crdt_state(crdt_state, filter_by_scene_id);
+                update_avatar_scene_updates(scene, crdt_state);
 
                 let camera_transform = DclTransformAndParent::from_godot(
                     camera_global_transform,

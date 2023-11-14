@@ -195,7 +195,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_scene_id_by_parcel_position(&self, parcel_position: Vector2i) -> i32 {
+    pub fn get_scene_id_by_parcel_position(&self, parcel_position: Vector2i) -> i32 {
         for scene in self.scenes.values() {
             if let SceneType::Global(_) = scene.scene_type {
                 continue;
@@ -604,19 +604,19 @@ impl SceneManager {
     #[signal]
     fn on_change_scene_id(scene_id: u32) {}
 
-    fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
+    pub fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
         &mut self.scenes
     }
 
-    fn get_scene_mut(&mut self, scene_id: &SceneId) -> Option<&mut Scene> {
+    pub fn get_scene_mut(&mut self, scene_id: &SceneId) -> Option<&mut Scene> {
         self.scenes.get_mut(scene_id)
     }
 
     // this could be cached
-    fn get_global_scenes(&self) -> Vec<SceneId> {
+    pub fn get_global_scenes(&self) -> Vec<SceneId> {
         self.scenes
             .iter()
-            .filter(|(scene_id, scene)| {
+            .filter(|(_scene_id, scene)| {
                 if let SceneType::Global(_) = scene.scene_type {
                     return true;
                 }

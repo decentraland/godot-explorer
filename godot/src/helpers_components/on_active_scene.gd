@@ -17,5 +17,5 @@ func _ready():
 	Global.scene_runner.on_change_scene_id.connect(self._on_change_scene_id)
 
 
-func _on_change_scene_id(scene_id: int):
+func _on_change_scene_id(scene_id: int, _prev_scene_id: int):
 	on_scene_active.emit(scene_id == _my_scene_id)

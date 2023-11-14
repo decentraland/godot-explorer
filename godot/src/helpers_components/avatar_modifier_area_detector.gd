@@ -25,7 +25,7 @@ func _on_tree_exiting():
 	
 
 
-func _on_avatar_change_scene_id(new_scene_id: int):
+func _on_avatar_change_scene_id(_new_scene_id: int, _prev_scene_id: int):
 	check_areas()
 
 

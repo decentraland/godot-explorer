@@ -65,7 +65,7 @@ func _process(dt):
 		var alias = 10000 + spawning_i
 		Global.avatars.add_avatar(alias, "")
 		Global.avatars.update_avatar_profile(alias, avatar_data)
-		Global.avatars.update_avatar_transform(alias, transform)
+		Global.avatars.update_avatar_transform_with_godot_transform(alias, transform)
 
 		spawning_position.append(initial_position)
 
@@ -91,4 +91,4 @@ func _process(dt):
 
 				spawning_position[i] = target_position
 				var alias = 10000 + i
-				Global.avatars.update_avatar_transform(alias, transform)
+				Global.avatars.update_avatar_transform_with_godot_transform(alias, transform)

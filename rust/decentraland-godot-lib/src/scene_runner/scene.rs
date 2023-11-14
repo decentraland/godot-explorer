@@ -137,12 +137,13 @@ pub enum GlobalSceneType {
 
 #[derive(Default)]
 pub struct SceneAvatarUpdates {
-    transform: HashMap<SceneEntityId, DclTransformAndParent>,
-    player_identity_data: HashMap<SceneEntityId, PbPlayerIdentityData>,
-    avatar_base: HashMap<SceneEntityId, PbAvatarBase>,
-    avatar_equipped_data: HashMap<SceneEntityId, PbAvatarEquippedData>,
-    pointer_events_result: HashMap<SceneEntityId, Vec<PbPointerEventsResult>>,
-    avatar_emote_command: HashMap<SceneEntityId, Vec<PbAvatarEmoteCommand>>,
+    pub transform: HashMap<SceneEntityId, Option<DclTransformAndParent>>,
+    pub player_identity_data: HashMap<SceneEntityId, PbPlayerIdentityData>,
+    pub avatar_base: HashMap<SceneEntityId, PbAvatarBase>,
+    pub avatar_equipped_data: HashMap<SceneEntityId, PbAvatarEquippedData>,
+    pub pointer_events_result: HashMap<SceneEntityId, Vec<PbPointerEventsResult>>,
+    pub avatar_emote_command: HashMap<SceneEntityId, Vec<PbAvatarEmoteCommand>>,
+    pub deleted_entities: HashSet<SceneEntityId>,
 }
 
 pub struct Scene {
