@@ -20,6 +20,7 @@ func load_nft(urn: String, style: NftFrameStyleLoader.NFTFrameStyles, background
 	# we just process the current one, and the last one
 	if loading:
 		scheduled_load_nft = self.load_nft.bind(urn, style, background_color)
+		return
 
 	loading = true
 	_load_nft(urn, style, background_color)

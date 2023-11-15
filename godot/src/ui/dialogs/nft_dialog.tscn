@@ -1,0 +1,154 @@
+[gd_scene load_steps=3 format=3 uid="uid://ca84fs1dxdp6e"]
+
+[ext_resource type="Script" path="res://src/ui/dialogs/nft_dialog.gd" id="1_insdf"]
+[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="2_5bhhj"]
+
+[node name="nft_dialog" type="Panel"]
+custom_minimum_size = Vector2(600, 400)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+script = ExtResource("1_insdf")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 20
+text = "Title"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="NFTImage" type="TextureRect" parent="VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 340)
+layout_mode = 2
+size_flags_horizontal = 3
+texture = ExtResource("2_5bhhj")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Content" type="Control" parent="VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer2/Content"]
+layout_mode = 2
+offset_right = 288.0
+offset_bottom = 23.0
+
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
+theme_override_font_sizes/font_size = 12
+text = "OWNER"
+
+[node name="Owner" type="Label" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 12
+text = "0x123...abc"
+
+[node name="Space" type="Control" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
+theme_override_font_sizes/font_size = 12
+text = "LAST SOLD FOR"
+
+[node name="LastSoldFor" type="Label" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 12
+text = "ETH 0.003"
+
+[node name="EmptySpace" type="Control" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer/VBoxContainer2"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
+theme_override_font_sizes/font_size = 12
+text = "PRICE"
+
+[node name="Price" type="Label" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer/VBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 12
+text = "NOT FOR SALE"
+
+[node name="Space2" type="Control" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+
+[node name="Label3" type="Label" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
+theme_override_font_sizes/font_size = 12
+text = "DESCRIPTION"
+
+[node name="Description" type="Label" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
+theme_override_font_sizes/font_size = 12
+text = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
+autowrap_mode = 3
+clip_text = true
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer"]
+layout_mode = 2
+
+[node name="Cancel" type="Button" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 12
+text = "CANCEL"
+
+[node name="ViewOnOpenSea" type="Button" parent="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 12
+text = "VIEW ON OPENSEA"
+
+[connection signal="pressed" from="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer2/Cancel" to="." method="_on_cancel_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer2/Content/VBoxContainer/HBoxContainer2/ViewOnOpenSea" to="." method="_on_view_on_open_sea_pressed"]
