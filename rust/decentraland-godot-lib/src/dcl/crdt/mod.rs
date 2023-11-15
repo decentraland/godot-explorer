@@ -298,7 +298,7 @@ mod test {
             Some(some_mesh_renderer),
         );
 
-        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        let mesh_renderer = mesh_renderer_component.get(&SceneEntityId::new(0, 0));
         assert_eq!(
             *mesh_renderer.unwrap(),
             LWWEntry {
@@ -327,7 +327,7 @@ mod test {
             Some(new_mesh_renderer),
         );
 
-        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        let mesh_renderer = mesh_renderer_component.get(&SceneEntityId::new(0, 0));
         assert_eq!(
             *mesh_renderer.unwrap(),
             LWWEntry {
@@ -352,7 +352,7 @@ mod test {
             SceneCrdtStateProtoComponents::get_mesh_renderer_mut(&mut crdt_state);
 
         mesh_renderer_component.set(SceneEntityId::new(0, 0), SceneCrdtTimestamp(0), None);
-        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        let mesh_renderer = mesh_renderer_component.get(&SceneEntityId::new(0, 0));
         assert_eq!(
             *mesh_renderer.unwrap(),
             LWWEntry {
@@ -362,7 +362,7 @@ mod test {
         );
 
         mesh_renderer_component.remove(SceneEntityId::new(0, 0));
-        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        let mesh_renderer = mesh_renderer_component.get(&SceneEntityId::new(0, 0));
         assert!(mesh_renderer.is_none());
     }
 

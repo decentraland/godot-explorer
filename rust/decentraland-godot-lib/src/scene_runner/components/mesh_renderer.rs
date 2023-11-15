@@ -70,7 +70,7 @@ pub fn update_mesh_renderer(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
         let mesh_renderer_component = SceneCrdtStateProtoComponents::get_mesh_renderer(crdt_state);
 
         for entity in mesh_renderer_dirty {
-            let new_value = mesh_renderer_component.get(*entity);
+            let new_value = mesh_renderer_component.get(entity);
             if new_value.is_none() {
                 continue;
             }

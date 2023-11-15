@@ -1,6 +1,9 @@
 use godot::engine::Node3D;
 use godot::prelude::*;
 
+use crate::dcl::components::SceneEntityId;
+use crate::dcl::SceneId;
+
 #[repr(i32)]
 #[derive(Property, Export, PartialEq, Debug)]
 pub enum GltfContainerLoadingState {
@@ -92,10 +95,10 @@ impl NodeVirtual for DclGltfContainer {
     fn init(base: Base<Node3D>) -> Self {
         Self {
             dcl_gltf_src: "".into(),
-            dcl_scene_id: -1,
+            dcl_scene_id: SceneId::INVALID.0,
             dcl_visible_cmask: 0,
             dcl_invisible_cmask: 3,
-            dcl_entity_id: -1,
+            dcl_entity_id: SceneEntityId::INVALID.as_i32(),
             dcl_gltf_loading_state: GltfContainerLoadingState::Unknown,
             _base: base,
         }

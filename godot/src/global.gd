@@ -56,6 +56,9 @@ func _ready():
 	self.portable_experience_controller = PortableExperienceController.new()
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
+	self.avatars = CustomAvatarScene.new()
+	self.avatars.set_name("avatar_scene")
+
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.content_manager)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
@@ -86,5 +89,5 @@ func print_node_tree(node: Node, prefix = ""):
 			print_node_tree(child, prefix + node.name + "/")
 
 
-func _process(dt: float):
+func _process(_dt: float):
 	http_requester.poll()

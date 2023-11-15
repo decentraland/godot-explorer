@@ -18,7 +18,11 @@ use std::{
 };
 
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
-pub struct SceneId(pub u32);
+pub struct SceneId(pub i32);
+
+impl SceneId {
+    pub const INVALID: SceneId = SceneId(-1);
+}
 
 // scene metadata
 #[derive(Clone, Default, Debug)]

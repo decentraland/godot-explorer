@@ -69,8 +69,8 @@ static func parse_urn(urn: String):
 
 func set_realm(new_realm_string: String) -> void:
 	realm_string = new_realm_string
-	realm_url = ensure_ends_with_slash(resolve_realm_url(realm_string))
-	realm_url = ensure_starts_with_https(realm_url)
+	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
+	realm_url = Realm.ensure_starts_with_https(realm_url)
 	var promise: Promise = http_requester.request_json(
 		realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
@@ -102,13 +102,13 @@ func set_realm(new_realm_string: String) -> void:
 
 		realm_scene_urns.clear()
 		for urn in configuration.get("scenesUrn", []):
-			var parsed_urn = parse_urn(urn)
+			var parsed_urn = Realm.parse_urn(urn)
 			if parsed_urn != null:
 				realm_scene_urns.push_back(parsed_urn)
 
 		realm_global_scene_urns.clear()
 		for urn in configuration.get("globalScenesUrn", []):
-			var parsed_urn = parse_urn(urn)
+			var parsed_urn = Realm.parse_urn(urn)
 			if parsed_urn != null:
 				realm_global_scene_urns.push_back(parsed_urn)
 
@@ -116,7 +116,9 @@ func set_realm(new_realm_string: String) -> void:
 
 		realm_name = configuration.get("realmName", "no_realm_name")
 
-		content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
+		content_base_url = Realm.ensure_ends_with_slash(
+			realm_about.get("content", {}).get("publicUrl")
+		)
 
 		Global.config.last_realm_joined = realm_url
 		Global.config.save_to_settings_file()

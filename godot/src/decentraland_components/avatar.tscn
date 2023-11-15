@@ -1163,7 +1163,7 @@ material = SubResource("StandardMaterial3D_6htl0")
 radius = 0.1
 height = 0.1
 
-[node name="Avatar" type="Node3D"]
+[node name="Avatar" type="DclAvatar"]
 script = ExtResource("1_kkscc")
 
 [node name="Armature" type="Node3D" parent="."]

@@ -19,7 +19,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(dirty_ui_text) = dirty_lww_components.get(&SceneComponentId::UI_TEXT) {
         for entity in dirty_ui_text {
-            let value = if let Some(entry) = ui_text_component.get(*entity) {
+            let value = if let Some(entry) = ui_text_component.get(entity) {
                 entry.value.clone()
             } else {
                 None

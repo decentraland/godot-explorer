@@ -84,7 +84,7 @@ pub fn update_scene_pointer_events(scene: &mut Scene, crdt_state: &mut SceneCrdt
             SceneCrdtStateProtoComponents::get_pointer_events(crdt_state);
 
         for entity in pointer_events_dirty {
-            let new_value = pointer_events_component.get(*entity);
+            let new_value = pointer_events_component.get(entity);
             let new_value = if let Some(value) = new_value {
                 value.value.clone()
             } else {

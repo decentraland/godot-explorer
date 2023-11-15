@@ -15,7 +15,7 @@ func _ready():
 	Global.scene_runner.scene_spawned.connect(self._on_scene_spawned)
 
 
-func _process(delta):
+func _process(_delta):
 	var to_spawn := self.consume_requested_spawn()
 	if not to_spawn.is_empty():
 		spawn_many_portables(to_spawn)

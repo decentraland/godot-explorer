@@ -120,7 +120,7 @@ class AnyAwaiter:
 		for i in size:
 			_call_func(i, funcs[i])
 
-	func _call_func(i: int, f) -> void:
+	func _call_func(_i: int, f) -> void:
 		@warning_ignore("redundant_await")
 		var promise: Promise = await Promise._co_call_and_get_promise(f)
 		var res = await promise.co_awaiter()
@@ -141,7 +141,7 @@ class RaceAwaiter:
 		for i in size:
 			_call_func(i, funcs[i])
 
-	func _call_func(i: int, f) -> void:
+	func _call_func(_i: int, f) -> void:
 		@warning_ignore("redundant_await")
 		var promise: Promise = await Promise._co_call_and_get_promise(f)
 		var res = await promise.co_awaiter()
@@ -156,6 +156,8 @@ class RaceAwaiter:
 # Each function in the array is expected to be a coroutine or a function
 # that returns a promise.
 static func co_all(funcs: Array) -> Array:
+	if funcs.is_empty():
+		return []
 	return await AllAwaiter.new(funcs)._promise.co_awaiter()
 
 

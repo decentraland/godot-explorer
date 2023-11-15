@@ -18,7 +18,7 @@ pub fn update_ui_transform(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(dirty_transform) = dirty_lww_components.get(&SceneComponentId::UI_TRANSFORM) {
         for entity in dirty_transform {
-            let ui_transform = if let Some(entry) = ui_transform_component.get(*entity) {
+            let ui_transform = if let Some(entry) = ui_transform_component.get(entity) {
                 entry.value.as_ref()
             } else {
                 None

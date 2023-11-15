@@ -18,7 +18,7 @@ pub struct DclVideoPlayer {
     base: Base<AudioStreamPlayer>,
 
     #[var]
-    dcl_scene_id: u32,
+    dcl_scene_id: i32,
 
     pub resolve_resource_sender: Option<tokio::sync::oneshot::Sender<String>>,
 }

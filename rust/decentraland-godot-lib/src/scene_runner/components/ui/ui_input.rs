@@ -19,7 +19,7 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(dirty_ui_input) = dirty_lww_components.get(&SceneComponentId::UI_INPUT) {
         for entity in dirty_ui_input {
-            let value = if let Some(entry) = ui_input_component.get(*entity) {
+            let value = if let Some(entry) = ui_input_component.get(entity) {
                 entry.value.clone()
             } else {
                 None

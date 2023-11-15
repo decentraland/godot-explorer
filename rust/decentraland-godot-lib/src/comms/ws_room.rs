@@ -408,7 +408,10 @@ impl WebSocketRoom {
                         rfc4::packet::Message::Position(position) => {
                             self.avatars
                                 .bind_mut()
-                                .update_transform(update.from_alias, &position);
+                                .update_avatar_transform_with_rfc4_position(
+                                    update.from_alias,
+                                    &position,
+                                );
                         }
                         rfc4::packet::Message::Chat(chat) => {
                             let address = format!("{:#x}", peer.address);

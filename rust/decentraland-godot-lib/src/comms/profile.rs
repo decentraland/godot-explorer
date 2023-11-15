@@ -1,6 +1,11 @@
 use godot::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::dcl::components::proto_components::{
+    common::Color3,
+    sdk::components::{PbAvatarBase, PbAvatarEquippedData, PbPlayerIdentityData},
+};
+
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
 pub struct AvatarColor3 {
     pub r: f32,
@@ -28,6 +33,16 @@ pub struct AvatarColor {
 impl From<&AvatarColor> for godot::prelude::Color {
     fn from(val: &AvatarColor) -> Self {
         godot::prelude::Color::from_rgb(val.color.r, val.color.g, val.color.b)
+    }
+}
+
+impl From<&AvatarColor> for Color3 {
+    fn from(val: &AvatarColor) -> Self {
+        Color3 {
+            r: val.color.r,
+            g: val.color.g,
+            b: val.color.b,
+        }
     }
 }
 
@@ -270,6 +285,40 @@ impl SerializedProfile {
                 None
             })
             .collect();
+    }
+
+    pub fn to_pb_avatar_base(&self) -> PbAvatarBase {
+        PbAvatarBase {
+            skin_color: self.avatar.skin.map(|c| Color3::from(&c)),
+            eyes_color: self.avatar.eyes.map(|c| Color3::from(&c)),
+            hair_color: self.avatar.hair.map(|c| Color3::from(&c)),
+            body_shape_urn: self
+                .avatar
+                .body_shape
+                .as_deref()
+                .map(ToString::to_string)
+                .unwrap_or("urn:decentraland:off-chain:base-avatars:BaseFemale".to_owned()),
+            name: self.avatar.name.as_deref().unwrap_or("???").to_owned(),
+        }
+    }
+    pub fn to_pb_player_identity_data(&self) -> PbPlayerIdentityData {
+        PbPlayerIdentityData {
+            address: self.user_id.clone().unwrap_or("unknown".to_owned()),
+            is_guest: !self.has_connected_web3.as_ref().unwrap_or(&false),
+        }
+    }
+    pub fn to_pb_avatar_equipped_data(&self) -> PbAvatarEquippedData {
+        PbAvatarEquippedData {
+            wearable_urns: self.avatar.wearables.to_vec(),
+            emotes_urns: self
+                .avatar
+                .emotes
+                .as_ref()
+                .unwrap_or(&Vec::default())
+                .iter()
+                .map(|emote| emote.urn.clone())
+                .collect(),
+        }
     }
 }
 

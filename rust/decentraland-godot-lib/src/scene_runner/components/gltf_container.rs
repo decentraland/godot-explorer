@@ -20,7 +20,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
     if let Some(gltf_container_dirty) = dirty_lww_components.get(&SceneComponentId::GLTF_CONTAINER)
     {
         for entity in gltf_container_dirty {
-            let new_value = gltf_container_component.get(*entity);
+            let new_value = gltf_container_component.get(entity);
             if new_value.is_none() {
                 continue;
             }
@@ -63,7 +63,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                     new_gltf
                         .bind_mut()
                         .set_dcl_gltf_src(GodotString::from(new_value.src));
-                    new_gltf.bind_mut().set_dcl_scene_id(scene_id as i32);
+                    new_gltf.bind_mut().set_dcl_scene_id(scene_id);
                     new_gltf.bind_mut().set_dcl_entity_id(entity.as_i32());
                     new_gltf
                         .bind_mut()
@@ -84,7 +84,6 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
 
 pub fn sync_gltf_loading_state(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
-    let scene_id = scene.scene_id.0;
     let gltf_container_loading_state_component =
         SceneCrdtStateProtoComponents::get_gltf_container_loading_state_mut(crdt_state);
 
@@ -94,7 +93,7 @@ pub fn sync_gltf_loading_state(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
             .1
             .try_get_node_as::<DclGltfContainer>(NodePath::from("GltfContainer"));
 
-        let current_state = match gltf_container_loading_state_component.get(*entity) {
+        let current_state = match gltf_container_loading_state_component.get(entity) {
             Some(state) => match state.value.as_ref() {
                 Some(value) => GltfContainerLoadingState::from_proto(value.current_state()),
                 _ => GltfContainerLoadingState::Unknown,
@@ -108,14 +107,6 @@ pub fn sync_gltf_loading_state(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
             }
             None => GltfContainerLoadingState::Unknown,
         };
-
-        tracing::info!(
-            " scene_id {:?} \t entity_id{:?} \t current_state {:?} \t current_state_godot: {:?}",
-            scene_id,
-            entity,
-            current_state,
-            current_state_godot
-        );
 
         if current_state_godot != current_state {
             gltf_container_loading_state_component.put(*entity, Some(crate::dcl::components::proto_components::sdk::components::PbGltfContainerLoadingState { current_state: current_state_godot.to_i32() }));
