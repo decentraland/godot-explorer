@@ -2,7 +2,8 @@ extends DclAvatarModifierArea3D
 
 @onready var collision_shape_3d = $CollisionShape3D
 
-var scene_id: int = 0
+# Initial value SceneId::INVALID
+var scene_id: int = -1
 
 
 # Called when the node enters the scene tree for the first time.

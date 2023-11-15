@@ -88,7 +88,7 @@ impl SceneManager {
 
     // Testing a comment for the API
     #[func]
-    fn start_scene(&mut self, scene_definition: Dictionary, content_mapping: Dictionary) -> u32 {
+    fn start_scene(&mut self, scene_definition: Dictionary, content_mapping: Dictionary) -> i32 {
         // TODO: Inject wallet from creator
         let wallet = Wallet::new_local_wallet();
 
@@ -154,7 +154,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn kill_scene(&mut self, scene_id: u32) -> bool {
+    fn kill_scene(&mut self, scene_id: i32) -> bool {
         let scene_id = SceneId(scene_id);
         if let Some(scene) = self.scenes.get_mut(&scene_id) {
             if let SceneState::Alive = scene.state {
@@ -180,7 +180,7 @@ impl SceneManager {
 
     #[func]
     fn get_scene_content_mapping(&self, scene_id: i32) -> Dictionary {
-        if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
             return scene.content_mapping.clone();
         }
         Dictionary::default()
@@ -188,7 +188,7 @@ impl SceneManager {
 
     #[func]
     fn get_scene_title(&self, scene_id: i32) -> GodotString {
-        if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
             return GodotString::from(scene.definition.title.clone());
         }
         GodotString::default()
@@ -202,23 +202,23 @@ impl SceneManager {
             }
 
             if scene.definition.parcels.contains(&parcel_position) {
-                return scene.scene_id.0 as i32;
+                return scene.scene_id.0;
             }
         }
 
-        -1
+        SceneId::INVALID.0
     }
 
     #[func]
     fn get_scene_base_parcel(&self, scene_id: i32) -> Vector2i {
-        if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
             return scene.definition.base;
         }
         Vector2i::default()
     }
 
     fn compute_scene_distance(&mut self) {
-        self.current_parcel_scene_id = SceneId(u32::MAX);
+        self.current_parcel_scene_id = SceneId::INVALID;
 
         let mut player_global_position = self.player_node.get_global_transform().origin;
         player_global_position.x *= 0.0625;
@@ -415,7 +415,7 @@ impl SceneManager {
                 Ok(response) => match response {
                     SceneResponse::Error(scene_id, msg) => {
                         let mut arguments = VariantArray::new();
-                        arguments.push((scene_id.0 as i32).to_variant());
+                        arguments.push((scene_id.0).to_variant());
                         arguments.push((SceneLogLevel::SystemError as i32).to_variant());
                         arguments.push(self.total_time_seconds_time.to_variant());
                         arguments.push(GodotString::from(&msg).to_variant());
@@ -457,7 +457,7 @@ impl SceneManager {
                         // enable logs
                         for log in &logs {
                             let mut arguments = VariantArray::new();
-                            arguments.push((scene_id.0 as i32).to_variant());
+                            arguments.push(scene_id.0.to_variant());
                             arguments.push((log.level as i32).to_variant());
                             arguments.push((log.timestamp as f32).to_variant());
                             arguments.push(GodotString::from(&log.message).to_variant());
@@ -519,7 +519,7 @@ impl SceneManager {
             )
             .to::<i32>();
 
-        let scene = self.scenes.get(&SceneId(dcl_scene_id as u32))?;
+        let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
         let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
         let raycast_data = RaycastHit::from_godot_raycast(
             scene_position,
@@ -529,7 +529,7 @@ impl SceneManager {
         )?;
 
         Some(GodotDclRaycastResult {
-            scene_id: SceneId(dcl_scene_id as u32),
+            scene_id: SceneId(dcl_scene_id),
             entity_id: SceneEntityId::from_i32(dcl_entity_id),
             hit: raycast_data,
         })
@@ -602,7 +602,7 @@ impl SceneManager {
     }
 
     #[signal]
-    fn on_change_scene_id(scene_id: u32) {}
+    fn on_change_scene_id(scene_id: i32) {}
 
     pub fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
         &mut self.scenes
@@ -643,7 +643,7 @@ impl NodeVirtual for SceneManager {
             sorted_scene_ids: vec![],
             dying_scene_ids: vec![],
             current_parcel_scene_id: SceneId(0),
-            last_current_parcel_scene_id: SceneId(u32::MAX),
+            last_current_parcel_scene_id: SceneId::INVALID,
 
             main_receiver_from_thread,
             thread_sender_to_main,

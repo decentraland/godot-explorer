@@ -53,6 +53,11 @@ impl SceneEntityId {
         Self { number, version: 0 }
     }
 
+    // Note: this is not actually an invalid id, but it's used to represent an invalid id in some cases
+    pub const INVALID: SceneEntityId = Self {
+        number: 0xFFFF,
+        version: 0xFFFF,
+    };
     pub const ROOT: SceneEntityId = Self::reserved(0);
     pub const PLAYER: SceneEntityId = Self::reserved(1);
     pub const CAMERA: SceneEntityId = Self::reserved(2);

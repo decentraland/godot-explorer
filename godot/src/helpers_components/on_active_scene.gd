@@ -4,7 +4,8 @@ extends Node3D
 
 signal on_scene_active(active: bool)
 
-var _my_scene_id: int = 0
+# Initial value SceneId::INVALID
+var _my_scene_id: int = -1
 
 
 func _ready():

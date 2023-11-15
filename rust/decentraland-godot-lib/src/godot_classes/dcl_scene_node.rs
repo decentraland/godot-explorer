@@ -4,7 +4,7 @@ use godot::prelude::*;
 #[derive(GodotClass)]
 #[class(init, base=Node3D)]
 pub struct DclSceneNode {
-    scene_id: u32,
+    scene_id: i32,
 
     is_global: bool,
 
@@ -16,7 +16,7 @@ pub struct DclSceneNode {
 
 #[godot_api]
 impl DclSceneNode {
-    pub fn new_alloc(scene_id: u32, is_global: bool) -> Gd<Self> {
+    pub fn new_alloc(scene_id: i32, is_global: bool) -> Gd<Self> {
         let mut obj = Gd::with_base(|_base| {
             // accepts the base and returns a constructed object containing it
             DclSceneNode {
@@ -34,7 +34,7 @@ impl DclSceneNode {
     }
 
     #[func]
-    fn get_scene_id(&self) -> u32 {
+    fn get_scene_id(&self) -> i32 {
         self.scene_id
     }
 

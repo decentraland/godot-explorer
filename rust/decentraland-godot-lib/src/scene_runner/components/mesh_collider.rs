@@ -135,14 +135,10 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
                 if add_to_base {
                     animatable_body_3d.set_name(GodotString::from("MeshCollider"));
-                    animatable_body_3d.set_meta(
-                        "dcl_entity_id".into(),
-                        (entity.as_usize() as i32).to_variant(),
-                    );
-                    animatable_body_3d.set_meta(
-                        "dcl_scene_id".into(),
-                        (scene.scene_id.0 as i32).to_variant(),
-                    );
+                    animatable_body_3d
+                        .set_meta("dcl_entity_id".into(), (entity.as_i32()).to_variant());
+                    animatable_body_3d
+                        .set_meta("dcl_scene_id".into(), (scene.scene_id.0).to_variant());
 
                     node_3d.add_child(animatable_body_3d.upcast());
                 }

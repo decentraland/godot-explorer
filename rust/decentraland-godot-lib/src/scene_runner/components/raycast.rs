@@ -253,7 +253,7 @@ fn get_raycast_hit(
         )
         .to::<i32>();
 
-    if dcl_scene_id != scene.scene_id.0 as i32 {
+    if dcl_scene_id != scene.scene_id.0 {
         return None;
     }
 

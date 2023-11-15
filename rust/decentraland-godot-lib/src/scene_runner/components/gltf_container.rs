@@ -63,7 +63,7 @@ pub fn update_gltf_container(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
                     new_gltf
                         .bind_mut()
                         .set_dcl_gltf_src(GodotString::from(new_value.src));
-                    new_gltf.bind_mut().set_dcl_scene_id(scene_id as i32);
+                    new_gltf.bind_mut().set_dcl_scene_id(scene_id);
                     new_gltf.bind_mut().set_dcl_entity_id(entity.as_i32());
                     new_gltf
                         .bind_mut()

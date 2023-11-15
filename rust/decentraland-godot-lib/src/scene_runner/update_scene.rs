@@ -127,7 +127,7 @@ pub fn _process_scene(
                 // enable logs
                 for log in &scene.current_dirty.logs {
                     let mut arguments = VariantArray::new();
-                    arguments.push((scene.scene_id.0 as i32).to_variant());
+                    arguments.push((scene.scene_id.0).to_variant());
                     arguments.push((log.level as i32).to_variant());
                     arguments.push((log.timestamp as f32).to_variant());
                     arguments.push(GodotString::from(&log.message).to_variant());

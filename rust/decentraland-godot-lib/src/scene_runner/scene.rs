@@ -212,7 +212,7 @@ impl GodotDclRaycastResult {
     // }
 }
 
-static SCENE_ID_MONOTONIC_COUNTER: once_cell::sync::Lazy<std::sync::atomic::AtomicU32> =
+static SCENE_ID_MONOTONIC_COUNTER: once_cell::sync::Lazy<std::sync::atomic::AtomicI32> =
     once_cell::sync::Lazy::new(Default::default);
 
 impl Scene {

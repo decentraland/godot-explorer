@@ -42,7 +42,7 @@ impl Node3DVirtual for DclAvatar {
     fn init(base: Base<Node3D>) -> Self {
         Self {
             movement_type: AvatarMovementType::ExternalController,
-            current_parcel_scene_id: SceneId::INVALID as i32,
+            current_parcel_scene_id: SceneId::INVALID.0,
             current_parcel_position: Vector2i::new(i32::MAX, i32::MAX),
             lerp_state: Default::default(),
             base,
@@ -120,7 +120,7 @@ impl DclAvatar {
                 .bind()
                 .get_scene_id_by_parcel_position(parcel_position);
 
-            if scene_id != -1 {
+            if scene_id != SceneId::INVALID.0 {
                 let prev_scene_id = self.current_parcel_scene_id;
                 self.current_parcel_scene_id = scene_id;
                 self.base.call_deferred(

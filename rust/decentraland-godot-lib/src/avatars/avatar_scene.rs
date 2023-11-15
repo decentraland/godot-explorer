@@ -21,6 +21,8 @@ use crate::{
     wallet::AsH160,
 };
 
+type AvatarAlias = u32;
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct AvatarScene {
@@ -28,9 +30,9 @@ pub struct AvatarScene {
     base: Base<Node>,
 
     // map alias to the entity_id
-    avatar_entity: HashMap<u32, SceneEntityId>,
+    avatar_entity: HashMap<AvatarAlias, SceneEntityId>,
     avatar_godot_scene: HashMap<SceneEntityId, Gd<DclAvatar>>,
-    avatar_address: HashMap<H160, u32>,
+    avatar_address: HashMap<H160, AvatarAlias>,
 
     crdt_state: SceneCrdtState,
 
@@ -167,15 +169,13 @@ impl AvatarScene {
 
     #[func]
     fn on_avatar_changed_scene(&self, scene_id: i32, prev_scene_id: i32, avatar_entity_id: i32) {
-        tracing::info!(
-            "on_avatar_changed_scene {:?} {:?} {:?}",
-            scene_id,
-            prev_scene_id,
-            avatar_entity_id
-        );
-        let scene_id = SceneId(scene_id as u32);
-        let prev_scene_id = SceneId(prev_scene_id as u32);
+        let scene_id = SceneId(scene_id);
+        let prev_scene_id = SceneId(prev_scene_id);
         let avatar_entity_id = SceneEntityId::from_i32(avatar_entity_id);
+
+        // TODO: as this function was deferred called, check if the current_parcel_entity_id is the same
+        // maybe it's better to cache the last parcel here instead of using prev_scene_id
+        // the state of to what parcel the avatar belongs is stored in the avatar_scene
 
         let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
         let mut scene_runner = scene_runner.bind_mut();
@@ -269,8 +269,8 @@ impl AvatarScene {
         let avatar_current_parcel_scene_id = avatar_scene.bind().get_current_parcel_scene_id();
         let avatar_active_scenes = {
             let mut scenes = scene_runner.get_global_scenes();
-            if avatar_current_parcel_scene_id != -1 {
-                scenes.push(SceneId(avatar_current_parcel_scene_id as u32));
+            if avatar_current_parcel_scene_id != SceneId::INVALID.0 {
+                scenes.push(SceneId(avatar_current_parcel_scene_id));
             }
             scenes
         };
@@ -488,7 +488,7 @@ impl AvatarScene {
             let target_transform_component = target_crdt_state.get_transform_mut();
 
             let null_transform: bool = if let Some(scene_id_int) = filter_by_scene_id {
-                (scene_id_int.0 as i32) != avatar_scene.bind().get_current_parcel_scene_id()
+                scene_id_int.0 != avatar_scene.bind().get_current_parcel_scene_id()
             } else {
                 false
             };
