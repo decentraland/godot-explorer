@@ -10,7 +10,11 @@ use crate::{
     dcl::{
         components::{
             material::DclMaterial,
-            proto_components::sdk::components::{common::RaycastHit, PbPointerEventsResult},
+            proto_components::sdk::components::{
+                common::RaycastHit, PbAvatarBase, PbAvatarEmoteCommand, PbAvatarEquippedData,
+                PbPlayerIdentityData, PbPointerEventsResult,
+            },
+            transform_and_parent::DclTransformAndParent,
             SceneEntityId,
         },
         js::SceneLogMessage,
@@ -133,6 +137,17 @@ pub enum GlobalSceneType {
     PortableExperience,
 }
 
+#[derive(Default)]
+pub struct SceneAvatarUpdates {
+    pub transform: HashMap<SceneEntityId, Option<DclTransformAndParent>>,
+    pub player_identity_data: HashMap<SceneEntityId, PbPlayerIdentityData>,
+    pub avatar_base: HashMap<SceneEntityId, PbAvatarBase>,
+    pub avatar_equipped_data: HashMap<SceneEntityId, PbAvatarEquippedData>,
+    pub pointer_events_result: HashMap<SceneEntityId, Vec<PbPointerEventsResult>>,
+    pub avatar_emote_command: HashMap<SceneEntityId, Vec<PbAvatarEmoteCommand>>,
+    pub deleted_entities: HashSet<SceneEntityId>,
+}
+
 pub struct Scene {
     pub scene_id: SceneId,
     pub godot_dcl_scene: GodotDclScene,
@@ -164,6 +179,8 @@ pub struct Scene {
     // Used by VideoPlayer and AudioStream
     pub audio_streams: HashMap<SceneEntityId, Gd<DclAudioStream>>,
     pub video_players: HashMap<SceneEntityId, Gd<DclVideoPlayer>>,
+
+    pub avatar_scene_updates: SceneAvatarUpdates,
 }
 
 #[derive(Debug)]
@@ -197,7 +214,7 @@ impl GodotDclRaycastResult {
     // }
 }
 
-static SCENE_ID_MONOTONIC_COUNTER: once_cell::sync::Lazy<std::sync::atomic::AtomicU32> =
+static SCENE_ID_MONOTONIC_COUNTER: once_cell::sync::Lazy<std::sync::atomic::AtomicI32> =
     once_cell::sync::Lazy::new(Default::default);
 
 impl Scene {
@@ -247,6 +264,7 @@ impl Scene {
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
             scene_type,
+            avatar_scene_updates: Default::default(),
         }
     }
 
@@ -299,6 +317,7 @@ impl Scene {
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
+            avatar_scene_updates: Default::default(),
         }
     }
 }

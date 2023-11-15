@@ -208,7 +208,7 @@ impl DclPortableExperienceController {
     }
 
     #[func]
-    pub fn announce_killed_by_scene_id(&mut self, killed_scene_id: u32) -> GodotString {
+    pub fn announce_killed_by_scene_id(&mut self, killed_scene_id: i32) -> GodotString {
         let killed_scene_id = SceneId(killed_scene_id);
         let Some(portable_experience) =
             self.portable_experiences
@@ -248,7 +248,7 @@ impl DclPortableExperienceController {
         pid: GodotString,
         success: bool,
         name: GodotString,
-        scene_id: u32,
+        scene_id: i32,
     ) {
         let Some(portable_experience) = self.portable_experiences.get_mut(&pid.to_string()) else {
             tracing::error!("announce_spawned: portable experience not found");

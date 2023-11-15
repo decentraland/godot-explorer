@@ -55,7 +55,7 @@ pub fn update_video_player(
         for entity in video_player_dirty {
             let exist_current_node = godot_dcl_scene.get_godot_entity_node(entity).is_some();
 
-            let next_value = if let Some(new_value) = video_player_component.get(*entity) {
+            let next_value = if let Some(new_value) = video_player_component.get(entity) {
                 new_value.value.as_ref()
             } else {
                 None

@@ -21,7 +21,7 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
         dirty_lww_components.get(&SceneComponentId::AVATAR_MODIFIER_AREA)
     {
         for entity in avatar_modifier_area_dirty {
-            let new_value = avatar_modifier_area_component.get(*entity);
+            let new_value = avatar_modifier_area_component.get(entity);
 
             let Some(new_value) = new_value else {
                 continue; // no value, continue
@@ -31,8 +31,7 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
 
             let new_value = new_value.value.clone();
 
-            let existing =
-                node_3d.try_get_node_as::<Node>(NodePath::from("DCLAvatarModifierArea3D"));
+            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarModifierArea"));
 
             if new_value.is_none() {
                 if let Some(avatar_modifier_area_node) = existing {
@@ -77,7 +76,7 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                         .bind_mut()
                         .set_avatar_modifiers(modifiers);
                     avatar_modifier_area.bind_mut().set_exclude_ids(exclude_ids);
-                    avatar_modifier_area.set_name(GodotString::from("DCLAvatarModifierArea3D"));
+                    avatar_modifier_area.set_name(GodotString::from("AvatarModifierArea"));
                     node_3d.add_child(avatar_modifier_area.clone().upcast());
                 }
             }

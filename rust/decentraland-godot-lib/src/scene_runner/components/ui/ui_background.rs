@@ -19,7 +19,7 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
     if let Some(dirty_ui_background) = dirty_lww_components.get(&SceneComponentId::UI_BACKGROUND) {
         for entity in dirty_ui_background {
-            let value = if let Some(entry) = ui_background_component.get(*entity) {
+            let value = if let Some(entry) = ui_background_component.get(entity) {
                 entry.value.clone()
             } else {
                 None

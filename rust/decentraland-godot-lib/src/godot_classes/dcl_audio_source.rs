@@ -28,7 +28,7 @@ pub struct DclAudioSource {
     dcl_audio_clip_url: GodotString,
 
     #[var]
-    dcl_scene_id: u32,
+    dcl_scene_id: i32,
 
     #[base]
     _base: Base<AudioStreamPlayer3D>,

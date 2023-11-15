@@ -163,7 +163,7 @@ func _on_wearable_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func _on_wearable_button_clear_filter(type):
+func _on_wearable_button_clear_filter(_type):
 	filtered_data = []
 	show_wearables()
 

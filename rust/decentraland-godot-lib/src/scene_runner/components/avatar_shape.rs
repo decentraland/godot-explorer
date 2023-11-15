@@ -17,7 +17,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(avatar_shape_dirty) = dirty_lww_components.get(&SceneComponentId::AVATAR_SHAPE) {
         for entity in avatar_shape_dirty {
-            let new_value = avatar_shape_component.get(*entity);
+            let new_value = avatar_shape_component.get(entity);
             if new_value.is_none() {
                 continue;
             }

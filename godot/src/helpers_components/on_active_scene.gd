@@ -4,7 +4,8 @@ extends Node3D
 
 signal on_scene_active(active: bool)
 
-var _my_scene_id: int = 0
+# Initial value SceneId::INVALID
+var _my_scene_id: int = -1
 
 
 func _ready():
@@ -17,5 +18,5 @@ func _ready():
 	Global.scene_runner.on_change_scene_id.connect(self._on_change_scene_id)
 
 
-func _on_change_scene_id(scene_id: int):
+func _on_change_scene_id(scene_id: int, _prev_scene_id: int):
 	on_scene_active.emit(scene_id == _my_scene_id)

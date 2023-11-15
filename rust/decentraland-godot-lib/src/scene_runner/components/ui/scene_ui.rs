@@ -227,7 +227,7 @@ pub fn update_scene_ui(
     let need_update_ui_canvas = {
         let ui_canvas_information_component =
             SceneCrdtStateProtoComponents::get_ui_canvas_information(crdt_state);
-        if let Some(entry) = ui_canvas_information_component.get(SceneEntityId::ROOT) {
+        if let Some(entry) = ui_canvas_information_component.get(&SceneEntityId::ROOT) {
             if let Some(current_value) = entry.value.as_ref() {
                 current_value != ui_canvas_information
             } else {

@@ -35,7 +35,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(material_dirty) = dirty_lww_components.get(&SceneComponentId::MATERIAL) {
         for entity in material_dirty {
-            let new_value = material_component.get(*entity);
+            let new_value = material_component.get(entity);
             if new_value.is_none() {
                 continue;
             }

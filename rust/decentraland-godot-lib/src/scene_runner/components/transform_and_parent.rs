@@ -41,7 +41,7 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
 
     if let Some(dirty_transform) = dirty_lww_components.get(&SceneComponentId::TRANSFORM) {
         for entity in dirty_transform {
-            let value = if let Some(entry) = transform_component.get(*entity) {
+            let value = if let Some(entry) = transform_component.get(entity) {
                 entry.value.clone()
             } else {
                 None

@@ -1,4 +1,4 @@
-extends Node3D
+extends DclAvatar
 class_name Avatar
 
 signal avatar_loaded
@@ -13,20 +13,6 @@ signal avatar_loaded
 var avatar_name: String = ""
 var avatar_id: String = ""
 var playing_emote = false
-
-# Parcel Position
-var parcel_position: Vector2i = Vector2i.ZERO
-var last_parcel_position: Vector2i = Vector2i(Math.INT32_MAX, Math.INT32_MAX)  # Vector2i.MAX is coming: https://github.com/godotengine/godot/pull/81741
-var scene_id: int = Math.INT32_MIN
-var last_scene_id: int = Math.INT32_MAX
-signal change_parcel_position(parcel_position: Vector2)
-signal change_scene_id(scene_id: Vector2)
-
-# Position Lerp
-var last_position: Vector3 = Vector3.ZERO
-var target_position: Vector3 = Vector3.ZERO
-var t: float = 0.0
-var target_distance: float = 0.0
 
 # Wearable requesting
 var current_content_url: String = ""
@@ -131,7 +117,7 @@ func play_emote(emote_id: String):
 	playing_emote = true
 
 
-func play_remote_emote(emote_src: String, looping: bool):
+func play_remote_emote(_emote_src: String, _looping: bool):
 	# TODO: Implement downloading emote from the scene content, adding to the avatar and then playing the emote
 	# Test scene: https://github.com/decentraland/unity-renderer/pull/5501
 	pass
@@ -427,52 +413,9 @@ func apply_texture_and_mask(
 	mesh.mesh.surface_set_material(0, current_material)
 
 
-func set_target(target: Transform3D) -> void:
-	target_distance = target_position.distance_to(target.origin)
-
-	last_position = target_position
-	target_position = target.origin
-
-	self.global_rotation = target.basis.get_euler()
-	self.global_position = last_position
-
-	t = 0
-
-
-func _check_parcel_position():
-	parcel_position = Math.get_parcel_position_by_world_position(self.get_global_position())
-
-	if last_parcel_position != parcel_position:
-		last_parcel_position = parcel_position
-		change_parcel_position.emit(parcel_position)
-		scene_id = Global.scene_runner.get_scene_id_by_parcel_position(parcel_position)
-		if last_scene_id != scene_id:
-			last_scene_id = scene_id
-			change_scene_id.emit(scene_id)
-
-
 func _process(delta):
-	_check_parcel_position()
-
-	if skip_process:
-		return
-
-	if t < 2:
-		t += 10 * delta
-		if t < 1:
-			if t > 1.0:
-				t = 1.0
-
-			self.global_position = last_position.lerp(target_position, t)
-
-			if target_distance > 0:
-				if target_distance > 0.6:
-					set_running()
-				else:
-					set_walking()
-
-		elif t > 1.5:
-			self.set_idle()
+	# TODO: maybe a gdext crate bug? when process implement the Node3DVirtual, super(delta) doesn't work :/
+	self.process(delta)
 
 
 func set_walking():

@@ -125,7 +125,8 @@ impl LivekitRoom {
 
                     match message.message {
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Position(position)) => {
-                            avatar_scene.update_transform(peer.alias, &position);
+                            avatar_scene
+                                .update_avatar_transform_with_rfc4_position(peer.alias, &position);
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Chat(chat)) => {
                             let address = format!("{:#x}", message.address);

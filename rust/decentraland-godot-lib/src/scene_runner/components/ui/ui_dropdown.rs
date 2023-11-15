@@ -19,7 +19,7 @@ pub fn update_ui_dropdown(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(dirty_ui_dropdown) = dirty_lww_components.get(&SceneComponentId::UI_DROPDOWN) {
         for entity in dirty_ui_dropdown {
-            let value = if let Some(entry) = ui_dropdown_component.get(*entity) {
+            let value = if let Some(entry) = ui_dropdown_component.get(entity) {
                 entry.value.clone()
             } else {
                 None
