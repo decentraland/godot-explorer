@@ -192,8 +192,11 @@ func fetch_texture(file_path: String, content_mapping: Dictionary) -> Promise:
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
 	return fetch_texture_by_hash(file_hash, content_mapping)
 
-
 func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
+	var url = content_mapping.get("base_url") + file_hash
+	return fetch_texture_by_url(file_hash, url)
+
+func fetch_texture_by_url(file_hash: String, url: String):
 	var promise = Promise.new()
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
@@ -206,8 +209,8 @@ func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
 		. append_content(
 			{
 				"file_hash": file_hash,
+				"url": url,
 				"content_type": ContentType.CT_TEXTURE,
-				"content_mapping": content_mapping,
 			}
 		)
 	)

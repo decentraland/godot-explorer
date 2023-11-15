@@ -256,25 +256,22 @@ func _co_process_loading_texture(
 	content: Dictionary,
 	content_cache_map: Dictionary,
 ) -> void:
-	var content_mapping = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
-	var base_url: String = content_mapping.get("base_url", "")
+	var url: String = content.get("url", "")
 	var local_texture_path = "user://content/" + file_hash
-	if file_hash.is_empty() or base_url.is_empty():
-		printerr("hash or base_url is empty")
+	if file_hash.is_empty() or url.is_empty():
+		printerr("hash or url is empty")
 		return
-
-	var file_hash_path = base_url + file_hash
 
 	if !FileAccess.file_exists(local_texture_path):
 		var absolute_file_path = local_texture_path.replace("user:/", OS.get_user_data_dir())
 
-		var promise: Promise = _http_requester.request_file(file_hash_path, absolute_file_path)
+		var promise: Promise = _http_requester.request_file(url, absolute_file_path)
 
 		var content_result = await promise.co_awaiter()
 		if content_result is Promise.Error:
 			printerr(
-				"Failing on loading gltf ", file_hash_path, " reason: ", content_result.get_error()
+				"Failing on loading gltf ", url, " reason: ", content_result.get_error()
 			)
 			return
 
@@ -287,7 +284,7 @@ func _co_process_loading_texture(
 	var image := Image.new()
 	var err = image.load_png_from_buffer(buf)
 	if err != OK:
-		printerr("Texture " + base_url + file_hash + " couldn't be loaded succesfully: ", err)
+		printerr("Texture " + url + " couldn't be loaded succesfully: ", err)
 		return
 
 	var content_cache = content_cache_map[file_hash]

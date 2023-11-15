@@ -58,7 +58,7 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 };
 
                 nft_shape_3d.call(
-                    "load_nft".into(),
+                    "co_load_nft".into(),
                     &[urn.to_variant(), style.to_variant(), color.to_variant()],
                 );
             }

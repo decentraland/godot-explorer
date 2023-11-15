@@ -48,24 +48,13 @@ class Asset:
 			valid = true
 
 	func download_image():
-		var local_file = OS.get_user_data_dir() + "/content/" + get_hash() + ".png"
-		if not FileAccess.file_exists(local_file):
-			var promise = Global.http_requester.request_file(image_url, local_file)
-			await promise.co_awaiter()
-
-		# Maybe can we done in a thread using the content thread pool...
-		var file = FileAccess.open(local_file, FileAccess.READ)
-		if file == null:
-			printerr("Opening texture `" + local_file + "` fails: ")
+		var hash = get_hash()
+		var promise = Global.content_manager.fetch_texture_by_url(hash, image_url)
+		var result = await promise.co_awaiter()
+		if result is Promise.Error:
+			printerr("open_sea_nft_fetcher::asset::download_image promise error: ", result.get_error())
 			return
-
-		var buf = file.get_buffer(file.get_length())
-		var image := Image.new()
-		var err = image.load_png_from_buffer(buf)
-		if err != OK:
-			printerr("Texture " + image_url + " couldn't be loaded succesfully: ", err)
-			return
-		self.texture = ImageTexture.create_from_image(image)
+		self.texture = result
 
 	func get_hash() -> String:
 		return contract_address + ":" + token_id
