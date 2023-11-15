@@ -135,7 +135,7 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
         None => Vector3::UP,
     }
     .normalized();
-    let raycast_distance = raycast.max_distance.max(1000.0); // engine constraints
+    let raycast_distance = raycast.max_distance.min(1000.0); // engine constraints
     let raycast_to = raycast_from + direction * raycast_distance;
 
     // TODO: check unwrap
@@ -144,12 +144,7 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
         .unwrap()
         .get_direct_space_state()
         .unwrap();
-    let mut raycast_query = PhysicsRayQueryParameters3D::new();
     let collision_mask = raycast.collision_mask.unwrap_or(3);
-
-    raycast_query.set_from(raycast_from);
-    raycast_query.set_to(raycast_to);
-    raycast_query.set_collision_mask(collision_mask);
 
     // debug drawing the ray
     if let Some(mut global) = DclGlobal::try_singleton() {
@@ -167,27 +162,31 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
 
     let hits = match query_type {
         RaycastQueryType::RqtHitFirst => {
-            if let Some(hit) = get_raycast_hit(scene, space.clone(), raycast_query.clone()) {
+            let mut raycast_query = PhysicsRayQueryParameters3D::new();
+            raycast_query.set_from(raycast_from);
+            raycast_query.set_to(raycast_to);
+            raycast_query.set_collision_mask(collision_mask);
+            if let Some(hit) = get_raycast_hit(scene, space.clone(), raycast_query) {
                 vec![hit.0]
             } else {
                 vec![]
             }
         }
         RaycastQueryType::RqtQueryAll => {
-            let mut counter = 0;
+            let mut exclude_rids = Array::new();
             let mut hits = vec![];
-            while let Some((hit, rid)) =
-                get_raycast_hit(scene, space.clone(), raycast_query.clone())
-            {
-                hits.push(hit);
 
-                let mut arr = raycast_query.get_exclude();
-                arr.push(rid);
-                raycast_query.set_exclude(arr);
+            for _ in 0..9 {
+                let mut raycast_query = PhysicsRayQueryParameters3D::new();
+                raycast_query.set_from(raycast_from);
+                raycast_query.set_to(raycast_to);
+                raycast_query.set_collision_mask(collision_mask);
+                raycast_query.set_exclude(exclude_rids.clone());
 
-                // Limitation up to 10 hitss
-                counter += 1;
-                if counter > 10 {
+                if let Some((hit, rid)) = get_raycast_hit(scene, space.clone(), raycast_query) {
+                    hits.push(hit);
+                    exclude_rids.push(rid);
+                } else {
                     break;
                 }
             }

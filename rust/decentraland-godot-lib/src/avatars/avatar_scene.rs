@@ -130,26 +130,32 @@ impl AvatarScene {
             .bind_mut()
             .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
 
-        // TODO: when updating to 4.2, change this to Callable:from_custom
-        if self
-            .base
-            .has_method("_temp_get_custom_callable_on_avatar_changed".into())
-        {
-            // let on_change_scene_id_callable = self
-            //     .base
-            //     .get("on_avatar_changed_scene".into())
-            //     .to::<Callable>();
+        // ############################
+        // Bind function block
+        // This is the only way to bind for now
+        let current_node_instance_id = self.base.instance_id();
+        let callable = Callable::from_fn(
+            "on_avatar_changed_scene_bind_call",
+            move |args: &[&Variant]| {
+                if let Some(current_node) =
+                    Gd::<Node>::try_from_instance_id(current_node_instance_id)
+                {
+                    let original_callable = current_node
+                        .get("on_avatar_changed_scene".into())
+                        .to::<Callable>();
+                    let mut args = Array::from_iter(args.iter().map(|v| (*v).clone()));
+                    args.push(entity_id.as_i32().to_variant());
 
-            let on_change_scene_id_callable = self
-                .base
-                .call(
-                    "_temp_get_custom_callable_on_avatar_changed".into(),
-                    &[entity_id.as_i32().to_variant()],
-                )
-                .to::<Callable>();
+                    let ret = original_callable.callv(args);
+                    Ok(ret)
+                } else {
+                    Err(())
+                }
+            },
+        );
+        // ############################
 
-            new_avatar.connect("change_scene_id".into(), on_change_scene_id_callable);
-        }
+        new_avatar.connect("change_scene_id".into(), callable);
 
         self.base.add_child(new_avatar.clone().upcast());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
