@@ -49,9 +49,9 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                     .map(GodotString::from)
                     .collect();
 
-                if let Some(avatar_modifier_mode_area_node) = existing {
+                if let Some(avatar_modifier_area_node) = existing {
                     let mut avatar_modifier_area_3d =
-                        avatar_modifier_mode_area_node.cast::<DclAvatarModifierArea3D>();
+                        avatar_modifier_area_node.cast::<DclAvatarModifierArea3D>();
 
                     avatar_modifier_area_3d
                         .bind_mut()

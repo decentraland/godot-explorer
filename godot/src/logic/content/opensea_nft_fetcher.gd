@@ -37,7 +37,7 @@ class Asset:
 		token_id = asset.get("token_id")
 		var color = asset.get("background_color")
 		if color is String:
-			background_color = color
+			background_color = "#" + color
 		image_url = asset.get("image_url", "")
 
 		# force format to png

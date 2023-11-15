@@ -28,27 +28,58 @@ enum NFTFrameStyles {
 
 var type_to_asset: Dictionary = {}
 
+
 func _init():
 	type_to_asset[NFTFrameStyles.NFT_CLASSIC] = preload("res://assets/nftshape/Classic.glb")
-	type_to_asset[NFTFrameStyles.NFT_BAROQUE_ORNAMENT] = preload("res://assets/nftshape/Barroque_01.glb")
-	type_to_asset[NFTFrameStyles.NFT_DIAMOND_ORNAMENT] = preload("res://assets/nftshape/Barroque_02.glb")
-	type_to_asset[NFTFrameStyles.NFT_MINIMAL_WIDE] = preload("res://assets/nftshape/Basic_01.glb")
-	type_to_asset[NFTFrameStyles.NFT_MINIMAL_GREY] = preload("res://assets/nftshape/Basic_02.glb")
-	type_to_asset[NFTFrameStyles.NFT_BLOCKY] = preload("res://assets/nftshape/Blocky_01.glb")
-	type_to_asset[NFTFrameStyles.NFT_GOLD_EDGES] = preload("res://assets/nftshape/Golden_01.glb")
-	type_to_asset[NFTFrameStyles.NFT_GOLD_CARVED] = preload("res://assets/nftshape/Golden_02.glb")
-	type_to_asset[NFTFrameStyles.NFT_GOLD_WIDE] = preload("res://assets/nftshape/Golden_03.glb")
-	type_to_asset[NFTFrameStyles.NFT_GOLD_ROUNDED] = preload("res://assets/nftshape/Golden_04.glb")
-	type_to_asset[NFTFrameStyles.NFT_METAL_MEDIUM] = preload("res://assets/nftshape/Metal_01.glb")
-	type_to_asset[NFTFrameStyles.NFT_METAL_WIDE] = preload("res://assets/nftshape/Metal_02.glb")
-	type_to_asset[NFTFrameStyles.NFT_METAL_SLIM] = preload("res://assets/nftshape/Metal_03.glb")
-	type_to_asset[NFTFrameStyles.NFT_METAL_ROUNDED] = preload("res://assets/nftshape/Metal_04.glb")
-	type_to_asset[NFTFrameStyles.NFT_PINS] = preload("res://assets/nftshape/Pin.glb")
-	type_to_asset[NFTFrameStyles.NFT_MINIMAL_BLACK] = preload("res://assets/nftshape/SimpleBlack.glb")
-	type_to_asset[NFTFrameStyles.NFT_MINIMAL_WHITE] = preload("res://assets/nftshape/SimpleWhite.glb")
-	type_to_asset[NFTFrameStyles.NFT_TAPE] = preload("res://assets/nftshape/Tapper.glb")
-	type_to_asset[NFTFrameStyles.NFT_WOOD_SLIM] = preload("res://assets/nftshape/Wood.glb")
-	type_to_asset[NFTFrameStyles.NFT_WOOD_WIDE] = preload("res://assets/nftshape/Wood_02.glb")
-	type_to_asset[NFTFrameStyles.NFT_WOOD_TWIGS] = preload("res://assets/nftshape/WoodSticks.glb")
-	type_to_asset[NFTFrameStyles.NFT_CANVAS] = preload("res://assets/nftshape/SimpleCanvas.glb")
-	type_to_asset[NFTFrameStyles.NFT_NONE] = null # Asumiendo que no hay activo para NFT_NONE
+	type_to_asset[NFTFrameStyles.NFT_BAROQUE_ORNAMENT] = preload(
+		"res://assets/nftshape/Baroque_Ornament.glb"
+	)
+	type_to_asset[NFTFrameStyles.NFT_DIAMOND_ORNAMENT] = preload(
+		"res://assets/nftshape/Diamond_Ornament.glb"
+	)
+	type_to_asset[NFTFrameStyles.NFT_MINIMAL_WIDE] = preload(
+		"res://assets/nftshape/Minimal_Wide.glb"
+	)
+	type_to_asset[NFTFrameStyles.NFT_MINIMAL_GREY] = preload(
+		"res://assets/nftshape/Minimal_Grey.glb"
+	)
+	type_to_asset[NFTFrameStyles.NFT_BLOCKY] = preload("res://assets/nftshape/Blocky.glb")
+	type_to_asset[NFTFrameStyles.NFT_GOLD_EDGES] = preload("res://assets/nftshape/Gold_Edges.glb")
+	type_to_asset[NFTFrameStyles.NFT_GOLD_CARVED] = preload("res://assets/nftshape/Gold_Carved.glb")
+	type_to_asset[NFTFrameStyles.NFT_GOLD_WIDE] = preload("res://assets/nftshape/Gold_Wide.glb")
+	type_to_asset[NFTFrameStyles.NFT_GOLD_ROUNDED] = preload(
+		"res://assets/nftshape/Gold_Rounded.glb"
+	)
+	type_to_asset[NFTFrameStyles.NFT_METAL_MEDIUM] = preload(
+		"res://assets/nftshape/Metal_Medium.glb"
+	)
+	type_to_asset[NFTFrameStyles.NFT_METAL_WIDE] = preload("res://assets/nftshape/Metal_Wide.glb")
+	type_to_asset[NFTFrameStyles.NFT_METAL_SLIM] = preload("res://assets/nftshape/Metal_Slim.glb")
+	type_to_asset[NFTFrameStyles.NFT_METAL_ROUNDED] = preload(
+		"res://assets/nftshape/Metal_Rounded.glb"
+	)
+	type_to_asset[NFTFrameStyles.NFT_PINS] = preload("res://assets/nftshape/Pins.glb")
+	type_to_asset[NFTFrameStyles.NFT_MINIMAL_BLACK] = preload(
+		"res://assets/nftshape/Minimal_Black.glb"
+	)
+	type_to_asset[NFTFrameStyles.NFT_MINIMAL_WHITE] = preload(
+		"res://assets/nftshape/Minimal_White.glb"
+	)
+	type_to_asset[NFTFrameStyles.NFT_TAPE] = preload("res://assets/nftshape/Tape.glb")
+	type_to_asset[NFTFrameStyles.NFT_WOOD_SLIM] = preload("res://assets/nftshape/Wood_Slim.glb")
+	type_to_asset[NFTFrameStyles.NFT_WOOD_WIDE] = preload("res://assets/nftshape/Wood_Wide.glb")
+	type_to_asset[NFTFrameStyles.NFT_WOOD_TWIGS] = preload("res://assets/nftshape/Wood_Twigs.glb")
+	type_to_asset[NFTFrameStyles.NFT_CANVAS] = preload("res://assets/nftshape/Canvas.glb")
+	type_to_asset[NFTFrameStyles.NFT_NONE] = preload("res://assets/nftshape/empty_frame.tscn")
+
+
+func instantiate(type: NFTFrameStyles):
+	var resource: Resource = type_to_asset[type]
+	if resource == null:
+		return null
+
+	var node: Node3D = resource.instantiate()
+	if type == NFTFrameStyles.NFT_CLASSIC:
+		node.rotate_x(-deg_to_rad(90.0))
+		node.rotate_y(deg_to_rad(180.0))
+	return node

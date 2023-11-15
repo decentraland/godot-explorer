@@ -289,6 +289,8 @@ func _on_line_edit_command_submit_message(message: String):
 				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
 			)
 			Global.realm.set_realm(params[1])
+		elif command_str == "/reload":
+			Global.realm.set_realm(Global.realm.get_realm_string())
 		else:
 			pass
 			# TODO: unknown command

@@ -16,6 +16,9 @@ var animation_importer: AnimationImporter = AnimationImporter.new()
 var scene_fetcher: SceneFetcher = null
 var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
 
+var nft_fetcher: OpenSeaFetcher = OpenSeaFetcher.new()
+var nft_frame_loader: NftFrameStyleLoader = NftFrameStyleLoader.new()
+
 var standalone = false
 
 enum CameraMode {
