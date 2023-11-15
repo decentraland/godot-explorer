@@ -270,9 +270,7 @@ func _co_process_loading_texture(
 
 		var content_result = await promise.co_awaiter()
 		if content_result is Promise.Error:
-			printerr(
-				"Failing on loading gltf ", url, " reason: ", content_result.get_error()
-			)
+			printerr("Failing on loading gltf ", url, " reason: ", content_result.get_error())
 			return
 
 	var file = FileAccess.open(local_texture_path, FileAccess.READ)

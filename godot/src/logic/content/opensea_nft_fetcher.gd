@@ -52,7 +52,9 @@ class Asset:
 		var promise = Global.content_manager.fetch_texture_by_url(hash, image_url)
 		var result = await promise.co_awaiter()
 		if result is Promise.Error:
-			printerr("open_sea_nft_fetcher::asset::download_image promise error: ", result.get_error())
+			printerr(
+				"open_sea_nft_fetcher::asset::download_image promise error: ", result.get_error()
+			)
 			return
 		self.texture = result
 

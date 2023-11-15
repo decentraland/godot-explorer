@@ -29,6 +29,7 @@ enum NFTFrameStyles {
 var type_to_asset: Dictionary = {}
 var loading_material: Material = null
 
+
 func _init():
 	# can be shared...
 	loading_material = load("res://assets/nftshape/material_loading_animation.tres")
