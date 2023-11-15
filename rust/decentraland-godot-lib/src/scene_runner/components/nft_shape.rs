@@ -17,7 +17,7 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(nft_shape_dirty) = dirty_lww_components.get(&SceneComponentId::NFT_SHAPE) {
         for entity in nft_shape_dirty {
-            let new_value = nft_shape_component.get(*entity);
+            let new_value = nft_shape_component.get(entity);
 
             let Some(new_value) = new_value else {
                 continue; // no value, continue
