@@ -93,6 +93,10 @@ pub enum RpcCall {
         world_coordinates: [i32; 2],
         response: RpcResultSender<Result<(), String>>,
     },
+    OpenNftDialog {
+        urn: String,
+        response: RpcResultSender<Result<(), String>>,
+    },
     TriggerEmote {
         emote_id: String,
         response: RpcResultSender<Result<(), String>>,

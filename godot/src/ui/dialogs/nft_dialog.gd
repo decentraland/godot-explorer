@@ -7,8 +7,6 @@ var permalink = "https://decentraland.org/"
 func _ready():
 	%DetailsPanel.hide()
 	%ViewOnOpenSea.disabled = true
-	# Temp
-	co_load_nft("urn:decentraland:ethereum:erc721:0x0fc3dd8c37880a297166bed57759974a157f0e74:651")
 
 
 func _on_visibility_changed():
@@ -43,19 +41,15 @@ func co_load_nft(urn: String):
 		%Title.text = asset.name
 		%Description.text = asset.description
 
-		var last_sell = asset.last_sell_erc20
-		%LastSoldFor.text = last_sell.ether_to_string() + " (" + last_sell.dollar_to_string() + ")"
-
-		var number_of_offers = await asset.co_load_offers()
-		if number_of_offers == 0:
-			%Offers.text = "NONE"
-			%Offers.add_theme_color_override("font_color", Color(0.7, 0.0, 0.0))
-		elif number_of_offers == 1:
-			%Offers.text = "ONLY ONE"
-			%Offers.add_theme_color_override("font_color", Color(0.0, 0.0, 0.0))
+		if asset.last_sell_erc20 != null:
+			var last_sell = asset.last_sell_erc20
+			%LastSoldFor.text = (
+				last_sell.ether_to_string() + " (" + last_sell.dollar_to_string() + ")"
+			)
 		else:
-			%Offers.text = str(number_of_offers)
-			%Offers.add_theme_color_override("font_color", Color(0.0, 0.0, 0.0))
+			%LastSoldFor.text = "NEVER SOLD"
+
+		%AvgPrice.text = asset.average_price_to_string()
 
 
 func _on_view_on_open_sea_pressed():

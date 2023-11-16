@@ -4,7 +4,7 @@
 [ext_resource type="SpriteFrames" uid="uid://bthpplsqs257v" path="res://assets/nftshape/loading_animation_sprite.tres" id="3_6iawc"]
 
 [node name="nft_dialog" type="Panel"]
-custom_minimum_size = Vector2(600, 400)
+custom_minimum_size = Vector2(800, 400)
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -18,7 +18,7 @@ script = ExtResource("1_insdf")
 
 [node name="LoadingAnimation" type="AnimatedSprite2D" parent="."]
 unique_name_in_owner = true
-position = Vector2(250, 141)
+position = Vector2(350, 141)
 sprite_frames = ExtResource("3_6iawc")
 autoplay = "default"
 centered = false
@@ -132,8 +132,8 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 14
 
 [node name="EmptySpace" type="Control" parent="VBoxContainer/HBoxContainer2/DetailsPanel/VBoxContainer/HBoxContainer"]
-custom_minimum_size = Vector2(60, 0)
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/HBoxContainer2/DetailsPanel/VBoxContainer/HBoxContainer"]
 layout_mode = 2
@@ -142,9 +142,9 @@ layout_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
 theme_override_font_sizes/font_size = 14
-text = "OFFERS"
+text = "COLLECTION AVG PRICE"
 
-[node name="Offers" type="Label" parent="VBoxContainer/HBoxContainer2/DetailsPanel/VBoxContainer/HBoxContainer/VBoxContainer2"]
+[node name="AvgPrice" type="Label" parent="VBoxContainer/HBoxContainer2/DetailsPanel/VBoxContainer/HBoxContainer/VBoxContainer2"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -188,6 +188,7 @@ theme_override_font_sizes/font_size = 12
 disabled = true
 text = "VIEW ON OPENSEA"
 
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="meta_clicked" from="VBoxContainer/HBoxContainer2/DetailsPanel/VBoxContainer/Owner" to="." method="_on_owner_meta_clicked"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer2/DetailsPanel/VBoxContainer/HBoxContainer2/Cancel" to="." method="_on_cancel_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer2/DetailsPanel/VBoxContainer/HBoxContainer2/ViewOnOpenSea" to="." method="_on_view_on_open_sea_pressed"]

@@ -19,21 +19,29 @@ class Asset:
 	var contract_address: String = ""
 	var token_id: String = ""
 	var image_url: String = ""
-	var background_color: Color = ""
+	var background_color: Color
 	var texture: ImageTexture = null
 	var last_sell_erc20: ERC20
 	var number_of_offers: int = 0
 	var username: String = ""
 	var address: String = ""
+	var average_price: float = 0.0
+	var average_price_in_dollars: float = 0.0
+
+	func _get_or_empty_string(dict: Dictionary, key: String) -> String:
+		var value = dict.get(key, null)
+		if value is String:
+			return value
+		return ""
 
 	func _init(endpoint: String, asset: Dictionary):
 		self.endpoint = endpoint
 		contract_address = asset.get("asset_contract", {}).get("address", "")
 		token_id = asset.get("token_id")
 
-		name = asset.get("name", "")
-		description = asset.get("description", "")
-		permalink = asset.get("permalink", "")
+		self.name = _get_or_empty_string(asset, "name")
+		self.description = _get_or_empty_string(asset, "description")
+		self.permalink = _get_or_empty_string(asset, "permalink")
 
 		var color = asset.get("background_color")
 		if color is String:
@@ -43,12 +51,18 @@ class Asset:
 
 		# last sell
 		var last_sale = asset.get("last_sale", {})
-		var total_price = last_sale.get("total_price", "0")
-		var payment_token = last_sale.get("payment_token", {})
-		var symbol = payment_token.get("symbol")
-		var usd_price = float(payment_token.get("usd_price"))
-		var eth_price = float(payment_token.get("eth_price"))
-		last_sell_erc20 = ERC20.new(BigNumber.new(total_price), symbol, usd_price, eth_price)
+		if last_sale != null:
+			var total_price = last_sale.get("total_price", "0")
+			var payment_token = last_sale.get("payment_token", {})
+			var symbol = payment_token.get("symbol")
+			var usd_price = float(payment_token.get("usd_price"))
+			var eth_price = float(payment_token.get("eth_price"))
+			last_sell_erc20 = ERC20.new(BigNumber.new(total_price), symbol, usd_price, eth_price)
+
+			# average price
+			average_price = asset.get("collection", {}).get("stats", {}).get("average_price", 0.0)
+			if last_sell_erc20 != null:
+				average_price_in_dollars = average_price * eth_price * usd_price
 
 		# image
 		image_url = asset.get("image_url", "")
@@ -60,18 +74,16 @@ class Asset:
 		var owner = asset.get("top_ownerships", [{}])[0].get("owner", {})
 		var user = owner.get("user", {})
 		if user:
-			self.username = str(user.get("username", ""))
-		self.address = str(owner.get("address", ""))
+			self.username = _get_or_empty_string(user, "username")
+		self.address = _get_or_empty_string(owner, "address")
 
 		if !token_id.is_empty() and !image_url.is_empty() and !contract_address.is_empty():
 			valid = true
 
-	func get_owner_name():
-		var short_address = Ether.shorten_eth_address(self.address)
-		if self.username.is_empty():
-			return short_address
-		else:
-			return self.username + " (" + short_address + ")"
+	func average_price_to_string():
+		var usd = "US$" + str(snappedf(average_price_in_dollars, 0.01))
+		var eth = "ETH " + str(snappedf(average_price, 0.0001))
+		return eth + " (" + usd + ")"
 
 	func co_load_offers() -> int:
 		# Request
@@ -92,6 +104,13 @@ class Asset:
 		var seaport_offers: Array = result.get("seaport_offers", [])
 		number_of_offers = seaport_offers.size()
 		return number_of_offers
+
+	func get_owner_name():
+		var short_address = Ether.shorten_eth_address(self.address)
+		if self.username.is_empty():
+			return short_address
+		else:
+			return self.username + " (" + short_address + ")"
 
 # Commented code if in the future we want to search for best_offers...
 # 		if seaport_offers.is_empty():

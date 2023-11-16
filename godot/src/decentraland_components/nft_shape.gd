@@ -53,7 +53,22 @@ func _load_frame_style(
 	return current_frame
 
 
-func _set_override_material(
+func _set_picture_frame_texture(
+	mesh_instance_3d: MeshInstance3D, style: NftFrameStyleLoader.NFTFrameStyles, texture: Texture2D
+):
+	if style == NftFrameStyleLoader.NFTFrameStyles.NFT_NONE:
+		# plane shape
+		var material = mesh_instance_3d.mesh.get_material().duplicate()
+		material.albedo_texture = texture
+		mesh_instance_3d.set_surface_override_material(0, material)
+	else:
+		var surf_idx = _get_surf_idx_by_resource_name(mesh_instance_3d.mesh, "PictureFrame")
+		var material = mesh_instance_3d.mesh.surface_get_material(surf_idx).duplicate()
+		material.albedo_texture = texture
+		mesh_instance_3d.set_surface_override_material(surf_idx, material)
+
+
+func _set_picture_frame_material(
 	mesh_instance_3d: MeshInstance3D, style: NftFrameStyleLoader.NFTFrameStyles, material: Material
 ):
 	if style == NftFrameStyleLoader.NFTFrameStyles.NFT_NONE:
@@ -73,7 +88,7 @@ func _set_loading_material(
 		return
 
 	var loading_material: Material = Global.nft_frame_loader.loading_material
-	_set_override_material(mesh_instance_3d, style, loading_material)
+	_set_picture_frame_material(mesh_instance_3d, style, loading_material)
 
 	# Load background
 	var background_material: StandardMaterial3D = _get_material_by_resource_name(
@@ -122,15 +137,4 @@ func _co_set_opensea_nft(
 		return
 
 	# Clean loading material...
-	_set_override_material(mesh_instance_3d, style, null)
-
-	if style == NftFrameStyleLoader.NFTFrameStyles.NFT_NONE:
-		var picture_material: StandardMaterial3D = mesh_instance_3d.mesh.get_material()
-		mesh_instance_3d.set_surface_override_material(0, null)
-		picture_material.albedo_texture = asset.texture
-	else:
-		var picture_material: StandardMaterial3D = _get_material_by_resource_name(
-			mesh_instance_3d.mesh, "PictureFrame"
-		)
-		picture_material.albedo_texture = asset.texture
-		picture_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_set_picture_frame_texture(mesh_instance_3d, style, asset.texture)
