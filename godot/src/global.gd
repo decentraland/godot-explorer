@@ -94,3 +94,11 @@ func print_node_tree(node: Node, prefix = ""):
 
 func _process(_dt: float):
 	http_requester.poll()
+
+
+func capture_mouse():
+	get_node("/root/explorer").capture_mouse()
+
+
+func release_mouse():
+	get_node("/root/explorer").release_mouse()

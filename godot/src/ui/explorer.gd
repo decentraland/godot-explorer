@@ -151,28 +151,24 @@ func _unhandled_input(event):
 	if not Global.is_mobile:
 		if event is InputEventMouseButton and event.pressed:
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-				label_crosshair.show()
+				capture_mouse()
 
 		if event is InputEventKey:
 			if event.pressed and event.keycode == KEY_TAB:
 				if not control_menu.visible:
 					control_menu.show_last()
-					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-					label_crosshair.hide()
+					release_mouse()
 
 			if event.pressed and event.keycode == KEY_M:
 				if control_menu.visible:
 					pass
 				else:
 					control_menu.show_map()
-					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-					label_crosshair.hide()
+					release_mouse()
 
 			if event.pressed and event.keycode == KEY_ESCAPE:
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-					label_crosshair.hide()
+					release_mouse()
 
 				line_edit_command.finish()
 
@@ -190,8 +186,7 @@ func _toggle_ram_usage(visibility: bool):
 func _on_control_minimap_request_open_map():
 	if !control_menu.visible:
 		control_menu.show_map()
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-		label_crosshair.hide()
+		release_mouse()
 
 
 func _on_control_menu_jump_to(parcel: Vector2i):
@@ -318,3 +313,13 @@ func teleport_to(parcel: Vector2i):
 
 func player_look_at(look_at_position: Vector3):
 	player.avatar_look_at(look_at_position)
+
+
+func capture_mouse():
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	label_crosshair.show()
+
+
+func release_mouse():
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	label_crosshair.hide()

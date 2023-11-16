@@ -49,18 +49,22 @@ class Asset:
 		else:
 			background_color = Color.TRANSPARENT
 
+		# average price
+		average_price = asset.get("collection", {}).get("stats", {}).get("average_price", 0.0)
+
 		# last sell
 		var last_sale = asset.get("last_sale", {})
 		if last_sale != null:
 			var total_price = last_sale.get("total_price", "0")
 			var payment_token = last_sale.get("payment_token", {})
-			var symbol = payment_token.get("symbol")
+			var decimals = int(payment_token.get("decimals", 18))
+			var symbol = payment_token.get("symbol", "")
 			var usd_price = float(payment_token.get("usd_price"))
 			var eth_price = float(payment_token.get("eth_price"))
-			last_sell_erc20 = Erc20.new(BigNumber.new(total_price), symbol, usd_price, eth_price)
+			var value = DclEther.format_units(total_price, decimals)
+			last_sell_erc20 = Erc20.new(value, symbol, usd_price, eth_price)
 
 			# average price
-			average_price = asset.get("collection", {}).get("stats", {}).get("average_price", 0.0)
 			if last_sell_erc20 != null:
 				average_price_in_dollars = average_price * eth_price * usd_price
 
@@ -81,9 +85,12 @@ class Asset:
 			valid = true
 
 	func average_price_to_string():
-		var usd = "US$" + str(snappedf(average_price_in_dollars, 0.01))
 		var eth = "ETH " + str(snappedf(average_price, 0.0001))
-		return eth + " (" + usd + ")"
+		if average_price_in_dollars > 0.1:
+			var usd = "US$" + str(snappedf(average_price_in_dollars, 0.01))
+			return eth + " (" + usd + ")"
+		else:
+			return eth
 
 	func co_load_offers() -> int:
 		# Request
@@ -106,7 +113,7 @@ class Asset:
 		return number_of_offers
 
 	func get_owner_name():
-		var short_address = Ether.shorten_eth_address(self.address)
+		var short_address = DclEther.shorten_eth_address(self.address)
 		if self.username.is_empty():
 			return short_address
 		else:

@@ -5,13 +5,13 @@ var permalink = "https://decentraland.org/"
 
 
 func _ready():
-	%DetailsPanel.hide()
+	%InformationPanel.hide()
 	%ViewOnOpenSea.disabled = true
 
 
 func _on_visibility_changed():
 	if is_visible():
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		Global.release_mouse()
 
 
 func co_load_nft(urn: String):
@@ -23,7 +23,7 @@ func co_load_nft(urn: String):
 	var promise = Global.nft_fetcher.fetch_nft(dcl_urn)
 	var asset = await promise.co_awaiter()
 	if asset is OpenSeaFetcher.Asset:
-		%DetailsPanel.show()
+		%InformationPanel.show()
 		permalink = asset.permalink
 		%ViewOnOpenSea.disabled = false
 		%LoadingAnimation.hide()
@@ -33,7 +33,7 @@ func co_load_nft(urn: String):
 		%Background.color = Color(asset.background_color)
 
 		var owner_name = asset.get_owner_name()
-		if Ether.is_valid_ethereum_address(asset.address):
+		if DclEther.is_valid_ethereum_address(asset.address):
 			var owner_url = "https://opensea.io/" + asset.address
 			%Owner.parse_bbcode("[url=%s]%s[/url]" % [owner_url, owner_name])
 		else:
