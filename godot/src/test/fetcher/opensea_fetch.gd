@@ -3,7 +3,6 @@ extends Control
 var nft_fetcher: OpenSeaFetcher = OpenSeaFetcher.new()
 
 
-# Called when the node enters the scene tree for the first time.
 func add_nft(urn: String):
 	var promise = nft_fetcher.fetch_nft(DclUrn.new(urn))
 	var result: OpenSeaFetcher.Asset = await promise.co_awaiter()
@@ -16,12 +15,6 @@ func add_nft(urn: String):
 	var y = $GridContainer.get_child_count() / 3
 	texture_rect.position = Vector2(x, y) * 200
 	$GridContainer.add_child(texture_rect)
-
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _ready():
-	#_on_button_pressed()
-	pass
 
 
 func _on_button_pressed():

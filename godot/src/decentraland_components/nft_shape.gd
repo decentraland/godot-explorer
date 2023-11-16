@@ -20,7 +20,7 @@ func co_load_nft(urn: String, style: NftFrameStyleLoader.NFTFrameStyles, backgro
 	# debounce the call, to avoid multiple calls being processed
 	# we just process the current one, and the last one
 	if loading:
-		scheduled_load_nft = self.load_nft.bind(urn, style, background_color)
+		scheduled_load_nft = self.co_load_nft.bind(urn, style, background_color)
 		return
 
 	loading = true

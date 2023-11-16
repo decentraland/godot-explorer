@@ -21,7 +21,7 @@ class Asset:
 	var image_url: String = ""
 	var background_color: Color
 	var texture: ImageTexture = null
-	var last_sell_erc20: ERC20
+	var last_sell_erc20: Erc20
 	var number_of_offers: int = 0
 	var username: String = ""
 	var address: String = ""
@@ -57,7 +57,7 @@ class Asset:
 			var symbol = payment_token.get("symbol")
 			var usd_price = float(payment_token.get("usd_price"))
 			var eth_price = float(payment_token.get("eth_price"))
-			last_sell_erc20 = ERC20.new(BigNumber.new(total_price), symbol, usd_price, eth_price)
+			last_sell_erc20 = Erc20.new(BigNumber.new(total_price), symbol, usd_price, eth_price)
 
 			# average price
 			average_price = asset.get("collection", {}).get("stats", {}).get("average_price", 0.0)

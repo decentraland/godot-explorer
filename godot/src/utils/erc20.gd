@@ -1,4 +1,4 @@
-class_name ERC20
+class_name Erc20
 var wei: BigNumber = null
 var value: float = 0.0
 var dollar_value: float = 0.0
