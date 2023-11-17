@@ -1,0 +1,60 @@
+[gd_scene load_steps=2 format=3 uid="uid://cfox5r1jvnvo"]
+
+[ext_resource type="Script" path="res://src/test/fetcher/opensea_fetch.gd" id="1_vg2d3"]
+
+[node name="opensea_fetch" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_vg2d3")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 20.0
+text = "Set your URNs separated by new lines..."
+
+[node name="LineEdit" type="TextEdit" parent="."]
+layout_mode = 0
+offset_top = 23.0
+offset_right = 623.0
+offset_bottom = 383.0
+text = "urn:decentraland:ethereum:erc721:0x06012c8cf97bead5deae237070f9587f8e7a266d:558536
+urn:decentraland:ethereum:erc721:0x7a31c6726f358fad0783110a46ef489372fbfc65:805
+urn:decentraland:ethereum:erc721:0x7a31c6726f358fad0783110a46ef489372fbfc65:5163
+urn:decentraland:ethereum:erc721:0x7a31c6726f358fad0783110a46ef489372fbfc65:388
+urn:decentraland:ethereum:erc721:0x06012c8cf97bead5deae237070f9587f8e7a266d:1347632
+urn:decentraland:ethereum:erc721:0x06012c8cf97bead5deae237070f9587f8e7a266d:1851791
+urn:decentraland:ethereum:erc721:0x06012c8cf97bead5deae237070f9587f8e7a266d:1475231
+urn:decentraland:ethereum:erc721:0x06012c8cf97bead5deae237070f9587f8e7a266d:1981747
+urn:decentraland:ethereum:erc721:0x06012c8cf97bead5deae237070f9587f8e7a266d:452079"
+
+[node name="Label2" type="Label" parent="."]
+layout_mode = 0
+offset_left = 643.0
+offset_right = 917.0
+offset_bottom = 23.0
+text = "Result:"
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 0
+offset_left = 547.0
+offset_top = 383.0
+offset_right = 622.0
+offset_bottom = 410.0
+text = "UPDATE"
+
+[node name="GridContainer" type="BoxContainer" parent="."]
+custom_minimum_size = Vector2(600, 600)
+layout_direction = 1
+layout_mode = 0
+offset_left = 643.0
+offset_top = 23.0
+offset_right = 1243.0
+offset_bottom = 623.0
+vertical = true
+
+[connection signal="pressed" from="Button" to="." method="_on_button_pressed"]

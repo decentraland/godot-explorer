@@ -11,6 +11,7 @@ pub mod gltf_container;
 pub mod material;
 pub mod mesh_collider;
 pub mod mesh_renderer;
+pub mod nft_shape;
 pub mod pointer_events;
 pub mod raycast;
 pub mod text_shape;
