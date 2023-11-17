@@ -7,8 +7,9 @@ use deno_core::{
 };
 
 use crate::dcl::{
+    components::proto_components::common::Color3,
     crdt::{SceneCrdtState, SceneCrdtStateProtoComponents},
-    scene_apis::{LocalCall, UserData},
+    scene_apis::{AvatarForUserData, LocalCall, UserData},
 };
 
 pub fn ops() -> Vec<OpDecl> {
@@ -119,7 +120,7 @@ pub fn get_player_data(user_id: String, crdt_state: &SceneCrdtState) -> Option<U
         .get(player_entity_id)?
         .value
         .as_ref()?;
-    let _avatar_equipped_data_value = avatar_equipped_data_component
+    let avatar_equipped_data_value = avatar_equipped_data_component
         .values
         .get(player_entity_id)?
         .value
@@ -134,16 +135,28 @@ pub fn get_player_data(user_id: String, crdt_state: &SceneCrdtState) -> Option<U
         },
         has_connected_web3: !player_identity_data_value.is_guest,
         user_id: player_identity_data_value.address.clone(),
-        version: 0, // TODO: how to get this?
-        avatar: None,
-        // avatar: Some(AvatarForUserData {
-        //     body_shape: avatar_base_value.body_shape_urn.clone(),
-        //     skin_color: avatar_base_value.skin_color.clone().unwrap_or(Color3).to_string(),
-        //     hair_color: String,
-        //     eye_color: String,
-        //     wearables: Vec<String>,
-        //     snapshots: Option<Snapshots>
-        // }),
+        // TODO: implement this when version is in the avatar components
+        version: 0, // TODO: we don't have this information in the avatar components
+        avatar: Some(AvatarForUserData {
+            body_shape: avatar_base_value.body_shape_urn.clone(),
+            skin_color: avatar_base_value
+                .skin_color
+                .as_ref()
+                .unwrap_or(&Color3::black())
+                .to_color_string(),
+            hair_color: avatar_base_value
+                .hair_color
+                .as_ref()
+                .unwrap_or(&Color3::black())
+                .to_color_string(),
+            eye_color: avatar_base_value
+                .eyes_color
+                .as_ref()
+                .unwrap_or(&Color3::black())
+                .to_color_string(),
+            wearables: avatar_equipped_data_value.wearable_urns.clone(),
+            snapshots: None, // TODO: we don't have this information in the avatar components
+        }),
     };
     Some(user_data)
 }

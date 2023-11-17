@@ -405,6 +405,7 @@ pub fn process_events_players_stateless(
         op_state.put(player_expression_sender);
     }
 
+    // TODO: implement this when version is in the avatar components
     if let Some(profile_changed_sender) = op_state.try_take::<EventSender<ProfileChanged>>() {
         op_state.put(profile_changed_sender);
     }
