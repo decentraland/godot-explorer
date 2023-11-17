@@ -97,8 +97,16 @@ func _process(_dt: float):
 
 
 func capture_mouse():
-	get_node("/root/explorer").capture_mouse()
+	var explorer = get_node_or_null("/root/explorer")
+	if is_instance_valid(explorer):
+		explorer.capture_mouse()
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
 func release_mouse():
-	get_node("/root/explorer").release_mouse()
+	var explorer = get_node_or_null("/root/explorer")
+	if is_instance_valid(explorer):
+		explorer.release_mouse()
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)

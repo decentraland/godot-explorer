@@ -5,8 +5,8 @@ var permalink = "https://decentraland.org/"
 
 
 func _ready():
-	%InformationPanel.hide()
-	%ViewOnOpenSea.disabled = true
+	%VBoxContainer_InfoPanel.hide()
+	%Button_ViewOnOpenSea.disabled = true
 
 
 func _on_visibility_changed():
@@ -23,42 +23,42 @@ func co_load_nft(urn: String):
 	var promise = Global.nft_fetcher.fetch_nft(dcl_urn)
 	var asset = await promise.co_awaiter()
 	if asset is OpenSeaFetcher.Asset:
-		%InformationPanel.show()
+		%VBoxContainer_InfoPanel.show()
 		permalink = asset.permalink
-		%ViewOnOpenSea.disabled = false
+		%Button_ViewOnOpenSea.disabled = false
 		%LoadingAnimation.hide()
 		current_asset = asset
-		%NFTImage.texture = asset.texture
+		%TextureRect_NFTImage.texture = asset.texture
 
-		%Background.color = Color(asset.background_color)
+		%ColorRect_Background.color = Color(asset.background_color)
 
 		var owner_name = asset.get_owner_name()
 		if DclEther.is_valid_ethereum_address(asset.address):
 			var owner_url = "https://opensea.io/" + asset.address
-			%Owner.parse_bbcode("[url=%s]%s[/url]" % [owner_url, owner_name])
+			%RichTextBox_Owner.parse_bbcode("[url=%s]%s[/url]" % [owner_url, owner_name])
 		else:
-			%Owner.parse_bbcode(owner_name)
-		%Title.text = asset.name
-		%Description.text = asset.description
+			%RichTextBox_Owner.parse_bbcode(owner_name)
+		%Label_Title.text = asset.name
+		%Label_Description.text = asset.description
 
 		if asset.last_sell_erc20 != null:
 			var last_sell = asset.last_sell_erc20
-			%LastSoldFor.text = (
+			%Label_LastSoldFor.text = (
 				last_sell.ether_to_string() + " (" + last_sell.dollar_to_string() + ")"
 			)
 		else:
-			%LastSoldFor.text = "NEVER SOLD"
+			%Label_LastSoldFor.text = "NEVER SOLD"
 
-		%AvgPrice.text = asset.average_price_to_string()
-
-
-func _on_view_on_open_sea_pressed():
-	OS.shell_open(permalink)
+		%Label_AvgPrice.text = asset.average_price_to_string()
 
 
-func _on_cancel_pressed():
+func _on_button_cancel_pressed():
 	queue_free()
 
 
-func _on_owner_meta_clicked(meta):
+func _on_button_view_on_open_sea_pressed():
+	OS.shell_open(permalink)
+
+
+func _on_rich_text_box_owner_meta_clicked(meta):
 	OS.shell_open(meta)
