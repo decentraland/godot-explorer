@@ -47,7 +47,7 @@ async fn op_open_nft_dialog(op_state: Rc<RefCell<OpState>>, urn: String) -> Resu
 
     op_state
         .borrow_mut()
-        .borrow_mut::<RpcCalls>()
+        .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::OpenNftDialog {
             urn,
             response: sx.into(),
