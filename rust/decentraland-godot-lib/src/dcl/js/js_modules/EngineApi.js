@@ -35,7 +35,7 @@ module.exports.subscribe = async function (message) {
  * This function unsubscribe to an event from the renderer
  */
 module.exports.unsubscribe = async function (message) {
-    Deno.core.ops.op_subscribe(message.eventId);
+    Deno.core.ops.op_unsubscribe(message.eventId);
 }
 
 /**
