@@ -17,6 +17,7 @@ use super::{
         material::update_material,
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
+        nft_shape::update_nft_shape,
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
         text_shape::update_text_shape,
@@ -173,6 +174,10 @@ pub fn _process_scene(
             SceneUpdateState::GltfContainer => {
                 update_gltf_container(scene, crdt_state);
                 sync_gltf_loading_state(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::NftShape => {
+                update_nft_shape(scene, crdt_state);
                 false
             }
             SceneUpdateState::Animator => {
