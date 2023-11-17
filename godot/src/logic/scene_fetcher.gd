@@ -60,7 +60,7 @@ func set_scene_radius(value: int):
 func _process(_dt):
 	scene_entity_coordinator.update()
 	if scene_entity_coordinator.get_version() != last_version_updated:
-		_on_desired_scene_changed()
+		await _co_on_desired_scene_changed()
 		last_version_updated = scene_entity_coordinator.get_version()
 
 
@@ -80,7 +80,7 @@ var empty_scenes = [
 ]
 
 
-func _on_desired_scene_changed():
+func _co_on_desired_scene_changed():
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
 	var keep_alive_scenes = d.get("keep_alive_scenes", [])
@@ -90,7 +90,7 @@ func _on_desired_scene_changed():
 			var dict = scene_entity_coordinator.get_scene_dict(scene_id)
 			if dict.size() > 0:
 				dict["metadata"] = JSON.parse_string(dict.metadata)
-				load_scene(scene_id, dict)
+				await co_load_scene(scene_id, dict)
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")
 
@@ -192,7 +192,7 @@ func update_position(new_position: Vector2i) -> void:
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
 
-func load_scene(scene_entity_id: String, entity: Dictionary):
+func co_load_scene(scene_entity_id: String, entity: Dictionary):
 	var metadata = entity.get("metadata", {})
 	var is_global = entity.get("is_global", false)
 
@@ -215,26 +215,26 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 
 	if is_sdk7:
 		var main_js_file_hash = entity.get("content", {}).get(metadata.get("main", ""), null)
-		if main_js_file_hash == null:
-			printerr("Scene ", scene_entity_id, " fail getting the main js file hash.")
-			return false
-
-		local_main_js_path = "user://content/" + main_js_file_hash
-		if not FileAccess.file_exists(local_main_js_path) or main_js_file_hash.begins_with("b64"):
-			var main_js_file_url: String = entity.baseUrl + main_js_file_hash
-			var promise: Promise = http_requester.request_file(
-				main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir())
-			)
-
-			var res = await promise.co_awaiter()
-			if res is Promise.Error:
-				printerr(
-					"Scene ",
-					scene_entity_id,
-					" fail getting the script code content, error message: ",
-					res.get_error()
+		if main_js_file_hash != null:
+			local_main_js_path = "user://content/" + main_js_file_hash
+			if (
+				not FileAccess.file_exists(local_main_js_path)
+				or main_js_file_hash.begins_with("b64")
+			):
+				var main_js_file_url: String = entity.baseUrl + main_js_file_hash
+				var promise: Promise = http_requester.request_file(
+					main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir())
 				)
-				return false
+
+				var res = await promise.co_awaiter()
+				if res is Promise.Error:
+					printerr(
+						"Scene ",
+						scene_entity_id,
+						" fail getting the script code content, error message: ",
+						res.get_error()
+					)
+					return false
 	else:
 		local_main_js_path = String(adaptation_layer_js_local_path)
 		if not FileAccess.file_exists(local_main_js_path):
@@ -284,7 +284,7 @@ func load_scene(scene_entity_id: String, entity: Dictionary):
 
 
 func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):
-	if not FileAccess.file_exists(local_main_js_path):
+	if not local_main_js_path.is_empty() and not FileAccess.file_exists(local_main_js_path):
 		printerr("Couldn't get main.js file")
 		local_main_js_path = ""
 
