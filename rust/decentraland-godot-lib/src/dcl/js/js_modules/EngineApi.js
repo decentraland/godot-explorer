@@ -16,7 +16,7 @@ module.exports.crdtGetState = async function () {
 }
 
 
-module.exports.isServer = async function() {
+module.exports.isServer = async function () {
     return {
         isServer: false
     }
@@ -26,18 +26,22 @@ module.exports.isServer = async function() {
  * @deprecated this is an SDK6 API.
  * This function subscribe to an event from the renderer
  */
-module.exports.subscribe = async function(message) {}
+module.exports.subscribe = async function (message) {
+    Deno.core.ops.op_subscribe(message.eventId);
+}
 
 /**
  * @deprecated this is an SDK6 API.
  * This function unsubscribe to an event from the renderer
  */
-module.exports.unsubscribe = async function(message) {}
+module.exports.unsubscribe = async function (message) {
+    Deno.core.ops.op_subscribe(message.eventId);
+}
 
 /**
  * @deprecated this is an SDK6 API.
  * This function polls events from the renderer
  */
-module.exports.sendBatch = async function() {
-    return { events: [] }
+module.exports.sendBatch = async function () {
+    return { events: Deno.core.ops.op_send_batch() }
 }

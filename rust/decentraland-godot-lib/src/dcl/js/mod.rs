@@ -1,11 +1,13 @@
 pub mod engine;
+pub mod events;
 pub mod fetch;
+pub mod players;
 pub mod portables;
 pub mod restricted_actions;
 pub mod runtime;
 pub mod websocket;
 
-use crate::common::rpc::RpcCalls;
+use crate::dcl::scene_apis::{LocalCall, RpcCall};
 use crate::wallet::Wallet;
 
 use super::{
@@ -62,13 +64,15 @@ pub fn create_runtime() -> deno_core::JsRuntime {
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 6] = [
+    let op_sets: [Vec<deno_core::OpDecl>; 8] = [
         engine::ops(),
         runtime::ops(),
         fetch::ops(),
         websocket::ops(),
         restricted_actions::ops(),
         portables::ops(),
+        players::ops(),
+        events::ops(),
     ];
 
     let mut op_map = HashMap::new();
@@ -142,7 +146,7 @@ pub(crate) fn scene_thread(
                     dirty,
                     Vec::new(),
                     0.0,
-                    RpcCalls::default(),
+                    Vec::new(),
                 ))
                 .expect("error sending scene response!!");
 
@@ -187,7 +191,8 @@ pub(crate) fn scene_thread(
 
     state.borrow_mut().put(wallet);
 
-    state.borrow_mut().put(RpcCalls::default());
+    state.borrow_mut().put(Vec::<RpcCall>::new());
+    state.borrow_mut().put(Vec::<LocalCall>::new());
 
     if let Some(scene_main_crdt) = scene_main_crdt {
         state.borrow_mut().put(scene_main_crdt);

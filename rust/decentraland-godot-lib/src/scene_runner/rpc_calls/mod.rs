@@ -1,10 +1,7 @@
 mod handle_restricted_actions;
 mod portables;
 
-use crate::{
-    common::rpc::{RpcCall, RpcCalls},
-    dcl::SceneId,
-};
+use crate::dcl::{scene_apis::RpcCall, SceneId};
 
 use self::{
     handle_restricted_actions::{
@@ -15,7 +12,7 @@ use self::{
 
 use super::scene::Scene;
 
-pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls: RpcCalls) {
+pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls: Vec<RpcCall>) {
     for rpc_call in rpc_calls {
         match rpc_call {
             RpcCall::ChangeRealm {

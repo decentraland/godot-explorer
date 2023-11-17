@@ -1,18 +1,19 @@
 pub mod components;
 pub mod crdt;
 pub mod js;
+pub mod scene_apis;
 pub mod serialization;
 
-use crate::{common::rpc::RpcCalls, wallet::Wallet};
+use crate::wallet::Wallet;
 
 use self::{
-    components::{SceneComponentId, SceneEntityId},
-    crdt::SceneCrdtState,
+    crdt::{DirtyCrdtState, SceneCrdtState},
     js::{scene_thread, SceneLogMessage},
+    scene_apis::RpcCall,
 };
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     sync::{Arc, Mutex},
     thread::JoinHandle,
 };
@@ -37,21 +38,10 @@ pub struct SceneDefinition {
     pub parcels: Vec<godot::prelude::Vector2i>,
     pub is_global: bool,
 }
-
-pub type DirtyLwwComponents = HashMap<SceneComponentId, HashSet<SceneEntityId>>;
-pub type DirtyGosComponents = HashMap<SceneComponentId, HashMap<SceneEntityId, usize>>;
-
-// message from scene-thread describing new and deleted entities
-#[derive(Debug, Default)]
-pub struct DirtyEntities {
-    pub born: HashSet<SceneEntityId>,
-    pub died: HashSet<SceneEntityId>,
-}
-
 // data from renderer to scene
 #[derive(Debug)]
 pub enum RendererResponse {
-    Ok((DirtyEntities, DirtyLwwComponents, DirtyGosComponents)),
+    Ok(DirtyCrdtState),
     Kill,
 }
 
@@ -61,10 +51,10 @@ pub enum SceneResponse {
     Error(SceneId, String),
     Ok(
         SceneId,
-        (DirtyEntities, DirtyLwwComponents, DirtyGosComponents),
+        DirtyCrdtState,
         Vec<SceneLogMessage>,
         f32,
-        RpcCalls,
+        Vec<RpcCall>,
     ),
     RemoveGodotScene(SceneId, Vec<SceneLogMessage>),
 }

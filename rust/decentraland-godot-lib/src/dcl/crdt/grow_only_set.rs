@@ -29,7 +29,7 @@ pub trait GenericGrowOnlySetComponent {
 
 pub trait GenericGrowOnlySetComponentOperation<T: 'static + FromDclReader + ToDclWriter> {
     fn append(&mut self, entity: SceneEntityId, value: T);
-    fn get(&self, entity: SceneEntityId) -> Option<&VecDeque<T>>;
+    fn get(&self, entity: &SceneEntityId) -> Option<&VecDeque<T>>;
 }
 
 impl<T> GrowOnlySet<T> {
@@ -104,8 +104,8 @@ impl<T: 'static + FromDclReader + ToDclWriter> GenericGrowOnlySetComponentOperat
         *dirty_count += 1;
     }
 
-    fn get(&self, entity: SceneEntityId) -> Option<&VecDeque<T>> {
-        self.values.get(&entity)
+    fn get(&self, entity: &SceneEntityId) -> Option<&VecDeque<T>> {
+        self.values.get(entity)
     }
 }
 

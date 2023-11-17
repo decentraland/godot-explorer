@@ -13,7 +13,8 @@ struct Component {
 
 const PROTO_FILES_BASE_DIR: &str = "src/dcl/components/proto/";
 const COMPONENT_BASE_DIR: &str = "src/dcl/components/proto/decentraland/sdk/components/";
-const GROW_ONLY_SET_COMPONENTS: [&str; 2] = ["PointerEventsResult", "VideoEvent"];
+const GROW_ONLY_SET_COMPONENTS: [&str; 3] =
+    ["PointerEventsResult", "VideoEvent", "AvatarEmoteCommand"];
 
 pub fn snake_to_pascal(input: &str) -> String {
     input

@@ -1,6 +1,5 @@
 use crate::{
-    common::rpc::RpcResultSender,
-    dcl::SceneId,
+    dcl::{scene_apis::RpcResultSender, SceneId},
     godot_classes::dcl_confirm_dialog::DclConfirmDialog,
     scene_runner::{
         global_get_node_helper::{
