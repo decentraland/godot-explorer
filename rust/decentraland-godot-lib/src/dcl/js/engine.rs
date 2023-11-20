@@ -151,6 +151,7 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
         }
     };
 
+    op_state.put(Vec::<LocalCall>::new());
     op_state.put(mutex_scene_crdt_state);
     let mut ret = Vec::<Vec<u8>>::with_capacity(1);
     if let Some(main_crdt) = op_state.try_take::<SceneMainCrdtFileContent>() {
