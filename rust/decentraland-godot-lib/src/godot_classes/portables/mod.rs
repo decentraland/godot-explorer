@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use godot::engine::Node;
 use godot::prelude::*;
 
-use crate::common::rpc::{PortableLocation, RpcResultSender, SpawnResponse};
+use crate::dcl::scene_apis::{PortableLocation, RpcResultSender, SpawnResponse};
 use crate::dcl::SceneId;
 
 #[derive(Clone)]

@@ -421,19 +421,13 @@ impl SceneManager {
                         arguments.push(GodotString::from(&msg).to_variant());
                         self.console.callv(arguments);
                     }
-                    SceneResponse::Ok(
-                        scene_id,
-                        (dirty_entities, dirty_lww_components, dirty_gos_components),
-                        logs,
-                        _,
-                        rpc_calls,
-                    ) => {
+                    SceneResponse::Ok(scene_id, dirty_crdt_state, logs, _, rpc_calls) => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
                             let dirty = Dirty {
                                 waiting_process: true,
-                                entities: dirty_entities,
-                                lww_components: dirty_lww_components,
-                                gos_components: dirty_gos_components,
+                                entities: dirty_crdt_state.entities,
+                                lww_components: dirty_crdt_state.lww,
+                                gos_components: dirty_crdt_state.gos,
                                 logs,
                                 renderer_response: None,
                                 update_state: SceneUpdateState::None,

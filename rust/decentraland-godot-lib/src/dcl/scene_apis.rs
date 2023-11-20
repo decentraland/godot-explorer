@@ -119,4 +119,16 @@ pub enum RpcCall {
     },
 }
 
-pub type RpcCalls = Vec<RpcCall>;
+#[derive(Debug)]
+pub enum LocalCall {
+    PlayersGetPlayerData {
+        user_id: String,
+        response: RpcResultSender<Option<UserData>>,
+    },
+    PlayersGetPlayersInScene {
+        response: RpcResultSender<Vec<String>>,
+    },
+    PlayersGetConnectedPlayers {
+        response: RpcResultSender<Vec<String>>,
+    },
+}

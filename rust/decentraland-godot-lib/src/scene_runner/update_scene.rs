@@ -31,7 +31,6 @@ use super::{
     scene::{Dirty, Scene, SceneType, SceneUpdateState},
 };
 use crate::{
-    common::rpc::RpcCalls,
     dcl::{
         components::{
             proto_components::sdk::components::{
@@ -323,7 +322,7 @@ pub fn _process_scene(
                         logs: Vec::new(),
                         renderer_response: None,
                         update_state: SceneUpdateState::Processed,
-                        rpc_calls: RpcCalls::default(),
+                        rpc_calls: Vec::new(),
                     });
 
                     return true;

@@ -36,6 +36,16 @@ pub mod common {
             godot::prelude::Color::from_rgba(self.r, self.g, self.b, self.a)
         }
 
+        pub fn to_color_string(&self) -> String {
+            format!(
+                "#{:02x}{:02x}{:02x}{:02x}",
+                (self.r * 255.0) as u8,
+                (self.g * 255.0) as u8,
+                (self.b * 255.0) as u8,
+                (self.a * 255.0) as u8
+            )
+        }
+
         pub fn multiply(&mut self, factor: f32) -> Self {
             Self {
                 r: self.r * factor,
@@ -63,6 +73,15 @@ pub mod common {
         }
         pub fn to_godot(&self) -> godot::prelude::Color {
             godot::prelude::Color::from_rgba(self.r, self.g, self.b, 1.0)
+        }
+
+        pub fn to_color_string(&self) -> String {
+            format!(
+                "#{:02x}{:02x}{:02x}",
+                (self.r * 255.0) as u8,
+                (self.g * 255.0) as u8,
+                (self.b * 255.0) as u8
+            )
         }
 
         pub fn multiply(&mut self, factor: f32) -> Self {

@@ -6,7 +6,7 @@ use deno_core::{
     op, Op, OpDecl, OpState,
 };
 
-use crate::common::rpc::{RpcCall, RpcCalls};
+use crate::dcl::scene_apis::RpcCall;
 
 pub fn ops() -> Vec<OpDecl> {
     vec![
@@ -29,7 +29,7 @@ async fn op_change_realm(
 
     op_state
         .borrow_mut()
-        .borrow_mut::<RpcCalls>()
+        .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::ChangeRealm {
             to: realm,
             message,
@@ -47,7 +47,7 @@ async fn op_open_nft_dialog(op_state: Rc<RefCell<OpState>>, urn: String) -> Resu
 
     op_state
         .borrow_mut()
-        .borrow_mut::<RpcCalls>()
+        .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::OpenNftDialog {
             urn,
             response: sx.into(),
@@ -68,7 +68,7 @@ async fn op_move_player_to(
 
     op_state
         .borrow_mut()
-        .borrow_mut::<RpcCalls>()
+        .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::MovePlayerTo {
             position_target,
             camera_target,
@@ -89,7 +89,7 @@ async fn op_teleport_to(
 
     op_state
         .borrow_mut()
-        .borrow_mut::<RpcCalls>()
+        .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::TeleportTo {
             world_coordinates,
             response: sx.into(),
@@ -109,7 +109,7 @@ async fn op_trigger_emote(
 
     op_state
         .borrow_mut()
-        .borrow_mut::<RpcCalls>()
+        .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::TriggerEmote {
             emote_id,
             response: sx.into(),
@@ -130,7 +130,7 @@ async fn op_trigger_scene_emote(
 
     op_state
         .borrow_mut()
-        .borrow_mut::<RpcCalls>()
+        .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::TriggerSceneEmote {
             emote_src,
             looping,

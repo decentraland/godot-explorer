@@ -3,7 +3,10 @@ pub mod grow_only_set;
 pub mod last_write_wins;
 pub mod message;
 
-use std::{any::Any, collections::HashMap};
+use std::{
+    any::Any,
+    collections::{HashMap, HashSet},
+};
 
 use self::{
     entity::SceneEntityContainer,
@@ -11,18 +14,31 @@ use self::{
     last_write_wins::{GenericLastWriteWinsComponent, LastWriteWins},
 };
 
-use super::{
-    components::{
-        proto_components, transform_and_parent::DclTransformAndParent, SceneComponentId,
-        SceneEntityId,
-    },
-    DirtyEntities, DirtyGosComponents, DirtyLwwComponents,
+use super::components::{
+    proto_components, transform_and_parent::DclTransformAndParent, SceneComponentId, SceneEntityId,
 };
 
 #[derive(Debug)]
 pub struct SceneCrdtState {
     pub components: HashMap<SceneComponentId, Box<dyn Any + Send>>,
     pub entities: SceneEntityContainer,
+}
+
+pub type DirtyLwwComponents = HashMap<SceneComponentId, HashSet<SceneEntityId>>;
+pub type DirtyGosComponents = HashMap<SceneComponentId, HashMap<SceneEntityId, usize>>;
+
+// message from scene-thread describing new and deleted entities
+#[derive(Debug, Default)]
+pub struct DirtyEntities {
+    pub born: HashSet<SceneEntityId>,
+    pub died: HashSet<SceneEntityId>,
+}
+
+#[derive(Debug, Default)]
+pub struct DirtyCrdtState {
+    pub entities: DirtyEntities,
+    pub lww: DirtyLwwComponents,
+    pub gos: DirtyGosComponents,
 }
 
 impl Default for SceneCrdtState {
@@ -177,7 +193,7 @@ impl SceneCrdtState {
         Some(component)
     }
 
-    pub fn take_dirty(&mut self) -> (DirtyEntities, DirtyLwwComponents, DirtyGosComponents) {
+    pub fn take_dirty(&mut self) -> DirtyCrdtState {
         let mut dirty_lww_components: DirtyLwwComponents = HashMap::new();
         let mut dirty_gos_components: DirtyGosComponents = HashMap::new();
         let keys: Vec<SceneComponentId> = self.components.keys().cloned().collect(); // another way to do this?
@@ -215,7 +231,11 @@ impl SceneCrdtState {
             }
         }
 
-        (dirty_entities, dirty_lww_components, dirty_gos_components)
+        DirtyCrdtState {
+            entities: dirty_entities,
+            lww: dirty_lww_components,
+            gos: dirty_gos_components,
+        }
     }
 
     pub fn get_transform_mut(&mut self) -> &mut LastWriteWins<DclTransformAndParent> {

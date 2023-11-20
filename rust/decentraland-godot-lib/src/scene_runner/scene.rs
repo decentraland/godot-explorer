@@ -6,7 +6,6 @@ use std::{
 use godot::prelude::{Dictionary, Gd};
 
 use crate::{
-    common::rpc::RpcCalls,
     dcl::{
         components::{
             material::DclMaterial,
@@ -17,12 +16,11 @@ use crate::{
             transform_and_parent::DclTransformAndParent,
             SceneEntityId,
         },
+        crdt::{DirtyEntities, DirtyGosComponents, DirtyLwwComponents},
         js::SceneLogMessage,
+        scene_apis::RpcCall,
         // js::js_runtime::SceneLogMessage,
         DclScene,
-        DirtyEntities,
-        DirtyGosComponents,
-        DirtyLwwComponents,
         RendererResponse,
         SceneDefinition,
         SceneId,
@@ -43,7 +41,7 @@ pub struct Dirty {
     pub logs: Vec<SceneLogMessage>,
     pub renderer_response: Option<RendererResponse>,
     pub update_state: SceneUpdateState,
-    pub rpc_calls: RpcCalls,
+    pub rpc_calls: Vec<RpcCall>,
 }
 
 pub enum SceneState {
@@ -248,7 +246,7 @@ impl Scene {
                 logs: Vec::new(),
                 renderer_response: None,
                 update_state: SceneUpdateState::None,
-                rpc_calls: RpcCalls::default(),
+                rpc_calls: Vec::new(),
             },
             enqueued_dirty: Vec::new(),
             distance: 0.0,
@@ -302,7 +300,7 @@ impl Scene {
                 logs: Vec::new(),
                 renderer_response: None,
                 update_state: SceneUpdateState::None,
-                rpc_calls: RpcCalls::default(),
+                rpc_calls: Vec::new(),
             },
             distance: 0.0,
             next_tick_us: 0,
