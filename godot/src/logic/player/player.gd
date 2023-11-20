@@ -122,11 +122,6 @@ func _input(event):
 			mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * vertical_sens)
 			_clamp_camera_rotation()
 
-		# Release mouse
-		if event is InputEventKey:
-			if event.keycode == KEY_TAB:
-				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-
 		# Toggle first or third person camera
 		if event is InputEventMouseButton:
 			if !camera_mode_change_blocked:

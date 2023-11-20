@@ -5,9 +5,7 @@ use deno_core::{
 };
 use std::{cell::RefCell, rc::Rc};
 
-use crate::common::rpc::{PortableLocation, RpcCall, SpawnResponse};
-
-use super::RpcCalls;
+use crate::dcl::scene_apis::{PortableLocation, RpcCall, SpawnResponse};
 
 // list of op declarations
 pub fn ops() -> Vec<OpDecl> {
@@ -34,7 +32,7 @@ async fn op_portable_spawn(
 
     state
         .borrow_mut()
-        .borrow_mut::<RpcCalls>()
+        .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::SpawnPortable {
             location,
             response: sx.into(),
@@ -53,7 +51,7 @@ async fn op_portable_kill(state: Rc<RefCell<OpState>>, pid: String) -> Result<bo
 
     state
         .borrow_mut()
-        .borrow_mut::<RpcCalls>()
+        .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::KillPortable {
             location: PortableLocation::Urn(pid.clone()),
             response: sx.into(),
@@ -68,7 +66,7 @@ async fn op_portable_list(state: Rc<RefCell<OpState>>) -> Vec<SpawnResponse> {
 
     state
         .borrow_mut()
-        .borrow_mut::<RpcCalls>()
+        .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::ListPortables {
             response: sx.into(),
         });

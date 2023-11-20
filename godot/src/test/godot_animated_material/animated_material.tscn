@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3 uid="uid://3e22fxwa0l3h"]
+
+[ext_resource type="Material" uid="uid://be33x2ystn11g" path="res://assets/nftshape/material_loading_animation.tres" id="1_fafjn"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_vlseh"]
+size = Vector2(1, 1)
+
+[node name="animated_material" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.90408)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0)
+mesh = SubResource("PlaneMesh_vlseh")
+surface_material_override/0 = ExtResource("1_fafjn")

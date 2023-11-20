@@ -1,6 +1,5 @@
 use crate::{
-    common::rpc::RpcResultSender,
-    dcl::SceneId,
+    dcl::{scene_apis::RpcResultSender, SceneId},
     godot_classes::dcl_confirm_dialog::DclConfirmDialog,
     scene_runner::{
         global_get_node_helper::{
@@ -10,14 +9,33 @@ use crate::{
     },
 };
 
-use godot::prelude::{GodotString, PackedScene, Variant, Vector2i, Vector3};
+use godot::{
+    builtin::meta::ToGodot,
+    prelude::{GodotString, PackedScene, Variant, Vector2i, Vector3},
+};
+
+fn _player_is_inside_scene(scene: &Scene, current_parcel_scene_id: &SceneId) -> bool {
+    // Check if player is inside the scene that requested the move
+    if let SceneType::Parcel = scene.scene_type {
+        &scene.scene_id == current_parcel_scene_id
+    } else {
+        true
+    }
+}
 
 pub fn change_realm(
     scene: &Scene,
+    current_parcel_scene_id: &SceneId,
     to: &str,
     message: &Option<String>,
     response: &RpcResultSender<Result<(), String>>,
 ) {
+    // Check if player is inside the scene that requested the move
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+        response.send(Err("Player position is outside the scene".to_string()));
+        return;
+    }
+
     // Get nodes
     let mut dialog_stack = get_dialog_stack_node(scene);
 
@@ -65,13 +83,32 @@ pub fn change_realm(
     );
 }
 
-fn _player_is_inside_scene(scene: &Scene, current_parcel_scene_id: &SceneId) -> bool {
+pub fn open_nft_dialog(
+    scene: &Scene,
+    current_parcel_scene_id: &SceneId,
+    urn: &str,
+    response: &RpcResultSender<Result<(), String>>,
+) {
     // Check if player is inside the scene that requested the move
-    if let SceneType::Parcel = scene.scene_type {
-        &scene.scene_id == current_parcel_scene_id
-    } else {
-        true
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+        response.send(Err("Player position is outside the scene".to_string()));
+        return;
     }
+
+    // Get nodes
+    let mut dialog_stack = get_dialog_stack_node(scene);
+
+    let mut confirm_dialog =
+        godot::engine::load::<PackedScene>("res://src/ui/dialogs/nft_dialog.tscn")
+            .instantiate()
+            .expect("NftDialog instantiate error");
+
+    // Setup confirm dialog
+    dialog_stack.add_child(confirm_dialog.clone());
+
+    confirm_dialog.call("co_load_nft".into(), &[urn.to_variant()]);
+
+    response.send(Ok(()));
 }
 
 // Allows to move a player inside the scene

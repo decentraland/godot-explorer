@@ -1,5 +1,7 @@
-use crate::dcl::{components::SceneEntityId, DirtyEntities};
+use crate::dcl::components::SceneEntityId;
 use std::collections::HashSet;
+
+use super::DirtyEntities;
 
 #[derive(Debug)]
 pub struct SceneEntityContainer {

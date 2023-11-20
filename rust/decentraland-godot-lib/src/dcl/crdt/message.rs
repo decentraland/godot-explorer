@@ -102,6 +102,7 @@ pub fn process_many_messages(stream: &mut DclReader, scene_crdt_state: &mut Scen
     }
 }
 
+const CRDT_DELETE_ENTITY_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 4;
 const CRDT_PUT_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 20;
 const CRDT_DELETE_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 16;
 
@@ -152,7 +153,7 @@ pub fn append_gos_component(
     scene_crdt_state: &SceneCrdtState,
     entity_id: &SceneEntityId,
     component_id: &SceneComponentId,
-    elements_count: usize,
+    elements_count: &usize,
     writer: &mut DclWriter,
 ) -> Result<(), String> {
     let Some(component_definition) = scene_crdt_state.get_gos_component_definition(*component_id)
@@ -160,7 +161,7 @@ pub fn append_gos_component(
         return Err("Component not found".into());
     };
 
-    for i in 0..elements_count {
+    for i in 0..*elements_count {
         // TODO: this can be improved by using the same writer, we don't know the component_data_length in advance to write the right length
         //  but if we have the position written we can overwrite then
         let mut component_buf = Vec::new();
@@ -181,4 +182,10 @@ pub fn append_gos_component(
     }
 
     Ok(())
+}
+
+pub fn delete_entity(entity_id: &SceneEntityId, writer: &mut DclWriter) {
+    writer.write_u32(CRDT_DELETE_ENTITY_HEADER_SIZE as u32);
+    writer.write(&CrdtMessageType::DeleteEntity);
+    writer.write(entity_id);
 }

@@ -17,6 +17,7 @@ use super::{
         material::update_material,
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
+        nft_shape::update_nft_shape,
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
         text_shape::update_text_shape,
@@ -30,7 +31,6 @@ use super::{
     scene::{Dirty, Scene, SceneType, SceneUpdateState},
 };
 use crate::{
-    common::rpc::RpcCalls,
     dcl::{
         components::{
             proto_components::sdk::components::{
@@ -176,6 +176,10 @@ pub fn _process_scene(
                 sync_gltf_loading_state(scene, crdt_state);
                 false
             }
+            SceneUpdateState::NftShape => {
+                update_nft_shape(scene, crdt_state);
+                false
+            }
             SceneUpdateState::Animator => {
                 update_animator(scene, crdt_state);
                 false
@@ -318,7 +322,7 @@ pub fn _process_scene(
                         logs: Vec::new(),
                         renderer_response: None,
                         update_state: SceneUpdateState::Processed,
-                        rpc_calls: RpcCalls::default(),
+                        rpc_calls: Vec::new(),
                     });
 
                     return true;

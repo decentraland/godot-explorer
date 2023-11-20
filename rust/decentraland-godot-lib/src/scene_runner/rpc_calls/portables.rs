@@ -1,5 +1,5 @@
 use crate::{
-    common::rpc::{PortableLocation, RpcResultSender, SpawnResponse},
+    dcl::scene_apis::{PortableLocation, RpcResultSender, SpawnResponse},
     godot_classes::dcl_global::DclGlobal,
     scene_runner::scene::Scene,
 };

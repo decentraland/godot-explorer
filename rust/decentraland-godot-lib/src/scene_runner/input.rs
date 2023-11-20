@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use godot::prelude::*;
+use godot::{engine::input::MouseMode, prelude::*};
 
 use crate::dcl::components::proto_components::sdk::components::common::InputAction;
 
@@ -39,11 +39,14 @@ impl InputState {
     pub fn get_new_inputs(&mut self) -> HashSet<(InputAction, bool)> {
         let mut result = HashSet::new();
         let input: Gd<Input> = Input::singleton();
-        for (input_action, action_string) in self.dcl_to_action.iter() {
-            let current_state = input.is_action_pressed(action_string.clone());
-            if self.state[input_action] != current_state {
-                self.state.insert(*input_action, current_state);
-                result.insert((*input_action, current_state));
+        let is_pointer_locked = input.get_mouse_mode() == MouseMode::MOUSE_MODE_CAPTURED;
+        if is_pointer_locked {
+            for (input_action, action_string) in self.dcl_to_action.iter() {
+                let current_state = input.is_action_pressed(action_string.clone());
+                if self.state[input_action] != current_state {
+                    self.state.insert(*input_action, current_state);
+                    result.insert((*input_action, current_state));
+                }
             }
         }
         result

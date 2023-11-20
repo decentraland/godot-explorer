@@ -16,6 +16,9 @@ var animation_importer: AnimationImporter = AnimationImporter.new()
 var scene_fetcher: SceneFetcher = null
 var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
 
+var nft_fetcher: OpenSeaFetcher = OpenSeaFetcher.new()
+var nft_frame_loader: NftFrameStyleLoader = NftFrameStyleLoader.new()
+
 var standalone = false
 
 enum CameraMode {
@@ -88,3 +91,19 @@ func print_node_tree(node: Node, prefix = ""):
 
 func _process(_dt: float):
 	http_requester.poll()
+
+
+func capture_mouse():
+	var explorer = get_node_or_null("/root/explorer")
+	if is_instance_valid(explorer):
+		explorer.capture_mouse()
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+
+func release_mouse():
+	var explorer = get_node_or_null("/root/explorer")
+	if is_instance_valid(explorer):
+		explorer.release_mouse()
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
