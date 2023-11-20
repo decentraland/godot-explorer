@@ -7,7 +7,7 @@ pub const PROTOC_BASE_URL: &str =
     "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";
 
 pub const GODOT4_BIN_BASE_URL: &str =
-    "https://github.com/godotengine/godot-builds/releases/download/4.2-beta6/Godot_v4.2-beta6_";
+    "https://github.com/godotengine/godot-builds/releases/download/4.2-rc1/Godot_v4.2-rc1_";
 
 pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
-    "https://github.com/godotengine/godot-builds/releases/download/4.2-beta6/Godot_v4.2-beta6_export_templates.tpz";
+    "https://github.com/godotengine/godot-builds/releases/download/4.2-rc1/Godot_v4.2-rc1_export_templates.tpz";

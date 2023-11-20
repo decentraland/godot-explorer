@@ -4,7 +4,8 @@
 
 1. Clone the repo using `git clone https://github.com/decentraland/godot-explorer`
 2. Install [rust](https://www.rust-lang.org/tools/install)
-3. Download and install third party libraries
+3. Download Godot 4.2-rc1 and set the executable path as envinronment variable: `GODOT4_BIN`
+4. Download and install third party libraries
     - **Linux** (apt-get based):
       - Install alsa and udev: `sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev`
       - Install ffmpeg deps: `sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev`
@@ -17,7 +18,7 @@
       - add `ffmpeg\bin` to your `PATH`
     - the `.github/workflows/ci.yml` file can be useful to guide you
 
-2. Go to `rust/xtask` folder, and run `cargo run -- install`.
+5. Go to `rust/xtask` folder, and run `cargo run -- install`.
 
 ## Running and editting the project
 
