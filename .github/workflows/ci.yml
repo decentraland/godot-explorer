@@ -127,10 +127,18 @@ jobs:
     # if: ${{ github.ref == 'refs/heads/main' }} 
     strategy:
       matrix:
-        os: [self-hosted-windows, ubuntu-latest, macos-latest]
+        include:
+          - name: macos
+            os: macos-11
+            with-llvm: true
+
+          - name: windows
+            os: self-hosted-windows
+
+          - name: linux
+            os: ubuntu-latest
+
     runs-on: ${{ matrix.os }}
-    env:
-      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -170,7 +178,14 @@ jobs:
       - name: install ffmpeg deps (macOs)
         if: runner.os == 'macos'
         run: brew install ffmpeg pkg-config
-        
+      - name: "Install LLVM"
+        if: ${{ matrix.with-llvm }}
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "10.0"
+          directory: llvm
+          cached: ${{ steps.cache.outputs.cache-hit }}
+
       # TODO: cross-build deprecated with the ffmpeg integration           
       # - name: Set up target platform
       #   if: ${{ matrix.os == 'macos-latest' }}
@@ -197,6 +212,12 @@ jobs:
         working-directory: rust/xtask
         run: cargo run -- install
 
+      - name: add GODOT4_BIN env var  
+        run: echo "GODOT4_BIN=${{ github.workspace }}/.bin/godot/godot4_bin" >> $GITHUB_ENV
+
+      - name: print GODOT4_BIN env var
+        run: echo $GODOT4_BIN
+          
       # Build section
       - name: cargo build
         working-directory: rust/decentraland-godot-lib
