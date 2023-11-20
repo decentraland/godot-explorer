@@ -212,7 +212,7 @@ impl LivekitRoom {
                                 continue;
                             }
 
-                            avatar_scene.update_avatar(
+                            avatar_scene.update_avatar_by_alias(
                                 peer.alias,
                                 &serialized_profile,
                                 &profile_response.base_url,
