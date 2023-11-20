@@ -326,6 +326,7 @@ impl CommunicationManager {
         match &mut self.current_adapter {
             Adapter::None | Adapter::SignedLogin(_) => {}
             Adapter::Livekit(_livekit_room) => {
+                // TODO: implement
                 // livekit_room.change_profile(self.player_identity.clone());
             }
             Adapter::WsRoom(ws_room) => {

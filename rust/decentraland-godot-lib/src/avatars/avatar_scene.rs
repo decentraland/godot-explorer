@@ -75,6 +75,22 @@ macro_rules! sync_crdt_lww_component {
 #[godot_api]
 impl AvatarScene {
     #[func]
+    pub fn update_primary_player_profile(&mut self, profile: Dictionary) {
+        let mut serialized_profile = SerializedProfile::default();
+        serialized_profile.copy_from_godot_dictionary(&profile);
+        let base_url = profile
+            .get("base_url")
+            .map(|v| v.to_string())
+            .unwrap_or("https://peer.decentraland.org/content".into());
+
+        self.update_avatar(
+            SceneEntityId::PLAYER,
+            &serialized_profile,
+            base_url.as_str(),
+        );
+    }
+
+    #[func]
     pub fn update_avatar_profile(&mut self, alias: u32, profile: Dictionary) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
@@ -325,7 +341,12 @@ impl AvatarScene {
         self._update_avatar_transform(&entity_id, dcl_transform);
     }
 
-    pub fn update_avatar(&mut self, alias: u32, profile: &SerializedProfile, base_url: &str) {
+    pub fn update_avatar_by_alias(
+        &mut self,
+        alias: u32,
+        profile: &SerializedProfile,
+        base_url: &str,
+    ) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
@@ -333,6 +354,15 @@ impl AvatarScene {
             return;
         };
 
+        self.update_avatar(entity_id, profile, base_url);
+    }
+
+    pub fn update_avatar(
+        &mut self,
+        entity_id: SceneEntityId,
+        profile: &SerializedProfile,
+        base_url: &str,
+    ) {
         // Avoid updating avatar with the same data
         if let Some(val) = self.last_updated_profile.get(&entity_id) {
             if profile.eq(val) {
@@ -341,10 +371,12 @@ impl AvatarScene {
         }
         self.last_updated_profile.insert(entity_id, profile.clone());
 
-        self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
-            "update_avatar".into(),
-            &[profile.to_godot_dictionary(base_url).to_variant()],
-        );
+        if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
+            avatar_scene.call(
+                "update_avatar".into(),
+                &[profile.to_godot_dictionary(base_url).to_variant()],
+            );
+        }
 
         let new_avatar_base = Some(profile.to_pb_avatar_base());
         let avatar_base_component =
@@ -528,5 +560,26 @@ impl AvatarScene {
                 local_avatar_equipped_data
             );
         }
+
+        let entity_id = &SceneEntityId::PLAYER;
+        let target_player_identity_data =
+            SceneCrdtStateProtoComponents::get_player_identity_data_mut(target_crdt_state);
+        sync_crdt_lww_component!(
+            entity_id,
+            target_player_identity_data,
+            local_player_identity_data
+        );
+
+        let target_avatar_base =
+            SceneCrdtStateProtoComponents::get_avatar_base_mut(target_crdt_state);
+        sync_crdt_lww_component!(entity_id, target_avatar_base, local_avatar_base);
+
+        let target_avatar_equipped_data =
+            SceneCrdtStateProtoComponents::get_avatar_equipped_data_mut(target_crdt_state);
+        sync_crdt_lww_component!(
+            entity_id,
+            target_avatar_equipped_data,
+            local_avatar_equipped_data
+        );
     }
 }

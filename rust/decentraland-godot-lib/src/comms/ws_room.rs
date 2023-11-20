@@ -494,7 +494,7 @@ impl WebSocketRoom {
                                 continue;
                             }
 
-                            self.avatars.bind_mut().update_avatar(
+                            self.avatars.bind_mut().update_avatar_by_alias(
                                 update.from_alias,
                                 &serialized_profile,
                                 &profile_response.base_url,
