@@ -129,6 +129,8 @@ jobs:
       matrix:
         os: [self-hosted-windows, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
