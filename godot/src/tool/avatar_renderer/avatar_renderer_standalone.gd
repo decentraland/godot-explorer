@@ -81,29 +81,29 @@ func update_avatar(index: int):
 func _on_avatar_avatar_loaded():
 	var payload = payload_to_process.payload[current_payload_index]
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
-	
+
 	# full body fov 90, y=1
 	%SubViewport.size = Vector2(payload.width, payload.height)
 	%Camera3D_Perpective.set_fov(90)
 	%Camera3D_Perpective.position.y = 1.0
-	
+
 	await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
-	
+
 	var img := sub_viewport.get_texture().get_image()
 	img.save_png(payload.dest_path)
-	
+
 	if not payload.face_dest_path.is_empty():
 		# face = fov 20, y=1.7
 		%SubViewport.size = Vector2(payload.face_width, payload.face_height)
 		%Camera3D_Perpective.set_fov(payload.face_zoom)
 		%Camera3D_Perpective.position.y = 1.75
 		await get_tree().process_frame
-		
+
 		var face_img := sub_viewport.get_texture().get_image()
 		face_img.save_png(payload.face_dest_path)
-	
+
 	if current_payload_index >= payload_to_process.payload.size() - 1:
 		get_tree().quit(0)
 	else:

@@ -52,7 +52,7 @@ class AvatarEntry:
 	var dest_path := ""
 	var width := 2048
 	var height := 2048
-	
+
 	var face_dest_path := ""
 	var face_width := 256
 	var face_height := 256
@@ -68,7 +68,7 @@ class AvatarEntry:
 		ret.dest_path = value.get("destPath", "")
 		ret.width = value.get("width", 2048)
 		ret.height = value.get("height", 2048)
-		ret.face_dest_path = value.get("faceDestPath", "") # optional
+		ret.face_dest_path = value.get("faceDestPath", "")  # optional
 		ret.face_width = value.get("faceWidth", 256)
 		ret.face_height = value.get("faceHeight", 256)
 		ret.face_zoom = value.get("faceZoom", 25)
