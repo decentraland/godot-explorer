@@ -6,6 +6,7 @@
 
 use godot::prelude::*;
 
+pub mod auth;
 pub mod av;
 pub mod avatars;
 pub mod comms;
@@ -15,7 +16,7 @@ pub mod http_request;
 pub mod realm;
 pub mod scene_runner;
 pub mod test_runner;
-pub mod wallet;
+
 struct DecentralandGodotLibrary;
 
 #[gdextension]

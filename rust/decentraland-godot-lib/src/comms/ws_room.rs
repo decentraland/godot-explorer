@@ -10,7 +10,7 @@ use crate::{
         rfc4::{self},
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
     },
-    wallet::{self, AsH160},
+    auth::wallet::{self, AsH160},
 };
 use ethers::types::{Signature, H160};
 use godot::{

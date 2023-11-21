@@ -1,6 +1,6 @@
 use godot::prelude::Dictionary;
 
-use crate::wallet::Wallet;
+use crate::auth::wallet::Wallet;
 
 use super::profile::UserProfile;
 

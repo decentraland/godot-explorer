@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::wallet::{sign_request, Wallet};
+use crate::auth::wallet::{sign_request, Wallet};
 use deno_core::{error::AnyError, op, OpState};
 use http::Uri;
 use serde::Serialize;

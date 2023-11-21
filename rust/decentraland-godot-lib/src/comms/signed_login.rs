@@ -7,7 +7,7 @@ use crate::http_request::{
     request_response::{RequestOption, ResponseEnum, ResponseType},
 };
 
-use crate::wallet::{SimpleAuthChain, Wallet};
+use crate::auth::wallet::{SimpleAuthChain, Wallet};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct SignedLoginResponse {

@@ -4,6 +4,7 @@ use ethers::types::H160;
 use godot::prelude::*;
 
 use crate::{
+    auth::wallet::AsH160,
     comms::profile::SerializedProfile,
     dcl::{
         components::{
@@ -18,7 +19,6 @@ use crate::{
     },
     godot_classes::dcl_avatar::{AvatarMovementType, DclAvatar},
     godot_classes::dcl_global::DclGlobal,
-    wallet::AsH160,
 };
 
 type AvatarAlias = u32;

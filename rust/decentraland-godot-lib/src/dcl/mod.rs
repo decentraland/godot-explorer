@@ -4,7 +4,7 @@ pub mod js;
 pub mod scene_apis;
 pub mod serialization;
 
-use crate::wallet::Wallet;
+use crate::auth::wallet::Wallet;
 
 use self::{
     crdt::{DirtyCrdtState, SceneCrdtState},

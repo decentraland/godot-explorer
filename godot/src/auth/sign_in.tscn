@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://brh1yknqh4ux6"]
+
+[ext_resource type="Script" path="res://src/auth/sign_in.gd" id="1_8ropt"]
+
+[node name="sign_in" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_8ropt")
