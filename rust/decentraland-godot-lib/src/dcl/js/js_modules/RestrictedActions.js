@@ -32,7 +32,9 @@ module.exports.changeRealm = async function (body) {
   );
 };
 module.exports.openExternalUrl = async function (body) {
-  return {};
+  return await Deno.core.ops.op_open_external_url(
+    body.url,
+  );
 };
 module.exports.openNftDialog = async function (body) {
   return await Deno.core.ops.op_open_nft_dialog(

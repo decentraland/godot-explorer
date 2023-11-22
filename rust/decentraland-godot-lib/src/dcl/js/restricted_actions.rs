@@ -5,6 +5,7 @@ use deno_core::{
     error::AnyError,
     op, Op, OpDecl, OpState,
 };
+use http::Uri;
 
 use crate::dcl::scene_apis::RpcCall;
 
@@ -12,6 +13,7 @@ pub fn ops() -> Vec<OpDecl> {
     vec![
         op_change_realm::DECL,
         op_open_nft_dialog::DECL,
+        op_open_external_url::DECL,
         op_move_player_to::DECL,
         op_teleport_to::DECL,
         op_trigger_emote::DECL,
@@ -50,6 +52,29 @@ async fn op_open_nft_dialog(op_state: Rc<RefCell<OpState>>, urn: String) -> Resu
         .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::OpenNftDialog {
             urn,
+            response: sx.into(),
+        });
+
+    rx.await
+        .map_err(|e| anyhow::anyhow!(e))?
+        .map_err(|e| anyhow!(e))
+}
+
+#[op]
+async fn op_open_external_url(op_state: Rc<RefCell<OpState>>, url: String) -> Result<(), AnyError> {
+    let parsed_url = match url.parse::<Uri>() {
+        Ok(parsed_url) if parsed_url.scheme_str() == Some("https") => parsed_url,
+        Ok(_) => return Err(anyhow!("URL does not use HTTPS")),
+        Err(_) => return Err(anyhow!("Invalid URL")),
+    };
+
+    let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
+
+    op_state
+        .borrow_mut()
+        .borrow_mut::<Vec<RpcCall>>()
+        .push(RpcCall::OpenExternalUrl {
+            url: parsed_url,
             response: sx.into(),
         });
 

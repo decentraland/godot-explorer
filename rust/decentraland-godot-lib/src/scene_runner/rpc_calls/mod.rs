@@ -5,8 +5,8 @@ use crate::dcl::{scene_apis::RpcCall, SceneId};
 
 use self::{
     handle_restricted_actions::{
-        change_realm, move_player_to, open_nft_dialog, teleport_to, trigger_emote,
-        trigger_scene_emote,
+        change_realm, move_player_to, open_external_url, open_nft_dialog, teleport_to,
+        trigger_emote, trigger_scene_emote,
     },
     portables::{kill_portable, list_portables, spawn_portable},
 };
@@ -25,6 +25,9 @@ pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls:
             }
             RpcCall::OpenNftDialog { urn, response } => {
                 open_nft_dialog(scene, current_parcel_scene_id, &urn, &response);
+            }
+            RpcCall::OpenExternalUrl { url, response } => {
+                open_external_url(scene, current_parcel_scene_id, &url, &response);
             }
             RpcCall::MovePlayerTo {
                 position_target,

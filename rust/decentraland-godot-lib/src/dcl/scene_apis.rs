@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 
+use http::Uri;
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -95,6 +96,10 @@ pub enum RpcCall {
     },
     OpenNftDialog {
         urn: String,
+        response: RpcResultSender<Result<(), String>>,
+    },
+    OpenExternalUrl {
+        url: Uri,
         response: RpcResultSender<Result<(), String>>,
     },
     TriggerEmote {
