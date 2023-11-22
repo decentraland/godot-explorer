@@ -5,6 +5,7 @@ pub mod players;
 pub mod portables;
 pub mod restricted_actions;
 pub mod runtime;
+pub mod testing;
 pub mod websocket;
 
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
@@ -28,6 +29,7 @@ use deno_core::{
     include_js_files, op, v8, Extension, Op, OpState, RuntimeOptions,
 };
 use once_cell::sync::Lazy;
+use serde::Serialize;
 use v8::IsolateHandle;
 
 struct SceneJsFileContent(pub String);
@@ -64,7 +66,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 8] = [
+    let op_sets: [Vec<deno_core::OpDecl>; 9] = [
         engine::ops(),
         runtime::ops(),
         fetch::ops(),
@@ -73,6 +75,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
         portables::ops(),
         players::ops(),
         events::ops(),
+        testing::ops(),
     ];
 
     let mut op_map = HashMap::new();
@@ -208,6 +211,7 @@ pub(crate) fn scene_thread(
     state
         .borrow_mut()
         .put(SceneStartTime(std::time::SystemTime::now()));
+
 
     let script = runtime.execute_script("<loader>", ascii_str!("require (\"~scene.js\")"));
 
@@ -346,12 +350,12 @@ async fn run_script(
 // synchronously returns a string containing JS code from the file system
 #[op(v8)]
 fn op_require(
-    state: Rc<RefCell<OpState>>,
+    state: &mut OpState,
     module_spec: String,
 ) -> Result<String, deno_core::error::AnyError> {
     match module_spec.as_str() {
         // user module load
-        "~scene.js" => Ok(state.borrow_mut().take::<SceneJsFileContent>().0),
+        "~scene.js" => Ok(state.take::<SceneJsFileContent>().0),
         // core module load
         "~system/CommunicationsController" => {
             Ok(include_str!("js_modules/CommunicationsController.js").to_owned())
@@ -376,6 +380,7 @@ fn op_require(
         "~system/Testing" => Ok(include_str!("js_modules/Testing.js").to_owned()),
         "~system/UserActionModule" => Ok(include_str!("js_modules/UserActionModule.js").to_owned()),
         "~system/UserIdentity" => Ok(include_str!("js_modules/UserIdentity.js").to_owned()),
+        "env" => Ok(get_env_for_scene(state)),
         _ => Err(generic_error(format!(
             "invalid module request `{module_spec}`"
         ))),
@@ -418,4 +423,20 @@ fn op_error(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
             level: SceneLogLevel::SceneError,
             message,
         })
+}
+
+#[derive(Serialize)]
+pub struct SceneEnv {
+    pub enable_know_env: bool,
+    pub testing_enable: bool,
+}
+
+fn get_env_for_scene(state: &mut OpState) -> String {
+    let scene_env = state.borrow::<SceneEnv>();
+    if scene_env.enable_know_env {
+        let scene_env_json = serde_json::to_string(scene_env).unwrap();
+        format!("module.exports = {}", scene_env_json)
+    } else {
+        "module.exports = {}".to_owned()
+    }
 }

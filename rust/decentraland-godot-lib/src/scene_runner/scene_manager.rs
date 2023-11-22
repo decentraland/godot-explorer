@@ -11,7 +11,9 @@ use crate::{
             SceneEntityId,
         },
         js::SceneLogLevel,
+        scene_apis::RpcResultSender,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
+        TakeAndCompareSnapshotResponse,
     },
     godot_classes::{dcl_camera_3d::DclCamera3D, dcl_ui_control::DclUiControl},
     wallet::Wallet,
@@ -70,6 +72,9 @@ pub struct SceneManager {
 
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
+
+    snapshot_sender:
+        HashMap<String, RpcResultSender<Result<TakeAndCompareSnapshotResponse, String>>>,
 
     #[export]
     pointer_tooltips: VariantArray,
@@ -458,6 +463,15 @@ impl SceneManager {
                             self.console.callv(arguments);
                         }
                     }
+
+                    SceneResponse::TakeSnapshot {
+                        id,
+                        camera_position,
+                        camera_target,
+                        snapshot_frame_size,
+                        tolerance,
+                        response,
+                    } => {}
                 },
                 Err(std::sync::mpsc::TryRecvError::Empty) => return,
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => {
@@ -653,6 +667,8 @@ impl NodeVirtual for SceneManager {
             input_state: InputState::default(),
             last_raycast_result: None,
             pointer_tooltips: VariantArray::new(),
+
+            snapshot_sender: HashMap::new(),
         }
     }
 
