@@ -30,7 +30,8 @@ jobs:
         run: pip3 install git+https://github.com/Scony/godot-gdscript-toolkit.git
       - name: Check format GDScript
         run: gdformat -d godot/
-    
+      - name: GDScript Linter
+        run: gdlint godot/
       # Depedencies section
       # => Linux 
       - name: Install alsa and udev
