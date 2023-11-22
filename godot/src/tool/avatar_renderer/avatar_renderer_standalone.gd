@@ -55,7 +55,7 @@ func _ready():
 		return
 
 	# Disable some functions
-	Global.realm.set_realm("null")
+	Global.realm.async_set_realm("null")
 	Global.scene_runner.set_pause(true)
 
 	self.start.call_deferred()
@@ -78,7 +78,7 @@ func update_avatar(index: int):
 	avatar_node.update_avatar(current_avatar)
 
 
-func _on_avatar_avatar_loaded():
+func _async_on_avatar_avatar_loaded():
 	var payload = payload_to_process.payload[current_payload_index]
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 

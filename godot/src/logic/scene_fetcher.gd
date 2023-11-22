@@ -71,14 +71,15 @@ func set_scene_radius(value: int):
 	scene_entity_coordinator.set_scene_radius(value)
 
 
+# gdlint:ignore = async-function-name
 func _process(_dt):
 	scene_entity_coordinator.update()
 	if scene_entity_coordinator.get_version() != last_version_updated:
-		await _co_on_desired_scene_changed()
+		await _async_on_desired_scene_changed()
 		last_version_updated = scene_entity_coordinator.get_version()
 
 
-func _co_on_desired_scene_changed():
+func _async_on_desired_scene_changed():
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
 	var keep_alive_scenes = d.get("keep_alive_scenes", [])
@@ -88,7 +89,7 @@ func _co_on_desired_scene_changed():
 			var dict = scene_entity_coordinator.get_scene_dict(scene_id)
 			if dict.size() > 0:
 				dict["metadata"] = JSON.parse_string(dict.metadata)
-				await co_load_scene(scene_id, dict)
+				await async_load_scene(scene_id, dict)
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")
 
@@ -190,7 +191,7 @@ func update_position(new_position: Vector2i) -> void:
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
 
-func co_load_scene(scene_entity_id: String, entity: Dictionary):
+func async_load_scene(scene_entity_id: String, entity: Dictionary):
 	var metadata = entity.get("metadata", {})
 	var is_global = entity.get("is_global", false)
 
@@ -224,7 +225,7 @@ func co_load_scene(scene_entity_id: String, entity: Dictionary):
 					main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir())
 				)
 
-				var res = await promise.co_awaiter()
+				var res = await promise.async_awaiter()
 				if res is Promise.Error:
 					printerr(
 						"Scene ",
@@ -240,7 +241,7 @@ func co_load_scene(scene_entity_id: String, entity: Dictionary):
 				"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.min.js",
 				local_main_js_path.replace("user:/", OS.get_user_data_dir())
 			)
-			var res = await promise.co_awaiter()
+			var res = await promise.async_awaiter()
 			if res is Promise.Error:
 				printerr(
 					"Scene ",
@@ -259,7 +260,7 @@ func co_load_scene(scene_entity_id: String, entity: Dictionary):
 			main_crdt_file_url, local_main_crdt_path.replace("user:/", OS.get_user_data_dir())
 		)
 
-		var res = await promise.co_awaiter()
+		var res = await promise.async_awaiter()
 		if res is Promise.Error:
 			printerr(
 				"Scene ",

@@ -38,6 +38,7 @@ var wearable_panel = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRe
 var skin_color_picker = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker
 
 
+# gdlint:ignore = async-function-name
 func _ready():
 	for child in v_box_container_category.get_children():
 		# TODO: check if it's a wearable_button
@@ -62,7 +63,7 @@ func _ready():
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
 	)
 	if promise != null:
-		await promise.co_awaiter()
+		await promise.async_awaiter()
 
 	for wearable_id in wearable_data:
 		wearable_data[wearable_id] = Global.content_manager.get_wearable(wearable_id)
@@ -89,12 +90,12 @@ func _update_avatar():
 		for wearable_hash in avatar_wearables:
 			var wearable = Global.content_manager.get_wearable(wearable_hash)
 			if wearable != null:
-				wearable_button.set_wearable(wearable)
+				wearable_button.async_set_wearable(wearable)
 
 		if wearable_body_shape != null:
-			wearable_button.set_wearable(wearable_body_shape)
+			wearable_button.async_set_wearable(wearable_body_shape)
 
-	avatar_preview.avatar.update_avatar(renderer_avatar_dictionary)
+	avatar_preview.avatar.async_update_avatar(renderer_avatar_dictionary)
 	button_save_profile.disabled = false
 
 
@@ -117,7 +118,7 @@ func show_wearables():
 		var wearable_item = wearable_item_instanceable.instantiate()
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_item.button_group = items_button_group
-		wearable_item.set_wearable(wearable_data[wearable_id])
+		wearable_item.async_set_wearable(wearable_data[wearable_id])
 		wearable_item.toggled.connect(self._on_wearable_toggled.bind(wearable_id))
 
 
@@ -136,7 +137,7 @@ func _on_wearable_toggled(_button_toggled: bool, wearable_id: String) -> void:
 	else:
 		equipped = avatar_body_shape == wearable_id
 
-	wearable_panel.set_wearable(wearable_data[wearable_id], wearable_id)
+	wearable_panel.async_set_wearable(wearable_data[wearable_id], wearable_id)
 	wearable_panel.set_equipable_and_equip(can_equip, equipped)
 
 

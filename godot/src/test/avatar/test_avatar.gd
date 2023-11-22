@@ -20,7 +20,7 @@ var emotes: Array = []
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	avatar.update_avatar(
+	avatar.async_update_avatar(
 		"https://peer.decentraland.org/content",
 		"Godot User",
 		body_shape,

@@ -117,7 +117,7 @@ func _on_toggled(_button_pressed):
 		flat = true
 
 
-func set_wearable(wearable: Dictionary):
+func async_set_wearable(wearable: Dictionary):
 	var wearable_category = Wearables.get_category(wearable)
 	if wearable_category != type_to_category(filter_category):
 		return
@@ -137,7 +137,7 @@ func set_wearable(wearable: Dictionary):
 			"base_url": "https://peer.decentraland.org/content/contents/"
 		}
 		var promise = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
-		var res = await promise.co_awaiter()
+		var res = await promise.async_awaiter()
 		if res is Promise.Error:
 			printerr("Fetch texture error on ", wearable_thumbnail)
 		else:

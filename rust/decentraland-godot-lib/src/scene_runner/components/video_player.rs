@@ -180,7 +180,7 @@ pub fn update_video_player(
 
                         if !file_hash.is_empty() {
                             video_player_node
-                                .call_deferred("request_video".into(), &[file_hash.to_variant()]);
+                                .call_deferred("async_request_video".into(), &[file_hash.to_variant()]);
                         }
                     }
                     VideoUpdateMode::FirstSpawnVideo => {
@@ -256,7 +256,7 @@ pub fn update_video_player(
 
                         if !file_hash.is_empty() {
                             video_player_node
-                                .call_deferred("request_video".into(), &[file_hash.to_variant()]);
+                                .call_deferred("async_request_video".into(), &[file_hash.to_variant()]);
                         }
                     }
                 }

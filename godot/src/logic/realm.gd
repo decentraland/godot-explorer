@@ -70,7 +70,7 @@ static func parse_urn(urn: String):
 	return {"urn": matches.get_string(0), "entityId": matches.get_string(2), "baseUrl": base_url}
 
 
-func set_realm(new_realm_string: String) -> void:
+func async_set_realm(new_realm_string: String) -> void:
 	realm_string = new_realm_string
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)
@@ -78,7 +78,7 @@ func set_realm(new_realm_string: String) -> void:
 		realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
 
-	var res = await promise.co_awaiter()
+	var res = await promise.async_awaiter()
 	if res is Promise.Error:
 		printerr(
 			"Rejected request change realm to: ",

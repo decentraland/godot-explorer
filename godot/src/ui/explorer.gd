@@ -109,12 +109,14 @@ func _ready():
 	Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
 
 	if cmd_realm != null:
-		Global.realm.set_realm(cmd_realm)
+		Global.realm.async_set_realm(cmd_realm)
 	else:
 		if Global.config.last_realm_joined.is_empty():
-			Global.realm.set_realm("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main")
+			Global.realm.async_set_realm(
+				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+			)
 		else:
-			Global.realm.set_realm(Global.config.last_realm_joined)
+			Global.realm.async_set_realm(Global.config.last_realm_joined)
 
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
@@ -281,9 +283,9 @@ func _on_line_edit_command_submit_message(message: String):
 			panel_chat.add_chat_message(
 				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
 			)
-			Global.realm.set_realm(params[1])
+			Global.realm.async_set_realm(params[1])
 		elif command_str == "/reload":
-			Global.realm.set_realm(Global.realm.get_realm_string())
+			Global.realm.async_set_realm(Global.realm.get_realm_string())
 		else:
 			pass
 			# TODO: unknown command

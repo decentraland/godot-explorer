@@ -84,14 +84,14 @@ func _ready():
 	Global.comms.update_profile_avatar(Global.config.avatar_profile)
 	# TODO: check this, the comms method already emit the signal of profile changed
 	# 	so, maybe we don't need to call here, only wait the signal
-	avatar.update_avatar(Global.config.avatar_profile)
+	avatar.async_update_avatar(Global.config.avatar_profile)
 
 	Global.config.param_changed.connect(self._on_param_changed)
 	Global.comms.profile_changed.connect(self._on_player_profile_changed)
 
 
 func _on_player_profile_changed(new_profile: Dictionary):
-	avatar.update_avatar(new_profile)
+	avatar.async_update_avatar(new_profile)
 	Global.avatars.update_primary_player_profile(new_profile)
 
 

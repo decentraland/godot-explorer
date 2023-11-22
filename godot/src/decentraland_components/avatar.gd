@@ -62,7 +62,7 @@ func _unset_avatar_modifier_area():
 	# TODO: Passport (enable functionality)
 
 
-func update_avatar(avatar: Dictionary):
+func async_update_avatar(avatar: Dictionary):
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
 		current_content_url = Global.realm.content_base_url
@@ -87,8 +87,8 @@ func update_avatar(avatar: Dictionary):
 	finish_loading = false
 
 	var promise = Global.content_manager.fetch_wearables(wearable_to_request, current_content_url)
-	await promise.co_awaiter()
-	fetch_wearables_dependencies()
+	await promise.async_awaiter()
+	async_fetch_wearables_dependencies()
 
 
 func _add_animation(index: int, animation_name: String):
@@ -163,7 +163,7 @@ func get_representation(representation_array: Array, desired_body_shape: String)
 	return representation_array[0]
 
 
-func fetch_wearables_dependencies():
+func async_fetch_wearables_dependencies():
 	# Clear last equipped werarables
 	wearables_dict.clear()
 
@@ -206,9 +206,9 @@ func fetch_wearables_dependencies():
 		for file_name in content_to_fetch:
 			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
 
-	await Promise.co_all(async_calls)
+	await Promise.async_all(async_calls)
 
-	load_wearables()
+	async_load_wearables()
 
 
 func _fetch_texture_or_gltf(file_name, content_mapping):
@@ -265,7 +265,7 @@ func try_to_set_body_shape(body_shape_hash):
 	_add_attach_points()
 
 
-func load_wearables():
+func async_load_wearables():
 	var curated_wearables = Wearables.get_curated_wearable_list(
 		current_body_shape, current_wearables, []
 	)
@@ -344,7 +344,7 @@ func load_wearables():
 			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
 
 	var promise = Global.content_manager.duplicate_materials(meshes)
-	await promise.co_awaiter()
+	await promise.async_awaiter()
 	apply_color_and_facial()
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true

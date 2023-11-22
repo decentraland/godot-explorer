@@ -48,25 +48,25 @@ func process(content_cache_map: Dictionary):  # not a coroutine
 
 	for content in loading_content:
 		# coroutine not awaited, it can process multiple times
-		co_process_content(content, content_cache_map)
+		async_process_content(content, content_cache_map)
 
 
 # coroutine
-func co_process_content(content: Dictionary, content_cache_map: Dictionary):
+func async_process_content(content: Dictionary, content_cache_map: Dictionary):
 	_processing_count += 1
 	var content_type: ContentType = content.get("content_type")
 	match content_type:
 		ContentType.CT_GLTF_GLB:
-			await _co_process_loading_gltf(content, content_cache_map)
+			await _async_process_loading_gltf(content, content_cache_map)
 
 		ContentType.CT_TEXTURE:
-			await _co_process_loading_texture(content, content_cache_map)
+			await _async_process_loading_texture(content, content_cache_map)
 
 		ContentType.CT_AUDIO:
-			await _co_process_loading_audio(content, content_cache_map)
+			await _async_process_loading_audio(content, content_cache_map)
 
 		ContentType.CT_WEARABLE_EMOTE:
-			await _co_process_loading_wearable(content, content_cache_map)
+			await _async_process_loading_wearable(content, content_cache_map)
 
 		ContentType.CT_MESHES_MATERIAL:
 			_process_meshes_material(content)
@@ -75,7 +75,7 @@ func co_process_content(content: Dictionary, content_cache_map: Dictionary):
 			_process_instance_gltf(content)
 
 		ContentType.CT_VIDEO:
-			await _co_process_loading_video(content, content_cache_map)
+			await _async_process_loading_video(content, content_cache_map)
 
 		_:
 			printerr("Fetching invalid content type ", content_type)
@@ -96,7 +96,7 @@ func _process_meshes_material(content: Dictionary):
 	promise.call_deferred("resolve")
 
 
-func _co_process_loading_wearable(
+func _async_process_loading_wearable(
 	content: Dictionary,
 	content_cache_map: Dictionary,
 ) -> void:
@@ -111,7 +111,7 @@ func _co_process_loading_wearable(
 		url, HTTPClient.METHOD_POST, json_payload, headers
 	)
 
-	var content_result = await promise.co_awaiter()
+	var content_result = await promise.async_awaiter()
 	if content_result is Promise.Error:
 		printerr("Failing on loading wearable ", url, " reason: ", content_result.get_error())
 		return
@@ -156,7 +156,7 @@ func _co_process_loading_wearable(
 	result_promise.call_deferred("resolve")
 
 
-func _co_process_loading_gltf(content: Dictionary, content_cache_map: Dictionary) -> void:
+func _async_process_loading_gltf(content: Dictionary, content_cache_map: Dictionary) -> void:
 	var content_mapping = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
 	var file_path: String = content.get("file_path")
@@ -183,7 +183,7 @@ func _co_process_loading_gltf(content: Dictionary, content_cache_map: Dictionary
 
 		var request_promise = _http_requester.request_file(file_hash_path, absolute_file_path)
 
-		var content_result = await request_promise.co_awaiter()
+		var content_result = await request_promise.async_awaiter()
 		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading gltf ", file_hash_path, " reason: ", content_result.get_error()
@@ -227,7 +227,7 @@ func _co_process_loading_gltf(content: Dictionary, content_cache_map: Dictionary
 
 	content["gltf_mappings"] = mappings
 
-	await Promise.co_all(promises_dependencies)
+	await Promise.async_all(promises_dependencies)
 
 	# final processing
 	var new_gltf := GLTFDocument.new()
@@ -252,7 +252,7 @@ func _co_process_loading_gltf(content: Dictionary, content_cache_map: Dictionary
 	promise.call_deferred("resolve")
 
 
-func _co_process_loading_texture(
+func _async_process_loading_texture(
 	content: Dictionary,
 	content_cache_map: Dictionary,
 ) -> void:
@@ -268,7 +268,7 @@ func _co_process_loading_texture(
 
 		var promise: Promise = _http_requester.request_file(url, absolute_file_path)
 
-		var content_result = await promise.co_awaiter()
+		var content_result = await promise.async_awaiter()
 		if content_result is Promise.Error:
 			printerr("Failing on loading gltf ", url, " reason: ", content_result.get_error())
 			return
@@ -295,7 +295,7 @@ func _co_process_loading_texture(
 	promise.call_deferred("resolve_with_data", resource)
 
 
-func _co_process_loading_audio(
+func _async_process_loading_audio(
 	content: Dictionary,
 	content_cache_map: Dictionary,
 ) -> void:
@@ -313,7 +313,7 @@ func _co_process_loading_audio(
 		var absolute_file_path = local_audio_path.replace("user:/", OS.get_user_data_dir())
 
 		var promise: Promise = _http_requester.request_file(file_hash_path, absolute_file_path)
-		var content_result = await promise.co_awaiter()
+		var content_result = await promise.async_awaiter()
 		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading wearable ",
@@ -355,7 +355,7 @@ func _co_process_loading_audio(
 	return
 
 
-func _co_process_loading_video(
+func _async_process_loading_video(
 	content: Dictionary,
 	content_cache_map: Dictionary,
 ) -> void:
@@ -374,7 +374,7 @@ func _co_process_loading_video(
 		var promise: Promise = _http_requester.request_file(
 			base_url + file_hash, absolute_file_path
 		)
-		var content_result = await promise.co_awaiter()
+		var content_result = await promise.async_awaiter()
 		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading wearable ",

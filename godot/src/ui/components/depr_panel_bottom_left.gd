@@ -105,11 +105,11 @@ func _on_h_slider_scene_radius_drag_ended(value_changed):
 func on_console_add(scene_title: String, level: int, timestamp: float, text: String) -> void:
 	var color := Color.BLACK
 	match level:
-		SceneLogLevel.Log:
+		SceneLogLevel.LOG:
 			color = Color.DARK_SLATE_BLUE
-		SceneLogLevel.SceneError:
+		SceneLogLevel.SCENE_ERROR:
 			color = Color.DARK_RED
-		SceneLogLevel.SystemError:
+		SceneLogLevel.SYSTEM_ERROR:
 			color = Color.RED
 
 	timestamp = round(timestamp * 100.0) / 100.0

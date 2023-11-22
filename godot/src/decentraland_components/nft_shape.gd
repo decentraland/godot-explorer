@@ -16,16 +16,18 @@ func _get_mesh_instance_3d(node: Node3D) -> MeshInstance3D:
 	return null
 
 
-func co_load_nft(urn: String, style: NftFrameStyleLoader.NFTFrameStyles, background_color: Color):
+func async_load_nft(
+	urn: String, style: NftFrameStyleLoader.NFTFrameStyles, background_color: Color
+):
 	# debounce the call, to avoid multiple calls being processed
 	# we just process the current one, and the last one
 	if loading:
-		scheduled_load_nft = self.co_load_nft.bind(urn, style, background_color)
+		scheduled_load_nft = self.async_load_nft.bind(urn, style, background_color)
 		return
 
 	loading = true
 	var picture_frame = _load_frame_style(style, background_color)
-	await _co_load_nft(picture_frame, urn, style)
+	await _async_load_nft(picture_frame, urn, style)
 	loading = false
 
 	if scheduled_load_nft is Callable:
@@ -103,18 +105,18 @@ func _set_loading_material(
 		background_material.albedo_color = background_color
 
 
-func _co_load_nft(picture_frame: Node3D, urn: String, style: NftFrameStyleLoader.NFTFrameStyles):
+func _async_load_nft(picture_frame: Node3D, urn: String, style: NftFrameStyleLoader.NFTFrameStyles):
 	var dcl_urn: DclUrn = DclUrn.new(urn)
 	if not dcl_urn.valid:
 		printerr("NftShape::load_nft Error, invalid urn: ", urn)
 		return
 
 	var promise = Global.nft_fetcher.fetch_nft(dcl_urn)
-	var result = await promise.co_awaiter()
+	var result = await promise.async_awaiter()
 	if result is Promise.Error:
 		printerr("NftShape::load_nft Error on fetching nft: ", result.get_error())
 		return
-	await _co_set_opensea_nft(picture_frame, style, result)
+	await _async_set_opensea_nft(picture_frame, style, result)
 
 
 func _get_surf_idx_by_resource_name(mesh: Mesh, resource_name: String) -> int:
@@ -133,7 +135,7 @@ func _get_material_by_resource_name(mesh: Mesh, resource_name: String) -> Standa
 	return null
 
 
-func _co_set_opensea_nft(
+func _async_set_opensea_nft(
 	picture_frame: Node3D, style: NftFrameStyleLoader.NFTFrameStyles, asset: OpenSeaFetcher.Asset
 ):
 	var mesh_instance_3d: MeshInstance3D = _get_mesh_instance_3d(picture_frame)
