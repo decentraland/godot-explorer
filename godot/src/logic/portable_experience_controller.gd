@@ -1,5 +1,5 @@
-extends DclPortableExperienceController
 class_name PortableExperienceController
+extends DclPortableExperienceController
 
 var desired_portable_experiences: Array[String] = []
 var killing_ids: Array[String] = []

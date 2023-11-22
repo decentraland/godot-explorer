@@ -1,5 +1,15 @@
 extends Node
 
+var parcel_position: Vector2i
+var parcel_position_real: Vector2
+var panel_bottom_left_height: int = 0
+var dirty_save_position: bool = false
+
+var last_position_sent: Vector3 = Vector3.ZERO
+var counter: int = 0
+
+var _last_parcel_position: Vector2i
+
 @onready var ui_root = $UI
 
 @onready var label_crosshair = $UI/Label_Crosshair
@@ -15,12 +25,7 @@ extends Node
 @onready var mobile_ui = $UI/MobileUI
 @onready var v_box_container_chat = $UI/VBoxContainer_Chat
 @onready var button_jump = $UI/Button_Jump
-
-var parcel_position: Vector2i
-var _last_parcel_position: Vector2i
-var parcel_position_real: Vector2
-var panel_bottom_left_height: int = 0
-var dirty_save_position: bool = false
+@onready var line_edit_command = $UI/LineEdit_Command
 
 
 func _process(_dt):
@@ -125,7 +130,7 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	var title: String = Global.scene_runner.get_scene_title(scene_id)
 	title += str(Global.scene_runner.get_scene_base_parcel(scene_id))
-	control_menu.control_advance_settings._on_console_add(title, level, timestamp, text)
+	control_menu.control_advance_settings.on_console_add(title, level, timestamp, text)
 
 
 func _on_pointer_tooltip_changed():
@@ -142,9 +147,6 @@ func change_tooltips():
 
 func _on_check_button_toggled(button_pressed):
 	Global.scene_runner.set_pause(button_pressed)
-
-
-@onready var line_edit_command = $UI/LineEdit_Command
 
 
 func _unhandled_input(event):
@@ -223,10 +225,6 @@ func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	Global.scene_fetcher.reload_scene(scene_id)
 
 
-var last_position_sent: Vector3 = Vector3.ZERO
-var counter: int = 0
-
-
 func _on_timer_broadcast_position_timeout():
 	var transform: Transform3D = player.avatar.global_transform
 	var position = transform.origin
@@ -291,7 +289,7 @@ func _on_line_edit_command_submit_message(message: String):
 			# TODO: unknown command
 	else:
 		Global.comms.send_chat(message)
-		panel_chat._on_chats_arrived([["Godot User", 0, message]])
+		panel_chat.on_chats_arrived([["0xNULL", "Godot User", 0, message]])
 
 
 func _on_control_menu_request_pause_scenes(enabled):

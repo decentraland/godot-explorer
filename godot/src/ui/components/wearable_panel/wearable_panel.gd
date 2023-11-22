@@ -1,23 +1,9 @@
 extends Control
-@onready var texture_rect_panel_background = $TextureRect_PanelBackground
-@onready
-var texture_rect_thumbnail_background = $HBoxContainer/MarginContainer2/TextureRect_ThumbnailBackground
 
-@onready var label_name = $HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Name/Label_Name
-@onready var button_equip = $HBoxContainer/MarginContainer/Button_Equip
-@onready
-var texture_rect_preview = $HBoxContainer/MarginContainer2/TextureRect_ThumbnailBackground/TextureRect_Preview
+signal equip(wearable_id: String)
+signal unequip(wearable_id: String)
 
 var thumbnail_hash: String
-
-var base_panel = preload("res://assets/ui/InfoCardBase.png")
-var common_panel = preload("res://assets/ui/CommonThumbnail.png")
-var uncommon_panel = preload("res://assets/ui/InfoCardUncommon.png")
-var rare_panel = preload("res://assets/ui/InfoCardRare.png")
-var epic_panel = preload("res://assets/ui/InfoCardEpic.png")
-var mythic_panel = preload("res://assets/ui/InfoCardMythic.png")
-var legendary_panel = preload("res://assets/ui/InfoCardLegendary.png")
-var unique_panel = preload("res://assets/ui/InfoCardUnique.png")
 
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
 var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
@@ -28,10 +14,25 @@ var mythic_thumbnail = preload("res://assets/ui/MythicThumbnail.png")
 var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 
-signal equip(wearable_id: String)
-signal unequip(wearable_id: String)
+var base_panel = preload("res://assets/ui/InfoCardBase.png")
+var common_panel = common_thumbnail
+var uncommon_panel = preload("res://assets/ui/InfoCardUncommon.png")
+var rare_panel = preload("res://assets/ui/InfoCardRare.png")
+var epic_panel = preload("res://assets/ui/InfoCardEpic.png")
+var mythic_panel = preload("res://assets/ui/InfoCardMythic.png")
+var legendary_panel = preload("res://assets/ui/InfoCardLegendary.png")
+var unique_panel = preload("res://assets/ui/InfoCardUnique.png")
 
 var wearable_id
+
+@onready var texture_rect_panel_background = $TextureRect_PanelBackground
+@onready
+var texture_rect_thumbnail_background = $HBoxContainer/MarginContainer2/TextureRect_ThumbnailBackground
+
+@onready var label_name = $HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Name/Label_Name
+@onready var button_equip = $HBoxContainer/MarginContainer/Button_Equip
+@onready
+var texture_rect_preview = $HBoxContainer/MarginContainer2/TextureRect_ThumbnailBackground/TextureRect_Preview
 
 
 func _ready():

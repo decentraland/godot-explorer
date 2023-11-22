@@ -34,8 +34,8 @@ class Asset:
 			return value
 		return ""
 
-	func _init(endpoint: String, asset: Dictionary):
-		self.endpoint = endpoint
+	func _init(_endpoint: String, asset: Dictionary):
+		self.endpoint = _endpoint
 		contract_address = asset.get("asset_contract", {}).get("address", "")
 		token_id = asset.get("token_id")
 
@@ -89,8 +89,8 @@ class Asset:
 		if average_price_in_dollars > 0.1:
 			var usd = "US$" + str(snappedf(average_price_in_dollars, 0.01))
 			return eth + " (" + usd + ")"
-		else:
-			return eth
+
+		return eth
 
 	func co_load_offers() -> int:
 		# Request
@@ -116,8 +116,8 @@ class Asset:
 		var short_address = DclEther.shorten_eth_address(self.address)
 		if self.username.is_empty():
 			return short_address
-		else:
-			return self.username + " (" + short_address + ")"
+
+		return self.username + " (" + short_address + ")"
 
 # Commented code if in the future we want to search for best_offers...
 # 		if seaport_offers.is_empty():
@@ -129,8 +129,8 @@ class Asset:
 #				best_offer = offer
 
 	func co_download_image():
-		var hash = get_hash()
-		var promise = Global.content_manager.fetch_texture_by_url(hash, image_url)
+		var texture_hash = get_hash()
+		var promise = Global.content_manager.fetch_texture_by_url(texture_hash, image_url)
 		var result = await promise.co_awaiter()
 		if result is Promise.Error:
 			printerr(

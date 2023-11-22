@@ -1,5 +1,5 @@
-extends RefCounted
 class_name ContentThread
+extends RefCounted
 
 enum ContentType {
 	CT_GLTF_GLB = 1,

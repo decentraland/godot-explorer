@@ -1,8 +1,5 @@
 extends Node2D
 
-@onready var avatar_node: Avatar = $SubViewportContainer/SubViewport/Avatar
-@onready var sub_viewport: SubViewport = $SubViewportContainer/SubViewport
-
 var payload_to_process: AvatarRendererHelper.AvatarFile
 var current_payload_index: int = 0
 
@@ -25,6 +22,9 @@ var current_avatar = {
 	"skin": Color(0.4901960790157318, 0.364705890417099, 0.27843138575553894),
 	"emotes": []
 }
+
+@onready var avatar_node: Avatar = $SubViewportContainer/SubViewport/Avatar
+@onready var sub_viewport: SubViewport = $SubViewportContainer/SubViewport
 
 
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc

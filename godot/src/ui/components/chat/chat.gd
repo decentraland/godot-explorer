@@ -1,4 +1,8 @@
 extends Panel
+const EMOTE: String = "␐"
+const REQUEST_PING: String = "␑"
+const ACK: String = "␆"
+
 @onready var rich_text_label_chat = $MarginContainer/RichTextLabel_Chat
 
 
@@ -7,7 +11,7 @@ func _ready():
 		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
 	)
 
-	Global.comms.chat_message.connect(self._on_chats_arrived)
+	Global.comms.chat_message.connect(self.on_chats_arrived)
 
 
 func add_chat_message(bb_text: String) -> void:
@@ -15,16 +19,11 @@ func add_chat_message(bb_text: String) -> void:
 	rich_text_label_chat.newline()
 
 
-const EMOTE: String = "␐"
-const REQUEST_PING: String = "␑"
-const ACK: String = "␆"
-
-
-func _on_chats_arrived(chats: Array):
+func on_chats_arrived(chats: Array):
 	for chat in chats:
 		var address: String = chat[0]
-		var _profile_name: StringName = chat[1]
-		var _timestamp: float = chat[2]
+		#var _profile_name: StringName = chat[1]
+		#var _timestamp: float = chat[2]
 		var message: StringName = chat[3]
 		var avatar = Global.avatars.get_avatar_by_address(address)
 

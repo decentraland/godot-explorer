@@ -1,5 +1,5 @@
-extends RefCounted
 class_name AvatarRendererHelper
+extends RefCounted
 
 
 class ColorEntry:
@@ -14,8 +14,8 @@ class ColorEntry:
 		var a = color_dict.get("a")
 		if [r, g, b].all(func(v): return v != null):
 			return Color(r, g, b, a)
-		else:
-			printerr("some color field is not there", value)
+
+		printerr("some color field is not there", value)
 		return null
 
 

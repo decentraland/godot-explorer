@@ -1,5 +1,22 @@
 extends VBoxContainer
 
+var filtered_data: Array
+var items_button_group = ButtonGroup.new()
+
+var avatar_body_shape: String
+var avatar_wearables: PackedStringArray
+var avatar_eyes_color: Color
+var avatar_hair_color: Color
+var avatar_skin_color: Color
+var avatar_emotes: Array
+
+var base_wearable_request_id: int = -1
+var wearable_data: Dictionary = {}
+
+var renderer_avatar_dictionary: Dictionary = {}
+
+var wearable_buttons: Array = []
+
 @onready var color_picker_panel = $Color_Picker_Panel
 
 @onready
@@ -17,22 +34,8 @@ var grid_container_wearables_list = $ColorRect_Background/HBoxContainer/ScrollCo
 @onready
 var wearable_panel = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
 
-var filtered_data: Array
-var items_button_group = ButtonGroup.new()
-
-var avatar_body_shape: String
-var avatar_wearables: PackedStringArray
-var avatar_eyes_color: Color
-var avatar_hair_color: Color
-var avatar_skin_color: Color
-var avatar_emotes: Array
-
-var base_wearable_request_id: int = -1
-var wearable_data: Dictionary = {}
-
-var renderer_avatar_dictionary: Dictionary = {}
-
-var wearable_buttons: Array = []
+@onready
+var skin_color_picker = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker
 
 
 func _ready():
@@ -214,16 +217,11 @@ func _on_wearable_panel_unequip(wearable_id: String):
 		# TODO: can not unequip a body shape
 		return
 
-	else:
-		var index = avatar_wearables.find(wearable_id)
-		if index != -1:
-			avatar_wearables.remove_at(index)
+	var index = avatar_wearables.find(wearable_id)
+	if index != -1:
+		avatar_wearables.remove_at(index)
 
 	_update_avatar()
-
-
-@onready
-var skin_color_picker = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker
 
 
 func _on_skin_color_picker_toggle_color_panel(toggled, color_target):

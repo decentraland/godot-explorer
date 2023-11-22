@@ -1,5 +1,10 @@
 extends SubViewportContainer
 
+var start_camera_transform
+var start_angle
+var start_dragging_position
+var dirty_is_dragging
+
 @onready var avatar = %Avatar
 @onready var camera_3d = $SubViewport/Camera3D
 
@@ -9,16 +14,22 @@ func _ready():
 		avatar.update_avatar(Global.config.avatar_profile)
 
 
-var start_camera_transform
-var start_angle
-var start_dragging_position
-var dirty_is_dragging
-
-
 func focus_camera_on(type):
 	var tween = create_tween()
 	match type:
-		Wearables.Categories.HAIR, Wearables.Categories.FACIAL_HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.EYES:
+		Wearables.Categories.HAIR, \
+		Wearables.Categories.FACIAL_HAIR, \
+		Wearables.Categories.EYEWEAR, \
+		Wearables.Categories.TIARA, \
+		Wearables.Categories.FACIAL, \
+		Wearables.Categories.EYEBROWS, \
+		Wearables.Categories.MOUTH, \
+		Wearables.Categories.HAT, \
+		Wearables.Categories.EARRING, \
+		Wearables.Categories.MASK, \
+		Wearables.Categories.HELMET, \
+		Wearables.Categories.TOP_HEAD, \
+		Wearables.Categories.EYES:
 			tween.tween_property(camera_3d, "position", Vector3(0, 1.68, -0.523), 0.5)
 		_:
 			tween.tween_property(camera_3d, "position", Vector3(0, 0.957, -1.623), 0.5)

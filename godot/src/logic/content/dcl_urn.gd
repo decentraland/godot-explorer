@@ -10,8 +10,8 @@ var token_id: String = ""
 var urn: String = ""
 
 
-func _init(urn):
-	var urn_parts: PackedStringArray = urn.split(SEPARATOR)
+func _init(_urn):
+	var urn_parts: PackedStringArray = _urn.split(SEPARATOR)
 
 	# 0: "urn"
 	if urn_parts[0] != "urn":
@@ -26,7 +26,7 @@ func _init(urn):
 	if urn_parts[2] != CHAIN_ETHEREUM:
 		return
 
-	self.urn = urn
+	self.urn = _urn
 	self.chain = urn_parts[2]
 
 	# 3: contract standard (not used, but we skip it)

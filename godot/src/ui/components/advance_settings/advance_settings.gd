@@ -1,5 +1,19 @@
 extends Control
 
+signal request_pause_scenes(enabled: bool)
+signal preview_hot_reload(scene_type: String, scene_id: String)
+
+enum SceneLogLevel {
+	LOG = 1,
+	SCENE_ERROR = 2,
+	SYSTEM_ERROR = 3,
+}
+
+var preview_ws = WebSocketPeer.new()
+var _preview_connect_to_url: String = ""
+var _dirty_closed: bool = false
+var _dirty_connected: bool = false
+
 @onready
 var check_button_pause = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer/CheckButton_Pause
 @onready
@@ -26,20 +40,6 @@ var spin_box_jump_velocity = $VBoxContainer/ColorRect_Background/HBoxContainer/V
 var spin_box_run_speed = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed
 @onready
 var spin_box_walk_speed = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed
-
-var preview_ws = WebSocketPeer.new()
-var _preview_connect_to_url: String = ""
-var _dirty_closed: bool = false
-var _dirty_connected: bool = false
-
-signal request_pause_scenes(enabled: bool)
-signal preview_hot_reload(scene_type: String, scene_id: String)
-
-const SceneLogLevel := {
-	Log = 1,
-	SceneError = 2,
-	SystemError = 3,
-}
 
 
 func _ready():
@@ -149,14 +149,14 @@ func _on_button_connect_preview_pressed():
 	)
 
 
-func _on_console_add(scene_title: String, level: int, timestamp: float, text: String) -> void:
+func on_console_add(scene_title: String, level: int, timestamp: float, text: String) -> void:
 	var color := Color.BLACK
 	match level:
-		SceneLogLevel.Log:
+		SceneLogLevel.LOG:
 			color = Color.DARK_SLATE_BLUE
-		SceneLogLevel.SceneError:
+		SceneLogLevel.SCENE_ERROR:
 			color = Color.DARK_RED
-		SceneLogLevel.SystemError:
+		SceneLogLevel.SYSTEM_ERROR:
 			color = Color.RED
 
 	timestamp = round(timestamp * 100.0) / 100.0

@@ -1,4 +1,7 @@
 extends Control
+
+var resolution_manager: ResolutionManager = ResolutionManager.new()
+
 @onready var general = $VBoxContainer_General
 @onready var graphics = $VBoxContainer_Graphics
 @onready var monitoring = $VBoxContainer_Monitoring
@@ -11,8 +14,6 @@ extends Control
 @onready var h_slider_gui_scale = $VBoxContainer_Graphics/GuiScale/HBoxContainer/HSlider_GuiScale
 @onready var menu_button_limit_fps = $VBoxContainer_Graphics/LimitFps/MenuButton_LimitFps
 @onready var menu_button_skybox = $VBoxContainer_Graphics/Skybox/MenuButton_Skybox
-
-var resolution_manager: ResolutionManager = ResolutionManager.new()
 
 
 func _ready():

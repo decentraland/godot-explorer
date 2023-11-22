@@ -3,7 +3,7 @@
 
 class_name Promise
 
-signal _on_resolved
+signal on_resolved
 
 var _resolved: bool = false
 var _data: Variant = null
@@ -13,7 +13,7 @@ func resolve():
 	if is_resolved():
 		return
 	_resolved = true
-	_on_resolved.emit()
+	on_resolved.emit()
 
 
 func resolve_with_data(data):
@@ -44,11 +44,11 @@ func is_resolved() -> bool:
 
 func co_awaiter() -> Variant:
 	if !_resolved:
-		await _on_resolved
+		await on_resolved
 	if _data is Promise:  # Chain promises
 		return _data.co_awaiter()
-	else:
-		return _data
+
+	return _data
 
 
 class Error:
@@ -64,25 +64,27 @@ class Error:
 
 
 # Internal helper function
-static func _co_call_and_get_promise(f) -> Promise:
-	if f is Promise:
-		return f
-	elif f is Callable:
-		var res = await f.call()
-		if res is Promise:
-			return res
-		else:
+class _Internal:
+	static func co_call_and_get_promise(f) -> Promise:
+		if f is Promise:
+			return f
+
+		if f is Callable:
+			var res = await f.call()
+			if res is Promise:
+				return res
+
 			printerr("Func doesn't return a Promise")
 			return null
-	else:
+
 		printerr("Func is not a callable nor promise")
 		return null
 
 
 class AllAwaiter:
+	var results: Array = []
 	var _mask: int
 	var _promise: Promise = Promise.new()
-	var results: Array = []
 
 	func _init(funcs: Array) -> void:
 		var size := funcs.size()
@@ -99,7 +101,7 @@ class AllAwaiter:
 
 	func _call_func(i: int, f) -> void:
 		@warning_ignore("redundant_await")
-		var promise = await Promise._co_call_and_get_promise(f)
+		var promise = await Promise._Internal.co_call_and_get_promise(f)
 		var data = await promise.co_awaiter()
 		results[i] = data
 
@@ -122,7 +124,7 @@ class AnyAwaiter:
 
 	func _call_func(_i: int, f) -> void:
 		@warning_ignore("redundant_await")
-		var promise: Promise = await Promise._co_call_and_get_promise(f)
+		var promise: Promise = await Promise._Internal.co_call_and_get_promise(f)
 		var res = await promise.co_awaiter()
 
 		# Promise.co_any ignores promises with errors
@@ -143,7 +145,7 @@ class RaceAwaiter:
 
 	func _call_func(_i: int, f) -> void:
 		@warning_ignore("redundant_await")
-		var promise: Promise = await Promise._co_call_and_get_promise(f)
+		var promise: Promise = await Promise._Internal.co_call_and_get_promise(f)
 		var res = await promise.co_awaiter()
 
 		# Promise.co_race doesn't ignore on error, you get the first one, with or without an error

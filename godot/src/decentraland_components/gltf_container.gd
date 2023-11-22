@@ -1,15 +1,15 @@
 extends DclGltfContainer
 
+enum GltfContainerLoadingState {
+	UNKNOWN = 0,
+	LOADING = 1,
+	NOT_FOUND = 2,
+	FINISHED_WITH_ERROR = 3,
+	FINISHED = 4,
+}
+
 var file_hash: String = ""
 var gltf_node = null
-
-const GltfContainerLoadingState = {
-	Unknown = 0,
-	Loading = 1,
-	NotFound = 2,
-	FinishedWithError = 3,
-	Finished = 4,
-}
 
 
 func _ready():
@@ -23,11 +23,11 @@ func load_gltf():
 	self.file_hash = content_mapping.get("content", {}).get(dcl_gltf_src, "")
 
 	if self.file_hash.is_empty():
-		dcl_gltf_loading_state = GltfContainerLoadingState.NotFound
+		dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND
 		return
 
 	# TODO: should we set a timeout?
-	dcl_gltf_loading_state = GltfContainerLoadingState.Loading
+	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 
 	var promise = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
 	if promise != null:
@@ -39,7 +39,7 @@ func load_gltf():
 func _on_gltf_loaded():
 	var node = Global.content_manager.get_resource_from_hash(file_hash)
 	if node == null:
-		dcl_gltf_loading_state = GltfContainerLoadingState.FinishedWithError
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		return
 
 	var promise: Promise = Global.content_manager.instance_gltf_colliders(
@@ -56,7 +56,7 @@ func deferred_add_child(new_gltf_node):
 	# Corner case, when the scene is unloaded before the gltf is loaded
 	var main_tree = get_tree()
 	if not is_instance_valid(main_tree):
-		dcl_gltf_loading_state = GltfContainerLoadingState.FinishedWithError
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		return
 
 	add_child(new_gltf_node)
@@ -64,7 +64,7 @@ func deferred_add_child(new_gltf_node):
 	await main_tree.process_frame
 
 	# Colliders and rendering is ensured to be ready at this point
-	dcl_gltf_loading_state = GltfContainerLoadingState.Finished
+	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
 
 
 func get_animatable_body_3d(mesh_instance: MeshInstance3D):

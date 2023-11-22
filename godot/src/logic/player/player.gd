@@ -1,27 +1,35 @@
 extends CharacterBody3D
 
+const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
+
+@export var vertical_sens: float = 0.5
+@export var horizontal_sens: float = 0.5
+
+var captured: bool = true
+
+var is_on_air: bool
+
+var walk_speed = 2.0
+var run_speed = 6.0
+var gravity := 55.0
+var jump_velocity_0 := 12.0
+
+var camera_mode_change_blocked: bool = false
+var stored_camera_mode_before_block: Global.CameraMode
+
+var current_direction: Vector3 = Vector3()
+
+var _mouse_position = Vector2(0.0, 0.0)
+var _touch_position = Vector2(0.0, 0.0)
+
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 
-var _mouse_position = Vector2(0.0, 0.0)
-var _touch_position = Vector2(0.0, 0.0)
-var captured: bool = true
-
-var is_on_air: bool
-
-@export var vertical_sens: float = 0.5
-@export var horizontal_sens: float = 0.5
-
-var WALK_SPEED = 2.0
-var RUN_SPEED = 6.0
-var GRAVITY := 55.0
-var JUMP_VELOCITY_0 := 12.0
-
-var THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
-var camera_mode_change_blocked: bool = false
-var stored_camera_mode_before_block: Global.CameraMode
+@onready var camera_fade_in_audio = preload("res://assets/sfx/ui_fade_in.wav")
+@onready var camera_fade_out_audio = preload("res://assets/sfx/ui_fade_out.wav")
+@onready var audio_stream_player_camera = $AudioStreamPlayer_Camera
 
 
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
@@ -88,15 +96,10 @@ func _on_player_profile_changed(new_profile: Dictionary):
 
 
 func _on_param_changed(_param):
-	WALK_SPEED = Global.config.walk_velocity
-	RUN_SPEED = Global.config.run_velocity
-	GRAVITY = Global.config.gravity
-	JUMP_VELOCITY_0 = Global.config.jump_velocity
-
-
-@onready var camera_fade_in_audio = preload("res://assets/sfx/ui_fade_in.wav")
-@onready var camera_fade_out_audio = preload("res://assets/sfx/ui_fade_out.wav")
-@onready var audio_stream_player_camera = $AudioStreamPlayer_Camera
+	walk_speed = Global.config.walk_velocity
+	run_speed = Global.config.run_velocity
+	gravity = Global.config.gravity
+	jump_velocity_0 = Global.config.jump_velocity
 
 
 func _clamp_camera_rotation():
@@ -138,35 +141,32 @@ func _input(event):
 						set_camera_mode(Global.CameraMode.FIRST_PERSON)
 
 
-var current_direction: Vector3 = Vector3()
-
-
 func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	current_direction = current_direction.move_toward(direction, 10 * delta)
 
 	if not is_on_floor():
-		velocity.y -= GRAVITY * delta
+		velocity.y -= gravity * delta
 
 	elif Input.is_action_just_pressed("ia_jump"):
-		velocity.y = JUMP_VELOCITY_0
+		velocity.y = jump_velocity_0
 
 	if current_direction:
 		if Input.is_action_pressed("ia_walk"):
 			avatar.set_walking()
-			velocity.x = current_direction.x * WALK_SPEED
-			velocity.z = current_direction.z * WALK_SPEED
+			velocity.x = current_direction.x * walk_speed
+			velocity.z = current_direction.z * walk_speed
 		else:
 			avatar.set_running()
-			velocity.x = current_direction.x * RUN_SPEED
-			velocity.z = current_direction.z * RUN_SPEED
+			velocity.x = current_direction.x * run_speed
+			velocity.z = current_direction.z * run_speed
 
 		avatar.look_at(current_direction + position)
 	else:
 		avatar.set_idle()
-		velocity.x = move_toward(velocity.x, 0, WALK_SPEED)
-		velocity.z = move_toward(velocity.z, 0, WALK_SPEED)
+		velocity.x = move_toward(velocity.x, 0, walk_speed)
+		velocity.z = move_toward(velocity.z, 0, walk_speed)
 
 	move_and_slide()
 

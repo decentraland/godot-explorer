@@ -1,5 +1,5 @@
-extends Node3D
 class_name NftShape
+extends Node3D
 
 var current_style = null
 var loading: bool = false

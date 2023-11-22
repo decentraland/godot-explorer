@@ -1,13 +1,9 @@
-extends DclAvatar
 class_name Avatar
+extends DclAvatar
 
 signal avatar_loaded
 
 @export var skip_process: bool = false
-@onready var animation_player = $Armature/AnimationPlayer
-@onready var label_3d_name = $Label3D_Name
-@onready var body_shape_root: Node3D = $Armature
-@onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
 
 # Public
 var avatar_name: String = ""
@@ -27,6 +23,24 @@ var wearables_dict: Dictionary = {}
 
 var finish_loading = false
 var wearables_by_category
+
+var generate_attach_points: bool = false
+var right_hand_idx: int = -1
+var right_hand_position: Transform3D
+var left_hand_idx: int = -1
+var left_hand_position: Transform3D
+var index_to_animation_name: Dictionary = {}
+
+var audio_stream_player: AudioStreamPlayer = null
+var audio_stream_player_gen: AudioStreamGenerator = null
+
+var mask_material = preload("res://assets/avatar/mask_material.tres")
+
+@onready var animation_player = $Armature/AnimationPlayer
+@onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
+@onready var label_3d_name = $Label3D_Name
+@onready var body_shape_root: Node3D = $Armature
+@onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
 
 
 func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
@@ -75,10 +89,6 @@ func update_avatar(avatar: Dictionary):
 	var promise = Global.content_manager.fetch_wearables(wearable_to_request, current_content_url)
 	await promise.co_awaiter()
 	fetch_wearables_dependencies()
-
-
-@onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
-var index_to_animation_name: Dictionary = {}
 
 
 func _add_animation(index: int, animation_name: String):
@@ -384,15 +394,11 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 				apply_texture_and_mask(child, eyebrows, current_hair_color, Color.BLACK)
 			else:
 				child.hide()
-			pass
 		elif child.name.ends_with("mask_mouth"):
 			if not mouth.is_empty():
 				apply_texture_and_mask(child, mouth, current_skin_color, Color.BLACK)
 			else:
 				child.hide()
-
-
-var mask_material = preload("res://assets/avatar/mask_material.tres")
 
 
 func apply_texture_and_mask(
@@ -435,10 +441,6 @@ func set_idle():
 		animation_player.play("Idle")
 
 
-var audio_stream_player: AudioStreamPlayer = null
-var audio_stream_player_gen: AudioStreamGenerator = null
-
-
 func spawn_voice_channel(sample_rate, num_channels, samples_per_channel):
 	printt("init voice chat ", sample_rate, num_channels, samples_per_channel)
 	audio_stream_player = AudioStreamPlayer.new()
@@ -456,13 +458,6 @@ func push_voice_frame(frame):
 		audio_stream_player.play()
 
 	audio_stream_player.get_stream_playback().push_buffer(frame)
-
-
-var generate_attach_points: bool = false
-var right_hand_idx: int = -1
-var right_hand_position: Transform3D
-var left_hand_idx: int = -1
-var left_hand_position: Transform3D
 
 
 func activate_attach_points():

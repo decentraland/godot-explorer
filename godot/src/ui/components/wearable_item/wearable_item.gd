@@ -1,9 +1,5 @@
 extends Button
 
-@onready var panel_container = $PanelContainer
-@onready var texture_rect_background = $Panel/TextureRect_Background
-@onready var texture_rect_preview = $Panel/TextureRect_Preview
-
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
 var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
 var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
@@ -14,6 +10,10 @@ var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 
 var thumbnail_hash: String
+
+@onready var panel_container = $PanelContainer
+@onready var texture_rect_background = $Panel/TextureRect_Background
+@onready var texture_rect_preview = $Panel/TextureRect_Preview
 
 
 func _ready():

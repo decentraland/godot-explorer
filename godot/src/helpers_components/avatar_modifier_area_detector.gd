@@ -1,6 +1,5 @@
 extends Area3D
 
-@export var avatar: Avatar = null
 signal set_avatar_modifier_area(area: DclAvatarModifierArea3D)
 # Logic explanation:
 # If the avatar enters/exits an AREA but it is not in the scene
@@ -8,6 +7,8 @@ signal set_avatar_modifier_area(area: DclAvatarModifierArea3D)
 # and when the avatar enters/exits the scene, it will check it
 
 signal unset_avatar_modifier_area
+
+@export var avatar: Avatar = null
 
 var overlapping_areas: Array[Area3D] = []
 

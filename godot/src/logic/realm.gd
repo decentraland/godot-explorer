@@ -1,9 +1,9 @@
-extends DclRealm
 class_name Realm
-
-var http_requester: RustHttpRequesterWrapper = Global.http_requester
+extends DclRealm
 
 signal realm_changed
+
+var http_requester: RustHttpRequesterWrapper = Global.http_requester
 
 
 static func is_dcl_ens(str_param: String) -> bool:
@@ -19,6 +19,9 @@ static func dcl_world_url(dcl_name: String) -> String:
 
 
 static func ensure_ends_with_slash(str_param: String) -> String:
+	if str_param.is_empty():
+		return ""
+
 	return str_param.trim_suffix("/") + "/"
 
 
