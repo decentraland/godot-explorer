@@ -9,7 +9,12 @@ module.exports.getRealm = async function (body) {
         }
     }
 }
-module.exports.getWorldTime = async function (body) { return {} }
+module.exports.getWorldTime = async function (body) {
+    const seconds = 60 * 60 * 12 // noon seconds
+    return {
+        seconds
+    }
+}
 
 // sync implementation
 module.exports.readFile = async function (body) {
