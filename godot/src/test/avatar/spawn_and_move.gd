@@ -1,7 +1,7 @@
-extends Node
 class_name TestSpawnAndMoveAvatars
+extends Node
 
-var test_avatar_N: int = 100
+const TEST_AVATAR_N: int = 100
 var moving_avatars: bool = false
 var moving_t: float = 0
 var spawning_avatars: bool = false
@@ -37,7 +37,7 @@ func get_random_wearable(category: String, body_shape_id: String):
 
 
 func _process(dt):
-	if spawning_avatars and spawning_i < test_avatar_N:
+	if spawning_avatars and spawning_i < TEST_AVATAR_N:
 		var body_shape_id = get_random_body()
 		var avatar_data = {
 			"base_url": "https://peer.decentraland.org/content",
@@ -70,14 +70,14 @@ func _process(dt):
 		spawning_position.append(initial_position)
 
 		spawning_i = spawning_i + 1
-		if spawning_i >= test_avatar_N:
+		if spawning_i >= TEST_AVATAR_N:
 			spawning_avatars = false
 			moving_avatars = true
 	elif moving_avatars:
 		moving_t += dt
 		if moving_t >= 0.1:
-			var WALK_SPEED = 2.0
-			var walk_delta = WALK_SPEED * moving_t
+			var walk_speed = 2.0
+			var walk_delta = walk_speed * moving_t
 			moving_t = 0
 			for i in range(spawning_position.size()):
 				var delta_position = (

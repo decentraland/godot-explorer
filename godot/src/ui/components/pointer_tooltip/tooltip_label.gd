@@ -1,10 +1,10 @@
 extends Control
 
+var action_to_trigger: String = ""
+
 @onready
 var label_action = $PanelContainer/MarginContainer/HBoxContainer/PanelContainer/MarginContainer/Label_Action
 @onready var label_text = $PanelContainer/MarginContainer/HBoxContainer/Label_Text
-
-var action_to_trigger: String = ""
 
 
 func _ready():

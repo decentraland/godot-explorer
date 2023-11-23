@@ -50,7 +50,7 @@ futures-util = "*"
 
 livekit = { git = "https://github.com/robtfm/client-sdk-rust", branch="h264-false", features=["rustls-tls-webpki-roots"] }
 
-taffy = { git = "https://github.com/DioxusLabs/taffy", branch="main" }
+taffy = { git = "https://github.com/DioxusLabs/taffy", rev="7eee673c5ea65f64f35c53f5ee2fe5faf62b9c1e" }
 tracing-test = "0.2.4"
 
 [target.'cfg(target_os = "android")'.dependencies]

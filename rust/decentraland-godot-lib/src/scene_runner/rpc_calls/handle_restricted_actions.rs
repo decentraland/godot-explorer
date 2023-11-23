@@ -74,7 +74,7 @@ pub fn change_realm(
         "No thanks",
         move |ok| {
             if ok {
-                realm_node.call("set_realm".into(), &[Variant::from(to)]);
+                realm_node.call("async_set_realm".into(), &[Variant::from(to)]);
                 response.send(Ok(()));
             } else {
                 response.send(Err("User rejected to change realm".to_string()));
@@ -106,7 +106,7 @@ pub fn open_nft_dialog(
     // Setup confirm dialog
     dialog_stack.add_child(confirm_dialog.clone());
 
-    confirm_dialog.call("co_load_nft".into(), &[urn.to_variant()]);
+    confirm_dialog.call("async_load_nft".into(), &[urn.to_variant()]);
 
     response.send(Ok(()));
 }

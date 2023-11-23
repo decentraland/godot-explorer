@@ -1,8 +1,5 @@
 extends Node2D
 
-@onready var avatar_node: Avatar = $SubViewportContainer/SubViewport/Avatar
-@onready var sub_viewport: SubViewport = $SubViewportContainer/SubViewport
-
 var payload_to_process: AvatarRendererHelper.AvatarFile
 var current_payload_index: int = 0
 
@@ -25,6 +22,9 @@ var current_avatar = {
 	"skin": Color(0.4901960790157318, 0.364705890417099, 0.27843138575553894),
 	"emotes": []
 }
+
+@onready var avatar_node: Avatar = $SubViewportContainer/SubViewport/Avatar
+@onready var sub_viewport: SubViewport = $SubViewportContainer/SubViewport
 
 
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
@@ -55,7 +55,7 @@ func _ready():
 		return
 
 	# Disable some functions
-	Global.realm.set_realm("null")
+	Global.realm.async_set_realm("null")
 	Global.scene_runner.set_pause(true)
 
 	self.start.call_deferred()
@@ -78,7 +78,7 @@ func update_avatar(index: int):
 	avatar_node.update_avatar(current_avatar)
 
 
-func _on_avatar_avatar_loaded():
+func _async_on_avatar_avatar_loaded():
 	var payload = payload_to_process.payload[current_payload_index]
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 

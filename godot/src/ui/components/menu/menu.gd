@@ -1,9 +1,5 @@
 extends Control
 
-@export var group: ButtonGroup
-var buttons_quantity: int = 0
-var pressed_index: int = 0
-
 signal hide_menu
 signal jump_to(Vector2i)
 signal toggle_minimap
@@ -14,6 +10,18 @@ signal toggle_ram
 signal request_pause_scenes(enabled: bool)
 signal preview_hot_reload(scene_type: String, scene_id: String)
 
+@export var group: ButtonGroup
+
+var buttons_quantity: int = 0
+var pressed_index: int = 0
+
+var selected_node: Control
+
+var resolutions := [
+	Vector2i(1920, 1080), Vector2i(1280, 720), Vector2i(800, 600), Vector2i(400, 300)
+]
+var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
+
 @onready var color_rect_header = $ColorRect_Header
 
 @onready var control_discover = $ColorRect_Background/Control_Discover
@@ -22,18 +30,11 @@ signal preview_hot_reload(scene_type: String, scene_id: String)
 @onready var control_advance_settings = $ColorRect_Background/Control_AdvanceSettings
 @onready var control_backpack = $ColorRect_Background/Control_Backpack
 
-var selected_node: Control
-
 @onready var button_discover = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Discover
 @onready var button_map = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Map
 @onready var button_settings = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Settings
 @onready
 var button_advance_settings = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_AdvanceSettings
-
-var resolutions := [
-	Vector2i(1920, 1080), Vector2i(1280, 720), Vector2i(800, 600), Vector2i(400, 300)
-]
-var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
 
 
 func _ready():

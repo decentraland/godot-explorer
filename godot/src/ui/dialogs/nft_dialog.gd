@@ -14,14 +14,14 @@ func _on_visibility_changed():
 		Global.release_mouse()
 
 
-func co_load_nft(urn: String):
+func async_load_nft(urn: String):
 	var dcl_urn: DclUrn = DclUrn.new(urn)
 	if not dcl_urn.valid:
 		printerr("NftShape::load_nft Error, invalid urn: ", urn)
 		return
 
 	var promise = Global.nft_fetcher.fetch_nft(dcl_urn)
-	var asset = await promise.co_awaiter()
+	var asset = await promise.async_awaiter()
 	if asset is OpenSeaFetcher.Asset:
 		%VBoxContainer_InfoPanel.show()
 		permalink = asset.permalink

@@ -1,5 +1,5 @@
-extends Node
 class_name ContentManager
+extends Node
 
 enum ContentType {
 	CT_GLTF_GLB = 1,
@@ -11,11 +11,12 @@ enum ContentType {
 	CT_VIDEO = 7,
 }
 
+const USE_THREAD = true
+const MAX_THREADS = 1
+
 var content_threads: Array[ContentThread] = []
 var http_requester = RustHttpRequesterWrapper.new()
 
-const use_thread = true
-const max_threads = 1
 var request_monotonic_counter: int = 0
 
 # shared memory...
@@ -39,9 +40,9 @@ func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
-	if use_thread:
+	if USE_THREAD:
 		self.process_mode = Node.PROCESS_MODE_DISABLED
-		for id in range(max_threads):
+		for id in range(MAX_THREADS):
 			var thread = Thread.new()
 			var content_thread = ContentThread.new(id + 1, thread)  # id=0 reserved for main thread
 			thread.start(self.process_thread.bind(content_thread))
@@ -271,7 +272,7 @@ func fetch_video(file_hash: String, content_mapping: Dictionary) -> Promise:
 # Should be disabled on single thread...
 func _process(_dt: float) -> void:
 	# Main thread
-	if use_thread == false:
+	if USE_THREAD == false:
 		content_threads[0].process(content_cache_map)
 
 

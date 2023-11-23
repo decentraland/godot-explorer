@@ -5,6 +5,20 @@ signal request_change_scene_radius(new_value: int)
 signal request_pause_scenes(enabled: bool)
 signal preview_hot_reload(scene_type: String, scene_id: String)
 
+enum SceneLogLevel {
+	LOG = 1,
+	SCENE_ERROR = 2,
+	SYSTEM_ERROR = 3,
+}
+
+var tabs: Dictionary = {}
+var panels_collapsed = false
+
+var preview_ws = WebSocketPeer.new()
+var _preview_connect_to_url: String = ""
+var _dirty_closed: bool = false
+var _dirty_connected: bool = false
+
 @onready var panel_console = $HFlowContainer/Panel_Console
 @onready var panel_realm = $HFlowContainer/Panel_Realm
 @onready var panel_preview = $HFlowContainer/Panel_Preview
@@ -23,14 +37,8 @@ signal preview_hot_reload(scene_type: String, scene_id: String)
 @onready var rich_text_label_console = $HFlowContainer/Panel_Console/RichTextLabel_Console
 @onready var rich_text_label_chat = $HFlowContainer/Panel_Chat/RichTextLabel_Chat
 
-const SceneLogLevel := {
-	Log = 1,
-	SceneError = 2,
-	SystemError = 3,
-}
-
-var tabs: Dictionary = {}
-var panels_collapsed = false
+@onready var label_ws_state = $HFlowContainer/Panel_Preview/Label_WsState
+@onready var line_edit_preview_url = $HFlowContainer/Panel_Preview/LineEdit_PreviewUrl
 
 
 func _ready():
@@ -50,10 +58,10 @@ func _ready():
 		"[color=#141]Welcome to the Godot Client! Navigate to Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/color]"
 	)
 
-	Global.comms.chat_message.connect(self._on_chats_arrived)
+	Global.comms.chat_message.connect(self.on_chats_arrived)
 
 
-func _on_chats_arrived(chats: Array):
+func on_chats_arrived(chats: Array):
 	for chat in chats:
 		var text = "[b][color=#144]%s[/color] > [color=#111]%s[/color]" % [chat[0], chat[2]]
 		add_chat_message(text)
@@ -94,14 +102,14 @@ func _on_h_slider_scene_radius_drag_ended(value_changed):
 		label_scene_radius_value.text = str(h_slider_scene_radius.value)
 
 
-func _on_console_add(scene_title: String, level: int, timestamp: float, text: String) -> void:
+func on_console_add(scene_title: String, level: int, timestamp: float, text: String) -> void:
 	var color := Color.BLACK
 	match level:
-		SceneLogLevel.Log:
+		SceneLogLevel.LOG:
 			color = Color.DARK_SLATE_BLUE
-		SceneLogLevel.SceneError:
+		SceneLogLevel.SCENE_ERROR:
 			color = Color.DARK_RED
-		SceneLogLevel.SystemError:
+		SceneLogLevel.SYSTEM_ERROR:
 			color = Color.RED
 
 	timestamp = round(timestamp * 100.0) / 100.0
@@ -114,15 +122,6 @@ func _on_console_add(scene_title: String, level: int, timestamp: float, text: St
 
 func _on_button_clear_console_pressed():
 	rich_text_label_console.clear()
-
-
-@onready var label_ws_state = $HFlowContainer/Panel_Preview/Label_WsState
-@onready var line_edit_preview_url = $HFlowContainer/Panel_Preview/LineEdit_PreviewUrl
-
-var preview_ws = WebSocketPeer.new()
-var _preview_connect_to_url: String = ""
-var _dirty_closed: bool = false
-var _dirty_connected: bool = false
 
 
 func set_ws_state(connected: bool) -> void:

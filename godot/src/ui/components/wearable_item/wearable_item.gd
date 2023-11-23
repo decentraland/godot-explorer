@@ -1,9 +1,5 @@
 extends Button
 
-@onready var panel_container = $PanelContainer
-@onready var texture_rect_background = $Panel/TextureRect_Background
-@onready var texture_rect_preview = $Panel/TextureRect_Preview
-
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
 var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
 var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
@@ -15,13 +11,17 @@ var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 
 var thumbnail_hash: String
 
+@onready var panel_container = $PanelContainer
+@onready var texture_rect_background = $Panel/TextureRect_Background
+@onready var texture_rect_preview = $Panel/TextureRect_Preview
+
 
 func _ready():
 	if button_pressed:
 		panel_container.show()
 
 
-func set_wearable(wearable: Dictionary):
+func async_set_wearable(wearable: Dictionary):
 	var wearable_thumbnail: String = wearable.get("metadata", {}).get("thumbnail", "")
 	thumbnail_hash = wearable.get("content", {}).get(wearable_thumbnail, "")
 
@@ -51,7 +51,7 @@ func set_wearable(wearable: Dictionary):
 		var promise: Promise = Global.content_manager.fetch_texture(
 			wearable_thumbnail, content_mapping
 		)
-		var res = await promise.co_awaiter()
+		var res = await promise.async_awaiter()
 		if res is Promise.Error:
 			printerr("Fetch texture error on ", wearable_thumbnail)
 		else:
