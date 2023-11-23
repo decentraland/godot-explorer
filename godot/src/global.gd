@@ -49,7 +49,7 @@ func _ready():
 
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
-	
+
 	self.testing_tools = TestingTools.new()
 	self.testing_tools.set_name("testing_tool")
 

@@ -324,6 +324,7 @@ func release_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	label_crosshair.hide()
 
+
 func set_visible_ui(value: bool):
 	if value:
 		$UI.show()

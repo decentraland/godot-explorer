@@ -1,4 +1,3 @@
-use ethers::core::k256::elliptic_curve::consts::U9;
 use godot::engine::{Image, Node};
 use godot::prelude::*;
 
@@ -15,7 +14,6 @@ fn to_gray(rgb: &[u8]) -> f32 {
     let b = rgb[2];
 
     ((0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)) / u8::MAX as f32).round()
-        as f32
 }
 
 #[godot_api]
