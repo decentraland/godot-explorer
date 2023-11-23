@@ -1,6 +1,10 @@
 extends Node
 
-var _player_node: Node3D
+@export var user_id: String = "":
+	set(value):
+		if user_id != value:
+			_player_node = null
+			user_id = value
 
 #  AAPT_POSITION = 0;
 #  AAPT_NAME_TAG = 1;
@@ -8,11 +12,7 @@ var _player_node: Node3D
 #  AAPT_RIGHT_HAND = 3;
 var attach_point: int = -1
 
-@export var user_id: String = "":
-	set(value):
-		if user_id != value:
-			_player_node = null
-			user_id = value
+var _player_node: Node3D
 
 
 func _ready():

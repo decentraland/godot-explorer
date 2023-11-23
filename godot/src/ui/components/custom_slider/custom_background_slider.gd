@@ -1,17 +1,12 @@
 extends Control
-enum Slider_type { COLOR, BRIGHTNESS, SATURATION }
-@export var slider_type := Slider_type.COLOR
-@onready var min_value: int = 0
-@onready var max_value: int
-@onready var step: int = 1
+
+signal value_change
+
+enum SliderType { COLOR, BRIGHTNESS, SATURATION }
+
+@export var slider_type := SliderType.COLOR
 @export var value: int = 10
 @export var lenght: int = 200
-@onready var heigth: int = 35
-
-@onready var control_grabber = $TextureRect_Background/Control_Grabber
-@onready var texture_rect_background = $TextureRect_Background
-
-@onready var label_title = $Label_Title
 
 var selected: bool = false
 var grabber_size: Vector2
@@ -21,25 +16,34 @@ var color_background_texture = preload("res://assets/ui/BackgroundHUE.png")
 var saturation_background_texture = preload("res://assets/ui/BackgroundSaturation.png")
 var brightness_background_texture = preload("res://assets/ui/BackgroundValue.png")
 
-signal value_change
+@onready var min_value: int = 0
+@onready var max_value: int
+@onready var step: int = 1
+
+@onready var heigth: int = 35
+
+@onready var control_grabber = $TextureRect_Background/Control_Grabber
+@onready var texture_rect_background = $TextureRect_Background
+
+@onready var label_title = $Label_Title
 
 
 func _ready():
 	match slider_type:
-		Slider_type.COLOR:
+		SliderType.COLOR:
 			texture_rect_background.texture = color_background_texture
 			texture_rect_background.flip_h = true
 			max_value = 360
 
-		Slider_type.BRIGHTNESS:
+		SliderType.BRIGHTNESS:
 			texture_rect_background.texture = brightness_background_texture
 			max_value = 100
 
-		Slider_type.SATURATION:
+		SliderType.SATURATION:
 			texture_rect_background.texture = saturation_background_texture
 			max_value = 100
 
-	label_title.text = Slider_type.keys()[slider_type]
+	label_title.text = SliderType.keys()[slider_type]
 	texture_rect_background.size = Vector2(lenght, heigth)
 
 	if value > max_value:

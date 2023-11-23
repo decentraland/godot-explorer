@@ -2,6 +2,9 @@
 
 extends Button
 
+signal filter_type(type: String)
+signal clear_filter
+
 enum WearableCategoryEnum {
 	BODY,
 	HAIR,
@@ -23,19 +26,17 @@ enum WearableCategoryEnum {
 	SKIN
 }
 
-@onready var panel_container = $HBoxContainer/Control2/PanelContainer
 @export var filter_category: WearableCategoryEnum:
 	set(new_value):
 		_update_category_icon()
 		filter_category = new_value
 
-signal filter_type(type: String)
-signal clear_filter
+var thumbnail_hash: String
+
+@onready var panel_container = $HBoxContainer/Control2/PanelContainer
 
 @onready var texture_rect_icon = $HBoxContainer/Control/TextureRect_Icon
 @onready var texture_rect_preview = $HBoxContainer/Control2/Panel/TextureRect_Preview
-
-var thumbnail_hash: String
 
 
 func _update_category_icon():
@@ -65,45 +66,46 @@ func _on_mouse_exited():
 
 
 func type_to_category(category_enum: WearableCategoryEnum) -> String:
+	var result: String = ""
 	match category_enum:
 		WearableCategoryEnum.BODY:
-			return Wearables.Categories.BODY_SHAPE
+			result = Wearables.Categories.BODY_SHAPE
 		WearableCategoryEnum.HAIR:
-			return Wearables.Categories.HAIR
+			result = Wearables.Categories.HAIR
 		WearableCategoryEnum.EYEBROWS:
-			return Wearables.Categories.EYEBROWS
+			result = Wearables.Categories.EYEBROWS
 		WearableCategoryEnum.EYES:
-			return Wearables.Categories.EYES
+			result = Wearables.Categories.EYES
 		WearableCategoryEnum.MOUTH:
-			return Wearables.Categories.MOUTH
+			result = Wearables.Categories.MOUTH
 		WearableCategoryEnum.FACIAL_HAIR:
-			return Wearables.Categories.FACIAL_HAIR
+			result = Wearables.Categories.FACIAL_HAIR
 		WearableCategoryEnum.UPPER_BODY:
-			return Wearables.Categories.UPPER_BODY
+			result = Wearables.Categories.UPPER_BODY
 		WearableCategoryEnum.HANDWEAR:
-			return Wearables.Categories.HANDS_WEAR
+			result = Wearables.Categories.HANDS_WEAR
 		WearableCategoryEnum.LOWER_BODY:
-			return Wearables.Categories.LOWER_BODY
+			result = Wearables.Categories.LOWER_BODY
 		WearableCategoryEnum.FEET:
-			return Wearables.Categories.FEET
+			result = Wearables.Categories.FEET
 		WearableCategoryEnum.HAT:
-			return Wearables.Categories.HAT
+			result = Wearables.Categories.HAT
 		WearableCategoryEnum.EYEWEAR:
-			return Wearables.Categories.EYEWEAR
+			result = Wearables.Categories.EYEWEAR
 		WearableCategoryEnum.EARRING:
-			return Wearables.Categories.EARRING
+			result = Wearables.Categories.EARRING
 		WearableCategoryEnum.MASK:
-			return Wearables.Categories.MASK
+			result = Wearables.Categories.MASK
 		WearableCategoryEnum.TIARA:
-			return Wearables.Categories.TIARA
+			result = Wearables.Categories.TIARA
 		WearableCategoryEnum.TOP_HEAD:
-			return Wearables.Categories.TOP_HEAD
+			result = Wearables.Categories.TOP_HEAD
 		WearableCategoryEnum.HELMET:
-			return Wearables.Categories.HELMET
+			result = Wearables.Categories.HELMET
 		WearableCategoryEnum.SKIN:
-			return Wearables.Categories.SKIN
+			result = Wearables.Categories.SKIN
 
-	return ""
+	return result
 
 
 func _on_toggled(_button_pressed):
@@ -115,7 +117,7 @@ func _on_toggled(_button_pressed):
 		flat = true
 
 
-func set_wearable(wearable: Dictionary):
+func async_set_wearable(wearable: Dictionary):
 	var wearable_category = Wearables.get_category(wearable)
 	if wearable_category != type_to_category(filter_category):
 		return
@@ -135,7 +137,7 @@ func set_wearable(wearable: Dictionary):
 			"base_url": "https://peer.decentraland.org/content/contents/"
 		}
 		var promise = Global.content_manager.fetch_texture(wearable_thumbnail, content_mapping)
-		var res = await promise.co_awaiter()
+		var res = await promise.async_awaiter()
 		if res is Promise.Error:
 			printerr("Fetch texture error on ", wearable_thumbnail)
 		else:

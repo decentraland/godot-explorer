@@ -34,8 +34,8 @@ class Asset:
 			return value
 		return ""
 
-	func _init(endpoint: String, asset: Dictionary):
-		self.endpoint = endpoint
+	func _init(_endpoint: String, asset: Dictionary):
+		self.endpoint = _endpoint
 		contract_address = asset.get("asset_contract", {}).get("address", "")
 		token_id = asset.get("token_id")
 
@@ -89,10 +89,10 @@ class Asset:
 		if average_price_in_dollars > 0.1:
 			var usd = "US$" + str(snappedf(average_price_in_dollars, 0.01))
 			return eth + " (" + usd + ")"
-		else:
-			return eth
 
-	func co_load_offers() -> int:
+		return eth
+
+	func async_load_offers() -> int:
 		# Request
 		var url = endpoint + "/offers"
 		var headers = [
@@ -102,9 +102,9 @@ class Asset:
 		var offers_promise: Promise = Global.http_requester.request_json(
 			url, HTTPClient.METHOD_GET, "", headers
 		)
-		var offers_result = await offers_promise.co_awaiter()
+		var offers_result = await offers_promise.async_awaiter()
 		if offers_result is Promise.Error:
-			printerr("Asset::co_load_offers error loading offers: ", offers_result.get_error())
+			printerr("Asset::async_load_offers error loading offers: ", offers_result.get_error())
 			return 0
 		# Parsing
 		var result = offers_result.get_string_response_as_json()
@@ -116,8 +116,8 @@ class Asset:
 		var short_address = DclEther.shorten_eth_address(self.address)
 		if self.username.is_empty():
 			return short_address
-		else:
-			return self.username + " (" + short_address + ")"
+
+		return self.username + " (" + short_address + ")"
 
 # Commented code if in the future we want to search for best_offers...
 # 		if seaport_offers.is_empty():
@@ -128,10 +128,10 @@ class Asset:
 #			if offer.is_larger_than(best_offer):
 #				best_offer = offer
 
-	func co_download_image():
-		var hash = get_hash()
-		var promise = Global.content_manager.fetch_texture_by_url(hash, image_url)
-		var result = await promise.co_awaiter()
+	func async_download_image():
+		var texture_hash = get_hash()
+		var promise = Global.content_manager.fetch_texture_by_url(texture_hash, image_url)
+		var result = await promise.async_awaiter()
 		if result is Promise.Error:
 			printerr(
 				"open_sea_nft_fetcher::asset::download_image promise error: ", result.get_error()
@@ -153,12 +153,12 @@ func fetch_nft(urn: DclUrn) -> Promise:
 
 	var promise = Promise.new()
 	cached_promises[urn.get_hash()] = promise
-	_co_request_nft(promise, urn)
+	_async_request_nft(promise, urn)
 
 	return promise
 
 
-func _co_request_nft(completed_promise: Promise, urn: DclUrn):
+func _async_request_nft(completed_promise: Promise, urn: DclUrn):
 	var url = RETRIEVE_ASSETS_ENDPOINT + "/" + urn.contract_address + "/" + urn.token_id
 	var headers = [
 		"Content-Type: application/json",
@@ -167,7 +167,7 @@ func _co_request_nft(completed_promise: Promise, urn: DclUrn):
 	var asset_promise: Promise = Global.http_requester.request_json(
 		url, HTTPClient.METHOD_GET, "", headers
 	)
-	var asset_result = await asset_promise.co_awaiter()
+	var asset_result = await asset_promise.async_awaiter()
 
 	if asset_result is Promise.Error:
 		printerr(
@@ -185,6 +185,6 @@ func _co_request_nft(completed_promise: Promise, urn: DclUrn):
 		completed_promise.reject("Error on opensea nft asset: " + asset.get_hash())
 		return
 
-	await asset.co_download_image()
+	await asset.async_download_image()
 
 	completed_promise.resolve_with_data(asset)

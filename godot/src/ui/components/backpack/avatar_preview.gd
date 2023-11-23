@@ -1,18 +1,17 @@
 extends SubViewportContainer
 
+var start_camera_transform
+var start_angle
+var start_dragging_position
+var dirty_is_dragging
+
 @onready var avatar = %Avatar
 @onready var camera_3d = $SubViewport/Camera3D
 
 
 func _ready():
 	if Global.standalone:
-		avatar.update_avatar(Global.config.avatar_profile)
-
-
-var start_camera_transform
-var start_angle
-var start_dragging_position
-var dirty_is_dragging
+		avatar.async_update_avatar(Global.config.avatar_profile)
 
 
 func focus_camera_on(type):

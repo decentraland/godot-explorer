@@ -1,5 +1,5 @@
-extends Node3D
 class_name AnimationImporter
+extends Node3D
 
 
 func get_animation_from_gltf(animation_name: String) -> Animation:

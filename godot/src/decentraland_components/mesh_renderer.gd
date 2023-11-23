@@ -1,13 +1,21 @@
-extends MeshInstance3D
 class_name DclMeshRenderer
+extends MeshInstance3D
 
 enum MeshRendererPrimitiveType { NONE, MRPT_BOX, MRPT_CYLINDER, MRPT_SPHERE, MRPT_PLANE }
 
 var current_type: MeshRendererPrimitiveType = MeshRendererPrimitiveType.NONE
 
+####################
+# Static methods
+####################
+
+static var initialized: bool = false
+static var plane_array: Array = []
+static var cube_array: Array = []
+
 
 func _ready():
-	DclMeshRenderer._init_primitive_shapes()
+	DclMeshRenderer.init_primitive_shapes()
 
 
 func set_box(uvs):
@@ -18,8 +26,8 @@ func set_box(uvs):
 		self.mesh.clear_surfaces()
 
 	var data_array = DclMeshRenderer.get_cube_arrays()
-	var N = min(floor(uvs.size() / 2), 8)
-	for i in range(N):
+	var n = min(floor(uvs.size() / 2), 8)
+	for i in range(n):
 		data_array[4][i] = Vector2(uvs[i * 2], -uvs[i * 2 + 1])
 
 	self.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, data_array)
@@ -33,8 +41,8 @@ func set_plane(uvs: Array):
 		self.mesh.clear_surfaces()
 
 	var data_array = DclMeshRenderer.get_plane_arrays()
-	var N = min(floor(float(uvs.size()) / 2.0), 8)
-	for i in range(N):
+	var n = min(floor(float(uvs.size()) / 2.0), 8)
+	for i in range(n):
 		data_array[4][i] = Vector2(uvs[i * 2], -uvs[i * 2 + 1])
 
 	self.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, data_array)
@@ -65,36 +73,27 @@ func set_sphere():
 		self.mesh = SphereMesh.new()
 
 
-####################
-# Static methods
-####################
-
-static var INITIALIZED: bool = false
-static var PLANE_ARRAY: Array = []
-static var CUBE_ARRAY: Array = []
-
-
-static func _init_primitive_shapes():
-	if INITIALIZED:
+static func init_primitive_shapes():
+	if initialized:
 		return
 
-	PLANE_ARRAY = build_plane_arrays()
-	CUBE_ARRAY = build_cube_arrays()
-	INITIALIZED = true
+	plane_array = build_plane_arrays()
+	cube_array = build_cube_arrays()
+	initialized = true
 
 
 static func get_plane_arrays() -> Array:
-	_init_primitive_shapes()
+	init_primitive_shapes()
 
-	var ret = PLANE_ARRAY.duplicate()
+	var ret = plane_array.duplicate()
 	ret[4] = ret[4].duplicate()
 	return ret
 
 
 static func get_cube_arrays() -> Array:
-	_init_primitive_shapes()
+	init_primitive_shapes()
 
-	var ret = CUBE_ARRAY.duplicate()
+	var ret = cube_array.duplicate()
 	ret[4] = ret[4].duplicate()
 	return ret
 

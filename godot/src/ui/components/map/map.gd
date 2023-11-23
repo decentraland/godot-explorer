@@ -3,15 +3,16 @@ extends Control
 signal jump_to(tile: Vector2i)
 
 @export var drag_enabled: bool = false
+
+var parcel_to_jump: Vector2i
+var mouse_tile: Vector2i
+var last_mouse_tile: Vector2i
+
 @onready var control_jump_to = $Control_JumpTo
 @onready var label_mouse_position = $Control_Tooltip/Label_MousePosition
 @onready var label_parcel_position = $Control_JumpTo/Panel_JumpTo/VBoxContainer/Label_ParcelPosition
 @onready var control_tooltip = $Control_Tooltip
 @onready var control_map_shader = $Control_MapShader
-
-var parcel_to_jump: Vector2i
-var mouse_tile: Vector2i
-var last_mouse_tile: Vector2i
 
 
 func _gui_input(event):

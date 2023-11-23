@@ -1,11 +1,8 @@
-extends RefCounted
 class_name RustHttpRequesterWrapper
-
-var _requester := RustHttpRequester.new()
-var promises: Dictionary = {}
+extends RefCounted
 
 # Dictionary mapping HTTP status codes to their descriptions.
-var http_status_descriptions = {
+const HTTP_STATUS_DESCRIPTIONS = {
 	100: "Continue",
 	101: "Switching Protocols",
 	200: "OK",
@@ -51,6 +48,10 @@ var http_status_descriptions = {
 	505: "HTTP Version Not Supported"
 }
 
+var promises: Dictionary = {}
+
+var _requester := RustHttpRequester.new()
+
 
 func get_status_description(status_code: int) -> String:
 	# Returns the description for the given HTTP status code.
@@ -59,7 +60,7 @@ func get_status_description(status_code: int) -> String:
 		"Status Code "
 		+ str(status_code)
 		+ " "
-		+ http_status_descriptions.get(status_code, "Unknown Status Code")
+		+ HTTP_STATUS_DESCRIPTIONS.get(status_code, "Unknown Status Code")
 	)
 
 
