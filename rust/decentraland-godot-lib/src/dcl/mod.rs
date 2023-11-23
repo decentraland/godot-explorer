@@ -4,7 +4,7 @@ pub mod js;
 pub mod scene_apis;
 pub mod serialization;
 
-use godot::builtin::{Vector3, Vector2};
+use godot::builtin::{Vector2, Vector3};
 use serde::Serialize;
 
 use crate::wallet::Wallet;
@@ -61,6 +61,7 @@ pub enum SceneResponse {
     ),
     RemoveGodotScene(SceneId, Vec<SceneLogMessage>),
     TakeSnapshot {
+        scene_id: SceneId,
         id: String,
         camera_position: Vector3,
         camera_target: Vector3,
@@ -74,13 +75,13 @@ pub enum SceneResponse {
 #[serde(rename_all = "camelCase")]
 pub struct TakeAndCompareSnapshotResponse {
     // true if the threshold was met, false otherwise or if it wasn't previously exist
-    is_match: bool,
+    pub is_match: bool,
     // from 0 to 1 how similar the snapshot taken is to the previous one
-    similarity: f32,
+    pub similarity: f32,
     // true if the snapshot already exists in the snapshot folder, false otherwise
-    was_exist: bool,
+    pub was_exist: bool,
     // true if the snapshot was created and saved, false otherwise
-    replaced: bool,
+    pub replaced: bool,
 }
 
 pub type SharedSceneCrdtState = Arc<Mutex<SceneCrdtState>>;

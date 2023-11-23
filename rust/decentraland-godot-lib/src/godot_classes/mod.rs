@@ -9,6 +9,7 @@ pub mod dcl_ether;
 pub mod dcl_global;
 pub mod dcl_gltf_container;
 pub mod dcl_realm;
+pub mod dcl_rpc_sender;
 pub mod dcl_scene_node;
 pub mod dcl_ui_background;
 pub mod dcl_ui_control;

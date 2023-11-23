@@ -49,6 +49,9 @@ func _ready():
 
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
+	
+	self.testing_tools = TestingTools.new()
+	self.testing_tools.set_name("testing_tool")
 
 	self.content_manager = ContentManager.new()
 	self.content_manager.set_name("content_manager")
@@ -69,6 +72,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.comms)
 	get_tree().root.add_child.call_deferred(self.avatars)
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
+	get_tree().root.add_child.call_deferred(self.testing_tools)
 
 	# TODO: enable raycast debugger
 	add_child(raycast_debugger)

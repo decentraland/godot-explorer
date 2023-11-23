@@ -112,9 +112,11 @@ func set_realm(new_realm_string: String) -> void:
 			if parsed_urn != null:
 				realm_global_scene_urns.push_back(parsed_urn)
 
-		realm_city_loader_content_base_url = Realm.ensure_ends_with_slash(
-			configuration.get("cityLoaderContentServer", "")
-		)
+		realm_city_loader_content_base_url = configuration.get("cityLoaderContentServer", "")
+		if not realm_city_loader_content_base_url.is_empty():
+			realm_city_loader_content_base_url = Realm.ensure_ends_with_slash(
+				configuration.get("cityLoaderContentServer", "")
+			)
 
 		realm_name = configuration.get("realmName", "no_realm_name")
 

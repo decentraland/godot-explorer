@@ -197,6 +197,12 @@ pub(crate) fn scene_thread(
     state.borrow_mut().put(Vec::<RpcCall>::new());
     state.borrow_mut().put(Vec::<LocalCall>::new());
 
+    // TODO: receive from main thread, and managed by command line params
+    state.borrow_mut().put(SceneEnv {
+        enable_know_env: true,
+        testing_enable: true,
+    });
+
     if let Some(scene_main_crdt) = scene_main_crdt {
         state.borrow_mut().put(scene_main_crdt);
     }
@@ -211,7 +217,6 @@ pub(crate) fn scene_thread(
     state
         .borrow_mut()
         .put(SceneStartTime(std::time::SystemTime::now()));
-
 
     let script = runtime.execute_script("<loader>", ascii_str!("require (\"~scene.js\")"));
 

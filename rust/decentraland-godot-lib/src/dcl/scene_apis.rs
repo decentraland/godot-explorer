@@ -45,7 +45,7 @@ pub struct UserData {
     pub avatar: Option<AvatarForUserData>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct RpcResultSender<T>(Arc<RwLock<Option<tokio::sync::oneshot::Sender<T>>>>);
 
 impl<T: 'static> RpcResultSender<T> {

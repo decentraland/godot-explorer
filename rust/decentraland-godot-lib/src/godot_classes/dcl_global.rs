@@ -7,6 +7,7 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
+    test_runner::testing_tools::DclTestingTools,
 };
 
 use super::{dcl_realm::DclRealm, portables::DclPortableExperienceController};
@@ -28,6 +29,8 @@ pub struct DclGlobal {
     pub realm: Gd<DclRealm>,
     #[var]
     pub portable_experience_controller: Gd<DclPortableExperienceController>,
+    #[var]
+    pub testing_tools: Gd<DclTestingTools>,
 }
 
 #[godot_api]
@@ -63,6 +66,7 @@ impl NodeVirtual for DclGlobal {
             tokio_runtime,
             realm: Gd::new_default(),
             portable_experience_controller: Gd::new_default(),
+            testing_tools: Gd::new_default(),
         }
     }
 }

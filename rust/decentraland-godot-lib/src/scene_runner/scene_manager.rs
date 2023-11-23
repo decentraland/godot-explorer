@@ -11,11 +11,12 @@ use crate::{
             SceneEntityId,
         },
         js::SceneLogLevel,
-        scene_apis::RpcResultSender,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
-        TakeAndCompareSnapshotResponse,
     },
-    godot_classes::{dcl_camera_3d::DclCamera3D, dcl_ui_control::DclUiControl},
+    godot_classes::{
+        dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal, dcl_rpc_sender::DclRpcSender,
+        dcl_ui_control::DclUiControl,
+    },
     wallet::Wallet,
 };
 use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
@@ -72,9 +73,6 @@ pub struct SceneManager {
 
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
-
-    snapshot_sender:
-        HashMap<String, RpcResultSender<Result<TakeAndCompareSnapshotResponse, String>>>,
 
     #[export]
     pointer_tooltips: VariantArray,
@@ -465,13 +463,44 @@ impl SceneManager {
                     }
 
                     SceneResponse::TakeSnapshot {
+                        scene_id,
                         id,
                         camera_position,
                         camera_target,
                         snapshot_frame_size,
                         tolerance,
                         response,
-                    } => {}
+                    } => {
+                        let offset = if let Some(scene) = self.scenes.get(&scene_id) {
+                            Vector3::new(
+                                scene.definition.base.x as f32 * 16.0,
+                                0.0,
+                                -scene.definition.base.y as f32 * 16.0,
+                            )
+                        } else {
+                            Vector3::new(0.0, 0.0, 0.0)
+                        };
+
+                        let mut testing_tools = DclGlobal::singleton().bind().get_testing_tools();
+                        if testing_tools.has_method("take_and_compare_snapshot".into()) {
+                            let mut dcl_rpc_sender: Gd<DclRpcSender> = Gd::new_default();
+                            dcl_rpc_sender.bind_mut().set_sender(response);
+
+                            testing_tools.call(
+                                "take_and_compare_snapshot".into(),
+                                &[
+                                    id.to_variant(),
+                                    (camera_position + offset).to_variant(),
+                                    (camera_position + camera_target).to_variant(),
+                                    snapshot_frame_size.to_variant(),
+                                    tolerance.to_variant(),
+                                    dcl_rpc_sender.to_variant(),
+                                ],
+                            );
+                        } else {
+                            response.send(Err("Testing tools not available".to_string()));
+                        }
+                    }
                 },
                 Err(std::sync::mpsc::TryRecvError::Empty) => return,
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => {
@@ -667,8 +696,6 @@ impl NodeVirtual for SceneManager {
             input_state: InputState::default(),
             last_raycast_result: None,
             pointer_tooltips: VariantArray::new(),
-
-            snapshot_sender: HashMap::new(),
         }
     }
 
