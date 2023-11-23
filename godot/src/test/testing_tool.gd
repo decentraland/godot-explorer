@@ -1,8 +1,8 @@
-extends DclTestingTools
 class_name TestingTools
+extends DclTestingTools
 
 
-func take_and_compare_snapshot(
+func async_take_and_compare_snapshot(
 	id: String,
 	camera_position: Vector3,
 	camera_target: Vector3,
@@ -11,7 +11,7 @@ func take_and_compare_snapshot(
 	dcl_rpc_sender: DclRpcSender
 ):
 	prints(
-		"take_and_compare_snapshot",
+		"async_take_and_compare_snapshot",
 		id,
 		camera_position,
 		camera_target,

@@ -482,12 +482,12 @@ impl SceneManager {
                         };
 
                         let mut testing_tools = DclGlobal::singleton().bind().get_testing_tools();
-                        if testing_tools.has_method("take_and_compare_snapshot".into()) {
+                        if testing_tools.has_method("async_take_and_compare_snapshot".into()) {
                             let mut dcl_rpc_sender: Gd<DclRpcSender> = Gd::new_default();
                             dcl_rpc_sender.bind_mut().set_sender(response);
 
                             testing_tools.call(
-                                "take_and_compare_snapshot".into(),
+                                "async_take_and_compare_snapshot".into(),
                                 &[
                                     id.to_variant(),
                                     (camera_position + offset).to_variant(),
