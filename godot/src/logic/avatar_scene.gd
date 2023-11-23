@@ -1,5 +1,5 @@
-extends AvatarScene
 class_name CustomAvatarScene  #workaround
+extends AvatarScene
 
 
 # TODO: when 4.2 is used, this could be removed

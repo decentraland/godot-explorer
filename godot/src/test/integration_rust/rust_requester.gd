@@ -13,7 +13,7 @@ func do_test():
 	http_requester.request_file(2, "https://httpbin.org/image/png", "algo2.png")
 
 
-func _process(delta):
+func _process(_delta):
 	var some: RequestResponse = http_requester.poll()
 	if some != null:
 		print(

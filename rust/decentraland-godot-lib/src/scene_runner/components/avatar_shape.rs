@@ -127,7 +127,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 if let Some(mut avatar_node) = existing {
                     avatar_node.call_deferred(
-                        StringName::from(GodotString::from("update_avatar")),
+                        StringName::from(GodotString::from("async_update_avatar")),
                         &[dictionary.to_variant()],
                     );
                 } else {
@@ -143,7 +143,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     node_3d.add_child(new_avatar_shape.clone().upcast());
 
                     new_avatar_shape.call_deferred(
-                        StringName::from(GodotString::from("update_avatar")),
+                        StringName::from(GodotString::from("async_update_avatar")),
                         &[dictionary.to_variant()],
                     );
                 }

@@ -1,11 +1,14 @@
 extends Control
-@onready var button = $Button
-@onready var right_arrow = $Button/Right_Arrow
 
 signal toggle_color_panel(toggled, color_target)
 
 enum ColorTarget { SKIN, HAIR, EYE }
+
 @export var color_target := ColorTarget.SKIN
+
+@onready var button = $Button
+@onready var right_arrow = $Button/Right_Arrow
+
 @onready var color_rect = $Button/ColorRect
 
 

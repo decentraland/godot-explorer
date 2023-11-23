@@ -20,17 +20,18 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.71
+          toolchain: 1.72
           override: true
           components: clippy, rustfmt
       - run: rustup component add rustfmt
       - name: Set up Python
         uses: actions/setup-python@v4
       - name: Install gdtoolkit 4
-        run: pip3 install git+https://github.com/Scony/godot-gdscript-toolkit.git
+        run: pip3 install git+https://github.com/kuruk-mm/godot-gdscript-toolkit.git
       - name: Check format GDScript
         run: gdformat -d godot/
-    
+      - name: GDScript Linter
+        run: gdlint godot/
       # Depedencies section
       # => Linux 
       - name: Install alsa and udev

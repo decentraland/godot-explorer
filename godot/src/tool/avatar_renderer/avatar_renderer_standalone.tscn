@@ -48,4 +48,4 @@ size = 2.5
 [node name="WorldEnvironment" type="WorldEnvironment" parent="SubViewportContainer/SubViewport"]
 environment = SubResource("Environment_8ly2k")
 
-[connection signal="avatar_loaded" from="SubViewportContainer/SubViewport/Avatar" to="." method="_on_avatar_avatar_loaded"]
+[connection signal="avatar_loaded" from="SubViewportContainer/SubViewport/Avatar" to="." method="_async_on_avatar_avatar_loaded"]

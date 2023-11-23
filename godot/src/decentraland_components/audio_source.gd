@@ -24,7 +24,7 @@ func apply_audio_props(action_on_playing: bool):
 			self.play()
 
 
-func _refresh_data():
+func _async_refresh_data():
 	dcl_audio_clip_url = dcl_audio_clip_url.to_lower()
 
 	if last_loaded_audio_clip == dcl_audio_clip_url:
@@ -45,7 +45,7 @@ func _refresh_data():
 		var promise: Promise = Global.content_manager.fetch_audio(
 			last_loaded_audio_clip, content_mapping
 		)
-		var res = await promise.co_awaiter()
+		var res = await promise.async_awaiter()
 		if res is Promise.Error:
 			self.stop()
 			self.stream = null

@@ -102,7 +102,7 @@ impl AvatarScene {
         self.avatar_godot_scene
             .get_mut(&entity_id)
             .unwrap()
-            .call("update_avatar".into(), &[profile.to_variant()]);
+            .call("async_update_avatar".into(), &[profile.to_variant()]);
     }
 
     #[func]
@@ -373,7 +373,7 @@ impl AvatarScene {
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar_scene.call(
-                "update_avatar".into(),
+                "async_update_avatar".into(),
                 &[profile.to_godot_dictionary(base_url).to_variant()],
             );
         }

@@ -1,96 +1,99 @@
-class_name ConfigData extends RefCounted
-
-enum ConfigParams {
-	ContentDirectory,
-	Resolution,
-	WindowSize,
-	UiScale,
-	Gravity,
-	JumpVelocity,
-	WalkVelocity,
-	RunVelocity,
-	ProcessTickQuotaMs,
-	SceneRadius,
-	ShowFps,
-	LimitFps,
-	SkyBox,
-	AvatarProfile
-}
+class_name ConfigData
+extends RefCounted
 
 signal param_changed(param: ConfigParams, new_value)
+
+enum ConfigParams {
+	CONTENT_DIRECTORY,
+	RESOLUTION,
+	WINDOW_SIZE,
+	UI_SCALE,
+	GRAVITY,
+	JUMP_VELOCITY,
+	WALK_VELOCITY,
+	RUN_VELOCITY,
+	PROCESS_TICK_QUOTA_MS,
+	SCENE_RADIUS,
+	SHOW_FPS,
+	LIMIT_FPS,
+	SKY_BOX,
+	AVATAR_PROFILE
+}
+
+const SETTINGS_FILE = "user://settings.cfg"
 
 var local_content_dir: String = OS.get_user_data_dir() + "/content":
 	set(value):
 		if DirAccess.dir_exists_absolute(value):
 			local_content_dir = value
-			param_changed.emit(ConfigParams.ContentDirectory)
+			param_changed.emit(ConfigParams.CONTENT_DIRECTORY)
 
 var gravity: float = 55.0:
 	set(value):
 		gravity = value
-		param_changed.emit(ConfigParams.Gravity)
+		param_changed.emit(ConfigParams.GRAVITY)
 
 var resolution: String = "1280 x 720":
 	set(value):
 		resolution = value
-		param_changed.emit(ConfigParams.Resolution)
+		param_changed.emit(ConfigParams.RESOLUTION)
 
 var window_size: String = "1280 x 720":
 	set(value):
 		window_size = value
-		param_changed.emit(ConfigParams.WindowSize)
+		param_changed.emit(ConfigParams.WINDOW_SIZE)
 
 var ui_scale: float:
 	set(value):
 		ui_scale = value
-		param_changed.emit(ConfigParams.UiScale)
+		param_changed.emit(ConfigParams.UI_SCALE)
 
 var jump_velocity: float = 12.0:
 	set(value):
 		jump_velocity = value
-		param_changed.emit(ConfigParams.JumpVelocity)
+		param_changed.emit(ConfigParams.JUMP_VELOCITY)
 
 var walk_velocity: float = 2.0:
 	set(value):
 		walk_velocity = value
-		param_changed.emit(ConfigParams.WalkVelocity)
+		param_changed.emit(ConfigParams.WALK_VELOCITY)
 
 var run_velocity: float = 6.0:
 	set(value):
 		run_velocity = value
-		param_changed.emit(ConfigParams.RunVelocity)
+		param_changed.emit(ConfigParams.RUN_VELOCITY)
 
 var process_tick_quota_ms: int = 10:
 	set(value):
 		process_tick_quota_ms = value
-		param_changed.emit(ConfigParams.ProcessTickQuotaMs)
+		param_changed.emit(ConfigParams.PROCESS_TICK_QUOTA_MS)
 
 var scene_radius: int = 4:
 	set(value):
 		scene_radius = value
-		param_changed.emit(ConfigParams.SceneRadius)
+		param_changed.emit(ConfigParams.SCENE_RADIUS)
 
 var show_fps: bool = true:
 	set(value):
 		show_fps = value
-		param_changed.emit(ConfigParams.ShowFps)
+		param_changed.emit(ConfigParams.SHOW_FPS)
 
 # 0 - Vsync, 1 - No limit, Other-> Limit limit_fps that amount
 var limit_fps: int = 0:
 	set(value):
 		limit_fps = value
-		param_changed.emit(ConfigParams.Gravity)
+		param_changed.emit(ConfigParams.GRAVITY)
 
 # 0- without, 1 - pretty, skybox -default env
 var skybox: int = 1:
 	set(value):
 		skybox = value
-		param_changed.emit(ConfigParams.SkyBox)
+		param_changed.emit(ConfigParams.SKY_BOX)
 
 var avatar_profile: Dictionary = {}:
 	set(value):
 		avatar_profile = value
-		param_changed.emit(ConfigParams.AvatarProfile)
+		param_changed.emit(ConfigParams.AVATAR_PROFILE)
 
 var last_realm_joined: String = "":
 	set(value):
@@ -145,9 +148,6 @@ func load_from_default():
 
 	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
 	self.last_parcel_position = Vector2i(72, -10)
-
-
-const SETTINGS_FILE = "user://settings.cfg"
 
 
 func load_from_settings_file():

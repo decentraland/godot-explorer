@@ -59,7 +59,7 @@ pub fn update_audio_source(
                     new_audio_source
                 };
 
-                audio_source.call_deferred("_refresh_data".into(), &[]);
+                audio_source.call_deferred("_async_refresh_data".into(), &[]);
 
                 let mut audio_source = audio_source.bind_mut();
                 audio_source.set_dcl_audio_clip_url(GodotString::from(new_value.audio_clip_url));

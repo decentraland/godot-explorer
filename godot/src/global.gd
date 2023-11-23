@@ -2,9 +2,11 @@ extends DclGlobal
 
 signal config_changed
 
-@onready var is_mobile = OS.has_feature("mobile")
-#@onready var is_mobile = true
-
+enum CameraMode {
+	FIRST_PERSON = 0,
+	THIRD_PERSON = 1,
+	CINEMATIC = 2,
+}
 ## Global classes (singleton pattern)
 
 var content_manager: ContentManager
@@ -21,11 +23,8 @@ var nft_frame_loader: NftFrameStyleLoader = NftFrameStyleLoader.new()
 
 var standalone = false
 
-enum CameraMode {
-	FIRST_PERSON = 0,
-	THIRD_PERSON = 1,
-	CINEMATIC = 2,
-}
+@onready var is_mobile = OS.has_feature("mobile")
+#@onready var is_mobile = true
 
 
 func _ready():
@@ -77,7 +76,7 @@ func _ready():
 	# TODO: enable raycast debugger
 	add_child(raycast_debugger)
 
-	DclMeshRenderer._init_primitive_shapes()
+	DclMeshRenderer.init_primitive_shapes()
 
 
 func add_raycast(_id: int, _time: float, _from: Vector3, _to: Vector3) -> void:

@@ -1,5 +1,5 @@
-extends Node
 class_name Wearables
+extends Node
 
 const BASE_WEARABLES: PackedStringArray = [
 	"BaseFemale",
@@ -285,7 +285,7 @@ const BASE_WEARABLES: PackedStringArray = [
 
 
 class DefaultWearables:
-	const by_body_shapes: Dictionary = {
+	const BY_BODY_SHAPES: Dictionary = {
 		BodyShapes.MALE:
 		{
 			Categories.EYES: "urn:decentraland:off-chain:base-avatars:eyes_00",
@@ -426,8 +426,8 @@ static func get_replaces_list(wearable: Dictionary, body_shape_id: String) -> Pa
 	var representation = get_representation(wearable, body_shape_id)
 	if representation.is_empty() or representation.get("overrideHides", []).is_empty():
 		return wearable.get("hides", [])
-	else:
-		return representation.get("overrideHides", [])
+
+	return representation.get("overrideHides", [])
 
 
 static func get_hides_list(wearable: Dictionary, body_shape_id: String) -> PackedStringArray:
@@ -563,8 +563,8 @@ static func get_wearable_facial_hashes(wearable: Variant, body_shape_id: String)
 
 	if mask_texture_file_hash.is_empty():
 		return [main_texture_file_hash]
-	else:
-		return [main_texture_file_hash, mask_texture_file_hash]
+
+	return [main_texture_file_hash, mask_texture_file_hash]
 
 
 static func get_wearable_main_file_hash(wearable: Variant, body_shape_id: String) -> String:
@@ -663,7 +663,7 @@ static func set_fallback_for_missing_needed_categories(
 		if wearables_by_category.has(hidden_categories):
 			continue
 
-		var fallback_wearable_id = DefaultWearables.by_body_shapes.get(body_shape_id, {}).get(
+		var fallback_wearable_id = DefaultWearables.BY_BODY_SHAPES.get(body_shape_id, {}).get(
 			needed_catagory
 		)
 		if fallback_wearable_id != null:

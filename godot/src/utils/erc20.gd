@@ -6,10 +6,10 @@ var token = "ETH"
 
 
 func _init(
-	ethers: float, token: String, token_to_dollars: float = 0.0, token_to_ethers: float = 0.0
+	_ethers: float, _token: String, token_to_dollars: float = 0.0, token_to_ethers: float = 0.0
 ):
-	self.ethers = ethers
-	self.token = token
+	ethers = _ethers
+	token = _token
 	dollar_value = ethers * token_to_dollars
 	ether_value = ethers * token_to_ethers
 

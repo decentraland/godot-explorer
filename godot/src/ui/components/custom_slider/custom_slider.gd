@@ -8,14 +8,14 @@ extends Control
 @export var lenght: int
 @export var heigth: int
 
+var selected: bool = false
+var grabber_size: Vector2i
+var slider_scale: float
+
 @onready var panel_grabber = $Panel_Grabber
 @onready var panel_grabber_area_highlight = $Panel_GrabberAreaHighlight
 @onready var panel_grabber_area = $Panel_GrabberArea
 @onready var label_grabber_value = $Panel_Grabber/Label_GrabberValue
-
-var selected: bool = false
-var grabber_size: Vector2i
-var slider_scale: float
 
 
 # Called when the node enters the scene tree for the first time.
@@ -43,7 +43,7 @@ func _ready():
 	refresh_highlight_area()
 
 
-func _process(delta):
+func _process(_delta):
 	if selected:
 		follow_mouse(get_local_mouse_position())
 

@@ -3,9 +3,9 @@ extends Control
 var nft_fetcher: OpenSeaFetcher = OpenSeaFetcher.new()
 
 
-func add_nft(urn: String):
+func async_add_nft(urn: String):
 	var promise = nft_fetcher.fetch_nft(DclUrn.new(urn))
-	var result: OpenSeaFetcher.Asset = await promise.co_awaiter()
+	var result: OpenSeaFetcher.Asset = await promise.async_awaiter()
 	prints("image_url:", result.image_url)
 	var texture_rect = Sprite2D.new()
 	texture_rect.texture = result.texture
@@ -23,4 +23,4 @@ func _on_button_pressed():
 		$GridContainer.remove_child(children)
 	for urn in urns:
 		prints("urn", urn)
-		add_nft(urn)
+		async_add_nft(urn)
