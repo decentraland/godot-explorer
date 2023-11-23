@@ -138,6 +138,9 @@ struct SceneEntityCoordinator {
     content_url: String,
 
     version: u32,
+    request_new_realm: bool, // just for one update
+    new_realm: bool,         // just for one update
+    force_reload: bool,      // used to force the reload of the realm
     dirty_loadable_scenes: bool,
     loadable_scenes: HashSet<String>,
     keep_alive_scenes: HashSet<String>,
@@ -291,6 +294,11 @@ impl SceneEntityCoordinator {
             self.cache_city_pointers
                 .insert(pointer, "empty".to_string());
         }
+
+        if self.request_new_realm {
+            self.new_realm = true;
+            self.request_new_realm = false;
+        }
     }
 
     fn handle_response(&mut self, response: RequestResponse) {
@@ -335,6 +343,7 @@ impl SceneEntityCoordinator {
     /// Returns the scenes that are desired to be loaded
     fn update_loadable_and_keep_alive_scenes(&mut self) {
         self.version += 1;
+        println!("update_loadable_and_keep_alive_scenes {}", self.version);
         self.loadable_scenes.clear();
         self.keep_alive_scenes.clear();
         self.empty_parcels.clear();
@@ -589,6 +598,22 @@ impl SceneEntityCoordinator {
     }
 
     #[func]
+    pub fn set_new_realm(&mut self, force_reload: bool) {
+        self.request_new_realm = true;
+        self.force_reload = force_reload;
+    }
+
+    #[func]
+    pub fn is_new_realm(&self) -> bool {
+        self.new_realm && self.force_reload && self.should_load_city_scenes
+    }
+
+    #[func]
+    pub fn is_requesting_new_realm(&self) -> bool {
+        self.request_new_realm && self.force_reload && self.should_load_city_scenes
+    }
+
+    #[func]
     pub fn set_fixed_desired_entities_global_urns(&mut self, entities: VariantArray) {
         let entities = entities
             .iter_shared()
@@ -613,6 +638,7 @@ impl SceneEntityCoordinator {
 
     #[func]
     pub fn update(&mut self) {
+        self.new_realm = false;
         self._update();
     }
 

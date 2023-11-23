@@ -74,16 +74,31 @@ func set_scene_radius(value: int):
 # gdlint:ignore = async-function-name
 func _process(_dt):
 	scene_entity_coordinator.update()
-	if scene_entity_coordinator.get_version() != last_version_updated:
-		await _async_on_desired_scene_changed()
+	var new_realm = scene_entity_coordinator.is_new_realm()
+	if scene_entity_coordinator.get_version() != last_version_updated or new_realm:
+		await _async_on_desired_scene_changed(new_realm)
 		last_version_updated = scene_entity_coordinator.get_version()
 
 
-func _async_on_desired_scene_changed():
+func _async_on_desired_scene_changed(new_realm: bool):
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
 	var keep_alive_scenes = d.get("keep_alive_scenes", [])
 	var empty_parcels = d.get("empty_parcels", [])
+
+	# remove scenes that are not desired...
+	if new_realm:
+		prints("new realm!", loadable_scenes, keep_alive_scenes)
+		for scene_id in loaded_scenes.keys():
+			# only remove scenes that are not loaded...
+			if not loadable_scenes.has(scene_id) and not keep_alive_scenes.has(scene_id):
+				prints("remove: ", scene_id)
+				var scene = loaded_scenes.get(scene_id)
+				var scene_number_id: int = scene.get("scene_number_id", -1)
+				if not scene.is_global and scene_number_id != -1:
+					Global.scene_runner.kill_scene(scene_number_id)
+				loaded_scenes.erase(scene_id)
+
 	for scene_id in loadable_scenes:
 		if not loaded_scenes.has(scene_id):
 			var dict = scene_entity_coordinator.get_scene_dict(scene_id)
@@ -93,12 +108,13 @@ func _async_on_desired_scene_changed():
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")
 
-	for scene_id in loaded_scenes.keys():
-		if not loadable_scenes.has(scene_id) and not keep_alive_scenes.has(scene_id):
-			var scene = loaded_scenes[scene_id]
-			var scene_number_id: int = scene.get("scene_number_id", -1)
-			if scene_number_id != -1:
-				Global.scene_runner.kill_scene(scene_number_id)
+	if not scene_entity_coordinator.is_requesting_new_realm():
+		for scene_id in loaded_scenes.keys():
+			if not loadable_scenes.has(scene_id) and not keep_alive_scenes.has(scene_id):
+				var scene = loaded_scenes[scene_id]
+				var scene_number_id: int = scene.get("scene_number_id", -1)
+				if scene_number_id != -1:
+					Global.scene_runner.kill_scene(scene_number_id)
 
 	var empty_parcels_coords = []
 	for parcel in empty_parcels:
@@ -122,7 +138,7 @@ func _async_on_desired_scene_changed():
 	parcels_processed.emit(parcel_filled, empty_parcels_coords)
 
 
-func _on_realm_changed():
+func _on_realm_changed(force_reload):
 	var should_load_city_pointers = true
 	var content_base_url = Global.realm.content_base_url
 
@@ -144,20 +160,14 @@ func _on_realm_changed():
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 	var scenes_urns: Array = Global.realm.realm_about.get("configurations", {}).get("scenesUrn", [])
 	scene_entity_coordinator.set_fixed_desired_entities_urns(scenes_urns)
-
-	set_portable_experiences_urns(self.desired_portable_experiences_urns)
-
-	for scene in loaded_scenes.values():
-		var scene_number_id: int = scene.get("scene_number_id", -1)
-		if not scene.is_global and scene_number_id != -1:
-			Global.scene_runner.kill_scene(scene_number_id)
+	scene_entity_coordinator.set_new_realm(force_reload)
 
 	for parcel in loaded_empty_scenes:
 		remove_child(loaded_empty_scenes[parcel])
 
 	loaded_empty_scenes.clear()
 
-	loaded_scenes = {}
+	set_portable_experiences_urns(self.desired_portable_experiences_urns)
 
 
 func set_portable_experiences_urns(urns: Array[String]) -> void:

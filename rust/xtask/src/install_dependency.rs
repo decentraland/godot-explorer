@@ -177,7 +177,14 @@ fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> io::Resu
     }
 
     // If the destination file does not exist or is older, we copy the source file to the destination
-    fs::copy(src_path, dest_path).map(|_| println!("Copying {}", dest_path.to_string_lossy()))?;
+    if env::consts::OS == "linux" {
+        if dest_path.exists() {
+            fs::remove_file(dest_path).map(|_| println!("Remove {}", dest_path.to_string_lossy()))?;
+        }
+        fs::hard_link(src_path, dest_path).map(|_| println!("Link {}", dest_path.to_string_lossy()))?;
+    } else {
+        fs::copy(src_path, dest_path).map(|_| println!("Copying {}", dest_path.to_string_lossy()))?;
+    }
     Ok(())
 }
 

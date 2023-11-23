@@ -285,7 +285,7 @@ func _on_line_edit_command_submit_message(message: String):
 			)
 			Global.realm.async_set_realm(params[1])
 		elif command_str == "/reload":
-			Global.realm.async_set_realm(Global.realm.get_realm_string())
+			Global.realm.async_set_realm(Global.realm.get_realm_string(), true)
 		else:
 			pass
 			# TODO: unknown command

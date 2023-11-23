@@ -208,7 +208,7 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn _on_realm_changed(&mut self) {
+    fn _on_realm_changed(&mut self, _force_reload: bool) {
         self.base
             .call_deferred("_on_realm_changed_deferred".into(), &[]);
     }

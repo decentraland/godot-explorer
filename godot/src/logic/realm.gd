@@ -1,7 +1,7 @@
 class_name Realm
 extends DclRealm
 
-signal realm_changed
+signal realm_changed(force_reload: bool)
 
 var http_requester: RustHttpRequesterWrapper = Global.http_requester
 
@@ -70,7 +70,7 @@ static func parse_urn(urn: String):
 	return {"urn": matches.get_string(0), "entityId": matches.get_string(2), "baseUrl": base_url}
 
 
-func async_set_realm(new_realm_string: String) -> void:
+func async_set_realm(new_realm_string: String, force_reload: bool = false) -> void:
 	realm_string = new_realm_string
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)
@@ -128,4 +128,4 @@ func async_set_realm(new_realm_string: String) -> void:
 		Global.config.last_realm_joined = realm_url
 		Global.config.save_to_settings_file()
 
-		emit_signal("realm_changed")
+		realm_changed.emit(force_reload)
