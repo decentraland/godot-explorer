@@ -41,6 +41,8 @@ module.exports.openNftDialog = async function (body) {
     body.urn,
   );
 };
+
+// Reference Client doesn't have it. No implement it until decide what to do with it...
 module.exports.setCommunicationsAdapter = async function (body) {
   return {};
 };

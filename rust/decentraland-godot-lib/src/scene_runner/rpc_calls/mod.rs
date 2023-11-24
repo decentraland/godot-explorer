@@ -1,4 +1,5 @@
 mod handle_restricted_actions;
+mod handle_runtime;
 mod portables;
 
 use crate::dcl::{scene_apis::RpcCall, SceneId};
@@ -8,6 +9,7 @@ use self::{
         change_realm, move_player_to, open_external_url, open_nft_dialog, teleport_to,
         trigger_emote, trigger_scene_emote,
     },
+    handle_runtime::get_realm,
     portables::{kill_portable, list_portables, spawn_portable},
 };
 
@@ -16,6 +18,7 @@ use super::scene::Scene;
 pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls: Vec<RpcCall>) {
     for rpc_call in rpc_calls {
         match rpc_call {
+            // Restricted Actions
             RpcCall::ChangeRealm {
                 to,
                 message,
@@ -65,6 +68,9 @@ pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls:
                 &looping,
                 &response,
             ),
+            RpcCall::GetRealm { response } => get_realm(&response),
+            // Runtime
+            // Portable Experiences
             RpcCall::SpawnPortable { location, response } => {
                 spawn_portable(scene, location, response)
             }

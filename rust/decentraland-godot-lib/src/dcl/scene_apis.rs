@@ -46,6 +46,16 @@ pub struct UserData {
     pub avatar: Option<AvatarForUserData>,
 }
 
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetRealmResponse {
+    pub base_url: String,
+    pub realm_name: String,
+    pub network_id: i32,
+    pub comms_adapter: String,
+    pub is_preview: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct RpcResultSender<T>(Arc<RwLock<Option<tokio::sync::oneshot::Sender<T>>>>);
 
@@ -80,6 +90,7 @@ impl<T: 'static> From<tokio::sync::oneshot::Sender<T>> for RpcResultSender<T> {
 
 #[derive(Debug)]
 pub enum RpcCall {
+    // Restricted Actions
     ChangeRealm {
         to: String,
         message: Option<String>,
@@ -111,6 +122,11 @@ pub enum RpcCall {
         looping: bool,
         response: RpcResultSender<Result<(), String>>,
     },
+    // Runtime
+    GetRealm {
+        response: RpcResultSender<GetRealmResponse>,
+    },
+    // Portable Experiences
     SpawnPortable {
         location: PortableLocation,
         response: RpcResultSender<Result<SpawnResponse, String>>,
