@@ -4,7 +4,8 @@ module.exports.getRealm = async function (body) {
     }
 }
 module.exports.getWorldTime = async function (body) {
-    const seconds = 60 * 60 * 12 // noon seconds
+    // TODO: Implement time when skybox feature has time
+    const seconds = 60 * 60 * 12 // noon time in seconds
     return {
         seconds
     }
