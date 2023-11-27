@@ -53,6 +53,9 @@ livekit = { git = "https://github.com/robtfm/client-sdk-rust", branch="h264-fals
 taffy = { git = "https://github.com/DioxusLabs/taffy", rev="7eee673c5ea65f64f35c53f5ee2fe5faf62b9c1e" }
 tracing-test = "0.2.4"
 
+base64 = "0.21.5"
+urlencoding = "2.1.3"
+
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"

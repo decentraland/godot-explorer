@@ -7,8 +7,8 @@ pub mod restricted_actions;
 pub mod runtime;
 pub mod websocket;
 
-use crate::dcl::scene_apis::{LocalCall, RpcCall};
 use crate::auth::wallet::Wallet;
+use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,

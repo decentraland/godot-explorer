@@ -21,6 +21,7 @@ enum Adapter {
     WsRoom(WebSocketRoom),
     SignedLogin(SignedLogin),
     Livekit(LivekitRoom),
+    WaitingForIdentity(String),
 }
 
 #[derive(GodotClass)]
@@ -53,6 +54,7 @@ impl NodeVirtual for CommunicationManager {
     fn process(&mut self, _dt: f64) {
         match &mut self.current_adapter {
             Adapter::None => {}
+            Adapter::WaitingForIdentity(adapter_url) => {}
             Adapter::WsRoom(ws_room) => {
                 ws_room.poll();
                 let chats = ws_room.consume_chats();
@@ -165,7 +167,7 @@ impl CommunicationManager {
         };
 
         let message_sent = match &mut self.current_adapter {
-            Adapter::None | Adapter::SignedLogin(_) => false,
+            Adapter::None | Adapter::SignedLogin(_) | Adapter::WaitingForIdentity(_) => false,
             Adapter::WsRoom(ws_room) => ws_room.send_rfc4(get_packet(), true),
             Adapter::Livekit(livekit_room) => livekit_room.send_rfc4(get_packet(), true),
         };
@@ -186,7 +188,7 @@ impl CommunicationManager {
         };
 
         match &mut self.current_adapter {
-            Adapter::None | Adapter::SignedLogin(_) => false,
+            Adapter::None | Adapter::SignedLogin(_) | Adapter::WaitingForIdentity(_) => false,
             Adapter::WsRoom(ws_room) => ws_room.send_rfc4(get_packet(), false),
             Adapter::Livekit(livekit_room) => livekit_room.send_rfc4(get_packet(), false),
         }
@@ -306,7 +308,7 @@ impl CommunicationManager {
 
     fn clean(&mut self) {
         match &self.current_adapter {
-            Adapter::None | Adapter::SignedLogin(_) => {}
+            Adapter::None | Adapter::SignedLogin(_) | Adapter::WaitingForIdentity(_) => {}
             Adapter::Livekit(_livekit_room) => {
                 // livekit_room.clean();
             }
@@ -324,7 +326,7 @@ impl CommunicationManager {
         player_identity.update_profile_from_dictionary(&new_profile);
 
         match &mut self.current_adapter {
-            Adapter::None | Adapter::SignedLogin(_) => {}
+            Adapter::None | Adapter::SignedLogin(_) | Adapter::WaitingForIdentity(_) => {}
             Adapter::Livekit(_livekit_room) => {
                 // TODO: implement
                 // livekit_room.change_profile(self.player_identity.clone());

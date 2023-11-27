@@ -5,12 +5,12 @@ use std::{
 };
 
 use crate::{
+    auth::wallet::{self, AsH160},
     avatars::avatar_scene::AvatarScene,
     dcl::components::proto_components::kernel::comms::{
         rfc4::{self},
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
     },
-    auth::wallet::{self, AsH160},
 };
 use ethers::types::{Signature, H160};
 use godot::{
