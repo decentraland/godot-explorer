@@ -22,10 +22,12 @@ module.exports.readFile = async function (body) {
 }
 
 module.exports.getSceneInformation = async function (body) {
+    const sceneInfo = await Deno.core.ops.op_get_scene_information()
+    sceneInfo.content = sceneInfo.content.map(item => ({
+        hash: item.hash,
+        file: item.file
+    }))    
     return {
-        urn: "", // this is either the entityId or the full URN of the scene that is running
-        content: [], // contents of the deployed entities
-        metadataJson: "", // JSON serialization of the entity.metadata field
-        baseUrl: "" // baseUrl used to resolve all content files
+        ...sceneInfo,
     }
 }

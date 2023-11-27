@@ -9,7 +9,7 @@ use self::{
         change_realm, move_player_to, open_external_url, open_nft_dialog, teleport_to,
         trigger_emote, trigger_scene_emote,
     },
-    handle_runtime::get_realm,
+    handle_runtime::{get_realm, get_scene_information},
     portables::{kill_portable, list_portables, spawn_portable},
 };
 
@@ -68,8 +68,9 @@ pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls:
                 &looping,
                 &response,
             ),
-            RpcCall::GetRealm { response } => get_realm(&response),
             // Runtime
+            RpcCall::GetRealm { response } => get_realm(&response),
+            RpcCall::GetSceneInformation { response } => get_scene_information(scene, &response),
             // Portable Experiences
             RpcCall::SpawnPortable { location, response } => {
                 spawn_portable(scene, location, response)

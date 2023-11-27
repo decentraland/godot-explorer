@@ -56,6 +56,22 @@ pub struct GetRealmResponse {
     pub is_preview: bool,
 }
 
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ContentMapping {
+    pub file: String,
+    pub hash: String,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetSceneInformationResponse {
+    pub urn: String,
+    pub content: Vec<ContentMapping>,
+    pub metadata_json: String,
+    pub base_url: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct RpcResultSender<T>(Arc<RwLock<Option<tokio::sync::oneshot::Sender<T>>>>);
 
@@ -125,6 +141,9 @@ pub enum RpcCall {
     // Runtime
     GetRealm {
         response: RpcResultSender<GetRealmResponse>,
+    },
+    GetSceneInformation {
+        response: RpcResultSender<GetSceneInformationResponse>,
     },
     // Portable Experiences
     SpawnPortable {

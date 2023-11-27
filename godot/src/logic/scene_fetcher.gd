@@ -322,7 +322,8 @@ func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):
 		"visible": true,
 		"parcels": scene.parcels,
 		"title": title,
-		"entity_id": scene.id
+		"entity_id": scene.id,
+		"metadata": scene.entity.metadata
 	}
 
 	var scene_number_id: int = Global.scene_runner.start_scene(scene_definition, content_mapping)
