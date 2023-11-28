@@ -3,25 +3,25 @@ use super::{
     wallet::{SimpleAuthChain, Wallet},
     with_browser_and_server::{remote_sign_message, RemoteReportState},
 };
-use ethers::{signers::LocalWallet, types::H160};
+use chrono::{DateTime, Utc};
+use ethers::{
+    signers::LocalWallet,
+    types::{Signature, H160},
+};
 use rand::thread_rng;
 
 fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
-    let expiration_str = match expiration.duration_since(std::time::SystemTime::UNIX_EPOCH) {
-        Ok(duration) => duration.as_secs().to_string(),
-        Err(_) => "Invalid expiration time".to_string(),
-    };
-
+    let datetime: DateTime<Utc> = expiration.into();
+    let formatted_time = datetime.format("%Y-%m-%dT%H:%M:%S%.3fZ");
     format!(
-        "Decentraland Login\nEphemeral address: {}\nExpiration: {}",
-        ephemeral_address, expiration_str
+        "Decentraland Login\nEphemeral address: {ephemeral_address}\nExpiration: {formatted_time}",
     )
 }
 
 pub async fn try_create_ephemeral_with_account(
     signer: H160,
     sender: tokio::sync::mpsc::Sender<RemoteReportState>,
-) -> Result<(H160, Wallet, String, u64), ()> {
+) -> Result<(H160, Wallet, Signature, u64), ()> {
     let ephemeral_wallet = Wallet::new_local_wallet();
     let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
     let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
@@ -45,11 +45,8 @@ pub async fn try_create_ephemeral(
     let (signer, signature, chain_id) =
         remote_sign_message(ephemeral_message.as_bytes(), None, sender).await?;
 
-    let auth_chain = SimpleAuthChain::new_ephemeral_identity_auth_chain(
-        ephemeral_wallet.address(),
-        ephemeral_message,
-        signature,
-    );
+    let auth_chain =
+        SimpleAuthChain::new_ephemeral_identity_auth_chain(signer, ephemeral_message, signature);
 
     let ephemeral_auth_chain =
         EphemeralAuthChain::new(signer, signing_key_bytes, auth_chain, expiration);

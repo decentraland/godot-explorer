@@ -71,8 +71,8 @@ impl Serialize for EphemeralAuthChain {
         S: serde::Serializer,
     {
         let mut state = serializer.serialize_struct("ephemeral_auth_chain", 4)?;
-        state.serialize_field("signer", &self.signer.as_bytes())?;
-        state.serialize_field("ephmeral_wallet", &self.ephemeral_keys.as_slice())?;
+        state.serialize_field("signer", &self.signer)?;
+        state.serialize_field("ephemeral_keys", &self.ephemeral_keys)?;
         state.serialize_field("auth_chain", &self.auth_chain)?;
         state.serialize_field("expiration", &self.expiration)?;
         state.end()
@@ -85,14 +85,14 @@ impl<'de> Deserialize<'de> for EphemeralAuthChain {
         D: Deserializer<'de>,
     {
         #[derive(serde::Deserialize)]
-        #[serde(field_identifier, rename_all = "lowercase")]
+        #[serde(field_identifier, rename_all = "snake_case")]
         enum Field {
             Signer,
-            EphemeralWallet,
+            EphemeralKeys,
             AuthChain,
             Expiration,
         }
-        const FIELDS: &[&str] = &["signer", "ephmeral_wallet", "auth_chain", "expiration"];
+        const FIELDS: &[&str] = &["signer", "ephemeral_keys", "auth_chain", "expiration"];
 
         struct EphemeralAuthChainVisitor;
 
@@ -144,7 +144,7 @@ impl<'de> Deserialize<'de> for EphemeralAuthChain {
                             }
                             signer = Some(map.next_value()?);
                         }
-                        Field::EphemeralWallet => {
+                        Field::EphemeralKeys => {
                             if ephemeral_keys.is_some() {
                                 return Err(de::Error::duplicate_field("ephemeral_keys"));
                             }
@@ -184,3 +184,37 @@ impl<'de> Deserialize<'de> for EphemeralAuthChain {
         deserializer.deserialize_struct("ephemeral_auth_chain", FIELDS, EphemeralAuthChainVisitor)
     }
 }
+
+// // Test serialization
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use ethers::signers::LocalWallet;
+//     use rand::thread_rng;
+//     use serde_json::json;
+
+//     #[test]
+//     fn test_serialize() {
+//         let signer_wallet = LocalWallet::new(&mut thread_rng());
+//         let local_wallet = LocalWallet::new(&mut thread_rng());
+//         let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
+//         let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
+
+//         let signer = H160::from_low_u64_be(0xdeadbeef);
+//         let ephemeral_keys = LocalWallet::new(&mut rand::thread_rng());
+//         let auth_chain = SimpleAuthChain::new(signer, vec![ephemeral_keys.address()]);
+//         let expiration = std::time::SystemTime::now();
+
+//         let ephemeral_auth_chain = EphemeralAuthChain::new(
+//             signer,
+//             ephemeral_keys.signer().to_bytes().to_vec(),
+//             auth_chain,
+//             expiration,
+//         );
+
+//         let serialized = serde_json::to_string(&ephemeral_auth_chain).unwrap();
+//         let expected = json!({
+//             "signer": "0x0000"
+//         });
+//     }
+// }

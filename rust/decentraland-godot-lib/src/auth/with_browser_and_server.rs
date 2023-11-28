@@ -1,7 +1,7 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 use base64::Engine as _;
-use ethers::types::H160;
+use ethers::types::{Signature, H160};
 use rand::Rng;
 use serde::{de::DeserializeOwned, Deserialize};
 
@@ -139,7 +139,7 @@ pub async fn remote_sign_message(
     payload: &[u8],
     by_signer: Option<H160>,
     url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
-) -> Result<(H160, String, u64), ()> {
+) -> Result<(H160, Signature, u64), ()> {
     let address = if by_signer.is_some() {
         format!("{:#x}", by_signer.unwrap())
     } else {
@@ -164,11 +164,12 @@ pub async fn remote_sign_message(
     let Some(account) = sign_payload.data.account.as_h160() else {
         return Err(());
     };
-    Ok((
-        account,
-        sign_payload.data.signature,
-        sign_payload.data.chain_id,
-    ))
+    let Ok(signature) = Signature::from_str(sign_payload.data.signature.as_str()) else {
+        tracing::error!("error while parsing signature");
+        return Err(());
+    };
+
+    Ok((account, signature, sign_payload.data.chain_id))
 }
 
 #[cfg(test)]
@@ -180,7 +181,7 @@ mod test {
     #[tokio::test]
     async fn test_gen_id() {
         let (sx, _rx) = tokio::sync::mpsc::channel(100);
-        let Ok((signer, signature, chain_id)) =
+        let Ok((signer, signature, _chain_id)) =
             remote_sign_message("hello".as_bytes(), None, sx).await
         else {
             return;

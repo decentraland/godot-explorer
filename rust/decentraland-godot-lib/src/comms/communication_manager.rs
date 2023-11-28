@@ -50,20 +50,22 @@ impl NodeVirtual for CommunicationManager {
 
     fn ready(&mut self) {
         self.base.call_deferred("init_rs".into(), &[]);
+        self.base.add_child(self.player_identity.clone().upcast());
     }
 
     fn process(&mut self, _dt: f64) {
         match &mut self.current_connection {
             CommsConnection::None => {}
-            CommsConnection::WaitingForIdentity(_adapter_url) => {
-                // if self.player_identity.bind().is_connected() {
-                //     self.change_adapter(_adapter_url.clone());
-                // }
+            CommsConnection::WaitingForIdentity(adapter_url) => {
+                if self.player_identity.bind().is_connected() {
+                    self.base
+                        .call_deferred("change_adapter".into(), &[adapter_url.to_variant()]);
+                }
             }
             CommsConnection::SignedLogin(signed_login) => match signed_login.poll() {
                 SignedLoginPollStatus::Pending => {}
                 SignedLoginPollStatus::Complete(response) => {
-                    self.change_adapter(response.fixed_adapter.unwrap_or("offline".into()));
+                    self.change_adapter(response.fixed_adapter.unwrap_or("offline".into()).into());
                 }
                 SignedLoginPollStatus::Error(e) => {
                     tracing::info!("Error in signed login: {:?}", e);
@@ -234,10 +236,12 @@ impl CommunicationManager {
         }
 
         let comms_fixed_adapter_str = comms_fixed_adapter.unwrap().to_string();
-        self.change_adapter(comms_fixed_adapter_str);
+        self.change_adapter(comms_fixed_adapter_str.into());
     }
 
-    fn change_adapter(&mut self, comms_fixed_adapter_str: String) {
+    #[func]
+    fn change_adapter(&mut self, comms_fixed_adapter_str: GodotString) {
+        let comms_fixed_adapter_str = comms_fixed_adapter_str.to_string();
         let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
         else {
             tracing::warn!("unrecognised fixed adapter string: {comms_fixed_adapter_str}");

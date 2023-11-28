@@ -124,20 +124,35 @@ func _ready():
 		self._on_panel_bottom_left_preview_hot_reload
 	)
 
-	var test = DclPlayerIdentity.new()
-	add_child(test)
-	test.need_open_url.connect(self._on_need_open_url)
-	test.wallet_connected.connect(self._on_wallet_connected)
-	test.try_connect_account()
+	Global.comms.player_identity.need_open_url.connect(self._on_need_open_url)
+	Global.comms.player_identity.wallet_connected.connect(self._on_wallet_connected)
+
+	if not Global.comms.player_identity.try_recover_account(Global.config.session_account):
+		Global.comms.player_identity.try_connect_account()
+		Global.scene_runner.set_pause(true)
 
 
-func _on_need_open_url(url: String, description: String) -> void:
+#
+#	Global.avatars.update_primary_player_profile(Global.config.avatar_profile)
+#	Global.comms.update_profile_avatar(Global.config.avatar_profile)
+#	# TODO: check this, the comms method already emit the signal of profile changed
+#	# 	so, maybe we don't need to call here, only wait the signal
+#	avatar.async_update_avatar(Global.config.avatar_profile)
+#
+#	Global.config.param_changed.connect(self._on_param_changed)
+#	Global.comms.profile_changed.connect(self._on_player_profile_changed)
+
+
+func _on_need_open_url(url: String, _description: String) -> void:
 	OS.shell_open(url)
-	prints("url ", url, "desc", description)
 
 
-func _on_wallet_connected(address: String, chain_id: int) -> void:
-	prints("wallet connected", address, "on chain", chain_id)
+func _on_wallet_connected(_address: String, _chain_id: int) -> void:
+	Global.scene_runner.set_pause(false)
+	var new_stored_account := {}
+	if Global.comms.player_identity.get_recover_account_to(new_stored_account):
+		Global.config.session_account = new_stored_account
+		Global.config.save_to_settings_file()
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:

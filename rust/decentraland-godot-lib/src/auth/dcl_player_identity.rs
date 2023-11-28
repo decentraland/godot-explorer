@@ -43,9 +43,13 @@ impl NodeVirtual for DclPlayerIdentity {
         while let Ok(state) = self.remote_report_receiver.try_recv() {
             match state {
                 RemoteReportState::OpenUrl { url, description } => {
-                    self.base.emit_signal(
-                        "need_open_url".into(),
-                        &[url.to_variant(), description.to_variant()],
+                    self.base.call_deferred(
+                        "emit_signal".into(),
+                        &[
+                            "need_open_url".to_variant(),
+                            url.to_variant(),
+                            description.to_variant(),
+                        ],
                     );
                 }
             }
@@ -79,9 +83,9 @@ impl DclPlayerIdentity {
 
         let ephemeral_auth_chain = match serde_json::from_str(&ephemeral_auth_chain.to_string()) {
             Ok(p) => p,
-            Err(_e) => {
+            Err(e) => {
                 tracing::error!(
-                    "invalid data ephemeral_auth_chain {:?}",
+                    "error {e} invalid data ephemeral_auth_chain {:?}",
                     ephemeral_auth_chain
                 );
                 self.base.call_deferred(
@@ -109,9 +113,10 @@ impl DclPlayerIdentity {
         ));
         self.ephemeral_auth_chain = Some(ephemeral_auth_chain);
         self.profile.content.user_id = Some(format!("{:#x}", account_address));
-        self.base.emit_signal(
-            "wallet_connected".into(),
+        self.base.call_deferred(
+            "emit_signal".into(),
             &[
+                "wallet_connected".to_variant(),
                 format!("{:#x}", self.remote_wallet.as_ref().unwrap().address()).to_variant(),
                 chain_id.to_variant(),
             ],

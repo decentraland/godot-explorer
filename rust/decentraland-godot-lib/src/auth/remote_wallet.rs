@@ -1,4 +1,4 @@
-use std::{fmt, str::FromStr};
+use std::fmt;
 
 use async_trait::async_trait;
 use ethers::{signers::WalletError, types::H160};
@@ -78,13 +78,11 @@ impl RemoteWallet {
 #[async_trait]
 impl ObjSafeWalletSigner for RemoteWallet {
     async fn sign_message(&self, message: &[u8]) -> Result<ethers::types::Signature, WalletError> {
-        let (_, signature_string, _chain_id) =
+        let (_, signature, _chain_id) =
             remote_sign_message(message, Some(self.address), self.report_url_sender.clone())
                 .await
                 .map_err(|_| WalletError::Eip712Error("Unknown error".to_owned()))?;
 
-        let signature = ethers::types::Signature::from_str(signature_string.as_str())
-            .expect("parse signature string");
         Ok(signature)
     }
 

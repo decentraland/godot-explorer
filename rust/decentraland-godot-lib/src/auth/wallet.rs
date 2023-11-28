@@ -94,11 +94,12 @@ impl SimpleAuthChain {
     pub fn new_ephemeral_identity_auth_chain(
         signer_address: Address,
         ephemeral_message: String,
-        first_signature: String,
+        signature: Signature,
     ) -> Self {
         const PERSONAL_SIGNATURE_LENGTH: usize = 132;
+        let first_signature = format!("0x{signature}");
         let auth_chain_type = if first_signature.len() == PERSONAL_SIGNATURE_LENGTH {
-            "ECDSA_PERSONAL_EPHEMERAL"
+            "ECDSA_EPHEMERAL"
         } else {
             "ECDSA_EIP_1654_EPHEMERAL"
         };
@@ -111,7 +112,7 @@ impl SimpleAuthChain {
             ChainLink {
                 ty: auth_chain_type.to_owned(),
                 payload: ephemeral_message,
-                signature: format!("0x{first_signature}"),
+                signature: first_signature,
             },
         ])
     }
