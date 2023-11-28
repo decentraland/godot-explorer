@@ -78,13 +78,10 @@ impl RemoteWallet {
 #[async_trait]
 impl ObjSafeWalletSigner for RemoteWallet {
     async fn sign_message(&self, message: &[u8]) -> Result<ethers::types::Signature, WalletError> {
-        let (_, signature_string, chain_id) = remote_sign_message(
-            message,
-            Some(self.address.clone()),
-            self.report_url_sender.clone(),
-        )
-        .await
-        .map_err(|_| WalletError::Eip712Error("Unknown error".to_owned()))?;
+        let (_, signature_string, _chain_id) =
+            remote_sign_message(message, Some(self.address), self.report_url_sender.clone())
+                .await
+                .map_err(|_| WalletError::Eip712Error("Unknown error".to_owned()))?;
 
         let signature = ethers::types::Signature::from_str(signature_string.as_str())
             .expect("parse signature string");
@@ -99,7 +96,7 @@ impl ObjSafeWalletSigner for RemoteWallet {
     }
 
     fn address(&self) -> ethers::types::Address {
-        self.address.into()
+        self.address
     }
 
     fn chain_id(&self) -> u64 {

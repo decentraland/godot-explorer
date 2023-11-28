@@ -1,11 +1,10 @@
+use super::{
+    ephemeral_auth_chain::EphemeralAuthChain,
+    wallet::{SimpleAuthChain, Wallet},
+    with_browser_and_server::{remote_sign_message, RemoteReportState},
+};
 use ethers::{signers::LocalWallet, types::H160};
 use rand::thread_rng;
-use serde::{de::Visitor, ser::SerializeStruct, Deserialize, Serialize, Serializer};
-
-use super::{
-    wallet::{ChainLink, SimpleAuthChain, Wallet},
-    with_browser_and_server::{remote_sign_message, RemoteReportState}, ephemeral_auth_chain::EphemeralAuthChain,
-};
 
 fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
     let expiration_str = match expiration.duration_since(std::time::SystemTime::UNIX_EPOCH) {

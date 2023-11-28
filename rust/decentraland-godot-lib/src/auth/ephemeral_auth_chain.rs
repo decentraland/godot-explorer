@@ -1,17 +1,13 @@
 use std::fmt;
 
 use ethers::{signers::LocalWallet, types::H160};
-use rand::thread_rng;
 use serde::{
     de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor},
     ser::SerializeStruct,
     Serialize,
 };
 
-use super::{
-    wallet::{ChainLink, SimpleAuthChain, Wallet},
-    with_browser_and_server::{remote_sign_message, RemoteReportState},
-};
+use super::wallet::{SimpleAuthChain, Wallet};
 
 pub struct EphemeralAuthChain {
     signer: H160,
@@ -46,7 +42,7 @@ impl EphemeralAuthChain {
     }
 
     pub fn signer(&self) -> H160 {
-        self.signer.clone()
+        self.signer
     }
 
     pub fn expiration(&self) -> std::time::SystemTime {
@@ -61,10 +57,10 @@ impl EphemeralAuthChain {
 impl Clone for EphemeralAuthChain {
     fn clone(&self) -> Self {
         Self::new(
-            self.signer.clone(),
+            self.signer,
             self.ephemeral_keys.clone(),
             self.auth_chain.clone(),
-            self.expiration.clone(),
+            self.expiration,
         )
     }
 }
@@ -96,8 +92,7 @@ impl<'de> Deserialize<'de> for EphemeralAuthChain {
             AuthChain,
             Expiration,
         }
-        const FIELDS: &'static [&'static str] =
-            &["signer", "ephmeral_wallet", "auth_chain", "expiration"];
+        const FIELDS: &[&str] = &["signer", "ephmeral_wallet", "auth_chain", "expiration"];
 
         struct EphemeralAuthChainVisitor;
 

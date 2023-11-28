@@ -22,7 +22,7 @@ use crate::{
     dcl::components::proto_components::kernel::comms::rfc4,
 };
 
-use super::adapter::Adapter;
+use super::adapter_trait::Adapter;
 
 pub struct NetworkMessage {
     pub data: Vec<u8>,
@@ -347,7 +347,9 @@ impl Adapter for LivekitRoom {
         self._send_rfc4(packet, unreliable)
     }
 
-    fn broadcast_voice(&mut self, _frame: Vec<i16>) {}
+    fn broadcast_voice(&mut self, frame: Vec<i16>) {
+        self._broadcast_voice(frame);
+    }
 
     fn support_voice_chat(&self) -> bool {
         false

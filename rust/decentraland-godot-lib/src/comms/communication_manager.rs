@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use godot::prelude::*;
 use http::Uri;
 
@@ -14,7 +12,7 @@ use crate::{
 };
 
 use super::{
-    adapter::adapter::Adapter,
+    adapter::adapter_trait::Adapter,
     signed_login::{SignedLogin, SignedLoginPollStatus},
 };
 
@@ -57,7 +55,11 @@ impl NodeVirtual for CommunicationManager {
     fn process(&mut self, _dt: f64) {
         match &mut self.current_connection {
             CommsConnection::None => {}
-            CommsConnection::WaitingForIdentity(adapter_url) => {}
+            CommsConnection::WaitingForIdentity(_adapter_url) => {
+                // if self.player_identity.bind().is_connected() {
+                //     self.change_adapter(_adapter_url.clone());
+                // }
+            }
             CommsConnection::SignedLogin(signed_login) => match signed_login.poll() {
                 SignedLoginPollStatus::Pending => {}
                 SignedLoginPollStatus::Complete(response) => {
@@ -242,8 +244,13 @@ impl CommunicationManager {
             return;
         };
 
-        let avatar_scene = DclGlobal::singleton().bind().get_avatars();
+        if !self.player_identity.bind().is_connected() {
+            self.current_connection = CommsConnection::WaitingForIdentity(comms_fixed_adapter_str);
+            return;
+        }
+
         self.current_connection = CommsConnection::None;
+        let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
         tracing::info!("change_adapter to protocol {protocol} and address {comms_address}");
 

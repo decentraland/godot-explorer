@@ -1,14 +1,10 @@
 use std::{
     collections::HashMap,
-    sync::Arc,
     time::{Duration, Instant},
 };
 
 use crate::{
-    auth::{
-        ephemeral_auth_chain::{self, EphemeralAuthChain},
-        wallet::{self, AsH160},
-    },
+    auth::{ephemeral_auth_chain::EphemeralAuthChain, wallet::AsH160},
     avatars::avatar_scene::AvatarScene,
     comms::profile::{SerializedProfile, UserProfile},
     dcl::components::proto_components::kernel::comms::{
@@ -21,7 +17,7 @@ use godot::{engine::WebSocketPeer, prelude::*};
 use prost::Message;
 use tracing::error;
 
-use super::adapter::Adapter;
+use super::adapter_trait::Adapter;
 
 #[derive(Clone)]
 enum WsRoomState {
@@ -597,7 +593,7 @@ impl Adapter for WebSocketRoom {
         self._send(packet, unreliable)
     }
 
-    fn broadcast_voice(&mut self, frame: Vec<i16>) {}
+    fn broadcast_voice(&mut self, _frame: Vec<i16>) {}
 
     fn support_voice_chat(&self) -> bool {
         false

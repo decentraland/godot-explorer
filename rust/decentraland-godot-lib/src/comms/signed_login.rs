@@ -3,14 +3,12 @@
 use http::{Method, Uri};
 
 use crate::{
-    auth::ephemeral_auth_chain::{self, EphemeralAuthChain},
+    auth::ephemeral_auth_chain::EphemeralAuthChain,
     http_request::{
         http_requester::HttpRequester,
         request_response::{RequestOption, ResponseEnum, ResponseType},
     },
 };
-
-use crate::auth::wallet::{SimpleAuthChain, Wallet};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct SignedLoginResponse {

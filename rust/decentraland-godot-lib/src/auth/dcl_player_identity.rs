@@ -119,7 +119,9 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn _error_getting_wallet(&mut self, error_str: GodotString) {}
+    fn _error_getting_wallet(&mut self, error_str: GodotString) {
+        tracing::error!("error getting wallet {:?}", error_str);
+    }
 
     #[func]
     fn try_connect_account(&mut self) {
@@ -225,5 +227,9 @@ impl DclPlayerIdentity {
     pub fn update_profile_from_dictionary(&mut self, dict: &Dictionary) {
         self.profile.content.copy_from_godot_dictionary(dict);
         self.profile.version += 1;
+    }
+
+    pub fn is_connected(&self) -> bool {
+        self.remote_wallet.is_some() && self.ephemeral_auth_chain.is_some()
     }
 }
