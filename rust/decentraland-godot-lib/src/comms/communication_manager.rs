@@ -74,11 +74,8 @@ impl NodeVirtual for CommunicationManager {
             },
             CommsConnection::Connected(adapter) => {
                 let adapter = adapter.as_mut();
-                let cancel_adapter = adapter.poll();
+                let adapter_polling_ok = adapter.poll();
                 let chats = adapter.consume_chats();
-                if cancel_adapter {
-                    self.current_connection = CommsConnection::None;
-                }
 
                 if !chats.is_empty() {
                     let mut chats_variant_array = VariantArray::new();
@@ -93,6 +90,10 @@ impl NodeVirtual for CommunicationManager {
                     }
                     self.base
                         .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
+                }
+
+                if !adapter_polling_ok {
+                    self.current_connection = CommsConnection::None;
                 }
             }
         }

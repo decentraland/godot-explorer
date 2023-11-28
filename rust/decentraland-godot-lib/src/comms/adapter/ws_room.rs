@@ -210,37 +210,33 @@ impl WebSocketRoom {
 
                                 let challenge_to_sign = challenge_msg.challenge_to_sign.clone();
 
-                                // TODO: this should be async, now it's a local wallet and it's blocking
-                                let sign = futures_lite::future::block_on(
+                                // TODO: should this block_on be async? the ephemeral wallet is sync
+                                let signature = futures_lite::future::block_on(
                                     self.ephemeral_auth_chain
                                         .ephemeral_wallet()
                                         .sign_message(challenge_to_sign.as_bytes()),
+                                )
+                                .expect("signature by ephemeral should always work");
+
+                                self.signature = Some(signature);
+
+                                let mut chain = self.ephemeral_auth_chain.auth_chain().clone();
+                                chain.add_signed_entity(challenge_to_sign, signature);
+
+                                let auth_chain_json = serde_json::to_string(&chain).unwrap();
+
+                                self._send(
+                                    WsPacket {
+                                        message: Some(
+                                            ws_packet::Message::SignedChallengeForServer(
+                                                WsSignedChallenge { auth_chain_json },
+                                            ),
+                                        ),
+                                    },
+                                    false,
                                 );
 
-                                if let Ok(sign) = sign {
-                                    self.signature = Some(sign);
-
-                                    let mut chain = self.ephemeral_auth_chain.auth_chain().clone();
-                                    chain.add_signed_entity(challenge_to_sign, sign);
-
-                                    let auth_chain_json = serde_json::to_string(&chain).unwrap();
-
-                                    self._send(
-                                        WsPacket {
-                                            message: Some(
-                                                ws_packet::Message::SignedChallengeForServer(
-                                                    WsSignedChallenge { auth_chain_json },
-                                                ),
-                                            ),
-                                        },
-                                        false,
-                                    );
-
-                                    self.state = WsRoomState::ChallengeMessageSent;
-                                } else {
-                                    peer.close();
-                                    self.state = WsRoomState::Connecting;
-                                }
+                                self.state = WsRoomState::ChallengeMessageSent;
                             }
                             _ => {
                                 tracing::info!(
@@ -590,7 +586,7 @@ impl Adapter for WebSocketRoom {
     }
 
     fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
-        self._send(packet, unreliable)
+        self._send_rfc4(packet, unreliable)
     }
 
     fn broadcast_voice(&mut self, _frame: Vec<i16>) {}

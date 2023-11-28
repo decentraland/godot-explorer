@@ -130,17 +130,11 @@ func _ready():
 	if not Global.comms.player_identity.try_recover_account(Global.config.session_account):
 		Global.comms.player_identity.try_connect_account()
 		Global.scene_runner.set_pause(true)
-
-
-#
-#	Global.avatars.update_primary_player_profile(Global.config.avatar_profile)
-#	Global.comms.update_profile_avatar(Global.config.avatar_profile)
-#	# TODO: check this, the comms method already emit the signal of profile changed
-#	# 	so, maybe we don't need to call here, only wait the signal
-#	avatar.async_update_avatar(Global.config.avatar_profile)
-#
-#	Global.config.param_changed.connect(self._on_param_changed)
-#	Global.comms.profile_changed.connect(self._on_player_profile_changed)
+	else:
+		# TODO: fetch profile
+		Global.avatars.update_primary_player_profile(Global.config.avatar_profile)
+		Global.comms.update_profile_avatar(Global.config.avatar_profile)
+		player.avatar.async_update_avatar(Global.config.avatar_profile)
 
 
 func _on_need_open_url(url: String, _description: String) -> void:
@@ -153,6 +147,11 @@ func _on_wallet_connected(_address: String, _chain_id: int) -> void:
 	if Global.comms.player_identity.get_recover_account_to(new_stored_account):
 		Global.config.session_account = new_stored_account
 		Global.config.save_to_settings_file()
+
+	# TODO: check when this is necessary, after fetching the profile
+	Global.avatars.update_primary_player_profile(Global.config.avatar_profile)
+	Global.comms.update_profile_avatar(Global.config.avatar_profile)
+	player.avatar.async_update_avatar(Global.config.avatar_profile)
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:

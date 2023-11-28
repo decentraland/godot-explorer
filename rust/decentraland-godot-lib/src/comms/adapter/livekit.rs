@@ -352,7 +352,7 @@ impl Adapter for LivekitRoom {
     }
 
     fn support_voice_chat(&self) -> bool {
-        false
+        true
     }
 }
 

@@ -58,12 +58,14 @@ impl SignedLogin {
 
         let meta = serde_json::to_string(&meta).unwrap();
         let payload = format!("post:{}:{}:{}", uri.path(), unix_time, meta).to_lowercase();
+
+        // TODO: should this block_on be async? the ephemeral wallet is sync
         let signature = futures_lite::future::block_on(
             ephemeral_auth_chain
                 .ephemeral_wallet()
                 .sign_message(&payload),
         )
-        .unwrap(); // TODO: async
+        .expect("signature by ephemeral should always work");
 
         let mut chain = ephemeral_auth_chain.auth_chain().clone();
         chain.add_signed_entity(payload, signature);
