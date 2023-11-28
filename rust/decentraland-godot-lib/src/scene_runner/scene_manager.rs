@@ -481,6 +481,14 @@ impl SceneManager {
                             Vector3::new(0.0, 0.0, 0.0)
                         };
 
+                        let global_camera_position =
+                            Vector3::new(camera_position.x, camera_position.y, camera_position.z)
+                                + offset;
+
+                        let global_camera_target =
+                            Vector3::new(camera_target.x, camera_target.y, camera_target.z)
+                                + offset;
+
                         let mut testing_tools = DclGlobal::singleton().bind().get_testing_tools();
                         if testing_tools.has_method("async_take_and_compare_snapshot".into()) {
                             let mut dcl_rpc_sender: Gd<DclRpcSender> = Gd::new_default();
@@ -490,8 +498,8 @@ impl SceneManager {
                                 "async_take_and_compare_snapshot".into(),
                                 &[
                                     id.to_variant(),
-                                    (camera_position + offset).to_variant(),
-                                    (camera_position + camera_target).to_variant(),
+                                    global_camera_position.to_variant(),
+                                    global_camera_target.to_variant(),
                                     snapshot_frame_size.to_variant(),
                                     tolerance.to_variant(),
                                     dcl_rpc_sender.to_variant(),

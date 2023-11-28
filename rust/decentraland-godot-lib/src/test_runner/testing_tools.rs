@@ -8,12 +8,12 @@ pub struct DclTestingTools {
     _base: Base<Node>,
 }
 
-fn to_gray(rgb: &[u8]) -> f32 {
+fn to_gray(rgb: &[u8]) -> f64 {
     let r = rgb[0];
     let g = rgb[1];
     let b = rgb[2];
 
-    ((0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b)) / u8::MAX as f32).round()
+    (0.299 * f64::from(r) + 0.587 * f64::from(g) + 0.114 * f64::from(b)) / u8::MAX as f64
 }
 
 #[godot_api]
@@ -45,11 +45,14 @@ impl DclTestingTools {
 
         for pixel_index in 0..pixel_count {
             let index = pixel_index * 3;
-            data_diff.push(
-                1.0 - (to_gray(&data_b[index..index + 3]) - to_gray(&data_a[index..index + 3]))
-                    .abs(),
-            );
+            let factor_a = to_gray(&data_a[index..index + 3]);
+            let factor_b = to_gray(&data_b[index..index + 3]);
+            let diff = 1.0 - (factor_b - factor_a).abs();
+            data_diff.push(diff);
         }
+
+        let cc = data_diff.iter().filter(|p| **p < 1.0).count();
+
         let score: f64 = 1.
             - (data_diff
                 .iter()
