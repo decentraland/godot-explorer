@@ -1,26 +1,62 @@
-// fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
-//     let expiration_str = match expiration.duration_since(std::time::SystemTime::UNIX_EPOCH) {
-//         Ok(duration) => duration.as_secs().to_string(),
-//         Err(_) => "Invalid expiration time".to_string(),
-//     };
+use ethers::{signers::LocalWallet, types::H160};
+use rand::thread_rng;
+use serde::{de::Visitor, ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
-//     format!(
-//         "Decentraland Login\nEphemeral address: {}\nExpiration: {}",
-//         ephemeral_address, expiration_str
-//     )
-// }
+use super::{
+    wallet::{ChainLink, SimpleAuthChain, Wallet},
+    with_browser_and_server::{remote_sign_message, RemoteReportState}, ephemeral_auth_chain::EphemeralAuthChain,
+};
 
-// pub async fn try_create_ephemeral(
-//     sender: tokio::sync::mpsc::Sender<RemoteReportState>,
-// ) -> Result<(H160, Wallet, String), ()> {
-//     let ephemeral_wallet = Wallet::new_local_wallet();
-//     let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
-//     let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
-//     let message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
+fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
+    let expiration_str = match expiration.duration_since(std::time::SystemTime::UNIX_EPOCH) {
+        Ok(duration) => duration.as_secs().to_string(),
+        Err(_) => "Invalid expiration time".to_string(),
+    };
 
-//     let (signer, signature) = remote_sign_message(message.as_bytes(), None, Some(sender)).await?;
-//     Ok((signer, ephemeral_wallet, signature))
-// }
+    format!(
+        "Decentraland Login\nEphemeral address: {}\nExpiration: {}",
+        ephemeral_address, expiration_str
+    )
+}
+
+pub async fn try_create_ephemeral_with_account(
+    signer: H160,
+    sender: tokio::sync::mpsc::Sender<RemoteReportState>,
+) -> Result<(H160, Wallet, String, u64), ()> {
+    let ephemeral_wallet = Wallet::new_local_wallet();
+    let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
+    let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
+    let message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
+
+    let (signer, signature, chain_id) =
+        remote_sign_message(message.as_bytes(), Some(signer), sender).await?;
+    Ok((signer, ephemeral_wallet, signature, chain_id))
+}
+
+pub async fn try_create_ephemeral(
+    sender: tokio::sync::mpsc::Sender<RemoteReportState>,
+) -> Result<(EphemeralAuthChain, u64), ()> {
+    let local_wallet = LocalWallet::new(&mut thread_rng());
+    let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
+    let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
+    let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
+    let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
+    let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
+
+    let (signer, signature, chain_id) =
+        remote_sign_message(ephemeral_message.as_bytes(), None, sender).await?;
+
+    let auth_chain = SimpleAuthChain::new_ephemeral_identity_auth_chain(
+        ephemeral_wallet.address(),
+        ephemeral_message,
+        signature,
+    );
+
+    let ephemeral_auth_chain =
+        EphemeralAuthChain::new(signer, signing_key_bytes, auth_chain, expiration);
+
+    Ok((ephemeral_auth_chain, chain_id))
+}
 
 #[cfg(test)]
 mod test {

@@ -27,14 +27,20 @@ impl Wallet {
     }
 
     pub fn new_local_wallet() -> Self {
-        Wallet {
+        Self {
             inner: Arc::new(Box::new(LocalWallet::new(&mut thread_rng()))),
+        }
+    }
+
+    pub fn new_from_inner(inner: Box<dyn ObjSafeWalletSigner + 'static + Send + Sync>) -> Self {
+        Self {
+            inner: Arc::new(inner),
         }
     }
 }
 
 #[async_trait]
-pub(crate) trait ObjSafeWalletSigner {
+pub trait ObjSafeWalletSigner {
     async fn sign_message(&self, message: &[u8]) -> Result<Signature, WalletError>;
 
     /// Signs the transaction
@@ -66,7 +72,7 @@ impl ObjSafeWalletSigner for LocalWallet {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SimpleAuthChain(Vec<ChainLink>);
 
 impl SimpleAuthChain {
@@ -85,6 +91,39 @@ impl SimpleAuthChain {
         ])
     }
 
+    pub fn new_ephemeral_identity_auth_chain(
+        signer_address: Address,
+        ephemeral_message: String,
+        first_signature: String,
+    ) -> Self {
+        const PERSONAL_SIGNATURE_LENGTH: usize = 132;
+        let auth_chain_type = if first_signature.len() == PERSONAL_SIGNATURE_LENGTH {
+            "ECDSA_PERSONAL_EPHEMERAL"
+        } else {
+            "ECDSA_EIP_1654_EPHEMERAL"
+        };
+        Self(vec![
+            ChainLink {
+                ty: "SIGNER".to_owned(),
+                payload: format!("{signer_address:#x}"),
+                signature: String::default(),
+            },
+            ChainLink {
+                ty: auth_chain_type.to_owned(),
+                payload: ephemeral_message,
+                signature: format!("0x{first_signature}"),
+            },
+        ])
+    }
+
+    pub fn add_signed_entity(&mut self, payload: String, signature: Signature) {
+        self.0.push(ChainLink {
+            ty: "ECDSA_SIGNED_ENTITY".to_owned(),
+            payload,
+            signature: format!("0x{signature}"),
+        });
+    }
+
     pub fn headers(&self) -> impl Iterator<Item = (String, String)> + '_ {
         self.0.iter().enumerate().map(|(ix, link)| {
             (
@@ -95,7 +134,7 @@ impl SimpleAuthChain {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ChainLink {
     #[serde(rename = "type")]
     ty: String,

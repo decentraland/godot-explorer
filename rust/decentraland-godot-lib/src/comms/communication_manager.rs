@@ -1,49 +1,52 @@
 use std::sync::Arc;
 
-use godot::{engine::TlsOptions, prelude::*};
+use godot::prelude::*;
 use http::Uri;
 
 use crate::{
-    comms::signed_login::SignedLoginMeta, dcl::components::proto_components::kernel::comms::rfc4,
+    auth::dcl_player_identity::DclPlayerIdentity,
+    comms::{
+        adapter::{livekit::LivekitRoom, ws_room::WebSocketRoom},
+        signed_login::SignedLoginMeta,
+    },
+    dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::dcl_global::DclGlobal,
 };
 
 use super::{
-    livekit::LivekitRoom,
-    player_identity::PlayerIdentity,
+    adapter::adapter::Adapter,
     signed_login::{SignedLogin, SignedLoginPollStatus},
-    ws_room::WebSocketRoom,
 };
 
 #[allow(clippy::large_enum_variant)]
-enum Adapter {
+enum CommsConnection {
     None,
-    WsRoom(WebSocketRoom),
-    SignedLogin(SignedLogin),
-    Livekit(LivekitRoom),
     WaitingForIdentity(String),
+    SignedLogin(SignedLogin),
+    Connected(Box<dyn Adapter>),
 }
 
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct CommunicationManager {
+    current_connection: CommsConnection,
+    last_position_broadcast_index: u64,
+
+    #[var]
+    player_identity: Gd<DclPlayerIdentity>,
+
     #[base]
     base: Base<Node>,
-    current_adapter: Adapter,
-    tls_client: Option<Gd<TlsOptions>>,
-    player_identity: Arc<PlayerIdentity>,
-    last_index: u64,
 }
 
 #[godot_api]
 impl NodeVirtual for CommunicationManager {
     fn init(base: Base<Node>) -> Self {
         CommunicationManager {
+            current_connection: CommsConnection::None,
+            last_position_broadcast_index: 0,
+            player_identity: Gd::new_default(),
             base,
-            current_adapter: Adapter::None,
-            tls_client: None,
-            player_identity: Arc::new(PlayerIdentity::new()),
-            last_index: 0,
         }
     }
 
@@ -52,12 +55,27 @@ impl NodeVirtual for CommunicationManager {
     }
 
     fn process(&mut self, _dt: f64) {
-        match &mut self.current_adapter {
-            Adapter::None => {}
-            Adapter::WaitingForIdentity(adapter_url) => {}
-            Adapter::WsRoom(ws_room) => {
-                ws_room.poll();
-                let chats = ws_room.consume_chats();
+        match &mut self.current_connection {
+            CommsConnection::None => {}
+            CommsConnection::WaitingForIdentity(adapter_url) => {}
+            CommsConnection::SignedLogin(signed_login) => match signed_login.poll() {
+                SignedLoginPollStatus::Pending => {}
+                SignedLoginPollStatus::Complete(response) => {
+                    self.change_adapter(response.fixed_adapter.unwrap_or("offline".into()));
+                }
+                SignedLoginPollStatus::Error(e) => {
+                    tracing::info!("Error in signed login: {:?}", e);
+                    self.current_connection = CommsConnection::None;
+                }
+            },
+            CommsConnection::Connected(adapter) => {
+                let adapter = adapter.as_mut();
+                let cancel_adapter = adapter.poll();
+                let chats = adapter.consume_chats();
+                if cancel_adapter {
+                    self.current_connection = CommsConnection::None;
+                }
+
                 if !chats.is_empty() {
                     let mut chats_variant_array = VariantArray::new();
                     for (address, profile_name, chat) in chats {
@@ -73,40 +91,6 @@ impl NodeVirtual for CommunicationManager {
                         .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
                 }
             }
-            Adapter::SignedLogin(signed_login) => match signed_login.poll() {
-                SignedLoginPollStatus::Pending => {}
-                SignedLoginPollStatus::Complete(response) => {
-                    self.change_adapter(response.fixed_adapter.unwrap_or("offline".into()));
-                }
-                SignedLoginPollStatus::Error(e) => {
-                    tracing::info!("Error in signed login: {:?}", e);
-                    self.current_adapter = Adapter::None;
-                }
-            },
-            Adapter::Livekit(livekit_room) => {
-                if livekit_room.poll() {
-                    let chats = livekit_room.consume_chats();
-                    if !chats.is_empty() {
-                        let mut chats_variant_array = VariantArray::new();
-                        for (address, profile_name, chat) in chats {
-                            let mut chat_arr = VariantArray::new();
-                            // TODO: change to the name?
-                            chat_arr.push(address.to_string().to_variant());
-                            chat_arr.push(profile_name.to_string().to_variant());
-                            chat_arr.push(chat.timestamp.to_variant());
-                            chat_arr.push(chat.message.to_variant());
-
-                            chats_variant_array.push(chat_arr.to_variant());
-                        }
-                        self.base.emit_signal(
-                            "chat_message".into(),
-                            &[chats_variant_array.to_variant()],
-                        );
-                    }
-                } else {
-                    self.current_adapter = Adapter::None;
-                }
-            }
         }
     }
 }
@@ -115,10 +99,6 @@ impl CommunicationManager {}
 
 #[godot_api]
 impl CommunicationManager {
-    fn realm(&self) -> Gd<Node> {
-        self.base.get_node("/root/realm".into()).unwrap()
-    }
-
     #[signal]
     fn chat_message(chats: VariantArray) {}
 
@@ -127,28 +107,33 @@ impl CommunicationManager {
 
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {
-        if let Adapter::Livekit(livekit_room) = &mut self.current_adapter {
-            let mut max_value = 0;
-            let vec = frame
-                .as_slice()
-                .iter()
-                .map(|v| {
-                    let value = ((0.5 * (v.x + v.y)) * i16::MAX as f32) as i16;
+        let CommsConnection::Connected(adapter) = &mut self.current_connection else {
+            return;
+        };
+        if !adapter.support_voice_chat() {
+            return;
+        }
 
-                    max_value = std::cmp::max(max_value, value);
-                    value
-                })
-                .collect::<Vec<i16>>();
+        let mut max_value = 0;
+        let vec = frame
+            .as_slice()
+            .iter()
+            .map(|v| {
+                let value = ((0.5 * (v.x + v.y)) * i16::MAX as f32) as i16;
 
-            if max_value > 0 {
-                livekit_room.broadcast_voice(vec);
-            }
+                max_value = std::cmp::max(max_value, value);
+                value
+            })
+            .collect::<Vec<i16>>();
+
+        if max_value > 0 {
+            adapter.broadcast_voice(vec);
         }
     }
 
     #[func]
     fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
-        let index = self.last_index;
+        let index = self.last_position_broadcast_index;
         let get_packet = || {
             let position_packet = rfc4::Position {
                 index: index as u32,
@@ -166,14 +151,15 @@ impl CommunicationManager {
             }
         };
 
-        let message_sent = match &mut self.current_adapter {
-            Adapter::None | Adapter::SignedLogin(_) | Adapter::WaitingForIdentity(_) => false,
-            Adapter::WsRoom(ws_room) => ws_room.send_rfc4(get_packet(), true),
-            Adapter::Livekit(livekit_room) => livekit_room.send_rfc4(get_packet(), true),
+        let message_sent = match &mut self.current_connection {
+            CommsConnection::None
+            | CommsConnection::SignedLogin(_)
+            | CommsConnection::WaitingForIdentity(_) => false,
+            CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), true),
         };
 
         if message_sent {
-            self.last_index += 1;
+            self.last_position_broadcast_index += 1;
         }
         message_sent
     }
@@ -187,26 +173,23 @@ impl CommunicationManager {
             })),
         };
 
-        match &mut self.current_adapter {
-            Adapter::None | Adapter::SignedLogin(_) | Adapter::WaitingForIdentity(_) => false,
-            Adapter::WsRoom(ws_room) => ws_room.send_rfc4(get_packet(), false),
-            Adapter::Livekit(livekit_room) => livekit_room.send_rfc4(get_packet(), false),
+        match &mut self.current_connection {
+            CommsConnection::None
+            | CommsConnection::SignedLogin(_)
+            | CommsConnection::WaitingForIdentity(_) => false,
+            CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), false),
         }
     }
 
     #[func]
     fn init_rs(&mut self) {
-        let mut realm = self.realm();
         let on_realm_changed =
             Callable::from_object_method(self.base.clone(), StringName::from("_on_realm_changed"));
 
-        realm.connect("realm_changed".into(), on_realm_changed);
-
-        if self.tls_client.is_none() {
-            let tls_client = DclGlobal::singleton().call("get_tls_client".into(), &[]);
-            let tls_client: Gd<TlsOptions> = Gd::from_variant(&tls_client);
-            self.tls_client = Some(tls_client);
-        }
+        DclGlobal::singleton()
+            .bind()
+            .get_realm()
+            .connect("realm_changed".into(), on_realm_changed);
     }
 
     #[func]
@@ -215,8 +198,8 @@ impl CommunicationManager {
             .call_deferred("_on_realm_changed_deferred".into(), &[]);
     }
 
-    fn _internal_get_comms_from_real(&self) -> Option<(String, Option<GodotString>)> {
-        let realm = self.realm();
+    fn _internal_get_comms_from_realm(&self) -> Option<(String, Option<GodotString>)> {
+        let realm = DclGlobal::singleton().bind().get_realm();
         let realm_about = Dictionary::from_variant(&realm.get("realm_about".into()));
         let comms = Dictionary::from_variant(&realm_about.get(StringName::from("comms"))?);
         let comms_protocol = String::from_variant(&comms.get(StringName::from("protocol"))?);
@@ -231,7 +214,7 @@ impl CommunicationManager {
     fn _on_realm_changed_deferred(&mut self) {
         self.clean();
 
-        let comms = self._internal_get_comms_from_real();
+        let comms = self._internal_get_comms_from_realm();
         if comms.is_none() {
             tracing::info!("invalid comms from realm.");
             return;
@@ -253,49 +236,65 @@ impl CommunicationManager {
     }
 
     fn change_adapter(&mut self, comms_fixed_adapter_str: String) {
-        let Some((protocol, address)) = comms_fixed_adapter_str.as_str().split_once(':') else {
+        let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
+        else {
             tracing::warn!("unrecognised fixed adapter string: {comms_fixed_adapter_str}");
             return;
         };
 
         let avatar_scene = DclGlobal::singleton().bind().get_avatars();
-        self.current_adapter = Adapter::None;
+        self.current_connection = CommsConnection::None;
 
-        tracing::info!("change_adapter to protocol {protocol} and address {address}");
+        tracing::info!("change_adapter to protocol {protocol} and address {comms_address}");
+
+        let current_ephemeral_auth_chain = self
+            .player_identity
+            .bind()
+            .try_get_ephemeral_auth_chain()
+            .expect("ephemeral auth chain needed to start a comms connection");
+
+        let player_profile = self.player_identity.bind().profile().clone();
 
         match protocol {
             "ws-room" => {
-                self.current_adapter = Adapter::WsRoom(WebSocketRoom::new(
-                    address,
-                    self.tls_client.as_ref().unwrap().clone(),
-                    self.player_identity.clone(),
+                self.current_connection = CommsConnection::Connected(Box::new(WebSocketRoom::new(
+                    comms_address,
+                    current_ephemeral_auth_chain,
+                    player_profile,
                     avatar_scene,
-                ));
+                )));
             }
             "signed-login" => {
-                let Ok(uri) = Uri::try_from(address.to_string()) else {
-                    tracing::warn!("failed to parse signed login address as a uri: {address}");
+                let Ok(uri) = Uri::try_from(comms_address.to_string()) else {
+                    tracing::warn!(
+                        "failed to parse signed login comms_address as a uri: {comms_address}"
+                    );
                     return;
                 };
 
-                let realm_url = self.realm().get("realm_url".into()).to_string();
+                let realm_url = DclGlobal::singleton()
+                    .bind()
+                    .get_realm()
+                    .get("realm_url".into())
+                    .to_string();
                 let Ok(origin) = Uri::try_from(&realm_url) else {
-                    tracing::warn!("failed to parse origin address as a uri: {realm_url}");
+                    tracing::warn!("failed to parse origin comms_address as a uri: {realm_url}");
                     return;
                 };
 
-                self.current_adapter = Adapter::SignedLogin(SignedLogin::new(
+                self.current_connection = CommsConnection::SignedLogin(SignedLogin::new(
                     uri,
-                    self.player_identity.wallet(),
+                    current_ephemeral_auth_chain,
                     SignedLoginMeta::new(true, origin),
                 ));
             }
             "livekit" => {
-                self.current_adapter = Adapter::Livekit(LivekitRoom::new(
-                    address.to_string(),
-                    self.player_identity.clone(),
+                self.current_connection = CommsConnection::Connected(Box::new(LivekitRoom::new(
+                    comms_address.to_string(),
+                    current_ephemeral_auth_chain.signer(),
+                    player_profile,
                     avatar_scene,
-                ));
+                )));
             }
             "offline" => {
                 tracing::info!("set offline");
@@ -307,32 +306,31 @@ impl CommunicationManager {
     }
 
     fn clean(&mut self) {
-        match &self.current_adapter {
-            Adapter::None | Adapter::SignedLogin(_) | Adapter::WaitingForIdentity(_) => {}
-            Adapter::Livekit(_livekit_room) => {
-                // livekit_room.clean();
-            }
-            Adapter::WsRoom(ws_room) => {
-                ws_room.clean();
+        match &mut self.current_connection {
+            CommsConnection::None
+            | CommsConnection::SignedLogin(_)
+            | CommsConnection::WaitingForIdentity(_) => {}
+            CommsConnection::Connected(adapter) => {
+                adapter.clean();
             }
         }
 
-        self.current_adapter = Adapter::None;
+        self.current_connection = CommsConnection::None;
     }
 
     #[func]
     fn update_profile_avatar(&mut self, new_profile: Dictionary) {
-        let player_identity = Arc::<PlayerIdentity>::make_mut(&mut self.player_identity);
-        player_identity.update_profile_from_dictionary(&new_profile);
+        self.player_identity
+            .bind_mut()
+            .update_profile_from_dictionary(&new_profile);
 
-        match &mut self.current_adapter {
-            Adapter::None | Adapter::SignedLogin(_) | Adapter::WaitingForIdentity(_) => {}
-            Adapter::Livekit(_livekit_room) => {
-                // TODO: implement
-                // livekit_room.change_profile(self.player_identity.clone());
-            }
-            Adapter::WsRoom(ws_room) => {
-                ws_room.change_profile(self.player_identity.clone());
+        match &mut self.current_connection {
+            CommsConnection::None
+            | CommsConnection::SignedLogin(_)
+            | CommsConnection::WaitingForIdentity(_) => {}
+            CommsConnection::Connected(adapter) => {
+                let player_profile = self.player_identity.bind().profile().clone();
+                adapter.change_profile(player_profile);
             }
         }
 

@@ -6,3 +6,10 @@
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("1_8ropt")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 48.0
+offset_bottom = 28.0

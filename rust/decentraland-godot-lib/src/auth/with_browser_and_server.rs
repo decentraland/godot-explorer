@@ -20,9 +20,11 @@ struct GetAccountResponse {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct SignToServerResponseData {
     account: String,
     signature: String,
+    chain_id: u64,
 }
 
 #[derive(Deserialize, Debug)]
@@ -135,9 +137,9 @@ pub async fn get_account(
 
 pub async fn remote_sign_message(
     payload: &[u8],
-    by_signer: Option<&H160>,
+    by_signer: Option<H160>,
     url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
-) -> Result<(H160, String), ()> {
+) -> Result<(H160, String, u64), ()> {
     let address = if by_signer.is_some() {
         format!("{:#x}", by_signer.unwrap())
     } else {
@@ -162,7 +164,11 @@ pub async fn remote_sign_message(
     let Some(account) = sign_payload.data.account.as_h160() else {
         return Err(());
     };
-    Ok((account, sign_payload.data.signature))
+    Ok((
+        account,
+        sign_payload.data.signature,
+        sign_payload.data.chain_id,
+    ))
 }
 
 #[cfg(test)]
@@ -174,7 +180,8 @@ mod test {
     #[tokio::test]
     async fn test_gen_id() {
         let (sx, _rx) = tokio::sync::mpsc::channel(100);
-        let Ok((signer, signature)) = remote_sign_message("hello".as_bytes(), None, sx).await
+        let Ok((signer, signature, chain_id)) =
+            remote_sign_message("hello".as_bytes(), None, sx).await
         else {
             return;
         };
