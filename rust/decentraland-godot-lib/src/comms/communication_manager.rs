@@ -29,6 +29,7 @@ pub struct CommunicationManager {
     #[base]
     base: Base<Node>,
     current_adapter: Adapter,
+    current_adapter_conn_str: String,
     tls_client: Option<Gd<TlsOptions>>,
     player_identity: Arc<PlayerIdentity>,
     last_index: u64,
@@ -40,6 +41,7 @@ impl NodeVirtual for CommunicationManager {
         CommunicationManager {
             base,
             current_adapter: Adapter::None,
+            current_adapter_conn_str: String::default(),
             tls_client: None,
             player_identity: Arc::new(PlayerIdentity::new()),
             last_index: 0,
@@ -250,6 +252,11 @@ impl CommunicationManager {
         self.change_adapter(comms_fixed_adapter_str);
     }
 
+    #[func]
+    pub fn get_current_adapter_conn_str(&self) -> GodotString {
+        GodotString::from(self.current_adapter_conn_str.clone())
+    }
+
     fn change_adapter(&mut self, comms_fixed_adapter_str: String) {
         let Some((protocol, address)) = comms_fixed_adapter_str.as_str().split_once(':') else {
             tracing::warn!("unrecognised fixed adapter string: {comms_fixed_adapter_str}");
@@ -258,6 +265,7 @@ impl CommunicationManager {
 
         let avatar_scene = DclGlobal::singleton().bind().get_avatars();
         self.current_adapter = Adapter::None;
+        self.current_adapter_conn_str = comms_fixed_adapter_str.clone();
 
         tracing::info!("change_adapter to protocol {protocol} and address {address}");
 
