@@ -80,10 +80,12 @@ func _ready():
 
 	floor_snap_length = 0.2
 
+	avatar.async_update_avatar(Global.config.avatar_profile)
+	Global.comms.player_identity.profile_changed.connect(self._on_player_profile_changed)
+
 
 func _on_player_profile_changed(new_profile: Dictionary):
 	avatar.async_update_avatar(new_profile)
-	Global.avatars.update_primary_player_profile(new_profile)
 
 
 func _on_param_changed(_param):

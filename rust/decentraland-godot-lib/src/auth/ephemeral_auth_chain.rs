@@ -184,37 +184,3 @@ impl<'de> Deserialize<'de> for EphemeralAuthChain {
         deserializer.deserialize_struct("ephemeral_auth_chain", FIELDS, EphemeralAuthChainVisitor)
     }
 }
-
-// // Test serialization
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use ethers::signers::LocalWallet;
-//     use rand::thread_rng;
-//     use serde_json::json;
-
-//     #[test]
-//     fn test_serialize() {
-//         let signer_wallet = LocalWallet::new(&mut thread_rng());
-//         let local_wallet = LocalWallet::new(&mut thread_rng());
-//         let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
-//         let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
-
-//         let signer = H160::from_low_u64_be(0xdeadbeef);
-//         let ephemeral_keys = LocalWallet::new(&mut rand::thread_rng());
-//         let auth_chain = SimpleAuthChain::new(signer, vec![ephemeral_keys.address()]);
-//         let expiration = std::time::SystemTime::now();
-
-//         let ephemeral_auth_chain = EphemeralAuthChain::new(
-//             signer,
-//             ephemeral_keys.signer().to_bytes().to_vec(),
-//             auth_chain,
-//             expiration,
-//         );
-
-//         let serialized = serde_json::to_string(&ephemeral_auth_chain).unwrap();
-//         let expected = json!({
-//             "signer": "0x0000"
-//         });
-//     }
-// }

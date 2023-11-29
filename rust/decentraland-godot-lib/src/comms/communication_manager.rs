@@ -107,9 +107,6 @@ impl CommunicationManager {
     #[signal]
     fn chat_message(chats: VariantArray) {}
 
-    #[signal]
-    fn profile_changed(new_profile: Dictionary) {}
-
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {
         let CommsConnection::Connected(adapter) = &mut self.current_connection else {
@@ -331,11 +328,7 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn update_profile_avatar(&mut self, new_profile: Dictionary) {
-        self.player_identity
-            .bind_mut()
-            .update_profile_from_dictionary(&new_profile);
-
+    fn _on_player_identity_profile_changed(&mut self, _new_profile: Dictionary) {
         match &mut self.current_connection {
             CommsConnection::None
             | CommsConnection::SignedLogin(_)
@@ -345,8 +338,13 @@ impl CommunicationManager {
                 adapter.change_profile(player_profile);
             }
         }
+    }
 
-        self.base
-            .emit_signal("profile_changed".into(), &[new_profile.to_variant()]);
+    #[func]
+    fn disconnect(&mut self, sign_out_session: bool) {
+        self.clean();
+        if sign_out_session {
+            self.player_identity.bind_mut().logout();
+        }
     }
 }

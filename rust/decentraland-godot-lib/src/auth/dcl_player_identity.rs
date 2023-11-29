@@ -1,18 +1,26 @@
+use ethers::signers::LocalWallet;
 use ethers::types::H160;
 use godot::prelude::*;
+use rand::thread_rng;
 
 use crate::comms::profile::UserProfile;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
+use super::auth_identity::create_local_ephemeral;
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
-use super::wallet::AsH160;
+use super::wallet::{AsH160, Wallet};
 use super::with_browser_and_server::RemoteReportState;
+
+enum CurrentWallet {
+    Remote(RemoteWallet),
+    Local { wallet: Wallet, keys: Vec<u8> },
+}
 
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclPlayerIdentity {
-    remote_wallet: Option<RemoteWallet>,
+    wallet: Option<CurrentWallet>,
     ephemeral_auth_chain: Option<EphemeralAuthChain>,
 
     remote_report_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
@@ -30,7 +38,7 @@ impl NodeVirtual for DclPlayerIdentity {
         let (remote_report_sender, remote_report_receiver) = tokio::sync::mpsc::channel(100);
 
         Self {
-            remote_wallet: None,
+            wallet: None,
             ephemeral_auth_chain: None,
             remote_report_receiver,
             remote_report_sender,
@@ -63,13 +71,16 @@ impl DclPlayerIdentity {
     fn need_open_url(&self, url: GodotString, description: GodotString);
 
     #[signal]
+    fn logout(&self);
+
+    #[signal]
     fn wallet_connected(&self, address: GodotString, chain_id: u64);
 
     #[signal]
-    fn profile_changed(&self, address: GodotString, chain_id: u64);
+    fn profile_changed(&self, new_profile: Dictionary);
 
     #[func]
-    fn try_set_wallet(
+    fn try_set_remote_wallet(
         &mut self,
         address_string: GodotString,
         chain_id: u64,
@@ -96,29 +107,60 @@ impl DclPlayerIdentity {
             }
         };
 
-        self._update_wallet(address, chain_id, ephemeral_auth_chain);
+        self._update_remote_wallet(address, chain_id, ephemeral_auth_chain);
         true
     }
 
-    fn _update_wallet(
+    fn _update_remote_wallet(
         &mut self,
         account_address: H160,
         chain_id: u64,
         ephemeral_auth_chain: EphemeralAuthChain,
     ) {
-        self.remote_wallet = Some(RemoteWallet::new(
+        self.wallet = Some(CurrentWallet::Remote(RemoteWallet::new(
             account_address,
             chain_id,
             self.remote_report_sender.clone(),
-        ));
+        )));
         self.ephemeral_auth_chain = Some(ephemeral_auth_chain);
         self.profile.content.user_id = Some(format!("{:#x}", account_address));
+
+        let address = self.address();
         self.base.call_deferred(
             "emit_signal".into(),
             &[
                 "wallet_connected".to_variant(),
-                format!("{:#x}", self.remote_wallet.as_ref().unwrap().address()).to_variant(),
+                format!("{:#x}", address).to_variant(),
                 chain_id.to_variant(),
+            ],
+        );
+    }
+
+    fn _update_local_wallet(
+        &mut self,
+        local_wallet_bytes: &[u8],
+        ephemeral_auth_chain: EphemeralAuthChain,
+    ) {
+        let local_wallet = Wallet::new_from_inner(Box::new(
+            LocalWallet::from_bytes(local_wallet_bytes).unwrap(),
+        ));
+
+        self.wallet = Some(CurrentWallet::Local {
+            wallet: local_wallet,
+            keys: Vec::from_iter(local_wallet_bytes.iter().cloned()),
+        });
+
+        self.ephemeral_auth_chain = Some(ephemeral_auth_chain);
+
+        let address = format!("{:#x}", self.address());
+        self.profile.content.user_id = Some(address.clone());
+
+        self.base.call_deferred(
+            "emit_signal".into(),
+            &[
+                "wallet_connected".to_variant(),
+                address.to_variant(),
+                1_u64.to_variant(),
             ],
         );
     }
@@ -126,6 +168,14 @@ impl DclPlayerIdentity {
     #[func]
     fn _error_getting_wallet(&mut self, error_str: GodotString) {
         tracing::error!("error getting wallet {:?}", error_str);
+    }
+
+    #[func]
+    fn create_guest_account(&mut self) {
+        let local_wallet = LocalWallet::new(&mut thread_rng());
+        let local_wallet_bytes = local_wallet.signer().to_bytes().to_vec();
+        let ephemeral_auth_chain = create_local_ephemeral(&local_wallet);
+        self._update_local_wallet(local_wallet_bytes.as_slice(), ephemeral_auth_chain);
     }
 
     #[func]
@@ -149,7 +199,7 @@ impl DclPlayerIdentity {
                             .expect("serialize ephemeral auth chain");
 
                     this.call_deferred(
-                        "try_set_wallet".into(),
+                        "try_set_remote_wallet".into(),
                         &[
                             format!("{:#x}", wallet.address()).to_variant(),
                             wallet.chain_id().to_variant(),
@@ -178,6 +228,9 @@ impl DclPlayerIdentity {
         let Some(ephemeral_auth_chain_str) = dict.get("ephemeral_auth_chain") else {
             return false;
         };
+        let local_wallet = dict
+            .get("local_wallet")
+            .unwrap_or(PackedByteArray::new().to_variant());
 
         let Some(account_address) = account_address.to_string().as_h160() else {
             return false;
@@ -190,37 +243,66 @@ impl DclPlayerIdentity {
         ) else {
             return false;
         };
+        let Ok(local_wallet_bytes) = local_wallet.try_to::<PackedByteArray>() else {
+            return false;
+        };
 
-        self._update_wallet(account_address, chain_id, ephemeral_auth_chain);
-        true
+        if !local_wallet_bytes.is_empty() {
+            self._update_local_wallet(local_wallet_bytes.as_slice(), ephemeral_auth_chain);
+            true
+        } else {
+            self._update_remote_wallet(account_address, chain_id, ephemeral_auth_chain);
+            true
+        }
     }
 
     #[func]
     fn get_recover_account_to(&self, mut dict: Dictionary) -> bool {
-        if self.remote_wallet.is_none() || self.ephemeral_auth_chain.is_none() {
+        if self.wallet.is_none() || self.ephemeral_auth_chain.is_none() {
             return false;
         }
-        let remote_wallet = self.remote_wallet.as_ref().unwrap();
+
+        let chain_id = match &self.wallet {
+            Some(CurrentWallet::Remote(wallet)) => wallet.chain_id(),
+            _ => 1,
+        };
+
+        if let Some(CurrentWallet::Local { wallet: _, keys }) = &self.wallet {
+            dict.insert(
+                "local_wallet",
+                PackedByteArray::from_iter(keys.iter().cloned()).to_variant(),
+            );
+        }
+
         dict.insert(
             "account_address",
-            format!("{:#x}", self.remote_wallet.as_ref().unwrap().address()).to_variant(),
+            format!("{:#x}", self.address()).to_variant(),
         );
-        dict.insert("chain_id", remote_wallet.chain_id().to_variant());
+        dict.insert("chain_id", chain_id.to_variant());
         dict.insert(
             "ephemeral_auth_chain",
             serde_json::to_string(&self.ephemeral_auth_chain.as_ref().unwrap())
                 .expect("serialize ephemeral auth chain")
                 .to_variant(),
         );
+
         true
+    }
+
+    #[func]
+    pub fn get_profile(&self) -> Dictionary {
+        self.profile
+            .content
+            .to_godot_dictionary(&self.profile.base_url)
+    }
+
+    #[func]
+    pub fn update_profile(&mut self, dict: Dictionary) {
+        self.update_profile_from_dictionary(&dict);
     }
 }
 
 impl DclPlayerIdentity {
-    pub fn try_get_wallet(&self) -> Option<RemoteWallet> {
-        self.remote_wallet.clone()
-    }
-
     pub fn try_get_ephemeral_auth_chain(&self) -> Option<EphemeralAuthChain> {
         self.ephemeral_auth_chain.clone()
     }
@@ -229,12 +311,37 @@ impl DclPlayerIdentity {
         &self.profile
     }
 
+    pub fn is_connected(&self) -> bool {
+        self.wallet.is_some() && self.ephemeral_auth_chain.is_some()
+    }
+
+    pub fn address(&self) -> H160 {
+        match &self.wallet {
+            Some(CurrentWallet::Remote(wallet)) => wallet.address(),
+            Some(CurrentWallet::Local { wallet, keys: _ }) => wallet.address(),
+            None => panic!("wallet not initialized"),
+        }
+    }
+
     pub fn update_profile_from_dictionary(&mut self, dict: &Dictionary) {
         self.profile.content.copy_from_godot_dictionary(dict);
         self.profile.version += 1;
+        self.base.call_deferred(
+            "emit_signal".into(),
+            &["profile_changed".to_variant(), dict.to_variant()],
+        );
     }
 
-    pub fn is_connected(&self) -> bool {
-        self.remote_wallet.is_some() && self.ephemeral_auth_chain.is_some()
+    // is not exposed to godot, because it should only be called by comms
+    pub fn logout(&mut self) {
+        if !self.is_connected() {
+            return;
+        }
+
+        self.wallet = None;
+        self.ephemeral_auth_chain = None;
+        self.profile = UserProfile::default();
+        self.base
+            .call_deferred("emit_signal".into(), &["logout".to_variant()]);
     }
 }

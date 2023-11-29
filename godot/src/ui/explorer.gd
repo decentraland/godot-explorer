@@ -1,5 +1,7 @@
 extends Node
 
+var sign_in_resource = preload("res://src/ui/components/auth/sign_in.tscn")
+
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
@@ -124,34 +126,28 @@ func _ready():
 		self._on_panel_bottom_left_preview_hot_reload
 	)
 
-	Global.comms.player_identity.need_open_url.connect(self._on_need_open_url)
-	Global.comms.player_identity.wallet_connected.connect(self._on_wallet_connected)
+	Global.comms.player_identity.logout.connect(self._on_player_logout)
+	Global.comms.player_identity.profile_changed.connect(
+		Global.avatars.update_primary_player_profile
+	)
 
 	if not Global.comms.player_identity.try_recover_account(Global.config.session_account):
-		Global.comms.player_identity.try_connect_account()
 		Global.scene_runner.set_pause(true)
+		ui_root.add_child(sign_in_resource.instantiate())
 	else:
 		# TODO: fetch profile
-		Global.avatars.update_primary_player_profile(Global.config.avatar_profile)
-		Global.comms.update_profile_avatar(Global.config.avatar_profile)
-		player.avatar.async_update_avatar(Global.config.avatar_profile)
+		Global.comms.player_identity.update_profile(Global.config.avatar_profile)
 
 
-func _on_need_open_url(url: String, _description: String) -> void:
-	OS.shell_open(url)
+func _on_player_logout():
+	# TODO: clean all UI ?
+	control_menu.close()
 
+	# Clean stored session
+	Global.config.session_account = {}
+	Global.config.save_to_settings_file()
 
-func _on_wallet_connected(_address: String, _chain_id: int) -> void:
-	Global.scene_runner.set_pause(false)
-	var new_stored_account := {}
-	if Global.comms.player_identity.get_recover_account_to(new_stored_account):
-		Global.config.session_account = new_stored_account
-		Global.config.save_to_settings_file()
-
-	# TODO: check when this is necessary, after fetching the profile
-	Global.avatars.update_primary_player_profile(Global.config.avatar_profile)
-	Global.comms.update_profile_avatar(Global.config.avatar_profile)
-	player.avatar.async_update_avatar(Global.config.avatar_profile)
+	ui_root.add_child(sign_in_resource.instantiate())
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:

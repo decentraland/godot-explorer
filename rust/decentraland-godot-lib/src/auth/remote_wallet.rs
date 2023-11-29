@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use ethers::{signers::WalletError, types::H160};
 
 use super::{
-    auth_identity::try_create_ephemeral,
+    auth_identity::try_create_remote_ephemeral,
     ephemeral_auth_chain::EphemeralAuthChain,
     wallet::ObjSafeWalletSigner,
     with_browser_and_server::{get_account, remote_sign_message, RemoteReportState},
@@ -30,7 +30,8 @@ impl RemoteWallet {
     pub async fn with_auth_identity(
         report_url_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
     ) -> Result<(Self, EphemeralAuthChain), ()> {
-        let (ephemeral_wallet, chain_id) = try_create_ephemeral(report_url_sender.clone()).await?;
+        let (ephemeral_wallet, chain_id) =
+            try_create_remote_ephemeral(report_url_sender.clone()).await?;
 
         Ok((
             Self {

@@ -62,6 +62,10 @@ theme_override_constants/margin_bottom = 20
 [node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Background/HBoxContainer/Control"]
 layout_mode = 2
 
+[node name="Button_Logout" type="Button" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer"]
+layout_mode = 2
+text = "Log out"
+
 [node name="HBoxContainer3" type="HBoxContainer" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 0
@@ -388,6 +392,7 @@ layout_mode = 2
 position = Vector2i(100, 0)
 visible = false
 
+[connection signal="pressed" from="ColorRect_Background/HBoxContainer/Control/VBoxContainer/Button_Logout" to="." method="_on_button_logout_pressed"]
 [connection signal="text_changed" from="ColorRect_Background/HBoxContainer/Control/VBoxContainer/LineEdit_Name" to="." method="_on_line_edit_name_text_changed"]
 [connection signal="pressed" from="ColorRect_Background/HBoxContainer/Control/VBoxContainer/Button_SaveProfile" to="." method="_on_button_save_profile_pressed"]
 [connection signal="toggle_color_panel" from="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker" to="." method="_on_skin_color_picker_toggle_color_panel"]

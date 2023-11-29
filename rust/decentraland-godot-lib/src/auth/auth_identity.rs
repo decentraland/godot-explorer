@@ -1,6 +1,6 @@
 use super::{
     ephemeral_auth_chain::EphemeralAuthChain,
-    wallet::{SimpleAuthChain, Wallet},
+    wallet::{ObjSafeWalletSigner, SimpleAuthChain, Wallet},
     with_browser_and_server::{remote_sign_message, RemoteReportState},
 };
 use chrono::{DateTime, Utc};
@@ -18,7 +18,7 @@ fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemT
     )
 }
 
-pub async fn try_create_ephemeral_with_account(
+pub async fn try_create_remote_ephemeral_with_account(
     signer: H160,
     sender: tokio::sync::mpsc::Sender<RemoteReportState>,
 ) -> Result<(H160, Wallet, Signature, u64), ()> {
@@ -32,7 +32,7 @@ pub async fn try_create_ephemeral_with_account(
     Ok((signer, ephemeral_wallet, signature, chain_id))
 }
 
-pub async fn try_create_ephemeral(
+pub async fn try_create_remote_ephemeral(
     sender: tokio::sync::mpsc::Sender<RemoteReportState>,
 ) -> Result<(EphemeralAuthChain, u64), ()> {
     let local_wallet = LocalWallet::new(&mut thread_rng());
@@ -54,20 +54,28 @@ pub async fn try_create_ephemeral(
     Ok((ephemeral_auth_chain, chain_id))
 }
 
-#[cfg(test)]
-mod test {
-    // #[traced_test]
-    // #[tokio::test]
-    // async fn test_try_create_ephemeral() {
-    //     let (sx, rx) = tokio::sync::mpsc::channel(100);
-    //     let Ok((signer, wallet, signature)) = try_create_ephemeral(sx).await else {
-    //         return;
-    //     };
-    //     tracing::info!(
-    //         "signer {:?} signature {:?} wallet {:?}",
-    //         signer,
-    //         signature,
-    //         wallet.address()
-    //     );
-    // }
+pub fn create_local_ephemeral(signer_wallet: &LocalWallet) -> EphemeralAuthChain {
+    let local_wallet = LocalWallet::new(&mut thread_rng());
+    let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
+    let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
+    let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
+    let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
+    let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
+
+    let signature =
+        futures_lite::future::block_on(signer_wallet.sign_message(ephemeral_message.as_bytes()))
+            .expect("signing with local wallet failed");
+
+    let auth_chain = SimpleAuthChain::new_ephemeral_identity_auth_chain(
+        signer_wallet.address(),
+        ephemeral_message,
+        signature,
+    );
+
+    EphemeralAuthChain::new(
+        signer_wallet.address(),
+        signing_key_bytes,
+        auth_chain,
+        expiration,
+    )
 }
