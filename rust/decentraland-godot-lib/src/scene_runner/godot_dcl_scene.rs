@@ -10,7 +10,7 @@ use crate::{
     },
     godot_classes::{dcl_scene_node::DclSceneNode, dcl_ui_control::DclUiControl},
 };
-use godot::prelude::*;
+use godot::{engine::Json, prelude::*};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -105,6 +105,9 @@ impl SceneDefinition {
             .collect::<Result<Vec<_>, VariantConversionError>>()
             .map_err(|v| v.to_string())?;
 
+        let metadata =
+            Json::stringify(dict.get("metadata").unwrap_or_default().to_variant()).to_string();
+
         Ok(Self {
             main_crdt_path: main_crdt_path.to::<GodotString>().to_string(),
             path: path.to::<GodotString>().to_string(),
@@ -114,6 +117,7 @@ impl SceneDefinition {
             is_global: is_global.to::<bool>(),
             title: title.to::<GodotString>().to_string(),
             entity_id: entity_id.to::<GodotString>().to_string(),
+            metadata,
         })
     }
 }

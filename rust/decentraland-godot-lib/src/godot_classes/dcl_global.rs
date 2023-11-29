@@ -28,6 +28,8 @@ pub struct DclGlobal {
     pub realm: Gd<DclRealm>,
     #[var]
     pub portable_experience_controller: Gd<DclPortableExperienceController>,
+    #[var]
+    pub preview_mode: bool,
 }
 
 #[godot_api]
@@ -63,6 +65,7 @@ impl NodeVirtual for DclGlobal {
             tokio_runtime,
             realm: Gd::new_default(),
             portable_experience_controller: Gd::new_default(),
+            preview_mode: false,
         }
     }
 }

@@ -28,6 +28,7 @@ enum CommsConnection {
 #[class(base=Node)]
 pub struct CommunicationManager {
     current_connection: CommsConnection,
+    current_connection_str: String,
     last_position_broadcast_index: u64,
 
     #[var]
@@ -42,6 +43,7 @@ impl NodeVirtual for CommunicationManager {
     fn init(base: Base<Node>) -> Self {
         CommunicationManager {
             current_connection: CommsConnection::None,
+            current_connection_str: String::default(),
             last_position_broadcast_index: 0,
             player_identity: Gd::new_default(),
             base,
@@ -252,6 +254,7 @@ impl CommunicationManager {
         }
 
         self.current_connection = CommsConnection::None;
+        self.current_connection_str = comms_fixed_adapter_str.clone();
         let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
         tracing::info!("change_adapter to protocol {protocol} and address {comms_address}");
@@ -325,6 +328,7 @@ impl CommunicationManager {
         }
 
         self.current_connection = CommsConnection::None;
+        self.current_connection_str = String::default();
     }
 
     #[func]
@@ -346,5 +350,10 @@ impl CommunicationManager {
         if sign_out_session {
             self.player_identity.bind_mut().logout();
         }
+    }
+
+    #[func]
+    pub fn get_current_adapter_conn_str(&self) -> GodotString {
+        GodotString::from(self.current_connection_str.clone())
     }
 }

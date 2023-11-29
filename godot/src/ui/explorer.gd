@@ -316,7 +316,9 @@ func _on_line_edit_command_submit_message(message: String):
 			# TODO: unknown command
 	else:
 		Global.comms.send_chat(message)
-		panel_chat.on_chats_arrived([["0xNULL", "Godot User", 0, message]])
+		panel_chat.on_chats_arrived(
+			[[player.avatar.avatar_id, player.avatar.avatar_name, 0, message]]
+		)
 
 
 func _on_control_menu_request_pause_scenes(enabled):
