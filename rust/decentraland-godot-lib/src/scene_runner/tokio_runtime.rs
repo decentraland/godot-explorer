@@ -12,7 +12,7 @@ pub struct TokioRuntime {
 }
 
 #[godot_api]
-impl NodeVirtual for TokioRuntime {
+impl INode for TokioRuntime {
     fn init(_base: Base<Node>) -> Self {
         match Runtime::new() {
             Ok(rt) => Self {

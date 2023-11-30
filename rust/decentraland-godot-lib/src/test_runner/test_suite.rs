@@ -161,7 +161,7 @@ impl TestRunnerSuite {
 }
 
 #[godot_api]
-impl NodeVirtual for TestRunnerSuite {
+impl INode for TestRunnerSuite {
     fn init(_base: Base<Node>) -> Self {
         TestRunnerSuite {
             total: 0,
@@ -248,9 +248,9 @@ fn get_execution_time(test: &Variant) -> Option<Duration> {
     Some(Duration::from_secs_f64(seconds))
 }
 
-fn get_errors(test: &Variant) -> Array<GodotString> {
+fn get_errors(test: &Variant) -> Array<GString> {
     test.call("get", &["errors".to_variant()])
-        .try_to::<Array<GodotString>>()
+        .try_to::<Array<GString>>()
         .unwrap_or_default()
 }
 

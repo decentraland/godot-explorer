@@ -31,7 +31,7 @@ pub struct DclUiDropdown {
 }
 
 #[godot_api]
-impl NodeVirtual for DclUiDropdown {
+impl INode for DclUiDropdown {
     fn init(base: Base<OptionButton>) -> Self {
         Self {
             base,

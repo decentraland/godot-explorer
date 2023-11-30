@@ -174,8 +174,8 @@ impl From<&TextureUnion> for Option<DclTexture> {
 impl DclTexture {
     fn with_hash(&mut self, content_mapping_files: &godot::prelude::Dictionary) {
         if let DclSourceTex::Texture(file_path) = &mut self.source {
-            let content_hash = content_mapping_files
-                .get(godot::prelude::GodotString::from(file_path.to_lowercase()));
+            let content_hash =
+                content_mapping_files.get(godot::prelude::GString::from(file_path.to_lowercase()));
 
             if content_hash.is_none() {
                 return;

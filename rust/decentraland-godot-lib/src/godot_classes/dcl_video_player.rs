@@ -9,7 +9,7 @@ pub struct DclVideoPlayer {
     dcl_volume: f32,
 
     #[export]
-    dcl_source: GodotString,
+    dcl_source: GString,
 
     #[export]
     dcl_texture: Option<Gd<ImageTexture>>,
@@ -26,7 +26,7 @@ pub struct DclVideoPlayer {
 #[godot_api]
 impl DclVideoPlayer {
     #[func]
-    fn resolve_resource(&mut self, file_path: GodotString) {
+    fn resolve_resource(&mut self, file_path: GString) {
         let Some(sender) = self.resolve_resource_sender.take() else {
             return;
         };

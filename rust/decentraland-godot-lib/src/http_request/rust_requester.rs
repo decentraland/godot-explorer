@@ -22,7 +22,7 @@ impl RustHttpRequester {
                         //     response.request_option.url.clone(),
                         //     !response.is_error()
                         // );
-                        Variant::from(Gd::new(response))
+                        Variant::from(Gd::from_object(response))
                     }
                     Err(error) => {
                         tracing::info!(
@@ -31,7 +31,7 @@ impl RustHttpRequester {
                             error.error_message
                         );
 
-                        Variant::from(Gd::new(error))
+                        Variant::from(Gd::from_object(error))
                     }
                 }
             }
@@ -40,12 +40,7 @@ impl RustHttpRequester {
     }
 
     #[func]
-    fn request_file(
-        &mut self,
-        reference_id: u32,
-        url: GodotString,
-        absolute_path: GodotString,
-    ) -> u32 {
+    fn request_file(&mut self, reference_id: u32, url: GString, absolute_path: GString) -> u32 {
         // tracing::info!(
         //     "Requesting file: {:?} in {absolute_path}  ",
         //     url.to_string()
@@ -68,9 +63,9 @@ impl RustHttpRequester {
     fn request_json(
         &mut self,
         reference_id: u32,
-        url: GodotString,
+        url: GString,
         method: godot::engine::http_client::Method,
-        body: GodotString,
+        body: GString,
         headers: VariantArray,
     ) -> u32 {
         tracing::info!("Requesting json: {:?}", url.to_string());
@@ -112,7 +107,7 @@ impl RustHttpRequester {
 }
 
 #[godot_api]
-impl NodeVirtual for RustHttpRequester {
+impl INode for RustHttpRequester {
     fn init(_base: Base<Node>) -> Self {
         RustHttpRequester {
             http_requester: super::http_requester::HttpRequester::new(

@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { git = "https://github.com/godot-rust/gdext", rev = "a81fc410" }
+godot = { git = "https://github.com/godot-rust/gdext", rev = "e9177f22" }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
@@ -66,4 +66,4 @@ prost-build = "0.11.8"
 
 [patch."https://github.com/godot-rust/godot4-prebuilt".godot4-prebuilt]
 git = "https://github.com//godot-rust/godot4-prebuilt"
-branch = "4.1.3"
+branch = "4.2"

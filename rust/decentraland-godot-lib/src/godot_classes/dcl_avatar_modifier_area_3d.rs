@@ -15,7 +15,7 @@ pub struct DclAvatarModifierArea3D {
     avatar_modifiers: Array<i32>,
 
     #[export]
-    exclude_ids: Array<GodotString>,
+    exclude_ids: Array<GString>,
 
     #[export]
     area: Vector3,

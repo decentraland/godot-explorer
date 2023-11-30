@@ -420,7 +420,7 @@ func apply_texture_and_mask(
 
 
 func _process(delta):
-	# TODO: maybe a gdext crate bug? when process implement the Node3DVirtual, super(delta) doesn't work :/
+	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
 
 

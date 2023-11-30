@@ -17,7 +17,7 @@ pub struct DclSceneNode {
 #[godot_api]
 impl DclSceneNode {
     pub fn new_alloc(scene_id: i32, is_global: bool) -> Gd<Self> {
-        let mut obj = Gd::with_base(|_base| {
+        let mut obj = Gd::from_init_fn(|_base| {
             // accepts the base and returns a constructed object containing it
             DclSceneNode {
                 _base,
@@ -26,10 +26,7 @@ impl DclSceneNode {
                 last_tick_number: -1,
             }
         });
-        obj.set_name(GodotString::from(format!(
-            "scene_id_{:?}",
-            scene_id.clone()
-        )));
+        obj.set_name(GString::from(format!("scene_id_{:?}", scene_id.clone())));
         obj
     }
 

@@ -51,7 +51,7 @@ pub fn update_audio_source(
                     .unwrap()
                     .cast::<DclAudioSource>();
 
-                    new_audio_source.set_name(GodotString::from("AudioSource"));
+                    new_audio_source.set_name(GString::from("AudioSource"));
                     node_3d.add_child(new_audio_source.clone().upcast());
                     scene
                         .audio_sources
@@ -62,7 +62,7 @@ pub fn update_audio_source(
                 audio_source.call_deferred("_async_refresh_data".into(), &[]);
 
                 let mut audio_source = audio_source.bind_mut();
-                audio_source.set_dcl_audio_clip_url(GodotString::from(new_value.audio_clip_url));
+                audio_source.set_dcl_audio_clip_url(GString::from(new_value.audio_clip_url));
                 audio_source.set_dcl_loop_activated(new_value.r#loop.unwrap_or(false));
                 audio_source.set_dcl_playing(new_value.playing.unwrap_or(false));
                 audio_source.set_dcl_pitch(new_value.pitch.unwrap_or(1.0));
