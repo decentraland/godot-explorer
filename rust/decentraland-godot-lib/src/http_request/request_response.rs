@@ -1,4 +1,4 @@
-use godot::prelude::{GodotString, Variant};
+use godot::prelude::{GString, Variant};
 
 #[derive(Debug)]
 pub enum ResponseEnum {
@@ -72,8 +72,8 @@ impl RequestResponse {
     }
 
     #[func]
-    pub fn get_error(&self) -> GodotString {
-        GodotString::from(self.response_data.as_ref().unwrap_err())
+    pub fn get_error(&self) -> GString {
+        GString::from(self.response_data.as_ref().unwrap_err())
     }
 
     #[func]
@@ -92,7 +92,7 @@ impl RequestResponse {
 
         match response {
             ResponseEnum::String(string) => {
-                godot::engine::Json::parse_string(GodotString::from(string))
+                godot::engine::Json::parse_string(GString::from(string))
             }
             _ => Variant::default(),
         }
@@ -103,24 +103,24 @@ impl RequestResponse {
         let response = self.response_data.as_ref().unwrap();
 
         match response {
-            ResponseEnum::String(string) => Variant::from(GodotString::from(string)),
+            ResponseEnum::String(string) => Variant::from(GString::from(string)),
             ResponseEnum::Json(json) => {
                 if let Ok(result) = json {
-                    Variant::from(GodotString::from(result.to_string()))
+                    Variant::from(GString::from(result.to_string()))
                 } else {
                     Variant::nil()
                 }
             }
             ResponseEnum::ToFile(path) => {
                 if let Ok(result) = path {
-                    Variant::from(GodotString::from(result))
+                    Variant::from(GString::from(result))
                 } else {
                     Variant::nil()
                 }
             }
             ResponseEnum::Bytes(bytes) => {
                 if let Ok(result) = String::from_utf8(bytes.to_vec()) {
-                    Variant::from(GodotString::from(result))
+                    Variant::from(GString::from(result))
                 } else {
                     Variant::nil()
                 }
@@ -143,7 +143,7 @@ impl RequestResponseError {
     }
 
     #[func]
-    pub fn get_error_message(&self) -> GodotString {
-        GodotString::from(self.error_message.clone())
+    pub fn get_error_message(&self) -> GString {
+        GString::from(self.error_message.clone())
     }
 }

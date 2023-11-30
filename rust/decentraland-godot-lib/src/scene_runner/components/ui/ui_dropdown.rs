@@ -1,4 +1,4 @@
-use godot::prelude::Gd;
+use godot::{obj::UserClass, prelude::Gd};
 
 use crate::{
     dcl::{
@@ -50,7 +50,7 @@ pub fn update_ui_dropdown(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             {
                 node.cast::<DclUiDropdown>()
             } else {
-                let mut node: Gd<DclUiDropdown> = Gd::new_default();
+                let mut node: Gd<DclUiDropdown> = DclUiDropdown::alloc_gd();
                 node.set_name("dropdown".into());
                 node.set_anchors_preset(godot::engine::control::LayoutPreset::PRESET_FULL_RECT);
                 node.bind_mut().set_dcl_entity_id(entity.as_i32());

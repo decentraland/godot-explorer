@@ -39,7 +39,7 @@ pub struct DclUiControl {
 }
 
 #[godot_api]
-impl NodeVirtual for DclUiControl {
+impl INode for DclUiControl {
     fn init(base: Base<Control>) -> Self {
         Self {
             base,
@@ -59,14 +59,10 @@ impl NodeVirtual for DclUiControl {
 
 #[godot_api]
 impl DclUiControl {
-    pub fn new_alloc() -> Gd<Self> {
-        Gd::new_default()
-    }
-
     #[func]
     pub fn _on_gui_input(&mut self, input: Gd<InputEvent>) {
         let global_tick_number = GLOBAL_TICK_NUMBER.load(Ordering::Relaxed);
-        if let Some(event) = input.try_cast::<InputEventMouseButton>() {
+        if let Ok(event) = input.try_cast::<InputEventMouseButton>() {
             let is_left_button = event.get_button_index() == MouseButton::MOUSE_BUTTON_LEFT;
             let down_event = event.is_pressed();
 

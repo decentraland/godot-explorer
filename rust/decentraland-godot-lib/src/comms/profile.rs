@@ -144,9 +144,9 @@ impl Default for SerializedProfile {
 impl SerializedProfile {
     pub fn to_godot_dictionary(&self, base_url: &str) -> Dictionary {
         let mut dictionary = Dictionary::new();
-        let name: GodotString = GodotString::from(self.name.as_str());
+        let name: GString = GString::from(self.name.as_str());
 
-        let body_shape: GodotString = self
+        let body_shape: GString = self
             .avatar
             .body_shape
             .as_ref()
@@ -196,7 +196,7 @@ impl SerializedProfile {
             .avatar
             .wearables
             .iter()
-            .map(GodotString::from)
+            .map(GString::from)
             .collect::<PackedStringArray>();
 
         let emotes = self
@@ -207,7 +207,7 @@ impl SerializedProfile {
             .iter()
             .map(|v| {
                 let mut arr = VariantArray::new();
-                arr.push(GodotString::from(v.urn.as_str()).to_variant());
+                arr.push(GString::from(v.urn.as_str()).to_variant());
                 arr.push(v.slot.to_variant());
                 arr.to_variant()
             })
@@ -231,7 +231,7 @@ impl SerializedProfile {
         let body_shape = dictionary
             .get("body_shape")
             .unwrap_or("default".to_variant())
-            .to::<GodotString>();
+            .to::<GString>();
         let eyes = dictionary
             .get("eyes")
             .unwrap_or(godot::prelude::Color::from_rgb(0.1, 0.5, 0.8).to_variant())

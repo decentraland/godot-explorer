@@ -67,7 +67,7 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
                     camera_mode_area_3d
                         .bind_mut()
                         .set_forced_camera_mode(forced_camera_mode);
-                    camera_mode_area_3d.set_name(GodotString::from("DCLCameraModeArea3D"));
+                    camera_mode_area_3d.set_name(GString::from("DCLCameraModeArea3D"));
                     node_3d.add_child(camera_mode_area_3d.clone().upcast());
                 }
             }

@@ -11,7 +11,7 @@ use crate::{
 
 use godot::{
     builtin::meta::ToGodot,
-    prelude::{GodotString, PackedScene, Variant, Vector2i, Vector3},
+    prelude::{GString, PackedScene, Variant, Vector2i, Vector3},
 };
 use http::Uri;
 
@@ -65,7 +65,7 @@ pub fn change_realm(
     );
 
     // clone data that is going to the callback
-    let to = GodotString::from(to);
+    let to = GString::from(to);
     let response = response.clone();
 
     confirm_dialog.setup(
@@ -119,7 +119,7 @@ pub fn open_external_url(
 
     // clone data that is going to the callback
     let response = response.clone();
-    let godot_url = GodotString::from(url.to_string());
+    let godot_url = GString::from(url.to_string());
 
     confirm_dialog.setup(
         "Open External URL",

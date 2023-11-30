@@ -1,4 +1,4 @@
-use godot::prelude::Gd;
+use godot::{obj::UserClass, prelude::Gd};
 
 use crate::{
     dcl::{
@@ -47,7 +47,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             {
                 node.cast::<DclUiText>()
             } else {
-                let mut node: Gd<DclUiText> = Gd::new_default();
+                let mut node: Gd<DclUiText> = DclUiText::alloc_gd();
                 node.set_name("text".into());
                 node.set_anchors_preset(godot::engine::control::LayoutPreset::PRESET_FULL_RECT);
 

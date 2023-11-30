@@ -33,7 +33,7 @@ pub struct DclGlobal {
 }
 
 #[godot_api]
-impl NodeVirtual for DclGlobal {
+impl INode for DclGlobal {
     fn init(base: Base<Node>) -> Self {
         #[cfg(target_os = "android")]
         android::init_logger();
@@ -45,10 +45,10 @@ impl NodeVirtual for DclGlobal {
 
         log_panics::init();
 
-        let mut avatars: Gd<AvatarScene> = Gd::new_default();
-        let mut comms: Gd<CommunicationManager> = Gd::new_default();
-        let mut scene_runner: Gd<SceneManager> = Gd::new_default();
-        let mut tokio_runtime: Gd<TokioRuntime> = Gd::new_default();
+        let mut avatars: Gd<AvatarScene> = AvatarScene::alloc_gd();
+        let mut comms: Gd<CommunicationManager> = CommunicationManager::alloc_gd();
+        let mut scene_runner: Gd<SceneManager> = SceneManager::alloc_gd();
+        let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::alloc_gd();
 
         tokio_runtime.set_name("tokio_runtime".into());
         scene_runner.set_name("scene_runner".into());
@@ -63,8 +63,8 @@ impl NodeVirtual for DclGlobal {
             comms,
             avatars,
             tokio_runtime,
-            realm: Gd::new_default(),
-            portable_experience_controller: Gd::new_default(),
+            realm: DclRealm::alloc_gd(),
+            portable_experience_controller: DclPortableExperienceController::alloc_gd(),
             preview_mode: false,
         }
     }
@@ -73,12 +73,17 @@ impl NodeVirtual for DclGlobal {
 #[godot_api]
 impl DclGlobal {
     pub fn try_singleton() -> Option<Gd<Self>> {
-        Engine::singleton()
+        let res = Engine::singleton()
             .get_main_loop()?
             .cast::<SceneTree>()
             .get_root()?
             .get_node("Global".into())?
-            .try_cast::<Self>()
+            .try_cast::<Self>();
+        if let Ok(res) = res {
+            Some(res)
+        } else {
+            None
+        }
     }
 
     pub fn singleton() -> Gd<Self> {

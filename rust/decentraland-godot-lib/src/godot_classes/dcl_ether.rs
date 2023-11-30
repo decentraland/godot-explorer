@@ -11,19 +11,19 @@ pub struct DclEther {
 #[godot_api]
 impl DclEther {
     #[func]
-    pub fn shorten_eth_address(address: GodotString) -> GodotString {
+    pub fn shorten_eth_address(address: GString) -> GString {
         let address = address.to_string();
         if address.len() == 42 && address.starts_with("0x") {
             let start = &address[0..6]; // First four characters after "0x"
             let end = &address[address.len() - 4..]; // Last four characters
-            GodotString::from(format!("{}...{}", start, end))
+            GString::from(format!("{}...{}", start, end))
         } else {
-            GodotString::from("Invalid address")
+            GString::from("Invalid address")
         }
     }
 
     #[func]
-    fn is_valid_ethereum_address(address: GodotString) -> bool {
+    fn is_valid_ethereum_address(address: GString) -> bool {
         let address = address.to_string();
         // Correct length
         if address.len() != 42 {
@@ -40,7 +40,7 @@ impl DclEther {
     }
 
     #[func]
-    fn format_units(amount: GodotString, units: u32) -> f32 {
+    fn format_units(amount: GString, units: u32) -> f32 {
         if let Ok(amount) = U256::from_dec_str(amount.to_string().as_str()) {
             let ethers = format_units(amount, units).unwrap_or("0.0".to_string());
             ethers.parse::<f32>().unwrap_or_default()

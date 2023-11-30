@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use godot::prelude::{Callable, GodotString, ToGodot, Transform3D, VariantArray};
+use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
 
 use super::{
     components::{
@@ -130,7 +130,7 @@ pub fn _process_scene(
                     arguments.push((scene.scene_id.0).to_variant());
                     arguments.push((log.level as i32).to_variant());
                     arguments.push((log.timestamp as f32).to_variant());
-                    arguments.push(GodotString::from(&log.message).to_variant());
+                    arguments.push(GString::from(&log.message).to_variant());
                     console.callv(arguments);
                 }
                 false

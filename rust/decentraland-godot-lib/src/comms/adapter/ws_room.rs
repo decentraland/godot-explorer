@@ -48,7 +48,7 @@ pub struct WebSocketRoom {
     state: WsRoomState,
 
     // Connection
-    ws_url: GodotString,
+    ws_url: GString,
     last_try_to_connect: Instant,
     ws_peer: Gd<WebSocketPeer>,
     signature: Option<Signature>,
@@ -90,7 +90,7 @@ impl WebSocketRoom {
 
         Self {
             ws_peer: WebSocketPeer::new(),
-            ws_url: GodotString::from(ws_url),
+            ws_url: GString::from(ws_url),
             state: WsRoomState::Connecting,
             player_address: ephemeral_auth_chain.signer(),
             ephemeral_auth_chain,
@@ -164,7 +164,7 @@ impl WebSocketRoom {
                     if (Instant::now() - self.last_try_to_connect).as_secs() > 1 {
                         let ws_protocols = {
                             let mut v = PackedStringArray::new();
-                            v.push(GodotString::from("rfc5"));
+                            v.push(GString::from("rfc5"));
                             v
                         };
 
@@ -300,7 +300,7 @@ impl WebSocketRoom {
                                 for (alias, peer) in self.peer_identities.iter() {
                                     self.avatars.bind_mut().add_avatar(
                                         *alias,
-                                        GodotString::from(format!("{:#x}", peer.address)),
+                                        GString::from(format!("{:#x}", peer.address)),
                                     );
                                 }
                             }
@@ -354,7 +354,7 @@ impl WebSocketRoom {
                         self.peer_identities.insert(peer.alias, Peer::new(h160));
                         self.avatars
                             .bind_mut()
-                            .add_avatar(peer.alias, GodotString::from(format!("{:#x}", h160)));
+                            .add_avatar(peer.alias, GString::from(format!("{:#x}", h160)));
                         // TODO: message XXX joined
                     } else {
                         // TODO: Invalid address

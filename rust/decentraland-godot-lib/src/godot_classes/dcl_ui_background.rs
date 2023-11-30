@@ -16,17 +16,17 @@ pub struct DclUiBackground {
 
     current_value: PbUiBackground,
 
-    waiting_hash: GodotString,
+    waiting_hash: GString,
     texture_loaded: bool,
 }
 
 #[godot_api]
-impl NodeVirtual for DclUiBackground {
+impl INode for DclUiBackground {
     fn init(base: Base<NinePatchRect>) -> Self {
         Self {
             base,
             current_value: PbUiBackground::default(),
-            waiting_hash: GodotString::default(),
+            waiting_hash: GString::default(),
             texture_loaded: false,
         }
     }
@@ -236,13 +236,13 @@ impl DclUiBackground {
                             .call(
                                 "fetch_texture_by_hash".into(),
                                 &[
-                                    GodotString::from(texture_hash).to_variant(),
+                                    GString::from(texture_hash).to_variant(),
                                     content_mapping.to_variant(),
                                 ],
                             )
                             .to::<Gd<RefCounted>>();
 
-                        self.waiting_hash = GodotString::from(texture_hash);
+                        self.waiting_hash = GString::from(texture_hash);
 
                         let fetching_resource =
                             promise.call("is_resolved".into(), &[]).to::<bool>();

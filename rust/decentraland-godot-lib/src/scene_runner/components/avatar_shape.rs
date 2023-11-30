@@ -57,11 +57,11 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 );
                 dictionary.set(
                     "name",
-                    GodotString::from(new_value.name.as_ref().unwrap_or(&"NPC".to_string())),
+                    GString::from(new_value.name.as_ref().unwrap_or(&"NPC".to_string())),
                 );
                 dictionary.set(
                     "body_shape",
-                    GodotString::from(new_value.body_shape.as_ref().unwrap_or(
+                    GString::from(new_value.body_shape.as_ref().unwrap_or(
                         &"urn:decentraland:off-chain:base-avatars:BaseFemale".to_string(),
                     )),
                 );
@@ -114,20 +114,20 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     "wearables",
                     wearables
                         .iter()
-                        .map(GodotString::from)
-                        .collect::<Array<GodotString>>()
+                        .map(GString::from)
+                        .collect::<Array<GString>>()
                         .to_variant(),
                 );
 
                 // dictionary.set("emotes", emotes);
                 dictionary.set(
                     "base_url",
-                    GodotString::from("https://peer.decentraland.org/content/").to_variant(),
+                    GString::from("https://peer.decentraland.org/content/").to_variant(),
                 );
 
                 if let Some(mut avatar_node) = existing {
                     avatar_node.call_deferred(
-                        StringName::from(GodotString::from("async_update_avatar")),
+                        StringName::from(GString::from("async_update_avatar")),
                         &[dictionary.to_variant()],
                     );
                 } else {
@@ -139,11 +139,11 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                     new_avatar_shape.set(StringName::from("skip_process"), Variant::from(true));
 
-                    new_avatar_shape.set_name(GodotString::from("AvatarShape"));
+                    new_avatar_shape.set_name(GString::from("AvatarShape"));
                     node_3d.add_child(new_avatar_shape.clone().upcast());
 
                     new_avatar_shape.call_deferred(
-                        StringName::from(GodotString::from("async_update_avatar")),
+                        StringName::from(GString::from("async_update_avatar")),
                         &[dictionary.to_variant()],
                     );
                 }

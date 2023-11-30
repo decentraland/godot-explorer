@@ -21,7 +21,7 @@ pub fn create_or_update_mesh(
     mesh_collider: &PbMeshCollider,
 ) {
     let mut collision_shape = if let Some(maybe_shape) = animatable_body_3d.get_child(0) {
-        if let Some(shape) = maybe_shape.try_cast::<CollisionShape3D>() {
+        if let Ok(shape) = maybe_shape.try_cast::<CollisionShape3D>() {
             shape
         } else {
             return; // TODO: error
@@ -134,7 +134,7 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 create_or_update_mesh(&mut animatable_body_3d, &new_value);
 
                 if add_to_base {
-                    animatable_body_3d.set_name(GodotString::from("MeshCollider"));
+                    animatable_body_3d.set_name(GString::from("MeshCollider"));
                     animatable_body_3d
                         .set_meta("dcl_entity_id".into(), (entity.as_i32()).to_variant());
                     animatable_body_3d
