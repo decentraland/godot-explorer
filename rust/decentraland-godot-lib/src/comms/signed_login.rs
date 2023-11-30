@@ -2,12 +2,13 @@
 
 use http::{Method, Uri};
 
-use crate::http_request::{
-    http_requester::HttpRequester,
-    request_response::{RequestOption, ResponseEnum, ResponseType},
+use crate::{
+    auth::ephemeral_auth_chain::EphemeralAuthChain,
+    http_request::{
+        http_requester::HttpRequester,
+        request_response::{RequestOption, ResponseEnum, ResponseType},
+    },
 };
-
-use crate::wallet::{SimpleAuthChain, Wallet};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct SignedLoginResponse {
@@ -49,7 +50,7 @@ pub struct SignedLogin {
 }
 
 impl SignedLogin {
-    pub fn new(uri: Uri, wallet: &Wallet, meta: SignedLoginMeta) -> Self {
+    pub fn new(uri: Uri, ephemeral_auth_chain: EphemeralAuthChain, meta: SignedLoginMeta) -> Self {
         let unix_time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -57,11 +58,20 @@ impl SignedLogin {
 
         let meta = serde_json::to_string(&meta).unwrap();
         let payload = format!("post:{}:{}:{}", uri.path(), unix_time, meta).to_lowercase();
-        let signature = futures_lite::future::block_on(wallet.sign_message(&payload)).unwrap(); // TODO: async
-        let auth_chain = SimpleAuthChain::new(wallet.address(), payload, signature);
+
+        // TODO: should this block_on be async? the ephemeral wallet is sync
+        let signature = futures_lite::future::block_on(
+            ephemeral_auth_chain
+                .ephemeral_wallet()
+                .sign_message(&payload),
+        )
+        .expect("signature by ephemeral should always work");
+
+        let mut chain = ephemeral_auth_chain.auth_chain().clone();
+        chain.add_signed_entity(payload, signature);
 
         let mut headers = Vec::from_iter(
-            auth_chain
+            chain
                 .headers()
                 .map(|(key, value)| format!("{}: {}", key, value)),
         );

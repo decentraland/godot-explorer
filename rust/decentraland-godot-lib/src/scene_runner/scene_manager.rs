@@ -1,4 +1,5 @@
 use crate::{
+    auth::wallet::Wallet,
     dcl::{
         components::{
             proto_components::{
@@ -14,7 +15,6 @@ use crate::{
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
     godot_classes::{dcl_camera_3d::DclCamera3D, dcl_ui_control::DclUiControl},
-    wallet::Wallet,
 };
 use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
 use std::{

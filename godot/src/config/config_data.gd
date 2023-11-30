@@ -17,7 +17,8 @@ enum ConfigParams {
 	SHOW_FPS,
 	LIMIT_FPS,
 	SKY_BOX,
-	AVATAR_PROFILE
+	AVATAR_PROFILE,
+	SESSION_ACCOUNT
 }
 
 const SETTINGS_FILE = "user://settings.cfg"
@@ -103,6 +104,33 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 	set(value):
 		last_parcel_position = value
 
+var session_account: Dictionary = {}:
+	set(value):
+		session_account = value
+		param_changed.emit(ConfigParams.SESSION_ACCOUNT)
+
+
+func default_profile() -> Dictionary:
+	return {
+		"base_url": "https://peer.decentraland.org/content",
+		"name": "Godotte",
+		"body_shape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
+		"eyes": Color(0.3, 0.22, 0.99),
+		"hair": Color(0.6, 0.38, 0.1),
+		"skin": Color(0.5, 0.36, 0.28),
+		"wearables":
+		[
+			"urn:decentraland:off-chain:base-avatars:f_sweater",
+			"urn:decentraland:off-chain:base-avatars:f_jeans",
+			"urn:decentraland:off-chain:base-avatars:bun_shoes",
+			"urn:decentraland:off-chain:base-avatars:standard_hair",
+			"urn:decentraland:off-chain:base-avatars:f_eyes_01",
+			"urn:decentraland:off-chain:base-avatars:f_eyebrows_00",
+			"urn:decentraland:off-chain:base-avatars:f_mouth_00"
+		],
+		"emotes": []
+	}
+
 
 func load_from_default():
 	self.gravity = 55.0
@@ -126,32 +154,15 @@ func load_from_default():
 	self.resolution = "1280 x 720"
 	self.window_size = "1280 x 720"
 	self.ui_scale = 1
-	self.avatar_profile = {
-		"base_url": "https://peer.decentraland.org/content",
-		"name": "Godotte",
-		"body_shape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
-		"eyes": Color(0.3, 0.22, 0.99),
-		"hair": Color(0.6, 0.38, 0.1),
-		"skin": Color(0.5, 0.36, 0.28),
-		"wearables":
-		[
-			"urn:decentraland:off-chain:base-avatars:f_sweater",
-			"urn:decentraland:off-chain:base-avatars:f_jeans",
-			"urn:decentraland:off-chain:base-avatars:bun_shoes",
-			"urn:decentraland:off-chain:base-avatars:standard_hair",
-			"urn:decentraland:off-chain:base-avatars:f_eyes_01",
-			"urn:decentraland:off-chain:base-avatars:f_eyebrows_00",
-			"urn:decentraland:off-chain:base-avatars:f_mouth_00"
-		],
-		"emotes": []
-	}
+	self.avatar_profile = default_profile()
+	self.session_account = {}
 
 	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
 	self.last_parcel_position = Vector2i(72, -10)
 
 
 func load_from_settings_file():
-	var data_default = ConfigData.new()
+	var data_default := ConfigData.new()
 	data_default.load_from_default()
 
 	var settings_file: ConfigFile = ConfigFile.new()
@@ -180,6 +191,10 @@ func load_from_settings_file():
 	self.ui_scale = settings_file.get_value("config", "ui_scale", data_default.ui_scale)
 
 	self.avatar_profile = settings_file.get_value("profile", "avatar", data_default.avatar_profile)
+	self.session_account = settings_file.get_value(
+		"session", "account", data_default.session_account
+	)
+
 	self.last_parcel_position = settings_file.get_value(
 		"user", "last_parcel_position", data_default.last_parcel_position
 	)
@@ -204,6 +219,7 @@ func save_to_settings_file():
 	settings_file.set_value("config", "window_size", self.window_size)
 	settings_file.set_value("config", "ui_scale", self.ui_scale)
 	settings_file.set_value("profile", "avatar", self.avatar_profile)
+	settings_file.set_value("session", "account", self.session_account)
 	settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	settings_file.save(SETTINGS_FILE)

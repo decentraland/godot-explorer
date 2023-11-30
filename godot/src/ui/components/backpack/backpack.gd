@@ -183,7 +183,7 @@ func _on_button_save_profile_pressed():
 	Global.config.avatar_profile = renderer_avatar_dictionary
 	Global.config.save_to_settings_file()
 
-	Global.comms.update_profile_avatar(renderer_avatar_dictionary)
+	Global.comms.player_identity.update_profile(renderer_avatar_dictionary)
 
 
 func _on_wearable_panel_equip(wearable_id: String):
@@ -268,3 +268,7 @@ func _on_color_picker_panel_pick_color(color):
 	renderer_avatar_dictionary["hair"] = avatar_hair_color
 	renderer_avatar_dictionary["skin"] = avatar_skin_color
 	button_save_profile.disabled = false
+
+
+func _on_button_logout_pressed():
+	Global.comms.disconnect(true)
