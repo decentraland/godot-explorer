@@ -3,6 +3,7 @@ use std::{str::FromStr, time::Duration};
 use base64::Engine as _;
 use ethers::types::{Signature, H160};
 use rand::Rng;
+use reqwest::Url;
 use serde::{de::DeserializeOwned, Deserialize};
 
 use crate::auth::wallet::AsH160;
@@ -34,8 +35,10 @@ struct SignToServerResponse {
 
 const AUTH_FRONT_URL: &str = "https://leanmendoza.github.io/decentraland-auth/";
 const AUTH_SERVER_ENDPOINT_URL: &str = "https://services.aesir-online.net/dcltest/queue/task";
-const AUTH_SERVER_RETRIES: i32 = 60;
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
+const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(60);
+const AUTH_SERVER_RETRIES: u64 =
+    AUTH_SERVER_TIMEOUT.as_secs() / AUTH_SERVER_RETRY_INTERVAL.as_secs();
 
 pub enum RemoteReportState {
     OpenUrl { url: String, description: String },
@@ -114,10 +117,17 @@ pub async fn get_account(
     url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
 ) -> Result<(H160, u64), ()> {
     let get_account_req_id = gen_id();
-    let server_endpoint = urlencoding::encode(AUTH_SERVER_ENDPOINT_URL);
-    let open_url: String = format!(
-        "{AUTH_FRONT_URL}get-account?id={get_account_req_id}&server-endpoint={server_endpoint}"
-    );
+    let open_url = {
+        let base_url = format!("{AUTH_FRONT_URL}get-account");
+
+        let mut url = Url::parse(base_url.as_str()).expect("static valid url");
+        {
+            let mut params = url.query_pairs_mut();
+            params.append_pair("id", &get_account_req_id);
+            params.append_pair("server-endpoint", AUTH_SERVER_ENDPOINT_URL);
+        }
+        url.to_string()
+    };
 
     tracing::debug!("get_account url {:?}", open_url);
     url_reporter
@@ -146,10 +156,20 @@ pub async fn remote_sign_message(
         "".into()
     };
     let sign_payload_req_id = gen_id();
-    let server_endpoint = urlencoding::encode(AUTH_SERVER_ENDPOINT_URL);
-    let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(payload);
-    let open_url =
-        format!("{AUTH_FRONT_URL}sign-to-server?id={sign_payload_req_id}&payload={payload}&address={address}&server-endpoint={server_endpoint}");
+    let open_url = {
+        let base_url = format!("{AUTH_FRONT_URL}sign-to-server");
+        let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(payload);
+
+        let mut url = Url::parse(base_url.as_str()).expect("static valid url");
+        {
+            let mut params = url.query_pairs_mut();
+            params.append_pair("id", &sign_payload_req_id);
+            params.append_pair("payload", &payload);
+            params.append_pair("address", &address);
+            params.append_pair("server-endpoint", AUTH_SERVER_ENDPOINT_URL);
+        }
+        url.to_string()
+    };
 
     tracing::debug!("sign url {:?}", open_url);
     url_reporter
