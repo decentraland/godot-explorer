@@ -103,7 +103,7 @@ pub fn update_mesh_renderer(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 create_or_update_mesh(&mut mesh_instance_3d, &new_value);
 
                 if add_to_base {
-                    mesh_instance_3d.set_name(GodotString::from("MeshRenderer"));
+                    mesh_instance_3d.set_name(GString::from("MeshRenderer"));
                     node_3d.add_child(mesh_instance_3d.upcast());
                 }
             }

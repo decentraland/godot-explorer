@@ -7,8 +7,8 @@ pub mod restricted_actions;
 pub mod runtime;
 pub mod websocket;
 
+use crate::auth::wallet::Wallet;
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
-use crate::wallet::Wallet;
 
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
@@ -127,7 +127,7 @@ pub(crate) fn scene_thread(
     // on main.crdt detected
     if !main_crdt_file_path.is_empty() {
         let file = godot::engine::FileAccess::open(
-            godot::prelude::GodotString::from(main_crdt_file_path),
+            godot::prelude::GString::from(main_crdt_file_path),
             godot::engine::file_access::ModeFlags::READ,
         );
 
@@ -156,7 +156,7 @@ pub(crate) fn scene_thread(
 
     let scene_file_path = scene_definition.path;
     let file = godot::engine::FileAccess::open(
-        godot::prelude::GodotString::from(scene_file_path.clone()),
+        godot::prelude::GString::from(scene_file_path.clone()),
         godot::engine::file_access::ModeFlags::READ,
     );
 

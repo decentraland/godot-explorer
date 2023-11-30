@@ -37,7 +37,7 @@ pub struct DclUiInput {
 }
 
 #[godot_api]
-impl NodeVirtual for DclUiInput {
+impl INode for DclUiInput {
     fn init(base: Base<LineEdit>) -> Self {
         Self {
             base,
@@ -79,7 +79,7 @@ impl NodeVirtual for DclUiInput {
 #[godot_api]
 impl DclUiInput {
     #[func]
-    pub fn on_text_changed(&mut self, new_text: GodotString) {
+    pub fn on_text_changed(&mut self, new_text: GString) {
         let Some(ui_result) = self.ui_result.as_ref() else {
             return;
         };
@@ -94,7 +94,7 @@ impl DclUiInput {
     }
 
     #[func]
-    pub fn on_text_submitted(&mut self, new_text: GodotString) {
+    pub fn on_text_submitted(&mut self, new_text: GString) {
         let Some(ui_result) = self.ui_result.as_ref() else {
             return;
         };

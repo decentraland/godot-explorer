@@ -38,7 +38,7 @@ pub struct DclAvatar {
 }
 
 #[godot_api]
-impl Node3DVirtual for DclAvatar {
+impl INode3D for DclAvatar {
     fn init(base: Base<Node3D>) -> Self {
         Self {
             movement_type: AvatarMovementType::ExternalController,

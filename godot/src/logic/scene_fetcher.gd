@@ -270,6 +270,10 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary):
 			)
 			return false
 
+	# the scene was removed while it was loading...
+	if not loaded_scenes.has(scene_entity_id):
+		return false
+
 	if is_sdk7:
 		_on_try_spawn_scene(
 			loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path
@@ -318,7 +322,8 @@ func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):
 		"visible": true,
 		"parcels": scene.parcels,
 		"title": title,
-		"entity_id": scene.id
+		"entity_id": scene.id,
+		"metadata": scene.entity.metadata
 	}
 
 	var scene_number_id: int = Global.scene_runner.start_scene(scene_definition, content_mapping)

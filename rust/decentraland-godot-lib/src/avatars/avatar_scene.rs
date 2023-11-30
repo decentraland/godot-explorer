@@ -4,6 +4,7 @@ use ethers::types::H160;
 use godot::prelude::*;
 
 use crate::{
+    auth::wallet::AsH160,
     comms::profile::SerializedProfile,
     dcl::{
         components::{
@@ -18,7 +19,6 @@ use crate::{
     },
     godot_classes::dcl_avatar::{AvatarMovementType, DclAvatar},
     godot_classes::dcl_global::DclGlobal,
-    wallet::AsH160,
 };
 
 type AvatarAlias = u32;
@@ -40,7 +40,7 @@ pub struct AvatarScene {
 }
 
 #[godot_api]
-impl NodeVirtual for AvatarScene {
+impl INode for AvatarScene {
     fn init(base: Base<Node>) -> Self {
         AvatarScene {
             base,
@@ -123,7 +123,7 @@ impl AvatarScene {
     }
 
     #[func]
-    pub fn add_avatar(&mut self, alias: u32, address: GodotString) {
+    pub fn add_avatar(&mut self, alias: u32, address: GString) {
         // TODO: the entity Self::MAX_ENTITY_ID + 1 would be a buggy avatar
         let entity_id = self
             .get_next_entity_id()
@@ -172,7 +172,7 @@ impl AvatarScene {
     }
 
     #[func]
-    pub fn get_avatar_by_address(&self, address: GodotString) -> Option<Gd<DclAvatar>> {
+    pub fn get_avatar_by_address(&self, address: GString) -> Option<Gd<DclAvatar>> {
         if let Some(address) = address.to_string().as_h160() {
             if let Some(alias) = self.avatar_address.get(&address) {
                 if let Some(entity_id) = self.avatar_entity.get(alias) {

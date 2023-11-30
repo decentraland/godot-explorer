@@ -1,5 +1,7 @@
 extends Node
 
+var sign_in_resource = preload("res://src/ui/components/auth/sign_in.tscn")
+
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
@@ -123,6 +125,29 @@ func _ready():
 	control_menu.control_advance_settings.preview_hot_reload.connect(
 		self._on_panel_bottom_left_preview_hot_reload
 	)
+
+	Global.comms.player_identity.logout.connect(self._on_player_logout)
+	Global.comms.player_identity.profile_changed.connect(
+		Global.avatars.update_primary_player_profile
+	)
+
+	if not Global.comms.player_identity.try_recover_account(Global.config.session_account):
+		Global.scene_runner.set_pause(true)
+		ui_root.add_child(sign_in_resource.instantiate())
+	else:
+		# TODO: fetch profile
+		Global.comms.player_identity.update_profile(Global.config.avatar_profile)
+
+
+func _on_player_logout():
+	# TODO: clean all UI ?
+	control_menu.close()
+
+	# Clean stored session
+	Global.config.session_account = {}
+	Global.config.save_to_settings_file()
+
+	ui_root.add_child(sign_in_resource.instantiate())
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -291,7 +316,9 @@ func _on_line_edit_command_submit_message(message: String):
 			# TODO: unknown command
 	else:
 		Global.comms.send_chat(message)
-		panel_chat.on_chats_arrived([["0xNULL", "Godot User", 0, message]])
+		panel_chat.on_chats_arrived(
+			[[player.avatar.avatar_id, player.avatar.avatar_name, 0, message]]
+		)
 
 
 func _on_control_menu_request_pause_scenes(enabled):

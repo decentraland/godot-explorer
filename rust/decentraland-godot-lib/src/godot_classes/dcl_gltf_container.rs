@@ -66,7 +66,7 @@ impl GltfContainerLoadingState {
 #[class(base=Node3D)]
 pub struct DclGltfContainer {
     #[export]
-    dcl_gltf_src: GodotString,
+    dcl_gltf_src: GString,
 
     #[export]
     dcl_scene_id: i32,
@@ -91,7 +91,7 @@ pub struct DclGltfContainer {
 impl DclGltfContainer {}
 
 #[godot_api]
-impl NodeVirtual for DclGltfContainer {
+impl INode for DclGltfContainer {
     fn init(base: Base<Node3D>) -> Self {
         Self {
             dcl_gltf_src: "".into(),

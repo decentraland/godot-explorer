@@ -184,31 +184,31 @@ impl DclPortableExperienceController {
     }
 
     #[func]
-    pub fn consume_requested_spawn(&mut self) -> Array<GodotString> {
+    pub fn consume_requested_spawn(&mut self) -> Array<GString> {
         let mut ret = Array::new();
         for (_, portable_experience) in self.portable_experiences.iter_mut() {
             if let PortableExperienceState::SpawnRequested = portable_experience.state {
                 portable_experience.state = PortableExperienceState::Spawning;
-                ret.push(GodotString::from(&portable_experience.pid));
+                ret.push(GString::from(&portable_experience.pid));
             }
         }
         ret
     }
 
     #[func]
-    pub fn consume_requested_kill(&mut self) -> Array<GodotString> {
+    pub fn consume_requested_kill(&mut self) -> Array<GString> {
         let mut ret = Array::new();
         for (_, portable_experience) in self.portable_experiences.iter_mut() {
             if let PortableExperienceState::KillRequested(scene_id) = portable_experience.state {
                 portable_experience.state = PortableExperienceState::Killing(scene_id);
-                ret.push(GodotString::from(&portable_experience.pid));
+                ret.push(GString::from(&portable_experience.pid));
             }
         }
         ret
     }
 
     #[func]
-    pub fn announce_killed_by_scene_id(&mut self, killed_scene_id: i32) -> GodotString {
+    pub fn announce_killed_by_scene_id(&mut self, killed_scene_id: i32) -> GString {
         let killed_scene_id = SceneId(killed_scene_id);
         let Some(portable_experience) =
             self.portable_experiences
@@ -222,10 +222,10 @@ impl DclPortableExperienceController {
                     },
                 )
         else {
-            return GodotString::default();
+            return GString::default();
         };
 
-        let ret = GodotString::from(portable_experience.0);
+        let ret = GString::from(portable_experience.0);
         if portable_experience.1.persistent {
             match portable_experience.1.state.clone() {
                 PortableExperienceState::Killing(_) => {
@@ -243,13 +243,7 @@ impl DclPortableExperienceController {
     }
 
     #[func]
-    pub fn announce_spawned(
-        &mut self,
-        pid: GodotString,
-        success: bool,
-        name: GodotString,
-        scene_id: i32,
-    ) {
+    pub fn announce_spawned(&mut self, pid: GString, success: bool, name: GString, scene_id: i32) {
         let Some(portable_experience) = self.portable_experiences.get_mut(&pid.to_string()) else {
             tracing::error!("announce_spawned: portable experience not found");
             return;
