@@ -79,7 +79,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             content_manager.call(
                                 "fetch_texture_by_hash".into(),
                                 &[
-                                    GodotString::from(hash).to_variant(),
+                                    GString::from(hash).to_variant(),
                                     scene.content_mapping.to_variant(),
                                 ],
                             );
@@ -258,7 +258,7 @@ fn check_texture(
             let is_loaded = content_manager
                 .call(
                     "is_resource_from_hash_loaded".into(),
-                    &[GodotString::from(content_hash).to_variant()],
+                    &[GString::from(content_hash).to_variant()],
                 )
                 .to::<bool>();
 
@@ -266,7 +266,7 @@ fn check_texture(
                 let resource = content_manager
                     .call(
                         "get_resource_from_hash".into(),
-                        &[GodotString::from(content_hash).to_variant()],
+                        &[GString::from(content_hash).to_variant()],
                     )
                     .to::<Gd<ImageTexture>>();
                 material.set_texture(param, resource.upcast());

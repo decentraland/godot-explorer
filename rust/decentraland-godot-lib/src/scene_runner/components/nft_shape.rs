@@ -52,7 +52,7 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     .instantiate()
                     .unwrap();
 
-                    nft_shape_3d.set_name(GodotString::from("NFTShape"));
+                    nft_shape_3d.set_name(GString::from("NFTShape"));
                     node_3d.add_child(nft_shape_3d.clone().upcast());
                     nft_shape_3d
                 };

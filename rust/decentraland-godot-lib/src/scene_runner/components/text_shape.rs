@@ -38,12 +38,12 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     None => (Label3D::new_alloc(), true),
                 };
 
-                label_3d.set_text(GodotString::from(new_value.text));
+                label_3d.set_text(GString::from(new_value.text));
                 label_3d.set_font_size(12 * new_value.font_size.unwrap_or(3.0) as i32); // TODO: see font size fix
                 label_3d.set_outline_size(8); // TODO: see font size fix
 
                 if add_to_base {
-                    label_3d.set_name(GodotString::from("TextShape"));
+                    label_3d.set_name(GString::from("TextShape"));
                     node_3d.add_child(label_3d.upcast());
                 }
             }

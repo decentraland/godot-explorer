@@ -33,7 +33,7 @@ pub struct DclPlayerIdentity {
 }
 
 #[godot_api]
-impl NodeVirtual for DclPlayerIdentity {
+impl INode for DclPlayerIdentity {
     fn init(base: Base<Node>) -> Self {
         let (remote_report_sender, remote_report_receiver) = tokio::sync::mpsc::channel(100);
 
@@ -68,13 +68,13 @@ impl NodeVirtual for DclPlayerIdentity {
 #[godot_api]
 impl DclPlayerIdentity {
     #[signal]
-    fn need_open_url(&self, url: GodotString, description: GodotString);
+    fn need_open_url(&self, url: GString, description: GString);
 
     #[signal]
     fn logout(&self);
 
     #[signal]
-    fn wallet_connected(&self, address: GodotString, chain_id: u64);
+    fn wallet_connected(&self, address: GString, chain_id: u64);
 
     #[signal]
     fn profile_changed(&self, new_profile: Dictionary);
@@ -82,9 +82,9 @@ impl DclPlayerIdentity {
     #[func]
     fn try_set_remote_wallet(
         &mut self,
-        address_string: GodotString,
+        address_string: GString,
         chain_id: u64,
-        ephemeral_auth_chain: GodotString,
+        ephemeral_auth_chain: GString,
     ) -> bool {
         let address = address_string
             .to_string()
@@ -166,7 +166,7 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn _error_getting_wallet(&mut self, error_str: GodotString) {
+    fn _error_getting_wallet(&mut self, error_str: GString) {
         tracing::error!("error getting wallet {:?}", error_str);
     }
 
@@ -188,7 +188,7 @@ impl DclPlayerIdentity {
         let sender = self.remote_report_sender.clone();
         handle.spawn(async move {
             let wallet = RemoteWallet::with_auth_identity(sender).await;
-            let Some(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
+            let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
 

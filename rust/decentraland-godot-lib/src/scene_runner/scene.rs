@@ -3,7 +3,10 @@ use std::{
     time::Instant,
 };
 
-use godot::prelude::{Dictionary, Gd};
+use godot::{
+    obj::UserClass,
+    prelude::{Dictionary, Gd},
+};
 
 use crate::{
     dcl::{
@@ -282,7 +285,7 @@ impl Scene {
         let dcl_scene = DclScene::spawn_new_test_scene(scene_id);
         let content_mapping = Dictionary::default();
         let godot_dcl_scene =
-            GodotDclScene::new(&scene_definition, &scene_id, DclUiControl::new_alloc());
+            GodotDclScene::new(&scene_definition, &scene_id, DclUiControl::alloc_gd());
 
         Self {
             scene_id,

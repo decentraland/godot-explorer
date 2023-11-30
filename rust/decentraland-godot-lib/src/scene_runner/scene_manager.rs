@@ -81,10 +81,10 @@ pub static GLOBAL_TICK_NUMBER: AtomicU32 = AtomicU32::new(0);
 #[godot_api]
 impl SceneManager {
     #[signal]
-    fn scene_spawned(&self, scene_id: i32, entity_id: GodotString) {}
+    fn scene_spawned(&self, scene_id: i32, entity_id: GString) {}
 
     #[signal]
-    fn scene_killed(&self, scene_id: i32, entity_id: GodotString) {}
+    fn scene_killed(&self, scene_id: i32, entity_id: GString) {}
 
     // Testing a comment for the API
     #[func]
@@ -100,8 +100,7 @@ impl SceneManager {
             }
         };
 
-        let base_url =
-            GodotString::from_variant(&content_mapping.get("base_url").unwrap()).to_string();
+        let base_url = GString::from_variant(&content_mapping.get("base_url").unwrap()).to_string();
         let content_dictionary = Dictionary::from_variant(&content_mapping.get("content").unwrap());
         let scene_type = if scene_definition.is_global {
             SceneType::Global(GlobalSceneType::GlobalRealm)
@@ -187,11 +186,11 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_scene_title(&self, scene_id: i32) -> GodotString {
+    fn get_scene_title(&self, scene_id: i32) -> GString {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
-            return GodotString::from(scene.definition.title.clone());
+            return GString::from(scene.definition.title.clone());
         }
-        GodotString::default()
+        GString::default()
     }
 
     #[func]
@@ -418,7 +417,7 @@ impl SceneManager {
                         arguments.push((scene_id.0).to_variant());
                         arguments.push((SceneLogLevel::SystemError as i32).to_variant());
                         arguments.push(self.total_time_seconds_time.to_variant());
-                        arguments.push(GodotString::from(&msg).to_variant());
+                        arguments.push(GString::from(&msg).to_variant());
                         self.console.callv(arguments);
                     }
                     SceneResponse::Ok(scene_id, dirty_crdt_state, logs, _, rpc_calls) => {
@@ -454,7 +453,7 @@ impl SceneManager {
                             arguments.push(scene_id.0.to_variant());
                             arguments.push((log.level as i32).to_variant());
                             arguments.push((log.timestamp as f32).to_variant());
-                            arguments.push(GodotString::from(&log.message).to_variant());
+                            arguments.push(GString::from(&log.message).to_variant());
                             self.console.callv(arguments);
                         }
                     }
@@ -622,14 +621,14 @@ impl SceneManager {
 }
 
 #[godot_api]
-impl NodeVirtual for SceneManager {
+impl INode for SceneManager {
     fn init(base: Base<Node>) -> Self {
         let (thread_sender_to_main, main_receiver_from_thread) =
             std::sync::mpsc::sync_channel(1000);
 
         SceneManager {
             base,
-            base_ui: DclUiControl::new_alloc(),
+            base_ui: DclUiControl::alloc_gd(),
             ui_canvas_information: PbUiCanvasInformation::default(),
 
             scenes: HashMap::new(),
@@ -642,7 +641,7 @@ impl NodeVirtual for SceneManager {
             main_receiver_from_thread,
             thread_sender_to_main,
 
-            camera_node: Gd::new_default(),
+            camera_node: DclCamera3D::alloc_gd(),
             player_node: Node3D::new_alloc(),
 
             player_position: Vector2i::new(-1000, -1000),
@@ -711,16 +710,16 @@ impl NodeVirtual for SceneManager {
                                     && !state);
                             if match_state {
                                 let text = if let Some(text) = info.hover_text.as_ref() {
-                                    GodotString::from(text)
+                                    GString::from(text)
                                 } else {
-                                    GodotString::from("Interact")
+                                    GString::from("Interact")
                                 };
 
                                 let mut dict = Dictionary::new();
                                 dict.set(StringName::from("text"), text);
                                 dict.set(
                                     StringName::from("action"),
-                                    GodotString::from(input_action.as_str_name()),
+                                    GString::from(input_action.as_str_name()),
                                 );
                                 dict.set(
                                     StringName::from("event_type"),

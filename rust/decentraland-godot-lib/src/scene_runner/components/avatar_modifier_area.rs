@@ -45,7 +45,7 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 let exclude_ids = new_value
                     .exclude_ids
                     .into_iter()
-                    .map(GodotString::from)
+                    .map(GString::from)
                     .collect();
 
                 if let Some(avatar_modifier_area_node) = existing {
@@ -76,7 +76,7 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                         .bind_mut()
                         .set_avatar_modifiers(modifiers);
                     avatar_modifier_area.bind_mut().set_exclude_ids(exclude_ids);
-                    avatar_modifier_area.set_name(GodotString::from("AvatarModifierArea"));
+                    avatar_modifier_area.set_name(GString::from("AvatarModifierArea"));
                     node_3d.add_child(avatar_modifier_area.clone().upcast());
                 }
             }

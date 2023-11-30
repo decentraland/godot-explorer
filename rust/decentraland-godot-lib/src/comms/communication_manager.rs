@@ -39,13 +39,13 @@ pub struct CommunicationManager {
 }
 
 #[godot_api]
-impl NodeVirtual for CommunicationManager {
+impl INode for CommunicationManager {
     fn init(base: Base<Node>) -> Self {
         CommunicationManager {
             current_connection: CommsConnection::None,
             current_connection_str: String::default(),
             last_position_broadcast_index: 0,
-            player_identity: Gd::new_default(),
+            player_identity: DclPlayerIdentity::alloc_gd(),
             base,
         }
     }
@@ -169,7 +169,7 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn send_chat(&mut self, text: GodotString) -> bool {
+    fn send_chat(&mut self, text: GString) -> bool {
         let get_packet = || rfc4::Packet {
             message: Some(rfc4::packet::Message::Chat(rfc4::Chat {
                 message: text.to_string(),
@@ -188,7 +188,7 @@ impl CommunicationManager {
     #[func]
     fn init_rs(&mut self) {
         let on_realm_changed =
-            Callable::from_object_method(self.base.clone(), StringName::from("_on_realm_changed"));
+            Callable::from_object_method(&self.base, StringName::from("_on_realm_changed"));
 
         DclGlobal::singleton()
             .bind()
@@ -202,14 +202,14 @@ impl CommunicationManager {
             .call_deferred("_on_realm_changed_deferred".into(), &[]);
     }
 
-    fn _internal_get_comms_from_realm(&self) -> Option<(String, Option<GodotString>)> {
+    fn _internal_get_comms_from_realm(&self) -> Option<(String, Option<GString>)> {
         let realm = DclGlobal::singleton().bind().get_realm();
         let realm_about = Dictionary::from_variant(&realm.get("realm_about".into()));
         let comms = Dictionary::from_variant(&realm_about.get(StringName::from("comms"))?);
         let comms_protocol = String::from_variant(&comms.get(StringName::from("protocol"))?);
         let comms_fixed_adapter = comms
             .get(StringName::from("fixedAdapter"))
-            .map(|v| GodotString::from_variant(&v));
+            .map(|v| GString::from_variant(&v));
 
         Some((comms_protocol, comms_fixed_adapter))
     }
@@ -240,7 +240,7 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn change_adapter(&mut self, comms_fixed_adapter_str: GodotString) {
+    fn change_adapter(&mut self, comms_fixed_adapter_str: GString) {
         let comms_fixed_adapter_str = comms_fixed_adapter_str.to_string();
         let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
         else {
@@ -353,7 +353,7 @@ impl CommunicationManager {
     }
 
     #[func]
-    pub fn get_current_adapter_conn_str(&self) -> GodotString {
-        GodotString::from(self.current_connection_str.clone())
+    pub fn get_current_adapter_conn_str(&self) -> GString {
+        GString::from(self.current_connection_str.clone())
     }
 }

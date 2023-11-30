@@ -31,7 +31,7 @@ impl Font {
 }
 
 #[godot_api]
-impl NodeVirtual for DclUiText {
+impl INode for DclUiText {
     fn init(base: Base<Label>) -> Self {
         Self {
             base,
