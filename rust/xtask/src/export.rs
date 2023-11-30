@@ -3,9 +3,9 @@ use std::{fs, io, path::Path};
 use crate::{
     consts::{BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_PROJECT_FOLDER},
     install_dependency::{
-        self, copy_ffmpeg_libraries, download_and_extract_zip, set_executable_permission,
+        self, download_and_extract_zip, set_executable_permission,
     },
-    path::adjust_canonicalization,
+    path::adjust_canonicalization, copy_files::copy_ffmpeg_libraries,
 };
 
 #[allow(dead_code)]
@@ -121,7 +121,7 @@ pub fn export() -> Result<(), anyhow::Error> {
         set_executable_permission(Path::new(output_rel_path.as_str()))?;
     }
 
-    copy_ffmpeg_libraries(EXPORTS_FOLDER.to_string())?;
+    copy_ffmpeg_libraries(EXPORTS_FOLDER.to_string(), false)?;
 
     Ok(())
 }
