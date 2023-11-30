@@ -467,8 +467,8 @@ impl SceneManager {
                         id,
                         camera_position,
                         camera_target,
-                        snapshot_frame_size,
-                        tolerance,
+                        screeshot_size,
+                        method,
                         response,
                     } => {
                         let offset = if let Some(scene) = self.scenes.get(&scene_id) {
@@ -500,8 +500,8 @@ impl SceneManager {
                                     id.to_variant(),
                                     global_camera_position.to_variant(),
                                     global_camera_target.to_variant(),
-                                    snapshot_frame_size.to_variant(),
-                                    tolerance.to_variant(),
+                                    screeshot_size.to_variant(),
+                                    0.0_f64.to_variant(),
                                     dcl_rpc_sender.to_variant(),
                                 ],
                             );

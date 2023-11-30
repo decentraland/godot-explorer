@@ -4,13 +4,48 @@ use deno_core::{
     op, Op, OpDecl, OpState,
 };
 use godot::builtin::{Vector2, Vector3};
+use serde::{Deserialize, Serialize};
 
-use crate::dcl::{SceneId, SceneResponse, TakeAndCompareSnapshotResponse};
+use crate::dcl::{SceneId, SceneResponse};
 
 use super::SceneEnv;
 
 pub fn ops() -> Vec<OpDecl> {
     vec![op_take_and_compare_snapshot::DECL]
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct GreyPixelDiffRequest;
+
+#[derive(Deserialize, Serialize)]
+pub struct TestingScreenshotComparisonMethodObj {
+    grey_pixel_diff: Option<GreyPixelDiffRequest>,
+}
+
+pub enum TestingScreenshotComparisonMethodRequest {
+    GreyPixelDiff(GreyPixelDiffRequest),
+}
+
+impl From<TestingScreenshotComparisonMethodObj> for TestingScreenshotComparisonMethodRequest {
+    fn from(obj: TestingScreenshotComparisonMethodObj) -> Self {
+        if let Some(grey_pixel_diff) = obj.grey_pixel_diff {
+            TestingScreenshotComparisonMethodRequest::GreyPixelDiff(grey_pixel_diff)
+        } else {
+            panic!("Invalid TestingScreenshotComparisonMethodObj")
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct GreyPixelDiffResult {
+    pub similarity: f64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TakeAndCompareSnapshotResponse {
+    pub stored_snapshot_found: bool,
+    pub grey_pixel_diff: Option<GreyPixelDiffResult>,
 }
 
 #[op]
@@ -19,8 +54,8 @@ fn op_take_and_compare_snapshot(
     id: String,
     camera_position: [f32; 3],
     camera_target: [f32; 3],
-    snapshot_frame_size: [f32; 2],
-    tolerance: f32,
+    screeshot_size: [f32; 2],
+    method: TestingScreenshotComparisonMethodObj,
 ) -> Result<TakeAndCompareSnapshotResponse, AnyError> {
     let scene_env = state.borrow::<SceneEnv>();
     if !scene_env.testing_enable {
@@ -46,11 +81,11 @@ fn op_take_and_compare_snapshot(
                 y: camera_target[1],
                 z: -camera_target[2],
             },
-            snapshot_frame_size: Vector2 {
-                x: snapshot_frame_size[0],
-                y: snapshot_frame_size[1],
+            screeshot_size: Vector2 {
+                x: screeshot_size[0],
+                y: screeshot_size[1],
             },
-            tolerance,
+            method: method.into(),
             response: sx.into(),
         })
         .expect("error sending scene response!!");

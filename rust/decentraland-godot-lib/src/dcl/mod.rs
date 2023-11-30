@@ -5,13 +5,12 @@ pub mod scene_apis;
 pub mod serialization;
 
 use godot::builtin::{Vector2, Vector3};
-use serde::Serialize;
 
 use crate::auth::wallet::Wallet;
 
 use self::{
     crdt::{DirtyCrdtState, SceneCrdtState},
-    js::{scene_thread, SceneLogMessage},
+    js::{scene_thread, testing::{TakeAndCompareSnapshotResponse, TestingScreenshotComparisonMethodRequest}, SceneLogMessage},
     scene_apis::{RpcCall, RpcResultSender},
 };
 
@@ -66,23 +65,10 @@ pub enum SceneResponse {
         id: String,
         camera_position: Vector3,
         camera_target: Vector3,
-        snapshot_frame_size: Vector2,
-        tolerance: f32,
+        screeshot_size: Vector2,
+        method: TestingScreenshotComparisonMethodRequest,
         response: RpcResultSender<Result<TakeAndCompareSnapshotResponse, String>>,
     },
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TakeAndCompareSnapshotResponse {
-    // true if the threshold was met, false otherwise or if it wasn't previously exist
-    pub is_match: bool,
-    // from 0 to 1 how similar the snapshot taken is to the previous one
-    pub similarity: f32,
-    // true if the snapshot already exists in the snapshot folder, false otherwise
-    pub was_exist: bool,
-    // true if the snapshot was created and saved, false otherwise
-    pub replaced: bool,
 }
 
 pub type SharedSceneCrdtState = Arc<Mutex<SceneCrdtState>>;
