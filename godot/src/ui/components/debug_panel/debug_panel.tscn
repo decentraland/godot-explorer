@@ -1,0 +1,90 @@
+[gd_scene load_steps=6 format=3 uid="uid://dua04n3geh0yf"]
+
+[ext_resource type="Theme" uid="uid://yt0vgau51udk" path="res://src/ui/components/debug_panel/dark_theme/Dark.theme" id="1_c8oen"]
+[ext_resource type="Script" path="res://src/ui/components/debug_panel/debug_panel.gd" id="2_juhlr"]
+[ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="3_nth2r"]
+[ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/debug_panel/icons/Clear.svg" id="4_k7442"]
+[ext_resource type="Texture2D" uid="uid://c0x4ssitmbcrg" path="res://src/ui/components/debug_panel/icons/GuiVisibilityHidden.svg" id="5_34smo"]
+
+[node name="DebugPanel" type="Control"]
+custom_minimum_size = Vector2(500, 300)
+layout_mode = 3
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -505.0
+offset_top = -305.0
+offset_right = -5.0
+offset_bottom = -5.0
+grow_horizontal = 0
+grow_vertical = 0
+theme = ExtResource("1_c8oen")
+script = ExtResource("2_juhlr")
+
+[node name="TabContainer_DebugPanel" type="TabContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(500, 250)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_c8oen")
+
+[node name="Console" type="VBoxContainer" parent="TabContainer_DebugPanel"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TabContainer_DebugPanel/Console"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="TabContainer_DebugPanel/Console/HBoxContainer"]
+layout_mode = 2
+text = "Filter:"
+
+[node name="LineEdit_Filter" type="LineEdit" parent="TabContainer_DebugPanel/Console/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Filter Messages"
+right_icon = ExtResource("3_nth2r")
+
+[node name="Button_Clear" type="Button" parent="TabContainer_DebugPanel/Console/HBoxContainer"]
+layout_mode = 2
+icon = ExtResource("4_k7442")
+
+[node name="Tree_Console" type="Tree" parent="TabContainer_DebugPanel/Console"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 12
+columns = 2
+allow_reselect = true
+allow_rmb_select = true
+hide_root = true
+select_mode = 1
+
+[node name="Button_ShowHide" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -101.0
+offset_top = -25.0
+grow_horizontal = 0
+grow_vertical = 0
+focus_mode = 0
+text = "Debug Panel"
+icon = ExtResource("5_34smo")
+
+[connection signal="text_changed" from="TabContainer_DebugPanel/Console/HBoxContainer/LineEdit_Filter" to="." method="_on_line_edit_filter_text_changed"]
+[connection signal="pressed" from="TabContainer_DebugPanel/Console/HBoxContainer/Button_Clear" to="." method="_on_button_clear_pressed"]
+[connection signal="item_mouse_selected" from="TabContainer_DebugPanel/Console/Tree_Console" to="." method="_on_tree_console_item_mouse_selected"]
+[connection signal="item_selected" from="TabContainer_DebugPanel/Console/Tree_Console" to="." method="_on_tree_console_item_selected"]
+[connection signal="pressed" from="Button_ShowHide" to="." method="_on_button_show_hide_pressed"]

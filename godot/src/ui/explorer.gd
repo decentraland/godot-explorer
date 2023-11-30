@@ -157,7 +157,7 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	var title: String = Global.scene_runner.get_scene_title(scene_id)
 	title += str(Global.scene_runner.get_scene_base_parcel(scene_id))
-	control_menu.control_advance_settings.on_console_add(title, level, timestamp, text)
+	%DebugPanel.on_console_add(title, level, timestamp, text)
 
 
 func _on_pointer_tooltip_changed():

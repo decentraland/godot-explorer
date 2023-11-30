@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://c8v1b3owo26xt"]
+[gd_scene load_steps=4 format=3 uid="uid://c8v1b3owo26xt"]
 
 [ext_resource type="Script" path="res://src/ui/components/advance_settings/advance_settings.gd" id="1_mo2dv"]
 
@@ -6,13 +6,6 @@
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
 
 [sub_resource type="Theme" id="Theme_o8ri3"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wrxk6"]
-bg_color = Color(0.976471, 0.976471, 0.976471, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
 
 [node name="Control_AdvanceSettings" type="Control"]
 layout_mode = 3
@@ -303,63 +296,6 @@ text = "Walk Speed"
 layout_mode = 2
 editable = false
 
-[node name="VBoxContainer_General2" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer"]
-custom_minimum_size = Vector2(400, 0)
-layout_mode = 2
-theme = SubResource("Theme_fdw13")
-theme_type_variation = &"2"
-theme_override_constants/separation = 15
-
-[node name="Panel_Console" type="Panel" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2"]
-custom_minimum_size = Vector2(400, 300)
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_wrxk6")
-
-[node name="RichTextLabel_Console" type="RichTextLabel" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 6.0
-offset_top = 6.0
-offset_right = -8.0
-offset_bottom = -58.0
-grow_horizontal = 2
-grow_vertical = 2
-bbcode_enabled = true
-scroll_following = true
-
-[node name="Button_CopyConsoleContent" type="Button" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console"]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -133.0
-offset_top = -41.0
-offset_right = -78.0
-offset_bottom = -14.0
-grow_horizontal = 0
-grow_vertical = 0
-text = "Copy"
-
-[node name="Button_ClearConsole" type="Button" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console"]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -70.0
-offset_top = -42.0
-offset_right = -15.0
-offset_bottom = -15.0
-grow_horizontal = 0
-grow_vertical = 0
-text = "Clear"
-
 [connection signal="toggled" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer/CheckButton_Pause" to="." method="_on_check_button_pause_toggled"]
 [connection signal="item_selected" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
 [connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
@@ -369,5 +305,3 @@ text = "Clear"
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity" to="." method="_on_spin_box_jump_velocity_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed" to="." method="_on_spin_box_run_speed_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed" to="." method="_on_spin_box_walk_speed_value_changed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console/Button_CopyConsoleContent" to="." method="_on_button_copy_console_content_pressed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console/Button_ClearConsole" to="." method="_on_button_clear_console_pressed"]

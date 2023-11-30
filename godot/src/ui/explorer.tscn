@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=19 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/FloorBaseGrass_01/Floor_Grass01.png.png" id="2_7jksa"]
@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
 [ext_resource type="PackedScene" uid="uid://wgrmvh6h51w3" path="res://src/ui/voice_chat.tscn" id="10_l3sp6"]
 [ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
+[ext_resource type="PackedScene" uid="uid://dua04n3geh0yf" path="res://src/ui/components/debug_panel/debug_panel.tscn" id="11_hm25p"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
@@ -176,6 +177,10 @@ layout_mode = 1
 group = SubResource("ButtonGroup_5uqfn")
 
 [node name="DialogStack" parent="UI" instance=ExtResource("10_y1lkn")]
+layout_mode = 1
+
+[node name="DebugPanel" parent="UI" instance=ExtResource("11_hm25p")]
+unique_name_in_owner = true
 layout_mode = 1
 
 [node name="Timer_BroadcastPosition" type="Timer" parent="."]
