@@ -28,7 +28,7 @@ texture_filter = 0
 
 [sub_resource type="Theme" id="Theme_1ufu0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_nn4lh"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_5uqfn"]
 resource_name = "Tabs"
 
 [node name="explorer" type="Node3D"]
@@ -173,7 +173,7 @@ layout_mode = 2
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_nn4lh")
+group = SubResource("ButtonGroup_5uqfn")
 
 [node name="DialogStack" parent="UI" instance=ExtResource("10_y1lkn")]
 layout_mode = 1

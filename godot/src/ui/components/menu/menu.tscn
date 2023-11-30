@@ -126,7 +126,7 @@ focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
 toggle_mode = true
 button_group = ExtResource("8_ao4hb")
-text = "Backpack"
+text = "My Profile"
 
 [node name="Button_Settings" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
 custom_minimum_size = Vector2(75, 0)

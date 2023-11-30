@@ -8,8 +8,8 @@ pub mod runtime;
 pub mod testing;
 pub mod websocket;
 
+use crate::auth::wallet::Wallet;
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
-use crate::wallet::Wallet;
 
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,

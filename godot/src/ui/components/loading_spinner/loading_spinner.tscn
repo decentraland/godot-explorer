@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://buu3ox7iefpgx"]
+
+[ext_resource type="Texture2D" uid="uid://dx7vyin0sc2ne" path="res://assets/ui/loading_spinner_progress.png" id="1_roup2"]
+[ext_resource type="Script" path="res://src/ui/components/loading_spinner/loading_spinner.gd" id="2_rds4p"]
+
+[node name="TextureProgressBar" type="TextureProgressBar"]
+offset_right = 40.0
+offset_bottom = 40.0
+value = 100.0
+fill_mode = 4
+texture_progress = ExtResource("1_roup2")
+radial_fill_degrees = 60.0
+script = ExtResource("2_rds4p")
+
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

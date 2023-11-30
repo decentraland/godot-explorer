@@ -18,6 +18,8 @@ pub struct DclRealm {
     #[var]
     realm_name: GodotString,
     #[var]
+    network_id: i32,
+    #[var]
     realm_scene_urns: Array<Dictionary>,
     #[var]
     realm_global_scene_urns: Array<Dictionary>,

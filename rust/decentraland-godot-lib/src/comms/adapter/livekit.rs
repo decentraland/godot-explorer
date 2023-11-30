@@ -16,14 +16,13 @@ use livekit::{
 use prost::Message;
 
 use crate::{
-    avatars::avatar_scene::AvatarScene, dcl::components::proto_components::kernel::comms::rfc4,
-    wallet::AsH160,
+    auth::wallet::AsH160,
+    avatars::avatar_scene::AvatarScene,
+    comms::profile::{SerializedProfile, UserProfile},
+    dcl::components::proto_components::kernel::comms::rfc4,
 };
 
-use super::{
-    player_identity::PlayerIdentity,
-    profile::{SerializedProfile, UserProfile},
-};
+use super::adapter_trait::Adapter;
 
 pub struct NetworkMessage {
     pub data: Vec<u8>,
@@ -52,7 +51,8 @@ pub struct LivekitRoom {
     sender_to_thread: tokio::sync::mpsc::Sender<NetworkMessage>,
     mic_sender_to_thread: tokio::sync::mpsc::Sender<Vec<i16>>,
     receiver_from_thread: tokio::sync::mpsc::Receiver<IncomingMessage>,
-    player_identity: Arc<PlayerIdentity>,
+    player_address: H160,
+    player_profile: UserProfile,
     avatars: Gd<AvatarScene>,
     peer_identities: HashMap<H160, Peer>,
     peer_alias_counter: u32,
@@ -65,7 +65,8 @@ pub struct LivekitRoom {
 impl LivekitRoom {
     pub fn new(
         remote_address: String,
-        player_identity: Arc<PlayerIdentity>,
+        player_address: H160,
+        player_profile: UserProfile,
         avatars: Gd<AvatarScene>,
     ) -> Self {
         tracing::debug!(">> lk connect async : {remote_address}");
@@ -84,7 +85,8 @@ impl LivekitRoom {
             sender_to_thread,
             mic_sender_to_thread,
             receiver_from_thread,
-            player_identity,
+            player_address,
+            player_profile,
             avatars,
             peer_identities: HashMap::new(),
             last_profile_response_sent: Instant::now(),
@@ -95,9 +97,9 @@ impl LivekitRoom {
         }
     }
 
-    pub fn clean(&mut self) {}
+    fn _clean(&mut self) {}
 
-    pub fn poll(&mut self) -> bool {
+    fn _poll(&mut self) -> bool {
         let mut avatar_scene_ref = self.avatars.clone();
         let mut avatar_scene = avatar_scene_ref.bind_mut();
 
@@ -158,7 +160,7 @@ impl LivekitRoom {
                             tracing::info!("comms > received ProfileRequest {:?}", profile_request);
 
                             if let Some(addr) = profile_request.address.as_h160() {
-                                if addr == self.player_identity.wallet().address() {
+                                if addr == self.player_address {
                                     self.last_profile_response_sent = Instant::now();
 
                                     self.send_rfc4(
@@ -166,14 +168,10 @@ impl LivekitRoom {
                                             message: Some(rfc4::packet::Message::ProfileResponse(
                                                 rfc4::ProfileResponse {
                                                     serialized_profile: serde_json::to_string(
-                                                        &self.player_identity.profile().content,
+                                                        &self.player_profile.content,
                                                     )
                                                     .unwrap(),
-                                                    base_url: self
-                                                        .player_identity
-                                                        .profile()
-                                                        .base_url
-                                                        .clone(),
+                                                    base_url: self.player_profile.base_url.clone(),
                                                 },
                                             )),
                                         },
@@ -290,8 +288,8 @@ impl LivekitRoom {
             }
         }
 
-        if self.last_profile_version_announced != self.player_identity.profile().version {
-            self.last_profile_version_announced = self.player_identity.profile().version;
+        if self.last_profile_version_announced != self.player_profile.version {
+            self.last_profile_version_announced = self.player_profile.version;
             self.send_rfc4(
                 rfc4::Packet {
                     message: Some(rfc4::packet::Message::ProfileVersion(
@@ -306,7 +304,7 @@ impl LivekitRoom {
         true
     }
 
-    pub fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
+    fn _send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
         let mut data: Vec<u8> = Vec::new();
         packet.encode(&mut data).unwrap();
 
@@ -315,16 +313,46 @@ impl LivekitRoom {
             .is_ok()
     }
 
-    pub fn change_profile(&mut self, new_profile: Arc<PlayerIdentity>) {
-        self.player_identity = new_profile;
+    fn _change_profile(&mut self, new_profile: UserProfile) {
+        self.player_profile = new_profile;
     }
 
-    pub fn consume_chats(&mut self) -> Vec<(String, String, rfc4::Chat)> {
+    fn _consume_chats(&mut self) -> Vec<(String, String, rfc4::Chat)> {
         std::mem::take(&mut self.chats)
     }
 
-    pub fn broadcast_voice(&mut self, frame: Vec<i16>) {
+    fn _broadcast_voice(&mut self, frame: Vec<i16>) {
         let _ = self.mic_sender_to_thread.blocking_send(frame);
+    }
+}
+
+impl Adapter for LivekitRoom {
+    fn poll(&mut self) -> bool {
+        self._poll()
+    }
+
+    fn clean(&mut self) {
+        self._clean();
+    }
+
+    fn change_profile(&mut self, new_profile: UserProfile) {
+        self._change_profile(new_profile);
+    }
+
+    fn consume_chats(&mut self) -> Vec<(String, String, rfc4::Chat)> {
+        self._consume_chats()
+    }
+
+    fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
+        self._send_rfc4(packet, unreliable)
+    }
+
+    fn broadcast_voice(&mut self, frame: Vec<i16>) {
+        self._broadcast_voice(frame);
+    }
+
+    fn support_voice_chat(&self) -> bool {
+        true
     }
 }
 

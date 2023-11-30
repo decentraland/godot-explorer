@@ -26,6 +26,9 @@ func on_chats_arrived(chats: Array):
 		#var _timestamp: float = chat[2]
 		var message: StringName = chat[3]
 		var avatar = Global.avatars.get_avatar_by_address(address)
+		var avatar_name = (
+			avatar.avatar_name if avatar != null else DclEther.shorten_eth_address(address)
+		)
 
 		if message.begins_with(EMOTE):
 			message = message.substr(1)  # Remove prefix
@@ -36,9 +39,7 @@ func on_chats_arrived(chats: Array):
 		elif message.begins_with(ACK):
 			pass  # TODO: Calculate ping
 		else:
-			var text = (
-				"[b][color=#1cc]%s[/color] > [color=#fff]%s[/color]" % [avatar.avatar_name, message]
-			)
+			var text = "[b][color=#1cc]%s[/color] > [color=#fff]%s[/color]" % [avatar_name, message]
 			add_chat_message(text)
 
 

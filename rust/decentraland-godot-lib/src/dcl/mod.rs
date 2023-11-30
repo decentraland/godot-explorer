@@ -7,7 +7,7 @@ pub mod serialization;
 use godot::builtin::{Vector2, Vector3};
 use serde::Serialize;
 
-use crate::wallet::Wallet;
+use crate::auth::wallet::Wallet;
 
 use self::{
     crdt::{DirtyCrdtState, SceneCrdtState},
@@ -40,6 +40,7 @@ pub struct SceneDefinition {
 
     pub parcels: Vec<godot::prelude::Vector2i>,
     pub is_global: bool,
+    pub metadata: String,
 }
 // data from renderer to scene
 #[derive(Debug)]

@@ -122,6 +122,7 @@ func async_set_realm(new_realm_string: String) -> void:
 			)
 
 		realm_name = configuration.get("realmName", "no_realm_name")
+		network_id = int(configuration.get("networkId", 1))  # 1=Ethereum
 
 		content_base_url = Realm.ensure_ends_with_slash(
 			realm_about.get("content", {}).get("publicUrl")

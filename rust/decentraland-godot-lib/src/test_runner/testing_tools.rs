@@ -51,14 +51,8 @@ impl DclTestingTools {
             data_diff.push(diff);
         }
 
-        let cc = data_diff.iter().filter(|p| **p < 1.0).count();
-
         let score: f64 = 1.
-            - (data_diff
-                .iter()
-                .map(|p| (1. - *p as f64).powi(2))
-                .sum::<f64>()
-                / (pixel_count as f64))
+            - (data_diff.iter().map(|p| (1. - *p).powi(2)).sum::<f64>() / (pixel_count as f64))
                 .sqrt();
 
         score

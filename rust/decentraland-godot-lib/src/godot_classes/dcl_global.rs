@@ -31,6 +31,8 @@ pub struct DclGlobal {
     pub portable_experience_controller: Gd<DclPortableExperienceController>,
     #[var]
     pub testing_tools: Gd<DclTestingTools>,
+    #[var]
+    pub preview_mode: bool,
 }
 
 #[godot_api]
@@ -67,6 +69,7 @@ impl NodeVirtual for DclGlobal {
             realm: Gd::new_default(),
             portable_experience_controller: Gd::new_default(),
             testing_tools: Gd::new_default(),
+            preview_mode: false,
         }
     }
 }
