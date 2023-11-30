@@ -13,7 +13,7 @@ config_version=5
 config/name="Decentraland Godot Rust"
 config/description="Decentraland Godot Client - Protocol Squad"
 run/main_scene="res://src/main.tscn"
-config/features=PackedStringArray("4.1")
+config/features=PackedStringArray("4.2")
 config/icon="res://decentraland_logo.png"
 
 [audio]
