@@ -11,7 +11,7 @@ enum ContentType {
 	CT_VIDEO = 7,
 }
 
-const USE_THREAD = true
+const USE_THREAD = false
 const MAX_THREADS = 1
 
 var content_threads: Array[ContentThread] = []
@@ -219,6 +219,19 @@ func fetch_texture_by_url(file_hash: String, url: String):
 	)
 
 	return promise
+
+
+func get_image_from_texture_or_null(file_path: String, content_mapping: Dictionary) -> Image:
+	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+	return get_image_from_texture_by_hash_or_null(file_hash)
+
+
+func get_image_from_texture_by_hash_or_null(file_hash: String) -> Image:
+	var promise = Promise.new()
+	var content_cached = content_cache_map.get(file_hash)
+	if content_cached != null:
+		return content_cached.get("image")
+	return null
 
 
 func fetch_audio(file_path: String, content_mapping: Dictionary) -> Promise:

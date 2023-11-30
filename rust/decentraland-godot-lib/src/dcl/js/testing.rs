@@ -6,7 +6,10 @@ use deno_core::{
 use godot::builtin::{Vector2, Vector3};
 use serde::{Deserialize, Serialize};
 
-use crate::dcl::{SceneId, SceneResponse};
+use crate::{
+    dcl::{SceneId, SceneResponse},
+    godot_classes::JsonGodotClass,
+};
 
 use super::SceneEnv;
 
@@ -14,27 +17,15 @@ pub fn ops() -> Vec<OpDecl> {
     vec![op_take_and_compare_snapshot::DECL]
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct GreyPixelDiffRequest;
 
-#[derive(Deserialize, Serialize)]
-pub struct TestingScreenshotComparisonMethodObj {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TestingScreenshotComparisonMethodRequest {
     grey_pixel_diff: Option<GreyPixelDiffRequest>,
 }
 
-pub enum TestingScreenshotComparisonMethodRequest {
-    GreyPixelDiff(GreyPixelDiffRequest),
-}
-
-impl From<TestingScreenshotComparisonMethodObj> for TestingScreenshotComparisonMethodRequest {
-    fn from(obj: TestingScreenshotComparisonMethodObj) -> Self {
-        if let Some(grey_pixel_diff) = obj.grey_pixel_diff {
-            TestingScreenshotComparisonMethodRequest::GreyPixelDiff(grey_pixel_diff)
-        } else {
-            panic!("Invalid TestingScreenshotComparisonMethodObj")
-        }
-    }
-}
+impl JsonGodotClass for TestingScreenshotComparisonMethodRequest {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GreyPixelDiffResult {
@@ -51,11 +42,11 @@ pub struct TakeAndCompareSnapshotResponse {
 #[op]
 fn op_take_and_compare_snapshot(
     state: &mut OpState,
-    id: String,
+    src_stored_snapshot: String,
     camera_position: [f32; 3],
     camera_target: [f32; 3],
     screeshot_size: [f32; 2],
-    method: TestingScreenshotComparisonMethodObj,
+    method: TestingScreenshotComparisonMethodRequest,
 ) -> Result<TakeAndCompareSnapshotResponse, AnyError> {
     let scene_env = state.borrow::<SceneEnv>();
     if !scene_env.testing_enable {
@@ -70,7 +61,7 @@ fn op_take_and_compare_snapshot(
     sender
         .send(SceneResponse::TakeSnapshot {
             scene_id,
-            id,
+            src_stored_snapshot,
             camera_position: Vector3 {
                 x: camera_position[0],
                 y: camera_position[1],
@@ -85,7 +76,7 @@ fn op_take_and_compare_snapshot(
                 x: screeshot_size[0],
                 y: screeshot_size[1],
             },
-            method: method.into(),
+            method,
             response: sx.into(),
         })
         .expect("error sending scene response!!");

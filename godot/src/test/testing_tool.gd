@@ -3,33 +3,30 @@ extends DclTestingTools
 
 
 func async_take_and_compare_snapshot(
-	id: String,
+	scene_id: int,
+	src_stored_snapshot: String,
 	camera_position: Vector3,
 	camera_target: Vector3,
-	snapshot_frame_size: Vector2,
-	tolerance: float,
-	dcl_rpc_sender: DclRpcSender
+	screenshot_size: Vector2,
+	method: Dictionary,
+	dcl_rpc_sender: DclRpcSenderTakeAndCompareSnapshotResponse
 ):
 	prints(
 		"async_take_and_compare_snapshot",
-		id,
+		scene_id,
+		src_stored_snapshot,
 		camera_position,
 		camera_target,
-		snapshot_frame_size,
-		tolerance,
+		screenshot_size,
+		method,
 		dcl_rpc_sender
 	)
 
 	# TODO: make this configurable
 	var hide_player := true
-	var update_snapshot := false
-	var create_snapshot_if_does_not_exist := true
 
-	var snapshot_path := "user://snapshot_" + id.replace(" ", "_") + ".png"
-
-	var existing_snapshot: Image = null
-	if not update_snapshot and FileAccess.file_exists(snapshot_path):
-		existing_snapshot = Image.load_from_file(snapshot_path)
+	var base_path := src_stored_snapshot.replace(" ", "_").replace("/", "_").replace("\\", "_")
+	var snapshot_path := "user://snapshot_" + base_path + ".png"
 
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 	var viewport = get_viewport()
@@ -38,7 +35,7 @@ func async_take_and_compare_snapshot(
 	var previous_camera_rotation = camera.global_rotation
 	var previous_viewport_size = viewport.size
 
-	viewport.size = snapshot_frame_size
+	viewport.size = screenshot_size
 	camera.global_position = camera_position
 	camera.look_at(camera_target)
 
@@ -60,25 +57,28 @@ func async_take_and_compare_snapshot(
 	camera.global_position = previous_camera_position
 	camera.global_rotation = previous_camera_rotation
 
-	var similarity := 0.0
-	var updated := false
+	var existing_snapshot: Image = null
+	var content_mapping = Global.scene_runner.get_scene_content_mapping(scene_id)
+	var promise = Global.content_manager.fetch_texture(src_stored_snapshot, content_mapping)
+	var res = await promise.async_awaiter()
 
-	if existing_snapshot != null:
-		similarity = self.compute_image_similarity(existing_snapshot, viewport_img)
-		prints("similarity factor ", similarity)
-
-	if update_snapshot or (existing_snapshot == null and create_snapshot_if_does_not_exist):
-		viewport_img.save_png(snapshot_path)
-		updated = true
-
-	(
-		dcl_rpc_sender
-		. send(
-			{
-				"is_match": similarity >= tolerance,
-				"similarity": similarity,
-				"was_exist": existing_snapshot != null,
-				"replaced": updated,
-			}
+	if res is Promise.Error:
+		printerr("Fetch snapshot texture error, doesn't it exist?")
+	else:
+		existing_snapshot = Global.content_manager.get_image_from_texture_or_null(
+			src_stored_snapshot, content_mapping
 		)
-	)
+
+	viewport_img.save_png(snapshot_path)
+
+	var result = {"stored_snapshot_found": existing_snapshot != null}
+	if existing_snapshot != null:
+		compare(method, existing_snapshot, viewport_img, result)
+
+	dcl_rpc_sender.send(result)
+
+
+func compare(method: Dictionary, image_a: Image, image_b: Image, result: Dictionary) -> void:
+	if method.get("grey_pixel_diff") != null:
+		var similarity = self.compute_image_similarity(image_a, image_b)
+		result["grey_pixel_diff"] = {"similarity": similarity}

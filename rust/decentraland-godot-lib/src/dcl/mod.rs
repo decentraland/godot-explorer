@@ -10,7 +10,11 @@ use crate::auth::wallet::Wallet;
 
 use self::{
     crdt::{DirtyCrdtState, SceneCrdtState},
-    js::{scene_thread, testing::{TakeAndCompareSnapshotResponse, TestingScreenshotComparisonMethodRequest}, SceneLogMessage},
+    js::{
+        scene_thread,
+        testing::{TakeAndCompareSnapshotResponse, TestingScreenshotComparisonMethodRequest},
+        SceneLogMessage,
+    },
     scene_apis::{RpcCall, RpcResultSender},
 };
 
@@ -62,7 +66,7 @@ pub enum SceneResponse {
     RemoveGodotScene(SceneId, Vec<SceneLogMessage>),
     TakeSnapshot {
         scene_id: SceneId,
-        id: String,
+        src_stored_snapshot: String,
         camera_position: Vector3,
         camera_target: Vector3,
         screeshot_size: Vector2,

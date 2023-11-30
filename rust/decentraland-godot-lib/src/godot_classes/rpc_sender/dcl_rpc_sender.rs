@@ -4,7 +4,8 @@ macro_rules! generate_dcl_rpc_sender {
         #[derive(godot::bind::GodotClass)]
         #[class(init, base=RefCounted)]
         pub struct $struct_name {
-            sender: Option<crate::dcl::scene_apis::RpcResultSender<Result<$response_type, String>>>,
+            sender:
+                Option<$crate::dcl::scene_apis::RpcResultSender<Result<$response_type, String>>>,
 
             #[base]
             _base: godot::obj::Base<godot::engine::RefCounted>,
@@ -13,7 +14,7 @@ macro_rules! generate_dcl_rpc_sender {
         impl $struct_name {
             pub fn set_sender(
                 &mut self,
-                sender: crate::dcl::scene_apis::RpcResultSender<Result<$response_type, String>>,
+                sender: $crate::dcl::scene_apis::RpcResultSender<Result<$response_type, String>>,
             ) {
                 self.sender = Some(sender);
             }
@@ -24,8 +25,8 @@ macro_rules! generate_dcl_rpc_sender {
             #[func]
             fn send(&mut self, response: godot::prelude::Variant) {
                 if let Some(sender) = self.sender.as_ref() {
-                    let response = response.try_to::<godot::prelude::Dictionary>().unwrap();
-                    let response = <$response_type>::from_godot(response);
+                    let response =
+                        <$response_type>::from_variant(response).expect("send convertion");
                     let sender: tokio::sync::oneshot::Sender<Result<$response_type, String>> =
                         sender.take();
                     let ret = sender.send(Ok(response));

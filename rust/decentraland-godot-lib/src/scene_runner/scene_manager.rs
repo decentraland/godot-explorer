@@ -15,8 +15,9 @@ use crate::{
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
     godot_classes::{
-        dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal, dcl_rpc_sender::DclRpcSender,
-        dcl_ui_control::DclUiControl,
+        dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal, dcl_ui_control::DclUiControl,
+        rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse,
+        JsonGodotClass,
     },
 };
 use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
@@ -463,7 +464,7 @@ impl SceneManager {
 
                     SceneResponse::TakeSnapshot {
                         scene_id,
-                        id,
+                        src_stored_snapshot,
                         camera_position,
                         camera_target,
                         screeshot_size,
@@ -490,17 +491,22 @@ impl SceneManager {
 
                         let mut testing_tools = DclGlobal::singleton().bind().get_testing_tools();
                         if testing_tools.has_method("async_take_and_compare_snapshot".into()) {
-                            let mut dcl_rpc_sender: Gd<DclRpcSender> = Gd::new_default();
+                            let mut dcl_rpc_sender: Gd<DclRpcSenderTakeAndCompareSnapshotResponse> =
+                                DclRpcSenderTakeAndCompareSnapshotResponse::new_gd();
                             dcl_rpc_sender.bind_mut().set_sender(response);
 
                             testing_tools.call(
                                 "async_take_and_compare_snapshot".into(),
                                 &[
-                                    id.to_variant(),
+                                    scene_id.0.to_variant(),
+                                    src_stored_snapshot.to_variant(),
                                     global_camera_position.to_variant(),
                                     global_camera_target.to_variant(),
                                     screeshot_size.to_variant(),
-                                    0.0_f64.to_variant(),
+                                    method
+                                        .to_godot_from_json()
+                                        .unwrap_or(Dictionary::new().to_variant())
+                                        .to_variant(),
                                     dcl_rpc_sender.to_variant(),
                                 ],
                             );
