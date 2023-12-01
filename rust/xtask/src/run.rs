@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader};
 use crate::{
     consts::{BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
     install_dependency,
-    path::adjust_canonicalization,
+    path::adjust_canonicalization, copy_files::copy_library,
 };
 
 pub fn run(
@@ -11,6 +11,7 @@ pub fn run(
     release_mode: bool,
     itest: bool,
     only_build: bool,
+    link_libs: bool,
 ) -> Result<(), anyhow::Error> {
     let program = adjust_canonicalization(
         std::fs::canonicalize(format!(
@@ -52,7 +53,7 @@ pub fn run(
         ));
     }
 
-    match install_dependency::copy_library(!release_mode) {
+    match copy_library(!release_mode, link_libs) {
         Ok(_) => Ok(()),
         Err(e) => Err(anyhow::anyhow!("copy the library failed: {}", e)),
     }?;

@@ -12,6 +12,7 @@ mod export;
 mod install_dependency;
 mod path;
 mod run;
+mod copy_files;
 
 fn main() -> Result<(), anyhow::Error> {
     let cli = Command::new("xtask")
@@ -86,6 +87,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("only-build")
                         .help("skip the run")
                         .takes_value(false),
+                )
+                .arg(
+                    Arg::new("link-libs")
+                        .short('l')
+                        .help("link libs instead of copying (only linux)")
+                        .takes_value(false),
                 ),
         );
     let matches = cli.get_matches();
@@ -107,6 +114,7 @@ fn main() -> Result<(), anyhow::Error> {
             sm.is_present("release"),
             sm.is_present("itest"),
             sm.is_present("only-build"),
+            sm.is_present("link-libs"),
         ),
         ("export", _m) => export::export(),
         ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),
