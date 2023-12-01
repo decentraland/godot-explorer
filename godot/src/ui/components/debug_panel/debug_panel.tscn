@@ -25,7 +25,6 @@ script = ExtResource("2_juhlr")
 
 [node name="TabContainer_DebugPanel" type="TabContainer" parent="."]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(500, 250)
 layout_mode = 1
 anchors_preset = 15
@@ -63,7 +62,7 @@ icon = ExtResource("4_k7442")
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-focus_mode = 0
+focus_mode = 1
 theme_override_font_sizes/font_size = 12
 columns = 2
 allow_reselect = true
@@ -88,8 +87,11 @@ focus_mode = 0
 text = "Debug Panel"
 icon = ExtResource("5_34smo")
 
+[node name="PopupMenu" type="PopupMenu" parent="."]
+unique_name_in_owner = true
+
 [connection signal="text_changed" from="TabContainer_DebugPanel/Console/HBoxContainer/LineEdit_Filter" to="." method="_on_line_edit_filter_text_changed"]
 [connection signal="pressed" from="TabContainer_DebugPanel/Console/HBoxContainer/Button_Clear" to="." method="_on_button_clear_pressed"]
 [connection signal="item_mouse_selected" from="TabContainer_DebugPanel/Console/Tree_Console" to="." method="_on_tree_console_item_mouse_selected"]
-[connection signal="item_selected" from="TabContainer_DebugPanel/Console/Tree_Console" to="." method="_on_tree_console_item_selected"]
 [connection signal="pressed" from="Button_ShowHide" to="." method="_on_button_show_hide_pressed"]
+[connection signal="index_pressed" from="PopupMenu" to="." method="_on_popup_menu_index_pressed"]

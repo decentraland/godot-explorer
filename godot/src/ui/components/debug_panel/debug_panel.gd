@@ -7,10 +7,12 @@ enum SceneLogLevel {
 }
 
 const ICON_COLUMN_WIDTH = 20
-
 var icon_log: Texture2D = preload("res://src/ui/components/debug_panel/icons/Log.svg")
 var icon_error: Texture2D = preload("res://src/ui/components/debug_panel/icons/Error.svg")
 var icon_warning: Texture2D = preload("res://src/ui/components/debug_panel/icons/Warning.svg")
+var icon_action_copy: Texture2D = preload(
+	"res://src/ui/components/debug_panel/icons/ActionCopy.svg"
+)
 
 var icon_hidden: Texture2D = preload(
 	"res://src/ui/components/debug_panel/icons/GuiVisibilityHidden.svg"
@@ -123,6 +125,21 @@ func _on_button_show_hide_pressed():
 		%Button_ShowHide.icon = icon_hidden
 
 
-func _on_tree_console_item_selected():
-	var text = %Tree_Console.get_selected().get_text(1)
-	DisplayServer.clipboard_set(text)
+func _on_tree_console_item_mouse_selected(position, mouse_button_index):
+	if mouse_button_index != MOUSE_BUTTON_RIGHT:
+		return
+
+	%PopupMenu.clear(true)
+	%PopupMenu.reset_size()
+
+	if %Tree_Console.get_selected():
+		%PopupMenu.add_icon_item(icon_action_copy, "Copy ")
+		%PopupMenu.set_position(%Tree_Console.get_screen_position() + position)
+		%PopupMenu.popup()
+
+
+func _on_popup_menu_index_pressed(index):
+	# Only has copy
+	if index == 0:
+		var text = %Tree_Console.get_selected().get_text(1)
+		DisplayServer.clipboard_set(text)
