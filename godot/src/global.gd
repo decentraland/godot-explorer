@@ -95,6 +95,29 @@ func _process(_dt: float):
 	http_requester.poll()
 
 
+func get_explorer():
+	var explorer = get_node_or_null("/root/explorer")
+	if is_instance_valid(explorer):
+		return explorer
+	return null
+
+
+func explorer_has_focus() -> bool:
+	var explorer = get_explorer()
+	if explorer == null:
+		return false
+
+	return explorer.ui_root.has_focus()
+
+
+func explorer_grab_focus() -> void:
+	var explorer = get_explorer()
+	if explorer == null:
+		return
+
+	return explorer.ui_root.grab_focus.call_deferred()
+
+
 func capture_mouse():
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):

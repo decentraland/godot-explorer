@@ -34,6 +34,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_c8oen")
+tab_focus_mode = 0
 
 [node name="Console" type="VBoxContainer" parent="TabContainer_DebugPanel"]
 layout_mode = 2
@@ -49,23 +50,27 @@ text = "Filter:"
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+focus_mode = 1
 placeholder_text = "Filter Messages"
 right_icon = ExtResource("3_nth2r")
 
 [node name="Button_Clear" type="Button" parent="TabContainer_DebugPanel/Console/HBoxContainer"]
 layout_mode = 2
+focus_mode = 0
 icon = ExtResource("4_k7442")
 
 [node name="Tree_Console" type="Tree" parent="TabContainer_DebugPanel/Console"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+focus_mode = 0
 theme_override_font_sizes/font_size = 12
 columns = 2
 allow_reselect = true
 allow_rmb_select = true
 hide_root = true
 select_mode = 1
+scroll_horizontal_enabled = false
 
 [node name="Button_ShowHide" type="Button" parent="."]
 unique_name_in_owner = true
