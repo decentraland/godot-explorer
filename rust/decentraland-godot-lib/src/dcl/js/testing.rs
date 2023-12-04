@@ -18,7 +18,7 @@ pub fn ops() -> Vec<OpDecl> {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct GreyPixelDiffRequest;
+pub struct GreyPixelDiffRequest {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TestingScreenshotComparisonMethodRequest {

@@ -25,8 +25,10 @@ func async_take_and_compare_snapshot(
 	# TODO: make this configurable
 	var hide_player := true
 
-	var base_path := src_stored_snapshot.replace(" ", "_").replace("/", "_").replace("\\", "_")
-	var snapshot_path := "user://snapshot_" + base_path + ".png"
+	var base_path := src_stored_snapshot.replace(" ", "_").replace("/", "_").replace("\\", "_").to_lower()
+	var snapshot_path := "user://snapshot_" + base_path
+	if not snapshot_path.ends_with(".png"):
+		snapshot_path += ".png"
 
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 	var viewport = get_viewport()

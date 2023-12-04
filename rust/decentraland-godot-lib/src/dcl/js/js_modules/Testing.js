@@ -14,8 +14,10 @@ function testingModule() {
     function takeAndCompareScreenshot(body) {
         const { srcStoredSnapshot, cameraPosition, cameraTarget, screenshotSize } = body
         const methods = {
-            greyPixelDiff: body.greyPixelDiff
+            grey_pixel_diff: body.greyPixelDiff
         }
+
+        console.log({ methods })
         return Deno.core.ops.op_take_and_compare_snapshot(
             srcStoredSnapshot,
             [cameraPosition.x, cameraPosition.y, cameraPosition.z],
