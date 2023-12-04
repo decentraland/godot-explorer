@@ -22,6 +22,7 @@ use super::{
         raycast::update_raycasts,
         text_shape::update_text_shape,
         transform_and_parent::update_transform_and_parent,
+        tween::update_tween,
         ui::scene_ui::update_scene_ui,
         video_player::update_video_player,
         visibility::update_visibility,
@@ -137,6 +138,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::DeletedEntities => {
                 update_deleted_entities(scene);
+                false
+            }
+            SceneUpdateState::Tween => {
+                update_tween(scene, crdt_state);
                 false
             }
             SceneUpdateState::TransformAndParent => {

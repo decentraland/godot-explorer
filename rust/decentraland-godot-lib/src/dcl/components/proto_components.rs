@@ -92,6 +92,30 @@ pub mod common {
             }
         }
     }
+
+    impl Vector3 {
+        pub fn to_godot(&self) -> godot::prelude::Vector3 {
+            godot::prelude::Vector3::new(self.x, self.y, self.z)
+        }
+    }
+
+    impl Position {
+        pub fn to_godot(&self) -> godot::prelude::Vector3 {
+            godot::prelude::Vector3::new(self.x, self.y, self.z)
+        }
+    }
+
+    impl Vector2 {
+        pub fn to_godot(&self) -> godot::prelude::Vector2 {
+            godot::prelude::Vector2::new(self.x, self.y)
+        }
+    }
+
+    impl Quaternion {
+        pub fn to_godot(&self) -> godot::prelude::Quaternion {
+            godot::prelude::Quaternion::new(self.x, self.y, self.z, self.w)
+        }
+    }
 }
 
 pub trait WrapToGodot<T> {
