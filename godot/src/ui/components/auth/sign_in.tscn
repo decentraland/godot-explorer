@@ -52,12 +52,14 @@ autowrap_mode = 3
 
 [node name="Button_SignIn" type="Button" parent="Panel_Main/VBoxContainer_Connect"]
 layout_mode = 2
+focus_mode = 0
 theme_override_font_sizes/font_size = 20
 text = "Sign In"
 
 [node name="Button_Guest" type="Button" parent="Panel_Main/VBoxContainer_Connect"]
 self_modulate = Color(1, 1, 1, 0.611765)
 layout_mode = 2
+focus_mode = 0
 theme_override_font_sizes/font_size = 20
 text = "Continue as a guest"
 
@@ -114,6 +116,7 @@ autowrap_mode = 3
 
 [node name="Button_ConfirmGuestRisk" type="Button" parent="Panel_Main/VBoxContainer_GuestConfirm"]
 layout_mode = 2
+focus_mode = 0
 text = "I assume the risk"
 
 [connection signal="pressed" from="Panel_Main/VBoxContainer_Connect/Button_SignIn" to="." method="_on_button_sign_in_pressed"]

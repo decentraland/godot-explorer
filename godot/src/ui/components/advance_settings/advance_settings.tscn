@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://c8v1b3owo26xt"]
+[gd_scene load_steps=4 format=3 uid="uid://c8v1b3owo26xt"]
 
 [ext_resource type="Script" path="res://src/ui/components/advance_settings/advance_settings.gd" id="1_mo2dv"]
 
@@ -7,13 +7,6 @@ Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
 
 [sub_resource type="Theme" id="Theme_o8ri3"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wrxk6"]
-bg_color = Color(0.976471, 0.976471, 0.976471, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
 [node name="Control_AdvanceSettings" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -21,6 +14,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("1_mo2dv")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
@@ -30,16 +24,19 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 theme_override_constants/separation = 0
 
 [node name="ColorRect_Navbar" type="ColorRect" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
+mouse_filter = 2
 color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 
 [node name="ColorRect_Background" type="ColorRect" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+mouse_filter = 2
 color = Color(0.85098, 0.843137, 0.866667, 1)
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background"]
@@ -55,11 +52,13 @@ offset_right = 492.0
 offset_bottom = 225.5
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 theme_override_constants/separation = 50
 alignment = 1
 
 [node name="VBoxContainer_General" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer"]
 layout_mode = 2
+mouse_filter = 2
 theme = SubResource("Theme_fdw13")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
@@ -68,12 +67,14 @@ theme_override_constants/separation = 15
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm"]
 layout_mode = 2
 size_flags_vertical = 3
+mouse_filter = 2
 theme_override_constants/separation = 31
 alignment = 2
 
@@ -86,6 +87,7 @@ alignment = 2
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 15
 
 [node name="Label" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer2"]
@@ -96,7 +98,7 @@ text = "Realm"
 layout_mode = 2
 size_flags_horizontal = 3
 tooltip_text = "Select scene to load"
-focus_mode = 0
+focus_mode = 1
 item_count = 10
 popup/item_0/text = "mannakia.dcl.eth"
 popup/item_0/id = 0
@@ -121,22 +123,26 @@ popup/item_9/id = 9
 
 [node name="HSeparator4" type="HSeparator" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 layout_mode = 2
+mouse_filter = 2
 
 [node name="VBoxContainer_Connection" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection"]
 layout_mode = 2
 size_flags_vertical = 3
+mouse_filter = 2
 theme_override_constants/separation = 15
 
 [node name="LineEdit_PreviewUrl" type="LineEdit" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+focus_mode = 1
 text = "http://127.0.0.1:8000/"
 
 [node name="Button_ConnectPreview" type="Button" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection/HBoxContainer"]
@@ -146,6 +152,7 @@ text = "Connect!"
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection"]
 layout_mode = 2
+mouse_filter = 2
 
 [node name="Label" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Connection/HBoxContainer2"]
 layout_mode = 2
@@ -157,11 +164,13 @@ text = "Disconnected"
 
 [node name="HSeparator3" type="HSeparator" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 layout_mode = 2
+mouse_filter = 2
 
 [node name="VBoxContainer_ProcessTickQuota" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
@@ -173,12 +182,13 @@ text = "Process Tick Quota"
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_ProcessTickQuota"]
 layout_mode = 2
 size_flags_vertical = 3
+mouse_filter = 2
 
 [node name="HSlider_ProcessTickQuota" type="HSlider" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_ProcessTickQuota/HBoxContainer"]
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
 size_flags_horizontal = 3
-focus_mode = 0
+focus_mode = 1
 min_value = 1.0
 max_value = 16.0
 value = 1.0
@@ -192,11 +202,13 @@ horizontal_alignment = 1
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 layout_mode = 2
+mouse_filter = 2
 
 [node name="VBoxContainer_SceneRadius" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
@@ -207,12 +219,14 @@ text = "Scene Radius"
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius"]
 layout_mode = 2
+mouse_filter = 2
 
 [node name="HSlider_SceneRadius" type="HSlider" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
 size_flags_horizontal = 3
-focus_mode = 0
+focus_mode = 1
+mouse_filter = 2
 max_value = 4.0
 value = 1.0
 
@@ -224,17 +238,20 @@ horizontal_alignment = 1
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 layout_mode = 2
+mouse_filter = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 0.0
+mouse_filter = 2
 
 [node name="HBoxContainer_Gravity" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_constants/separation = 10
 
 [node name="Label_Gravity" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity"]
@@ -246,12 +263,14 @@ text = "Gravity
 
 [node name="SpinBox_Gravity" type="SpinBox" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity"]
 layout_mode = 2
+focus_mode = 1
 value = 100.0
 
 [node name="HBoxContainer_JumpVelocity" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_constants/separation = 10
 
 [node name="Label_JumpVelocity" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity"]
@@ -263,17 +282,20 @@ text = "Jump Velocity
 
 [node name="SpinBox_JumpVelocity" type="SpinBox" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity"]
 layout_mode = 2
+focus_mode = 1
 editable = false
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_stretch_ratio = 0.0
+mouse_filter = 2
 
 [node name="HBoxContainer_RunSpeed" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_constants/separation = 10
 
 [node name="Label_RunSpeed" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed"]
@@ -285,12 +307,14 @@ text = "Run Speed
 
 [node name="SpinBox_RunSpeed" type="SpinBox" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed"]
 layout_mode = 2
+focus_mode = 1
 editable = false
 
 [node name="HBoxContainer_WalkSpeed" type="HBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
+mouse_filter = 2
 theme_override_constants/separation = 10
 
 [node name="Label_WalkSpeed" type="Label" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed"]
@@ -301,64 +325,8 @@ text = "Walk Speed"
 
 [node name="SpinBox_WalkSpeed" type="SpinBox" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed"]
 layout_mode = 2
+focus_mode = 1
 editable = false
-
-[node name="VBoxContainer_General2" type="VBoxContainer" parent="VBoxContainer/ColorRect_Background/HBoxContainer"]
-custom_minimum_size = Vector2(400, 0)
-layout_mode = 2
-theme = SubResource("Theme_fdw13")
-theme_type_variation = &"2"
-theme_override_constants/separation = 15
-
-[node name="Panel_Console" type="Panel" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2"]
-custom_minimum_size = Vector2(400, 300)
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_wrxk6")
-
-[node name="RichTextLabel_Console" type="RichTextLabel" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 6.0
-offset_top = 6.0
-offset_right = -8.0
-offset_bottom = -58.0
-grow_horizontal = 2
-grow_vertical = 2
-bbcode_enabled = true
-scroll_following = true
-
-[node name="Button_CopyConsoleContent" type="Button" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console"]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -133.0
-offset_top = -41.0
-offset_right = -78.0
-offset_bottom = -14.0
-grow_horizontal = 0
-grow_vertical = 0
-text = "Copy"
-
-[node name="Button_ClearConsole" type="Button" parent="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console"]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -70.0
-offset_top = -42.0
-offset_right = -15.0
-offset_bottom = -15.0
-grow_horizontal = 0
-grow_vertical = 0
-text = "Clear"
 
 [connection signal="toggled" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer/CheckButton_Pause" to="." method="_on_check_button_pause_toggled"]
 [connection signal="item_selected" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
@@ -369,5 +337,3 @@ text = "Clear"
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity" to="." method="_on_spin_box_jump_velocity_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed" to="." method="_on_spin_box_run_speed_value_changed"]
 [connection signal="value_changed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed" to="." method="_on_spin_box_walk_speed_value_changed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console/Button_CopyConsoleContent" to="." method="_on_button_copy_console_content_pressed"]
-[connection signal="pressed" from="VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console/Button_ClearConsole" to="." method="_on_button_clear_console_pressed"]

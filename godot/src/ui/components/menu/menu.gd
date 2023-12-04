@@ -110,6 +110,7 @@ func close():
 
 func show_last():
 	self.show()
+	self.grab_focus()
 	var tween = create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.3).set_ease(Tween.EASE_IN_OUT)
 	color_rect_header.show()

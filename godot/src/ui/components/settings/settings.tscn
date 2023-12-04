@@ -116,7 +116,7 @@ text = "Cache Path"
 [node name="TextEdit_CachePath" type="LineEdit" parent="VBoxContainer_General/VBoxContainer_CachePath"]
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
-focus_mode = 0
+focus_mode = 1
 editable = false
 
 [node name="Button_ClearCache" type="Button" parent="VBoxContainer_General/VBoxContainer_CachePath"]
@@ -157,7 +157,7 @@ text = "Window Size"
 
 [node name="MenuButton_WindowSize" type="OptionButton" parent="VBoxContainer_Graphics/WindowSize"]
 layout_mode = 2
-focus_mode = 0
+focus_mode = 1
 
 [node name="Resolution" type="VBoxContainer" parent="VBoxContainer_Graphics"]
 layout_mode = 2
@@ -171,7 +171,7 @@ text = "Resolution"
 
 [node name="MenuButton_Resolution" type="OptionButton" parent="VBoxContainer_Graphics/Resolution"]
 layout_mode = 2
-focus_mode = 0
+focus_mode = 1
 
 [node name="GuiScale" type="VBoxContainer" parent="VBoxContainer_Graphics"]
 layout_mode = 2
@@ -190,7 +190,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-focus_mode = 0
+focus_mode = 1
 min_value = 100.0
 max_value = 200.0
 step = 25.0
@@ -216,7 +216,7 @@ text = "Limit FPS"
 
 [node name="MenuButton_LimitFps" type="OptionButton" parent="VBoxContainer_Graphics/LimitFps"]
 layout_mode = 2
-focus_mode = 0
+focus_mode = 1
 item_count = 5
 selected = 0
 popup/item_0/text = "VSync"
@@ -253,7 +253,7 @@ vertical_alignment = 1
 
 [node name="MenuButton_Skybox" type="OptionButton" parent="VBoxContainer_Graphics/Skybox"]
 layout_mode = 2
-focus_mode = 0
+focus_mode = 1
 item_count = 2
 selected = 0
 popup/item_0/text = "Default"

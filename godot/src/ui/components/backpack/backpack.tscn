@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=31 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -13,10 +13,44 @@
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_0kgen"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_tq2r2"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_a5xle"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_ouxga"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_hkxxq"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_2wved"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_huhdk"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_er5ug"]
 
 [sub_resource type="StyleBoxLine" id="StyleBoxLine_0xmb3"]
 color = Color(1, 1, 1, 1)
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_hfu0u"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_l3hah"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_i0u3o"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_ebnlf"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_67eac"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_lcntv"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_id16e"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_qj18f"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_3hmj1"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_t8fuy"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_jdlmx"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_lo7qx"]
 
 [node name="Control_Backpack" type="VBoxContainer"]
 anchors_preset = 15
@@ -64,6 +98,7 @@ layout_mode = 2
 
 [node name="Button_Logout" type="Button" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer"]
 layout_mode = 2
+focus_mode = 0
 text = "Log out"
 
 [node name="HBoxContainer3" type="HBoxContainer" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer"]
@@ -88,6 +123,7 @@ alignment = 2
 [node name="Button" type="Button" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer/HBoxContainer3/HBoxContainer4"]
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
+focus_mode = 0
 theme_type_variation = &"OrangeButton"
 toggle_mode = true
 button_pressed = true
@@ -97,6 +133,7 @@ text = "Avatar"
 [node name="Button2" type="Button" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer/HBoxContainer3/HBoxContainer4"]
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
+focus_mode = 0
 theme_type_variation = &"OrangeButton"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_0kgen")
@@ -110,10 +147,12 @@ size_flags_horizontal = 1
 
 [node name="LineEdit_Name" type="LineEdit" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer"]
 layout_mode = 2
+focus_mode = 1
 
 [node name="Button_SaveProfile" type="Button" parent="ColorRect_Background/HBoxContainer/Control/VBoxContainer"]
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
+focus_mode = 0
 theme_type_variation = &"OrangeButton"
 disabled = true
 toggle_mode = true
@@ -158,6 +197,7 @@ columns = 4
 
 [node name="CheckButton" type="CheckButton" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
+focus_mode = 0
 theme = ExtResource("1_0pkvk")
 theme_type_variation = &"BrownCheckButton"
 text = "ONLY COLLECTIBLES"
@@ -173,6 +213,7 @@ text = "COLLECTION"
 [node name="OptionButton" type="OptionButton" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer2"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
+focus_mode = 1
 
 [node name="HBoxContainer3" type="HBoxContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
@@ -185,6 +226,7 @@ text = "SORT BY"
 [node name="OptionButton" type="OptionButton" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer3"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
+focus_mode = 1
 
 [node name="LineEdit" type="LineEdit" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
@@ -216,12 +258,12 @@ theme_override_constants/separation = 11
 
 [node name="wearable_button" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_a5xle")
 filter_category = 0
 
 [node name="wearable_button2" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_ouxga")
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -229,12 +271,12 @@ theme_override_constants/separation = 11
 
 [node name="wearable_button" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer2" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_hkxxq")
 filter_category = 2
 
 [node name="wearable_button2" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer2" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_2wved")
 filter_category = 3
 
 [node name="HBoxContainer3" type="HBoxContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer"]
@@ -243,12 +285,12 @@ theme_override_constants/separation = 11
 
 [node name="wearable_button" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer3" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_huhdk")
 filter_category = 4
 
 [node name="wearable_button2" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer3" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_er5ug")
 filter_category = 5
 
 [node name="HSeparator" type="HSeparator" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer"]
@@ -261,12 +303,12 @@ theme_override_constants/separation = 11
 
 [node name="wearable_button" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer4" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_hfu0u")
 filter_category = 6
 
 [node name="wearable_button2" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer4" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_l3hah")
 filter_category = 7
 
 [node name="HBoxContainer5" type="HBoxContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer"]
@@ -275,12 +317,12 @@ theme_override_constants/separation = 11
 
 [node name="wearable_button" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer5" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_i0u3o")
 filter_category = 8
 
 [node name="wearable_button2" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer5" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_ebnlf")
 filter_category = 9
 
 [node name="HSeparator2" type="HSeparator" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer"]
@@ -293,12 +335,12 @@ theme_override_constants/separation = 11
 
 [node name="wearable_button" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer6" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_67eac")
 filter_category = 10
 
 [node name="wearable_button2" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer6" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_lcntv")
 filter_category = 11
 
 [node name="HBoxContainer7" type="HBoxContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer"]
@@ -307,12 +349,12 @@ theme_override_constants/separation = 11
 
 [node name="wearable_button" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer7" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_id16e")
 filter_category = 12
 
 [node name="wearable_button2" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer7" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_qj18f")
 filter_category = 13
 
 [node name="HBoxContainer8" type="HBoxContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer"]
@@ -321,12 +363,12 @@ theme_override_constants/separation = 11
 
 [node name="wearable_button" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer8" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_3hmj1")
 filter_category = 14
 
 [node name="wearable_button2" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer8" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_t8fuy")
 filter_category = 15
 
 [node name="HBoxContainer9" type="HBoxContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer"]
@@ -335,12 +377,12 @@ theme_override_constants/separation = 11
 
 [node name="wearable_button" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer9" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_jdlmx")
 filter_category = 16
 
 [node name="wearable_button2" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer9" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_tq2r2")
+button_group = SubResource("ButtonGroup_lo7qx")
 filter_category = 17
 
 [node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2"]
@@ -353,6 +395,7 @@ theme_override_constants/separation = 11
 
 [node name="Button_All" type="Button" parent="ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer"]
 layout_mode = 2
+focus_mode = 0
 theme_type_variation = &"OrangeButton"
 toggle_mode = true
 button_pressed = true

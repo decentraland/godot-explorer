@@ -12,7 +12,7 @@ var counter: int = 0
 
 var _last_parcel_position: Vector2i
 
-@onready var ui_root = $UI
+@onready var ui_root: Control = $UI
 
 @onready var label_crosshair = $UI/Label_Crosshair
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
@@ -138,6 +138,9 @@ func _ready():
 		# TODO: fetch profile
 		Global.comms.player_identity.update_profile(Global.config.avatar_profile)
 
+	# last
+	ui_root.grab_focus.call_deferred()
+
 
 func _on_player_logout():
 	# TODO: clean all UI ?
@@ -157,7 +160,7 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	var title: String = Global.scene_runner.get_scene_title(scene_id)
 	title += str(Global.scene_runner.get_scene_base_parcel(scene_id))
-	control_menu.control_advance_settings.on_console_add(title, level, timestamp, text)
+	%DebugPanel.on_console_add(title, level, timestamp, text)
 
 
 func _on_pointer_tooltip_changed():
@@ -182,7 +185,7 @@ func _unhandled_input(event):
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 				capture_mouse()
 
-		if event is InputEventKey:
+		if event is InputEventKey and ui_root.has_focus():
 			if event.pressed and event.keycode == KEY_TAB:
 				if not control_menu.visible:
 					control_menu.show_last()
@@ -226,6 +229,7 @@ func _on_control_menu_jump_to(parcel: Vector2i):
 func _on_control_menu_hide_menu():
 	control_menu.close()
 	control_menu.control_map.clear()
+	ui_root.grab_focus()
 
 
 func _on_timer_timeout():
@@ -345,6 +349,7 @@ func player_look_at(look_at_position: Vector3):
 func capture_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	label_crosshair.show()
+	ui_root.grab_focus.call_deferred()
 
 
 func release_mouse():

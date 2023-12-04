@@ -20,6 +20,7 @@ offset_bottom = 30.0
 layout_mode = 0
 offset_right = 68.0
 offset_bottom = 35.0
+focus_mode = 0
 text = "Talk"
 
 [connection signal="text_submitted" from="LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
