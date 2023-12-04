@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use deno_core::{
     anyhow::{self, anyhow},
     error::AnyError,
@@ -7,7 +9,7 @@ use godot::builtin::{Vector2, Vector3};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dcl::{SceneId, SceneResponse},
+    dcl::{scene_apis::RpcCall, SceneId, SceneResponse},
     godot_classes::JsonGodotClass,
 };
 
@@ -37,6 +39,29 @@ pub struct GreyPixelDiffResult {
 pub struct TakeAndCompareSnapshotResponse {
     pub stored_snapshot_found: bool,
     pub grey_pixel_diff: Option<GreyPixelDiffResult>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SceneTestResult {
+    pub name: String,
+    pub ok: bool,
+    pub error: Option<String>,
+    pub stack: Option<String>,
+    pub total_frames: i32,
+    pub total_time: f32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SceneTestPlan {
+    pub tests: Vec<SceneTestPlanTestPlanEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SceneTestPlanTestPlanEntry {
+    pub name: String,
 }
 
 #[op]
@@ -108,4 +133,18 @@ fn op_take_and_compare_snapshot(
     response
         .map_err(|e| anyhow::anyhow!(e))?
         .map_err(|e| anyhow!(e))
+}
+
+#[op]
+fn op_log_test_result(state: &mut OpState, body: SceneTestResult) {
+    state
+        .borrow_mut::<Vec<RpcCall>>()
+        .push(RpcCall::SceneTestResult { body });
+}
+
+#[op]
+fn op_log_test_plan(state: &mut OpState, body: SceneTestPlan) {
+    state
+        .borrow_mut::<Vec<RpcCall>>()
+        .push(RpcCall::SceneTestPlan { body });
 }

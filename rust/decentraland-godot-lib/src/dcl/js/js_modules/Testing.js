@@ -7,6 +7,7 @@ function emptyTesting() {
         logTestResult: async function (body) { return {} },
         plan: async function (body) { return {} },
         setCameraTransform: async function (body) { return {} },
+        takeAndCompareScreenshot: async function (body) { return {} }
     }
 }
 
@@ -28,8 +29,14 @@ function testingModule() {
     }
 
     return {
-        logTestResult: async function (body) { return {} },
-        plan: async function (body) { return {} },
+        logTestResult: async function (body) {
+            Deno.core.ops.op_log_test_result(body);
+            return {}
+        },
+        plan: async function (body) {
+            Deno.core.ops.op_log_test_plan(body);
+            return {}
+        },
         setCameraTransform: async function (body) { return {} },
         takeAndCompareScreenshot
     }

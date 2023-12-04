@@ -20,7 +20,7 @@ use crate::{
             SceneEntityId,
         },
         crdt::{DirtyEntities, DirtyGosComponents, DirtyLwwComponents},
-        js::SceneLogMessage,
+        js::{testing::SceneTestResult, SceneLogMessage},
         scene_apis::RpcCall,
         // js::js_runtime::SceneLogMessage,
         DclScene,
@@ -182,6 +182,7 @@ pub struct Scene {
     pub video_players: HashMap<SceneEntityId, Gd<DclVideoPlayer>>,
 
     pub avatar_scene_updates: SceneAvatarUpdates,
+    pub scene_tests: HashMap<String, Option<SceneTestResult>>,
 }
 
 #[derive(Debug)]
@@ -266,6 +267,7 @@ impl Scene {
             video_players: HashMap::new(),
             scene_type,
             avatar_scene_updates: Default::default(),
+            scene_tests: HashMap::new(),
         }
     }
 
@@ -319,6 +321,7 @@ impl Scene {
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
             avatar_scene_updates: Default::default(),
+            scene_tests: HashMap::new(),
         }
     }
 }
