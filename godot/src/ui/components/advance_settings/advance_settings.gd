@@ -31,8 +31,6 @@ var h_slider_scene_radius = $VBoxContainer/ColorRect_Background/HBoxContainer/VB
 @onready
 var label_scene_radius_value = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/Label_SceneRadiusValue
 @onready
-var rich_text_label_console = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General2/Panel_Console/RichTextLabel_Console
-@onready
 var spin_box_gravity = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
 @onready
 var spin_box_jump_velocity = $VBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity
@@ -74,10 +72,6 @@ func _on_h_slider_scene_radius_drag_ended(value_changed):
 
 func _on_check_button_pause_toggled(button_pressed):
 	emit_signal("request_pause_scenes", check_button_pause.button_pressed)
-
-
-func _on_button_clear_console_pressed():
-	rich_text_label_console.clear()
 
 
 func set_ws_state(connected: bool) -> void:
@@ -149,24 +143,6 @@ func _on_button_connect_preview_pressed():
 	)
 
 
-func on_console_add(scene_title: String, level: int, timestamp: float, text: String) -> void:
-	var color := Color.BLACK
-	match level:
-		SceneLogLevel.LOG:
-			color = Color.DARK_SLATE_BLUE
-		SceneLogLevel.SCENE_ERROR:
-			color = Color.DARK_RED
-		SceneLogLevel.SYSTEM_ERROR:
-			color = Color.RED
-
-	timestamp = round(timestamp * 100.0) / 100.0
-	var msg = "(" + str(timestamp) + ") " + scene_title + " > " + text
-	rich_text_label_console.push_color(color)
-	rich_text_label_console.add_text(msg)
-	rich_text_label_console.pop()
-	rich_text_label_console.newline()
-
-
 func _on_spin_box_walk_speed_value_changed(value):
 	Global.config.walk_velocity = value
 	Global.config.save_to_settings_file()
@@ -185,9 +161,3 @@ func _on_spin_box_jump_velocity_value_changed(value):
 func _on_spin_box_gravity_value_changed(value):
 	Global.config.gravity = value
 	Global.config.save_to_settings_file()
-
-
-func _on_button_copy_console_content_pressed():
-	rich_text_label_console.select_all()
-	var text = rich_text_label_console.get_parsed_text()
-	DisplayServer.clipboard_set(text)

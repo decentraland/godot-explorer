@@ -23,6 +23,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+focus_mode = 1
 mouse_force_pass_scroll_events = false
 theme = ExtResource("1_ji0pe")
 script = ExtResource("2_cgghr")

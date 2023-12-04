@@ -123,7 +123,7 @@ func _input(event):
 			_clamp_camera_rotation()
 
 		# Toggle first or third person camera
-		if event is InputEventMouseButton:
+		if event is InputEventMouseButton and Global.explorer_has_focus():
 			if !camera_mode_change_blocked:
 				if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 					if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
@@ -136,6 +136,10 @@ func _input(event):
 
 func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
+
+	if not Global.explorer_has_focus():  # ignore input
+		input_dir = Vector2(0, 0)
+
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	current_direction = current_direction.move_toward(direction, 10 * delta)
 

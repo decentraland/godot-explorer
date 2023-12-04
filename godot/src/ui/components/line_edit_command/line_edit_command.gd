@@ -6,6 +6,10 @@ signal submit_message(message: String)
 @onready var button_send = $Button_Send
 
 
+func _ready():
+	line_edit_command.hide()
+
+
 func _on_button_send_pressed():
 	if line_edit_command.visible:
 		submit_message.emit(line_edit_command.text)
@@ -31,3 +35,4 @@ func start():
 
 func _on_line_edit_command_text_submitted(new_text: String) -> void:
 	submit_message.emit(new_text)
+	Global.explorer_grab_focus()

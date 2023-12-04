@@ -12,9 +12,9 @@ use crate::download_file::download_file;
 use crate::export::prepare_templates;
 
 use crate::consts::{
-    BIN_FOLDER, GODOT4_BIN_BASE_URL, GODOT_PROJECT_FOLDER, PROTOC_BASE_URL, RUST_LIB_PROJECT_FOLDER,
+    BIN_FOLDER, GODOT4_BIN_BASE_URL, PROTOC_BASE_URL, RUST_LIB_PROJECT_FOLDER,
 };
-use crate::path::adjust_canonicalization;
+
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
@@ -154,86 +154,6 @@ pub fn get_godot_executable_path() -> Option<String> {
     }?;
 
     Some(os_url)
-}
-
-fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q) -> io::Result<()> {
-    let src_path = src.as_ref();
-    let dest_path = dest.as_ref();
-
-    // Obtain the metadata of the source and destination file
-    let metadata_src = fs::metadata(src_path);
-    let metadata_dest = fs::metadata(dest_path);
-
-    // If both files exist, we compare their modification times
-    if metadata_src.is_ok() && metadata_dest.is_ok() {
-        let time_src = metadata_src?.modified()?;
-        let time_dest = metadata_dest?.modified()?;
-
-        // If the destination file is more recent or equal to the source file, we do not copy
-        if time_dest >= time_src {
-            println!("Skip copy, equal file {}", dest_path.to_string_lossy());
-            return Ok(());
-        }
-    }
-
-    // If the destination file does not exist or is older, we copy the source file to the destination
-    fs::copy(src_path, dest_path).map(|_| println!("Copying {}", dest_path.to_string_lossy()))?;
-    Ok(())
-}
-
-pub fn copy_library(debug_mode: bool) -> Result<(), anyhow::Error> {
-    let os = env::consts::OS;
-    let arch = env::consts::ARCH;
-    let file_name = match (os, arch) {
-        ("linux", _) => Some("libdecentraland_godot_lib.so".to_string()),
-        ("windows", _) => Some("decentraland_godot_lib.dll".to_string()),
-        ("macos", _) => Some("libdecentraland_godot_lib.dylib".to_string()),
-        _ => None,
-    }
-    .expect("Couldn't find a library for this platform");
-
-    let source_folder: &str = if debug_mode {
-        "target/debug/"
-    } else {
-        "target/release/"
-    };
-
-    let source_folder = format!("{RUST_LIB_PROJECT_FOLDER}{source_folder}");
-
-    let source_file =
-        adjust_canonicalization(fs::canonicalize(source_folder)?.join(file_name.clone()));
-
-    let lib_folder = format!("{GODOT_PROJECT_FOLDER}lib/");
-    let destination_file =
-        adjust_canonicalization(fs::canonicalize(lib_folder.as_str())?.join(file_name));
-    copy_if_modified(source_file, destination_file)?;
-
-    copy_ffmpeg_libraries(lib_folder)?;
-
-    Ok(())
-}
-
-pub fn copy_ffmpeg_libraries(dest_folder: String) -> Result<(), anyhow::Error> {
-    let os = env::consts::OS;
-    if os == "windows" {
-        // copy ffmpeg .dll
-        let ffmpeg_dll_folder = format!("{BIN_FOLDER}ffmpeg/ffmpeg-6.0-full_build-shared/bin");
-
-        // copy all dlls in ffmpeg_dll_folder to exports folder
-        for entry in fs::read_dir(ffmpeg_dll_folder)? {
-            let entry = entry?;
-            let ty = entry.file_type()?;
-            if ty.is_file() {
-                let file_name = entry.file_name().to_str().unwrap().to_string();
-
-                if file_name.ends_with(".dll") {
-                    let dest_path = format!("{dest_folder}{file_name}");
-                    copy_if_modified(entry.path(), dest_path)?;
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
 pub fn install(skip_download_templates: bool) -> Result<(), anyhow::Error> {
