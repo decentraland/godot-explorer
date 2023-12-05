@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use deno_core::{
     anyhow::{self, anyhow},
     error::AnyError,
@@ -16,7 +14,11 @@ use crate::{
 use super::SceneEnv;
 
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_take_and_compare_snapshot::DECL]
+    vec![
+        op_take_and_compare_snapshot::DECL,
+        op_log_test_result::DECL,
+        op_log_test_plan::DECL,
+    ]
 }
 
 #[derive(Debug, Deserialize, Serialize)]

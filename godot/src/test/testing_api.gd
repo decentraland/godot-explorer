@@ -84,3 +84,12 @@ func compare(method: Dictionary, image_a: Image, image_b: Image, result: Diction
 	if method.get("grey_pixel_diff") != null:
 		var similarity = self.compute_image_similarity(image_a, image_b)
 		result["grey_pixel_diff"] = {"similarity": similarity}
+
+func _process(delta):
+	#if not is_test_mode_active():
+		#return
+		
+	if Global.scene_fetcher.is_parcel_scene_loaded(52, -52):
+		if Global.scene_runner.scene_tests_finished():
+			get_tree().quit()
+	

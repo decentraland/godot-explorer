@@ -658,12 +658,16 @@ impl SceneManager {
         &mut self.scenes
     }
 
+    pub fn get_all_scenes(&mut self) -> &HashMap<SceneId, Scene> {
+        &self.scenes
+    }
+
     pub fn get_scene_mut(&mut self, scene_id: &SceneId) -> Option<&mut Scene> {
         self.scenes.get_mut(scene_id)
     }
 
     // this could be cached
-    pub fn get_global_scenes(&self) -> Vec<SceneId> {
+    pub fn get_global_scene_ids(&self) -> Vec<SceneId> {
         self.scenes
             .iter()
             .filter(|(_scene_id, scene)| {
@@ -674,6 +678,19 @@ impl SceneManager {
             })
             .map(|(scene_id, _)| *scene_id)
             .collect::<Vec<SceneId>>()
+    }
+
+    #[func]
+    pub fn is_scene_tests_finished(&self, scene_id: i32) -> bool {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return false;
+        };
+
+        scene.tick_number > 10
+            && scene
+                .scene_tests
+                .iter()
+                .all(|(_, test_result)| test_result.is_some())
     }
 }
 

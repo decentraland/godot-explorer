@@ -85,6 +85,8 @@ pub fn _process_scene(
                         0
                     };
 
+                scene.tick_number = tick_number;
+
                 // fix: if the scene is loading, we need to wait until it finishes before spawn the next tick
                 // tick 0 => onStart() => tick=1 => first onUpdate() => tick=2 => second onUpdate() => tick= 3
                 if tick_number < 3 && !scene.gltf_loading.is_empty() {

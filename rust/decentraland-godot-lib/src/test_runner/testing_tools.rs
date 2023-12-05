@@ -2,8 +2,10 @@ use godot::engine::{Image, Node};
 use godot::prelude::*;
 
 #[derive(GodotClass)]
-#[class(init, base=Node)]
+#[class(base=Node)]
 pub struct DclTestingTools {
+    is_test_mode_active: bool,
+
     #[base]
     _base: Base<Node>,
 }
@@ -14,6 +16,23 @@ fn to_gray(rgb: &[u8]) -> f64 {
     let b = rgb[2];
 
     (0.299 * f64::from(r) + 0.587 * f64::from(g) + 0.114 * f64::from(b)) / u8::MAX as f64
+}
+
+#[godot_api]
+impl INode for DclTestingTools {
+    fn init(base: Base<Node>) -> Self {
+        let args = godot::engine::Os::singleton().get_cmdline_args();
+        let cmd_arg_scene_test = GString::from("--scene-test");
+        let is_test_mode_active = args
+            .as_slice()
+            .iter()
+            .any(|arg| arg.eq(&cmd_arg_scene_test));
+
+        DclTestingTools {
+            _base: base,
+            is_test_mode_active,
+        }
+    }
 }
 
 #[godot_api]
@@ -56,5 +75,10 @@ impl DclTestingTools {
                 .sqrt();
 
         score
+    }
+
+    #[func]
+    fn is_test_mode_active(&self) -> bool {
+        self.is_test_mode_active
     }
 }

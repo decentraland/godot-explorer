@@ -24,8 +24,8 @@ var adaptation_layer_js_local_path: String = "user://sdk-adaptation-layer.js"
 var http_requester: RustHttpRequesterWrapper = Global.http_requester
 
 var current_position: Vector2i = Vector2i(-1000, -1000)
-var loaded_scenes: Dictionary = {}
 var loaded_empty_scenes: Dictionary = {}
+var loaded_scenes: Dictionary = {}
 var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.new()
 var last_version_updated: int = -1
 
@@ -78,8 +78,18 @@ func _process(_dt):
 		await _async_on_desired_scene_changed()
 		last_version_updated = scene_entity_coordinator.get_version()
 
+func is_parcel_scene_loaded(x: int, z: int) -> bool:
+	for scene_id in loaded_scenes.keys():
+		var scene = loaded_scenes[scene_id]
+		var scene_number_id: int = scene.get("scene_number_id", -1)
+		if scene_number_id != -1:
+			for pos in scene.get("parcels", []):
+				if pos.x == x and pos.y == z:
+					return true
+	return false
 
 func _async_on_desired_scene_changed():
+	print("_async_on_desired_scene_changed")
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
 	var keep_alive_scenes = d.get("keep_alive_scenes", [])
