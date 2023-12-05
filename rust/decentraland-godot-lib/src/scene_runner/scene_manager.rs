@@ -692,6 +692,62 @@ impl SceneManager {
                 .iter()
                 .all(|(_, test_result)| test_result.is_some())
     }
+
+    #[func]
+    pub fn get_scene_tests_result(&self, scene_id: i32) -> Dictionary {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return Dictionary::default();
+        };
+
+        let test_total = scene.scene_tests.len() as u32;
+        let mut test_fail = 0;
+        let mut text_test_list = String::new();
+        let mut text_detail_failed = String::new();
+        for value in scene.scene_tests.iter() {
+            if let Some(result) = value.1 {
+                if result.ok {
+                    text_test_list += &format!(
+                        "\t🟢 {} (frames={},time={}): OK\n",
+                        value.0, result.total_frames, result.total_time
+                    );
+                } else {
+                    text_test_list += &format!(
+                        "\t🔴 {} (frames={},time={}):",
+                        value.0, result.total_frames, result.total_time
+                    );
+                    test_fail += 1;
+                    if let Some(error) = &result.error {
+                        text_test_list += "\tFAIL with Error\n";
+                        text_detail_failed += &format!("🔴{}: ❌{}\n", value.0, error);
+                    } else {
+                        text_test_list += "\tFAIL with Unknown Error \n";
+                    }
+                }
+            }
+        }
+
+        let mut text = format!("Scene {:?} tests:\n", scene.definition.title);
+        text += &format!("{}\n", text_test_list);
+        if test_fail == 0 {
+            text += &format!(
+                "✅ All tests ({}) passed in the scene {:?}\n",
+                test_total, scene.definition.title
+            );
+        } else {
+            text += &format!(
+                "❌ {} tests failed of {} in the scene {:?}\n",
+                test_fail, test_total, scene.definition.title
+            );
+        }
+
+        let mut dict = Dictionary::default();
+        dict.set("text", text.to_variant());
+        dict.set("text_detail_failed", text_detail_failed.to_variant());
+        dict.set("total", test_total.to_variant());
+        dict.set("fail", test_fail.to_variant());
+
+        dict
+    }
 }
 
 #[godot_api]

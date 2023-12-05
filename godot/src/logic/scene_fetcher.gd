@@ -78,15 +78,17 @@ func _process(_dt):
 		await _async_on_desired_scene_changed()
 		last_version_updated = scene_entity_coordinator.get_version()
 
-func is_parcel_scene_loaded(x: int, z: int) -> bool:
+
+func get_parcel_scene_id(x: int, z: int) -> int:
 	for scene_id in loaded_scenes.keys():
 		var scene = loaded_scenes[scene_id]
 		var scene_number_id: int = scene.get("scene_number_id", -1)
 		if scene_number_id != -1:
 			for pos in scene.get("parcels", []):
 				if pos.x == x and pos.y == z:
-					return true
-	return false
+					return scene_number_id
+	return -1
+
 
 func _async_on_desired_scene_changed():
 	print("_async_on_desired_scene_changed")
