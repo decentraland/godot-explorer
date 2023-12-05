@@ -92,6 +92,7 @@ impl DclScene {
         base_url: String,
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
         wallet: Wallet,
+        testing_mode: bool,
     ) -> Self {
         let (main_sender_to_thread, thread_receive_from_renderer) =
             tokio::sync::mpsc::channel::<RendererResponse>(1);
@@ -111,6 +112,7 @@ impl DclScene {
                     thread_receive_from_renderer,
                     thread_scene_crdt,
                     wallet,
+                    testing_mode,
                 )
             })
             .unwrap();

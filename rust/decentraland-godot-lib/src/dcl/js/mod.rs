@@ -123,6 +123,7 @@ pub(crate) fn scene_thread(
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
     scene_crdt: SharedSceneCrdtState,
     wallet: Wallet,
+    testing_mode: bool,
 ) {
     let mut scene_main_crdt = None;
     let main_crdt_file_path = scene_definition.main_crdt_path;
@@ -199,8 +200,8 @@ pub(crate) fn scene_thread(
 
     // TODO: receive from main thread, and managed by command line params
     state.borrow_mut().put(SceneEnv {
-        enable_know_env: true,
-        testing_enable: true,
+        enable_know_env: testing_mode,
+        testing_enable: testing_mode,
     });
 
     if let Some(scene_main_crdt) = scene_main_crdt {

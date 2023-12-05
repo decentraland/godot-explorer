@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3 uid="uid://drmwih6numdke"]
+
+[ext_resource type="Script" path="res://assets/sky/sky_basic.gd" id="1_sxikl"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ahgj8"]
+sky_top_color = Color(0.85098, 0.913725, 1, 1)
+
+[sub_resource type="Sky" id="Sky_e2lcq"]
+sky_material = SubResource("ProceduralSkyMaterial_ahgj8")
+
+[sub_resource type="Environment" id="Environment_ncxa3"]
+background_mode = 2
+sky = SubResource("Sky_e2lcq")
+glow_levels/1 = 16.0
+glow_levels/2 = 16.0
+glow_levels/3 = 16.0
+glow_levels/4 = 16.0
+glow_levels/5 = 16.0
+glow_levels/6 = 16.0
+glow_levels/7 = 2.95
+fog_density = 0.001
+
+[node name="SkyBasic" type="WorldEnvironment"]
+environment = SubResource("Environment_ncxa3")
+script = ExtResource("1_sxikl")

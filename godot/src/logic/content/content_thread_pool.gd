@@ -11,7 +11,7 @@ enum ContentType {
 	CT_VIDEO = 7,
 }
 
-const USE_THREAD = false
+const USE_THREAD = true
 const MAX_THREADS = 1
 
 var content_threads: Array[ContentThread] = []

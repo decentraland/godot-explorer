@@ -7,12 +7,12 @@ use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 use crate::consts::RUST_LIB_PROJECT_FOLDER;
 
 mod consts;
+mod copy_files;
 mod download_file;
 mod export;
 mod install_dependency;
 mod path;
 mod run;
-mod copy_files;
 
 fn main() -> Result<(), anyhow::Error> {
     let cli = Command::new("xtask")
@@ -93,6 +93,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .short('l')
                         .help("link libs instead of copying (only linux)")
                         .takes_value(false),
+                )
+                .arg(
+                    Arg::new("extras")
+                        .last(true)
+                        .allow_hyphen_values(true)
+                        .multiple(true),
                 ),
         );
     let matches = cli.get_matches();
@@ -115,6 +121,7 @@ fn main() -> Result<(), anyhow::Error> {
             sm.is_present("itest"),
             sm.is_present("only-build"),
             sm.is_present("link-libs"),
+            sm.values_of("extras"),
         ),
         ("export", _m) => export::export(),
         ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),

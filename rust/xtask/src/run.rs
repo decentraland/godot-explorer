@@ -1,9 +1,12 @@
 use std::io::{BufRead, BufReader};
 
+use clap::Values;
+
 use crate::{
     consts::{BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    copy_files::copy_library,
     install_dependency,
-    path::adjust_canonicalization, copy_files::copy_library,
+    path::adjust_canonicalization,
 };
 
 pub fn run(
@@ -12,6 +15,7 @@ pub fn run(
     itest: bool,
     only_build: bool,
     link_libs: bool,
+    extras: Option<Values>,
 ) -> Result<(), anyhow::Error> {
     let program = adjust_canonicalization(
         std::fs::canonicalize(format!(
@@ -21,6 +25,12 @@ pub fn run(
         ))
         .expect("Did you executed `cargo run -- install`?"),
     );
+
+    let extras: Vec<String> = match extras {
+        Some(iter) => iter.map(|it| it.into()).collect(),
+        None => vec![],
+    };
+    println!("extras: {:?}", extras);
 
     std::env::set_var("GODOT4_BIN", program.clone());
 
@@ -68,6 +78,14 @@ pub fn run(
         args.push("--test");
     }
 
+    if extras.len() > 0 {
+        args.push("--");
+
+        for extra in &extras {
+            args.push(extra.as_str());
+        }
+    }
+    
     if itest {
         let program = std::process::Command::new(program.as_str())
             .args(&args)
@@ -101,6 +119,7 @@ pub fn run(
             Err(anyhow::anyhow!("test not run"))
         }
     } else {
+        println!("Running Godot with args: {:?}", args);
         let status = std::process::Command::new(program.as_str())
             .args(&args)
             .status()

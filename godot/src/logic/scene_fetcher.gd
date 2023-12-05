@@ -91,7 +91,6 @@ func get_parcel_scene_id(x: int, z: int) -> int:
 
 
 func _async_on_desired_scene_changed():
-	print("_async_on_desired_scene_changed")
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
 	var keep_alive_scenes = d.get("keep_alive_scenes", [])

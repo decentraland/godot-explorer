@@ -6,7 +6,7 @@ const DEFAULT_TIMEOUT_REALM_SECONDS = 10.0
 
 class SceneTestItem:
 	extends RefCounted
-	const INVALID_PARCEL_POSITION = Vector2i(INF, INF)
+	const INVALID_PARCEL_POSITION = Vector2i.MAX
 	const INVALID_SCENE_URN = "invalid"
 	const DEFAULT_TIMEOUT_TEST_SECONDS = 10.0
 
@@ -49,7 +49,7 @@ func _ready():
 
 func start():
 	var args := OS.get_cmdline_args()
-	var scene_test_index := 33  # args.find("--scene-test")
+	var scene_test_index := args.find("--scene-test")
 
 	if scene_test_index == -1:
 		self.process_mode = PROCESS_MODE_DISABLED
@@ -57,7 +57,10 @@ func start():
 
 	prints("screenshot_folder='" + OS.get_user_data_dir() + "'")
 
-	var parcels = JSON.parse_string('["52,-52"]')  # args[scene_test_index + 1])
+	var parcels_str = args[scene_test_index + 1].replace("'", "\"")
+	prints("parcels_str=" + str(parcels_str))
+
+	var parcels = JSON.parse_string(parcels_str)
 	for pos_str in parcels:
 		var pos = pos_str.split(",")
 		if pos.size() == 2:
@@ -77,6 +80,7 @@ func start():
 	get_tree().create_timer(DEFAULT_TIMEOUT_REALM_SECONDS).timeout.connect(
 		self.on_realm_change_timeout
 	)
+	self.testing_mode_active = true
 
 
 func on_realm_changed():

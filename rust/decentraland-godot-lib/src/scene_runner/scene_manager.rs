@@ -119,6 +119,7 @@ impl SceneManager {
 
         let new_scene_id = Scene::new_id();
         let signal_data = (new_scene_id, scene_definition.entity_id.clone());
+        let testing_mode_active = DclGlobal::singleton().bind().testing_scene_mode;
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(
             new_scene_id,
             scene_definition.clone(),
@@ -126,6 +127,7 @@ impl SceneManager {
             base_url,
             self.thread_sender_to_main.clone(),
             wallet,
+            testing_mode_active,
         );
 
         let new_scene = Scene::new(

@@ -13,6 +13,7 @@ var counter: int = 0
 var _last_parcel_position: Vector2i
 
 @onready var ui_root: Control = $UI
+@onready var voice_chat_ui = $voice_chat
 
 @onready var label_crosshair = $UI/Label_Crosshair
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
@@ -83,16 +84,20 @@ func _ready():
 		button_jump.hide()
 
 	var sky = null
-	match Global.config.skybox:
-		0:
-			sky = load("res://assets/sky/sky_basic.tscn").instantiate()
-		1:
-			sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
-			sky.day_time = 14.9859
+	if Global.testing_scene_mode:
+		sky = load("res://assets/sky/sky_test.tscn").instantiate()
+		add_child(sky)
+	else:
+		match Global.config.skybox:
+			0:
+				sky = load("res://assets/sky/sky_basic.tscn").instantiate()
+			1:
+				sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
+				sky.day_time = 14.9859
 
-	add_child(sky)
-	if Global.config.skybox == 1:
-		sky.day_time = 10
+		add_child(sky)
+		if Global.config.skybox == 1:
+			sky.day_time = 10
 
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)
@@ -132,8 +137,11 @@ func _ready():
 	)
 
 	if not Global.comms.player_identity.try_recover_account(Global.config.session_account):
-		Global.scene_runner.set_pause(true)
-		ui_root.add_child(sign_in_resource.instantiate())
+		if Global.testing_scene_mode:
+			Global.comms.player_identity.create_guest_account()
+		else:
+			Global.scene_runner.set_pause(true)
+			ui_root.add_child(sign_in_resource.instantiate())
 	else:
 		# TODO: fetch profile
 		Global.comms.player_identity.update_profile(Global.config.avatar_profile)
@@ -359,8 +367,8 @@ func release_mouse():
 
 func set_visible_ui(value: bool):
 	if value:
-		$UI.show()
-		$voice_chat.show()
+		ui_root.show()
+		voice_chat_ui.show()
 	else:
-		$UI.hide()
-		$voice_chat.hide()
+		ui_root.hide()
+		voice_chat_ui.hide()

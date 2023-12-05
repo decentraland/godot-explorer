@@ -202,9 +202,6 @@ grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 1
 
-[node name="CSGBox3D" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.30259, 1.22605, 2.26942)
-
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_timeout"]
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
 [connection signal="submit_message" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_submit_message"]
