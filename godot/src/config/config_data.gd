@@ -206,7 +206,7 @@ func load_from_settings_file():
 func save_to_settings_file():
 	if Global.testing_scene_mode:
 		return
-		
+
 	var settings_file: ConfigFile = ConfigFile.new()
 	settings_file.set_value("config", "gravity", self.gravity)
 	settings_file.set_value("config", "jump_velocity", self.jump_velocity)

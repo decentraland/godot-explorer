@@ -1,13 +1,14 @@
 class_name TestingTools
 extends DclTestingTools
 
-const DEFAULT_TIMEOUT_REALM_SECONDS = 10.0
+const DEFAULT_TIMEOUT_REALM_SECONDS = 15.0
+const DEFAULT_TIMEOUT_TEST_SECONDS = 15.0
+
 
 class SceneTestItem:
 	extends RefCounted
 	const INVALID_PARCEL_POSITION = Vector2i.MAX
 	const INVALID_SCENE_URN = "invalid"
-	const DEFAULT_TIMEOUT_TEST_SECONDS = 10.0
 
 	var parcel_position: Vector2i = INVALID_PARCEL_POSITION
 	var scene_urn: String = INVALID_SCENE_URN
@@ -40,14 +41,16 @@ var realm_change_emited: bool = false
 var test_camera_node: DclCamera3D
 var test_player_node: Node3D
 
+
 func _ready():
 	self.process_mode = PROCESS_MODE_DISABLED
 	start.call_deferred()
 
+
 func start():
 	var args := OS.get_cmdline_args()
 	var scene_test_index := args.find("--scene-test")
-	
+
 	if Global.FORCE_TEST:
 		scene_test_index = 0
 		Global.testing_scene_mode = true
@@ -60,8 +63,8 @@ func start():
 
 	var parcels_str: String = Global.FORCE_TEST_ARG
 	if not Global.FORCE_TEST:
-		args[scene_test_index + 1].replace("'", "\"")
-	
+		args[scene_test_index + 1].replace("'", '"')
+
 	prints("parcels_str=" + str(parcels_str))
 
 	var parcels = JSON.parse_string(parcels_str)
@@ -84,6 +87,7 @@ func start():
 	get_tree().create_timer(DEFAULT_TIMEOUT_REALM_SECONDS).timeout.connect(
 		self.on_realm_change_timeout
 	)
+
 
 func on_realm_changed():
 	realm_change_emited = true
@@ -190,12 +194,20 @@ func async_take_and_compare_snapshot(
 
 	var result = {"stored_snapshot_found": existing_snapshot != null}
 	if existing_snapshot != null:
-		compare(method, existing_snapshot, viewport_img, result, snapshot_path.replace(".png", ".diff.png"))
+		compare(
+			method,
+			existing_snapshot,
+			viewport_img,
+			result,
+			snapshot_path.replace(".png", ".diff.png")
+		)
 
 	dcl_rpc_sender.send(result)
 
 
-func compare(method: Dictionary, image_a: Image, image_b: Image, result: Dictionary, diff_dest_path: String) -> void:
+func compare(
+	method: Dictionary, image_a: Image, image_b: Image, result: Dictionary, diff_dest_path: String
+) -> void:
 	if method.get("grey_pixel_diff") != null:
 		var similarity = self.compute_image_similarity(image_a, image_b, diff_dest_path)
 		result["grey_pixel_diff"] = {"similarity": similarity}
@@ -256,11 +268,7 @@ func _process(_delta):
 					scene.test_result = Global.scene_runner.get_scene_tests_result(scene_id)
 			return
 
-	return
-
 	if dump_test_result_and_get_ok():
-		#get_tree().quit(0)
-		pass
+		get_tree().quit(0)
 	else:
-		pass
-		#get_tree().quit(1)
+		get_tree().quit(1)

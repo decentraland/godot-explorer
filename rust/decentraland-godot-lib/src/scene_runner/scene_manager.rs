@@ -611,6 +611,11 @@ impl SceneManager {
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
+    #[func]
+    fn get_current_parcel_scene_id(&self) -> i32 {
+        self.current_parcel_scene_id.0
+    }
+
     fn on_current_parcel_scene_changed(&mut self) {
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
             for (_, audio_source_node) in scene.audio_sources.iter() {

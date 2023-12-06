@@ -4,6 +4,24 @@ use crate::{
 };
 use godot::prelude::*;
 
+pub enum Billboard {
+    None,
+    Y,
+    YX,
+    All,
+}
+
+impl From<Option<i32>> for Billboard {
+    fn from(value: Option<i32>) -> Self {
+        match value {
+            Some(0) => Billboard::None,
+            Some(2) => Billboard::Y,
+            Some(3) => Billboard::YX,
+            _ => Billboard::All,
+        }
+    }
+}
+
 pub fn update_billboard(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
@@ -13,18 +31,38 @@ pub fn update_billboard(
     let camera_position = camera_global_transform.origin;
 
     for (entity, entry) in billboard_component.values.iter() {
-        if let Some(_billboard) = entry.value.as_ref() {
+        if let Some(billboard) = entry.value.as_ref() {
+            let billboard_mode = Billboard::from(billboard.billboard_mode);
+            if let Billboard::None = billboard_mode {
+                continue;
+            }
+
             let (_, mut node_3d) = scene.godot_dcl_scene.ensure_node_3d(entity);
             let original_scale = node_3d.get_scale();
-            let origin = node_3d.get_global_position();
-            let direction = node_3d.get_global_position() - camera_position;
 
-            let basis = Basis::new_looking_at(direction, Vector3::UP, false);
-            node_3d.set_global_transform(Transform3D { basis, origin });
+            match Billboard::from(billboard.billboard_mode) {
+                Billboard::None => {}
+                Billboard::Y => {
+                    let origin = node_3d.get_global_position();
+                    let direction = node_3d.get_global_position() - camera_position;
+                    let basis = Basis::new_looking_at(direction, Vector3::UP, false);
 
+                    let mut euler_vector = basis.to_euler(EulerOrder::YXZ);
+                    euler_vector.z = 0.0;
+                    euler_vector.x = 0.0;
+                    let basis = Basis::from_euler(EulerOrder::YXZ, euler_vector);
+
+                    node_3d.set_global_transform(Transform3D { basis, origin });
+                }
+                // TODO: we do not distinguish between YX and All for now
+                Billboard::All | Billboard::YX => {
+                    let origin = node_3d.get_global_position();
+                    let direction = node_3d.get_global_position() - camera_position;
+                    let basis = Basis::new_looking_at(direction, Vector3::UP, false);
+                    node_3d.set_global_transform(Transform3D { basis, origin });
+                }
+            }
             node_3d.set_scale(original_scale);
-
-            // TODO: implement billboard mode
         }
     }
 }

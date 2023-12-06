@@ -56,7 +56,7 @@ impl DclTestingTools {
             let mut dest_data_packed_array = diff_img.get_data();
             let dest_data = dest_data_packed_array.as_mut_slice();
             for index in 0..a_data.len() {
-                dest_data[index] = data_diff[index].abs() as u8;
+                dest_data[index] = data_diff[index].unsigned_abs() as u8;
             }
             diff_img.set_data(
                 width as i32,

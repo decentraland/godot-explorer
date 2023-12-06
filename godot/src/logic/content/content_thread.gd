@@ -263,7 +263,8 @@ func _async_process_loading_texture(
 		content_cache_map[file_hash]["promise"].call_deferred("reject", "Hash or url is empty")
 		return
 
-	if !FileAccess.file_exists(local_texture_path):
+	# with testing_scene_mode we don't cache textures TODO: see if this mode could be more generic e.g. no_cache
+	if !FileAccess.file_exists(local_texture_path) or Global.testing_scene_mode:
 		var absolute_file_path = local_texture_path.replace("user:/", OS.get_user_data_dir())
 
 		var promise: Promise = _http_requester.request_file(url, absolute_file_path)
@@ -278,7 +279,7 @@ func _async_process_loading_texture(
 
 	var file = FileAccess.open(local_texture_path, FileAccess.READ)
 	if file == null:
-		printerr("texture download fails")
+		content_cache_map[file_hash]["promise"].call_deferred("reject", "texture download fails")
 		return
 
 	var buf = file.get_buffer(file.get_length())
