@@ -3,7 +3,6 @@ extends DclCameraModeArea3D
 var _my_scene_id: int = -1
 
 @onready var collision_shape_3d = $CollisionShape3D
-@onready var on_active_scene = $OnActiveScene
 
 
 func _ready():

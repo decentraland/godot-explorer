@@ -1,8 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://b18cq0sobskjn"]
+[gd_scene load_steps=4 format=3 uid="uid://b18cq0sobskjn"]
 
 [ext_resource type="Script" path="res://src/decentraland_components/camera_mode_area.gd" id="1_bo2c6"]
-[ext_resource type="PackedScene" uid="uid://ksn0qud7g0lq" path="res://src/helpers_components/force_global_scale_component.tscn" id="2_76k0e"]
-[ext_resource type="PackedScene" uid="uid://decs8rg0sccrx" path="res://src/helpers_components/on_active_scene.tscn" id="3_lqqmy"]
+[ext_resource type="PackedScene" uid="uid://ksn0qud7g0lq" path="res://src/helpers_components/force_global_scale_component.tscn" id="3_lqqmy"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_dvgte"]
 
@@ -16,9 +15,5 @@ script = ExtResource("1_bo2c6")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_dvgte")
 
-[node name="ForceGlobalScaleComponent" parent="." node_paths=PackedStringArray("target") instance=ExtResource("2_76k0e")]
+[node name="ForceGlobalScaleComponent" parent="." node_paths=PackedStringArray("target") instance=ExtResource("3_lqqmy")]
 target = NodePath("..")
-
-[node name="OnActiveScene" parent="." instance=ExtResource("3_lqqmy")]
-
-[connection signal="on_scene_active" from="OnActiveScene" to="." method="_on_scene_active"]

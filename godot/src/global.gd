@@ -11,7 +11,7 @@ enum CameraMode {
 # Only for debugging purpose, Godot editor doesn't include a custom param debugging
 const FORCE_TEST = false
 const FORCE_TEST_ARG = '["52,-52"]'
-const FORCE_TEST_REALM = "http://localhost:8000"
+const FORCE_TEST_REALM = "https://sdilauro.github.io/dae-unit-tests/dae-unit-tests"
 
 ## Global classes (singleton pattern)
 var content_manager: ContentManager
@@ -127,7 +127,7 @@ func explorer_grab_focus() -> void:
 	if explorer == null:
 		return
 
-	return explorer.ui_root.grab_focus.call_deferred()
+	explorer.ui_root.grab_focus.call_deferred()
 
 
 func capture_mouse():

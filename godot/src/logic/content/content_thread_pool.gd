@@ -227,7 +227,6 @@ func get_image_from_texture_or_null(file_path: String, content_mapping: Dictiona
 
 
 func get_image_from_texture_by_hash_or_null(file_hash: String) -> Image:
-	var promise = Promise.new()
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		return content_cached.get("image")

@@ -131,7 +131,6 @@ fn op_take_and_compare_snapshot(
         value.unwrap()
     };
 
-    // let response = rx.blocking_recv();
     response
         .map_err(|e| anyhow::anyhow!(e))?
         .map_err(|e| anyhow!(e))

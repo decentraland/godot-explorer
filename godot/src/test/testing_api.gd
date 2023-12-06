@@ -19,8 +19,8 @@ class SceneTestItem:
 
 	var already_telep = false
 
-	func _init(parcel_pos: Vector2i, scene_urn: String) -> void:
-		self.scene_urn = scene_urn
+	func _init(parcel_pos: Vector2i, _scene_urn: String) -> void:
+		self.scene_urn = _scene_urn
 		self.parcel_position = parcel_pos
 		reset_timeout()
 
@@ -29,7 +29,7 @@ class SceneTestItem:
 
 	func reset_timeout() -> void:
 		timeout_set = Time.get_ticks_msec()
-		timeout_ms = Time.get_ticks_msec() + 1000 * DEFAULT_TIMEOUT_TEST_SECONDS
+		timeout_ms = Time.get_ticks_msec() + int(1000.0 * DEFAULT_TIMEOUT_TEST_SECONDS)
 
 	func timeout() -> bool:
 		return Time.get_ticks_msec() > timeout_ms

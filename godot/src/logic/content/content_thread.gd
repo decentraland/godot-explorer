@@ -267,9 +267,9 @@ func _async_process_loading_texture(
 	if !FileAccess.file_exists(local_texture_path) or Global.testing_scene_mode:
 		var absolute_file_path = local_texture_path.replace("user:/", OS.get_user_data_dir())
 
-		var promise: Promise = _http_requester.request_file(url, absolute_file_path)
+		var promise_texture_file: Promise = _http_requester.request_file(url, absolute_file_path)
 
-		var content_result = await promise.async_awaiter()
+		var content_result = await promise_texture_file.async_awaiter()
 		if content_result is Promise.Error:
 			content_cache_map[file_hash]["promise"].call_deferred(
 				"reject",
@@ -318,8 +318,10 @@ func _async_process_loading_audio(
 	if !FileAccess.file_exists(local_audio_path):
 		var absolute_file_path = local_audio_path.replace("user:/", OS.get_user_data_dir())
 
-		var promise: Promise = _http_requester.request_file(file_hash_path, absolute_file_path)
-		var content_result = await promise.async_awaiter()
+		var promise_audio_file: Promise = _http_requester.request_file(
+			file_hash_path, absolute_file_path
+		)
+		var content_result = await promise_audio_file.async_awaiter()
 		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading wearable ",
@@ -377,10 +379,10 @@ func _async_process_loading_video(
 
 	if !FileAccess.file_exists(local_video_path):
 		var absolute_file_path = local_video_path.replace("user:/", OS.get_user_data_dir())
-		var promise: Promise = _http_requester.request_file(
+		var promise_video_file: Promise = _http_requester.request_file(
 			base_url + file_hash, absolute_file_path
 		)
-		var content_result = await promise.async_awaiter()
+		var content_result = await promise_video_file.async_awaiter()
 		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading wearable ",
