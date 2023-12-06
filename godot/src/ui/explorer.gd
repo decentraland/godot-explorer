@@ -71,7 +71,7 @@ func get_params_from_cmd():
 
 func _ready():
 	var cmd_params = get_params_from_cmd()
-	var cmd_realm = cmd_params[0]
+	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
 
 	if Global.is_mobile:

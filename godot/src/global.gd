@@ -1,5 +1,10 @@
 extends DclGlobal
 
+# Only for debugging purpose, Godot editor doesn't include a custom param debugging
+const FORCE_TEST = true
+const FORCE_TEST_ARG = "[\"52,-52\"]"
+const FORCE_TEST_REALM = "http://localhost:8000"
+
 signal config_changed
 
 enum CameraMode {
@@ -33,6 +38,9 @@ func _ready():
 		if args[0] != "res://src/main.tscn":
 			self.standalone = true
 
+	if FORCE_TEST:
+		Global.testing_scene_mode = true
+	
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 

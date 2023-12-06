@@ -79,8 +79,6 @@ pub fn run(
     }
 
     if extras.len() > 0 {
-        args.push("--");
-
         for extra in &extras {
             args.push(extra.as_str());
         }

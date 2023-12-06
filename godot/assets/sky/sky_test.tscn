@@ -9,8 +9,10 @@ sky_top_color = Color(0.85098, 0.913725, 1, 1)
 sky_material = SubResource("ProceduralSkyMaterial_ahgj8")
 
 [sub_resource type="Environment" id="Environment_ncxa3"]
-background_mode = 2
 sky = SubResource("Sky_e2lcq")
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+reflected_light_source = 1
 glow_levels/1 = 16.0
 glow_levels/2 = 16.0
 glow_levels/3 = 16.0
