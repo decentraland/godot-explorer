@@ -260,29 +260,35 @@ func _async_process_loading_texture(
 	var url: String = content.get("url", "")
 	var local_texture_path = "user://content/" + file_hash
 	if file_hash.is_empty() or url.is_empty():
-		printerr("hash or url is empty")
+		content_cache_map[file_hash]["promise"].call_deferred("reject", "Hash or url is empty")
 		return
 
-	if !FileAccess.file_exists(local_texture_path):
+	# with testing_scene_mode we don't cache textures TODO: see if this mode could be more generic e.g. no_cache
+	if !FileAccess.file_exists(local_texture_path) or Global.testing_scene_mode:
 		var absolute_file_path = local_texture_path.replace("user:/", OS.get_user_data_dir())
 
-		var promise: Promise = _http_requester.request_file(url, absolute_file_path)
+		var promise_texture_file: Promise = _http_requester.request_file(url, absolute_file_path)
 
-		var content_result = await promise.async_awaiter()
+		var content_result = await promise_texture_file.async_awaiter()
 		if content_result is Promise.Error:
-			printerr("Failing on loading gltf ", url, " reason: ", content_result.get_error())
+			content_cache_map[file_hash]["promise"].call_deferred(
+				"reject",
+				"Failing on loading texture " + url + " reason: " + str(content_result.get_error())
+			)
 			return
 
 	var file = FileAccess.open(local_texture_path, FileAccess.READ)
 	if file == null:
-		printerr("texture download fails")
+		content_cache_map[file_hash]["promise"].call_deferred("reject", "texture download fails")
 		return
 
 	var buf = file.get_buffer(file.get_length())
 	var image := Image.new()
 	var err = image.load_png_from_buffer(buf)
 	if err != OK:
-		printerr("Texture " + url + " couldn't be loaded succesfully: ", err)
+		content_cache_map[file_hash]["promise"].call_deferred(
+			"reject", "Texture  " + url + " couldn't be loaded succesfully: " + str(err)
+		)
 		return
 
 	var content_cache = content_cache_map[file_hash]
@@ -312,8 +318,10 @@ func _async_process_loading_audio(
 	if !FileAccess.file_exists(local_audio_path):
 		var absolute_file_path = local_audio_path.replace("user:/", OS.get_user_data_dir())
 
-		var promise: Promise = _http_requester.request_file(file_hash_path, absolute_file_path)
-		var content_result = await promise.async_awaiter()
+		var promise_audio_file: Promise = _http_requester.request_file(
+			file_hash_path, absolute_file_path
+		)
+		var content_result = await promise_audio_file.async_awaiter()
 		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading wearable ",
@@ -371,10 +379,10 @@ func _async_process_loading_video(
 
 	if !FileAccess.file_exists(local_video_path):
 		var absolute_file_path = local_video_path.replace("user:/", OS.get_user_data_dir())
-		var promise: Promise = _http_requester.request_file(
+		var promise_video_file: Promise = _http_requester.request_file(
 			base_url + file_hash, absolute_file_path
 		)
-		var content_result = await promise.async_awaiter()
+		var content_result = await promise_video_file.async_awaiter()
 		if content_result is Promise.Error:
 			printerr(
 				"Failing on loading wearable ",

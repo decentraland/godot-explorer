@@ -283,16 +283,16 @@ impl AvatarScene {
         let mut scene_runner = scene_runner.bind_mut();
 
         let avatar_current_parcel_scene_id = avatar_scene.bind().get_current_parcel_scene_id();
-        let avatar_active_scenes = {
-            let mut scenes = scene_runner.get_global_scenes();
+        let avatar_active_scene_ids = {
+            let mut scene_ids = scene_runner.get_global_scene_ids();
             if avatar_current_parcel_scene_id != SceneId::INVALID.0 {
-                scenes.push(SceneId(avatar_current_parcel_scene_id));
+                scene_ids.push(SceneId(avatar_current_parcel_scene_id));
             }
-            scenes
+            scene_ids
         };
 
         // Push dirty state only in active scenes
-        for scene_id in avatar_active_scenes {
+        for scene_id in avatar_active_scene_ids {
             if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
                 let mut avatar_scene_transform = dcl_transform.clone();
                 avatar_scene_transform.translation.x -= (scene.definition.base.x as f32) * 16.0;

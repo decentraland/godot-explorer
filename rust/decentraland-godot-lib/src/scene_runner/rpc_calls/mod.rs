@@ -15,7 +15,7 @@ use self::{
 
 use super::scene::Scene;
 
-pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls: Vec<RpcCall>) {
+pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_calls: Vec<RpcCall>) {
     for rpc_call in rpc_calls {
         match rpc_call {
             // Restricted Actions
@@ -77,6 +77,16 @@ pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls:
             }
             RpcCall::KillPortable { location, response } => kill_portable(location, response),
             RpcCall::ListPortables { response } => list_portables(response),
+            RpcCall::SceneTestPlan { body } => {
+                tracing::info!("SceneTestPlan: {:?}", body);
+                scene.scene_tests = body.tests.iter().map(|v| (v.name.clone(), None)).collect();
+            }
+            RpcCall::SceneTestResult { body } => {
+                tracing::info!("SceneTestResult: {:?}", body);
+                if let Some(test_entry) = scene.scene_tests.get_mut(&body.name) {
+                    *test_entry = Some(body);
+                }
+            }
         }
     }
 }

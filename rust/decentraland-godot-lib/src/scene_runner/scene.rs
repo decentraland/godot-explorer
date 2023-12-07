@@ -20,7 +20,7 @@ use crate::{
             SceneEntityId,
         },
         crdt::{DirtyEntities, DirtyGosComponents, DirtyLwwComponents},
-        js::SceneLogMessage,
+        js::{testing::SceneTestResult, SceneLogMessage},
         scene_apis::RpcCall,
         // js::js_runtime::SceneLogMessage,
         DclScene,
@@ -156,6 +156,7 @@ pub struct Scene {
     pub godot_dcl_scene: GodotDclScene,
     pub dcl_scene: DclScene,
     pub definition: SceneDefinition,
+    pub tick_number: u32,
 
     pub state: SceneState,
 
@@ -184,6 +185,7 @@ pub struct Scene {
     pub video_players: HashMap<SceneEntityId, Gd<DclVideoPlayer>>,
 
     pub avatar_scene_updates: SceneAvatarUpdates,
+    pub scene_tests: HashMap<String, Option<SceneTestResult>>,
 
     // Tween
     pub tweens: HashMap<SceneEntityId, Tween>,
@@ -240,6 +242,7 @@ impl Scene {
 
         Self {
             scene_id,
+            tick_number: 0,
             godot_dcl_scene,
             definition: scene_definition,
             dcl_scene,
@@ -271,6 +274,7 @@ impl Scene {
             video_players: HashMap::new(),
             scene_type,
             avatar_scene_updates: Default::default(),
+            scene_tests: HashMap::new(),
             tweens: HashMap::new(),
         }
     }
@@ -296,6 +300,7 @@ impl Scene {
         Self {
             scene_id,
             godot_dcl_scene,
+            tick_number: 0,
             definition: scene_definition,
             dcl_scene,
             state: SceneState::Alive,
@@ -325,6 +330,7 @@ impl Scene {
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
             avatar_scene_updates: Default::default(),
+            scene_tests: HashMap::new(),
             tweens: HashMap::new(),
         }
     }

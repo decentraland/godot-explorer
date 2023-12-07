@@ -4,12 +4,18 @@ pub mod js;
 pub mod scene_apis;
 pub mod serialization;
 
+use godot::builtin::{Vector2, Vector3};
+
 use crate::auth::wallet::Wallet;
 
 use self::{
     crdt::{DirtyCrdtState, SceneCrdtState},
-    js::{scene_thread, SceneLogMessage},
-    scene_apis::RpcCall,
+    js::{
+        scene_thread,
+        testing::{TakeAndCompareSnapshotResponse, TestingScreenshotComparisonMethodRequest},
+        SceneLogMessage,
+    },
+    scene_apis::{RpcCall, RpcResultSender},
 };
 
 use std::{
@@ -58,6 +64,15 @@ pub enum SceneResponse {
         Vec<RpcCall>,
     ),
     RemoveGodotScene(SceneId, Vec<SceneLogMessage>),
+    TakeSnapshot {
+        scene_id: SceneId,
+        src_stored_snapshot: String,
+        camera_position: Vector3,
+        camera_target: Vector3,
+        screeshot_size: Vector2,
+        method: TestingScreenshotComparisonMethodRequest,
+        response: RpcResultSender<Result<TakeAndCompareSnapshotResponse, String>>,
+    },
 }
 
 pub type SharedSceneCrdtState = Arc<Mutex<SceneCrdtState>>;
@@ -77,6 +92,7 @@ impl DclScene {
         base_url: String,
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
         wallet: Wallet,
+        testing_mode: bool,
     ) -> Self {
         let (main_sender_to_thread, thread_receive_from_renderer) =
             tokio::sync::mpsc::channel::<RendererResponse>(1);
@@ -96,6 +112,7 @@ impl DclScene {
                     thread_receive_from_renderer,
                     thread_scene_crdt,
                     wallet,
+                    testing_mode,
                 )
             })
             .unwrap();

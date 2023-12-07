@@ -7,8 +7,13 @@ enum CameraMode {
 	THIRD_PERSON = 1,
 	CINEMATIC = 2,
 }
-## Global classes (singleton pattern)
 
+# Only for debugging purpose, Godot editor doesn't include a custom param debugging
+const FORCE_TEST = false
+const FORCE_TEST_ARG = '["52,-52"]'
+const FORCE_TEST_REALM = "https://sdilauro.github.io/dae-unit-tests/dae-unit-tests"
+
+## Global classes (singleton pattern)
 var content_manager: ContentManager
 var config: ConfigData
 
@@ -33,6 +38,9 @@ func _ready():
 		if args[0] != "res://src/main.tscn":
 			self.standalone = true
 
+	if FORCE_TEST:
+		Global.testing_scene_mode = true
+
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
@@ -48,6 +56,9 @@ func _ready():
 
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
+
+	self.testing_tools = TestingTools.new()
+	self.testing_tools.set_name("testing_tool")
 
 	self.content_manager = ContentManager.new()
 	self.content_manager.set_name("content_manager")
@@ -68,6 +79,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.comms)
 	get_tree().root.add_child.call_deferred(self.avatars)
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
+	get_tree().root.add_child.call_deferred(self.testing_tools)
 
 	# TODO: enable raycast debugger
 	add_child(raycast_debugger)
@@ -115,7 +127,7 @@ func explorer_grab_focus() -> void:
 	if explorer == null:
 		return
 
-	return explorer.ui_root.grab_focus.call_deferred()
+	explorer.ui_root.grab_focus.call_deferred()
 
 
 func capture_mouse():

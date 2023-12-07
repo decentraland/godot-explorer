@@ -7,6 +7,7 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
+    test_runner::testing_tools::DclTestingTools,
 };
 
 use super::{dcl_realm::DclRealm, portables::DclPortableExperienceController};
@@ -29,7 +30,11 @@ pub struct DclGlobal {
     #[var]
     pub portable_experience_controller: Gd<DclPortableExperienceController>,
     #[var]
+    pub testing_tools: Gd<DclTestingTools>,
+    #[var]
     pub preview_mode: bool,
+    #[var]
+    pub testing_scene_mode: bool,
 }
 
 #[godot_api]
@@ -57,15 +62,23 @@ impl INode for DclGlobal {
         comms.set_name("comms".into());
         avatars.set_name("avatars".into());
 
+        let args = godot::engine::Os::singleton().get_cmdline_args();
+
+        let testing_scene_mode = args.find("--scene-test".into(), None).is_some();
+        let preview_mode = args.find("--preview".into(), None).is_some();
+
+        // var scene_test_index := args.find("--scene-test")
         Self {
             _base: base,
             scene_runner,
             comms,
             avatars,
             tokio_runtime,
+            testing_tools: DclTestingTools::alloc_gd(),
             realm: DclRealm::alloc_gd(),
             portable_experience_controller: DclPortableExperienceController::alloc_gd(),
-            preview_mode: false,
+            preview_mode,
+            testing_scene_mode,
         }
     }
 }

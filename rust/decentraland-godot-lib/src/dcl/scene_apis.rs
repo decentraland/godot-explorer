@@ -3,6 +3,8 @@ use std::sync::{Arc, RwLock};
 use http::Uri;
 use serde::Serialize;
 
+use super::js::testing::{SceneTestPlan, SceneTestResult};
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PortableLocation {
     Urn(String),
@@ -156,6 +158,12 @@ pub enum RpcCall {
     },
     ListPortables {
         response: RpcResultSender<Vec<SpawnResponse>>,
+    },
+    SceneTestPlan {
+        body: SceneTestPlan,
+    },
+    SceneTestResult {
+        body: SceneTestResult,
     },
 }
 
