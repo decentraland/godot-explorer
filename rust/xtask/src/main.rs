@@ -1,7 +1,7 @@
-use std::fs::create_dir_all;
+use std::{collections::HashMap, fs::create_dir_all};
 
 use anyhow::Context;
-use clap::{AppSettings, Arg, Command};
+use clap::{AppSettings, Arg, Command, Values};
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
 use crate::consts::RUST_LIB_PROJECT_FOLDER;
@@ -128,7 +128,10 @@ fn main() -> Result<(), anyhow::Error> {
             sm.is_present("only-build"),
             sm.is_present("link-libs"),
             sm.is_present("stest"),
-            sm.values_of("extras"),
+            sm.values_of("extras")
+                .map(|v| v.map(|it| it.into()).collect())
+                .unwrap_or_default(),
+            None,
         ),
         ("export", _m) => export::export(),
         ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),
@@ -169,30 +172,48 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         .dir(RUST_LIB_PROJECT_FOLDER)
         .run()?;
 
-    cmd!("cargo", "run", "--", "run", "--itest")
-        .env("CARGO_INCREMENTAL", "0")
-        .env("RUSTFLAGS", "-Cinstrument-coverage")
-        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
-        .run()?;
+    let build_envs: HashMap<String, String> = [
+        ("CARGO_INCREMENTAL", "0"),
+        ("RUSTFLAGS", "-Cinstrument-coverage"),
+        ("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw"),
+    ]
+    .iter()
+    .map(|(k, v)| (k.to_string(), v.to_string()))
+    .collect();
 
-    cmd!(
-        "cargo",
-        "run",
-        "--",
-        "run",
-        "--stest",
-        "--",
+    run::run(
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        vec![],
+        Some(build_envs.clone()),
+    )?;
+
+    let extra_args = [
         "--rendering-driver",
         "opengl3",
         "--scene-test",
         "['52,-52']",
         "--realm",
-        "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests"
-    )
-    .env("CARGO_INCREMENTAL", "0")
-    .env("RUSTFLAGS", "-Cinstrument-coverage")
-    .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
-    .run()?;
+        "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests",
+    ]
+    .iter()
+    .map(|it| it.to_string())
+    .collect();
+
+    run::run(
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        extra_args,
+        Some(build_envs.clone()),
+    )?;
 
     let err = glob::glob("./../../godot/*.profraw")?
         .filter_map(|entry| entry.ok())
