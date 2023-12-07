@@ -15,6 +15,7 @@ pub fn run(
     itest: bool,
     only_build: bool,
     link_libs: bool,
+    scene_tests: bool,
     extras: Option<Values>,
 ) -> Result<(), anyhow::Error> {
     let program = adjust_canonicalization(
@@ -83,8 +84,8 @@ pub fn run(
             args.push(extra.as_str());
         }
     }
-    
-    if itest {
+
+    if itest || scene_tests {
         let program = std::process::Command::new(program.as_str())
             .args(&args)
             .stdout(std::process::Stdio::piped())
@@ -100,10 +101,22 @@ pub fn run(
             println!("{}", line);
 
             // You can check if the line contains the desired string
-            if line.contains("test-exiting with code ") {
-                test_ok.0 = true;
-                test_ok.1 = line.contains("test-exiting with code 0");
-                test_ok.2 = line;
+            if scene_tests {
+                if line.contains("All test of all scene passed") {
+                    test_ok.0 = true;
+                    test_ok.1 = true;
+                    test_ok.2 = line;
+                } else if line.contains("Some tests fail or some scenes couldn't be tested") {
+                    test_ok.0 = true;
+                    test_ok.1 = false;
+                    test_ok.2 = line;
+                }
+            } else {
+                if line.contains("test-exiting with code ") {
+                    test_ok.0 = true;
+                    test_ok.1 = line.contains("test-exiting with code 0");
+                    test_ok.2 = line;
+                }
             }
         }
 

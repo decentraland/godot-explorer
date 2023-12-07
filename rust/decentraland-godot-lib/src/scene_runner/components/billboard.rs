@@ -115,7 +115,7 @@ mod test {
         SceneCrdtStateProtoComponents::get_billboard_mut(&mut crdt_state).put(
             entity,
             Some(PbBillboard {
-                billboard_mode: Some(0),
+                billboard_mode: Some(3),
             }),
         );
 

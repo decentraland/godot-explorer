@@ -79,7 +79,13 @@ fn main() -> Result<(), anyhow::Error> {
                 .arg(
                     Arg::new("itest")
                         .long("itest")
-                        .help("run tests")
+                        .help("run integration-tests")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("stest")
+                        .long("stest")
+                        .help("run scene-tests")
                         .takes_value(false),
                 )
                 .arg(
@@ -121,6 +127,7 @@ fn main() -> Result<(), anyhow::Error> {
             sm.is_present("itest"),
             sm.is_present("only-build"),
             sm.is_present("link-libs"),
+            sm.is_present("stest"),
             sm.values_of("extras"),
         ),
         ("export", _m) => export::export(),
@@ -167,6 +174,25 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
         .run()?;
+
+    cmd!(
+        "cargo",
+        "run",
+        "--",
+        "run",
+        "--stest",
+        "--",
+        "--rendering-driver",
+        "opengl3",
+        "--scene-test",
+        "['52,-52']",
+        "--realm",
+        "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests"
+    )
+    .env("CARGO_INCREMENTAL", "0")
+    .env("RUSTFLAGS", "-Cinstrument-coverage")
+    .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
+    .run()?;
 
     let err = glob::glob("./../../godot/*.profraw")?
         .filter_map(|entry| entry.ok())
