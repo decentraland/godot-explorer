@@ -196,7 +196,10 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
 
     let err = glob::glob("./../../godot/*.profraw")?
         .filter_map(|entry| entry.ok())
-        .map(|entry| cmd!("mv", entry, "./../decentraland-godot-lib/").run())
+        .map(|entry| {
+            println!("moving {:?} to ./../decentraland-godot-lib/", entry);
+            cmd!("mv", entry, "./../decentraland-godot-lib/").run()
+        })
         .any(|res| res.is_err());
 
     if err {
