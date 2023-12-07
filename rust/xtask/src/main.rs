@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fs::create_dir_all};
 
 use anyhow::Context;
-use clap::{AppSettings, Arg, Command, Values};
+use clap::{AppSettings, Arg, Command};
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
 use crate::consts::RUST_LIB_PROJECT_FOLDER;

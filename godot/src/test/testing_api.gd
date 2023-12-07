@@ -269,6 +269,6 @@ func _process(_delta):
 			return
 
 	if dump_test_result_and_get_ok():
-		get_tree().quit(0)
+		self.exit_gracefully(0)
 	else:
-		get_tree().quit(1)
+		self.exit_gracefully(1)
