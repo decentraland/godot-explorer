@@ -1,5 +1,6 @@
 # Decentraland Godot Rust
 
+
 ## Set up project
 
 1. Clone the repo using `git clone https://github.com/decentraland/godot-explorer`
@@ -39,3 +40,7 @@ This repos is set up to be opened with Visual Studio Code. In the section `Run a
 
 # Mobile targets
 See `rust/decentraland-godot-lib/builds.md`
+
+
+Powered by the Decentraland DAO
+![Decentraland DAO logo](https://bafkreibci6gg3wbjvxzlqpuh353upzrssalqqoddb6c4rez33bcagqsc2a.ipfs.nftstorage.link/)
