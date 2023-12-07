@@ -27,8 +27,16 @@ module.exports.getSceneInformation = async function (body) {
     sceneInfo.content = sceneInfo.content.map(item => ({
         hash: item.hash,
         file: item.file
-    }))    
+    }))
     return {
         ...sceneInfo,
+    }
+}
+
+module.exports.getExplorerInformation = async function (body) {
+    return {
+        agent: 'godot',
+        platform: 'desktop',
+        configurations: {}
     }
 }

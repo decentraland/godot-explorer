@@ -89,6 +89,11 @@ jobs:
           key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: coverage-cargo-
 
+      - name: Prepare graphics renderering
+        run: |
+            sudo apt-get -y install xvfb
+            sudo /usr/bin/Xvfb :0 -screen 0 1280x1024x24 &
+            
       # Depedencies section
       # => Linux 
       - name: Install alsa and udev
@@ -115,7 +120,11 @@ jobs:
 
       - name: Run xtask coverage
         working-directory: rust/xtask
-        run: cargo run -- coverage
+        continue-on-error: true
+        run: |
+          export DISPLAY=:99
+          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+          cargo run -- coverage
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3

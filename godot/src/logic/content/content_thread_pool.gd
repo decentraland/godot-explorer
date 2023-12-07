@@ -221,6 +221,18 @@ func fetch_texture_by_url(file_hash: String, url: String):
 	return promise
 
 
+func get_image_from_texture_or_null(file_path: String, content_mapping: Dictionary) -> Image:
+	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+	return get_image_from_texture_by_hash_or_null(file_hash)
+
+
+func get_image_from_texture_by_hash_or_null(file_hash: String) -> Image:
+	var content_cached = content_cache_map.get(file_hash)
+	if content_cached != null:
+		return content_cached.get("image")
+	return null
+
+
 func fetch_audio(file_path: String, content_mapping: Dictionary) -> Promise:
 	var promise = Promise.new()
 	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")

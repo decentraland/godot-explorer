@@ -2,18 +2,30 @@
 
 set -e
 
-# Tested with NDK 25.2.9519653
-ANDROID_NDK=~/Android/Sdk/ndk/25.2.9519653
-export FFMPEG_DIR=~/Documents/github/ffmpeg-kit/prebuilt/android-arm64/ffmpeg
+if [[ -z "${ANDROID_NDK}" ]]; then
+    # Tested with NDK 25.2.9519653
+    if [[ -z "${ANDROID_SDK}" ]]; then
+        CUR_ANDROID_NDK=$ANDROID_SDK/ndk/25.2.9519653
+    else
+        CUR_ANDROID_NDK=~/Android/Sdk/ndk/25.2.9519653
+    fi
+else
+    CUR_ANDROID_NDK=$ANDROID_NDK
+fi
+
+if [[ -z "${FFMPEG_DIR}" ]]; then
+    export FFMPEG_DIR=~/Documents/github/ffmpeg-kit/prebuilt/android-arm64/ffmpeg
+fi
+
 
 # Run the specified commands
-export TARGET_CC=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
-export TARGET_CXX=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang++
-export TARGET_AR=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+export TARGET_CC=$CUR_ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+export TARGET_CXX=$CUR_ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang++
+export TARGET_AR=$CUR_ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
 export RUSTY_V8_MIRROR=https://github.com/leanmendoza/rusty_v8/releases/download
 export CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE=1
 
-export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CUR_ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
 
 # Store the original content of Cargo.toml
 cargo_file_path="Cargo.toml"

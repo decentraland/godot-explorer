@@ -14,7 +14,11 @@ use crate::{
         js::SceneLogLevel,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
-    godot_classes::{dcl_camera_3d::DclCamera3D, dcl_ui_control::DclUiControl},
+    godot_classes::{
+        dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal, dcl_ui_control::DclUiControl,
+        rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse,
+        JsonGodotClass,
+    },
 };
 use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
 use std::{
@@ -115,6 +119,7 @@ impl SceneManager {
 
         let new_scene_id = Scene::new_id();
         let signal_data = (new_scene_id, scene_definition.entity_id.clone());
+        let testing_mode_active = DclGlobal::singleton().bind().testing_scene_mode;
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(
             new_scene_id,
             scene_definition.clone(),
@@ -122,6 +127,7 @@ impl SceneManager {
             base_url,
             self.thread_sender_to_main.clone(),
             wallet,
+            testing_mode_active,
         );
 
         let new_scene = Scene::new(
@@ -457,6 +463,59 @@ impl SceneManager {
                             self.console.callv(arguments);
                         }
                     }
+
+                    SceneResponse::TakeSnapshot {
+                        scene_id,
+                        src_stored_snapshot,
+                        camera_position,
+                        camera_target,
+                        screeshot_size,
+                        method,
+                        response,
+                    } => {
+                        let offset = if let Some(scene) = self.scenes.get(&scene_id) {
+                            Vector3::new(
+                                scene.definition.base.x as f32 * 16.0,
+                                0.0,
+                                -scene.definition.base.y as f32 * 16.0,
+                            )
+                        } else {
+                            Vector3::new(0.0, 0.0, 0.0)
+                        };
+
+                        let global_camera_position =
+                            Vector3::new(camera_position.x, camera_position.y, camera_position.z)
+                                + offset;
+
+                        let global_camera_target =
+                            Vector3::new(camera_target.x, camera_target.y, camera_target.z)
+                                + offset;
+
+                        let mut testing_tools = DclGlobal::singleton().bind().get_testing_tools();
+                        if testing_tools.has_method("async_take_and_compare_snapshot".into()) {
+                            let mut dcl_rpc_sender: Gd<DclRpcSenderTakeAndCompareSnapshotResponse> =
+                                DclRpcSenderTakeAndCompareSnapshotResponse::new_gd();
+                            dcl_rpc_sender.bind_mut().set_sender(response);
+
+                            testing_tools.call(
+                                "async_take_and_compare_snapshot".into(),
+                                &[
+                                    scene_id.0.to_variant(),
+                                    src_stored_snapshot.to_variant(),
+                                    global_camera_position.to_variant(),
+                                    global_camera_target.to_variant(),
+                                    screeshot_size.to_variant(),
+                                    method
+                                        .to_godot_from_json()
+                                        .unwrap_or(Dictionary::new().to_variant())
+                                        .to_variant(),
+                                    dcl_rpc_sender.to_variant(),
+                                ],
+                            );
+                        } else {
+                            response.send(Err("Testing tools not available".to_string()));
+                        }
+                    }
                 },
                 Err(std::sync::mpsc::TryRecvError::Empty) => return,
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => {
@@ -552,6 +611,11 @@ impl SceneManager {
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
+    #[func]
+    fn get_current_parcel_scene_id(&self) -> i32 {
+        self.current_parcel_scene_id.0
+    }
+
     fn on_current_parcel_scene_changed(&mut self) {
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
             for (_, audio_source_node) in scene.audio_sources.iter() {
@@ -601,12 +665,16 @@ impl SceneManager {
         &mut self.scenes
     }
 
+    pub fn get_all_scenes(&mut self) -> &HashMap<SceneId, Scene> {
+        &self.scenes
+    }
+
     pub fn get_scene_mut(&mut self, scene_id: &SceneId) -> Option<&mut Scene> {
         self.scenes.get_mut(scene_id)
     }
 
     // this could be cached
-    pub fn get_global_scenes(&self) -> Vec<SceneId> {
+    pub fn get_global_scene_ids(&self) -> Vec<SceneId> {
         self.scenes
             .iter()
             .filter(|(_scene_id, scene)| {
@@ -617,6 +685,75 @@ impl SceneManager {
             })
             .map(|(scene_id, _)| *scene_id)
             .collect::<Vec<SceneId>>()
+    }
+
+    #[func]
+    pub fn is_scene_tests_finished(&self, scene_id: i32) -> bool {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return false;
+        };
+
+        scene.tick_number > 10
+            && scene
+                .scene_tests
+                .iter()
+                .all(|(_, test_result)| test_result.is_some())
+    }
+
+    #[func]
+    pub fn get_scene_tests_result(&self, scene_id: i32) -> Dictionary {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return Dictionary::default();
+        };
+
+        let test_total = scene.scene_tests.len() as u32;
+        let mut test_fail = 0;
+        let mut text_test_list = String::new();
+        let mut text_detail_failed = String::new();
+        for value in scene.scene_tests.iter() {
+            if let Some(result) = value.1 {
+                if result.ok {
+                    text_test_list += &format!(
+                        "\t🟢 {} (frames={},time={}): OK\n",
+                        value.0, result.total_frames, result.total_time
+                    );
+                } else {
+                    text_test_list += &format!(
+                        "\t🔴 {} (frames={},time={}):",
+                        value.0, result.total_frames, result.total_time
+                    );
+                    test_fail += 1;
+                    if let Some(error) = &result.error {
+                        text_test_list += "\tFAIL with Error\n";
+                        text_detail_failed += &format!("🔴{}: ❌{}\n", value.0, error);
+                    } else {
+                        text_test_list += "\tFAIL with Unknown Error \n";
+                    }
+                }
+            }
+        }
+
+        let mut text = format!("Scene {:?} tests:\n", scene.definition.title);
+        text += &format!("{}\n", text_test_list);
+        if test_fail == 0 {
+            text += &format!(
+                "✅ All tests ({}) passed in the scene {:?}\n",
+                test_total, scene.definition.title
+            );
+        } else {
+            text += &format!(
+                "❌ {} tests failed of {} in the scene {:?}\n",
+                test_fail, test_total, scene.definition.title
+            );
+        }
+
+        let mut dict = Dictionary::default();
+        dict.set("text", text.to_variant());
+        dict.set("text_detail_failed", text_detail_failed.to_variant());
+        dict.set("total", test_total.to_variant());
+        dict.set("fail", test_fail.to_variant());
+
+        dict
     }
 }
 

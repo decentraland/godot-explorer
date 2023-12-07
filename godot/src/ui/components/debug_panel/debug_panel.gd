@@ -66,8 +66,8 @@ func on_console_add(scene_title: String, level: int, _timestamp: float, text: St
 	item.set_text(1, message)
 
 	var filter_text = %LineEdit_Filter.text
-	var hide = message.find(filter_text) == -1 and not filter_text.is_empty()
-	item.visible = not hide
+	var should_hide = message.find(filter_text) == -1 and not filter_text.is_empty()
+	item.visible = not should_hide
 
 	# Check size of text...
 	var width = get_string_width(message)
@@ -89,7 +89,7 @@ func on_console_add(scene_title: String, level: int, _timestamp: float, text: St
 func get_string_width(message: String) -> int:
 	var font: Font = tree_console.get_theme_font("font")
 	var font_size = tree_console.get_theme_font_size("font_size")
-	return font.get_string_size(message, 0, -1, font_size).x
+	return int(font.get_string_size(message, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x)
 
 
 func word_wrap(message: String) -> Array[String]:
@@ -123,8 +123,8 @@ func _on_button_clear_pressed():
 func _on_line_edit_filter_text_changed(new_text):
 	var children = tree_console.get_root().get_children()
 	for item: TreeItem in children:
-		var hide = item.get_text(1).find(new_text) == -1 and not new_text.is_empty()
-		item.visible = not hide
+		var should_hide = item.get_text(1).find(new_text) == -1 and not new_text.is_empty()
+		item.visible = not should_hide
 
 
 func _on_button_show_hide_pressed():
@@ -135,7 +135,7 @@ func _on_button_show_hide_pressed():
 		button_show_hide.icon = icon_hidden
 
 
-func _on_tree_console_item_mouse_selected(position, mouse_button_index):
+func _on_tree_console_item_mouse_selected(tree_position, mouse_button_index):
 	if mouse_button_index != MOUSE_BUTTON_RIGHT:
 		return
 
@@ -144,7 +144,7 @@ func _on_tree_console_item_mouse_selected(position, mouse_button_index):
 
 	if tree_console.get_selected():
 		popup_menu.add_icon_item(icon_action_copy, "Copy ")
-		popup_menu.set_position(tree_console.get_screen_position() + position)
+		popup_menu.set_position(tree_console.get_screen_position() + tree_position)
 		popup_menu.popup()
 
 
