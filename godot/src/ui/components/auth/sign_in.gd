@@ -27,15 +27,15 @@ func close_sign_in():
 
 
 func _ready():
-	Global.comms.player_identity.need_open_url.connect(self._on_need_open_url)
-	Global.comms.player_identity.wallet_connected.connect(self._on_wallet_connected)
+	Global.player_identity.need_open_url.connect(self._on_need_open_url)
+	Global.player_identity.wallet_connected.connect(self._on_wallet_connected)
 
 	Global.scene_runner.set_pause(true)
 	show_panel(v_box_container_connect)
 
 
 func _on_button_sign_in_pressed():
-	Global.comms.player_identity.try_connect_account()
+	Global.player_identity.try_connect_account()
 	show_waiting_panel("Please follow the steps to connect your account and sign the message")
 
 
@@ -44,23 +44,25 @@ func _on_button_guest_pressed():
 
 
 func _on_button_confirm_guest_risk_pressed():
-	Global.comms.player_identity.create_guest_account()
+	Global.player_identity.create_guest_account()
 
 
 func _on_need_open_url(url: String, _description: String) -> void:
 	OS.shell_open(url)
 
 
-func _on_wallet_connected(_address: String, _chain_id: int) -> void:
+func _on_wallet_connected(_address: String, _chain_id: int, is_guest: bool) -> void:
 	Global.scene_runner.set_pause(false)
 	Global.config.session_account = {}
 
-	var new_stored_account := {}
-	if Global.comms.player_identity.get_recover_account_to(new_stored_account):
-		Global.config.session_account = new_stored_account
+	if not is_guest:
+		var new_stored_account := {}
+		if Global.player_identity.get_recover_account_to(new_stored_account):
+			Global.config.session_account = new_stored_account
 
-	Global.config.avatar_profile = Global.config.default_profile()
-	Global.config.save_to_settings_file()
+		Global.config.save_to_settings_file()
 
-	Global.comms.player_identity.update_profile(Global.config.avatar_profile)
+	# TODO: fetch profile
+	# Global.player_identity.update_profile(Global.config.avatar_profile)
+	
 	close_sign_in()

@@ -51,13 +51,13 @@ func _ready():
 		var key = "urn:decentraland:off-chain:base-avatars:" + wearable_id
 		wearable_data[key] = null
 
-	avatar_body_shape = Global.config.avatar_profile.body_shape
-	avatar_wearables = Global.config.avatar_profile.wearables
-	avatar_eyes_color = Global.config.avatar_profile.eyes
-	avatar_hair_color = Global.config.avatar_profile.hair
-	avatar_skin_color = Global.config.avatar_profile.skin
-	avatar_emotes = Global.config.avatar_profile.emotes
-	line_edit_name.text = Global.config.avatar_profile.name
+	#avatar_body_shape = Global.config.avatar_profile.body_shape
+	#avatar_wearables = Global.config.avatar_profile.wearables
+	#avatar_eyes_color = Global.config.avatar_profile.eyes
+	#avatar_hair_color = Global.config.avatar_profile.hair
+	#avatar_skin_color = Global.config.avatar_profile.skin
+	#avatar_emotes = Global.config.avatar_profile.emotes
+	#line_edit_name.text = Global.config.avatar_profile.name
 
 	var promise = Global.content_manager.fetch_wearables(
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
@@ -183,7 +183,8 @@ func _on_button_save_profile_pressed():
 	Global.config.avatar_profile = renderer_avatar_dictionary
 	Global.config.save_to_settings_file()
 
-	Global.comms.player_identity.update_profile(renderer_avatar_dictionary)
+	# TODO: deploy profile
+	Global.player_identity.update_profile(renderer_avatar_dictionary)
 
 
 func _on_wearable_panel_equip(wearable_id: String):

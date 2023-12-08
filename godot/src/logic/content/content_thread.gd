@@ -17,7 +17,7 @@ var id: int = -1
 
 # Private
 var _pending_content: Array[Dictionary] = []
-var _http_requester = RustHttpRequesterWrapper.new()
+var _http_requester: RustHttpRequesterWrapper
 
 # Metrics
 var _processing_count = 0
@@ -32,6 +32,7 @@ func content_processing_count():
 
 
 func _init(param_id: int, param_thread: Thread):
+	_http_requester = RustHttpRequesterWrapper.new()
 	self.thread = param_thread
 	self.id = param_id
 

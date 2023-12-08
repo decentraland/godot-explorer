@@ -104,6 +104,54 @@ impl RustHttpRequester {
         self.http_requester.send_request(request_option);
         id
     }
+
+    #[func]
+    fn post_formdata(
+        &mut self,
+        reference_id: u32,
+        url: GString,
+        method: godot::engine::http_client::Method,
+        body: GString,
+        headers: VariantArray,
+    ) -> u32 {
+        tracing::info!("posting form data: {:?}", url.to_string());
+
+        
+
+        let method = match method {
+            godot::engine::http_client::Method::METHOD_POST => http::Method::POST,
+            _ => http::Method::GET,
+        };
+
+        let body = match body.to_string().as_str() {
+            "" => None,
+            _ => Some(body.to_string().into_bytes()),
+        };
+
+        let headers = match headers.len() {
+            0 => None,
+            _ => {
+                let mut headers_vec = Vec::new();
+                for i in 0..headers.len() {
+                    let header = headers.get(i).to_string();
+                    headers_vec.push(header);
+                }
+                Some(headers_vec)
+            }
+        };
+
+        let request_option = crate::http_request::request_response::RequestOption::new(
+            reference_id,
+            url.to_string(),
+            method,
+            crate::http_request::request_response::ResponseType::AsString,
+            body,
+            headers,
+        );
+        let id = request_option.id;
+        self.http_requester.send_request(request_option);
+        id
+    }
 }
 
 #[godot_api]

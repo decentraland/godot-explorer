@@ -3,9 +3,6 @@ extends DclRealm
 
 signal realm_changed
 
-var http_requester: RustHttpRequesterWrapper = Global.http_requester
-
-
 static func is_dcl_ens(str_param: String) -> bool:
 	var regex = RegEx.new()
 	regex.compile("^[a-zA-Z0-9]+\\.dcl\\.eth$")
@@ -74,7 +71,7 @@ func async_set_realm(new_realm_string: String) -> void:
 	realm_string = new_realm_string
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)
-	var promise: Promise = http_requester.request_json(
+	var promise: Promise = Global.http_requester.request_json(
 		realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
 
@@ -120,6 +117,15 @@ func async_set_realm(new_realm_string: String) -> void:
 			realm_city_loader_content_base_url = Realm.ensure_ends_with_slash(
 				configuration.get("cityLoaderContentServer", "")
 			)
+
+		lambda_server_base_url = realm_about.get("lambdas", {}).get("publicUrl", "https://peer.decentraland.org/lambdas/")
+		if not lambda_server_base_url.is_empty():
+			lambda_server_base_url = Realm.ensure_ends_with_slash(
+				lambda_server_base_url
+			)
+		Realm.ensure_ends_with_slash(
+			realm_about.get("lambdas", {}).get("publicUrl")
+		)
 
 		realm_name = configuration.get("realmName", "no_realm_name")
 		network_id = int(configuration.get("networkId", 1))  # 1=Ethereum

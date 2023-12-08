@@ -7,7 +7,7 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
-    test_runner::testing_tools::DclTestingTools,
+    test_runner::testing_tools::DclTestingTools, auth::dcl_player_identity::DclPlayerIdentity,
 };
 
 use super::{dcl_realm::DclRealm, portables::DclPortableExperienceController};
@@ -35,6 +35,8 @@ pub struct DclGlobal {
     pub preview_mode: bool,
     #[var]
     pub testing_scene_mode: bool,
+    #[var]
+    pub player_identity: Gd<DclPlayerIdentity>,
 }
 
 #[godot_api]
@@ -79,6 +81,7 @@ impl INode for DclGlobal {
             portable_experience_controller: DclPortableExperienceController::alloc_gd(),
             preview_mode,
             testing_scene_mode,
+            player_identity: DclPlayerIdentity::alloc_gd(),
         }
     }
 }

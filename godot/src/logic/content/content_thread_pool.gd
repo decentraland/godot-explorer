@@ -15,7 +15,7 @@ const USE_THREAD = true
 const MAX_THREADS = 1
 
 var content_threads: Array[ContentThread] = []
-var http_requester = RustHttpRequesterWrapper.new()
+var http_requester: RustHttpRequesterWrapper
 
 var request_monotonic_counter: int = 0
 
@@ -37,6 +37,8 @@ func get_best_content_thread() -> ContentThread:
 
 
 func _ready():
+	http_requester = RustHttpRequesterWrapper.new()
+	
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
