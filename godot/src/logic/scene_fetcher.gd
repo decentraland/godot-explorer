@@ -249,7 +249,7 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary):
 		local_main_js_path = String(adaptation_layer_js_local_path)
 		if not FileAccess.file_exists(local_main_js_path):
 			var promise: Promise = http_requester.request_file(
-				"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/main/index.min.js",
+				"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/dev/index.min.js",
 				local_main_js_path.replace("user:/", OS.get_user_data_dir())
 			)
 			var res = await promise.async_awaiter()
