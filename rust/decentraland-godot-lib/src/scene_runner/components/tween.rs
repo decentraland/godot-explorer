@@ -1,7 +1,5 @@
 use std::{collections::HashSet, time::Duration};
 
-use godot::builtin::{Quaternion, Vector3};
-
 use crate::{
     dcl::{
         components::{
