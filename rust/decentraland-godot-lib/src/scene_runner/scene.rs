@@ -34,7 +34,7 @@ use crate::{
     },
 };
 
-use super::godot_dcl_scene::GodotDclScene;
+use super::{components::tween::Tween, godot_dcl_scene::GodotDclScene};
 
 pub struct Dirty {
     pub waiting_process: bool,
@@ -65,6 +65,7 @@ pub enum SceneUpdateState {
     None,
     PrintLogs,
     DeletedEntities,
+    Tween,
     TransformAndParent,
     VisibilityComponent,
     MeshRenderer,
@@ -96,7 +97,8 @@ impl SceneUpdateState {
         match self {
             Self::None => Self::PrintLogs,
             Self::PrintLogs => Self::DeletedEntities,
-            Self::DeletedEntities => Self::TransformAndParent,
+            Self::DeletedEntities => Self::Tween,
+            Self::Tween => Self::TransformAndParent,
             Self::TransformAndParent => Self::VisibilityComponent,
             Self::VisibilityComponent => Self::MeshRenderer,
             Self::MeshRenderer => Self::ScenePointerEvents,
@@ -184,6 +186,9 @@ pub struct Scene {
 
     pub avatar_scene_updates: SceneAvatarUpdates,
     pub scene_tests: HashMap<String, Option<SceneTestResult>>,
+
+    // Tween
+    pub tweens: HashMap<SceneEntityId, Tween>,
 }
 
 #[derive(Debug)]
@@ -270,6 +275,7 @@ impl Scene {
             scene_type,
             avatar_scene_updates: Default::default(),
             scene_tests: HashMap::new(),
+            tweens: HashMap::new(),
         }
     }
 
@@ -325,6 +331,7 @@ impl Scene {
             video_players: HashMap::new(),
             avatar_scene_updates: Default::default(),
             scene_tests: HashMap::new(),
+            tweens: HashMap::new(),
         }
     }
 }
