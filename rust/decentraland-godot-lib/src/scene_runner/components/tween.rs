@@ -217,26 +217,7 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 if data.face_direction == Some(true) {
                     // TODO: This must be calculated one per tween data update, not per frame
-                    // TODO: Fix maths
-
-                    // look_at
-                    let forward = Vector3 {
-                        x: 1.0,
-                        y: 0.0,
-                        z: 0.0,
-                    };
-
-                    let direction = (end - start).normalized();
-
-                    // Calculate the rotation needed
-                    // This is a simplified example. You may need to use more complex calculations
-                    // based on your coordinate system and how your rotations are represented.
-                    let dot = forward.dot(direction);
-                    let angle = dot.acos();
-                    let axis = forward.cross(direction).normalized();
-
-                    transform.rotation = Quaternion::from_angle_axis(axis, angle);
-                    // Create the rotation quaternion
+                    // TODO: Implement transform.rotation = start.look_at(end)
                 }
 
                 transform.translation = start + ((end - start) * ease_value);
