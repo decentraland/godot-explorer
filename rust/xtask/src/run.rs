@@ -1,6 +1,7 @@
-use std::io::{BufRead, BufReader};
-
-use clap::Values;
+use std::{
+    collections::HashMap,
+    io::{BufRead, BufReader},
+};
 
 use crate::{
     consts::{BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
@@ -16,8 +17,14 @@ pub fn run(
     only_build: bool,
     link_libs: bool,
     scene_tests: bool,
-    extras: Option<Values>,
+    extras: Vec<String>,
+    with_build_envs: Option<HashMap<String, String>>,
 ) -> Result<(), anyhow::Error> {
+    let with_build_envs = match with_build_envs {
+        Some(vars) => vars,
+        None => HashMap::new(),
+    };
+
     let program = adjust_canonicalization(
         std::fs::canonicalize(format!(
             "{}godot/{}",
@@ -27,10 +34,6 @@ pub fn run(
         .expect("Did you executed `cargo run -- install`?"),
     );
 
-    let extras: Vec<String> = match extras {
-        Some(iter) => iter.map(|it| it.into()).collect(),
-        None => vec![],
-    };
     println!("extras: {:?}", extras);
 
     std::env::set_var("GODOT4_BIN", program.clone());
@@ -54,6 +57,7 @@ pub fn run(
     let build_status = std::process::Command::new("cargo")
         .current_dir(build_cwd)
         .args(build_args)
+        .envs(with_build_envs)
         .status()
         .expect("Failed to run Godot");
 

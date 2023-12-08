@@ -85,4 +85,9 @@ impl DclTestingTools {
 
         score
     }
+
+    #[func]
+    fn exit_gracefully(&self, code: i32) {
+        std::process::exit(code);
+    }
 }

@@ -7,4 +7,6 @@ func start():
 
 	var exit_code: int = 0 if success else 1
 	print("test-exiting with code ", exit_code)
-	get_tree().quit(exit_code)
+
+	var testing_tools := TestingTools.new()
+	testing_tools.exit_gracefully(exit_code)
