@@ -40,6 +40,11 @@ var skin_color_picker = $ColorRect_Background/HBoxContainer/ScrollContainer/Colo
 
 # gdlint:ignore = async-function-name
 func _ready():
+
+	Global.player_identity.profile_changed.connect(
+		self._on_profile_changed
+	)
+	
 	for child in v_box_container_category.get_children():
 		# TODO: check if it's a wearable_button
 		for wearable_button in child.get_children():
@@ -50,14 +55,6 @@ func _ready():
 	for wearable_id in Wearables.BASE_WEARABLES:
 		var key = "urn:decentraland:off-chain:base-avatars:" + wearable_id
 		wearable_data[key] = null
-
-	#avatar_body_shape = Global.config.avatar_profile.body_shape
-	#avatar_wearables = Global.config.avatar_profile.wearables
-	#avatar_eyes_color = Global.config.avatar_profile.eyes
-	#avatar_hair_color = Global.config.avatar_profile.hair
-	#avatar_skin_color = Global.config.avatar_profile.skin
-	#avatar_emotes = Global.config.avatar_profile.emotes
-	#line_edit_name.text = Global.config.avatar_profile.name
 
 	var promise = Global.content_manager.fetch_wearables(
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
@@ -71,6 +68,18 @@ func _ready():
 	_update_avatar()
 
 
+	
+func _on_profile_changed(new_profile: Dictionary):
+	avatar_body_shape = new_profile.body_shape
+	avatar_wearables = new_profile.wearables
+	avatar_eyes_color = new_profile.eyes
+	avatar_hair_color = new_profile.hair
+	avatar_skin_color = new_profile.skin
+	avatar_emotes = new_profile.emotes
+	line_edit_name.text = new_profile.name
+	
+	_update_avatar()
+	
 func _update_avatar():
 	renderer_avatar_dictionary = {
 		"base_url": "https://peer.decentraland.org/content",
@@ -180,12 +189,9 @@ func _on_button_save_profile_pressed():
 	button_save_profile.disabled = true
 	renderer_avatar_dictionary["name"] = line_edit_name.text
 
-	Global.config.avatar_profile = renderer_avatar_dictionary
-	Global.config.save_to_settings_file()
-
-	# TODO: deploy profile
 	Global.player_identity.update_profile(renderer_avatar_dictionary)
-
+	await Global.player_identity.async_deploy_profile()
+	
 
 func _on_wearable_panel_equip(wearable_id: String):
 	var desired_wearable = wearable_data[wearable_id]

@@ -1,9 +1,11 @@
 use ethers::signers::LocalWallet;
 use ethers::types::H160;
+use godot::engine::GdScript;
 use godot::prelude::*;
 use rand::thread_rng;
 
-use crate::comms::profile::UserProfile;
+use crate::comms::profile::{LambdaProfiles, UserProfile};
+use crate::http_request::request_response::{RequestResponse, ResponseEnum};
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
 use super::auth_identity::create_local_ephemeral;
@@ -318,9 +320,122 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn deploy_profile(&self) {
-        
+    pub fn async_prepare_deploy_profile(&self) -> Gd<Object> {
+        let promise = load::<GdScript>("res://src/utils/promise.gd").instantiate(&[]);
+        let mut promise = promise.to::<Gd<Object>>();
+        let promise_instance_id = promise.instance_id();
 
+        let Some(profile) = self.profile.clone() else {
+            promise.call_deferred("reject".into(), &["profile not initialized".to_variant()]);
+            return promise;
+        };
+
+        if let Some(handle) = TokioRuntime::static_clone_handle() {
+            let ephemeral_auth_chain = self
+                .ephemeral_auth_chain
+                .as_ref()
+                .expect("ephemeral auth chain not initialized")
+                .clone();
+            handle.spawn(async move {
+                let deploy_data = super::deploy_profile::prepare_deploy_profile(
+                    ephemeral_auth_chain.clone(),
+                    profile,
+                )
+                .await;
+
+                let Ok(mut promise) = Gd::<Object>::try_from_instance_id(promise_instance_id)
+                else {
+                    tracing::error!("error getting promise");
+                    return;
+                };
+
+                let Ok((content_type, body_payload)) = deploy_data else {
+                    promise.call_deferred(
+                        "reject".into(),
+                        &["error preparing deploy profile".to_variant()],
+                    );
+                    return;
+                };
+
+                // TODO: gdext should implement a packedByteArray constructor from &[u8] and not iteration
+                let body_payload = {
+                    let byte_length = body_payload.len();
+                    let mut param = PackedByteArray::new();
+                    param.resize(byte_length);
+                    let data_arr_ptr = param.as_mut_slice();
+
+                    unsafe {
+                        let dst_ptr = &mut data_arr_ptr[0] as *mut u8;
+                        let src_ptr = &body_payload[0] as *const u8;
+                        std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, byte_length);
+                    }
+                    param
+                };
+
+                let mut dict = Dictionary::default();
+                dict.set("content_type", content_type.to_variant());
+                dict.set("body_payload", body_payload.to_variant());
+
+                promise.call_deferred("resolve_with_data".into(), &[dict.to_variant()]);
+            });
+        }
+
+        promise
+    }
+
+    #[func]
+    fn update_profile_from_lambda(&mut self, response: Gd<RequestResponse>) -> bool {
+        match &response.bind().response_data {
+            Ok(ResponseEnum::String(json)) => {
+                if let Ok(response) = serde_json::from_str::<LambdaProfiles>(json.as_str()) {
+                    let Some(mut content) = response.avatars.into_iter().next() else {
+                        tracing::error!("error parsing lambda response");
+                        return false;
+                    };
+
+                    // clean up the lambda result
+                    if let Some(snapshots) = content.avatar.snapshots.as_mut() {
+                        if let Some(hash) = snapshots
+                            .body
+                            .rsplit_once('/')
+                            .map(|(_, hash)| hash.to_owned())
+                        {
+                            snapshots.body = hash;
+                        }
+                        if let Some(hash) = snapshots
+                            .face256
+                            .rsplit_once('/')
+                            .map(|(_, hash)| hash.to_owned())
+                        {
+                            snapshots.face256 = hash;
+                        }
+                    }
+
+                    self.profile = Some(UserProfile {
+                        version: content.version as u32,
+                        content,
+                        base_url: "https://peer.decentraland.zone/content/contents/".to_owned(),
+                    });
+
+                    let dict = self.get_profile_or_empty();
+                    self.base.call_deferred(
+                        "emit_signal".into(),
+                        &["profile_changed".to_variant(), dict.to_variant()],
+                    );
+
+                    return true;
+                } else {
+                    tracing::error!("error parsing lambda response");
+                }
+            }
+            Err(e) => {
+                tracing::error!("error updating profile {:?}", e);
+            }
+            _ => {
+                tracing::error!("error updating profile");
+            }
+        }
+        false
     }
 }
 
@@ -346,15 +461,19 @@ impl DclPlayerIdentity {
     }
 
     pub fn update_profile_from_dictionary(&mut self, dict: &Dictionary) {
-        let profile = if let Some(profile) = &mut self.profile {
-            profile
-        } else {
-            self.profile = Some(UserProfile::default());
-            self.profile.as_mut().unwrap()
-        };
+        let eth_address = self.get_address_str().to_string();
 
-        profile.content.copy_from_godot_dictionary(dict);
-        profile.version += 1;
+        if self.profile.is_none() {
+            self.profile = Some(UserProfile::default());
+        }
+
+        {
+            let profile = self.profile.as_mut().unwrap();
+            profile.content.copy_from_godot_dictionary(dict);
+            profile.version += 1;
+            profile.content.user_id = Some(eth_address.clone());
+            profile.content.eth_address = eth_address;
+        }
 
         self.base.call_deferred(
             "emit_signal".into(),

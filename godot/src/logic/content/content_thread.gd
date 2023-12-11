@@ -105,6 +105,10 @@ func _async_process_loading_wearable(
 		content.get("content_base_url", "https://peer.decentraland.org/content") + "entities/active"
 	)
 	var wearables: PackedStringArray = content.get("new_wearables", [])
+	if wearables.is_empty():
+		printerr("Trying to fetch empty wearables")
+		return
+		
 	var json_payload: String = JSON.stringify({"pointers": wearables})
 	var headers = ["Content-Type: application/json"]
 

@@ -84,6 +84,12 @@ func request_json(url: String, method: int, body: String, headers: Array) -> Pro
 	promises[id] = promise
 	return promise
 
+func request_json_bin(url: String, method: int, body: PackedByteArray, headers: Array) -> Promise:
+	var id = _requester.request_json_bin(0, url, method, body, headers)
+
+	var promise = Promise.new()
+	promises[id] = promise
+	return promise
 
 func poll():
 	var res = _requester.poll()
@@ -94,7 +100,11 @@ func poll():
 		if response.is_error():
 			promise.reject(response.get_error())
 		elif !is_success_status_code(response.status_code()):
-			promise.reject(get_status_description(response.status_code()))
+			var payload = response.get_response_as_string()
+			if payload != null:
+				promise.reject(payload)
+			else:
+				promise.reject(get_status_description(response.status_code()))
 		else:
 			promise.resolve_with_data(response)
 		promises.erase(id)
