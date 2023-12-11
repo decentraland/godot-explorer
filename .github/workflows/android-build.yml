@@ -23,7 +23,8 @@ jobs:
       #     limit-access-to-actor: true
       - name: Build Decentraland Godot Lib
         run: |
-          source $HOME/.cargo/env
+          rustup install stable
+          rustup target add aarch64-linux-android
           cd rust/decentraland-godot-lib
           bash android-build.sh
       - name: Install Godot
