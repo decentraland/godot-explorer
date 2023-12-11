@@ -21,10 +21,13 @@ jobs:
       #   with:
       #     sudo: false
       #     limit-access-to-actor: true
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-linux-android
+          override: true
       - name: Build Decentraland Godot Lib
         run: |
-          rustup install stable
-          rustup target add aarch64-linux-android
           cd rust/decentraland-godot-lib
           bash android-build.sh
       - name: Install Godot
