@@ -28,14 +28,14 @@ func async_fetch_profile(address: String, lambda_server_base_url: String) -> voi
 		return
 
 	if response is PromiseError:
-		if response._error_description.find("404") != -1:
+		if response.get_error().find("404") != -1:
 			# Deploy profile?
 			self.set_default_profile()
 			print("Profile not found " + url)
 		else:
 			self.set_default_profile()
 			printerr(
-				"Error while fetching profile " + url, " reason: ", response._error_description
+				"Error while fetching profile " + url, " reason: ", response.get_error()
 			)
 			return
 
@@ -65,7 +65,7 @@ func async_deploy_profile(new_profile: Dictionary) -> void:
 	)
 	var response = await PromiseUtils.async_awaiter(promise_req)
 	if response is PromiseError:
-		print(response._error_description)
+		print(response.get_error())
 
 		var test_file = FileAccess.open("test.request.bin", FileAccess.WRITE)
 		test_file.store_buffer((ret as Dictionary).get("body_payload"))
