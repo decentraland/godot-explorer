@@ -19,11 +19,7 @@ jobs:
       - name: Build Decentraland Godot Lib
         run: |
           echo $0
-          ls -la /app
-          ls -la /opt/
-          rustup update
-          cd rust/decentraland-godot-lib
-          GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --target aarch64-linux-android --release
+          bash android-build.sh
       - name: Install Godot
         run: |
           cd rust/xtask
