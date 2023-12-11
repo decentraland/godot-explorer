@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Decentraland Godot Lib
         run: |
+          echo $0
           ls -la /app
           ls -la /opt/
           rustup update
