@@ -34,9 +34,7 @@ func async_fetch_profile(address: String, lambda_server_base_url: String) -> voi
 			print("Profile not found " + url)
 		else:
 			self.set_default_profile()
-			printerr(
-				"Error while fetching profile " + url, " reason: ", response.get_error()
-			)
+			printerr("Error while fetching profile " + url, " reason: ", response.get_error())
 			return
 
 	if not self._update_profile_from_lambda(response):
