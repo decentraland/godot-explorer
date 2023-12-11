@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Decentraland Godot Lib
         run: |
-          echo $0
+          cd rust/decentraland-godot-lib
           bash android-build.sh
       - name: Install Godot
         run: |
