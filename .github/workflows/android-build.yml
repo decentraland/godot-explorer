@@ -20,6 +20,8 @@ jobs:
         run: |
           ls -la /app
           ls -la /opt/
+          rustup install stable
+          rustup default stable
           cd rust/decentraland-godot-lib
           GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --target aarch64-linux-android --release
       - name: Install Godot
