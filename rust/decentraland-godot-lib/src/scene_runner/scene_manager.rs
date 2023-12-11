@@ -896,20 +896,3 @@ impl INode for SceneManager {
         GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 }
-
-#[cfg(target_os = "android")]
-mod android {
-    use tracing_subscriber::filter::LevelFilter;
-    use tracing_subscriber::fmt::format::FmtSpan;
-    use tracing_subscriber::prelude::*;
-    use tracing_subscriber::{self, registry};
-
-    pub fn init_logger() {
-        let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
-            .with_span_events(FmtSpan::CLOSE)
-            .with_thread_names(true)
-            .with_filter(LevelFilter::DEBUG);
-
-        registry().with(android_layer).init();
-    }
-}

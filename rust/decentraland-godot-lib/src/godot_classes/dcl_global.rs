@@ -12,6 +12,23 @@ use crate::{
 
 use super::{dcl_realm::DclRealm, portables::DclPortableExperienceController};
 
+#[cfg(target_os = "android")]
+mod android {
+    use tracing_subscriber::filter::LevelFilter;
+    use tracing_subscriber::fmt::format::FmtSpan;
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::{self, registry};
+
+    pub fn init_logger() {
+        let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
+            .with_span_events(FmtSpan::CLOSE)
+            .with_thread_names(true)
+            .with_filter(LevelFilter::DEBUG);
+
+        registry().with(android_layer).init();
+    }
+}
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclGlobal {

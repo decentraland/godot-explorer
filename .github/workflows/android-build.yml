@@ -1,0 +1,33 @@
+name: Android Build
+
+on:
+  push:
+    branches:
+  pull_request:
+  release:
+    types:
+      - created
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: docker://kuruk/dcl-godot-android-builder:latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Decentraland Godot Lib
+        run: |
+          cd rust/decentraland-godot-lib
+          GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --target aarch64-linux-android --release
+      - name: Install Godot
+        run: |
+          cd rust/xtask
+          cargo run -- install
+      # TODO: We should build `decentraland-godot-lib` for Linux
+      # TODO: Copy Android FFMPEG Libs
+      - name: Export Godot APK
+        run: |
+          /app/.bin/godot/godot4_bin \
+            -e --headless --rendering-driver opengl3 --headless \
+            --export-release Android /app/android.apk
