@@ -40,11 +40,8 @@ var skin_color_picker = $ColorRect_Background/HBoxContainer/ScrollContainer/Colo
 
 # gdlint:ignore = async-function-name
 func _ready():
+	Global.player_identity.profile_changed.connect(self._on_profile_changed)
 
-	Global.player_identity.profile_changed.connect(
-		self._on_profile_changed
-	)
-	
 	for child in v_box_container_category.get_children():
 		# TODO: check if it's a wearable_button
 		for wearable_button in child.get_children():
@@ -68,7 +65,6 @@ func _ready():
 	_update_avatar()
 
 
-	
 func _on_profile_changed(new_profile: Dictionary):
 	avatar_body_shape = new_profile.body_shape
 	avatar_wearables = new_profile.wearables
@@ -77,9 +73,10 @@ func _on_profile_changed(new_profile: Dictionary):
 	avatar_skin_color = new_profile.skin
 	avatar_emotes = new_profile.emotes
 	line_edit_name.text = new_profile.name
-	
+
 	_update_avatar()
-	
+
+
 func _update_avatar():
 	renderer_avatar_dictionary = {
 		"base_url": "https://peer.decentraland.org/content",
@@ -190,8 +187,8 @@ func _on_button_save_profile_pressed():
 	renderer_avatar_dictionary["name"] = line_edit_name.text
 
 	Global.player_identity.update_profile(renderer_avatar_dictionary)
-	await Global.player_identity.async_deploy_profile()
-	
+	Global.player_identity.async_deploy_profile()
+
 
 func _on_wearable_panel_equip(wearable_id: String):
 	var desired_wearable = wearable_data[wearable_id]

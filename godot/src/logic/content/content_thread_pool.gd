@@ -38,7 +38,7 @@ func get_best_content_thread() -> ContentThread:
 
 func _ready():
 	http_requester = RustHttpRequesterWrapper.new()
-	
+
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 

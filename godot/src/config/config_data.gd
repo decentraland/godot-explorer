@@ -103,6 +103,7 @@ var session_account: Dictionary = {}:
 		session_account = value
 		param_changed.emit(ConfigParams.SESSION_ACCOUNT)
 
+
 # TODO: should this be moved to other place?
 func default_profile() -> Dictionary:
 	return {

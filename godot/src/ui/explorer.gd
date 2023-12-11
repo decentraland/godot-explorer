@@ -133,9 +133,7 @@ func _ready():
 	)
 
 	Global.player_identity.logout.connect(self._on_player_logout)
-	Global.player_identity.profile_changed.connect(
-		Global.avatars.update_primary_player_profile
-	)
+	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 
 	if not Global.player_identity.try_recover_account(Global.config.session_account):
 		if Global.testing_scene_mode:

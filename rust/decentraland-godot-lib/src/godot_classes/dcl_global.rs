@@ -4,10 +4,11 @@ use godot::{
 };
 
 use crate::{
+    auth::dcl_player_identity::DclPlayerIdentity,
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
-    test_runner::testing_tools::DclTestingTools, auth::dcl_player_identity::DclPlayerIdentity,
+    test_runner::testing_tools::DclTestingTools,
 };
 
 use super::{dcl_realm::DclRealm, portables::DclPortableExperienceController};

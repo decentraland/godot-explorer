@@ -84,12 +84,14 @@ func request_json(url: String, method: int, body: String, headers: Array) -> Pro
 	promises[id] = promise
 	return promise
 
+
 func request_json_bin(url: String, method: int, body: PackedByteArray, headers: Array) -> Promise:
 	var id = _requester.request_json_bin(0, url, method, body, headers)
 
 	var promise = Promise.new()
 	promises[id] = promise
 	return promise
+
 
 func poll():
 	var res = _requester.poll()

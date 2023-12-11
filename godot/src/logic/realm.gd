@@ -3,6 +3,7 @@ extends DclRealm
 
 signal realm_changed
 
+
 static func is_dcl_ens(str_param: String) -> bool:
 	var regex = RegEx.new()
 	regex.compile("^[a-zA-Z0-9]+\\.dcl\\.eth$")
@@ -118,14 +119,12 @@ func async_set_realm(new_realm_string: String) -> void:
 				configuration.get("cityLoaderContentServer", "")
 			)
 
-		lambda_server_base_url = realm_about.get("lambdas", {}).get("publicUrl", "https://peer.decentraland.org/lambdas/")
-		if not lambda_server_base_url.is_empty():
-			lambda_server_base_url = Realm.ensure_ends_with_slash(
-				lambda_server_base_url
-			)
-		Realm.ensure_ends_with_slash(
-			realm_about.get("lambdas", {}).get("publicUrl")
+		lambda_server_base_url = realm_about.get("lambdas", {}).get(
+			"publicUrl", "https://peer.decentraland.org/lambdas/"
 		)
+		if not lambda_server_base_url.is_empty():
+			lambda_server_base_url = Realm.ensure_ends_with_slash(lambda_server_base_url)
+		Realm.ensure_ends_with_slash(realm_about.get("lambdas", {}).get("publicUrl"))
 
 		realm_name = configuration.get("realmName", "no_realm_name")
 		network_id = int(configuration.get("networkId", 1))  # 1=Ethereum

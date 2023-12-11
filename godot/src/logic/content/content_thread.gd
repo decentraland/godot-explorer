@@ -108,7 +108,7 @@ func _async_process_loading_wearable(
 	if wearables.is_empty():
 		printerr("Trying to fetch empty wearables")
 		return
-		
+
 	var json_payload: String = JSON.stringify({"pointers": wearables})
 	var headers = ["Content-Type: application/json"]
 
