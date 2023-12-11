@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo $0
+
 set -e
 
 if [[ -z "${ANDROID_NDK}" ]]; then
