@@ -20,41 +20,41 @@ func async_fetch_profile(address: String, lambda_server_base_url: String) -> voi
 	var url = lambda_server_base_url + "profiles/" + address
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", [])
 
-	var response = await promise.async_awaiter()
+	var response = await PromiseUtils.async_awaiter(promise)
 
 	# Are we still needing to fetch this profile?
 	if get_address_str() != address or current_lambda_server_base_url != lambda_server_base_url:
 		print("fetc profile dismissed")
 		return
 
-	if response is Promise.Error:
+	if response is PromiseError:
 		if response._error_description.find("404") != -1:
 			# Deploy profile?
-			update_profile(Global.config.default_profile())
+			self.set_default_profile()
 			print("Profile not found " + url)
 		else:
-			update_profile(Global.config.default_profile())
+			self.set_default_profile()
 			printerr(
 				"Error while fetching profile " + url, " reason: ", response._error_description
 			)
 			return
 
-	if not self.update_profile_from_lambda(response):
-		self.update_profile(Global.config.default_profile())
+	if not self._update_profile_from_lambda(response):
+		self.set_default_profile()
 
 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool):
 	if is_guest:
-		update_profile(Global.config.default_profile())
+		self.set_default_profile()
 		return
 
 	async_fetch_profile(address, current_lambda_server_base_url)
 
 
-func async_deploy_profile():
-	var promise: Promise = self.async_prepare_deploy_profile()
-	var ret = await promise.async_awaiter()
-	if ret is Promise.Error:
+func async_deploy_profile(new_profile: Dictionary) -> void:
+	var promise: Promise = self.async_prepare_deploy_profile(new_profile)
+	var ret = await PromiseUtils.async_awaiter(promise)
+	if ret is PromiseError:
 		print(ret)
 		return
 
@@ -63,8 +63,8 @@ func async_deploy_profile():
 	var promise_req := Global.http_requester.request_json_bin(
 		url, HTTPClient.METHOD_POST, (ret as Dictionary).get("body_payload"), headers
 	)
-	var response = await promise_req.async_awaiter()
-	if response is Promise.Error:
+	var response = await PromiseUtils.async_awaiter(promise_req)
+	if response is PromiseError:
 		print(response._error_description)
 
 		var test_file = FileAccess.open("test.request.bin", FileAccess.WRITE)
@@ -74,4 +74,6 @@ func async_deploy_profile():
 		return
 
 	response = (response as RequestResponse).get_string_response_as_json()
-	prints(response)
+	if response is Dictionary:
+		if response.get("creationTimestamp") != null:
+			self._update_profile_from_dictionary(new_profile)

@@ -76,8 +76,8 @@ func async_set_realm(new_realm_string: String) -> void:
 		realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
 
-	var res = await promise.async_awaiter()
-	if res is Promise.Error:
+	var res = await PromiseUtils.async_awaiter(promise)
+	if res is PromiseError:
 		printerr(
 			"Rejected request change realm to: ",
 			new_realm_string,

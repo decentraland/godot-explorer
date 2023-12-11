@@ -62,7 +62,4 @@ func _on_wallet_connected(_address: String, _chain_id: int, is_guest: bool) -> v
 
 		Global.config.save_to_settings_file()
 
-	# TODO: fetch profile
-	# Global.player_identity.update_profile(Global.config.avatar_profile)
-
 	close_sign_in()

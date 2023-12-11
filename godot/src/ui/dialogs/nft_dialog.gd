@@ -21,7 +21,7 @@ func async_load_nft(urn: String):
 		return
 
 	var promise = Global.nft_fetcher.fetch_nft(dcl_urn)
-	var asset = await promise.async_awaiter()
+	var asset = await PromiseUtils.async_awaiter(promise)
 	if asset is OpenSeaFetcher.Asset:
 		%VBoxContainer_InfoPanel.show()
 		permalink = asset.permalink

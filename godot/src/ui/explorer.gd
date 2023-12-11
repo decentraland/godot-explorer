@@ -141,10 +141,6 @@ func _ready():
 		else:
 			Global.scene_runner.set_pause(true)
 			ui_root.add_child(sign_in_resource.instantiate())
-	else:
-		pass
-		# TODO: fetch profile
-		#Global.player_identity.update_profile(Global.config.avatar_profile)
 
 	# last
 	ui_root.grab_focus.call_deferred()

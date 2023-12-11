@@ -57,7 +57,7 @@ func _ready():
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
 	)
 	if promise != null:
-		await promise.async_awaiter()
+		await PromiseUtils.async_awaiter(promise)
 
 	for wearable_id in wearable_data:
 		wearable_data[wearable_id] = Global.content_manager.get_wearable(wearable_id)
@@ -185,9 +185,7 @@ func _on_line_edit_name_text_changed(_new_text):
 func _on_button_save_profile_pressed():
 	button_save_profile.disabled = true
 	renderer_avatar_dictionary["name"] = line_edit_name.text
-
-	Global.player_identity.update_profile(renderer_avatar_dictionary)
-	Global.player_identity.async_deploy_profile()
+	Global.player_identity.async_deploy_profile(renderer_avatar_dictionary)
 
 
 func _on_wearable_panel_equip(wearable_id: String):

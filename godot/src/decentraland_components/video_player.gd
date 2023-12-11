@@ -12,8 +12,8 @@ func async_request_video(file_hash):
 	var content_mapping = Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
 	var promise = Global.content_manager.fetch_video(file_hash, content_mapping)
-	var res = await promise.async_awaiter()
-	if res is Promise.Error:
+	var res = await PromiseUtils.async_awaiter(promise)
+	if res is PromiseError:
 		printerr("Error on fetching video: ", res.get_error())
 	else:
 		_on_video_loaded(file_hash)

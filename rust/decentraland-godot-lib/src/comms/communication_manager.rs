@@ -200,7 +200,7 @@ impl CommunicationManager {
 
     #[func]
     fn _on_profile_changed(&mut self) {
-        self.base.call_deferred("update_profile".into(), &[]);
+        self.base.call_deferred("_on_update_profile".into(), &[]);
     }
 
     #[func]
@@ -273,7 +273,7 @@ impl CommunicationManager {
             .try_get_ephemeral_auth_chain()
             .expect("ephemeral auth chain needed to start a comms connection");
 
-        let player_profile = player_identity.bind().profile().clone().map(|v| v.clone());
+        let player_profile = player_identity.bind().profile().cloned();
 
         match protocol {
             "ws-room" => {
@@ -340,7 +340,7 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn update_profile(&mut self) {
+    fn _on_update_profile(&mut self) {
         match &mut self.current_connection {
             CommsConnection::None
             | CommsConnection::SignedLogin(_)

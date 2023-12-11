@@ -102,8 +102,8 @@ class Asset:
 		var offers_promise: Promise = Global.http_requester.request_json(
 			url, HTTPClient.METHOD_GET, "", headers
 		)
-		var offers_result = await offers_promise.async_awaiter()
-		if offers_result is Promise.Error:
+		var offers_result = await PromiseUtils.async_awaiter(offers_promise)
+		if offers_result is PromiseError:
 			printerr("Asset::async_load_offers error loading offers: ", offers_result.get_error())
 			return 0
 		# Parsing
@@ -131,8 +131,8 @@ class Asset:
 	func async_download_image():
 		var texture_hash = get_hash()
 		var promise = Global.content_manager.fetch_texture_by_url(texture_hash, image_url)
-		var result = await promise.async_awaiter()
-		if result is Promise.Error:
+		var result = await PromiseUtils.async_awaiter(promise)
+		if result is PromiseError:
 			printerr(
 				"open_sea_nft_fetcher::asset::download_image promise error: ", result.get_error()
 			)
@@ -167,9 +167,9 @@ func _async_request_nft(completed_promise: Promise, urn: DclUrn):
 	var asset_promise: Promise = Global.http_requester.request_json(
 		url, HTTPClient.METHOD_GET, "", headers
 	)
-	var asset_result = await asset_promise.async_awaiter()
+	var asset_result = await PromiseUtils.async_awaiter(asset_promise)
 
-	if asset_result is Promise.Error:
+	if asset_result is PromiseError:
 		printerr(
 			"Error fetching asset result for opensea, url: ",
 			url,

@@ -5,7 +5,7 @@ var nft_fetcher: OpenSeaFetcher = OpenSeaFetcher.new()
 
 func async_add_nft(urn: String):
 	var promise = nft_fetcher.fetch_nft(DclUrn.new(urn))
-	var result: OpenSeaFetcher.Asset = await promise.async_awaiter()
+	var result: OpenSeaFetcher.Asset = await PromiseUtils.async_awaiter(promise)
 	prints("image_url:", result.image_url)
 	var texture_rect = Sprite2D.new()
 	texture_rect.texture = result.texture

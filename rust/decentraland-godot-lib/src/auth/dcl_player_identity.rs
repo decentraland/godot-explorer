@@ -1,10 +1,10 @@
 use ethers::signers::LocalWallet;
 use ethers::types::H160;
-use godot::engine::GdScript;
 use godot::prelude::*;
 use rand::thread_rng;
 
 use crate::comms::profile::{LambdaProfiles, UserProfile};
+use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::{RequestResponse, ResponseEnum};
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
@@ -307,8 +307,13 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn update_profile(&mut self, dict: Dictionary) {
-        self.update_profile_from_dictionary(&dict);
+    pub fn set_default_profile(&mut self) {
+        self.profile = Some(UserProfile::default());
+        let dict = self.get_profile_or_empty();
+        self.base.call_deferred(
+            "emit_signal".into(),
+            &["profile_changed".to_variant(), dict.to_variant()],
+        );
     }
 
     #[func]
@@ -320,15 +325,24 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn async_prepare_deploy_profile(&self) -> Gd<Object> {
-        let promise = load::<GdScript>("res://src/utils/promise.gd").instantiate(&[]);
-        let mut promise = promise.to::<Gd<Object>>();
+    pub fn async_prepare_deploy_profile(&self, dict: Dictionary) -> Gd<Promise> {
+        let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();
 
-        let Some(profile) = self.profile.clone() else {
-            promise.call_deferred("reject".into(), &["profile not initialized".to_variant()]);
-            return promise;
+        let mut profile = if let Some(profile) = self.profile.clone() {
+            profile
+        } else {
+            UserProfile {
+                version: 0,
+                ..Default::default()
+            }
         };
+
+        let eth_address = self.get_address_str().to_string();
+        profile.content.copy_from_godot_dictionary(&dict);
+        profile.version += 1;
+        profile.content.user_id = Some(eth_address.clone());
+        profile.content.eth_address = eth_address;
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
             let ephemeral_auth_chain = self
@@ -343,17 +357,16 @@ impl DclPlayerIdentity {
                 )
                 .await;
 
-                let Ok(mut promise) = Gd::<Object>::try_from_instance_id(promise_instance_id)
+                let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
                 else {
                     tracing::error!("error getting promise");
                     return;
                 };
 
                 let Ok((content_type, body_payload)) = deploy_data else {
-                    promise.call_deferred(
-                        "reject".into(),
-                        &["error preparing deploy profile".to_variant()],
-                    );
+                    promise
+                        .bind_mut()
+                        .reject("error preparing deploy profile".into());
                     return;
                 };
 
@@ -376,7 +389,7 @@ impl DclPlayerIdentity {
                 dict.set("content_type", content_type.to_variant());
                 dict.set("body_payload", body_payload.to_variant());
 
-                promise.call_deferred("resolve_with_data".into(), &[dict.to_variant()]);
+                promise.bind_mut().resolve_with_data(dict.to_variant());
             });
         }
 
@@ -384,7 +397,7 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn update_profile_from_lambda(&mut self, response: Gd<RequestResponse>) -> bool {
+    fn _update_profile_from_lambda(&mut self, response: Gd<RequestResponse>) -> bool {
         match &response.bind().response_data {
             Ok(ResponseEnum::String(json)) => {
                 if let Ok(response) = serde_json::from_str::<LambdaProfiles>(json.as_str()) {
@@ -437,6 +450,29 @@ impl DclPlayerIdentity {
         }
         false
     }
+
+    #[func]
+    pub fn _update_profile_from_dictionary(&mut self, dict: Dictionary) {
+        let eth_address = self.get_address_str().to_string();
+
+        if self.profile.is_none() {
+            self.profile = Some(UserProfile::default());
+            self.profile.as_mut().unwrap().version = 0;
+        }
+
+        {
+            let profile = self.profile.as_mut().unwrap();
+            profile.content.copy_from_godot_dictionary(&dict);
+            profile.version += 1;
+            profile.content.user_id = Some(eth_address.clone());
+            profile.content.eth_address = eth_address;
+        }
+
+        self.base.call_deferred(
+            "emit_signal".into(),
+            &["profile_changed".to_variant(), dict.to_variant()],
+        );
+    }
 }
 
 impl DclPlayerIdentity {
@@ -458,27 +494,6 @@ impl DclPlayerIdentity {
 
     pub fn get_address(&self) -> H160 {
         self.try_get_address().expect("wallet not initialized")
-    }
-
-    pub fn update_profile_from_dictionary(&mut self, dict: &Dictionary) {
-        let eth_address = self.get_address_str().to_string();
-
-        if self.profile.is_none() {
-            self.profile = Some(UserProfile::default());
-        }
-
-        {
-            let profile = self.profile.as_mut().unwrap();
-            profile.content.copy_from_godot_dictionary(dict);
-            profile.version += 1;
-            profile.content.user_id = Some(eth_address.clone());
-            profile.content.eth_address = eth_address;
-        }
-
-        self.base.call_deferred(
-            "emit_signal".into(),
-            &["profile_changed".to_variant(), dict.to_variant()],
-        );
     }
 
     // is not exposed to godot, because it should only be called by comms

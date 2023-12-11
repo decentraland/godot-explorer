@@ -104,29 +104,6 @@ var session_account: Dictionary = {}:
 		param_changed.emit(ConfigParams.SESSION_ACCOUNT)
 
 
-# TODO: should this be moved to other place?
-func default_profile() -> Dictionary:
-	return {
-		"base_url": "https://peer.decentraland.org/content",
-		"name": "Godot Guest",
-		"body_shape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
-		"eyes": Color(0.3, 0.22, 0.99),
-		"hair": Color(0.6, 0.38, 0.1),
-		"skin": Color(0.5, 0.36, 0.28),
-		"wearables":
-		[
-			"urn:decentraland:off-chain:base-avatars:f_sweater",
-			"urn:decentraland:off-chain:base-avatars:f_jeans",
-			"urn:decentraland:off-chain:base-avatars:bun_shoes",
-			"urn:decentraland:off-chain:base-avatars:standard_hair",
-			"urn:decentraland:off-chain:base-avatars:f_eyes_01",
-			"urn:decentraland:off-chain:base-avatars:f_eyebrows_00",
-			"urn:decentraland:off-chain:base-avatars:f_mouth_00"
-		],
-		"emotes": []
-	}
-
-
 func load_from_default():
 	self.gravity = 55.0
 	self.jump_velocity = 12.0
