@@ -1,4 +1,8 @@
 #!/bin/bash
+
+set -e
+set +o pipefail
+
 EXPLORER_PATH=$(pwd)
 if [ ! -d ${EXPLORER_PATH}/godot/android/ ]
 then

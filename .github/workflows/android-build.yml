@@ -44,7 +44,7 @@ jobs:
             rust/xtask/Cargo.lock
           key: android-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: android-cargo-
-      - name: Build Godot Linux x86_64
+      - name: Build
         run: |
           ./build-android-apk.sh
       - uses: actions/upload-artifact@v3
