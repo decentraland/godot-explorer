@@ -32,6 +32,7 @@ GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --target aarch64
 
 mkdir -p ../../godot/lib/android/
 cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/lib/android/libdecentraland_godot_lib.so
+mkdir -p ../../godot/android/build/libs/debug/arm64-v8a/
 cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/android/build/libs/debug/arm64-v8a/libdecentraland_godot_lib.so
 
 # Dependencies 
