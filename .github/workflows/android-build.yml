@@ -25,7 +25,7 @@ jobs:
       #   run: |
       #     cd godot/
       #     git clone https://github.com/decentraland/godot-explorer-android-template android
-      - name: Build Decentraland Godot Lib
+      - name: Setup Rust
         run: |
           echo $ANDROID_HOME
           ls -la /root/
@@ -33,15 +33,29 @@ jobs:
           export PATH="/root/.cargo/bin:${PATH}"
           rustup default stable
           rustup target add aarch64-linux-android
-          
-          cd rust/decentraland-godot-lib
-          bash android-build.sh
-      - name: Install Godot
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/decentraland-godot-lib/target/
+            rust/decentraland-godot-lib/Cargo.lock
+            rust/xtask/target/
+            rust/xtask/Cargo.lock
+          key: android-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: android-cargo-
+      - name: Build Godot Linux x86_64
         run: |
           cd rust/xtask
           cargo run -- install
-      # TODO: We should build `decentraland-godot-lib` for Linux
-      # TODO: Copy Android FFMPEG Libs
+          cargo run -- run --only-build
+      - name: Build Godot Android ARM
+        run: |
+          cd rust/decentraland-godot-lib
+          bash android-build.sh
       - name: Generate Debug Keystore
         run: |
           cd /opt/
