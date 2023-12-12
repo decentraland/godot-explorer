@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: docker://kuruk/dcl-godot-android-builder:latest
+      options: --user root
 
     steps:
       - uses: actions/checkout@v4
