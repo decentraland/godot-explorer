@@ -12,6 +12,8 @@ var counter: int = 0
 
 var _last_parcel_position: Vector2i
 
+var last_index_scene_ui_root: int = -1
+
 @onready var ui_root: Control = $UI
 @onready var voice_chat_ui = $voice_chat
 
@@ -362,9 +364,19 @@ func release_mouse():
 
 
 func set_visible_ui(value: bool):
+	if value == ui_root.visible:
+		return
+		
 	if value:
 		ui_root.show()
 		voice_chat_ui.show()
+		
+		Global.scene_runner.base_ui.reparent(ui_root)
+		ui_root.move_child( Global.scene_runner.base_ui, last_index_scene_ui_root)
 	else:
 		ui_root.hide()
 		voice_chat_ui.hide()
+		
+		last_index_scene_ui_root = Global.scene_runner.base_ui.get_index()
+		Global.scene_runner.base_ui.reparent(ui_root.get_parent())
+

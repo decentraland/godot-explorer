@@ -2,6 +2,7 @@ use ethers::signers::LocalWallet;
 use ethers::types::H160;
 use godot::prelude::*;
 use rand::thread_rng;
+use tokio::task::JoinHandle;
 
 use crate::comms::profile::{LambdaProfiles, UserProfile};
 use crate::godot_classes::promise::Promise;
@@ -30,6 +31,8 @@ pub struct DclPlayerIdentity {
 
     profile: Option<UserProfile>,
 
+    try_connect_account_handle: Option<JoinHandle<()>>,
+
     #[var]
     is_guest: bool,
 
@@ -50,6 +53,7 @@ impl INode for DclPlayerIdentity {
             profile: None,
             base,
             is_guest: false,
+            try_connect_account_handle: None,
         }
     }
 
@@ -195,7 +199,7 @@ impl DclPlayerIdentity {
 
         let instance_id = self.base.instance_id();
         let sender = self.remote_report_sender.clone();
-        handle.spawn(async move {
+        let try_connect_account_handle = handle.spawn(async move {
             let wallet = RemoteWallet::with_auth_identity(sender).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
@@ -224,6 +228,15 @@ impl DclPlayerIdentity {
                 }
             }
         });
+
+        self.try_connect_account_handle = Some(try_connect_account_handle);
+    }
+
+    #[func]
+    fn abort_try_connect_account(&mut self) {
+        if let Some(handle) = self.try_connect_account_handle.take() {
+            handle.abort();
+        }
     }
 
     #[func]

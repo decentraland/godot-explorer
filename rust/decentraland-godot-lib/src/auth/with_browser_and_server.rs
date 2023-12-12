@@ -33,7 +33,8 @@ struct SignToServerResponse {
     data: SignToServerResponseData,
 }
 
-const AUTH_FRONT_URL: &str = "https://leanmendoza.github.io/decentraland-auth/";
+// const AUTH_FRONT_URL: &str = "https://leanmendoza.github.io/decentraland-auth/";
+const AUTH_FRONT_URL: &str = "http://localhost:5173/";
 const AUTH_SERVER_ENDPOINT_URL: &str = "https://services.aesir-online.net/dcltest/queue/task";
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(60);
