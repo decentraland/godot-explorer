@@ -22,7 +22,7 @@ ln -sf ${EXPLORER_PATH}/.bin/godot/templates/templates/ 4.2.stable
 
 echo "Build for Android"
 cd ${EXPLORER_PATH}/rust/decentraland-godot-lib
-./android-build.sh
+bash android-build.sh
 
 echo "Setup Android Debug Keys"
 cd /opt/
@@ -36,8 +36,11 @@ export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
 
 echo "Export Godot APK"
 cd ${EXPLORER_PATH}/godot/
-${EXPLORER_PATH}/.bin/godot/godot4_bin \
+if ! ${EXPLORER_PATH}/.bin/godot/godot4_bin \
     -e --headless --rendering-driver opengl3 --headless \
-    --export-debug Android ${EXPLORER_PATH}/android.apk || true
+    --export-debug Android ${EXPLORER_PATH}/android.apk; then
+    echo "Godot exited with status != 0."
+fi
+
 
 ls -la | grep android.apk

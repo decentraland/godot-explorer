@@ -46,7 +46,7 @@ jobs:
           restore-keys: android-cargo-
       - name: Build
         run: |
-          ./build-android-apk.sh
+          bash build-android-apk.sh
       - uses: actions/upload-artifact@v3
         with:
           name: Android APK
