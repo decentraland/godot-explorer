@@ -46,3 +46,7 @@ jobs:
       - name: Build Godot Linux x86_64
         run: |
           ./build-android-apk.sh
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Android APK
+          path: android.apk

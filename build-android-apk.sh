@@ -34,6 +34,6 @@ echo "Export Godot APK"
 cd ${EXPLORER_PATH}/godot/
 ${EXPLORER_PATH}/.bin/godot/godot4_bin \
     -e --headless --rendering-driver opengl3 --headless \
-    --export-debug Android ${EXPLORER_PATH}/android.apk
+    --export-debug Android ${EXPLORER_PATH}/android.apk || true
 
 ls -la | grep android.apk
