@@ -28,9 +28,14 @@ jobs:
       #     git clone https://github.com/decentraland/godot-explorer-android-template android
       - name: Build Decentraland Godot Lib
         run: |
+          sudo apt-get update
+          sudo apt-get install -y sudo
           echo $HOME
           su
           echo $HOME
+          sudo su
+          echo $HOME
+          sudo echo $HOME
           cd rust/decentraland-godot-lib
           bash android-build.sh
       - name: Install Godot
@@ -41,9 +46,14 @@ jobs:
       # TODO: Copy Android FFMPEG Libs
       - name: Generate Debug Keystore
         run: |
+          cd /opt/
           keytool -keyalg RSA -genkeypair -alias androiddebugkey \
             -keypass android -keystore debug.keystore -storepass android \
             -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH=/opt/debug.keystore
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
       - name: Export Godot APK
         run: |
           /app/godot-explorer/.bin/godot/godot4_bin \
