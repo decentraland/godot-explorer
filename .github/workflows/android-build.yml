@@ -22,12 +22,13 @@ jobs:
       #   with:
       #     sudo: false
       #     limit-access-to-actor: true
+      - name: Install Android Template
+        run: |
+          cd godot/
+          git clone https://github.com/decentraland/godot-explorer-android-template android
       - name: Build Decentraland Godot Lib
         run: |
-          /bin/bash
-          export PATH="/root/.cargo/bin:${PATH}"
-          rustup install stable
-          rustup target add aarch64-linux-android
+          curl https://sh.rustup.rs -sSf | bash -s -- -y
           cd rust/decentraland-godot-lib
           bash android-build.sh
       - name: Install Godot
@@ -38,6 +39,6 @@ jobs:
       # TODO: Copy Android FFMPEG Libs
       - name: Export Godot APK
         run: |
-          /app/.bin/godot/godot4_bin \
+          /app/godot-explorer/.bin/godot/godot4_bin \
             -e --headless --rendering-driver opengl3 --headless \
             --export-release Android /app/android.apk
