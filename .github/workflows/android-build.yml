@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: docker://kuruk/dcl-godot-android-builder:latest
-      options: --user root
 
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +27,13 @@ jobs:
       #     git clone https://github.com/decentraland/godot-explorer-android-template android
       - name: Build Decentraland Godot Lib
         run: |
+          echo $ANDROID_HOME
+          ls -la /root/
+          ls -la /root/.cargo/bin/
           export PATH="/root/.cargo/bin:${PATH}"
+          rustup default stable
+          rustup target add aarch64-linux-android
+          
           cd rust/decentraland-godot-lib
           bash android-build.sh
       - name: Install Godot
