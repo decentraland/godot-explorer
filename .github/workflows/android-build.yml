@@ -28,14 +28,7 @@ jobs:
       #     git clone https://github.com/decentraland/godot-explorer-android-template android
       - name: Build Decentraland Godot Lib
         run: |
-          apt-get update
-          apt-get install -y sudo
-          echo $HOME
-          su
-          echo $HOME
-          sudo su
-          echo $HOME
-          sudo echo $HOME
+          export PATH="/root/.cargo/bin:${PATH}"
           cd rust/decentraland-godot-lib
           bash android-build.sh
       - name: Install Godot
