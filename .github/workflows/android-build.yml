@@ -29,6 +29,8 @@ jobs:
       - name: Build Decentraland Godot Lib
         run: |
           echo $HOME
+          su
+          echo $HOME
           cd rust/decentraland-godot-lib
           bash android-build.sh
       - name: Install Godot
@@ -37,6 +39,11 @@ jobs:
           cargo run -- install
       # TODO: We should build `decentraland-godot-lib` for Linux
       # TODO: Copy Android FFMPEG Libs
+      - name: Generate Debug Keystore
+        run: |
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey \
+            -keypass android -keystore debug.keystore -storepass android \
+            -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
       - name: Export Godot APK
         run: |
           /app/godot-explorer/.bin/godot/godot4_bin \
