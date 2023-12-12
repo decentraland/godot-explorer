@@ -1,21 +1,23 @@
 #!/bin/bash
-if [ ! -d /app/godot/android/ ]
+EXPLORER_PATH=$(pwd)
+if [ ! -d ${EXPLORER_PATH}/godot/android/ ]
 then
-    echo "Checkout godot android"
-    git clone https://github.com/decentraland/godot-explorer-android-template /app/godot/android
+    echo "Checkout godot android template"
+    git clone https://github.com/decentraland/godot-explorer-android-template ${EXPLORER_PATH}/godot/android
 fi
 
 echo "Build for Linux x86_64"
-cd /app/rust/xtask
+cd ${EXPLORER_PATH}/rust/xtask
 cargo run -- install
 cargo run -- run --only-build
 
-echo "Copy export templates"
-mkdir -p /root/.local/share/godot/export_templates/4.2.stable/
-
+echo "Link export templates"
+mkdir -p ${HOME}/.local/share/godot/export_templates/
+cd ${HOME}/.local/share/godot/export_templates/
+ln -sf ${EXPLORER_PATH}/.bin/godot/templates/templates/ 4.2.stable
 
 echo "Build for Android"
-cd /app/rust/decentraland-godot-lib
+cd ${EXPLORER_PATH}/rust/decentraland-godot-lib
 ./android-build.sh
 
 echo "Setup Android Debug Keys"
@@ -29,9 +31,9 @@ export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey
 export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
 
 echo "Export Godot APK"
-cd /app/godot/
-/app/.bin/godot/godot4_bin \
+cd ${EXPLORER_PATH}/godot/
+${EXPLORER_PATH}/.bin/godot/godot4_bin \
     -e --headless --rendering-driver opengl3 --headless \
-    --export-debug Android /app/android.apk
+    --export-debug Android ${EXPLORER_PATH}/android.apk
 
 ls -la | grep android.apk

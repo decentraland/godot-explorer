@@ -21,10 +21,6 @@ jobs:
       #   with:
       #     sudo: false
       #     limit-access-to-actor: true
-      # - name: Install Android Template
-      #   run: |
-      #     cd godot/
-      #     git clone https://github.com/decentraland/godot-explorer-android-template android
       - name: Setup Rust
         run: |
           echo $ANDROID_HOME
@@ -49,25 +45,4 @@ jobs:
           restore-keys: android-cargo-
       - name: Build Godot Linux x86_64
         run: |
-          cd rust/xtask
-          cargo run -- install
-          cargo run -- run --only-build
-      - name: Build Godot Android ARM
-        run: |
-          cd rust/decentraland-godot-lib
-          bash android-build.sh
-      - name: Generate Debug Keystore
-        run: |
-          cd /opt/
-          keytool -keyalg RSA -genkeypair -alias androiddebugkey \
-            -keypass android -keystore debug.keystore -storepass android \
-            -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
-
-          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH=/opt/debug.keystore
-          export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey
-          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
-      - name: Export Godot APK
-        run: |
-          /app/godot-explorer/.bin/godot/godot4_bin \
-            -e --headless --rendering-driver opengl3 --headless \
-            --export-release Android /app/android.apk
+          ./build-android-apk.sh
