@@ -133,6 +133,19 @@ impl SimpleAuthChain {
             )
         })
     }
+
+    pub fn formdata(&self) -> impl Iterator<Item = (String, String)> + '_ {
+        self.0.iter().enumerate().flat_map(|(ix, link)| {
+            [
+                (format!("authChain[{ix}][type]"), link.ty.clone()),
+                (format!("authChain[{ix}][payload]"), link.payload.clone()),
+                (
+                    format!("authChain[{ix}][signature]"),
+                    link.signature.clone(),
+                ),
+            ]
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]

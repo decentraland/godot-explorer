@@ -31,7 +31,7 @@ func async_load_gltf():
 
 	var promise = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
 	if promise != null:
-		await promise.async_awaiter()
+		await PromiseUtils.async_awaiter(promise)
 
 	_async_on_gltf_loaded()
 
@@ -46,7 +46,7 @@ func _async_on_gltf_loaded():
 		node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
 	)
 
-	await promise.async_awaiter()
+	await PromiseUtils.async_awaiter(promise)
 
 	gltf_node = promise.get_data()
 	self.async_deferred_add_child.call_deferred(gltf_node)

@@ -17,7 +17,7 @@ var id: int = -1
 
 # Private
 var _pending_content: Array[Dictionary] = []
-var _http_requester = RustHttpRequesterWrapper.new()
+var _http_requester: RustHttpRequesterWrapper
 
 # Metrics
 var _processing_count = 0
@@ -32,6 +32,7 @@ func content_processing_count():
 
 
 func _init(param_id: int, param_thread: Thread):
+	_http_requester = RustHttpRequesterWrapper.new()
 	self.thread = param_thread
 	self.id = param_id
 
@@ -104,6 +105,10 @@ func _async_process_loading_wearable(
 		content.get("content_base_url", "https://peer.decentraland.org/content") + "entities/active"
 	)
 	var wearables: PackedStringArray = content.get("new_wearables", [])
+	if wearables.is_empty():
+		printerr("Trying to fetch empty wearables")
+		return
+
 	var json_payload: String = JSON.stringify({"pointers": wearables})
 	var headers = ["Content-Type: application/json"]
 
@@ -111,8 +116,8 @@ func _async_process_loading_wearable(
 		url, HTTPClient.METHOD_POST, json_payload, headers
 	)
 
-	var content_result = await promise.async_awaiter()
-	if content_result is Promise.Error:
+	var content_result = await PromiseUtils.async_awaiter(promise)
+	if content_result is PromiseError:
 		printerr("Failing on loading wearable ", url, " reason: ", content_result.get_error())
 		return
 
@@ -183,8 +188,8 @@ func _async_process_loading_gltf(content: Dictionary, content_cache_map: Diction
 
 		var request_promise = _http_requester.request_file(file_hash_path, absolute_file_path)
 
-		var content_result = await request_promise.async_awaiter()
-		if content_result is Promise.Error:
+		var content_result = await PromiseUtils.async_awaiter(request_promise)
+		if content_result is PromiseError:
 			printerr(
 				"Failing on loading gltf ", file_hash_path, " reason: ", content_result.get_error()
 			)
@@ -227,7 +232,7 @@ func _async_process_loading_gltf(content: Dictionary, content_cache_map: Diction
 
 	content["gltf_mappings"] = mappings
 
-	await Promise.async_all(promises_dependencies)
+	await PromiseUtils.async_all(promises_dependencies)
 
 	# final processing
 	var new_gltf := GLTFDocument.new()
@@ -269,8 +274,8 @@ func _async_process_loading_texture(
 
 		var promise_texture_file: Promise = _http_requester.request_file(url, absolute_file_path)
 
-		var content_result = await promise_texture_file.async_awaiter()
-		if content_result is Promise.Error:
+		var content_result = await PromiseUtils.async_awaiter(promise_texture_file)
+		if content_result is PromiseError:
 			content_cache_map[file_hash]["promise"].call_deferred(
 				"reject",
 				"Failing on loading texture " + url + " reason: " + str(content_result.get_error())
@@ -321,8 +326,8 @@ func _async_process_loading_audio(
 		var promise_audio_file: Promise = _http_requester.request_file(
 			file_hash_path, absolute_file_path
 		)
-		var content_result = await promise_audio_file.async_awaiter()
-		if content_result is Promise.Error:
+		var content_result = await PromiseUtils.async_awaiter(promise_audio_file)
+		if content_result is PromiseError:
 			printerr(
 				"Failing on loading wearable ",
 				file_hash_path,
@@ -382,8 +387,8 @@ func _async_process_loading_video(
 		var promise_video_file: Promise = _http_requester.request_file(
 			base_url + file_hash, absolute_file_path
 		)
-		var content_result = await promise_video_file.async_awaiter()
-		if content_result is Promise.Error:
+		var content_result = await PromiseUtils.async_awaiter(promise_video_file)
+		if content_result is PromiseError:
 			printerr(
 				"Failing on loading wearable ",
 				file_hash_path,

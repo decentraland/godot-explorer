@@ -71,6 +71,11 @@ pub struct AvatarWireFormat {
     pub snapshots: Option<AvatarSnapshots>,
 }
 
+#[derive(Deserialize)]
+pub struct LambdaProfiles {
+    pub avatars: Vec<SerializedProfile>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SerializedProfile {
     #[serde(rename = "userId")]
@@ -108,8 +113,8 @@ impl Default for SerializedProfile {
                     \"urn:decentraland:off-chain:base-avatars:f_mouth_00\"
                 ],
                 \"snapshots\": {
-                    \"face256\":\"QmSqZ2npVD4RLdqe17FzGCFcN29RfvmqmEd2FcQUctxaKk\",
-                    \"body\":\"QmSav1o6QK37Jj1yhbmhYk9MJc6c2H5DWbWzPVsg9JLYfF\"
+                    \"body\": \"bafkreigxesh5owgy4vreca65nh33zqw7br6haokkltmzg3mn22g5whcfbq\",
+                    \"face256\": \"bafkreibykc3l7ai5z5zik7ypxlqetgtmiepr42al6jcn4yovdgezycwa2y\"
                 },
                 \"eyes\":{
                     \"color\":{\"r\":0.3,\"g\":0.2235294133424759,\"b\":0.99,\"a\":1}
@@ -134,8 +139,8 @@ impl Default for SerializedProfile {
             blocked: Default::default(),
             muted: Default::default(),
             interests: Default::default(),
-            has_claimed_name: Default::default(),
-            has_connected_web3: Default::default(),
+            has_claimed_name: Some(false),
+            has_connected_web3: Some(false),
             avatar,
         }
     }
@@ -246,16 +251,19 @@ impl SerializedProfile {
             .to::<godot::prelude::Color>();
 
         let wearables: Vec<String> = {
-            let ret = dictionary.get("wearables").unwrap();
-            if let Ok(ret) = ret.try_to::<VariantArray>() {
-                ret.iter_shared()
-                    .map(|v| v.to_string())
-                    .collect::<Vec<String>>()
-            } else if let Ok(ret) = ret.try_to::<PackedStringArray>() {
-                ret.to_vec()
-                    .iter()
-                    .map(|v| v.to_string())
-                    .collect::<Vec<String>>()
+            if let Some(ret) = dictionary.get("wearables") {
+                if let Ok(ret) = ret.try_to::<VariantArray>() {
+                    ret.iter_shared()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<String>>()
+                } else if let Ok(ret) = ret.try_to::<PackedStringArray>() {
+                    ret.to_vec()
+                        .iter()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<String>>()
+                } else {
+                    Vec::default()
+                }
             } else {
                 Vec::default()
             }

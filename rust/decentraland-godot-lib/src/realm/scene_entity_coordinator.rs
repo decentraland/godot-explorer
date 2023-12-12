@@ -15,8 +15,8 @@ use super::parcel::*;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TypedIpfsRef {
-    file: String,
-    hash: String,
+    pub file: String,
+    pub hash: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

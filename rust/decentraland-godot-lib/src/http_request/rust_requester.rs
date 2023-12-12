@@ -68,16 +68,51 @@ impl RustHttpRequester {
         body: GString,
         headers: VariantArray,
     ) -> u32 {
+        let body = match body.to_string().as_str() {
+            "" => None,
+            _ => Some(body.to_string().into_bytes()),
+        };
+        self._request_json(reference_id, url, method, body, headers)
+    }
+
+    #[func]
+    fn request_json_bin(
+        &mut self,
+        reference_id: u32,
+        url: GString,
+        method: godot::engine::http_client::Method,
+        body: PackedByteArray,
+        headers: VariantArray,
+    ) -> u32 {
+        self._request_json(reference_id, url, method, Some(body.to_vec()), headers)
+    }
+}
+
+#[godot_api]
+impl INode for RustHttpRequester {
+    fn init(_base: Base<Node>) -> Self {
+        RustHttpRequester {
+            http_requester: super::http_requester::HttpRequester::new(
+                TokioRuntime::static_clone_handle(),
+            ),
+        }
+    }
+}
+
+impl RustHttpRequester {
+    fn _request_json(
+        &mut self,
+        reference_id: u32,
+        url: GString,
+        method: godot::engine::http_client::Method,
+        body: Option<Vec<u8>>,
+        headers: VariantArray,
+    ) -> u32 {
         tracing::info!("Requesting json: {:?}", url.to_string());
 
         let method = match method {
             godot::engine::http_client::Method::METHOD_POST => http::Method::POST,
             _ => http::Method::GET,
-        };
-
-        let body = match body.to_string().as_str() {
-            "" => None,
-            _ => Some(body.to_string().into_bytes()),
         };
 
         let headers = match headers.len() {
@@ -103,16 +138,5 @@ impl RustHttpRequester {
         let id = request_option.id;
         self.http_requester.send_request(request_option);
         id
-    }
-}
-
-#[godot_api]
-impl INode for RustHttpRequester {
-    fn init(_base: Base<Node>) -> Self {
-        RustHttpRequester {
-            http_requester: super::http_requester::HttpRequester::new(
-                TokioRuntime::static_clone_handle(),
-            ),
-        }
     }
 }

@@ -56,7 +56,7 @@ pub struct WebSocketRoom {
     // Self alias
     from_alias: u32,
     player_address: H160,
-    player_profile: UserProfile,
+    player_profile: Option<UserProfile>,
     ephemeral_auth_chain: EphemeralAuthChain,
     peer_identities: HashMap<u32, Peer>,
 
@@ -72,7 +72,7 @@ impl WebSocketRoom {
     pub fn new(
         ws_url: &str,
         ephemeral_auth_chain: EphemeralAuthChain,
-        player_profile: UserProfile,
+        player_profile: Option<UserProfile>,
         avatars: Gd<AvatarScene>,
     ) -> Self {
         let lower_url = ws_url.to_lowercase();
@@ -267,34 +267,36 @@ impl WebSocketRoom {
                                     ),
                                 );
 
-                                self.send_rfc4(
-                                    rfc4::Packet {
-                                        message: Some(rfc4::packet::Message::ProfileResponse(
-                                            rfc4::ProfileResponse {
-                                                serialized_profile: serde_json::to_string(
-                                                    &self.player_profile.content,
-                                                )
-                                                .unwrap(),
-                                                base_url: self.player_profile.base_url.clone(),
-                                            },
-                                        )),
-                                    },
-                                    false,
-                                );
+                                if let Some(profile) = self.player_profile.as_ref().cloned() {
+                                    self.send_rfc4(
+                                        rfc4::Packet {
+                                            message: Some(rfc4::packet::Message::ProfileResponse(
+                                                rfc4::ProfileResponse {
+                                                    serialized_profile: serde_json::to_string(
+                                                        &profile.content,
+                                                    )
+                                                    .unwrap(),
+                                                    base_url: profile.base_url.clone(),
+                                                },
+                                            )),
+                                        },
+                                        false,
+                                    );
 
-                                self.last_profile_version_announced = self.player_profile.version;
+                                    self.last_profile_version_announced = profile.version;
 
-                                self.send_rfc4(
-                                    rfc4::Packet {
-                                        message: Some(rfc4::packet::Message::ProfileVersion(
-                                            rfc4::AnnounceProfileVersion {
-                                                profile_version: self
-                                                    .last_profile_version_announced,
-                                            },
-                                        )),
-                                    },
-                                    false,
-                                );
+                                    self.send_rfc4(
+                                        rfc4::Packet {
+                                            message: Some(rfc4::packet::Message::ProfileVersion(
+                                                rfc4::AnnounceProfileVersion {
+                                                    profile_version: self
+                                                        .last_profile_version_announced,
+                                                },
+                                            )),
+                                        },
+                                        false,
+                                    );
+                                }
 
                                 self.avatars.bind_mut().clean();
                                 for (alias, peer) in self.peer_identities.iter() {
@@ -422,22 +424,27 @@ impl WebSocketRoom {
 
                             if let Some(addr) = profile_request.address.as_h160() {
                                 if addr == self.player_address {
-                                    self.last_profile_response_sent = Instant::now();
+                                    if let Some(profile) = &self.player_profile {
+                                        self.last_profile_response_sent = Instant::now();
 
-                                    self.send_rfc4(
-                                        rfc4::Packet {
-                                            message: Some(rfc4::packet::Message::ProfileResponse(
-                                                rfc4::ProfileResponse {
-                                                    serialized_profile: serde_json::to_string(
-                                                        &self.player_profile.content,
-                                                    )
-                                                    .unwrap(),
-                                                    base_url: self.player_profile.base_url.clone(),
-                                                },
-                                            )),
-                                        },
-                                        false,
-                                    );
+                                        self.send_rfc4(
+                                            rfc4::Packet {
+                                                message: Some(
+                                                    rfc4::packet::Message::ProfileResponse(
+                                                        rfc4::ProfileResponse {
+                                                            serialized_profile:
+                                                                serde_json::to_string(
+                                                                    &profile.content,
+                                                                )
+                                                                .unwrap(),
+                                                            base_url: profile.base_url.clone(),
+                                                        },
+                                                    ),
+                                                ),
+                                            },
+                                            false,
+                                        );
+                                    }
                                 }
                             }
                         }
@@ -534,23 +541,25 @@ impl WebSocketRoom {
             }
         }
 
-        if self.last_profile_version_announced != self.player_profile.version {
-            self.last_profile_version_announced = self.player_profile.version;
-            self.send_rfc4(
-                rfc4::Packet {
-                    message: Some(rfc4::packet::Message::ProfileVersion(
-                        rfc4::AnnounceProfileVersion {
-                            profile_version: self.last_profile_version_announced,
-                        },
-                    )),
-                },
-                false,
-            );
+        if let Some(profile) = &self.player_profile {
+            if self.last_profile_version_announced != profile.version {
+                self.last_profile_version_announced = profile.version;
+                self.send_rfc4(
+                    rfc4::Packet {
+                        message: Some(rfc4::packet::Message::ProfileVersion(
+                            rfc4::AnnounceProfileVersion {
+                                profile_version: self.last_profile_version_announced,
+                            },
+                        )),
+                    },
+                    false,
+                );
+            }
         }
     }
 
     fn _change_profile(&mut self, new_profile: UserProfile) {
-        self.player_profile = new_profile;
+        self.player_profile = Some(new_profile);
     }
 }
 

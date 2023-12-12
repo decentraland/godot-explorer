@@ -21,8 +21,6 @@ const EMPTY_SCENES = [
 var adaptation_layer_js_request: int = -1
 var adaptation_layer_js_local_path: String = "user://sdk-adaptation-layer.js"
 
-var http_requester: RustHttpRequesterWrapper = Global.http_requester
-
 var current_position: Vector2i = Vector2i(-1000, -1000)
 var loaded_empty_scenes: Dictionary = {}
 var loaded_scenes: Dictionary = {}
@@ -232,12 +230,12 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary):
 				or main_js_file_hash.begins_with("b64")
 			):
 				var main_js_file_url: String = entity.baseUrl + main_js_file_hash
-				var promise: Promise = http_requester.request_file(
+				var promise: Promise = Global.http_requester.request_file(
 					main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir())
 				)
 
-				var res = await promise.async_awaiter()
-				if res is Promise.Error:
+				var res = await PromiseUtils.async_awaiter(promise)
+				if res is PromiseError:
 					printerr(
 						"Scene ",
 						scene_entity_id,
@@ -248,12 +246,12 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary):
 	else:
 		local_main_js_path = String(adaptation_layer_js_local_path)
 		if not FileAccess.file_exists(local_main_js_path):
-			var promise: Promise = http_requester.request_file(
+			var promise: Promise = Global.http_requester.request_file(
 				"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/dev/index.min.js",
 				local_main_js_path.replace("user:/", OS.get_user_data_dir())
 			)
-			var res = await promise.async_awaiter()
-			if res is Promise.Error:
+			var res = await PromiseUtils.async_awaiter(promise)
+			if res is PromiseError:
 				printerr(
 					"Scene ",
 					scene_entity_id,
@@ -267,12 +265,12 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary):
 	if main_crdt_file_hash != null:
 		local_main_crdt_path = "user://content/" + main_crdt_file_hash
 		var main_crdt_file_url: String = entity.baseUrl + main_crdt_file_hash
-		var promise: Promise = http_requester.request_file(
+		var promise: Promise = Global.http_requester.request_file(
 			main_crdt_file_url, local_main_crdt_path.replace("user:/", OS.get_user_data_dir())
 		)
 
-		var res = await promise.async_awaiter()
-		if res is Promise.Error:
+		var res = await PromiseUtils.async_awaiter(promise)
+		if res is PromiseError:
 			printerr(
 				"Scene ",
 				scene_entity_id,

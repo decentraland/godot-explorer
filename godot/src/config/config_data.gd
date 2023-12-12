@@ -17,7 +17,6 @@ enum ConfigParams {
 	SHOW_FPS,
 	LIMIT_FPS,
 	SKY_BOX,
-	AVATAR_PROFILE,
 	SESSION_ACCOUNT
 }
 
@@ -91,11 +90,6 @@ var skybox: int = 1:
 		skybox = value
 		param_changed.emit(ConfigParams.SKY_BOX)
 
-var avatar_profile: Dictionary = {}:
-	set(value):
-		avatar_profile = value
-		param_changed.emit(ConfigParams.AVATAR_PROFILE)
-
 var last_realm_joined: String = "":
 	set(value):
 		last_realm_joined = value
@@ -108,28 +102,6 @@ var session_account: Dictionary = {}:
 	set(value):
 		session_account = value
 		param_changed.emit(ConfigParams.SESSION_ACCOUNT)
-
-
-func default_profile() -> Dictionary:
-	return {
-		"base_url": "https://peer.decentraland.org/content",
-		"name": "Godotte",
-		"body_shape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
-		"eyes": Color(0.3, 0.22, 0.99),
-		"hair": Color(0.6, 0.38, 0.1),
-		"skin": Color(0.5, 0.36, 0.28),
-		"wearables":
-		[
-			"urn:decentraland:off-chain:base-avatars:f_sweater",
-			"urn:decentraland:off-chain:base-avatars:f_jeans",
-			"urn:decentraland:off-chain:base-avatars:bun_shoes",
-			"urn:decentraland:off-chain:base-avatars:standard_hair",
-			"urn:decentraland:off-chain:base-avatars:f_eyes_01",
-			"urn:decentraland:off-chain:base-avatars:f_eyebrows_00",
-			"urn:decentraland:off-chain:base-avatars:f_mouth_00"
-		],
-		"emotes": []
-	}
 
 
 func load_from_default():
@@ -154,7 +126,6 @@ func load_from_default():
 	self.resolution = "1280 x 720"
 	self.window_size = "1280 x 720"
 	self.ui_scale = 1
-	self.avatar_profile = default_profile()
 	self.session_account = {}
 
 	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
@@ -190,7 +161,6 @@ func load_from_settings_file():
 	self.window_size = settings_file.get_value("config", "window_size", data_default.window_size)
 	self.ui_scale = settings_file.get_value("config", "ui_scale", data_default.ui_scale)
 
-	self.avatar_profile = settings_file.get_value("profile", "avatar", data_default.avatar_profile)
 	self.session_account = settings_file.get_value(
 		"session", "account", data_default.session_account
 	)
@@ -221,7 +191,6 @@ func save_to_settings_file():
 	settings_file.set_value("config", "resolution", self.resolution)
 	settings_file.set_value("config", "window_size", self.window_size)
 	settings_file.set_value("config", "ui_scale", self.ui_scale)
-	settings_file.set_value("profile", "avatar", self.avatar_profile)
 	settings_file.set_value("session", "account", self.session_account)
 	settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)

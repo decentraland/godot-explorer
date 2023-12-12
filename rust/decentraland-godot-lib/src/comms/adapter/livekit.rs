@@ -52,7 +52,7 @@ pub struct LivekitRoom {
     mic_sender_to_thread: tokio::sync::mpsc::Sender<Vec<i16>>,
     receiver_from_thread: tokio::sync::mpsc::Receiver<IncomingMessage>,
     player_address: H160,
-    player_profile: UserProfile,
+    player_profile: Option<UserProfile>,
     avatars: Gd<AvatarScene>,
     peer_identities: HashMap<H160, Peer>,
     peer_alias_counter: u32,
@@ -66,7 +66,7 @@ impl LivekitRoom {
     pub fn new(
         remote_address: String,
         player_address: H160,
-        player_profile: UserProfile,
+        player_profile: Option<UserProfile>,
         avatars: Gd<AvatarScene>,
     ) -> Self {
         tracing::debug!(">> lk connect async : {remote_address}");
@@ -161,22 +161,27 @@ impl LivekitRoom {
 
                             if let Some(addr) = profile_request.address.as_h160() {
                                 if addr == self.player_address {
-                                    self.last_profile_response_sent = Instant::now();
+                                    if let Some(profile) = self.player_profile.as_ref() {
+                                        self.last_profile_response_sent = Instant::now();
 
-                                    self.send_rfc4(
-                                        rfc4::Packet {
-                                            message: Some(rfc4::packet::Message::ProfileResponse(
-                                                rfc4::ProfileResponse {
-                                                    serialized_profile: serde_json::to_string(
-                                                        &self.player_profile.content,
-                                                    )
-                                                    .unwrap(),
-                                                    base_url: self.player_profile.base_url.clone(),
-                                                },
-                                            )),
-                                        },
-                                        false,
-                                    );
+                                        self.send_rfc4(
+                                            rfc4::Packet {
+                                                message: Some(
+                                                    rfc4::packet::Message::ProfileResponse(
+                                                        rfc4::ProfileResponse {
+                                                            serialized_profile:
+                                                                serde_json::to_string(
+                                                                    &profile.content,
+                                                                )
+                                                                .unwrap(),
+                                                            base_url: profile.base_url.clone(),
+                                                        },
+                                                    ),
+                                                ),
+                                            },
+                                            false,
+                                        );
+                                    }
                                 }
                             }
                         }
@@ -288,18 +293,20 @@ impl LivekitRoom {
             }
         }
 
-        if self.last_profile_version_announced != self.player_profile.version {
-            self.last_profile_version_announced = self.player_profile.version;
-            self.send_rfc4(
-                rfc4::Packet {
-                    message: Some(rfc4::packet::Message::ProfileVersion(
-                        rfc4::AnnounceProfileVersion {
-                            profile_version: self.last_profile_version_announced,
-                        },
-                    )),
-                },
-                false,
-            );
+        if let Some(profile) = self.player_profile.as_ref() {
+            if self.last_profile_version_announced != profile.version {
+                self.last_profile_version_announced = profile.version;
+                self.send_rfc4(
+                    rfc4::Packet {
+                        message: Some(rfc4::packet::Message::ProfileVersion(
+                            rfc4::AnnounceProfileVersion {
+                                profile_version: self.last_profile_version_announced,
+                            },
+                        )),
+                    },
+                    false,
+                );
+            }
         }
         true
     }
@@ -314,7 +321,7 @@ impl LivekitRoom {
     }
 
     fn _change_profile(&mut self, new_profile: UserProfile) {
-        self.player_profile = new_profile;
+        self.player_profile = Some(new_profile);
     }
 
     fn _consume_chats(&mut self) -> Vec<(String, String, rfc4::Chat)> {
