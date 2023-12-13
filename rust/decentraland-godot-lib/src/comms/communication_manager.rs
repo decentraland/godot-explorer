@@ -2,7 +2,6 @@ use godot::prelude::*;
 use http::Uri;
 
 use crate::{
-    auth::dcl_player_identity::DclPlayerIdentity,
     comms::{
         adapter::{livekit::LivekitRoom, ws_room::WebSocketRoom},
         signed_login::SignedLoginMeta,
@@ -31,9 +30,6 @@ pub struct CommunicationManager {
     current_connection_str: String,
     last_position_broadcast_index: u64,
 
-    #[var]
-    player_identity: Gd<DclPlayerIdentity>,
-
     #[base]
     base: Base<Node>,
 }
@@ -45,21 +41,21 @@ impl INode for CommunicationManager {
             current_connection: CommsConnection::None,
             current_connection_str: String::default(),
             last_position_broadcast_index: 0,
-            player_identity: DclPlayerIdentity::alloc_gd(),
             base,
         }
     }
 
     fn ready(&mut self) {
         self.base.call_deferred("init_rs".into(), &[]);
-        self.base.add_child(self.player_identity.clone().upcast());
     }
 
     fn process(&mut self, _dt: f64) {
         match &mut self.current_connection {
             CommsConnection::None => {}
             CommsConnection::WaitingForIdentity(adapter_url) => {
-                if self.player_identity.bind().is_connected() {
+                let player_identity = DclGlobal::singleton().bind().get_player_identity();
+
+                if player_identity.bind().try_get_address().is_some() {
                     self.base
                         .call_deferred("change_adapter".into(), &[adapter_url.to_variant()]);
                 }
@@ -194,6 +190,17 @@ impl CommunicationManager {
             .bind()
             .get_realm()
             .connect("realm_changed".into(), on_realm_changed);
+
+        let on_profile_changed =
+            Callable::from_object_method(&self.base, StringName::from("_on_profile_changed"));
+
+        let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
+        player_identity.connect("profile_changed".into(), on_profile_changed);
+    }
+
+    #[func]
+    fn _on_profile_changed(&mut self) {
+        self.base.call_deferred("_on_update_profile".into(), &[]);
     }
 
     #[func]
@@ -248,7 +255,9 @@ impl CommunicationManager {
             return;
         };
 
-        if !self.player_identity.bind().is_connected() {
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+
+        if player_identity.bind().try_get_address().is_none() {
             self.current_connection = CommsConnection::WaitingForIdentity(comms_fixed_adapter_str);
             return;
         }
@@ -259,13 +268,12 @@ impl CommunicationManager {
 
         tracing::info!("change_adapter to protocol {protocol} and address {comms_address}");
 
-        let current_ephemeral_auth_chain = self
-            .player_identity
+        let current_ephemeral_auth_chain = player_identity
             .bind()
             .try_get_ephemeral_auth_chain()
             .expect("ephemeral auth chain needed to start a comms connection");
 
-        let player_profile = self.player_identity.bind().profile().clone();
+        let player_profile = player_identity.bind().profile().cloned();
 
         match protocol {
             "ws-room" => {
@@ -332,14 +340,17 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn _on_player_identity_profile_changed(&mut self, _new_profile: Dictionary) {
+    fn _on_update_profile(&mut self) {
         match &mut self.current_connection {
             CommsConnection::None
             | CommsConnection::SignedLogin(_)
             | CommsConnection::WaitingForIdentity(_) => {}
             CommsConnection::Connected(adapter) => {
-                let player_profile = self.player_identity.bind().profile().clone();
-                adapter.change_profile(player_profile);
+                let dcl_player_identity = DclGlobal::singleton().bind().get_player_identity();
+                let player_identity = dcl_player_identity.bind();
+                if let Some(player_profile) = player_identity.profile() {
+                    adapter.change_profile(player_profile.clone());
+                }
             }
         }
     }
@@ -348,7 +359,8 @@ impl CommunicationManager {
     fn disconnect(&mut self, sign_out_session: bool) {
         self.clean();
         if sign_out_session {
-            self.player_identity.bind_mut().logout();
+            let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
+            player_identity.bind_mut().logout();
         }
     }
 

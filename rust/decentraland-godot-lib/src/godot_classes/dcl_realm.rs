@@ -27,6 +27,9 @@ pub struct DclRealm {
     realm_city_loader_content_base_url: GString,
 
     #[var]
+    lambda_server_base_url: GString,
+
+    #[var]
     content_base_url: GString,
 
     #[base]

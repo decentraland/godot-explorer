@@ -17,6 +17,7 @@ pub mod dcl_ui_input;
 pub mod dcl_ui_text;
 pub mod dcl_video_player;
 pub mod portables;
+pub mod promise;
 pub mod rpc_sender;
 
 pub trait JsonGodotClass

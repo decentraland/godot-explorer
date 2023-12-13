@@ -110,7 +110,7 @@ alignment = 1
 [node name="Label" type="Label" parent="Panel_Main/VBoxContainer_GuestConfirm"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "Connecting with a guest account is limiting transactions like collecting wearables, you can't use this account in other devices. Your guest account will be stored in your local storage."
+text = "Please be aware that utilizing a guest account imposes limitations on transactions, such as collecting wearables. Keep in mind that your progress will be lost upon logging out."
 horizontal_alignment = 1
 autowrap_mode = 3
 

@@ -22,6 +22,7 @@ var _last_parcel_position: Vector2i
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
+@onready var debug_panel = %DebugPanel
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
 @onready var player := $Player
@@ -131,20 +132,15 @@ func _ready():
 		self._on_panel_bottom_left_preview_hot_reload
 	)
 
-	Global.comms.player_identity.logout.connect(self._on_player_logout)
-	Global.comms.player_identity.profile_changed.connect(
-		Global.avatars.update_primary_player_profile
-	)
+	Global.player_identity.logout.connect(self._on_player_logout)
+	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 
-	if not Global.comms.player_identity.try_recover_account(Global.config.session_account):
+	if not Global.player_identity.try_recover_account(Global.config.session_account):
 		if Global.testing_scene_mode:
-			Global.comms.player_identity.create_guest_account()
+			Global.player_identity.create_guest_account()
 		else:
 			Global.scene_runner.set_pause(true)
 			ui_root.add_child(sign_in_resource.instantiate())
-	else:
-		# TODO: fetch profile
-		Global.comms.player_identity.update_profile(Global.config.avatar_profile)
 
 	# last
 	ui_root.grab_focus.call_deferred()
@@ -168,7 +164,7 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	var title: String = Global.scene_runner.get_scene_title(scene_id)
 	title += str(Global.scene_runner.get_scene_base_parcel(scene_id))
-	%DebugPanel.on_console_add(title, level, timestamp, text)
+	debug_panel.on_console_add(title, level, timestamp, text)
 
 
 func _on_pointer_tooltip_changed():

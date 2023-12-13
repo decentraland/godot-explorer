@@ -21,7 +21,7 @@ var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd
 var animation_importer: AnimationImporter = AnimationImporter.new()
 
 var scene_fetcher: SceneFetcher = null
-var http_requester: RustHttpRequesterWrapper = RustHttpRequesterWrapper.new()
+var http_requester: RustHttpRequesterWrapper
 
 var nft_fetcher: OpenSeaFetcher = OpenSeaFetcher.new()
 var nft_frame_loader: NftFrameStyleLoader = NftFrameStyleLoader.new()
@@ -33,6 +33,8 @@ var standalone = false
 
 
 func _ready():
+	http_requester = RustHttpRequesterWrapper.new()
+
 	var args := OS.get_cmdline_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
 		if args[0] != "res://src/main.tscn":
@@ -57,6 +59,9 @@ func _ready():
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 
+	self.player_identity = PlayerIdentity.new()
+	self.player_identity.set_name("player_identity")
+
 	self.testing_tools = TestingTools.new()
 	self.testing_tools.set_name("testing_tool")
 
@@ -76,6 +81,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.content_manager)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
+	get_tree().root.add_child.call_deferred(self.player_identity)
 	get_tree().root.add_child.call_deferred(self.comms)
 	get_tree().root.add_child.call_deferred(self.avatars)
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)

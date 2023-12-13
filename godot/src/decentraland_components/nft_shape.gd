@@ -112,8 +112,8 @@ func _async_load_nft(picture_frame: Node3D, urn: String, style: NftFrameStyleLoa
 		return
 
 	var promise = Global.nft_fetcher.fetch_nft(dcl_urn)
-	var result = await promise.async_awaiter()
-	if result is Promise.Error:
+	var result = await PromiseUtils.async_awaiter(promise)
+	if result is PromiseError:
 		printerr("NftShape::load_nft Error on fetching nft: ", result.get_error())
 		return
 	await _async_set_opensea_nft(picture_frame, style, result)

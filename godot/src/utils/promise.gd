@@ -1,66 +1,18 @@
 # Promises for GDScript
 # Every function that must be awaited has an `async_` prefix
 
-class_name Promise
-
-signal on_resolved
-
-var _resolved: bool = false
-var _data: Variant = null
+class_name PromiseUtils
 
 
-func resolve():
-	if is_resolved():
-		return
-	_resolved = true
-	on_resolved.emit()
+static func async_awaiter(promise: Promise) -> Variant:
+	if !promise.is_resolved():
+		await promise.on_resolved
 
+	var data = promise.get_data()
+	if data is Promise:  # Chain promises
+		return await PromiseUtils.async_awaiter(data)
 
-func resolve_with_data(data):
-	if is_resolved():
-		return
-	_data = data
-	resolve()
-
-
-func get_data():
-	return _data
-
-
-func reject(reason: String):
-	if is_resolved():
-		return
-	_data = Promise.Error.create(reason)
-	resolve()
-
-
-func is_rejected() -> bool:
-	return _data is Promise.Error
-
-
-func is_resolved() -> bool:
-	return _resolved
-
-
-func async_awaiter() -> Variant:
-	if !_resolved:
-		await on_resolved
-	if _data is Promise:  # Chain promises
-		return _data.async_awaiter()
-
-	return _data
-
-
-class Error:
-	var _error_description: String = ""
-
-	static func create(description: String) -> Promise.Error:
-		var error = Promise.Error.new()
-		error._error_description = description
-		return error
-
-	func get_error() -> String:
-		return _error_description
+	return data
 
 
 # Internal helper function
@@ -101,8 +53,8 @@ class AllAwaiter:
 
 	func _async_call_func(i: int, f) -> void:
 		@warning_ignore("redundant_await")
-		var promise = await Promise._Internal.async_call_and_get_promise(f)
-		var data = await promise.async_awaiter()
+		var promise = await PromiseUtils._Internal.async_call_and_get_promise(f)
+		var data = await PromiseUtils.async_awaiter(promise)
 		results[i] = data
 
 		_mask &= ~(1 << i)
@@ -124,8 +76,8 @@ class AnyAwaiter:
 
 	func _async_call_func(_i: int, f) -> void:
 		@warning_ignore("redundant_await")
-		var promise: Promise = await Promise._Internal.async_call_and_get_promise(f)
-		var res = await promise.async_awaiter()
+		var promise: Promise = await PromiseUtils._Internal.async_call_and_get_promise(f)
+		var res = await PromiseUtils.async_awaiter(promise)
 
 		# Promise.async_any ignores promises with errors
 		if !promise.is_rejected() and not _promise.is_resolved():
@@ -145,8 +97,8 @@ class RaceAwaiter:
 
 	func _async_call_func(_i: int, f) -> void:
 		@warning_ignore("redundant_await")
-		var promise: Promise = await Promise._Internal.async_call_and_get_promise(f)
-		var res = await promise.async_awaiter()
+		var promise: Promise = await PromiseUtils._Internal.async_call_and_get_promise(f)
+		var res = await PromiseUtils.async_awaiter(promise)
 
 		# Promise.async_race doesn't ignore on error, you get the first one, with or without an error
 		if not _promise.is_resolved():
@@ -160,18 +112,18 @@ class RaceAwaiter:
 static func async_all(funcs: Array) -> Array:
 	if funcs.is_empty():
 		return []
-	return await AllAwaiter.new(funcs)._promise.async_awaiter()
+	return await PromiseUtils.async_awaiter(AllAwaiter.new(funcs)._promise)
 
 
 # `async_any` is a static function similar to `async_all`, but it resolves as soon as any of the
 # functions in the provided array resolves. It returns the result of the first function
 # that resolves. It ignores the rejections (differently from async_race)
 static func async_any(funcs: Array) -> Variant:
-	return await AnyAwaiter.new(funcs)._promise.async_awaiter()
+	return await PromiseUtils.async_awaiter(AnyAwaiter.new(funcs)._promise)
 
 
 # `async_race` is another static function that takes an array of functions and returns
 # a variant. It behaves like a race condition, returning the result of the function
 # that completes first, even if it fails (differently from async_any)
 static func async_race(funcs: Array) -> Variant:
-	return await RaceAwaiter.new(funcs)._promise.async_awaiter()
+	return await PromiseUtils.async_awaiter(RaceAwaiter.new(funcs)._promise)
