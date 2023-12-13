@@ -63,6 +63,7 @@ cid = "0.11.0"
 multipart = { version = "0.18.0", default-features = false, features = ["client", "lazy_static"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
+ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix", features = ["fix_usize_size_t"] }
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
 
