@@ -1,0 +1,33 @@
+name: Android Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: self-hosted-ubuntu
+    container:
+      image: docker://kuruk/dcl-godot-android-builder:latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        run: |
+          echo $ANDROID_HOME
+          ls -la /root/
+          ls -la /root/.cargo/bin/
+          export PATH="/root/.cargo/bin:${PATH}"
+          rustup default stable
+          rustup target add aarch64-linux-android
+      - name: Build
+        continue-on-error: true
+        run: |
+          bash build-android-apk.sh
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: Android APK
+          path: |
+            android.apk
