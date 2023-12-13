@@ -39,6 +39,3 @@ cd ${EXPLORER_PATH}/godot/
 
 ${EXPLORER_PATH}/.bin/godot/godot4_bin \
     -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk
-
-ls -la
-ls -la ${EXPLORER_PATH}

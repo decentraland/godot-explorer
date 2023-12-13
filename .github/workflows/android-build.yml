@@ -17,11 +17,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
-      #   with:
-      #     sudo: false
-      #     limit-access-to-actor: true
       - name: Setup Rust
         run: |
           echo $ANDROID_HOME
