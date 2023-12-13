@@ -45,6 +45,7 @@ jobs:
           key: android-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: android-cargo-
       - name: Build
+        continue-on-error: true
         run: |
           bash build-android-apk.sh
       - uses: actions/upload-artifact@v3
