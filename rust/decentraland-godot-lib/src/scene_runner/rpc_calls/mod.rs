@@ -2,7 +2,10 @@ mod handle_restricted_actions;
 mod handle_runtime;
 mod portables;
 
-use crate::dcl::{scene_apis::RpcCall, SceneId};
+use crate::{
+    dcl::{scene_apis::RpcCall, SceneId},
+    godot_classes::dcl_global::DclGlobal,
+};
 
 use self::{
     handle_restricted_actions::{
@@ -86,6 +89,13 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 if let Some(test_entry) = scene.scene_tests.get_mut(&body.name) {
                     *test_entry = Some(body);
                 }
+            }
+            RpcCall::SendAsync { body, response } => {
+                DclGlobal::singleton()
+                    .bind()
+                    .get_player_identity()
+                    .bind()
+                    .send_async(body, response);
             }
         }
     }

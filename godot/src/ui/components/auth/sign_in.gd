@@ -1,5 +1,7 @@
 extends Control
 
+var cancel_action: Callable = Callable()
+
 @onready var panel_main = $Panel_Main
 
 @onready var v_box_container_connect = $Panel_Main/VBoxContainer_Connect
@@ -9,7 +11,6 @@ extends Control
 @onready var label_waiting = $Panel_Main/VBoxContainer_Waiting/Label_Waiting
 @onready var button_waiting_cancel = $Panel_Main/VBoxContainer_Waiting/Button_WaitingCancel
 
-var cancel_action: Callable = Callable()
 
 func show_panel(child_node: Control):
 	for child in panel_main.get_children():
@@ -20,14 +21,14 @@ func show_panel(child_node: Control):
 
 func show_waiting_panel(text: String, new_cancel_action: Variant = null):
 	label_waiting.text = text
-	
+
 	if new_cancel_action != null and new_cancel_action is Callable:
 		button_waiting_cancel.show()
 		cancel_action = new_cancel_action
 	else:
 		button_waiting_cancel.hide()
 		cancel_action = Callable()
-	
+
 	show_panel(v_box_container_waiting)
 
 
@@ -44,14 +45,18 @@ func _ready():
 	show_panel(v_box_container_connect)
 
 
+func _on_button_sign_in_pressed_abort():
+	Global.player_identity.abort_try_connect_account()
+	show_panel(v_box_container_connect)
+
+
 func _on_button_sign_in_pressed():
 	Global.player_identity.try_connect_account()
-	
-	var abort = func ():
-		Global.player_identity.abort_try_connect_account()
-		show_panel(v_box_container_connect)
-		
-	show_waiting_panel("Please follow the steps to connect your account and sign the message", abort)
+
+	show_waiting_panel(
+		"Please follow the steps to connect your account and sign the message",
+		self._on_button_sign_in_pressed_abort
+	)
 
 
 func _on_button_guest_pressed():

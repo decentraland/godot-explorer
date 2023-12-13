@@ -4,4 +4,4 @@ pub mod deploy_profile;
 pub mod ephemeral_auth_chain;
 pub mod remote_wallet;
 pub mod wallet;
-mod with_browser_and_server;
+pub mod with_browser_and_server;
