@@ -3,7 +3,7 @@ name: Android Build
 on:
   push:
     branches:
-      main
+      - main
   pull_request:
   release:
     types:
@@ -30,24 +30,13 @@ jobs:
           export PATH="/root/.cargo/bin:${PATH}"
           rustup default stable
           rustup target add aarch64-linux-android
-      - name: Set up cargo cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            rust/decentraland-godot-lib/target/
-            rust/decentraland-godot-lib/Cargo.lock
-            rust/xtask/target/
-            rust/xtask/Cargo.lock
-          key: android-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: android-cargo-
       - name: Build
+        continue-on-error: true
         run: |
           bash build-android-apk.sh
       - uses: actions/upload-artifact@v3
+        if: always()
         with:
           name: Android APK
-          path: android.apk
+          path: |
+            android.apk

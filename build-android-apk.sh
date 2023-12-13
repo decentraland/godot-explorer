@@ -36,11 +36,9 @@ export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
 
 echo "Export Godot APK"
 cd ${EXPLORER_PATH}/godot/
-if ! ${EXPLORER_PATH}/.bin/godot/godot4_bin \
-    -e --headless --rendering-driver opengl3 --headless \
-    --export-debug Android ${EXPLORER_PATH}/android.apk; then
-    echo "Godot exited with status != 0."
-fi
 
+${EXPLORER_PATH}/.bin/godot/godot4_bin \
+    -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk
 
-ls -la | grep android.apk
+ls -la
+ls -la ${EXPLORER_PATH}
