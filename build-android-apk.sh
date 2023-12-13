@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set +e
 set +o pipefail
 
 EXPLORER_PATH=$(pwd)
