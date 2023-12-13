@@ -4,40 +4,55 @@ use base64::Engine as _;
 use ethers::types::{Signature, H160};
 use rand::Rng;
 use reqwest::Url;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::auth::wallet::AsH160;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct GetAccountResponseData {
-    address: String,
-    chain_id: u64,
-}
-
-#[derive(Deserialize, Debug)]
-struct GetAccountResponse {
-    data: GetAccountResponseData,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct SignToServerResponseData {
+struct SignResponseData {
     account: String,
     signature: String,
     chain_id: u64,
 }
 
-#[derive(Deserialize, Debug)]
-struct SignToServerResponse {
-    data: SignToServerResponseData,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RPCSendableMessage {
+    pub jsonrpc: String,
+    pub id: u64,
+    pub method: String,
+    pub params: Vec<serde_json::Value>, // Using serde_json::Value for unknown[]
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum RemoteWalletRequest {
+    #[serde(rename = "send-async", rename_all = "camelCase")]
+    SendAsync {
+        body: RPCSendableMessage,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        by_address: Option<String>,
+    },
+    #[serde(rename = "sign", rename_all = "camelCase")]
+    Sign {
+        b64_message: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        by_address: Option<String>,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RegisterRequestBody {
+    id: String,
+    request: RemoteWalletRequest,
 }
 
 // const AUTH_FRONT_URL: &str = "https://leanmendoza.github.io/decentraland-auth/";
+// const AUTH_SERVER_ENDPOINT_URL: &str = "https://services.aesir-online.net/dcltest/queue/task";
 const AUTH_FRONT_URL: &str = "http://localhost:5173/";
-const AUTH_SERVER_ENDPOINT_URL: &str = "https://services.aesir-online.net/dcltest/queue/task";
+const AUTH_SERVER_ENDPOINT_URL: &str = "http://localhost:5545/task/";
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
-const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(60);
+const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
 const AUTH_SERVER_RETRIES: u64 =
     AUTH_SERVER_TIMEOUT.as_secs() / AUTH_SERVER_RETRY_INTERVAL.as_secs();
 
@@ -55,24 +70,24 @@ pub fn gen_id() -> String {
         .collect()
 }
 
-async fn fetch_server<T>(req_id: String) -> Result<T, ()>
+async fn fetch_server<T>(req_id: String) -> Result<T, anyhow::Error>
 where
     T: DeserializeOwned,
 {
+    let url = format!("{AUTH_SERVER_ENDPOINT_URL}{req_id}/response");
     let mut attempt = 0;
     loop {
         tracing::debug!("trying req_id {:?} attempt ${attempt}", req_id);
         if attempt >= AUTH_SERVER_RETRIES {
-            return Err(());
+            return Err(anyhow::Error::msg("too many atempts"));
         }
         attempt += 1;
 
-        let url = format!("{AUTH_SERVER_ENDPOINT_URL}/{req_id}");
         let response = reqwest::Client::builder()
             .timeout(AUTH_SERVER_RETRY_INTERVAL)
             .build()
             .expect("reqwest build error")
-            .get(url)
+            .get(url.clone())
             .send()
             .await;
 
@@ -111,63 +126,50 @@ where
         }
         break;
     }
-    Err(())
+    Err(anyhow::Error::msg("couldn't get response"))
 }
 
-pub async fn get_account(
-    url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
-) -> Result<(H160, u64), ()> {
-    let get_account_req_id = gen_id();
-    let open_url = {
-        let base_url = format!("{AUTH_FRONT_URL}get-account");
-
-        let mut url = Url::parse(base_url.as_str()).expect("static valid url");
-        {
-            let mut params = url.query_pairs_mut();
-            params.append_pair("id", &get_account_req_id);
-            params.append_pair("server-endpoint", AUTH_SERVER_ENDPOINT_URL);
-        }
-        url.to_string()
+async fn register_request(
+    req_id: String,
+    request: RemoteWalletRequest,
+) -> Result<(), anyhow::Error> {
+    let body = RegisterRequestBody {
+        id: req_id,
+        request,
     };
+    let body = serde_json::to_string(&body).expect("valid json");
+    let response = reqwest::Client::builder()
+        .timeout(AUTH_SERVER_RETRY_INTERVAL)
+        .build()
+        .expect("reqwest build error")
+        .post(AUTH_SERVER_ENDPOINT_URL)
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await?;
 
-    tracing::debug!("get_account url {:?}", open_url);
-    url_reporter
-        .send(RemoteReportState::OpenUrl {
-            url: open_url.clone(),
-            description: "Know your public address account".to_owned(),
-        })
-        .await
-        .unwrap();
-
-    let account = fetch_server::<GetAccountResponse>(get_account_req_id).await?;
-    let Some(address) = account.data.address.as_h160() else {
-        return Err(());
-    };
-    Ok((address, account.data.chain_id))
-}
-
-pub async fn remote_sign_message(
-    payload: &[u8],
-    by_signer: Option<H160>,
-    url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
-) -> Result<(H160, Signature, u64), ()> {
-    let address = if by_signer.is_some() {
-        format!("{:#x}", by_signer.unwrap())
+    if response.status().is_success() {
+        Ok(())
     } else {
-        "".into()
-    };
-    let sign_payload_req_id = gen_id();
+        tracing::error!("Error registering request: {:?}", response);
+        Err(anyhow::Error::msg("couldn't get response"))
+    }
+}
+
+async fn generate_and_report_request(
+    request: RemoteWalletRequest,
+    url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
+) -> Result<String, anyhow::Error> {
+    let req_id = gen_id();
+    register_request(req_id.clone(), request).await?;
     let open_url = {
-        let base_url = format!("{AUTH_FRONT_URL}sign-to-server");
-        let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(payload);
+        let base_url = format!("{AUTH_FRONT_URL}remote-wallet");
 
         let mut url = Url::parse(base_url.as_str()).expect("static valid url");
         {
             let mut params = url.query_pairs_mut();
-            params.append_pair("id", &sign_payload_req_id);
-            params.append_pair("payload", &payload);
-            params.append_pair("address", &address);
-            params.append_pair("server-endpoint", AUTH_SERVER_ENDPOINT_URL);
+            params.append_pair("requestId", &req_id);
+            params.append_pair("serverEndpoint", AUTH_SERVER_ENDPOINT_URL);
         }
         url.to_string()
     };
@@ -178,19 +180,63 @@ pub async fn remote_sign_message(
             url: open_url.clone(),
             description: "Sign a message".to_owned(),
         })
-        .await
-        .unwrap();
+        .await?;
 
-    let sign_payload = fetch_server::<SignToServerResponse>(sign_payload_req_id).await?;
-    let Some(account) = sign_payload.data.account.as_h160() else {
-        return Err(());
+    Ok(req_id)
+}
+
+pub async fn remote_sign_message(
+    payload: &[u8],
+    by_signer: Option<H160>,
+    url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
+) -> Result<(H160, Signature, u64), anyhow::Error> {
+    let by_address = if by_signer.is_some() {
+        Some(format!("{:#x}", by_signer.unwrap()))
+    } else {
+        None
     };
-    let Ok(signature) = Signature::from_str(sign_payload.data.signature.as_str()) else {
-        tracing::error!("error while parsing signature");
-        return Err(());
+    let b64_message = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(payload);
+
+    let req_id = generate_and_report_request(
+        RemoteWalletRequest::Sign {
+            b64_message,
+            by_address,
+        },
+        url_reporter,
+    )
+    .await?;
+
+    let sign_payload = fetch_server::<SignResponseData>(req_id).await?;
+    let Some(account) = sign_payload.account.as_h160() else {
+        return Err(anyhow::Error::msg("invalid account"));
+    };
+    let Ok(signature) = Signature::from_str(sign_payload.signature.as_str()) else {
+        return Err(anyhow::Error::msg("invalid signature"));
     };
 
-    Ok((account, signature, sign_payload.data.chain_id))
+    Ok((account, signature, sign_payload.chain_id))
+}
+
+pub async fn remote_send_async(
+    message: RPCSendableMessage,
+    by_signer: Option<H160>,
+    url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
+) -> Result<serde_json::Value, anyhow::Error> {
+    let by_address = if by_signer.is_some() {
+        Some(format!("{:#x}", by_signer.unwrap()))
+    } else {
+        None
+    };
+    let req_id = generate_and_report_request(
+        RemoteWalletRequest::SendAsync {
+            body: message,
+            by_address,
+        },
+        url_reporter,
+    )
+    .await?;
+
+    fetch_server::<serde_json::Value>(req_id).await
 }
 
 #[cfg(test)]
@@ -201,12 +247,61 @@ mod test {
     #[traced_test]
     #[tokio::test]
     async fn test_gen_id() {
-        let (sx, _rx) = tokio::sync::mpsc::channel(100);
+        let (sx, mut rx) = tokio::sync::mpsc::channel(100);
+
+        tokio::spawn(async move {
+            loop {
+                match rx.recv().await {
+                    Some(RemoteReportState::OpenUrl { url, description }) => {
+                        tracing::info!("url {:?} description {:?}", url, description);
+                    }
+                    None => {
+                        break;
+                    }
+                }
+            }
+        });
+
         let Ok((signer, signature, _chain_id)) =
             remote_sign_message("hello".as_bytes(), None, sx).await
         else {
             return;
         };
         tracing::info!("signer {:?} signature {:?}", signer, signature);
+    }
+
+    #[traced_test]
+    #[tokio::test]
+    async fn test_send_async() {
+        let (sx, mut rx) = tokio::sync::mpsc::channel(100);
+
+        tokio::spawn(async move {
+            loop {
+                match rx.recv().await {
+                    Some(RemoteReportState::OpenUrl { url, description }) => {
+                        tracing::info!("url {:?} description {:?}", url, description);
+                    }
+                    None => {
+                        break;
+                    }
+                }
+            }
+        });
+
+        let Ok(value) = remote_send_async(
+            RPCSendableMessage {
+                jsonrpc: "2.0".to_owned(),
+                id: 1,
+                method: "eth_chainId".to_owned(),
+                params: vec![],
+            },
+            None,
+            sx,
+        )
+        .await
+        else {
+            return;
+        };
+        tracing::info!("value {:?} ", value);
     }
 }
