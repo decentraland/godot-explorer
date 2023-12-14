@@ -3,7 +3,6 @@ use std::{str::FromStr, time::Duration};
 use base64::Engine as _;
 use ethers::types::{Signature, H160};
 use rand::Rng;
-use reqwest::Url;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::auth::wallet::AsH160;
@@ -47,10 +46,11 @@ struct RegisterRequestBody {
     request: RemoteWalletRequest,
 }
 
-// const AUTH_FRONT_URL: &str = "https://leanmendoza.github.io/decentraland-auth/";
-// const AUTH_SERVER_ENDPOINT_URL: &str = "https://services.aesir-online.net/dcltest/queue/task";
-const AUTH_FRONT_URL: &str = "http://localhost:5173/";
-const AUTH_SERVER_ENDPOINT_URL: &str = "http://localhost:5545/task/";
+const AUTH_FRONT_URL: &str = "https://auth.dclexplorer.com/";
+const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-server.dclexplorer.com/task/";
+// const AUTH_FRONT_URL: &str = "http://localhost:5173/";
+// const AUTH_SERVER_ENDPOINT_URL: &str = "http://localhost:5545/task/";
+
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
 const AUTH_SERVER_RETRIES: u64 =
@@ -117,7 +117,7 @@ where
                         tokio::time::sleep(AUTH_SERVER_RETRY_INTERVAL).await;
                         continue;
                     } else {
-                        tracing::error!("Error fetching task: {:?}", error);
+                        tracing::error!("Error fetching task with status: {:?}", error);
                     }
                 } else {
                     tracing::error!("Error fetching task: {:?}", error);
@@ -162,17 +162,7 @@ async fn generate_and_report_request(
 ) -> Result<String, anyhow::Error> {
     let req_id = gen_id();
     register_request(req_id.clone(), request).await?;
-    let open_url = {
-        let base_url = format!("{AUTH_FRONT_URL}remote-wallet");
-
-        let mut url = Url::parse(base_url.as_str()).expect("static valid url");
-        {
-            let mut params = url.query_pairs_mut();
-            params.append_pair("requestId", &req_id);
-            params.append_pair("serverEndpoint", AUTH_SERVER_ENDPOINT_URL);
-        }
-        url.to_string()
-    };
+    let open_url = format!("{AUTH_FRONT_URL}remote-wallet/{req_id}");
 
     tracing::debug!("sign url {:?}", open_url);
     url_reporter
