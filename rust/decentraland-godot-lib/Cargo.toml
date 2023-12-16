@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { git = "https://github.com/godot-rust/gdext", rev = "e9177f22" }
+godot = { git = "https://github.com/godot-rust/gdext", rev = "ef5f388def606ee119849e01ac0fafc1e0ec2c2a" }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
@@ -66,6 +66,8 @@ multipart = { version = "0.18.0", default-features = false, features = ["client"
 ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix", features = ["fix_usize_size_t"] }
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
+godot = { git = "https://github.com/godot-rust/gdext", rev = "ef5f388def606ee119849e01ac0fafc1e0ec2c2a", features = ["lazy-function-tables"] }
+
 
 [build-dependencies]
 webrtc-sys-build = "0.2.0"
