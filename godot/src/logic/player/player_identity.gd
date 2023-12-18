@@ -41,8 +41,8 @@ func async_fetch_profile(address: String, lambda_server_base_url: String) -> voi
 		self.set_default_profile()
 
 
-func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool):
-	if is_guest:
+func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool):
+	if is_guest_value:
 		self.set_default_profile()
 		return
 

@@ -56,6 +56,8 @@ const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
 const AUTH_SERVER_RETRIES: u64 =
     AUTH_SERVER_TIMEOUT.as_secs() / AUTH_SERVER_RETRY_INTERVAL.as_secs();
 
+const AUTH_SERVER_REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
+
 pub enum RemoteReportState {
     OpenUrl { url: String, description: String },
 }
@@ -84,7 +86,7 @@ where
         attempt += 1;
 
         let response = reqwest::Client::builder()
-            .timeout(AUTH_SERVER_RETRY_INTERVAL)
+            .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
             .build()
             .expect("reqwest build error")
             .get(url.clone())
@@ -139,7 +141,7 @@ async fn register_request(
     };
     let body = serde_json::to_string(&body).expect("valid json");
     let response = reqwest::Client::builder()
-        .timeout(AUTH_SERVER_RETRY_INTERVAL)
+        .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
         .build()
         .expect("reqwest build error")
         .post(AUTH_SERVER_ENDPOINT_URL)

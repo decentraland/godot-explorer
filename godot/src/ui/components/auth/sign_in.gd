@@ -68,7 +68,11 @@ func _on_button_confirm_guest_risk_pressed():
 
 
 func _on_need_open_url(url: String, _description: String) -> void:
-	OS.shell_open(url)
+	if Global.dcl_android_plugin != null:
+		Global.dcl_android_plugin.showDecentralandMobileToast()
+		Global.dcl_android_plugin.openUrl(url)
+	else:
+		OS.shell_open(url)
 
 
 func _on_wallet_connected(_address: String, _chain_id: int, is_guest: bool) -> void:

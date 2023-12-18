@@ -27,6 +27,7 @@ var nft_fetcher: OpenSeaFetcher = OpenSeaFetcher.new()
 var nft_frame_loader: NftFrameStyleLoader = NftFrameStyleLoader.new()
 
 var standalone = false
+var dcl_android_plugin
 
 @onready var is_mobile = OS.has_feature("mobile")
 #@onready var is_mobile = true
@@ -55,6 +56,9 @@ func _ready():
 
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
+
+	if Engine.has_singleton("DclAndroidPlugin"):
+		dcl_android_plugin = Engine.get_singleton("DclAndroidPlugin")
 
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
