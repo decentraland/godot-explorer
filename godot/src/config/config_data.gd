@@ -125,7 +125,11 @@ func load_from_default():
 
 	self.resolution = "1280 x 720"
 	self.window_size = "1280 x 720"
-	self.ui_scale = 1
+	if Global.is_mobile:
+		self.ui_scale = 1.75
+	else:
+		self.ui_scale = 1.0
+
 	self.session_account = {}
 
 	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"

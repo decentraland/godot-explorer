@@ -64,7 +64,6 @@ theme_override_font_sizes/font_size = 20
 text = "Continue as a guest"
 
 [node name="VBoxContainer_Waiting" type="VBoxContainer" parent="Panel_Main"]
-visible = false
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -89,6 +88,11 @@ autowrap_mode = 3
 [node name="TextureProgressBar" parent="Panel_Main/VBoxContainer_Waiting" instance=ExtResource("2_wwc6a")]
 layout_mode = 2
 size_flags_horizontal = 4
+
+[node name="Button_WaitingCancel" type="Button" parent="Panel_Main/VBoxContainer_Waiting"]
+visible = false
+layout_mode = 2
+text = "Cancel"
 
 [node name="VBoxContainer_GuestConfirm" type="VBoxContainer" parent="Panel_Main"]
 visible = false
@@ -121,4 +125,5 @@ text = "I assume the risk"
 
 [connection signal="pressed" from="Panel_Main/VBoxContainer_Connect/Button_SignIn" to="." method="_on_button_sign_in_pressed"]
 [connection signal="pressed" from="Panel_Main/VBoxContainer_Connect/Button_Guest" to="." method="_on_button_guest_pressed"]
+[connection signal="pressed" from="Panel_Main/VBoxContainer_Waiting/Button_WaitingCancel" to="." method="_on_button_waiting_cancel_pressed"]
 [connection signal="pressed" from="Panel_Main/VBoxContainer_GuestConfirm/Button_ConfirmGuestRisk" to="." method="_on_button_confirm_guest_risk_pressed"]

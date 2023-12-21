@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { git = "https://github.com/godot-rust/gdext", rev = "e9177f22" }
+godot = { git = "https://github.com/godot-rust/gdext", rev = "ef5f388def606ee119849e01ac0fafc1e0ec2c2a" }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
@@ -62,10 +62,14 @@ multihash-codetable = { version = "0.1.1", features = ["digest", "sha2"] }
 cid = "0.11.0"
 multipart = { version = "0.18.0", default-features = false, features = ["client", "lazy_static"] }
 
+ethers-providers = { version = "2.0", features = ["ws","rustls"] }
+
 [target.'cfg(target_os = "android")'.dependencies]
 ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix", features = ["fix_usize_size_t"] }
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
+godot = { git = "https://github.com/godot-rust/gdext", rev = "ef5f388def606ee119849e01ac0fafc1e0ec2c2a", features = ["lazy-function-tables"] }
+
 
 [build-dependencies]
 webrtc-sys-build = "0.2.0"
@@ -73,4 +77,4 @@ prost-build = "0.11.8"
 
 [patch."https://github.com/godot-rust/godot4-prebuilt".godot4-prebuilt]
 git = "https://github.com//godot-rust/godot4-prebuilt"
-branch = "4.2"
+branch = "4.2.1"

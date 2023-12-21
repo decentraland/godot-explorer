@@ -196,7 +196,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         "--rendering-driver",
         "opengl3",
         "--scene-test",
-        "['52,-52']",
+        "[[52,-52],[52,-54],[52,-56],[52,-58],[52,-60],[52,-62],[52,-64],[52,-66],[52,-68],[54,-52],[54,-54],[54,-56],[54,-58],[54,-60]]",
         "--realm",
         "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests",
     ]

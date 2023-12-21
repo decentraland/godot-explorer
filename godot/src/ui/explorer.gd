@@ -10,6 +10,7 @@ var dirty_save_position: bool = false
 var last_position_sent: Vector3 = Vector3.ZERO
 var counter: int = 0
 
+var last_index_scene_ui_root: int = -1
 var _last_parcel_position: Vector2i
 
 @onready var ui_root: Control = $UI
@@ -104,6 +105,7 @@ func _ready():
 	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)
 	if cmd_location != null:
 		start_parcel_position = cmd_location
+	start_parcel_position = Vector2i()
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
@@ -134,16 +136,25 @@ func _ready():
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
+	Global.player_identity.need_open_url.connect(self._on_need_open_url)
 
-	if not Global.player_identity.try_recover_account(Global.config.session_account):
-		if Global.testing_scene_mode:
-			Global.player_identity.create_guest_account()
-		else:
-			Global.scene_runner.set_pause(true)
-			ui_root.add_child(sign_in_resource.instantiate())
+	if Global.testing_scene_mode:
+		Global.player_identity.create_guest_account()
+	elif not Global.player_identity.try_recover_account(Global.config.session_account):
+		Global.scene_runner.set_pause(true)
+		ui_root.add_child(sign_in_resource.instantiate())
 
 	# last
 	ui_root.grab_focus.call_deferred()
+
+
+func _on_need_open_url(url: String, _description: String) -> void:
+	if not Global.player_identity.get_address_str().is_empty():
+		if Global.dcl_android_plugin != null:
+			Global.dcl_android_plugin.showDecentralandMobileToast()
+			Global.dcl_android_plugin.openUrl(url)
+		else:
+			OS.shell_open(url)
 
 
 func _on_player_logout():
@@ -362,9 +373,16 @@ func release_mouse():
 
 
 func set_visible_ui(value: bool):
+	if value == ui_root.visible:
+		return
+
 	if value:
 		ui_root.show()
 		voice_chat_ui.show()
+		var ui_node = ui_root.get_parent().get_node("scenes_ui")
+		ui_node.reparent(ui_root)
 	else:
 		ui_root.hide()
 		voice_chat_ui.hide()
+		var ui_node = ui_root.get_node("scenes_ui")
+		ui_node.reparent(ui_root.get_parent())

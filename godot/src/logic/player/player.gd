@@ -84,7 +84,7 @@ func _ready():
 
 
 func _on_player_profile_changed(new_profile: Dictionary):
-	avatar.async_update_avatar(new_profile)
+	avatar.async_update_avatar_from_profile(new_profile)
 
 
 func _on_param_changed(_param):

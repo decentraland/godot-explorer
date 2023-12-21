@@ -4,10 +4,7 @@ use super::{
     with_browser_and_server::{remote_sign_message, RemoteReportState},
 };
 use chrono::{DateTime, Utc};
-use ethers::{
-    signers::LocalWallet,
-    types::{Signature, H160},
-};
+use ethers::signers::LocalWallet;
 use rand::thread_rng;
 
 fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
@@ -18,23 +15,9 @@ fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemT
     )
 }
 
-pub async fn try_create_remote_ephemeral_with_account(
-    signer: H160,
-    sender: tokio::sync::mpsc::Sender<RemoteReportState>,
-) -> Result<(H160, Wallet, Signature, u64), ()> {
-    let ephemeral_wallet = Wallet::new_local_wallet();
-    let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
-    let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
-    let message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
-
-    let (signer, signature, chain_id) =
-        remote_sign_message(message.as_bytes(), Some(signer), sender).await?;
-    Ok((signer, ephemeral_wallet, signature, chain_id))
-}
-
 pub async fn try_create_remote_ephemeral(
     sender: tokio::sync::mpsc::Sender<RemoteReportState>,
-) -> Result<(EphemeralAuthChain, u64), ()> {
+) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
     let local_wallet = LocalWallet::new(&mut thread_rng());
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
     let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));

@@ -147,154 +147,6 @@ impl Default for SerializedProfile {
 }
 
 impl SerializedProfile {
-    pub fn to_godot_dictionary(&self, base_url: &str) -> Dictionary {
-        let mut dictionary = Dictionary::new();
-        let name: GString = GString::from(self.name.as_str());
-
-        let body_shape: GString = self
-            .avatar
-            .body_shape
-            .as_ref()
-            .unwrap_or(&"default".into())
-            .into();
-
-        let eyes: godot::prelude::Color = self
-            .avatar
-            .eyes
-            .as_ref()
-            .unwrap_or(&AvatarColor {
-                color: AvatarColor3 {
-                    r: 0.2,
-                    g: 0.2,
-                    b: 0.5,
-                },
-            })
-            .into();
-
-        let hair: godot::prelude::Color = self
-            .avatar
-            .hair
-            .as_ref()
-            .unwrap_or(&AvatarColor {
-                color: AvatarColor3 {
-                    r: 0.2,
-                    g: 0.2,
-                    b: 0.5,
-                },
-            })
-            .into();
-
-        let skin: godot::prelude::Color = self
-            .avatar
-            .skin
-            .as_ref()
-            .unwrap_or(&AvatarColor {
-                color: AvatarColor3 {
-                    r: 0.2,
-                    g: 0.2,
-                    b: 0.5,
-                },
-            })
-            .into();
-
-        let wearables = self
-            .avatar
-            .wearables
-            .iter()
-            .map(GString::from)
-            .collect::<PackedStringArray>();
-
-        let emotes = self
-            .avatar
-            .emotes
-            .as_ref()
-            .unwrap_or(&vec![])
-            .iter()
-            .map(|v| {
-                let mut arr = VariantArray::new();
-                arr.push(GString::from(v.urn.as_str()).to_variant());
-                arr.push(v.slot.to_variant());
-                arr.to_variant()
-            })
-            .collect::<VariantArray>();
-
-        dictionary.set("name", name);
-        dictionary.set("body_shape", body_shape);
-        dictionary.set("eyes", eyes);
-        dictionary.set("hair", hair);
-        dictionary.set("skin", skin);
-        dictionary.set("wearables", wearables);
-        dictionary.set("emotes", emotes);
-        dictionary.set("base_url", base_url);
-
-        dictionary
-    }
-
-    pub fn copy_from_godot_dictionary(&mut self, dictionary: &Dictionary) {
-        let name = dictionary.get("name").unwrap_or("Noname".to_variant());
-
-        let body_shape = dictionary
-            .get("body_shape")
-            .unwrap_or("default".to_variant())
-            .to::<GString>();
-        let eyes = dictionary
-            .get("eyes")
-            .unwrap_or(godot::prelude::Color::from_rgb(0.1, 0.5, 0.8).to_variant())
-            .to::<godot::prelude::Color>();
-        let hair = dictionary
-            .get("hair")
-            .unwrap_or(godot::prelude::Color::from_rgb(0.1, 0.5, 0.8).to_variant())
-            .to::<godot::prelude::Color>();
-        let skin = dictionary
-            .get("skin")
-            .unwrap_or(godot::prelude::Color::from_rgb(0.1, 0.5, 0.8).to_variant())
-            .to::<godot::prelude::Color>();
-
-        let wearables: Vec<String> = {
-            if let Some(ret) = dictionary.get("wearables") {
-                if let Ok(ret) = ret.try_to::<VariantArray>() {
-                    ret.iter_shared()
-                        .map(|v| v.to_string())
-                        .collect::<Vec<String>>()
-                } else if let Ok(ret) = ret.try_to::<PackedStringArray>() {
-                    ret.to_vec()
-                        .iter()
-                        .map(|v| v.to_string())
-                        .collect::<Vec<String>>()
-                } else {
-                    Vec::default()
-                }
-            } else {
-                Vec::default()
-            }
-        };
-
-        let emotes = dictionary
-            .get("emotes")
-            .unwrap_or(VariantArray::default().to_variant())
-            .to::<VariantArray>();
-
-        self.name = name.to_string();
-        self.avatar.body_shape = Some(body_shape.to_string());
-        self.avatar.eyes = Some((&eyes).into());
-        self.avatar.hair = Some((&hair).into());
-        self.avatar.skin = Some((&skin).into());
-        self.avatar.wearables = wearables;
-        self.avatar.emotes = emotes
-            .iter_shared()
-            .filter_map(|_v| {
-                // if !v() {
-                //     return None;
-                // }
-                // Some(AvatarEmote {
-                //     slot: 0,
-                //     urn: v.get("urn").unwrap_or("".to_variant()),
-                // })
-                None
-            })
-            .collect();
-    }
-
     pub fn to_pb_avatar_base(&self) -> PbAvatarBase {
         PbAvatarBase {
             skin_color: self.avatar.skin.map(|c| Color3::from(&c)),
@@ -330,7 +182,7 @@ impl SerializedProfile {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct UserProfile {
     pub version: u32,
     pub content: SerializedProfile,
@@ -344,5 +196,18 @@ impl Default for UserProfile {
             version: 1,
             content: SerializedProfile::default(),
         }
+    }
+}
+
+impl UserProfile {
+    pub fn from_godot_dictionary(dictionary: &Dictionary) -> Self {
+        let value = godot::engine::Json::stringify(dictionary.to_variant());
+        serde_json::from_str(value.to_string().as_str()).unwrap_or_default()
+    }
+
+    pub fn to_godot_dictionary(&self) -> Dictionary {
+        let value = serde_json::to_string(self).unwrap_or_default();
+        let value = godot::engine::Json::parse_string(value.into());
+        value.to::<Dictionary>()
     }
 }

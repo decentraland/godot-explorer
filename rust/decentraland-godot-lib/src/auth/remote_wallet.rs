@@ -7,7 +7,7 @@ use super::{
     auth_identity::try_create_remote_ephemeral,
     ephemeral_auth_chain::EphemeralAuthChain,
     wallet::ObjSafeWalletSigner,
-    with_browser_and_server::{get_account, remote_sign_message, RemoteReportState},
+    with_browser_and_server::{remote_sign_message, RemoteReportState},
 };
 
 #[derive(Clone)]
@@ -29,7 +29,7 @@ impl fmt::Debug for RemoteWallet {
 impl RemoteWallet {
     pub async fn with_auth_identity(
         report_url_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
-    ) -> Result<(Self, EphemeralAuthChain), ()> {
+    ) -> Result<(Self, EphemeralAuthChain), anyhow::Error> {
         let (ephemeral_wallet, chain_id) =
             try_create_remote_ephemeral(report_url_sender.clone()).await?;
 
@@ -41,18 +41,6 @@ impl RemoteWallet {
             },
             ephemeral_wallet,
         ))
-    }
-
-    pub async fn with(
-        report_url_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
-    ) -> Result<Self, ()> {
-        let (address, chain_id) = get_account(report_url_sender.clone()).await?;
-
-        Ok(Self {
-            address,
-            report_url_sender,
-            chain_id,
-        })
     }
 
     pub fn new(

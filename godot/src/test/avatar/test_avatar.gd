@@ -20,16 +20,17 @@ var emotes: Array = []
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	avatar.async_update_avatar(
-		"https://peer.decentraland.org/content",
-		"Godot User",
-		body_shape,
-		eyes_color,
-		hair_color,
-		skin_color,
-		wearables,
-		emotes
-	)
+	# TODO: this is outdated
+	#avatar.async_update_avatar(
+	#"https://peer.decentraland.org/content",
+	#"Godot User",
+	#body_shape,
+	#eyes_color,
+	#hair_color,
+	#skin_color,
+	#wearables,
+	#emotes
+	#)
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.

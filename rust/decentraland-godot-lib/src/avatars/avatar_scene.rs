@@ -5,7 +5,7 @@ use godot::prelude::*;
 
 use crate::{
     auth::wallet::AsH160,
-    comms::profile::SerializedProfile,
+    comms::profile::UserProfile,
     dcl::{
         components::{
             proto_components::kernel::comms::rfc4, transform_and_parent::DclTransformAndParent,
@@ -36,7 +36,7 @@ pub struct AvatarScene {
 
     crdt_state: SceneCrdtState,
 
-    last_updated_profile: HashMap<SceneEntityId, SerializedProfile>,
+    last_updated_profile: HashMap<SceneEntityId, UserProfile>,
 }
 
 #[godot_api]
@@ -76,18 +76,8 @@ macro_rules! sync_crdt_lww_component {
 impl AvatarScene {
     #[func]
     pub fn update_primary_player_profile(&mut self, profile: Dictionary) {
-        let mut serialized_profile = SerializedProfile::default();
-        serialized_profile.copy_from_godot_dictionary(&profile);
-        let base_url = profile
-            .get("base_url")
-            .map(|v| v.to_string())
-            .unwrap_or("https://peer.decentraland.org/content".into());
-
-        self.update_avatar(
-            SceneEntityId::PLAYER,
-            &serialized_profile,
-            base_url.as_str(),
-        );
+        let user_profile = UserProfile::from_godot_dictionary(&profile);
+        self.update_avatar(SceneEntityId::PLAYER, &user_profile);
     }
 
     #[func]
@@ -99,10 +89,10 @@ impl AvatarScene {
             return;
         };
 
-        self.avatar_godot_scene
-            .get_mut(&entity_id)
-            .unwrap()
-            .call("async_update_avatar".into(), &[profile.to_variant()]);
+        self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
+            "async_update_avatar_from_profile".into(),
+            &[profile.to_variant()],
+        );
     }
 
     #[func]
@@ -341,12 +331,7 @@ impl AvatarScene {
         self._update_avatar_transform(&entity_id, dcl_transform);
     }
 
-    pub fn update_avatar_by_alias(
-        &mut self,
-        alias: u32,
-        profile: &SerializedProfile,
-        base_url: &str,
-    ) {
+    pub fn update_avatar_by_alias(&mut self, alias: u32, profile: &UserProfile) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
@@ -354,15 +339,10 @@ impl AvatarScene {
             return;
         };
 
-        self.update_avatar(entity_id, profile, base_url);
+        self.update_avatar(entity_id, profile);
     }
 
-    pub fn update_avatar(
-        &mut self,
-        entity_id: SceneEntityId,
-        profile: &SerializedProfile,
-        base_url: &str,
-    ) {
+    pub fn update_avatar(&mut self, entity_id: SceneEntityId, profile: &UserProfile) {
         // Avoid updating avatar with the same data
         if let Some(val) = self.last_updated_profile.get(&entity_id) {
             if profile.eq(val) {
@@ -373,12 +353,12 @@ impl AvatarScene {
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar_scene.call(
-                "async_update_avatar".into(),
-                &[profile.to_godot_dictionary(base_url).to_variant()],
+                "async_update_avatar_from_profile".into(),
+                &[profile.to_godot_dictionary().to_variant()],
             );
         }
 
-        let new_avatar_base = Some(profile.to_pb_avatar_base());
+        let new_avatar_base = Some(profile.content.to_pb_avatar_base());
         let avatar_base_component =
             SceneCrdtStateProtoComponents::get_avatar_base(&self.crdt_state);
         let avatar_base_component_value = avatar_base_component
@@ -398,7 +378,7 @@ impl AvatarScene {
                 .put(entity_id, new_avatar_base);
         }
 
-        let new_avatar_equipped_data = Some(profile.to_pb_avatar_equipped_data());
+        let new_avatar_equipped_data = Some(profile.content.to_pb_avatar_equipped_data());
         let avatar_equipped_data_component =
             SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt_state);
         let avatar_equipped_data_value = avatar_equipped_data_component
@@ -420,7 +400,7 @@ impl AvatarScene {
                 .put(entity_id, new_avatar_equipped_data);
         }
 
-        let new_player_identity_data = Some(profile.to_pb_player_identity_data());
+        let new_player_identity_data = Some(profile.content.to_pb_player_identity_data());
         let player_identity_data_component =
             SceneCrdtStateProtoComponents::get_player_identity_data(&self.crdt_state);
         let player_identity_data_value = player_identity_data_component

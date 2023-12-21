@@ -118,6 +118,7 @@ func word_wrap(message: String) -> Array[String]:
 
 func _on_button_clear_pressed():
 	tree_console.clear()
+	_ready()
 
 
 func _on_line_edit_filter_text_changed(new_text):

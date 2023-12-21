@@ -6,7 +6,7 @@ pub mod serialization;
 
 use godot::builtin::{Vector2, Vector3};
 
-use crate::auth::wallet::Wallet;
+use crate::auth::{ethereum_provider::EthereumProvider, wallet::Wallet};
 
 use self::{
     crdt::{DirtyCrdtState, SceneCrdtState},
@@ -85,6 +85,7 @@ pub struct DclScene {
 }
 
 impl DclScene {
+    #[allow(clippy::too_many_arguments)]
     pub fn spawn_new_js_dcl_scene(
         id: SceneId,
         scene_definition: SceneDefinition,
@@ -93,6 +94,7 @@ impl DclScene {
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
         wallet: Wallet,
         testing_mode: bool,
+        ethereum_provider: Arc<EthereumProvider>,
     ) -> Self {
         let (main_sender_to_thread, thread_receive_from_renderer) =
             tokio::sync::mpsc::channel::<RendererResponse>(1);
@@ -113,6 +115,7 @@ impl DclScene {
                     thread_scene_crdt,
                     wallet,
                     testing_mode,
+                    ethereum_provider,
                 )
             })
             .unwrap();

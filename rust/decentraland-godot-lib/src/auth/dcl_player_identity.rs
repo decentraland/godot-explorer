@@ -2,8 +2,10 @@ use ethers::signers::LocalWallet;
 use ethers::types::H160;
 use godot::prelude::*;
 use rand::thread_rng;
+use tokio::task::JoinHandle;
 
 use crate::comms::profile::{LambdaProfiles, UserProfile};
+use crate::dcl::scene_apis::RpcResultSender;
 use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::{RequestResponse, ResponseEnum};
 use crate::scene_runner::tokio_runtime::TokioRuntime;
@@ -12,7 +14,7 @@ use super::auth_identity::create_local_ephemeral;
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
 use super::wallet::{AsH160, Wallet};
-use super::with_browser_and_server::RemoteReportState;
+use super::with_browser_and_server::{remote_send_async, RPCSendableMessage, RemoteReportState};
 
 enum CurrentWallet {
     Remote(RemoteWallet),
@@ -29,6 +31,8 @@ pub struct DclPlayerIdentity {
     remote_report_receiver: tokio::sync::mpsc::Receiver<RemoteReportState>,
 
     profile: Option<UserProfile>,
+
+    try_connect_account_handle: Option<JoinHandle<()>>,
 
     #[var]
     is_guest: bool,
@@ -50,6 +54,7 @@ impl INode for DclPlayerIdentity {
             profile: None,
             base,
             is_guest: false,
+            try_connect_account_handle: None,
         }
     }
 
@@ -195,7 +200,7 @@ impl DclPlayerIdentity {
 
         let instance_id = self.base.instance_id();
         let sender = self.remote_report_sender.clone();
-        handle.spawn(async move {
+        let try_connect_account_handle = handle.spawn(async move {
             let wallet = RemoteWallet::with_auth_identity(sender).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
@@ -216,7 +221,8 @@ impl DclPlayerIdentity {
                         ],
                     );
                 }
-                Err(_) => {
+                Err(err) => {
+                    tracing::error!("error getting wallet {:?}", err);
                     this.call_deferred(
                         "_error_getting_wallet".into(),
                         &["Unknown error".to_variant()],
@@ -224,6 +230,15 @@ impl DclPlayerIdentity {
                 }
             }
         });
+
+        self.try_connect_account_handle = Some(try_connect_account_handle);
+    }
+
+    #[func]
+    fn abort_try_connect_account(&mut self) {
+        if let Some(handle) = self.try_connect_account_handle.take() {
+            handle.abort();
+        }
     }
 
     #[func]
@@ -298,9 +313,7 @@ impl DclPlayerIdentity {
     #[func]
     pub fn get_profile_or_empty(&self) -> Dictionary {
         if let Some(profile) = &self.profile {
-            profile
-                .content
-                .to_godot_dictionary(&self.profile.as_ref().unwrap().base_url)
+            profile.to_godot_dictionary()
         } else {
             Dictionary::default()
         }
@@ -308,6 +321,9 @@ impl DclPlayerIdentity {
 
     #[func]
     pub fn set_default_profile(&mut self) {
+        let mut profile = UserProfile::default();
+        profile.content.user_id = Some(self.get_address_str().to_string());
+
         self.profile = Some(UserProfile::default());
         let dict = self.get_profile_or_empty();
         self.base.call_deferred(
@@ -329,7 +345,8 @@ impl DclPlayerIdentity {
         let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();
 
-        let mut profile = if let Some(profile) = self.profile.clone() {
+        let mut new_profile = UserProfile::from_godot_dictionary(&dict);
+        let current_profile = if let Some(profile) = self.profile.clone() {
             profile
         } else {
             UserProfile {
@@ -339,10 +356,10 @@ impl DclPlayerIdentity {
         };
 
         let eth_address = self.get_address_str().to_string();
-        profile.content.copy_from_godot_dictionary(&dict);
-        profile.version += 1;
-        profile.content.user_id = Some(eth_address.clone());
-        profile.content.eth_address = eth_address;
+        new_profile.version = current_profile.version + 1;
+        new_profile.content.version = new_profile.version as i64;
+        new_profile.content.user_id = Some(eth_address.clone());
+        new_profile.content.eth_address = eth_address;
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
             let ephemeral_auth_chain = self
@@ -353,7 +370,7 @@ impl DclPlayerIdentity {
             handle.spawn(async move {
                 let deploy_data = super::deploy_profile::prepare_deploy_profile(
                     ephemeral_auth_chain.clone(),
-                    profile,
+                    new_profile,
                 )
                 .await;
 
@@ -455,19 +472,11 @@ impl DclPlayerIdentity {
     pub fn _update_profile_from_dictionary(&mut self, dict: Dictionary) {
         let eth_address = self.get_address_str().to_string();
 
-        if self.profile.is_none() {
-            self.profile = Some(UserProfile::default());
-            self.profile.as_mut().unwrap().version = 0;
-        }
+        let mut new_profile = UserProfile::from_godot_dictionary(&dict);
+        new_profile.content.user_id = Some(eth_address.clone());
+        new_profile.content.eth_address = eth_address;
 
-        {
-            let profile = self.profile.as_mut().unwrap();
-            profile.content.copy_from_godot_dictionary(&dict);
-            profile.version += 1;
-            profile.content.user_id = Some(eth_address.clone());
-            profile.content.eth_address = eth_address;
-        }
-
+        self.profile = Some(new_profile);
         self.base.call_deferred(
             "emit_signal".into(),
             &["profile_changed".to_variant(), dict.to_variant()],
@@ -507,5 +516,19 @@ impl DclPlayerIdentity {
         self.profile = None;
         self.base
             .call_deferred("emit_signal".into(), &["logout".to_variant()]);
+    }
+
+    pub fn send_async(
+        &self,
+        body: RPCSendableMessage,
+        response: RpcResultSender<Result<serde_json::Value, String>>,
+    ) {
+        let url_sender = self.remote_report_sender.clone();
+        if let Some(handle) = TokioRuntime::static_clone_handle() {
+            handle.spawn(async move {
+                let result = remote_send_async(body, None, url_sender).await;
+                response.send(result.map_err(|err| err.to_string()));
+            });
+        }
     }
 }

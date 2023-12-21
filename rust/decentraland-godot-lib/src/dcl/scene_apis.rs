@@ -3,6 +3,8 @@ use std::sync::{Arc, RwLock};
 use http::Uri;
 use serde::Serialize;
 
+use crate::auth::with_browser_and_server::RPCSendableMessage;
+
 use super::js::testing::{SceneTestPlan, SceneTestResult};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -164,6 +166,10 @@ pub enum RpcCall {
     },
     SceneTestResult {
         body: SceneTestResult,
+    },
+    SendAsync {
+        body: RPCSendableMessage,
+        response: RpcResultSender<Result<serde_json::Value, String>>,
     },
 }
 

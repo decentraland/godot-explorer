@@ -11,10 +11,7 @@ use zip::ZipArchive;
 use crate::download_file::download_file;
 use crate::export::prepare_templates;
 
-use crate::consts::{
-    BIN_FOLDER, GODOT4_BIN_BASE_URL, PROTOC_BASE_URL, RUST_LIB_PROJECT_FOLDER,
-};
-
+use crate::consts::{BIN_FOLDER, GODOT4_BIN_BASE_URL, PROTOC_BASE_URL, RUST_LIB_PROJECT_FOLDER};
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
@@ -147,8 +144,8 @@ pub fn get_godot_executable_path() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("Godot_v4.2-stable_linux.x86_64".to_string()),
-        ("windows", "x86_64") => Some("Godot_v4.2-stable_win64.exe".to_string()),
+        ("linux", "x86_64") => Some("Godot_v4.2.1-stable_linux.x86_64".to_string()),
+        ("windows", "x86_64") => Some("Godot_v4.2.1-stable_win64.exe".to_string()),
         ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
         _ => None,
     }?;

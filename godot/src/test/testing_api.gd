@@ -68,17 +68,19 @@ func start():
 	prints("parcels_str=" + str(parcels_str))
 
 	var parcels = JSON.parse_string(parcels_str)
-	for pos_str in parcels:
-		var pos = pos_str.split(",")
-		if pos.size() == 2:
-			var parcel_pos: Vector2i = Vector2i(int(pos[0]), int(pos[1]))
+	for pos_array in parcels:
+		if not pos_array is Array:
+			continue
+
+		if pos_array.size() == 2:
+			var parcel_pos: Vector2i = Vector2i(int(pos_array[0]), int(pos_array[1]))
 			scene_tests.push_back(SceneTestItem.new(parcel_pos, ""))
 		else:
-			printerr("Scene to test '" + pos_str + "' not supported for now.")
+			printerr("Scene to test '" + pos_array + "' not supported for now.")
 
 	if scene_tests.is_empty():
 		printerr(
-			'Couldn\'t get any scene to test in the scene-test mode. Please try --scene-test ["52,-52"]'
+			"Couldn't get any scene to test in the scene-test mode. Please try --scene-test [[52,-52]]"
 		)
 		get_tree().quit(1)
 		return
@@ -151,14 +153,17 @@ func async_take_and_compare_snapshot(
 
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 	var viewport = get_viewport()
-	var camera = viewport.get_camera_3d()
-	var previous_camera_position = camera.global_position
-	var previous_camera_rotation = camera.global_rotation
+	var previous_camera = viewport.get_camera_3d()
+
+	var test_camera_3d = Camera3D.new()
+	add_child(test_camera_3d)
+	test_camera_3d.make_current()
+
 	var previous_viewport_size = viewport.size
 
 	viewport.size = screenshot_size
-	camera.global_position = camera_position
-	camera.look_at(camera_target)
+	test_camera_3d.global_position = camera_position
+	test_camera_3d.look_at(camera_target)
 
 	get_node("/root/explorer").set_visible_ui(false)
 	if hide_player:
@@ -170,13 +175,16 @@ func async_take_and_compare_snapshot(
 
 	var viewport_img := viewport.get_texture().get_image()
 
+	#await get_tree().create_timer(10.0).timeout
+
 	get_node("/root/explorer").set_visible_ui(true)
 	if hide_player:
 		get_node("/root/explorer/Player").show()
 
 	viewport.size = previous_viewport_size
-	camera.global_position = previous_camera_position
-	camera.global_rotation = previous_camera_rotation
+	previous_camera.make_current()
+	remove_child(test_camera_3d)
+	test_camera_3d.queue_free()
 
 	var existing_snapshot: Image = null
 	var content_mapping = Global.scene_runner.get_scene_content_mapping(scene_id)
@@ -224,6 +232,7 @@ func dump_test_result_and_get_ok() -> bool:
 	for scene in scene_tests:
 		if scene.test_result.is_empty():
 			ok = false
+			prints("🔴 test result is empty in the scene " + str(scene.parcel_position))
 			continue
 
 		prints(scene.test_result.text)
@@ -250,7 +259,9 @@ func _process(_delta):
 						scene.already_telep = true
 						scene.reset_timeout()
 						test_player_node.global_position = Vector3(
-							scene.parcel_position.x * 16.0, 1.0, -scene.parcel_position.y * 16.0
+							scene.parcel_position.x * 16.0 + 8.0,
+							1.0,
+							-scene.parcel_position.y * 16.0 - 8.0
 						)
 					elif scene.timeout():
 						printerr(
