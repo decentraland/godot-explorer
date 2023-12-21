@@ -22,14 +22,14 @@ var emotes: Array = []
 func _ready():
 	# TODO: this is outdated
 	#avatar.async_update_avatar(
-		#"https://peer.decentraland.org/content",
-		#"Godot User",
-		#body_shape,
-		#eyes_color,
-		#hair_color,
-		#skin_color,
-		#wearables,
-		#emotes
+	#"https://peer.decentraland.org/content",
+	#"Godot User",
+	#body_shape,
+	#eyes_color,
+	#hair_color,
+	#skin_color,
+	#wearables,
+	#emotes
 	#)
 
 

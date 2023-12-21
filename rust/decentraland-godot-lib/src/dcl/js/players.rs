@@ -112,10 +112,8 @@ pub fn get_player_data(user_id: String, crdt_state: &SceneCrdtState) -> Option<U
                     if entity_id == &&SceneEntityId::PLAYER {
                         return true;
                     }
-                } else {
-                    if let Some(data) = entry.value.as_ref() {
-                        return data.address == user_id;
-                    }
+                } else if let Some(data) = entry.value.as_ref() {
+                    return data.address == user_id;
                 }
                 false
             })?;

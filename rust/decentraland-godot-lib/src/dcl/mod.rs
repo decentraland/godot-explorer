@@ -85,6 +85,7 @@ pub struct DclScene {
 }
 
 impl DclScene {
+    #[allow(clippy::too_many_arguments)]
     pub fn spawn_new_js_dcl_scene(
         id: SceneId,
         scene_definition: SceneDefinition,
@@ -114,7 +115,7 @@ impl DclScene {
                     thread_scene_crdt,
                     wallet,
                     testing_mode,
-                    ethereum_provider
+                    ethereum_provider,
                 )
             })
             .unwrap();

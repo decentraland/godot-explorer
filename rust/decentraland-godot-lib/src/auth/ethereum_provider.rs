@@ -7,6 +7,12 @@ pub struct EthereumProvider {
     provider: Mutex<Option<Provider<Ws>>>,
 }
 
+impl Default for EthereumProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EthereumProvider {
     pub fn new() -> Self {
         Self {

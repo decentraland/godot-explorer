@@ -67,9 +67,10 @@ func async_update_avatar_from_profile(profile: Dictionary):
 	avatar_id = profile_content.get("userId", "unknown")
 	if profile_content.get("name", "") != null:
 		avatar_name = profile_content.get("name", "")
-		
-	await async_update_avatar(profile.get("content", {}).get("avatar",{}))
-	
+
+	await async_update_avatar(profile.get("content", {}).get("avatar", {}))
+
+
 func async_update_avatar(avatar: Dictionary):
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
@@ -81,16 +82,16 @@ func async_update_avatar(avatar: Dictionary):
 
 	playing_emote = false
 	set_idle()
-	
+
 	if avatar.get("name", "") != null:
 		avatar_name = avatar.get("name", "")
-		
+
 	label_3d_name.text = avatar_name
 	current_wearables = avatar.get("wearables")
 	current_body_shape = avatar.get("bodyShape")
-	current_eyes_color = Avatar.from_color_object(avatar.get("eyes",{}).get("color", null))
-	current_skin_color = Avatar.from_color_object(avatar.get("skin",{}).get("color", null))
-	current_hair_color = Avatar.from_color_object(avatar.get("hair",{}).get("color", null))
+	current_eyes_color = Avatar.from_color_object(avatar.get("eyes", {}).get("color", null))
+	current_skin_color = Avatar.from_color_object(avatar.get("skin", {}).get("color", null))
+	current_hair_color = Avatar.from_color_object(avatar.get("hair", {}).get("color", null))
 
 	var wearable_to_request := PackedStringArray(current_wearables)
 	wearable_to_request.push_back(current_body_shape)
@@ -103,16 +104,22 @@ func async_update_avatar(avatar: Dictionary):
 	await PromiseUtils.async_awaiter(promise)
 	async_fetch_wearables_dependencies()
 
+
 static func from_color_object(color: Variant, default: Color = Color.WHITE) -> Color:
 	if color is Dictionary:
-		return Color(color.get("r", default.r), color.get("g", default.g), color.get("b", default.b), color.get("a", default.a))
+		return Color(
+			color.get("r", default.r),
+			color.get("g", default.g),
+			color.get("b", default.b),
+			color.get("a", default.a)
+		)
 	return default
-	
+
+
 static func to_color_object(color: Color) -> Dictionary:
-	return { 
-		"color": {"r": color.r, "g": color.g, "b": color.b, "a": color.a}
-	}
-	
+	return {"color": {"r": color.r, "g": color.g, "b": color.b, "a": color.a}}
+
+
 func _add_animation(index: int, animation_name: String):
 	var animation = Global.animation_importer.get_animation_from_gltf(animation_name)
 	global_animation_library.add_animation(animation_name, animation)

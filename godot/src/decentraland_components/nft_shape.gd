@@ -87,9 +87,9 @@ func _set_picture_frame_material(
 
 
 func _set_loading_material(
-	style: NftFrameStyleLoader.NFTFrameStyles, current_frame: Node3D, background_color: Color
+	style: NftFrameStyleLoader.NFTFrameStyles, new_current_frame: Node3D, background_color: Color
 ):
-	var mesh_instance_3d: MeshInstance3D = _get_mesh_instance_3d(current_frame)
+	var mesh_instance_3d: MeshInstance3D = _get_mesh_instance_3d(new_current_frame)
 	if mesh_instance_3d == null:
 		printerr("set nft mesh_instance_3d is null")
 		return

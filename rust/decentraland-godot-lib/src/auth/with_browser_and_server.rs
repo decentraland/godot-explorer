@@ -110,7 +110,7 @@ where
                             } else if let Some(reason) = response.reason {
                                 return Err(anyhow::Error::msg(reason));
                             } else {
-                                return Err(anyhow::Error::msg("invalid response"));
+                                tracing::error!("invalid response ok={:?}", response.ok);
                             }
                         }
                         Err(error) => {
@@ -195,11 +195,7 @@ pub async fn remote_sign_message(
     by_signer: Option<H160>,
     url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
 ) -> Result<(H160, Signature, u64), anyhow::Error> {
-    let by_address = if by_signer.is_some() {
-        Some(format!("{:#x}", by_signer.unwrap()))
-    } else {
-        None
-    };
+    let by_address = by_signer.map(|s| format!("{:#x}", s));
     let b64_message = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(payload);
 
     let req_id = generate_and_report_request(
@@ -227,11 +223,7 @@ pub async fn remote_send_async(
     by_signer: Option<H160>,
     url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
 ) -> Result<serde_json::Value, anyhow::Error> {
-    let by_address = if by_signer.is_some() {
-        Some(format!("{:#x}", by_signer.unwrap()))
-    } else {
-        None
-    };
+    let by_address = by_signer.map(|s| format!("{:#x}", s));
     let req_id = generate_and_report_request(
         RemoteWalletRequest::SendAsync {
             body: message,

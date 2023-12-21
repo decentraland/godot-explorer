@@ -68,7 +68,7 @@ func _ready():
 func _on_profile_changed(new_profile: Dictionary):
 	var profile_content = new_profile.get("content", {})
 	line_edit_name.text = profile_content.get("name")
-	
+
 	var profile_avatar = profile_content.get("avatar", {})
 	avatar_body_shape = profile_avatar.bodyShape
 	avatar_wearables = profile_avatar.wearables
@@ -76,25 +76,27 @@ func _on_profile_changed(new_profile: Dictionary):
 	avatar_hair_color = Avatar.from_color_object(profile_avatar.hair.color)
 	avatar_skin_color = Avatar.from_color_object(profile_avatar.skin.color)
 	avatar_emotes = profile_avatar.emotes
-	
+
 	if primary_player_profile_dictionary.is_empty():
 		primary_player_profile_dictionary = new_profile.duplicate()
-	
+
 	_update_avatar()
 
 
 func _update_avatar():
 	if primary_player_profile_dictionary.is_empty():
 		return
-		
-	var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get("avatar", {})
+
+	var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get(
+		"avatar", {}
+	)
 	profile_avatar["bodyShape"] = avatar_body_shape
 	profile_avatar["eyes"] = Avatar.to_color_object(avatar_eyes_color)
 	profile_avatar["hair"] = Avatar.to_color_object(avatar_hair_color)
 	profile_avatar["skin"] = Avatar.to_color_object(avatar_skin_color)
 	profile_avatar["wearables"] = avatar_wearables
 	profile_avatar["emotes"] = avatar_emotes
-	
+
 	var wearable_body_shape = Global.content_manager.get_wearable(avatar_body_shape)
 
 	# TODO: make this more performant
@@ -190,14 +192,14 @@ func _on_line_edit_name_text_changed(_new_text):
 
 func _on_button_save_profile_pressed():
 	button_save_profile.disabled = true
-	
+
 	var profile_content = primary_player_profile_dictionary.get("content", {})
 	var profile_avatar = profile_content.get("avatar", {})
-	
+
 	profile_content["name"] = line_edit_name.text
 	profile_content["hasConnectedWeb3"] = !Global.player_identity.is_guest
 	profile_avatar["name"] = line_edit_name.text
-	
+
 	Global.player_identity.async_deploy_profile(primary_player_profile_dictionary)
 
 

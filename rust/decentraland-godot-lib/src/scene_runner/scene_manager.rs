@@ -417,14 +417,11 @@ impl SceneManager {
             if scene.dcl_scene.thread_join_handle.is_finished() {
                 if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
                     let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
-                        // The panic payload is a string
                         format!("Thread panicked with: {}", panic_info)
                     } else if let Some(panic_info) = err.downcast_ref::<String>() {
-                        // The panic payload is a String
                         format!("Thread panicked with: {}", panic_info)
                     } else {
-                        // The panic payload is of an unknown type
-                        format!("Thread panicked with an unknown payload")
+                        "Thread panicked with an unknown payload".to_string()
                     };
                     tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
                 }
