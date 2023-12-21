@@ -120,6 +120,7 @@ impl SceneManager {
         let new_scene_id = Scene::new_id();
         let signal_data = (new_scene_id, scene_definition.entity_id.clone());
         let testing_mode_active = DclGlobal::singleton().bind().testing_scene_mode;
+        let ethereum_provider = DclGlobal::singleton().bind().ethereum_provider.clone();
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(
             new_scene_id,
             scene_definition.clone(),
@@ -128,6 +129,7 @@ impl SceneManager {
             self.thread_sender_to_main.clone(),
             wallet,
             testing_mode_active,
+            ethereum_provider,
         );
 
         let new_scene = Scene::new(
@@ -325,6 +327,12 @@ impl SceneManager {
             }
 
             if let SceneState::Alive = scene.state {
+                if scene.dcl_scene.thread_join_handle.is_finished() {
+                    tracing::error!("scene closed without kill signal");
+                    scene_to_remove.insert(*scene_id);
+                    continue;
+                }
+
                 if _process_scene(
                     scene,
                     end_time_us,
@@ -405,6 +413,22 @@ impl SceneManager {
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);
             self.scenes.remove(scene_id);
+
+            if scene.dcl_scene.thread_join_handle.is_finished() {
+                if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
+                    let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
+                        // The panic payload is a string
+                        format!("Thread panicked with: {}", panic_info)
+                    } else if let Some(panic_info) = err.downcast_ref::<String>() {
+                        // The panic payload is a String
+                        format!("Thread panicked with: {}", panic_info)
+                    } else {
+                        // The panic payload is of an unknown type
+                        format!("Thread panicked with an unknown payload")
+                    };
+                    tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
+                }
+            }
 
             self.base.emit_signal(
                 "scene_killed".into(),

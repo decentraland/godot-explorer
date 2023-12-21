@@ -7,7 +7,7 @@ use deno_core::{
 };
 
 use crate::dcl::{
-    components::proto_components::common::Color3,
+    components::{proto_components::common::Color3, SceneEntityId},
     crdt::{SceneCrdtState, SceneCrdtStateProtoComponents},
     scene_apis::{AvatarForUserData, LocalCall, UserData},
 };
@@ -107,9 +107,15 @@ pub fn get_player_data(user_id: String, crdt_state: &SceneCrdtState) -> Option<U
         player_identity_data_component
             .values
             .iter()
-            .find(|(_entity_id, entry)| {
-                if let Some(data) = entry.value.as_ref() {
-                    return data.address == user_id;
+            .find(|(entity_id, entry)| {
+                if user_id.is_empty() {
+                    if entity_id == &&SceneEntityId::PLAYER {
+                        return true;
+                    }
+                } else {
+                    if let Some(data) = entry.value.as_ref() {
+                        return data.address == user_id;
+                    }
                 }
                 false
             })?;

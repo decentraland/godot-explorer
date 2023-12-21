@@ -215,17 +215,14 @@ impl LivekitRoom {
                                 continue;
                             }
 
-                            avatar_scene.update_avatar_by_alias(
-                                peer.alias,
-                                &serialized_profile,
-                                &profile_response.base_url,
-                            );
-
-                            peer.profile = Some(UserProfile {
+                            let profile = UserProfile {
                                 version: incoming_version,
-                                content: serialized_profile,
-                                base_url: profile_response.base_url,
-                            });
+                                content: serialized_profile.clone(),
+                                base_url: profile_response.base_url.clone(),
+                            };
+
+                            avatar_scene.update_avatar_by_alias(peer.alias, &profile);
+                            peer.profile = Some(profile);
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Scene(_scene)) => {}
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Voice(_voice)) => {}

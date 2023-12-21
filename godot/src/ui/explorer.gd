@@ -136,6 +136,7 @@ func _ready():
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
+	Global.player_identity.need_open_url.connect(self._on_need_open_url)
 
 	if not Global.player_identity.try_recover_account(Global.config.session_account):
 		if Global.testing_scene_mode:
@@ -147,6 +148,13 @@ func _ready():
 	# last
 	ui_root.grab_focus.call_deferred()
 
+func _on_need_open_url(url: String, _description: String) -> void:
+	if not Global.player_identity.get_address_str().is_empty():
+		if Global.dcl_android_plugin != null:
+			Global.dcl_android_plugin.showDecentralandMobileToast()
+			Global.dcl_android_plugin.openUrl(url)
+		else:
+			OS.shell_open(url)
 
 func _on_player_logout():
 	# TODO: clean all UI ?

@@ -15,6 +15,13 @@ struct SignResponseData {
     chain_id: u64,
 }
 
+#[derive(Deserialize, Debug)]
+struct RemoteWalletResponse<T> {
+    ok: bool,
+    reason: Option<String>,
+    response: Option<T>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RPCSendableMessage {
     pub jsonrpc: String,
@@ -96,9 +103,15 @@ where
         match response {
             Ok(response) => {
                 if response.status().is_success() {
-                    match response.json::<T>().await {
-                        Ok(response_data) => {
-                            return Ok(response_data);
+                    match response.json::<RemoteWalletResponse<T>>().await {
+                        Ok(response) => {
+                            if let Some(response_data) = response.response {
+                                return Ok(response_data);
+                            } else if let Some(reason) = response.reason {
+                                return Err(anyhow::Error::msg(reason));
+                            } else {
+                                return Err(anyhow::Error::msg("invalid response"));
+                            }
                         }
                         Err(error) => {
                             tracing::error!("error while parsing a task {:?}", error);

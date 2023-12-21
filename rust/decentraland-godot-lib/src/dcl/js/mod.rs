@@ -1,4 +1,5 @@
 pub mod engine;
+pub mod ethereum_controller;
 pub mod events;
 pub mod fetch;
 pub mod players;
@@ -8,6 +9,7 @@ pub mod runtime;
 pub mod testing;
 pub mod websocket;
 
+use crate::auth::ethereum_provider::EthereumProvider;
 use crate::auth::wallet::Wallet;
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
@@ -20,6 +22,7 @@ use super::{RendererResponse, SceneId, SceneResponse};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Duration;
 
 use deno_core::error::JsError;
@@ -66,7 +69,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 9] = [
+    let op_sets: [Vec<deno_core::OpDecl>; 10] = [
         engine::ops(),
         runtime::ops(),
         fetch::ops(),
@@ -76,6 +79,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
         players::ops(),
         events::ops(),
         testing::ops(),
+        ethereum_controller::ops(),
     ];
 
     let mut op_map = HashMap::new();
@@ -124,6 +128,7 @@ pub(crate) fn scene_thread(
     scene_crdt: SharedSceneCrdtState,
     wallet: Wallet,
     testing_mode: bool,
+    ethereum_provider: Arc<EthereumProvider>,
 ) {
     let mut scene_main_crdt = None;
     let main_crdt_file_path = scene_definition.main_crdt_path;
@@ -189,6 +194,7 @@ pub(crate) fn scene_thread(
 
     state.borrow_mut().put(thread_sender_to_main);
     state.borrow_mut().put(thread_receive_from_main);
+    state.borrow_mut().put(ethereum_provider);
 
     state.borrow_mut().put(scene_id);
     state.borrow_mut().put(scene_crdt);

@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use godot::{
     engine::{node::ProcessMode, Engine},
     prelude::*,
 };
 
 use crate::{
-    auth::dcl_player_identity::DclPlayerIdentity,
+    auth::{dcl_player_identity::DclPlayerIdentity, ethereum_provider::EthereumProvider},
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
@@ -55,6 +57,8 @@ pub struct DclGlobal {
     pub testing_scene_mode: bool,
     #[var]
     pub player_identity: Gd<DclPlayerIdentity>,
+
+    pub ethereum_provider: Arc<EthereumProvider>,
 }
 
 #[godot_api]
@@ -100,6 +104,7 @@ impl INode for DclGlobal {
             preview_mode,
             testing_scene_mode,
             player_identity: DclPlayerIdentity::alloc_gd(),
+            ethereum_provider: Arc::new(EthereumProvider::new()),
         }
     }
 }

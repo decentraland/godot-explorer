@@ -11,7 +11,9 @@ var dirty_is_dragging
 
 func _ready():
 	if Global.standalone:
-		avatar.async_update_avatar(Global.config.avatar_profile)
+		pass
+		# TODO: this config no longer exists 
+		#avatar.async_update_avatar(Global.config.avatar_profile)
 
 
 func focus_camera_on(type):

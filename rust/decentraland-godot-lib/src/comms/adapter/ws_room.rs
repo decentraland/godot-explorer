@@ -476,20 +476,20 @@ impl WebSocketRoom {
                                 continue;
                             }
 
-                            self.avatars.bind_mut().update_avatar_by_alias(
-                                update.from_alias,
-                                &serialized_profile,
-                                &profile_response.base_url,
-                            );
+                            let profile = UserProfile {
+                                version: incoming_version,
+                                content: serialized_profile.clone(),
+                                base_url: profile_response.base_url.clone(),
+                            };
+
+                            self.avatars
+                                .bind_mut()
+                                .update_avatar_by_alias(update.from_alias, &profile);
 
                             self.peer_identities
                                 .get_mut(&update.from_alias)
                                 .unwrap()
-                                .profile = Some(UserProfile {
-                                version: incoming_version,
-                                content: serialized_profile,
-                                base_url: profile_response.base_url,
-                            });
+                                .profile = Some(profile);
                         }
                         rfc4::packet::Message::Scene(_scene) => {}
                         rfc4::packet::Message::Voice(_voice) => {}

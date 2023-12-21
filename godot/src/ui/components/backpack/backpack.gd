@@ -13,7 +13,7 @@ var avatar_emotes: Array
 var base_wearable_request_id: int = -1
 var wearable_data: Dictionary = {}
 
-var renderer_avatar_dictionary: Dictionary = {}
+var primary_player_profile_dictionary: Dictionary = {}
 
 var wearable_buttons: Array = []
 
@@ -66,29 +66,35 @@ func _ready():
 
 
 func _on_profile_changed(new_profile: Dictionary):
-	avatar_body_shape = new_profile.body_shape
-	avatar_wearables = new_profile.wearables
-	avatar_eyes_color = new_profile.eyes
-	avatar_hair_color = new_profile.hair
-	avatar_skin_color = new_profile.skin
-	avatar_emotes = new_profile.emotes
-	line_edit_name.text = new_profile.name
-
+	var profile_content = new_profile.get("content", {})
+	line_edit_name.text = profile_content.get("name")
+	
+	var profile_avatar = profile_content.get("avatar", {})
+	avatar_body_shape = profile_avatar.bodyShape
+	avatar_wearables = profile_avatar.wearables
+	avatar_eyes_color = Avatar.from_color_object(profile_avatar.eyes.color)
+	avatar_hair_color = Avatar.from_color_object(profile_avatar.hair.color)
+	avatar_skin_color = Avatar.from_color_object(profile_avatar.skin.color)
+	avatar_emotes = profile_avatar.emotes
+	
+	if primary_player_profile_dictionary.is_empty():
+		primary_player_profile_dictionary = new_profile.duplicate()
+	
 	_update_avatar()
 
 
 func _update_avatar():
-	renderer_avatar_dictionary = {
-		"base_url": "https://peer.decentraland.org/content",
-		"name": "",
-		"body_shape": avatar_body_shape,
-		"eyes": avatar_eyes_color,
-		"hair": avatar_hair_color,
-		"skin": avatar_skin_color,
-		"wearables": avatar_wearables,
-		"emotes": avatar_emotes
-	}
-
+	if primary_player_profile_dictionary.is_empty():
+		return
+		
+	var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get("avatar", {})
+	profile_avatar["bodyShape"] = avatar_body_shape
+	profile_avatar["eyes"] = Avatar.to_color_object(avatar_eyes_color)
+	profile_avatar["hair"] = Avatar.to_color_object(avatar_hair_color)
+	profile_avatar["skin"] = Avatar.to_color_object(avatar_skin_color)
+	profile_avatar["wearables"] = avatar_wearables
+	profile_avatar["emotes"] = avatar_emotes
+	
 	var wearable_body_shape = Global.content_manager.get_wearable(avatar_body_shape)
 
 	# TODO: make this more performant
@@ -101,7 +107,7 @@ func _update_avatar():
 		if wearable_body_shape != null:
 			wearable_button.async_set_wearable(wearable_body_shape)
 
-	avatar_preview.avatar.async_update_avatar(renderer_avatar_dictionary)
+	avatar_preview.avatar.async_update_avatar_from_profile(primary_player_profile_dictionary)
 	button_save_profile.disabled = false
 
 
@@ -184,8 +190,15 @@ func _on_line_edit_name_text_changed(_new_text):
 
 func _on_button_save_profile_pressed():
 	button_save_profile.disabled = true
-	renderer_avatar_dictionary["name"] = line_edit_name.text
-	Global.player_identity.async_deploy_profile(renderer_avatar_dictionary)
+	
+	var profile_content = primary_player_profile_dictionary.get("content", {})
+	var profile_avatar = profile_content.get("avatar", {})
+	
+	profile_content["name"] = line_edit_name.text
+	profile_content["hasConnectedWeb3"] = !Global.player_identity.is_guest
+	profile_avatar["name"] = line_edit_name.text
+	
+	Global.player_identity.async_deploy_profile(primary_player_profile_dictionary)
 
 
 func _on_wearable_panel_equip(wearable_id: String):
@@ -266,9 +279,9 @@ func _on_color_picker_panel_pick_color(color):
 	skin_color_picker.set_color(color)
 	avatar_preview.avatar.update_colors(avatar_eyes_color, avatar_skin_color, avatar_hair_color)
 
-	renderer_avatar_dictionary["eyes"] = avatar_eyes_color
-	renderer_avatar_dictionary["hair"] = avatar_hair_color
-	renderer_avatar_dictionary["skin"] = avatar_skin_color
+	primary_player_profile_dictionary["eyes"] = Avatar.to_color_object(avatar_eyes_color)
+	primary_player_profile_dictionary["hair"] = Avatar.to_color_object(avatar_hair_color)
+	primary_player_profile_dictionary["skin"] = Avatar.to_color_object(avatar_skin_color)
 	button_save_profile.disabled = false
 
 

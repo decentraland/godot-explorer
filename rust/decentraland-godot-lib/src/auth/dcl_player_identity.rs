@@ -313,9 +313,7 @@ impl DclPlayerIdentity {
     #[func]
     pub fn get_profile_or_empty(&self) -> Dictionary {
         if let Some(profile) = &self.profile {
-            profile
-                .content
-                .to_godot_dictionary(&self.profile.as_ref().unwrap().base_url)
+            profile.to_godot_dictionary()
         } else {
             Dictionary::default()
         }
@@ -344,7 +342,8 @@ impl DclPlayerIdentity {
         let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();
 
-        let mut profile = if let Some(profile) = self.profile.clone() {
+        let mut new_profile = UserProfile::from_godot_dictionary(&dict);
+        let current_profile = if let Some(profile) = self.profile.clone() {
             profile
         } else {
             UserProfile {
@@ -354,10 +353,10 @@ impl DclPlayerIdentity {
         };
 
         let eth_address = self.get_address_str().to_string();
-        profile.content.copy_from_godot_dictionary(&dict);
-        profile.version += 1;
-        profile.content.user_id = Some(eth_address.clone());
-        profile.content.eth_address = eth_address;
+        new_profile.version = current_profile.version + 1;
+        new_profile.content.version = new_profile.version as i64;
+        new_profile.content.user_id = Some(eth_address.clone());
+        new_profile.content.eth_address = eth_address;
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
             let ephemeral_auth_chain = self
@@ -368,7 +367,7 @@ impl DclPlayerIdentity {
             handle.spawn(async move {
                 let deploy_data = super::deploy_profile::prepare_deploy_profile(
                     ephemeral_auth_chain.clone(),
-                    profile,
+                    new_profile,
                 )
                 .await;
 
@@ -470,19 +469,11 @@ impl DclPlayerIdentity {
     pub fn _update_profile_from_dictionary(&mut self, dict: Dictionary) {
         let eth_address = self.get_address_str().to_string();
 
-        if self.profile.is_none() {
-            self.profile = Some(UserProfile::default());
-            self.profile.as_mut().unwrap().version = 0;
-        }
+        let mut new_profile = UserProfile::from_godot_dictionary(&dict);
+        new_profile.content.user_id = Some(eth_address.clone());
+        new_profile.content.eth_address = eth_address;
 
-        {
-            let profile = self.profile.as_mut().unwrap();
-            profile.content.copy_from_godot_dictionary(&dict);
-            profile.version += 1;
-            profile.content.user_id = Some(eth_address.clone());
-            profile.content.eth_address = eth_address;
-        }
-
+        self.profile = Some(new_profile);
         self.base.call_deferred(
             "emit_signal".into(),
             &["profile_changed".to_variant(), dict.to_variant()],
