@@ -64,7 +64,11 @@ func _unset_avatar_modifier_area():
 
 func async_update_avatar_from_profile(profile: Dictionary):
 	var profile_content: Dictionary = profile.get("content", {})
-	avatar_id = profile_content.get("userId", "unknown")
+	var id = profile_content.get("userId", "unknown")
+	if id == null:
+		id = "unknown"
+
+	avatar_id = id
 	if profile_content.get("name", "") != null:
 		avatar_name = profile_content.get("name", "")
 

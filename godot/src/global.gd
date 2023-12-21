@@ -10,8 +10,10 @@ enum CameraMode {
 
 # Only for debugging purpose, Godot editor doesn't include a custom param debugging
 const FORCE_TEST = false
-const FORCE_TEST_ARG = '["52,-52"]'
-const FORCE_TEST_REALM = "https://sdilauro.github.io/dae-unit-tests/dae-unit-tests"
+const FORCE_TEST_ARG = "[[52,-52],[52,-54],[52,-56],[52,-58],[52,-60],[52,-62],[52,-64],[52,-66],[52,-68],[54,-52],[54,-54],[54,-56],[54,-58],[54,-60],[54,-62]]"
+const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests"
+#const FORCE_TEST_ARG = "[[52,-64]]"
+#const FORCE_TEST_REALM = "http://localhost:8000"
 
 ## Global classes (singleton pattern)
 var content_manager: ContentManager

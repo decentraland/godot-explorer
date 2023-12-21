@@ -321,6 +321,9 @@ impl DclPlayerIdentity {
 
     #[func]
     pub fn set_default_profile(&mut self) {
+        let mut profile = UserProfile::default();
+        profile.content.user_id = Some(self.get_address_str().to_string());
+
         self.profile = Some(UserProfile::default());
         let dict = self.get_profile_or_empty();
         self.base.call_deferred(

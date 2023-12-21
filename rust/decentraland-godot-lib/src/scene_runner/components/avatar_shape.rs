@@ -33,6 +33,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     node_3d.remove_child(avatar_node);
                 }
             } else if let Some(new_value) = new_value {
+                // TODO: make dictionary from PbAvatarShape as SerializedProfile
                 let mut dictionary = Dictionary::new();
                 let eyes = new_value.eye_color.as_ref().unwrap_or(
                     &crate::dcl::components::proto_components::common::Color3 {

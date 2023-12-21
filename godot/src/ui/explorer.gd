@@ -138,12 +138,11 @@ func _ready():
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 	Global.player_identity.need_open_url.connect(self._on_need_open_url)
 
-	if not Global.player_identity.try_recover_account(Global.config.session_account):
-		if Global.testing_scene_mode:
-			Global.player_identity.create_guest_account()
-		else:
-			Global.scene_runner.set_pause(true)
-			ui_root.add_child(sign_in_resource.instantiate())
+	if Global.testing_scene_mode:
+		Global.player_identity.create_guest_account()
+	elif not Global.player_identity.try_recover_account(Global.config.session_account):
+		Global.scene_runner.set_pause(true)
+		ui_root.add_child(sign_in_resource.instantiate())
 
 	# last
 	ui_root.grab_focus.call_deferred()
@@ -380,12 +379,10 @@ func set_visible_ui(value: bool):
 	if value:
 		ui_root.show()
 		voice_chat_ui.show()
-
-		Global.scene_runner.base_ui.reparent(ui_root)
-		ui_root.move_child(Global.scene_runner.base_ui, last_index_scene_ui_root)
+		var ui_node = ui_root.get_parent().get_node("scenes_ui")
+		ui_node.reparent(ui_root)
 	else:
 		ui_root.hide()
 		voice_chat_ui.hide()
-
-		last_index_scene_ui_root = Global.scene_runner.base_ui.get_index()
-		Global.scene_runner.base_ui.reparent(ui_root.get_parent())
+		var ui_node = ui_root.get_node("scenes_ui")
+		ui_node.reparent(ui_root.get_parent())

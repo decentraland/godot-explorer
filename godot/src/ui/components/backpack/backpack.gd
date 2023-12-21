@@ -75,7 +75,9 @@ func _on_profile_changed(new_profile: Dictionary):
 	avatar_eyes_color = Avatar.from_color_object(profile_avatar.eyes.color)
 	avatar_hair_color = Avatar.from_color_object(profile_avatar.hair.color)
 	avatar_skin_color = Avatar.from_color_object(profile_avatar.skin.color)
-	avatar_emotes = profile_avatar.emotes
+
+	if profile_avatar.emotes != null:
+		avatar_emotes = profile_avatar.emotes
 
 	if primary_player_profile_dictionary.is_empty():
 		primary_player_profile_dictionary = new_profile.duplicate()
