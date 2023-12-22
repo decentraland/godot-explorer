@@ -1,3 +1,4 @@
+pub mod internal_player_data;
 pub mod material;
 pub mod proto_components;
 pub mod transform_and_parent;
@@ -79,6 +80,9 @@ impl std::fmt::Display for SceneEntityId {
 
 impl SceneComponentId {
     pub const TRANSFORM: SceneComponentId = SceneComponentId(1);
+
+    // Custom GODOT implementation components
+    pub const INTERNAL_PLAYER_DATA: SceneComponentId = SceneComponentId(101);
 }
 
 include!(concat!(env!("OUT_DIR"), "/components_enum.gen.rs"));

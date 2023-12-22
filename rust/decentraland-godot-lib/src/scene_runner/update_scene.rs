@@ -117,11 +117,21 @@ pub fn _process_scene(
                         None
                     };
 
+                    let primary_player_inside = if let SceneType::Parcel = scene.scene_type {
+                        *current_parcel_scene_id == scene.scene_id
+                    } else {
+                        true
+                    };
+
                     DclGlobal::singleton()
                         .bind()
                         .avatars
                         .bind()
-                        .first_sync_crdt_state(crdt_state, filter_by_scene_id);
+                        .first_sync_crdt_state(
+                            crdt_state,
+                            filter_by_scene_id,
+                            primary_player_inside,
+                        );
                 }
 
                 false

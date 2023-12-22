@@ -42,10 +42,17 @@ pub async fn prepare_deploy_profile(
         .ok_or(anyhow!("no snapshots"))?
         .clone();
 
+    let user_id = profile
+        .content
+        .user_id
+        .as_ref()
+        .unwrap_or(&profile.content.eth_address)
+        .clone();
+
     let deployment = serde_json::to_string(&Deployment {
         version: "v3",
         ty: "profile",
-        pointers: vec![profile.content.eth_address.clone()],
+        pointers: vec![user_id],
         timestamp: unix_time,
         content: vec![
             TypedIpfsRef {

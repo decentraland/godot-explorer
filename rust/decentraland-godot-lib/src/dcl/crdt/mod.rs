@@ -15,7 +15,8 @@ use self::{
 };
 
 use super::components::{
-    proto_components, transform_and_parent::DclTransformAndParent, SceneComponentId, SceneEntityId,
+    internal_player_data::InternalPlayerData, proto_components,
+    transform_and_parent::DclTransformAndParent, SceneComponentId, SceneEntityId,
 };
 
 #[derive(Debug)]
@@ -55,6 +56,8 @@ impl SceneCrdtState {
         };
         crdt_state.insert_lww_component::<DclTransformAndParent>(SceneComponentId::TRANSFORM);
         crdt_state
+            .insert_lww_component::<InternalPlayerData>(SceneComponentId::INTERNAL_PLAYER_DATA);
+        crdt_state
     }
 
     fn insert_lww_component<T: 'static + Send>(
@@ -91,6 +94,10 @@ impl SceneCrdtState {
             SceneComponentId::TRANSFORM => self
                 .get_unknown_lww_component::<LastWriteWins<DclTransformAndParent>>(
                     SceneComponentId::TRANSFORM,
+                ),
+            SceneComponentId::INTERNAL_PLAYER_DATA => self
+                .get_unknown_lww_component::<LastWriteWins<InternalPlayerData>>(
+                    SceneComponentId::INTERNAL_PLAYER_DATA,
                 ),
             _ => None,
         }
@@ -134,6 +141,10 @@ impl SceneCrdtState {
             SceneComponentId::TRANSFORM => self
                 .get_unknown_lww_component_mut::<LastWriteWins<DclTransformAndParent>>(
                     SceneComponentId::TRANSFORM,
+                ),
+            SceneComponentId::INTERNAL_PLAYER_DATA => self
+                .get_unknown_lww_component_mut::<LastWriteWins<InternalPlayerData>>(
+                    SceneComponentId::INTERNAL_PLAYER_DATA,
                 ),
             _ => None,
         }
@@ -251,6 +262,22 @@ impl SceneCrdtState {
             .get(&SceneComponentId::TRANSFORM)
             .unwrap()
             .downcast_ref::<LastWriteWins<DclTransformAndParent>>()
+            .unwrap()
+    }
+
+    pub fn get_internal_player_data_mut(&mut self) -> &mut LastWriteWins<InternalPlayerData> {
+        self.components
+            .get_mut(&SceneComponentId::INTERNAL_PLAYER_DATA)
+            .unwrap()
+            .downcast_mut::<LastWriteWins<InternalPlayerData>>()
+            .unwrap()
+    }
+
+    pub fn get_internal_player_data(&self) -> &LastWriteWins<InternalPlayerData> {
+        self.components
+            .get(&SceneComponentId::INTERNAL_PLAYER_DATA)
+            .unwrap()
+            .downcast_ref::<LastWriteWins<InternalPlayerData>>()
             .unwrap()
     }
 

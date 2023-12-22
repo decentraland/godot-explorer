@@ -100,36 +100,47 @@ pub struct SerializedProfile {
 
 impl Default for SerializedProfile {
     fn default() -> Self {
-        let avatar = serde_json::from_str("
-            {
-                \"bodyShape\":\"urn:decentraland:off-chain:base-avatars:BaseFemale\",
-                \"wearables\":[
-                    \"urn:decentraland:off-chain:base-avatars:f_sweater\",
-                    \"urn:decentraland:off-chain:base-avatars:f_jeans\",
-                    \"urn:decentraland:off-chain:base-avatars:bun_shoes\",
-                    \"urn:decentraland:off-chain:base-avatars:standard_hair\",
-                    \"urn:decentraland:off-chain:base-avatars:f_eyes_01\",
-                    \"urn:decentraland:off-chain:base-avatars:f_eyebrows_00\",
-                    \"urn:decentraland:off-chain:base-avatars:f_mouth_00\"
-                ],
-                \"snapshots\": {
-                    \"body\": \"bafkreigxesh5owgy4vreca65nh33zqw7br6haokkltmzg3mn22g5whcfbq\",
-                    \"face256\": \"bafkreibykc3l7ai5z5zik7ypxlqetgtmiepr42al6jcn4yovdgezycwa2y\"
+        let avatar = AvatarWireFormat {
+            name: Some("Godot User".into()),
+            emotes: Some(vec![]),
+            body_shape: Some("urn:decentraland:off-chain:base-avatars:BaseFemale".into()),
+            wearables: vec![
+                "urn:decentraland:off-chain:base-avatars:f_sweater".into(),
+                "urn:decentraland:off-chain:base-avatars:f_jeans".into(),
+                "urn:decentraland:off-chain:base-avatars:bun_shoes".into(),
+                "urn:decentraland:off-chain:base-avatars:standard_hair".into(),
+                "urn:decentraland:off-chain:base-avatars:f_eyes_01".into(),
+                "urn:decentraland:off-chain:base-avatars:f_eyebrows_00".into(),
+                "urn:decentraland:off-chain:base-avatars:f_mouth_00".into(),
+            ],
+            snapshots: Some(AvatarSnapshots {
+                body: "bafkreigxesh5owgy4vreca65nh33zqw7br6haokkltmzg3mn22g5whcfbq".into(),
+                face256: "bafkreibykc3l7ai5z5zik7ypxlqetgtmiepr42al6jcn4yovdgezycwa2y".into(),
+            }),
+            eyes: Some(AvatarColor {
+                color: AvatarColor3 {
+                    r: 0.3,
+                    g: 0.22,
+                    b: 0.99,
                 },
-                \"eyes\":{
-                    \"color\":{\"r\":0.3,\"g\":0.2235294133424759,\"b\":0.99,\"a\":1}
+            }),
+            hair: Some(AvatarColor {
+                color: AvatarColor3 {
+                    r: 0.596,
+                    g: 0.372,
+                    b: 0.215,
                 },
-                \"hair\":{
-                    \"color\":{\"r\":0.5960784554481506,\"g\":0.37254902720451355,\"b\":0.21568627655506134,\"a\":1}
+            }),
+            skin: Some(AvatarColor {
+                color: AvatarColor3 {
+                    r: 0.490,
+                    g: 0.364,
+                    b: 0.278,
                 },
-                \"skin\":{
-                    \"color\":{\"r\":0.4901960790157318,\"g\":0.364705890417099,\"b\":0.27843138575553894,\"a\":1}
-                }
-            }
-        ").unwrap();
-
+            }),
+        };
         Self {
-            user_id: Default::default(),
+            user_id: Some("0x0000000000000000000000000000000000000000".into()),
             name: "Godot User".to_string(),
             description: Default::default(),
             version: 1,
@@ -147,6 +158,13 @@ impl Default for SerializedProfile {
 }
 
 impl SerializedProfile {
+    pub fn get_user_id(&self) -> String {
+        self.user_id
+            .as_ref()
+            .unwrap_or(&self.eth_address)
+            .to_owned()
+    }
+
     pub fn to_pb_avatar_base(&self) -> PbAvatarBase {
         PbAvatarBase {
             skin_color: self.avatar.skin.map(|c| Color3::from(&c)),
@@ -163,7 +181,7 @@ impl SerializedProfile {
     }
     pub fn to_pb_player_identity_data(&self) -> PbPlayerIdentityData {
         PbPlayerIdentityData {
-            address: self.user_id.clone().unwrap_or("unknown".to_owned()),
+            address: self.get_user_id(),
             is_guest: !self.has_connected_web3.as_ref().unwrap_or(&false),
         }
     }

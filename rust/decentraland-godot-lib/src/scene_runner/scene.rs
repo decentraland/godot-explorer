@@ -11,6 +11,7 @@ use godot::{
 use crate::{
     dcl::{
         components::{
+            internal_player_data::InternalPlayerData,
             material::DclMaterial,
             proto_components::sdk::components::{
                 common::RaycastHit, PbAvatarBase, PbAvatarEmoteCommand, PbAvatarEquippedData,
@@ -142,6 +143,7 @@ pub enum GlobalSceneType {
 
 #[derive(Default)]
 pub struct SceneAvatarUpdates {
+    pub internal_player_data: HashMap<SceneEntityId, InternalPlayerData>,
     pub transform: HashMap<SceneEntityId, Option<DclTransformAndParent>>,
     pub player_identity_data: HashMap<SceneEntityId, PbPlayerIdentityData>,
     pub avatar_base: HashMap<SceneEntityId, PbAvatarBase>,
