@@ -78,6 +78,35 @@ impl DclAvatar {
         self.update_parcel_position(self.lerp_state.target_position);
     }
 
+    // This function is called when a parcel scene is created,
+    //  it handles the corner case where the avatar is already in the parcel
+    //  that is being created
+    pub fn on_parcel_scenes_changed(&mut self) {
+        let godot_parcel_position = self.base.get_global_position() / 16.0;
+        let parcel_position = Vector2i::new(
+            f32::floor(godot_parcel_position.x) as i32,
+            f32::floor(-godot_parcel_position.z) as i32,
+        );
+
+        let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
+        let scene_id: i32 = scene_runner
+            .bind()
+            .get_scene_id_by_parcel_position(parcel_position);
+        let prev_scene_id = self.current_parcel_scene_id;
+
+        if prev_scene_id != scene_id {
+            self.current_parcel_scene_id = scene_id;
+            self.base.call_deferred(
+                "emit_signal".into(),
+                &[
+                    "change_scene_id".to_variant(),
+                    scene_id.to_variant(),
+                    prev_scene_id.to_variant(),
+                ],
+            );
+        }
+    }
+
     #[func]
     pub fn update_parcel_position(&mut self, position: Vector3) -> bool {
         let godot_parcel_position = position / 16.0;
@@ -114,7 +143,7 @@ impl DclAvatar {
                 );
             }
             return true;
-        } else if self.current_parcel_scene_id == -1 {
+        } else if self.current_parcel_scene_id == SceneId::INVALID.0 {
             let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
             let scene_id: i32 = scene_runner
                 .bind()

@@ -2,6 +2,7 @@ use crate::{
     auth::wallet::Wallet,
     dcl::{
         components::{
+            internal_player_data::InternalPlayerData,
             proto_components::{
                 common::BorderRect,
                 sdk::components::{
@@ -651,6 +652,11 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(true);
             }
 
+            scene
+                .avatar_scene_updates
+                .internal_player_data
+                .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: false });
+
             self.base_ui
                 .remove_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
         }
@@ -667,6 +673,11 @@ impl SceneManager {
             for (_, video_player_node) in scene.video_players.iter_mut() {
                 video_player_node.bind_mut().set_muted(false);
             }
+
+            scene
+                .avatar_scene_updates
+                .internal_player_data
+                .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: true });
 
             self.base_ui
                 .add_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());

@@ -278,7 +278,7 @@ impl EventPlayerState {
     fn new(crdt_state: &SceneCrdtState) -> Self {
         let player_identity_data_component =
             SceneCrdtStateProtoComponents::get_player_identity_data(crdt_state);
-        let transform_component = crdt_state.get_transform();
+        let internal_player_data_component = crdt_state.get_internal_player_data();
 
         let current_players =
             HashMap::from_iter(player_identity_data_component.values.iter().filter_map(
@@ -290,15 +290,20 @@ impl EventPlayerState {
                 },
             ));
 
-        let inside_scene = HashSet::from_iter(transform_component.values.iter().filter_map(
-            |(entity_id, value)| {
-                if value.value.is_some() {
-                    Some(*entity_id)
-                } else {
-                    None
-                }
-            },
-        ));
+        let inside_scene =
+            HashSet::from_iter(internal_player_data_component.values.iter().filter_map(
+                |(entity_id, value)| {
+                    if let Some(internal_player_data) = value.value.as_ref() {
+                        if internal_player_data.inside {
+                            Some(*entity_id)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                },
+            ));
         Self {
             current_players,
             inside_scene,
@@ -503,22 +508,32 @@ pub fn process_events_players_stateful(
     let player_entered_scene_sender = op_state.try_take::<EventSender<PlayerEnteredScene>>();
     let player_left_scene_sender = op_state.try_take::<EventSender<PlayerLeftScene>>();
 
-    let transform_component_dirty = dirty_crdt_state.lww.get(&SceneComponentId::TRANSFORM);
-    let transform_component = crdt_state.get_transform();
+    let internal_player_data_dirty = dirty_crdt_state
+        .lww
+        .get(&SceneComponentId::INTERNAL_PLAYER_DATA);
+    let internal_player_data_component = crdt_state.get_internal_player_data();
 
-    if let Some(transform_component_dirty) = transform_component_dirty {
-        for entity_id in transform_component_dirty {
-            let value_exists = {
-                if let Some(value) = transform_component.values.get(entity_id).as_ref() {
-                    value.value.is_some()
+    if let Some(internal_player_data_dirty) = internal_player_data_dirty {
+        for entity_id in internal_player_data_dirty {
+            let entity_is_notified_as_inside = {
+                if let Some(value) = internal_player_data_component
+                    .values
+                    .get(entity_id)
+                    .as_ref()
+                {
+                    if let Some(internal_player_data_value) = value.value.as_ref() {
+                        internal_player_data_value.inside
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 }
             };
             let entity_is_inside = events_state.inside_scene.contains(entity_id);
 
-            if value_exists != entity_is_inside {
-                if value_exists {
+            if entity_is_notified_as_inside != entity_is_inside {
+                if entity_is_notified_as_inside {
                     events_state.inside_scene.insert(*entity_id);
 
                     if let Some(user_id) = events_state.current_players.get(entity_id).cloned() {

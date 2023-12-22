@@ -41,6 +41,13 @@ pub fn update_avatar_scene_updates(scene: &mut Scene, crdt_state: &mut SceneCrdt
         }
     }
 
+    {
+        let internal_player_data_component = crdt_state.get_internal_player_data_mut();
+        for (entity_id, value) in scene.avatar_scene_updates.internal_player_data.drain() {
+            internal_player_data_component.put(entity_id, Some(value));
+        }
+    }
+
     // {
     //     let avatar_emote_command_component =
     //         SceneCrdtStateProtoComponents::get_avatar_emote_command_mut(crdt_state);

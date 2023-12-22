@@ -67,7 +67,7 @@ async fn op_get_connected_players(op_state: Rc<RefCell<OpState>>) -> Result<Vec<
 pub fn get_players(crdt_state: &SceneCrdtState, only_in_scene: bool) -> Vec<String> {
     let player_identity_data_component =
         SceneCrdtStateProtoComponents::get_player_identity_data(crdt_state);
-    let transform_component = crdt_state.get_transform();
+    let internal_player_data = crdt_state.get_internal_player_data();
 
     player_identity_data_component
         .values
@@ -76,13 +76,16 @@ pub fn get_players(crdt_state: &SceneCrdtState, only_in_scene: bool) -> Vec<Stri
             let Some(_) = entry.value.as_ref() else {
                 return false;
             };
-            let Some(transform_entry) = transform_component.values.get(entity_id) else {
+            let Some(internal_player_data_entry) = internal_player_data.values.get(entity_id)
+            else {
                 return false;
             };
             if only_in_scene {
-                let Some(_) = transform_entry.value.as_ref() else {
+                let Some(value) = internal_player_data_entry.value.as_ref() else {
                     return false;
                 };
+
+                return value.inside;
             }
             true
         })

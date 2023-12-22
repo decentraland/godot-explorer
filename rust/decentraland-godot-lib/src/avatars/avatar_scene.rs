@@ -8,8 +8,8 @@ use crate::{
     comms::profile::UserProfile,
     dcl::{
         components::{
-            proto_components::kernel::comms::rfc4, transform_and_parent::DclTransformAndParent,
-            SceneEntityId,
+            internal_player_data::InternalPlayerData, proto_components::kernel::comms::rfc4,
+            transform_and_parent::DclTransformAndParent, SceneEntityId,
         },
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
@@ -50,6 +50,13 @@ impl INode for AvatarScene {
             avatar_address: HashMap::new(),
             last_updated_profile: HashMap::new(),
         }
+    }
+
+    fn ready(&mut self) {
+        DclGlobal::singleton().bind_mut().scene_runner.connect(
+            "scene_spawned".into(),
+            self.base.callable("on_scene_spawned"),
+        );
     }
 }
 
@@ -174,6 +181,13 @@ impl AvatarScene {
     }
 
     #[func]
+    pub fn on_scene_spawned(&mut self) {
+        for (_, avatar) in self.avatar_godot_scene.iter_mut() {
+            avatar.bind_mut().on_parcel_scenes_changed();
+        }
+    }
+
+    #[func]
     fn on_avatar_changed_scene(&self, scene_id: i32, prev_scene_id: i32, avatar_entity_id: i32) {
         let scene_id = SceneId(scene_id);
         let prev_scene_id = SceneId(prev_scene_id);
@@ -190,6 +204,10 @@ impl AvatarScene {
                 .avatar_scene_updates
                 .transform
                 .insert(avatar_entity_id, None);
+            prev_scene
+                .avatar_scene_updates
+                .internal_player_data
+                .insert(avatar_entity_id, InternalPlayerData { inside: false });
         }
 
         if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
@@ -203,6 +221,11 @@ impl AvatarScene {
                 .avatar_scene_updates
                 .transform
                 .insert(avatar_entity_id, Some(dcl_transform.clone()));
+
+            scene
+                .avatar_scene_updates
+                .internal_player_data
+                .insert(avatar_entity_id, InternalPlayerData { inside: true });
         }
     }
 }
@@ -241,6 +264,8 @@ impl AvatarScene {
             self.base.remove_child(avatar.clone().upcast());
 
             self.avatar_address.retain(|_, v| *v != alias);
+
+            self.last_updated_profile.remove(&entity_id);
 
             avatar.queue_free();
 
@@ -469,6 +494,7 @@ impl AvatarScene {
         &self,
         target_crdt_state: &mut SceneCrdtState,
         filter_by_scene_id: Option<SceneId>,
+        primary_player_inside: bool,
     ) {
         for entity_number in Self::FROM_ENTITY_ID..Self::MAX_ENTITY_ID {
             let (local_version, local_live) =
@@ -520,6 +546,14 @@ impl AvatarScene {
                 );
             }
 
+            let target_internal_player_data = target_crdt_state.get_internal_player_data_mut();
+            target_internal_player_data.put(
+                *entity_id,
+                Some(InternalPlayerData {
+                    inside: !null_transform,
+                }),
+            );
+
             let target_player_identity_data =
                 SceneCrdtStateProtoComponents::get_player_identity_data_mut(target_crdt_state);
             sync_crdt_lww_component!(
@@ -560,6 +594,14 @@ impl AvatarScene {
             entity_id,
             target_avatar_equipped_data,
             local_avatar_equipped_data
+        );
+
+        let target_internal_player_data = target_crdt_state.get_internal_player_data_mut();
+        target_internal_player_data.put(
+            *entity_id,
+            Some(InternalPlayerData {
+                inside: primary_player_inside,
+            }),
         );
     }
 }
