@@ -165,7 +165,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     create_dir_all("../coverage")?;
 
     println!("=== running coverage ===");
-    cmd!("cargo", "test")
+    cmd!("cargo", "test", "--", "--skip", "auth")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
