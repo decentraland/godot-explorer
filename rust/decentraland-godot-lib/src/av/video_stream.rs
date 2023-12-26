@@ -5,10 +5,12 @@ use godot::{
 };
 use tracing::{debug, warn};
 
+use crate::dcl::components::proto_components::sdk::components::PbVideoEvent;
+
 use super::{
     audio_context::{AudioContext, AudioError, AudioSink},
     ffmpeg_util::InputWrapper,
-    stream_processor::{process_streams, AVCommand},
+    stream_processor::{process_streams, AVCommand, StreamStateData},
     video_context::{VideoContext, VideoError},
 };
 
@@ -25,6 +27,7 @@ pub struct VideoSink {
     pub current_time: f64,
     pub length: Option<f64>,
     pub rate: Option<f64>,
+    pub stream_data_state_receiver: tokio::sync::mpsc::Receiver<StreamStateData>,
 }
 
 pub fn av_sinks(
@@ -36,6 +39,7 @@ pub fn av_sinks(
     wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,
 ) -> (Option<VideoSink>, AudioSink) {
     let (command_sender, command_receiver) = tokio::sync::mpsc::channel(10);
+    let (stream_data_state_sender, stream_data_state_receiver) = tokio::sync::mpsc::channel(10);
 
     spawn_av_thread(
         command_receiver,
@@ -43,6 +47,7 @@ pub fn av_sinks(
         texture.clone(),
         audio_stream_player,
         wait_for_resource,
+        stream_data_state_sender,
     );
 
     if playing {
@@ -61,6 +66,7 @@ pub fn av_sinks(
             current_time: 0.0,
             length: None,
             rate: None,
+            stream_data_state_receiver,
         }),
         AudioSink { command_sender },
     )
@@ -72,6 +78,7 @@ pub fn spawn_av_thread(
     tex: Option<Gd<ImageTexture>>,
     audio_stream_player: Gd<AudioStreamPlayer>,
     wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,
+    sink: tokio::sync::mpsc::Sender<StreamStateData>,
 ) {
     let video_instance_id = tex.map(|value| value.instance_id());
     let audio_stream_player_instance_id = audio_stream_player.instance_id();
@@ -84,6 +91,7 @@ pub fn spawn_av_thread(
                 video_instance_id,
                 audio_stream_player_instance_id,
                 wait_for_resource,
+                sink,
             )
         })
         .unwrap();
@@ -95,11 +103,18 @@ fn av_thread(
     tex: Option<InstanceId>,
     audio_stream: InstanceId,
     wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,
+    sink: tokio::sync::mpsc::Sender<StreamStateData>,
 ) {
     let tex = tex.map(Gd::from_instance_id);
     let audio_stream_player: Gd<AudioStreamPlayer> = Gd::from_instance_id(audio_stream);
-    if let Err(error) = av_thread_inner(commands, path, tex, audio_stream_player, wait_for_resource)
-    {
+    if let Err(error) = av_thread_inner(
+        commands,
+        path,
+        tex,
+        audio_stream_player,
+        wait_for_resource,
+        sink,
+    ) {
         warn!("av error: {error}");
     } else {
         debug!("av closed");
@@ -112,6 +127,7 @@ pub fn av_thread_inner(
     texture: Option<Gd<ImageTexture>>,
     audio_stream_player: Gd<AudioStreamPlayer>,
     wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,
+    sink: tokio::sync::mpsc::Sender<StreamStateData>,
 ) -> Result<(), String> {
     if let Some(wait_for_resource_receiver) = wait_for_resource {
         match wait_for_resource_receiver.blocking_recv() {
@@ -160,12 +176,12 @@ pub fn av_thread_inner(
 
     match (video_context, audio_context) {
         (None, None) => Ok(()),
-        (None, Some(mut ac)) => process_streams(input_context, &mut [&mut ac], commands)
+        (None, Some(mut ac)) => process_streams(input_context, &mut [&mut ac], commands, sink)
             .map_err(|e| format!("{:?} on line {}", e, line!())),
-        (Some(mut vc), None) => process_streams(input_context, &mut [&mut vc], commands)
+        (Some(mut vc), None) => process_streams(input_context, &mut [&mut vc], commands, sink)
             .map_err(|e| format!("{:?} on line {}", e, line!())),
         (Some(mut vc), Some(mut ac)) => {
-            process_streams(input_context, &mut [&mut vc, &mut ac], commands)
+            process_streams(input_context, &mut [&mut vc, &mut ac], commands, sink)
                 .map_err(|e| format!("{:?} on line {}", e, line!()))
         }
     }
