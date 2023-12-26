@@ -83,6 +83,7 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
             RpcCall::SceneTestPlan { body } => {
                 tracing::info!("SceneTestPlan: {:?}", body);
                 scene.scene_tests = body.tests.iter().map(|v| (v.name.clone(), None)).collect();
+                scene.scene_test_plan_received = true;
             }
             RpcCall::SceneTestResult { body } => {
                 tracing::info!("SceneTestResult: {:?}", body);

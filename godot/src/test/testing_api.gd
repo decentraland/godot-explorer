@@ -63,7 +63,7 @@ func start():
 
 	var parcels_str: String = Global.FORCE_TEST_ARG
 	if not Global.FORCE_TEST:
-		args[scene_test_index + 1].replace("'", '"')
+		parcels_str = args[scene_test_index + 1].replace("'", '"')
 
 	prints("parcels_str=" + str(parcels_str))
 
@@ -84,6 +84,8 @@ func start():
 		)
 		get_tree().quit(1)
 		return
+
+	print("Testing scenes: " + str(scene_tests.size()))
 
 	Global.realm.realm_changed.connect(self.on_realm_changed)
 	get_tree().create_timer(DEFAULT_TIMEOUT_REALM_SECONDS).timeout.connect(

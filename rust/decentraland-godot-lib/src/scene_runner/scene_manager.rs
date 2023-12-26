@@ -725,7 +725,7 @@ impl SceneManager {
             return false;
         };
 
-        scene.tick_number > 10
+        scene.scene_test_plan_received
             && scene
                 .scene_tests
                 .iter()
@@ -920,7 +920,7 @@ impl INode for SceneManager {
                 .godot_dcl_scene
                 .get_node_3d_mut(&SceneEntityId::CAMERA)
             {
-                camera_node.set_global_transform(self.player_node.get_global_transform());
+                camera_node.set_global_transform(self.camera_node.get_global_transform());
             }
         }
 

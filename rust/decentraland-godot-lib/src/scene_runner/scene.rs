@@ -188,6 +188,7 @@ pub struct Scene {
 
     pub avatar_scene_updates: SceneAvatarUpdates,
     pub scene_tests: HashMap<String, Option<SceneTestResult>>,
+    pub scene_test_plan_received: bool,
 
     // Tween
     pub tweens: HashMap<SceneEntityId, Tween>,
@@ -277,6 +278,7 @@ impl Scene {
             scene_type,
             avatar_scene_updates: Default::default(),
             scene_tests: HashMap::new(),
+            scene_test_plan_received: false,
             tweens: HashMap::new(),
         }
     }
@@ -333,6 +335,7 @@ impl Scene {
             video_players: HashMap::new(),
             avatar_scene_updates: Default::default(),
             scene_tests: HashMap::new(),
+            scene_test_plan_received: false,
             tweens: HashMap::new(),
         }
     }
