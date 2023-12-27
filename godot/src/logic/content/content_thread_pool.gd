@@ -42,7 +42,9 @@ func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
-	if USE_THREAD:
+	# We do not use threads for tests, running the test in a docker introduces an issue with multithreading on nodes
+	# More info: https://github.com/godotengine/godot/issues/79194
+	if USE_THREAD and not Global.testing_scene_mode:
 		self.process_mode = Node.PROCESS_MODE_DISABLED
 		for id in range(MAX_THREADS):
 			var thread = Thread.new()
