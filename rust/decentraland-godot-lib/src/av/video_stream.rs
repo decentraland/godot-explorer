@@ -5,8 +5,6 @@ use godot::{
 };
 use tracing::{debug, warn};
 
-use crate::dcl::components::proto_components::sdk::components::PbVideoEvent;
-
 use super::{
     audio_context::{AudioContext, AudioError, AudioSink},
     ffmpeg_util::InputWrapper,

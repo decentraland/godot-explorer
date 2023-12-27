@@ -6,8 +6,6 @@ use godot::prelude::{AudioStreamPlayer, Gd, PackedVector2Array, ToGodot, Vector2
 use thiserror::Error;
 use tracing::{debug, error};
 
-use crate::dcl::components::proto_components::sdk::components::PbVideoEvent;
-
 use super::stream_processor::AVCommand;
 use super::stream_processor::FfmpegContext;
 

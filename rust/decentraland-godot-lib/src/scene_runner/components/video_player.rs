@@ -295,7 +295,7 @@ pub fn update_video_player(
     let video_player_entities = SceneCrdtStateProtoComponents::get_video_player(crdt_state)
         .values
         .keys()
-        .map(|key| *key)
+        .copied()
         .collect::<Vec<_>>();
     let video_event_component = SceneCrdtStateProtoComponents::get_video_event_mut(crdt_state);
 

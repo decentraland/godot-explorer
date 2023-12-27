@@ -134,7 +134,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: snapshots
-          path: "$HOME/.local/share/godot/app_userdata/Decentraland Godot Rust/snapshot/**/*"
+          path: ${HOME}/.local/share/godot/app_userdata/Decentraland Godot Rust/snapshot/**/*
 
   build:
     name: Build and test
