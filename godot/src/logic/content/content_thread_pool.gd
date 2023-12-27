@@ -11,8 +11,9 @@ enum ContentType {
 	CT_VIDEO = 7,
 }
 
-const USE_THREAD = true
 const MAX_THREADS = 1
+
+var use_thread = true
 
 var content_threads: Array[ContentThread] = []
 var http_requester: RustHttpRequesterWrapper
@@ -44,7 +45,10 @@ func _ready():
 
 	# We do not use threads for tests, running the test in a docker introduces an issue with multithreading on nodes
 	# More info: https://github.com/godotengine/godot/issues/79194
-	if USE_THREAD and not Global.testing_scene_mode:
+	if Global.testing_scene_mode:
+		use_thread = false
+
+	if use_thread:
 		self.process_mode = Node.PROCESS_MODE_DISABLED
 		for id in range(MAX_THREADS):
 			var thread = Thread.new()
@@ -288,7 +292,7 @@ func fetch_video(file_hash: String, content_mapping: Dictionary) -> Promise:
 # Should be disabled on single thread...
 func _process(_dt: float) -> void:
 	# Main thread
-	if USE_THREAD == false:
+	if use_thread == false:
 		content_threads[0].process(content_cache_map)
 
 
