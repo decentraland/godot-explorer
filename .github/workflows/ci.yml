@@ -121,6 +121,8 @@ jobs:
       - name: Run xtask coverage
         working-directory: rust/xtask
         run: |
+          mkdir -p snapshots
+          touch snapshots/.keep
           export DISPLAY=:99
           sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
           cargo run -- coverage
@@ -131,18 +133,12 @@ jobs:
         with:
           files: rust/coverage/*.lcov
 
-      - name: Copy snapshots
-        if: success() || failure()
-        run: |
-          mkdir tmp_snapshots
-          cp -r "${HOME}/.local/share/godot/app_userdata/Decentraland Godot Rust/snapshot/*" tmp_snapshots/
-
       - name: Upload artifacts
         if: success() || failure()
         uses: actions/upload-artifact@v2
         with:
           name: snapshots
-          path: tmp_snapshots
+          path: snapshots/**/*
 
   build:
     name: Build and test

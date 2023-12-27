@@ -41,6 +41,8 @@ var realm_change_emited: bool = false
 var test_camera_node: DclCamera3D
 var test_player_node: Node3D
 
+var snapshot_folder: String = ""
+
 
 func _ready():
 	self.process_mode = PROCESS_MODE_DISABLED
@@ -59,7 +61,16 @@ func start():
 		self.process_mode = PROCESS_MODE_DISABLED
 		return
 
-	prints('screenshot_folder="' + OS.get_user_data_dir() + '/snapshot"')
+	var snapshot_folder_index := args.find("--snapshot-folder")
+	if snapshot_folder_index != -1:
+		snapshot_folder = args[snapshot_folder_index + 1]
+	else:
+		snapshot_folder = OS.get_user_data_dir() + "/snapshot"
+
+	if not snapshot_folder.ends_with("/"):
+		snapshot_folder += "/"
+
+	prints('screenshot_folder="' + snapshot_folder + '"')
 
 	var parcels_str: String = Global.FORCE_TEST_ARG
 	if not Global.FORCE_TEST:
@@ -147,7 +158,7 @@ func async_take_and_compare_snapshot(
 	var base_path := (
 		src_stored_snapshot.replace(" ", "_").replace("/", "_").replace("\\", "_").to_lower()
 	)
-	var snapshot_path := "user://snapshot/" + base_path
+	var snapshot_path := snapshot_folder + base_path
 	if not snapshot_path.ends_with(".png"):
 		snapshot_path += ".png"
 
