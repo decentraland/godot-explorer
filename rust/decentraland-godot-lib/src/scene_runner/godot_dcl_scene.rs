@@ -38,6 +38,8 @@ pub struct GodotDclScene {
 pub struct VideoPlayerData {
     pub video_sink: VideoSink,
     pub audio_sink: AudioSink,
+    pub timestamp: u32,
+    pub length: f32,
 }
 
 pub struct UiNode {

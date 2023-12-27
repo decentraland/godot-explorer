@@ -41,6 +41,8 @@ var realm_change_emited: bool = false
 var test_camera_node: DclCamera3D
 var test_player_node: Node3D
 
+var snapshot_folder: String = ""
+
 
 func _ready():
 	self.process_mode = PROCESS_MODE_DISABLED
@@ -59,11 +61,20 @@ func start():
 		self.process_mode = PROCESS_MODE_DISABLED
 		return
 
-	prints("screenshot_folder='" + OS.get_user_data_dir() + "'")
+	var snapshot_folder_index := args.find("--snapshot-folder")
+	if snapshot_folder_index != -1:
+		snapshot_folder = args[snapshot_folder_index + 1]
+	else:
+		snapshot_folder = OS.get_user_data_dir() + "/snapshot"
+
+	if not snapshot_folder.ends_with("/"):
+		snapshot_folder += "/"
+
+	prints('screenshot_folder="' + snapshot_folder + '"')
 
 	var parcels_str: String = Global.FORCE_TEST_ARG
 	if not Global.FORCE_TEST:
-		args[scene_test_index + 1].replace("'", '"')
+		parcels_str = args[scene_test_index + 1].replace("'", '"')
 
 	prints("parcels_str=" + str(parcels_str))
 
@@ -84,6 +95,8 @@ func start():
 		)
 		get_tree().quit(1)
 		return
+
+	print("Testing scenes: " + str(scene_tests.size()))
 
 	Global.realm.realm_changed.connect(self.on_realm_changed)
 	get_tree().create_timer(DEFAULT_TIMEOUT_REALM_SECONDS).timeout.connect(
@@ -145,11 +158,14 @@ func async_take_and_compare_snapshot(
 	var base_path := (
 		src_stored_snapshot.replace(" ", "_").replace("/", "_").replace("\\", "_").to_lower()
 	)
-	var snapshot_path := "user://snapshot_" + base_path
+	var snapshot_path := snapshot_folder + base_path
 	if not snapshot_path.ends_with(".png"):
 		snapshot_path += ".png"
 
-	snapshot_path = snapshot_path.replace("snapshot_screenshot_", "")
+	snapshot_path = snapshot_path.replace("screenshot_", "")
+
+	if not DirAccess.dir_exists_absolute(snapshot_path.get_base_dir()):
+		DirAccess.make_dir_recursive_absolute(snapshot_path.get_base_dir())
 
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 	var viewport = get_viewport()

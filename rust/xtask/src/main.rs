@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::create_dir_all};
+use std::{collections::HashMap, fs::create_dir_all, path::Path};
 
 use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
@@ -161,11 +161,17 @@ fn main() -> Result<(), anyhow::Error> {
 }
 
 pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
+    remove_dir("../../snapshots")?;
+    create_dir_all("../../snapshots")?;
+
+    let snapshot_folder = Path::new("../../snapshots");
+    let snapshot_folder = snapshot_folder.canonicalize()?;
+
     remove_dir("../coverage")?;
     create_dir_all("../coverage")?;
 
     println!("=== running coverage ===");
-    cmd!("cargo", "test")
+    cmd!("cargo", "test", "--", "--skip", "auth")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
@@ -192,6 +198,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         Some(build_envs.clone()),
     )?;
 
+
     let extra_args = [
         "--rendering-driver",
         "opengl3",
@@ -199,6 +206,9 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         "[[52,-52],[52,-54],[52,-56],[52,-58],[52,-60],[52,-62],[52,-64],[52,-66],[52,-68],[54,-52],[54,-54],[54,-56],[54,-58],[54,-60]]",
         "--realm",
         "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests",
+        "--snapshot-folder",
+        snapshot_folder.to_str().unwrap()
+        
     ]
     .iter()
     .map(|it| it.to_string())

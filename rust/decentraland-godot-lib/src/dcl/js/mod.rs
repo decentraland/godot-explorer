@@ -225,7 +225,18 @@ pub(crate) fn scene_thread(
         .borrow_mut()
         .put(SceneStartTime(std::time::SystemTime::now()));
 
-    let script = runtime.execute_script("<loader>", ascii_str!("require (\"~scene.js\")"));
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .enable_io()
+        .build()
+        .unwrap();
+
+    let script = rt.block_on(async {
+        runtime.execute_script(
+            "<loader>",
+            ascii_str!("const env = require('env');globalThis.DEBUG=true;require (\"~scene.js\")"),
+        )
+    });
 
     let script = match script {
         Err(e) => {
@@ -234,12 +245,6 @@ pub(crate) fn scene_thread(
         }
         Ok(script) => script,
     };
-
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_time()
-        .enable_io()
-        .build()
-        .unwrap();
 
     let result =
         rt.block_on(async { run_script(&mut runtime, &script, "onStart", |_| Vec::new()).await });

@@ -21,6 +21,16 @@ pub trait FfmpegContext {
     fn set_start_frame(&mut self);
     fn reset_start_frame(&mut self);
     fn seconds_till_next_frame(&self) -> f64;
+    fn length(&self) -> f64;
+    fn position(&self) -> f64;
+}
+
+pub enum StreamStateData {
+    Ready { length: f64 },
+    Playing { position: f64 },
+    Buffering { position: f64 },
+    Seeking {},
+    Paused { position: f64 },
 }
 
 // pumps packets through stream contexts keeping them in sync
@@ -28,13 +38,19 @@ pub fn process_streams(
     mut input_context: impl PacketIter,
     streams: &mut [&mut dyn FfmpegContext],
     mut commands: tokio::sync::mpsc::Receiver<AVCommand>,
+    sink: tokio::sync::mpsc::Sender<StreamStateData>,
 ) -> Result<(), anyhow::Error> {
     let mut start_instant: Option<Instant> = None;
     let mut repeat = false;
+    let mut init = false;
 
     loop {
         // ensure frame available
         while !input_context.is_eof() && streams.iter().any(|ctx| ctx.buffered_time() == 0.0) {
+            let _ = sink.blocking_send(StreamStateData::Buffering {
+                position: streams[0].position(),
+            });
+
             if let Some((stream_index, packet)) = input_context.blocking_next() {
                 for stream in streams.iter_mut() {
                     if Some(stream_index) == stream.stream_index() {
@@ -43,6 +59,13 @@ pub fn process_streams(
                     }
                 }
             }
+        }
+
+        if !init {
+            init = true;
+            let _ = sink.blocking_send(StreamStateData::Ready {
+                length: streams[0].length(),
+            });
         }
 
         if input_context.is_eof() {
@@ -134,6 +157,15 @@ pub fn process_streams(
                 let context = streams.get_mut(index).unwrap();
                 context.send_frame();
             }
+
+            let _ = sink.blocking_send(StreamStateData::Playing {
+                position: streams[0].position(),
+            });
+        } else {
+            let _ = sink.blocking_send(StreamStateData::Paused {
+                position: streams[0].position(),
+            });
+            std::thread::sleep(Duration::from_millis(100));
         }
     }
 }

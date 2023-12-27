@@ -112,6 +112,8 @@ pub struct AudioContext {
     format: AVSampleFormat,
     frame_size: usize,
     channels: usize,
+
+    audio_length: f64,
 }
 
 impl AudioContext {
@@ -183,6 +185,7 @@ impl AudioContext {
             rate: frame_rate,
             audio_stream_player,
             format,
+            audio_length: length,
 
             frame_size,
             channels,
@@ -273,5 +276,13 @@ impl FfmpegContext for AudioContext {
 
     fn seconds_till_next_frame(&self) -> f64 {
         (self.current_frame - self.start_frame + 1) as f64 / self.rate
+    }
+
+    fn length(&self) -> f64 {
+        self.audio_length
+    }
+
+    fn position(&self) -> f64 {
+        self.current_frame as f64 / self.rate
     }
 }

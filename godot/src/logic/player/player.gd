@@ -168,8 +168,9 @@ func _physics_process(delta: float) -> void:
 
 
 func avatar_look_at(target_position: Vector3):
-	var target_direction = target_position - get_global_position()
-	target_direction = direction.normalized()
+	var global_pos := get_global_position()
+	var target_direction = target_position - global_pos
+	target_direction = target_direction.normalized()
 
 	var y_rot = atan2(target_direction.x, target_direction.z)
 	var x_rot = atan2(

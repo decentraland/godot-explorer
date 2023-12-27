@@ -3,6 +3,7 @@ const env = require('env')
 const testingEnabled = env['testing_enable']
 
 function emptyTesting() {
+    console.log("Testing disabled")
     return {
         logTestResult: async function (body) { return {} },
         plan: async function (body) { return {} },
@@ -12,13 +13,13 @@ function emptyTesting() {
 }
 
 function testingModule() {
+    console.log("Testing enabled")
     function takeAndCompareScreenshot(body) {
         const { srcStoredSnapshot, cameraPosition, cameraTarget, screenshotSize } = body
         const methods = {
             grey_pixel_diff: body.greyPixelDiff
         }
 
-        console.log({ methods })
         return Deno.core.ops.op_take_and_compare_snapshot(
             srcStoredSnapshot,
             [cameraPosition.x, cameraPosition.y, cameraPosition.z],

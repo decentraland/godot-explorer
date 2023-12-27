@@ -20,11 +20,6 @@ pub struct VideoInfo {
     pub length: f64,
 }
 
-pub enum VideoData {
-    Info(VideoInfo),
-    Frame(frame::Video, f64),
-}
-
 pub struct VideoContext {
     stream_index: usize,
     decoder: decoder::Video,
@@ -33,6 +28,8 @@ pub struct VideoContext {
     buffer: VecDeque<frame::video::Video>,
     current_frame: usize,
     start_frame: usize,
+
+    // godot texture
     texture: Gd<ImageTexture>,
     video_info: VideoInfo,
     last_frame_time: Instant,
@@ -217,5 +214,13 @@ impl FfmpegContext for VideoContext {
 
     fn seconds_till_next_frame(&self) -> f64 {
         (self.current_frame - self.start_frame + 1) as f64 / self.rate
+    }
+
+    fn length(&self) -> f64 {
+        self.video_info.length
+    }
+
+    fn position(&self) -> f64 {
+        self.current_frame as f64 / self.rate
     }
 }

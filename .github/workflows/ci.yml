@@ -120,16 +120,23 @@ jobs:
 
       - name: Run xtask coverage
         working-directory: rust/xtask
-        continue-on-error: true
         run: |
           export DISPLAY=:99
           sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
           cargo run -- coverage
 
       - name: Upload to codecov.io
+        if: success() || failure()
         uses: codecov/codecov-action@v3
         with:
           files: rust/coverage/*.lcov
+
+      - name: Upload artifacts
+        if: success() || failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: snapshots
+          path: snapshots/**/*
 
   build:
     name: Build and test

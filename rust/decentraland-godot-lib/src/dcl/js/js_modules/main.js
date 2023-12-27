@@ -84,13 +84,13 @@ function logValue(value, seen) {
 // minimal console
 const console = {
     log: function (...args) {
-        Deno.core.ops.op_log("LOG " + customLog(...args), false)
+        Deno.core.ops.op_log("LOG " + customLog(...args), DEBUG)
     },
     error: function (...args) {
-        Deno.core.ops.op_error("ERROR " + customLog(...args), false)
+        Deno.core.ops.op_error("ERROR " + customLog(...args), DEBUG)
     },
     warn: function (...args) {
-        Deno.core.ops.op_log("WARN " + customLog(...args), false)
+        Deno.core.ops.op_log("WARN " + customLog(...args), DEBUG)
     },
 }
 
@@ -112,6 +112,7 @@ globalThis.setImmediate = (fn) => Promise.resolve().then(fn)
 globalThis.require = require;
 globalThis.console = console;
 globalThis._internal_console = _internal_console;
+globalThis.DEBUG = false
 
 globalThis.fetch = require('fetch').fetch;
 globalThis.WebSocket = require('ws').WebSocket;
