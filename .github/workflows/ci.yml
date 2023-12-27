@@ -130,6 +130,11 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           files: rust/coverage/*.lcov
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: snapshots
+          path: "$HOME/.local/share/godot/app_userdata/Decentraland Godot Rust/snapshot/**/*"
 
   build:
     name: Build and test

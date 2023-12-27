@@ -59,7 +59,7 @@ func start():
 		self.process_mode = PROCESS_MODE_DISABLED
 		return
 
-	prints("screenshot_folder='" + OS.get_user_data_dir() + "'")
+	prints('screenshot_folder="' + OS.get_user_data_dir() + '/snapshot"')
 
 	var parcels_str: String = Global.FORCE_TEST_ARG
 	if not Global.FORCE_TEST:
@@ -147,11 +147,14 @@ func async_take_and_compare_snapshot(
 	var base_path := (
 		src_stored_snapshot.replace(" ", "_").replace("/", "_").replace("\\", "_").to_lower()
 	)
-	var snapshot_path := "user://snapshot_" + base_path
+	var snapshot_path := "user://snapshot/" + base_path
 	if not snapshot_path.ends_with(".png"):
 		snapshot_path += ".png"
 
-	snapshot_path = snapshot_path.replace("snapshot_screenshot_", "")
+	snapshot_path = snapshot_path.replace("screenshot_", "")
+
+	if not DirAccess.dir_exists_absolute(snapshot_path.get_base_dir()):
+		DirAccess.make_dir_recursive_absolute(snapshot_path.get_base_dir())
 
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 	var viewport = get_viewport()
