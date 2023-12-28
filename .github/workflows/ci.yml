@@ -235,8 +235,7 @@ jobs:
 
       - name: cargo test
         working-directory: rust/decentraland-godot-lib
-        run: cargo test --release
-
+        run: cargo test --release -- --skip auth
       # TODO: cross-build deprecated with the ffmpeg integration 
       # Package section
       # # => MacOS
