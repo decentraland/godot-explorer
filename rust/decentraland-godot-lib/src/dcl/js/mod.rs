@@ -9,8 +9,8 @@ pub mod runtime;
 pub mod testing;
 pub mod websocket;
 
+use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::auth::ethereum_provider::EthereumProvider;
-use crate::auth::wallet::Wallet;
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
 use super::{
@@ -126,9 +126,9 @@ pub(crate) fn scene_thread(
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
     scene_crdt: SharedSceneCrdtState,
-    wallet: Wallet,
     testing_mode: bool,
     ethereum_provider: Arc<EthereumProvider>,
+    ephemeral_wallet: Option<EphemeralAuthChain>,
 ) {
     let mut scene_main_crdt = None;
     let main_crdt_file_path = scene_definition.main_crdt_path;
@@ -199,7 +199,7 @@ pub(crate) fn scene_thread(
     state.borrow_mut().put(scene_id);
     state.borrow_mut().put(scene_crdt);
 
-    state.borrow_mut().put(wallet);
+    state.borrow_mut().put(ephemeral_wallet);
 
     state.borrow_mut().put(Vec::<RpcCall>::new());
     state.borrow_mut().put(Vec::<LocalCall>::new());

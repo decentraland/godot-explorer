@@ -11,6 +11,7 @@ sky_material = SubResource("ProceduralSkyMaterial_bfvnp")
 [sub_resource type="Environment" id="Environment_mvu0t"]
 background_mode = 2
 sky = SubResource("Sky_0guyp")
+glow_enabled = true
 glow_levels/1 = 16.0
 glow_levels/2 = 16.0
 glow_levels/3 = 16.0
@@ -18,6 +19,7 @@ glow_levels/4 = 16.0
 glow_levels/5 = 16.0
 glow_levels/6 = 16.0
 glow_levels/7 = 2.95
+glow_blend_mode = 0
 fog_density = 0.001
 
 [node name="SkyBasic" type="WorldEnvironment"]

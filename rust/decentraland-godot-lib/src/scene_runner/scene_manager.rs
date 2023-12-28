@@ -1,5 +1,4 @@
 use crate::{
-    auth::wallet::Wallet,
     dcl::{
         components::{
             internal_player_data::InternalPlayerData,
@@ -94,9 +93,6 @@ impl SceneManager {
     // Testing a comment for the API
     #[func]
     fn start_scene(&mut self, scene_definition: Dictionary, content_mapping: Dictionary) -> i32 {
-        // TODO: Inject wallet from creator
-        let wallet = Wallet::new_local_wallet();
-
         let scene_definition = match SceneDefinition::from_dict(scene_definition) {
             Ok(scene_definition) => scene_definition,
             Err(e) => {
@@ -122,15 +118,20 @@ impl SceneManager {
         let signal_data = (new_scene_id, scene_definition.entity_id.clone());
         let testing_mode_active = DclGlobal::singleton().bind().testing_scene_mode;
         let ethereum_provider = DclGlobal::singleton().bind().ethereum_provider.clone();
+        let ephemeral_wallet = DclGlobal::singleton()
+            .bind()
+            .player_identity
+            .bind()
+            .try_get_ephemeral_auth_chain();
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(
             new_scene_id,
             scene_definition.clone(),
             content_mapping_hash_map,
             base_url,
             self.thread_sender_to_main.clone(),
-            wallet,
             testing_mode_active,
             ethereum_provider,
+            ephemeral_wallet,
         );
 
         let new_scene = Scene::new(

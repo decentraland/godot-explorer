@@ -286,7 +286,6 @@ fn check_texture(
                 }
             }
             return false;
-            // TODO: implement link video texture with entity
         }
     }
 
