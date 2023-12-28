@@ -20,16 +20,6 @@ pub struct DclUiText {
     current_font: Font,
 }
 
-impl Font {
-    pub fn get_font_path(self) -> &'static str {
-        match self {
-            Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-Regular.ttf",
-            Font::FSerif => "res://assets/themes/fonts/noto/NotoSerif-Regular.ttf",
-            Font::FMonospace => "res://assets/themes/fonts/noto/NotoSansMono-Regular.ttf",
-        }
-    }
-}
-
 #[godot_api]
 impl INode for DclUiText {
     fn init(base: Base<Label>) -> Self {
@@ -40,9 +30,8 @@ impl INode for DclUiText {
     }
 
     fn ready(&mut self) {
-        let font_resource = load(self.current_font.get_font_path());
         self.base
-            .add_theme_font_override("font".into(), font_resource);
+            .add_theme_font_override("font".into(), self.current_font.get_font_resource());
     }
 }
 
@@ -115,9 +104,8 @@ impl DclUiText {
 
         if new_value.font() != self.current_font {
             self.current_font = new_value.font();
-            let font_resource = load(self.current_font.get_font_path());
             self.base
-                .add_theme_font_override("font".into(), font_resource);
+                .add_theme_font_override("font".into(), self.current_font.get_font_resource());
         }
     }
 }

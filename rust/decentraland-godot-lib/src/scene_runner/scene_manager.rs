@@ -154,9 +154,13 @@ impl SceneManager {
         self.sorted_scene_ids.push(new_scene_id);
         self.compute_scene_distance();
 
-        self.base.emit_signal(
-            "scene_spawned".into(),
-            &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
+        self.base.call_deferred(
+            "emit_signal".into(),
+            &[
+                "scene_spawned".to_variant(),
+                signal_data.0 .0.to_variant(),
+                signal_data.1.to_variant(),
+            ],
         );
         new_scene_id.0
     }
@@ -825,8 +829,8 @@ impl INode for SceneManager {
     }
 
     fn ready(&mut self) {
-        let callable = self.base.get("_on_ui_resize".into()).to::<Callable>();
-        self.base_ui.connect("resized".into(), callable);
+        self.base_ui
+            .connect("resized".into(), self.base.callable("_on_ui_resize"));
         self.base_ui.set_name("scenes_ui".into());
     }
 

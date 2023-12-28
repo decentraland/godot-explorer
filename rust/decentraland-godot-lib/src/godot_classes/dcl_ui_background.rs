@@ -36,8 +36,7 @@ impl INode for DclUiBackground {
             .base
             .get_parent()
             .expect("ui_background suppose to have a parent");
-        let callable = self.base.get("_on_parent_size".into()).to::<Callable>();
-        parent.connect("resized".into(), callable);
+        parent.connect("resized".into(), self.base.callable("_on_parent_size"));
 
         self._set_white_pixel();
     }
@@ -248,9 +247,10 @@ impl DclUiBackground {
                             promise.call("is_resolved".into(), &[]).to::<bool>();
 
                         if fetching_resource {
-                            let callable =
-                                self.base.get("_on_texture_loaded".into()).to::<Callable>();
-                            promise.connect("_on_resolved".into(), callable);
+                            promise.connect(
+                                "_on_resolved".into(),
+                                self.base.callable("_on_texture_loaded"),
+                            );
                         } else {
                             self.base.call_deferred("_on_texture_loaded".into(), &[]);
                         }
