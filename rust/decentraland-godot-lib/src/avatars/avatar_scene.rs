@@ -144,7 +144,7 @@ impl AvatarScene {
             .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
 
         let instance_id = self.base.instance_id();
-        let avatar_entity_id = entity_id.clone();
+        let avatar_entity_id = entity_id;
         let callable = Callable::from_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
             if args.len() != 2 {
                 return Err(());

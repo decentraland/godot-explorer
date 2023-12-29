@@ -61,25 +61,10 @@ func async_deferred_add_child(new_gltf_node):
 
 	add_child(new_gltf_node)
 
-	check_colliders(new_gltf_node)
-
 	await main_tree.process_frame
 
 	# Colliders and rendering is ensured to be ready at this point
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
-
-func check_colliders(node_to_inspect: Node):
-	for node in node_to_inspect.get_children():
-		if node is AnimatableBody3D:
-			var det: float = node.global_transform.basis.determinant()
-			if det < 1e-6:
-				prints("collider here", node.global_transform.basis.determinant())
-		
-		if node is CollisionShape3D:
-			node.disabled = true
-			
-		if node is Node:
-			check_colliders(node)
 
 
 func get_animatable_body_3d(mesh_instance: MeshInstance3D):

@@ -1,4 +1,7 @@
-use godot::prelude::{Node, Transform3D, Vector3};
+use godot::{
+    builtin::math::FloatExt,
+    prelude::{Node, Transform3D, Vector3},
+};
 
 use crate::{
     dcl::{
@@ -58,20 +61,17 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 }
             }
 
-            // node_3d.set_position(transform.translation);
-            // node_3d
-            //     .set_rotation(transform.rotation.to_euler(godot::prelude::EulerOrder::XYZ));
-
-            // TODO: the scale seted in the transform is local
-            node_3d.set_transform(transform.to_godot_transform_3d());
-            node_3d.set_scale(transform.scale);
-            
-            // Note: this is a hack that only tackles some cases of det == 0
-            if transform.scale.is_zero_approx() {
-                node_3d.set_scale(Vector3::new(0.0001, 0.0001, 0.0001));
-            } else {
-                node_3d.set_scale(transform.scale);
+            node_3d.set_transform(transform.to_godot_transform_3d_without_scaled());
+            if transform.scale.x.is_zero_approx() {
+                transform.scale.x = 0.00001;
             }
+            if transform.scale.y.is_zero_approx() {
+                transform.scale.y = 0.00001;
+            }
+            if transform.scale.z.is_zero_approx() {
+                transform.scale.z = 0.00001;
+            }
+            node_3d.set_scale(transform.scale);
 
             godot_entity_node.desired_parent_3d = transform.parent;
             if godot_entity_node.desired_parent_3d != old_parent {
