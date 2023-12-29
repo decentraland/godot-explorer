@@ -183,19 +183,16 @@ impl CommunicationManager {
 
     #[func]
     fn init_rs(&mut self) {
-        let on_realm_changed =
-            Callable::from_object_method(&self.base, StringName::from("_on_realm_changed"));
-
-        DclGlobal::singleton()
-            .bind()
-            .get_realm()
-            .connect("realm_changed".into(), on_realm_changed);
-
-        let on_profile_changed =
-            Callable::from_object_method(&self.base, StringName::from("_on_profile_changed"));
+        DclGlobal::singleton().bind().get_realm().connect(
+            "realm_changed".into(),
+            self.base.callable("_on_realm_changed"),
+        );
 
         let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
-        player_identity.connect("profile_changed".into(), on_profile_changed);
+        player_identity.connect(
+            "profile_changed".into(),
+            self.base.callable("_on_profile_changed"),
+        );
     }
 
     #[func]

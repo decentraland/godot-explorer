@@ -6,7 +6,7 @@ pub mod serialization;
 
 use godot::builtin::{Vector2, Vector3};
 
-use crate::auth::{ethereum_provider::EthereumProvider, wallet::Wallet};
+use crate::auth::{ephemeral_auth_chain::EphemeralAuthChain, ethereum_provider::EthereumProvider};
 
 use self::{
     crdt::{DirtyCrdtState, SceneCrdtState},
@@ -92,9 +92,9 @@ impl DclScene {
         content_mapping: HashMap<String, String>,
         base_url: String,
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
-        wallet: Wallet,
         testing_mode: bool,
         ethereum_provider: Arc<EthereumProvider>,
+        ephemeral_wallet: Option<EphemeralAuthChain>,
     ) -> Self {
         let (main_sender_to_thread, thread_receive_from_renderer) =
             tokio::sync::mpsc::channel::<RendererResponse>(1);
@@ -113,9 +113,9 @@ impl DclScene {
                     thread_sender_to_main,
                     thread_receive_from_renderer,
                     thread_scene_crdt,
-                    wallet,
                     testing_mode,
                     ethereum_provider,
+                    ephemeral_wallet,
                 )
             })
             .unwrap();

@@ -58,9 +58,11 @@ func _load_frame_style(
 func _set_picture_frame_texture(
 	mesh_instance_3d: MeshInstance3D, style: NftFrameStyleLoader.NFTFrameStyles, texture: Texture2D
 ):
-	var factor = float(maxi(texture.get_width(), texture.get_height()))
-	var scale_x = texture.get_width() / factor
-	var scale_y = texture.get_height() / factor
+	var tex_width := 256 if texture == null else texture.get_width()
+	var tex_height := 256 if texture == null else texture.get_height()
+	var factor = float(maxi(tex_height, tex_height))
+	var scale_x = tex_height / factor
+	var scale_y = tex_height / factor
 	self.scale = Vector3(0.5, 0.5, 0.5) * Vector3(scale_x, scale_y, 1.0)
 
 	if style == NftFrameStyleLoader.NFTFrameStyles.NFT_NONE:

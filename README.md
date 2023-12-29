@@ -1,5 +1,6 @@
-# Decentraland Godot Rust
 
+# Decentraland Godot Rust
+[![codecov](https://codecov.io/gh/decentraland/godot-explorer/branch/main/graph/badge.svg)](https://codecov.io/gh/decentraland/godot-explorer)
 
 ## Set up project
 

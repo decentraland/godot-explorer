@@ -121,11 +121,14 @@ impl DclUiControl {
         if connect != self.is_gui_input_signal_connected {
             self.is_gui_input_signal_connected = connect;
 
-            let callable = self.base.get("_on_gui_input".into()).to::<Callable>();
             if connect {
-                self.base.connect("gui_input".into(), callable);
+                self.base
+                    .clone()
+                    .connect("gui_input".into(), self.base.callable("_on_gui_input"));
             } else {
-                self.base.disconnect("gui_input".into(), callable);
+                self.base
+                    .clone()
+                    .disconnect("gui_input".into(), self.base.callable("_on_gui_input"));
             }
             self.update_mouse_filter();
         }

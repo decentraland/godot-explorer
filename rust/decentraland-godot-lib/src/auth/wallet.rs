@@ -9,6 +9,8 @@ use ethers::{
 use http::Uri;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
+
+use super::ephemeral_auth_chain::EphemeralAuthChain;
 #[derive(Clone)]
 pub struct Wallet {
     inner: Arc<Box<dyn ObjSafeWalletSigner + 'static + Send + Sync>>,
@@ -187,7 +189,7 @@ impl AsH160 for String {
 pub async fn sign_request<META: Serialize>(
     method: &str,
     uri: &Uri,
-    wallet: &Wallet,
+    wallet: &EphemeralAuthChain,
     meta: META,
 ) -> Vec<(String, String)> {
     let unix_time = std::time::SystemTime::now()
@@ -197,8 +199,14 @@ pub async fn sign_request<META: Serialize>(
 
     let meta = serde_json::to_string(&meta).unwrap();
     let payload = format!("{}:{}:{}:{}", method, uri.path(), unix_time, meta).to_lowercase();
-    let signature = wallet.sign_message(&payload).await.unwrap();
-    let auth_chain = SimpleAuthChain::new(wallet.address(), payload, signature);
+
+    let signature = wallet
+        .ephemeral_wallet()
+        .sign_message(&payload)
+        .await
+        .expect("signature by ephemeral should always work");
+    let mut auth_chain = wallet.auth_chain().clone();
+    auth_chain.add_signed_entity(payload, signature);
 
     let mut headers: Vec<_> = auth_chain.headers().collect();
     headers.push(("x-identity-timestamp".to_owned(), format!("{}", unix_time)));

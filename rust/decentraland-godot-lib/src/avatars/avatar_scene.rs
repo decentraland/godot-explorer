@@ -143,26 +143,31 @@ impl AvatarScene {
             .bind_mut()
             .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
 
-        // TODO: when updating to 4.2, change this to Callable:from_custom
-        if self
-            .base
-            .has_method("_temp_get_custom_callable_on_avatar_changed".into())
-        {
-            // let on_change_scene_id_callable = self
-            //     .base
-            //     .get("on_avatar_changed_scene".into())
-            //     .to::<Callable>();
+        let instance_id = self.base.instance_id();
+        let avatar_entity_id = entity_id;
+        let callable = Callable::from_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
+            if args.len() != 2 {
+                return Err(());
+            }
 
-            let on_change_scene_id_callable = self
-                .base
-                .call(
-                    "_temp_get_custom_callable_on_avatar_changed".into(),
-                    &[entity_id.as_i32().to_variant()],
-                )
-                .to::<Callable>();
+            let scene_id = args[0].try_to::<i32>().map_err(|_e| ())?;
+            let prev_scene_id = args[1].try_to::<i32>().map_err(|_e| ())?;
 
-            new_avatar.connect("change_scene_id".into(), on_change_scene_id_callable);
-        }
+            if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
+                avatar_scene.call_deferred(
+                    "on_avatar_changed_scene".into(),
+                    &[
+                        scene_id.to_variant(),
+                        prev_scene_id.to_variant(),
+                        avatar_entity_id.as_i32().to_variant(),
+                    ],
+                );
+            }
+
+            Ok(Variant::nil())
+        });
+
+        new_avatar.connect("change_scene_id".into(), callable);
 
         self.base.add_child(new_avatar.clone().upcast());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
