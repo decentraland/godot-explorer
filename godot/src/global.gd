@@ -80,7 +80,7 @@ func _ready():
 	self.portable_experience_controller = PortableExperienceController.new()
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
-	self.avatars = CustomAvatarScene.new()
+	self.avatars = AvatarScene.new()
 	self.avatars.set_name("avatar_scene")
 
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
