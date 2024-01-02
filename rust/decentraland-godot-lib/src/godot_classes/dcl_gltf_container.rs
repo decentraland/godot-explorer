@@ -1,8 +1,12 @@
-use godot::engine::Node3D;
+use godot::engine::{AnimationPlayer, Node3D};
 use godot::prelude::*;
 
+use crate::dcl::components::proto_components::sdk::components::{PbAnimationState, PbAnimator};
 use crate::dcl::components::SceneEntityId;
 use crate::dcl::SceneId;
+use crate::scene_runner::components::animator::apply_animator_value;
+
+use super::dcl_global::DclGlobal;
 
 #[repr(i32)]
 #[derive(Property, Export, PartialEq, Debug)]
@@ -84,11 +88,51 @@ pub struct DclGltfContainer {
     dcl_gltf_loading_state: GltfContainerLoadingState,
 
     #[base]
-    _base: Base<Node3D>,
+    base: Base<Node3D>,
+}
+
+fn get_animation_player(godot_entity_node: &Base<Node3D>) -> Option<Gd<AnimationPlayer>> {
+    godot_entity_node
+        .get_child(0)?
+        .try_get_node_as::<AnimationPlayer>("AnimationPlayer")
 }
 
 #[godot_api]
-impl DclGltfContainer {}
+impl DclGltfContainer {
+    #[func]
+    fn check_animations(&mut self) {
+        let Some(animation_player) = get_animation_player(&self.base) else {
+            return;
+        };
+        let entity_id = SceneEntityId::from_i32(self.dcl_entity_id);
+
+        let global = DclGlobal::singleton();
+        let scene_runner = global.bind().get_scene_runner();
+        let dcl_scene_runner = scene_runner.bind();
+        if let Some(scene) = dcl_scene_runner.get_scene(&SceneId(self.dcl_scene_id)) {
+            if let Some(pending_animator_value) = scene.dup_animator.get(&entity_id) {
+                apply_animator_value(pending_animator_value, animation_player);
+            } else {
+                let animation_list = animation_player.get_animation_list();
+                if !animation_list.is_empty() {
+                    let animation_name = animation_list.get(0).into();
+                    apply_animator_value(
+                        &PbAnimator {
+                            states: vec![PbAnimationState {
+                                clip: animation_name,
+                                playing: Some(true),
+                                r#loop: Some(true),
+                                should_reset: Some(true),
+                                ..Default::default()
+                            }],
+                        },
+                        animation_player,
+                    );
+                }
+            }
+        }
+    }
+}
 
 #[godot_api]
 impl INode for DclGltfContainer {
@@ -100,7 +144,7 @@ impl INode for DclGltfContainer {
             dcl_invisible_cmask: 3,
             dcl_entity_id: SceneEntityId::INVALID.as_i32(),
             dcl_gltf_loading_state: GltfContainerLoadingState::Unknown,
-            _base: base,
+            base,
         }
     }
 }

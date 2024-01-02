@@ -105,7 +105,7 @@ func _ready():
 	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)
 	if cmd_location != null:
 		start_parcel_position = cmd_location
-	start_parcel_position = Vector2i()
+	# start_parcel_position = Vector2i()
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 

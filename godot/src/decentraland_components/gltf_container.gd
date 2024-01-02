@@ -60,6 +60,7 @@ func async_deferred_add_child(new_gltf_node):
 		return
 
 	add_child(new_gltf_node)
+	self.check_animations()
 
 	await main_tree.process_frame
 

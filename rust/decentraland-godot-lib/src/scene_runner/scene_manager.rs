@@ -710,6 +710,10 @@ impl SceneManager {
         self.scenes.get_mut(scene_id)
     }
 
+    pub fn get_scene(&self, scene_id: &SceneId) -> Option<&Scene> {
+        self.scenes.get(scene_id)
+    }
+
     // this could be cached
     pub fn get_global_scene_ids(&self) -> Vec<SceneId> {
         self.scenes
