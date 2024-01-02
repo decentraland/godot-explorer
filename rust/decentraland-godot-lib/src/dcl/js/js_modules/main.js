@@ -117,6 +117,11 @@ globalThis.DEBUG = false
 globalThis.fetch = require('fetch').fetch;
 globalThis.WebSocket = require('ws').WebSocket;
 
+var nowOffset = Date.now();
+globalThis.performance = {
+    now: () => Date.now() - nowOffset
+}
+
 Deno.core.ops.op_set_promise_reject_callback((type, promise, reason) => {
     console.error('Unhandled promise: ', reason)
     Deno.core.ops.op_promise_reject();
