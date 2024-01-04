@@ -23,7 +23,7 @@ var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd
 var animation_importer: AnimationImporter = AnimationImporter.new()
 
 var scene_fetcher: SceneFetcher = null
-var http_requester: RustHttpRequesterWrapper
+var http_requester: RustHttpQueueRequester
 
 var nft_fetcher: OpenSeaFetcher = OpenSeaFetcher.new()
 var nft_frame_loader: NftFrameStyleLoader = NftFrameStyleLoader.new()
@@ -36,7 +36,7 @@ var dcl_android_plugin
 
 
 func _ready():
-	http_requester = RustHttpRequesterWrapper.new()
+	http_requester = RustHttpQueueRequester.new()
 
 	var args := OS.get_cmdline_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
@@ -116,7 +116,8 @@ func print_node_tree(node: Node, prefix = ""):
 
 
 func _process(_dt: float):
-	http_requester.poll()
+	pass
+	#http_requester.poll()
 
 
 func get_explorer():

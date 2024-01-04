@@ -17,7 +17,7 @@ var id: int = -1
 
 # Private
 var _pending_content: Array[Dictionary] = []
-var _http_requester: RustHttpRequesterWrapper
+var _http_requester: RustHttpQueueRequester
 
 # Metrics
 var _processing_count = 0
@@ -32,13 +32,13 @@ func content_processing_count():
 
 
 func _init(param_id: int, param_thread: Thread):
-	_http_requester = RustHttpRequesterWrapper.new()
+	_http_requester = RustHttpQueueRequester.new()
 	self.thread = param_thread
 	self.id = param_id
 
 
 func process(content_cache_map: Dictionary):  # not a coroutine
-	_http_requester.poll()
+	#_http_requester.poll()
 
 	if _pending_content.is_empty():
 		return
@@ -177,7 +177,7 @@ func _get_gltf_dependencies(local_gltf_path: String) -> Array[String]:
 		text = json_data.get_string_from_utf8()
 	else:
 		p_file.seek(0)
-		text = p_file.get_as_utf8_string()
+		text = p_file.get_as_text()
 
 	var json = JSON.parse_string(text)
 	if json == null:

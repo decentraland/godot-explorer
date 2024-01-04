@@ -82,4 +82,11 @@ impl Promise {
     pub fn is_rejected(&self) -> bool {
         self.data.try_to::<Gd<PromiseError>>().is_ok()
     }
+
+    pub fn make_to_async() -> (Gd<Promise>, impl Fn() -> Option<Gd<Promise>>) {
+        let this_promise = Promise::new_gd();
+        let promise_instance_id = this_promise.instance_id();
+        let get_promise = move || Gd::<Promise>::try_from_instance_id(promise_instance_id).ok();
+        (this_promise, get_promise)
+    }
 }
