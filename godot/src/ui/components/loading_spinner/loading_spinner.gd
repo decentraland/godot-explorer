@@ -1,18 +1,13 @@
 extends TextureProgressBar
 
-var tween: Tween = null
-
-
-func _ready() -> void:
-	tween = get_tree().create_tween().set_loops()
-	tween.tween_property(self, "radial_initial_angle", 360.0, 1.5).as_relative()
-
+@onready var animation_player = $AnimationPlayer
 
 func _on_visibility_changed():
-	if tween == null:
+	if animation_player == null:
 		return
-
+		
+		
 	if self.visible:
-		tween.play()
+		animation_player.play("spin")
 	else:
-		tween.pause()
+		animation_player.pause()
