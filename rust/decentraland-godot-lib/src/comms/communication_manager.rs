@@ -211,9 +211,27 @@ impl CommunicationManager {
         let realm_about = Dictionary::from_variant(&realm.get("realm_about".into()));
         let comms = Dictionary::from_variant(&realm_about.get(StringName::from("comms"))?);
         let comms_protocol = String::from_variant(&comms.get(StringName::from("protocol"))?);
-        let comms_fixed_adapter = comms
-            .get(StringName::from("fixedAdapter"))
-            .map(|v| GString::from_variant(&v));
+
+        let comms_fixed_adapter = if comms.contains_key("fixedAdapter") {
+            comms
+                .get(StringName::from("fixedAdapter"))
+                .map(|v| GString::from_variant(&v))
+        } else if comms.contains_key("adapter") {
+            if let Some(temp) = comms
+                .get(StringName::from("adapter"))
+                .map(|v| GString::from_variant(&v).to_string())
+            {
+                if temp.starts_with("fixed-adapter:") {
+                    Some(temp.replace("fixed-adapter:", "").into())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
 
         Some((comms_protocol, comms_fixed_adapter))
     }

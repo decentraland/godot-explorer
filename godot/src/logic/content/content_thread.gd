@@ -177,7 +177,7 @@ func _get_gltf_dependencies(local_gltf_path: String) -> Array[String]:
 		text = json_data.get_string_from_utf8()
 	else:
 		p_file.seek(0)
-		text = p_file.get_as_utf8_string()
+		text = p_file.get_as_text()
 
 	var json = JSON.parse_string(text)
 	if json == null:
