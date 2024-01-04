@@ -86,7 +86,10 @@ func _ready():
 		button_jump.hide()
 
 	var sky = null
-	if Global.testing_scene_mode:
+	if Global.is_mobile:
+		sky = load("res://assets/sky/sky_basic_without_glow").instantiate()
+		add_child(sky)
+	elif Global.testing_scene_mode:
 		sky = load("res://assets/sky/sky_test.tscn").instantiate()
 		add_child(sky)
 	else:

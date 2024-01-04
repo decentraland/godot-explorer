@@ -1,7 +1,29 @@
-[gd_scene load_steps=3 format=3 uid="uid://buu3ox7iefpgx"]
+[gd_scene load_steps=5 format=3 uid="uid://buu3ox7iefpgx"]
 
 [ext_resource type="Texture2D" uid="uid://dx7vyin0sc2ne" path="res://assets/ui/loading_spinner_progress.png" id="1_roup2"]
 [ext_resource type="Script" path="res://src/ui/components/loading_spinner/loading_spinner.gd" id="2_rds4p"]
+
+[sub_resource type="Animation" id="Animation_h8jfn"]
+resource_name = "spin"
+length = 1.5
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:radial_initial_angle")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 1.5),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.0, 360.0]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_rrpsh"]
+_data = {
+"spin": SubResource("Animation_h8jfn")
+}
 
 [node name="TextureProgressBar" type="TextureProgressBar"]
 offset_right = 40.0
@@ -9,7 +31,14 @@ offset_bottom = 40.0
 value = 100.0
 fill_mode = 4
 texture_progress = ExtResource("1_roup2")
+radial_initial_angle = 343.23
 radial_fill_degrees = 60.0
 script = ExtResource("2_rds4p")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_rrpsh")
+}
+autoplay = "spin"
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
