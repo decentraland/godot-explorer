@@ -154,3 +154,12 @@ func _on_popup_menu_index_pressed(index):
 	if index == 0:
 		var text = tree_console.get_selected().get_text(1)
 		DisplayServer.clipboard_set(text)
+
+
+func _on_button_copy_pressed():
+	var text: String = ""
+	var children = tree_console.get_root().get_children()
+	for item: TreeItem in children:
+		if item.visible:
+			text += item.get_text(1) + "\n"
+	DisplayServer.clipboard_set(text)

@@ -14,8 +14,8 @@ use crate::{
             internal_player_data::InternalPlayerData,
             material::DclMaterial,
             proto_components::sdk::components::{
-                common::RaycastHit, PbAvatarBase, PbAvatarEmoteCommand, PbAvatarEquippedData,
-                PbPlayerIdentityData, PbPointerEventsResult,
+                common::RaycastHit, PbAnimator, PbAvatarBase, PbAvatarEmoteCommand,
+                PbAvatarEquippedData, PbPlayerIdentityData, PbPointerEventsResult,
             },
             transform_and_parent::DclTransformAndParent,
             SceneEntityId,
@@ -192,6 +192,8 @@ pub struct Scene {
 
     // Tween
     pub tweens: HashMap<SceneEntityId, Tween>,
+    // Duplicated value to async-access the animator
+    pub dup_animator: HashMap<SceneEntityId, PbAnimator>,
 }
 
 #[derive(Debug)]
@@ -280,6 +282,7 @@ impl Scene {
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
+            dup_animator: HashMap::new(),
         }
     }
 
@@ -337,6 +340,7 @@ impl Scene {
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
+            dup_animator: HashMap::new(),
         }
     }
 }

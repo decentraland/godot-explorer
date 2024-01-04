@@ -161,6 +161,41 @@ func _async_process_loading_wearable(
 	result_promise.call_deferred("resolve")
 
 
+func _get_gltf_dependencies(local_gltf_path: String) -> Array[String]:
+	var dependencies: Array[String] = []
+	var p_file := FileAccess.open(local_gltf_path, FileAccess.READ)
+	p_file.seek(0)
+
+	var magic := p_file.get_32()
+	var text: String
+	if magic == 0x46546C67:
+		p_file.get_32()  # version
+		p_file.get_32()  # length
+		var chunk_length := p_file.get_32()
+		var chunk_type := p_file.get_32()
+		var json_data := p_file.get_buffer(chunk_length)
+		text = json_data.get_string_from_utf8()
+	else:
+		p_file.seek(0)
+		text = p_file.get_as_text()
+
+	var json = JSON.parse_string(text)
+	if json == null:
+		printerr("Failing on loading gltf when parsing the JSON")
+		return dependencies
+
+	for image in json.get("images", []):
+		var uri = image.get("uri", "")
+		if not uri.is_empty() and not uri.begins_with("data:"):
+			dependencies.push_back(String(uri))
+	for buf in json.get("buffers", []):
+		var uri = buf.get("uri", "")
+		if not uri.is_empty() and not uri.begins_with("data:"):
+			dependencies.push_back(String(uri))
+
+	return dependencies
+
+
 func _async_process_loading_gltf(content: Dictionary, content_cache_map: Dictionary) -> void:
 	var content_mapping = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
@@ -168,14 +203,6 @@ func _async_process_loading_gltf(content: Dictionary, content_cache_map: Diction
 	var base_url: String = content_mapping.get("base_url", "")
 	var base_path = file_path.get_base_dir()
 	var local_gltf_path = "user://content/" + file_hash
-
-	# TODO: this is temp
-	var it = content.get("it", 0)
-	if it > 100000:
-		printerr("timeout ", file_path)
-		return
-
-	content["it"] = it + 1
 
 	if file_hash.is_empty() or base_url.is_empty():
 		printerr("hash or base_url is empty")
@@ -185,9 +212,7 @@ func _async_process_loading_gltf(content: Dictionary, content_cache_map: Diction
 	# If gltf doesn't exists locally, we request it
 	if !FileAccess.file_exists(local_gltf_path):
 		var absolute_file_path = local_gltf_path.replace("user:/", OS.get_user_data_dir())
-
 		var request_promise = _http_requester.request_file(file_hash_path, absolute_file_path)
-
 		var content_result = await PromiseUtils.async_awaiter(request_promise)
 		if content_result is PromiseError:
 			printerr(
@@ -195,21 +220,10 @@ func _async_process_loading_gltf(content: Dictionary, content_cache_map: Diction
 			)
 			return
 
-	# We load the gltf from
-	var gltf := GLTFDocument.new()
-	var pre_gltf_state := GLTFState.new()
-	pre_gltf_state.set_additional_data("placeholder_image", true)
-	var base_gltf_err = gltf.append_from_file(
-		local_gltf_path, pre_gltf_state, 0, OS.get_user_data_dir()
-	)
-	if base_gltf_err != OK:
-		printerr("GLTF " + file_hash_path + " couldn't be loaded succesfully: ", base_gltf_err)
-		return
-
 	# Load gltf dependencies
-	var dependencies: Array[String] = pre_gltf_state.get_additional_data("dependencies")
 	var mappings: Dictionary = {}
 	var promises_dependencies: Array[Promise] = []
+	var dependencies = _get_gltf_dependencies(local_gltf_path)
 
 	for uri in dependencies:
 		var image_path
