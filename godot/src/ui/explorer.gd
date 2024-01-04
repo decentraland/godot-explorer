@@ -85,7 +85,6 @@ func _ready():
 		mobile_ui.hide()
 		button_jump.hide()
 
-
 	var sky = null
 	if Global.is_mobile:
 		sky = load("res://assets/sky/sky_basic_without_glow").instantiate()

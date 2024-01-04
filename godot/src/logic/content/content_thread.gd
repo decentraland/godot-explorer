@@ -172,7 +172,7 @@ func _get_gltf_dependencies(local_gltf_path: String) -> Array[String]:
 		p_file.get_32()  # version
 		p_file.get_32()  # length
 		var chunk_length := p_file.get_32()
-		var _chunk_type := p_file.get_32()
+		p_file.get_32()  # chunk_type
 		var json_data := p_file.get_buffer(chunk_length)
 		text = json_data.get_string_from_utf8()
 	else:
