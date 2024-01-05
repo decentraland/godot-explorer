@@ -3,9 +3,10 @@ use serde::Serialize;
 
 use std::{cell::RefCell, rc::Rc};
 
-use crate::dcl::scene_apis::{GetRealmResponse, GetSceneInformationResponse, RpcCall};
-
-use super::SceneContentMapping;
+use crate::{
+    content::content_mapping::ContentMappingAndUrlRef,
+    dcl::scene_apis::{GetRealmResponse, GetSceneInformationResponse, RpcCall},
+};
 
 pub fn ops() -> Vec<OpDecl> {
     vec![
@@ -28,8 +29,10 @@ fn op_get_file_url(
     filename: String,
 ) -> Result<GetFileUrlResponse, AnyError> {
     let state = op_state.borrow();
-    let SceneContentMapping(base_url, content_mapping) = state.borrow::<SceneContentMapping>();
-    let file = content_mapping.get(&filename);
+    let content_mapping = state.borrow::<ContentMappingAndUrlRef>();
+    let filename = filename.to_lowercase();
+    let base_url = content_mapping.base_url.as_str();
+    let file = content_mapping.content.get(&filename);
 
     if let Some(hash) = file {
         let url = format!("{base_url}{hash}");

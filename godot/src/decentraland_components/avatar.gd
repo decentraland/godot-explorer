@@ -231,20 +231,20 @@ func async_fetch_wearables_dependencies():
 				if content[file_name] == file_hash:
 					content_to_fetch[file_name] = file_hash
 
-		var content_mapping: Dictionary = {
-			"content": wearable.get("content", {}),
-			"base_url": "https://peer.decentraland.org/content/contents/"
-		}
+		var dcl_content_mapping = DclContentMappingAndUrl.new()
+		dcl_content_mapping.initialize(
+			"https://peer.decentraland.org/content/contents/", wearable.get("content", {})
+		)
 
 		for file_name in content_to_fetch:
-			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
+			async_calls.push_back(_fetch_texture_or_gltf(file_name, dcl_content_mapping))
 
 	await PromiseUtils.async_all(async_calls)
 
 	async_load_wearables()
 
 
-func _fetch_texture_or_gltf(file_name, content_mapping):
+func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappingAndUrl):
 	var promise: Promise
 
 	if file_name.ends_with(".png"):

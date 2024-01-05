@@ -3,9 +3,12 @@ use godot::{
     prelude::*,
 };
 
-use crate::dcl::components::{
-    material::{DclSourceTex, DclTexture},
-    proto_components::sdk::components::{BackgroundTextureMode, PbUiBackground},
+use crate::{
+    content::content_mapping::{ContentMappingAndUrlRef, DclContentMappingAndUrl},
+    dcl::components::{
+        material::{DclSourceTex, DclTexture},
+        proto_components::sdk::components::{BackgroundTextureMode, PbUiBackground},
+    },
 };
 
 #[derive(GodotClass)]
@@ -208,19 +211,15 @@ impl DclUiBackground {
     pub fn change_value(
         &mut self,
         new_value: PbUiBackground,
-        content_mapping: &godot::prelude::Dictionary,
+        content_mapping: ContentMappingAndUrlRef,
     ) {
         let texture_changed = new_value.texture != self.current_value.texture;
         self.current_value = new_value;
 
         // texture change if
         if texture_changed {
-            let content_mapping_files = content_mapping.get("content").unwrap().to::<Dictionary>();
-
-            let texture = DclTexture::from_proto_with_hash(
-                &self.current_value.texture,
-                &content_mapping_files,
-            );
+            let texture =
+                DclTexture::from_proto_with_hash(&self.current_value.texture, &content_mapping);
 
             if let Some(texture) = texture {
                 match &texture.source {
@@ -236,7 +235,7 @@ impl DclUiBackground {
                                 "fetch_texture_by_hash".into(),
                                 &[
                                     GString::from(texture_hash).to_variant(),
-                                    content_mapping.to_variant(),
+                                    DclContentMappingAndUrl::from_ref(content_mapping).to_variant(),
                                 ],
                             )
                             .to::<Gd<RefCounted>>();

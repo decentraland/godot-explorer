@@ -17,10 +17,10 @@ func _ready():
 
 
 func async_load_gltf():
-	var content_mapping = Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
-	self.file_hash = content_mapping.get("content", {}).get(dcl_gltf_src, "")
+	self.file_hash = content_mapping.get_hash(dcl_gltf_src)
 
 	if self.file_hash.is_empty():
 		dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND

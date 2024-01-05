@@ -312,17 +312,6 @@ func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):
 		scene.entity.get("metadata", {}).get("scene", {}).get("base", "0,0").split_floats(",")
 	)
 	var title = scene.entity.get("metadata", {}).get("display", {}).get("title", "No title")
-
-	var content_mapping: Dictionary = {
-		"base_url": scene.entity.baseUrl, "content": scene.entity["content"]
-	}
-
-	for key in content_mapping.content.keys():
-		var key_lower = key.to_lower()
-		if not content_mapping.content.has(key_lower):
-			content_mapping.content[key_lower] = content_mapping.content[key]
-			content_mapping.content.erase(key)
-
 	var scene_definition: Dictionary = {
 		"base": Vector2i(base_parcel[0], base_parcel[1]),
 		"is_global": scene.is_global,
@@ -335,7 +324,11 @@ func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):
 		"metadata": scene.entity.metadata
 	}
 
-	var scene_number_id: int = Global.scene_runner.start_scene(scene_definition, content_mapping)
+	var dcl_content_mapping = DclContentMappingAndUrl.new()
+	dcl_content_mapping.initialize(scene.entity.baseUrl, scene.entity["content"])
+	var scene_number_id: int = Global.scene_runner.start_scene(
+		scene_definition, dcl_content_mapping
+	)
 	scene.scene_number_id = scene_number_id
 
 	return true

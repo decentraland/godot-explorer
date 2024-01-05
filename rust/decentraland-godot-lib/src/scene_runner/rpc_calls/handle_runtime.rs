@@ -1,5 +1,3 @@
-use godot::builtin::{meta::FromGodot, Dictionary};
-
 use crate::{
     dcl::scene_apis::{
         ContentMapping, GetRealmResponse, GetSceneInformationResponse, RpcResultSender,
@@ -37,15 +35,13 @@ pub fn get_scene_information(
     scene: &Scene,
     response: &RpcResultSender<GetSceneInformationResponse>,
 ) {
-    let base_url = scene.content_mapping.get("base_url").unwrap().to_string();
-
-    let content_dictionary =
-        Dictionary::from_variant(&scene.content_mapping.get("content").unwrap());
-    let content: Vec<ContentMapping> = content_dictionary
-        .iter_shared()
-        .map(|(file_name, file_hash)| ContentMapping {
-            file: file_name.to_string(),
-            hash: file_hash.to_string(),
+    let content: Vec<ContentMapping> = scene
+        .content_mapping
+        .content
+        .iter()
+        .map(|(file, hash)| ContentMapping {
+            file: file.clone(),
+            hash: hash.clone(),
         })
         .collect();
 
@@ -53,6 +49,6 @@ pub fn get_scene_information(
         urn: scene.definition.entity_id.clone(),
         content,
         metadata_json: scene.definition.metadata.clone(),
-        base_url,
+        base_url: scene.content_mapping.base_url.clone(),
     })
 }

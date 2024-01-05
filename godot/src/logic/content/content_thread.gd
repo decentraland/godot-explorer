@@ -164,6 +164,10 @@ func _async_process_loading_wearable(
 func _get_gltf_dependencies(local_gltf_path: String) -> Array[String]:
 	var dependencies: Array[String] = []
 	var p_file := FileAccess.open(local_gltf_path, FileAccess.READ)
+
+	if p_file == null:
+		return []
+
 	p_file.seek(0)
 
 	var magic := p_file.get_32()
@@ -197,10 +201,10 @@ func _get_gltf_dependencies(local_gltf_path: String) -> Array[String]:
 
 
 func _async_process_loading_gltf(content: Dictionary, content_cache_map: Dictionary) -> void:
-	var content_mapping = content.get("content_mapping")
+	var content_mapping: DclContentMappingAndUrl = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
 	var file_path: String = content.get("file_path")
-	var base_url: String = content_mapping.get("base_url", "")
+	var base_url: String = content_mapping.get_base_url()
 	var base_path = file_path.get_base_dir()
 	var local_gltf_path = "user://content/" + file_hash
 
@@ -231,7 +235,7 @@ func _async_process_loading_gltf(content: Dictionary, content_cache_map: Diction
 			image_path = uri
 		else:
 			image_path = base_path + "/" + uri
-		var image_hash = content_mapping.get("content", {}).get(image_path.to_lower(), "")
+		var image_hash = content_mapping.get_hash(image_path)
 		if image_hash.is_empty() or base_url.is_empty():
 			printerr(uri + " not found (resolved: " + image_path + ") => ", content_mapping)
 			continue
@@ -324,9 +328,9 @@ func _async_process_loading_audio(
 	content: Dictionary,
 	content_cache_map: Dictionary,
 ) -> void:
-	var content_mapping = content.get("content_mapping")
+	var content_mapping: DclContentMappingAndUrl = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
-	var base_url: String = content_mapping.get("base_url", "")
+	var base_url: String = content_mapping.get_base_url()
 	var local_audio_path = "user://content/" + file_hash
 
 	if file_hash.is_empty() or base_url.is_empty():
@@ -386,9 +390,9 @@ func _async_process_loading_video(
 	content: Dictionary,
 	content_cache_map: Dictionary,
 ) -> void:
-	var content_mapping = content.get("content_mapping")
+	var content_mapping: DclContentMappingAndUrl = content.get("content_mapping")
 	var file_hash: String = content.get("file_hash")
-	var base_url: String = content_mapping.get("base_url", "")
+	var base_url: String = content_mapping.get_base_url()
 	var local_video_path = "user://content/" + file_hash
 
 	if file_hash.is_empty() or base_url.is_empty():

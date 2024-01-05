@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
+    content::content_mapping::DclContentMappingAndUrl,
     dcl::{
         components::{
             material::{DclMaterial, DclSourceTex, DclTexture},
@@ -27,11 +28,6 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         .get_node("/root/content_manager".into())
         .unwrap()
         .clone();
-    let content_mapping_files = scene
-        .content_mapping
-        .get("content")
-        .unwrap()
-        .to::<Dictionary>();
 
     if let Some(material_dirty) = dirty_lww_components.get(&SceneComponentId::MATERIAL) {
         for entity in material_dirty {
@@ -45,7 +41,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 material
                     .material
                     .as_ref()
-                    .map(|material| DclMaterial::from_proto(material, &content_mapping_files))
+                    .map(|material| DclMaterial::from_proto(material, &scene.content_mapping))
             } else {
                 None
             };
@@ -80,7 +76,10 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                                 "fetch_texture_by_hash".into(),
                                 &[
                                     GString::from(hash).to_variant(),
-                                    scene.content_mapping.to_variant(),
+                                    DclContentMappingAndUrl::from_ref(
+                                        scene.content_mapping.clone(),
+                                    )
+                                    .to_variant(),
                                 ],
                             );
                         }

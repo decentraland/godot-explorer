@@ -171,9 +171,9 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 
 # Public function
 # @returns request state on success, null if it had already been fetched
-func fetch_gltf(file_path: String, content_mapping: Dictionary) -> Promise:
+func fetch_gltf(file_path: String, content_mapping: DclContentMappingAndUrl) -> Promise:
 	var promise = Promise.new()
-	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+	var file_hash: String = content_mapping.get_hash(file_path)
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		return content_cached.get("promise")
@@ -197,13 +197,13 @@ func fetch_gltf(file_path: String, content_mapping: Dictionary) -> Promise:
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_texture(file_path: String, content_mapping: Dictionary) -> Promise:
-	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+func fetch_texture(file_path: String, content_mapping: DclContentMappingAndUrl) -> Promise:
+	var file_hash: String = content_mapping.get_hash(file_path)
 	return fetch_texture_by_hash(file_hash, content_mapping)
 
 
-func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
-	var url = content_mapping.get("base_url") + file_hash
+func fetch_texture_by_hash(file_hash: String, content_mapping: DclContentMappingAndUrl):
+	var url = content_mapping.get_base_url() + file_hash
 	return fetch_texture_by_url(file_hash, url)
 
 
@@ -229,8 +229,10 @@ func fetch_texture_by_url(file_hash: String, url: String):
 	return promise
 
 
-func get_image_from_texture_or_null(file_path: String, content_mapping: Dictionary) -> Image:
-	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+func get_image_from_texture_or_null(
+	file_path: String, content_mapping: DclContentMappingAndUrl
+) -> Image:
+	var file_hash: String = content_mapping.get_hash(file_path)
 	return get_image_from_texture_by_hash_or_null(file_hash)
 
 
@@ -241,9 +243,9 @@ func get_image_from_texture_by_hash_or_null(file_hash: String) -> Image:
 	return null
 
 
-func fetch_audio(file_path: String, content_mapping: Dictionary) -> Promise:
+func fetch_audio(file_path: String, content_mapping: DclContentMappingAndUrl) -> Promise:
 	var promise = Promise.new()
-	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+	var file_hash: String = content_mapping.get_hash(file_path)
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		return content_cached.get("promise")
@@ -267,7 +269,7 @@ func fetch_audio(file_path: String, content_mapping: Dictionary) -> Promise:
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_video(file_hash: String, content_mapping: Dictionary) -> Promise:
+func fetch_video(file_hash: String, content_mapping: DclContentMappingAndUrl) -> Promise:
 	var promise = Promise.new()
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:

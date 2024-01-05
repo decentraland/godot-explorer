@@ -65,7 +65,7 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
             existing_ui_background_control
                 .bind_mut()
-                .change_value(value.clone(), &scene.content_mapping);
+                .change_value(value.clone(), scene.content_mapping.clone());
         }
     }
 }

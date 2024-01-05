@@ -9,7 +9,7 @@ func stream_buffer(data: PackedVector2Array):
 
 
 func async_request_video(file_hash):
-	var content_mapping = Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
 	var promise = Global.content_manager.fetch_video(file_hash, content_mapping)
 	var res = await PromiseUtils.async_awaiter(promise)

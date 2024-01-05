@@ -203,7 +203,7 @@ func async_take_and_compare_snapshot(
 	test_camera_3d.queue_free()
 
 	var existing_snapshot: Image = null
-	var content_mapping = Global.scene_runner.get_scene_content_mapping(scene_id)
+	var content_mapping := Global.scene_runner.get_scene_content_mapping(scene_id)
 	var promise = Global.content_manager.fetch_texture(src_stored_snapshot, content_mapping)
 	var res = await PromiseUtils.async_awaiter(promise)
 

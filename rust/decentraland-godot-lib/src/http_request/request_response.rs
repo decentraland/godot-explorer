@@ -163,7 +163,7 @@ pub fn send_result_to_promise(
             let status_code = response.status_code();
             if response.is_error() {
                 promise.reject(response.get_error());
-            } else if status_code < 200 && status_code > 299 {
+            } else if !(200..=299).contains(&status_code) {
                 let payload = response.get_response_as_string();
                 if payload.is_nil() {
                     let mut rejected = false;
