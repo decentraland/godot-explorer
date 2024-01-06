@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://cdswseeu07kuo"]
+
+[ext_resource type="ArrayMesh" uid="uid://jluf76ektf3g" path="res://assets/empty-scenes/EP_8_Visual.res" id="1_3fd5p"]
+[ext_resource type="Shape3D" uid="uid://l0t8etl87eha" path="res://assets/empty-scenes/EP_8_col.res" id="2_ycqvd"]
+
+[node name="EP_8" type="Node3D"]
+
+[node name="EP_8_Visual" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1_3fd5p")
+skeleton = NodePath("")
+
+[node name="EP_8_StaticBody" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EP_8_StaticBody"]
+shape = ExtResource("2_ycqvd")

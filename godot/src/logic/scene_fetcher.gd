@@ -4,18 +4,18 @@ extends Node
 signal parcels_processed(parcel_filled, empty)
 
 const EMPTY_SCENES = [
-	preload("res://assets/empty-scenes/EP_01.glb"),
-	preload("res://assets/empty-scenes/EP_02.glb"),
-	preload("res://assets/empty-scenes/EP_03.glb"),
-	preload("res://assets/empty-scenes/EP_04.glb"),
-	preload("res://assets/empty-scenes/EP_05.glb"),
-	preload("res://assets/empty-scenes/EP_06.glb"),
-	preload("res://assets/empty-scenes/EP_07.glb"),
-	preload("res://assets/empty-scenes/EP_08.glb"),
-	preload("res://assets/empty-scenes/EP_09.glb"),
-	preload("res://assets/empty-scenes/EP_10.glb"),
-	preload("res://assets/empty-scenes/EP_11.glb"),
-	preload("res://assets/empty-scenes/EP_12.glb")
+	preload("res://assets/empty-scenes/EP_0.tscn"),
+	#preload("res://assets/empty-scenes/EP_1.tscn"), # it looks dark
+	preload("res://assets/empty-scenes/EP_2.tscn"),
+	preload("res://assets/empty-scenes/EP_3.tscn"),
+	preload("res://assets/empty-scenes/EP_4.tscn"),
+	preload("res://assets/empty-scenes/EP_5.tscn"),
+	preload("res://assets/empty-scenes/EP_6.tscn"),
+	preload("res://assets/empty-scenes/EP_7.tscn"),
+	preload("res://assets/empty-scenes/EP_8.tscn"),
+	preload("res://assets/empty-scenes/EP_9.tscn"),
+	preload("res://assets/empty-scenes/EP_10.tscn"),
+	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
 var adaptation_layer_js_request: int = -1
@@ -117,9 +117,10 @@ func _async_on_desired_scene_changed():
 		empty_parcels_coords.push_back(Vector2i(x, z))
 
 		if not loaded_empty_scenes.has(parcel):
-			var index = randi_range(0, 11)
+			var index = randi_range(0, EMPTY_SCENES.size() - 1)
 			var scene: Node3D = EMPTY_SCENES[index].instantiate()
-			Global.content_manager.hide_colliders(scene)
+			var temp := "EP_%s_%s_%s" % [index, str(x).replace("-", "m"), str(-z).replace("-", "m")]
+			scene.name = temp
 			add_child(scene)
 			scene.global_position = Vector3(x * 16 + 8, 0, -z * 16 - 8)
 			loaded_empty_scenes[parcel] = scene
@@ -356,4 +357,4 @@ func reload_scene(scene_id: String) -> void:
 		var content_dict: Dictionary = dict.get("content", {})
 		for file_hash in content_dict.values():
 			print("todo clean file hash ", file_hash)
-#			Global.content_manager.remove_file_hash(file_hash)
+			# TODO: clean file hash cached
