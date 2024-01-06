@@ -29,20 +29,35 @@ func async_load_gltf():
 	# TODO: should we set a timeout?
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 
-	var promise = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
-	if promise != null:
+	var promise = Global.content_provider.fetch_gltf(dcl_gltf_src, content_mapping)
+	if promise == null:
+		printerr("Fatal error on fetch gltf: promise == null")
+		return
+		
+	if not promise.is_resolved():
 		await PromiseUtils.async_awaiter(promise)
-
-	_async_on_gltf_loaded()
+		
+	var res = promise.get_data()
+	if res is PromiseError:
+		printerr("Error on fetch gltf: ", res.get_error())
+		return
+	
+	# TODO: use this instead
+	# _async_on_gltf_loaded()
+	
+	# TODO: temp
+	var new_node = res.duplicate()
+	self.async_deferred_add_child.call_deferred(new_node)
+	
 
 
 func _async_on_gltf_loaded():
-	var node = Global.content_manager.get_resource_from_hash(file_hash)
+	var node = Global.content_provider.get_gltf_from_hash(file_hash)
 	if node == null:
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		return
 
-	var promise: Promise = Global.content_manager.instance_gltf_colliders(
+	var promise: Promise = Global.content_provider.instance_gltf_colliders(
 		node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
 	)
 

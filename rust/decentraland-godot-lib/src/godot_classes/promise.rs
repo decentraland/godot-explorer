@@ -89,4 +89,12 @@ impl Promise {
         let get_promise = move || Gd::<Promise>::try_from_instance_id(promise_instance_id).ok();
         (this_promise, get_promise)
     }
+
+    pub fn from_resolved(data: Variant) -> Gd<Self> {
+        Gd::from_init_fn(|base| Self {
+            resolved: true,
+            data,
+            base,
+        })
+    }
 }

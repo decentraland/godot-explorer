@@ -40,7 +40,7 @@ func _async_refresh_data():
 			# TODO: log file not found
 			return
 
-		var promise: Promise = Global.content_manager.fetch_audio(
+		var promise: Promise = Global.content_provider.fetch_audio(
 			last_loaded_audio_clip, content_mapping
 		)
 		var res = await PromiseUtils.async_awaiter(promise)

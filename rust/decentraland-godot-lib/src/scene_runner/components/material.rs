@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    content::content_mapping::DclContentMappingAndUrl,
+    content::{content_mapping::DclContentMappingAndUrl, content_provider::ContentProvider},
     dcl::{
         components::{
             material::{DclMaterial, DclSourceTex, DclTexture},
@@ -12,10 +12,11 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
+    godot_classes::dcl_global::DclGlobal,
     scene_runner::scene::{MaterialItem, Scene},
 };
 use godot::{
-    engine::{ImageTexture, MeshInstance3D, StandardMaterial3D},
+    engine::{MeshInstance3D, StandardMaterial3D},
     prelude::{utilities::weakref, *},
 };
 
@@ -23,11 +24,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
     let material_component = SceneCrdtStateProtoComponents::get_material(crdt_state);
-    let mut content_manager = godot_dcl_scene
-        .root_node_3d
-        .get_node("/root/content_manager".into())
-        .unwrap()
-        .clone();
+    let mut content_provider = DclGlobal::singleton().bind().get_content_provider();
 
     if let Some(material_dirty) = dirty_lww_components.get(&SceneComponentId::MATERIAL) {
         for entity in material_dirty {
@@ -72,7 +69,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 if existing_material.is_none() {
                     for tex in dcl_material.get_textures().into_iter().flatten() {
                         if let DclSourceTex::Texture(hash) = &tex.source {
-                            content_manager.call(
+                            content_provider.call(
                                 "fetch_texture_by_hash".into(),
                                 &[
                                     GString::from(hash).to_variant(),
@@ -182,7 +179,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             godot::engine::base_material_3d::TextureParam::TEXTURE_ALBEDO,
                             &unlit_material.texture,
                             &mut material,
-                            &mut content_manager,
+                            content_provider.bind_mut(),
                             scene,
                         );
                     }
@@ -191,27 +188,27 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             godot::engine::base_material_3d::TextureParam::TEXTURE_ALBEDO,
                             &pbr.texture,
                             &mut material,
-                            &mut content_manager,
+                            content_provider.bind_mut(),
                             scene,
                         );
                         // check_texture(
                         //     godot::engine::base_material_3d::TextureParam::,
                         //     &pbr.alpha_texture,
                         //     item,
-                        //     &mut content_manager,
+                        //     &mut content_provider,
                         // );
                         ready &= check_texture(
                             godot::engine::base_material_3d::TextureParam::TEXTURE_NORMAL,
                             &pbr.bump_texture,
                             &mut material,
-                            &mut content_manager,
+                            content_provider.bind_mut(),
                             scene,
                         );
                         ready &= check_texture(
                             godot::engine::base_material_3d::TextureParam::TEXTURE_EMISSION,
                             &pbr.emissive_texture,
                             &mut material,
-                            &mut content_manager,
+                            content_provider.bind_mut(),
                             scene,
                         );
                     }
@@ -243,7 +240,7 @@ fn check_texture(
     param: godot::engine::base_material_3d::TextureParam,
     dcl_texture: &Option<DclTexture>,
     material: &mut Gd<StandardMaterial3D>,
-    content_manager: &mut Node,
+    content_provider: GdMut<ContentProvider>,
     scene: &Scene,
 ) -> bool {
     if dcl_texture.is_none() {
@@ -254,21 +251,12 @@ fn check_texture(
 
     match &dcl_texture.source {
         DclSourceTex::Texture(content_hash) => {
-            let is_loaded = content_manager
-                .call(
-                    "is_resource_from_hash_loaded".into(),
-                    &[GString::from(content_hash).to_variant()],
-                )
-                .to::<bool>();
-
-            if is_loaded {
-                let resource = content_manager
-                    .call(
-                        "get_resource_from_hash".into(),
-                        &[GString::from(content_hash).to_variant()],
-                    )
-                    .to::<Gd<ImageTexture>>();
-                material.set_texture(param, resource.upcast());
+            if content_provider.is_resource_from_hash_loaded(GString::from(content_hash)) {
+                if let Some(resource) =
+                    content_provider.get_texture_from_hash(GString::from(content_hash))
+                {
+                    material.set_texture(param, resource.upcast());
+                }
                 return true;
             } else {
                 return false;

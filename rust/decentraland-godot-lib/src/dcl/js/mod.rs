@@ -403,6 +403,7 @@ fn op_require(
 
 #[op(v8)]
 fn op_log(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
+    return;
     if immediate {
         tracing::info!("{}", message);
     }
@@ -422,6 +423,7 @@ fn op_log(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
 
 #[op(v8)]
 fn op_error(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
+    return;
     if immediate {
         tracing::error!("{}", message);
     }

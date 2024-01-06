@@ -86,7 +86,7 @@ func async_set_wearable(wearable: Dictionary, _wearable_id: String):
 		dcl_content_mapping.initialize(
 			"https://peer.decentraland.org/content/contents/", wearable.get("content", {})
 		)
-		var promise = Global.content_manager.fetch_texture(wearable_thumbnail, dcl_content_mapping)
+		var promise = Global.content_provider.fetch_texture(wearable_thumbnail, dcl_content_mapping)
 		var res = await PromiseUtils.async_awaiter(promise)
 		if res is PromiseError:
 			printerr("Fetch texture error on ", wearable_thumbnail)

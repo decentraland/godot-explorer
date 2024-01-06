@@ -413,7 +413,9 @@ impl SceneManager {
                 .upcast::<Node>()
                 .clone();
             self.base.remove_child(node_3d);
-            self.base_ui.remove_child(node_ui);
+            if node_ui.get_parent().is_some() {
+                self.base_ui.remove_child(node_ui);
+            }
             scene.godot_dcl_scene.root_node_3d.queue_free();
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);

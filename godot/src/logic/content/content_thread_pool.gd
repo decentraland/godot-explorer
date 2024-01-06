@@ -40,8 +40,6 @@ func get_best_content_thread() -> ContentThread:
 func _ready():
 	http_requester = RustHttpQueueRequester.new()
 
-	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
-	GLTFDocument.register_gltf_document_extension(custom_importer)
 
 	# We do not use threads for tests, running the test in a docker introduces an issue with multithreading on nodes
 	# More info: https://github.com/godotengine/godot/issues/79194
@@ -70,7 +68,7 @@ func get_resource_from_hash(file_hash: String):
 	return null
 
 
-func is_resource_from_hash_loaded(file_hash: String):
+func is_resource_from_hash_loaded(file_hash: String) -> bool:
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		return content_cached.get("loaded")
@@ -327,7 +325,7 @@ func split_animations(_gltf_node: Node) -> void:
 
 
 # TODO(Mateo): Looks like more a helper than part of the ContentThreadPool
-func hide_colliders(gltf_node):
+static func hide_colliders(gltf_node: Node):
 	for maybe_collider in gltf_node.get_children():
 		if maybe_collider is Node3D and maybe_collider.name.find("_collider") != -1:
 			maybe_collider.visible = false

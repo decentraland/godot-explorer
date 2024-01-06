@@ -11,6 +11,8 @@ use crate::{
     },
 };
 
+use super::dcl_global::DclGlobal;
+
 #[derive(GodotClass)]
 #[class(base=NinePatchRect)]
 pub struct DclUiBackground {
@@ -92,24 +94,14 @@ impl DclUiBackground {
 
     #[func]
     fn _on_texture_loaded(&mut self) {
-        let mut content_manager = self
-            .base
-            .get_node("/root/content_manager".into())
-            .unwrap()
-            .clone();
-
-        let resource = content_manager.call(
-            "get_resource_from_hash".into(),
-            &[self.waiting_hash.to_variant()],
-        );
-
-        if resource.is_nil() {
-            return;
-        }
-        let Ok(godot_texture) = resource.try_to::<Gd<godot::engine::ImageTexture>>() else {
+        let global = DclGlobal::singleton();
+        let mut content_provider = global.bind().get_content_provider();
+        let Some(godot_texture) = content_provider
+            .bind_mut()
+            .get_texture_from_hash(self.waiting_hash.clone())
+        else {
             return;
         };
-
         self.texture_loaded = true;
         self.base.set_texture(godot_texture.clone().upcast());
 
@@ -224,30 +216,17 @@ impl DclUiBackground {
             if let Some(texture) = texture {
                 match &texture.source {
                     DclSourceTex::Texture(texture_hash) => {
-                        let mut content_manager = self
-                            .base
-                            .get_node("/root/content_manager".into())
-                            .unwrap()
-                            .clone();
-
-                        let mut promise = content_manager
-                            .call(
-                                "fetch_texture_by_hash".into(),
-                                &[
-                                    GString::from(texture_hash).to_variant(),
-                                    DclContentMappingAndUrl::from_ref(content_mapping).to_variant(),
-                                ],
-                            )
-                            .to::<Gd<RefCounted>>();
-
+                        let global = DclGlobal::singleton();
+                        let mut content_provider = global.bind().get_content_provider();
+                        let mut promise = content_provider.bind_mut().fetch_texture_by_hash(
+                            GString::from(texture_hash),
+                            DclContentMappingAndUrl::from_ref(content_mapping),
+                        );
                         self.waiting_hash = GString::from(texture_hash);
 
-                        let fetching_resource =
-                            promise.call("is_resolved".into(), &[]).to::<bool>();
-
-                        if fetching_resource {
+                        if promise.bind().is_resolved() {
                             promise.connect(
-                                "_on_resolved".into(),
+                                "on_resolved".into(),
                                 self.base.callable("_on_texture_loaded"),
                             );
                         } else {
