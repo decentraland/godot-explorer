@@ -141,4 +141,4 @@ func async_set_wearable(wearable: Dictionary):
 		if res is PromiseError:
 			printerr("Fetch texture error on ", wearable_thumbnail)
 		else:
-			texture_rect_preview.texture = res
+			texture_rect_preview.texture = res.get("texture")

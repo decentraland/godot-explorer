@@ -1,9 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use godot::{
-    engine::{AudioStream, Image, ImageTexture},
-    prelude::*,
-};
+use godot::{engine::ImageTexture, prelude::*};
 
 use crate::{
     content::content_mapping::DclContentMappingAndUrl, godot_classes::promise::Promise,
@@ -12,17 +9,11 @@ use crate::{
 };
 
 use super::{
+    audio::load_audio,
     content_notificator::ContentNotificator,
     gltf::{apply_update_set_mask_colliders, load_gltf},
+    texture::load_png_texture,
 };
-pub enum ContentEntryData {
-    Texture(Gd<ImageTexture>),
-    Gltf(Gd<Node3D>),
-    WearableEmote(Dictionary),
-    Audio(Gd<AudioStream>),
-    Video(()),
-}
-
 pub struct ContentEntry {
     promise: Gd<Promise>,
 }
@@ -70,12 +61,20 @@ impl ContentProvider {
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
-        if let Some(entry) = self.cached.get(&file_path.to_string()) {
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        let Some(file_hash) = content_mapping
+            .content
+            .get(&file_path.to_string().to_lowercase())
+        else {
+            return Promise::from_rejected(format!("File not found: {}", file_path));
+        };
+
+        if let Some(entry) = self.cached.get(file_hash) {
             return entry.promise.clone();
         }
 
+        let file_hash = file_hash.clone();
         let (promise, get_promise) = Promise::make_to_async();
-        let content_mapping = content_mapping.bind().get_content_mapping();
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
@@ -89,18 +88,13 @@ impl ContentProvider {
         });
 
         self.cached.insert(
-            file_path.to_string(),
+            file_hash,
             ContentEntry {
                 promise: promise.clone(),
             },
         );
 
         promise
-    }
-
-    #[func]
-    pub fn duplicate_materials(&mut self, _target_meshes: VariantArray) -> Gd<Promise> {
-        Promise::from_resolved(Variant::nil())
     }
 
     #[func]
@@ -129,58 +123,157 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn fetch_wearables(
+    pub fn fetch_audio(
         &mut self,
-        _wearables: VariantArray,
-        _content_base_url: GString,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
-        Promise::from_resolved(Variant::nil())
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        let Some(file_hash) = content_mapping
+            .content
+            .get(&file_path.to_string().to_lowercase())
+        else {
+            return Promise::from_rejected(format!("File not found: {}", file_path));
+        };
+
+        if let Some(entry) = self.cached.get(file_hash) {
+            return entry.promise.clone();
+        }
+
+        let file_hash = file_hash.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+        let audio_file_path = file_path.to_string();
+        let content_provider_context = self.get_context();
+        TokioRuntime::spawn(async move {
+            load_audio(
+                audio_file_path,
+                content_mapping,
+                get_promise,
+                content_provider_context,
+            )
+            .await;
+        });
+
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                promise: promise.clone(),
+            },
+        );
+
+        promise
     }
 
     #[func]
     pub fn fetch_texture(
         &mut self,
-        _file_path: GString,
-        _content_mapping: Gd<DclContentMappingAndUrl>,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
-        Promise::from_resolved(Variant::nil())
+        let file_hash = content_mapping.bind().get_hash(file_path);
+        if file_hash.is_empty() {
+            return Promise::from_rejected("Texture not found in the mappings.".to_string());
+        };
+
+        self.fetch_texture_by_hash(file_hash, content_mapping)
     }
 
     #[func]
     pub fn fetch_texture_by_hash(
         &mut self,
-        _file_hash: GString,
-        _content_mapping: Gd<DclContentMappingAndUrl>,
+        file_hash: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
-        Promise::from_resolved(Variant::nil())
+        let file_hash = file_hash.to_string();
+        if let Some(entry) = self.cached.get(&file_hash) {
+            return entry.promise.clone();
+        }
+
+        let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
+        let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
+        let (promise, get_promise) = Promise::make_to_async();
+        let content_provider_context = self.get_context();
+        TokioRuntime::spawn(async move {
+            load_png_texture(
+                url,
+                absolute_file_path,
+                get_promise,
+                content_provider_context,
+            )
+            .await;
+        });
+
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                promise: promise.clone(),
+            },
+        );
+
+        promise
     }
 
     #[func]
-    pub fn fetch_texture_by_url(&mut self, _file_hash: GString, _url: GString) -> Gd<Promise> {
-        Promise::from_resolved(Variant::nil())
+    pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
+        let file_hash = file_hash.to_string();
+        if let Some(entry) = self.cached.get(&file_hash) {
+            return entry.promise.clone();
+        }
+        let url = url.to_string();
+        let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
+        let (promise, get_promise) = Promise::make_to_async();
+        let content_provider_context = self.get_context();
+        TokioRuntime::spawn(async move {
+            load_png_texture(
+                url,
+                absolute_file_path,
+                get_promise,
+                content_provider_context,
+            )
+            .await;
+        });
+
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                promise: promise.clone(),
+            },
+        );
+
+        promise
     }
 
     #[func]
-    pub fn get_image_from_texture_or_nil(
-        &mut self,
-        _file_path: GString,
-        _content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> Gd<Image> {
-        Image::new()
+    pub fn get_texture_from_hash(&self, file_hash: GString) -> Option<Gd<ImageTexture>> {
+        self.cached
+            .get(&file_hash.to_string())?
+            .promise
+            .bind()
+            .get_data()
+            .try_to::<Dictionary>()
+            .ok()?
+            .get("texture")?
+            .try_to::<Gd<ImageTexture>>()
+            .ok()
     }
 
     #[func]
-    pub fn get_image_from_texture_by_hash_or_nil(&mut self, _file_hash: GString) -> Gd<Image> {
-        Image::new()
+    pub fn get_gltf_from_hash(&self, file_hash: GString) -> Option<Gd<Node3D>> {
+        self.cached
+            .get(&file_hash.to_string())?
+            .promise
+            .bind()
+            .get_data()
+            .try_to::<Gd<Node3D>>()
+            .ok()
     }
 
     #[func]
-    pub fn fetch_audio(
-        &mut self,
-        _file_path: GString,
-        _content_mapping: Gd<DclContentMappingAndUrl>,
-    ) -> Gd<Promise> {
-        Promise::from_resolved(Variant::nil())
+    pub fn is_resource_from_hash_loaded(&self, file_hash: GString) -> bool {
+        if let Some(entry) = self.cached.get(&file_hash.to_string()) {
+            return entry.promise.bind().is_resolved();
+        }
+        false
     }
 
     #[func]
@@ -193,23 +286,22 @@ impl ContentProvider {
     }
 
     #[func]
+    pub fn duplicate_materials(&mut self, _target_meshes: VariantArray) -> Gd<Promise> {
+        Promise::from_resolved(Variant::nil())
+    }
+
+    #[func]
+    pub fn fetch_wearables(
+        &mut self,
+        _wearables: VariantArray,
+        _content_base_url: GString,
+    ) -> Gd<Promise> {
+        Promise::from_resolved(Variant::nil())
+    }
+
+    #[func]
     pub fn get_wearable(&mut self, _id: GString) -> Variant {
         Variant::nil()
-    }
-
-    #[func]
-    pub fn get_texture_from_hash(&self, _file_hash: GString) -> Option<Gd<ImageTexture>> {
-        None
-    }
-
-    #[func]
-    pub fn get_gltf_from_hash(&self, _file_hash: GString) -> Option<Gd<Node3D>> {
-        None
-    }
-
-    #[func]
-    pub fn is_resource_from_hash_loaded(&self, _file_hash: GString) -> bool {
-        true
     }
 }
 

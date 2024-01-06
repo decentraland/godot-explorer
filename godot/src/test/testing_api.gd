@@ -210,9 +210,7 @@ func async_take_and_compare_snapshot(
 	if res is PromiseError:
 		printerr("Fetch snapshot texture error, doesn't it exist?")
 	else:
-		existing_snapshot = Global.content_provider.get_image_from_texture_or_null(
-			src_stored_snapshot, content_mapping
-		)
+		existing_snapshot = res.get("image")
 
 	viewport_img.save_png(snapshot_path)
 

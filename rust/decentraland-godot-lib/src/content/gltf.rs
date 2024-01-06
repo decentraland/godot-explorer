@@ -4,7 +4,7 @@ use godot::{
     builtin::{meta::ToGodot, Dictionary, GString},
     engine::{
         file_access::ModeFlags, global::Error, node::ProcessMode, AnimatableBody3D,
-        CollisionShape3D, ConcavePolygonShape3D, FileAccess, GdScript, GltfDocument, GltfState,
+        CollisionShape3D, ConcavePolygonShape3D, FileAccess, GltfDocument, GltfState,
         MeshInstance3D, Node, Node3D, StaticBody3D,
     },
     obj::{Gd, InstanceId},
@@ -15,7 +15,12 @@ use crate::{
     http_request::request_response::{RequestOption, ResponseType},
 };
 
-use super::{content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext};
+use super::{
+    content_mapping::ContentMappingAndUrlRef,
+    content_provider::ContentProviderContext,
+    file_string::get_base_dir,
+    thread_safety::{reject_promise, resolve_promise, set_thread_safety_checks_enabled},
+};
 
 pub async fn load_gltf(
     file_path: String,
@@ -123,10 +128,6 @@ pub async fn load_gltf(
         return;
     }
 
-    let Some(mut promise) = get_promise() else {
-        return;
-    };
-
     set_thread_safety_checks_enabled(false);
 
     let mut new_gltf = GltfDocument::new();
@@ -181,11 +182,7 @@ pub async fn load_gltf(
     node.rotate_y(std::f32::consts::PI);
     create_colliders(node.clone().upcast());
 
-    promise.call_deferred("resolve_with_data".into(), &[node.to_variant()]);
-
-    if file_hash.as_str() == "bafybeidctk6oprgdus3l26eupkqsgbunje7ykza6omxdshlql35zikgmkq" {
-        tracing::debug!("breakpoint");
-    }
+    resolve_promise(get_promise, Some(node.to_variant()));
 
     set_thread_safety_checks_enabled(true);
 }
@@ -221,15 +218,7 @@ pub fn apply_update_set_mask_colliders(
         node.queue_free();
     }
 
-    if let Some(mut promise) = get_promise() {
-        promise.call_deferred("resolve_with_data".into(), &[gltf_node.to_variant()]);
-    }
-}
-
-fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: String) {
-    if let Some(mut promise) = get_promise() {
-        promise.call_deferred("reject".into(), &[reason.to_variant()]);
-    }
+    resolve_promise(get_promise, Some(gltf_node.to_variant()));
 }
 
 fn get_dependencies(file_path: &String) -> Vec<String> {
@@ -291,22 +280,6 @@ fn get_dependencies(file_path: &String) -> Vec<String> {
     }
 
     dependencies
-}
-
-pub fn get_base_dir(file_path: &str) -> String {
-    let last_slash = file_path.rfind('/');
-    if let Some(last_slash) = last_slash {
-        return file_path[0..last_slash].to_string();
-    }
-    "".to_string()
-}
-
-pub fn set_thread_safety_checks_enabled(enabled: bool) {
-    let mut temp_script = godot::engine::load::<GdScript>("res://src/logic/thread_safety.gd");
-    temp_script.call(
-        "set_thread_safety_checks_enabled".into(),
-        &[enabled.to_variant()],
-    );
 }
 
 fn get_collider(mesh_instance: &Gd<MeshInstance3D>) -> Option<Gd<StaticBody3D>> {

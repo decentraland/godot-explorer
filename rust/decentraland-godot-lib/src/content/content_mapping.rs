@@ -56,12 +56,12 @@ impl DclContentMappingAndUrl {
     }
 
     #[func]
-    fn get_base_url(&self) -> GString {
+    pub fn get_base_url(&self) -> GString {
         self.inner.base_url.to_string().into()
     }
 
     #[func]
-    fn get_hash(&self, file: GString) -> GString {
+    pub fn get_hash(&self, file: GString) -> GString {
         let file = file.to_string().to_lowercase();
         self.inner
             .content

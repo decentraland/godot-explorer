@@ -91,7 +91,7 @@ func async_set_wearable(wearable: Dictionary, _wearable_id: String):
 		if res is PromiseError:
 			printerr("Fetch texture error on ", wearable_thumbnail)
 		else:
-			texture_rect_preview.texture = res
+			texture_rect_preview.texture = res.get("texture")
 
 
 func set_equipable_and_equip(equipable: bool, equipped: bool):

@@ -97,4 +97,15 @@ impl Promise {
             base,
         })
     }
+
+    pub fn from_rejected(reason: String) -> Gd<Self> {
+        let mut data = PromiseError::new_gd();
+        data.bind_mut().error_description = GString::from(reason);
+
+        Gd::from_init_fn(|base| Self {
+            resolved: true,
+            data: data.to_variant(),
+            base,
+        })
+    }
 }
