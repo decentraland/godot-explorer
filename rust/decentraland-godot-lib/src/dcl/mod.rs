@@ -6,7 +6,10 @@ pub mod serialization;
 
 use godot::builtin::{Vector2, Vector3};
 
-use crate::auth::{ephemeral_auth_chain::EphemeralAuthChain, ethereum_provider::EthereumProvider};
+use crate::{
+    auth::{ephemeral_auth_chain::EphemeralAuthChain, ethereum_provider::EthereumProvider},
+    content::content_mapping::ContentMappingAndUrlRef,
+};
 
 use self::{
     crdt::{DirtyCrdtState, SceneCrdtState},
@@ -19,7 +22,6 @@ use self::{
 };
 
 use std::{
-    collections::HashMap,
     sync::{Arc, Mutex},
     thread::JoinHandle,
 };
@@ -89,8 +91,7 @@ impl DclScene {
     pub fn spawn_new_js_dcl_scene(
         id: SceneId,
         scene_definition: SceneDefinition,
-        content_mapping: HashMap<String, String>,
-        base_url: String,
+        content_mapping: ContentMappingAndUrlRef,
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
         testing_mode: bool,
         ethereum_provider: Arc<EthereumProvider>,
@@ -109,7 +110,6 @@ impl DclScene {
                     id,
                     scene_definition,
                     content_mapping,
-                    base_url,
                     thread_sender_to_main,
                     thread_receive_from_renderer,
                     thread_scene_crdt,

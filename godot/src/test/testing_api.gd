@@ -203,14 +203,14 @@ func async_take_and_compare_snapshot(
 	test_camera_3d.queue_free()
 
 	var existing_snapshot: Image = null
-	var content_mapping = Global.scene_runner.get_scene_content_mapping(scene_id)
-	var promise = Global.content_manager.fetch_texture(src_stored_snapshot, content_mapping)
+	var content_mapping := Global.scene_runner.get_scene_content_mapping(scene_id)
+	var promise = Global.content_provider.fetch_texture(src_stored_snapshot, content_mapping)
 	var res = await PromiseUtils.async_awaiter(promise)
 
 	if res is PromiseError:
 		printerr("Fetch snapshot texture error, doesn't it exist?")
 	else:
-		existing_snapshot = Global.content_manager.get_image_from_texture_or_null(
+		existing_snapshot = Global.content_provider.get_image_from_texture_or_null(
 			src_stored_snapshot, content_mapping
 		)
 

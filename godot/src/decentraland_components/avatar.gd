@@ -97,14 +97,14 @@ func async_update_avatar(avatar: Dictionary):
 	current_skin_color = Avatar.from_color_object(avatar.get("skin", {}).get("color", null))
 	current_hair_color = Avatar.from_color_object(avatar.get("hair", {}).get("color", null))
 
-	var wearable_to_request := PackedStringArray(current_wearables)
+	var wearable_to_request := Array(current_wearables)
 	wearable_to_request.push_back(current_body_shape)
 
 	_load_default_emotes()
 
 	finish_loading = false
 
-	var promise = Global.content_manager.fetch_wearables(wearable_to_request, current_content_url)
+	var promise = Global.content_provider.fetch_wearables(wearable_to_request, current_content_url)
 	await PromiseUtils.async_awaiter(promise)
 	async_fetch_wearables_dependencies()
 
@@ -201,9 +201,9 @@ func async_fetch_wearables_dependencies():
 	wearables_dict.clear()
 
 	# Fill data
-	wearables_dict[current_body_shape] = Global.content_manager.get_wearable(current_body_shape)
+	wearables_dict[current_body_shape] = Global.content_provider.get_wearable(current_body_shape)
 	for item in current_wearables:
-		wearables_dict[item] = Global.content_manager.get_wearable(item)
+		wearables_dict[item] = Global.content_provider.get_wearable(item)
 
 	var async_calls: Array = []
 	for wearable_key in wearables_dict.keys():
@@ -231,26 +231,26 @@ func async_fetch_wearables_dependencies():
 				if content[file_name] == file_hash:
 					content_to_fetch[file_name] = file_hash
 
-		var content_mapping: Dictionary = {
-			"content": wearable.get("content", {}),
-			"base_url": "https://peer.decentraland.org/content/contents/"
-		}
+		var dcl_content_mapping = DclContentMappingAndUrl.new()
+		dcl_content_mapping.initialize(
+			"https://peer.decentraland.org/content/contents/", wearable.get("content", {})
+		)
 
 		for file_name in content_to_fetch:
-			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
+			async_calls.push_back(_fetch_texture_or_gltf(file_name, dcl_content_mapping))
 
 	await PromiseUtils.async_all(async_calls)
 
 	async_load_wearables()
 
 
-func _fetch_texture_or_gltf(file_name, content_mapping):
+func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappingAndUrl):
 	var promise: Promise
 
 	if file_name.ends_with(".png"):
-		promise = Global.content_manager.fetch_texture(file_name, content_mapping)
+		promise = Global.content_provider.fetch_texture(file_name, content_mapping)
 	else:
-		promise = Global.content_manager.fetch_gltf(file_name, content_mapping)
+		promise = Global.content_provider.fetch_gltf(file_name, content_mapping)
 
 	return promise
 
@@ -267,7 +267,7 @@ func _free_old_skeleton(skeleton: Node):
 
 
 func try_to_set_body_shape(body_shape_hash):
-	var body_shape: Node3D = Global.content_manager.get_resource_from_hash(body_shape_hash)
+	var body_shape: Node3D = Global.content_provider.get_gltf_from_hash(body_shape_hash)
 	if body_shape == null:
 		return
 
@@ -331,7 +331,7 @@ func async_load_wearables():
 			continue
 
 		var file_hash = Wearables.get_wearable_main_file_hash(wearable, current_body_shape)
-		var obj = Global.content_manager.get_resource_from_hash(file_hash)
+		var obj = Global.content_provider.get_gltf_from_hash(file_hash)
 		var wearable_skeleton: Skeleton3D = obj.find_child("Skeleton3D")
 		for child in wearable_skeleton.get_children():
 			var new_wearable = child.duplicate()
@@ -376,7 +376,7 @@ func async_load_wearables():
 			child.mesh = child.mesh.duplicate(true)
 			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
 
-	var promise = Global.content_manager.duplicate_materials(meshes)
+	var promise = Global.content_provider.duplicate_materials(meshes)
 	await PromiseUtils.async_awaiter(promise)
 	apply_color_and_facial()
 	body_shape_skeleton_3d.visible = true
@@ -439,14 +439,14 @@ func apply_texture_and_mask(
 ):
 	var current_material = mask_material.duplicate()
 	current_material.set_shader_parameter(
-		"base_texture", Global.content_manager.get_resource_from_hash(textures[0])
+		"base_texture", Global.content_provider.get_texture_from_hash(textures[0])
 	)
 	current_material.set_shader_parameter("material_color", color)
 	current_material.set_shader_parameter("mask_color", mask_color)
 
 	if textures.size() > 1:
 		current_material.set_shader_parameter(
-			"mask_texture", Global.content_manager.get_resource_from_hash(textures[1])
+			"mask_texture", Global.content_provider.get_texture_from_hash(textures[1])
 		)
 
 	mesh.mesh.surface_set_material(0, current_material)

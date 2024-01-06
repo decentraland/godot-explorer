@@ -1,14 +1,13 @@
 use std::{
     collections::{HashMap, HashSet},
+    sync::Arc,
     time::Instant,
 };
 
-use godot::{
-    obj::UserClass,
-    prelude::{Dictionary, Gd},
-};
+use godot::{obj::UserClass, prelude::Gd};
 
 use crate::{
+    content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
     dcl::{
         components::{
             internal_player_data::InternalPlayerData,
@@ -162,7 +161,7 @@ pub struct Scene {
 
     pub state: SceneState,
 
-    pub content_mapping: Dictionary,
+    pub content_mapping: ContentMappingAndUrlRef,
 
     pub gltf_loading: HashSet<SceneEntityId>,
     pub pointer_events_result: Vec<(SceneEntityId, PbPointerEventsResult)>,
@@ -239,7 +238,7 @@ impl Scene {
         scene_id: SceneId,
         scene_definition: SceneDefinition,
         dcl_scene: DclScene,
-        content_mapping: Dictionary,
+        content_mapping: ContentMappingAndUrlRef,
         scene_type: SceneType,
         parent_ui_node: Gd<DclUiControl>,
     ) -> Self {
@@ -300,7 +299,6 @@ impl Scene {
         let scene_definition = SceneDefinition::default();
         let scene_id = Scene::new_id();
         let dcl_scene = DclScene::spawn_new_test_scene(scene_id);
-        let content_mapping = Dictionary::default();
         let godot_dcl_scene =
             GodotDclScene::new(&scene_definition, &scene_id, DclUiControl::alloc_gd());
 
@@ -312,7 +310,7 @@ impl Scene {
             dcl_scene,
             state: SceneState::Alive,
             enqueued_dirty: Vec::new(),
-            content_mapping,
+            content_mapping: Arc::new(ContentMappingAndUrl::new()),
             current_dirty: Dirty {
                 waiting_process: true,
                 entities: DirtyEntities::default(),

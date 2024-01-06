@@ -16,14 +16,13 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
 ## Global classes (singleton pattern)
-var content_manager: ContentManager
 var config: ConfigData
 
 var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
 var animation_importer: AnimationImporter = AnimationImporter.new()
 
 var scene_fetcher: SceneFetcher = null
-var http_requester: RustHttpRequesterWrapper
+var http_requester: RustHttpQueueRequester
 
 var nft_fetcher: OpenSeaFetcher = OpenSeaFetcher.new()
 var nft_frame_loader: NftFrameStyleLoader = NftFrameStyleLoader.new()
@@ -36,7 +35,7 @@ var dcl_android_plugin
 
 
 func _ready():
-	http_requester = RustHttpRequesterWrapper.new()
+	http_requester = RustHttpQueueRequester.new()
 
 	var args := OS.get_cmdline_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
@@ -71,8 +70,8 @@ func _ready():
 	self.testing_tools = TestingTools.new()
 	self.testing_tools.set_name("testing_tool")
 
-	self.content_manager = ContentManager.new()
-	self.content_manager.set_name("content_manager")
+	self.content_provider = ContentProvider.new()
+	self.content_provider.set_name("content_provider")
 
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
@@ -84,7 +83,7 @@ func _ready():
 	self.avatars.set_name("avatar_scene")
 
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
-	get_tree().root.add_child.call_deferred(self.content_manager)
+	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
 	get_tree().root.add_child.call_deferred(self.player_identity)
@@ -92,6 +91,9 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.avatars)
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
 	get_tree().root.add_child.call_deferred(self.testing_tools)
+
+	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
+	GLTFDocument.register_gltf_document_extension(custom_importer)
 
 	# TODO: enable raycast debugger
 	add_child(raycast_debugger)
@@ -116,7 +118,8 @@ func print_node_tree(node: Node, prefix = ""):
 
 
 func _process(_dt: float):
-	http_requester.poll()
+	pass
+	#http_requester.poll()
 
 
 func get_explorer():

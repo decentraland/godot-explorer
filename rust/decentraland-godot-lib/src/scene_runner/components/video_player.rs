@@ -3,6 +3,7 @@ use crate::{
         stream_processor::{AVCommand, StreamStateData},
         video_stream::av_sinks,
     },
+    content::content_mapping::ContentMappingAndUrlRef,
     dcl::{
         components::{
             proto_components::sdk::components::{PbVideoEvent, VideoState},
@@ -33,20 +34,17 @@ enum VideoUpdateMode {
 }
 
 fn get_local_file_hash_future(
-    content_mapping: &Dictionary,
+    content_mapping: &ContentMappingAndUrlRef,
     file_path: &str,
 ) -> Option<(
     tokio::sync::oneshot::Sender<String>,
     tokio::sync::oneshot::Receiver<String>,
     String,
 )> {
-    let file_path = file_path.to_lowercase();
-    let dict = content_mapping.get("content".to_variant())?;
-    let file_hash = Dictionary::from_variant(&dict)
-        .get(file_path.to_variant())?
-        .to_string();
+    let file_path = file_path.to_lowercase().to_string();
+    let file = content_mapping.content.get(&file_path)?.clone();
     let (sx, rx) = tokio::sync::oneshot::channel::<String>();
-    Some((sx, rx, file_hash))
+    Some((sx, rx, file))
 }
 
 pub fn update_video_player(

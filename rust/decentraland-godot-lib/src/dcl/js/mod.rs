@@ -11,6 +11,7 @@ pub mod websocket;
 
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::auth::ethereum_provider::EthereumProvider;
+use crate::content::content_mapping::ContentMappingAndUrlRef;
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
 use super::{
@@ -42,7 +43,6 @@ pub struct SceneStartTime(pub std::time::SystemTime);
 pub struct SceneLogs(pub Vec<SceneLogMessage>);
 pub struct SceneMainCrdt(pub Option<Vec<u8>>);
 pub struct SceneTickCounter(pub u32);
-pub struct SceneContentMapping(pub String, pub HashMap<String, String>);
 pub struct SceneDying(pub bool);
 
 pub struct SceneElapsedTime(pub f32);
@@ -121,8 +121,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
 pub(crate) fn scene_thread(
     scene_id: SceneId,
     scene_definition: SceneDefinition,
-    content_mapping: HashMap<String, String>,
-    base_url: String,
+    content_mapping: ContentMappingAndUrlRef,
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
     scene_crdt: SharedSceneCrdtState,
@@ -214,9 +213,7 @@ pub(crate) fn scene_thread(
         state.borrow_mut().put(scene_main_crdt);
     }
 
-    state
-        .borrow_mut()
-        .put(SceneContentMapping(base_url, content_mapping));
+    state.borrow_mut().put(content_mapping);
 
     state.borrow_mut().put(SceneLogs(Vec::new()));
     state.borrow_mut().put(SceneElapsedTime(0.0));

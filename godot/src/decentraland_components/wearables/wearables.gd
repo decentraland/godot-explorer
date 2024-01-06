@@ -517,7 +517,7 @@ static func compose_hidden_categories(
 
 
 static func get_skeleton_from_content(content_hash: String) -> Skeleton3D:
-	var content = Global.content_manager.get_resource_from_hash(content_hash)
+	var content = Global.content_provider.get_gltf_from_hash(content_hash)
 	if content == null:
 		return null
 
@@ -596,7 +596,9 @@ static func is_valid_wearable(
 		return false
 
 	if not skip_content_integrity:
-		var obj = Global.content_manager.get_resource_from_hash(file_hash)
+		var obj = Global.content_provider.get_gltf_from_hash(file_hash)
+		if obj == null:
+			obj = Global.content_provider.get_texture_from_hash(file_hash)
 		if obj == null:
 			# printerr("wearable ", wearable_key, " doesn't have resource from hash")
 			return false
@@ -623,14 +625,14 @@ static func get_curated_wearable_list(
 ) -> Array:
 	var wearables_by_category: Dictionary = {}
 
-	var body_shape = Global.content_manager.get_wearable(body_shape_id)
+	var body_shape = Global.content_provider.get_wearable(body_shape_id)
 	if not is_valid_wearable(body_shape, body_shape_id):
 		return []
 
 	wearables_by_category[Categories.BODY_SHAPE] = body_shape
 
 	for wearable_id in wearables:
-		var wearable = Global.content_manager.get_wearable(wearable_id)
+		var wearable = Global.content_provider.get_wearable(wearable_id)
 		if is_valid_wearable(wearable, body_shape_id):
 			var category = get_category(wearable)
 			if not wearables_by_category.has(category):
@@ -667,9 +669,9 @@ static func set_fallback_for_missing_needed_categories(
 			needed_catagory
 		)
 		if fallback_wearable_id != null:
-			var fallback_wearable = Global.content_manager.get_wearable(fallback_wearable_id)
+			var fallback_wearable = Global.content_provider.get_wearable(fallback_wearable_id)
 			if is_valid_wearable(fallback_wearable, body_shape_id):
-				wearables_by_category[needed_catagory] = Global.content_manager.get_wearable(
+				wearables_by_category[needed_catagory] = Global.content_provider.get_wearable(
 					fallback_wearable_id
 				)
 

@@ -130,7 +130,7 @@ class Asset:
 
 	func async_download_image():
 		var texture_hash = get_hash()
-		var promise = Global.content_manager.fetch_texture_by_url(texture_hash, image_url)
+		var promise = Global.content_provider.fetch_texture_by_url(texture_hash, image_url)
 		var result = await PromiseUtils.async_awaiter(promise)
 		if result is PromiseError:
 			printerr(

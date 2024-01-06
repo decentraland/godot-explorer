@@ -9,7 +9,7 @@ use crate::scene_runner::components::animator::apply_animator_value;
 use super::dcl_global::DclGlobal;
 
 #[repr(i32)]
-#[derive(Property, Export, PartialEq, Debug)]
+#[derive(Clone, Property, Export, PartialEq, Debug)]
 pub enum GltfContainerLoadingState {
     Unknown = 0,
     #[allow(dead_code)]
@@ -101,6 +101,9 @@ fn get_animation_player(godot_entity_node: &Base<Node3D>) -> Option<Gd<Animation
 impl DclGltfContainer {
     #[func]
     fn check_animations(&mut self) {
+        if self.dcl_gltf_loading_state != GltfContainerLoadingState::Finished {
+            return;
+        }
         let Some(animation_player) = get_animation_player(&self.base) else {
             return;
         };
@@ -131,6 +134,10 @@ impl DclGltfContainer {
                 }
             }
         }
+    }
+
+    pub fn get_state(&self) -> GltfContainerLoadingState {
+        self.dcl_gltf_loading_state.clone()
     }
 }
 

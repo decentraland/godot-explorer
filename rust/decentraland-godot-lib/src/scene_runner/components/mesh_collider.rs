@@ -20,6 +20,10 @@ pub fn create_or_update_mesh(
     animatable_body_3d: &mut Gd<AnimatableBody3D>,
     mesh_collider: &PbMeshCollider,
 ) {
+    if animatable_body_3d.get_child_count() == 0 {
+        return;
+    }
+
     let mut collision_shape = if let Some(maybe_shape) = animatable_body_3d.get_child(0) {
         if let Ok(shape) = maybe_shape.try_cast::<CollisionShape3D>() {
             shape
