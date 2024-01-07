@@ -20,6 +20,7 @@ use super::{
     gltf::{apply_update_set_mask_colliders, load_gltf},
     texture::load_png_texture,
     thread_safety::{resolve_promise, set_thread_safety_checks_enabled},
+    video::download_video,
     wearable_entities::request_wearables,
 };
 pub struct ContentEntry {
@@ -287,10 +288,32 @@ impl ContentProvider {
     #[func]
     pub fn fetch_video(
         &mut self,
-        _file_hash: GString,
-        _content_mapping: Gd<DclContentMappingAndUrl>,
+        file_hash: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
-        Promise::from_resolved(Variant::nil())
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        let (promise, get_promise) = Promise::make_to_async();
+        let file_hash = file_hash.to_string();
+        let video_file_hash = file_hash.clone();
+        let content_provider_context = self.get_context();
+        TokioRuntime::spawn(async move {
+            download_video(
+                video_file_hash,
+                content_mapping,
+                get_promise,
+                content_provider_context,
+            )
+            .await;
+        });
+
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                promise: promise.clone(),
+            },
+        );
+
+        promise
     }
 
     #[func]
