@@ -87,7 +87,7 @@ func _ready():
 
 	var sky = null
 	if Global.is_mobile:
-		sky = load("res://assets/sky/sky_basic_without_glow").instantiate()
+		sky = load("res://assets/sky/sky_basic_without_glow.tscn").instantiate()
 		add_child(sky)
 	elif Global.testing_scene_mode:
 		sky = load("res://assets/sky/sky_test.tscn").instantiate()
