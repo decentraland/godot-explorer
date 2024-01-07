@@ -544,21 +544,22 @@ static func get_wearable_facial_hashes(wearable: Variant, body_shape_id: String)
 		return []
 
 	var main_file: String = representation.get("mainFile", "").to_lower()
-	var content = wearable.get("content", {})
-	var main_texture_file_hash = content.get(main_file, "")
+	var content_mapping: DclContentMappingAndUrl = wearable.get("content")
+	var files := content_mapping.get_files()
+	var main_texture_file_hash = content_mapping.get_hash(main_file)
 	if main_texture_file_hash.is_empty():
-		for file_name in content:
+		for file_name in files:
 			if file_name.ends_with(".png") and not file_name.ends_with("_mask.png"):
-				main_texture_file_hash = content[file_name]
+				main_texture_file_hash = content_mapping.get_hash(file_name)
 				break
 
 	if main_texture_file_hash.is_empty():
 		return []
 
 	var mask_texture_file_hash: String
-	for file_name in content:
+	for file_name in files:
 		if file_name.ends_with("_mask.png"):
-			mask_texture_file_hash = content[file_name]
+			mask_texture_file_hash = content_mapping.get_hash(file_name)
 			break
 
 	if mask_texture_file_hash.is_empty():
@@ -576,7 +577,8 @@ static func get_wearable_main_file_hash(wearable: Variant, body_shape_id: String
 		return ""
 
 	var main_file: String = representation.get("mainFile", "").to_lower()
-	var file_hash = wearable.get("content", {}).get(main_file, "")
+	var content_mapping: DclContentMappingAndUrl = wearable.get("content")
+	var file_hash = content_mapping.get_hash(main_file)
 	return file_hash
 
 
@@ -591,7 +593,8 @@ static func is_valid_wearable(
 		return false
 
 	var main_file: String = representation.get("mainFile", "").to_lower()
-	var file_hash = wearable.get("content", {}).get(main_file, "")
+	var content_mapping: DclContentMappingAndUrl = wearable.get("content")
+	var file_hash = content_mapping.get_hash(main_file)
 	if file_hash.is_empty():
 		return false
 

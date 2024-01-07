@@ -105,7 +105,7 @@ func async_update_avatar(avatar: Dictionary):
 	finish_loading = false
 
 	var promise = Global.content_provider.fetch_wearables(wearable_to_request, current_content_url)
-	await PromiseUtils.async_awaiter(promise)
+	await PromiseUtils.async_all(promise)
 	async_fetch_wearables_dependencies()
 
 
@@ -224,27 +224,22 @@ func async_fetch_wearables_dependencies():
 		if hashes_to_fetch.is_empty():
 			continue
 
-		var content: Dictionary = wearable.get("content", {})
-		var content_to_fetch := {}
-		for file_name in content:
+		var content_mapping: DclContentMappingAndUrl = wearable.get("content")
+		var files: Array = []
+		for file_name in content_mapping.get_files():
 			for file_hash in hashes_to_fetch:
-				if content[file_name] == file_hash:
-					content_to_fetch[file_name] = file_hash
+				if content_mapping.get_hash(file_name) == file_hash:
+					files.push_back(file_name)
 
-		var dcl_content_mapping = DclContentMappingAndUrl.new()
-		dcl_content_mapping.initialize(
-			"https://peer.decentraland.org/content/contents/", wearable.get("content", {})
-		)
-
-		for file_name in content_to_fetch:
-			async_calls.push_back(_fetch_texture_or_gltf(file_name, dcl_content_mapping))
+		for file_name in files:
+			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
 
 	await PromiseUtils.async_all(async_calls)
 
 	async_load_wearables()
 
 
-func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappingAndUrl):
+func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappingAndUrl) -> Promise:
 	var promise: Promise
 
 	if file_name.ends_with(".png"):
@@ -376,7 +371,7 @@ func async_load_wearables():
 			child.mesh = child.mesh.duplicate(true)
 			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
 
-	var promise = Global.content_provider.duplicate_materials(meshes)
+	var promise: Promise = Global.content_provider.duplicate_materials(meshes)
 	await PromiseUtils.async_awaiter(promise)
 	apply_color_and_facial()
 	body_shape_skeleton_3d.visible = true

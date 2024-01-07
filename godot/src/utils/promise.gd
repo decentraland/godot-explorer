@@ -5,6 +5,10 @@ class_name PromiseUtils
 
 
 static func async_awaiter(promise: Promise) -> Variant:
+	if promise == null:
+		printerr("try to await a null promise")
+		return null
+
 	if !promise.is_resolved():
 		var thread_id := OS.get_thread_caller_id()
 		await promise.on_resolved

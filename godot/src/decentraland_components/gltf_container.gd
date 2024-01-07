@@ -47,7 +47,7 @@ func async_load_gltf():
 	)
 	var res_instance = await PromiseUtils.async_awaiter(instance_promise)
 	if res_instance is PromiseError:
-		printerr("Error on fetch gltf: ", res.get_error())
+		printerr("Error on fetch gltf: ", res_instance.get_error())
 		return
 
 	self.async_deferred_add_child.call_deferred(res_instance)

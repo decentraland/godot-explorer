@@ -1,6 +1,6 @@
 use godot::{
     builtin::{meta::ToGodot, Dictionary, GString},
-    engine::{file_access::ModeFlags, global::Error, FileAccess, Image, ImageTexture},
+    engine::{file_access::ModeFlags, global::Error, DirAccess, FileAccess, Image, ImageTexture},
     obj::Gd,
 };
 
@@ -55,10 +55,12 @@ pub async fn load_png_texture(
     };
 
     let bytes = file.get_buffer(file.get_length() as i64);
+    drop(file);
 
     let mut image = Image::new();
     let err = image.load_png_from_buffer(bytes);
     if err != Error::OK {
+        DirAccess::remove_absolute(GString::from(&absolute_file_path));
         let err = err.to_variant().to::<i32>();
         reject_promise(
             get_promise,

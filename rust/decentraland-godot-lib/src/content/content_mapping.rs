@@ -69,6 +69,11 @@ impl DclContentMappingAndUrl {
             .unwrap_or(&"".to_string())
             .into()
     }
+
+    #[func]
+    pub fn get_files(&self) -> PackedStringArray {
+        PackedStringArray::from_iter(self.inner.content.keys().map(|k| k.into()))
+    }
 }
 
 impl DclContentMappingAndUrl {
@@ -83,6 +88,15 @@ impl DclContentMappingAndUrl {
     pub fn empty() -> Gd<DclContentMappingAndUrl> {
         Gd::from_init_fn(move |_base| DclContentMappingAndUrl {
             inner: Arc::new(ContentMappingAndUrl::new()),
+        })
+    }
+
+    pub fn from_values(
+        base_url: String,
+        content: HashMap<String, String>,
+    ) -> Gd<DclContentMappingAndUrl> {
+        Gd::from_init_fn(move |_base| DclContentMappingAndUrl {
+            inner: Arc::new(ContentMappingAndUrl { base_url, content }),
         })
     }
 }

@@ -208,7 +208,7 @@ func async_take_and_compare_snapshot(
 	var res = await PromiseUtils.async_awaiter(promise)
 
 	if res is PromiseError:
-		printerr("Fetch snapshot texture error, doesn't it exist?")
+		printerr("Fetch snapshot texture error, doesn't it exist? ", res.get_error())
 	else:
 		existing_snapshot = res.get("image")
 

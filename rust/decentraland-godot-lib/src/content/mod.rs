@@ -6,3 +6,4 @@ mod file_string;
 mod gltf;
 mod texture;
 mod thread_safety;
+mod wearable_entities;

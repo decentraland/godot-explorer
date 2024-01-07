@@ -1,6 +1,12 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
-use godot::{engine::ImageTexture, prelude::*};
+use godot::{
+    engine::{ImageTexture, Material, Mesh},
+    prelude::*,
+};
 
 use crate::{
     content::content_mapping::DclContentMappingAndUrl, godot_classes::promise::Promise,
@@ -13,6 +19,8 @@ use super::{
     content_notificator::ContentNotificator,
     gltf::{apply_update_set_mask_colliders, load_gltf},
     texture::load_png_texture,
+    thread_safety::{resolve_promise, set_thread_safety_checks_enabled},
+    wearable_entities::request_wearables,
 };
 pub struct ContentEntry {
     promise: Gd<Promise>,
@@ -286,21 +294,118 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn duplicate_materials(&mut self, _target_meshes: VariantArray) -> Gd<Promise> {
-        Promise::from_resolved(Variant::nil())
+    pub fn duplicate_materials(&mut self, target_meshes: Array<Dictionary>) -> Gd<Promise> {
+        let data = target_meshes
+            .iter_shared()
+            .map(|dict| {
+                let mesh = dict.get("mesh")?.try_to::<Gd<Mesh>>().ok()?;
+                let n = dict.get("n")?.try_to::<i32>().ok()?;
+
+                Some((mesh.instance_id(), n))
+            })
+            .filter(|v| v.is_some())
+            .flatten()
+            .collect::<Vec<_>>();
+
+        let (promise, get_promise) = Promise::make_to_async();
+        TokioRuntime::spawn(async move {
+            set_thread_safety_checks_enabled(false);
+
+            for (mesh_instance_id, n) in data {
+                let mut mesh = Gd::<Mesh>::from_instance_id(mesh_instance_id);
+                for i in 0..n {
+                    let Some(new_material) = mesh.surface_get_material(i) else {
+                        continue;
+                    };
+                    let Some(new_material) = new_material.duplicate() else {
+                        continue;
+                    };
+
+                    mesh.surface_set_material(i, new_material.cast::<Material>());
+                }
+            }
+
+            set_thread_safety_checks_enabled(true);
+
+            resolve_promise(get_promise, None);
+        });
+
+        promise
     }
 
     #[func]
     pub fn fetch_wearables(
         &mut self,
-        _wearables: VariantArray,
-        _content_base_url: GString,
-    ) -> Gd<Promise> {
-        Promise::from_resolved(Variant::nil())
+        wearables: VariantArray,
+        content_base_url: GString,
+    ) -> Array<Gd<Promise>> {
+        let mut promise_ids = HashSet::new();
+        let mut new_promise = None;
+        let mut wearable_to_fetch = HashSet::new();
+
+        for wearable in wearables.iter_shared() {
+            let wearable_id = wearable.to_string().to_lowercase();
+            if let Some(entry) = self.cached.get(&wearable_id) {
+                promise_ids.insert(entry.promise.instance_id());
+            } else {
+                wearable_to_fetch.insert(wearable_id.clone());
+                if new_promise.is_none() {
+                    let (promise, get_promise) = Promise::make_to_async();
+                    promise_ids.insert(promise.instance_id());
+                    new_promise = Some((promise, get_promise));
+                }
+
+                self.cached.insert(
+                    wearable_id,
+                    ContentEntry {
+                        promise: new_promise.as_ref().unwrap().0.clone(),
+                    },
+                );
+            }
+        }
+
+        if !wearable_to_fetch.is_empty() {
+            let (promise, get_promise) = new_promise.unwrap();
+            let content_provider_context = self.get_context();
+            let content_base_url = content_base_url.to_string();
+            let extra_slash = if content_base_url.ends_with('/') {
+                ""
+            } else {
+                "/"
+            };
+            let content_base_url = format!("{}{extra_slash}", content_base_url);
+            let ipfs_content_base_url = format!("{content_base_url}contents/");
+            TokioRuntime::spawn(async move {
+                request_wearables(
+                    content_base_url,
+                    ipfs_content_base_url,
+                    wearable_to_fetch.into_iter().collect(),
+                    get_promise,
+                    content_provider_context,
+                )
+                .await;
+            });
+            self.cached.insert(
+                "wearables".to_string(),
+                ContentEntry {
+                    promise: promise.clone(),
+                },
+            );
+        }
+
+        Array::from_iter(promise_ids.into_iter().map(Gd::from_instance_id))
     }
 
     #[func]
-    pub fn get_wearable(&mut self, _id: GString) -> Variant {
+    pub fn get_wearable(&mut self, id: GString) -> Variant {
+        let id = id.to_string().to_lowercase();
+        if let Some(entry) = self.cached.get(&id) {
+            if let Ok(results) = entry.promise.bind().get_data().try_to::<Dictionary>() {
+                if let Some(wearable) = results.get(id) {
+                    return wearable;
+                }
+            }
+        }
         Variant::nil()
     }
 }
