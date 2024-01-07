@@ -5,9 +5,10 @@ use http::{Method, Uri};
 use crate::{
     auth::ephemeral_auth_chain::EphemeralAuthChain,
     http_request::{
-        http_requester::HttpRequester,
+        http_queue_requester::HttpQueueRequester,
         request_response::{RequestOption, ResponseEnum, ResponseType},
     },
+    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 #[derive(Debug, serde::Deserialize)]
@@ -46,67 +47,90 @@ pub enum SignedLoginPollStatus {
 }
 
 pub struct SignedLogin {
-    http_requester: HttpRequester,
+    login_result_receiver: tokio::sync::oneshot::Receiver<SignedLoginPollStatus>,
 }
 
 impl SignedLogin {
     pub fn new(uri: Uri, ephemeral_auth_chain: EphemeralAuthChain, meta: SignedLoginMeta) -> Self {
-        let unix_time = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
+        let (login_result_sender, login_result_receiver) = tokio::sync::oneshot::channel();
 
-        let meta = serde_json::to_string(&meta).unwrap();
-        let payload = format!("post:{}:{}:{}", uri.path(), unix_time, meta).to_lowercase();
+        TokioRuntime::spawn(async move {
+            let unix_time = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis();
 
-        // TODO: should this block_on be async? the ephemeral wallet is sync
-        let signature = futures_lite::future::block_on(
-            ephemeral_auth_chain
-                .ephemeral_wallet()
-                .sign_message(&payload),
-        )
-        .expect("signature by ephemeral should always work");
+            let meta = serde_json::to_string(&meta).unwrap();
+            let payload = format!("post:{}:{}:{}", uri.path(), unix_time, meta).to_lowercase();
 
-        let mut chain = ephemeral_auth_chain.auth_chain().clone();
-        chain.add_signed_entity(payload, signature);
+            // TODO: should this block_on be async? the ephemeral wallet is sync
+            let signature = futures_lite::future::block_on(
+                ephemeral_auth_chain
+                    .ephemeral_wallet()
+                    .sign_message(&payload),
+            )
+            .expect("signature by ephemeral should always work");
 
-        let mut headers = Vec::from_iter(
-            chain
-                .headers()
-                .map(|(key, value)| format!("{}: {}", key, value)),
-        );
+            let mut chain = ephemeral_auth_chain.auth_chain().clone();
+            chain.add_signed_entity(payload, signature);
 
-        headers.push(format!("x-identity-timestamp: {unix_time}"));
-        headers.push(format!("x-identity-metadata: {meta}"));
+            let mut headers = Vec::from_iter(
+                chain
+                    .headers()
+                    .map(|(key, value)| format!("{}: {}", key, value)),
+            );
 
-        let mut http_requester = HttpRequester::new(None);
-        http_requester.send_request(RequestOption::new(
-            0,
-            uri.to_string(),
-            Method::POST,
-            ResponseType::AsJson,
-            None,
-            Some(headers),
-        ));
+            headers.push(format!("x-identity-timestamp: {unix_time}"));
+            headers.push(format!("x-identity-metadata: {meta}"));
 
-        SignedLogin { http_requester }
-    }
+            let http_requester = HttpQueueRequester::new(1);
+            let response = http_requester
+                .request(
+                    RequestOption::new(
+                        0,
+                        uri.to_string(),
+                        Method::POST,
+                        ResponseType::AsJson,
+                        None,
+                        Some(headers),
+                        None,
+                    ),
+                    0,
+                )
+                .await;
 
-    pub fn poll(&mut self) -> SignedLoginPollStatus {
-        if let Some(response) = self.http_requester.poll() {
             match response {
                 Ok(response) => {
                     if let Ok(ResponseEnum::Json(Ok(json))) = response.response_data {
                         if let Ok(response) = serde_json::from_value::<SignedLoginResponse>(json) {
-                            return SignedLoginPollStatus::Complete(response);
+                            let _ =
+                                login_result_sender.send(SignedLoginPollStatus::Complete(response));
+                            return;
                         }
                     }
                 }
-                Err(e) => return SignedLoginPollStatus::Error(anyhow::anyhow!(e.error_message)),
+                Err(e) => {
+                    let _ = login_result_sender.send(SignedLoginPollStatus::Error(
+                        anyhow::anyhow!(e.error_message),
+                    ));
+                    return;
+                }
             }
+            let _ = login_result_sender.send(SignedLoginPollStatus::Error(anyhow::anyhow!(
+                "unknown error"
+            )));
+        });
 
-            return SignedLoginPollStatus::Error(anyhow::anyhow!("unknown error"));
+        SignedLogin {
+            login_result_receiver,
         }
-        SignedLoginPollStatus::Pending
+    }
+
+    pub fn poll(&mut self) -> SignedLoginPollStatus {
+        match self.login_result_receiver.try_recv() {
+            Ok(result) => result,
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty) => SignedLoginPollStatus::Pending,
+            _ => SignedLoginPollStatus::Error(anyhow::anyhow!("channel closed")),
+        }
     }
 }

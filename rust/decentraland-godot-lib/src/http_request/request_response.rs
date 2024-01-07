@@ -1,4 +1,9 @@
-use godot::prelude::{GString, Variant};
+use godot::{
+    obj::Gd,
+    prelude::{GString, Variant},
+};
+
+use crate::godot_classes::promise::Promise;
 
 #[derive(Debug)]
 pub enum ResponseEnum {
@@ -29,6 +34,7 @@ pub struct RequestOption {
     pub body: Option<Vec<u8>>,
     pub headers: Option<Vec<String>>,
     pub response_type: ResponseType,
+    pub timeout: Option<std::time::Duration>,
 }
 
 impl RequestOption {
@@ -39,6 +45,7 @@ impl RequestOption {
         response_type: ResponseType,
         body: Option<Vec<u8>>,
         headers: Option<Vec<String>>,
+        timeout: Option<std::time::Duration>,
     ) -> Self {
         Self {
             id: REQUEST_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
@@ -48,6 +55,7 @@ impl RequestOption {
             body,
             headers,
             response_type,
+            timeout,
         }
     }
 }
@@ -99,7 +107,7 @@ impl RequestResponse {
     }
 
     #[func]
-    pub fn get_response_as_string(&mut self) -> Variant {
+    pub fn get_response_as_string(&self) -> Variant {
         let response = self.response_data.as_ref().unwrap();
 
         match response {
@@ -145,5 +153,41 @@ impl RequestResponseError {
     #[func]
     pub fn get_error_message(&self) -> GString {
         GString::from(self.error_message.clone())
+    }
+}
+
+pub fn send_result_to_promise(
+    result: Result<RequestResponse, RequestResponseError>,
+    mut promise: Gd<Promise>,
+) {
+    let mut promise = promise.bind_mut();
+    match result {
+        Ok(response) => {
+            let status_code = response.status_code();
+            if response.is_error() {
+                promise.reject(response.get_error());
+            } else if !(200..=299).contains(&status_code) {
+                let payload = response.get_response_as_string();
+                if payload.is_nil() {
+                    let mut rejected = false;
+                    if let Ok(status_code) = http::StatusCode::from_u16(status_code as u16) {
+                        if let Some(reason) = status_code.canonical_reason() {
+                            promise.reject(reason.into());
+                            rejected = true;
+                        }
+                    }
+                    if !rejected {
+                        promise.reject("unknown reason".into());
+                    }
+                } else {
+                    promise.reject(GString::from(payload.to_string()));
+                }
+            } else {
+                promise.resolve_with_data(Variant::from(Gd::from_object(response)));
+            }
+        }
+        Err(error) => {
+            promise.reject(error.get_error_message());
+        }
     }
 }

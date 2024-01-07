@@ -130,14 +130,14 @@ class Asset:
 
 	func async_download_image():
 		var texture_hash = get_hash()
-		var promise = Global.content_manager.fetch_texture_by_url(texture_hash, image_url)
+		var promise = Global.content_provider.fetch_texture_by_url(texture_hash, image_url)
 		var result = await PromiseUtils.async_awaiter(promise)
 		if result is PromiseError:
 			printerr(
 				"open_sea_nft_fetcher::asset::download_image promise error: ", result.get_error()
 			)
 			return
-		self.texture = result
+		self.texture = result.get("texture")
 
 	func get_hash() -> String:
 		return contract_address + ":" + token_id

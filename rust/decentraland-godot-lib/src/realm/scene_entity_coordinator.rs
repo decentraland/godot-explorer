@@ -198,6 +198,7 @@ impl SceneEntityCoordinator {
                 ResponseType::AsJson,
                 Some(request_body.as_bytes().to_vec()),
                 Some(vec!["Content-Type: application/json".to_string()]),
+                None,
             );
             self.requested_city_pointers
                 .insert(request.id, set_request_pointers);
@@ -402,6 +403,7 @@ impl SceneEntityCoordinator {
                 ResponseType::AsJson,
                 None,
                 None,
+                None,
             );
 
             self.requested_entity.insert(request.id, entity_base);
@@ -432,6 +434,7 @@ impl SceneEntityCoordinator {
                 url,
                 http::Method::GET,
                 ResponseType::AsJson,
+                None,
                 None,
                 None,
             );

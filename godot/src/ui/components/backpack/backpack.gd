@@ -53,14 +53,14 @@ func _ready():
 		var key = "urn:decentraland:off-chain:base-avatars:" + wearable_id
 		wearable_data[key] = null
 
-	var promise = Global.content_manager.fetch_wearables(
+	var promise = Global.content_provider.fetch_wearables(
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
 	)
 	if promise != null:
-		await PromiseUtils.async_awaiter(promise)
+		await PromiseUtils.async_all(promise)
 
 	for wearable_id in wearable_data:
-		wearable_data[wearable_id] = Global.content_manager.get_wearable(wearable_id)
+		wearable_data[wearable_id] = Global.content_provider.get_wearable(wearable_id)
 
 	_update_avatar()
 
@@ -99,12 +99,12 @@ func _update_avatar():
 	profile_avatar["wearables"] = avatar_wearables
 	profile_avatar["emotes"] = avatar_emotes
 
-	var wearable_body_shape = Global.content_manager.get_wearable(avatar_body_shape)
+	var wearable_body_shape = Global.content_provider.get_wearable(avatar_body_shape)
 
 	# TODO: make this more performant
 	for wearable_button in wearable_buttons:
 		for wearable_hash in avatar_wearables:
-			var wearable = Global.content_manager.get_wearable(wearable_hash)
+			var wearable = Global.content_provider.get_wearable(wearable_hash)
 			if wearable != null:
 				wearable_button.async_set_wearable(wearable)
 

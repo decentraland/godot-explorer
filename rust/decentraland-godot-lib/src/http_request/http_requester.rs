@@ -217,6 +217,7 @@ fn test() {
         ResponseType::AsString,
         Some("{\"pointers\":[\"0,0\"]}".as_bytes().to_vec()),
         Some(vec!["Content-Type: application/json".to_string()]),
+        None,
     ));
 
     let mut counter = 0;

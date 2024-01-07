@@ -5,8 +5,29 @@ class_name PromiseUtils
 
 
 static func async_awaiter(promise: Promise) -> Variant:
+	if promise == null:
+		printerr("try to await a null promise")
+		return null
+
 	if !promise.is_resolved():
+		var thread_id := OS.get_thread_caller_id()
 		await promise.on_resolved
+
+		# This happen because emitting signal with call_deferred
+		#  enqueues the call in the main thread (MessageQueue)
+		if thread_id != OS.get_thread_caller_id():
+			var main_thread_id := OS.get_main_thread_id()
+			printerr(
+				"Thread different after await in async_awaiter ",
+				OS.get_thread_caller_id(),
+				" != ",
+				thread_id,
+				" main=",
+				main_thread_id
+			)
+
+	# var some = Node.new()
+	# some.call_deferred_thread_group()
 
 	var data = promise.get_data()
 	if data is Promise:  # Chain promises

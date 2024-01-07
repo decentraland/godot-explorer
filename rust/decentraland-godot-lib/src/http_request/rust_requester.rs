@@ -53,6 +53,7 @@ impl RustHttpRequester {
             crate::http_request::request_response::ResponseType::ToFile(absolute_path.to_string()),
             None,
             None,
+            None,
         );
         let id = request_option.id;
         self.http_requester.send_request(request_option);
@@ -134,6 +135,7 @@ impl RustHttpRequester {
             crate::http_request::request_response::ResponseType::AsString,
             body,
             headers,
+            None,
         );
         let id = request_option.id;
         self.http_requester.send_request(request_option);

@@ -17,10 +17,10 @@ func _ready():
 
 
 func async_load_gltf():
-	var content_mapping = Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
-	self.file_hash = content_mapping.get("content", {}).get(dcl_gltf_src, "")
+	self.file_hash = content_mapping.get_hash(dcl_gltf_src)
 
 	if self.file_hash.is_empty():
 		dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND
@@ -29,20 +29,37 @@ func async_load_gltf():
 	# TODO: should we set a timeout?
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 
-	var promise = Global.content_manager.fetch_gltf(dcl_gltf_src, content_mapping)
-	if promise != null:
+	var promise = Global.content_provider.fetch_gltf(dcl_gltf_src, content_mapping)
+	if promise == null:
+		printerr("Fatal error on fetch gltf: promise == null")
+		return
+
+	if not promise.is_resolved():
 		await PromiseUtils.async_awaiter(promise)
 
-	_async_on_gltf_loaded()
+	var res = promise.get_data()
+	if res is PromiseError:
+		printerr("Error on fetch gltf: ", res.get_error())
+		return
+
+	var instance_promise: Promise = Global.content_provider.instance_gltf_colliders(
+		res, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
+	)
+	var res_instance = await PromiseUtils.async_awaiter(instance_promise)
+	if res_instance is PromiseError:
+		printerr("Error on fetch gltf: ", res_instance.get_error())
+		return
+
+	self.async_deferred_add_child.call_deferred(res_instance)
 
 
 func _async_on_gltf_loaded():
-	var node = Global.content_manager.get_resource_from_hash(file_hash)
+	var node = Global.content_provider.get_gltf_from_hash(file_hash)
 	if node == null:
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		return
 
-	var promise: Promise = Global.content_manager.instance_gltf_colliders(
+	var promise: Promise = Global.content_provider.instance_gltf_colliders(
 		node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
 	)
 
@@ -60,12 +77,13 @@ func async_deferred_add_child(new_gltf_node):
 		return
 
 	add_child(new_gltf_node)
-	self.check_animations()
 
 	await main_tree.process_frame
 
 	# Colliders and rendering is ensured to be ready at this point
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
+
+	self.check_animations()
 
 
 func get_animatable_body_3d(mesh_instance: MeshInstance3D):

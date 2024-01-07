@@ -6,6 +6,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
+    godot_classes::dcl_gltf_container::{DclGltfContainer, GltfContainerLoadingState},
     scene_runner::{godot_dcl_scene::GodotEntityNode, scene::Scene},
 };
 use godot::{
@@ -14,10 +15,16 @@ use godot::{
 };
 
 fn get_animation_player(godot_entity_node: &mut GodotEntityNode) -> Option<Gd<AnimationPlayer>> {
-    godot_entity_node
+    let gltf_container = godot_entity_node
         .base_3d
         .as_ref()?
-        .try_get_node_as::<Node>(NodePath::from("GltfContainer"))?
+        .try_get_node_as::<DclGltfContainer>(NodePath::from("GltfContainer"))?;
+
+    if gltf_container.bind().get_state() != GltfContainerLoadingState::Finished {
+        return None;
+    }
+
+    gltf_container
         .get_child(0)?
         .try_get_node_as::<AnimationPlayer>("AnimationPlayer")
 }

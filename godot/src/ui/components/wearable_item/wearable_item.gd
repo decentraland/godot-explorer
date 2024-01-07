@@ -23,7 +23,7 @@ func _ready():
 
 func async_set_wearable(wearable: Dictionary):
 	var wearable_thumbnail: String = wearable.get("metadata", {}).get("thumbnail", "")
-	thumbnail_hash = wearable.get("content", {}).get(wearable_thumbnail, "")
+	thumbnail_hash = wearable.get("content").get_hash(wearable_thumbnail)
 
 	match wearable.get("rarity", ""):
 		"common":
@@ -44,18 +44,15 @@ func async_set_wearable(wearable: Dictionary):
 			texture_rect_background.texture = base_thumbnail
 
 	if not thumbnail_hash.is_empty():
-		var content_mapping: Dictionary = {
-			"content": wearable.get("content", {}),
-			"base_url": "https://peer.decentraland.org/content/contents/"
-		}
-		var promise: Promise = Global.content_manager.fetch_texture(
-			wearable_thumbnail, content_mapping
+		var dcl_content_mapping = wearable.get("content")
+		var promise: Promise = Global.content_provider.fetch_texture(
+			wearable_thumbnail, dcl_content_mapping
 		)
 		var res = await PromiseUtils.async_awaiter(promise)
 		if res is PromiseError:
-			printerr("Fetch texture error on ", wearable_thumbnail)
+			printerr("Fetch texture error on ", wearable_thumbnail, ": ", res.get_error())
 		else:
-			texture_rect_preview.texture = res
+			texture_rect_preview.texture = res.get("texture")
 
 
 func _on_mouse_entered():

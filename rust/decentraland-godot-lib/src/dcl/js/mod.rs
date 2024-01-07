@@ -11,6 +11,7 @@ pub mod websocket;
 
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::auth::ethereum_provider::EthereumProvider;
+use crate::content::content_mapping::ContentMappingAndUrlRef;
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
 use super::{
@@ -22,6 +23,7 @@ use super::{RendererResponse, SceneId, SceneResponse};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -42,7 +44,6 @@ pub struct SceneStartTime(pub std::time::SystemTime);
 pub struct SceneLogs(pub Vec<SceneLogMessage>);
 pub struct SceneMainCrdt(pub Option<Vec<u8>>);
 pub struct SceneTickCounter(pub u32);
-pub struct SceneContentMapping(pub String, pub HashMap<String, String>);
 pub struct SceneDying(pub bool);
 
 pub struct SceneElapsedTime(pub f32);
@@ -62,6 +63,16 @@ pub struct SceneLogMessage {
 
 pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
     Lazy::new(Default::default);
+
+static SCENE_LOG_ENABLED: AtomicBool = AtomicBool::new(false);
+
+pub fn set_scene_log_enabled(enabled: bool) {
+    SCENE_LOG_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn is_scene_log_enabled() -> bool {
+    SCENE_LOG_ENABLED.load(std::sync::atomic::Ordering::Relaxed)
+}
 
 pub fn create_runtime() -> deno_core::JsRuntime {
     let mut ext = &mut Extension::builder_with_deps("decentraland", &[]);
@@ -121,8 +132,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
 pub(crate) fn scene_thread(
     scene_id: SceneId,
     scene_definition: SceneDefinition,
-    content_mapping: HashMap<String, String>,
-    base_url: String,
+    content_mapping: ContentMappingAndUrlRef,
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
     scene_crdt: SharedSceneCrdtState,
@@ -214,9 +224,7 @@ pub(crate) fn scene_thread(
         state.borrow_mut().put(scene_main_crdt);
     }
 
-    state
-        .borrow_mut()
-        .put(SceneContentMapping(base_url, content_mapping));
+    state.borrow_mut().put(content_mapping);
 
     state.borrow_mut().put(SceneLogs(Vec::new()));
     state.borrow_mut().put(SceneElapsedTime(0.0));
@@ -406,6 +414,10 @@ fn op_require(
 
 #[op(v8)]
 fn op_log(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
+    if !is_scene_log_enabled() {
+        return;
+    }
+
     if immediate {
         tracing::info!("{}", message);
     }
@@ -425,6 +437,10 @@ fn op_log(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
 
 #[op(v8)]
 fn op_error(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
+    if !is_scene_log_enabled() {
+        return;
+    }
+
     if immediate {
         tracing::error!("{}", message);
     }

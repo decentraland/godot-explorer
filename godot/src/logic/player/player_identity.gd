@@ -53,7 +53,7 @@ func async_deploy_profile(new_profile: Dictionary) -> void:
 	var promise: Promise = self.async_prepare_deploy_profile(new_profile)
 	var ret = await PromiseUtils.async_awaiter(promise)
 	if ret is PromiseError:
-		print(ret)
+		printerr("Error preparing deploying profile: ", ret.get_error())
 		return
 
 	var headers := ["Content-Type: " + (ret as Dictionary).get("content_type")]
@@ -63,12 +63,7 @@ func async_deploy_profile(new_profile: Dictionary) -> void:
 	)
 	var response = await PromiseUtils.async_awaiter(promise_req)
 	if response is PromiseError:
-		print(response.get_error())
-
-		var test_file = FileAccess.open("test.request.bin", FileAccess.WRITE)
-		test_file.store_buffer((ret as Dictionary).get("body_payload"))
-		test_file.close()
-
+		printerr("Error deploying profile: ", response.get_error())
 		return
 
 	response = (response as RequestResponse).get_string_response_as_json()

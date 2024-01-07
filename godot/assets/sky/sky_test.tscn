@@ -13,7 +13,6 @@ sky = SubResource("Sky_e2lcq")
 ambient_light_source = 2
 ambient_light_color = Color(1, 1, 1, 1)
 reflected_light_source = 1
-glow_enabled = true
 glow_levels/1 = 16.0
 glow_levels/2 = 16.0
 glow_levels/3 = 16.0

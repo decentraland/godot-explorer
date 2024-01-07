@@ -1,4 +1,5 @@
 use crate::{
+    content::content_mapping::DclContentMappingAndUrl,
     dcl::{
         components::{
             internal_player_data::InternalPlayerData,
@@ -92,7 +93,11 @@ impl SceneManager {
 
     // Testing a comment for the API
     #[func]
-    fn start_scene(&mut self, scene_definition: Dictionary, content_mapping: Dictionary) -> i32 {
+    fn start_scene(
+        &mut self,
+        scene_definition: Dictionary,
+        shared_content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> i32 {
         let scene_definition = match SceneDefinition::from_dict(scene_definition) {
             Ok(scene_definition) => scene_definition,
             Err(e) => {
@@ -101,18 +106,12 @@ impl SceneManager {
             }
         };
 
-        let base_url = GString::from_variant(&content_mapping.get("base_url").unwrap()).to_string();
-        let content_dictionary = Dictionary::from_variant(&content_mapping.get("content").unwrap());
+        let content_mapping = shared_content_mapping.bind().get_content_mapping();
         let scene_type = if scene_definition.is_global {
             SceneType::Global(GlobalSceneType::GlobalRealm)
         } else {
             SceneType::Parcel
         };
-
-        let content_mapping_hash_map: HashMap<String, String> = content_dictionary
-            .iter_shared()
-            .map(|(file_name, file_hash)| (file_name.to_string(), file_hash.to_string()))
-            .collect();
 
         let new_scene_id = Scene::new_id();
         let signal_data = (new_scene_id, scene_definition.entity_id.clone());
@@ -126,8 +125,7 @@ impl SceneManager {
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(
             new_scene_id,
             scene_definition.clone(),
-            content_mapping_hash_map,
-            base_url,
+            content_mapping.clone(),
             self.thread_sender_to_main.clone(),
             testing_mode_active,
             ethereum_provider,
@@ -138,7 +136,7 @@ impl SceneManager {
             new_scene_id,
             scene_definition,
             dcl_scene,
-            content_mapping,
+            content_mapping.clone(),
             scene_type.clone(),
             self.base_ui.clone(),
         );
@@ -192,11 +190,12 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_scene_content_mapping(&self, scene_id: i32) -> Dictionary {
+    fn get_scene_content_mapping(&self, scene_id: i32) -> Gd<DclContentMappingAndUrl> {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
-            return scene.content_mapping.clone();
+            DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
+        } else {
+            DclContentMappingAndUrl::empty()
         }
-        Dictionary::default()
     }
 
     #[func]
@@ -414,7 +413,9 @@ impl SceneManager {
                 .upcast::<Node>()
                 .clone();
             self.base.remove_child(node_3d);
-            self.base_ui.remove_child(node_ui);
+            if node_ui.get_parent().is_some() {
+                self.base_ui.remove_child(node_ui);
+            }
             scene.godot_dcl_scene.root_node_3d.queue_free();
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);

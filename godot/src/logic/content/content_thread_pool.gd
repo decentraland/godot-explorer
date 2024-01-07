@@ -16,7 +16,7 @@ const MAX_THREADS = 1
 var use_thread = true
 
 var content_threads: Array[ContentThread] = []
-var http_requester: RustHttpRequesterWrapper
+var http_requester: RustHttpQueueRequester
 
 var request_monotonic_counter: int = 0
 
@@ -38,10 +38,7 @@ func get_best_content_thread() -> ContentThread:
 
 
 func _ready():
-	http_requester = RustHttpRequesterWrapper.new()
-
-	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
-	GLTFDocument.register_gltf_document_extension(custom_importer)
+	http_requester = RustHttpQueueRequester.new()
 
 	# We do not use threads for tests, running the test in a docker introduces an issue with multithreading on nodes
 	# More info: https://github.com/godotengine/godot/issues/79194
@@ -70,7 +67,7 @@ func get_resource_from_hash(file_hash: String):
 	return null
 
 
-func is_resource_from_hash_loaded(file_hash: String):
+func is_resource_from_hash_loaded(file_hash: String) -> bool:
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		return content_cached.get("loaded")
@@ -171,9 +168,9 @@ func fetch_wearables(wearables: PackedStringArray, content_base_url: String) -> 
 
 # Public function
 # @returns request state on success, null if it had already been fetched
-func fetch_gltf(file_path: String, content_mapping: Dictionary) -> Promise:
+func fetch_gltf(file_path: String, content_mapping: DclContentMappingAndUrl) -> Promise:
 	var promise = Promise.new()
-	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+	var file_hash: String = content_mapping.get_hash(file_path)
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		return content_cached.get("promise")
@@ -197,13 +194,13 @@ func fetch_gltf(file_path: String, content_mapping: Dictionary) -> Promise:
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_texture(file_path: String, content_mapping: Dictionary) -> Promise:
-	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+func fetch_texture(file_path: String, content_mapping: DclContentMappingAndUrl) -> Promise:
+	var file_hash: String = content_mapping.get_hash(file_path)
 	return fetch_texture_by_hash(file_hash, content_mapping)
 
 
-func fetch_texture_by_hash(file_hash: String, content_mapping: Dictionary):
-	var url = content_mapping.get("base_url") + file_hash
+func fetch_texture_by_hash(file_hash: String, content_mapping: DclContentMappingAndUrl):
+	var url = content_mapping.get_base_url() + file_hash
 	return fetch_texture_by_url(file_hash, url)
 
 
@@ -229,8 +226,10 @@ func fetch_texture_by_url(file_hash: String, url: String):
 	return promise
 
 
-func get_image_from_texture_or_null(file_path: String, content_mapping: Dictionary) -> Image:
-	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+func get_image_from_texture_or_null(
+	file_path: String, content_mapping: DclContentMappingAndUrl
+) -> Image:
+	var file_hash: String = content_mapping.get_hash(file_path)
 	return get_image_from_texture_by_hash_or_null(file_hash)
 
 
@@ -241,9 +240,9 @@ func get_image_from_texture_by_hash_or_null(file_hash: String) -> Image:
 	return null
 
 
-func fetch_audio(file_path: String, content_mapping: Dictionary) -> Promise:
+func fetch_audio(file_path: String, content_mapping: DclContentMappingAndUrl) -> Promise:
 	var promise = Promise.new()
-	var file_hash: String = content_mapping.get("content", {}).get(file_path, "")
+	var file_hash: String = content_mapping.get_hash(file_path)
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
 		return content_cached.get("promise")
@@ -267,7 +266,7 @@ func fetch_audio(file_path: String, content_mapping: Dictionary) -> Promise:
 
 # Public function
 # @returns true if the resource was added to queue to fetch, false if it had already been fetched
-func fetch_video(file_hash: String, content_mapping: Dictionary) -> Promise:
+func fetch_video(file_hash: String, content_mapping: DclContentMappingAndUrl) -> Promise:
 	var promise = Promise.new()
 	var content_cached = content_cache_map.get(file_hash)
 	if content_cached != null:
@@ -325,7 +324,7 @@ func split_animations(_gltf_node: Node) -> void:
 
 
 # TODO(Mateo): Looks like more a helper than part of the ContentThreadPool
-func hide_colliders(gltf_node):
+static func hide_colliders(gltf_node: Node):
 	for maybe_collider in gltf_node.get_children():
 		if maybe_collider is Node3D and maybe_collider.name.find("_collider") != -1:
 			maybe_collider.visible = false
