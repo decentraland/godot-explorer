@@ -10,6 +10,7 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     content::content_provider::ContentProvider,
+    dcl::js::set_scene_log_enabled,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
     test_runner::testing_tools::DclTestingTools,
 };
@@ -93,8 +94,10 @@ impl INode for DclGlobal {
 
         let testing_scene_mode = args.find("--scene-test".into(), None).is_some();
         let preview_mode = args.find("--preview".into(), None).is_some();
+        let developer_mode = args.find("--dev".into(), None).is_some();
 
-        // var scene_test_index := args.find("--scene-test")
+        set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
+
         Self {
             _base: base,
             scene_runner,

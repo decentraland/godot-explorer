@@ -77,12 +77,13 @@ func async_deferred_add_child(new_gltf_node):
 		return
 
 	add_child(new_gltf_node)
-	self.check_animations()
 
 	await main_tree.process_frame
 
 	# Colliders and rendering is ensured to be ready at this point
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
+
+	self.check_animations()
 
 
 func get_animatable_body_3d(mesh_instance: MeshInstance3D):
