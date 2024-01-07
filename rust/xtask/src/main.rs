@@ -198,17 +198,37 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         Some(build_envs.clone()),
     )?;
 
+    let scene_test_realm: &str =
+        "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests";
+    let scene_test_coords: Vec<[i32; 2]> = vec![
+        [52, -52], // raycast
+        [52, -54], // transform
+        [52, -56], // billboard
+        [52, -58], // camera-mode
+        [52, -60], // engine-info
+        [52, -62], // gltf-container
+        [52, -64], // visibility
+        [52, -66], // mesh-renderer
+        [52, -68], // avatar-attach
+        [54, -52], // material
+        [54, -54], // text-shape
+        // TODO: video events not working well
+        // [54, -56], // video-player 
+        [54, -58], // ui-background
+        [54, -60], // ui-text
+    ];
+    let scene_test_coords_str = serde_json::ser::to_string(&scene_test_coords)
+        .expect("failed to serialize scene_test_coords");
 
     let extra_args = [
         "--rendering-driver",
         "opengl3",
         "--scene-test",
-        "[[52,-52],[52,-54],[52,-56],[52,-58],[52,-60],[52,-62],[52,-64],[52,-66],[52,-68],[54,-52],[54,-54],[54,-56],[54,-58],[54,-60]]",
+        scene_test_coords_str.as_str(),
         "--realm",
-        "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests",
+        scene_test_realm,
         "--snapshot-folder",
-        snapshot_folder.to_str().unwrap()
-        
+        snapshot_folder.to_str().unwrap(),
     ]
     .iter()
     .map(|it| it.to_string())
