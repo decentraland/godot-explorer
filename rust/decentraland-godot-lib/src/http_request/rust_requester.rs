@@ -1,6 +1,6 @@
 use godot::prelude::*;
 
-use crate::scene_runner::tokio_runtime::TokioRuntime;
+use crate::{godot_classes::dcl_global::DclGlobal, scene_runner::tokio_runtime::TokioRuntime};
 
 // Deriving GodotClass makes the class available to Godot
 #[derive(GodotClass)]
@@ -92,10 +92,14 @@ impl RustHttpRequester {
 #[godot_api]
 impl INode for RustHttpRequester {
     fn init(_base: Base<Node>) -> Self {
+        let runtime = if DclGlobal::has_singleton() {
+            TokioRuntime::static_clone_handle()
+        } else {
+            None
+        };
+
         RustHttpRequester {
-            http_requester: super::http_requester::HttpRequester::new(
-                TokioRuntime::static_clone_handle(),
-            ),
+            http_requester: super::http_requester::HttpRequester::new(runtime),
         }
     }
 }

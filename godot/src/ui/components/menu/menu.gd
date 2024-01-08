@@ -8,6 +8,7 @@ signal toggle_ram
 
 #signals from advanced settings
 signal request_pause_scenes(enabled: bool)
+signal request_debug_panel(enabled: bool)
 signal preview_hot_reload(scene_type: String, scene_id: String)
 
 @export var group: ButtonGroup
@@ -27,14 +28,11 @@ var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
 @onready var control_discover = $ColorRect_Background/Control_Discover
 @onready var control_settings = $ColorRect_Background/Control_Settings
 @onready var control_map = $ColorRect_Background/Control_Map
-@onready var control_advance_settings = $ColorRect_Background/Control_AdvanceSettings
 @onready var control_backpack = $ColorRect_Background/Control_Backpack
 
 @onready var button_discover = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Discover
 @onready var button_map = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Map
 @onready var button_settings = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Settings
-@onready
-var button_advance_settings = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_AdvanceSettings
 
 
 func _ready():
@@ -44,7 +42,6 @@ func _ready():
 	control_map.hide()
 	control_settings.show()
 	control_discover.hide()
-	control_advance_settings.hide()
 	control_backpack.hide()
 	control_map.jump_to.connect(_jump_to)
 
@@ -82,14 +79,12 @@ func modulate_all():
 	tween_m.tween_property(control_discover, "modulate", Color(1, 1, 1, 0), 0.125)
 	tween_m.tween_property(control_map, "modulate", Color(1, 1, 1, 0), 0.125)
 	tween_m.tween_property(control_settings, "modulate", Color(1, 1, 1, 0), 0.125)
-	tween_m.tween_property(control_advance_settings, "modulate", Color(1, 1, 1, 0), 0.125)
 
 
 func hide_all():
 	control_discover.hide()
 	control_map.hide()
 	control_settings.hide()
-	control_advance_settings.hide()
 
 
 func _on_button_close_pressed():
@@ -139,12 +134,6 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 	emit_signal("toggle_ram", visibility)
 
 
-func _on_button_advance_settings_pressed():
-	if selected_node != control_advance_settings:
-		fade_out(selected_node)
-		fade_in(control_advance_settings)
-
-
 func _on_button_settings_pressed():
 	if selected_node != control_settings:
 		fade_out(selected_node)
@@ -183,9 +172,13 @@ func fade_out(node: Control):
 	tween_h.tween_callback(node.hide).set_delay(0.3)
 
 
-func _on_control_advance_settings_preview_hot_reload(scene_type, scene_id):
+func _on_control_settings_preview_hot_reload(scene_type, scene_id):
 	emit_signal("preview_hot_reload", scene_type, scene_id)
 
 
-func _on_control_advance_settings_request_pause_scenes(enabled):
-	emit_signal("request_pause_scene", enabled)
+func _on_control_settings_request_pause_scenes(enabled):
+	emit_signal("request_pause_scenes", enabled)
+
+
+func _on_control_settings_request_debug_panel(enabled):
+	emit_signal("request_debug_panel", enabled)

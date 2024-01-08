@@ -200,7 +200,10 @@ impl ContentProvider {
 
         let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
         let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
-        let (promise, get_promise) = Promise::make_to_async();
+        let (mut promise, get_promise) = Promise::make_to_async();
+        promise
+            .bind_mut()
+            .preset_data(Dictionary::new().to_variant());
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
             load_png_texture(
@@ -230,7 +233,10 @@ impl ContentProvider {
         }
         let url = url.to_string();
         let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
-        let (promise, get_promise) = Promise::make_to_async();
+        let (mut promise, get_promise) = Promise::make_to_async();
+        promise
+            .bind_mut()
+            .preset_data(Dictionary::new().to_variant());
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
             load_png_texture(
@@ -254,16 +260,14 @@ impl ContentProvider {
 
     #[func]
     pub fn get_texture_from_hash(&self, file_hash: GString) -> Option<Gd<ImageTexture>> {
-        self.cached
+        let promise_data = self
+            .cached
             .get(&file_hash.to_string())?
             .promise
             .bind()
-            .get_data()
-            .try_to::<Dictionary>()
-            .ok()?
-            .get("texture")?
-            .try_to::<Gd<ImageTexture>>()
-            .ok()
+            .get_data();
+        let dict = promise_data.try_to::<Dictionary>().ok()?;
+        dict.get("texture")?.try_to::<Gd<ImageTexture>>().ok()
     }
 
     #[func]

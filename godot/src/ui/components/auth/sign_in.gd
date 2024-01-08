@@ -91,3 +91,7 @@ func _on_wallet_connected(_address: String, _chain_id: int, is_guest: bool) -> v
 
 func _on_button_waiting_cancel_pressed():
 	cancel_action.call()
+
+
+func _on_button_risk_cancel_pressed():
+	show_panel(v_box_container_connect)

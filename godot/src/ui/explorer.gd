@@ -10,6 +10,8 @@ var dirty_save_position: bool = false
 var last_position_sent: Vector3 = Vector3.ZERO
 var counter: int = 0
 
+var debug_panel = null
+
 var last_index_scene_ui_root: int = -1
 var _last_parcel_position: Vector2i
 
@@ -23,7 +25,6 @@ var _last_parcel_position: Vector2i
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
-@onready var debug_panel = %DebugPanel
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
 @onready var player := $Player
@@ -108,7 +109,7 @@ func _ready():
 	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)
 	if cmd_location != null:
 		start_parcel_position = cmd_location
-	# start_parcel_position = Vector2i()
+
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
@@ -133,9 +134,7 @@ func _ready():
 
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
-	control_menu.control_advance_settings.preview_hot_reload.connect(
-		self._on_panel_bottom_left_preview_hot_reload
-	)
+	control_menu.preview_hot_reload.connect(self._on_panel_bottom_left_preview_hot_reload)
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
@@ -178,7 +177,8 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	var title: String = Global.scene_runner.get_scene_title(scene_id)
 	title += str(Global.scene_runner.get_scene_base_parcel(scene_id))
-	debug_panel.on_console_add(title, level, timestamp, text)
+	if is_instance_valid(debug_panel):
+		debug_panel.on_console_add(title, level, timestamp, text)
 
 
 func _on_pointer_tooltip_changed():
@@ -389,3 +389,18 @@ func set_visible_ui(value: bool):
 		voice_chat_ui.hide()
 		var ui_node = ui_root.get_node("scenes_ui")
 		ui_node.reparent(ui_root.get_parent())
+
+
+func _on_control_menu_request_debug_panel(enabled):
+	if enabled:
+		if not is_instance_valid(debug_panel):
+			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
+			ui_root.add_child(debug_panel)
+			ui_root.move_child(debug_panel, control_menu.get_index() - 1)
+	else:
+		if is_instance_valid(debug_panel):
+			ui_root.remove_child(debug_panel)
+			debug_panel.queue_free()
+			debug_panel = null
+
+	Global.set_scene_log_enabled(enabled)

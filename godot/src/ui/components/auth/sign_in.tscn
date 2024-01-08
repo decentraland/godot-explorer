@@ -95,7 +95,6 @@ layout_mode = 2
 text = "Cancel"
 
 [node name="VBoxContainer_GuestConfirm" type="VBoxContainer" parent="Panel_Main"]
-visible = false
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -123,7 +122,12 @@ layout_mode = 2
 focus_mode = 0
 text = "I assume the risk"
 
+[node name="Button_RiskCancel" type="Button" parent="Panel_Main/VBoxContainer_GuestConfirm"]
+layout_mode = 2
+text = "Cancel"
+
 [connection signal="pressed" from="Panel_Main/VBoxContainer_Connect/Button_SignIn" to="." method="_on_button_sign_in_pressed"]
 [connection signal="pressed" from="Panel_Main/VBoxContainer_Connect/Button_Guest" to="." method="_on_button_guest_pressed"]
 [connection signal="pressed" from="Panel_Main/VBoxContainer_Waiting/Button_WaitingCancel" to="." method="_on_button_waiting_cancel_pressed"]
 [connection signal="pressed" from="Panel_Main/VBoxContainer_GuestConfirm/Button_ConfirmGuestRisk" to="." method="_on_button_confirm_guest_risk_pressed"]
+[connection signal="pressed" from="Panel_Main/VBoxContainer_GuestConfirm/Button_RiskCancel" to="." method="_on_button_risk_cancel_pressed"]

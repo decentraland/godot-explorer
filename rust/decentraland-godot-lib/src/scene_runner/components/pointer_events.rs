@@ -231,10 +231,12 @@ pub fn pointer_events_system(
         }
 
         let event_info = pointer_event.event_info.as_ref().unwrap();
+        let pointer_event_button = event_info.button.unwrap_or(InputAction::IaAny as i32);
 
         for (input_action, state) in changed_inputs {
-            if *input_action == InputAction::IaAny
+            if *input_action == InputAction::IaAny // FIX: Is this possible? :S
                 || *input_action as i32 == event_info.button.unwrap_or(InputAction::IaAny as i32)
+                || pointer_event_button == InputAction::IaAny as i32
             {
                 let match_state = (*state
                     && pointer_event.event_type == PointerEventType::PetDown as i32)

@@ -35,17 +35,18 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 if let Some(node) = existing_ui_input.base_control.get_node("input".into()) {
                     existing_ui_input.base_control.remove_child(node);
                 }
-                existing_ui_input.has_text = false;
+                existing_ui_input.text_size = None;
                 continue;
             }
-            existing_ui_input.has_text = true;
 
             let value = value.as_ref().unwrap();
-            let mut existing_ui_input_control = if let Some(node) = existing_ui_input
+            if let Some(node) = existing_ui_input
                 .base_control
                 .get_node_or_null("input".into())
             {
-                node.cast::<DclUiInput>()
+                let mut existing_ui_input_control = node.cast::<DclUiInput>();
+                existing_ui_input_control.bind_mut().change_value(value);
+                existing_ui_input.text_size = Some(existing_ui_input_control.get_size());
             } else {
                 let mut node: Gd<DclUiInput> = DclUiInput::alloc_gd();
                 node.set_name("input".into());
@@ -59,12 +60,13 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 existing_ui_input
                     .base_control
                     .move_child(node.clone().upcast(), 1);
+
+                node.bind_mut().change_value(value);
+                existing_ui_input.text_size = Some(node.get_size());
+
                 node.bind_mut()
                     .set_ui_result(godot_dcl_scene.ui_results.clone());
-                node
-            };
-
-            existing_ui_input_control.bind_mut().change_value(value);
+            }
         }
     }
 }

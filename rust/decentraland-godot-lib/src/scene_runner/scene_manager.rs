@@ -21,7 +21,13 @@ use crate::{
         JsonGodotClass,
     },
 };
-use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
+use godot::{
+    engine::{
+        control::{LayoutPreset, MouseFilter},
+        PhysicsRayQueryParameters3D,
+    },
+    prelude::*,
+};
 use std::{
     collections::{HashMap, HashSet},
     sync::atomic::AtomicU32,
@@ -805,9 +811,13 @@ impl INode for SceneManager {
         let (thread_sender_to_main, main_receiver_from_thread) =
             std::sync::mpsc::sync_channel(1000);
 
+        let mut base_ui = DclUiControl::alloc_gd();
+        base_ui.set_anchors_preset(LayoutPreset::PRESET_FULL_RECT);
+        base_ui.set_mouse_filter(MouseFilter::MOUSE_FILTER_IGNORE);
+
         SceneManager {
             base,
-            base_ui: DclUiControl::alloc_gd(),
+            base_ui,
             ui_canvas_information: PbUiCanvasInformation::default(),
 
             scenes: HashMap::new(),
@@ -838,6 +848,7 @@ impl INode for SceneManager {
         self.base_ui
             .connect("resized".into(), self.base.callable("_on_ui_resize"));
         self.base_ui.set_name("scenes_ui".into());
+        self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
     fn process(&mut self, delta: f64) {

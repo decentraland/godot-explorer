@@ -83,6 +83,10 @@ impl Promise {
         self.data.try_to::<Gd<PromiseError>>().is_ok()
     }
 
+    pub fn preset_data(&mut self, data: Variant) {
+        self.data = data;
+    }
+
     pub fn make_to_async() -> (Gd<Promise>, impl Fn() -> Option<Gd<Promise>>) {
         let this_promise = Promise::new_gd();
         let promise_instance_id = this_promise.instance_id();
