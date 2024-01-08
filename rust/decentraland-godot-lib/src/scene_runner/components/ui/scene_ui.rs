@@ -62,7 +62,13 @@ fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformatio
 
     let mut taffy: taffy::Taffy<()> = taffy::Taffy::new();
     let root_node = taffy
-        .new_leaf(taffy::style::Style::default())
+        .new_leaf(taffy::style::Style {
+            size: taffy::Size {
+                width: taffy::style::Dimension::Length(ui_canvas_information.width as f32),
+                height: taffy::style::Dimension::Length(ui_canvas_information.height as f32),
+            },
+            ..Default::default()
+        })
         .expect("failed to create root node");
 
     processed_nodes.insert(SceneEntityId::ROOT, (root_node, 0));
@@ -98,9 +104,18 @@ fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformatio
                 }
             }
 
-            let child = taffy
-                .new_leaf(ui_node.ui_transform.taffy_style.clone())
-                .expect("failed to create node");
+            let mut style = ui_node.ui_transform.taffy_style.clone();
+
+            if let Some(text_size) = ui_node.text_size {
+                if style.size.width == taffy::Dimension::Auto {
+                    style.size.width = taffy::Dimension::Length(text_size.x);
+                }
+                if style.size.height == taffy::Dimension::Auto {
+                    style.size.height = taffy::Dimension::Length(text_size.y);
+                }
+            }
+
+            let child = taffy.new_leaf(style).expect("failed to create node");
 
             taffy.add_child(parent.0, child).unwrap();
             processed_nodes.insert(*entity, (child, 0));
@@ -214,16 +229,6 @@ pub fn update_scene_ui(
     }
 
     let dirty_lww_components = &scene.current_dirty.lww_components;
-    let need_skip: bool = dirty_lww_components
-        .get(&SceneComponentId::UI_TRANSFORM)
-        .is_none()
-        && dirty_lww_components
-            .get(&SceneComponentId::UI_BACKGROUND)
-            .is_none()
-        && dirty_lww_components
-            .get(&SceneComponentId::UI_TEXT)
-            .is_none();
-
     let need_update_ui_canvas = {
         let ui_canvas_information_component =
             SceneCrdtStateProtoComponents::get_ui_canvas_information(crdt_state);
@@ -237,6 +242,16 @@ pub fn update_scene_ui(
             true
         }
     };
+    let need_skip: bool = dirty_lww_components
+        .get(&SceneComponentId::UI_TRANSFORM)
+        .is_none()
+        && dirty_lww_components
+            .get(&SceneComponentId::UI_BACKGROUND)
+            .is_none()
+        && dirty_lww_components
+            .get(&SceneComponentId::UI_TEXT)
+            .is_none()
+        && !need_update_ui_canvas;
 
     if need_update_ui_canvas {
         let ui_canvas_information_component =

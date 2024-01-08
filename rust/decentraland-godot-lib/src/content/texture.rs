@@ -77,8 +77,19 @@ pub async fn load_png_texture(
         return;
     };
 
-    let mut dict = Dictionary::new();
+    let Some(promise) = get_promise() else {
+        return;
+    };
+
+    let Ok(mut dict) = promise.bind().get_data().try_to::<Dictionary>() else {
+        reject_promise(
+            get_promise,
+            format!("Error creating texture from image {}", absolute_file_path),
+        );
+        return;
+    };
+
     dict.insert("image", image.to_variant());
     dict.insert("texture", texture.to_variant());
-    resolve_promise(get_promise, Some(dict.to_variant()));
+    resolve_promise(get_promise, None);
 }

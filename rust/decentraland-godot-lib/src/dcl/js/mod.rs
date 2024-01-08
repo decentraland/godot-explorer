@@ -312,10 +312,7 @@ pub(crate) fn scene_thread(
     let mut op_state = state.borrow_mut();
     let logs = op_state.take::<SceneLogs>();
     let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
-    sender
-        .send(SceneResponse::RemoveGodotScene(scene_id, logs.0))
-        .expect("error sending scene response!!");
-
+    let _ = sender.send(SceneResponse::RemoveGodotScene(scene_id, logs.0));
     runtime.v8_isolate().terminate_execution();
 
     tracing::info!("exiting from the thread {:?}", scene_id);
@@ -405,6 +402,7 @@ fn op_require(
         "~system/Testing" => Ok(include_str!("js_modules/Testing.js").to_owned()),
         "~system/UserActionModule" => Ok(include_str!("js_modules/UserActionModule.js").to_owned()),
         "~system/UserIdentity" => Ok(include_str!("js_modules/UserIdentity.js").to_owned()),
+        "~system/CommsApi" => Ok(include_str!("js_modules/CommsApi.js").to_owned()),
         "env" => Ok(get_env_for_scene(state)),
         _ => Err(generic_error(format!(
             "invalid module request `{module_spec}`"

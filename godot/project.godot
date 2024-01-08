@@ -35,6 +35,10 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/size/resizable=false
 
+[filesystem]
+
+import/blender/enabled=false
+
 [gui]
 
 theme/custom="res://assets/themes/theme.tres"

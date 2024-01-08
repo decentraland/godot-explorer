@@ -20,6 +20,8 @@ var emotes: Array = []
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	pass
+
 	# TODO: this is outdated
 	#avatar.async_update_avatar(
 	#"https://peer.decentraland.org/content",

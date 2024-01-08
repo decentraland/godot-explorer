@@ -67,8 +67,8 @@ pub async fn request_wearables(
         Err(err) => Err(err.error_message),
     };
 
-    if result.is_err() {
-        reject_promise(get_promise, result.unwrap_err());
+    if let Err(err) = result {
+        reject_promise(get_promise, err);
         return;
     }
 

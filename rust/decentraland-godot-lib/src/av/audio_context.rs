@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 use ffmpeg_next::ffi::AVSampleFormat;
 use ffmpeg_next::{decoder, format::context::Input, media::Type, util::frame, Packet};
+use godot::obj::InstanceId;
 use godot::prelude::{AudioStreamPlayer, Gd, PackedVector2Array, ToGodot, Vector2};
 use thiserror::Error;
 use tracing::{debug, error};
@@ -108,7 +109,7 @@ pub struct AudioContext {
     current_frame: usize,
     start_frame: usize,
 
-    audio_stream_player: Gd<AudioStreamPlayer>,
+    audio_stream_player_instance_id: InstanceId,
     format: AVSampleFormat,
     frame_size: usize,
     channels: usize,
@@ -119,7 +120,7 @@ pub struct AudioContext {
 impl AudioContext {
     pub fn init(
         input_context: &Input,
-        mut audio_stream_player: Gd<AudioStreamPlayer>,
+        audio_stream_player_instance_id: InstanceId,
     ) -> Result<Self, AudioError> {
         let input_stream = input_context
             .streams()
@@ -160,18 +161,22 @@ impl AudioContext {
             length
         );
 
-        audio_stream_player.call_deferred(
-            "init_audio".into(),
-            &[
-                frame_rate.to_variant(),
-                input_stream.frames().to_variant(),
-                length.to_variant(),
-                (format as i32).to_variant(),
-                (decoder.bit_rate() as u32).to_variant(),
-                decoder.frame_size().to_variant(),
-                decoder.channels().to_variant(),
-            ],
-        );
+        if let Ok(mut audio_stream_player) =
+            Gd::<AudioStreamPlayer>::try_from_instance_id(audio_stream_player_instance_id)
+        {
+            audio_stream_player.call_deferred(
+                "init_audio".into(),
+                &[
+                    frame_rate.to_variant(),
+                    input_stream.frames().to_variant(),
+                    length.to_variant(),
+                    (format as i32).to_variant(),
+                    (decoder.bit_rate() as u32).to_variant(),
+                    decoder.frame_size().to_variant(),
+                    decoder.channels().to_variant(),
+                ],
+            );
+        }
 
         let frame_size = decoder.frame_size() as usize;
         let channels = decoder.channels() as usize;
@@ -183,7 +188,7 @@ impl AudioContext {
             current_frame: 0,
             start_frame: 0,
             rate: frame_rate,
-            audio_stream_player,
+            audio_stream_player_instance_id,
             format,
             audio_length: length,
 
@@ -259,8 +264,11 @@ impl FfmpegContext for AudioContext {
             )
         };
 
-        self.audio_stream_player
-            .call_deferred("stream_buffer".into(), &[data.to_variant()]);
+        if let Ok(mut audio_stream_player) =
+            Gd::<AudioStreamPlayer>::try_from_instance_id(self.audio_stream_player_instance_id)
+        {
+            audio_stream_player.call_deferred("stream_buffer".into(), &[data.to_variant()]);
+        }
 
         self.current_frame += 1;
     }

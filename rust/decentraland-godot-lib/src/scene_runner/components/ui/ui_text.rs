@@ -35,10 +35,9 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 if let Some(node) = existing_ui_text.base_control.get_node("text".into()) {
                     existing_ui_text.base_control.remove_child(node);
                 }
-                existing_ui_text.has_text = false;
+                existing_ui_text.text_size = None;
                 continue;
             }
-            existing_ui_text.has_text = true;
 
             let value = value.as_ref().unwrap();
             let mut existing_ui_text_control = if let Some(node) = existing_ui_text
@@ -61,6 +60,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             };
 
             existing_ui_text_control.bind_mut().change_value(value);
+            existing_ui_text.text_size = Some(existing_ui_text_control.get_minimum_size());
         }
     }
 }

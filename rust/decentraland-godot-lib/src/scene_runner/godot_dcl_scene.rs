@@ -47,12 +47,12 @@ pub struct UiNode {
     pub ui_transform: UiTransform,
     pub computed_parent: SceneEntityId,
     pub has_background: bool,
-    pub has_text: bool,
+    pub text_size: Option<Vector2>,
 }
 
 impl UiNode {
     pub fn control_offset(&self) -> i32 {
-        (if self.has_background { 1 } else { 0 }) + (if self.has_text { 1 } else { 0 })
+        (if self.has_background { 1 } else { 0 }) + (if self.text_size.is_some() { 1 } else { 0 })
     }
 }
 
@@ -163,7 +163,7 @@ impl GodotDclScene {
             ui_transform: UiTransform::default(),
             computed_parent: SceneEntityId::ROOT,
             has_background: false,
-            has_text: false,
+            text_size: None,
         };
 
         let entities = HashMap::from([(
@@ -276,7 +276,7 @@ impl GodotDclScene {
                 ui_transform: UiTransform::default(),
                 computed_parent: SceneEntityId::ROOT,
                 has_background: false,
-                has_text: false,
+                text_size: None,
             });
             self.ui_entities.insert(*entity);
         }

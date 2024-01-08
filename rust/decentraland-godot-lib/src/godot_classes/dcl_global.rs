@@ -118,6 +118,21 @@ impl INode for DclGlobal {
 
 #[godot_api]
 impl DclGlobal {
+    #[func]
+    fn set_scene_log_enabled(&self, enabled: bool) {
+        set_scene_log_enabled(enabled);
+    }
+
+    pub fn has_singleton() -> bool {
+        let Some(main_loop) = Engine::singleton().get_main_loop() else {
+            return false;
+        };
+        let Some(root) = main_loop.cast::<SceneTree>().get_root() else {
+            return false;
+        };
+        root.has_node("Global".into())
+    }
+
     pub fn try_singleton() -> Option<Gd<Self>> {
         let res = Engine::singleton()
             .get_main_loop()?

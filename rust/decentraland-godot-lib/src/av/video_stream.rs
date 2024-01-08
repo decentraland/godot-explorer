@@ -104,15 +104,8 @@ fn av_thread(
     sink: tokio::sync::mpsc::Sender<StreamStateData>,
 ) {
     let tex = tex.map(Gd::from_instance_id);
-    let audio_stream_player: Gd<AudioStreamPlayer> = Gd::from_instance_id(audio_stream);
-    if let Err(error) = av_thread_inner(
-        commands,
-        path,
-        tex,
-        audio_stream_player,
-        wait_for_resource,
-        sink,
-    ) {
+    if let Err(error) = av_thread_inner(commands, path, tex, audio_stream, wait_for_resource, sink)
+    {
         warn!("av error: {error}");
     } else {
         debug!("av closed");
@@ -123,7 +116,7 @@ pub fn av_thread_inner(
     commands: tokio::sync::mpsc::Receiver<AVCommand>,
     mut path: String,
     texture: Option<Gd<ImageTexture>>,
-    audio_stream_player: Gd<AudioStreamPlayer>,
+    audio_stream_player_instance_id: InstanceId,
     wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,
     sink: tokio::sync::mpsc::Sender<StreamStateData>,
 ) -> Result<(), String> {
@@ -160,7 +153,7 @@ pub fn av_thread_inner(
 
     // try and get an audio context
     let audio_context: Option<AudioContext> =
-        match AudioContext::init(&input_context, audio_stream_player) {
+        match AudioContext::init(&input_context, audio_stream_player_instance_id) {
             Ok(ac) => Some(ac),
             Err(AudioError::NoStream) => None,
             Err(AudioError::Failed(ffmpeg_err)) => return Err(ffmpeg_err.to_string()),
