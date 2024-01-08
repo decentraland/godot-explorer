@@ -405,6 +405,7 @@ fn op_require(
         "~system/Testing" => Ok(include_str!("js_modules/Testing.js").to_owned()),
         "~system/UserActionModule" => Ok(include_str!("js_modules/UserActionModule.js").to_owned()),
         "~system/UserIdentity" => Ok(include_str!("js_modules/UserIdentity.js").to_owned()),
+        "~system/CommsApi" => Ok(include_str!("js_modules/CommsApi.js").to_owned()),
         "env" => Ok(get_env_for_scene(state)),
         _ => Err(generic_error(format!(
             "invalid module request `{module_spec}`"
