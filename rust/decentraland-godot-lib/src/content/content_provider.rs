@@ -18,7 +18,7 @@ use super::{
     audio::load_audio,
     content_notificator::ContentNotificator,
     gltf::{apply_update_set_mask_colliders, load_gltf},
-    texture::load_png_texture,
+    texture::{load_png_texture, TextureEntry},
     thread_safety::{resolve_promise, set_thread_safety_checks_enabled},
     video::download_video,
     wearable_entities::request_wearables,
@@ -200,10 +200,7 @@ impl ContentProvider {
 
         let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
         let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
-        let (mut promise, get_promise) = Promise::make_to_async();
-        promise
-            .bind_mut()
-            .preset_data(Dictionary::new().to_variant());
+        let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
             load_png_texture(
@@ -233,10 +230,7 @@ impl ContentProvider {
         }
         let url = url.to_string();
         let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
-        let (mut promise, get_promise) = Promise::make_to_async();
-        promise
-            .bind_mut()
-            .preset_data(Dictionary::new().to_variant());
+        let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
             load_png_texture(
@@ -266,8 +260,9 @@ impl ContentProvider {
             .promise
             .bind()
             .get_data();
-        let dict = promise_data.try_to::<Dictionary>().ok()?;
-        dict.get("texture")?.try_to::<Gd<ImageTexture>>().ok()
+        let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
+        let texture = texture_entry.bind().texture.clone();
+        Some(texture)
     }
 
     #[func]

@@ -137,7 +137,7 @@ class Asset:
 				"open_sea_nft_fetcher::asset::download_image promise error: ", result.get_error()
 			)
 			return
-		self.texture = result.get("texture")
+		self.texture = result.texture
 
 	func get_hash() -> String:
 		return contract_address + ":" + token_id

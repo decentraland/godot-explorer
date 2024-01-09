@@ -16,7 +16,6 @@ var last_index_scene_ui_root: int = -1
 var _last_parcel_position: Vector2i
 
 @onready var ui_root: Control = $UI
-@onready var voice_chat_ui = $voice_chat
 
 @onready var label_crosshair = $UI/Label_Crosshair
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
@@ -381,12 +380,10 @@ func set_visible_ui(value: bool):
 
 	if value:
 		ui_root.show()
-		voice_chat_ui.show()
 		var ui_node = ui_root.get_parent().get_node("scenes_ui")
 		ui_node.reparent(ui_root)
 	else:
 		ui_root.hide()
-		voice_chat_ui.hide()
 		var ui_node = ui_root.get_node("scenes_ui")
 		ui_node.reparent(ui_root.get_parent())
 

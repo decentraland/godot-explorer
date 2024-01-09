@@ -18,14 +18,14 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 ## Global classes (singleton pattern)
 var config: ConfigData
 
-var raycast_debugger = load("res://src/tool/raycast_debugger/raycast_debugger.gd").new()
-var animation_importer: AnimationImporter = AnimationImporter.new()
+var raycast_debugger: RaycastDebugger
+var animation_importer: AnimationImporter
 
-var scene_fetcher: SceneFetcher = null
+var scene_fetcher: SceneFetcher
 var http_requester: RustHttpQueueRequester
 
-var nft_fetcher: OpenSeaFetcher = OpenSeaFetcher.new()
-var nft_frame_loader: NftFrameStyleLoader = NftFrameStyleLoader.new()
+var nft_fetcher: OpenSeaFetcher
+var nft_frame_loader: NftFrameStyleLoader
 
 var standalone = false
 var dcl_android_plugin
@@ -36,6 +36,9 @@ var dcl_android_plugin
 
 func _ready():
 	http_requester = RustHttpQueueRequester.new()
+	animation_importer = AnimationImporter.new()
+	nft_frame_loader = NftFrameStyleLoader.new()
+	nft_fetcher = OpenSeaFetcher.new()
 
 	var args := OS.get_cmdline_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
@@ -48,6 +51,7 @@ func _ready():
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
+	# #[itest] only needs a godot context, not the all explorer one
 	if args.has("--test"):
 		print("Running godot-tests...")
 		var test_runner = load("res://src/test/test_runner.gd").new()
@@ -95,19 +99,28 @@ func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
-	# TODO: enable raycast debugger
-	add_child(raycast_debugger)
+	if args.has("--raycast-debugger"):
+		set_raycast_debugger_enable(true)
 
 	DclMeshRenderer.init_primitive_shapes()
 
 
-func add_raycast(_id: int, _time: float, _from: Vector3, _to: Vector3) -> void:
-	# raycast_debugger.add_raycast(_id, _time, _from, _to)
-	pass
+func set_raycast_debugger_enable(enable: bool):
+	var current_enabled = is_instance_valid(raycast_debugger)
+	if current_enabled == enable:
+		return
+
+	if enable:
+		raycast_debugger = RaycastDebugger.new()
+		add_child(raycast_debugger)
+	else:
+		remove_child(raycast_debugger)
+		raycast_debugger = null
 
 
-func get_tls_client():
-	return TLSOptions.client_unsafe()
+func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
+	if is_instance_valid(raycast_debugger):
+		raycast_debugger.add_raycast(id, time, from, to)
 
 
 func print_node_tree(node: Node, prefix = ""):
@@ -115,11 +128,6 @@ func print_node_tree(node: Node, prefix = ""):
 	for child in node.get_children():
 		if child is Node:
 			print_node_tree(child, prefix + node.name + "/")
-
-
-func _process(_dt: float):
-	pass
-	#http_requester.poll()
 
 
 func get_explorer():

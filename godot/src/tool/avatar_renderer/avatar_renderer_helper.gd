@@ -2,53 +2,8 @@ class_name AvatarRendererHelper
 extends RefCounted
 
 
-class ColorEntry:
-	static func from_dict(value):
-		if value == null or not value is Dictionary:
-			printerr("color is not a dictionary", value)
-			return null
-		var color_dict = value.get("color", {})
-		var r = color_dict.get("r")
-		var g = color_dict.get("g")
-		var b = color_dict.get("b")
-		var a = color_dict.get("a")
-		if [r, g, b].all(func(v): return v != null):
-			return Color(r, g, b, a)
-
-		printerr("some color field is not there", value)
-		return null
-
-
-class AvatarJson:
-	var body_shape
-	var wearables
-	var eyes
-	var hair
-	var skin
-
-	func is_valid() -> bool:
-		return [body_shape, wearables, eyes, hair, skin].all(func(v): return v != null)
-
-	static func from_json(value):
-		if value == null or not value is Dictionary:
-			printerr("avatar is not a dictionary", value)
-			return
-
-		var ret := AvatarJson.new()
-		if value.get("bodyShape") is String:
-			ret.body_shape = value.get("bodyShape")
-		if value.get("wearables") is Array:
-			ret.wearables = value.get("wearables")
-		ret.eyes = ColorEntry.from_dict(value.get("eyes"))
-		ret.hair = ColorEntry.from_dict(value.get("hair"))
-		ret.skin = ColorEntry.from_dict(value.get("skin"))
-
-		if ret.is_valid():
-			return ret
-		return null
-
-
 class AvatarEntry:
+	var entity := ""
 	var dest_path := ""
 	var width := 2048
 	var height := 2048
@@ -57,7 +12,7 @@ class AvatarEntry:
 	var face_width := 256
 	var face_height := 256
 	var face_zoom := 25
-	var avatar: AvatarJson
+	var avatar: Dictionary
 
 	static func from_json(value):
 		if value == null or not value is Dictionary:
@@ -65,6 +20,7 @@ class AvatarEntry:
 			return
 
 		var ret := AvatarEntry.new()
+		ret.entity = value.get("entity", "")
 		ret.dest_path = value.get("destPath", "")
 		ret.width = value.get("width", 2048)
 		ret.height = value.get("height", 2048)
@@ -72,7 +28,7 @@ class AvatarEntry:
 		ret.face_width = value.get("faceWidth", 256)
 		ret.face_height = value.get("faceHeight", 256)
 		ret.face_zoom = value.get("faceZoom", 25)
-		ret.avatar = AvatarJson.from_json(value.get("avatar"))
+		ret.avatar = value.get("avatar")
 
 		if ret.dest_path is String and ret.avatar != null:
 			return ret
@@ -94,21 +50,21 @@ class AvatarFile:
 			printerr("the file has to be a valid json dictionary")
 			return null
 
-		var base_url = json_value.get("baseUrl")
-		var payload = json_value.get("payload")
-		if not ([base_url, payload].all(func(v): return v != null)):
+		var tmp_base_url = json_value.get("baseUrl")
+		var tmp_payload = json_value.get("payload")
+		if not ([tmp_base_url, tmp_payload].all(func(v): return v != null)):
 			printerr("baseUrl and payload property has to be included in the the file dictionary")
 			return null
 
-		if not payload is Array:
+		if not tmp_payload is Array:
 			printerr("payload has to be an array")
 			return null
 
 		var ret := AvatarFile.new()
 
-		ret.base_url = base_url
+		ret.base_url = tmp_base_url
 		ret.payload = []
-		for maybe_entry in payload:
+		for maybe_entry in tmp_payload:
 			var entry = AvatarEntry.from_json(maybe_entry)
 			if entry == null:
 				printerr("payload entry dismissed")

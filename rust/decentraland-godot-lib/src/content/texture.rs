@@ -1,5 +1,6 @@
 use godot::{
-    builtin::{meta::ToGodot, Dictionary, GString},
+    bind::GodotClass,
+    builtin::{meta::ToGodot, GString},
     engine::{file_access::ModeFlags, global::Error, DirAccess, FileAccess, Image, ImageTexture},
     obj::Gd,
 };
@@ -13,6 +14,15 @@ use super::{
     content_provider::ContentProviderContext,
     thread_safety::{reject_promise, resolve_promise},
 };
+
+#[derive(GodotClass)]
+#[class(init, base=RefCounted)]
+pub struct TextureEntry {
+    #[var]
+    pub image: Gd<Image>,
+    #[var]
+    pub texture: Gd<ImageTexture>,
+}
 
 pub async fn load_png_texture(
     url: String,
@@ -69,7 +79,7 @@ pub async fn load_png_texture(
         return;
     }
 
-    let Some(texture) = ImageTexture::create_from_image(image.clone()) else {
+    let Some(mut texture) = ImageTexture::create_from_image(image.clone()) else {
         reject_promise(
             get_promise,
             format!("Error creating texture from image {}", absolute_file_path),
@@ -77,19 +87,8 @@ pub async fn load_png_texture(
         return;
     };
 
-    let Some(promise) = get_promise() else {
-        return;
-    };
+    texture.set_name(GString::from(&url));
 
-    let Ok(mut dict) = promise.bind().get_data().try_to::<Dictionary>() else {
-        reject_promise(
-            get_promise,
-            format!("Error creating texture from image {}", absolute_file_path),
-        );
-        return;
-    };
-
-    dict.insert("image", image.to_variant());
-    dict.insert("texture", texture.to_variant());
-    resolve_promise(get_promise, None);
+    let texture_entry = Gd::from_init_fn(|_base| TextureEntry { texture, image });
+    resolve_promise(get_promise, Some(texture_entry.to_variant()));
 }
