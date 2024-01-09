@@ -327,6 +327,11 @@ mouse_filter = 2
 layout_mode = 2
 text = "Scene logs enabled"
 
+[node name="CheckBox_RaycastDebugger" type="CheckBox" parent="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer5"]
+layout_mode = 2
+size_flags_horizontal = 10
+text = "Raycast debugger"
+
 [node name="CheckBox_ScenePause" type="CheckBox" parent="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer5"]
 layout_mode = 2
 size_flags_horizontal = 10
@@ -593,6 +598,7 @@ focus_mode = 1
 [connection signal="toggled" from="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Graphics/VBoxContainer_Monitoring/Checkbox_RamUsage" to="." method="_on_ram_usage_toggled"]
 [connection signal="toggled" from="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Graphics/VBoxContainer_Monitoring/Checkbox_Fps" to="." method="_on_checkbox_fps_toggled"]
 [connection signal="toggled" from="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_SceneLog" to="." method="_on_check_box_scene_log_toggled"]
+[connection signal="toggled" from="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger" to="." method="_on_check_box_raycast_debugger_toggled"]
 [connection signal="toggled" from="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_ScenePause" to="." method="_on_check_box_scene_pause_toggled"]
 [connection signal="item_selected" from="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
 [connection signal="text_changed" from="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/LineEdit_PreviewUrl" to="." method="_on_line_edit_preview_url_text_changed"]

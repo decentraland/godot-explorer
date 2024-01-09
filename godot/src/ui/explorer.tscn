@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=17 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -8,7 +8,6 @@
 [ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
 [ext_resource type="PackedScene" uid="uid://c6a0rjrc13kel" path="res://src/ui/components/line_edit_command/line_edit_command.tscn" id="9_5u55i"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
-[ext_resource type="PackedScene" uid="uid://wgrmvh6h51w3" path="res://src/ui/voice_chat.tscn" id="10_l3sp6"]
 [ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 
@@ -170,21 +169,6 @@ theme_override_constants/margin_bottom = 15
 
 [node name="Panel_Chat" parent="UI/VBoxContainer_Chat/MarginContainer" instance=ExtResource("9_4ktln")]
 layout_mode = 2
-
-[node name="voice_chat" parent="UI" instance=ExtResource("10_l3sp6")]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -100.0
-offset_top = -48.0
-offset_right = 100.0
-offset_bottom = -8.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 1
 
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false

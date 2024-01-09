@@ -104,20 +104,24 @@ fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformatio
                 }
             }
 
-            let mut style = ui_node.ui_transform.taffy_style.clone();
-
+            let child = taffy
+                .new_leaf(ui_node.ui_transform.taffy_style.clone())
+                .expect("failed to create node");
             if let Some(text_size) = ui_node.text_size {
-                if style.size.width == taffy::Dimension::Auto {
-                    style.size.width = taffy::Dimension::Length(text_size.x);
-                }
-                if style.size.height == taffy::Dimension::Auto {
-                    style.size.height = taffy::Dimension::Length(text_size.y);
-                }
+                let size_child = taffy
+                    .new_leaf(taffy::style::Style {
+                        size: taffy::Size {
+                            width: taffy::style::Dimension::Length(text_size.x),
+                            height: taffy::style::Dimension::Length(text_size.y),
+                        },
+                        ..Default::default()
+                    })
+                    .expect("failed to create node");
+
+                let _ = taffy.add_child(child, size_child);
             }
 
-            let child = taffy.new_leaf(style).expect("failed to create node");
-
-            taffy.add_child(parent.0, child).unwrap();
+            let _ = taffy.add_child(parent.0, child);
             processed_nodes.insert(*entity, (child, 0));
             processed_nodes_sorted.push((*entity, child));
 
