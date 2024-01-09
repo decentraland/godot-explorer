@@ -531,7 +531,7 @@ impl SceneManager {
                                 DclRpcSenderTakeAndCompareSnapshotResponse::new_gd();
                             dcl_rpc_sender.bind_mut().set_sender(response);
 
-                            testing_tools.call(
+                            testing_tools.call_deferred(
                                 "async_take_and_compare_snapshot".into(),
                                 &[
                                     scene_id.0.to_variant(),

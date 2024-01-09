@@ -158,7 +158,7 @@ func _physics_process(delta: float) -> void:
 			velocity.x = current_direction.x * run_speed
 			velocity.z = current_direction.z * run_speed
 
-		avatar.look_at(current_direction + position)
+		avatar.look_at(current_direction.normalized() + position)
 	else:
 		avatar.set_idle()
 		velocity.x = move_toward(velocity.x, 0, walk_speed)

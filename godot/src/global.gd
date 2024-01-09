@@ -38,6 +38,7 @@ func _ready():
 	http_requester = RustHttpQueueRequester.new()
 	animation_importer = AnimationImporter.new()
 	nft_frame_loader = NftFrameStyleLoader.new()
+	nft_fetcher = OpenSeaFetcher.new()
 
 	var args := OS.get_cmdline_args()
 	if args.size() == 1 and args[0].begins_with("res://"):

@@ -69,13 +69,15 @@ pub async fn load_png_texture(
         return;
     }
 
-    let Some(texture) = ImageTexture::create_from_image(image.clone()) else {
+    let Some(mut texture) = ImageTexture::create_from_image(image.clone()) else {
         reject_promise(
             get_promise,
             format!("Error creating texture from image {}", absolute_file_path),
         );
         return;
     };
+
+    texture.set_name(GString::from(&url));
 
     let Some(promise) = get_promise() else {
         return;

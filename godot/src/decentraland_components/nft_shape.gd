@@ -60,8 +60,8 @@ func _set_picture_frame_texture(
 ):
 	var tex_width := 256 if texture == null else texture.get_width()
 	var tex_height := 256 if texture == null else texture.get_height()
-	var factor = float(maxi(tex_height, tex_height))
-	var scale_x = tex_height / factor
+	var factor = float(maxi(tex_width, tex_height))
+	var scale_x = tex_width / factor
 	var scale_y = tex_height / factor
 	self.scale = Vector3(0.5, 0.5, 0.5) * Vector3(scale_x, scale_y, 1.0)
 
@@ -71,7 +71,10 @@ func _set_picture_frame_texture(
 		material.albedo_texture = texture
 		mesh_instance_3d.set_surface_override_material(0, material)
 	else:
-		var surf_idx = _get_surf_idx_by_resource_name(mesh_instance_3d.mesh, "PictureFrame")
+		var look_at_material := "PictureFrame"
+		if style == NftFrameStyleLoader.NFTFrameStyles.NFT_CLASSIC:
+			look_at_material = "Mat_CK"
+		var surf_idx = _get_surf_idx_by_resource_name(mesh_instance_3d.mesh, look_at_material)
 		var material = mesh_instance_3d.mesh.surface_get_material(surf_idx).duplicate()
 		material.albedo_texture = texture
 		mesh_instance_3d.set_surface_override_material(surf_idx, material)
@@ -124,7 +127,7 @@ func _async_load_nft(picture_frame: Node3D, urn: String, style: NftFrameStyleLoa
 func _get_surf_idx_by_resource_name(mesh: Mesh, resource_name: String) -> int:
 	for surf_idx in range(mesh.get_surface_count()):
 		var material: StandardMaterial3D = mesh.surface_get_material(surf_idx)
-		if material.resource_name.begins_with(resource_name):
+		if material.resource_name.contains(resource_name):
 			return surf_idx
 	return 0
 
