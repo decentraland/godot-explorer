@@ -69,7 +69,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 if existing_material.is_none() {
                     for tex in dcl_material.get_textures().into_iter().flatten() {
                         if let DclSourceTex::Texture(hash) = &tex.source {
-                            content_provider.call(
+                            content_provider.call_deferred(
                                 "fetch_texture_by_hash".into(),
                                 &[
                                     GString::from(hash).to_variant(),

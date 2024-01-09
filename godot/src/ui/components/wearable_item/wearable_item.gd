@@ -52,7 +52,7 @@ func async_set_wearable(wearable: Dictionary):
 		if res is PromiseError:
 			printerr("Fetch texture error on ", wearable_thumbnail, ": ", res.get_error())
 		else:
-			texture_rect_preview.texture = res.get("texture")
+			texture_rect_preview.texture = res.texture
 
 
 func _on_mouse_entered():

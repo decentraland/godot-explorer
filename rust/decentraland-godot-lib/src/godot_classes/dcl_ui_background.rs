@@ -100,6 +100,7 @@ impl DclUiBackground {
             .bind_mut()
             .get_texture_from_hash(self.waiting_hash.clone())
         else {
+            tracing::error!("trying to set texture not found: {}", self.waiting_hash);
             return;
         };
         self.texture_loaded = true;
@@ -224,14 +225,14 @@ impl DclUiBackground {
                         );
                         self.waiting_hash = GString::from(texture_hash);
 
-                        if promise.bind().is_resolved() {
+                        if !promise.bind().is_resolved() {
                             promise.connect(
                                 "on_resolved".into(),
                                 self.base.callable("_on_texture_loaded"),
                             );
-                        } else {
-                            self.base.call_deferred("_on_texture_loaded".into(), &[]);
                         }
+
+                        self.base.call_deferred("_on_texture_loaded".into(), &[]);
                     }
                     DclSourceTex::VideoTexture(_) => {
                         // TODO: implement video texture
