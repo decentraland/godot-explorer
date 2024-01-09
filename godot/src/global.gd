@@ -98,32 +98,36 @@ func _ready():
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
-	if args.has("--raycast-debugger"): 
+	if args.has("--raycast-debugger"):
 		set_raycast_debugger_enable(true)
 
 	DclMeshRenderer.init_primitive_shapes()
+
 
 func set_raycast_debugger_enable(enable: bool):
 	var current_enabled = is_instance_valid(raycast_debugger)
 	if current_enabled == enable:
 		return
-		
+
 	if enable:
 		raycast_debugger = RaycastDebugger.new()
 		add_child(raycast_debugger)
 	else:
 		remove_child(raycast_debugger)
 		raycast_debugger = null
-		
+
+
 func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
 	if is_instance_valid(raycast_debugger):
 		raycast_debugger.add_raycast(id, time, from, to)
+
 
 func print_node_tree(node: Node, prefix = ""):
 	print(prefix + node.name)
 	for child in node.get_children():
 		if child is Node:
 			print_node_tree(child, prefix + node.name + "/")
+
 
 func get_explorer():
 	var explorer = get_node_or_null("/root/explorer")

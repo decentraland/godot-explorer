@@ -23,7 +23,8 @@ var general = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VB
 var graphics = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Graphics
 @onready
 var advanced = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced
-@onready var check_box_raycast_debugger = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger
+@onready
+var check_box_raycast_debugger = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger
 
 @onready
 var text_edit = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
@@ -198,9 +199,10 @@ func refresh_values():
 	h_slider_scene_radius.set_value_no_signal(Global.config.scene_radius)
 	label_process_tick_quota_value.text = str(Global.config.process_tick_quota_ms)
 	label_scene_radius_value.text = str(Global.config.scene_radius)
-	
+
 	if is_instance_valid(Global.raycast_debugger):
 		check_box_raycast_debugger.set_pressed_no_signal(true)
+
 
 func _on_h_slider_process_tick_quota_value_changed(value):
 	label_process_tick_quota_value.text = str(value)
