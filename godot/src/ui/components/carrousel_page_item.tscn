@@ -1,0 +1,28 @@
+[gd_scene load_steps=3 format=3 uid="uid://bo6jyvmcx6vfc"]
+
+[ext_resource type="Script" path="res://src/ui/components/carrousel_page_item.gd" id="1_qrtqa"]
+[ext_resource type="Texture2D" uid="uid://bykg1oy4i7sr1" path="res://assets/ui/carrousel_item.png" id="1_wxprv"]
+
+[node name="Control_CarrouselItem" type="Control"]
+custom_minimum_size = Vector2(15, 15)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 15.0
+offset_bottom = 15.0
+script = ExtResource("1_qrtqa")
+
+[node name="TextureRect_Item" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -7.0
+offset_top = -7.5
+offset_right = 7.0
+offset_bottom = 7.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("1_wxprv")

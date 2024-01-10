@@ -1,0 +1,189 @@
+[gd_scene load_steps=12 format=3 uid="uid://bmjwqm6jgri7c"]
+
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_uio8w"]
+[ext_resource type="Script" path="res://src/ui/components/loading_screen/loading_screen.gd" id="2_7hdbk"]
+[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="2_tl0bq"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_y82bl"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_slpbh"]
+[ext_resource type="Texture2D" uid="uid://bxom57mhcmhv4" path="res://assets/ui/LeftArrow.png" id="6_oud40"]
+[ext_resource type="Texture2D" uid="uid://b6b4uw0byh1sg" path="res://assets/ui/NPCs_Robot.png" id="7_wcl70"]
+[ext_resource type="Texture2D" uid="uid://dx34q3r7ow0x0" path="res://assets/ui/NPCs_Aisha.png" id="8_4im5j"]
+[ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="8_32igy"]
+[ext_resource type="Texture2D" uid="uid://bkogft5vqdpas" path="res://assets/ui/RightArrow.png" id="9_xqknv"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_t4bn8"]
+shader = ExtResource("8_32igy")
+shader_parameter/strength = 0.9
+shader_parameter/speed = 0.025
+shader_parameter/angle = 0.0
+
+[node name="VBox_Loading" type="VBoxContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 1
+mouse_force_pass_scroll_events = false
+theme = ExtResource("1_uio8w")
+theme_override_constants/separation = 0
+script = ExtResource("2_7hdbk")
+
+[node name="VBox_Header" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="ColorRect_Header" type="ColorRect" parent="VBox_Header"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+color = Color(0.0862745, 0.0862745, 0.0862745, 1)
+
+[node name="DecentralandLogo" type="Sprite2D" parent="VBox_Header/ColorRect_Header"]
+position = Vector2(32, 30)
+scale = Vector2(0.166016, 0.166016)
+texture = ExtResource("2_tl0bq")
+
+[node name="Label" type="RichTextLabel" parent="VBox_Header/ColorRect_Header"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 64.0
+offset_top = -18.0
+offset_right = 272.0
+offset_bottom = 18.0
+grow_vertical = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_fonts/normal_font = ExtResource("3_y82bl")
+theme_override_fonts/bold_font = ExtResource("4_slpbh")
+bbcode_enabled = true
+text = "[b]Decentraland[/b] 
+Godot Explorer Alpha v#.###"
+
+[node name="ColorRect_Separator" type="ColorRect" parent="VBox_Header"]
+material = SubResource("ShaderMaterial_t4bn8")
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+
+[node name="ColorRect_Background" type="ColorRect" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+color = Color(0.85098, 0.843137, 0.866667, 1)
+
+[node name="Control_Discover" type="MarginContainer" parent="ColorRect_Background"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("1_uio8w")
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 30
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Background/Control_Discover"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="HBoxContainer_Content" type="HBoxContainer" parent="ColorRect_Background/Control_Discover/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+alignment = 1
+
+[node name="Control_Left" type="Control" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="TextureRect" type="TextureRect" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Left"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -32.5
+offset_top = -32.0
+offset_right = 32.5
+offset_bottom = 32.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("6_oud40")
+
+[node name="VBox_Data" type="VBoxContainer" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.3
+mouse_filter = 2
+alignment = 1
+
+[node name="Label_Title" type="Label" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/VBox_Data"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_slpbh")
+theme_override_font_sizes/font_size = 36
+text = "Genesis Plaza, heart of city"
+
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/VBox_Data"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.960906, 0.152895, 0.344884, 1)
+theme_override_fonts/normal_font = ExtResource("3_y82bl")
+theme_override_font_sizes/normal_font_size = 18
+text = "Genesis Plaza is built and maintained by the Decentraland Foundation but is still in many ways a community project. Around here you'll find several teleports that can take you directly to special scenes marked as points of interest."
+fit_content = true
+shortcut_keys_enabled = false
+
+[node name="Control_Image" type="Control" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content"]
+custom_minimum_size = Vector2(500, 500)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="TextureRect" type="TextureRect" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Image"]
+layout_mode = 0
+offset_left = 64.0
+offset_top = 110.0
+offset_right = 270.0
+offset_bottom = 294.0
+mouse_filter = 2
+texture = ExtResource("7_wcl70")
+
+[node name="TextureRect2" type="TextureRect" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Image"]
+layout_mode = 0
+offset_left = 224.0
+offset_top = 87.0
+offset_right = 492.0
+offset_bottom = 402.0
+mouse_filter = 2
+texture = ExtResource("8_4im5j")
+
+[node name="Control_Right" type="Control" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="TextureRect" type="TextureRect" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Right"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -32.5
+offset_top = -32.0
+offset_right = 32.5
+offset_bottom = 32.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("9_xqknv")
+
+[node name="HBoxContainer_Pagination" type="HBoxContainer" parent="ColorRect_Background/Control_Discover/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
