@@ -21,7 +21,7 @@
 
 2. Go to `rust/xtask` folder, and run `cargo run -- install`.
 
-## Running and editting the project
+## Running and editing the project
 
 1. Ensure you are in `rust/xtask` folder first
 2. You can run `cargo run -- run` to build the Rust library and execute the client. 
@@ -33,7 +33,7 @@
 More details on [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Debugging the library
-This repos is set up to be opened with Visual Studio Code. In the section `Run and Debug` in the Activity bar, you can find the configuration for your platform.
+This repo is set up to be opened with Visual Studio Code. In the section `Run and Debug` in the Activity bar, you can find the configuration for your platform.
 
 ## Run test with coverage
 1. Ensure you are in `rust/xtask` folder first
@@ -41,7 +41,6 @@ This repos is set up to be opened with Visual Studio Code. In the section `Run a
 
 # Mobile targets
 See `rust/decentraland-godot-lib/builds.md`
-
 
 Powered by the Decentraland DAO
 ![Decentraland DAO logo](https://bafkreibci6gg3wbjvxzlqpuh353upzrssalqqoddb6c4rez33bcagqsc2a.ipfs.nftstorage.link/)
