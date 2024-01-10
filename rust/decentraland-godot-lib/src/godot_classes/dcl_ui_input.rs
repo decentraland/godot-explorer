@@ -37,7 +37,7 @@ pub struct DclUiInput {
 }
 
 #[godot_api]
-impl NodeVirtual for DclUiInput {
+impl INode for DclUiInput {
     fn init(base: Base<LineEdit>) -> Self {
         Self {
             base,
@@ -48,10 +48,9 @@ impl NodeVirtual for DclUiInput {
     }
 
     fn ready(&mut self) {
-        let font_resource = load(self.current_font.get_font_path());
         let style_box_empty: Gd<godot::engine::StyleBox> = StyleBoxEmpty::new().upcast();
         self.base
-            .add_theme_font_override("font".into(), font_resource);
+            .add_theme_font_override("font".into(), self.current_font.get_font_resource());
         self.base
             .add_theme_stylebox_override("normal".into(), style_box_empty.clone());
         self.base
@@ -59,19 +58,12 @@ impl NodeVirtual for DclUiInput {
         self.base
             .add_theme_stylebox_override("read_only".into(), style_box_empty.clone());
 
-        self.base.clone().connect(
-            "text_changed".into(),
-            self.base
-                .clone()
-                .get("on_text_changed".into())
-                .to::<Callable>(),
-        );
+        self.base
+            .clone()
+            .connect("text_changed".into(), self.base.callable("on_text_changed"));
         self.base.clone().connect(
             "text_submitted".into(),
-            self.base
-                .clone()
-                .get("on_text_submitted".into())
-                .to::<Callable>(),
+            self.base.callable("on_text_submitted"),
         );
     }
 }
@@ -79,7 +71,7 @@ impl NodeVirtual for DclUiInput {
 #[godot_api]
 impl DclUiInput {
     #[func]
-    pub fn on_text_changed(&mut self, new_text: GodotString) {
+    pub fn on_text_changed(&mut self, new_text: GString) {
         let Some(ui_result) = self.ui_result.as_ref() else {
             return;
         };
@@ -94,7 +86,7 @@ impl DclUiInput {
     }
 
     #[func]
-    pub fn on_text_submitted(&mut self, new_text: GodotString) {
+    pub fn on_text_submitted(&mut self, new_text: GString) {
         let Some(ui_result) = self.ui_result.as_ref() else {
             return;
         };
@@ -184,9 +176,8 @@ impl DclUiInput {
 
         if new_value.font() != self.current_font {
             self.current_font = new_value.font();
-            let font_resource = load(self.current_font.get_font_path());
             self.base
-                .add_theme_font_override("font".into(), font_resource);
+                .add_theme_font_override("font".into(), self.current_font.get_font_resource());
         }
     }
 

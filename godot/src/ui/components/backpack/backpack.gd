@@ -1,5 +1,22 @@
 extends VBoxContainer
 
+var filtered_data: Array
+var items_button_group = ButtonGroup.new()
+
+var avatar_body_shape: String
+var avatar_wearables: PackedStringArray
+var avatar_eyes_color: Color
+var avatar_hair_color: Color
+var avatar_skin_color: Color
+var avatar_emotes: Array
+
+var base_wearable_request_id: int = -1
+var wearable_data: Dictionary = {}
+
+var primary_player_profile_dictionary: Dictionary = {}
+
+var wearable_buttons: Array = []
+
 @onready var color_picker_panel = $Color_Picker_Panel
 
 @onready
@@ -17,25 +34,14 @@ var grid_container_wearables_list = $ColorRect_Background/HBoxContainer/ScrollCo
 @onready
 var wearable_panel = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
 
-var filtered_data: Array
-var items_button_group = ButtonGroup.new()
-
-var avatar_body_shape: String
-var avatar_wearables: PackedStringArray
-var avatar_eyes_color: Color
-var avatar_hair_color: Color
-var avatar_skin_color: Color
-var avatar_emotes: Array
-
-var base_wearable_request_id: int = -1
-var wearable_data: Dictionary = {}
-
-var renderer_avatar_dictionary: Dictionary = {}
-
-var wearable_buttons: Array = []
+@onready
+var skin_color_picker = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker
 
 
+# gdlint:ignore = async-function-name
 func _ready():
+	Global.player_identity.profile_changed.connect(self._on_profile_changed)
+
 	for child in v_box_container_category.get_children():
 		# TODO: check if it's a wearable_button
 		for wearable_button in child.get_children():
@@ -47,51 +53,65 @@ func _ready():
 		var key = "urn:decentraland:off-chain:base-avatars:" + wearable_id
 		wearable_data[key] = null
 
-	avatar_body_shape = Global.config.avatar_profile.body_shape
-	avatar_wearables = Global.config.avatar_profile.wearables
-	avatar_eyes_color = Global.config.avatar_profile.eyes
-	avatar_hair_color = Global.config.avatar_profile.hair
-	avatar_skin_color = Global.config.avatar_profile.skin
-	avatar_emotes = Global.config.avatar_profile.emotes
-	line_edit_name.text = Global.config.avatar_profile.name
-
-	var promise = Global.content_manager.fetch_wearables(
+	var promise = Global.content_provider.fetch_wearables(
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
 	)
 	if promise != null:
-		await promise.co_awaiter()
+		await PromiseUtils.async_all(promise)
 
 	for wearable_id in wearable_data:
-		wearable_data[wearable_id] = Global.content_manager.get_wearable(wearable_id)
+		wearable_data[wearable_id] = Global.content_provider.get_wearable(wearable_id)
+
+	_update_avatar()
+
+
+func _on_profile_changed(new_profile: Dictionary):
+	var profile_content = new_profile.get("content", {})
+	line_edit_name.text = profile_content.get("name")
+
+	var profile_avatar = profile_content.get("avatar", {})
+	avatar_body_shape = profile_avatar.bodyShape
+	avatar_wearables = profile_avatar.wearables
+	avatar_eyes_color = Avatar.from_color_object(profile_avatar.eyes.color)
+	avatar_hair_color = Avatar.from_color_object(profile_avatar.hair.color)
+	avatar_skin_color = Avatar.from_color_object(profile_avatar.skin.color)
+
+	if profile_avatar.emotes != null:
+		avatar_emotes = profile_avatar.emotes
+
+	if primary_player_profile_dictionary.is_empty():
+		primary_player_profile_dictionary = new_profile.duplicate()
 
 	_update_avatar()
 
 
 func _update_avatar():
-	renderer_avatar_dictionary = {
-		"base_url": "https://peer.decentraland.org/content",
-		"name": "",
-		"body_shape": avatar_body_shape,
-		"eyes": avatar_eyes_color,
-		"hair": avatar_hair_color,
-		"skin": avatar_skin_color,
-		"wearables": avatar_wearables,
-		"emotes": avatar_emotes
-	}
+	if primary_player_profile_dictionary.is_empty():
+		return
 
-	var wearable_body_shape = Global.content_manager.get_wearable(avatar_body_shape)
+	var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get(
+		"avatar", {}
+	)
+	profile_avatar["bodyShape"] = avatar_body_shape
+	profile_avatar["eyes"] = Avatar.to_color_object(avatar_eyes_color)
+	profile_avatar["hair"] = Avatar.to_color_object(avatar_hair_color)
+	profile_avatar["skin"] = Avatar.to_color_object(avatar_skin_color)
+	profile_avatar["wearables"] = avatar_wearables
+	profile_avatar["emotes"] = avatar_emotes
+
+	var wearable_body_shape = Global.content_provider.get_wearable(avatar_body_shape)
 
 	# TODO: make this more performant
 	for wearable_button in wearable_buttons:
 		for wearable_hash in avatar_wearables:
-			var wearable = Global.content_manager.get_wearable(wearable_hash)
+			var wearable = Global.content_provider.get_wearable(wearable_hash)
 			if wearable != null:
-				wearable_button.set_wearable(wearable)
+				wearable_button.async_set_wearable(wearable)
 
 		if wearable_body_shape != null:
-			wearable_button.set_wearable(wearable_body_shape)
+			wearable_button.async_set_wearable(wearable_body_shape)
 
-	avatar_preview.avatar.update_avatar(renderer_avatar_dictionary)
+	avatar_preview.avatar.async_update_avatar_from_profile(primary_player_profile_dictionary)
 	button_save_profile.disabled = false
 
 
@@ -114,7 +134,7 @@ func show_wearables():
 		var wearable_item = wearable_item_instanceable.instantiate()
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_item.button_group = items_button_group
-		wearable_item.set_wearable(wearable_data[wearable_id])
+		wearable_item.async_set_wearable(wearable_data[wearable_id])
 		wearable_item.toggled.connect(self._on_wearable_toggled.bind(wearable_id))
 
 
@@ -133,7 +153,7 @@ func _on_wearable_toggled(_button_toggled: bool, wearable_id: String) -> void:
 	else:
 		equipped = avatar_body_shape == wearable_id
 
-	wearable_panel.set_wearable(wearable_data[wearable_id], wearable_id)
+	wearable_panel.async_set_wearable(wearable_data[wearable_id], wearable_id)
 	wearable_panel.set_equipable_and_equip(can_equip, equipped)
 
 
@@ -163,7 +183,7 @@ func _on_wearable_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func _on_wearable_button_clear_filter(type):
+func _on_wearable_button_clear_filter(_type):
 	filtered_data = []
 	show_wearables()
 
@@ -174,12 +194,15 @@ func _on_line_edit_name_text_changed(_new_text):
 
 func _on_button_save_profile_pressed():
 	button_save_profile.disabled = true
-	renderer_avatar_dictionary["name"] = line_edit_name.text
 
-	Global.config.avatar_profile = renderer_avatar_dictionary
-	Global.config.save_to_settings_file()
+	var profile_content = primary_player_profile_dictionary.get("content", {})
+	var profile_avatar = profile_content.get("avatar", {})
 
-	Global.comms.update_profile_avatar(renderer_avatar_dictionary)
+	profile_content["name"] = line_edit_name.text
+	profile_content["hasConnectedWeb3"] = !Global.player_identity.is_guest
+	profile_avatar["name"] = line_edit_name.text
+
+	Global.player_identity.async_deploy_profile(primary_player_profile_dictionary)
 
 
 func _on_wearable_panel_equip(wearable_id: String):
@@ -214,16 +237,11 @@ func _on_wearable_panel_unequip(wearable_id: String):
 		# TODO: can not unequip a body shape
 		return
 
-	else:
-		var index = avatar_wearables.find(wearable_id)
-		if index != -1:
-			avatar_wearables.remove_at(index)
+	var index = avatar_wearables.find(wearable_id)
+	if index != -1:
+		avatar_wearables.remove_at(index)
 
 	_update_avatar()
-
-
-@onready
-var skin_color_picker = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker
 
 
 func _on_skin_color_picker_toggle_color_panel(toggled, color_target):
@@ -265,7 +283,11 @@ func _on_color_picker_panel_pick_color(color):
 	skin_color_picker.set_color(color)
 	avatar_preview.avatar.update_colors(avatar_eyes_color, avatar_skin_color, avatar_hair_color)
 
-	renderer_avatar_dictionary["eyes"] = avatar_eyes_color
-	renderer_avatar_dictionary["hair"] = avatar_hair_color
-	renderer_avatar_dictionary["skin"] = avatar_skin_color
+	primary_player_profile_dictionary["eyes"] = Avatar.to_color_object(avatar_eyes_color)
+	primary_player_profile_dictionary["hair"] = Avatar.to_color_object(avatar_hair_color)
+	primary_player_profile_dictionary["skin"] = Avatar.to_color_object(avatar_skin_color)
 	button_save_profile.disabled = false
+
+
+func _on_button_logout_pressed():
+	Global.comms.disconnect(true)

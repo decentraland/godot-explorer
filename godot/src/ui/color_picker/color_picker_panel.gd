@@ -1,5 +1,9 @@
 extends PopupPanel
 
+signal pick_color(color: Color)
+
+enum ColorTargetType { SKIN, OTHER }
+
 var skin_colors: Array[Color] = [
 	Color("ffe4c6"),
 	Color("ffddbc"),
@@ -28,11 +32,11 @@ var example_colors: Array[Color] = [
 	Color.from_hsv(333.0 / 360.0, 0.52, 0.91)
 ]
 
-enum ColorTargetType { SKIN, OTHER }
-
 var color_type: ColorTargetType = ColorTargetType.SKIN
 
 var color_button_group: ButtonGroup = ButtonGroup.new()
+
+var colorable_square = preload("res://src/ui/color_picker/colorable_square.tscn")
 
 @onready var v_box_container_hair = $VBoxContainer/VBoxContainer_Hair
 @onready var grid_container_hair = $VBoxContainer/VBoxContainer_Hair/GridContainer_Hair
@@ -42,10 +46,6 @@ var color_button_group: ButtonGroup = ButtonGroup.new()
 @onready var saturation_slider = $VBoxContainer/VBoxContainer_Hair/SaturationSlider
 @onready var brightness_slider = $VBoxContainer/VBoxContainer_Hair/BrightnessSlider
 @onready var panel_preview = $VBoxContainer/VBoxContainer_Hair/Panel_Preview
-
-var colorable_square = preload("res://src/ui/color_picker/colorable_square.tscn")
-
-signal pick_color(color: Color)
 
 
 func custom_popup(rect: Rect2, current_color: Color):

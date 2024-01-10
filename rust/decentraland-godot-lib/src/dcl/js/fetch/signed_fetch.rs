@@ -1,13 +1,19 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::wallet::{sign_request, Wallet};
-use deno_core::{error::AnyError, op, OpState};
+use deno_core::{
+    anyhow::{self},
+    error::AnyError,
+    op, OpState,
+};
 use http::Uri;
+
+use crate::auth::{ephemeral_auth_chain::EphemeralAuthChain, wallet::sign_request};
+
 use serde::Serialize;
 
 #[derive(Serialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct SignedFetchMetaRealm {
+struct SignedFetchMetaRealm {
     domain: Option<String>,
     catalyst_name: Option<String>,
     layer: Option<String>,
@@ -16,7 +22,7 @@ pub struct SignedFetchMetaRealm {
 
 #[derive(Serialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct SignedFetchMeta {
+struct SignedFetchMeta {
     origin: Option<String>,
     scene_id: Option<String>,
     parcel: Option<String>,
@@ -28,25 +34,32 @@ pub struct SignedFetchMeta {
 
 #[op]
 pub async fn op_signed_fetch_headers(
-    state: Rc<RefCell<OpState>>,
+    op_state: Rc<RefCell<OpState>>,
     uri: String,
     method: Option<String>,
 ) -> Result<Vec<(String, String)>, AnyError> {
-    let wallet = state.borrow().borrow::<Wallet>().clone();
+    let wallet = op_state
+        .borrow()
+        .borrow::<Option<EphemeralAuthChain>>()
+        .clone();
 
-    let meta = SignedFetchMeta {
-        origin: Some("localhost".to_owned()),
-        is_guest: Some(true),
-        ..Default::default()
-    };
+    if let Some(ephemeral_wallet) = wallet {
+        let meta = SignedFetchMeta {
+            origin: Some("localhost".to_owned()),
+            is_guest: Some(true),
+            ..Default::default()
+        };
 
-    let headers = sign_request(
-        method.as_deref().unwrap_or("get"),
-        &Uri::try_from(uri)?,
-        &wallet,
-        meta,
-    )
-    .await;
+        let headers = sign_request(
+            method.as_deref().unwrap_or("get"),
+            &Uri::try_from(uri)?,
+            &ephemeral_wallet,
+            meta,
+        )
+        .await;
 
-    Ok(headers)
+        Ok(headers)
+    } else {
+        Err(anyhow::Error::msg("There is no wallet to sign headers."))
+    }
 }

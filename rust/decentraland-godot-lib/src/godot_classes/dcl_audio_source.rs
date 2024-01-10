@@ -25,10 +25,10 @@ pub struct DclAudioSource {
 
     /// the clip path as given in the `files` array of the scene's manifest.
     #[var]
-    dcl_audio_clip_url: GodotString,
+    dcl_audio_clip_url: GString,
 
     #[var]
-    dcl_scene_id: u32,
+    dcl_scene_id: i32,
 
     #[base]
     _base: Base<AudioStreamPlayer3D>,

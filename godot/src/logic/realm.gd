@@ -1,7 +1,5 @@
-extends DclRealm
 class_name Realm
-
-var http_requester: RustHttpRequesterWrapper = Global.http_requester
+extends DclRealm
 
 signal realm_changed
 
@@ -19,7 +17,20 @@ static func dcl_world_url(dcl_name: String) -> String:
 
 
 static func ensure_ends_with_slash(str_param: String) -> String:
+	if str_param.is_empty():
+		return ""
+
 	return str_param.trim_suffix("/") + "/"
+
+
+static func ensure_starts_with_https(str_param: String) -> String:
+	if str_param.begins_with("https://"):
+		return str_param
+
+	if str_param.begins_with("http://"):
+		return str_param
+
+	return "https://" + str_param
 
 
 static func resolve_realm_url(value: String) -> String:
@@ -57,14 +68,15 @@ static func parse_urn(urn: String):
 	return {"urn": matches.get_string(0), "entityId": matches.get_string(2), "baseUrl": base_url}
 
 
-func set_realm(new_realm_string: String) -> void:
+func async_set_realm(new_realm_string: String) -> void:
 	realm_string = new_realm_string
-	realm_url = ensure_ends_with_slash(resolve_realm_url(realm_string))
-	var promise: Promise = http_requester.request_json(
+	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
+	realm_url = Realm.ensure_starts_with_https(realm_url)
+	var promise: Promise = Global.http_requester.request_json(
 		realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
 
-	var res = await promise.co_awaiter()
+	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:
 		printerr(
 			"Rejected request change realm to: ",
@@ -91,21 +103,35 @@ func set_realm(new_realm_string: String) -> void:
 
 		realm_scene_urns.clear()
 		for urn in configuration.get("scenesUrn", []):
-			var parsed_urn = parse_urn(urn)
+			var parsed_urn = Realm.parse_urn(urn)
 			if parsed_urn != null:
 				realm_scene_urns.push_back(parsed_urn)
 
 		realm_global_scene_urns.clear()
 		for urn in configuration.get("globalScenesUrn", []):
-			var parsed_urn = parse_urn(urn)
+			var parsed_urn = Realm.parse_urn(urn)
 			if parsed_urn != null:
 				realm_global_scene_urns.push_back(parsed_urn)
 
 		realm_city_loader_content_base_url = configuration.get("cityLoaderContentServer", "")
+		if not realm_city_loader_content_base_url.is_empty():
+			realm_city_loader_content_base_url = Realm.ensure_ends_with_slash(
+				configuration.get("cityLoaderContentServer", "")
+			)
+
+		lambda_server_base_url = realm_about.get("lambdas", {}).get(
+			"publicUrl", "https://peer.decentraland.org/lambdas/"
+		)
+		if not lambda_server_base_url.is_empty():
+			lambda_server_base_url = Realm.ensure_ends_with_slash(lambda_server_base_url)
+		Realm.ensure_ends_with_slash(realm_about.get("lambdas", {}).get("publicUrl"))
 
 		realm_name = configuration.get("realmName", "no_realm_name")
+		network_id = int(configuration.get("networkId", 1))  # 1=Ethereum
 
-		content_base_url = ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
+		content_base_url = Realm.ensure_ends_with_slash(
+			realm_about.get("content", {}).get("publicUrl")
+		)
 
 		Global.config.last_realm_joined = realm_url
 		Global.config.save_to_settings_file()

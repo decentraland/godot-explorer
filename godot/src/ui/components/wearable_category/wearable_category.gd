@@ -43,42 +43,43 @@ func _update_category_icon():
 
 
 func type_to_category(category_enum: WearableCategoryEnum) -> String:
+	var result: String = ""
 	match category_enum:
 		WearableCategoryEnum.BODY:
-			return Wearables.Categories.BODY_SHAPE
+			result = Wearables.Categories.BODY_SHAPE
 		WearableCategoryEnum.HAIR:
-			return Wearables.Categories.HAIR
+			result = Wearables.Categories.HAIR
 		WearableCategoryEnum.EYEBROWS:
-			return Wearables.Categories.EYEBROWS
+			result = Wearables.Categories.EYEBROWS
 		WearableCategoryEnum.EYES:
-			return Wearables.Categories.EYES
+			result = Wearables.Categories.EYES
 		WearableCategoryEnum.MOUTH:
-			return Wearables.Categories.MOUTH
+			result = Wearables.Categories.MOUTH
 		WearableCategoryEnum.FACIAL_HAIR:
-			return Wearables.Categories.FACIAL_HAIR
+			result = Wearables.Categories.FACIAL_HAIR
 		WearableCategoryEnum.UPPER_BODY:
-			return Wearables.Categories.UPPER_BODY
+			result = Wearables.Categories.UPPER_BODY
 		WearableCategoryEnum.HANDWEAR:
-			return Wearables.Categories.HANDS_WEAR
+			result = Wearables.Categories.HANDS_WEAR
 		WearableCategoryEnum.LOWER_BODY:
-			return Wearables.Categories.LOWER_BODY
+			result = Wearables.Categories.LOWER_BODY
 		WearableCategoryEnum.FEET:
-			return Wearables.Categories.FEET
+			result = Wearables.Categories.FEET
 		WearableCategoryEnum.HAT:
-			return Wearables.Categories.HAT
+			result = Wearables.Categories.HAT
 		WearableCategoryEnum.EYEWEAR:
-			return Wearables.Categories.EYEWEAR
+			result = Wearables.Categories.EYEWEAR
 		WearableCategoryEnum.EARRING:
-			return Wearables.Categories.EARRING
+			result = Wearables.Categories.EARRING
 		WearableCategoryEnum.MASK:
-			return Wearables.Categories.MASK
+			result = Wearables.Categories.MASK
 		WearableCategoryEnum.TIARA:
-			return Wearables.Categories.TIARA
+			result = Wearables.Categories.TIARA
 		WearableCategoryEnum.TOP_HEAD:
-			return Wearables.Categories.TOP_HEAD
+			result = Wearables.Categories.TOP_HEAD
 		WearableCategoryEnum.HELMET:
-			return Wearables.Categories.HELMET
+			result = Wearables.Categories.HELMET
 		WearableCategoryEnum.SKIN:
-			return Wearables.Categories.SKIN
+			result = Wearables.Categories.SKIN
 
-	return ""
+	return result

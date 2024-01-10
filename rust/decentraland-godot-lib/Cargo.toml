@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { git = "https://github.com/godot-rust/gdext", rev = "00ba8c9d", features = ["threads"] }
+godot = { git = "https://github.com/godot-rust/gdext", rev = "5e18af87a13bf8d40b4f50bfcb180228e227b773", features=["experimental-threads"] }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
@@ -45,17 +45,34 @@ num = "0.4"
 http = "0.2.9"
 bytes = "1.4.0"
 
-tokio-tungstenite = "*"
+tokio-tungstenite = "0.20.1"
 futures-util = "*"
 
 livekit = { git = "https://github.com/robtfm/client-sdk-rust", branch="h264-false", features=["rustls-tls-webpki-roots"] }
 
-taffy = { git = "https://github.com/DioxusLabs/taffy", branch="main" }
+taffy = { git = "https://github.com/DioxusLabs/taffy", rev="7eee673c5ea65f64f35c53f5ee2fe5faf62b9c1e" }
+tracing-test = "0.2.4"
+
+base64 = "0.21.5"
+chrono = "0.4.31"
+
+simple-easing = "1.0.1"
+
+multihash-codetable = { version = "0.1.1", features = ["digest", "sha2"] }
+cid = "0.11.0"
+multipart = { version = "0.18.0", default-features = false, features = ["client", "lazy_static"] }
+
+ethers-providers = { version = "2.0", features = ["ws","rustls"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
+ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix", features = ["fix_usize_size_t"] }
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
 
 [build-dependencies]
 webrtc-sys-build = "0.2.0"
 prost-build = "0.11.8"
+
+[patch."https://github.com/godot-rust/godot4-prebuilt".godot4-prebuilt]
+git = "https://github.com//godot-rust/godot4-prebuilt"
+branch = "4.2.1"

@@ -31,7 +31,7 @@ pub struct DclUiDropdown {
 }
 
 #[godot_api]
-impl NodeVirtual for DclUiDropdown {
+impl INode for DclUiDropdown {
     fn init(base: Base<OptionButton>) -> Self {
         Self {
             base,
@@ -42,10 +42,9 @@ impl NodeVirtual for DclUiDropdown {
     }
 
     fn ready(&mut self) {
-        let font_resource = load(self.current_font.get_font_path());
         let style_box_empty: Gd<godot::engine::StyleBox> = StyleBoxEmpty::new().upcast();
         self.base
-            .add_theme_font_override("font".into(), font_resource);
+            .add_theme_font_override("font".into(), self.current_font.get_font_resource());
         self.base
             .add_theme_stylebox_override("normal".into(), style_box_empty.clone());
         self.base
@@ -57,10 +56,7 @@ impl NodeVirtual for DclUiDropdown {
 
         self.base.clone().connect(
             "item_selected".into(),
-            self.base
-                .clone()
-                .get("on_item_selected".into())
-                .to::<Callable>(),
+            self.base.callable("on_item_selected"),
         );
     }
 }
@@ -141,9 +137,8 @@ impl DclUiDropdown {
 
         if new_value.font() != self.current_font {
             self.current_font = new_value.font();
-            let font_resource = load(self.current_font.get_font_path());
             self.base
-                .add_theme_font_override("font".into(), font_resource);
+                .add_theme_font_override("font".into(), self.current_font.get_font_resource());
         }
     }
 

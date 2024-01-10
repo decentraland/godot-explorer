@@ -31,7 +31,7 @@ pub fn update_audio_stream(
         for entity in audio_stream_dirty {
             let exist_current_node = godot_dcl_scene.get_godot_entity_node(entity).is_some();
 
-            let next_value = if let Some(new_value) = audio_stream_component.get(*entity) {
+            let next_value = if let Some(new_value) = audio_stream_component.get(entity) {
                 new_value.value.as_ref()
             } else {
                 None

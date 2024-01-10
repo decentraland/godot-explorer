@@ -20,7 +20,7 @@ pub fn update_visibility(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     };
 
     for entity in visibility_dirty {
-        let new_value = visibility_component.get(*entity);
+        let new_value = visibility_component.get(entity);
 
         let Some(new_value) = new_value else {
             continue;

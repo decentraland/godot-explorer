@@ -17,7 +17,7 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
     if let Some(avatar_attach_dirty) = dirty_lww_components.get(&SceneComponentId::AVATAR_ATTACH) {
         for entity in avatar_attach_dirty {
-            let new_value = avatar_attach_component.get(*entity);
+            let new_value = avatar_attach_component.get(entity);
             if new_value.is_none() {
                 continue;
             }
@@ -54,7 +54,7 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     Variant::from(new_value.anchor_point_id),
                 );
 
-                avatar_attach_node.set_name(GodotString::from("AvatarAttach"));
+                avatar_attach_node.set_name(GString::from("AvatarAttach"));
 
                 node_3d.add_child(avatar_attach_node);
             }

@@ -3,7 +3,6 @@ extends Control
 signal on_move
 signal parcel_click(parcel_position: Vector2i)
 
-@onready var color_rect_map = %ColorRect_Map
 @export var drag_enabled: bool = true
 @export var zoom_value: int = 20
 
@@ -17,6 +16,8 @@ var start_dragging_position: Vector2
 var map_parcel_size: Vector2
 # The top left parcel
 var map_topleft_parcel_position: Vector2
+
+@onready var color_rect_map = %ColorRect_Map
 
 
 func _ready():

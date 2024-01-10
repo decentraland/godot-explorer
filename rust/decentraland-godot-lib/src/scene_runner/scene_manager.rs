@@ -1,6 +1,8 @@
 use crate::{
+    content::content_mapping::DclContentMappingAndUrl,
     dcl::{
         components::{
+            internal_player_data::InternalPlayerData,
             proto_components::{
                 common::BorderRect,
                 sdk::components::{
@@ -13,10 +15,19 @@ use crate::{
         js::SceneLogLevel,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
-    godot_classes::{dcl_camera_3d::DclCamera3D, dcl_ui_control::DclUiControl},
-    wallet::Wallet,
+    godot_classes::{
+        dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal, dcl_ui_control::DclUiControl,
+        rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse,
+        JsonGodotClass,
+    },
 };
-use godot::{engine::PhysicsRayQueryParameters3D, prelude::*};
+use godot::{
+    engine::{
+        control::{LayoutPreset, MouseFilter},
+        PhysicsRayQueryParameters3D,
+    },
+    prelude::*,
+};
 use std::{
     collections::{HashMap, HashSet},
     sync::atomic::AtomicU32,
@@ -81,17 +92,18 @@ pub static GLOBAL_TICK_NUMBER: AtomicU32 = AtomicU32::new(0);
 #[godot_api]
 impl SceneManager {
     #[signal]
-    fn scene_spawned(&self, scene_id: i32, entity_id: GodotString) {}
+    fn scene_spawned(&self, scene_id: i32, entity_id: GString) {}
 
     #[signal]
-    fn scene_killed(&self, scene_id: i32, entity_id: GodotString) {}
+    fn scene_killed(&self, scene_id: i32, entity_id: GString) {}
 
     // Testing a comment for the API
     #[func]
-    fn start_scene(&mut self, scene_definition: Dictionary, content_mapping: Dictionary) -> u32 {
-        // TODO: Inject wallet from creator
-        let wallet = Wallet::new_local_wallet();
-
+    fn start_scene(
+        &mut self,
+        scene_definition: Dictionary,
+        shared_content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> i32 {
         let scene_definition = match SceneDefinition::from_dict(scene_definition) {
             Ok(scene_definition) => scene_definition,
             Err(e) => {
@@ -100,36 +112,37 @@ impl SceneManager {
             }
         };
 
-        let base_url =
-            GodotString::from_variant(&content_mapping.get("base_url").unwrap()).to_string();
-        let content_dictionary = Dictionary::from_variant(&content_mapping.get("content").unwrap());
+        let content_mapping = shared_content_mapping.bind().get_content_mapping();
         let scene_type = if scene_definition.is_global {
             SceneType::Global(GlobalSceneType::GlobalRealm)
         } else {
             SceneType::Parcel
         };
 
-        let content_mapping_hash_map: HashMap<String, String> = content_dictionary
-            .iter_shared()
-            .map(|(file_name, file_hash)| (file_name.to_string(), file_hash.to_string()))
-            .collect();
-
         let new_scene_id = Scene::new_id();
         let signal_data = (new_scene_id, scene_definition.entity_id.clone());
+        let testing_mode_active = DclGlobal::singleton().bind().testing_scene_mode;
+        let ethereum_provider = DclGlobal::singleton().bind().ethereum_provider.clone();
+        let ephemeral_wallet = DclGlobal::singleton()
+            .bind()
+            .player_identity
+            .bind()
+            .try_get_ephemeral_auth_chain();
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(
             new_scene_id,
             scene_definition.clone(),
-            content_mapping_hash_map,
-            base_url,
+            content_mapping.clone(),
             self.thread_sender_to_main.clone(),
-            wallet,
+            testing_mode_active,
+            ethereum_provider,
+            ephemeral_wallet,
         );
 
         let new_scene = Scene::new(
             new_scene_id,
             scene_definition,
             dcl_scene,
-            content_mapping,
+            content_mapping.clone(),
             scene_type.clone(),
             self.base_ui.clone(),
         );
@@ -146,15 +159,19 @@ impl SceneManager {
         self.sorted_scene_ids.push(new_scene_id);
         self.compute_scene_distance();
 
-        self.base.emit_signal(
-            "scene_spawned".into(),
-            &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
+        self.base.call_deferred(
+            "emit_signal".into(),
+            &[
+                "scene_spawned".to_variant(),
+                signal_data.0 .0.to_variant(),
+                signal_data.1.to_variant(),
+            ],
         );
         new_scene_id.0
     }
 
     #[func]
-    fn kill_scene(&mut self, scene_id: u32) -> bool {
+    fn kill_scene(&mut self, scene_id: i32) -> bool {
         let scene_id = SceneId(scene_id);
         if let Some(scene) = self.scenes.get_mut(&scene_id) {
             if let SceneState::Alive = scene.state {
@@ -179,31 +196,47 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_scene_content_mapping(&self, scene_id: i32) -> Dictionary {
-        if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
-            return scene.content_mapping.clone();
+    fn get_scene_content_mapping(&self, scene_id: i32) -> Gd<DclContentMappingAndUrl> {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
+            DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
+        } else {
+            DclContentMappingAndUrl::empty()
         }
-        Dictionary::default()
     }
 
     #[func]
-    fn get_scene_title(&self, scene_id: i32) -> GodotString {
-        if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
-            return GodotString::from(scene.definition.title.clone());
+    fn get_scene_title(&self, scene_id: i32) -> GString {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
+            return GString::from(scene.definition.title.clone());
         }
-        GodotString::default()
+        GString::default()
+    }
+
+    #[func]
+    pub fn get_scene_id_by_parcel_position(&self, parcel_position: Vector2i) -> i32 {
+        for scene in self.scenes.values() {
+            if let SceneType::Global(_) = scene.scene_type {
+                continue;
+            }
+
+            if scene.definition.parcels.contains(&parcel_position) {
+                return scene.scene_id.0;
+            }
+        }
+
+        SceneId::INVALID.0
     }
 
     #[func]
     fn get_scene_base_parcel(&self, scene_id: i32) -> Vector2i {
-        if let Some(scene) = self.scenes.get(&SceneId(scene_id as u32)) {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
             return scene.definition.base;
         }
         Vector2i::default()
     }
 
     fn compute_scene_distance(&mut self) {
-        self.current_parcel_scene_id = SceneId(u32::MAX);
+        self.current_parcel_scene_id = SceneId::INVALID;
 
         let mut player_global_position = self.player_node.get_global_transform().origin;
         player_global_position.x *= 0.0625;
@@ -305,6 +338,12 @@ impl SceneManager {
             }
 
             if let SceneState::Alive = scene.state {
+                if scene.dcl_scene.thread_join_handle.is_finished() {
+                    tracing::error!("scene closed without kill signal");
+                    scene_to_remove.insert(*scene_id);
+                    continue;
+                }
+
                 if _process_scene(
                     scene,
                     end_time_us,
@@ -380,11 +419,26 @@ impl SceneManager {
                 .upcast::<Node>()
                 .clone();
             self.base.remove_child(node_3d);
-            self.base_ui.remove_child(node_ui);
+            if node_ui.get_parent().is_some() {
+                self.base_ui.remove_child(node_ui);
+            }
             scene.godot_dcl_scene.root_node_3d.queue_free();
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);
             self.scenes.remove(scene_id);
+
+            if scene.dcl_scene.thread_join_handle.is_finished() {
+                if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
+                    let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
+                        format!("Thread panicked with: {}", panic_info)
+                    } else if let Some(panic_info) = err.downcast_ref::<String>() {
+                        format!("Thread panicked with: {}", panic_info)
+                    } else {
+                        "Thread panicked with an unknown payload".to_string()
+                    };
+                    tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
+                }
+            }
 
             self.base.emit_signal(
                 "scene_killed".into(),
@@ -400,25 +454,19 @@ impl SceneManager {
                 Ok(response) => match response {
                     SceneResponse::Error(scene_id, msg) => {
                         let mut arguments = VariantArray::new();
-                        arguments.push((scene_id.0 as i32).to_variant());
+                        arguments.push((scene_id.0).to_variant());
                         arguments.push((SceneLogLevel::SystemError as i32).to_variant());
                         arguments.push(self.total_time_seconds_time.to_variant());
-                        arguments.push(GodotString::from(&msg).to_variant());
+                        arguments.push(GString::from(&msg).to_variant());
                         self.console.callv(arguments);
                     }
-                    SceneResponse::Ok(
-                        scene_id,
-                        (dirty_entities, dirty_lww_components, dirty_gos_components),
-                        logs,
-                        _,
-                        rpc_calls,
-                    ) => {
+                    SceneResponse::Ok(scene_id, dirty_crdt_state, logs, _, rpc_calls) => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
                             let dirty = Dirty {
                                 waiting_process: true,
-                                entities: dirty_entities,
-                                lww_components: dirty_lww_components,
-                                gos_components: dirty_gos_components,
+                                entities: dirty_crdt_state.entities,
+                                lww_components: dirty_crdt_state.lww,
+                                gos_components: dirty_crdt_state.gos,
                                 logs,
                                 renderer_response: None,
                                 update_state: SceneUpdateState::None,
@@ -442,11 +490,64 @@ impl SceneManager {
                         // enable logs
                         for log in &logs {
                             let mut arguments = VariantArray::new();
-                            arguments.push((scene_id.0 as i32).to_variant());
+                            arguments.push(scene_id.0.to_variant());
                             arguments.push((log.level as i32).to_variant());
                             arguments.push((log.timestamp as f32).to_variant());
-                            arguments.push(GodotString::from(&log.message).to_variant());
+                            arguments.push(GString::from(&log.message).to_variant());
                             self.console.callv(arguments);
+                        }
+                    }
+
+                    SceneResponse::TakeSnapshot {
+                        scene_id,
+                        src_stored_snapshot,
+                        camera_position,
+                        camera_target,
+                        screeshot_size,
+                        method,
+                        response,
+                    } => {
+                        let offset = if let Some(scene) = self.scenes.get(&scene_id) {
+                            Vector3::new(
+                                scene.definition.base.x as f32 * 16.0,
+                                0.0,
+                                -scene.definition.base.y as f32 * 16.0,
+                            )
+                        } else {
+                            Vector3::new(0.0, 0.0, 0.0)
+                        };
+
+                        let global_camera_position =
+                            Vector3::new(camera_position.x, camera_position.y, camera_position.z)
+                                + offset;
+
+                        let global_camera_target =
+                            Vector3::new(camera_target.x, camera_target.y, camera_target.z)
+                                + offset;
+
+                        let mut testing_tools = DclGlobal::singleton().bind().get_testing_tools();
+                        if testing_tools.has_method("async_take_and_compare_snapshot".into()) {
+                            let mut dcl_rpc_sender: Gd<DclRpcSenderTakeAndCompareSnapshotResponse> =
+                                DclRpcSenderTakeAndCompareSnapshotResponse::new_gd();
+                            dcl_rpc_sender.bind_mut().set_sender(response);
+
+                            testing_tools.call_deferred(
+                                "async_take_and_compare_snapshot".into(),
+                                &[
+                                    scene_id.0.to_variant(),
+                                    src_stored_snapshot.to_variant(),
+                                    global_camera_position.to_variant(),
+                                    global_camera_target.to_variant(),
+                                    screeshot_size.to_variant(),
+                                    method
+                                        .to_godot_from_json()
+                                        .unwrap_or(Dictionary::new().to_variant())
+                                        .to_variant(),
+                                    dcl_rpc_sender.to_variant(),
+                                ],
+                            );
+                        } else {
+                            response.send(Err("Testing tools not available".to_string()));
                         }
                     }
                 },
@@ -504,7 +605,7 @@ impl SceneManager {
             )
             .to::<i32>();
 
-        let scene = self.scenes.get(&SceneId(dcl_scene_id as u32))?;
+        let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
         let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
         let raycast_data = RaycastHit::from_godot_raycast(
             scene_position,
@@ -514,7 +615,7 @@ impl SceneManager {
         )?;
 
         Some(GodotDclRaycastResult {
-            scene_id: SceneId(dcl_scene_id as u32),
+            scene_id: SceneId(dcl_scene_id),
             entity_id: SceneEntityId::from_i32(dcl_entity_id),
             hit: raycast_data,
         })
@@ -544,6 +645,11 @@ impl SceneManager {
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
+    #[func]
+    fn get_current_parcel_scene_id(&self) -> i32 {
+        self.current_parcel_scene_id.0
+    }
+
     fn on_current_parcel_scene_changed(&mut self) {
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
             for (_, audio_source_node) in scene.audio_sources.iter() {
@@ -557,6 +663,11 @@ impl SceneManager {
             for (_, video_player_node) in scene.video_players.iter_mut() {
                 video_player_node.bind_mut().set_muted(true);
             }
+
+            scene
+                .avatar_scene_updates
+                .internal_player_data
+                .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: false });
 
             self.base_ui
                 .remove_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
@@ -575,6 +686,11 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(false);
             }
 
+            scene
+                .avatar_scene_updates
+                .internal_player_data
+                .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: true });
+
             self.base_ui
                 .add_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
         }
@@ -587,18 +703,121 @@ impl SceneManager {
     }
 
     #[signal]
-    fn on_change_scene_id(scene_id: u32) {}
+    fn on_change_scene_id(scene_id: i32) {}
+
+    pub fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
+        &mut self.scenes
+    }
+
+    pub fn get_all_scenes(&mut self) -> &HashMap<SceneId, Scene> {
+        &self.scenes
+    }
+
+    pub fn get_scene_mut(&mut self, scene_id: &SceneId) -> Option<&mut Scene> {
+        self.scenes.get_mut(scene_id)
+    }
+
+    pub fn get_scene(&self, scene_id: &SceneId) -> Option<&Scene> {
+        self.scenes.get(scene_id)
+    }
+
+    // this could be cached
+    pub fn get_global_scene_ids(&self) -> Vec<SceneId> {
+        self.scenes
+            .iter()
+            .filter(|(_scene_id, scene)| {
+                if let SceneType::Global(_) = scene.scene_type {
+                    return true;
+                }
+                false
+            })
+            .map(|(scene_id, _)| *scene_id)
+            .collect::<Vec<SceneId>>()
+    }
+
+    #[func]
+    pub fn is_scene_tests_finished(&self, scene_id: i32) -> bool {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return false;
+        };
+
+        scene.scene_test_plan_received
+            && scene
+                .scene_tests
+                .iter()
+                .all(|(_, test_result)| test_result.is_some())
+    }
+
+    #[func]
+    pub fn get_scene_tests_result(&self, scene_id: i32) -> Dictionary {
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return Dictionary::default();
+        };
+
+        let test_total = scene.scene_tests.len() as u32;
+        let mut test_fail = 0;
+        let mut text_test_list = String::new();
+        let mut text_detail_failed = String::new();
+        for value in scene.scene_tests.iter() {
+            if let Some(result) = value.1 {
+                if result.ok {
+                    text_test_list += &format!(
+                        "\t🟢 {} (frames={},time={}): OK\n",
+                        value.0, result.total_frames, result.total_time
+                    );
+                } else {
+                    text_test_list += &format!(
+                        "\t🔴 {} (frames={},time={}):",
+                        value.0, result.total_frames, result.total_time
+                    );
+                    test_fail += 1;
+                    if let Some(error) = &result.error {
+                        text_test_list += "\tFAIL with Error\n";
+                        text_detail_failed += &format!("🔴{}: ❌{}\n", value.0, error);
+                    } else {
+                        text_test_list += "\tFAIL with Unknown Error \n";
+                    }
+                }
+            }
+        }
+
+        let mut text = format!("Scene {:?} tests:\n", scene.definition.title);
+        text += &format!("{}\n", text_test_list);
+        if test_fail == 0 {
+            text += &format!(
+                "✅ All tests ({}) passed in the scene {:?}\n",
+                test_total, scene.definition.title
+            );
+        } else {
+            text += &format!(
+                "❌ {} tests failed of {} in the scene {:?}\n",
+                test_fail, test_total, scene.definition.title
+            );
+        }
+
+        let mut dict = Dictionary::default();
+        dict.set("text", text.to_variant());
+        dict.set("text_detail_failed", text_detail_failed.to_variant());
+        dict.set("total", test_total.to_variant());
+        dict.set("fail", test_fail.to_variant());
+
+        dict
+    }
 }
 
 #[godot_api]
-impl NodeVirtual for SceneManager {
+impl INode for SceneManager {
     fn init(base: Base<Node>) -> Self {
         let (thread_sender_to_main, main_receiver_from_thread) =
             std::sync::mpsc::sync_channel(1000);
 
+        let mut base_ui = DclUiControl::alloc_gd();
+        base_ui.set_anchors_preset(LayoutPreset::PRESET_FULL_RECT);
+        base_ui.set_mouse_filter(MouseFilter::MOUSE_FILTER_IGNORE);
+
         SceneManager {
             base,
-            base_ui: DclUiControl::new_alloc(),
+            base_ui,
             ui_canvas_information: PbUiCanvasInformation::default(),
 
             scenes: HashMap::new(),
@@ -606,12 +825,12 @@ impl NodeVirtual for SceneManager {
             sorted_scene_ids: vec![],
             dying_scene_ids: vec![],
             current_parcel_scene_id: SceneId(0),
-            last_current_parcel_scene_id: SceneId(u32::MAX),
+            last_current_parcel_scene_id: SceneId::INVALID,
 
             main_receiver_from_thread,
             thread_sender_to_main,
 
-            camera_node: Gd::new_default(),
+            camera_node: DclCamera3D::alloc_gd(),
             player_node: Node3D::new_alloc(),
 
             player_position: Vector2i::new(-1000, -1000),
@@ -626,9 +845,10 @@ impl NodeVirtual for SceneManager {
     }
 
     fn ready(&mut self) {
-        let callable = self.base.get("_on_ui_resize".into()).to::<Callable>();
-        self.base_ui.connect("resized".into(), callable);
+        self.base_ui
+            .connect("resized".into(), self.base.callable("_on_ui_resize"));
         self.base_ui.set_name("scenes_ui".into());
+        self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
     fn process(&mut self, delta: f64) {
@@ -680,16 +900,16 @@ impl NodeVirtual for SceneManager {
                                     && !state);
                             if match_state {
                                 let text = if let Some(text) = info.hover_text.as_ref() {
-                                    GodotString::from(text)
+                                    GString::from(text)
                                 } else {
-                                    GodotString::from("Interact")
+                                    GString::from("Interact")
                                 };
 
                                 let mut dict = Dictionary::new();
                                 dict.set(StringName::from("text"), text);
                                 dict.set(
                                     StringName::from("action"),
-                                    GodotString::from(input_action.as_str_name()),
+                                    GString::from(input_action.as_str_name()),
                                 );
                                 dict.set(
                                     StringName::from("event_type"),
@@ -721,28 +941,11 @@ impl NodeVirtual for SceneManager {
                 .godot_dcl_scene
                 .get_node_3d_mut(&SceneEntityId::CAMERA)
             {
-                camera_node.set_global_transform(self.player_node.get_global_transform());
+                camera_node.set_global_transform(self.camera_node.get_global_transform());
             }
         }
 
         self.last_raycast_result = current_pointer_raycast_result;
         GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    }
-}
-
-#[cfg(target_os = "android")]
-mod android {
-    use tracing_subscriber::filter::LevelFilter;
-    use tracing_subscriber::fmt::format::FmtSpan;
-    use tracing_subscriber::prelude::*;
-    use tracing_subscriber::{self, registry};
-
-    pub fn init_logger() {
-        let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
-            .with_span_events(FmtSpan::CLOSE)
-            .with_thread_names(true)
-            .with_filter(LevelFilter::DEBUG);
-
-        registry().with(android_layer).init();
     }
 }

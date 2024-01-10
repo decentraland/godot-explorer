@@ -1,8 +1,16 @@
 use crate::{
-    av::{stream_processor::AVCommand, video_stream::av_sinks},
+    av::{
+        stream_processor::{AVCommand, StreamStateData},
+        video_stream::av_sinks,
+    },
+    content::content_mapping::ContentMappingAndUrlRef,
     dcl::{
-        components::SceneComponentId,
+        components::{
+            proto_components::sdk::components::{PbVideoEvent, VideoState},
+            SceneComponentId,
+        },
         crdt::{
+            grow_only_set::GenericGrowOnlySetComponentOperation,
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
@@ -26,20 +34,17 @@ enum VideoUpdateMode {
 }
 
 fn get_local_file_hash_future(
-    content_mapping: &Dictionary,
+    content_mapping: &ContentMappingAndUrlRef,
     file_path: &str,
 ) -> Option<(
     tokio::sync::oneshot::Sender<String>,
     tokio::sync::oneshot::Receiver<String>,
     String,
 )> {
-    let file_path = file_path.to_lowercase();
-    let dict = content_mapping.get("content".to_variant())?;
-    let file_hash = Dictionary::from_variant(&dict)
-        .get(file_path.to_variant())?
-        .to_string();
+    let file_path = file_path.to_lowercase().to_string();
+    let file = content_mapping.content.get(&file_path)?.clone();
     let (sx, rx) = tokio::sync::oneshot::channel::<String>();
-    Some((sx, rx, file_hash))
+    Some((sx, rx, file))
 }
 
 pub fn update_video_player(
@@ -55,7 +60,7 @@ pub fn update_video_player(
         for entity in video_player_dirty {
             let exist_current_node = godot_dcl_scene.get_godot_entity_node(entity).is_some();
 
-            let next_value = if let Some(new_value) = video_player_component.get(*entity) {
+            let next_value = if let Some(new_value) = video_player_component.get(entity) {
                 new_value.value.as_ref()
             } else {
                 None
@@ -176,11 +181,15 @@ pub fn update_video_player(
                         godot_entity_node.video_player_data = Some(VideoPlayerData {
                             video_sink,
                             audio_sink,
+                            timestamp: 0,
+                            length: -1.0,
                         });
 
                         if !file_hash.is_empty() {
-                            video_player_node
-                                .call_deferred("request_video".into(), &[file_hash.to_variant()]);
+                            video_player_node.call_deferred(
+                                "async_request_video".into(),
+                                &[file_hash.to_variant()],
+                            );
                         }
                     }
                     VideoUpdateMode::FirstSpawnVideo => {
@@ -249,14 +258,18 @@ pub fn update_video_player(
                         godot_entity_node.video_player_data = Some(VideoPlayerData {
                             video_sink,
                             audio_sink,
+                            timestamp: 0,
+                            length: -1.0,
                         });
                         scene
                             .video_players
                             .insert(*entity, video_player_node.clone());
 
                         if !file_hash.is_empty() {
-                            video_player_node
-                                .call_deferred("request_video".into(), &[file_hash.to_variant()]);
+                            video_player_node.call_deferred(
+                                "async_request_video".into(),
+                                &[file_hash.to_variant()],
+                            );
                         }
                     }
                 }
@@ -273,6 +286,90 @@ pub fn update_video_player(
                 }
 
                 node.video_player_data = None;
+            }
+        }
+    }
+
+    let video_player_entities = SceneCrdtStateProtoComponents::get_video_player(crdt_state)
+        .values
+        .keys()
+        .copied()
+        .collect::<Vec<_>>();
+    let video_event_component = SceneCrdtStateProtoComponents::get_video_event_mut(crdt_state);
+
+    for entity_id in video_player_entities {
+        if let Some(video_players) = godot_dcl_scene.get_godot_entity_node_mut(&entity_id) {
+            if let Some(video_sink) = video_players.video_player_data.as_mut() {
+                loop {
+                    match video_sink.video_sink.stream_data_state_receiver.try_recv() {
+                        Ok(StreamStateData::Ready { length }) => {
+                            video_sink.length = length as f32;
+                            video_event_component.append(
+                                entity_id,
+                                PbVideoEvent {
+                                    timestamp: video_sink.timestamp,
+                                    tick_number: scene.tick_number,
+                                    current_offset: 0.0,
+                                    video_length: video_sink.length,
+                                    state: VideoState::VsReady as i32,
+                                },
+                            );
+                        }
+                        Ok(StreamStateData::Playing { position }) => {
+                            video_event_component.append(
+                                entity_id,
+                                PbVideoEvent {
+                                    timestamp: video_sink.timestamp,
+                                    tick_number: scene.tick_number,
+                                    current_offset: position as f32,
+                                    video_length: video_sink.length,
+                                    state: VideoState::VsPlaying as i32,
+                                },
+                            );
+                        }
+                        Ok(StreamStateData::Buffering { position }) => {
+                            video_event_component.append(
+                                entity_id,
+                                PbVideoEvent {
+                                    timestamp: video_sink.timestamp,
+                                    tick_number: scene.tick_number,
+                                    current_offset: position as f32,
+                                    video_length: video_sink.length,
+                                    state: VideoState::VsBuffering as i32,
+                                },
+                            );
+                        }
+                        Ok(StreamStateData::Seeking {}) => {
+                            video_event_component.append(
+                                entity_id,
+                                PbVideoEvent {
+                                    timestamp: video_sink.timestamp,
+                                    tick_number: scene.tick_number,
+                                    current_offset: -1.0,
+                                    video_length: video_sink.length,
+                                    state: VideoState::VsSeeking as i32,
+                                },
+                            );
+                        }
+                        Ok(StreamStateData::Paused { position }) => {
+                            video_event_component.append(
+                                entity_id,
+                                PbVideoEvent {
+                                    timestamp: video_sink.timestamp,
+                                    tick_number: scene.tick_number,
+                                    current_offset: position as f32,
+                                    video_length: video_sink.length,
+                                    state: VideoState::VsPaused as i32,
+                                },
+                            );
+                        }
+                        _ => {
+                            break;
+                        }
+                    }
+
+                    video_sink.timestamp += 1;
+                }
             }
         }
     }

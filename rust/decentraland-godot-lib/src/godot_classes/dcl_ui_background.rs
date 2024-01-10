@@ -3,10 +3,15 @@ use godot::{
     prelude::*,
 };
 
-use crate::dcl::components::{
-    material::{DclSourceTex, DclTexture},
-    proto_components::sdk::components::{BackgroundTextureMode, PbUiBackground},
+use crate::{
+    content::content_mapping::{ContentMappingAndUrlRef, DclContentMappingAndUrl},
+    dcl::components::{
+        material::{DclSourceTex, DclTexture},
+        proto_components::sdk::components::{BackgroundTextureMode, PbUiBackground},
+    },
 };
+
+use super::dcl_global::DclGlobal;
 
 #[derive(GodotClass)]
 #[class(base=NinePatchRect)]
@@ -16,17 +21,17 @@ pub struct DclUiBackground {
 
     current_value: PbUiBackground,
 
-    waiting_hash: GodotString,
+    waiting_hash: GString,
     texture_loaded: bool,
 }
 
 #[godot_api]
-impl NodeVirtual for DclUiBackground {
+impl INode for DclUiBackground {
     fn init(base: Base<NinePatchRect>) -> Self {
         Self {
             base,
             current_value: PbUiBackground::default(),
-            waiting_hash: GodotString::default(),
+            waiting_hash: GString::default(),
             texture_loaded: false,
         }
     }
@@ -36,8 +41,7 @@ impl NodeVirtual for DclUiBackground {
             .base
             .get_parent()
             .expect("ui_background suppose to have a parent");
-        let callable = self.base.get("_on_parent_size".into()).to::<Callable>();
-        parent.connect("resized".into(), callable);
+        parent.connect("resized".into(), self.base.callable("_on_parent_size"));
 
         self._set_white_pixel();
     }
@@ -90,24 +94,15 @@ impl DclUiBackground {
 
     #[func]
     fn _on_texture_loaded(&mut self) {
-        let mut content_manager = self
-            .base
-            .get_node("/root/content_manager".into())
-            .unwrap()
-            .clone();
-
-        let resource = content_manager.call(
-            "get_resource_from_hash".into(),
-            &[self.waiting_hash.to_variant()],
-        );
-
-        if resource.is_nil() {
-            return;
-        }
-        let Ok(godot_texture) = resource.try_to::<Gd<godot::engine::ImageTexture>>() else {
+        let global = DclGlobal::singleton();
+        let mut content_provider = global.bind().get_content_provider();
+        let Some(godot_texture) = content_provider
+            .bind_mut()
+            .get_texture_from_hash(self.waiting_hash.clone())
+        else {
+            tracing::error!("trying to set texture not found: {}", self.waiting_hash);
             return;
         };
-
         self.texture_loaded = true;
         self.base.set_texture(godot_texture.clone().upcast());
 
@@ -209,51 +204,35 @@ impl DclUiBackground {
     pub fn change_value(
         &mut self,
         new_value: PbUiBackground,
-        content_mapping: &godot::prelude::Dictionary,
+        content_mapping: ContentMappingAndUrlRef,
     ) {
         let texture_changed = new_value.texture != self.current_value.texture;
         self.current_value = new_value;
 
         // texture change if
         if texture_changed {
-            let content_mapping_files = content_mapping.get("content").unwrap().to::<Dictionary>();
-
-            let texture = DclTexture::from_proto_with_hash(
-                &self.current_value.texture,
-                &content_mapping_files,
-            );
+            let texture =
+                DclTexture::from_proto_with_hash(&self.current_value.texture, &content_mapping);
 
             if let Some(texture) = texture {
                 match &texture.source {
                     DclSourceTex::Texture(texture_hash) => {
-                        let mut content_manager = self
-                            .base
-                            .get_node("/root/content_manager".into())
-                            .unwrap()
-                            .clone();
+                        let global = DclGlobal::singleton();
+                        let mut content_provider = global.bind().get_content_provider();
+                        let mut promise = content_provider.bind_mut().fetch_texture_by_hash(
+                            GString::from(texture_hash),
+                            DclContentMappingAndUrl::from_ref(content_mapping),
+                        );
+                        self.waiting_hash = GString::from(texture_hash);
 
-                        let mut promise = content_manager
-                            .call(
-                                "fetch_texture_by_hash".into(),
-                                &[
-                                    GodotString::from(texture_hash).to_variant(),
-                                    content_mapping.to_variant(),
-                                ],
-                            )
-                            .to::<Gd<RefCounted>>();
-
-                        self.waiting_hash = GodotString::from(texture_hash);
-
-                        let fetching_resource =
-                            promise.call("is_resolved".into(), &[]).to::<bool>();
-
-                        if fetching_resource {
-                            let callable =
-                                self.base.get("_on_texture_loaded".into()).to::<Callable>();
-                            promise.connect("_on_resolved".into(), callable);
-                        } else {
-                            self.base.call_deferred("_on_texture_loaded".into(), &[]);
+                        if !promise.bind().is_resolved() {
+                            promise.connect(
+                                "on_resolved".into(),
+                                self.base.callable("_on_texture_loaded"),
+                            );
                         }
+
+                        self.base.call_deferred("_on_texture_loaded".into(), &[]);
                     }
                     DclSourceTex::VideoTexture(_) => {
                         // TODO: implement video texture

@@ -1,3 +1,5 @@
+use crate::content::content_mapping::ContentMappingAndUrlRef;
+
 use super::{
     proto_components::{
         common::{
@@ -172,10 +174,9 @@ impl From<&TextureUnion> for Option<DclTexture> {
 }
 
 impl DclTexture {
-    fn with_hash(&mut self, content_mapping_files: &godot::prelude::Dictionary) {
+    fn with_hash(&mut self, content_mapping_files: &ContentMappingAndUrlRef) {
         if let DclSourceTex::Texture(file_path) = &mut self.source {
-            let content_hash = content_mapping_files
-                .get(godot::prelude::GodotString::from(file_path.to_lowercase()));
+            let content_hash = content_mapping_files.content.get(&file_path.to_lowercase());
 
             if content_hash.is_none() {
                 return;
@@ -188,7 +189,7 @@ impl DclTexture {
 
     pub fn from_proto_with_hash(
         texture: &Option<TextureUnion>,
-        content_mapping_files: &godot::prelude::Dictionary,
+        content_mapping_files: &ContentMappingAndUrlRef,
     ) -> Option<Self> {
         let value: Option<DclTexture> = texture.as_ref()?.into();
 
@@ -290,7 +291,7 @@ impl Default for DclUnlitMaterial {
 impl DclMaterial {
     pub fn from_proto(
         source: &pb_material::Material,
-        content_mapping_files: &godot::prelude::Dictionary,
+        content_mapping_files: &ContentMappingAndUrlRef,
     ) -> Self {
         match source {
             pb_material::Material::Pbr(pbr) => {

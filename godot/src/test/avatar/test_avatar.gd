@@ -1,5 +1,4 @@
 extends Node3D
-@onready var avatar = $Avatar
 
 var body_shape: String = "urn:decentraland:off-chain:base-avatars:BaseFemale"
 var wearables: PackedStringArray = [
@@ -16,23 +15,28 @@ var hair_color: Color = Color(0.5960784554481506, 0.37254902720451355, 0.2156862
 var skin_color: Color = Color(0.4901960790157318, 0.364705890417099, 0.27843138575553894)
 var emotes: Array = []
 
+@onready var avatar = $Avatar
+
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	avatar.update_avatar(
-		"https://peer.decentraland.org/content",
-		"Godot User",
-		body_shape,
-		eyes_color,
-		hair_color,
-		skin_color,
-		wearables,
-		emotes
-	)
+	pass
+
+	# TODO: this is outdated
+	#avatar.async_update_avatar(
+	#"https://peer.decentraland.org/content",
+	#"Godot User",
+	#body_shape,
+	#eyes_color,
+	#hair_color,
+	#skin_color,
+	#wearables,
+	#emotes
+	#)
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	pass
 
 #	avatar.set_running()

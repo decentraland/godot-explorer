@@ -24,28 +24,26 @@ func apply_audio_props(action_on_playing: bool):
 			self.play()
 
 
-func _refresh_data():
+func _async_refresh_data():
 	dcl_audio_clip_url = dcl_audio_clip_url.to_lower()
 
 	if last_loaded_audio_clip == dcl_audio_clip_url:
 		apply_audio_props(true)
 	else:
-		var content_mapping = Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
+		var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
 		last_loaded_audio_clip = dcl_audio_clip_url
 		valid = false
 
-		var audio_clip_file_hash = content_mapping.get("content", {}).get(
-			last_loaded_audio_clip, ""
-		)
+		var audio_clip_file_hash = content_mapping.get_hash(last_loaded_audio_clip)
 		if audio_clip_file_hash.is_empty():
 			# TODO: log file not found
 			return
 
-		var promise: Promise = Global.content_manager.fetch_audio(
+		var promise: Promise = Global.content_provider.fetch_audio(
 			last_loaded_audio_clip, content_mapping
 		)
-		var res = await promise.co_awaiter()
+		var res = await PromiseUtils.async_awaiter(promise)
 		if res is PromiseError:
 			self.stop()
 			self.stream = null

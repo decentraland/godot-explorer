@@ -1,3 +1,4 @@
+class_name RaycastDebugger
 extends Node
 
 var raycast_line_instancer := preload("res://src/tool/raycast_debugger/raycast_line.tscn")

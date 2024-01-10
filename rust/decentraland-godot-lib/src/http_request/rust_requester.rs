@@ -1,6 +1,6 @@
 use godot::prelude::*;
 
-use crate::scene_runner::tokio_runtime::TokioRuntime;
+use crate::{godot_classes::dcl_global::DclGlobal, scene_runner::tokio_runtime::TokioRuntime};
 
 // Deriving GodotClass makes the class available to Godot
 #[derive(GodotClass)]
@@ -22,7 +22,7 @@ impl RustHttpRequester {
                         //     response.request_option.url.clone(),
                         //     !response.is_error()
                         // );
-                        Variant::from(Gd::new(response))
+                        Variant::from(Gd::from_object(response))
                     }
                     Err(error) => {
                         tracing::info!(
@@ -31,7 +31,7 @@ impl RustHttpRequester {
                             error.error_message
                         );
 
-                        Variant::from(Gd::new(error))
+                        Variant::from(Gd::from_object(error))
                     }
                 }
             }
@@ -40,12 +40,7 @@ impl RustHttpRequester {
     }
 
     #[func]
-    fn request_file(
-        &mut self,
-        reference_id: u32,
-        url: GodotString,
-        absolute_path: GodotString,
-    ) -> u32 {
+    fn request_file(&mut self, reference_id: u32, url: GString, absolute_path: GString) -> u32 {
         // tracing::info!(
         //     "Requesting file: {:?} in {absolute_path}  ",
         //     url.to_string()
@@ -58,6 +53,7 @@ impl RustHttpRequester {
             crate::http_request::request_response::ResponseType::ToFile(absolute_path.to_string()),
             None,
             None,
+            None,
         );
         let id = request_option.id;
         self.http_requester.send_request(request_option);
@@ -68,9 +64,53 @@ impl RustHttpRequester {
     fn request_json(
         &mut self,
         reference_id: u32,
-        url: GodotString,
+        url: GString,
         method: godot::engine::http_client::Method,
-        body: GodotString,
+        body: GString,
+        headers: VariantArray,
+    ) -> u32 {
+        let body = match body.to_string().as_str() {
+            "" => None,
+            _ => Some(body.to_string().into_bytes()),
+        };
+        self._request_json(reference_id, url, method, body, headers)
+    }
+
+    #[func]
+    fn request_json_bin(
+        &mut self,
+        reference_id: u32,
+        url: GString,
+        method: godot::engine::http_client::Method,
+        body: PackedByteArray,
+        headers: VariantArray,
+    ) -> u32 {
+        self._request_json(reference_id, url, method, Some(body.to_vec()), headers)
+    }
+}
+
+#[godot_api]
+impl INode for RustHttpRequester {
+    fn init(_base: Base<Node>) -> Self {
+        let runtime = if DclGlobal::has_singleton() {
+            TokioRuntime::static_clone_handle()
+        } else {
+            None
+        };
+
+        RustHttpRequester {
+            http_requester: super::http_requester::HttpRequester::new(runtime),
+        }
+    }
+}
+
+impl RustHttpRequester {
+    fn _request_json(
+        &mut self,
+        reference_id: u32,
+        url: GString,
+        method: godot::engine::http_client::Method,
+        body: Option<Vec<u8>>,
         headers: VariantArray,
     ) -> u32 {
         tracing::info!("Requesting json: {:?}", url.to_string());
@@ -78,11 +118,6 @@ impl RustHttpRequester {
         let method = match method {
             godot::engine::http_client::Method::METHOD_POST => http::Method::POST,
             _ => http::Method::GET,
-        };
-
-        let body = match body.to_string().as_str() {
-            "" => None,
-            _ => Some(body.to_string().into_bytes()),
         };
 
         let headers = match headers.len() {
@@ -104,20 +139,10 @@ impl RustHttpRequester {
             crate::http_request::request_response::ResponseType::AsString,
             body,
             headers,
+            None,
         );
         let id = request_option.id;
         self.http_requester.send_request(request_option);
         id
-    }
-}
-
-#[godot_api]
-impl NodeVirtual for RustHttpRequester {
-    fn init(_base: Base<Node>) -> Self {
-        RustHttpRequester {
-            http_requester: super::http_requester::HttpRequester::new(
-                TokioRuntime::static_clone_handle(),
-            ),
-        }
     }
 }

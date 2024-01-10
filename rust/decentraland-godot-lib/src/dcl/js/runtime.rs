@@ -3,10 +3,17 @@ use serde::Serialize;
 
 use std::{cell::RefCell, rc::Rc};
 
-use super::SceneContentMapping;
+use crate::{
+    content::content_mapping::ContentMappingAndUrlRef,
+    dcl::scene_apis::{GetRealmResponse, GetSceneInformationResponse, RpcCall},
+};
 
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_get_file_url::DECL]
+    vec![
+        op_get_file_url::DECL,
+        op_get_realm::DECL,
+        op_get_scene_information::DECL,
+    ]
 }
 
 #[derive(Serialize)]
@@ -22,8 +29,10 @@ fn op_get_file_url(
     filename: String,
 ) -> Result<GetFileUrlResponse, AnyError> {
     let state = op_state.borrow();
-    let SceneContentMapping(base_url, content_mapping) = state.borrow::<SceneContentMapping>();
-    let file = content_mapping.get(&filename);
+    let content_mapping = state.borrow::<ContentMappingAndUrlRef>();
+    let filename = filename.to_lowercase();
+    let base_url = content_mapping.base_url.as_str();
+    let file = content_mapping.content.get(&filename);
 
     if let Some(hash) = file {
         let url = format!("{base_url}{hash}");
@@ -34,4 +43,34 @@ fn op_get_file_url(
     }
 
     Err(anyhow!("not found"))
+}
+
+#[op]
+async fn op_get_realm(op_state: Rc<RefCell<OpState>>) -> Result<GetRealmResponse, AnyError> {
+    let (sx, rx) = tokio::sync::oneshot::channel::<GetRealmResponse>();
+
+    op_state
+        .borrow_mut()
+        .borrow_mut::<Vec<RpcCall>>()
+        .push(RpcCall::GetRealm {
+            response: sx.into(),
+        });
+
+    rx.await.map_err(|e| anyhow!(e))
+}
+
+#[op]
+async fn op_get_scene_information(
+    op_state: Rc<RefCell<OpState>>,
+) -> Result<GetSceneInformationResponse, AnyError> {
+    let (sx, rx) = tokio::sync::oneshot::channel::<GetSceneInformationResponse>();
+
+    op_state
+        .borrow_mut()
+        .borrow_mut::<Vec<RpcCall>>()
+        .push(RpcCall::GetSceneInformation {
+            response: sx.into(),
+        });
+
+    rx.await.map_err(|e| anyhow!(e))
 }

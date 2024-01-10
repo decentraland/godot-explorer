@@ -1,9 +1,5 @@
 extends Control
 
-@export var group: ButtonGroup
-var buttons_quantity: int = 0
-var pressed_index: int = 0
-
 signal hide_menu
 signal jump_to(Vector2i)
 signal toggle_minimap
@@ -12,28 +8,31 @@ signal toggle_ram
 
 #signals from advanced settings
 signal request_pause_scenes(enabled: bool)
+signal request_debug_panel(enabled: bool)
 signal preview_hot_reload(scene_type: String, scene_id: String)
+
+@export var group: ButtonGroup
+
+var buttons_quantity: int = 0
+var pressed_index: int = 0
+
+var selected_node: Control
+
+var resolutions := [
+	Vector2i(1920, 1080), Vector2i(1280, 720), Vector2i(800, 600), Vector2i(400, 300)
+]
+var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
 
 @onready var color_rect_header = $ColorRect_Header
 
 @onready var control_discover = $ColorRect_Background/Control_Discover
 @onready var control_settings = $ColorRect_Background/Control_Settings
 @onready var control_map = $ColorRect_Background/Control_Map
-@onready var control_advance_settings = $ColorRect_Background/Control_AdvanceSettings
 @onready var control_backpack = $ColorRect_Background/Control_Backpack
-
-var selected_node: Control
 
 @onready var button_discover = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Discover
 @onready var button_map = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Map
 @onready var button_settings = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Settings
-@onready
-var button_advance_settings = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_AdvanceSettings
-
-var resolutions := [
-	Vector2i(1920, 1080), Vector2i(1280, 720), Vector2i(800, 600), Vector2i(400, 300)
-]
-var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
 
 
 func _ready():
@@ -43,7 +42,6 @@ func _ready():
 	control_map.hide()
 	control_settings.show()
 	control_discover.hide()
-	control_advance_settings.hide()
 	control_backpack.hide()
 	control_map.jump_to.connect(_jump_to)
 
@@ -81,14 +79,12 @@ func modulate_all():
 	tween_m.tween_property(control_discover, "modulate", Color(1, 1, 1, 0), 0.125)
 	tween_m.tween_property(control_map, "modulate", Color(1, 1, 1, 0), 0.125)
 	tween_m.tween_property(control_settings, "modulate", Color(1, 1, 1, 0), 0.125)
-	tween_m.tween_property(control_advance_settings, "modulate", Color(1, 1, 1, 0), 0.125)
 
 
 func hide_all():
 	control_discover.hide()
 	control_map.hide()
 	control_settings.hide()
-	control_advance_settings.hide()
 
 
 func _on_button_close_pressed():
@@ -109,6 +105,7 @@ func close():
 
 func show_last():
 	self.show()
+	self.grab_focus()
 	var tween = create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.3).set_ease(Tween.EASE_IN_OUT)
 	color_rect_header.show()
@@ -135,12 +132,6 @@ func _on_control_settings_toggle_map_visibility(visibility):
 
 func _on_control_settings_toggle_ram_usage_visibility(visibility):
 	emit_signal("toggle_ram", visibility)
-
-
-func _on_button_advance_settings_pressed():
-	if selected_node != control_advance_settings:
-		fade_out(selected_node)
-		fade_in(control_advance_settings)
 
 
 func _on_button_settings_pressed():
@@ -181,9 +172,13 @@ func fade_out(node: Control):
 	tween_h.tween_callback(node.hide).set_delay(0.3)
 
 
-func _on_control_advance_settings_preview_hot_reload(scene_type, scene_id):
+func _on_control_settings_preview_hot_reload(scene_type, scene_id):
 	emit_signal("preview_hot_reload", scene_type, scene_id)
 
 
-func _on_control_advance_settings_request_pause_scenes(enabled):
-	emit_signal("request_pause_scene", enabled)
+func _on_control_settings_request_pause_scenes(enabled):
+	emit_signal("request_pause_scenes", enabled)
+
+
+func _on_control_settings_request_debug_panel(enabled):
+	emit_signal("request_debug_panel", enabled)

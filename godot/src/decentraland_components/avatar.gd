@@ -1,21 +1,14 @@
-extends Node3D
 class_name Avatar
+extends DclAvatar
+
+signal avatar_loaded
 
 @export var skip_process: bool = false
-@onready var animation_player = $Armature/AnimationPlayer
-@onready var label_3d_name = $Label3D_Name
-@onready var body_shape_root: Node3D = $Armature
-@onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
 
 # Public
 var avatar_name: String = ""
+var avatar_id: String = ""
 var playing_emote = false
-
-# Position Lerp
-var last_position: Vector3 = Vector3.ZERO
-var target_position: Vector3 = Vector3.ZERO
-var t: float = 0.0
-var target_distance: float = 0.0
 
 # Wearable requesting
 var current_content_url: String = ""
@@ -31,37 +24,104 @@ var wearables_dict: Dictionary = {}
 var finish_loading = false
 var wearables_by_category
 
+var generate_attach_points: bool = false
+var right_hand_idx: int = -1
+var right_hand_position: Transform3D
+var left_hand_idx: int = -1
+var left_hand_position: Transform3D
+var index_to_animation_name: Dictionary = {}
 
-func update_avatar(avatar: Dictionary):
+var audio_stream_player: AudioStreamPlayer = null
+var audio_stream_player_gen: AudioStreamGenerator = null
+
+var mask_material = preload("res://assets/avatar/mask_material.tres")
+
+@onready var animation_player = $Armature/AnimationPlayer
+@onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
+@onready var label_3d_name = $Label3D_Name
+@onready var body_shape_root: Node3D = $Armature
+@onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
+
+
+func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
+	_unset_avatar_modifier_area()  # Reset state
+
+	for exclude_id in area.exclude_ids:
+		if avatar_id == exclude_id:
+			return  # the avatar is not going to be modified
+
+	for modifier in area.avatar_modifiers:
+		if modifier == 0:  # hide avatar
+			hide()
+		elif modifier == 1:  # disable passport
+			pass  # TODO: Passport (disable functionality)
+
+
+func _unset_avatar_modifier_area():
+	show()
+	# TODO: Passport (enable functionality)
+
+
+func async_update_avatar_from_profile(profile: Dictionary):
+	var profile_content: Dictionary = profile.get("content", {})
+	var id = profile_content.get("userId", "unknown")
+	if id == null:
+		id = "unknown"
+
+	avatar_id = id
+	if profile_content.get("name", "") != null:
+		avatar_name = profile_content.get("name", "")
+
+	await async_update_avatar(profile.get("content", {}).get("avatar", {}))
+
+
+func async_update_avatar(avatar: Dictionary):
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
 		current_content_url = Global.realm.content_base_url
 
+	if avatar.is_empty():
+		printerr("Trying to update an avatar with an empty object")
+		return
+
 	playing_emote = false
 	set_idle()
 
-	avatar_name = avatar.get("name")
+	if avatar.get("name", "") != null:
+		avatar_name = avatar.get("name", "")
+
 	label_3d_name.text = avatar_name
 	current_wearables = avatar.get("wearables")
-	current_body_shape = avatar.get("body_shape")
-	current_eyes_color = avatar.get("eyes")
-	current_skin_color = avatar.get("skin")
-	current_hair_color = avatar.get("hair")
+	current_body_shape = avatar.get("bodyShape")
+	current_eyes_color = Avatar.from_color_object(avatar.get("eyes", {}).get("color", null))
+	current_skin_color = Avatar.from_color_object(avatar.get("skin", {}).get("color", null))
+	current_hair_color = Avatar.from_color_object(avatar.get("hair", {}).get("color", null))
 
-	var wearable_to_request := PackedStringArray(current_wearables)
+	var wearable_to_request := Array(current_wearables)
 	wearable_to_request.push_back(current_body_shape)
 
 	_load_default_emotes()
 
 	finish_loading = false
 
-	var promise = Global.content_manager.fetch_wearables(wearable_to_request, current_content_url)
-	await promise.co_awaiter()
-	fetch_wearables_dependencies()
+	var promise = Global.content_provider.fetch_wearables(wearable_to_request, current_content_url)
+	await PromiseUtils.async_all(promise)
+	async_fetch_wearables_dependencies()
 
 
-@onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
-var index_to_animation_name: Dictionary = {}
+static func from_color_object(color: Variant, default: Color = Color.WHITE) -> Color:
+	if color is Dictionary:
+		return Color(
+			color.get("r", default.r),
+			color.get("g", default.g),
+			color.get("b", default.b),
+			color.get("a", default.a)
+		)
+	return default
+
+
+static func to_color_object(color: Color) -> Dictionary:
+	return {"color": {"r": color.r, "g": color.g, "b": color.b, "a": color.a}}
 
 
 func _add_animation(index: int, animation_name: String):
@@ -100,7 +160,7 @@ func play_emote(emote_id: String):
 	playing_emote = true
 
 
-func play_remote_emote(emote_src: String, looping: bool):
+func play_remote_emote(_emote_src: String, _looping: bool):
 	# TODO: Implement downloading emote from the scene content, adding to the avatar and then playing the emote
 	# Test scene: https://github.com/decentraland/unity-renderer/pull/5501
 	pass
@@ -136,14 +196,14 @@ func get_representation(representation_array: Array, desired_body_shape: String)
 	return representation_array[0]
 
 
-func fetch_wearables_dependencies():
+func async_fetch_wearables_dependencies():
 	# Clear last equipped werarables
 	wearables_dict.clear()
 
 	# Fill data
-	wearables_dict[current_body_shape] = Global.content_manager.get_wearable(current_body_shape)
+	wearables_dict[current_body_shape] = Global.content_provider.get_wearable(current_body_shape)
 	for item in current_wearables:
-		wearables_dict[item] = Global.content_manager.get_wearable(item)
+		wearables_dict[item] = Global.content_provider.get_wearable(item)
 
 	var async_calls: Array = []
 	for wearable_key in wearables_dict.keys():
@@ -164,33 +224,28 @@ func fetch_wearables_dependencies():
 		if hashes_to_fetch.is_empty():
 			continue
 
-		var content: Dictionary = wearable.get("content", {})
-		var content_to_fetch := {}
-		for file_name in content:
+		var content_mapping: DclContentMappingAndUrl = wearable.get("content")
+		var files: Array = []
+		for file_name in content_mapping.get_files():
 			for file_hash in hashes_to_fetch:
-				if content[file_name] == file_hash:
-					content_to_fetch[file_name] = file_hash
+				if content_mapping.get_hash(file_name) == file_hash:
+					files.push_back(file_name)
 
-		var content_mapping: Dictionary = {
-			"content": wearable.get("content", {}),
-			"base_url": "https://peer.decentraland.org/content/contents/"
-		}
-
-		for file_name in content_to_fetch:
+		for file_name in files:
 			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
 
-	await Awaiter.co_all(async_calls)
+	await PromiseUtils.async_all(async_calls)
 
-	load_wearables()
+	async_load_wearables()
 
 
-func _fetch_texture_or_gltf(file_name, content_mapping):
+func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappingAndUrl) -> Promise:
 	var promise: Promise
 
 	if file_name.ends_with(".png"):
-		promise = Global.content_manager.fetch_texture(file_name, content_mapping)
+		promise = Global.content_provider.fetch_texture(file_name, content_mapping)
 	else:
-		promise = Global.content_manager.fetch_gltf(file_name, content_mapping)
+		promise = Global.content_provider.fetch_gltf(file_name, content_mapping)
 
 	return promise
 
@@ -207,7 +262,7 @@ func _free_old_skeleton(skeleton: Node):
 
 
 func try_to_set_body_shape(body_shape_hash):
-	var body_shape: Node3D = Global.content_manager.get_resource_from_hash(body_shape_hash)
+	var body_shape: Node3D = Global.content_provider.get_gltf_from_hash(body_shape_hash)
 	if body_shape == null:
 		return
 
@@ -238,7 +293,7 @@ func try_to_set_body_shape(body_shape_hash):
 	_add_attach_points()
 
 
-func load_wearables():
+func async_load_wearables():
 	var curated_wearables = Wearables.get_curated_wearable_list(
 		current_body_shape, current_wearables, []
 	)
@@ -271,7 +326,7 @@ func load_wearables():
 			continue
 
 		var file_hash = Wearables.get_wearable_main_file_hash(wearable, current_body_shape)
-		var obj = Global.content_manager.get_resource_from_hash(file_hash)
+		var obj = Global.content_provider.get_gltf_from_hash(file_hash)
 		var wearable_skeleton: Skeleton3D = obj.find_child("Skeleton3D")
 		for child in wearable_skeleton.get_children():
 			var new_wearable = child.duplicate()
@@ -316,11 +371,13 @@ func load_wearables():
 			child.mesh = child.mesh.duplicate(true)
 			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
 
-	var promise = Global.content_manager.duplicate_materials(meshes)
-	await promise.co_awaiter()
+	var promise: Promise = Global.content_provider.duplicate_materials(meshes)
+	await PromiseUtils.async_awaiter(promise)
 	apply_color_and_facial()
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
+
+	emit_signal("avatar_loaded")
 
 
 func apply_color_and_facial():
@@ -365,7 +422,6 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 				apply_texture_and_mask(child, eyebrows, current_hair_color, Color.BLACK)
 			else:
 				child.hide()
-			pass
 		elif child.name.ends_with("mask_mouth"):
 			if not mouth.is_empty():
 				apply_texture_and_mask(child, mouth, current_skin_color, Color.BLACK)
@@ -373,58 +429,27 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 				child.hide()
 
 
-var mask_material = preload("res://assets/avatar/mask_material.tres")
-
-
 func apply_texture_and_mask(
 	mesh: MeshInstance3D, textures: Array[String], color: Color, mask_color: Color
 ):
 	var current_material = mask_material.duplicate()
 	current_material.set_shader_parameter(
-		"base_texture", Global.content_manager.get_resource_from_hash(textures[0])
+		"base_texture", Global.content_provider.get_texture_from_hash(textures[0])
 	)
 	current_material.set_shader_parameter("material_color", color)
 	current_material.set_shader_parameter("mask_color", mask_color)
 
 	if textures.size() > 1:
 		current_material.set_shader_parameter(
-			"mask_texture", Global.content_manager.get_resource_from_hash(textures[1])
+			"mask_texture", Global.content_provider.get_texture_from_hash(textures[1])
 		)
 
 	mesh.mesh.surface_set_material(0, current_material)
 
 
-func set_target(target: Transform3D) -> void:
-	target_distance = target_position.distance_to(target.origin)
-
-	last_position = target_position
-	target_position = target.origin
-
-	self.global_rotation = target.basis.get_euler()
-	self.global_position = last_position
-
-	t = 0
-
-
 func _process(delta):
-	if skip_process:
-		return
-
-	if t < 2:
-		t += 10 * delta
-		if t < 1:
-			if t > 1.0:
-				t = 1.0
-
-			self.global_position = last_position.lerp(target_position, t)
-			if target_distance > 0:
-				if target_distance > 0.6:
-					set_running()
-				else:
-					set_walking()
-
-		elif t > 1.5:
-			self.set_idle()
+	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
+	self.process(delta)
 
 
 func set_walking():
@@ -444,10 +469,6 @@ func set_idle():
 		animation_player.play("Idle")
 
 
-var audio_stream_player: AudioStreamPlayer = null
-var audio_stream_player_gen: AudioStreamGenerator = null
-
-
 func spawn_voice_channel(sample_rate, num_channels, samples_per_channel):
 	printt("init voice chat ", sample_rate, num_channels, samples_per_channel)
 	audio_stream_player = AudioStreamPlayer.new()
@@ -465,13 +486,6 @@ func push_voice_frame(frame):
 		audio_stream_player.play()
 
 	audio_stream_player.get_stream_playback().push_buffer(frame)
-
-
-var generate_attach_points: bool = false
-var right_hand_idx: int = -1
-var right_hand_position: Transform3D
-var left_hand_idx: int = -1
-var left_hand_position: Transform3D
 
 
 func activate_attach_points():

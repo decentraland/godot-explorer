@@ -12,7 +12,7 @@ pub struct TokioRuntime {
 }
 
 #[godot_api]
-impl NodeVirtual for TokioRuntime {
+impl INode for TokioRuntime {
     fn init(_base: Base<Node>) -> Self {
         match Runtime::new() {
             Ok(rt) => Self {
@@ -52,5 +52,27 @@ impl TokioRuntime {
                 .try_get_handle()?
                 .clone(),
         )
+    }
+
+    pub fn spawn<F>(future: F)
+    where
+        F: futures_util::Future + Send + 'static,
+        F::Output: Send + 'static,
+    {
+        if let Some(handle) = Self::static_clone_handle() {
+            handle.spawn(future);
+        } else {
+            std::thread::spawn(move || {
+                let runtime = tokio::runtime::Runtime::new();
+                if runtime.is_err() {
+                    panic!("Failed to create runtime {:?}", runtime.err());
+                }
+                let runtime = runtime.unwrap();
+
+                runtime.block_on(async move {
+                    future.await;
+                });
+            });
+        }
     }
 }

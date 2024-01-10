@@ -1,29 +1,41 @@
 use std::time::Instant;
 
-use godot::prelude::{Callable, GodotString, ToVariant, Transform3D, VariantArray};
+use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
 
 use super::{
     components::{
-        animator::update_animator, audio_source::update_audio_source,
-        audio_stream::update_audio_stream, avatar_attach::update_avatar_attach,
-        avatar_shape::update_avatar_shape, billboard::update_billboard,
-        camera_mode_area::update_camera_mode_area, gltf_container::update_gltf_container,
-        material::update_material, mesh_collider::update_mesh_collider,
-        mesh_renderer::update_mesh_renderer, pointer_events::update_scene_pointer_events,
-        raycast::update_raycasts, text_shape::update_text_shape,
-        transform_and_parent::update_transform_and_parent, ui::scene_ui::update_scene_ui,
-        video_player::update_video_player, visibility::update_visibility,
+        animator::update_animator,
+        audio_source::update_audio_source,
+        audio_stream::update_audio_stream,
+        avatar_attach::update_avatar_attach,
+        avatar_data::update_avatar_scene_updates,
+        avatar_modifier_area::update_avatar_modifier_area,
+        avatar_shape::update_avatar_shape,
+        billboard::update_billboard,
+        camera_mode_area::update_camera_mode_area,
+        gltf_container::{sync_gltf_loading_state, update_gltf_container},
+        material::update_material,
+        mesh_collider::update_mesh_collider,
+        mesh_renderer::update_mesh_renderer,
+        nft_shape::update_nft_shape,
+        pointer_events::update_scene_pointer_events,
+        raycast::update_raycasts,
+        text_shape::update_text_shape,
+        transform_and_parent::update_transform_and_parent,
+        tween::update_tween,
+        ui::scene_ui::update_scene_ui,
+        video_player::update_video_player,
+        visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
     rpc_calls::process_rpcs,
-    scene::{Dirty, Scene, SceneUpdateState},
+    scene::{Dirty, Scene, SceneType, SceneUpdateState},
 };
 use crate::{
-    common::rpc::RpcCalls,
     dcl::{
         components::{
             proto_components::sdk::components::{
-                PbCameraMode, PbEngineInfo, PbUiCanvasInformation,
+                PbCameraMode, PbEngineInfo, PbPointerLock, PbUiCanvasInformation,
             },
             transform_and_parent::DclTransformAndParent,
             SceneEntityId,
@@ -34,6 +46,7 @@ use crate::{
         },
         RendererResponse, SceneId,
     },
+    godot_classes::dcl_global::DclGlobal,
 };
 
 // @returns true if the scene was full processed, or false if it remains something to process
@@ -63,7 +76,7 @@ pub fn _process_scene(
                 let engine_info_component =
                     SceneCrdtStateProtoComponents::get_engine_info_mut(crdt_state);
                 let tick_number =
-                    if let Some(entry) = engine_info_component.get(SceneEntityId::ROOT) {
+                    if let Some(entry) = engine_info_component.get(&SceneEntityId::ROOT) {
                         if let Some(value) = entry.value.as_ref() {
                             value.tick_number + 1
                         } else {
@@ -72,6 +85,22 @@ pub fn _process_scene(
                     } else {
                         0
                     };
+
+                scene.tick_number = tick_number;
+
+                // fix: if the scene is loading, we need to wait until it finishes before spawn the next tick
+                // tick 0 => onStart() => tick=1 => first onUpdate() => tick=2 => second onUpdate() => tick= 3
+                if tick_number < 3 && !scene.gltf_loading.is_empty() {
+                    sync_gltf_loading_state(scene, crdt_state);
+                    return false;
+                }
+
+                scene
+                    .godot_dcl_scene
+                    .root_node_3d
+                    .bind_mut()
+                    .last_tick_number = tick_number as i32;
+
                 engine_info_component.put(
                     SceneEntityId::ROOT,
                     Some(PbEngineInfo {
@@ -80,22 +109,51 @@ pub fn _process_scene(
                         total_runtime: (Instant::now() - scene.start_time).as_secs_f32(),
                     }),
                 );
+
+                if tick_number == 0 {
+                    let filter_by_scene_id = if let SceneType::Parcel = scene.scene_type {
+                        Some(*current_parcel_scene_id)
+                    } else {
+                        None
+                    };
+
+                    let primary_player_inside = if let SceneType::Parcel = scene.scene_type {
+                        *current_parcel_scene_id == scene.scene_id
+                    } else {
+                        true
+                    };
+
+                    DclGlobal::singleton()
+                        .bind()
+                        .avatars
+                        .bind()
+                        .first_sync_crdt_state(
+                            crdt_state,
+                            filter_by_scene_id,
+                            primary_player_inside,
+                        );
+                }
+
                 false
             }
             SceneUpdateState::PrintLogs => {
                 // enable logs
                 for log in &scene.current_dirty.logs {
                     let mut arguments = VariantArray::new();
-                    arguments.push((scene.scene_id.0 as i32).to_variant());
+                    arguments.push((scene.scene_id.0).to_variant());
                     arguments.push((log.level as i32).to_variant());
                     arguments.push((log.timestamp as f32).to_variant());
-                    arguments.push(GodotString::from(&log.message).to_variant());
+                    arguments.push(GString::from(&log.message).to_variant());
                     console.callv(arguments);
                 }
                 false
             }
             SceneUpdateState::DeletedEntities => {
                 update_deleted_entities(scene);
+                false
+            }
+            SceneUpdateState::Tween => {
+                update_tween(scene, crdt_state);
                 false
             }
             SceneUpdateState::TransformAndParent => {
@@ -132,6 +190,11 @@ pub fn _process_scene(
             }
             SceneUpdateState::GltfContainer => {
                 update_gltf_container(scene, crdt_state);
+                sync_gltf_loading_state(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::NftShape => {
+                update_nft_shape(scene, crdt_state);
                 false
             }
             SceneUpdateState::Animator => {
@@ -158,6 +221,10 @@ pub fn _process_scene(
                 update_audio_stream(scene, crdt_state, current_parcel_scene_id);
                 false
             }
+            SceneUpdateState::AvatarModifierArea => {
+                update_avatar_modifier_area(scene, crdt_state);
+                false
+            }
             SceneUpdateState::CameraModeArea => {
                 update_camera_mode_area(scene, crdt_state);
                 false
@@ -176,6 +243,9 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::ComputeCrdtState => {
+                update_avatar_scene_updates(scene, crdt_state);
+
+                // Set transform
                 let camera_transform = DclTransformAndParent::from_godot(
                     camera_global_transform,
                     scene.godot_dcl_scene.root_node_3d.get_position(),
@@ -191,33 +261,46 @@ pub fn _process_scene(
                     .get_transform_mut()
                     .put(SceneEntityId::CAMERA, Some(camera_transform));
 
-                let maybe_current_camera_mode = {
-                    if let Some(camera_mode_value) =
-                        SceneCrdtStateProtoComponents::get_camera_mode(crdt_state)
-                            .get(SceneEntityId::CAMERA)
-                    {
-                        camera_mode_value
-                            .value
-                            .as_ref()
-                            .map(|camera_mode_value| camera_mode_value.mode)
-                    } else {
-                        None
-                    }
-                };
+                // Set camera mode
+                let maybe_current_camera_mode =
+                    SceneCrdtStateProtoComponents::get_camera_mode(crdt_state)
+                        .get(&SceneEntityId::CAMERA)
+                        .and_then(|camera_mode_value| {
+                            camera_mode_value.value.as_ref().map(|v| v.mode)
+                        });
 
-                if maybe_current_camera_mode.is_none()
-                    || maybe_current_camera_mode.unwrap() != camera_mode
-                {
+                if maybe_current_camera_mode != Some(camera_mode) {
                     let camera_mode_component = PbCameraMode { mode: camera_mode };
                     SceneCrdtStateProtoComponents::get_camera_mode_mut(crdt_state)
                         .put(SceneEntityId::CAMERA, Some(camera_mode_component));
                 }
 
+                // Set PointerLock
+                let maybe_is_pointer_locked =
+                    SceneCrdtStateProtoComponents::get_pointer_lock(crdt_state)
+                        .get(&SceneEntityId::CAMERA)
+                        .and_then(|pointer_lock_value| {
+                            pointer_lock_value
+                                .value
+                                .as_ref()
+                                .map(|v| v.is_pointer_locked)
+                        });
+
+                let is_pointer_locked = godot::prelude::Input::singleton().get_mouse_mode()
+                    == godot::engine::input::MouseMode::MOUSE_MODE_CAPTURED;
+                if maybe_is_pointer_locked != Some(is_pointer_locked) {
+                    let pointer_lock_component = PbPointerLock { is_pointer_locked };
+                    SceneCrdtStateProtoComponents::get_pointer_lock_mut(crdt_state)
+                        .put(SceneEntityId::CAMERA, Some(pointer_lock_component));
+                }
+
+                // Process pointer events
                 let pointer_events_result_component =
                     SceneCrdtStateProtoComponents::get_pointer_events_result_mut(crdt_state);
 
                 let results = scene.pointer_events_result.drain(0..);
-                for (entity, value) in results {
+                for (entity, mut value) in results {
+                    value.timestamp = scene.tick_number;
                     pointer_events_result_component.append(entity, value);
                 }
 
@@ -227,6 +310,7 @@ pub fn _process_scene(
                     pointer_events_result_component.append(entity, value);
                 }
 
+                // Set renderer response to the scene
                 let dirty = crdt_state.take_dirty();
                 scene.current_dirty.renderer_response = Some(RendererResponse::Ok(dirty));
                 false
@@ -256,7 +340,7 @@ pub fn _process_scene(
                         logs: Vec::new(),
                         renderer_response: None,
                         update_state: SceneUpdateState::Processed,
-                        rpc_calls: RpcCalls::default(),
+                        rpc_calls: Vec::new(),
                     });
 
                     return true;

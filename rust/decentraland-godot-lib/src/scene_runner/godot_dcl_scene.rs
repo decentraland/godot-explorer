@@ -10,7 +10,7 @@ use crate::{
     },
     godot_classes::{dcl_scene_node::DclSceneNode, dcl_ui_control::DclUiControl},
 };
-use godot::prelude::*;
+use godot::{builtin::meta::ConvertError, engine::Json, prelude::*};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -38,6 +38,8 @@ pub struct GodotDclScene {
 pub struct VideoPlayerData {
     pub video_sink: VideoSink,
     pub audio_sink: AudioSink,
+    pub timestamp: u32,
+    pub length: f32,
 }
 
 pub struct UiNode {
@@ -45,12 +47,12 @@ pub struct UiNode {
     pub ui_transform: UiTransform,
     pub computed_parent: SceneEntityId,
     pub has_background: bool,
-    pub has_text: bool,
+    pub text_size: Option<Vector2>,
 }
 
 impl UiNode {
     pub fn control_offset(&self) -> i32 {
-        (if self.has_background { 1 } else { 0 }) + (if self.has_text { 1 } else { 0 })
+        (if self.has_background { 1 } else { 0 }) + (if self.text_size.is_some() { 1 } else { 0 })
     }
 }
 
@@ -99,29 +101,25 @@ impl SceneDefinition {
         let parcels = VariantArray::try_from_variant(&parcels)
             .map_err(|_op| "couldn't get parcels as array")?;
 
-        let mut parcels = parcels
+        let parcels = parcels
             .iter_shared()
-            .map(|v| Vector2i::try_from_variant(&v));
+            .map(|v| Vector2i::try_from_variant(&v))
+            .collect::<Result<Vec<_>, ConvertError>>()
+            .map_err(|v| v.to_string())?;
 
-        if parcels.any(|v| v.is_err()) {
-            return Err("couldn't get parcels as Vector2".to_string());
-        }
-
-        let mut parcels: Vec<Vector2i> = parcels.map(|v| v.unwrap()).collect();
-
-        if !parcels.contains(&base) {
-            parcels.push(base);
-        }
+        let metadata =
+            Json::stringify(dict.get("metadata").unwrap_or_default().to_variant()).to_string();
 
         Ok(Self {
-            main_crdt_path: main_crdt_path.to::<GodotString>().to_string(),
-            path: path.to::<GodotString>().to_string(),
+            main_crdt_path: main_crdt_path.to::<GString>().to_string(),
+            path: path.to::<GString>().to_string(),
             base,
             visible: visible.to::<bool>(),
             parcels,
             is_global: is_global.to::<bool>(),
-            title: title.to::<GodotString>().to_string(),
-            entity_id: entity_id.to::<GodotString>().to_string(),
+            title: title.to::<GString>().to_string(),
+            entity_id: entity_id.to::<GString>().to_string(),
+            metadata,
         })
     }
 }
@@ -157,15 +155,15 @@ impl GodotDclScene {
             z: 16.0 * -scene_definition.base.y as f32,
         });
 
-        let mut root_node_ui_control = DclUiControl::new_alloc();
-        root_node_ui_control.set_name(GodotString::from(format!("ui_scene_id_{:?}", scene_id.0)));
+        let mut root_node_ui_control = DclUiControl::alloc_gd();
+        root_node_ui_control.set_name(GString::from(format!("ui_scene_id_{:?}", scene_id.0)));
 
         let root_node_ui = UiNode {
             base_control: root_node_ui_control.clone(),
             ui_transform: UiTransform::default(),
             computed_parent: SceneEntityId::ROOT,
             has_background: false,
-            has_text: false,
+            text_size: None,
         };
 
         let entities = HashMap::from([(
@@ -237,7 +235,7 @@ impl GodotDclScene {
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_3d.is_none() {
             let mut new_node_3d = Node3D::new_alloc();
-            new_node_3d.set_name(GodotString::from(format!(
+            new_node_3d.set_name(GString::from(format!(
                 "e{:?}_{:?}",
                 entity.number, entity.version
             )));
@@ -259,8 +257,8 @@ impl GodotDclScene {
 
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_ui.is_none() {
-            let mut new_node_ui = DclUiControl::new_alloc();
-            new_node_ui.set_name(GodotString::from(format!(
+            let mut new_node_ui = DclUiControl::alloc_gd();
+            new_node_ui.set_name(GString::from(format!(
                 "e{:?}_{:?}",
                 entity.number, entity.version
             )));
@@ -278,7 +276,7 @@ impl GodotDclScene {
                 ui_transform: UiTransform::default(),
                 computed_parent: SceneEntityId::ROOT,
                 has_background: false,
-                has_text: false,
+                text_size: None,
             });
             self.ui_entities.insert(*entity);
         }

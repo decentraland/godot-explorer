@@ -23,7 +23,7 @@ pub fn update_audio_source(
 
     if let Some(audio_source_dirty) = dirty_lww_components.get(&SceneComponentId::AUDIO_SOURCE) {
         for entity in audio_source_dirty {
-            let new_value = audio_source_component.get(*entity);
+            let new_value = audio_source_component.get(entity);
             if new_value.is_none() {
                 scene.audio_sources.remove(entity);
                 continue;
@@ -51,7 +51,7 @@ pub fn update_audio_source(
                     .unwrap()
                     .cast::<DclAudioSource>();
 
-                    new_audio_source.set_name(GodotString::from("AudioSource"));
+                    new_audio_source.set_name(GString::from("AudioSource"));
                     node_3d.add_child(new_audio_source.clone().upcast());
                     scene
                         .audio_sources
@@ -59,10 +59,10 @@ pub fn update_audio_source(
                     new_audio_source
                 };
 
-                audio_source.call_deferred("_refresh_data".into(), &[]);
+                audio_source.call_deferred("_async_refresh_data".into(), &[]);
 
                 let mut audio_source = audio_source.bind_mut();
-                audio_source.set_dcl_audio_clip_url(GodotString::from(new_value.audio_clip_url));
+                audio_source.set_dcl_audio_clip_url(GString::from(new_value.audio_clip_url));
                 audio_source.set_dcl_loop_activated(new_value.r#loop.unwrap_or(false));
                 audio_source.set_dcl_playing(new_value.playing.unwrap_or(false));
                 audio_source.set_dcl_pitch(new_value.pitch.unwrap_or(1.0));

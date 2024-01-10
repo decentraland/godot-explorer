@@ -1,24 +1,37 @@
 pub mod components;
 pub mod crdt;
 pub mod js;
+pub mod scene_apis;
 pub mod serialization;
 
-use crate::{common::rpc::RpcCalls, wallet::Wallet};
+use godot::builtin::{Vector2, Vector3};
+
+use crate::{
+    auth::{ephemeral_auth_chain::EphemeralAuthChain, ethereum_provider::EthereumProvider},
+    content::content_mapping::ContentMappingAndUrlRef,
+};
 
 use self::{
-    components::{SceneComponentId, SceneEntityId},
-    crdt::SceneCrdtState,
-    js::{scene_thread, SceneLogMessage},
+    crdt::{DirtyCrdtState, SceneCrdtState},
+    js::{
+        scene_thread,
+        testing::{TakeAndCompareSnapshotResponse, TestingScreenshotComparisonMethodRequest},
+        SceneLogMessage,
+    },
+    scene_apis::{RpcCall, RpcResultSender},
 };
 
 use std::{
-    collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
     thread::JoinHandle,
 };
 
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
-pub struct SceneId(pub u32);
+pub struct SceneId(pub i32);
+
+impl SceneId {
+    pub const INVALID: SceneId = SceneId(-1);
+}
 
 // scene metadata
 #[derive(Clone, Default, Debug)]
@@ -32,22 +45,12 @@ pub struct SceneDefinition {
 
     pub parcels: Vec<godot::prelude::Vector2i>,
     pub is_global: bool,
+    pub metadata: String,
 }
-
-pub type DirtyLwwComponents = HashMap<SceneComponentId, HashSet<SceneEntityId>>;
-pub type DirtyGosComponents = HashMap<SceneComponentId, HashMap<SceneEntityId, usize>>;
-
-// message from scene-thread describing new and deleted entities
-#[derive(Debug, Default)]
-pub struct DirtyEntities {
-    pub born: HashSet<SceneEntityId>,
-    pub died: HashSet<SceneEntityId>,
-}
-
 // data from renderer to scene
 #[derive(Debug)]
 pub enum RendererResponse {
-    Ok((DirtyEntities, DirtyLwwComponents, DirtyGosComponents)),
+    Ok(DirtyCrdtState),
     Kill,
 }
 
@@ -57,12 +60,21 @@ pub enum SceneResponse {
     Error(SceneId, String),
     Ok(
         SceneId,
-        (DirtyEntities, DirtyLwwComponents, DirtyGosComponents),
+        DirtyCrdtState,
         Vec<SceneLogMessage>,
         f32,
-        RpcCalls,
+        Vec<RpcCall>,
     ),
     RemoveGodotScene(SceneId, Vec<SceneLogMessage>),
+    TakeSnapshot {
+        scene_id: SceneId,
+        src_stored_snapshot: String,
+        camera_position: Vector3,
+        camera_target: Vector3,
+        screeshot_size: Vector2,
+        method: TestingScreenshotComparisonMethodRequest,
+        response: RpcResultSender<Result<TakeAndCompareSnapshotResponse, String>>,
+    },
 }
 
 pub type SharedSceneCrdtState = Arc<Mutex<SceneCrdtState>>;
@@ -75,13 +87,15 @@ pub struct DclScene {
 }
 
 impl DclScene {
+    #[allow(clippy::too_many_arguments)]
     pub fn spawn_new_js_dcl_scene(
         id: SceneId,
         scene_definition: SceneDefinition,
-        content_mapping: HashMap<String, String>,
-        base_url: String,
+        content_mapping: ContentMappingAndUrlRef,
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
-        wallet: Wallet,
+        testing_mode: bool,
+        ethereum_provider: Arc<EthereumProvider>,
+        ephemeral_wallet: Option<EphemeralAuthChain>,
     ) -> Self {
         let (main_sender_to_thread, thread_receive_from_renderer) =
             tokio::sync::mpsc::channel::<RendererResponse>(1);
@@ -96,11 +110,12 @@ impl DclScene {
                     id,
                     scene_definition,
                     content_mapping,
-                    base_url,
                     thread_sender_to_main,
                     thread_receive_from_renderer,
                     thread_scene_crdt,
-                    wallet,
+                    testing_mode,
+                    ethereum_provider,
+                    ephemeral_wallet,
                 )
             })
             .unwrap();

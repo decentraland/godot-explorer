@@ -1,4 +1,4 @@
-use godot::prelude::Gd;
+use godot::{obj::UserClass, prelude::Gd};
 
 use crate::{
     dcl::{
@@ -19,7 +19,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(dirty_ui_text) = dirty_lww_components.get(&SceneComponentId::UI_TEXT) {
         for entity in dirty_ui_text {
-            let value = if let Some(entry) = ui_text_component.get(*entity) {
+            let value = if let Some(entry) = ui_text_component.get(entity) {
                 entry.value.clone()
             } else {
                 None
@@ -35,10 +35,9 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 if let Some(node) = existing_ui_text.base_control.get_node("text".into()) {
                     existing_ui_text.base_control.remove_child(node);
                 }
-                existing_ui_text.has_text = false;
+                existing_ui_text.text_size = None;
                 continue;
             }
-            existing_ui_text.has_text = true;
 
             let value = value.as_ref().unwrap();
             let mut existing_ui_text_control = if let Some(node) = existing_ui_text
@@ -47,7 +46,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             {
                 node.cast::<DclUiText>()
             } else {
-                let mut node: Gd<DclUiText> = Gd::new_default();
+                let mut node: Gd<DclUiText> = DclUiText::alloc_gd();
                 node.set_name("text".into());
                 node.set_anchors_preset(godot::engine::control::LayoutPreset::PRESET_FULL_RECT);
 
@@ -61,6 +60,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             };
 
             existing_ui_text_control.bind_mut().change_value(value);
+            existing_ui_text.text_size = Some(existing_ui_text_control.get_minimum_size());
         }
     }
 }

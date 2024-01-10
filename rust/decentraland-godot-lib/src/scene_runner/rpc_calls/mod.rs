@@ -1,29 +1,39 @@
 mod handle_restricted_actions;
+mod handle_runtime;
 mod portables;
 
 use crate::{
-    common::rpc::{RpcCall, RpcCalls},
-    dcl::SceneId,
+    dcl::{scene_apis::RpcCall, SceneId},
+    godot_classes::dcl_global::DclGlobal,
 };
 
 use self::{
     handle_restricted_actions::{
-        change_realm, move_player_to, teleport_to, trigger_emote, trigger_scene_emote,
+        change_realm, move_player_to, open_external_url, open_nft_dialog, teleport_to,
+        trigger_emote, trigger_scene_emote,
     },
+    handle_runtime::{get_realm, get_scene_information},
     portables::{kill_portable, list_portables, spawn_portable},
 };
 
 use super::scene::Scene;
 
-pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls: RpcCalls) {
+pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_calls: Vec<RpcCall>) {
     for rpc_call in rpc_calls {
         match rpc_call {
+            // Restricted Actions
             RpcCall::ChangeRealm {
                 to,
                 message,
                 response,
             } => {
-                change_realm(scene, &to, &message, &response);
+                change_realm(scene, current_parcel_scene_id, &to, &message, &response);
+            }
+            RpcCall::OpenNftDialog { urn, response } => {
+                open_nft_dialog(scene, current_parcel_scene_id, &urn, &response);
+            }
+            RpcCall::OpenExternalUrl { url, response } => {
+                open_external_url(scene, current_parcel_scene_id, &url, &response);
             }
             RpcCall::MovePlayerTo {
                 position_target,
@@ -61,11 +71,33 @@ pub fn process_rpcs(scene: &Scene, current_parcel_scene_id: &SceneId, rpc_calls:
                 &looping,
                 &response,
             ),
+            // Runtime
+            RpcCall::GetRealm { response } => get_realm(&response),
+            RpcCall::GetSceneInformation { response } => get_scene_information(scene, &response),
+            // Portable Experiences
             RpcCall::SpawnPortable { location, response } => {
                 spawn_portable(scene, location, response)
             }
             RpcCall::KillPortable { location, response } => kill_portable(location, response),
             RpcCall::ListPortables { response } => list_portables(response),
+            RpcCall::SceneTestPlan { body } => {
+                tracing::info!("SceneTestPlan: {:?}", body);
+                scene.scene_tests = body.tests.iter().map(|v| (v.name.clone(), None)).collect();
+                scene.scene_test_plan_received = true;
+            }
+            RpcCall::SceneTestResult { body } => {
+                tracing::info!("SceneTestResult: {:?}", body);
+                if let Some(test_entry) = scene.scene_tests.get_mut(&body.name) {
+                    *test_entry = Some(body);
+                }
+            }
+            RpcCall::SendAsync { body, response } => {
+                DclGlobal::singleton()
+                    .bind()
+                    .get_player_identity()
+                    .bind()
+                    .send_async(body, response);
+            }
         }
     }
 }

@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://0qdwoj2popk7"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lj3bd"]
+transparency = 1
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_83e61"]
+material = SubResource("StandardMaterial3D_lj3bd")
+flip_faces = true
+size = Vector2(1, 1)
+
+[node name="EmptyFrame" type="Node3D"]
+
+[node name="RootNode" type="Node3D" parent="."]
+
+[node name="NftEmptyFrame" type="MeshInstance3D" parent="RootNode"]
+mesh = SubResource("PlaneMesh_83e61")
+skeleton = NodePath("../../..")

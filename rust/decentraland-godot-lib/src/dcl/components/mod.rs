@@ -1,3 +1,4 @@
+pub mod internal_player_data;
 pub mod material;
 pub mod proto_components;
 pub mod transform_and_parent;
@@ -5,7 +6,7 @@ pub mod transform_and_parent;
 use std::hash::Hash;
 
 use godot::{
-    bind::property::ExportInfo,
+    bind::property::PropertyHintInfo,
     engine::global::PropertyHint,
     prelude::{Export, Property},
 };
@@ -29,8 +30,8 @@ impl Property for SceneEntityId {
 }
 
 impl Export for SceneEntityId {
-    fn default_export_info() -> ExportInfo {
-        ExportInfo {
+    fn default_export_info() -> PropertyHintInfo {
+        PropertyHintInfo {
             hint: PropertyHint::PROPERTY_HINT_NONE,
             hint_string: "Entity ID in the owner scene".into(),
         }
@@ -53,6 +54,11 @@ impl SceneEntityId {
         Self { number, version: 0 }
     }
 
+    // Note: this is not actually an invalid id, but it's used to represent an invalid id in some cases
+    pub const INVALID: SceneEntityId = Self {
+        number: 0xFFFF,
+        version: 0xFFFF,
+    };
     pub const ROOT: SceneEntityId = Self::reserved(0);
     pub const PLAYER: SceneEntityId = Self::reserved(1);
     pub const CAMERA: SceneEntityId = Self::reserved(2);
@@ -74,6 +80,9 @@ impl std::fmt::Display for SceneEntityId {
 
 impl SceneComponentId {
     pub const TRANSFORM: SceneComponentId = SceneComponentId(1);
+
+    // Custom GODOT implementation components
+    pub const INTERNAL_PLAYER_DATA: SceneComponentId = SceneComponentId(101);
 }
 
 include!(concat!(env!("OUT_DIR"), "/components_enum.gen.rs"));

@@ -15,8 +15,8 @@ use super::parcel::*;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TypedIpfsRef {
-    file: String,
-    hash: String,
+    pub file: String,
+    pub hash: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -46,16 +46,16 @@ impl EntityDefinitionJson {
         let mut dict = Dictionary::new();
 
         dict.set(
-            GodotString::from("id"),
+            GString::from("id"),
             Variant::from(self.id.as_ref().unwrap().clone()),
         );
         dict.set(
-            GodotString::from("baseUrl"),
+            GString::from("baseUrl"),
             Variant::from(self.base_url.as_ref().unwrap().clone()),
         );
 
         dict.set(
-            GodotString::from("is_global"),
+            GString::from("is_global"),
             Variant::from(self.is_global.unwrap_or_default()),
         );
 
@@ -66,13 +66,13 @@ impl EntityDefinitionJson {
                 Variant::from(typed_ipfs_ref.hash.clone()),
             );
         }
-        dict.set(GodotString::from("content"), content);
+        dict.set(GString::from("content"), content);
 
         let metadata = match &self.metadata {
             Some(metadata) => serde_json::ser::to_string(metadata).unwrap_or("{}".to_string()),
             None => "{}".to_string(),
         };
-        dict.set(GodotString::from("metadata"), metadata);
+        dict.set(GString::from("metadata"), metadata);
 
         dict
     }
@@ -198,6 +198,7 @@ impl SceneEntityCoordinator {
                 ResponseType::AsJson,
                 Some(request_body.as_bytes().to_vec()),
                 Some(vec!["Content-Type: application/json".to_string()]),
+                None,
             );
             self.requested_city_pointers
                 .insert(request.id, set_request_pointers);
@@ -402,6 +403,7 @@ impl SceneEntityCoordinator {
                 ResponseType::AsJson,
                 None,
                 None,
+                None,
             );
 
             self.requested_entity.insert(request.id, entity_base);
@@ -432,6 +434,7 @@ impl SceneEntityCoordinator {
                 url,
                 http::Method::GET,
                 ResponseType::AsJson,
+                None,
                 None,
                 None,
             );
@@ -529,8 +532,8 @@ impl SceneEntityCoordinator {
     #[func]
     fn config(
         &mut self,
-        entities_active_url: GodotString,
-        content_url: GodotString,
+        entities_active_url: GString,
+        content_url: GString,
         should_load_city_scenes: bool,
     ) {
         self._config(
@@ -548,20 +551,20 @@ impl SceneEntityCoordinator {
         let mut empty_parcels = VariantArray::new();
 
         for loadable_scene in self.get_loadable_scenes().iter() {
-            loadable_scenes.push(Variant::from(GodotString::from(loadable_scene)));
+            loadable_scenes.push(Variant::from(GString::from(loadable_scene)));
         }
 
         for keep_alive_scene in self.get_keep_alive_scenes().iter() {
-            keep_alive_scenes.push(Variant::from(GodotString::from(keep_alive_scene)));
+            keep_alive_scenes.push(Variant::from(GString::from(keep_alive_scene)));
         }
 
         for empty_parcel in self.get_empty_parcels().iter() {
-            empty_parcels.push(Variant::from(GodotString::from(empty_parcel)));
+            empty_parcels.push(Variant::from(GString::from(empty_parcel)));
         }
 
-        dict.set(GodotString::from("loadable_scenes"), loadable_scenes);
-        dict.set(GodotString::from("keep_alive_scenes"), keep_alive_scenes);
-        dict.set(GodotString::from("empty_parcels"), empty_parcels);
+        dict.set(GString::from("loadable_scenes"), loadable_scenes);
+        dict.set(GString::from("keep_alive_scenes"), keep_alive_scenes);
+        dict.set(GString::from("empty_parcels"), empty_parcels);
 
         dict
     }
@@ -603,7 +606,7 @@ impl SceneEntityCoordinator {
     }
 
     #[func]
-    pub fn get_scene_dict(&self, entity_id: GodotString) -> Dictionary {
+    pub fn get_scene_dict(&self, entity_id: GString) -> Dictionary {
         if let Some(def) = self.get_entity_definition(&entity_id.to_string()) {
             def.to_godot_dictionary()
         } else {
@@ -617,17 +620,17 @@ impl SceneEntityCoordinator {
     }
 
     #[func]
-    pub fn get_scene_entity_id(&self, coord: Vector2i) -> GodotString {
+    pub fn get_scene_entity_id(&self, coord: Vector2i) -> GString {
         let coord = Coord(coord.x as i16, coord.y as i16);
         if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
-            GodotString::from(entity_id)
+            GString::from(entity_id)
         } else {
-            GodotString::from("empty")
+            GString::from("empty")
         }
     }
 
     #[func]
-    pub fn reload_scene_data(&mut self, scene_id: GodotString) {
+    pub fn reload_scene_data(&mut self, scene_id: GString) {
         let scene_id = scene_id.to_string();
         let mut coord_to_clean = Vec::new();
         for (key, value) in self.cache_city_pointers.iter() {
@@ -646,7 +649,7 @@ impl SceneEntityCoordinator {
 }
 
 #[godot_api]
-impl NodeVirtual for SceneEntityCoordinator {
+impl INode for SceneEntityCoordinator {
     fn init(_base: Base<Node>) -> Self {
         SceneEntityCoordinator::new("".into(), "".into(), false)
     }

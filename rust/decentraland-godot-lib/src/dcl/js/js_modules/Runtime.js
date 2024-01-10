@@ -1,19 +1,17 @@
 module.exports.getRealm = async function (body) {
     return {
-        realmInfo: {
-            baseUrl: "https://localhost:8000",
-            realName: "LocalPreview",
-            networkId: 1,
-            commsAdapter: "offline",
-            isPreview: true,
-        }
+        realmInfo: await Deno.core.ops.op_get_realm()
     }
 }
-module.exports.getWorldTime = async function (body) { return {} }
+module.exports.getWorldTime = async function (body) {
+    // TODO: Implement time when skybox feature has time
+    const seconds = 60 * 60 * 12 // noon time in seconds
+    return {
+        seconds
+    }
+}
 
-// sync implementation
 module.exports.readFile = async function (body) {
-    // body.fileName
     const { hash, url } = Deno.core.ops.op_get_file_url(body.fileName)
     const response = await fetch(url)
     const bytes = await response.bytes()
@@ -23,4 +21,22 @@ module.exports.readFile = async function (body) {
         hash
     }
 }
-module.exports.getSceneInformation = async function (body) { return {} }
+
+module.exports.getSceneInformation = async function (body) {
+    const sceneInfo = await Deno.core.ops.op_get_scene_information()
+    sceneInfo.content = sceneInfo.content.map(item => ({
+        hash: item.hash,
+        file: item.file
+    }))
+    return {
+        ...sceneInfo,
+    }
+}
+
+module.exports.getExplorerInformation = async function (body) {
+    return {
+        agent: 'godot',
+        platform: 'desktop',
+        configurations: {}
+    }
+}

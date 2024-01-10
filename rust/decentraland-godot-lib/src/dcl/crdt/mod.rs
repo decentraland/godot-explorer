@@ -3,7 +3,10 @@ pub mod grow_only_set;
 pub mod last_write_wins;
 pub mod message;
 
-use std::{any::Any, collections::HashMap};
+use std::{
+    any::Any,
+    collections::{HashMap, HashSet},
+};
 
 use self::{
     entity::SceneEntityContainer,
@@ -11,18 +14,32 @@ use self::{
     last_write_wins::{GenericLastWriteWinsComponent, LastWriteWins},
 };
 
-use super::{
-    components::{
-        proto_components, transform_and_parent::DclTransformAndParent, SceneComponentId,
-        SceneEntityId,
-    },
-    DirtyEntities, DirtyGosComponents, DirtyLwwComponents,
+use super::components::{
+    internal_player_data::InternalPlayerData, proto_components,
+    transform_and_parent::DclTransformAndParent, SceneComponentId, SceneEntityId,
 };
 
 #[derive(Debug)]
 pub struct SceneCrdtState {
     pub components: HashMap<SceneComponentId, Box<dyn Any + Send>>,
     pub entities: SceneEntityContainer,
+}
+
+pub type DirtyLwwComponents = HashMap<SceneComponentId, HashSet<SceneEntityId>>;
+pub type DirtyGosComponents = HashMap<SceneComponentId, HashMap<SceneEntityId, usize>>;
+
+// message from scene-thread describing new and deleted entities
+#[derive(Debug, Default)]
+pub struct DirtyEntities {
+    pub born: HashSet<SceneEntityId>,
+    pub died: HashSet<SceneEntityId>,
+}
+
+#[derive(Debug, Default)]
+pub struct DirtyCrdtState {
+    pub entities: DirtyEntities,
+    pub lww: DirtyLwwComponents,
+    pub gos: DirtyGosComponents,
 }
 
 impl Default for SceneCrdtState {
@@ -38,6 +55,8 @@ impl SceneCrdtState {
             entities: SceneEntityContainer::new(),
         };
         crdt_state.insert_lww_component::<DclTransformAndParent>(SceneComponentId::TRANSFORM);
+        crdt_state
+            .insert_lww_component::<InternalPlayerData>(SceneComponentId::INTERNAL_PLAYER_DATA);
         crdt_state
     }
 
@@ -75,6 +94,10 @@ impl SceneCrdtState {
             SceneComponentId::TRANSFORM => self
                 .get_unknown_lww_component::<LastWriteWins<DclTransformAndParent>>(
                     SceneComponentId::TRANSFORM,
+                ),
+            SceneComponentId::INTERNAL_PLAYER_DATA => self
+                .get_unknown_lww_component::<LastWriteWins<InternalPlayerData>>(
+                    SceneComponentId::INTERNAL_PLAYER_DATA,
                 ),
             _ => None,
         }
@@ -118,6 +141,10 @@ impl SceneCrdtState {
             SceneComponentId::TRANSFORM => self
                 .get_unknown_lww_component_mut::<LastWriteWins<DclTransformAndParent>>(
                     SceneComponentId::TRANSFORM,
+                ),
+            SceneComponentId::INTERNAL_PLAYER_DATA => self
+                .get_unknown_lww_component_mut::<LastWriteWins<InternalPlayerData>>(
+                    SceneComponentId::INTERNAL_PLAYER_DATA,
                 ),
             _ => None,
         }
@@ -177,7 +204,7 @@ impl SceneCrdtState {
         Some(component)
     }
 
-    pub fn take_dirty(&mut self) -> (DirtyEntities, DirtyLwwComponents, DirtyGosComponents) {
+    pub fn take_dirty(&mut self) -> DirtyCrdtState {
         let mut dirty_lww_components: DirtyLwwComponents = HashMap::new();
         let mut dirty_gos_components: DirtyGosComponents = HashMap::new();
         let keys: Vec<SceneComponentId> = self.components.keys().cloned().collect(); // another way to do this?
@@ -215,7 +242,11 @@ impl SceneCrdtState {
             }
         }
 
-        (dirty_entities, dirty_lww_components, dirty_gos_components)
+        DirtyCrdtState {
+            entities: dirty_entities,
+            lww: dirty_lww_components,
+            gos: dirty_gos_components,
+        }
     }
 
     pub fn get_transform_mut(&mut self) -> &mut LastWriteWins<DclTransformAndParent> {
@@ -231,6 +262,22 @@ impl SceneCrdtState {
             .get(&SceneComponentId::TRANSFORM)
             .unwrap()
             .downcast_ref::<LastWriteWins<DclTransformAndParent>>()
+            .unwrap()
+    }
+
+    pub fn get_internal_player_data_mut(&mut self) -> &mut LastWriteWins<InternalPlayerData> {
+        self.components
+            .get_mut(&SceneComponentId::INTERNAL_PLAYER_DATA)
+            .unwrap()
+            .downcast_mut::<LastWriteWins<InternalPlayerData>>()
+            .unwrap()
+    }
+
+    pub fn get_internal_player_data(&self) -> &LastWriteWins<InternalPlayerData> {
+        self.components
+            .get(&SceneComponentId::INTERNAL_PLAYER_DATA)
+            .unwrap()
+            .downcast_ref::<LastWriteWins<InternalPlayerData>>()
             .unwrap()
     }
 
@@ -298,7 +345,7 @@ mod test {
             Some(some_mesh_renderer),
         );
 
-        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        let mesh_renderer = mesh_renderer_component.get(&SceneEntityId::new(0, 0));
         assert_eq!(
             *mesh_renderer.unwrap(),
             LWWEntry {
@@ -327,7 +374,7 @@ mod test {
             Some(new_mesh_renderer),
         );
 
-        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        let mesh_renderer = mesh_renderer_component.get(&SceneEntityId::new(0, 0));
         assert_eq!(
             *mesh_renderer.unwrap(),
             LWWEntry {
@@ -352,7 +399,7 @@ mod test {
             SceneCrdtStateProtoComponents::get_mesh_renderer_mut(&mut crdt_state);
 
         mesh_renderer_component.set(SceneEntityId::new(0, 0), SceneCrdtTimestamp(0), None);
-        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        let mesh_renderer = mesh_renderer_component.get(&SceneEntityId::new(0, 0));
         assert_eq!(
             *mesh_renderer.unwrap(),
             LWWEntry {
@@ -362,7 +409,7 @@ mod test {
         );
 
         mesh_renderer_component.remove(SceneEntityId::new(0, 0));
-        let mesh_renderer = mesh_renderer_component.get(SceneEntityId::new(0, 0));
+        let mesh_renderer = mesh_renderer_component.get(&SceneEntityId::new(0, 0));
         assert!(mesh_renderer.is_none());
     }
 

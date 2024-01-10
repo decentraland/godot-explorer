@@ -9,7 +9,7 @@ pub struct DclAudioStream {
     dcl_volume: f32,
 
     #[export]
-    dcl_url: GodotString,
+    dcl_url: GString,
 
     #[base]
     base: Base<AudioStreamPlayer>,

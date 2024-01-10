@@ -10,6 +10,35 @@ use crate::{
 };
 use godot::prelude::*;
 
+trait ToDictionaryColorObject {
+    fn to_dictionary_color_object(&self) -> Dictionary;
+}
+
+impl ToDictionaryColorObject for crate::dcl::components::proto_components::common::Color3 {
+    fn to_dictionary_color_object(&self) -> Dictionary {
+        let mut dictionary = Dictionary::new();
+        dictionary.set("r", self.r);
+        dictionary.set("g", self.g);
+        dictionary.set("b", self.b);
+        dictionary.set("a", 1.0);
+        let mut ret_dictionary = Dictionary::new();
+        ret_dictionary.set("color", dictionary);
+        ret_dictionary
+    }
+}
+impl ToDictionaryColorObject for crate::dcl::components::proto_components::common::Color4 {
+    fn to_dictionary_color_object(&self) -> Dictionary {
+        let mut dictionary = Dictionary::new();
+        dictionary.set("r", self.r);
+        dictionary.set("g", self.g);
+        dictionary.set("b", self.b);
+        dictionary.set("a", self.a);
+        let mut ret_dictionary = Dictionary::new();
+        ret_dictionary.set("color", dictionary);
+        ret_dictionary
+    }
+}
+
 pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
@@ -17,7 +46,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(avatar_shape_dirty) = dirty_lww_components.get(&SceneComponentId::AVATAR_SHAPE) {
         for entity in avatar_shape_dirty {
-            let new_value = avatar_shape_component.get(*entity);
+            let new_value = avatar_shape_component.get(entity);
             if new_value.is_none() {
                 continue;
             }
@@ -33,6 +62,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     node_3d.remove_child(avatar_node);
                 }
             } else if let Some(new_value) = new_value {
+                // TODO: make dictionary from PbAvatarShape as SerializedProfile
                 let mut dictionary = Dictionary::new();
                 let eyes = new_value.eye_color.as_ref().unwrap_or(
                     &crate::dcl::components::proto_components::common::Color3 {
@@ -41,14 +71,14 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         b: 0.356,
                     },
                 );
-                let hair = new_value.eye_color.as_ref().unwrap_or(
+                let hair = new_value.hair_color.as_ref().unwrap_or(
                     &crate::dcl::components::proto_components::common::Color3 {
                         r: 0.283,
                         g: 0.142,
                         b: 0.0,
                     },
                 );
-                let skin = new_value.eye_color.as_ref().unwrap_or(
+                let skin = new_value.skin_color.as_ref().unwrap_or(
                     &crate::dcl::components::proto_components::common::Color3 {
                         r: 0.6,
                         g: 0.462,
@@ -57,41 +87,17 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 );
                 dictionary.set(
                     "name",
-                    GodotString::from(new_value.name.as_ref().unwrap_or(&"NPC".to_string())),
+                    GString::from(new_value.name.as_ref().unwrap_or(&"NPC".to_string())),
                 );
                 dictionary.set(
-                    "body_shape",
-                    GodotString::from(new_value.body_shape.as_ref().unwrap_or(
+                    "bodyShape",
+                    GString::from(new_value.body_shape.as_ref().unwrap_or(
                         &"urn:decentraland:off-chain:base-avatars:BaseFemale".to_string(),
                     )),
                 );
-                dictionary.set(
-                    "eyes",
-                    Color {
-                        a: 1.0,
-                        r: eyes.r,
-                        g: eyes.g,
-                        b: eyes.b,
-                    },
-                );
-                dictionary.set(
-                    "hair",
-                    Color {
-                        a: 1.0,
-                        r: hair.r,
-                        g: hair.g,
-                        b: hair.b,
-                    },
-                );
-                dictionary.set(
-                    "skin",
-                    Color {
-                        a: 1.0,
-                        r: skin.r,
-                        g: skin.g,
-                        b: skin.b,
-                    },
-                );
+                dictionary.set("eyes", eyes.to_dictionary_color_object());
+                dictionary.set("hair", hair.to_dictionary_color_object());
+                dictionary.set("skin", skin.to_dictionary_color_object());
 
                 let wearables = {
                     if new_value.wearables.is_empty() {
@@ -114,20 +120,16 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     "wearables",
                     wearables
                         .iter()
-                        .map(GodotString::from)
-                        .collect::<Array<GodotString>>()
+                        .map(GString::from)
+                        .collect::<Array<GString>>()
                         .to_variant(),
                 );
 
                 // dictionary.set("emotes", emotes);
-                dictionary.set(
-                    "base_url",
-                    GodotString::from("https://peer.decentraland.org/content/").to_variant(),
-                );
 
                 if let Some(mut avatar_node) = existing {
                     avatar_node.call_deferred(
-                        StringName::from(GodotString::from("update_avatar")),
+                        StringName::from(GString::from("async_update_avatar")),
                         &[dictionary.to_variant()],
                     );
                 } else {
@@ -139,11 +141,11 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                     new_avatar_shape.set(StringName::from("skip_process"), Variant::from(true));
 
-                    new_avatar_shape.set_name(GodotString::from("AvatarShape"));
+                    new_avatar_shape.set_name(GString::from("AvatarShape"));
                     node_3d.add_child(new_avatar_shape.clone().upcast());
 
                     new_avatar_shape.call_deferred(
-                        StringName::from(GodotString::from("update_avatar")),
+                        StringName::from(GString::from("async_update_avatar")),
                         &[dictionary.to_variant()],
                     );
                 }

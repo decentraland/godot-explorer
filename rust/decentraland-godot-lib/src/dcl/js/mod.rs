@@ -1,12 +1,18 @@
 pub mod engine;
+pub mod ethereum_controller;
+pub mod events;
 pub mod fetch;
+pub mod players;
 pub mod portables;
 pub mod restricted_actions;
 pub mod runtime;
+pub mod testing;
 pub mod websocket;
 
-use crate::common::rpc::RpcCalls;
-use crate::wallet::Wallet;
+use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
+use crate::auth::ethereum_provider::EthereumProvider;
+use crate::content::content_mapping::ContentMappingAndUrlRef;
+use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
@@ -17,6 +23,8 @@ use super::{RendererResponse, SceneId, SceneResponse};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use std::time::Duration;
 
 use deno_core::error::JsError;
@@ -26,6 +34,7 @@ use deno_core::{
     include_js_files, op, v8, Extension, Op, OpState, RuntimeOptions,
 };
 use once_cell::sync::Lazy;
+use serde::Serialize;
 use v8::IsolateHandle;
 
 struct SceneJsFileContent(pub String);
@@ -35,7 +44,6 @@ pub struct SceneStartTime(pub std::time::SystemTime);
 pub struct SceneLogs(pub Vec<SceneLogMessage>);
 pub struct SceneMainCrdt(pub Option<Vec<u8>>);
 pub struct SceneTickCounter(pub u32);
-pub struct SceneContentMapping(pub String, pub HashMap<String, String>);
 pub struct SceneDying(pub bool);
 
 pub struct SceneElapsedTime(pub f32);
@@ -56,19 +64,33 @@ pub struct SceneLogMessage {
 pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
     Lazy::new(Default::default);
 
+static SCENE_LOG_ENABLED: AtomicBool = AtomicBool::new(false);
+
+pub fn set_scene_log_enabled(enabled: bool) {
+    SCENE_LOG_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn is_scene_log_enabled() -> bool {
+    SCENE_LOG_ENABLED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 pub fn create_runtime() -> deno_core::JsRuntime {
     let mut ext = &mut Extension::builder_with_deps("decentraland", &[]);
 
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 6] = [
+    let op_sets: [Vec<deno_core::OpDecl>; 10] = [
         engine::ops(),
         runtime::ops(),
         fetch::ops(),
         websocket::ops(),
         restricted_actions::ops(),
         portables::ops(),
+        players::ops(),
+        events::ops(),
+        testing::ops(),
+        ethereum_controller::ops(),
     ];
 
     let mut op_map = HashMap::new();
@@ -110,12 +132,13 @@ pub fn create_runtime() -> deno_core::JsRuntime {
 pub(crate) fn scene_thread(
     scene_id: SceneId,
     scene_definition: SceneDefinition,
-    content_mapping: HashMap<String, String>,
-    base_url: String,
+    content_mapping: ContentMappingAndUrlRef,
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
     scene_crdt: SharedSceneCrdtState,
-    wallet: Wallet,
+    testing_mode: bool,
+    ethereum_provider: Arc<EthereumProvider>,
+    ephemeral_wallet: Option<EphemeralAuthChain>,
 ) {
     let mut scene_main_crdt = None;
     let main_crdt_file_path = scene_definition.main_crdt_path;
@@ -123,7 +146,7 @@ pub(crate) fn scene_thread(
     // on main.crdt detected
     if !main_crdt_file_path.is_empty() {
         let file = godot::engine::FileAccess::open(
-            godot::prelude::GodotString::from(main_crdt_file_path),
+            godot::prelude::GString::from(main_crdt_file_path),
             godot::engine::file_access::ModeFlags::READ,
         );
 
@@ -142,7 +165,7 @@ pub(crate) fn scene_thread(
                     dirty,
                     Vec::new(),
                     0.0,
-                    RpcCalls::default(),
+                    Vec::new(),
                 ))
                 .expect("error sending scene response!!");
 
@@ -152,7 +175,7 @@ pub(crate) fn scene_thread(
 
     let scene_file_path = scene_definition.path;
     let file = godot::engine::FileAccess::open(
-        godot::prelude::GodotString::from(scene_file_path.clone()),
+        godot::prelude::GString::from(scene_file_path.clone()),
         godot::engine::file_access::ModeFlags::READ,
     );
 
@@ -181,21 +204,27 @@ pub(crate) fn scene_thread(
 
     state.borrow_mut().put(thread_sender_to_main);
     state.borrow_mut().put(thread_receive_from_main);
+    state.borrow_mut().put(ethereum_provider);
 
     state.borrow_mut().put(scene_id);
     state.borrow_mut().put(scene_crdt);
 
-    state.borrow_mut().put(wallet);
+    state.borrow_mut().put(ephemeral_wallet);
 
-    state.borrow_mut().put(RpcCalls::default());
+    state.borrow_mut().put(Vec::<RpcCall>::new());
+    state.borrow_mut().put(Vec::<LocalCall>::new());
+
+    // TODO: receive from main thread, and managed by command line params
+    state.borrow_mut().put(SceneEnv {
+        enable_know_env: testing_mode,
+        testing_enable: testing_mode,
+    });
 
     if let Some(scene_main_crdt) = scene_main_crdt {
         state.borrow_mut().put(scene_main_crdt);
     }
 
-    state
-        .borrow_mut()
-        .put(SceneContentMapping(base_url, content_mapping));
+    state.borrow_mut().put(content_mapping);
 
     state.borrow_mut().put(SceneLogs(Vec::new()));
     state.borrow_mut().put(SceneElapsedTime(0.0));
@@ -204,7 +233,18 @@ pub(crate) fn scene_thread(
         .borrow_mut()
         .put(SceneStartTime(std::time::SystemTime::now()));
 
-    let script = runtime.execute_script("<loader>", ascii_str!("require (\"~scene.js\")"));
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .enable_io()
+        .build()
+        .unwrap();
+
+    let script = rt.block_on(async {
+        runtime.execute_script(
+            "<loader>",
+            ascii_str!("const env = require('env');globalThis.DEBUG=true;require (\"~scene.js\")"),
+        )
+    });
 
     let script = match script {
         Err(e) => {
@@ -213,12 +253,6 @@ pub(crate) fn scene_thread(
         }
         Ok(script) => script,
     };
-
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_time()
-        .enable_io()
-        .build()
-        .unwrap();
 
     let result =
         rt.block_on(async { run_script(&mut runtime, &script, "onStart", |_| Vec::new()).await });
@@ -278,10 +312,7 @@ pub(crate) fn scene_thread(
     let mut op_state = state.borrow_mut();
     let logs = op_state.take::<SceneLogs>();
     let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
-    sender
-        .send(SceneResponse::RemoveGodotScene(scene_id, logs.0))
-        .expect("error sending scene response!!");
-
+    let _ = sender.send(SceneResponse::RemoveGodotScene(scene_id, logs.0));
     runtime.v8_isolate().terminate_execution();
 
     tracing::info!("exiting from the thread {:?}", scene_id);
@@ -341,12 +372,12 @@ async fn run_script(
 // synchronously returns a string containing JS code from the file system
 #[op(v8)]
 fn op_require(
-    state: Rc<RefCell<OpState>>,
+    state: &mut OpState,
     module_spec: String,
 ) -> Result<String, deno_core::error::AnyError> {
     match module_spec.as_str() {
         // user module load
-        "~scene.js" => Ok(state.borrow_mut().take::<SceneJsFileContent>().0),
+        "~scene.js" => Ok(state.take::<SceneJsFileContent>().0),
         // core module load
         "~system/CommunicationsController" => {
             Ok(include_str!("js_modules/CommunicationsController.js").to_owned())
@@ -371,6 +402,8 @@ fn op_require(
         "~system/Testing" => Ok(include_str!("js_modules/Testing.js").to_owned()),
         "~system/UserActionModule" => Ok(include_str!("js_modules/UserActionModule.js").to_owned()),
         "~system/UserIdentity" => Ok(include_str!("js_modules/UserIdentity.js").to_owned()),
+        "~system/CommsApi" => Ok(include_str!("js_modules/CommsApi.js").to_owned()),
+        "env" => Ok(get_env_for_scene(state)),
         _ => Err(generic_error(format!(
             "invalid module request `{module_spec}`"
         ))),
@@ -379,6 +412,10 @@ fn op_require(
 
 #[op(v8)]
 fn op_log(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
+    if !is_scene_log_enabled() {
+        return;
+    }
+
     if immediate {
         tracing::info!("{}", message);
     }
@@ -398,6 +435,10 @@ fn op_log(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
 
 #[op(v8)]
 fn op_error(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
+    if !is_scene_log_enabled() {
+        return;
+    }
+
     if immediate {
         tracing::error!("{}", message);
     }
@@ -413,4 +454,20 @@ fn op_error(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
             level: SceneLogLevel::SceneError,
             message,
         })
+}
+
+#[derive(Serialize)]
+pub struct SceneEnv {
+    pub enable_know_env: bool,
+    pub testing_enable: bool,
+}
+
+fn get_env_for_scene(state: &mut OpState) -> String {
+    let scene_env = state.borrow::<SceneEnv>();
+    if scene_env.enable_know_env {
+        let scene_env_json = serde_json::to_string(scene_env).unwrap();
+        format!("module.exports = {}", scene_env_json)
+    } else {
+        "module.exports = {}".to_owned()
+    }
 }

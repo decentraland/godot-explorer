@@ -8,6 +8,14 @@ signal is_holded(bool)
 
 # EXPORTED VARIABLE
 
+## The joystick doesn't move.  ## Every time the joystick area is pressed,
+## the joystick position is set on the touched position.
+enum JoystickMode { FIXED, DYNAMIC }
+
+## Always visible
+## Visible on touch screens only
+enum VisibilityMode { ALWAYS, TOUCHSCREEN_ONLY }
+
 ## The color of the button when the joystick is pressed.
 @export var pressed_color := Color.GRAY
 
@@ -17,15 +25,12 @@ signal is_holded(bool)
 ## The max distance the tip can reach.
 @export_range(0, 500, 1) var clampzone_size: float = 75
 
-enum Joystick_mode { FIXED, DYNAMIC }  ## The joystick doesn't move.  ## Every time the joystick area is pressed, the joystick position is set on the touched position.
-
-## If the joystick stays in the same position or appears on the touched position when touch is started
-@export var joystick_mode := Joystick_mode.FIXED
-
-enum Visibility_mode { ALWAYS, TOUCHSCREEN_ONLY }  ## Always visible  ## Visible on touch screens only
+## If the joystick stays in the same position or appears on the touched
+## position when touch is started
+@export var joystick_mode := JoystickMode.FIXED
 
 ## If the joystick is always visible, or is shown only if there is a touchscreen
-@export var visibility_mode := Visibility_mode.ALWAYS
+@export var visibility_mode := VisibilityMode.ALWAYS
 
 ## If true, the joystick uses Input Actions (Project -> Project Settings -> Input Map)
 @export var use_input_actions := true
@@ -63,7 +68,7 @@ var _touch_index: int = -1
 func _ready() -> void:
 	if (
 		not DisplayServer.is_touchscreen_available()
-		and visibility_mode == Visibility_mode.TOUCHSCREEN_ONLY
+		and visibility_mode == VisibilityMode.TOUCHSCREEN_ONLY
 	):
 		hide()
 
@@ -74,13 +79,13 @@ func _input(event: InputEvent) -> void:
 			if event.pressed:
 				if _is_point_inside_joystick_area(event.position) and _touch_index == -1:
 					if (
-						joystick_mode == Joystick_mode.DYNAMIC
+						joystick_mode == JoystickMode.DYNAMIC
 						or (
-							joystick_mode == Joystick_mode.FIXED
+							joystick_mode == JoystickMode.FIXED
 							and _is_point_inside_base(event.position)
 						)
 					):
-						if joystick_mode == Joystick_mode.DYNAMIC:
+						if joystick_mode == JoystickMode.DYNAMIC:
 							_move_base(event.position)
 						_touch_index = event.index
 						_tip.modulate = pressed_color
@@ -131,8 +136,8 @@ func _is_point_inside_base(point: Vector2) -> bool:
 	var vector: Vector2 = point - center
 	if vector.length_squared() <= _base_radius.x * _base_radius.x:
 		return true
-	else:
-		return false
+
+	return false
 
 
 func _update_joystick(touch_position: Vector2) -> void:

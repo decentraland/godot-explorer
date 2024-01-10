@@ -8,8 +8,8 @@ radius = 0.25
 height = 1.5
 
 [node name="camera_mode_area_detector" type="Area3D"]
-collision_layer = 256
-collision_mask = 256
+collision_layer = 2147483648
+collision_mask = 2147483648
 input_ray_pickable = false
 monitorable = false
 script = ExtResource("1_wchgk")

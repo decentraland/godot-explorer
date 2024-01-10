@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://carcf0ubjo75q"]
+
+[ext_resource type="ArrayMesh" uid="uid://l1kcdeum0700" path="res://assets/empty-scenes/EP_7_Visual.res" id="1_8m7fl"]
+[ext_resource type="Shape3D" uid="uid://dr0g2rk68hnhj" path="res://assets/empty-scenes/EP_7_col.res" id="2_wfbiy"]
+
+[node name="EP_7" type="Node3D"]
+
+[node name="EP_7_Visual" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.25745, 5.16703, -1.56218)
+mesh = ExtResource("1_8m7fl")
+skeleton = NodePath("")
+
+[node name="EP_7_StaticBody" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.25745, 5.16703, -1.56218)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EP_7_StaticBody"]
+shape = ExtResource("2_wfbiy")

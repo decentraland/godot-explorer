@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://decs8rg0sccrx"]
-
-[ext_resource type="Script" path="res://src/helpers_components/on_active_scene.gd" id="1_j0y6u"]
-
-[node name="OnActiveScene" type="Node3D"]
-script = ExtResource("1_j0y6u")

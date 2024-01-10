@@ -39,9 +39,14 @@ pub fn update_deleted_entities(scene: &mut Scene) {
         scene.audio_sources.remove(deleted_entity);
         scene.audio_streams.remove(deleted_entity);
         scene.video_players.remove(deleted_entity);
+        scene.dup_animator.remove(deleted_entity);
+        scene.gltf_loading.remove(deleted_entity);
+        scene.continuos_raycast.remove(deleted_entity);
 
-        // TODO: clean continuos_raycast
-        // TODO: clean gltf_loading
-        // TODO: clean pointer_events_result
+        scene.pointer_events_result = scene
+            .pointer_events_result
+            .drain(..)
+            .filter(|(entity, _)| entity != deleted_entity)
+            .collect();
     }
 }

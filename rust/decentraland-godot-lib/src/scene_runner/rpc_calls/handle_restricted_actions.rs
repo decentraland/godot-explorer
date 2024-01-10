@@ -1,6 +1,5 @@
 use crate::{
-    common::rpc::RpcResultSender,
-    dcl::SceneId,
+    dcl::{scene_apis::RpcResultSender, SceneId},
     godot_classes::dcl_confirm_dialog::DclConfirmDialog,
     scene_runner::{
         global_get_node_helper::{
@@ -10,14 +9,34 @@ use crate::{
     },
 };
 
-use godot::prelude::{GodotString, PackedScene, Variant, Vector2i, Vector3};
+use godot::{
+    builtin::meta::ToGodot,
+    prelude::{GString, PackedScene, Variant, Vector2i, Vector3},
+};
+use http::Uri;
+
+fn _player_is_inside_scene(scene: &Scene, current_parcel_scene_id: &SceneId) -> bool {
+    // Check if player is inside the scene that requested the move
+    if let SceneType::Parcel = scene.scene_type {
+        &scene.scene_id == current_parcel_scene_id
+    } else {
+        true
+    }
+}
 
 pub fn change_realm(
     scene: &Scene,
+    current_parcel_scene_id: &SceneId,
     to: &str,
     message: &Option<String>,
     response: &RpcResultSender<Result<(), String>>,
 ) {
+    // Check if player is inside the scene that requested the move
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+        response.send(Err("Primary Player is outside the scene".to_string()));
+        return;
+    }
+
     // Get nodes
     let mut dialog_stack = get_dialog_stack_node(scene);
 
@@ -46,7 +65,7 @@ pub fn change_realm(
     );
 
     // clone data that is going to the callback
-    let to = GodotString::from(to);
+    let to = GString::from(to);
     let response = response.clone();
 
     confirm_dialog.setup(
@@ -56,7 +75,7 @@ pub fn change_realm(
         "No thanks",
         move |ok| {
             if ok {
-                realm_node.call("set_realm".into(), &[Variant::from(to)]);
+                realm_node.call("async_set_realm".into(), &[Variant::from(to)]);
                 response.send(Ok(()));
             } else {
                 response.send(Err("User rejected to change realm".to_string()));
@@ -65,13 +84,85 @@ pub fn change_realm(
     );
 }
 
-fn _player_is_inside_scene(scene: &Scene, current_parcel_scene_id: &SceneId) -> bool {
+pub fn open_external_url(
+    scene: &Scene,
+    current_parcel_scene_id: &SceneId,
+    url: &Uri,
+    response: &RpcResultSender<Result<(), String>>,
+) {
     // Check if player is inside the scene that requested the move
-    if let SceneType::Parcel = scene.scene_type {
-        &scene.scene_id == current_parcel_scene_id
-    } else {
-        true
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+        response.send(Err("Primary Player is outside the scene".to_string()));
+        return;
     }
+
+    // Get nodes
+    let mut dialog_stack = get_dialog_stack_node(scene);
+
+    let confirm_dialog =
+        godot::engine::load::<PackedScene>("res://src/ui/dialogs/confirm_dialog.tscn")
+            .instantiate()
+            .expect("ConfirmDialog instantiate error");
+
+    // Setup confirm dialog
+    dialog_stack.add_child(confirm_dialog.clone());
+
+    // Setup confirm Dialog
+    let mut confirm_dialog = confirm_dialog.cast::<DclConfirmDialog>();
+    let mut confirm_dialog = confirm_dialog.bind_mut();
+
+    let description = format!(
+        "You are about to open a link from the community. External links can be unsafe and lead to unverified content. Proceed with caution.
+        Do you still want to open the URL?\n\nURL:\n {}",
+        url
+    );
+
+    // clone data that is going to the callback
+    let response = response.clone();
+    let godot_url = GString::from(url.to_string());
+
+    confirm_dialog.setup(
+        "Open External URL",
+        description.as_str(),
+        "Open Url",
+        "No thanks",
+        move |ok| {
+            if ok {
+                godot::engine::Os::singleton().shell_open(godot_url);
+                response.send(Ok(()));
+            } else {
+                response.send(Err("User rejected to open the url".to_string()));
+            }
+        },
+    );
+}
+
+pub fn open_nft_dialog(
+    scene: &Scene,
+    current_parcel_scene_id: &SceneId,
+    urn: &str,
+    response: &RpcResultSender<Result<(), String>>,
+) {
+    // Check if player is inside the scene that requested the move
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+        response.send(Err("Primary Player is outside the scene".to_string()));
+        return;
+    }
+
+    // Get nodes
+    let mut dialog_stack = get_dialog_stack_node(scene);
+
+    let mut confirm_dialog =
+        godot::engine::load::<PackedScene>("res://src/ui/dialogs/nft_dialog.tscn")
+            .instantiate()
+            .expect("NftDialog instantiate error");
+
+    // Setup confirm dialog
+    dialog_stack.add_child(confirm_dialog.clone());
+
+    confirm_dialog.call("async_load_nft".into(), &[urn.to_variant()]);
+
+    response.send(Ok(()));
 }
 
 // Allows to move a player inside the scene
@@ -84,7 +175,7 @@ pub fn move_player_to(
 ) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
-        response.send(Err("Player position is outside the scene".to_string()));
+        response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
 
@@ -137,7 +228,7 @@ pub fn teleport_to(
 ) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
-        response.send(Err("Player position is outside the scene".to_string()));
+        response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
 
@@ -192,7 +283,7 @@ pub fn trigger_emote(
 ) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
-        response.send(Err("Player position is outside the scene".to_string()));
+        response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
 
@@ -210,7 +301,7 @@ pub fn trigger_scene_emote(
 ) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
-        response.send(Err("Player position is outside the scene".to_string()));
+        response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
 

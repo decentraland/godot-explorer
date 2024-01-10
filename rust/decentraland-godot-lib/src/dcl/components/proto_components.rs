@@ -36,6 +36,16 @@ pub mod common {
             godot::prelude::Color::from_rgba(self.r, self.g, self.b, self.a)
         }
 
+        pub fn to_color_string(&self) -> String {
+            format!(
+                "#{:02x}{:02x}{:02x}{:02x}",
+                (self.r * 255.0) as u8,
+                (self.g * 255.0) as u8,
+                (self.b * 255.0) as u8,
+                (self.a * 255.0) as u8
+            )
+        }
+
         pub fn multiply(&mut self, factor: f32) -> Self {
             Self {
                 r: self.r * factor,
@@ -65,12 +75,45 @@ pub mod common {
             godot::prelude::Color::from_rgba(self.r, self.g, self.b, 1.0)
         }
 
+        pub fn to_color_string(&self) -> String {
+            format!(
+                "#{:02x}{:02x}{:02x}",
+                (self.r * 255.0) as u8,
+                (self.g * 255.0) as u8,
+                (self.b * 255.0) as u8
+            )
+        }
+
         pub fn multiply(&mut self, factor: f32) -> Self {
             Self {
                 r: self.r * factor,
                 g: self.g * factor,
                 b: self.b * factor,
             }
+        }
+    }
+
+    impl Vector3 {
+        pub fn to_godot(&self) -> godot::prelude::Vector3 {
+            godot::prelude::Vector3::new(self.x, self.y, self.z)
+        }
+    }
+
+    impl Position {
+        pub fn to_godot(&self) -> godot::prelude::Vector3 {
+            godot::prelude::Vector3::new(self.x, self.y, self.z)
+        }
+    }
+
+    impl Vector2 {
+        pub fn to_godot(&self) -> godot::prelude::Vector2 {
+            godot::prelude::Vector2::new(self.x, self.y)
+        }
+    }
+
+    impl Quaternion {
+        pub fn to_godot(&self) -> godot::prelude::Quaternion {
+            godot::prelude::Quaternion::new(self.x, self.y, self.z, self.w)
         }
     }
 }

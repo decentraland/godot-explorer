@@ -1,5 +1,5 @@
-extends DclPortableExperienceController
 class_name PortableExperienceController
+extends DclPortableExperienceController
 
 var desired_portable_experiences: Array[String] = []
 var killing_ids: Array[String] = []
@@ -15,7 +15,7 @@ func _ready():
 	Global.scene_runner.scene_spawned.connect(self._on_scene_spawned)
 
 
-func _process(delta):
+func _process(_delta):
 	var to_spawn := self.consume_requested_spawn()
 	if not to_spawn.is_empty():
 		spawn_many_portables(to_spawn)
@@ -27,7 +27,7 @@ func _process(delta):
 
 func spawn_many_portables(pids: Array[String]) -> void:
 	for pid in pids:
-		spawn_portable_experience(pid)
+		async_spawn_portable_experience(pid)
 
 
 func kill_many_portables(pids: Array[String]) -> void:
@@ -40,12 +40,12 @@ func get_world_urn(ens: String):
 		return world_to_urn.get(ens)
 
 
-func spawn_portable_experience(pid: String) -> void:
+func async_spawn_portable_experience(pid: String) -> void:
 	if Realm.is_dcl_ens(pid):
 		var world_ens = pid
 		if not world_to_urn.has(world_ens):
 			var world_realm = Realm.new()
-			world_realm.set_realm(pid)
+			world_realm.async_set_realm(pid)
 
 			add_child(world_realm)
 			await world_realm.realm_changed

@@ -1,4 +1,6 @@
+
 # Decentraland Godot Rust
+[![codecov](https://codecov.io/gh/decentraland/godot-explorer/branch/main/graph/badge.svg)](https://codecov.io/gh/decentraland/godot-explorer)
 
 ## Set up project
 
@@ -26,9 +28,9 @@
 - With adding `-r` it builds the library in release mode. Note: the Godot executable is an editor, so it's a `release_debug` build, see the Target section [here](https://docs.godotengine.org/en/stable/contributing/development/compiling/introduction_to_the_buildsystem.html) for more infromation.
 - With adding `-e` it also builds the library, but the project edition is executed instead of the client.
 
-## GDScript formatting
+## Contributing
 
-When GD files are modified, they must be well-formated. You can autoformat all files running `gdformat godot/` (it requires [godot-gdscript-toolkit](https://github.com/Scony/godot-gdscript-toolkit) installed)
+More details on [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Debugging the library
 This repo is set up to be opened with Visual Studio Code. In the section `Run and Debug` in the Activity bar, you can find the configuration for your platform.
@@ -39,3 +41,6 @@ This repo is set up to be opened with Visual Studio Code. In the section `Run an
 
 # Mobile targets
 See `rust/decentraland-godot-lib/builds.md`
+
+Powered by the Decentraland DAO
+![Decentraland DAO logo](https://bafkreibci6gg3wbjvxzlqpuh353upzrssalqqoddb6c4rez33bcagqsc2a.ipfs.nftstorage.link/)

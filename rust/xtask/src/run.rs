@@ -1,7 +1,11 @@
-use std::io::{BufRead, BufReader};
+use std::{
+    collections::HashMap,
+    io::{BufRead, BufReader},
+};
 
 use crate::{
     consts::{BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    copy_files::copy_library,
     install_dependency,
     path::adjust_canonicalization,
 };
@@ -11,7 +15,16 @@ pub fn run(
     release_mode: bool,
     itest: bool,
     only_build: bool,
+    link_libs: bool,
+    scene_tests: bool,
+    extras: Vec<String>,
+    with_build_envs: Option<HashMap<String, String>>,
 ) -> Result<(), anyhow::Error> {
+    let with_build_envs = match with_build_envs {
+        Some(vars) => vars,
+        None => HashMap::new(),
+    };
+
     let program = adjust_canonicalization(
         std::fs::canonicalize(format!(
             "{}godot/{}",
@@ -20,6 +33,8 @@ pub fn run(
         ))
         .expect("Did you executed `cargo run -- install`?"),
     );
+
+    println!("extras: {:?}", extras);
 
     std::env::set_var("GODOT4_BIN", program.clone());
 
@@ -42,6 +57,7 @@ pub fn run(
     let build_status = std::process::Command::new("cargo")
         .current_dir(build_cwd)
         .args(build_args)
+        .envs(with_build_envs)
         .status()
         .expect("Failed to run Godot");
 
@@ -52,7 +68,7 @@ pub fn run(
         ));
     }
 
-    match install_dependency::copy_library(!release_mode) {
+    match copy_library(!release_mode, link_libs) {
         Ok(_) => Ok(()),
         Err(e) => Err(anyhow::anyhow!("copy the library failed: {}", e)),
     }?;
@@ -67,7 +83,13 @@ pub fn run(
         args.push("--test");
     }
 
-    if itest {
+    if extras.len() > 0 {
+        for extra in &extras {
+            args.push(extra.as_str());
+        }
+    }
+
+    if itest || scene_tests {
         let program = std::process::Command::new(program.as_str())
             .args(&args)
             .stdout(std::process::Stdio::piped())
@@ -83,10 +105,22 @@ pub fn run(
             println!("{}", line);
 
             // You can check if the line contains the desired string
-            if line.contains("test-exiting with code ") {
-                test_ok.0 = true;
-                test_ok.1 = line.contains("test-exiting with code 0");
-                test_ok.2 = line;
+            if scene_tests {
+                if line.contains("All test of all scene passed") {
+                    test_ok.0 = true;
+                    test_ok.1 = true;
+                    test_ok.2 = line;
+                } else if line.contains("Some tests fail or some scenes couldn't be tested") {
+                    test_ok.0 = true;
+                    test_ok.1 = false;
+                    test_ok.2 = line;
+                }
+            } else {
+                if line.contains("test-exiting with code ") {
+                    test_ok.0 = true;
+                    test_ok.1 = line.contains("test-exiting with code 0");
+                    test_ok.2 = line;
+                }
             }
         }
 
@@ -100,6 +134,7 @@ pub fn run(
             Err(anyhow::anyhow!("test not run"))
         }
     } else {
+        println!("Running Godot with args: {:?}", args);
         let status = std::process::Command::new(program.as_str())
             .args(&args)
             .status()

@@ -1,6 +1,21 @@
 extends Node
 
-@onready var ui_root = $UI
+var sign_in_resource = preload("res://src/ui/components/auth/sign_in.tscn")
+
+var parcel_position: Vector2i
+var parcel_position_real: Vector2
+var panel_bottom_left_height: int = 0
+var dirty_save_position: bool = false
+
+var last_position_sent: Vector3 = Vector3.ZERO
+var counter: int = 0
+
+var debug_panel = null
+
+var last_index_scene_ui_root: int = -1
+var _last_parcel_position: Vector2i
+
+@onready var ui_root: Control = $UI
 
 @onready var label_crosshair = $UI/Label_Crosshair
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
@@ -15,12 +30,7 @@ extends Node
 @onready var mobile_ui = $UI/MobileUI
 @onready var v_box_container_chat = $UI/VBoxContainer_Chat
 @onready var button_jump = $UI/Button_Jump
-
-var parcel_position: Vector2i
-var _last_parcel_position: Vector2i
-var parcel_position_real: Vector2
-var panel_bottom_left_height: int = 0
-var dirty_save_position: bool = false
+@onready var line_edit_command = $UI/LineEdit_Command
 
 
 func _process(_dt):
@@ -40,7 +50,32 @@ func _on_parcels_procesed(parcels, empty):
 	control_menu.control_map.control_map_shader.set_used_parcels(parcels, empty)
 
 
+# TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
+func get_params_from_cmd():
+	var args := OS.get_cmdline_args()
+	var realm_string = null
+	var location_vector = null
+	var realm_in_place := args.find("--realm")
+	var location_in_place := args.find("--location")
+
+	if realm_in_place != -1 and args.size() > realm_in_place + 1:
+		realm_string = args[realm_in_place + 1]
+
+	if location_in_place != -1 and args.size() > location_in_place + 1:
+		location_vector = args[location_in_place + 1]
+		location_vector = location_vector.split(",")
+		if location_vector.size() == 2:
+			location_vector = Vector2i(int(location_vector[0]), int(location_vector[1]))
+		else:
+			location_vector = null
+	return [realm_string, location_vector]
+
+
 func _ready():
+	var cmd_params = get_params_from_cmd()
+	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
+	var cmd_location = cmd_params[1]
+
 	if Global.is_mobile:
 		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_BEGIN
 		mobile_ui.show()
@@ -51,19 +86,29 @@ func _ready():
 		button_jump.hide()
 
 	var sky = null
-	match Global.config.skybox:
-		0:
-			sky = load("res://assets/sky/sky_basic.tscn").instantiate()
-		1:
-			sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
-			sky.day_time = 14.9859
+	if Global.is_mobile:
+		sky = load("res://assets/sky/sky_basic_without_glow.tscn").instantiate()
+		add_child(sky)
+	elif Global.testing_scene_mode:
+		sky = load("res://assets/sky/sky_test.tscn").instantiate()
+		add_child(sky)
+	else:
+		match Global.config.skybox:
+			0:
+				sky = load("res://assets/sky/sky_basic.tscn").instantiate()
+			1:
+				sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
+				sky.day_time = 14.9859
 
-	add_child(sky)
-	if Global.config.skybox == 1:
-		sky.day_time = 10
+		add_child(sky)
+		if Global.config.skybox == 1:
+			sky.day_time = 10
 
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)
+	if cmd_location != null:
+		start_parcel_position = cmd_location
+
 	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
@@ -76,16 +121,52 @@ func _ready():
 
 	Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
 
-	if Global.config.last_realm_joined.is_empty():
-		Global.realm.set_realm("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main")
+	if cmd_realm != null:
+		Global.realm.async_set_realm(cmd_realm)
 	else:
-		Global.realm.set_realm(Global.config.last_realm_joined)
+		if Global.config.last_realm_joined.is_empty():
+			Global.realm.async_set_realm(
+				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+			)
+		else:
+			Global.realm.async_set_realm(Global.config.last_realm_joined)
 
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
-	control_menu.control_advance_settings.preview_hot_reload.connect(
-		self._on_panel_bottom_left_preview_hot_reload
-	)
+	control_menu.preview_hot_reload.connect(self._on_panel_bottom_left_preview_hot_reload)
+
+	Global.player_identity.logout.connect(self._on_player_logout)
+	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
+	Global.player_identity.need_open_url.connect(self._on_need_open_url)
+
+	if Global.testing_scene_mode:
+		Global.player_identity.create_guest_account()
+	elif not Global.player_identity.try_recover_account(Global.config.session_account):
+		Global.scene_runner.set_pause(true)
+		ui_root.add_child(sign_in_resource.instantiate())
+
+	# last
+	ui_root.grab_focus.call_deferred()
+
+
+func _on_need_open_url(url: String, _description: String) -> void:
+	if not Global.player_identity.get_address_str().is_empty():
+		if Global.dcl_android_plugin != null:
+			Global.dcl_android_plugin.showDecentralandMobileToast()
+			Global.dcl_android_plugin.openUrl(url)
+		else:
+			OS.shell_open(url)
+
+
+func _on_player_logout():
+	# TODO: clean all UI ?
+	control_menu.close()
+
+	# Clean stored session
+	Global.config.session_account = {}
+	Global.config.save_to_settings_file()
+
+	ui_root.add_child(sign_in_resource.instantiate())
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -95,7 +176,8 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	var title: String = Global.scene_runner.get_scene_title(scene_id)
 	title += str(Global.scene_runner.get_scene_base_parcel(scene_id))
-	control_menu.control_advance_settings._on_console_add(title, level, timestamp, text)
+	if is_instance_valid(debug_panel):
+		debug_panel.on_console_add(title, level, timestamp, text)
 
 
 func _on_pointer_tooltip_changed():
@@ -114,35 +196,28 @@ func _on_check_button_toggled(button_pressed):
 	Global.scene_runner.set_pause(button_pressed)
 
 
-@onready var line_edit_command = $UI/LineEdit_Command
-
-
 func _unhandled_input(event):
 	if not Global.is_mobile:
 		if event is InputEventMouseButton and event.pressed:
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-				label_crosshair.show()
+				capture_mouse()
 
-		if event is InputEventKey:
+		if event is InputEventKey and ui_root.has_focus():
 			if event.pressed and event.keycode == KEY_TAB:
 				if not control_menu.visible:
 					control_menu.show_last()
-					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-					label_crosshair.hide()
+					release_mouse()
 
 			if event.pressed and event.keycode == KEY_M:
 				if control_menu.visible:
 					pass
 				else:
 					control_menu.show_map()
-					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-					label_crosshair.hide()
+					release_mouse()
 
 			if event.pressed and event.keycode == KEY_ESCAPE:
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-					Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-					label_crosshair.hide()
+					release_mouse()
 
 				line_edit_command.finish()
 
@@ -160,8 +235,7 @@ func _toggle_ram_usage(visibility: bool):
 func _on_control_minimap_request_open_map():
 	if !control_menu.visible:
 		control_menu.show_map()
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-		label_crosshair.hide()
+		release_mouse()
 
 
 func _on_control_menu_jump_to(parcel: Vector2i):
@@ -172,6 +246,7 @@ func _on_control_menu_jump_to(parcel: Vector2i):
 func _on_control_menu_hide_menu():
 	control_menu.close()
 	control_menu.control_map.clear()
+	ui_root.grab_focus()
 
 
 func _on_timer_timeout():
@@ -196,10 +271,6 @@ func _on_control_menu_toggle_minimap(visibility):
 
 func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	Global.scene_fetcher.reload_scene(scene_id)
-
-
-var last_position_sent: Vector3 = Vector3.ZERO
-var counter: int = 0
 
 
 func _on_timer_broadcast_position_timeout():
@@ -258,13 +329,17 @@ func _on_line_edit_command_submit_message(message: String):
 			panel_chat.add_chat_message(
 				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
 			)
-			Global.realm.set_realm(params[1])
+			Global.realm.async_set_realm(params[1])
+		elif command_str == "/reload":
+			Global.realm.async_set_realm(Global.realm.get_realm_string())
 		else:
 			pass
 			# TODO: unknown command
 	else:
 		Global.comms.send_chat(message)
-		panel_chat._on_chats_arrived([["Godot User", 0, message]])
+		panel_chat.on_chats_arrived(
+			[[player.avatar.avatar_id, player.avatar.avatar_name, 0, message]]
+		)
 
 
 func _on_control_menu_request_pause_scenes(enabled):
@@ -286,3 +361,43 @@ func teleport_to(parcel: Vector2i):
 
 func player_look_at(look_at_position: Vector3):
 	player.avatar_look_at(look_at_position)
+
+
+func capture_mouse():
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	label_crosshair.show()
+	ui_root.grab_focus.call_deferred()
+
+
+func release_mouse():
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	label_crosshair.hide()
+
+
+func set_visible_ui(value: bool):
+	if value == ui_root.visible:
+		return
+
+	if value:
+		ui_root.show()
+		var ui_node = ui_root.get_parent().get_node("scenes_ui")
+		ui_node.reparent(ui_root)
+	else:
+		ui_root.hide()
+		var ui_node = ui_root.get_node("scenes_ui")
+		ui_node.reparent(ui_root.get_parent())
+
+
+func _on_control_menu_request_debug_panel(enabled):
+	if enabled:
+		if not is_instance_valid(debug_panel):
+			debug_panel = load("res://src/ui/components/debug_panel/debug_panel.tscn").instantiate()
+			ui_root.add_child(debug_panel)
+			ui_root.move_child(debug_panel, control_menu.get_index() - 1)
+	else:
+		if is_instance_valid(debug_panel):
+			ui_root.remove_child(debug_panel)
+			debug_panel.queue_free()
+			debug_panel = null
+
+	Global.set_scene_log_enabled(enabled)

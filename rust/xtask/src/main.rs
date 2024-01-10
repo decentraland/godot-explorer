@@ -1,4 +1,4 @@
-use std::fs::create_dir_all;
+use std::{collections::HashMap, fs::create_dir_all, path::Path};
 
 use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
@@ -7,6 +7,7 @@ use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 use crate::consts::RUST_LIB_PROJECT_FOLDER;
 
 mod consts;
+mod copy_files;
 mod download_file;
 mod export;
 mod install_dependency;
@@ -78,7 +79,13 @@ fn main() -> Result<(), anyhow::Error> {
                 .arg(
                     Arg::new("itest")
                         .long("itest")
-                        .help("run tests")
+                        .help("run integration-tests")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("stest")
+                        .long("stest")
+                        .help("run scene-tests")
                         .takes_value(false),
                 )
                 .arg(
@@ -86,6 +93,18 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("only-build")
                         .help("skip the run")
                         .takes_value(false),
+                )
+                .arg(
+                    Arg::new("link-libs")
+                        .short('l')
+                        .help("link libs instead of copying (only linux)")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("extras")
+                        .last(true)
+                        .allow_hyphen_values(true)
+                        .multiple(true),
                 ),
         );
     let matches = cli.get_matches();
@@ -107,6 +126,12 @@ fn main() -> Result<(), anyhow::Error> {
             sm.is_present("release"),
             sm.is_present("itest"),
             sm.is_present("only-build"),
+            sm.is_present("link-libs"),
+            sm.is_present("stest"),
+            sm.values_of("extras")
+                .map(|v| v.map(|it| it.into()).collect())
+                .unwrap_or_default(),
+            None,
         ),
         ("export", _m) => export::export(),
         ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),
@@ -136,26 +161,96 @@ fn main() -> Result<(), anyhow::Error> {
 }
 
 pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
+    remove_dir("../../snapshots")?;
+    create_dir_all("../../snapshots")?;
+
+    let snapshot_folder = Path::new("../../snapshots");
+    let snapshot_folder = snapshot_folder.canonicalize()?;
+
     remove_dir("../coverage")?;
     create_dir_all("../coverage")?;
 
     println!("=== running coverage ===");
-    cmd!("cargo", "test")
+    cmd!("cargo", "test", "--", "--skip", "auth")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
         .dir(RUST_LIB_PROJECT_FOLDER)
         .run()?;
 
-    cmd!("cargo", "run", "--", "run", "--itest")
-        .env("CARGO_INCREMENTAL", "0")
-        .env("RUSTFLAGS", "-Cinstrument-coverage")
-        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
-        .run()?;
+    let build_envs: HashMap<String, String> = [
+        ("CARGO_INCREMENTAL", "0"),
+        ("RUSTFLAGS", "-Cinstrument-coverage"),
+        ("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw"),
+    ]
+    .iter()
+    .map(|(k, v)| (k.to_string(), v.to_string()))
+    .collect();
+
+    run::run(
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        vec![],
+        Some(build_envs.clone()),
+    )?;
+
+    let scene_test_realm: &str =
+        "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests";
+    let scene_test_coords: Vec<[i32; 2]> = vec![
+        [52, -52], // raycast
+        [52, -54], // transform
+        [52, -56], // billboard
+        [52, -58], // camera-mode
+        [52, -60], // engine-info
+        [52, -62], // gltf-container
+        [52, -64], // visibility
+        [52, -66], // mesh-renderer
+        [52, -68], // avatar-attach
+        [54, -52], // material
+        [54, -54], // text-shape
+        // TODO: video events not working well
+        // [54, -56], // video-player 
+        [54, -58], // ui-background
+        [54, -60], // ui-text
+    ];
+    let scene_test_coords_str = serde_json::ser::to_string(&scene_test_coords)
+        .expect("failed to serialize scene_test_coords");
+
+    let extra_args = [
+        "--rendering-driver",
+        "opengl3",
+        "--scene-test",
+        scene_test_coords_str.as_str(),
+        "--realm",
+        scene_test_realm,
+        "--snapshot-folder",
+        snapshot_folder.to_str().unwrap(),
+    ]
+    .iter()
+    .map(|it| it.to_string())
+    .collect();
+
+    run::run(
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        extra_args,
+        Some(build_envs.clone()),
+    )?;
 
     let err = glob::glob("./../../godot/*.profraw")?
         .filter_map(|entry| entry.ok())
-        .map(|entry| cmd!("mv", entry, "./../decentraland-godot-lib/").run())
+        .map(|entry| {
+            println!("moving {:?} to ./../decentraland-godot-lib/", entry);
+            cmd!("mv", entry, "./../decentraland-godot-lib/").run()
+        })
         .any(|res| res.is_err());
 
     if err {

@@ -29,7 +29,7 @@ pub fn update_raycasts(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
     if let Some(raycast_dirty) = dirty_lww_components.get(&SceneComponentId::RAYCAST) {
         for entity in raycast_dirty {
-            let new_value = raycast_component.get(*entity);
+            let new_value = raycast_component.get(entity);
             if new_value.is_none() {
                 scene.continuos_raycast.remove(entity);
                 continue;
@@ -59,7 +59,7 @@ pub fn update_raycasts(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         let Some(entity_node) = scene.godot_dcl_scene.get_node_3d(entity) else {
             continue;
         };
-        let Some(raycast) = raycast_component.get(*entity) else {
+        let Some(raycast) = raycast_component.get(entity) else {
             continue;
         };
 
@@ -80,7 +80,7 @@ pub fn update_raycasts(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 }
 
 fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRaycastResult {
-    let tick_number = 0;
+    let tick_number = scene.tick_number;
     let query_type = match RaycastQueryType::from_i32(raycast.query_type) {
         Some(query_type) => {
             if query_type == RaycastQueryType::RqtNone {
@@ -95,12 +95,17 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
     };
 
     let scene_position = scene.godot_dcl_scene.root_node_3d.get_global_position();
-    let raycast_from = node_3d.get_global_position()
-        + if let Some(offset) = raycast.origin_offset.as_ref() {
-            Vector3::new(offset.x, offset.y, -offset.z)
-        } else {
-            Vector3::ZERO
-        };
+
+    let global_origin_offset = if let Some(offset) = raycast.origin_offset.as_ref() {
+        let transform = node_3d
+            .get_global_transform()
+            .translated_local(Vector3::new(offset.x, offset.y, -offset.z));
+        transform.origin
+    } else {
+        node_3d.get_global_position()
+    };
+
+    let raycast_from = global_origin_offset;
 
     let direction = match raycast.direction.as_ref() {
         Some(direction) => match direction {
@@ -253,7 +258,7 @@ fn get_raycast_hit(
         )
         .to::<i32>();
 
-    if dcl_scene_id != scene.scene_id.0 as i32 {
+    if dcl_scene_id != scene.scene_id.0 {
         return None;
     }
 

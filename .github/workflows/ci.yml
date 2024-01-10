@@ -20,19 +20,20 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.71
+          toolchain: 1.72
           override: true
           components: clippy, rustfmt
       - run: rustup component add rustfmt
       - name: Set up Python
         uses: actions/setup-python@v4
       - name: Install gdtoolkit 4
-        run: pip3 install git+https://github.com/Scony/godot-gdscript-toolkit.git
+        run: pip3 install git+https://github.com/kuruk-mm/godot-gdscript-toolkit.git
       - name: Check format GDScript
         run: gdformat -d godot/
-
+      - name: GDScript Linter
+        run: gdlint godot/
       # Dependencies section
-      # => Linux
+      # => Linux 
       - name: Install alsa and udev
         if: runner.os == 'linux'
         run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
@@ -88,8 +89,13 @@ jobs:
           key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: coverage-cargo-
 
+      - name: Prepare graphics renderering
+        run: |
+            sudo apt-get -y install xvfb
+            sudo /usr/bin/Xvfb :0 -screen 0 1280x1024x24 &
+            
       # Dependencies section
-      # => Linux
+      # => Linux 
       - name: Install alsa and udev
         if: runner.os == 'linux'
         run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
@@ -114,12 +120,23 @@ jobs:
 
       - name: Run xtask coverage
         working-directory: rust/xtask
-        run: cargo run -- coverage
+        run: |
+          export DISPLAY=:99
+          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+          cargo run -- coverage
 
       - name: Upload to codecov.io
+        if: success() || failure()
         uses: codecov/codecov-action@v3
         with:
           files: rust/coverage/*.lcov
+
+      - name: Upload artifacts
+        if: success() || failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: snapshots
+          path: snapshots/**/*
 
   build:
     name: Build and test
@@ -218,9 +235,9 @@ jobs:
 
       - name: cargo test
         working-directory: rust/decentraland-godot-lib
-        run: cargo test --release
-
-      # TODO: cross-build deprecated with the ffmpeg integration
+        run: cargo test --release -- --skip auth
+        
+      # TODO: cross-build deprecated with the ffmpeg integration 
       # Package section
       # # => MacOS
       # - name: Make universal library

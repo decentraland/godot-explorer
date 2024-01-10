@@ -26,18 +26,23 @@ module.exports.triggerSceneEmote = async function (body) {
   return await Deno.core.ops.op_trigger_scene_emote(body.src, body.looping);
 };
 module.exports.changeRealm = async function (body) {
-  const response = await Deno.core.ops.op_change_realm(
+  return await Deno.core.ops.op_change_realm(
     body.realm,
     body.message
   );
-  return response;
 };
 module.exports.openExternalUrl = async function (body) {
-  return {};
+  return await Deno.core.ops.op_open_external_url(
+    body.url,
+  );
 };
 module.exports.openNftDialog = async function (body) {
-  return {};
+  return await Deno.core.ops.op_open_nft_dialog(
+    body.urn,
+  );
 };
+
+// Reference Client doesn't have it. No implement it until decide what to do with it...
 module.exports.setCommunicationsAdapter = async function (body) {
   return {};
 };

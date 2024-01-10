@@ -1,4 +1,8 @@
 extends Panel
+const EMOTE: String = "␐"
+const REQUEST_PING: String = "␑"
+const ACK: String = "␆"
+
 @onready var rich_text_label_chat = $MarginContainer/RichTextLabel_Chat
 
 
@@ -7,7 +11,7 @@ func _ready():
 		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
 	)
 
-	Global.comms.chat_message.connect(self._on_chats_arrived)
+	Global.comms.chat_message.connect(self.on_chats_arrived)
 
 
 func add_chat_message(bb_text: String) -> void:
@@ -15,18 +19,16 @@ func add_chat_message(bb_text: String) -> void:
 	rich_text_label_chat.newline()
 
 
-const EMOTE: String = "␐"
-const REQUEST_PING: String = "␑"
-const ACK: String = "␆"
-
-
-func _on_chats_arrived(chats: Array):
+func on_chats_arrived(chats: Array):
 	for chat in chats:
 		var address: String = chat[0]
-		var profile_name: StringName = chat[1]
-		var timestamp: float = chat[2]
+		#var _profile_name: StringName = chat[1]
+		#var _timestamp: float = chat[2]
 		var message: StringName = chat[3]
 		var avatar = Global.avatars.get_avatar_by_address(address)
+		var avatar_name = (
+			avatar.avatar_name if avatar != null else DclEther.shorten_eth_address(address)
+		)
 
 		if message.begins_with(EMOTE):
 			message = message.substr(1)  # Remove prefix
@@ -37,9 +39,7 @@ func _on_chats_arrived(chats: Array):
 		elif message.begins_with(ACK):
 			pass  # TODO: Calculate ping
 		else:
-			var text = (
-				"[b][color=#1cc]%s[/color] > [color=#fff]%s[/color]" % [avatar.avatar_name, message]
-			)
+			var text = "[b][color=#1cc]%s[/color] > [color=#fff]%s[/color]" % [avatar_name, message]
 			add_chat_message(text)
 
 

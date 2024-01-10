@@ -10,22 +10,27 @@ pub struct DclRealm {
     #[var]
     realm_about: Dictionary,
     #[var]
-    realm_url: GodotString,
+    realm_url: GString,
     #[var]
-    realm_string: GodotString,
+    realm_string: GString,
 
     // Mirror realm_about.get("configuration")
     #[var]
-    realm_name: GodotString,
+    realm_name: GString,
+    #[var]
+    network_id: i32,
     #[var]
     realm_scene_urns: Array<Dictionary>,
     #[var]
     realm_global_scene_urns: Array<Dictionary>,
     #[var]
-    realm_city_loader_content_base_url: GodotString,
+    realm_city_loader_content_base_url: GString,
 
     #[var]
-    content_base_url: GodotString,
+    lambda_server_base_url: GString,
+
+    #[var]
+    content_base_url: GString,
 
     #[base]
     _base: Base<Node>,

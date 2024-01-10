@@ -1,4 +1,4 @@
-use godot::engine::{Button, Label, Panel, PanelVirtual};
+use godot::engine::{Button, IPanel, Label, Panel};
 use godot::prelude::*;
 
 #[derive(GodotClass)]
@@ -29,21 +29,21 @@ impl DclConfirmDialog {
         self.confirm_callback = Some(Box::new(confirm_callback));
 
         if let Some(title_label) = &mut self.title_label {
-            let title = GodotString::from(title);
+            let title = GString::from(title);
             self.base.set_name(title.clone());
             title_label.set_text(title);
         }
 
         if let Some(description_label) = &mut self.description_label {
-            description_label.set_text(GodotString::from(description));
+            description_label.set_text(GString::from(description));
         }
 
         if let Some(ok_button) = &mut self.ok_button {
-            ok_button.set_text(GodotString::from(ok_button_text));
+            ok_button.set_text(GString::from(ok_button_text));
         }
 
         if let Some(reject_button) = &mut self.reject_button {
-            reject_button.set_text(GodotString::from(reject_button_text));
+            reject_button.set_text(GString::from(reject_button_text));
         }
 
         self.base.show();
@@ -70,7 +70,7 @@ impl DclConfirmDialog {
 }
 
 #[godot_api]
-impl PanelVirtual for DclConfirmDialog {
+impl IPanel for DclConfirmDialog {
     fn init(base: Base<Panel>) -> Self {
         Self {
             base,
