@@ -14,7 +14,11 @@ pub struct TokioRuntime {
 #[godot_api]
 impl INode for TokioRuntime {
     fn init(_base: Base<Node>) -> Self {
-        match Runtime::new() {
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .thread_name("dcl-godot-tokio")
+            .build();
+        match rt {
             Ok(rt) => Self {
                 runtime: Some(Arc::new(rt)),
             },
