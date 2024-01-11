@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use godot::{
     builtin::{meta::ToGodot, Dictionary, GString},
     engine::{
         file_access::ModeFlags, global::Error, node::ProcessMode, AnimatableBody3D,
-        CollisionShape3D, ConcavePolygonShape3D, FileAccess, GltfDocument, GltfState,
-        MeshInstance3D, Node, Node3D, StaticBody3D,
+        AnimationLibrary, AnimationPlayer, CollisionShape3D, ConcavePolygonShape3D, FileAccess,
+        GltfDocument, GltfState, MeshInstance3D, Node, Node3D, NodeExt, StaticBody3D,
     },
     obj::{Gd, InstanceId},
 };
@@ -199,7 +199,7 @@ pub fn apply_update_set_mask_colliders(
 
     let mut to_remove_nodes = Vec::new();
     let gltf_node: Gd<Node> = Gd::from_instance_id(gltf_node_instance_id);
-    let Some(gltf_node) = gltf_node.duplicate() else {
+    let Some(gltf_node) = gltf_node.duplicate_ex().flags(8).done() else {
         set_thread_safety_checks_enabled(true);
         reject_promise(get_promise, "unable to duplicate gltf node".into());
         return;
@@ -213,6 +213,8 @@ pub fn apply_update_set_mask_colliders(
         dcl_entity_id,
         &mut to_remove_nodes,
     );
+
+    duplicate_animation_resources(gltf_node.clone());
 
     for mut node in to_remove_nodes {
         node.queue_free();
@@ -376,7 +378,7 @@ fn update_set_mask_colliders(
             };
 
             if !node.has_meta("dcl_scene_id".into()) {
-                let Some(mut resolved_node) = node.duplicate() else {
+                let Some(mut resolved_node) = node.duplicate_ex().flags(8).done() else {
                     continue;
                 };
 
@@ -408,5 +410,54 @@ fn update_set_mask_colliders(
             dcl_entity_id,
             to_remove_nodes,
         )
+    }
+}
+
+fn duplicate_animation_resources(gltf_node: Gd<Node>) {
+    let Some(mut animation_player) =
+        gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")
+    else {
+        return;
+    };
+
+    let mut new_animation_libraries = HashMap::new();
+    let animation_libraries = animation_player.get_animation_library_list();
+    for animation_library_name in animation_libraries.iter_shared() {
+        let Some(animation_library) =
+            animation_player.get_animation_library(animation_library_name.clone())
+        else {
+            tracing::error!("animation library not found");
+            continue;
+        };
+
+        let mut new_animations = HashMap::new();
+        let animations = animation_library.get_animation_list();
+        for animation_name in animations.iter_shared() {
+            let Some(animation) = animation_player.get_animation(animation_name.clone()) else {
+                continue;
+            };
+
+            let Some(dup_animation) = animation.duplicate_ex().subresources(true).done() else {
+                tracing::error!("Error duplicating animation {:?}", animation_name);
+                continue;
+            };
+            let _ = new_animations.insert(animation_name, dup_animation);
+        }
+
+        let mut new_animation_library = AnimationLibrary::new();
+        for new_animation in new_animations {
+            new_animation_library.add_animation(new_animation.0, new_animation.1.cast());
+        }
+        new_animation_libraries.insert(animation_library_name, new_animation_library);
+    }
+
+    // remove current animation library
+    for animation_library_name in animation_libraries.iter_shared() {
+        animation_player.remove_animation_library(animation_library_name);
+    }
+
+    // add new animation library
+    for new_animation_library in new_animation_libraries {
+        animation_player.add_animation_library(new_animation_library.0, new_animation_library.1);
     }
 }

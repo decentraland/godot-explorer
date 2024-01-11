@@ -71,6 +71,9 @@ func _async_on_gltf_loaded():
 
 func async_deferred_add_child(new_gltf_node):
 	# Corner case, when the scene is unloaded before the gltf is loaded
+	if not is_inside_tree():
+		return
+
 	var main_tree = get_tree()
 	if not is_instance_valid(main_tree):
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
