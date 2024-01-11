@@ -26,6 +26,7 @@ offset_bottom = 722.0
 
 [node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
 unique_name_in_owner = true
+transparent_bg = true
 handle_input_locally = false
 size = Vector2i(2048, 2048)
 render_target_update_mode = 4
