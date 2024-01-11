@@ -22,6 +22,27 @@ use super::{
     thread_safety::{reject_promise, resolve_promise, set_thread_safety_checks_enabled},
 };
 
+struct GodotSingleThreadSafety {
+    _guard: tokio::sync::OwnedSemaphorePermit,
+}
+
+impl GodotSingleThreadSafety {
+    pub async fn acquire_owned(ctx: &ContentProviderContext) -> Option<Self> {
+        let guard = ctx.godot_single_thread.clone().acquire_owned().await.ok()?;
+        set_thread_safety_checks_enabled(false);
+        Some(Self { _guard: guard })
+    }
+
+    fn nop(&self) { /* nop */
+    }
+}
+
+impl Drop for GodotSingleThreadSafety {
+    fn drop(&mut self) {
+        set_thread_safety_checks_enabled(true);
+    }
+}
+
 pub async fn load_gltf(
     file_path: String,
     content_mapping: ContentMappingAndUrlRef,
@@ -128,7 +149,13 @@ pub async fn load_gltf(
         return;
     }
 
-    set_thread_safety_checks_enabled(false);
+    let Some(thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
+        reject_promise(
+            get_promise,
+            "Error loading gltf when acquiring thread safety".to_string(),
+        );
+        return;
+    };
 
     let mut new_gltf = GltfDocument::new();
     let mut new_gltf_state = GltfState::new();
@@ -153,7 +180,6 @@ pub async fn load_gltf(
 
     if err != Error::OK {
         let err = err.to_variant().to::<i32>();
-        set_thread_safety_checks_enabled(true);
         reject_promise(
             get_promise,
             format!("Error loading gltf after appending from file {}", err),
@@ -162,7 +188,6 @@ pub async fn load_gltf(
     }
 
     let Some(node) = new_gltf.generate_scene(new_gltf_state) else {
-        set_thread_safety_checks_enabled(true);
         reject_promise(
             get_promise,
             "Error loading gltf when generating scene".to_string(),
@@ -171,7 +196,6 @@ pub async fn load_gltf(
     };
 
     let Ok(mut node) = node.try_cast::<Node3D>() else {
-        set_thread_safety_checks_enabled(true);
         reject_promise(
             get_promise,
             "Error loading gltf when casting to Node3D".to_string(),
@@ -183,24 +207,29 @@ pub async fn load_gltf(
     create_colliders(node.clone().upcast());
 
     resolve_promise(get_promise, Some(node.to_variant()));
-
-    set_thread_safety_checks_enabled(true);
+    thread_safe_check.nop();
 }
 
-pub fn apply_update_set_mask_colliders(
+pub async fn apply_update_set_mask_colliders(
     gltf_node_instance_id: InstanceId,
     dcl_visible_cmask: i32,
     dcl_invisible_cmask: i32,
     dcl_scene_id: i32,
     dcl_entity_id: i32,
     get_promise: impl Fn() -> Option<Gd<Promise>>,
+    ctx: ContentProviderContext,
 ) {
-    set_thread_safety_checks_enabled(false);
+    let Some(thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
+        reject_promise(
+            get_promise,
+            "Error loading gltf when acquiring thread safety".to_string(),
+        );
+        return;
+    };
 
     let mut to_remove_nodes = Vec::new();
     let gltf_node: Gd<Node> = Gd::from_instance_id(gltf_node_instance_id);
     let Some(gltf_node) = gltf_node.duplicate_ex().flags(8).done() else {
-        set_thread_safety_checks_enabled(true);
         reject_promise(get_promise, "unable to duplicate gltf node".into());
         return;
     };
@@ -221,6 +250,7 @@ pub fn apply_update_set_mask_colliders(
     }
 
     resolve_promise(get_promise, Some(gltf_node.to_variant()));
+    thread_safe_check.nop();
 }
 
 fn get_dependencies(file_path: &String) -> Vec<String> {

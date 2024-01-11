@@ -7,6 +7,7 @@ use godot::{
     engine::{ImageTexture, Material, Mesh},
     prelude::*,
 };
+use tokio::sync::Semaphore;
 
 use crate::{
     content::content_mapping::DclContentMappingAndUrl, godot_classes::promise::Promise,
@@ -34,6 +35,7 @@ pub struct ContentProvider {
     http_queue_requester: Arc<HttpQueueRequester>,
     content_notificator: Arc<ContentNotificator>,
     cached: HashMap<String, ContentEntry>,
+    godot_single_thread: Arc<Semaphore>,
 }
 
 #[derive(Clone)]
@@ -41,6 +43,7 @@ pub struct ContentProviderContext {
     pub content_folder: Arc<String>,
     pub http_queue_requester: Arc<HttpQueueRequester>,
     pub content_notificator: Arc<ContentNotificator>,
+    pub godot_single_thread: Arc<Semaphore>,
 }
 
 unsafe impl Send for ContentProviderContext {}
@@ -57,6 +60,7 @@ impl INode for ContentProvider {
             http_queue_requester: Arc::new(HttpQueueRequester::new(4)),
             cached: HashMap::new(),
             content_notificator: Arc::new(ContentNotificator::new()),
+            godot_single_thread: Arc::new(Semaphore::new(1)),
         }
     }
     fn ready(&mut self) {}
@@ -117,6 +121,7 @@ impl ContentProvider {
     ) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
         let gltf_node_instance_id = gltf_node.instance_id();
+        let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
             apply_update_set_mask_colliders(
                 gltf_node_instance_id,
@@ -125,7 +130,9 @@ impl ContentProvider {
                 dcl_scene_id,
                 dcl_entity_id,
                 get_promise,
-            );
+                content_provider_context,
+            )
+            .await;
         });
 
         promise
@@ -438,6 +445,7 @@ impl ContentProvider {
             content_folder: self.content_folder.clone(),
             http_queue_requester: self.http_queue_requester.clone(),
             content_notificator: self.content_notificator.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
         }
     }
 }

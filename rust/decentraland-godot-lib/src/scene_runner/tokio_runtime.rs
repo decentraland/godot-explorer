@@ -16,8 +16,7 @@ impl INode for TokioRuntime {
     fn init(_base: Base<Node>) -> Self {
         let rt = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
-            .worker_threads(1)
-            .thread_name("content-thread-loading")
+            .thread_name("dcl-godot-tokio")
             .build();
         match rt {
             Ok(rt) => Self {
