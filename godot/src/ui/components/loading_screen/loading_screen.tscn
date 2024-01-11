@@ -1,20 +1,111 @@
-[gd_scene load_steps=11 format=3 uid="uid://bmjwqm6jgri7c"]
+[gd_scene load_steps=16 format=3 uid="uid://bmjwqm6jgri7c"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_uio8w"]
 [ext_resource type="Script" path="res://src/ui/components/loading_screen/loading_screen.gd" id="2_7hdbk"]
-[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="2_tl0bq"]
+[ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="3_r47t1"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_y82bl"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_slpbh"]
 [ext_resource type="Texture2D" uid="uid://bxom57mhcmhv4" path="res://assets/ui/LeftArrow.png" id="6_oud40"]
 [ext_resource type="Texture2D" uid="uid://b6b4uw0byh1sg" path="res://assets/ui/NPCs_Robot.png" id="7_wcl70"]
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="8_32igy"]
 [ext_resource type="Texture2D" uid="uid://bkogft5vqdpas" path="res://assets/ui/RightArrow.png" id="9_xqknv"]
+[ext_resource type="PackedScene" uid="uid://cu2ci0kwgisjo" path="res://src/ui/components/pagination/Pagination.tscn" id="10_6e8p0"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_t4bn8"]
 shader = ExtResource("8_32igy")
 shader_parameter/strength = 0.9
 shader_parameter/speed = 0.025
 shader_parameter/angle = 0.0
+
+[sub_resource type="Animation" id="Animation_70m5k"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/VBox_Data:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Image:modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_vn187"]
+resource_name = "fadeInContent"
+length = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/VBox_Data:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Image:modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.2),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_6q8ci"]
+resource_name = "fadeOutContent"
+length = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/VBox_Data:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Image:modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.2),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_qs068"]
+_data = {
+"RESET": SubResource("Animation_70m5k"),
+"fadeInContent": SubResource("Animation_vn187"),
+"fadeOutContent": SubResource("Animation_6q8ci")
+}
 
 [node name="VBox_Loading" type="VBoxContainer"]
 anchors_preset = 15
@@ -37,27 +128,47 @@ custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 
-[node name="DecentralandLogo" type="Sprite2D" parent="VBox_Header/ColorRect_Header"]
-position = Vector2(32, 30)
-scale = Vector2(0.166016, 0.166016)
-texture = ExtResource("2_tl0bq")
-
-[node name="Label" type="RichTextLabel" parent="VBox_Header/ColorRect_Header"]
+[node name="MarginContainer" type="MarginContainer" parent="VBox_Header/ColorRect_Header"]
 layout_mode = 1
-anchors_preset = 4
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_left = 64.0
-offset_top = -18.0
-offset_right = 272.0
-offset_bottom = 18.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_right = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBox_Header/ColorRect_Header/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="DecentralandLogo" type="TextureRect" parent="VBox_Header/ColorRect_Header/MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+size_flags_vertical = 4
+auto_translate = false
+localize_numeral_system = false
+texture = ExtResource("3_r47t1")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="Control" type="VBoxContainer" parent="VBox_Header/ColorRect_Header/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="Label" type="RichTextLabel" parent="VBox_Header/ColorRect_Header/MarginContainer/HBoxContainer/Control"]
+clip_contents = false
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 6
 theme_override_colors/default_color = Color(1, 1, 1, 1)
 theme_override_fonts/normal_font = ExtResource("3_y82bl")
 theme_override_fonts/bold_font = ExtResource("4_slpbh")
 bbcode_enabled = true
-text = "[b]Decentraland[/b] 
-Godot Explorer Alpha v#.###"
+text = "Godot Explorer 
+Alpha v#.###"
 
 [node name="ColorRect_Separator" type="ColorRect" parent="VBox_Header"]
 material = SubResource("ShaderMaterial_t4bn8")
@@ -91,6 +202,7 @@ mouse_filter = 2
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
+theme_override_constants/separation = 37
 alignment = 1
 
 [node name="Control_Left" type="Control" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content"]
@@ -118,24 +230,24 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.5
 mouse_filter = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 12
 alignment = 1
 
 [node name="Label_Title" type="Label" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/VBox_Data"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("4_slpbh")
-theme_override_font_sizes/font_size = 48
-text = "Large larga large large title"
+theme_override_font_sizes/font_size = 40
+text = "Genesis Plaza, heart of city"
 autowrap_mode = 2
 
 [node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/VBox_Data"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_colors/default_color = Color(0.960906, 0.152895, 0.344884, 1)
+theme_override_colors/default_color = Color(0.960784, 0.152941, 0.345098, 1)
 theme_override_fonts/normal_font = ExtResource("3_y82bl")
-theme_override_font_sizes/normal_font_size = 24
-text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur cursus magna vitae odio molestie consectetur. Etiam rhoncus tincidunt aliquet. Sed ultricies nisl est, a auctor justo semper nec. Sed tempor est nec faucibus bibendum. Nam risus metus, condimentum eget cursus in, convallis non sapien. Donec id libero ultricies, sagittis nunc eu, elementum ipsum."
+theme_override_font_sizes/normal_font_size = 20
+text = "Genesis Plaza is built and maintained by the Decentraland Foundation but is still in many ways a community project. Around here you'll find several teleports that can take you directly to special scenes marked as points of interest."
 fit_content = true
 shortcut_keys_enabled = false
 
@@ -153,10 +265,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -165.0
-offset_top = -147.5
-offset_right = 165.0
-offset_bottom = 147.5
+offset_left = -141.0
+offset_top = -151.0
+offset_right = 189.0
+offset_bottom = 144.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -182,10 +294,13 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("9_xqknv")
 
-[node name="HBoxContainer_Pagination" type="HBoxContainer" parent="ColorRect_Background/Control_Discover/VBoxContainer"]
+[node name="Pagination" parent="ColorRect_Background/Control_Discover/VBoxContainer" instance=ExtResource("10_6e8p0")]
 layout_mode = 2
-mouse_filter = 2
-alignment = 1
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_qs068")
+}
 
 [connection signal="gui_input" from="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Left/TextureRect_LeftArrow" to="." method="_on_texture_rect_left_arrow_gui_input"]
 [connection signal="gui_input" from="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Right/TextureRect_RightArrow" to="." method="_on_texture_rect_right_arrow_gui_input"]

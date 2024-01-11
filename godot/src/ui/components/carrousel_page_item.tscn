@@ -1,28 +1,113 @@
-[gd_scene load_steps=3 format=3 uid="uid://bo6jyvmcx6vfc"]
+[gd_scene load_steps=7 format=3 uid="uid://bo6jyvmcx6vfc"]
 
 [ext_resource type="Script" path="res://src/ui/components/carrousel_page_item.gd" id="1_qrtqa"]
-[ext_resource type="Texture2D" uid="uid://bykg1oy4i7sr1" path="res://assets/ui/carrousel_item.png" id="1_wxprv"]
+[ext_resource type="Texture2D" uid="uid://bwmb6xnj44ugb" path="res://assets/ui/carrousel_item.svg" id="2_07f1a"]
 
-[node name="Control_CarrouselItem" type="Control"]
-custom_minimum_size = Vector2(15, 15)
-layout_mode = 3
-anchors_preset = 0
+[sub_resource type="Animation" id="Animation_60sd0"]
+resource_name = "select"
+length = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TextureRect_Item:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.2),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector2(0.4, 0.4), Vector2(0.55, 0.55), Vector2(0.5, 0.5)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("TextureRect_Item:self_modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(0.960784, 0.152941, 0.345098, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_p0rpe"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TextureRect_Item:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(0.4, 0.4)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("TextureRect_Item:self_modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_t2ujx"]
+resource_name = "unselect"
+length = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TextureRect_Item:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.2),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector2(0.5, 0.5), Vector2(0.35, 0.35), Vector2(0.4, 0.4)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("TextureRect_Item:self_modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_wrlxe"]
+_data = {
+"RESET": SubResource("Animation_p0rpe"),
+"select": SubResource("Animation_60sd0"),
+"unselect": SubResource("Animation_t2ujx")
+}
+
+[node name="VBoxContainer_CarrouselItem" type="VBoxContainer"]
+custom_minimum_size = Vector2(20, 20)
 offset_right = 15.0
 offset_bottom = 15.0
+size_flags_vertical = 3
+alignment = 1
 script = ExtResource("1_qrtqa")
 
-[node name="TextureRect_Item" type="TextureRect" parent="."]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -7.0
-offset_top = -7.5
-offset_right = 7.0
-offset_bottom = 7.5
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("1_wxprv")
+[node name="TextureRect_Item" type="Sprite2D" parent="."]
+position = Vector2(10, 10)
+scale = Vector2(0.4, 0.4)
+texture = ExtResource("2_07f1a")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_wrlxe")
+}
+autoplay = "RESET"
