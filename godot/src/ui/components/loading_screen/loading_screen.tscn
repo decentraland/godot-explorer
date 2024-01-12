@@ -6,8 +6,8 @@
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_y82bl"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_slpbh"]
 [ext_resource type="Texture2D" uid="uid://bxom57mhcmhv4" path="res://assets/ui/LeftArrow.png" id="6_oud40"]
-[ext_resource type="Texture2D" uid="uid://b6b4uw0byh1sg" path="res://assets/ui/NPCs_Robot.png" id="7_wcl70"]
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="8_32igy"]
+[ext_resource type="Texture2D" uid="uid://dx34q3r7ow0x0" path="res://assets/ui/NPCs_Aisha.png" id="8_xoe30"]
 [ext_resource type="Texture2D" uid="uid://bkogft5vqdpas" path="res://assets/ui/RightArrow.png" id="9_xqknv"]
 [ext_resource type="PackedScene" uid="uid://cu2ci0kwgisjo" path="res://src/ui/components/pagination/Pagination.tscn" id="10_6e8p0"]
 
@@ -157,18 +157,12 @@ layout_mode = 2
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="Label" type="RichTextLabel" parent="VBox_Header/ColorRect_Header/MarginContainer/HBoxContainer/Control"]
-clip_contents = false
-custom_minimum_size = Vector2(0, 36)
+[node name="Label" type="Label" parent="VBox_Header/ColorRect_Header/MarginContainer/HBoxContainer/Control"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 size_flags_vertical = 6
-theme_override_colors/default_color = Color(1, 1, 1, 1)
-theme_override_fonts/normal_font = ExtResource("3_y82bl")
-theme_override_fonts/bold_font = ExtResource("4_slpbh")
-bbcode_enabled = true
-text = "Godot Explorer 
-Alpha v#.###"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "Alpha v#.###"
 
 [node name="ColorRect_Separator" type="ColorRect" parent="VBox_Header"]
 material = SubResource("ShaderMaterial_t4bn8")
@@ -187,7 +181,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
 theme = ExtResource("1_uio8w")
 theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 30
@@ -208,6 +201,7 @@ alignment = 1
 [node name="Control_Left" type="Control" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
+size_flags_vertical = 4
 mouse_filter = 1
 
 [node name="TextureRect_LeftArrow" type="TextureRect" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Left"]
@@ -265,14 +259,15 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -141.0
-offset_top = -151.0
-offset_right = 189.0
-offset_bottom = 144.0
+offset_left = -186.5
+offset_top = -219.0
+offset_right = 186.5
+offset_bottom = 219.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("7_wcl70")
+texture = ExtResource("8_xoe30")
+stretch_mode = 4
 
 [node name="Control_Right" type="Control" parent="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content"]
 custom_minimum_size = Vector2(100, 0)
@@ -302,5 +297,6 @@ libraries = {
 "": SubResource("AnimationLibrary_qs068")
 }
 
+[connection signal="gui_input" from="ColorRect_Background/Control_Discover" to="." method="_on_control_discover_gui_input"]
 [connection signal="gui_input" from="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Left/TextureRect_LeftArrow" to="." method="_on_texture_rect_left_arrow_gui_input"]
 [connection signal="gui_input" from="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Right/TextureRect_RightArrow" to="." method="_on_texture_rect_right_arrow_gui_input"]
