@@ -74,7 +74,7 @@ jobs:
           node-version: 16.x
 
       - name: Prepare and run local test-realm
-        run:
+        run: |
           mkdir -p tests/server
           cd tests/server
           npm init -y
@@ -82,7 +82,7 @@ jobs:
           sed -i 's|https://decentraland.github.io/scene-explorer-tests/|http://localhost:7666/|g' node_modules/@dcl/scene-explorer-tests/static/scene-explorer-tests/about
           npm i -g http-server
           http-server node_modules/@dcl/scene-explorer-tests/static -p 7666 &
-          # /changerealm http://localhost:7666/scene-explorer-tests/
+        # /changerealm http://localhost:7666/scene-explorer-tests/
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
