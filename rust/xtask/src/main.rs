@@ -198,8 +198,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         Some(build_envs.clone()),
     )?;
 
-    let scene_test_realm: &str =
-        "https://decentraland.github.io/scene-explorer-tests/scene-explorer-tests";
+    let scene_test_realm: &str = "http://localhost:7666/scene-explorer-tests";
     let scene_test_coords: Vec<[i32; 2]> = vec![
         [52, -52], // raycast
         [52, -54], // transform
@@ -213,7 +212,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         [54, -52], // material
         [54, -54], // text-shape
         // TODO: video events not working well
-        // [54, -56], // video-player 
+        // [54, -56], // video-player
         [54, -58], // ui-background
         [54, -60], // ui-text
     ];
