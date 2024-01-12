@@ -1,3 +1,4 @@
 exports/
 .bin/
 snapshots/
+!tests/snapshots
