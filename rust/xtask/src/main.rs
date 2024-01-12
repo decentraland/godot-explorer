@@ -161,10 +161,7 @@ fn main() -> Result<(), anyhow::Error> {
 }
 
 pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
-    remove_dir("../../snapshots")?;
-    create_dir_all("../../snapshots")?;
-
-    let snapshot_folder = Path::new("../../snapshots");
+    let snapshot_folder = Path::new("../../tests/snapshots");
     let snapshot_folder = snapshot_folder.canonicalize()?;
 
     remove_dir("../coverage")?;
