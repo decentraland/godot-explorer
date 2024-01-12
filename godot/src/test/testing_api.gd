@@ -61,8 +61,6 @@ func start():
 	if scene_test_index == -1:
 		self.process_mode = PROCESS_MODE_DISABLED
 		return
-		
-		
 
 	var snapshot_folder_index := args.find("--snapshot-folder")
 	if snapshot_folder_index != -1:
@@ -77,13 +75,13 @@ func start():
 		snapshot_folder += "/"
 
 	snapshot_comparison_folder = snapshot_folder + "comparison/"
-	
+
 	if not DirAccess.dir_exists_absolute(snapshot_folder):
 		DirAccess.make_dir_recursive_absolute(snapshot_folder)
-		
+
 	if not DirAccess.dir_exists_absolute(snapshot_comparison_folder):
 		DirAccess.make_dir_recursive_absolute(snapshot_comparison_folder)
-		
+
 	prints('snapshot_folder="' + snapshot_folder + '"')
 	prints('snapshot_comparison_folder="' + snapshot_comparison_folder + '"')
 
@@ -172,7 +170,6 @@ func async_take_and_compare_snapshot(
 	# TODO: make this configurable
 	var hide_player := true
 
-
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 	var viewport = get_viewport()
 	var previous_camera = viewport.get_camera_3d()
@@ -213,14 +210,14 @@ func async_take_and_compare_snapshot(
 	)
 	if not base_path.ends_with(".png"):
 		base_path += ".png"
-		
+
 	var current_snapshot_path := snapshot_comparison_folder + base_path
 	var existing_snapshot_path := snapshot_folder + base_path
 	var existing_snapshot: Image = null
-	
+
 	if FileAccess.file_exists(existing_snapshot_path):
 		existing_snapshot = Image.load_from_file(existing_snapshot_path)
-	
+
 	viewport_img.save_png(current_snapshot_path)
 
 	var result = {"stored_snapshot_found": existing_snapshot != null}
