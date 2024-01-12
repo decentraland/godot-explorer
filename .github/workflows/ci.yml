@@ -67,6 +67,23 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
+      # To host test-realm local server
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+
+      - name: Prepare and run local test-realm
+        run: |
+          mkdir -p tests/server
+          cd tests/server
+          npm init -y
+          npm install @dcl/scene-explorer-tests@1.0.0-20240112171553.commit-12b6151
+          sed -i 's|https://decentraland.github.io/scene-explorer-tests/|http://localhost:7666/|g' node_modules/@dcl/scene-explorer-tests/static/scene-explorer-tests/about
+          npm i -g http-server
+          http-server node_modules/@dcl/scene-explorer-tests/static -p 7666 &
+        # /changerealm http://localhost:7666/scene-explorer-tests/
+
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -136,7 +153,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: snapshots
-          path: snapshots/**/*
+          path: tests/snapshots/comparison/**/*
 
   build:
     name: Build and test
