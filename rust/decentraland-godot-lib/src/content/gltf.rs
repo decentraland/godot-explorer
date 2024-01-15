@@ -9,6 +9,7 @@ use godot::{
     },
     obj::{Gd, InstanceId},
 };
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
 use crate::godot_classes::promise::Promise;
 
@@ -73,20 +74,33 @@ pub async fn load_gltf(
         }
     }
 
-    let dependencies = get_dependencies(&absolute_file_path)
-        .into_iter()
-        .map(|dep| {
-            let full_path = if base_path.is_empty() {
-                dep.clone()
-            } else {
-                format!("{}/{}", base_path, dep)
-            }
-            .to_lowercase();
+    let dependencies = match get_dependencies(&absolute_file_path).await {
+        Ok(dependencies) => dependencies
+            .into_iter()
+            .map(|dep| {
+                let full_path = if base_path.is_empty() {
+                    dep.clone()
+                } else {
+                    format!("{}/{}", base_path, dep)
+                }
+                .to_lowercase();
 
-            let item = content_mapping.content.get(&full_path).cloned();
-            (dep, item)
-        })
-        .collect::<Vec<(String, Option<String>)>>();
+                let item = content_mapping.content.get(&full_path).cloned();
+                (dep, item)
+            })
+            .collect::<Vec<(String, Option<String>)>>(),
+
+        Err(err) => {
+            reject_promise(
+                get_promise,
+                format!(
+                    "Error downloading gltf {file_hash} ({file_path}): {:?}",
+                    err
+                ),
+            );
+            return;
+        }
+    };
 
     if dependencies.iter().any(|(_, hash)| hash.is_none()) {
         reject_promise(
@@ -230,43 +244,40 @@ pub async fn apply_update_set_mask_colliders(
     thread_safe_check.nop();
 }
 
-fn get_dependencies(file_path: &String) -> Vec<String> {
+async fn get_dependencies(file_path: &String) -> Result<Vec<String>, String> {
     let mut dependencies = Vec::new();
-    let Some(mut p_file) = FileAccess::open(GString::from(&file_path), ModeFlags::READ) else {
-        return dependencies;
-    };
+    let mut file = tokio::fs::File::open(file_path)
+        .await
+        .map_err(|err| err.to_string())?;
 
-    if p_file.get_error() != Error::OK {
-        return dependencies;
-    }
+    let magic = file.read_i32_le().await.map_err(|err| err.to_string())?;
+    let json: serde_json::Value = if magic == 0x46546C67 {
+        let _version = file.read_i32_le().await.map_err(|err| err.to_string())?;
+        let _length = file.read_i32_le().await.map_err(|err| err.to_string())?;
 
-    if p_file.get_length() < 20 {
-        return dependencies;
-    }
+        let chunk_length = file.read_i32_le().await.map_err(|err| err.to_string())?;
+        let _chunk_type = file.read_i32_le().await.map_err(|err| err.to_string())?;
 
-    p_file.seek(0);
+        let mut json_data = vec![0u8; chunk_length as usize];
+        let _ = file
+            .read_exact(&mut json_data)
+            .await
+            .map_err(|err| err.to_string())?;
 
-    let magic = p_file.get_32();
-    let maybe_json: Result<serde_json::Value, serde_json::Error> = if magic == 0x46546C67 {
-        p_file.get_32(); // version
-        p_file.get_32(); // length
-
-        let chunk_length = p_file.get_32();
-        p_file.get_32(); // chunk_type
-
-        let json_data = p_file.get_buffer(chunk_length as i64);
         serde_json::de::from_slice(json_data.as_slice())
     } else {
-        p_file.seek(0);
-        let json_data = p_file.get_buffer(p_file.get_length() as i64);
+        let mut json_data = Vec::new();
+        let _ = file
+            .seek(std::io::SeekFrom::Start(0))
+            .await
+            .map_err(|err| err.to_string())?;
+        let _ = file
+            .read_to_end(&mut json_data)
+            .await
+            .map_err(|err| err.to_string())?;
         serde_json::de::from_slice(json_data.as_slice())
-    };
-
-    if maybe_json.is_err() {
-        return dependencies;
     }
-
-    let json = maybe_json.unwrap();
+    .map_err(|err| err.to_string())?;
 
     if let Some(images) = json.get("images") {
         if let Some(images) = images.as_array() {
@@ -296,7 +307,7 @@ fn get_dependencies(file_path: &String) -> Vec<String> {
         }
     }
 
-    dependencies
+    Ok(dependencies)
 }
 
 fn get_collider(mesh_instance: &Gd<MeshInstance3D>) -> Option<Gd<StaticBody3D>> {

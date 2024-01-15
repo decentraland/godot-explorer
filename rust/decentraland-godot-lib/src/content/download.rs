@@ -25,7 +25,7 @@ pub async fn fetch_resource_or_wait(
         }
         ContentState::Released(result) => result,
         ContentState::RequestOwner => {
-            if !FileAccess::file_exists(GString::from(&absolute_file_path)) {
+            if tokio::fs::metadata(&absolute_file_path).await.is_err() {
                 let request = RequestOption::new(
                     0,
                     url.clone(),
