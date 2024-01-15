@@ -19,8 +19,8 @@ const mockedData = [{
 ]
 
 var selected_data = 0
-var touchPos:Vector2
-var dragging:bool
+var swipe_threshold = 120
+
 
 func _ready():
 	if Global.is_mobile:
@@ -50,32 +50,32 @@ func update_view():
 	var texture = load(route)
 	texture_rect_image.texture = texture
 
-
+var start_swipe_position:Vector2
 func _on_control_discover_gui_input(event):
-	if event is InputEventScreenDrag:
-		var xDrag = event.relative.x
-		if xDrag > 100:
-			nextPage()
-			dragging = true
-		if xDrag < -100:
-			nextPage()
-			dragging = true
-	
-	if event is InputEventScreenDrag and event.is_released():
-		dragging = false
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			start_swipe_position = event.position
+			
+	if event is InputEventScreenTouch:
+		if !event.pressed:
+			var end_swipe_position = event.position
+			var swipe_distance = end_swipe_position - start_swipe_position
+			if abs(swipe_distance.x) > swipe_threshold:
+				if swipe_distance.x > 0:
+					nextPage()
+				else:
+					prevPage()
 		
 func prevPage():
-	if !dragging:
-		if selected_data > 0:
-			selected_data = selected_data - 1
-		else:
-			selected_data = len(mockedData) - 1
-		update_view()
+	if selected_data > 0:
+		selected_data = selected_data - 1
+	else:
+		selected_data = len(mockedData) - 1
+	update_view()
 	
 func nextPage():
-	if !dragging:
-		if selected_data < len(mockedData) - 1:
-			selected_data = selected_data + 1
-		else:
-			selected_data = 0
-		update_view()
+	if selected_data < len(mockedData) - 1:
+		selected_data = selected_data + 1
+	else:
+		selected_data = 0
+	update_view()
