@@ -236,6 +236,14 @@ fn get_dependencies(file_path: &String) -> Vec<String> {
         return dependencies;
     };
 
+    if p_file.get_error() != Error::OK {
+        return dependencies;
+    }
+
+    if p_file.get_length() < 20 {
+        return dependencies;
+    }
+
     p_file.seek(0);
 
     let magic = p_file.get_32();
