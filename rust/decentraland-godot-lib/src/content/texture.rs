@@ -5,13 +5,11 @@ use godot::{
     obj::Gd,
 };
 
-use crate::{
-    godot_classes::promise::Promise,
-    http_request::request_response::{RequestOption, ResponseType},
-};
+use crate::godot_classes::promise::Promise;
 
 use super::{
     content_provider::ContentProviderContext,
+    download::fetch_resource_or_wait,
     thread_safety::{reject_promise, resolve_promise},
 };
 
@@ -26,33 +24,19 @@ pub struct TextureEntry {
 
 pub async fn load_png_texture(
     url: String,
-    absolute_file_path: String,
+    file_hash: String,
     get_promise: impl Fn() -> Option<Gd<Promise>>,
     ctx: ContentProviderContext,
 ) {
-    if !FileAccess::file_exists(GString::from(&absolute_file_path)) {
-        let request = RequestOption::new(
-            0,
-            url.clone(),
-            http::Method::GET,
-            ResponseType::ToFile(absolute_file_path.clone()),
-            None,
-            None,
-            None,
-        );
-
-        match ctx.http_queue_requester.request(request, 0).await {
-            Ok(_response) => {}
-            Err(err) => {
-                reject_promise(
-                    get_promise,
-                    format!(
-                        "Error downloading png texture {url} ({absolute_file_path}): {:?}",
-                        err
-                    ),
-                );
-                return;
-            }
+    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
+    match fetch_resource_or_wait(&url, &file_hash, &absolute_file_path, ctx.clone()).await {
+        Ok(_) => {}
+        Err(err) => {
+            reject_promise(
+                get_promise,
+                format!("Error downloading png texture {file_hash}: {:?}", err),
+            );
+            return;
         }
     }
 

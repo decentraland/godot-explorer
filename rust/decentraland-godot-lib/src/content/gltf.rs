@@ -10,14 +10,12 @@ use godot::{
     obj::{Gd, InstanceId},
 };
 
-use crate::{
-    godot_classes::promise::Promise,
-    http_request::request_response::{RequestOption, ResponseType},
-};
+use crate::godot_classes::promise::Promise;
 
 use super::{
     content_mapping::ContentMappingAndUrlRef,
     content_provider::ContentProviderContext,
+    download::fetch_resource_or_wait,
     file_string::get_base_dir,
     thread_safety::{reject_promise, resolve_promise, set_thread_safety_checks_enabled},
 };
@@ -59,30 +57,19 @@ pub async fn load_gltf(
         return;
     };
 
+    let url = format!("{}{}", content_mapping.base_url, file_hash);
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-    if !FileAccess::file_exists(GString::from(&absolute_file_path)) {
-        let request = RequestOption::new(
-            0,
-            format!("{}{}", content_mapping.base_url, file_hash),
-            http::Method::GET,
-            ResponseType::ToFile(absolute_file_path.clone()),
-            None,
-            None,
-            None,
-        );
-
-        match ctx.http_queue_requester.request(request, 0).await {
-            Ok(_response) => {}
-            Err(err) => {
-                reject_promise(
-                    get_promise,
-                    format!(
-                        "Error downloading gltf {file_hash} ({file_path}): {:?}",
-                        err
-                    ),
-                );
-                return;
-            }
+    match fetch_resource_or_wait(&url, &file_hash, &absolute_file_path, ctx.clone()).await {
+        Ok(_) => {}
+        Err(err) => {
+            reject_promise(
+                get_promise,
+                format!(
+                    "Error downloading gltf {file_hash} ({file_path}): {:?}",
+                    err
+                ),
+            );
+            return;
         }
     }
 
@@ -114,29 +101,19 @@ pub async fn load_gltf(
         .map(|(file_path, hash)| (file_path, hash.unwrap()))
         .collect::<Vec<(String, String)>>();
 
-    let futures = dependencies_hash.iter().map(|(_, file_hash)| {
+    let futures = dependencies_hash.iter().map(|(_, dependency_file_hash)| {
         let ctx = ctx.clone();
-        let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
         let content_mapping = content_mapping.clone();
         async move {
-            if !FileAccess::file_exists(GString::from(&absolute_file_path)) {
-                let request = RequestOption::new(
-                    0,
-                    format!("{}{}", content_mapping.base_url, file_hash),
-                    http::Method::GET,
-                    ResponseType::ToFile(absolute_file_path.clone()),
-                    None,
-                    None,
-                    None,
-                );
-
-                match ctx.http_queue_requester.request(request, 0).await {
-                    Ok(_response) => Ok(()),
-                    Err(_err) => Err(()),
-                }
-            } else {
-                Ok(())
-            }
+            let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
+            let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
+            fetch_resource_or_wait(
+                &url,
+                &dependency_file_hash,
+                &absolute_file_path,
+                ctx.clone(),
+            )
+            .await
         }
     });
 

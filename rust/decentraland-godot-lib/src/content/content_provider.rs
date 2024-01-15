@@ -205,18 +205,16 @@ impl ContentProvider {
             return entry.promise.clone();
         }
 
-        let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
-        let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
+        let url = format!(
+            "{}{}",
+            content_mapping.bind().get_base_url(),
+            file_hash.clone()
+        );
         let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
+        let sent_file_hash = file_hash.clone();
         TokioRuntime::spawn(async move {
-            load_png_texture(
-                url,
-                absolute_file_path,
-                get_promise,
-                content_provider_context,
-            )
-            .await;
+            load_png_texture(url, sent_file_hash, get_promise, content_provider_context).await;
         });
 
         self.cached.insert(
@@ -236,17 +234,11 @@ impl ContentProvider {
             return entry.promise.clone();
         }
         let url = url.to_string();
-        let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
         let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
+        let sent_file_hash = file_hash.clone();
         TokioRuntime::spawn(async move {
-            load_png_texture(
-                url,
-                absolute_file_path,
-                get_promise,
-                content_provider_context,
-            )
-            .await;
+            load_png_texture(url, sent_file_hash, get_promise, content_provider_context).await;
         });
 
         self.cached.insert(
