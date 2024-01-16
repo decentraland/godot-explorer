@@ -167,6 +167,10 @@ func async_take_and_compare_snapshot(
 		dcl_rpc_sender
 	)
 
+	var pending_promises := Global.content_provider.get_pending_promises()
+	if not pending_promises.is_empty():
+		await PromiseUtils.async_all(Global.content_provider.get_pending_promises())
+
 	# TODO: make this configurable
 	var hide_player := true
 
