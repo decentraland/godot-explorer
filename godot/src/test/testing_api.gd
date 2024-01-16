@@ -186,7 +186,7 @@ func async_take_and_compare_snapshot(
 
 	get_node("/root/explorer").set_visible_ui(false)
 	if hide_player:
-		get_node("/root/explorer/Player").hide()
+		get_node("/root/explorer/world/Player").hide()
 
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -198,7 +198,7 @@ func async_take_and_compare_snapshot(
 
 	get_node("/root/explorer").set_visible_ui(true)
 	if hide_player:
-		get_node("/root/explorer/Player").show()
+		get_node("/root/explorer/world/Player").show()
 
 	viewport.size = previous_viewport_size
 	previous_camera.make_current()

@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=19 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
@@ -8,12 +8,28 @@
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
 [ext_resource type="ButtonGroup" uid="uid://73odg1nwdkof" path="res://src/ui/components/menu/button_group_menu_tabs.tres" id="8_ao4hb"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="8_d38wp"]
+[ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="9_8r287"]
+[ext_resource type="Texture2D" uid="uid://bqypc3fidla5s" path="res://assets/ui/SettingsOff.png" id="10_asfa4"]
+[ext_resource type="Texture2D" uid="uid://dfntqgxlp7fsc" path="res://assets/themes/dark_dcl_theme/icons/Backpack.svg" id="10_iakp3"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="12_dymeh"]
+[ext_resource type="Texture2D" uid="uid://dux2iwsr2jei8" path="res://assets/themes/dark_dcl_theme/icons/DecentralandLogo.svg" id="12_eucri"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="12_rk6dl"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="13_likvk"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_t4bn8"]
 shader = ExtResource("5_k4wpn")
 shader_parameter/strength = 0.9
 shader_parameter/speed = 0.025
 shader_parameter/angle = 0.0
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_dm3ec"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_60djt"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
 [node name="Control_Menu" type="Control"]
 layout_mode = 3
@@ -59,9 +75,9 @@ layout_mode = 1
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 59.0
+offset_bottom = 80.0
 grow_horizontal = 2
-color = Color(0.0862745, 0.0862745, 0.0862745, 1)
+color = Color(0.0862745, 0.0784314, 0.105882, 1)
 
 [node name="ColorRect_Separator" type="ColorRect" parent="ColorRect_Header"]
 material = SubResource("ShaderMaterial_t4bn8")
@@ -104,53 +120,118 @@ button_group = ExtResource("8_ao4hb")
 text = "Discover"
 
 [node name="Button_Map" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
-custom_minimum_size = Vector2(75, 0)
+custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("8_ao4hb")
-text = "Map"
+text = "MAP"
+icon = ExtResource("9_8r287")
+flat = true
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
 
 [node name="Button_Backpack" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
-custom_minimum_size = Vector2(75, 0)
+custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("8_ao4hb")
-text = "My Profile"
+text = "BACKPACK"
+icon = ExtResource("10_iakp3")
+flat = true
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
 
 [node name="Button_Settings" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
-custom_minimum_size = Vector2(75, 0)
+custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("8_ao4hb")
-text = "Settings"
+text = "SETTINGS"
+icon = ExtResource("10_asfa4")
+flat = true
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+
+[node name="HBoxContainer_Logo" type="HBoxContainer" parent="ColorRect_Header"]
+layout_mode = 0
+offset_left = 34.0
+offset_top = 26.0
+offset_right = 136.0
+offset_bottom = 54.0
+
+[node name="TextureRect_Logo" type="TextureRect" parent="ColorRect_Header/HBoxContainer_Logo"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("12_eucri")
+expand_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="ColorRect_Header/HBoxContainer_Logo"]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_dm3ec")
+
+[node name="Label" type="Label" parent="ColorRect_Header/HBoxContainer_Logo"]
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("13_likvk")
+theme_override_font_sizes/font_size = 18
+text = "ALPHA"
+vertical_alignment = 1
 
 [node name="Button_Close" type="Button" parent="."]
-custom_minimum_size = Vector2(75, 0)
+custom_minimum_size = Vector2(52, 52)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -77.0
-offset_top = 18.0
-offset_right = -27.0
-offset_bottom = 41.0
+offset_left = -84.0
+offset_top = 14.0
+offset_right = -32.0
+offset_bottom = 66.0
 grow_horizontal = 0
 size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
-text = "CLOSE"
+theme = ExtResource("12_dymeh")
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_styles/normal = SubResource("StyleBoxFlat_60djt")
+toggle_mode = true
+button_group = ExtResource("8_ao4hb")
+icon = ExtResource("12_rk6dl")
+icon_alignment = 1
+expand_icon = true
 
 [connection signal="preview_hot_reload" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_preview_hot_reload"]
 [connection signal="request_debug_panel" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_request_debug_panel"]

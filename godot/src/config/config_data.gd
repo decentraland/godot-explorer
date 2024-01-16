@@ -114,7 +114,7 @@ func load_from_default():
 	self.scene_radius = 4
 	self.limit_fps = 0
 
-	if OS.has_feature("mobile"):
+	if Global.is_mobile:
 		self.skybox = 0
 	else:
 		self.skybox = 1
@@ -125,10 +125,6 @@ func load_from_default():
 
 	self.resolution = "1280 x 720"
 	self.window_size = "1280 x 720"
-	if Global.is_mobile:
-		self.ui_scale = 1.75
-	else:
-		self.ui_scale = 1.0
 
 	self.session_account = {}
 
