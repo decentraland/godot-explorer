@@ -37,7 +37,7 @@ pub fn set_thread_safety_checks_enabled(enabled: bool) {
     );
 }
 
-pub fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: String) -> bool {
+fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: String) -> bool {
     if let Some(mut promise) = get_promise() {
         promise.call_deferred("reject".into(), &[reason.to_variant()]);
         true
@@ -46,10 +46,7 @@ pub fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: Str
     }
 }
 
-pub fn resolve_promise(
-    get_promise: impl Fn() -> Option<Gd<Promise>>,
-    value: Option<Variant>,
-) -> bool {
+fn resolve_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, value: Option<Variant>) -> bool {
     if let Some(mut promise) = get_promise() {
         if let Some(value) = value {
             promise.call_deferred("resolve_with_data".into(), &[value]);
@@ -60,4 +57,14 @@ pub fn resolve_promise(
     } else {
         false
     }
+}
+
+pub fn then_promise(
+    get_promise: impl Fn() -> Option<Gd<Promise>>,
+    result: Result<Option<Variant>, anyhow::Error>,
+) {
+    match result {
+        Ok(value) => resolve_promise(get_promise, value),
+        Err(reason) => reject_promise(get_promise, reason.to_string()),
+    };
 }

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use godot::{
-    builtin::{meta::ToGodot, Dictionary, GString},
+    builtin::{meta::ToGodot, Dictionary, GString, Variant},
     engine::{
         global::Error, node::ProcessMode, AnimatableBody3D, AnimationLibrary, AnimationPlayer,
         CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, MeshInstance3D, Node,
@@ -11,82 +11,50 @@ use godot::{
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
-use crate::godot_classes::promise::Promise;
-
 use super::{
-    content_mapping::ContentMappingAndUrlRef,
-    content_provider::ContentProviderContext,
-    download::fetch_resource_or_wait,
-    file_string::get_base_dir,
-    thread_safety::{reject_promise, resolve_promise, GodotSingleThreadSafety},
+    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
+    download::fetch_resource_or_wait, file_string::get_base_dir,
+    thread_safety::GodotSingleThreadSafety,
 };
 
 pub async fn load_gltf(
     file_path: String,
     content_mapping: ContentMappingAndUrlRef,
-    get_promise: impl Fn() -> Option<Gd<Promise>>,
     ctx: ContentProviderContext,
-) {
+) -> Result<Option<Variant>, anyhow::Error> {
     let base_path = Arc::new(get_base_dir(&file_path));
 
-    let Some(file_hash) = content_mapping.content.get(&file_path) else {
-        reject_promise(
-            get_promise,
-            "File not found in the content mappings".to_string(),
-        );
-        return;
-    };
+    let file_hash = content_mapping
+        .content
+        .get(&file_path)
+        .ok_or(anyhow::Error::msg("File not found in the content mappings"))?;
 
     let url = format!("{}{}", content_mapping.base_url, file_hash);
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-    match fetch_resource_or_wait(&url, file_hash, &absolute_file_path, ctx.clone()).await {
-        Ok(_) => {}
-        Err(err) => {
-            reject_promise(
-                get_promise,
-                format!(
-                    "Error downloading gltf {file_hash} ({file_path}): {:?}",
-                    err
-                ),
-            );
-            return;
-        }
-    }
+    fetch_resource_or_wait(&url, file_hash, &absolute_file_path, ctx.clone())
+        .await
+        .map_err(anyhow::Error::msg)?;
 
-    let dependencies = match get_dependencies(&absolute_file_path).await {
-        Ok(dependencies) => dependencies
-            .into_iter()
-            .map(|dep| {
-                let full_path = if base_path.is_empty() {
-                    dep.clone()
-                } else {
-                    format!("{}/{}", base_path, dep)
-                }
-                .to_lowercase();
+    let dependencies = get_dependencies(&absolute_file_path)
+        .await?
+        .into_iter()
+        .map(|dep| {
+            let full_path = if base_path.is_empty() {
+                dep.clone()
+            } else {
+                format!("{}/{}", base_path, dep)
+            }
+            .to_lowercase();
 
-                let item = content_mapping.content.get(&full_path).cloned();
-                (dep, item)
-            })
-            .collect::<Vec<(String, Option<String>)>>(),
-
-        Err(err) => {
-            reject_promise(
-                get_promise,
-                format!(
-                    "Error downloading gltf {file_hash} ({file_path}): {:?}",
-                    err
-                ),
-            );
-            return;
-        }
-    };
+            let item = content_mapping.content.get(&full_path).cloned();
+            (dep, item)
+        })
+        .collect::<Vec<(String, Option<String>)>>();
 
     if dependencies.iter().any(|(_, hash)| hash.is_none()) {
-        reject_promise(
-            get_promise,
+        return Err(anyhow::Error::msg(
             "There are some missing dependencies in the gltf".to_string(),
-        );
-        return;
+        ));
     }
 
     let dependencies_hash = dependencies
@@ -120,20 +88,15 @@ pub async fn load_gltf(
             .map(|err| err.to_string())
             .collect::<Vec<String>>()
             .join("\n");
-        reject_promise(
-            get_promise,
-            format!("Error downloading gltf dependencies: {errors}"),
-        );
-        return;
+
+        return Err(anyhow::Error::msg(format!(
+            "Error downloading gltf dependencies: {errors}"
+        )));
     }
 
-    let Some(_thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
-        reject_promise(
-            get_promise,
-            "Error loading gltf when acquiring thread safety".to_string(),
-        );
-        return;
-    };
+    let _thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
+        .await
+        .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
 
     let mut new_gltf = GltfDocument::new();
     let mut new_gltf_state = GltfState::new();
@@ -158,33 +121,26 @@ pub async fn load_gltf(
 
     if err != Error::OK {
         let err = err.to_variant().to::<i32>();
-        reject_promise(
-            get_promise,
-            format!("Error loading gltf after appending from file {}", err),
-        );
-        return;
+        return Err(anyhow::Error::msg(format!(
+            "Error loading gltf after appending from file {}",
+            err
+        )));
     }
 
-    let Some(node) = new_gltf.generate_scene(new_gltf_state) else {
-        reject_promise(
-            get_promise,
+    let node = new_gltf
+        .generate_scene(new_gltf_state)
+        .ok_or(anyhow::Error::msg(
             "Error loading gltf when generating scene".to_string(),
-        );
-        return;
-    };
+        ))?;
 
-    let Ok(mut node) = node.try_cast::<Node3D>() else {
-        reject_promise(
-            get_promise,
-            "Error loading gltf when casting to Node3D".to_string(),
-        );
-        return;
-    };
+    let mut node = node.try_cast::<Node3D>().map_err(|err| {
+        anyhow::Error::msg(format!("Error loading gltf when casting to Node3D: {err}"))
+    })?;
 
     node.rotate_y(std::f32::consts::PI);
     create_colliders(node.clone().upcast());
 
-    resolve_promise(get_promise, Some(node.to_variant()));
+    Ok(Some(node.to_variant()))
 }
 
 pub async fn apply_update_set_mask_colliders(
@@ -193,23 +149,19 @@ pub async fn apply_update_set_mask_colliders(
     dcl_invisible_cmask: i32,
     dcl_scene_id: i32,
     dcl_entity_id: i32,
-    get_promise: impl Fn() -> Option<Gd<Promise>>,
     ctx: ContentProviderContext,
-) {
-    let Some(_thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
-        reject_promise(
-            get_promise,
-            "Error loading gltf when acquiring thread safety".to_string(),
-        );
-        return;
-    };
+) -> Result<Option<Variant>, anyhow::Error> {
+    let _thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
+        .await
+        .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
 
     let mut to_remove_nodes = Vec::new();
     let gltf_node: Gd<Node> = Gd::from_instance_id(gltf_node_instance_id);
-    let Some(gltf_node) = gltf_node.duplicate_ex().flags(8).done() else {
-        reject_promise(get_promise, "unable to duplicate gltf node".into());
-        return;
-    };
+    let gltf_node = gltf_node
+        .duplicate_ex()
+        .flags(8)
+        .done()
+        .ok_or(anyhow::Error::msg("unable to duplicate gltf node"))?;
 
     update_set_mask_colliders(
         gltf_node.clone(),
@@ -226,7 +178,7 @@ pub async fn apply_update_set_mask_colliders(
         node.queue_free();
     }
 
-    resolve_promise(get_promise, Some(gltf_node.to_variant()));
+    Ok(Some(gltf_node.to_variant()))
 }
 
 async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
