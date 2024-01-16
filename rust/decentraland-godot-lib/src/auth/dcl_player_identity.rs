@@ -5,6 +5,7 @@ use rand::thread_rng;
 use tokio::task::JoinHandle;
 
 use crate::comms::profile::{LambdaProfiles, UserProfile};
+use crate::content::bytes::fast_create_packed_byte_array_from_vec;
 use crate::dcl::scene_apis::RpcResultSender;
 use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::{RequestResponse, ResponseEnum};
@@ -388,21 +389,7 @@ impl DclPlayerIdentity {
                     return;
                 };
 
-                // TODO: gdext should implement a packedByteArray constructor from &[u8] and not iteration
-                let body_payload = {
-                    let byte_length = body_payload.len();
-                    let mut param = PackedByteArray::new();
-                    param.resize(byte_length);
-                    let data_arr_ptr = param.as_mut_slice();
-
-                    unsafe {
-                        let dst_ptr = &mut data_arr_ptr[0] as *mut u8;
-                        let src_ptr = &body_payload[0] as *const u8;
-                        std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, byte_length);
-                    }
-                    param
-                };
-
+                let body_payload = fast_create_packed_byte_array_from_vec(&body_payload);
                 let mut dict = Dictionary::default();
                 dict.set("content_type", content_type.to_variant());
                 dict.set("body_payload", body_payload.to_variant());
