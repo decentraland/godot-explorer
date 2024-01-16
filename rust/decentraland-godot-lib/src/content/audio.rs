@@ -1,19 +1,18 @@
 use godot::{
-    builtin::{meta::ToGodot, GString},
-    engine::{file_access::ModeFlags, AudioStream, AudioStreamMp3, AudioStreamWav, FileAccess},
+    builtin::{meta::ToGodot, PackedByteArray},
+    engine::{AudioStream, AudioStreamMp3, AudioStreamWav},
     obj::Gd,
 };
+use tokio::io::AsyncReadExt;
 
-use crate::{
-    godot_classes::promise::Promise,
-    http_request::request_response::{RequestOption, ResponseType},
-};
+use crate::godot_classes::promise::Promise;
 
 use super::{
     content_mapping::ContentMappingAndUrlRef,
     content_provider::ContentProviderContext,
+    download::fetch_resource_or_wait,
     file_string::get_extension,
-    thread_safety::{reject_promise, resolve_promise},
+    thread_safety::{reject_promise, resolve_promise, GodotSingleThreadSafety},
 };
 
 pub async fn load_audio(
@@ -39,42 +38,58 @@ pub async fn load_audio(
         return;
     };
 
+    let url = format!("{}{}", content_mapping.base_url, file_hash);
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-    if !FileAccess::file_exists(GString::from(&absolute_file_path)) {
-        let request = RequestOption::new(
-            0,
-            format!("{}{}", content_mapping.base_url, file_hash),
-            http::Method::GET,
-            ResponseType::ToFile(absolute_file_path.clone()),
-            None,
-            None,
-            None,
-        );
-
-        match ctx.http_queue_requester.request(request, 0).await {
-            Ok(_response) => {}
-            Err(err) => {
-                reject_promise(
-                    get_promise,
-                    format!(
-                        "Error downloading audio {file_hash} ({file_path}): {:?}",
-                        err
-                    ),
-                );
-                return;
-            }
+    match fetch_resource_or_wait(&url, file_hash, &absolute_file_path, ctx.clone()).await {
+        Ok(_) => {}
+        Err(err) => {
+            reject_promise(
+                get_promise,
+                format!("Error downloading audio {file_hash}: {:?}", err),
+            );
+            return;
         }
     }
 
-    let Some(file) = FileAccess::open(GString::from(&absolute_file_path), ModeFlags::READ) else {
+    let mut file = match tokio::fs::File::open(&absolute_file_path).await {
+        Ok(file) => file,
+        Err(err) => {
+            reject_promise(
+                get_promise,
+                format!("Error opening audio file {}: {:?}", file_path, err),
+            );
+            return;
+        }
+    };
+
+    let mut bytes_vec = Vec::new();
+    if let Err(err) = file.read_to_end(&mut bytes_vec).await {
         reject_promise(
             get_promise,
-            format!("Error opening audio file {}", absolute_file_path),
+            format!("Error reading audio file {}: {:?}", file_path, err),
+        );
+        return;
+    }
+
+    let Some(thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
+        reject_promise(
+            get_promise,
+            "Error loading gltf when acquiring thread safety".to_string(),
         );
         return;
     };
 
-    let bytes = file.get_buffer(file.get_length() as i64);
+    let byte_length = bytes_vec.len();
+    let mut bytes = PackedByteArray::new();
+    bytes.resize(byte_length);
+
+    let data_arr_ptr = bytes.as_mut_slice();
+    unsafe {
+        let dst_ptr = &mut data_arr_ptr[0] as *mut u8;
+        let src_ptr = &bytes_vec[0] as *const u8;
+        std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, byte_length);
+    }
+
     let audio_stream: Option<Gd<AudioStream>> = match extension.as_str() {
         ".wav" => {
             let mut audio_stream = AudioStreamWav::new();
@@ -103,4 +118,5 @@ pub async fn load_audio(
     };
 
     resolve_promise(get_promise, Some(audio_stream.to_variant()));
+    thread_safe_check.nop();
 }

@@ -1,5 +1,3 @@
-use godot::{builtin::GString, engine::FileAccess};
-
 use crate::http_request::request_response::{RequestOption, ResponseType};
 
 use super::{content_notificator::ContentState, content_provider::ContentProviderContext};
@@ -12,13 +10,13 @@ pub async fn fetch_resource_or_wait(
 ) -> Result<(), String> {
     let content_state = ctx
         .content_notificator
-        .get_or_create_notify(&file_hash)
+        .get_or_create_notify(file_hash)
         .await;
 
     match content_state {
         ContentState::Busy(notify) => {
             notify.notified().await;
-            match ctx.content_notificator.get(&file_hash).await {
+            match ctx.content_notificator.get(file_hash).await {
                 Some(ContentState::Released(result)) => result,
                 _ => Err("Double busy state ".to_string()),
             }
@@ -45,11 +43,11 @@ pub async fn fetch_resource_or_wait(
                 };
 
                 ctx.content_notificator
-                    .resolve(&file_hash, result.clone())
+                    .resolve(file_hash, result.clone())
                     .await;
                 result
             } else {
-                ctx.content_notificator.resolve(&file_hash, Ok(())).await;
+                ctx.content_notificator.resolve(file_hash, Ok(())).await;
                 Ok(())
             }
         }

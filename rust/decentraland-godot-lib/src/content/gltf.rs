@@ -3,9 +3,9 @@ use std::{collections::HashMap, sync::Arc};
 use godot::{
     builtin::{meta::ToGodot, Dictionary, GString},
     engine::{
-        file_access::ModeFlags, global::Error, node::ProcessMode, AnimatableBody3D,
-        AnimationLibrary, AnimationPlayer, CollisionShape3D, ConcavePolygonShape3D, FileAccess,
-        GltfDocument, GltfState, MeshInstance3D, Node, Node3D, NodeExt, StaticBody3D,
+        global::Error, node::ProcessMode, AnimatableBody3D, AnimationLibrary, AnimationPlayer,
+        CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, MeshInstance3D, Node,
+        Node3D, NodeExt, StaticBody3D,
     },
     obj::{Gd, InstanceId},
 };
@@ -18,29 +18,8 @@ use super::{
     content_provider::ContentProviderContext,
     download::fetch_resource_or_wait,
     file_string::get_base_dir,
-    thread_safety::{reject_promise, resolve_promise, set_thread_safety_checks_enabled},
+    thread_safety::{reject_promise, resolve_promise, GodotSingleThreadSafety},
 };
-
-struct GodotSingleThreadSafety {
-    _guard: tokio::sync::OwnedSemaphorePermit,
-}
-
-impl GodotSingleThreadSafety {
-    pub async fn acquire_owned(ctx: &ContentProviderContext) -> Option<Self> {
-        let guard = ctx.godot_single_thread.clone().acquire_owned().await.ok()?;
-        set_thread_safety_checks_enabled(false);
-        Some(Self { _guard: guard })
-    }
-
-    fn nop(&self) { /* nop */
-    }
-}
-
-impl Drop for GodotSingleThreadSafety {
-    fn drop(&mut self) {
-        set_thread_safety_checks_enabled(true);
-    }
-}
 
 pub async fn load_gltf(
     file_path: String,
@@ -60,7 +39,7 @@ pub async fn load_gltf(
 
     let url = format!("{}{}", content_mapping.base_url, file_hash);
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-    match fetch_resource_or_wait(&url, &file_hash, &absolute_file_path, ctx.clone()).await {
+    match fetch_resource_or_wait(&url, file_hash, &absolute_file_path, ctx.clone()).await {
         Ok(_) => {}
         Err(err) => {
             reject_promise(
@@ -121,21 +100,29 @@ pub async fn load_gltf(
         async move {
             let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
             let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
-            fetch_resource_or_wait(
-                &url,
-                &dependency_file_hash,
-                &absolute_file_path,
-                ctx.clone(),
-            )
-            .await
+            fetch_resource_or_wait(&url, dependency_file_hash, &absolute_file_path, ctx.clone())
+                .await
+                .map_err(|e| {
+                    format!(
+                        "Dependency {} failed to fetch: {:?}",
+                        dependency_file_hash, e
+                    )
+                })
         }
     });
 
     let result = futures_util::future::join_all(futures).await;
     if result.iter().any(|res| res.is_err()) {
+        // collect errors
+        let errors = result
+            .into_iter()
+            .filter_map(|res| res.err())
+            .map(|err| err.to_string())
+            .collect::<Vec<String>>()
+            .join("\n");
         reject_promise(
             get_promise,
-            "Error downloading gltf dependencies".to_string(),
+            format!("Error downloading gltf dependencies: {errors}"),
         );
         return;
     }
@@ -244,40 +231,26 @@ pub async fn apply_update_set_mask_colliders(
     thread_safe_check.nop();
 }
 
-async fn get_dependencies(file_path: &String) -> Result<Vec<String>, String> {
+async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
     let mut dependencies = Vec::new();
-    let mut file = tokio::fs::File::open(file_path)
-        .await
-        .map_err(|err| err.to_string())?;
+    let mut file = tokio::fs::File::open(file_path).await?;
 
-    let magic = file.read_i32_le().await.map_err(|err| err.to_string())?;
+    let magic = file.read_i32_le().await?;
     let json: serde_json::Value = if magic == 0x46546C67 {
-        let _version = file.read_i32_le().await.map_err(|err| err.to_string())?;
-        let _length = file.read_i32_le().await.map_err(|err| err.to_string())?;
-
-        let chunk_length = file.read_i32_le().await.map_err(|err| err.to_string())?;
-        let _chunk_type = file.read_i32_le().await.map_err(|err| err.to_string())?;
+        let _version = file.read_i32_le().await?;
+        let _length = file.read_i32_le().await?;
+        let chunk_length = file.read_i32_le().await?;
+        let _chunk_type = file.read_i32_le().await?;
 
         let mut json_data = vec![0u8; chunk_length as usize];
-        let _ = file
-            .read_exact(&mut json_data)
-            .await
-            .map_err(|err| err.to_string())?;
-
+        let _ = file.read_exact(&mut json_data).await?;
         serde_json::de::from_slice(json_data.as_slice())
     } else {
         let mut json_data = Vec::new();
-        let _ = file
-            .seek(std::io::SeekFrom::Start(0))
-            .await
-            .map_err(|err| err.to_string())?;
-        let _ = file
-            .read_to_end(&mut json_data)
-            .await
-            .map_err(|err| err.to_string())?;
+        let _ = file.seek(std::io::SeekFrom::Start(0)).await?;
+        let _ = file.read_to_end(&mut json_data).await?;
         serde_json::de::from_slice(json_data.as_slice())
-    }
-    .map_err(|err| err.to_string())?;
+    }?;
 
     if let Some(images) = json.get("images") {
         if let Some(images) = images.as_array() {

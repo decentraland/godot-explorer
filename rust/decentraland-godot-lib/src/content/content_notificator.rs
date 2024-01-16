@@ -45,13 +45,12 @@ impl ContentNotificator {
         ContentState::RequestOwner
     }
 
-    pub async fn resolve(&self, key: &String, result: Result<(), String>) {
+    pub async fn resolve(&self, key: &str, result: Result<(), String>) {
         let mut files = self.files.write().await;
-        if let Some(notify) = files.insert(key.clone(), ContentState::Released(result)) {
-            if let ContentState::Busy(notify) = notify {
-                notify.notify_waiters();
-            }
+        if let Some(ContentState::Busy(notify)) =
+            files.insert(key.to_owned(), ContentState::Released(result))
+        {
+            notify.notify_waiters();
         }
-        files.remove(key);
     }
 }
