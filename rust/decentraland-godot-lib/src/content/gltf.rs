@@ -127,7 +127,7 @@ pub async fn load_gltf(
         return;
     }
 
-    let Some(thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
+    let Some(_thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
         reject_promise(
             get_promise,
             "Error loading gltf when acquiring thread safety".to_string(),
@@ -185,7 +185,6 @@ pub async fn load_gltf(
     create_colliders(node.clone().upcast());
 
     resolve_promise(get_promise, Some(node.to_variant()));
-    thread_safe_check.nop();
 }
 
 pub async fn apply_update_set_mask_colliders(
@@ -197,7 +196,7 @@ pub async fn apply_update_set_mask_colliders(
     get_promise: impl Fn() -> Option<Gd<Promise>>,
     ctx: ContentProviderContext,
 ) {
-    let Some(thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
+    let Some(_thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
         reject_promise(
             get_promise,
             "Error loading gltf when acquiring thread safety".to_string(),
@@ -228,7 +227,6 @@ pub async fn apply_update_set_mask_colliders(
     }
 
     resolve_promise(get_promise, Some(gltf_node.to_variant()));
-    thread_safe_check.nop();
 }
 
 async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {

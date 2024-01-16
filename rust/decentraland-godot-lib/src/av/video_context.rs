@@ -7,9 +7,11 @@ use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
 use ffmpeg_next::{decoder, format::context::Input, media::Type, util::frame, Packet};
 use godot::engine::image::Format;
 use godot::engine::{Image, ImageTexture};
-use godot::prelude::{Gd, PackedByteArray, Vector2};
+use godot::prelude::{Gd, Vector2};
 use thiserror::Error;
 use tracing::debug;
+
+use crate::content::bytes::fast_create_packed_byte_array_from_slice;
 
 use super::stream_processor::FfmpegContext;
 
@@ -150,17 +152,7 @@ impl FfmpegContext for VideoContext {
         // let data_arr = PackedByteArray::from(current_frame.data(0));
 
         let raw_data = current_frame.data(0);
-        let byte_length = raw_data.len();
-        let mut data_arr = PackedByteArray::new();
-        data_arr.resize(raw_data.len());
-
-        let data_arr_ptr = data_arr.as_mut_slice();
-
-        unsafe {
-            let dst_ptr = &mut data_arr_ptr[0] as *mut u8;
-            let src_ptr = &raw_data[0] as *const u8;
-            std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, byte_length);
-        }
+        let data_arr = fast_create_packed_byte_array_from_slice(raw_data);
 
         let diff = self.last_frame_time.elapsed().as_secs_f32();
         debug!(

@@ -1,5 +1,5 @@
 use godot::{
-    builtin::{meta::ToGodot, PackedByteArray},
+    builtin::meta::ToGodot,
     engine::{AudioStream, AudioStreamMp3, AudioStreamWav},
     obj::Gd,
 };
@@ -8,6 +8,7 @@ use tokio::io::AsyncReadExt;
 use crate::godot_classes::promise::Promise;
 
 use super::{
+    bytes::fast_create_packed_byte_array_from_vec,
     content_mapping::ContentMappingAndUrlRef,
     content_provider::ContentProviderContext,
     download::fetch_resource_or_wait,
@@ -71,7 +72,7 @@ pub async fn load_audio(
         return;
     }
 
-    let Some(thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
+    let Some(_thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
         reject_promise(
             get_promise,
             "Error loading gltf when acquiring thread safety".to_string(),
@@ -79,17 +80,7 @@ pub async fn load_audio(
         return;
     };
 
-    let byte_length = bytes_vec.len();
-    let mut bytes = PackedByteArray::new();
-    bytes.resize(byte_length);
-
-    let data_arr_ptr = bytes.as_mut_slice();
-    unsafe {
-        let dst_ptr = &mut data_arr_ptr[0] as *mut u8;
-        let src_ptr = &bytes_vec[0] as *const u8;
-        std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, byte_length);
-    }
-
+    let bytes = fast_create_packed_byte_array_from_vec(&bytes_vec);
     let audio_stream: Option<Gd<AudioStream>> = match extension.as_str() {
         ".wav" => {
             let mut audio_stream = AudioStreamWav::new();
@@ -118,5 +109,4 @@ pub async fn load_audio(
     };
 
     resolve_promise(get_promise, Some(audio_stream.to_variant()));
-    thread_safe_check.nop();
 }

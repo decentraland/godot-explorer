@@ -261,6 +261,10 @@ pub(crate) fn scene_thread(
         return;
     }
 
+    rt.block_on(async {
+        let _ = runtime.run_event_loop(false).await;
+    });
+
     let start_time = std::time::SystemTime::now();
     let mut elapsed = Duration::default();
 

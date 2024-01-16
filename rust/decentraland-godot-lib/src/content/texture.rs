@@ -1,16 +1,18 @@
 use godot::{
     bind::GodotClass,
     builtin::{meta::ToGodot, GString},
-    engine::{file_access::ModeFlags, global::Error, DirAccess, FileAccess, Image, ImageTexture},
+    engine::{global::Error, DirAccess, Image, ImageTexture},
     obj::Gd,
 };
+use tokio::io::AsyncReadExt;
 
 use crate::godot_classes::promise::Promise;
 
 use super::{
+    bytes::fast_create_packed_byte_array_from_vec,
     content_provider::ContentProviderContext,
     download::fetch_resource_or_wait,
-    thread_safety::{reject_promise, resolve_promise},
+    thread_safety::{reject_promise, resolve_promise, GodotSingleThreadSafety},
 };
 
 #[derive(GodotClass)]
@@ -40,16 +42,41 @@ pub async fn load_png_texture(
         }
     }
 
-    let Some(file) = FileAccess::open(GString::from(&absolute_file_path), ModeFlags::READ) else {
+    let mut file = match tokio::fs::File::open(&absolute_file_path).await {
+        Ok(file) => file,
+        Err(err) => {
+            reject_promise(
+                get_promise,
+                format!(
+                    "Error opening texture file {}: {:?}",
+                    absolute_file_path, err
+                ),
+            );
+            return;
+        }
+    };
+
+    let mut bytes_vec = Vec::new();
+    if let Err(err) = file.read_to_end(&mut bytes_vec).await {
         reject_promise(
             get_promise,
-            format!("Error opening png file {}", absolute_file_path),
+            format!(
+                "Error reading texture file {}: {:?}",
+                absolute_file_path, err
+            ),
+        );
+        return;
+    }
+
+    let Some(_thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await else {
+        reject_promise(
+            get_promise,
+            "Error loading gltf when acquiring thread safety".to_string(),
         );
         return;
     };
 
-    let bytes = file.get_buffer(file.get_length() as i64);
-    drop(file);
+    let bytes = fast_create_packed_byte_array_from_vec(&bytes_vec);
 
     let mut image = Image::new();
     let err = image.load_png_from_buffer(bytes);

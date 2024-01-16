@@ -18,9 +18,6 @@ impl GodotSingleThreadSafety {
         set_thread_safety_checks_enabled(false);
         Some(Self { _guard: guard })
     }
-
-    pub fn nop(&self) { /* nop */
-    }
 }
 
 impl Drop for GodotSingleThreadSafety {
