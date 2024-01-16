@@ -298,5 +298,13 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         }
     }
 
+    println!("=== test build without default features ===");
+    cmd!("cargo", "build", "--no-default-features")
+        .env("CARGO_INCREMENTAL", "0")
+        .env("RUSTFLAGS", "-Cinstrument-coverage")
+        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
+        .dir(RUST_LIB_PROJECT_FOLDER)
+        .run()?;
+
     Ok(())
 }

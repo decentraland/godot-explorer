@@ -81,7 +81,9 @@ pub enum SceneUpdateState {
     Raycasts,
     AvatarAttach,
     SceneUi,
+    #[cfg(feature = "ffmpeg")]
     VideoPlayer,
+    #[cfg(feature = "ffmpeg")]
     AudioStream,
     AvatarModifierArea,
     CameraModeArea,
@@ -111,9 +113,14 @@ impl SceneUpdateState {
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::Raycasts,
+            #[cfg(feature = "ffmpeg")]
             Self::Raycasts => Self::VideoPlayer,
+            #[cfg(feature = "ffmpeg")]
             Self::VideoPlayer => Self::AudioStream,
+            #[cfg(feature = "ffmpeg")]
             Self::AudioStream => Self::AvatarModifierArea,
+            #[cfg(not(feature = "ffmpeg"))]
+            Self::Raycasts => Self::AvatarModifierArea,
             Self::AvatarModifierArea => Self::CameraModeArea,
             Self::CameraModeArea => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,

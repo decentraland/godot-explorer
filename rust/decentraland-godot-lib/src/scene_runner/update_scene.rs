@@ -2,11 +2,13 @@ use std::time::Instant;
 
 use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
 
+#[cfg(feature = "ffmpeg")]
+use super::components::{audio_stream::update_audio_stream, video_player::update_video_player};
+
 use super::{
     components::{
         animator::update_animator,
         audio_source::update_audio_source,
-        audio_stream::update_audio_stream,
         avatar_attach::update_avatar_attach,
         avatar_data::update_avatar_scene_updates,
         avatar_modifier_area::update_avatar_modifier_area,
@@ -24,7 +26,6 @@ use super::{
         transform_and_parent::update_transform_and_parent,
         tween::update_tween,
         ui::scene_ui::update_scene_ui,
-        video_player::update_video_player,
         visibility::update_visibility,
     },
     deleted_entities::update_deleted_entities,
@@ -213,10 +214,12 @@ pub fn _process_scene(
                 update_avatar_attach(scene, crdt_state);
                 false
             }
+            #[cfg(feature = "ffmpeg")]
             SceneUpdateState::VideoPlayer => {
                 update_video_player(scene, crdt_state, current_parcel_scene_id);
                 false
             }
+            #[cfg(feature = "ffmpeg")]
             SceneUpdateState::AudioStream => {
                 update_audio_stream(scene, crdt_state, current_parcel_scene_id);
                 false

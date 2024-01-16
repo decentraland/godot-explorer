@@ -26,8 +26,8 @@ urn = "0.7.0"
 ethers = { version = "2.0", features = ["rustls"] }
 async-trait = "0.1.68"
 
-cpal = "0.15.2"
-ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch="audioline-and-mobile-fix" }
+cpal = { version = "0.15.2", optional = true }
+ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch="audioline-and-mobile-fix", optional = true }
 
 thiserror = "1.0"
 anyhow = "1.0.70"
@@ -48,7 +48,7 @@ bytes = "1.4.0"
 tokio-tungstenite = "0.20.1"
 futures-util = "*"
 
-livekit = { git = "https://github.com/robtfm/client-sdk-rust", branch="h264-false", features=["rustls-tls-webpki-roots"] }
+livekit = { git = "https://github.com/robtfm/client-sdk-rust", branch="h264-false", features=["rustls-tls-webpki-roots"], optional = true }
 
 taffy = { git = "https://github.com/DioxusLabs/taffy", rev="7eee673c5ea65f64f35c53f5ee2fe5faf62b9c1e" }
 tracing-test = "0.2.4"
@@ -65,9 +65,14 @@ multipart = { version = "0.18.0", default-features = false, features = ["client"
 ethers-providers = { version = "2.0", features = ["ws","rustls"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix", features = ["fix_usize_size_t"] }
+ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix", features = ["fix_usize_size_t"], optional = true }
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
+
+[features]
+default = ["ffmpeg", "livekit"]
+ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
+livekit = ["ffmpeg", "dep:livekit"]
 
 [build-dependencies]
 webrtc-sys-build = "0.2.0"
