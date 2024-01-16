@@ -429,6 +429,16 @@ impl ContentProvider {
         }
         Variant::nil()
     }
+
+    #[func]
+    pub fn get_pending_promises(&self) -> Array<Gd<Promise>> {
+        Array::from_iter(
+            self.cached
+                .iter()
+                .filter(|(_, entry)| !entry.promise.bind().is_resolved())
+                .map(|(_, entry)| entry.promise.clone()),
+        )
+    }
 }
 
 impl ContentProvider {

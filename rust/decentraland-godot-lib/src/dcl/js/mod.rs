@@ -254,6 +254,17 @@ pub(crate) fn scene_thread(
         Ok(script) => script,
     };
 
+    let utils_script = rt.block_on(async {
+        runtime.execute_script("<loader>", ascii_str!("require (\"~utils.js\")"))
+    });
+    let utils_script = match utils_script {
+        Err(e) => {
+            tracing::error!("[scene thread {scene_id:?}] utils script load error: {}", e);
+            return;
+        }
+        Ok(script) => script,
+    };
+
     let result =
         rt.block_on(async { run_script(&mut runtime, &script, "onStart", |_| Vec::new()).await });
     if let Err(e) = result {
@@ -261,9 +272,14 @@ pub(crate) fn scene_thread(
         return;
     }
 
-    rt.block_on(async {
-        let _ = runtime.run_event_loop(false).await;
+    // instead of using run_event_loop for polling, this is a workaround to resolve pending promises
+    let result = rt.block_on(async {
+        run_script(&mut runtime, &utils_script, "run_async", |_| Vec::new()).await
     });
+    if let Err(e) = result {
+        tracing::error!("[scene thread {scene_id:?}] script load running: {}", e);
+        return;
+    }
 
     let start_time = std::time::SystemTime::now();
     let mut elapsed = Duration::default();
@@ -382,6 +398,7 @@ fn op_require(
     match module_spec.as_str() {
         // user module load
         "~scene.js" => Ok(state.take::<SceneJsFileContent>().0),
+        "~utils.js" => Ok(include_str!("js_modules/utils.js").to_owned()),
         // core module load
         "~system/CommunicationsController" => {
             Ok(include_str!("js_modules/CommunicationsController.js").to_owned())
