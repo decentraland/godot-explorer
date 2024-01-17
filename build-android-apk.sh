@@ -10,9 +10,6 @@ then
     git clone https://github.com/decentraland/godot-explorer-android-template ${EXPLORER_PATH}/godot/android
 fi
 
-echo "Install x86_64-android target toolchain"
-rustup target add x86_64-linux-android
-
 echo "Build for Linux x86_64"
 cd ${EXPLORER_PATH}/rust/xtask
 cargo run -- install
@@ -50,3 +47,5 @@ cd ${EXPLORER_PATH}/godot/
 
 ${EXPLORER_PATH}/.bin/godot/godot4_bin \
     -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk
+
+echo "Finished"
