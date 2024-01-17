@@ -1,18 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://moihpyoq7yky"]
 
+[ext_resource type="StyleBox" uid="uid://fwa6quwdho3d" path="res://src/ui/components/icon_button/custom_icon_button.tres" id="1_27kq4"]
 [ext_resource type="Script" path="res://src/ui/components/icon_button/icon_button.gd" id="1_bbc1x"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xy523"]
-content_margin_left = 8.0
-content_margin_top = 8.0
-content_margin_right = 8.0
-content_margin_bottom = 8.0
-bg_color = Color(1, 1, 1, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-anti_aliasing = false
 
 [node name="IconButton" type="Button"]
 self_modulate = Color(0, 0, 0, 1)
@@ -31,7 +20,9 @@ grow_vertical = 2
 pivot_offset = Vector2(15, 15)
 size_flags_horizontal = 4
 size_flags_vertical = 4
-theme_override_styles/normal = SubResource("StyleBoxFlat_xy523")
+theme_override_styles/normal = ExtResource("1_27kq4")
+theme_override_styles/hover = ExtResource("1_27kq4")
+theme_override_styles/pressed = ExtResource("1_27kq4")
 script = ExtResource("1_bbc1x")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
@@ -50,3 +41,6 @@ theme_override_constants/margin_bottom = 8
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
+
+[connection signal="button_down" from="." to="." method="_on_button_down"]
+[connection signal="button_up" from="." to="." method="_on_button_up"]

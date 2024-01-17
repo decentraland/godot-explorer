@@ -66,6 +66,7 @@ var spin_box_run_speed = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxC
 @onready
 var spin_box_walk_speed = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed
 
+@onready var custom_popup = $CustomPopup
 
 func _ready():
 	if Global.is_mobile:
@@ -75,6 +76,7 @@ func _ready():
 	general.show()
 	graphics.hide()
 	advanced.hide()
+	custom_popup.close()
 
 	text_edit.text = Global.config.local_content_dir
 
@@ -318,3 +320,7 @@ func _on_check_box_scene_pause_toggled(toggled_on):
 
 func _on_check_box_raycast_debugger_toggled(toggled_on):
 	Global.set_raycast_debugger_enable(toggled_on)
+
+
+func _on_button_profile_pressed():
+	custom_popup.openProfile()

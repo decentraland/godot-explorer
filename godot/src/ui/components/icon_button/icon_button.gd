@@ -10,12 +10,21 @@ extends Button
 
 func _ready():
 	if navigation:
-		size = Vector2(26,26)
+		custom_minimum_size = Vector2(30,30)
 	else:
-		size = Vector2(30,30)
+		custom_minimum_size = Vector2(35,35)
 		
 	self_modulate = bg_color
 	texture_rect_icon.self_modulate = icon_color
 	texture_rect_icon.texture = icon_source
 
 
+
+
+func _on_button_down():
+	scale = Vector2(1.1,1.1)
+	texture_rect_icon.self_modulate = Color(icon_color.r/2, icon_color.g/2, icon_color.b/2)
+
+func _on_button_up():
+	scale = Vector2(1,1)
+	texture_rect_icon.self_modulate = icon_color

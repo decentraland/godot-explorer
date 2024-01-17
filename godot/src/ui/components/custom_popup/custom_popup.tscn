@@ -1,8 +1,11 @@
-[gd_scene load_steps=9 format=3 uid="uid://g7mjpw7t7gif"]
+[gd_scene load_steps=12 format=3 uid="uid://g7mjpw7t7gif"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_qsodf"]
 [ext_resource type="PackedScene" uid="uid://moihpyoq7yky" path="res://src/ui/components/icon_button/icon_button.tscn" id="2_848bx"]
-[ext_resource type="PackedScene" uid="uid://beskp5r5fb0hf" path="res://src/ui/components/profile/profile.tscn" id="4_bus5v"]
+[ext_resource type="Script" path="res://src/ui/components/custom_popup/custom_popup.gd" id="2_mxgsc"]
+[ext_resource type="PackedScene" uid="uid://beskp5r5fb0hf" path="res://src/ui/components/profile/my_profile.tscn" id="3_gprc4"]
+[ext_resource type="Texture2D" uid="uid://bj7ixhs7ddpki" path="res://assets/ui/Next.svg" id="3_wlm0s"]
+[ext_resource type="Texture2D" uid="uid://bg6somt12nu12" path="res://assets/ui/close.svg" id="6_t53rf"]
 
 [sub_resource type="Animation" id="Animation_70m5k"]
 length = 0.001
@@ -29,7 +32,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[node name="VBox_Loading" type="ColorRect"]
+[node name="CustomPopup" type="ColorRect"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -39,6 +42,7 @@ focus_mode = 1
 mouse_force_pass_scroll_events = false
 theme = ExtResource("1_qsodf")
 color = Color(0, 0, 0, 0.784314)
+script = ExtResource("2_mxgsc")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
@@ -60,19 +64,57 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_02u0i")
 
-[node name="MarginContainer2" type="MarginContainer" parent="PanelContainer"]
+[node name="MarginContainer_Content" type="MarginContainer" parent="PanelContainer"]
 layout_mode = 2
 theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 30
 
-[node name="IconButton" parent="PanelContainer/MarginContainer2" instance=ExtResource("2_848bx")]
+[node name="MyProfile" parent="PanelContainer/MarginContainer_Content" instance=ExtResource("3_gprc4")]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="MarginContainer_Navigation" type="MarginContainer" parent="PanelContainer"]
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
-script = null
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 30
 
-[node name="Profile" parent="PanelContainer/MarginContainer2" instance=ExtResource("4_bus5v")]
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer_Navigation"]
 layout_mode = 2
-mouse_filter = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+alignment = 1
+
+[node name="VBoxContainer_Back" type="VBoxContainer" parent="PanelContainer/MarginContainer_Navigation/HBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="IconButton_Back" parent="PanelContainer/MarginContainer_Navigation/HBoxContainer/VBoxContainer_Back" instance=ExtResource("2_848bx")]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+focus_mode = 0
+navigation = true
+icon_source = ExtResource("3_wlm0s")
+
+[node name="VBoxContainer_Close" type="VBoxContainer" parent="PanelContainer/MarginContainer_Navigation/HBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="IconButton_Close" parent="PanelContainer/MarginContainer_Navigation/HBoxContainer/VBoxContainer_Close" instance=ExtResource("2_848bx")]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+focus_mode = 0
+navigation = true
+icon_source = ExtResource("6_t53rf")
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="pressed" from="PanelContainer/MarginContainer_Navigation/HBoxContainer/VBoxContainer_Close/IconButton_Close" to="." method="_on_icon_button_close_pressed"]

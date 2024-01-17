@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=17 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
@@ -8,6 +8,13 @@
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
 [ext_resource type="ButtonGroup" uid="uid://73odg1nwdkof" path="res://src/ui/components/menu/button_group_menu_tabs.tres" id="8_ao4hb"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="8_d38wp"]
+[ext_resource type="PackedScene" uid="uid://ospn0xlkak6m" path="res://src/ui/components/vertical_icon_button/vertical_icon_button.tscn" id="9_7vo8e"]
+[ext_resource type="Texture2D" uid="uid://ck0o5otm5qv8k" path="res://assets/ui/nav-bar-icons/explorer-off.svg" id="10_ly37h"]
+[ext_resource type="Texture2D" uid="uid://in6jrkrtptfk" path="res://assets/ui/nav-bar-icons/explorer-on.svg" id="11_gl688"]
+[ext_resource type="Texture2D" uid="uid://3w81orc6dom3" path="res://assets/ui/nav-bar-icons/backpack-off.svg" id="12_jqiqu"]
+[ext_resource type="Texture2D" uid="uid://6imcvlsym60g" path="res://assets/ui/nav-bar-icons/backpack-on.svg" id="13_dwe06"]
+[ext_resource type="Texture2D" uid="uid://3hwotq2y3fji" path="res://assets/ui/nav-bar-icons/settings-off.svg" id="14_k81tr"]
+[ext_resource type="Texture2D" uid="uid://btbdt48fn6ys1" path="res://assets/ui/nav-bar-icons/settings-on.svg" id="15_uduxr"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_t4bn8"]
 shader = ExtResource("5_k4wpn")
@@ -42,7 +49,6 @@ visible = false
 layout_mode = 1
 
 [node name="Control_Settings" parent="ColorRect_Background" instance=ExtResource("3_1stdy")]
-visible = false
 layout_mode = 1
 
 [node name="Control_Map" parent="ColorRect_Background" instance=ExtResource("4_jtsir")]
@@ -90,6 +96,31 @@ grow_vertical = 2
 focus_mode = 2
 theme_override_constants/separation = 50
 
+[node name="IconButton_Discover" parent="ColorRect_Header/HBoxContainer_ButtonsPanel" instance=ExtResource("9_7vo8e")]
+self_modulate = Color(1, 1, 1, 0)
+layout_mode = 2
+icon_unpressed = ExtResource("10_ly37h")
+icon_pressed = ExtResource("11_gl688")
+label_value = "EXPLORER"
+
+[node name="IconButton_Map" parent="ColorRect_Header/HBoxContainer_ButtonsPanel" instance=ExtResource("9_7vo8e")]
+self_modulate = Color(1, 1, 1, 0)
+layout_mode = 2
+
+[node name="IconButton_Backpack" parent="ColorRect_Header/HBoxContainer_ButtonsPanel" instance=ExtResource("9_7vo8e")]
+self_modulate = Color(1, 1, 1, 0)
+layout_mode = 2
+icon_unpressed = ExtResource("12_jqiqu")
+icon_pressed = ExtResource("13_dwe06")
+label_value = "BACKPACK"
+
+[node name="IconButton_Settings" parent="ColorRect_Header/HBoxContainer_ButtonsPanel" instance=ExtResource("9_7vo8e")]
+self_modulate = Color(1, 1, 1, 0)
+layout_mode = 2
+icon_unpressed = ExtResource("14_k81tr")
+icon_pressed = ExtResource("15_uduxr")
+label_value = "SETTINGS"
+
 [node name="Button_Discover" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
 visible = false
 custom_minimum_size = Vector2(75, 0)
@@ -136,6 +167,17 @@ toggle_mode = true
 button_group = ExtResource("8_ao4hb")
 text = "Settings"
 
+[node name="Button_Profile" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
+custom_minimum_size = Vector2(75, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+toggle_mode = true
+button_group = ExtResource("8_ao4hb")
+text = "Profile"
+
 [node name="Button_Close" type="Button" parent="."]
 custom_minimum_size = Vector2(75, 0)
 layout_mode = 1
@@ -159,4 +201,5 @@ text = "CLOSE"
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Settings" to="." method="_on_button_settings_pressed"]
+[connection signal="pressed" from="ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Profile" to="." method="_on_button_settings_pressed"]
 [connection signal="pressed" from="Button_Close" to="." method="_on_button_close_pressed"]

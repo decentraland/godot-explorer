@@ -1,0 +1,63 @@
+[gd_scene load_steps=6 format=3 uid="uid://ospn0xlkak6m"]
+
+[ext_resource type="StyleBox" uid="uid://fwa6quwdho3d" path="res://src/ui/components/icon_button/custom_icon_button.tres" id="1_33vgq"]
+[ext_resource type="Script" path="res://src/ui/components/vertical_icon_button/vertical_icon_button.gd" id="2_dnm3u"]
+[ext_resource type="Texture2D" uid="uid://cjel222xxlxh5" path="res://assets/ui/map-off.svg" id="3_14fjy"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_drj4u"]
+[ext_resource type="Texture2D" uid="uid://bg6q5c0kp71lq" path="res://assets/ui/map-on.svg" id="4_g3r3p"]
+
+[node name="IconButton" type="Button"]
+self_modulate = Color(1, 1, 1, 0)
+custom_minimum_size = Vector2(150, 48)
+offset_right = 150.0
+offset_bottom = 48.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+focus_mode = 0
+theme_override_styles/normal = ExtResource("1_33vgq")
+theme_override_styles/hover = ExtResource("1_33vgq")
+theme_override_styles/pressed = ExtResource("1_33vgq")
+toggle_mode = true
+script = ExtResource("2_dnm3u")
+icon_unpressed = ExtResource("3_14fjy")
+icon_pressed = ExtResource("4_g3r3p")
+label_value = "MAP"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = -2
+alignment = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TextureRect_Icon" type="TextureRect" parent="VBoxContainer/MarginContainer"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("3_14fjy")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("4_drj4u")
+theme_override_font_sizes/font_size = 14
+text = "MAP"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[connection signal="toggled" from="." to="." method="_on_toggled"]
