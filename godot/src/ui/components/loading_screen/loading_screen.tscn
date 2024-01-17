@@ -1,34 +1,15 @@
-[gd_scene load_steps=27 format=3 uid="uid://bmjwqm6jgri7c"]
+[gd_scene load_steps=16 format=3 uid="uid://bmjwqm6jgri7c"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_uio8w"]
 [ext_resource type="Script" path="res://src/ui/components/loading_screen/loading_screen.gd" id="2_7hdbk"]
 [ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="3_r47t1"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_y82bl"]
-[ext_resource type="PackedScene" uid="uid://ospn0xlkak6m" path="res://src/ui/components/vertical_icon_button/vertical_icon_button.tscn" id="4_p0lya"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_slpbh"]
-[ext_resource type="Texture2D" uid="uid://ck0o5otm5qv8k" path="res://assets/ui/nav-bar-icons/explorer-off.svg" id="5_68e3v"]
-[ext_resource type="Texture2D" uid="uid://in6jrkrtptfk" path="res://assets/ui/nav-bar-icons/explorer-on.svg" id="6_iplhm"]
 [ext_resource type="Texture2D" uid="uid://bxom57mhcmhv4" path="res://assets/ui/LeftArrow.png" id="6_oud40"]
-[ext_resource type="Texture2D" uid="uid://3w81orc6dom3" path="res://assets/ui/nav-bar-icons/backpack-off.svg" id="7_2tm6c"]
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="8_32igy"]
-[ext_resource type="Texture2D" uid="uid://6imcvlsym60g" path="res://assets/ui/nav-bar-icons/backpack-on.svg" id="8_bksan"]
 [ext_resource type="Texture2D" uid="uid://dx34q3r7ow0x0" path="res://assets/ui/NPCs_Aisha.png" id="8_xoe30"]
-[ext_resource type="Texture2D" uid="uid://3hwotq2y3fji" path="res://assets/ui/nav-bar-icons/settings-off.svg" id="9_6c3ra"]
 [ext_resource type="Texture2D" uid="uid://bkogft5vqdpas" path="res://assets/ui/RightArrow.png" id="9_xqknv"]
 [ext_resource type="PackedScene" uid="uid://cu2ci0kwgisjo" path="res://src/ui/components/pagination/Pagination.tscn" id="10_6e8p0"]
-[ext_resource type="Texture2D" uid="uid://btbdt48fn6ys1" path="res://assets/ui/nav-bar-icons/settings-on.svg" id="10_l0po4"]
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_kjjlr"]
-resource_name = "Tabs"
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_s1nec"]
-resource_name = "Tabs"
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_0k2e8"]
-resource_name = "Tabs"
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_d5gc4"]
-resource_name = "Tabs"
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_t4bn8"]
 shader = ExtResource("8_32igy")
@@ -148,7 +129,6 @@ layout_mode = 2
 color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 
 [node name="MarginContainer" type="MarginContainer" parent="VBox_Header/ColorRect_Header"]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -183,47 +163,6 @@ size_flags_horizontal = 0
 size_flags_vertical = 6
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 text = "Alpha v#.###"
-
-[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBox_Header/ColorRect_Header"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -117.5
-offset_top = -20.0
-offset_right = 117.5
-offset_bottom = 20.0
-grow_horizontal = 2
-grow_vertical = 2
-focus_mode = 2
-theme_override_constants/separation = 50
-
-[node name="IconButton_Discover" parent="VBox_Header/ColorRect_Header/HBoxContainer_ButtonsPanel" instance=ExtResource("4_p0lya")]
-layout_mode = 2
-button_group = SubResource("ButtonGroup_kjjlr")
-icon_unpressed = ExtResource("5_68e3v")
-icon_pressed = ExtResource("6_iplhm")
-label_value = "EXPLORER"
-
-[node name="IconButton_Map" parent="VBox_Header/ColorRect_Header/HBoxContainer_ButtonsPanel" instance=ExtResource("4_p0lya")]
-layout_mode = 2
-button_group = SubResource("ButtonGroup_s1nec")
-
-[node name="IconButton_Backpack" parent="VBox_Header/ColorRect_Header/HBoxContainer_ButtonsPanel" instance=ExtResource("4_p0lya")]
-layout_mode = 2
-button_group = SubResource("ButtonGroup_0k2e8")
-icon_unpressed = ExtResource("7_2tm6c")
-icon_pressed = ExtResource("8_bksan")
-label_value = "BACKPACK"
-
-[node name="IconButton_Settings" parent="VBox_Header/ColorRect_Header/HBoxContainer_ButtonsPanel" instance=ExtResource("4_p0lya")]
-layout_mode = 2
-button_group = SubResource("ButtonGroup_d5gc4")
-icon_unpressed = ExtResource("9_6c3ra")
-icon_pressed = ExtResource("10_l0po4")
-label_value = "SETTINGS"
 
 [node name="ColorRect_Separator" type="ColorRect" parent="VBox_Header"]
 material = SubResource("ShaderMaterial_t4bn8")
@@ -358,7 +297,6 @@ libraries = {
 "": SubResource("AnimationLibrary_qs068")
 }
 
-[connection signal="button_up" from="VBox_Header/ColorRect_Header/HBoxContainer_ButtonsPanel/IconButton_Backpack" to="." method="_on_icon_button_backpack_button_up"]
 [connection signal="gui_input" from="ColorRect_Background/Control_Discover" to="." method="_on_control_discover_gui_input"]
 [connection signal="gui_input" from="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Left/TextureRect_LeftArrow" to="." method="_on_texture_rect_left_arrow_gui_input"]
 [connection signal="gui_input" from="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Right/TextureRect_RightArrow" to="." method="_on_texture_rect_right_arrow_gui_input"]

@@ -1,8 +1,7 @@
-[gd_scene load_steps=9 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=8 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
-[ext_resource type="PackedScene" uid="uid://g7mjpw7t7gif" path="res://src/ui/components/custom_popup/custom_popup.tscn" id="3_d4r00"]
 
 [sub_resource type="Theme" id="Theme_5xlkc"]
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
@@ -35,11 +34,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
-
-[node name="ColorRect_Navbar" type="ColorRect" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 80)
-layout_mode = 2
-color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
@@ -596,10 +590,6 @@ text = "Walk Speed"
 [node name="SpinBox_WalkSpeed" type="SpinBox" parent="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed"]
 layout_mode = 2
 focus_mode = 1
-
-[node name="CustomPopup" parent="." instance=ExtResource("3_d4r00")]
-visible = false
-layout_mode = 1
 
 [connection signal="toggled" from="VBoxContainer/HBoxContainer/ColorRect_Sidebar/VBoxContainer_Sections/Button_General" to="." method="_on_general_button_toggled"]
 [connection signal="toggled" from="VBoxContainer/HBoxContainer/ColorRect_Sidebar/VBoxContainer_Sections/Button_Graphics" to="." method="_on_graphic_button_toggled"]
