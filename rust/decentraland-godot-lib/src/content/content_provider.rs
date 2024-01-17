@@ -20,7 +20,7 @@ use super::{
     content_notificator::ContentNotificator,
     gltf::{apply_update_set_mask_colliders, load_gltf},
     texture::{load_png_texture, TextureEntry},
-    thread_safety::{resolve_promise, set_thread_safety_checks_enabled},
+    thread_safety::{set_thread_safety_checks_enabled, then_promise},
     video::download_video,
     wearable_entities::request_wearables,
 };
@@ -64,6 +64,10 @@ impl INode for ContentProvider {
         }
     }
     fn ready(&mut self) {}
+    fn exit_tree(&mut self) {
+        self.cached.clear();
+        tracing::info!("ContentProvider::exit_tree");
+    }
 }
 
 #[godot_api]
@@ -91,13 +95,8 @@ impl ContentProvider {
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            load_gltf(
-                gltf_file_path,
-                content_mapping,
-                get_promise,
-                content_provider_context,
-            )
-            .await;
+            let result = load_gltf(gltf_file_path, content_mapping, content_provider_context).await;
+            then_promise(get_promise, result);
         });
 
         self.cached.insert(
@@ -123,16 +122,16 @@ impl ContentProvider {
         let gltf_node_instance_id = gltf_node.instance_id();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            apply_update_set_mask_colliders(
+            let result = apply_update_set_mask_colliders(
                 gltf_node_instance_id,
                 dcl_visible_cmask,
                 dcl_invisible_cmask,
                 dcl_scene_id,
                 dcl_entity_id,
-                get_promise,
                 content_provider_context,
             )
             .await;
+            then_promise(get_promise, result);
         });
 
         promise
@@ -161,13 +160,9 @@ impl ContentProvider {
         let audio_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            load_audio(
-                audio_file_path,
-                content_mapping,
-                get_promise,
-                content_provider_context,
-            )
-            .await;
+            let result =
+                load_audio(audio_file_path, content_mapping, content_provider_context).await;
+            then_promise(get_promise, result);
         });
 
         self.cached.insert(
@@ -205,18 +200,17 @@ impl ContentProvider {
             return entry.promise.clone();
         }
 
-        let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
-        let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
+        let url = format!(
+            "{}{}",
+            content_mapping.bind().get_base_url(),
+            file_hash.clone()
+        );
         let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
+        let sent_file_hash = file_hash.clone();
         TokioRuntime::spawn(async move {
-            load_png_texture(
-                url,
-                absolute_file_path,
-                get_promise,
-                content_provider_context,
-            )
-            .await;
+            let result = load_png_texture(url, sent_file_hash, content_provider_context).await;
+            then_promise(get_promise, result);
         });
 
         self.cached.insert(
@@ -236,17 +230,12 @@ impl ContentProvider {
             return entry.promise.clone();
         }
         let url = url.to_string();
-        let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
         let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
+        let sent_file_hash = file_hash.clone();
         TokioRuntime::spawn(async move {
-            load_png_texture(
-                url,
-                absolute_file_path,
-                get_promise,
-                content_provider_context,
-            )
-            .await;
+            let result = load_png_texture(url, sent_file_hash, content_provider_context).await;
+            then_promise(get_promise, result);
         });
 
         self.cached.insert(
@@ -303,13 +292,9 @@ impl ContentProvider {
         let video_file_hash = file_hash.clone();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            download_video(
-                video_file_hash,
-                content_mapping,
-                get_promise,
-                content_provider_context,
-            )
-            .await;
+            let result =
+                download_video(video_file_hash, content_mapping, content_provider_context).await;
+            then_promise(get_promise, result);
         });
 
         self.cached.insert(
@@ -356,7 +341,7 @@ impl ContentProvider {
 
             set_thread_safety_checks_enabled(true);
 
-            resolve_promise(get_promise, None);
+            then_promise(get_promise, Ok(None));
         });
 
         promise
@@ -405,14 +390,14 @@ impl ContentProvider {
             let content_base_url = format!("{}{extra_slash}", content_base_url);
             let ipfs_content_base_url = format!("{content_base_url}contents/");
             TokioRuntime::spawn(async move {
-                request_wearables(
+                let result = request_wearables(
                     content_base_url,
                     ipfs_content_base_url,
                     wearable_to_fetch.into_iter().collect(),
-                    get_promise,
                     content_provider_context,
                 )
                 .await;
+                then_promise(get_promise, result);
             });
             self.cached.insert(
                 "wearables".to_string(),
@@ -436,6 +421,16 @@ impl ContentProvider {
             }
         }
         Variant::nil()
+    }
+
+    #[func]
+    pub fn get_pending_promises(&self) -> Array<Gd<Promise>> {
+        Array::from_iter(
+            self.cached
+                .iter()
+                .filter(|(_, entry)| !entry.promise.bind().is_resolved())
+                .map(|(_, entry)| entry.promise.clone()),
+        )
     }
 }
 

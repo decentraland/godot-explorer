@@ -167,6 +167,10 @@ func async_take_and_compare_snapshot(
 		dcl_rpc_sender
 	)
 
+	var pending_promises := Global.content_provider.get_pending_promises()
+	if not pending_promises.is_empty():
+		await PromiseUtils.async_all(Global.content_provider.get_pending_promises())
+
 	# TODO: make this configurable
 	var hide_player := true
 
@@ -186,7 +190,7 @@ func async_take_and_compare_snapshot(
 
 	get_node("/root/explorer").set_visible_ui(false)
 	if hide_player:
-		get_node("/root/explorer/Player").hide()
+		get_node("/root/explorer/world/Player").hide()
 
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -198,7 +202,7 @@ func async_take_and_compare_snapshot(
 
 	get_node("/root/explorer").set_visible_ui(true)
 	if hide_player:
-		get_node("/root/explorer/Player").show()
+		get_node("/root/explorer/world/Player").show()
 
 	viewport.size = previous_viewport_size
 	previous_camera.make_current()

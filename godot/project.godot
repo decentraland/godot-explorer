@@ -33,7 +33,8 @@ gdscript/warnings/redundant_await=false
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
-window/size/resizable=false
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [filesystem]
 
@@ -42,6 +43,7 @@ import/blender/enabled=false
 [gui]
 
 theme/custom="res://assets/themes/theme.tres"
+theme/custom_font="res://assets/themes/fonts/inter/Inter-Regular.ttf"
 
 [input]
 

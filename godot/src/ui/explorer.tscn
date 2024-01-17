@@ -1,15 +1,21 @@
-[gd_scene load_steps=17 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=22 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
 [ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://src/logic/player/player.tscn" id="3_fr1df"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
+[ext_resource type="Script" path="res://src/ui/components/safe_area_hud/SafeAreaHUD.gd" id="5_c8ksg"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
+[ext_resource type="Texture2D" uid="uid://v1avum5r3l4s" path="res://assets/themes/dark_dcl_theme/icons/JumpButton.svg" id="8_ttlm2"]
 [ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
-[ext_resource type="PackedScene" uid="uid://c6a0rjrc13kel" path="res://src/ui/components/line_edit_command/line_edit_command.tscn" id="9_5u55i"]
+[ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="9_hj43f"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
 [ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
+[ext_resource type="Texture2D" uid="uid://2phiy0bi4o0i" path="res://assets/themes/dark_dcl_theme/icons/PinOutline.svg" id="12_tcp5l"]
+[ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="14_jag8f"]
+[ext_resource type="Texture2D" uid="uid://bxgklimw13m4d" path="res://assets/themes/dark_dcl_theme/icons/Profile.svg" id="16_8okg3"]
 
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
 data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
@@ -25,25 +31,29 @@ albedo_texture = ExtResource("2_7jksa")
 uv1_scale = Vector3(4800, 4800, 4800)
 texture_filter = 0
 
-[sub_resource type="Theme" id="Theme_1ufu0"]
-
 [sub_resource type="ButtonGroup" id="ButtonGroup_n040o"]
 resource_name = "Tabs"
 
-[node name="explorer" type="Node3D"]
+[node name="explorer" type="Node"]
 script = ExtResource("1_5n8xk")
 
-[node name="StaticBody3D_Floor" type="StaticBody3D" parent="."]
+[node name="world" type="Node3D" parent="."]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D_Floor"]
+[node name="StaticBody3D_Floor" type="StaticBody3D" parent="world"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="world/StaticBody3D_Floor"]
 shape = SubResource("ConcavePolygonShape3D_xs7js")
 
-[node name="Floor" type="MeshInstance3D" parent="."]
+[node name="Floor" type="MeshInstance3D" parent="world"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 mesh = SubResource("PlaneMesh_x854j")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
 
-[node name="Player" parent="." instance=ExtResource("3_fr1df")]
+[node name="Player" parent="world" instance=ExtResource("3_fr1df")]
+
+[node name="Timer_BroadcastPosition" type="Timer" parent="world"]
+wait_time = 0.1
+autostart = true
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3
@@ -54,7 +64,186 @@ grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 1
 mouse_filter = 1
-theme = SubResource("Theme_1ufu0")
+theme = ExtResource("4_2vs87")
+
+[node name="SafeAreaHUD" type="Control" parent="UI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_c8ksg")
+
+[node name="MobileUI" type="Control" parent="UI/SafeAreaHUD"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Button_Jump" type="TextureButton" parent="UI/SafeAreaHUD/MobileUI"]
+modulate = Color(1, 1, 1, 0.501961)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -164.0
+offset_top = -174.0
+offset_right = -44.0
+offset_bottom = -54.0
+grow_horizontal = 0
+grow_vertical = 0
+focus_mode = 0
+theme = ExtResource("4_2vs87")
+texture_normal = ExtResource("8_ttlm2")
+ignore_texture_size = true
+stretch_mode = 4
+
+[node name="ShadowOutter" type="TextureRect" parent="UI/SafeAreaHUD/MobileUI/Button_Jump"]
+modulate = Color(0, 0, 0, 1)
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -2.0
+offset_top = -2.0
+offset_right = 2.0
+offset_bottom = 2.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("8_ttlm2")
+expand_mode = 2
+
+[node name="ShadowInner" type="TextureRect" parent="UI/SafeAreaHUD/MobileUI/Button_Jump"]
+modulate = Color(0, 0, 0, 1)
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("8_ttlm2")
+expand_mode = 2
+
+[node name="JoystickMoveArea" type="Control" parent="UI/SafeAreaHUD/MobileUI"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -328.0
+offset_right = 516.0
+grow_vertical = 0
+mouse_filter = 1
+mouse_force_pass_scroll_events = false
+
+[node name="VirtualJoystick_Left" parent="UI/SafeAreaHUD/MobileUI/JoystickMoveArea" instance=ExtResource("9_lxw33")]
+layout_mode = 1
+offset_left = 44.0
+offset_top = -204.0
+offset_right = 204.0
+offset_bottom = -44.0
+deadzone_size = 0.0
+
+[node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="UI/SafeAreaHUD"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 327.0
+offset_bottom = 80.0
+theme = ExtResource("4_2vs87")
+theme_override_constants/separation = 10
+
+[node name="MiniMap" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_constants/icon_max_width = 32
+icon = ExtResource("12_tcp5l")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Emotes" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
+visible = false
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_constants/icon_max_width = 40
+theme_override_font_sizes/font_size = 0
+icon = ExtResource("14_jag8f")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_OpenChat" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 48
+icon = ExtResource("9_hj43f")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Profile" type="TextureButton" parent="UI/SafeAreaHUD"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -120.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = 120.0
+grow_horizontal = 0
+texture_normal = ExtResource("16_8okg3")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="Panel_Chat" parent="UI/SafeAreaHUD" instance=ExtResource("9_4ktln")]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 90.0
+offset_right = 320.0
+offset_bottom = 390.0
+
+[node name="Label_FPS" type="Label" parent="UI/SafeAreaHUD"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -203.0
+offset_top = 20.0
+offset_right = -50.0
+offset_bottom = 35.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
+theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "ALPHA - FPS"
+horizontal_alignment = 2
+
+[node name="Label_RAM" type="Label" parent="UI/SafeAreaHUD"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -319.0
+offset_right = -170.0
+offset_bottom = 26.0
+grow_horizontal = 0
+text = "RAM"
+horizontal_alignment = 2
 
 [node name="Timer_FPSLabel" type="Timer" parent="UI"]
 autostart = true
@@ -81,94 +270,15 @@ text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Label_FPS" type="Label" parent="UI"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -181.0
-offset_top = 24.0
-offset_right = -32.0
-offset_bottom = 57.0
-grow_horizontal = 0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
-text = "FPS"
-horizontal_alignment = 2
-
-[node name="Label_RAM" type="Label" parent="UI"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -181.0
-offset_top = 56.0
-offset_right = -32.0
-offset_bottom = 82.0
-grow_horizontal = 0
-text = "RAM"
-horizontal_alignment = 2
-
 [node name="Control_Minimap" parent="UI" instance=ExtResource("4_6aqla")]
-layout_mode = 2
+visible = false
 anchors_preset = 0
 anchor_right = 0.0
 anchor_bottom = 0.0
+offset_left = 0.0
+offset_top = 0.0
 offset_right = 15.0
 offset_bottom = 15.0
-
-[node name="LineEdit_Command" parent="UI" instance=ExtResource("9_5u55i")]
-layout_mode = 0
-offset_left = 272.0
-offset_top = 16.0
-offset_right = 1001.0
-offset_bottom = 52.0
-
-[node name="MobileUI" type="CanvasLayer" parent="UI"]
-layer = -1
-
-[node name="VirtualJoystick_Left" parent="UI/MobileUI" instance=ExtResource("9_lxw33")]
-pivot_offset = Vector2(1, 299)
-deadzone_size = 0.0
-
-[node name="Button_Jump" type="Button" parent="UI"]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -136.0
-offset_top = -136.0
-offset_right = -8.0
-offset_bottom = -8.0
-grow_horizontal = 0
-grow_vertical = 0
-theme_override_font_sizes/font_size = 24
-text = "Jump"
-
-[node name="VBoxContainer_Chat" type="VBoxContainer" parent="UI"]
-layout_mode = 1
-anchors_preset = 9
-anchor_bottom = 1.0
-offset_right = 265.0
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="MarginContainer" type="MarginContainer" parent="UI/VBoxContainer_Chat"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 15
-theme_override_constants/margin_top = 60
-theme_override_constants/margin_bottom = 15
-
-[node name="Panel_Chat" parent="UI/VBoxContainer_Chat/MarginContainer" instance=ExtResource("9_4ktln")]
-layout_mode = 2
 
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
@@ -177,15 +287,21 @@ group = SubResource("ButtonGroup_n040o")
 
 [node name="DialogStack" parent="UI" instance=ExtResource("10_y1lkn")]
 layout_mode = 1
+offset_left = -180.0
+offset_top = -140.0
+offset_right = 180.0
+offset_bottom = 140.0
 
-[node name="Timer_BroadcastPosition" type="Timer" parent="."]
-wait_time = 0.1
-autostart = true
-
-[connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_timeout"]
+[connection signal="timeout" from="world/Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]
+[connection signal="gui_input" from="UI/SafeAreaHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]
+[connection signal="gui_input" from="UI/SafeAreaHUD/MobileUI/JoystickMoveArea" to="." method="_on_joystick_move_area_gui_input"]
+[connection signal="is_holded" from="UI/SafeAreaHUD/MobileUI/JoystickMoveArea/VirtualJoystick_Left" to="." method="_on_virtual_joystick_left_is_holded"]
+[connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
+[connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
+[connection signal="pressed" from="UI/SafeAreaHUD/Profile" to="." method="_on_profile_pressed"]
+[connection signal="submit_message" from="UI/SafeAreaHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
+[connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
-[connection signal="submit_message" from="UI/LineEdit_Command" to="." method="_on_line_edit_command_submit_message"]
-[connection signal="gui_input" from="UI/Button_Jump" to="." method="_on_button_jump_gui_input"]
 [connection signal="hide_menu" from="UI/Control_Menu" to="." method="_on_control_menu_hide_menu"]
 [connection signal="jump_to" from="UI/Control_Menu" to="." method="_on_control_menu_jump_to"]
 [connection signal="preview_hot_reload" from="UI/Control_Menu" to="." method="_on_control_menu_preview_hot_reload"]
@@ -194,4 +310,3 @@ autostart = true
 [connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
 [connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
-[connection signal="timeout" from="Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]
