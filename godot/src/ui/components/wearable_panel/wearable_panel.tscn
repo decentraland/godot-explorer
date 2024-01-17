@@ -30,10 +30,11 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [node name="WearablePanel" type="Control"]
+custom_minimum_size = Vector2(580, 250)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 555.0
-offset_bottom = 225.0
+offset_right = 580.0
+offset_bottom = 250.0
 script = ExtResource("1_wjefq")
 
 [node name="TextureRect_PanelBackground" type="TextureRect" parent="."]

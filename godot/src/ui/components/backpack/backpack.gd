@@ -1,4 +1,4 @@
-extends VBoxContainer
+extends TextureRect
 
 var filtered_data: Array
 var items_button_group = ButtonGroup.new()
@@ -17,26 +17,16 @@ var primary_player_profile_dictionary: Dictionary = {}
 
 var wearable_buttons: Array = []
 
+const WEARABLE_ITEM_INSTANTIABLE = preload("res://src/ui/components/wearable_item/wearable_item.tscn")
+
 @onready var color_picker_panel = $Color_Picker_Panel
-
-@onready
-var button_save_profile = $ColorRect_Background/HBoxContainer/Control/VBoxContainer/Button_SaveProfile
-@onready var line_edit_name = $ColorRect_Background/HBoxContainer/Control/VBoxContainer/LineEdit_Name
-
+@onready var v_box_container_category = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/MarginContainer/ScrollContainer/MarginContainer/VBoxContainer_Category
+@onready var line_edit_name = $HBoxContainer/Control/VBoxContainer/LineEdit_Name
 @onready var avatar_preview = %AvatarPreview
-
-@onready
-var v_box_container_category = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/ScrollContainer/MarginContainer/VBoxContainer
-@onready
-var wearable_item_instanceable = preload("res://src/ui/components/wearable_item/wearable_item.tscn")
-@onready
-var grid_container_wearables_list = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/GridContainer_WearablesList
-@onready
-var wearable_panel = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
-
-@onready
-var skin_color_picker = $ColorRect_Background/HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker
-
+@onready var button_save_profile = $HBoxContainer/Control/VBoxContainer/Button_SaveProfile
+@onready var wearable_panel = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
+@onready var grid_container_wearables_list = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/GridContainer_WearablesList
+@onready var skin_color_picker = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker
 
 # gdlint:ignore = async-function-name
 func _ready():
@@ -131,7 +121,7 @@ func show_wearables():
 		child.queue_free()
 
 	for wearable_id in filtered_data:
-		var wearable_item = wearable_item_instanceable.instantiate()
+		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_item.button_group = items_button_group
 		wearable_item.async_set_wearable(wearable_data[wearable_id])

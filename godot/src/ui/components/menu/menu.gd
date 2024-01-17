@@ -36,15 +36,16 @@ var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
 
 @onready var color_rect_header = $ColorRect_Header
 
+@onready var button_discover = $ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Discover
+@onready var button_map = $ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Map
+@onready var button_backpack = $ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Backpack
+@onready var button_settings = $ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Settings
+
 @onready var control_discover = $ColorRect_Background/Control_Discover
 @onready var control_settings = $ColorRect_Background/Control_Settings
 @onready var control_map = $ColorRect_Background/Control_Map
 @onready var control_backpack = $ColorRect_Background/Control_Backpack
 
-@onready var button_discover = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Discover
-@onready var button_map = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Map
-@onready var button_backpack = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Backpack
-@onready var button_settings = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Settings
 
 
 func _ready():
