@@ -1,5 +1,16 @@
 extends Control
 
+const BACKPACK_OFF = preload("res://assets/ui/nav-bar-icons/backpack-off.svg")
+const BACKPACK_ON = preload("res://assets/ui/nav-bar-icons/backpack-on.svg")
+const CAMERA_REEL_OFF = preload("res://assets/ui/nav-bar-icons/camera-reel-off.svg")
+const CAMERA_REEL_ON = preload("res://assets/ui/nav-bar-icons/camera-reel-on.svg")
+const EXPLORER_OFF = preload("res://assets/ui/nav-bar-icons/explorer-off.svg")
+const EXPLORER_ON = preload("res://assets/ui/nav-bar-icons/explorer-on.svg")
+const MAP_OFF = preload("res://assets/ui/nav-bar-icons/map-off.svg")
+const MAP_ON = preload("res://assets/ui/nav-bar-icons/map-on.svg")
+const SETTINGS_OFF = preload("res://assets/ui/nav-bar-icons/settings-off.svg")
+const SETTINGS_ON = preload("res://assets/ui/nav-bar-icons/settings-on.svg")
+
 signal hide_menu
 signal jump_to(Vector2i)
 signal toggle_minimap
@@ -38,13 +49,14 @@ var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
 
 func _ready():
 	self.modulate = Color(1, 1, 1, 0)
-	button_settings.set_pressed(true)
+	button_map.set_pressed(true)
 	selected_node = control_settings
-	control_map.hide()
-	control_settings.show()
+	control_map.show()
+	control_settings.hide()
 	control_discover.hide()
 	control_backpack.hide()
 	control_map.jump_to.connect(_jump_to)
+	_updated_icons()
 
 
 func _unhandled_input(event):
@@ -91,18 +103,8 @@ func hide_all():
 func _on_button_close_pressed():
 	emit_signal("hide_menu")
 
-
 func _jump_to(parcel: Vector2i):
 	emit_signal("jump_to", parcel)
-
-
-func close():
-	color_rect_header.hide()
-	var tween_m = create_tween()
-	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
-	var tween_h = create_tween()
-	tween_h.tween_callback(hide).set_delay(0.3)
-
 
 func show_last():
 	self.show()
@@ -113,25 +115,22 @@ func show_last():
 
 
 func show_map():
-	self.show()
-
 	if selected_node != control_map:
-		self._on_button_map_pressed()
+		_on_button_map_pressed()
 	button_map.set_pressed(true)
-	var tween = create_tween()
-	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
-	color_rect_header.show()
-
+	_open()
 
 func show_backpack():
-	self.show()
-
-	if selected_node != control_backpack:
-		self._on_button_backpack_pressed()
+	if selected_node != control_map:
+		_on_button_backpack_pressed()
 	button_backpack.set_pressed(true)
-	var tween = create_tween()
-	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
-	color_rect_header.show()
+	_open()
+
+func show_settings():
+	if selected_node != control_map:
+		_on_button_settings_pressed()
+	button_settings.set_pressed(true)
+	_open()
 
 
 func _on_control_settings_toggle_fps_visibility(visibility):
@@ -147,24 +146,28 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 
 
 func _on_button_settings_pressed():
+	_updated_icons()
 	if selected_node != control_settings:
 		fade_out(selected_node)
 		fade_in(control_settings)
 
 
 func _on_button_map_pressed():
+	_updated_icons()
 	if selected_node != control_map:
 		fade_out(selected_node)
 		fade_in(control_map)
 
 
 func _on_button_discover_pressed():
+	_updated_icons()
 	if selected_node != control_discover:
 		fade_out(selected_node)
 		fade_in(control_discover)
 
 
 func _on_button_backpack_pressed():
+	_updated_icons()
 	if selected_node != control_backpack:
 		fade_out(selected_node)
 		fade_in(control_backpack)
@@ -194,3 +197,40 @@ func _on_control_settings_request_pause_scenes(enabled):
 
 func _on_control_settings_request_debug_panel(enabled):
 	emit_signal("request_debug_panel", enabled)
+	
+	
+func _open():
+	_updated_icons()
+	if not visible:
+		show()
+	var tween = create_tween()
+	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
+	color_rect_header.show()
+	
+func close():
+	color_rect_header.hide()
+	var tween_m = create_tween()
+	tween_m.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(Tween.EASE_IN_OUT)
+	var tween_h = create_tween()
+	tween_h.tween_callback(hide).set_delay(0.3)
+
+func _updated_icons():
+	if button_map.button_pressed:
+		button_map.icon = MAP_ON
+	else:
+		button_map.icon = MAP_OFF
+		
+	if button_backpack.button_pressed:
+		button_backpack.icon = BACKPACK_ON
+	else:
+		button_backpack.icon = BACKPACK_OFF
+		
+	if button_settings.button_pressed:
+		button_settings.icon = SETTINGS_ON
+	else:
+		button_settings.icon = SETTINGS_OFF
+		
+	if button_discover.button_pressed:
+		button_discover.icon = EXPLORER_ON
+	else:
+		button_discover.icon = EXPLORER_OFF

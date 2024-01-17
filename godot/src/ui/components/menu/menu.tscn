@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=20 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
@@ -9,6 +9,7 @@
 [ext_resource type="ButtonGroup" uid="uid://73odg1nwdkof" path="res://src/ui/components/menu/button_group_menu_tabs.tres" id="8_ao4hb"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="8_d38wp"]
 [ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="9_8r287"]
+[ext_resource type="Texture2D" uid="uid://ck0o5otm5qv8k" path="res://assets/ui/nav-bar-icons/explorer-off.svg" id="9_xphlb"]
 [ext_resource type="Texture2D" uid="uid://bqypc3fidla5s" path="res://assets/ui/SettingsOff.png" id="10_asfa4"]
 [ext_resource type="Texture2D" uid="uid://dfntqgxlp7fsc" path="res://assets/themes/dark_dcl_theme/icons/Backpack.svg" id="10_iakp3"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="12_dymeh"]
@@ -107,17 +108,25 @@ focus_mode = 2
 theme_override_constants/separation = 50
 
 [node name="Button_Discover" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
-visible = false
-custom_minimum_size = Vector2(75, 0)
+custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-disabled = true
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("8_ao4hb")
-text = "Discover"
+text = "DISCOVER"
+icon = ExtResource("9_xphlb")
+flat = true
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
 
 [node name="Button_Map" type="Button" parent="ColorRect_Header/HBoxContainer_ButtonsPanel"]
 custom_minimum_size = Vector2(120, 80)
