@@ -99,7 +99,7 @@ func _clamp_camera_rotation():
 	if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
 		mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90))
 	elif camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
-		mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(45))
+		mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(35))
 
 
 func _input(event):
@@ -145,7 +145,7 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-	elif Input.is_action_just_pressed("ia_jump"):
+	elif Input.is_action_pressed("ia_jump"):
 		velocity.y = jump_velocity_0
 
 	if current_direction:

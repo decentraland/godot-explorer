@@ -14,11 +14,12 @@ func _ready():
 
 func set_tooltip_data(text: String, action: String):
 	var key: String
-	var index: int = InputMap.get_actions().find(action.to_lower(), 0)
+	var action_lower: String = action.to_lower()
+	var index: int = InputMap.get_actions().find(action_lower, 0)
 	if label_text:
-		if index != -1:
-			action_to_trigger = action.to_lower()
-			show()
+		if index == -1 and action_lower == "ia_any":
+			key = "Any"
+		elif index != -1:
 			var event = InputMap.action_get_events(InputMap.get_actions()[index])[0]
 			if event is InputEventKey:
 				key = char(event.unicode).to_upper()
@@ -29,15 +30,22 @@ func set_tooltip_data(text: String, action: String):
 					key = "Mouse Right Button"
 				if event.button_index == 0:
 					key = "Mouse Wheel Button"
+
+		if not key.is_empty():
+			show()
+			action_to_trigger = action_lower
 			label_action.text = key
 			label_text.text = text
 		else:
-			action_to_trigger = ""
 			hide()
+			action_to_trigger = ""
 			printerr("Action doesn't exist ", action)
 
 
 func mobile_on_panel_container_gui_input(event):
+	if action_to_trigger.is_empty():
+		return
+
 	if event is InputEventMouseButton:
 		if event.pressed:
 			Input.action_press(action_to_trigger)

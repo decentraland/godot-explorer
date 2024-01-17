@@ -1,22 +1,11 @@
-use std::collections::HashMap;
-
+use super::{content_mapping::DclContentMappingAndUrl, content_provider::ContentProviderContext};
+use crate::http_request::request_response::{RequestOption, ResponseEnum, ResponseType};
 use godot::{
     builtin::{meta::ToGodot, Dictionary, GString, Variant, VariantArray},
     engine::{global::Error, Json},
-    obj::Gd,
 };
 use serde::Serialize;
-
-use crate::{
-    godot_classes::promise::Promise,
-    http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
-};
-
-use super::{
-    content_mapping::DclContentMappingAndUrl,
-    content_provider::ContentProviderContext,
-    thread_safety::{reject_promise, resolve_promise},
-};
+use std::collections::HashMap;
 
 #[derive(Serialize)]
 struct EntitiesRequest {
@@ -27,9 +16,8 @@ pub async fn request_wearables(
     content_server_base_url: String,
     ipfs_content_base_url: String,
     pointers: Vec<String>,
-    get_promise: impl Fn() -> Option<Gd<Promise>>,
     ctx: ContentProviderContext,
-) {
+) -> Result<Option<Variant>, anyhow::Error> {
     let url = format!("{content_server_base_url}entities/active");
     let headers = vec![("Content-Type: application/json".to_string())];
     let payload = serde_json::to_string(&EntitiesRequest {
@@ -47,33 +35,31 @@ pub async fn request_wearables(
         None,
     );
 
-    let result = match ctx.http_queue_requester.request(request_option, 0).await {
-        Ok(response) => match response.response_data {
-            Ok(ResponseEnum::String(result)) => {
-                let mut json = Json::new();
-                let err = json.parse(GString::from(result));
+    let response = ctx
+        .http_queue_requester
+        .request(request_option, 0)
+        .await
+        .map_err(|e| anyhow::Error::msg(e.error_message))?;
 
-                if err != Error::OK {
-                    Err("Couldn't parse wearable entities response".to_string())
-                } else {
-                    match json.get_data().try_to::<VariantArray>() {
-                        Ok(array) => Ok(array),
-                        Err(_err) => Err("Pointers response is not an array".to_string()),
-                    }
+    let pointers_result = match response.response_data {
+        Ok(ResponseEnum::String(result)) => {
+            let mut json = Json::new();
+            let err = json.parse(GString::from(result));
+
+            if err != Error::OK {
+                Err("Couldn't parse wearable entities response".to_string())
+            } else {
+                match json.get_data().try_to::<VariantArray>() {
+                    Ok(array) => Ok(array),
+                    Err(_err) => Err("Pointers response is not an array".to_string()),
                 }
             }
-            _ => Err("Invalid response".to_string()),
-        },
-        Err(err) => Err(err.error_message),
-    };
-
-    if let Err(err) = result {
-        reject_promise(get_promise, err);
-        return;
+        }
+        _ => Err("Invalid response".to_string()),
     }
+    .map_err(anyhow::Error::msg)?;
 
     let mut dictionary_result = Dictionary::new();
-    let pointers_result = result.unwrap();
     for item in pointers_result.iter_shared() {
         let Ok(mut dict) = item.try_to::<Dictionary>() else {
             continue;
@@ -133,5 +119,5 @@ pub async fn request_wearables(
         }
     }
 
-    resolve_promise(get_promise, Some(dictionary_result.to_variant()));
+    Ok(Some(dictionary_result.to_variant()))
 }

@@ -32,6 +32,7 @@ var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
 
 @onready var button_discover = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Discover
 @onready var button_map = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Map
+@onready var button_backpack = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Backpack
 @onready var button_settings = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Settings
 
 
@@ -116,7 +117,18 @@ func show_map():
 
 	if selected_node != control_map:
 		self._on_button_map_pressed()
-		button_map.set_pressed(true)
+	button_map.set_pressed(true)
+	var tween = create_tween()
+	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
+	color_rect_header.show()
+
+
+func show_backpack():
+	self.show()
+
+	if selected_node != control_backpack:
+		self._on_button_backpack_pressed()
+	button_backpack.set_pressed(true)
 	var tween = create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
 	color_rect_header.show()

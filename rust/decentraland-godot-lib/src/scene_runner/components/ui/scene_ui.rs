@@ -255,6 +255,12 @@ pub fn update_scene_ui(
         && dirty_lww_components
             .get(&SceneComponentId::UI_TEXT)
             .is_none()
+        && dirty_lww_components
+            .get(&SceneComponentId::UI_DROPDOWN)
+            .is_none()
+        && dirty_lww_components
+            .get(&SceneComponentId::UI_INPUT)
+            .is_none()
         && !need_update_ui_canvas;
 
     if need_update_ui_canvas {

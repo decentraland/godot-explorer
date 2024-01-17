@@ -34,6 +34,6 @@ pub fn get_avatar_node(scene: &Scene) -> Gd<Node> {
     scene
         .godot_dcl_scene
         .root_node_3d
-        .get_node("/root/explorer/Player/Avatar".into())
+        .get_node("/root/explorer/world/Player/Avatar".into())
         .expect("Missing Player Avatar Node")
 }

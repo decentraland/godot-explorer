@@ -1,9 +1,14 @@
 extends Panel
+
+signal submit_message(message: String)
+
 const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
 const ACK: String = "␆"
 
-@onready var rich_text_label_chat = $MarginContainer/RichTextLabel_Chat
+@onready var rich_text_label_chat = $MarginContainer/VBoxContainer/RichTextLabel_Chat
+@onready
+var line_edit_command = $MarginContainer/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command
 
 
 func _ready():
@@ -43,5 +48,31 @@ func on_chats_arrived(chats: Array):
 			add_chat_message(text)
 
 
-func _on_button_clear_chat_pressed():
-	rich_text_label_chat.clear()
+func _on_button_send_pressed():
+	submit_message.emit(line_edit_command.text)
+	line_edit_command.text = ""
+	line_edit_command.grab_focus()
+
+
+func _on_line_edit_command_text_submitted(new_text):
+	submit_message.emit(new_text)
+	line_edit_command.text = ""
+
+
+func finish():
+	if line_edit_command.text.size() > 0:
+		submit_message.emit(line_edit_command.text)
+		line_edit_command.text = ""
+
+
+func _on_visibility_changed():
+	if is_instance_valid(line_edit_command):
+		line_edit_command.text = ""
+		if visible:
+			line_edit_command.grab_focus()
+		else:
+			Global.explorer_grab_focus()
+
+
+func _on_line_edit_command_focus_exited():
+	self.hide()

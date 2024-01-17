@@ -23,6 +23,7 @@ pub struct DclUiBackground {
 
     waiting_hash: GString,
     texture_loaded: bool,
+    first_texture_load_shot: bool,
 }
 
 #[godot_api]
@@ -33,6 +34,7 @@ impl INode for DclUiBackground {
             current_value: PbUiBackground::default(),
             waiting_hash: GString::default(),
             texture_loaded: false,
+            first_texture_load_shot: false,
         }
     }
 
@@ -100,7 +102,11 @@ impl DclUiBackground {
             .bind_mut()
             .get_texture_from_hash(self.waiting_hash.clone())
         else {
-            tracing::error!("trying to set texture not found: {}", self.waiting_hash);
+            if self.first_texture_load_shot {
+                self.first_texture_load_shot = false;
+            } else {
+                tracing::error!("trying to set texture not found: {}", self.waiting_hash);
+            }
             return;
         };
         self.texture_loaded = true;
@@ -232,6 +238,7 @@ impl DclUiBackground {
                             );
                         }
 
+                        self.first_texture_load_shot = true;
                         self.base.call_deferred("_on_texture_loaded".into(), &[]);
                     }
                     DclSourceTex::VideoTexture(_) => {
