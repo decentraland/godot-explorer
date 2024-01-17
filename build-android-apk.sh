@@ -24,6 +24,9 @@ echo "Build for Android"
 cd ${EXPLORER_PATH}/rust/decentraland-godot-lib
 bash android-build.sh
 
+rustup target add x86_64-linux-android
+bash android-build.sh x86_64
+
 echo "Setup Android Debug Keys"
 cd /opt/
 keytool -keyalg RSA -genkeypair -alias androiddebugkey \
