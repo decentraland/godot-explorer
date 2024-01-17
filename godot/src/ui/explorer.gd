@@ -22,18 +22,17 @@ var _last_parcel_position: Vector2i
 @onready var label_crosshair = $UI/Label_Crosshair
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
 
-@onready var panel_chat = $UI/Panel_Chat
+@onready var panel_chat = $UI/SafeAreaHUD/Panel_Chat
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
 @onready var player := $world/Player
-@onready var mobile_ui = $UI/MobileUI
-@onready var v_box_container_chat = $UI/VBoxContainer_Chat
-@onready var line_edit_command = $UI/HBoxContainer_TopLeftMenu/LineEdit_Command
-@onready var virtual_joystick: Control = $UI/MobileUI/JoystickMoveArea/VirtualJoystick_Left
-@onready var joystick_move_area: Control = $UI/MobileUI/JoystickMoveArea
+@onready var mobile_ui = $UI/SafeAreaHUD/MobileUI
+@onready
+var virtual_joystick: Control = $UI/SafeAreaHUD/MobileUI/JoystickMoveArea/VirtualJoystick_Left
+@onready var joystick_move_area: Control = $UI/SafeAreaHUD/MobileUI/JoystickMoveArea
 
 
 func _process(_dt):
@@ -81,6 +80,7 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
+	panel_chat.hide()
 
 	if Global.is_mobile:
 		mobile_ui.show()
@@ -222,10 +222,8 @@ func _unhandled_input(event):
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 					release_mouse()
 
-				line_edit_command.finish()
-
 			if event.pressed and event.keycode == KEY_ENTER:
-				line_edit_command.start()
+				panel_chat.show()
 
 
 func _toggle_ram_usage(visibility: bool):
@@ -299,9 +297,7 @@ func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
 
 
-func _on_line_edit_command_submit_message(message: String):
-	line_edit_command.finish()
-
+func _on_panel_chat_submit_message(message: String):
 	if message.length() == 0:
 		return
 
@@ -434,3 +430,7 @@ func _on_virtual_joystick_left_is_holded(holded: bool):
 	if not holded:
 		virtual_joystick.set_position(virtual_joystick_orig_position)
 		virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func _on_button_open_chat_pressed():
+	panel_chat.visible = not panel_chat.visible
