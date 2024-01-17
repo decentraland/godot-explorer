@@ -30,8 +30,8 @@ var nft_frame_loader: NftFrameStyleLoader
 var standalone = false
 var dcl_android_plugin
 
-#@onready var is_mobile = OS.has_feature("mobile")
-@onready var is_mobile = true
+@onready var is_mobile = OS.has_feature("mobile")
+#@onready var is_mobile = true
 
 
 func _ready():
