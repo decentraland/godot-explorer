@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
 
-#[cfg(feature = "ffmpeg")]
+#[cfg(feature = "use_ffmpeg")]
 use super::components::{audio_stream::update_audio_stream, video_player::update_video_player};
 
 use super::{
@@ -214,12 +214,12 @@ pub fn _process_scene(
                 update_avatar_attach(scene, crdt_state);
                 false
             }
-            #[cfg(feature = "ffmpeg")]
+            #[cfg(feature = "use_ffmpeg")]
             SceneUpdateState::VideoPlayer => {
                 update_video_player(scene, crdt_state, current_parcel_scene_id);
                 false
             }
-            #[cfg(feature = "ffmpeg")]
+            #[cfg(feature = "use_ffmpeg")]
             SceneUpdateState::AudioStream => {
                 update_audio_stream(scene, crdt_state, current_parcel_scene_id);
                 false

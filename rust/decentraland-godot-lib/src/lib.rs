@@ -7,7 +7,7 @@
 use godot::prelude::*;
 
 pub mod auth;
-#[cfg(feature = "ffmpeg")]
+#[cfg(feature = "use_ffmpeg")]
 pub mod av;
 pub mod avatars;
 pub mod comms;

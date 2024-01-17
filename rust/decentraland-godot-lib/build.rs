@@ -318,7 +318,7 @@ fn main() -> io::Result<()> {
     std::env::set_var("PROTOC", protoc_path);
     prost_build::compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
 
-    #[cfg(feature = "livekit")]
+    #[cfg(feature = "use_livekit")]
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
         webrtc_sys_build::configure_jni_symbols().unwrap();
     }

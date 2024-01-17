@@ -12,7 +12,7 @@ use super::{
     signed_login::{SignedLogin, SignedLoginPollStatus},
 };
 
-#[cfg(feature = "livekit")]
+#[cfg(feature = "use_livekit")]
 use crate::comms::adapter::livekit::LivekitRoom;
 
 #[allow(clippy::large_enum_variant)]
@@ -324,7 +324,7 @@ impl CommunicationManager {
                 ));
             }
 
-            #[cfg(feature = "livekit")]
+            #[cfg(feature = "use_livekit")]
             "livekit" => {
                 self.current_connection = CommsConnection::Connected(Box::new(LivekitRoom::new(
                     comms_address.to_string(),
@@ -334,7 +334,7 @@ impl CommunicationManager {
                 )));
             }
 
-            #[cfg(not(feature = "livekit"))]
+            #[cfg(not(feature = "use_livekit"))]
             "livekit" => {
                 tracing::error!("livekit wasn't included in this build");
             }
