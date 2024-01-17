@@ -9,6 +9,7 @@ use godot::{obj::UserClass, prelude::Gd};
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
     dcl::{
+        common::{SceneLogMessage, SceneTestResult},
         components::{
             internal_player_data::InternalPlayerData,
             material::DclMaterial,
@@ -20,13 +21,8 @@ use crate::{
             SceneEntityId,
         },
         crdt::{DirtyEntities, DirtyGosComponents, DirtyLwwComponents},
-        js::{testing::SceneTestResult, SceneLogMessage},
         scene_apis::RpcCall,
-        // js::js_runtime::SceneLogMessage,
-        DclScene,
-        RendererResponse,
-        SceneDefinition,
-        SceneId,
+        DclScene, RendererResponse, SceneDefinition, SceneId,
     },
     godot_classes::{
         dcl_audio_source::DclAudioSource, dcl_audio_stream::DclAudioStream,

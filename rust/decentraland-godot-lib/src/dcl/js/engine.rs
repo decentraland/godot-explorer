@@ -7,13 +7,13 @@ use std::{
 use deno_core::{op, Op, OpDecl, OpState};
 
 use crate::dcl::{
+    common::{SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent},
     crdt::{
         message::{
             append_gos_component, delete_entity, process_many_messages, put_or_delete_lww_component,
         },
         SceneCrdtState,
     },
-    js::{SceneDying, SceneMainCrdtFileContent},
     scene_apis::{LocalCall, RpcCall},
     serialization::{reader::DclReader, writer::DclWriter},
     RendererResponse, SceneId, SceneResponse, SharedSceneCrdtState,
@@ -22,7 +22,6 @@ use crate::dcl::{
 use super::{
     events::process_events,
     players::{get_player_data, get_players},
-    SceneElapsedTime, SceneLogs,
 };
 
 // list of op declarations
