@@ -20,13 +20,14 @@ var wearable_buttons: Array = []
 const WEARABLE_ITEM_INSTANTIABLE = preload("res://src/ui/components/wearable_item/wearable_item.tscn")
 
 @onready var color_picker_panel = $Color_Picker_Panel
-@onready var v_box_container_category = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/MarginContainer/ScrollContainer/MarginContainer/VBoxContainer_Category
+@onready var v_box_container_category = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/MarginContainer/ScrollContainer/MarginContainer/HBoxContainer/VBoxContainer_Category
 @onready var line_edit_name = $HBoxContainer/Control/VBoxContainer/LineEdit_Name
 @onready var avatar_preview = %AvatarPreview
 @onready var button_save_profile = $HBoxContainer/Control/VBoxContainer/Button_SaveProfile
 @onready var wearable_panel = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
 @onready var grid_container_wearables_list = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/GridContainer_WearablesList
 @onready var skin_color_picker = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker
+
 
 # gdlint:ignore = async-function-name
 func _ready():

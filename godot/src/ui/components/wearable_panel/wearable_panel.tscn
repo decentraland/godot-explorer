@@ -39,48 +39,50 @@ script = ExtResource("1_wjefq")
 
 [node name="TextureRect_PanelBackground" type="TextureRect" parent="."]
 layout_mode = 2
-offset_right = 593.0
-offset_bottom = 254.0
+offset_right = 574.0
+offset_bottom = 242.0
 texture = ExtResource("2_eceik")
 expand_mode = 5
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
-layout_mode = 2
-offset_left = 7.0
-offset_right = 557.0
-offset_bottom = 214.0
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect_PanelBackground"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 45
+theme_override_constants/margin_bottom = 50
 
-[node name="MarginContainer2" type="MarginContainer" parent="HBoxContainer"]
-custom_minimum_size = Vector2(150, 200)
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect_PanelBackground/MarginContainer"]
+layout_mode = 2
+
+[node name="MarginContainer2" type="MarginContainer" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="TextureRect_ThumbnailBackground" type="TextureRect" parent="HBoxContainer/MarginContainer2"]
+[node name="TextureRect_ThumbnailBackground" type="TextureRect" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer2"]
 layout_mode = 2
 texture = ExtResource("3_ylvgo")
 expand_mode = 3
 
-[node name="TextureRect_Preview" type="TextureRect" parent="HBoxContainer/MarginContainer2/TextureRect_ThumbnailBackground"]
+[node name="TextureRect_Preview" type="TextureRect" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer2/TextureRect_ThumbnailBackground"]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -90.0
-offset_top = -90.0
-offset_right = 90.0
-offset_bottom = 90.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(90, 90)
 texture = ExtResource("1_rbo0n")
 expand_mode = 3
 
-[node name="MarginContainer3" type="MarginContainer" parent="HBoxContainer"]
+[node name="MarginContainer3" type="MarginContainer" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/margin_left = 10
@@ -88,49 +90,49 @@ theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/MarginContainer3"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer3"]
 layout_mode = 2
 
-[node name="HBoxContainer_Name" type="HBoxContainer" parent="HBoxContainer/MarginContainer3/VBoxContainer"]
+[node name="HBoxContainer_Name" type="HBoxContainer" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer3/VBoxContainer"]
 layout_mode = 2
 
-[node name="Wearable_Category" parent="HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Name" instance=ExtResource("3_f2n7s")]
+[node name="Wearable_Category" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Name" instance=ExtResource("3_f2n7s")]
 layout_mode = 2
 size_flags_vertical = 4
 
-[node name="Label_Name" type="Label" parent="HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Name"]
+[node name="Label_Name" type="Label" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Name"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 18
 text = "Name"
 
-[node name="HBoxContainer_Hide" type="HBoxContainer" parent="HBoxContainer/MarginContainer3/VBoxContainer"]
+[node name="HBoxContainer_Hide" type="HBoxContainer" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer3/VBoxContainer"]
 layout_mode = 2
 
-[node name="TextureRect_Icon" type="TextureRect" parent="HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Hide"]
+[node name="TextureRect_Icon" type="TextureRect" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Hide"]
 modulate = Color(0, 0, 0, 1)
 layout_mode = 2
 size_flags_horizontal = 4
 texture = ExtResource("3_d0tom")
 expand_mode = 2
 
-[node name="Label_Hides" type="Label" parent="HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Hide"]
+[node name="Label_Hides" type="Label" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Hide"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 12
 text = "HIDES:"
 
-[node name="Wearable_Category" parent="HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Hide" instance=ExtResource("3_f2n7s")]
+[node name="Wearable_Category" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Hide" instance=ExtResource("3_f2n7s")]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="Button_Equip" type="Button" parent="HBoxContainer/MarginContainer"]
+[node name="Button_Equip" type="Button" parent="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer"]
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 size_flags_horizontal = 8
@@ -141,4 +143,4 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_daucq")
 toggle_mode = true
 text = "EQUIP"
 
-[connection signal="toggled" from="HBoxContainer/MarginContainer/Button_Equip" to="." method="_on_button_equip_toggled"]
+[connection signal="toggled" from="TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer/Button_Equip" to="." method="_on_button_equip_toggled"]

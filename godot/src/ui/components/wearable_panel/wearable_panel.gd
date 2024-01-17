@@ -26,13 +26,11 @@ var unique_panel = preload("res://assets/ui/InfoCardUnique.png")
 var wearable_id
 
 @onready var texture_rect_panel_background = $TextureRect_PanelBackground
-@onready
-var texture_rect_thumbnail_background = $HBoxContainer/MarginContainer2/TextureRect_ThumbnailBackground
+@onready var texture_rect_thumbnail_background = $TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer2/TextureRect_ThumbnailBackground
+@onready var label_name = $TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Name/Label_Name
+@onready var texture_rect_preview = $TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer2/TextureRect_ThumbnailBackground/TextureRect_Preview
+@onready var button_equip = $TextureRect_PanelBackground/MarginContainer/HBoxContainer/MarginContainer/Button_Equip
 
-@onready var label_name = $HBoxContainer/MarginContainer3/VBoxContainer/HBoxContainer_Name/Label_Name
-@onready var button_equip = $HBoxContainer/MarginContainer/Button_Equip
-@onready
-var texture_rect_preview = $HBoxContainer/MarginContainer2/TextureRect_ThumbnailBackground/TextureRect_Preview
 
 
 func _ready():
