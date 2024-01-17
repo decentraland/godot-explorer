@@ -73,6 +73,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("5_c8ksg")
 
 [node name="MobileUI" type="Control" parent="UI/SafeAreaHUD"]
@@ -98,6 +99,7 @@ offset_right = -44.0
 offset_bottom = -54.0
 grow_horizontal = 0
 grow_vertical = 0
+focus_mode = 0
 theme = ExtResource("4_2vs87")
 texture_normal = ExtResource("8_ttlm2")
 ignore_texture_size = true
