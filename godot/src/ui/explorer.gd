@@ -1,4 +1,6 @@
 extends Node
+const MY_PROFILE = preload("res://src/ui/components/profile/my_profile.tscn")
+const TEST = preload("res://src/ui/components/profile/test.tscn")
 
 var sign_in_resource = preload("res://src/ui/components/auth/sign_in.tscn")
 
@@ -23,6 +25,7 @@ var _last_parcel_position: Vector2i
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
 
 @onready var panel_chat = $UI/SafeAreaHUD/Panel_Chat
+@onready var custom_popup = $UI/CustomPopup
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
@@ -434,3 +437,13 @@ func _on_virtual_joystick_left_is_holded(holded: bool):
 
 func _on_button_open_chat_pressed():
 	panel_chat.visible = not panel_chat.visible
+
+
+func _on_my_profile_pressed():
+	custom_popup.open(MY_PROFILE, true)
+	release_mouse()
+
+
+func _on_test_pressed():
+	custom_popup.open(TEST, true)
+	release_mouse()

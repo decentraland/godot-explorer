@@ -1,15 +1,15 @@
-[gd_scene load_steps=16 format=3 uid="uid://beskp5r5fb0hf"]
+[gd_scene load_steps=16 format=3 uid="uid://b0qqx0yj4xbhk"]
 
-[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0b6hs"]
-[ext_resource type="Texture2D" uid="uid://x8gxm5im3o45" path="res://assets/ui/profile_placeholder.svg" id="2_vi8dn"]
-[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_xkj2o"]
-[ext_resource type="Texture2D" uid="uid://bskyowm6e7h86" path="res://assets/ui/copy.svg" id="4_vchpx"]
-[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_3gvvb"]
-[ext_resource type="Texture2D" uid="uid://bk0sk08y0n0j1" path="res://assets/ui/Wallet.svg" id="6_5nrx8"]
-[ext_resource type="Texture2D" uid="uid://c8s3ic645y8i1" path="res://assets/ui/Mana.svg" id="7_hitm1"]
-[ext_resource type="Texture2D" uid="uid://qmjechb2b3td" path="res://assets/ui/PolygonMana.svg" id="8_jmd2d"]
-[ext_resource type="Texture2D" uid="uid://dj71heyiyjlms" path="res://assets/ui/Account.svg" id="9_q56uw"]
-[ext_resource type="Texture2D" uid="uid://cv6mjte01scg0" path="res://assets/ui/Logout.svg" id="10_klru4"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_lxl7f"]
+[ext_resource type="Texture2D" uid="uid://x8gxm5im3o45" path="res://assets/ui/profile_placeholder.svg" id="2_snkf0"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_nvak4"]
+[ext_resource type="Texture2D" uid="uid://bskyowm6e7h86" path="res://assets/ui/copy.svg" id="4_wlxan"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_qfkbo"]
+[ext_resource type="Texture2D" uid="uid://bk0sk08y0n0j1" path="res://assets/ui/Wallet.svg" id="6_fie38"]
+[ext_resource type="Texture2D" uid="uid://c8s3ic645y8i1" path="res://assets/ui/Mana.svg" id="7_4je1e"]
+[ext_resource type="Texture2D" uid="uid://qmjechb2b3td" path="res://assets/ui/PolygonMana.svg" id="8_ndrlm"]
+[ext_resource type="Texture2D" uid="uid://dj71heyiyjlms" path="res://assets/ui/Account.svg" id="9_85ol3"]
+[ext_resource type="Texture2D" uid="uid://cv6mjte01scg0" path="res://assets/ui/Logout.svg" id="10_fwb7d"]
 
 [sub_resource type="Animation" id="Animation_70m5k"]
 length = 0.001
@@ -37,14 +37,14 @@ corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 
 [node name="MyProfile" type="VBoxContainer"]
-custom_minimum_size = Vector2(200, 0)
-offset_right = 200.0
-offset_bottom = 444.0
+custom_minimum_size = Vector2(600, 0)
+offset_right = 600.0
+offset_bottom = 456.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 focus_mode = 1
 mouse_force_pass_scroll_events = false
-theme = ExtResource("1_0b6hs")
+theme = ExtResource("1_lxl7f")
 theme_override_constants/separation = 20
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
@@ -76,7 +76,7 @@ offset_bottom = 25.0
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(25, 25)
-texture = ExtResource("2_vi8dn")
+texture = ExtResource("2_snkf0")
 expand_mode = 1
 stretch_mode = 4
 
@@ -88,7 +88,7 @@ alignment = 1
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("3_xkj2o")
+theme_override_fonts/font = ExtResource("3_nvak4")
 theme_override_font_sizes/font_size = 14
 text = "Carrie"
 horizontal_alignment = 1
@@ -99,7 +99,7 @@ modulate = Color(1, 1, 1, 0.627451)
 custom_minimum_size = Vector2(30, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("3_xkj2o")
+theme_override_fonts/font = ExtResource("3_nvak4")
 theme_override_font_sizes/font_size = 14
 text = "#b47f"
 horizontal_alignment = 1
@@ -108,7 +108,7 @@ vertical_alignment = 1
 [node name="TextureRect" type="TextureRect" parent="VBoxContainer_Profile/HBoxContainer"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
-texture = ExtResource("4_vchpx")
+texture = ExtResource("4_wlxan")
 expand_mode = 1
 stretch_mode = 5
 
@@ -120,7 +120,7 @@ alignment = 1
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-theme_override_fonts/font = ExtResource("5_3gvvb")
+theme_override_fonts/font = ExtResource("5_qfkbo")
 theme_override_font_sizes/font_size = 12
 text = "0x0e...a92"
 horizontal_alignment = 1
@@ -129,7 +129,7 @@ vertical_alignment = 1
 [node name="TextureRect" type="TextureRect" parent="VBoxContainer_Profile/HBoxContainer2"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
-texture = ExtResource("4_vchpx")
+texture = ExtResource("4_wlxan")
 expand_mode = 1
 stretch_mode = 5
 
@@ -160,7 +160,7 @@ alignment = 1
 [node name="TextureRect3" type="TextureRect" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
-texture = ExtResource("6_5nrx8")
+texture = ExtResource("6_fie38")
 expand_mode = 1
 stretch_mode = 5
 
@@ -171,14 +171,14 @@ layout_mode = 2
 [node name="TextureRect2" type="TextureRect" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer/HBoxContainer2"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
-texture = ExtResource("7_hitm1")
+texture = ExtResource("7_4je1e")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Label" type="Label" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer/HBoxContainer2"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_fonts/font = ExtResource("3_xkj2o")
+theme_override_fonts/font = ExtResource("3_nvak4")
 theme_override_font_sizes/font_size = 10
 text = "32K"
 
@@ -189,14 +189,14 @@ layout_mode = 2
 [node name="TextureRect2" type="TextureRect" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer/HBoxContainer3"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
-texture = ExtResource("8_jmd2d")
+texture = ExtResource("8_ndrlm")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Label" type="Label" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer/HBoxContainer3"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_fonts/font = ExtResource("3_xkj2o")
+theme_override_fonts/font = ExtResource("3_nvak4")
 theme_override_font_sizes/font_size = 10
 text = "0
 "
@@ -206,7 +206,7 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
-theme = ExtResource("1_0b6hs")
+theme = ExtResource("1_lxl7f")
 theme_type_variation = &"OutlinedButton"
 text = "PREVIEW PROFILE"
 
@@ -243,7 +243,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(25, 25)
-texture = ExtResource("9_q56uw")
+texture = ExtResource("9_85ol3")
 expand_mode = 5
 stretch_mode = 5
 
@@ -251,7 +251,7 @@ stretch_mode = 5
 custom_minimum_size = Vector2(0, 22)
 layout_mode = 2
 size_flags_horizontal = 3
-theme = ExtResource("1_0b6hs")
+theme = ExtResource("1_lxl7f")
 theme_type_variation = &"OutlinedButton"
 text = "ACCOUNT SETTINGS"
 flat = true
@@ -273,7 +273,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(25, 25)
-texture = ExtResource("10_klru4")
+texture = ExtResource("10_fwb7d")
 expand_mode = 5
 stretch_mode = 5
 
@@ -281,7 +281,7 @@ stretch_mode = 5
 custom_minimum_size = Vector2(0, 22)
 layout_mode = 2
 size_flags_horizontal = 3
-theme = ExtResource("1_0b6hs")
+theme = ExtResource("1_lxl7f")
 theme_type_variation = &"OutlinedButton"
 text = "SIGN OUT"
 flat = true
@@ -306,7 +306,7 @@ alignment = 1
 custom_minimum_size = Vector2(0, 22)
 layout_mode = 2
 size_flags_horizontal = 3
-theme = ExtResource("1_0b6hs")
+theme = ExtResource("1_lxl7f")
 theme_type_variation = &"OutlinedButtonThin"
 text = "Terms of Service"
 flat = true
@@ -316,7 +316,7 @@ expand_icon = true
 custom_minimum_size = Vector2(0, 22)
 layout_mode = 2
 size_flags_horizontal = 3
-theme = ExtResource("1_0b6hs")
+theme = ExtResource("1_lxl7f")
 theme_type_variation = &"OutlinedButtonThin"
 text = "Privacy Policy"
 flat = true

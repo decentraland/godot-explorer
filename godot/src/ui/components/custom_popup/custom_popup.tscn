@@ -1,9 +1,8 @@
-[gd_scene load_steps=12 format=3 uid="uid://g7mjpw7t7gif"]
+[gd_scene load_steps=11 format=3 uid="uid://g7mjpw7t7gif"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_qsodf"]
 [ext_resource type="PackedScene" uid="uid://moihpyoq7yky" path="res://src/ui/components/icon_button/icon_button.tscn" id="2_848bx"]
 [ext_resource type="Script" path="res://src/ui/components/custom_popup/custom_popup.gd" id="2_mxgsc"]
-[ext_resource type="PackedScene" uid="uid://beskp5r5fb0hf" path="res://src/ui/components/profile/my_profile.tscn" id="3_gprc4"]
 [ext_resource type="Texture2D" uid="uid://bj7ixhs7ddpki" path="res://assets/ui/Next.svg" id="3_wlm0s"]
 [ext_resource type="Texture2D" uid="uid://bg6somt12nu12" path="res://assets/ui/close.svg" id="6_t53rf"]
 
@@ -70,10 +69,6 @@ theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 30
-
-[node name="MyProfile" parent="PanelContainer/MarginContainer_Content" instance=ExtResource("3_gprc4")]
-layout_mode = 2
-mouse_filter = 2
 
 [node name="MarginContainer_Navigation" type="MarginContainer" parent="PanelContainer"]
 layout_mode = 2

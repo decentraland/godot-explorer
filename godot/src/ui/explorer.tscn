@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=24 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
 [ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="9_hj43f"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
+[ext_resource type="Texture2D" uid="uid://bj5051ty1im72" path="res://assets/ui/social-bar-icons/profile-outlined.svg" id="10_i86vb"]
 [ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 [ext_resource type="Texture2D" uid="uid://2phiy0bi4o0i" path="res://assets/themes/dark_dcl_theme/icons/PinOutline.svg" id="12_tcp5l"]
@@ -184,6 +185,24 @@ icon = ExtResource("14_jag8f")
 icon_alignment = 1
 expand_icon = true
 
+[node name="MyProfile" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_constants/icon_max_width = 40
+theme_override_font_sizes/font_size = 0
+icon = ExtResource("10_i86vb")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Test" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_constants/icon_max_width = 40
+theme_override_font_sizes/font_size = 0
+icon = ExtResource("10_i86vb")
+icon_alignment = 1
+expand_icon = true
+
 [node name="Button_OpenChat" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
@@ -302,6 +321,8 @@ layout_mode = 1
 [connection signal="gui_input" from="UI/SafeAreaHUD/MobileUI/JoystickMoveArea" to="." method="_on_joystick_move_area_gui_input"]
 [connection signal="is_holded" from="UI/SafeAreaHUD/MobileUI/JoystickMoveArea/VirtualJoystick_Left" to="." method="_on_virtual_joystick_left_is_holded"]
 [connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
+[connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/MyProfile" to="." method="_on_my_profile_pressed"]
+[connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/Test" to="." method="_on_test_pressed"]
 [connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
 [connection signal="pressed" from="UI/SafeAreaHUD/Profile" to="." method="_on_profile_pressed"]
 [connection signal="submit_message" from="UI/SafeAreaHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
