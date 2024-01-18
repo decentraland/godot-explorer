@@ -22,17 +22,18 @@ var _last_parcel_position: Vector2i
 @onready var label_crosshair = $UI/Label_Crosshair
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
 
-@onready var panel_chat = $UI/SafeAreaHUD/Panel_Chat
+@onready var panel_chat = $UI/SafeMarginContainer/InteractableHUD/Panel_Chat
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
 @onready var player := $world/Player
-@onready var mobile_ui = $UI/SafeAreaHUD/MobileUI
+@onready var mobile_ui = $UI/SafeMarginContainer/InteractableHUD/MobileUI
 @onready
-var virtual_joystick: Control = $UI/SafeAreaHUD/MobileUI/JoystickMoveArea/VirtualJoystick_Left
-@onready var joystick_move_area: Control = $UI/SafeAreaHUD/MobileUI/JoystickMoveArea
+var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/JoystickMoveArea/VirtualJoystick_Left
+@onready
+var joystick_move_area: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/JoystickMoveArea
 
 
 func _process(_dt):
