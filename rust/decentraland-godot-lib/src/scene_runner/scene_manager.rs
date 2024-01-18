@@ -1,6 +1,7 @@
 use crate::{
     content::content_mapping::DclContentMappingAndUrl,
     dcl::{
+        common::SceneLogLevel,
         components::{
             internal_player_data::InternalPlayerData,
             proto_components::{
@@ -12,7 +13,6 @@ use crate::{
             },
             SceneEntityId,
         },
-        js::SceneLogLevel,
         DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
     },
     godot_classes::{

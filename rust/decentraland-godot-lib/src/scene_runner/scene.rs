@@ -9,6 +9,7 @@ use godot::{obj::UserClass, prelude::Gd};
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
     dcl::{
+        common::{SceneLogMessage, SceneTestResult},
         components::{
             internal_player_data::InternalPlayerData,
             material::DclMaterial,
@@ -20,13 +21,8 @@ use crate::{
             SceneEntityId,
         },
         crdt::{DirtyEntities, DirtyGosComponents, DirtyLwwComponents},
-        js::{testing::SceneTestResult, SceneLogMessage},
         scene_apis::RpcCall,
-        // js::js_runtime::SceneLogMessage,
-        DclScene,
-        RendererResponse,
-        SceneDefinition,
-        SceneId,
+        DclScene, RendererResponse, SceneDefinition, SceneId,
     },
     godot_classes::{
         dcl_audio_source::DclAudioSource, dcl_audio_stream::DclAudioStream,
@@ -81,7 +77,9 @@ pub enum SceneUpdateState {
     Raycasts,
     AvatarAttach,
     SceneUi,
+    #[cfg(feature = "use_ffmpeg")]
     VideoPlayer,
+    #[cfg(feature = "use_ffmpeg")]
     AudioStream,
     AvatarModifierArea,
     CameraModeArea,
@@ -111,9 +109,14 @@ impl SceneUpdateState {
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::Raycasts,
+            #[cfg(feature = "use_ffmpeg")]
             Self::Raycasts => Self::VideoPlayer,
+            #[cfg(feature = "use_ffmpeg")]
             Self::VideoPlayer => Self::AudioStream,
+            #[cfg(feature = "use_ffmpeg")]
             Self::AudioStream => Self::AvatarModifierArea,
+            #[cfg(not(feature = "use_ffmpeg"))]
+            Self::Raycasts => Self::AvatarModifierArea,
             Self::AvatarModifierArea => Self::CameraModeArea,
             Self::CameraModeArea => Self::AudioSource,
             Self::AudioSource => Self::AvatarAttach,

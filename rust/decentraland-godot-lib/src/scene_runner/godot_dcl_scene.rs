@@ -1,5 +1,4 @@
 use crate::{
-    av::{audio_context::AudioSink, video_stream::VideoSink},
     dcl::{
         components::{
             material::DclMaterial,
@@ -19,6 +18,9 @@ use std::{
 
 use super::components::ui::{scene_ui::UiResults, style::UiTransform};
 
+#[cfg(feature = "use_ffmpeg")]
+use crate::av::{audio_context::AudioSink, video_stream::VideoSink};
+
 pub struct GodotDclScene {
     pub entities: HashMap<SceneEntityId, GodotEntityNode>,
 
@@ -35,6 +37,7 @@ pub struct GodotDclScene {
     pub ui_results: Rc<RefCell<UiResults>>,
 }
 
+#[cfg(feature = "use_ffmpeg")]
 pub struct VideoPlayerData {
     pub video_sink: VideoSink,
     pub audio_sink: AudioSink,
@@ -62,7 +65,9 @@ pub struct GodotEntityNode {
     pub computed_parent_3d: SceneEntityId,
     pub material: Option<DclMaterial>,
     pub pointer_events: Option<proto_components::sdk::components::PbPointerEvents>,
+    #[cfg(feature = "use_ffmpeg")]
     pub video_player_data: Option<VideoPlayerData>,
+    #[cfg(feature = "use_ffmpeg")]
     pub audio_stream: Option<(String, AudioSink)>,
 
     pub base_ui: Option<UiNode>,
@@ -135,7 +140,9 @@ impl GodotEntityNode {
 
             material: None,
             pointer_events: None,
+            #[cfg(feature = "use_ffmpeg")]
             video_player_data: None,
+            #[cfg(feature = "use_ffmpeg")]
             audio_stream: None,
         }
     }
