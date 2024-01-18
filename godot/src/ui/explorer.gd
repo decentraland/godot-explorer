@@ -31,9 +31,7 @@ var _last_parcel_position: Vector2i
 @onready var player := $world/Player
 @onready var mobile_ui = $UI/SafeMarginContainer/InteractableHUD/MobileUI
 @onready
-var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/JoystickMoveArea/VirtualJoystick_Left
-@onready
-var joystick_move_area: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/JoystickMoveArea
+var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left
 
 
 func _process(_dt):
@@ -414,23 +412,6 @@ func _on_button_jump_gui_input(event):
 			Input.action_press("ia_jump")
 		else:
 			Input.action_release("ia_jump")
-
-
-func _on_joystick_move_area_gui_input(event):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			virtual_joystick.set_position(event.position - virtual_joystick.get_size() / 2)
-
-			# Convert to global position and forward the event
-			virtual_joystick.mouse_filter = Control.MOUSE_FILTER_PASS
-			event.position = joystick_move_area.get_global_rect().position + event.position
-			virtual_joystick.custom_input(event)
-
-
-func _on_virtual_joystick_left_is_holded(holded: bool):
-	if not holded:
-		virtual_joystick.set_position(virtual_joystick_orig_position)
-		virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _on_button_open_chat_pressed():

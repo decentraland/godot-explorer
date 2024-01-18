@@ -4,7 +4,7 @@ extends MarginContainer
 
 func _ready() -> void:
 	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
-	var window_size: Vector2i = DisplayServer.window_get_size_with_decorations()
+	var window_size: Vector2i = DisplayServer.window_get_size()
 
 	# BASE MARGINS
 	var top: int = 8 if Global.is_mobile else 0
@@ -23,5 +23,8 @@ func _ready() -> void:
 
 	add_theme_constant_override("margin_top", top)
 	add_theme_constant_override("margin_left", left)
-	add_theme_constant_override("margin_bottom", bottom)
 	add_theme_constant_override("margin_right", right)
+	add_theme_constant_override("margin_bottom", bottom)
+
+	var real_safe_area: Rect2i = Rect2i(top, left, size.x - right, size.y - bottom)
+	Global.scene_runner.set_interactable_area(real_safe_area)
