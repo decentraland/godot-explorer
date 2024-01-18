@@ -2,10 +2,7 @@ use godot::prelude::*;
 use http::Uri;
 
 use crate::{
-    comms::{
-        adapter::{livekit::LivekitRoom, ws_room::WebSocketRoom},
-        signed_login::SignedLoginMeta,
-    },
+    comms::{adapter::ws_room::WebSocketRoom, signed_login::SignedLoginMeta},
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::dcl_global::DclGlobal,
 };
@@ -14,6 +11,9 @@ use super::{
     adapter::adapter_trait::Adapter,
     signed_login::{SignedLogin, SignedLoginPollStatus},
 };
+
+#[cfg(feature = "use_livekit")]
+use crate::comms::adapter::livekit::LivekitRoom;
 
 #[allow(clippy::large_enum_variant)]
 enum CommsConnection {
@@ -323,6 +323,8 @@ impl CommunicationManager {
                     SignedLoginMeta::new(true, origin),
                 ));
             }
+
+            #[cfg(feature = "use_livekit")]
             "livekit" => {
                 self.current_connection = CommsConnection::Connected(Box::new(LivekitRoom::new(
                     comms_address.to_string(),
@@ -331,6 +333,12 @@ impl CommunicationManager {
                     avatar_scene,
                 )));
             }
+
+            #[cfg(not(feature = "use_livekit"))]
+            "livekit" => {
+                tracing::error!("livekit wasn't included in this build");
+            }
+
             "offline" => {
                 tracing::info!("set offline");
             }

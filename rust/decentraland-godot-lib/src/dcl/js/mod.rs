@@ -12,6 +12,10 @@ pub mod websocket;
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::auth::ethereum_provider::EthereumProvider;
 use crate::content::content_mapping::ContentMappingAndUrlRef;
+use crate::dcl::common::{
+    is_scene_log_enabled, SceneDying, SceneElapsedTime, SceneJsFileContent, SceneLogLevel,
+    SceneLogMessage, SceneLogs, SceneStartTime,
+};
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
 use super::{
@@ -23,7 +27,6 @@ use super::{RendererResponse, SceneId, SceneResponse};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -37,42 +40,8 @@ use once_cell::sync::Lazy;
 use serde::Serialize;
 use v8::IsolateHandle;
 
-struct SceneJsFileContent(pub String);
-struct SceneMainCrdtFileContent(pub Vec<u8>);
-
-pub struct SceneStartTime(pub std::time::SystemTime);
-pub struct SceneLogs(pub Vec<SceneLogMessage>);
-pub struct SceneMainCrdt(pub Option<Vec<u8>>);
-pub struct SceneTickCounter(pub u32);
-pub struct SceneDying(pub bool);
-
-pub struct SceneElapsedTime(pub f32);
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum SceneLogLevel {
-    Log = 1,
-    SceneError = 2,
-    SystemError = 3,
-}
-
-#[derive(Clone, Debug)]
-pub struct SceneLogMessage {
-    pub timestamp: f64, // scene local time
-    pub level: SceneLogLevel,
-    pub message: String,
-}
-
 pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
     Lazy::new(Default::default);
-
-static SCENE_LOG_ENABLED: AtomicBool = AtomicBool::new(false);
-
-pub fn set_scene_log_enabled(enabled: bool) {
-    SCENE_LOG_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
-}
-
-pub fn is_scene_log_enabled() -> bool {
-    SCENE_LOG_ENABLED.load(std::sync::atomic::Ordering::Relaxed)
-}
 
 pub fn create_runtime() -> deno_core::JsRuntime {
     let mut ext = &mut Extension::builder_with_deps("decentraland", &[]);

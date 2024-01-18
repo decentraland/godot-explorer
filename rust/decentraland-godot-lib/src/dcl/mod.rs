@@ -1,5 +1,7 @@
+pub mod common;
 pub mod components;
 pub mod crdt;
+#[cfg(feature = "use_deno")]
 pub mod js;
 pub mod scene_apis;
 pub mod serialization;
@@ -12,14 +14,15 @@ use crate::{
 };
 
 use self::{
-    crdt::{DirtyCrdtState, SceneCrdtState},
-    js::{
-        scene_thread,
-        testing::{TakeAndCompareSnapshotResponse, TestingScreenshotComparisonMethodRequest},
-        SceneLogMessage,
+    common::{
+        SceneLogMessage, TakeAndCompareSnapshotResponse, TestingScreenshotComparisonMethodRequest,
     },
+    crdt::{DirtyCrdtState, SceneCrdtState},
     scene_apis::{RpcCall, RpcResultSender},
 };
+
+#[cfg(feature = "use_deno")]
+use self::js::scene_thread;
 
 use std::{
     sync::{Arc, Mutex},
@@ -106,6 +109,7 @@ impl DclScene {
         let thread_join_handle = std::thread::Builder::new()
             .name(format!("scene thread {}", id.0))
             .spawn(move || {
+                #[cfg(feature = "use_deno")]
                 scene_thread(
                     id,
                     scene_definition,

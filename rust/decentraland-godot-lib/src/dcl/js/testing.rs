@@ -4,11 +4,14 @@ use deno_core::{
     op, Op, OpDecl, OpState,
 };
 use godot::builtin::{Vector2, Vector3};
-use serde::{Deserialize, Serialize};
 
-use crate::{
-    dcl::{scene_apis::RpcCall, SceneId, SceneResponse},
-    godot_classes::JsonGodotClass,
+use crate::dcl::{
+    common::{
+        SceneTestPlan, SceneTestResult, TakeAndCompareSnapshotResponse,
+        TestingScreenshotComparisonMethodRequest,
+    },
+    scene_apis::RpcCall,
+    SceneId, SceneResponse,
 };
 
 use super::SceneEnv;
@@ -19,51 +22,6 @@ pub fn ops() -> Vec<OpDecl> {
         op_log_test_result::DECL,
         op_log_test_plan::DECL,
     ]
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct GreyPixelDiffRequest {}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct TestingScreenshotComparisonMethodRequest {
-    grey_pixel_diff: Option<GreyPixelDiffRequest>,
-}
-
-impl JsonGodotClass for TestingScreenshotComparisonMethodRequest {}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct GreyPixelDiffResult {
-    pub similarity: f64,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TakeAndCompareSnapshotResponse {
-    pub stored_snapshot_found: bool,
-    pub grey_pixel_diff: Option<GreyPixelDiffResult>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SceneTestResult {
-    pub name: String,
-    pub ok: bool,
-    pub error: Option<String>,
-    pub stack: Option<String>,
-    pub total_frames: i32,
-    pub total_time: f32,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SceneTestPlan {
-    pub tests: Vec<SceneTestPlanTestPlanEntry>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SceneTestPlanTestPlanEntry {
-    pub name: String,
 }
 
 #[op]

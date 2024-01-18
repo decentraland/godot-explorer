@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::auth::with_browser_and_server::RPCSendableMessage;
 
-use super::js::testing::{SceneTestPlan, SceneTestResult};
+use super::common::{SceneTestPlan, SceneTestResult};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PortableLocation {
