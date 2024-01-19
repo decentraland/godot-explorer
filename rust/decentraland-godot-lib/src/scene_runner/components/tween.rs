@@ -6,6 +6,7 @@ use crate::{
             proto_components::sdk::components::{
                 pb_tween::Mode, EasingFunction, PbTween, PbTweenState, TweenStateStatus,
             },
+            transform_and_parent::DclTransformAndParent,
             SceneComponentId,
         },
         crdt::{
@@ -196,15 +197,11 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         }
 
         // get entity transform from crdt state
-        let transform = crdt_state.get_transform_mut().get(entity);
-
-        let Some(transform) = transform else {
-            continue;
-        };
-
-        let Some(mut transform) = transform.value.clone() else {
-            continue;
-        };
+        let mut transform: DclTransformAndParent = crdt_state
+            .get_transform_mut()
+            .get(entity)
+            .and_then(|transform| transform.value.clone())
+            .unwrap_or_else(DclTransformAndParent::default);
 
         // calculate new transform with the tween
         let ease_value = (tween.ease_fn)(progress);
