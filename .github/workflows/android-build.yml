@@ -1,20 +1,26 @@
-name: Android Build
-
 on:
   push:
     branches:
       - main
-  pull_request:
-    types:
-      - created
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch name'
+        required: true
+        default: 'main'
+
+name: Android Build
 
 jobs:
   build:
     runs-on: self-hosted-ubuntu
     container:
       image: docker://kuruk/dcl-godot-android-builder:latest
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && 'main' || github.event.inputs.branch }}
       - name: Setup Rust
         run: |
           echo $ANDROID_HOME
