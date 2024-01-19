@@ -83,6 +83,34 @@ class AllAwaiter:
 		if not _mask and not _promise.is_resolved():
 			_promise.resolve_with_data(results)
 
+class AllAwaiterEx:
+	var results: Array = []
+	var resolved: Array = []
+	var _mask: int
+	var _promise: Promise = Promise.new()
+
+	func _init(funcs: Array) -> void:
+		var size := funcs.size()
+		if size == 0:  # inmediate resolve, no funcs to await...
+			_promise.resolve()
+			return
+
+		resolved.resize(size)
+		resolved.fill(false)
+		results.resize(size)
+		results.fill(null)  # by default, the return will be null
+		for i in size:
+			_async_call_func(i, funcs[i])
+
+	func _async_call_func(i: int, f) -> void:
+		@warning_ignore("redundant_await")
+		var promise = await PromiseUtils._Internal.async_call_and_get_promise(f)
+		var data = await PromiseUtils.async_awaiter(promise)
+		results[i] = data
+		resolved[i] = true
+
+		if not resolved.has(false) and not _promise.is_resolved():
+			_promise.resolve_with_data(results)
 
 class AnyAwaiter:
 	var _promise: Promise = Promise.new()
@@ -133,8 +161,10 @@ class RaceAwaiter:
 static func async_all(funcs: Array) -> Array:
 	if funcs.is_empty():
 		return []
-	return await PromiseUtils.async_awaiter(AllAwaiter.new(funcs)._promise)
-
+	if funcs.size() < 64:
+		return await PromiseUtils.async_awaiter(AllAwaiter.new(funcs)._promise)
+	else:
+		return await PromiseUtils.async_awaiter(AllAwaiterEx.new(funcs)._promise)
 
 # `async_any` is a static function similar to `async_all`, but it resolves as soon as any of the
 # functions in the provided array resolves. It returns the result of the first function
