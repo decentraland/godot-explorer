@@ -10,6 +10,8 @@ const MAP_OFF = preload("res://assets/ui/nav-bar-icons/map-off.svg")
 const MAP_ON = preload("res://assets/ui/nav-bar-icons/map-on.svg")
 const SETTINGS_OFF = preload("res://assets/ui/nav-bar-icons/settings-off.svg")
 const SETTINGS_ON = preload("res://assets/ui/nav-bar-icons/settings-on.svg")
+const BUILDER_OFF = preload("res://assets/ui/nav-bar-icons/builder-off.svg")
+const BUILDER_ON = preload("res://assets/ui/nav-bar-icons/builder-on.svg")
 
 signal hide_menu
 signal jump_to(Vector2i)
@@ -40,11 +42,13 @@ var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
 @onready var button_map = $ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Map
 @onready var button_backpack = $ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Backpack
 @onready var button_settings = $ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Settings
+@onready var button_profile = $ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Profile
 
 @onready var control_discover = $ColorRect_Background/Control_Discover
 @onready var control_settings = $ColorRect_Background/Control_Settings
 @onready var control_map = $ColorRect_Background/Control_Map
 @onready var control_backpack = $ColorRect_Background/Control_Backpack
+@onready var control_profile = $ColorRect_Background/Control_Profile
 
 
 
@@ -86,19 +90,6 @@ func _unhandled_input(event):
 				emit_signal("hide_menu")
 			else:
 				_on_button_settings_pressed()
-
-
-func modulate_all():
-	var tween_m = create_tween()
-	tween_m.tween_property(control_discover, "modulate", Color(1, 1, 1, 0), 0.125)
-	tween_m.tween_property(control_map, "modulate", Color(1, 1, 1, 0), 0.125)
-	tween_m.tween_property(control_settings, "modulate", Color(1, 1, 1, 0), 0.125)
-
-
-func hide_all():
-	control_discover.hide()
-	control_map.hide()
-	control_settings.hide()
 
 
 func _on_button_close_pressed():
@@ -174,6 +165,12 @@ func _on_button_backpack_pressed():
 		fade_in(control_backpack)
 
 
+func _on_button_profile_pressed():
+	_updated_icons()
+	if selected_node != control_profile:
+		fade_out(selected_node)
+		fade_in(control_profile)
+
 func fade_in(node: Control):
 	selected_node = node
 	node.show()
@@ -235,3 +232,9 @@ func _updated_icons():
 		button_discover.icon = EXPLORER_ON
 	else:
 		button_discover.icon = EXPLORER_OFF
+		
+	if button_profile.button_pressed:
+		button_profile.icon = BUILDER_ON
+	else:
+		button_profile.icon = BUILDER_OFF
+

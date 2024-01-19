@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=22 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
@@ -12,10 +12,12 @@
 [ext_resource type="Texture2D" uid="uid://ck0o5otm5qv8k" path="res://assets/ui/nav-bar-icons/explorer-off.svg" id="9_xphlb"]
 [ext_resource type="Texture2D" uid="uid://bqypc3fidla5s" path="res://assets/ui/SettingsOff.png" id="10_asfa4"]
 [ext_resource type="Texture2D" uid="uid://dfntqgxlp7fsc" path="res://assets/themes/dark_dcl_theme/icons/Backpack.svg" id="10_iakp3"]
+[ext_resource type="Texture2D" uid="uid://malx84j74mqd" path="res://assets/ui/nav-bar-icons/builder-off.svg" id="10_rglx5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="12_dymeh"]
 [ext_resource type="Texture2D" uid="uid://dux2iwsr2jei8" path="res://assets/themes/dark_dcl_theme/icons/DecentralandLogo.svg" id="12_eucri"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="12_rk6dl"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="13_likvk"]
+[ext_resource type="PackedScene" uid="uid://beacicqxx6wof" path="res://src/ui/components/profile/profile.tscn" id="17_ubulu"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_dm3ec"]
 
@@ -180,6 +182,27 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
+[node name="Button_Profile" type="Button" parent="ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel"]
+custom_minimum_size = Vector2(120, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/icon_max_width = 44
+toggle_mode = true
+button_group = ExtResource("8_ao4hb")
+text = "PROFILE"
+icon = ExtResource("10_rglx5")
+flat = true
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+
 [node name="MarginContainer2" type="MarginContainer" parent="ColorRect_Header/HBoxContainer"]
 custom_minimum_size = Vector2(204, 0)
 layout_mode = 2
@@ -224,6 +247,10 @@ visible = false
 layout_mode = 1
 
 [node name="Control_Map" parent="ColorRect_Background" instance=ExtResource("4_jtsir")]
+visible = false
+layout_mode = 1
+
+[node name="Control_Profile" parent="ColorRect_Background" instance=ExtResource("17_ubulu")]
 layout_mode = 1
 
 [node name="Control_Backpack" parent="ColorRect_Background" instance=ExtResource("8_d38wp")]
@@ -234,6 +261,7 @@ layout_mode = 1
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Settings" to="." method="_on_button_settings_pressed"]
+[connection signal="pressed" from="ColorRect_Header/HBoxContainer/HBoxContainer_ButtonsPanel/Button_Profile" to="." method="_on_button_profile_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer/MarginContainer2/Button_Close" to="." method="_on_button_close_pressed"]
 [connection signal="preview_hot_reload" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_preview_hot_reload"]
 [connection signal="request_debug_panel" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_request_debug_panel"]
