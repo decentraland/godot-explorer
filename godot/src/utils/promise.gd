@@ -83,6 +83,7 @@ class AllAwaiter:
 		if not _mask and not _promise.is_resolved():
 			_promise.resolve_with_data(results)
 
+
 class AllAwaiterEx:
 	var results: Array = []
 	var resolved: Array = []
@@ -111,6 +112,7 @@ class AllAwaiterEx:
 
 		if not resolved.has(false) and not _promise.is_resolved():
 			_promise.resolve_with_data(results)
+
 
 class AnyAwaiter:
 	var _promise: Promise = Promise.new()
@@ -163,8 +165,9 @@ static func async_all(funcs: Array) -> Array:
 		return []
 	if funcs.size() < 64:
 		return await PromiseUtils.async_awaiter(AllAwaiter.new(funcs)._promise)
-	else:
-		return await PromiseUtils.async_awaiter(AllAwaiterEx.new(funcs)._promise)
+
+	return await PromiseUtils.async_awaiter(AllAwaiterEx.new(funcs)._promise)
+
 
 # `async_any` is a static function similar to `async_all`, but it resolves as soon as any of the
 # functions in the provided array resolves. It returns the result of the first function
