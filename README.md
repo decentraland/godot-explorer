@@ -28,6 +28,23 @@
 - With adding `-r` it builds the library in release mode. Note: the Godot executable is an editor, so it's a `release_debug` build, see the Target section [here](https://docs.godotengine.org/en/stable/contributing/development/compiling/introduction_to_the_buildsystem.html) for more infromation.
 - With adding `-e` it also builds the library, but the project edition is executed instead of the client.
 
+## Docker Set up project with Docker (for Android and Linux)
+
+Execute the following commands:
+```bash
+# Run Docker
+docker run -v {godot-explorer-repo-path}:/app/ -it kuruk/dcl-godot-android-builder:latest
+
+# Compile for Android
+cd rust/decentraland-godot-lib
+./android-build.sh
+
+# Compile for Linux
+cd rust/xtask
+cargo run -- install
+cargo run -- run --only-build
+```
+
 ## Contributing
 
 More details on [CONTRIBUTING.md](CONTRIBUTING.md)
