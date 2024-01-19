@@ -201,7 +201,7 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             .get_transform_mut()
             .get(entity)
             .and_then(|transform| transform.value.clone())
-            .unwrap_or_else(DclTransformAndParent::default);
+            .unwrap_or_default();
 
         // calculate new transform with the tween
         let ease_value = (tween.ease_fn)(progress);
