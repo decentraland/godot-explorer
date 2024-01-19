@@ -9,10 +9,10 @@
 [sub_resource type="ButtonGroup" id="ButtonGroup_knjct"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lrv73"]
-content_margin_left = 20.0
-content_margin_top = 20.0
-content_margin_right = 20.0
-content_margin_bottom = 20.0
+content_margin_left = 30.0
+content_margin_top = 30.0
+content_margin_right = 30.0
+content_margin_bottom = 30.0
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
 corner_radius_top_left = 18
 corner_radius_top_right = 18
@@ -91,45 +91,48 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 80
-theme_override_constants/margin_top = 30
+theme_override_constants/margin_top = 50
 theme_override_constants/margin_right = 80
-theme_override_constants/margin_bottom = 30
+theme_override_constants/margin_bottom = 0
 
 [node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer"]
 layout_mode = 2
-horizontal_scroll_mode = 0
+follow_focus = true
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 3
 
-[node name="Control_Content" type="Control" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
 
-[node name="VBoxContainer_MyProfile" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content"]
-visible = false
+[node name="VBoxContainer_MyProfile" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
-offset_right = 1120.0
-offset_bottom = 345.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 30
 
-[node name="VBoxContainer_Name" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile"]
+[node name="VBoxContainer_Name" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name"]
+layout_mode = 2
+theme_override_constants/margin_left = 50
+
+[node name="HBoxContainer_Name" type="HBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name/MarginContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer_Name" type="HBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_Name"]
-layout_mode = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_Name/HBoxContainer_Name"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name/MarginContainer/HBoxContainer_Name"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Label" type="Label" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_Name/HBoxContainer_Name/VBoxContainer"]
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name/MarginContainer/HBoxContainer_Name/VBoxContainer"]
 layout_mode = 2
 theme = ExtResource("3_4yj28")
 theme_type_variation = &"LabelBold"
 text = "Name*"
 
-[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_Name/HBoxContainer_Name/VBoxContainer"]
+[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name/MarginContainer/HBoxContainer_Name/VBoxContainer"]
 clip_contents = false
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
@@ -141,26 +144,26 @@ text = "Choose a name that you like and would let people recognise you"
 fit_content = true
 scroll_active = false
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_Name/HBoxContainer_Name"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name/MarginContainer/HBoxContainer_Name"]
 layout_mode = 2
 alignment = 1
 
-[node name="Button" type="Button" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_Name/HBoxContainer_Name/VBoxContainer2"]
+[node name="Button" type="Button" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name/MarginContainer/HBoxContainer_Name/VBoxContainer2"]
 layout_mode = 2
 theme = ExtResource("3_4yj28")
 theme_type_variation = &"BlackButton"
 text = "Claim Unique NAME"
 
-[node name="PanelContainer_Name" type="PanelContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_Name"]
+[node name="PanelContainer_Name" type="PanelContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_lrv73")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_Name/PanelContainer_Name"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name/PanelContainer_Name"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 20
 
-[node name="TabBar" type="TabBar" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_Name/PanelContainer_Name/VBoxContainer"]
+[node name="TabBar" type="TabBar" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name/PanelContainer_Name/VBoxContainer"]
 layout_mode = 2
 focus_mode = 0
 theme = ExtResource("3_4yj28")
@@ -168,7 +171,7 @@ tab_count = 2
 tab_0/title = "Unique NAME"
 tab_1/title = "Non-Unique Name"
 
-[node name="TextEdit" type="LineEdit" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_Name/PanelContainer_Name/VBoxContainer"]
+[node name="TextEdit" type="LineEdit" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_Name/PanelContainer_Name/VBoxContainer"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 size_flags_vertical = 3
@@ -176,24 +179,29 @@ theme = ExtResource("3_4yj28")
 text = "Carrie"
 placeholder_text = "Name"
 
-[node name="VBoxContainer_About" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile"]
+[node name="VBoxContainer_About" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile"]
+custom_minimum_size = Vector2(0, 400)
 layout_mode = 2
-size_flags_vertical = 3
+theme_override_constants/separation = 15
 
-[node name="HBoxContainer_About" type="HBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_About"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_About"]
+layout_mode = 2
+theme_override_constants/margin_left = 50
+
+[node name="HBoxContainer_About" type="HBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_About/MarginContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_About/HBoxContainer_About"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_About/MarginContainer/HBoxContainer_About"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Label" type="Label" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_About/HBoxContainer_About/VBoxContainer"]
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_About/MarginContainer/HBoxContainer_About/VBoxContainer"]
 layout_mode = 2
 theme = ExtResource("3_4yj28")
 theme_type_variation = &"LabelBold"
 text = "About"
 
-[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_About/HBoxContainer_About/VBoxContainer"]
+[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_About/MarginContainer/HBoxContainer_About/VBoxContainer"]
 clip_contents = false
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
@@ -205,40 +213,41 @@ text = "Use this space to describe yourself in a few words"
 fit_content = true
 scroll_active = false
 
-[node name="PanelContainer_About" type="PanelContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_About"]
-custom_minimum_size = Vector2(0, 50)
+[node name="PanelContainer_About" type="PanelContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_About"]
+custom_minimum_size = Vector2(0, 300)
 layout_mode = 2
-size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_lrv73")
 
-[node name="TextEdit" type="TextEdit" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile/VBoxContainer_About/PanelContainer_About"]
+[node name="TextEdit" type="TextEdit" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile/VBoxContainer_About/PanelContainer_About"]
 layout_mode = 2
 theme = ExtResource("3_4yj28")
 placeholder_text = "About me..."
 
-[node name="VBoxContainer_Email" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content"]
+[node name="VBoxContainer_Email" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer"]
 visible = false
 layout_mode = 2
-offset_right = 1120.0
-offset_bottom = 580.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 30
+theme_override_constants/separation = 20
 
-[node name="HBoxContainer_Email" type="HBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_Email"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email"]
+layout_mode = 2
+theme_override_constants/margin_left = 50
+
+[node name="HBoxContainer_Email" type="HBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email/MarginContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_Email/HBoxContainer_Email"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email/MarginContainer/HBoxContainer_Email"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Label" type="Label" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_Email/HBoxContainer_Email/VBoxContainer"]
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email/MarginContainer/HBoxContainer_Email/VBoxContainer"]
 layout_mode = 2
 theme = ExtResource("3_4yj28")
 theme_type_variation = &"LabelBold"
 text = "Email"
 
-[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_Email/HBoxContainer_Email/VBoxContainer"]
+[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email/MarginContainer/HBoxContainer_Email/VBoxContainer"]
 clip_contents = false
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
@@ -250,22 +259,22 @@ text = "Choose an e-mail address to receive notifications"
 fit_content = true
 scroll_active = false
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_Email/HBoxContainer_Email"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email/MarginContainer/HBoxContainer_Email"]
 layout_mode = 2
 alignment = 1
 
-[node name="Button" type="Button" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_Email/HBoxContainer_Email/VBoxContainer2"]
+[node name="Button" type="Button" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email/MarginContainer/HBoxContainer_Email/VBoxContainer2"]
 layout_mode = 2
 theme = ExtResource("3_4yj28")
 theme_type_variation = &"BlackButton"
 text = "Set e-mail"
 
-[node name="PanelContainer_About" type="PanelContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_Email"]
+[node name="PanelContainer_About" type="PanelContainer" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_lrv73")
 
-[node name="TextEdit" type="LineEdit" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_Email/PanelContainer_About"]
+[node name="TextEdit" type="LineEdit" parent="VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email/PanelContainer_About"]
 layout_mode = 2
 theme = ExtResource("3_4yj28")
 placeholder_text = "E-mail"

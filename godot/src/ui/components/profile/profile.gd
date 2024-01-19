@@ -1,8 +1,11 @@
 extends Control
-@onready var v_box_container_my_profile = $VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_MyProfile
-@onready var v_box_container_email = $VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/Control_Content/VBoxContainer_Email
+
 @onready var button_my_profile = $ColorRect_Background/MarginContainer/HBoxContainer/Button_MyProfile
 @onready var button_email_notifications = $ColorRect_Background/MarginContainer/HBoxContainer/Button_EmailNotifications
+@onready var v_box_container_my_profile = $VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_MyProfile
+@onready var v_box_container_email = $VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email
+
+
 
 var selected_node: Control
 
