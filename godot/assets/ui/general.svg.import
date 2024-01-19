@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bxom57mhcmhv4"
-path="res://.godot/imported/LeftArrow.png-a7fe114ca7e0ef2a781795f2437a0fcf.ctex"
+uid="uid://cabehbamxb2jf"
+path="res://.godot/imported/general.svg-e4769134672c64fce2cd596ebc8a5ac9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/LeftArrow.png"
-dest_files=["res://.godot/imported/LeftArrow.png-a7fe114ca7e0ef2a781795f2437a0fcf.ctex"]
+source_file="res://assets/ui/general.svg"
+dest_files=["res://.godot/imported/general.svg-e4769134672c64fce2cd596ebc8a5ac9.ctex"]
 
 [params]
 
@@ -32,3 +32,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=5.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

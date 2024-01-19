@@ -1,6 +1,7 @@
 extends Node
 const MY_PROFILE = preload("res://src/ui/components/profile/my_profile.tscn")
-const TEST = preload("res://src/ui/components/profile/test.tscn")
+
+const SCENE_1 = preload("res://src/ui/components/side-bar/scene1.tscn")
 
 var sign_in_resource = preload("res://src/ui/components/auth/sign_in.tscn")
 
@@ -36,6 +37,8 @@ var _last_parcel_position: Vector2i
 @onready
 var virtual_joystick: Control = $UI/SafeAreaHUD/MobileUI/JoystickMoveArea/VirtualJoystick_Left
 @onready var joystick_move_area: Control = $UI/SafeAreaHUD/MobileUI/JoystickMoveArea
+
+@onready var side_bar = $UI/SideBar
 
 
 func _process(_dt):
@@ -405,11 +408,6 @@ func _on_mini_map_pressed():
 	release_mouse()
 
 
-func _on_profile_pressed():
-	control_menu.show_backpack()
-	release_mouse()
-
-
 func _on_button_jump_gui_input(event):
 	if event is InputEventScreenTouch:
 		if event.pressed:
@@ -439,11 +437,11 @@ func _on_button_open_chat_pressed():
 	panel_chat.visible = not panel_chat.visible
 
 
-func _on_my_profile_pressed():
+func _on_profile_pressed():
 	custom_popup.open(MY_PROFILE, true)
 	release_mouse()
 
 
-func _on_test_pressed():
-	custom_popup.open(TEST, true)
-	release_mouse()
+func _on_button_side_bar_pressed():
+	side_bar.push(SCENE_1)
+

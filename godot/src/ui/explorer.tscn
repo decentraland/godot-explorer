@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=25 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -11,13 +11,14 @@
 [ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
 [ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="9_hj43f"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
-[ext_resource type="Texture2D" uid="uid://bj5051ty1im72" path="res://assets/ui/social-bar-icons/profile-outlined.svg" id="10_i86vb"]
 [ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
+[ext_resource type="Texture2D" uid="uid://cabehbamxb2jf" path="res://assets/ui/general.svg" id="11_g6clf"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 [ext_resource type="Texture2D" uid="uid://2phiy0bi4o0i" path="res://assets/themes/dark_dcl_theme/icons/PinOutline.svg" id="12_tcp5l"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="14_jag8f"]
 [ext_resource type="Texture2D" uid="uid://bxgklimw13m4d" path="res://assets/themes/dark_dcl_theme/icons/Profile.svg" id="16_8okg3"]
 [ext_resource type="PackedScene" uid="uid://g7mjpw7t7gif" path="res://src/ui/components/custom_popup/custom_popup.tscn" id="17_82rkt"]
+[ext_resource type="PackedScene" uid="uid://bat0cdkjcb8qt" path="res://src/ui/components/side-bar/side-bar.tscn" id="17_i8q4l"]
 
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
 data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
@@ -185,30 +186,21 @@ icon = ExtResource("14_jag8f")
 icon_alignment = 1
 expand_icon = true
 
-[node name="MyProfile" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
-custom_minimum_size = Vector2(60, 60)
-layout_mode = 2
-theme_override_constants/icon_max_width = 40
-theme_override_font_sizes/font_size = 0
-icon = ExtResource("10_i86vb")
-icon_alignment = 1
-expand_icon = true
-
-[node name="Test" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
-custom_minimum_size = Vector2(60, 60)
-layout_mode = 2
-theme_override_constants/icon_max_width = 40
-theme_override_font_sizes/font_size = 0
-icon = ExtResource("10_i86vb")
-icon_alignment = 1
-expand_icon = true
-
 [node name="Button_OpenChat" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 focus_mode = 0
 theme_override_constants/icon_max_width = 48
 icon = ExtResource("9_hj43f")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_SideBar" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 48
+icon = ExtResource("11_g6clf")
 icon_alignment = 1
 expand_icon = true
 
@@ -312,6 +304,10 @@ offset_top = -140.0
 offset_right = 180.0
 offset_bottom = 140.0
 
+[node name="SideBar" parent="UI" instance=ExtResource("17_i8q4l")]
+visible = false
+layout_mode = 1
+
 [node name="CustomPopup" parent="UI" instance=ExtResource("17_82rkt")]
 visible = false
 layout_mode = 1
@@ -321,9 +317,8 @@ layout_mode = 1
 [connection signal="gui_input" from="UI/SafeAreaHUD/MobileUI/JoystickMoveArea" to="." method="_on_joystick_move_area_gui_input"]
 [connection signal="is_holded" from="UI/SafeAreaHUD/MobileUI/JoystickMoveArea/VirtualJoystick_Left" to="." method="_on_virtual_joystick_left_is_holded"]
 [connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
-[connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/MyProfile" to="." method="_on_my_profile_pressed"]
-[connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/Test" to="." method="_on_test_pressed"]
 [connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
+[connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/Button_SideBar" to="." method="_on_button_side_bar_pressed"]
 [connection signal="pressed" from="UI/SafeAreaHUD/Profile" to="." method="_on_profile_pressed"]
 [connection signal="submit_message" from="UI/SafeAreaHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
