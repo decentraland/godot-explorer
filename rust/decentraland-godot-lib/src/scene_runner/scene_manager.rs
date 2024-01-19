@@ -54,6 +54,7 @@ pub struct SceneManager {
     #[var]
     base_ui: Gd<DclUiControl>,
     ui_canvas_information: PbUiCanvasInformation,
+    interactable_area: Rect2i,
 
     scenes: HashMap<SceneId, Scene>,
 
@@ -626,22 +627,31 @@ impl SceneManager {
 
     fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
         let canvas_size = self.base_ui.get_size();
-        let device_pixel_ratio = godot::engine::DisplayServer::singleton().screen_get_dpi() as f32;
+        let window_size: Vector2i = godot::engine::DisplayServer::singleton().window_get_size();
+
+        let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
+
         PbUiCanvasInformation {
             device_pixel_ratio,
             width: canvas_size.x as i32,
             height: canvas_size.y as i32,
             interactable_area: Some(BorderRect {
-                top: 0.0,
-                left: 0.0,
-                right: canvas_size.x,
-                bottom: canvas_size.y,
+                top: self.interactable_area.position.x as f32,
+                left: self.interactable_area.position.y as f32,
+                right: self.interactable_area.end().x as f32,
+                bottom: self.interactable_area.end().y as f32,
             }),
         }
     }
 
     #[func]
     fn _on_ui_resize(&mut self) {
+        self.ui_canvas_information = self.create_ui_canvas_information();
+    }
+
+    #[func]
+    fn set_interactable_area(&mut self, interactable_area: Rect2i) {
+        self.interactable_area = interactable_area;
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
@@ -815,6 +825,8 @@ impl INode for SceneManager {
         base_ui.set_anchors_preset(LayoutPreset::PRESET_FULL_RECT);
         base_ui.set_mouse_filter(MouseFilter::MOUSE_FILTER_IGNORE);
 
+        let canvas_size = base_ui.get_size();
+
         SceneManager {
             base,
             base_ui,
@@ -841,6 +853,12 @@ impl INode for SceneManager {
             input_state: InputState::default(),
             last_raycast_result: None,
             pointer_tooltips: VariantArray::new(),
+            interactable_area: Rect2i::from_components(
+                0,
+                0,
+                canvas_size.x as i32,
+                canvas_size.y as i32,
+            ),
         }
     }
 

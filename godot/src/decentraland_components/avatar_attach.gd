@@ -70,6 +70,6 @@ func look_up_player():
 	# default to current player
 	if user_id.is_empty():
 		# TODO: change this
-		_player_node = get_node("/root/explorer/Player/Avatar")
+		_player_node = get_node("/root/explorer/world/Player/Avatar")
 	else:
 		_player_node = Global.avatars.get_avatar_by_address(user_id)

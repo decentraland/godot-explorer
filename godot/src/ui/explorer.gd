@@ -12,6 +12,8 @@ var counter: int = 0
 
 var debug_panel = null
 
+var virtual_joystick_orig_position: Vector2i
+
 var last_index_scene_ui_root: int = -1
 var _last_parcel_position: Vector2i
 
@@ -20,17 +22,16 @@ var _last_parcel_position: Vector2i
 @onready var label_crosshair = $UI/Label_Crosshair
 @onready var control_pointer_tooltip = $UI/Control_PointerTooltip
 
-@onready var panel_chat = $UI/VBoxContainer_Chat/MarginContainer/Panel_Chat
+@onready var panel_chat = $UI/SafeMarginContainer/InteractableHUD/Panel_Chat
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
-@onready var player := $Player
-@onready var mobile_ui = $UI/MobileUI
-@onready var v_box_container_chat = $UI/VBoxContainer_Chat
-@onready var button_jump = $UI/Button_Jump
-@onready var line_edit_command = $UI/LineEdit_Command
+@onready var player := $world/Player
+@onready var mobile_ui = $UI/SafeMarginContainer/InteractableHUD/MobileUI
+@onready
+var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left
 
 
 func _process(_dt):
@@ -76,14 +77,15 @@ func _ready():
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
 
+	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	virtual_joystick_orig_position = virtual_joystick.get_position()
+	panel_chat.hide()
+
 	if Global.is_mobile:
-		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_BEGIN
 		mobile_ui.show()
 		label_crosshair.show()
 	else:
-		v_box_container_chat.alignment = VBoxContainer.ALIGNMENT_END
 		mobile_ui.hide()
-		button_jump.hide()
 
 	var sky = null
 	if Global.is_mobile:
@@ -219,10 +221,8 @@ func _unhandled_input(event):
 				if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 					release_mouse()
 
-				line_edit_command.finish()
-
 			if event.pressed and event.keycode == KEY_ENTER:
-				line_edit_command.start()
+				panel_chat.show()
 
 
 func _toggle_ram_usage(visibility: bool):
@@ -247,14 +247,6 @@ func _on_control_menu_hide_menu():
 	control_menu.close()
 	control_menu.control_map.clear()
 	ui_root.grab_focus()
-
-
-func _on_timer_timeout():
-	label_ram.set_text("RAM Usage: " + str(OS.get_static_memory_usage() / 1024.0 / 1024.0) + " MB")
-	label_fps.set_text(str(Engine.get_frames_per_second()) + " FPS")
-	if dirty_save_position:
-		dirty_save_position = false
-		Global.config.save_to_settings_file()
 
 
 func _on_control_menu_toggle_ram(visibility):
@@ -304,9 +296,7 @@ func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
 
 
-func _on_line_edit_command_submit_message(message: String):
-	line_edit_command.finish()
-
+func _on_panel_chat_submit_message(message: String):
 	if message.length() == 0:
 		return
 
@@ -344,11 +334,6 @@ func _on_line_edit_command_submit_message(message: String):
 
 func _on_control_menu_request_pause_scenes(enabled):
 	Global.scene_runner.set_pause(enabled)
-
-
-func _on_button_jump_gui_input(event):
-	if event is InputEventScreenTouch:
-		Input.action_press("ia_jump")
 
 
 func move_to(position: Vector3):
@@ -401,3 +386,33 @@ func _on_control_menu_request_debug_panel(enabled):
 			debug_panel = null
 
 	Global.set_scene_log_enabled(enabled)
+
+
+func _on_timer_fps_label_timeout():
+	label_ram.set_text("RAM Usage: " + str(OS.get_static_memory_usage() / 1024.0 / 1024.0) + " MB")
+	label_fps.set_text("ALPHA - " + str(Engine.get_frames_per_second()) + " FPS")
+	if dirty_save_position:
+		dirty_save_position = false
+		Global.config.save_to_settings_file()
+
+
+func _on_mini_map_pressed():
+	control_menu.show_map()
+	release_mouse()
+
+
+func _on_profile_pressed():
+	control_menu.show_backpack()
+	release_mouse()
+
+
+func _on_button_jump_gui_input(event):
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			Input.action_press("ia_jump")
+		else:
+			Input.action_release("ia_jump")
+
+
+func _on_button_open_chat_pressed():
+	panel_chat.visible = not panel_chat.visible
