@@ -30,19 +30,31 @@
 
 ## Docker Set up project with Docker (for Android and Linux)
 
-Execute the following commands:
+Execute the following commands for building Godot:
 ```bash
 # Run Docker
 docker run -v {godot-explorer-repo-path}:/app/ -it kuruk/dcl-godot-android-builder:latest
 
 # Compile for Android
 cd rust/decentraland-godot-lib
-./android-build.sh
+./android-build.sh # arm64
+./android-build.sh x86_64 # android x86_64 if needed
+cd ../../ # return
 
 # Compile for Linux
 cd rust/xtask
 cargo run -- install
 cargo run -- run --only-build
+cd ../../ # return
+
+# Generate .APK
+## Download Android Template, only one time needed
+cd godot/
+git clone https://github.com/decentraland/godot-explorer-android-template.git android # Only one time
+cd ../
+
+## Build Android and Export APK for arm64
+./build-android-apk.sh
 ```
 
 ## Contributing
