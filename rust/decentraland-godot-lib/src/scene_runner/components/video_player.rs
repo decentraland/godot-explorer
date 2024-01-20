@@ -1,8 +1,4 @@
 use crate::{
-    av::{
-        stream_processor::{AVCommand, StreamStateData},
-        video_stream::av_sinks,
-    },
     content::content_mapping::ContentMappingAndUrlRef,
     dcl::{
         components::{
@@ -25,6 +21,11 @@ use crate::{
 use godot::{
     engine::{image::Format, AudioStreamGenerator, Image, ImageTexture},
     prelude::*,
+};
+
+use crate::av::{
+    stream_processor::{AVCommand, StreamStateData},
+    video_stream::av_sinks,
 };
 
 enum VideoUpdateMode {

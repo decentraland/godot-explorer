@@ -10,7 +10,7 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     content::content_provider::ContentProvider,
-    dcl::js::set_scene_log_enabled,
+    dcl::common::set_scene_log_enabled,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
     test_runner::testing_tools::DclTestingTools,
 };

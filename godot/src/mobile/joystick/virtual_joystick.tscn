@@ -10,20 +10,25 @@ layout_mode = 3
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = -160.0
-offset_right = 160.0
+offset_top = -425.0
+offset_right = 662.0
 grow_vertical = 0
-mouse_filter = 2
+mouse_filter = 1
 script = ExtResource("1_8x4dy")
 deadzone_size = 1.0
+joystick_mode = 1
+visibility_mode = 1
 
 [node name="Base" type="TextureRect" parent="."]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 2
+anchor_top = 1.0
 anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 40.0
+offset_top = -200.0
+offset_right = 200.0
+offset_bottom = -40.0
+grow_vertical = 0
 pivot_offset = Vector2(100, 100)
 mouse_force_pass_scroll_events = false
 texture = ExtResource("2_vn7es")
@@ -62,7 +67,7 @@ texture = ExtResource("3_yjory")
 expand_mode = 3
 stretch_mode = 4
 
-[node name="BaseShadowOutter" type="TextureRect" parent="."]
+[node name="BaseShadowOutter" type="TextureRect" parent="Base"]
 modulate = Color(0, 0, 0, 1)
 show_behind_parent = true
 layout_mode = 1
@@ -81,7 +86,7 @@ texture = ExtResource("2_vn7es")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="BaseShadowInner" type="TextureRect" parent="."]
+[node name="BaseShadowInner" type="TextureRect" parent="Base"]
 modulate = Color(0, 0, 0, 1)
 show_behind_parent = true
 layout_mode = 1

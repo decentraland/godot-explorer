@@ -241,7 +241,7 @@ fn check_texture(
     dcl_texture: &Option<DclTexture>,
     material: &mut Gd<StandardMaterial3D>,
     content_provider: GdMut<ContentProvider>,
-    scene: &Scene,
+    _scene: &Scene,
 ) -> bool {
     if dcl_texture.is_none() {
         return true;
@@ -265,8 +265,17 @@ fn check_texture(
         DclSourceTex::AvatarTexture(_user_id) => {
             // TODO: implement load avatar texture
         }
+
+        #[cfg(not(feature = "use_ffmpeg"))]
+        DclSourceTex::VideoTexture(_video_entity_id) => {
+            // TODO: set a texture with a `without-video build` message
+        }
+        #[cfg(feature = "use_ffmpeg")]
         DclSourceTex::VideoTexture(video_entity_id) => {
-            if let Some(node) = scene.godot_dcl_scene.get_godot_entity_node(video_entity_id) {
+            if let Some(node) = _scene
+                .godot_dcl_scene
+                .get_godot_entity_node(video_entity_id)
+            {
                 if let Some(data) = &node.video_player_data {
                     material.set_texture(param, data.video_sink.texture.clone().upcast());
                     return true;

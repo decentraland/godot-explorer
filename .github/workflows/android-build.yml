@@ -1,13 +1,15 @@
-name: Android Build
-
 on:
   push:
     branches:
       - main
-  pull_request:
-  release:
-    types:
-      - created
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch name'
+        required: true
+        default: 'main'
+
+name: Android Build
 
 jobs:
   build:
@@ -17,6 +19,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && 'main' || github.event.inputs.branch }}
       - name: Setup Rust
         run: |
           echo $ANDROID_HOME
@@ -25,12 +29,12 @@ jobs:
           export PATH="/root/.cargo/bin:${PATH}"
           rustup default stable
           rustup target add aarch64-linux-android
+          rustup target add x86_64-linux-android
       - name: Build
-        continue-on-error: true
         run: |
           bash build-android-apk.sh
       - uses: actions/upload-artifact@v3
-        if: always()
+        if: success() || failure()
         with:
           name: Android APK
           path: |

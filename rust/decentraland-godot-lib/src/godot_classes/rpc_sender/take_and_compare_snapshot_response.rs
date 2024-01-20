@@ -1,7 +1,7 @@
 use godot::prelude::*;
 
 use crate::{
-    dcl::js::testing::{GreyPixelDiffResult, TakeAndCompareSnapshotResponse},
+    dcl::common::{GreyPixelDiffResult, TakeAndCompareSnapshotResponse},
     generate_dcl_rpc_sender,
 };
 

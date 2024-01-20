@@ -5,7 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://src/logic/player/player.tscn" id="3_fr1df"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
-[ext_resource type="Script" path="res://src/ui/components/safe_area_hud/SafeAreaHUD.gd" id="5_c8ksg"]
+[ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="5_c8ksg"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 [ext_resource type="Texture2D" uid="uid://v1avum5r3l4s" path="res://assets/themes/dark_dcl_theme/icons/JumpButton.svg" id="8_ttlm2"]
 [ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
@@ -66,7 +66,7 @@ focus_mode = 1
 mouse_filter = 1
 theme = ExtResource("4_2vs87")
 
-[node name="SafeAreaHUD" type="Control" parent="UI"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="UI"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -76,7 +76,11 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_c8ksg")
 
-[node name="MobileUI" type="Control" parent="UI/SafeAreaHUD"]
+[node name="InteractableHUD" type="Control" parent="UI/SafeMarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="MobileUI" type="Control" parent="UI/SafeMarginContainer/InteractableHUD"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -85,7 +89,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Button_Jump" type="TextureButton" parent="UI/SafeAreaHUD/MobileUI"]
+[node name="Button_Jump" type="TextureButton" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI"]
 modulate = Color(1, 1, 1, 0.501961)
 layout_mode = 1
 anchors_preset = 3
@@ -105,7 +109,7 @@ texture_normal = ExtResource("8_ttlm2")
 ignore_texture_size = true
 stretch_mode = 4
 
-[node name="ShadowOutter" type="TextureRect" parent="UI/SafeAreaHUD/MobileUI/Button_Jump"]
+[node name="ShadowOutter" type="TextureRect" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
 modulate = Color(0, 0, 0, 1)
 show_behind_parent = true
 layout_mode = 1
@@ -121,7 +125,7 @@ grow_vertical = 2
 texture = ExtResource("8_ttlm2")
 expand_mode = 2
 
-[node name="ShadowInner" type="TextureRect" parent="UI/SafeAreaHUD/MobileUI/Button_Jump"]
+[node name="ShadowInner" type="TextureRect" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
 modulate = Color(0, 0, 0, 1)
 show_behind_parent = true
 layout_mode = 1
@@ -137,26 +141,18 @@ grow_vertical = 2
 texture = ExtResource("8_ttlm2")
 expand_mode = 2
 
-[node name="JoystickMoveArea" type="Control" parent="UI/SafeAreaHUD/MobileUI"]
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_top = -328.0
-offset_right = 516.0
-grow_vertical = 0
-mouse_filter = 1
-mouse_force_pass_scroll_events = false
-
-[node name="VirtualJoystick_Left" parent="UI/SafeAreaHUD/MobileUI/JoystickMoveArea" instance=ExtResource("9_lxw33")]
-layout_mode = 1
-offset_left = 44.0
-offset_top = -204.0
-offset_right = 204.0
-offset_bottom = -44.0
+[node name="VirtualJoystick_Left" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("9_lxw33")]
+layout_mode = 0
+anchors_preset = 0
+anchor_top = 0.0
+anchor_bottom = 0.0
+offset_top = 393.0
+offset_right = 450.0
+offset_bottom = 720.0
+grow_vertical = 1
 deadzone_size = 0.0
 
-[node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="UI/SafeAreaHUD"]
+[node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="UI/SafeMarginContainer/InteractableHUD"]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 20.0
@@ -165,7 +161,7 @@ offset_bottom = 80.0
 theme = ExtResource("4_2vs87")
 theme_override_constants/separation = 10
 
-[node name="MiniMap" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
+[node name="MiniMap" type="Button" parent="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_constants/icon_max_width = 32
@@ -173,7 +169,7 @@ icon = ExtResource("12_tcp5l")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Emotes" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
+[node name="Emotes" type="Button" parent="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
 visible = false
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
@@ -183,7 +179,7 @@ icon = ExtResource("14_jag8f")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_OpenChat" type="Button" parent="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu"]
+[node name="Button_OpenChat" type="Button" parent="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 focus_mode = 0
@@ -192,37 +188,37 @@ icon = ExtResource("9_hj43f")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Profile" type="TextureButton" parent="UI/SafeAreaHUD"]
+[node name="Profile" type="TextureButton" parent="UI/SafeMarginContainer/InteractableHUD"]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -120.0
-offset_top = 40.0
-offset_right = -40.0
-offset_bottom = 120.0
+offset_left = -100.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 100.0
 grow_horizontal = 0
 texture_normal = ExtResource("16_8okg3")
 ignore_texture_size = true
 stretch_mode = 0
 
-[node name="Panel_Chat" parent="UI/SafeAreaHUD" instance=ExtResource("9_4ktln")]
+[node name="Panel_Chat" parent="UI/SafeMarginContainer/InteractableHUD" instance=ExtResource("9_4ktln")]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 90.0
 offset_right = 320.0
 offset_bottom = 390.0
 
-[node name="Label_FPS" type="Label" parent="UI/SafeAreaHUD"]
+[node name="Label_FPS" type="Label" parent="UI/SafeMarginContainer/InteractableHUD"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -203.0
-offset_top = 20.0
-offset_right = -50.0
-offset_bottom = 35.0
+offset_left = -173.0
+offset_top = 3.0
+offset_right = -20.0
+offset_bottom = 18.0
 grow_horizontal = 0
 theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
 theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
@@ -231,7 +227,7 @@ theme_override_font_sizes/font_size = 12
 text = "ALPHA - FPS"
 horizontal_alignment = 2
 
-[node name="Label_RAM" type="Label" parent="UI/SafeAreaHUD"]
+[node name="Label_RAM" type="Label" parent="UI/SafeMarginContainer/InteractableHUD"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -293,13 +289,11 @@ offset_right = 180.0
 offset_bottom = 140.0
 
 [connection signal="timeout" from="world/Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]
-[connection signal="gui_input" from="UI/SafeAreaHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]
-[connection signal="gui_input" from="UI/SafeAreaHUD/MobileUI/JoystickMoveArea" to="." method="_on_joystick_move_area_gui_input"]
-[connection signal="is_holded" from="UI/SafeAreaHUD/MobileUI/JoystickMoveArea/VirtualJoystick_Left" to="." method="_on_virtual_joystick_left_is_holded"]
-[connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
-[connection signal="pressed" from="UI/SafeAreaHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
-[connection signal="pressed" from="UI/SafeAreaHUD/Profile" to="." method="_on_profile_pressed"]
-[connection signal="submit_message" from="UI/SafeAreaHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
+[connection signal="gui_input" from="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]
+[connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
+[connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
+[connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/Profile" to="." method="_on_profile_pressed"]
+[connection signal="submit_message" from="UI/SafeMarginContainer/InteractableHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
 [connection signal="hide_menu" from="UI/Control_Menu" to="." method="_on_control_menu_hide_menu"]

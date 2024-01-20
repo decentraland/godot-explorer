@@ -20,9 +20,17 @@ mkdir -p ${HOME}/.local/share/godot/export_templates/
 cd ${HOME}/.local/share/godot/export_templates/
 ln -sf ${EXPLORER_PATH}/.bin/godot/templates/templates/ 4.2.1.stable
 
-echo "Build for Android"
+set -e 
+
+echo "Build for Android (arm64)"
 cd ${EXPLORER_PATH}/rust/decentraland-godot-lib
 bash android-build.sh
+
+echo "Build for Android (x86_64)"
+cd ${EXPLORER_PATH}/rust/decentraland-godot-lib
+bash android-build.sh x86_64
+
+set +e
 
 echo "Setup Android Debug Keys"
 cd /opt/
@@ -39,3 +47,5 @@ cd ${EXPLORER_PATH}/godot/
 
 ${EXPLORER_PATH}/.bin/godot/godot4_bin \
     -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk
+
+echo "Finished"

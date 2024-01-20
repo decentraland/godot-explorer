@@ -1,5 +1,4 @@
 use crate::{
-    av::{stream_processor::AVCommand, video_stream::av_sinks},
     dcl::{
         components::SceneComponentId,
         crdt::{
@@ -17,6 +16,8 @@ enum AudioUpdateMode {
     ChangeAudio,
     FirstSpawnAudio,
 }
+
+use crate::av::{stream_processor::AVCommand, video_stream::av_sinks};
 
 pub fn update_audio_stream(
     scene: &mut Scene,
