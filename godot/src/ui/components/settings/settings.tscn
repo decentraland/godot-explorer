@@ -7,7 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://g38eqwq311ph" path="res://assets/ui/speaker-on.svg" id="6_ny0k8"]
 [ext_resource type="Texture2D" uid="uid://djwf5d8a0rw6y" path="res://assets/ui/graphics.svg" id="7_5q3q8"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_jsp7l"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_jdndg"]
 
 [sub_resource type="Theme" id="Theme_5xlkc"]
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
@@ -59,7 +59,7 @@ theme = ExtResource("3_gd6dr")
 theme_type_variation = &"ButtonWhite"
 toggle_mode = true
 button_pressed = true
-button_group = SubResource("ButtonGroup_jsp7l")
+button_group = SubResource("ButtonGroup_jdndg")
 text = "General"
 icon = ExtResource("6_gugrl")
 alignment = 0
@@ -72,7 +72,7 @@ focus_mode = 0
 theme = ExtResource("3_gd6dr")
 theme_type_variation = &"ButtonWhite"
 toggle_mode = true
-button_group = SubResource("ButtonGroup_jsp7l")
+button_group = SubResource("ButtonGroup_jdndg")
 text = "Graphics"
 icon = ExtResource("7_5q3q8")
 alignment = 0
@@ -85,7 +85,7 @@ focus_mode = 0
 theme = ExtResource("3_gd6dr")
 theme_type_variation = &"ButtonWhite"
 toggle_mode = true
-button_group = SubResource("ButtonGroup_jsp7l")
+button_group = SubResource("ButtonGroup_jdndg")
 text = "Audio"
 icon = ExtResource("6_ny0k8")
 alignment = 0
@@ -98,7 +98,7 @@ focus_mode = 0
 theme = ExtResource("3_gd6dr")
 theme_type_variation = &"ButtonWhite"
 toggle_mode = true
-button_group = SubResource("ButtonGroup_jsp7l")
+button_group = SubResource("ButtonGroup_jdndg")
 text = "Advanced
 "
 alignment = 0
