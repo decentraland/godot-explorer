@@ -1,15 +1,15 @@
 [gd_scene load_steps=16 format=3 uid="uid://b0qqx0yj4xbhk"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_lxl7f"]
-[ext_resource type="Texture2D" uid="uid://x8gxm5im3o45" path="res://assets/ui/profile_placeholder.svg" id="2_snkf0"]
+[ext_resource type="Texture2D" uid="uid://x8gxm5im3o45" path="res://assets/ui/profile-placeholder.svg" id="2_snkf0"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_nvak4"]
 [ext_resource type="Texture2D" uid="uid://bskyowm6e7h86" path="res://assets/ui/copy.svg" id="4_wlxan"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_qfkbo"]
-[ext_resource type="Texture2D" uid="uid://bk0sk08y0n0j1" path="res://assets/ui/Wallet.svg" id="6_fie38"]
-[ext_resource type="Texture2D" uid="uid://c8s3ic645y8i1" path="res://assets/ui/Mana.svg" id="7_4je1e"]
-[ext_resource type="Texture2D" uid="uid://qmjechb2b3td" path="res://assets/ui/PolygonMana.svg" id="8_ndrlm"]
+[ext_resource type="Texture2D" uid="uid://bk0sk08y0n0j1" path="res://assets/ui/wallet.svg" id="6_fie38"]
+[ext_resource type="Texture2D" uid="uid://c8s3ic645y8i1" path="res://assets/ui/mana.svg" id="7_4je1e"]
+[ext_resource type="Texture2D" uid="uid://qmjechb2b3td" path="res://assets/ui/polygon-mana.svg" id="8_ndrlm"]
 [ext_resource type="Texture2D" uid="uid://dj71heyiyjlms" path="res://assets/ui/Account.svg" id="9_85ol3"]
-[ext_resource type="Texture2D" uid="uid://cv6mjte01scg0" path="res://assets/ui/Logout.svg" id="10_fwb7d"]
+[ext_resource type="Texture2D" uid="uid://cv6mjte01scg0" path="res://assets/ui/logout.svg" id="10_fwb7d"]
 
 [sub_resource type="Animation" id="Animation_70m5k"]
 length = 0.001

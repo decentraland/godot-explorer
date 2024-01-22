@@ -18,21 +18,28 @@ var primary_player_profile_dictionary: Dictionary = {}
 var wearable_buttons: Array = []
 
 const WEARABLE_ITEM_INSTANTIABLE = preload("res://src/ui/components/wearable_item/wearable_item.tscn")
+const FILTER = preload("res://assets/ui/Filter.svg")
 
 @onready var color_picker_panel = $Color_Picker_Panel
-@onready var v_box_container_category = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/MarginContainer/ScrollContainer/MarginContainer/HBoxContainer/VBoxContainer_Category
+@onready var wearable_panel = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
+@onready var grid_container_wearables_list = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/GridContainer_WearablesList
+
 @onready var line_edit_name = $HBoxContainer/Control/VBoxContainer/LineEdit_Name
 @onready var avatar_preview = %AvatarPreview
 @onready var button_save_profile = $HBoxContainer/Control/VBoxContainer/Button_SaveProfile
-@onready var wearable_panel = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
-@onready var grid_container_wearables_list = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/GridContainer_WearablesList
-@onready var skin_color_picker = $HBoxContainer/ScrollContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/HBoxContainer/skin_color_picker
 
+@onready var skin_color_picker = $Color_Picker_Panel
+
+
+@onready var v_box_container_category = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category
+@onready var menu_button_filter = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/MenuButton_Filter
 
 # gdlint:ignore = async-function-name
 func _ready():
 	Global.player_identity.profile_changed.connect(self._on_profile_changed)
-
+	menu_button_filter.text = "FILTER"
+	menu_button_filter.icon = FILTER
+	menu_button_filter.icon
 	for child in v_box_container_category.get_children():
 		# TODO: check if it's a wearable_button
 		for wearable_button in child.get_children():
@@ -93,14 +100,14 @@ func _update_avatar():
 	var wearable_body_shape = Global.content_provider.get_wearable(avatar_body_shape)
 
 	# TODO: make this more performant
-	for wearable_button in wearable_buttons:
-		for wearable_hash in avatar_wearables:
-			var wearable = Global.content_provider.get_wearable(wearable_hash)
-			if wearable != null:
-				wearable_button.async_set_wearable(wearable)
+	#for wearable_button in wearable_buttons:
+	#	for wearable_hash in avatar_wearables:
+	#		var wearable = Global.content_provider.get_wearable(wearable_hash)
+	#		if wearable != null:
+	#			wearable_button.async_set_wearable(wearable)
 
-		if wearable_body_shape != null:
-			wearable_button.async_set_wearable(wearable_body_shape)
+	#	if wearable_body_shape != null:
+	#		wearable_button.async_set_wearable(wearable_body_shape)
 
 	avatar_preview.avatar.async_update_avatar_from_profile(primary_player_profile_dictionary)
 	button_save_profile.disabled = false
@@ -282,3 +289,79 @@ func _on_color_picker_panel_pick_color(color):
 
 func _on_button_logout_pressed():
 	Global.comms.disconnect(true)
+
+
+func _on_button_all_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_body_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_hair_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_eyebrows_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_eyes_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_mouth_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_facial_hair_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_top_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_hands_wear_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_bottom_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_shoes_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_hat_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_glasses_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_ear_rings_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_mask_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_tiara_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_top_head_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_helmet_pressed():
+	pass # Replace with function body.
+
+
+func _on_button_skin_pressed():
+	pass # Replace with function body.
