@@ -35,10 +35,13 @@ const FILTER = preload("res://assets/ui/Filter.svg")
 
 # gdlint:ignore = async-function-name
 func _ready():
+	skin_color_picker.hide()
 	Global.player_identity.profile_changed.connect(self._on_profile_changed)
+	
 	menu_button_filter.text = "FILTER"
 	menu_button_filter.icon = FILTER
 	menu_button_filter.icon
+	
 	for child in v_box_container_category.get_children():
 		# TODO: check if it's a wearable_button
 		for wearable_button in child.get_children():

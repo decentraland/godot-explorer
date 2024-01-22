@@ -1,5 +1,8 @@
 extends Button
 
+signal equip(wearable_id: String)
+signal unequip(wearable_id: String)
+
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
 var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
 var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
@@ -8,20 +11,29 @@ var epic_thumbnail = preload("res://assets/ui/EpicThumbnail.png")
 var mythic_thumbnail = preload("res://assets/ui/MythicThumbnail.png")
 var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
-
 var thumbnail_hash: String
+var wearable_id: String
+
+@onready var texture_rect_background = $PanelContainer/VBoxContainer/Panel/TextureRect_Background
+@onready var texture_rect_preview = $PanelContainer/VBoxContainer/Panel/TextureRect_Preview
+
 
 @onready var panel_container = $PanelContainer
-@onready var texture_rect_background = $Panel/TextureRect_Background
-@onready var texture_rect_preview = $Panel/TextureRect_Preview
+@onready var button_info = $PanelContainer/VBoxContainer/Button_Info
+@onready var panel = $PanelContainer/VBoxContainer/Panel
 
 
 func _ready():
 	if button_pressed:
-		panel_container.show()
+		button_info.show()
+		panel_container.self_modulate = Color("#161518")
+	else:
+		button_info.hide()
+		panel_container.self_modulate = Color("#ffffff")
 
 
 func async_set_wearable(wearable: Dictionary):
+	wearable_id = wearable.get("id", "")
 	var wearable_thumbnail: String = wearable.get("metadata", {}).get("thumbnail", "")
 	thumbnail_hash = wearable.get("content").get_hash(wearable_thumbnail)
 
@@ -57,18 +69,21 @@ func async_set_wearable(wearable: Dictionary):
 
 func _on_mouse_entered():
 	scale = Vector2(1.1, 1.1)
-	if not button_pressed:
-		panel_container.show()
+	
 
 
 func _on_mouse_exited():
 	scale = Vector2(1, 1)
-	if not button_pressed:
-		panel_container.hide()
+	
 
 
 func _on_toggled(_button_pressed):
-	if _button_pressed:
-		panel_container.show()
+	if pressed:
+		self.equip.emit(wearable_id)
+		button_info.show()
+		panel_container.self_modulate = Color("#161518")
 	else:
-		panel_container.hide()
+		self.unequip.emit(wearable_id)
+		button_info.hide()
+		panel_container.self_modulate = Color("#ffffff")
+
