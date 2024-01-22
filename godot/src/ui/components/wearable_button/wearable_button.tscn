@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/ui/components/wearable_button/wearable_button.gd" id="1_8llwr"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_8qm0i"]
-[ext_resource type="Texture2D" uid="uid://cxbbagoc6bkvo" path="res://assets/ui/skins-icon.svg" id="1_u4ved"]
+[ext_resource type="Texture2D" uid="uid://b2kifoj66rvad" path="res://assets/wearable_categories/hair-icon.svg" id="2_ad3b3"]
 
 [node name="Wearable_Button" type="Button"]
 custom_minimum_size = Vector2(5, 35)
@@ -16,10 +16,9 @@ theme_override_constants/h_separation = 2
 theme_override_constants/icon_max_width = 30
 theme_override_font_sizes/font_size = 12
 toggle_mode = true
-icon = ExtResource("1_u4ved")
+text = "HAIR"
+icon = ExtResource("2_ad3b3")
 script = ExtResource("1_8llwr")
 filter_category = 1
 
-[connection signal="mouse_entered" from="." to="." method="_on_mouse_entered"]
-[connection signal="mouse_exited" from="." to="." method="_on_mouse_exited"]
 [connection signal="toggled" from="." to="." method="_on_toggled"]

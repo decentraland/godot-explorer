@@ -28,8 +28,7 @@ const FILTER = preload("res://assets/ui/Filter.svg")
 @onready var avatar_preview = %AvatarPreview
 @onready var button_save_profile = $HBoxContainer/Control/VBoxContainer/Button_SaveProfile
 
-@onready var skin_color_picker = $Color_Picker_Panel
-
+@onready var skin_color_picker = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/Color_Picker_Button
 
 @onready var v_box_container_category = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category
 @onready var menu_button_filter = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/MenuButton_Filter
@@ -242,27 +241,11 @@ func _on_wearable_panel_unequip(wearable_id: String):
 	_update_avatar()
 
 
-func _on_skin_color_picker_toggle_color_panel(toggled, color_target):
-	if not toggled and color_picker_panel.visible:
-		hide()
+func _on_button_logout_pressed():
+	Global.comms.disconnect(true)
 
-	if toggled:
-		var rect = skin_color_picker.get_global_rect()
-		rect.position.y += rect.size.y + 10
 
-		var current_color: Color
-		match skin_color_picker.color_target:
-			skin_color_picker.ColorTarget.EYE:
-				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
-				current_color = avatar_eyes_color
-			skin_color_picker.ColorTarget.SKIN:
-				color_picker_panel.color_type = color_picker_panel.ColorTargetType.SKIN
-				current_color = avatar_skin_color
-			skin_color_picker.ColorTarget.HAIR:
-				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
-				current_color = avatar_hair_color
 
-		color_picker_panel.custom_popup(rect, current_color)
 
 
 func _on_color_picker_panel_popup_hide():
@@ -287,81 +270,24 @@ func _on_color_picker_panel_pick_color(color):
 	button_save_profile.disabled = false
 
 
-func _on_button_logout_pressed():
-	Global.comms.disconnect(true)
+func _on_color_picker_button_toggle_color_panel(toggled, color_target):
+	if not toggled and color_picker_panel.visible:
+		hide()
 
+	if toggled:
+		var rect = skin_color_picker.get_global_rect()
+		rect.position.y += rect.size.y + 10
 
-func _on_button_all_pressed():
-	pass # Replace with function body.
+		var current_color: Color
+		match skin_color_picker.color_target:
+			skin_color_picker.ColorTarget.EYE:
+				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
+				current_color = avatar_eyes_color
+			skin_color_picker.ColorTarget.SKIN:
+				color_picker_panel.color_type = color_picker_panel.ColorTargetType.SKIN
+				current_color = avatar_skin_color
+			skin_color_picker.ColorTarget.HAIR:
+				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
+				current_color = avatar_hair_color
 
-
-func _on_button_body_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_hair_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_eyebrows_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_eyes_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_mouth_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_facial_hair_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_top_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_hands_wear_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_bottom_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_shoes_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_hat_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_glasses_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_ear_rings_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_mask_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_tiara_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_top_head_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_helmet_pressed():
-	pass # Replace with function body.
-
-
-func _on_button_skin_pressed():
-	pass # Replace with function body.
+		color_picker_panel.custom_popup(rect, current_color)

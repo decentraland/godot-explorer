@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://cyf8k77w3gdih"]
 
 [ext_resource type="Script" path="res://src/ui/color_picker/color_picker_button.gd" id="1_vxb5w"]
-[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_40q1a"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="2_dpxvm"]
 [ext_resource type="PackedScene" uid="uid://cdd521b6pi2ki" path="res://src/ui/components/right_arrow/right_arrow.tscn" id="3_x8xfs"]
 
 [sub_resource type="Theme" id="Theme_2qh7h"]
@@ -14,11 +14,11 @@ size_flags_vertical = 0
 script = ExtResource("1_vxb5w")
 
 [node name="Button" type="Button" parent="."]
-custom_minimum_size = Vector2(110, 0)
+custom_minimum_size = Vector2(110, 35)
 layout_mode = 2
 size_flags_horizontal = 0
 mouse_default_cursor_shape = 2
-theme = ExtResource("2_40q1a")
+theme = ExtResource("2_dpxvm")
 theme_type_variation = &"WhiteButton"
 toggle_mode = true
 text = "EYE COLOR           "

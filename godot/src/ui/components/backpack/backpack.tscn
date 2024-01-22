@@ -6,10 +6,10 @@
 [ext_resource type="PackedScene" uid="uid://wuyfsip50bwb" path="res://src/ui/components/wearable_button/wearable_button.tscn" id="3_ih1sc"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="4_4kxkq"]
 [ext_resource type="Texture2D" uid="uid://dra4ek5p0o6jj" path="res://assets/wearable_categories/body_shape-icon.svg" id="6_4rdaw"]
-[ext_resource type="Texture2D" uid="uid://b2kifoj66rvad" path="res://assets/wearable_categories/hair-icon.svg" id="6_8fjda"]
 [ext_resource type="Shader" path="res://src/ui/components/backpack/backpack.gdshader" id="6_qle00"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="6_t442b"]
 [ext_resource type="Texture2D" uid="uid://bg68xlkrhus8m" path="res://assets/wearable_categories/eyebrows-icon.svg" id="7_a6yyg"]
+[ext_resource type="PackedScene" uid="uid://cyf8k77w3gdih" path="res://src/ui/color_picker/color_picker_button.tscn" id="7_i1fkq"]
 [ext_resource type="PackedScene" uid="uid://bamnvinmv5e6g" path="res://src/ui/components/wearable_panel/wearable_panel.tscn" id="7_x3c64"]
 [ext_resource type="Texture2D" uid="uid://dp2sc2kkjq5wk" path="res://assets/wearable_categories/eyes-icon.svg" id="8_416cn"]
 [ext_resource type="Texture2D" uid="uid://ontpvrldbxsu" path="res://assets/wearable_categories/mouth-icon.svg" id="9_rk0en"]
@@ -41,41 +41,41 @@ shader_parameter/down_clip = 0.0
 shader_parameter/left_clip = 0.0
 shader_parameter/right_clip = 0.0
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_rbke3"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_h6d5a"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_5jkfq"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_6aqtd"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_lpo3t"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_s3uxo"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_uvesk"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_83708"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_0qxhq"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_p7dep"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_cbu8n"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_4xtig"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_r4g2v"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_shmqb"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_hitve"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_x1j83"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_quxds"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_v85yj"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_yatxi"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_xj4xs"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_pyu6b"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_dxykw"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_jea0b"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_xo2nk"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_dsvpq"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_x6uwx"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_h2rvn"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_ao5b0"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_iaexp"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_46ajc"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_lfvbb"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_po385"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_ct68e"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_f8hw4"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_iyi3c"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_smko8"]
 
 [node name="Backpack" type="TextureRect"]
 anchors_preset = 15
@@ -270,13 +270,19 @@ layout_mode = 2
 theme_override_constants/separation = 11
 
 [node name="MenuButton_Filter" type="OptionButton" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer"]
-custom_minimum_size = Vector2(150, 30)
+custom_minimum_size = Vector2(150, 35)
 layout_mode = 2
+size_flags_vertical = 4
 focus_mode = 1
 theme = ExtResource("6_t442b")
 theme_override_constants/h_separation = 15
 theme_override_constants/outline_size = 1
 expand_icon = true
+
+[node name="Color_Picker_Button" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("7_i1fkq")]
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("6_t442b")
 
 [node name="LineEdit_PreviewUrl" type="LineEdit" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer"]
 layout_mode = 2
@@ -310,127 +316,124 @@ theme_override_constants/separation = 11
 
 [node name="wearable_button" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_rbke3")
+button_group = SubResource("ButtonGroup_h6d5a")
 text = "BODY SHAPE"
 icon = ExtResource("6_4rdaw")
 filter_category = 0
 
 [node name="wearable_button2" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_5jkfq")
-text = "HAIR"
-icon = ExtResource("6_8fjda")
+button_group = SubResource("ButtonGroup_6aqtd")
 
 [node name="wearable_button3" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_lpo3t")
+button_group = SubResource("ButtonGroup_s3uxo")
 text = "EYEBROWS"
 icon = ExtResource("7_a6yyg")
 filter_category = 2
 
 [node name="wearable_button4" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_uvesk")
+button_group = SubResource("ButtonGroup_83708")
 text = "EYES"
 icon = ExtResource("8_416cn")
 filter_category = 3
 
 [node name="wearable_button5" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_0qxhq")
+button_group = SubResource("ButtonGroup_p7dep")
 text = "MOUTH"
 icon = ExtResource("9_rk0en")
 filter_category = 4
 
 [node name="wearable_button6" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_cbu8n")
+button_group = SubResource("ButtonGroup_4xtig")
 text = "FACIAL HAIR"
 icon = ExtResource("11_hbc6s")
 filter_category = 5
 
 [node name="wearable_button7" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_r4g2v")
+button_group = SubResource("ButtonGroup_shmqb")
 text = "UPPER BODY"
 icon = ExtResource("12_6wpew")
 filter_category = 6
 
 [node name="wearable_button8" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_hitve")
+button_group = SubResource("ButtonGroup_x1j83")
 text = "HANDS WEAR"
 icon = ExtResource("13_1prjt")
 filter_category = 7
 
 [node name="wearable_button9" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_quxds")
+button_group = SubResource("ButtonGroup_v85yj")
 text = "LOWER BODY"
 icon = ExtResource("14_5xqio")
 filter_category = 8
 
 [node name="wearable_button10" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_yatxi")
+button_group = SubResource("ButtonGroup_xj4xs")
 text = "FEET"
 icon = ExtResource("15_147vw")
 filter_category = 9
 
 [node name="wearable_button11" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_pyu6b")
+button_group = SubResource("ButtonGroup_dxykw")
 text = "HAT"
 icon = ExtResource("10_xqo47")
 filter_category = 10
 
 [node name="wearable_button12" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_jea0b")
+button_group = SubResource("ButtonGroup_xo2nk")
 text = "EYEWEAR"
 icon = ExtResource("17_073bg")
 filter_category = 11
 
 [node name="wearable_button13" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_dsvpq")
+button_group = SubResource("ButtonGroup_x6uwx")
 text = "EARRING"
 icon = ExtResource("11_2suar")
 filter_category = 12
 
 [node name="wearable_button14" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_h2rvn")
+button_group = SubResource("ButtonGroup_ao5b0")
 text = "MASK"
 icon = ExtResource("12_6hl8c")
 filter_category = 13
 
 [node name="wearable_button15" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_iaexp")
+button_group = SubResource("ButtonGroup_46ajc")
 text = "TIARA"
 icon = ExtResource("13_jd3w1")
 filter_category = 14
 
 [node name="wearable_button16" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_lfvbb")
+button_group = SubResource("ButtonGroup_po385")
 text = "TOP HEAD"
 icon = ExtResource("21_rmg80")
 filter_category = 15
 
 [node name="wearable_button17" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_ct68e")
+button_group = SubResource("ButtonGroup_f8hw4")
 text = "HELMET"
 icon = ExtResource("14_nbor4")
 filter_category = 16
 
 [node name="wearable_button18" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("3_ih1sc")]
 layout_mode = 2
-button_group = SubResource("ButtonGroup_iyi3c")
+button_group = SubResource("ButtonGroup_smko8")
 text = "SKIN"
-icon = ExtResource("6_8fjda")
 filter_category = 17
 
 [node name="ScrollContainer" type="ScrollContainer" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer"]
@@ -444,7 +447,7 @@ size_flags_horizontal = 0
 size_flags_vertical = 0
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
-columns = 5
+columns = 8
 
 [node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer"]
 visible = false
@@ -456,3 +459,5 @@ layout_mode = 2
 [node name="Color_Picker_Panel" parent="." instance=ExtResource("10_8s7x3")]
 position = Vector2i(100, 0)
 visible = false
+
+[connection signal="toggle_color_panel" from="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/Color_Picker_Button" to="." method="_on_color_picker_button_toggle_color_panel"]
