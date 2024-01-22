@@ -1,7 +1,7 @@
 extends TextureRect
 
 var filtered_data: Array
-var items_button_group = ButtonGroup.new()
+const WEARABLE_GROUP = preload("res://src/ui/components/backpack/wearable_group.tres")
 
 var avatar_body_shape: String
 var avatar_wearables: PackedStringArray
@@ -22,7 +22,8 @@ const FILTER = preload("res://assets/ui/Filter.svg")
 
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var wearable_panel = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
-@onready var grid_container_wearables_list = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/GridContainer_WearablesList
+@onready var grid_container_wearables_list = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/MarginContainer/GridContainer_WearablesList
+
 
 @onready var line_edit_name = $HBoxContainer/Control/VBoxContainer/LineEdit_Name
 @onready var avatar_preview = %AvatarPreview
@@ -101,16 +102,6 @@ func _update_avatar():
 
 	var wearable_body_shape = Global.content_provider.get_wearable(avatar_body_shape)
 
-	# TODO: make this more performant
-	#for wearable_button in wearable_buttons:
-	#	for wearable_hash in avatar_wearables:
-	#		var wearable = Global.content_provider.get_wearable(wearable_hash)
-	#		if wearable != null:
-	#			wearable_button.async_set_wearable(wearable)
-
-	#	if wearable_body_shape != null:
-	#		wearable_button.async_set_wearable(wearable_body_shape)
-
 	avatar_preview.avatar.async_update_avatar_from_profile(primary_player_profile_dictionary)
 	button_save_profile.disabled = false
 
@@ -133,7 +124,7 @@ func show_wearables():
 	for wearable_id in filtered_data:
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		grid_container_wearables_list.add_child(wearable_item)
-		wearable_item.button_group = items_button_group
+		wearable_item.button_group = WEARABLE_GROUP
 		wearable_item.async_set_wearable(wearable_data[wearable_id])
 		wearable_item.toggled.connect(self._on_wearable_toggled.bind(wearable_id))
 

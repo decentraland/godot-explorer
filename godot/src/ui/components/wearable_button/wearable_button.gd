@@ -100,4 +100,3 @@ func _on_toggled(_button_pressed):
 		emit_signal("filter_type", type_to_category(filter_category))
 	else:
 		emit_signal("clear_filter")
-

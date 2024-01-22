@@ -15,7 +15,6 @@ theme_type_variation = &"ButtonWhite"
 theme_override_constants/h_separation = 2
 theme_override_constants/icon_max_width = 30
 theme_override_font_sizes/font_size = 12
-toggle_mode = true
 text = "HAIR"
 icon = ExtResource("2_ad3b3")
 script = ExtResource("1_8llwr")
