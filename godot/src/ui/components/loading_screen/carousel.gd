@@ -46,7 +46,3 @@ func set_item(index: int, direction_right: bool = true):
 		current_index = index
 		await old_tween.finished
 		old_item.hide()
-
-
-func _on_timer_timeout():
-	set_item(randi_range(0, items.size() - 1))

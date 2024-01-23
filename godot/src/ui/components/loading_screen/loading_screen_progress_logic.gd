@@ -7,16 +7,17 @@ signal loading_show_requested
 var scenes_metadata_loaded: bool = false
 var waiting_new_scene_load_report = true
 var waiting_for_scenes = false
+var wait_for: float = 0.0
 
 
 func _ready():
-	Global.scene_fetcher.report_new_load.connect(_report_scene_new_load)
+	Global.scene_fetcher.report_scene_load.connect(_report_scene_load)
 
 
-func _report_scene_new_load(done: bool):
+func _report_scene_load(done: bool, is_new_loading: bool):
 	scenes_metadata_loaded = done
 	waiting_for_scenes = done
-	if done == false:  # start
+	if done == false and is_new_loading:  # start
 		enable_loading_screen()
 
 	waiting_new_scene_load_report = false
@@ -29,6 +30,7 @@ func enable_loading_screen():
 	loading_screen.set_progress(0.0)
 	waiting_new_scene_load_report = true
 	loading_show_requested.emit()
+	wait_for = 1.0
 
 
 func hide_loading_screen():
@@ -37,6 +39,9 @@ func hide_loading_screen():
 
 
 func _physics_process(delta):
+	if wait_for > 0.0:
+		wait_for -= delta
+		return
 	if waiting_new_scene_load_report:
 		return
 
@@ -49,7 +54,8 @@ func _physics_process(delta):
 		var scene_progress: int = 0
 		for child in Global.scene_runner.get_children():
 			if child is DclSceneNode:
-				scene_progress += mini(child.get_last_tick_number(), 4)
+				var tick_number = mini(child.get_last_tick_number(), 4)
+				scene_progress += tick_number
 
 		var current_progress: int = (
 			int(float(scene_progress) / float(Global.scene_runner.get_child_count() * 4) * 80.0)

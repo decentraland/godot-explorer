@@ -242,7 +242,7 @@ func _on_control_minimap_request_open_map():
 
 
 func _on_control_menu_jump_to(parcel: Vector2i):
-	player.set_position(Vector3i(parcel.x * 16, 3, -parcel.y * 16))
+	move_to(Vector3i(parcel.x * 16, 3, -parcel.y * 16))
 	control_menu.close()
 
 
@@ -343,10 +343,13 @@ func _on_control_menu_request_pause_scenes(enabled):
 
 func move_to(position: Vector3):
 	player.set_position(position)
+	var parcel_position = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
+	if not Global.scene_fetcher.is_scene_loaded(parcel_position.x, parcel_position.y):
+		loading_ui.enable_loading_screen()
 
 
 func teleport_to(parcel: Vector2i):
-	player.set_position(Vector3i(parcel.x * 16, 3, -parcel.y * 16))
+	move_to(Vector3i(parcel.x * 16, 3, -parcel.y * 16))
 
 
 func player_look_at(look_at_position: Vector3):

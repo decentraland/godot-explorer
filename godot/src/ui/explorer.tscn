@@ -290,6 +290,7 @@ offset_right = 180.0
 offset_bottom = 140.0
 
 [node name="Loading" parent="UI" instance=ExtResource("17_0blod")]
+visible = false
 layout_mode = 1
 
 [connection signal="timeout" from="world/Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]

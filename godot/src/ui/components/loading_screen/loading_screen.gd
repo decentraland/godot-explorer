@@ -45,6 +45,7 @@ func enable_loading_screen():
 
 
 func async_hide_loading_screen_effect():
+	timer_check_progress_timeout.stop()
 	var tween = get_tree().create_tween()
 	background.use_parent_material = true  # disable material
 	modulate = Color.WHITE
@@ -107,6 +108,7 @@ func set_shader_background_color(color: Color):
 
 
 func set_progress(new_progress: float):
+	new_progress = clampf(new_progress, 0.0, 100.0)
 	if progress != new_progress:
 		last_progress_change = Time.get_ticks_msec()
 	progress = new_progress
@@ -122,8 +124,12 @@ func _on_timer_auto_move_carousel_timeout():
 
 
 func _on_timer_check_progress_timeout_timeout():
-	var inactive_seconds = round((Time.get_ticks_msec() - last_progress_change) / 1000.0)
-	if inactive_seconds >= 10:
+	if Global.scene_runner.is_paused():
+		last_progress_change = Time.get_ticks_msec()
+		return
+
+	var inactive_seconds: int = int(floor((Time.get_ticks_msec() - last_progress_change) / 1000.0))
+	if inactive_seconds > 20:
 		var tween = get_tree().create_tween()
 		popup_warning.position.y = -popup_warning.size.y
 		tween.tween_property(popup_warning, "position:y", popup_warning_pos_y, 1.0).set_trans(

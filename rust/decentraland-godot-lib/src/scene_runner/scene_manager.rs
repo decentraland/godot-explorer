@@ -565,6 +565,11 @@ impl SceneManager {
         self.pause = value;
     }
 
+    #[func]
+    fn is_paused(&mut self) -> bool {
+        self.pause
+    }
+
     fn get_current_mouse_entity(&mut self) -> Option<GodotDclRaycastResult> {
         const RAY_LENGTH: f32 = 100.0;
 

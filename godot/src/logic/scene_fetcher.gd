@@ -2,7 +2,7 @@ class_name SceneFetcher
 extends Node
 
 signal parcels_processed(parcel_filled, empty)
-signal report_new_load(done: bool)
+signal report_scene_load(done: bool, is_new_loading: bool)
 
 const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_0.tscn"),
@@ -78,6 +78,11 @@ func _process(_dt):
 		await _async_on_desired_scene_changed()
 
 
+func is_scene_loaded(x: int, z: int) -> bool:
+	var parcel_str = "%d,%d" % [x, z]
+	return get_parcel_scene_id(x, z) != -1 or loaded_empty_scenes.has(parcel_str)
+
+
 func get_parcel_scene_id(x: int, z: int) -> int:
 	for scene_id in loaded_scenes.keys():
 		var scene = loaded_scenes[scene_id]
@@ -111,8 +116,7 @@ func _async_on_desired_scene_changed():
 			# When we already have loaded the scene...
 			new_loading = false
 
-	if new_loading:
-		report_new_load.emit(false)
+	report_scene_load.emit(false, new_loading)
 
 	await PromiseUtils.async_all(loading_promises)
 
@@ -143,8 +147,7 @@ func _async_on_desired_scene_changed():
 	for scene_id in loaded_scenes:
 		parcel_filled.append_array(loaded_scenes[scene_id].parcels)
 
-	if new_loading:
-		report_new_load.emit(true)
+	report_scene_load.emit(true, new_loading)
 
 	parcels_processed.emit(parcel_filled, empty_parcels_coords)
 
