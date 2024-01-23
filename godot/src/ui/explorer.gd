@@ -33,6 +33,7 @@ var _last_parcel_position: Vector2i
 @onready
 var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left
 
+@onready var loading_ui = $UI/Loading
 
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
@@ -73,6 +74,7 @@ func get_params_from_cmd():
 
 
 func _ready():
+	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
@@ -320,8 +322,10 @@ func _on_panel_chat_submit_message(message: String):
 				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
 			)
 			Global.realm.async_set_realm(params[1])
+			loading_ui.enable_loading_screen()
 		elif command_str == "/reload":
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
+			loading_ui.enable_loading_screen()
 		else:
 			pass
 			# TODO: unknown command

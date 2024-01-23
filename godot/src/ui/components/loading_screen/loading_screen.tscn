@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://bmjwqm6jgri7c"]
+[gd_scene load_steps=14 format=3 uid="uid://bmjwqm6jgri7c"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_uio8w"]
 [ext_resource type="Script" path="res://src/ui/components/loading_screen/loading_screen.gd" id="2_7hdbk"]
@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://bwhq0um6jgi1n" path="res://assets/ui/loading/LeftArrow.svg" id="7_v28ps"]
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="8_32igy"]
 [ext_resource type="PackedScene" uid="uid://blang7av7p2rm" path="res://src/ui/components/loading_screen/carousel_viewport.tscn" id="8_s5q41"]
+[ext_resource type="Script" path="res://src/ui/components/loading_screen/LoadingScreenProgressLogic.gd" id="10_xsh10"]
 [ext_resource type="Texture2D" uid="uid://msi357rn4mni" path="res://assets/ui/loading/RightArrow.svg" id="11_hsax5"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cb4ls"]
@@ -184,17 +185,16 @@ grow_vertical = 2
 texture = ExtResource("11_hsax5")
 expand_mode = 2
 
-[node name="Test_TimerLoading" type="Timer" parent="."]
-wait_time = 0.1
-autostart = true
-
 [node name="Timer_AutoMoveCarousel" type="Timer" parent="."]
 wait_time = 3.0
 one_shot = true
 autostart = true
 
+[node name="LoadingScreenProgressLogic" type="Node" parent="." node_paths=PackedStringArray("loading_screen")]
+script = ExtResource("10_xsh10")
+loading_screen = NodePath("..")
+
 [connection signal="gui_input" from="ColorRect_Background/Control_Discover" to="." method="_on_control_discover_gui_input"]
 [connection signal="gui_input" from="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Left/TextureRect_LeftArrow" to="." method="_on_texture_rect_left_arrow_gui_input"]
 [connection signal="gui_input" from="ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Right/TextureRect_RightArrow" to="." method="_on_texture_rect_right_arrow_gui_input"]
-[connection signal="timeout" from="Test_TimerLoading" to="." method="_on_test_timer_loading_timeout"]
 [connection signal="timeout" from="Timer_AutoMoveCarousel" to="." method="_on_timer_auto_move_carousel_timeout"]

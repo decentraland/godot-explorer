@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=23 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -16,6 +16,7 @@
 [ext_resource type="Texture2D" uid="uid://2phiy0bi4o0i" path="res://assets/themes/dark_dcl_theme/icons/PinOutline.svg" id="12_tcp5l"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="14_jag8f"]
 [ext_resource type="Texture2D" uid="uid://bxgklimw13m4d" path="res://assets/themes/dark_dcl_theme/icons/Profile.svg" id="16_8okg3"]
+[ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="17_0blod"]
 
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
 data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
@@ -287,6 +288,9 @@ offset_left = -180.0
 offset_top = -140.0
 offset_right = 180.0
 offset_bottom = 140.0
+
+[node name="Loading" parent="UI" instance=ExtResource("17_0blod")]
+layout_mode = 1
 
 [connection signal="timeout" from="world/Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]
 [connection signal="gui_input" from="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]
