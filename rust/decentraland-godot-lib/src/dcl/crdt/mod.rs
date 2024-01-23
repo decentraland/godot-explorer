@@ -25,7 +25,22 @@ pub struct SceneCrdtState {
     pub entities: SceneEntityContainer,
 }
 
-pub type DirtyLwwComponents = HashMap<SceneComponentId, HashSet<SceneEntityId>>;
+pub trait InsertIfNotExists<T> {
+    fn insert_if_not_exists(&mut self, value: T) -> bool;
+}
+
+impl<T: PartialEq> InsertIfNotExists<T> for Vec<T> {
+    fn insert_if_not_exists(&mut self, value: T) -> bool {
+        if !self.contains(&value) {
+            self.push(value);
+            true
+        } else {
+            false
+        }
+    }
+}
+
+pub type DirtyLwwComponents = HashMap<SceneComponentId, Vec<SceneEntityId>>;
 pub type DirtyGosComponents = HashMap<SceneComponentId, HashMap<SceneEntityId, usize>>;
 
 // message from scene-thread describing new and deleted entities
@@ -221,7 +236,7 @@ impl SceneCrdtState {
                 }
 
                 if !dirty.is_empty() {
-                    dirty_lww_components.insert(*component_id, dirty);
+                    dirty_lww_components.insert(*component_id, dirty.into_iter().collect());
                 }
             }
         }

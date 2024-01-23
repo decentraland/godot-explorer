@@ -72,6 +72,11 @@ pub fn _process_scene(
     let mut current_time_us;
 
     loop {
+        let before_compute_update = std::time::Instant::now();
+
+        let this_stage_end_us =
+            ((std::time::Instant::now() - *ref_time).as_micros() as i64 + 1000).min(end_time_us);
+
         let should_break = match scene.current_dirty.update_state {
             SceneUpdateState::None => {
                 let engine_info_component =
@@ -92,7 +97,7 @@ pub fn _process_scene(
                 // fix: if the scene is loading, we need to wait until it finishes before spawn the next tick
                 // tick 0 => onStart() => tick=1 => first onUpdate() => tick=2 => second onUpdate() => tick= 3
                 if tick_number < 3 && !scene.gltf_loading.is_empty() {
-                    sync_gltf_loading_state(scene, crdt_state);
+                    sync_gltf_loading_state(scene, crdt_state, ref_time, this_stage_end_us);
                     return false;
                 }
 
@@ -158,16 +163,14 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::TransformAndParent => {
-                update_transform_and_parent(scene, crdt_state);
-                false
+                !update_transform_and_parent(scene, crdt_state, ref_time, this_stage_end_us)
             }
             SceneUpdateState::VisibilityComponent => {
                 update_visibility(scene, crdt_state);
                 false
             }
             SceneUpdateState::MeshRenderer => {
-                update_mesh_renderer(scene, crdt_state);
-                false
+                !update_mesh_renderer(scene, crdt_state, ref_time, this_stage_end_us)
             }
             SceneUpdateState::ScenePointerEvents => {
                 update_scene_pointer_events(scene, crdt_state);
@@ -190,9 +193,10 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::GltfContainer => {
-                update_gltf_container(scene, crdt_state);
-                sync_gltf_loading_state(scene, crdt_state);
-                false
+                !update_gltf_container(scene, crdt_state, ref_time, this_stage_end_us)
+            }
+            SceneUpdateState::SyncGltfContainer => {
+                !sync_gltf_loading_state(scene, crdt_state, ref_time, this_stage_end_us)
             }
             SceneUpdateState::NftShape => {
                 update_nft_shape(scene, crdt_state);
@@ -355,19 +359,25 @@ pub fn _process_scene(
             }
         };
 
+        let this_update_ms = (std::time::Instant::now() - before_compute_update).as_micros() as i64;
+        if this_update_ms > 5000 {
+            println!(
+                "metric:\"{:?}\",{:?},{:?},{:?}",
+                scene.definition.title,
+                scene.tick_number,
+                scene.current_dirty.update_state,
+                this_update_ms
+            );
+        }
+
         if should_break {
             return false;
         }
 
-        // let prev = scene.current_dirty.update_state;
         scene.current_dirty.update_state = scene.current_dirty.update_state.next();
 
         current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
         if current_time_us > end_time_us {
-            // let diff = current_time_us - end_time_us;
-            // if diff > 3000 {
-            //     println!("exceed time limit by {:?} in the state {:?}", diff, prev);
-            // }
             return false;
         }
     }

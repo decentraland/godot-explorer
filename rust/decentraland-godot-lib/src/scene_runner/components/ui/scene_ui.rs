@@ -13,7 +13,7 @@ use crate::{
             SceneComponentId, SceneEntityId,
         },
         crdt::{
-            last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
+            last_write_wins::LastWriteWinsComponentOperation, InsertIfNotExists, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
         SceneId,
@@ -219,11 +219,11 @@ pub fn update_scene_ui(
                     .current_dirty
                     .lww_components
                     .entry(component_id)
-                    .or_insert(HashSet::with_capacity(hidden_dirty.len()));
+                    .or_insert(Vec::with_capacity(hidden_dirty.len()));
 
                 hidden_dirty.iter().for_each(|entity_id| {
                     if !crdt_state.entities.is_dead(entity_id) {
-                        dirty.insert(*entity_id);
+                        dirty.insert_if_not_exists(*entity_id);
                     }
                 });
             }

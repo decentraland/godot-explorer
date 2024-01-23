@@ -56,7 +56,13 @@ pub struct MaterialItem {
     pub alive: bool,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
+pub struct PartialIteratorState {
+    pub current_index: usize,
+    pub items: Vec<SceneEntityId>,
+}
+
+#[derive(Debug)]
 pub enum SceneUpdateState {
     None,
     PrintLogs,
@@ -71,6 +77,7 @@ pub enum SceneUpdateState {
     Billboard,
     MeshCollider,
     GltfContainer,
+    SyncGltfContainer,
     NftShape,
     Animator,
     AvatarShape,
@@ -91,41 +98,42 @@ pub enum SceneUpdateState {
 }
 
 impl SceneUpdateState {
-    pub fn next(self) -> Self {
-        match self {
-            Self::None => Self::PrintLogs,
-            Self::PrintLogs => Self::DeletedEntities,
-            Self::DeletedEntities => Self::Tween,
-            Self::Tween => Self::TransformAndParent,
-            Self::TransformAndParent => Self::VisibilityComponent,
-            Self::VisibilityComponent => Self::MeshRenderer,
-            Self::MeshRenderer => Self::ScenePointerEvents,
-            Self::ScenePointerEvents => Self::Material,
-            Self::Material => Self::TextShape,
-            Self::TextShape => Self::Billboard,
-            Self::Billboard => Self::MeshCollider,
-            Self::MeshCollider => Self::GltfContainer,
-            Self::GltfContainer => Self::NftShape,
-            Self::NftShape => Self::Animator,
-            Self::Animator => Self::AvatarShape,
-            Self::AvatarShape => Self::Raycasts,
+    pub fn next(&self) -> Self {
+        match &self {
+            &Self::None => Self::PrintLogs,
+            &Self::PrintLogs => Self::DeletedEntities,
+            &Self::DeletedEntities => Self::Tween,
+            &Self::Tween => Self::TransformAndParent,
+            &Self::TransformAndParent => Self::VisibilityComponent,
+            &Self::VisibilityComponent => Self::MeshRenderer,
+            &Self::MeshRenderer => Self::ScenePointerEvents,
+            &Self::ScenePointerEvents => Self::Material,
+            &Self::Material => Self::TextShape,
+            &Self::TextShape => Self::Billboard,
+            &Self::Billboard => Self::MeshCollider,
+            &Self::MeshCollider => Self::GltfContainer,
+            &Self::GltfContainer => Self::SyncGltfContainer,
+            &Self::SyncGltfContainer => Self::NftShape,
+            &Self::NftShape => Self::Animator,
+            &Self::Animator => Self::AvatarShape,
+            &Self::AvatarShape => Self::Raycasts,
             #[cfg(feature = "use_ffmpeg")]
-            Self::Raycasts => Self::VideoPlayer,
+            &Self::Raycasts => Self::VideoPlayer,
             #[cfg(feature = "use_ffmpeg")]
-            Self::VideoPlayer => Self::AudioStream,
+            &Self::VideoPlayer => Self::AudioStream,
             #[cfg(feature = "use_ffmpeg")]
-            Self::AudioStream => Self::AvatarModifierArea,
+            &Self::AudioStream => Self::AvatarModifierArea,
             #[cfg(not(feature = "use_ffmpeg"))]
-            Self::Raycasts => Self::AvatarModifierArea,
-            Self::AvatarModifierArea => Self::CameraModeArea,
-            Self::CameraModeArea => Self::AudioSource,
-            Self::AudioSource => Self::AvatarAttach,
-            Self::AvatarAttach => Self::SceneUi,
-            Self::SceneUi => Self::ProcessRpcs,
-            Self::ProcessRpcs => Self::ComputeCrdtState,
-            Self::ComputeCrdtState => Self::SendToThread,
-            Self::SendToThread => Self::Processed,
-            Self::Processed => Self::Processed,
+            &Self::Raycasts => Self::AvatarModifierArea,
+            &Self::AvatarModifierArea => Self::CameraModeArea,
+            &Self::CameraModeArea => Self::AudioSource,
+            &Self::AudioSource => Self::AvatarAttach,
+            &Self::AvatarAttach => Self::SceneUi,
+            &Self::SceneUi => Self::ProcessRpcs,
+            &Self::ProcessRpcs => Self::ComputeCrdtState,
+            &Self::ComputeCrdtState => Self::SendToThread,
+            &Self::SendToThread => Self::Processed,
+            &Self::Processed => Self::Processed,
         }
     }
 }
