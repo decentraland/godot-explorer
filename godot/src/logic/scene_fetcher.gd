@@ -110,10 +110,10 @@ func _async_on_desired_scene_changed():
 		else:
 			# When we already have loaded the scene...
 			new_loading = false
-	
+
 	if new_loading:
 		report_new_load.emit(false)
-	
+
 	await PromiseUtils.async_all(loading_promises)
 
 	for scene_id in loaded_scenes.keys():
@@ -217,6 +217,7 @@ func update_position(new_position: Vector2i) -> void:
 	current_position = new_position
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
+
 func async_load_scene(scene_entity_id: String, entity: Dictionary) -> Promise:
 	var metadata = entity.get("metadata", {})
 	var is_global = entity.get("is_global", false)
@@ -300,9 +301,7 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary) -> Promise:
 	if not loaded_scenes.has(scene_entity_id):
 		return PromiseUtils.resolved(false)
 
-	_on_try_spawn_scene(
-		loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path
-	)
+	_on_try_spawn_scene(loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path)
 	return PromiseUtils.resolved(true)
 
 

@@ -35,6 +35,7 @@ var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI
 
 @onready var loading_ui = $UI/Loading
 
+
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
 	control_minimap.set_center_position(parcel_position_real)

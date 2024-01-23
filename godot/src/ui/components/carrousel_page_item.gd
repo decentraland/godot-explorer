@@ -7,8 +7,10 @@ extends Control
 func _ready():
 	pass
 
+
 func select():
 	animation_player.play("select")
-	
+
+
 func unselect():
 	animation_player.play("unselect")
