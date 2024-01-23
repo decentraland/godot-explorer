@@ -21,7 +21,6 @@ const WEARABLE_ITEM_INSTANTIABLE = preload("res://src/ui/components/wearable_ite
 const FILTER = preload("res://assets/ui/Filter.svg")
 
 @onready var color_picker_panel = $Color_Picker_Panel
-@onready var wearable_panel = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer/WearablePanel
 @onready var grid_container_wearables_list = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/MarginContainer/GridContainer_WearablesList
 
 
@@ -41,7 +40,7 @@ func _ready():
 	
 	menu_button_filter.text = "FILTER"
 	menu_button_filter.icon = FILTER
-	menu_button_filter.icon
+
 	
 	for child in v_box_container_category.get_children():
 		# TODO: check if it's a wearable_button
@@ -100,14 +99,13 @@ func _update_avatar():
 	profile_avatar["wearables"] = avatar_wearables
 	profile_avatar["emotes"] = avatar_emotes
 
-	var wearable_body_shape = Global.content_provider.get_wearable(avatar_body_shape)
+	#var wearable_body_shape = Global.content_provider.get_wearable(avatar_body_shape)
 
 	avatar_preview.avatar.async_update_avatar_from_profile(primary_player_profile_dictionary)
 	button_save_profile.disabled = false
 
 
 func load_filtered_data(filter: String):
-	wearable_panel.unset_wearable()
 	filtered_data = []
 	for wearable_id in wearable_data:
 		var wearable = wearable_data[wearable_id]
@@ -126,26 +124,9 @@ func show_wearables():
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_item.button_group = WEARABLE_GROUP
 		wearable_item.async_set_wearable(wearable_data[wearable_id])
-		wearable_item.toggled.connect(self._on_wearable_toggled.bind(wearable_id))
 
-
-func _on_wearable_toggled(_button_toggled: bool, wearable_id: String) -> void:
-	var desired_wearable = wearable_data[wearable_id]
-	var category = Wearables.get_category(desired_wearable)
-
-	var equipped = false
-	var can_equip = true
-	if category != Wearables.Categories.BODY_SHAPE:
-		can_equip = Wearables.can_equip(desired_wearable, avatar_body_shape)
-		for current_wearable_id in avatar_wearables:
-			if current_wearable_id == wearable_id:
-				equipped = true
-				break
-	else:
-		equipped = avatar_body_shape == wearable_id
-
-	wearable_panel.async_set_wearable(wearable_data[wearable_id], wearable_id)
-	wearable_panel.set_equipable_and_equip(can_equip, equipped)
+		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
+		wearable_item.unequip.connect(self._on_wearable_unequip.bind(wearable_id))
 
 
 func _on_wearable_button_filter_type(type):
@@ -174,7 +155,7 @@ func _on_wearable_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func _on_wearable_button_clear_filter(_type):
+func _on_wearable_button_clear_filter():
 	filtered_data = []
 	show_wearables()
 
@@ -196,7 +177,7 @@ func _on_button_save_profile_pressed():
 	Global.player_identity.async_deploy_profile(primary_player_profile_dictionary)
 
 
-func _on_wearable_panel_equip(wearable_id: String):
+func _on_wearable_equip(wearable_id: String):
 	var desired_wearable = wearable_data[wearable_id]
 	var category = Wearables.get_category(desired_wearable)
 
@@ -220,7 +201,7 @@ func _on_wearable_panel_equip(wearable_id: String):
 	_update_avatar()
 
 
-func _on_wearable_panel_unequip(wearable_id: String):
+func _on_wearable_unequip(wearable_id: String):
 	var desired_wearable = wearable_data[wearable_id]
 	var category = Wearables.get_category(desired_wearable)
 
@@ -285,3 +266,4 @@ func _on_color_picker_button_toggle_color_panel(toggled, color_target):
 				current_color = avatar_hair_color
 
 		color_picker_panel.custom_popup(rect, current_color)
+

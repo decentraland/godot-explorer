@@ -80,12 +80,12 @@ func _on_mouse_exited():
 func _on_toggled(_button_pressed):
 	
 	if _button_pressed:
-		self.equip.emit(wearable_id)
+		self.equip.emit()
 		button_info.show()
 		panel_container.self_modulate = Color("#161518")
 
 	else:
-		self.unequip.emit(wearable_id)
+		self.unequip.emit()
 		button_info.hide()
 		panel_container.self_modulate = Color("#ffffff")
 

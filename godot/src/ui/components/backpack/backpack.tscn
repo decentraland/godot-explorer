@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=29 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -10,7 +10,6 @@
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="6_t442b"]
 [ext_resource type="Texture2D" uid="uid://bg68xlkrhus8m" path="res://assets/wearable_categories/eyebrows-icon.svg" id="7_a6yyg"]
 [ext_resource type="PackedScene" uid="uid://cyf8k77w3gdih" path="res://src/ui/color_picker/color_picker_button.tscn" id="7_i1fkq"]
-[ext_resource type="PackedScene" uid="uid://bamnvinmv5e6g" path="res://src/ui/components/wearable_panel/wearable_panel.tscn" id="7_x3c64"]
 [ext_resource type="Texture2D" uid="uid://dp2sc2kkjq5wk" path="res://assets/wearable_categories/eyes-icon.svg" id="8_416cn"]
 [ext_resource type="Texture2D" uid="uid://ontpvrldbxsu" path="res://assets/wearable_categories/mouth-icon.svg" id="9_rk0en"]
 [ext_resource type="PackedScene" uid="uid://djuo7hndjhpas" path="res://src/ui/color_picker/color_picker_panel.tscn" id="10_8s7x3"]
@@ -439,12 +438,6 @@ size_flags_vertical = 0
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 8
-
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer"]
-layout_mode = 2
-
-[node name="WearablePanel" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/MarginContainer" instance=ExtResource("7_x3c64")]
-layout_mode = 2
 
 [node name="Color_Picker_Panel" parent="." instance=ExtResource("10_8s7x3")]
 position = Vector2i(100, 0)
