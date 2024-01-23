@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://bwhq0um6jgi1n" path="res://assets/ui/loading/LeftArrow.svg" id="7_v28ps"]
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="8_32igy"]
 [ext_resource type="PackedScene" uid="uid://blang7av7p2rm" path="res://src/ui/components/loading_screen/carousel_viewport.tscn" id="8_s5q41"]
-[ext_resource type="Script" path="res://src/ui/components/loading_screen/LoadingScreenProgressLogic.gd" id="10_xsh10"]
+[ext_resource type="Script" path="res://src/ui/components/loading_screen/loading_screen_progress_logic.gd" id="10_xsh10"]
 [ext_resource type="Texture2D" uid="uid://msi357rn4mni" path="res://assets/ui/loading/RightArrow.svg" id="11_hsax5"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cb4ls"]
