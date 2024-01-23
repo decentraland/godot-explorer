@@ -40,7 +40,6 @@ func _ready():
 	
 	menu_button_filter.text = "FILTER"
 	menu_button_filter.icon = FILTER
-
 	
 	for child in v_box_container_category.get_children():
 		# TODO: check if it's a wearable_button
@@ -120,11 +119,13 @@ func show_wearables():
 		child.queue_free()
 
 	for wearable_id in filtered_data:
+		var index = avatar_wearables.find(wearable_id)
+		if index != -1:
+			print(index)
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_item.button_group = WEARABLE_GROUP
 		wearable_item.async_set_wearable(wearable_data[wearable_id])
-
 		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
 		wearable_item.unequip.connect(self._on_wearable_unequip.bind(wearable_id))
 
