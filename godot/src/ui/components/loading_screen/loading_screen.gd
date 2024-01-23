@@ -1,4 +1,4 @@
-extends VBoxContainer
+extends Control
 
 var bg_colors: Array[Color] = [
 	Color(0.5, 0.25, 0.0, 1.0),
@@ -13,26 +13,47 @@ var bg_colors: Array[Color] = [
 var item_index = 0
 var item_count = 0
 var progress: float = 0.0
+var last_progress_change := Time.get_ticks_msec()
+var popup_warning_pos_y: int = 0
 
 @onready var loading_progress = %ColorRect_LoadingProgress
 @onready var loading_progress_label = %Label_LoadingProgress
 
 @onready
-var carousel = $ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/CarouselViewport/SubViewport/Carousel
-@onready var background: ColorRect = $ColorRect_Background
+var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/CarouselViewport/SubViewport/Carousel
+@onready var background: ColorRect = $VBox_Loading/ColorRect_Background
 
 @onready var timer_auto_move_carousel = $Timer_AutoMoveCarousel
-@onready var timer_hide_loading_screen = $Timer_HideLoadingScreen
+@onready var popup_warning = $PopupWarning
+
+@onready var loading_screen_progress_logic = $LoadingScreenProgressLogic
+@onready var timer_check_progress_timeout = $Timer_CheckProgressTimeout
 
 
 func _ready():
+	last_progress_change = Time.get_ticks_msec()
+	popup_warning.hide()
+	popup_warning_pos_y = popup_warning.position.y
 	item_count = carousel.item_count()
 	set_item(randi_range(0, item_count - 1))
 
 
 # Forward
 func enable_loading_screen():
-	$LoadingScreenProgressLogic.enable_loading_screen()
+	Global.release_mouse()
+	loading_screen_progress_logic.enable_loading_screen()
+
+
+func async_hide_loading_screen_effect():
+	var tween = get_tree().create_tween()
+	background.use_parent_material = true  # disable material
+	modulate = Color.WHITE
+	tween.tween_property(self, "modulate", Color.TRANSPARENT, 1.0)
+	await tween.finished
+	hide()
+	modulate = Color.WHITE
+	background.use_parent_material = false  # enable material
+	self.position.y = 0
 
 
 func _on_texture_rect_right_arrow_gui_input(event):
@@ -71,9 +92,13 @@ func set_item(index: int, right_direction: bool = true):
 	item_index = index
 	carousel.set_item(index, right_direction)
 
-	var tween = get_tree().create_tween()
 	var new_color = Color(bg_colors[index])
-	tween.tween_method(set_shader_background_color, current_color, new_color, 0.25)
+	set_bg_shader_color(current_color, new_color)
+
+
+func set_bg_shader_color(from: Color, to: Color):
+	var tween = get_tree().create_tween()
+	tween.tween_method(set_shader_background_color, from, to, 0.25)
 
 
 func set_shader_background_color(color: Color):
@@ -82,13 +107,53 @@ func set_shader_background_color(color: Color):
 
 
 func set_progress(new_progress: float):
+	if progress != new_progress:
+		last_progress_change = Time.get_ticks_msec()
 	progress = new_progress
 
 	loading_progress_label.text = "LOADING %d%%" % floor(progress)
 	var tween = get_tree().create_tween()
 	var new_width = loading_progress.get_parent().size.x * (progress / 100.0)
-	tween.tween_property(loading_progress, "size:x", new_width, 0.1)
+	tween.tween_property(loading_progress, "position:x", new_width, 0.1)
 
 
 func _on_timer_auto_move_carousel_timeout():
 	next_page()
+
+
+func _on_timer_check_progress_timeout_timeout():
+	var inactive_seconds = round((Time.get_ticks_msec() - last_progress_change) / 1000.0)
+	if inactive_seconds >= 10:
+		var tween = get_tree().create_tween()
+		popup_warning.position.y = -popup_warning.size.y
+		tween.tween_property(popup_warning, "position:y", popup_warning_pos_y, 1.0).set_trans(
+			Tween.TRANS_ELASTIC
+		)
+		popup_warning.show()
+		timer_check_progress_timeout.stop()
+
+
+func async_hide_popup_warning():
+	var tween = get_tree().create_tween()
+	popup_warning.position.y = popup_warning_pos_y
+	tween.tween_property(popup_warning, "position:y", -popup_warning.size.y, 1.0).set_trans(
+		Tween.TRANS_ELASTIC
+	)
+	await tween.finished
+	popup_warning.hide()
+
+
+func _on_button_continue_pressed():
+	loading_screen_progress_logic.hide_loading_screen()
+	async_hide_popup_warning()
+
+
+func _on_button_reload_pressed():
+	Global.realm.async_set_realm(Global.realm.get_realm_string())
+	async_hide_popup_warning()
+
+
+func _on_loading_screen_progress_logic_loading_show_requested():
+	last_progress_change = Time.get_ticks_msec()
+	popup_warning.hide()
+	timer_check_progress_timeout.start()
