@@ -16,6 +16,8 @@ var progress: float = 0.0
 var last_progress_change := Time.get_ticks_msec()
 var popup_warning_pos_y: int = 0
 
+var last_hide_click := 0.0
+
 @onready var loading_progress = %ColorRect_LoadingProgress
 @onready var loading_progress_label = %Label_LoadingProgress
 
@@ -163,3 +165,13 @@ func _on_loading_screen_progress_logic_loading_show_requested():
 	last_progress_change = Time.get_ticks_msec()
 	popup_warning.hide()
 	timer_check_progress_timeout.start()
+
+
+# For dev purposes
+func _on_color_rect_header_gui_input(event):
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			var elapsed_time = Time.get_ticks_msec() - last_hide_click
+			if elapsed_time <= 500:
+				self.hide()
+			last_hide_click = Time.get_ticks_msec()

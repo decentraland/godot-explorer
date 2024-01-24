@@ -299,6 +299,7 @@ layout_mode = 2
 theme_type_variation = &"GrayButton"
 text = "RUN ANYWAY"
 
+[connection signal="gui_input" from="VBox_Loading/VBox_Header/ColorRect_Header" to="." method="_on_color_rect_header_gui_input"]
 [connection signal="gui_input" from="VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Left/TextureRect_LeftArrow" to="." method="_on_texture_rect_left_arrow_gui_input"]
 [connection signal="gui_input" from="VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/Control_Right/TextureRect_RightArrow" to="." method="_on_texture_rect_right_arrow_gui_input"]
 [connection signal="timeout" from="Timer_AutoMoveCarousel" to="." method="_on_timer_auto_move_carousel_timeout"]
