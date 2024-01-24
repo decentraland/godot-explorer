@@ -302,7 +302,7 @@ func async_load_wearables():
 		return
 
 	wearables_by_category = curated_wearables[0]
-	# var hidden_categories = curated_wearables[1]
+	var hiding_list: PackedStringArray = curated_wearables[1]
 
 	var body_shape = wearables_by_category.get(Wearables.Categories.BODY_SHAPE)
 	if body_shape == null:
@@ -312,11 +312,11 @@ func async_load_wearables():
 	try_to_set_body_shape(Wearables.get_wearable_main_file_hash(body_shape, current_body_shape))
 	wearables_by_category.erase(Wearables.Categories.BODY_SHAPE)
 
-	var has_skin = false
-	var hide_upper_body = false
-	var hide_lower_body = false
-	var hide_feet = false
-	var hide_head = false
+	var has_own_skin = false
+	var has_own_upper_body = false
+	var has_own_lower_body = false
+	var has_own_feet = false
+	var has_own_head = false
 
 	for category in wearables_by_category:
 		var wearable = wearables_by_category[category]
@@ -330,30 +330,30 @@ func async_load_wearables():
 		var wearable_skeleton: Skeleton3D = obj.find_child("Skeleton3D")
 		for child in wearable_skeleton.get_children():
 			var new_wearable = child.duplicate()
-			new_wearable.name = new_wearable.name.to_lower()
+			new_wearable.name = new_wearable.name.to_lower() + "_" + category
 			body_shape_skeleton_3d.add_child(new_wearable)
 
 		match category:
 			Wearables.Categories.UPPER_BODY:
-				hide_upper_body = true
+				has_own_upper_body = true
 			Wearables.Categories.LOWER_BODY:
-				hide_lower_body = true
+				has_own_lower_body = true
 			Wearables.Categories.FEET:
-				hide_feet = true
+				has_own_feet = true
 			Wearables.Categories.HEAD:
-				hide_head = true
+				has_own_head = true
 			Wearables.Categories.SKIN:
-				has_skin = true
+				has_own_skin = true
 
 	var hidings = {
-		"ubody_basemesh": has_skin or hide_upper_body,
-		"lbody_basemesh": has_skin or hide_lower_body,
-		"feet_basemesh": has_skin or hide_feet,
-		"head": has_skin or hide_head,
-		"head_basemesh": has_skin or hide_head,
-		"mask_eyes": has_skin or hide_head,
-		"mask_eyebrows": has_skin or hide_head,
-		"mask_mouth": has_skin or hide_head,
+		"ubody_basemesh": has_own_skin or has_own_upper_body,
+		"lbody_basemesh": has_own_skin or has_own_lower_body,
+		"feet_basemesh": has_own_skin or has_own_feet,
+		"head": has_own_skin or has_own_head,
+		"head_basemesh": has_own_skin or has_own_head,
+		"mask_eyes": has_own_skin or has_own_head,
+		"mask_eyebrows": has_own_skin or has_own_head,
+		"mask_mouth": has_own_skin or has_own_head,
 	}
 
 	for child in body_shape_skeleton_3d.get_children():
