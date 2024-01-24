@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use godot::{
     builtin::math::FloatExt,
     prelude::{Node, Transform3D, Vector3},
@@ -37,13 +39,23 @@ impl DclTransformAndParent {
     }
 }
 
-pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+pub fn update_transform_and_parent(
+    scene: &mut Scene,
+    crdt_state: &mut SceneCrdtState,
+    ref_time: &Instant,
+    end_time_us: i64,
+) -> bool {
+    let mut current_time_us;
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
-    let dirty_lww_components = &scene.current_dirty.lww_components;
+    let dirty_transform = scene
+        .current_dirty
+        .lww_components
+        .remove(&SceneComponentId::TRANSFORM);
     let transform_component = crdt_state.get_transform();
 
-    if let Some(dirty_transform) = dirty_lww_components.get(&SceneComponentId::TRANSFORM) {
-        for entity in dirty_transform {
+    if let Some(mut dirty_transform) = dirty_transform {
+        let mut updated_count = 0;
+        for entity in dirty_transform.iter() {
             let value = if let Some(entry) = transform_component.get(entity) {
                 entry.value.clone()
             } else {
@@ -78,6 +90,23 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 godot_dcl_scene.unparented_entities_3d.insert(*entity);
                 godot_dcl_scene.hierarchy_dirty_3d = true;
             }
+
+            updated_count += 1;
+            if updated_count % 10 == 0 {
+                current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
+                if current_time_us > end_time_us {
+                    break;
+                }
+            }
+        }
+
+        if updated_count < dirty_transform.len() {
+            dirty_transform.drain(0..updated_count);
+            scene
+                .current_dirty
+                .lww_components
+                .insert(SceneComponentId::TRANSFORM, dirty_transform);
+            return false;
         }
     }
 
@@ -141,7 +170,14 @@ pub fn update_transform_and_parent(scene: &mut Scene, crdt_state: &mut SceneCrdt
                 }
             }
         }
+
+        current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
+        if current_time_us > end_time_us {
+            return false;
+        }
     }
+
+    true
 }
 
 fn detect_entity_id_in_parent_chain(

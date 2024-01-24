@@ -1,4 +1,4 @@
-use std::{collections::HashSet, time::Duration};
+use std::time::Duration;
 
 use godot::builtin::Basis;
 
@@ -12,7 +12,7 @@ use crate::{
             SceneComponentId,
         },
         crdt::{
-            last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
+            last_write_wins::LastWriteWinsComponentOperation, InsertIfNotExists, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
     },
@@ -269,14 +269,12 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             .lww_components
             .get_mut(&SceneComponentId::TRANSFORM)
         {
-            dirty.insert(*entity);
+            dirty.insert_if_not_exists(*entity);
         } else {
-            let mut new_dirty = HashSet::new();
-            new_dirty.insert(*entity);
             scene
                 .current_dirty
                 .lww_components
-                .insert(SceneComponentId::TRANSFORM, new_dirty.clone());
+                .insert(SceneComponentId::TRANSFORM, vec![*entity]);
         }
     }
 }

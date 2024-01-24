@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use crate::{
     dcl::{
         components::{
@@ -63,13 +65,24 @@ pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMe
     }
 }
 
-pub fn update_mesh_renderer(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+pub fn update_mesh_renderer(
+    scene: &mut Scene,
+    crdt_state: &mut SceneCrdtState,
+    ref_time: &Instant,
+    end_time_us: i64,
+) -> bool {
+    let mut updated_count = 0;
+    let mut current_time_us;
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
-    let dirty_lww_components = &scene.current_dirty.lww_components;
-    if let Some(mesh_renderer_dirty) = dirty_lww_components.get(&SceneComponentId::MESH_RENDERER) {
+    let mesh_renderer_dirty = scene
+        .current_dirty
+        .lww_components
+        .remove(&SceneComponentId::MESH_RENDERER);
+
+    if let Some(mut mesh_renderer_dirty) = mesh_renderer_dirty {
         let mesh_renderer_component = SceneCrdtStateProtoComponents::get_mesh_renderer(crdt_state);
 
-        for entity in mesh_renderer_dirty {
+        for entity in mesh_renderer_dirty.iter() {
             let new_value = mesh_renderer_component.get(entity);
             if new_value.is_none() {
                 continue;
@@ -107,6 +120,22 @@ pub fn update_mesh_renderer(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     node_3d.add_child(mesh_instance_3d.upcast());
                 }
             }
+            updated_count += 1;
+            current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
+            if current_time_us > end_time_us {
+                break;
+            }
+        }
+
+        if updated_count < mesh_renderer_dirty.len() {
+            mesh_renderer_dirty.drain(0..updated_count);
+            scene
+                .current_dirty
+                .lww_components
+                .insert(SceneComponentId::MESH_RENDERER, mesh_renderer_dirty);
+            return false;
         }
     }
+
+    true
 }

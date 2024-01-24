@@ -87,6 +87,9 @@ pub struct DclGltfContainer {
     #[export(enum = (Unknown, Loading, NotFound, FinishedWithError, Finished))]
     dcl_gltf_loading_state: GltfContainerLoadingState,
 
+    #[export]
+    dcl_pending_node: Option<Gd<Node>>,
+
     #[base]
     base: Base<Node3D>,
 }
@@ -151,6 +154,7 @@ impl INode for DclGltfContainer {
             dcl_invisible_cmask: 3,
             dcl_entity_id: SceneEntityId::INVALID.as_i32(),
             dcl_gltf_loading_state: GltfContainerLoadingState::Unknown,
+            dcl_pending_node: None,
             base,
         }
     }
