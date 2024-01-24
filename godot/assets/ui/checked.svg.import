@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bmoy7cmuucooq"
-path="res://.godot/imported/skins-icon.svg-2fda88879232b5625f42df5dacb79bff.ctex"
+uid="uid://bheg7fuh5a4p0"
+path="res://.godot/imported/checked.svg-43de85376b55c6663511ad1d84793dfa.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/wearable_categories/skins-icon.svg"
-dest_files=["res://.godot/imported/skins-icon.svg-2fda88879232b5625f42df5dacb79bff.ctex"]
+source_file="res://assets/ui/checked.svg"
+dest_files=["res://.godot/imported/checked.svg-43de85376b55c6663511ad1d84793dfa.ctex"]
 
 [params]
 

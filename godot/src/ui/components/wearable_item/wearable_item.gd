@@ -16,6 +16,8 @@ var wearable_id: String
 
 @onready var texture_rect_background = $PanelContainer/VBoxContainer/Panel/TextureRect_Background
 @onready var texture_rect_preview = $PanelContainer/VBoxContainer/Panel/TextureRect_Preview
+@onready var texture_rect_equiped = $PanelContainer/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Equiped
+@onready var texture_rect_category = $PanelContainer/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Category
 
 
 @onready var panel_container = $PanelContainer
@@ -33,9 +35,13 @@ func _ready():
 
 
 func async_set_wearable(wearable: Dictionary):
+
 	wearable_id = wearable.get("id", "")
 	var wearable_thumbnail: String = wearable.get("metadata", {}).get("thumbnail", "")
 	thumbnail_hash = wearable.get("content").get_hash(wearable_thumbnail)
+	print(wearable)
+	_update_category_icon(wearable)
+	
 
 	match wearable.get("rarity", ""):
 		"common":
@@ -83,10 +89,28 @@ func _on_toggled(_button_pressed):
 		self.equip.emit()
 		button_info.show()
 		panel_container.self_modulate = Color("#161518")
+		z_index = 5
 
 	else:
 		self.unequip.emit()
 		button_info.hide()
 		panel_container.self_modulate = Color("#ffffff")
+		z_index = 0
 
+func set_equiped(is_equiped:bool):
+	if is_equiped:
+		texture_rect_equiped.show()
+	else:
+		texture_rect_equiped.hide()
 
+func _update_category_icon(wearable: Dictionary):
+
+	var texture_path = (
+		"res://assets/wearable_categories/"
+		+ wearable.get("metadata","").get("data","").get("category","")
+		+ "-icon.svg"
+	)
+	if FileAccess.file_exists(texture_path):
+		var texture = load(texture_path)
+		if texture != null:
+			texture_rect_category.texture = texture

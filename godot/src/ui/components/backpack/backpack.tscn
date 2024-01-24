@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=30 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -25,6 +25,7 @@
 [ext_resource type="Texture2D" uid="uid://bavm4qx6mvfcs" path="res://assets/wearable_categories/feet-icon.svg" id="15_147vw"]
 [ext_resource type="Texture2D" uid="uid://du26rhhe8qfin" path="res://assets/wearable_categories/eyewear-icon.svg" id="17_073bg"]
 [ext_resource type="Texture2D" uid="uid://8mwi1tvyxm5f" path="res://assets/wearable_categories/top_head-icon.svg" id="21_rmg80"]
+[ext_resource type="Texture2D" uid="uid://bmoy7cmuucooq" path="res://assets/wearable_categories/skin-icon.svg" id="25_cd16j"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_0kgen"]
 
@@ -436,6 +437,7 @@ mouse_filter = 1
 toggle_mode = true
 button_group = SubResource("ButtonGroup_meiko")
 text = "SKIN"
+icon = ExtResource("25_cd16j")
 filter_category = 17
 
 [node name="ScrollContainer" type="ScrollContainer" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer"]
@@ -455,7 +457,7 @@ size_flags_horizontal = 0
 size_flags_vertical = 0
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
-columns = 8
+columns = 6
 
 [node name="Color_Picker_Panel" parent="." instance=ExtResource("10_8s7x3")]
 position = Vector2i(100, 0)

@@ -109,7 +109,8 @@ func load_filtered_data(filter: String):
 	for wearable_id in wearable_data:
 		var wearable = wearable_data[wearable_id]
 		if Wearables.get_category(wearable) == filter:
-			filtered_data.push_back(wearable_id)
+			if Wearables.can_equip(wearable, avatar_body_shape) or Wearables.get_category(wearable) == 'body_shape' :
+				filtered_data.push_back(wearable_id)
 
 	show_wearables()
 
@@ -117,6 +118,8 @@ func load_filtered_data(filter: String):
 func show_wearables():
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
+	
+	
 
 	for wearable_id in filtered_data:
 		var index = avatar_wearables.find(wearable_id)
