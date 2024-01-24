@@ -4,6 +4,12 @@
 class_name PromiseUtils
 
 
+static func resolved(data = null) -> Promise:
+	var promise := Promise.new()
+	promise.resolve_with_data(data)
+	return promise
+
+
 static func async_awaiter(promise: Promise) -> Variant:
 	if promise == null:
 		printerr("try to await a null promise")

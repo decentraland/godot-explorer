@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3 uid="uid://cu2ci0kwgisjo"]
+
+[ext_resource type="Script" path="res://src/ui/components/pagination/pagination.gd" id="1_ydifs"]
+
+[node name="HBoxContainer_Pagination" type="HBoxContainer"]
+custom_minimum_size = Vector2(30, 30)
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 6
+alignment = 1
+script = ExtResource("1_ydifs")

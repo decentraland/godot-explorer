@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use godot::builtin::Basis;
+
 use crate::{
     dcl::{
         components::{
@@ -211,8 +213,29 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let end = data.end.clone().unwrap().to_godot();
 
                 if data.face_direction == Some(true) {
-                    // TODO: This must be calculated one per tween data update, not per frame
-                    // TODO: Implement transform.rotation = start.look_at(end)
+                    let direction = (end - start).normalized();
+                    let basis = if direction.is_zero_approx() {
+                        Basis::IDENTITY
+                    } else {
+                        let v_x = godot::builtin::Vector3::UP.cross(direction);
+                        let v_x = if v_x.is_zero_approx() {
+                            // same workaround as bevy-explorer
+                            // when the direction is colinear to the up vector, we use the forward vector as up+
+                            godot::builtin::Vector3::FORWARD.cross(direction)
+                        } else {
+                            v_x
+                        }
+                        .normalized();
+                        let v_y = direction.cross(v_x);
+
+                        let mut basis = Basis::IDENTITY;
+                        basis.set_col_a(v_x);
+                        basis.set_col_b(v_y);
+                        basis.set_col_c(direction);
+                        basis
+                    };
+
+                    transform.rotation = basis.to_quat();
                 }
 
                 transform.translation = start + ((end - start) * ease_value);

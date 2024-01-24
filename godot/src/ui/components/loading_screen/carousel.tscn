@@ -1,0 +1,529 @@
+[gd_scene load_steps=17 format=3 uid="uid://bykgikku3dda2"]
+
+[ext_resource type="Script" path="res://src/ui/components/loading_screen/carousel.gd" id="1_ioipx"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_p56uk"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_hl04s"]
+[ext_resource type="Texture2D" uid="uid://cq3fego5ooe38" path="res://assets/ui/loading/slider1.png" id="4_4k1g3"]
+[ext_resource type="Texture2D" uid="uid://cjqc8r12w88yx" path="res://assets/ui/loading/mana.png" id="5_33rqf"]
+[ext_resource type="Texture2D" uid="uid://dste33vadqk6s" path="res://assets/ui/loading/builder.png" id="6_v3410"]
+[ext_resource type="Texture2D" uid="uid://bpb1tkjv7v8gj" path="res://assets/ui/loading/editor.png" id="7_chjnp"]
+[ext_resource type="Texture2D" uid="uid://cf8fgdg0nv8wr" path="res://assets/ui/loading/land.png" id="8_ken5x"]
+[ext_resource type="Texture2D" uid="uid://djhxn4op4dsu2" path="res://assets/ui/loading/wearables-emotes.png" id="9_5y3n0"]
+[ext_resource type="Texture2D" uid="uid://c2qtaxje4umi3" path="res://assets/ui/loading/dao.png" id="10_8gymy"]
+
+[sub_resource type="Animation" id="Animation_koy0s"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TextureRect_Image:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(-6, 29)]
+}
+
+[sub_resource type="Animation" id="Animation_xthki"]
+resource_name = "default"
+length = 8.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TextureRect_Image:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 4),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(-6, 29), Vector2(-6, 79)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_in2xg"]
+_data = {
+"RESET": SubResource("Animation_koy0s"),
+"default": SubResource("Animation_xthki")
+}
+
+[sub_resource type="Animation" id="Animation_d5qpx"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TextureRect_Image:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.001),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(0, 0), Vector2(-6, 68)]
+}
+
+[sub_resource type="Animation" id="Animation_524wq"]
+resource_name = "default"
+length = 8.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TextureRect_Image:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 4),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(-6, 68), Vector2(-6, 118)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_8leup"]
+_data = {
+"RESET": SubResource("Animation_d5qpx"),
+"default": SubResource("Animation_524wq")
+}
+
+[node name="Carousel" type="Control"]
+custom_minimum_size = Vector2(946, 546)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 946.0
+offset_bottom = 546.0
+script = ExtResource("1_ioipx")
+
+[node name="Item1" type="HBoxContainer" parent="."]
+custom_minimum_size = Vector2(946, 546)
+layout_direction = 2
+layout_mode = 2
+offset_right = 946.0
+offset_bottom = 546.0
+
+[node name="VBox_Data" type="VBoxContainer" parent="Item1"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Label_Title" type="Label" parent="Item1/VBox_Data"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_p56uk")
+theme_override_font_sizes/font_size = 40
+text = "Genesis Plaza,
+heart of city"
+autowrap_mode = 2
+
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item1/VBox_Data"]
+custom_minimum_size = Vector2(442, 150)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_fonts/normal_font = ExtResource("3_hl04s")
+theme_override_font_sizes/normal_font_size = 20
+text = "Genesis Plaza is built and maintained by the Decentraland Foundation but is still in many ways a community project. Around here you'll find several teleports that can take you directly to special scenes marked as points of interest."
+scroll_active = false
+shortcut_keys_enabled = false
+
+[node name="Control_Image" type="Control" parent="Item1"]
+custom_minimum_size = Vector2(500, 500)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+
+[node name="TextureRect_Image" type="TextureRect" parent="Item1/Control_Image"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -186.5
+offset_top = -219.0
+offset_right = 186.5
+offset_bottom = 219.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_4k1g3")
+stretch_mode = 4
+
+[node name="Item2" type="HBoxContainer" parent="."]
+visible = false
+custom_minimum_size = Vector2(946, 546)
+layout_direction = 2
+layout_mode = 2
+offset_right = 946.0
+offset_bottom = 546.0
+
+[node name="VBox_Data" type="VBoxContainer" parent="Item2"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Label_Title" type="Label" parent="Item2/VBox_Data"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_p56uk")
+theme_override_font_sizes/font_size = 40
+text = "MANA"
+autowrap_mode = 2
+
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item2/VBox_Data"]
+custom_minimum_size = Vector2(442, 100)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_fonts/normal_font = ExtResource("3_hl04s")
+theme_override_font_sizes/normal_font_size = 20
+text = "MANA is Decentraland’s virtual currency. Use it to buy LAND, Unique NAMEs, Wearables, Emotes and vote on Decentraland’s key policies and pay platform fees."
+scroll_active = false
+shortcut_keys_enabled = false
+
+[node name="Control_Image" type="Control" parent="Item2"]
+custom_minimum_size = Vector2(500, 500)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+
+[node name="TextureRect_Image" type="TextureRect" parent="Item2/Control_Image"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -256.0
+offset_top = -180.0
+offset_right = 256.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("5_33rqf")
+stretch_mode = 4
+
+[node name="Item3" type="HBoxContainer" parent="."]
+visible = false
+custom_minimum_size = Vector2(946, 546)
+layout_direction = 2
+layout_mode = 2
+offset_right = 946.0
+offset_bottom = 546.0
+
+[node name="VBox_Data" type="VBoxContainer" parent="Item3"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Label_Title" type="Label" parent="Item3/VBox_Data"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_p56uk")
+theme_override_font_sizes/font_size = 40
+text = "Builder"
+autowrap_mode = 2
+
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item3/VBox_Data"]
+custom_minimum_size = Vector2(442, 150)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_fonts/normal_font = ExtResource("3_hl04s")
+theme_override_font_sizes/normal_font_size = 20
+text = "Create scenes, artworks, challenges and more, using the simple Builder: an easy drag and drop tool.
+For more experienced creators, the SDK provides the tools to fill the world with social games and applications."
+scroll_active = false
+shortcut_keys_enabled = false
+
+[node name="Control_Image" type="Control" parent="Item3"]
+custom_minimum_size = Vector2(500, 500)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+
+[node name="TextureRect_Image" type="TextureRect" parent="Item3/Control_Image"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -186.5
+offset_top = -219.0
+offset_right = 186.5
+offset_bottom = 219.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("6_v3410")
+stretch_mode = 4
+
+[node name="Item4" type="HBoxContainer" parent="."]
+visible = false
+custom_minimum_size = Vector2(946, 546)
+layout_direction = 2
+layout_mode = 2
+offset_right = 946.0
+offset_bottom = 546.0
+
+[node name="VBox_Data" type="VBoxContainer" parent="Item4"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Label_Title" type="Label" parent="Item4/VBox_Data"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_p56uk")
+theme_override_font_sizes/font_size = 40
+text = "Decentraland
+Editor"
+autowrap_mode = 2
+
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item4/VBox_Data"]
+custom_minimum_size = Vector2(442, 100)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_fonts/normal_font = ExtResource("3_hl04s")
+theme_override_font_sizes/normal_font_size = 20
+text = "It’s intended for users of any knowledge level, combining a graphical interface with code editing capabilities. Both technical and non-technical creators will benefit from using it."
+scroll_active = false
+shortcut_keys_enabled = false
+
+[node name="Control_Image" type="Control" parent="Item4"]
+custom_minimum_size = Vector2(500, 500)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+
+[node name="TextureRect_Image" type="TextureRect" parent="Item4/Control_Image"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -6.0
+offset_top = 29.0
+offset_right = 506.0
+offset_bottom = 467.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("7_chjnp")
+stretch_mode = 4
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Item4/Control_Image"]
+libraries = {
+"": SubResource("AnimationLibrary_in2xg")
+}
+autoplay = "default"
+
+[node name="Item5" type="HBoxContainer" parent="."]
+visible = false
+custom_minimum_size = Vector2(946, 546)
+layout_direction = 2
+layout_mode = 2
+offset_right = 946.0
+offset_bottom = 546.0
+
+[node name="VBox_Data" type="VBoxContainer" parent="Item5"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Label_Title" type="Label" parent="Item5/VBox_Data"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_p56uk")
+theme_override_font_sizes/font_size = 40
+text = "LAND"
+autowrap_mode = 2
+
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item5/VBox_Data"]
+custom_minimum_size = Vector2(442, 100)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_fonts/normal_font = ExtResource("3_hl04s")
+theme_override_font_sizes/normal_font_size = 20
+text = "Decentraland is made up of over 90,000 LANDs: virtual spaces backed by cryptographic tokens. Only LANDowners can determine the content that sits on their LAND."
+scroll_active = false
+shortcut_keys_enabled = false
+
+[node name="Control_Image" type="Control" parent="Item5"]
+custom_minimum_size = Vector2(500, 500)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+
+[node name="TextureRect_Image" type="TextureRect" parent="Item5/Control_Image"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -186.5
+offset_top = -219.0
+offset_right = 186.5
+offset_bottom = 219.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("8_ken5x")
+stretch_mode = 4
+
+[node name="Item6" type="HBoxContainer" parent="."]
+visible = false
+custom_minimum_size = Vector2(946, 546)
+layout_direction = 2
+layout_mode = 2
+offset_right = 946.0
+offset_bottom = 546.0
+
+[node name="VBox_Data" type="VBoxContainer" parent="Item6"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Label_Title" type="Label" parent="Item6/VBox_Data"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_p56uk")
+theme_override_font_sizes/font_size = 40
+text = "Wearables & Emotes"
+autowrap_mode = 2
+
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item6/VBox_Data"]
+custom_minimum_size = Vector2(442, 100)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_fonts/normal_font = ExtResource("3_hl04s")
+theme_override_font_sizes/normal_font_size = 20
+text = "Each Wearable or Emote model has a limited supply. 
+The rarest ones can get to be super valuable. You can buy and sell them in the Marketplace."
+scroll_active = false
+shortcut_keys_enabled = false
+
+[node name="Control_Image" type="Control" parent="Item6"]
+custom_minimum_size = Vector2(500, 500)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+
+[node name="TextureRect_Image" type="TextureRect" parent="Item6/Control_Image"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_right = 512.0
+offset_bottom = 360.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("9_5y3n0")
+stretch_mode = 4
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Item6/Control_Image"]
+libraries = {
+"": SubResource("AnimationLibrary_8leup")
+}
+autoplay = "default"
+
+[node name="Item7" type="HBoxContainer" parent="."]
+visible = false
+custom_minimum_size = Vector2(946, 546)
+layout_direction = 2
+layout_mode = 2
+offset_right = 946.0
+offset_bottom = 546.0
+
+[node name="VBox_Data" type="VBoxContainer" parent="Item7"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Label_Title" type="Label" parent="Item7/VBox_Data"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_p56uk")
+theme_override_font_sizes/font_size = 40
+text = "Decentraland DAO"
+autowrap_mode = 2
+
+[node name="RichTextLabel_Paragraph" type="RichTextLabel" parent="Item7/VBox_Data"]
+custom_minimum_size = Vector2(542, 100)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 1, 1, 1)
+theme_override_fonts/normal_font = ExtResource("3_hl04s")
+theme_override_font_sizes/normal_font_size = 20
+text = "Decentraland is the first fully decentralized virtual world. By voting through the DAO  ('Decentralized Autonomous Organization'), you are in control of the policies created to determine how the world behaves."
+scroll_active = false
+shortcut_keys_enabled = false
+
+[node name="Control_Image" type="Control" parent="Item7"]
+custom_minimum_size = Vector2(400, 400)
+layout_mode = 2
+size_flags_stretch_ratio = 0.5
+mouse_filter = 2
+
+[node name="TextureRect_Image" type="TextureRect" parent="Item7/Control_Image"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -180.0
+offset_right = 180.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("10_8gymy")
+expand_mode = 1
+stretch_mode = 4

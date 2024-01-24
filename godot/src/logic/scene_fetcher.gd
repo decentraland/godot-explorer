@@ -2,6 +2,7 @@ class_name SceneFetcher
 extends Node
 
 signal parcels_processed(parcel_filled, empty)
+signal report_scene_load(done: bool, is_new_loading: bool)
 
 const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_0.tscn"),
@@ -73,8 +74,13 @@ func set_scene_radius(value: int):
 func _process(_dt):
 	scene_entity_coordinator.update()
 	if scene_entity_coordinator.get_version() != last_version_updated:
-		await _async_on_desired_scene_changed()
 		last_version_updated = scene_entity_coordinator.get_version()
+		await _async_on_desired_scene_changed()
+
+
+func is_scene_loaded(x: int, z: int) -> bool:
+	var parcel_str = "%d,%d" % [x, z]
+	return get_parcel_scene_id(x, z) != -1 or loaded_empty_scenes.has(parcel_str)
 
 
 func get_parcel_scene_id(x: int, z: int) -> int:
@@ -93,14 +99,26 @@ func _async_on_desired_scene_changed():
 	var loadable_scenes = d.get("loadable_scenes", [])
 	var keep_alive_scenes = d.get("keep_alive_scenes", [])
 	var empty_parcels = d.get("empty_parcels", [])
+
+	# Report new load, when I dont have scenes loaded, and there are a lot of new scenes...
+	var new_loading = loaded_scenes.is_empty() and not loadable_scenes.is_empty()
+
+	var loading_promises: Array = []
 	for scene_id in loadable_scenes:
 		if not loaded_scenes.has(scene_id):
 			var dict = scene_entity_coordinator.get_scene_dict(scene_id)
 			if dict.size() > 0:
 				dict["metadata"] = JSON.parse_string(dict.metadata)
-				await async_load_scene(scene_id, dict)
+				loading_promises.push_back(async_load_scene.bind(scene_id, dict))
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")
+		else:
+			# When we already have loaded the scene...
+			new_loading = false
+
+	report_scene_load.emit(false, new_loading)
+
+	await PromiseUtils.async_all(loading_promises)
 
 	for scene_id in loaded_scenes.keys():
 		if not loadable_scenes.has(scene_id) and not keep_alive_scenes.has(scene_id):
@@ -128,6 +146,8 @@ func _async_on_desired_scene_changed():
 	var parcel_filled = []
 	for scene_id in loaded_scenes:
 		parcel_filled.append_array(loaded_scenes[scene_id].parcels)
+
+	report_scene_load.emit(true, new_loading)
 
 	parcels_processed.emit(parcel_filled, empty_parcels_coords)
 
@@ -201,7 +221,7 @@ func update_position(new_position: Vector2i) -> void:
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
 
-func async_load_scene(scene_entity_id: String, entity: Dictionary):
+func async_load_scene(scene_entity_id: String, entity: Dictionary) -> Promise:
 	var metadata = entity.get("metadata", {})
 	var is_global = entity.get("is_global", false)
 
@@ -216,7 +236,7 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary):
 		"entity": entity,
 		"scene_number_id": -1,
 		"parcels": parcels,
-		"is_global": is_global
+		"is_global": is_global,
 	}
 
 	var is_sdk7 = metadata.get("runtimeVersion", null) == "7"
@@ -243,7 +263,7 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary):
 						" fail getting the script code content, error message: ",
 						res.get_error()
 					)
-					return false
+					return PromiseUtils.resolved(false)
 	else:
 		local_main_js_path = String(adaptation_layer_js_local_path)
 		if not FileAccess.file_exists(local_main_js_path):
@@ -259,7 +279,7 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary):
 					" fail getting the adaptation layer content, error message: ",
 					res.get_error()
 				)
-				return false
+				return PromiseUtils.resolved(false)
 
 	var main_crdt_file_hash = entity.get("content", {}).get("main.crdt", null)
 	var local_main_crdt_path = ""
@@ -278,22 +298,14 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary):
 				" fail getting the main crdt content, error message: ",
 				res.get_error()
 			)
-			return false
+			return PromiseUtils.resolved(false)
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):
-		return false
+		return PromiseUtils.resolved(false)
 
-	if is_sdk7:
-		_on_try_spawn_scene(
-			loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path
-		)
-	else:
-		# SDK6 scenes don't have crdt file, and if they'd have, there is no mechanism to make a clean spawn of both
-		_on_try_spawn_scene(
-			loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path
-		)
-	return true
+	_on_try_spawn_scene(loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path)
+	return PromiseUtils.resolved(true)
 
 
 func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):

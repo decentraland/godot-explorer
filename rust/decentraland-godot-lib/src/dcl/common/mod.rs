@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::godot_classes::JsonGodotClass;
 
+pub mod string;
+
 pub struct SceneJsFileContent(pub String);
 pub struct SceneMainCrdtFileContent(pub Vec<u8>);
 

@@ -240,6 +240,80 @@
                     }
                 }
             }
+        },
+        {
+            "entity": "mati_avatar_test",
+            "destPath": "output/mati_avatar_test.png",
+            "width": 256,
+            "height": 512,
+            "faceDestPath": "output/mati_avatar_test_face.png",
+            "faceWidth": 256,
+            "faceHeight": 256,
+            "avatar": {
+                "bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+                "wearables": [
+                    "urn:decentraland:off-chain:base-avatars:eyebrows_00",
+                    "urn:decentraland:off-chain:base-avatars:eyes_06",
+                    "urn:decentraland:off-chain:base-avatars:mouth_03",
+                    "urn:decentraland:off-chain:base-avatars:beard",
+                    "urn:decentraland:off-chain:base-avatars:short_hair",
+                    "urn:decentraland:matic:collections-v2:0xf1483f042614105cb943d3dd67157256cd003028:6:631873750011343120187508166102022593913370572403294667525865865225",
+                    "urn:decentraland:matic:collections-v2:0xd50191baed16bc532feb9d499fdaa805fe01d3ff:8:842498333348457493583344221469363458551160763204392890034487820292",
+                    "urn:decentraland:matic:collections-v2:0xf1483f042614105cb943d3dd67157256cd003028:16:1684996666696914987166688442938726917102321526408785780068975640582",
+                    "urn:decentraland:matic:collections-v2:0xd05723401566e9d9b7a728bd4dbe07584cf8ac76:5:526561458342785933489590138418352161594475477002745556271554887855"
+                ],
+                "forceRender": [],
+                "emotes": [
+                    {
+                        "slot": 0,
+                        "urn": "handsair"
+                    },
+                    {
+                        "slot": 6,
+                        "urn": "money"
+                    },
+                    {
+                        "slot": 7,
+                        "urn": "kiss"
+                    },
+                    {
+                        "slot": 8,
+                        "urn": "tik"
+                    },
+                    {
+                        "slot": 9,
+                        "urn": "shrug"
+                    }
+                ],
+                "snapshots": {
+                    "body": "https://peer-ec1.decentraland.org/content/contents/bafkreidhmzu5wwcssv3f65wfs7swnncalwarfqavsfifxvclgv32ku3zdu",
+                    "face256": "https://peer-ec1.decentraland.org/content/contents/bafkreigea3qbj56h6erxvt524hah2mlxnvqkpazjelcotktxldecvraohq"
+                },
+                "eyes": {
+                    "color": {
+                        "r": 0.22265625,
+                        "g": 0.484375,
+                        "b": 0.69140625,
+                        "a": 1
+                    }
+                },
+                "hair": {
+                    "color": {
+                        "r": 0.98046875,
+                        "g": 0.82421875,
+                        "b": 0.5078125,
+                        "a": 1
+                    }
+                },
+                "skin": {
+                    "color": {
+                        "r": 0.94921875,
+                        "g": 0.76171875,
+                        "b": 0.6484375,
+                        "a": 1
+                    }
+                }
+            }
         }
     ]
 }

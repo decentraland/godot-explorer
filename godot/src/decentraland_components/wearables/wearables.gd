@@ -430,8 +430,9 @@ static func get_replaces_list(wearable: Dictionary, body_shape_id: String) -> Pa
 	return representation.get("overrideHides", [])
 
 
-static func get_hides_list(wearable: Dictionary, body_shape_id: String) -> PackedStringArray:
-	var result: PackedStringArray = []
+static func get_hides_list(
+	wearable: Dictionary, wearable_category: String, body_shape_id: String
+) -> PackedStringArray:
 	var representation = get_representation(wearable, body_shape_id)
 
 	var hides: PackedStringArray = []
@@ -453,12 +454,27 @@ static func get_hides_list(wearable: Dictionary, body_shape_id: String) -> Packe
 
 	hides.append_array(get_replaces_list(wearable, body_shape_id))
 
+	if wearable_category == Categories.SKIN:
+		hides.append_array(
+			[
+				"head",
+				"hair",
+				"facial_hair",
+				"mouth",
+				"eyebrows",
+				"eyes",
+				"upper_body",
+				"lower_body",
+				"feet"
+			]
+		)
+
 	# Safeguard the wearable can not hide itself
-	var index := hides.find(wearable.get("category", ""))
+	var index := hides.find(wearable_category)
 	if index != -1:
 		hides.remove_at(index)
 
-	return result
+	return hides
 
 
 # @returns Empty if there is no representation
@@ -497,7 +513,7 @@ static func compose_hidden_categories(
 		if wearable == null:
 			continue
 
-		var current_hides_list = get_hides_list(wearable, body_shape_id)
+		var current_hides_list = get_hides_list(wearable, priority_category, body_shape_id)
 		if current_hides_list.is_empty():
 			continue
 
@@ -511,7 +527,8 @@ static func compose_hidden_categories(
 			if force_render.has(category_to_hide):
 				continue
 
-			result.push_back(category_to_hide)
+			if not result.has(category_to_hide):
+				result.push_back(category_to_hide)
 
 	return result
 

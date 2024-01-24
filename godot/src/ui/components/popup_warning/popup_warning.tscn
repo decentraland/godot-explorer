@@ -1,0 +1,80 @@
+[gd_scene load_steps=5 format=3 uid="uid://jinshx5k4hax"]
+
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_o3tuu"]
+[ext_resource type="Texture2D" uid="uid://c2b5kvxnhtgok" path="res://assets/themes/dark_dcl_theme/icons/Delay.svg" id="2_7p6xw"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vtq8r"]
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_82asl"]
+
+[node name="PopupWarning" type="Panel"]
+offset_right = 560.0
+offset_bottom = 76.0
+theme = ExtResource("1_o3tuu")
+theme_override_styles/panel = SubResource("StyleBoxFlat_vtq8r")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 13
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 13
+theme_override_constants/margin_bottom = 20
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="HBoxContainer_Title" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
+layout_mode = 2
+texture = ExtResource("2_7p6xw")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
+layout_mode = 2
+text = "A Little Longer Than Expected..."
+
+[node name="Label2" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "You can try to reload the experience or run it as it is."
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 10
+size_flags_vertical = 4
+alignment = 2
+
+[node name="Accept" type="Button" parent="MarginContainer/HBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme = ExtResource("1_o3tuu")
+theme_type_variation = &"RedButton"
+text = "RELOAD
+"
+
+[node name="VSeparator" type="VSeparator" parent="MarginContainer/HBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_82asl")
+
+[node name="Reject" type="Button" parent="MarginContainer/HBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"GrayButton"
+text = "RUN ANYWAY"
