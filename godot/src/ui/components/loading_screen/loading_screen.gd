@@ -173,5 +173,5 @@ func _on_color_rect_header_gui_input(event):
 		if event.pressed:
 			var elapsed_time = Time.get_ticks_msec() - last_hide_click
 			if elapsed_time <= 500:
-				self.hide()
+				loading_screen_progress_logic.hide_loading_screen()
 			last_hide_click = Time.get_ticks_msec()
