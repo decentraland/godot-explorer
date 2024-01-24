@@ -10,8 +10,8 @@ use godot::{
 use tokio::sync::Semaphore;
 
 use crate::{
-    content::content_mapping::DclContentMappingAndUrl, godot_classes::promise::Promise,
-    http_request::http_queue_requester::HttpQueueRequester,
+    content::content_mapping::DclContentMappingAndUrl, dcl::common::string::FindNthChar,
+    godot_classes::promise::Promise, http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
 };
 
@@ -358,7 +358,12 @@ impl ContentProvider {
         let mut wearable_to_fetch = HashSet::new();
 
         for wearable in wearables.iter_shared() {
-            let wearable_id = wearable.to_string().to_lowercase();
+            let wearable_id = wearable.to_string();
+            let token_id_pos = wearable_id
+                .find_nth_char(6, ':')
+                .unwrap_or(wearable_id.len());
+            let wearable_id = wearable_id[0..token_id_pos].to_lowercase();
+
             if let Some(entry) = self.cached.get(&wearable_id) {
                 promise_ids.insert(entry.promise.instance_id());
             } else {
@@ -412,7 +417,10 @@ impl ContentProvider {
 
     #[func]
     pub fn get_wearable(&mut self, id: GString) -> Variant {
-        let id = id.to_string().to_lowercase();
+        let id = id.to_string();
+        let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
+        let id = id[0..token_id_pos].to_lowercase();
+
         if let Some(entry) = self.cached.get(&id) {
             if let Ok(results) = entry.promise.bind().get_data().try_to::<Dictionary>() {
                 if let Some(wearable) = results.get(id) {
