@@ -74,9 +74,6 @@ pub fn _process_scene(
     loop {
         let before_compute_update = std::time::Instant::now();
 
-        let this_stage_end_us =
-            ((std::time::Instant::now() - *ref_time).as_micros() as i64 + 1000).min(end_time_us);
-
         let should_break = match scene.current_dirty.update_state {
             SceneUpdateState::None => {
                 let engine_info_component =
@@ -97,7 +94,7 @@ pub fn _process_scene(
                 // fix: if the scene is loading, we need to wait until it finishes before spawn the next tick
                 // tick 0 => onStart() => tick=1 => first onUpdate() => tick=2 => second onUpdate() => tick= 3
                 if tick_number < 3 && !scene.gltf_loading.is_empty() {
-                    sync_gltf_loading_state(scene, crdt_state, ref_time, this_stage_end_us);
+                    sync_gltf_loading_state(scene, crdt_state, ref_time, end_time_us);
                     return false;
                 }
 
@@ -163,14 +160,14 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::TransformAndParent => {
-                !update_transform_and_parent(scene, crdt_state, ref_time, this_stage_end_us)
+                !update_transform_and_parent(scene, crdt_state, ref_time, end_time_us)
             }
             SceneUpdateState::VisibilityComponent => {
                 update_visibility(scene, crdt_state);
                 false
             }
             SceneUpdateState::MeshRenderer => {
-                !update_mesh_renderer(scene, crdt_state, ref_time, this_stage_end_us)
+                !update_mesh_renderer(scene, crdt_state, ref_time, end_time_us)
             }
             SceneUpdateState::ScenePointerEvents => {
                 update_scene_pointer_events(scene, crdt_state);
@@ -193,10 +190,10 @@ pub fn _process_scene(
                 false
             }
             SceneUpdateState::GltfContainer => {
-                !update_gltf_container(scene, crdt_state, ref_time, this_stage_end_us)
+                !update_gltf_container(scene, crdt_state, ref_time, end_time_us)
             }
             SceneUpdateState::SyncGltfContainer => {
-                !sync_gltf_loading_state(scene, crdt_state, ref_time, this_stage_end_us)
+                !sync_gltf_loading_state(scene, crdt_state, ref_time, end_time_us)
             }
             SceneUpdateState::NftShape => {
                 update_nft_shape(scene, crdt_state);
