@@ -12,9 +12,200 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{AnimatableBody3D, BoxShape3D, CollisionShape3D, CylinderShape3D, SphereShape3D},
+    engine::{
+        mesh::PrimitiveType, AnimatableBody3D, ArrayMesh, BoxShape3D, CollisionShape3D,
+        CylinderShape3D, SphereShape3D,
+    },
     prelude::*,
 };
+use num_traits::Zero;
+
+fn build_cylinder_arrays(radius_top: f32, radius_bottom: f32) -> VariantArray {
+    let mut uvs_array = PackedVector2Array::new();
+    let mut vertices_array = PackedVector3Array::new();
+    let mut normals_array = PackedVector3Array::new();
+    let mut triangles_array = PackedInt32Array::new();
+    let num_vertices = 10;
+    let length = 1.0;
+    let offset_pos = Vector3::new(0.0, -0.5, 0.0);
+    let num_vertices_plus_one = num_vertices + 1;
+
+    vertices_array.resize(2 * num_vertices_plus_one + (num_vertices + 1) + (num_vertices + 1));
+    normals_array.resize(2 * num_vertices_plus_one + (num_vertices + 1) + (num_vertices + 1));
+    uvs_array.resize(2 * num_vertices_plus_one + (num_vertices + 1) + (num_vertices + 1));
+
+    let uvs = uvs_array.as_mut_slice();
+    let vertices = vertices_array.as_mut_slice();
+    let normals = normals_array.as_mut_slice();
+
+    let slope = ((radius_bottom - radius_top) / length).atan();
+    let slope_sin = -slope.sin();
+    let slope_cos = slope.sin();
+
+    for i in 0..num_vertices {
+        let angle = 2.0 * std::f32::consts::PI * i as f32 / num_vertices as f32;
+        let angle_sin = -angle.sin();
+        let angle_cos = angle.cos();
+        let angle_half = 2.0 * std::f32::consts::PI * (i as f32 + 0.5) / num_vertices as f32;
+        let angle_half_sin = -angle_half.sin();
+        let angle_half_cos = angle_half.cos();
+
+        vertices[i] =
+            Vector3::new(radius_top * angle_cos, length, radius_top * angle_sin) + offset_pos;
+        vertices[i + num_vertices_plus_one] =
+            Vector3::new(radius_bottom * angle_cos, 0.0, radius_bottom * angle_sin) + offset_pos;
+
+        if radius_top.is_zero() {
+            normals[i] = Vector3::new(
+                angle_half_cos * slope_cos,
+                -slope_sin,
+                angle_half_sin * slope_cos,
+            );
+        } else {
+            normals[i] = Vector3::new(angle_cos * slope_cos, -slope_sin, angle_sin * slope_cos);
+        }
+
+        if radius_bottom.is_zero() {
+            normals[i + num_vertices_plus_one] = Vector3::new(
+                angle_half_cos * slope_cos,
+                -slope_sin,
+                angle_half_sin * slope_cos,
+            );
+        } else {
+            normals[i + num_vertices_plus_one] =
+                Vector3::new(angle_cos * slope_cos, -slope_sin, angle_sin * slope_cos);
+        }
+
+        uvs[i] = Vector2::new(1.0 - 1.0 * i as f32 / num_vertices as f32, 1.0);
+        uvs[i + num_vertices_plus_one] =
+            Vector2::new(1.0 - 1.0 * i as f32 / num_vertices as f32, 0.0);
+    }
+
+    vertices[num_vertices] = vertices[0];
+    vertices[num_vertices + num_vertices_plus_one] = vertices[num_vertices_plus_one];
+    uvs[num_vertices] = Vector2::new(1.0 - 1.0 * num_vertices as f32 / num_vertices as f32, 1.0);
+    uvs[num_vertices + num_vertices_plus_one] =
+        Vector2::new(1.0 - 1.0 * num_vertices as f32 / num_vertices as f32, 0.0);
+    normals[num_vertices] = normals[0];
+    normals[num_vertices + num_vertices_plus_one] = normals[num_vertices_plus_one];
+
+    let cover_top_index_start = 2 * num_vertices_plus_one;
+    let cover_top_index_end = 2 * num_vertices_plus_one + num_vertices;
+    for i in 0..num_vertices {
+        let angle = 2.0 * std::f32::consts::PI * i as f32 / num_vertices as f32;
+        let angle_sin = -angle.sin();
+        let angle_cos = angle.cos();
+
+        vertices[cover_top_index_start + i] =
+            Vector3::new(radius_top * angle_cos, length, radius_top * angle_sin) + offset_pos;
+        normals[cover_top_index_start + i] = Vector3::new(0.0, 1.0, 0.0);
+        uvs[cover_top_index_start + i] = Vector2::new(angle_cos / 2.0 + 0.5, angle_sin / 2.0 + 0.5);
+    }
+
+    vertices[cover_top_index_start + num_vertices] = Vector3::new(0.0, length, 0.0) + offset_pos;
+    normals[cover_top_index_start + num_vertices] = Vector3::new(0.0, 1.0, 0.0);
+    uvs[cover_top_index_start + num_vertices] = Vector2::new(0.5, 0.5);
+
+    let cover_bottom_index_start = cover_top_index_start + num_vertices + 1;
+    let cover_bottom_index_end = cover_bottom_index_start + num_vertices;
+    for i in 0..num_vertices {
+        let angle = 2.0 * std::f32::consts::PI * i as f32 / num_vertices as f32;
+        let angle_sin = -angle.sin();
+        let angle_cos = angle.cos();
+
+        vertices[cover_bottom_index_start + i] =
+            Vector3::new(radius_bottom * angle_cos, 0.0, radius_bottom * angle_sin) + offset_pos;
+        normals[cover_bottom_index_start + i] = Vector3::new(0.0, -1.0, 0.0);
+        uvs[cover_bottom_index_start + i] =
+            Vector2::new(angle_cos / 2.0 + 0.5, angle_sin / 2.0 + 0.5);
+    }
+
+    vertices[cover_bottom_index_start + num_vertices] = Vector3::new(0.0, 0.0, 0.0) + offset_pos;
+    normals[cover_bottom_index_start + num_vertices] = Vector3::new(0.0, -1.0, 0.0);
+    uvs[cover_bottom_index_start + num_vertices] = Vector2::new(0.5, 0.5);
+
+    if radius_top.is_zero() || radius_bottom.is_zero() {
+        triangles_array.resize(num_vertices_plus_one * 3 + num_vertices * 3 + num_vertices * 3);
+    } else {
+        triangles_array.resize(num_vertices_plus_one * 6 + num_vertices * 3 + num_vertices * 3);
+    }
+    let triangles = triangles_array.as_mut_slice();
+
+    let mut cnt = 0;
+    if radius_top.is_zero() {
+        for i in 0..num_vertices {
+            triangles[cnt] = (i + num_vertices_plus_one) as i32;
+            cnt += 1;
+            triangles[cnt] = (i) as i32;
+            cnt += 1;
+            triangles[cnt] = (i + 1 + num_vertices_plus_one) as i32;
+            cnt += 1;
+        }
+    } else if radius_bottom.is_zero() {
+        for i in 0..num_vertices {
+            triangles[cnt] = (i) as i32;
+            cnt += 1;
+            triangles[cnt] = (i + 1) as i32;
+            cnt += 1;
+            triangles[cnt] = (i + num_vertices_plus_one) as i32;
+            cnt += 1;
+        }
+    } else {
+        for i in 0..num_vertices {
+            let ip1 = i + 1;
+            triangles[cnt] = (i) as i32;
+            cnt += 1;
+            triangles[cnt] = (ip1) as i32;
+            cnt += 1;
+            triangles[cnt] = (i + num_vertices_plus_one) as i32;
+            cnt += 1;
+
+            triangles[cnt] = (ip1 + num_vertices_plus_one) as i32;
+            cnt += 1;
+            triangles[cnt] = (i + num_vertices_plus_one) as i32;
+            cnt += 1;
+            triangles[cnt] = (ip1) as i32;
+            cnt += 1;
+        }
+    }
+
+    for i in 0..num_vertices {
+        let mut next = cover_top_index_start + i + 1;
+
+        if next == cover_top_index_end {
+            next = cover_top_index_start
+        }
+
+        triangles[cnt] = (next) as i32;
+        cnt += 1;
+        triangles[cnt] = (cover_top_index_start + i) as i32;
+        cnt += 1;
+        triangles[cnt] = (cover_top_index_end) as i32;
+        cnt += 1;
+    }
+
+    for i in 0..num_vertices {
+        let mut next = cover_bottom_index_start + i + 1;
+        if next == cover_bottom_index_end {
+            next = cover_bottom_index_start;
+        }
+
+        triangles[cnt] = (cover_bottom_index_end) as i32;
+        cnt += 1;
+        triangles[cnt] = (cover_bottom_index_start + i) as i32;
+        cnt += 1;
+        triangles[cnt] = (next) as i32;
+        cnt += 1;
+    }
+
+    let mut ret = VariantArray::new();
+    ret.resize(13);
+    ret.set(0, vertices_array.to_variant());
+    ret.set(1, normals_array.to_variant());
+    ret.set(4, uvs_array.to_variant());
+    ret.set(12, triangles_array.to_variant());
+    ret
+}
 
 pub fn create_or_update_mesh(
     animatable_body_3d: &mut Gd<AnimatableBody3D>,
@@ -58,19 +249,29 @@ pub fn create_or_update_mesh(
                 sphere_mesh.upcast()
             }
             pb_mesh_collider::Mesh::Cylinder(cylinder_mesh_value) => {
-                let mut cylinder_shape = match current_shape {
-                    Some(current_shape) => current_shape
-                        .try_cast::<CylinderShape3D>()
-                        .unwrap_or(CylinderShape3D::new()),
-                    None => CylinderShape3D::new(),
-                };
-                // TODO: top and bottom radius
-                let radius = (cylinder_mesh_value.radius_top.unwrap_or(0.5)
-                    + cylinder_mesh_value.radius_bottom.unwrap_or(0.5))
-                    * 0.5;
-                cylinder_shape.set_radius(radius);
-                cylinder_shape.set_height(1.0);
-                cylinder_shape.upcast()
+                let mut array_mesh = ArrayMesh::new();
+                let arrays = build_cylinder_arrays(
+                    cylinder_mesh_value.radius_top.unwrap_or(0.5),
+                    cylinder_mesh_value.radius_bottom.unwrap_or(0.5),
+                );
+                array_mesh.add_surface_from_arrays(PrimitiveType::PRIMITIVE_TRIANGLES, arrays);
+                if let Some(new_shape) = array_mesh.create_trimesh_shape() {
+                    new_shape.upcast()
+                } else {
+                    let mut cylinder_shape = match current_shape {
+                        Some(current_shape) => current_shape
+                            .try_cast::<CylinderShape3D>()
+                            .unwrap_or(CylinderShape3D::new()),
+                        None => CylinderShape3D::new(),
+                    };
+                    // TODO: top and bottom radius
+                    let radius = (cylinder_mesh_value.radius_top.unwrap_or(0.5)
+                        + cylinder_mesh_value.radius_bottom.unwrap_or(0.5))
+                        * 0.5;
+                    cylinder_shape.set_radius(radius);
+                    cylinder_shape.set_height(1.0);
+                    cylinder_shape.upcast()
+                }
             }
             pb_mesh_collider::Mesh::Plane(_plane_mesh) => {
                 let mut box_shape = match current_shape {

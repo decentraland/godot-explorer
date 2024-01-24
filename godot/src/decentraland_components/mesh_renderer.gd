@@ -49,16 +49,8 @@ func set_plane(uvs: Array):
 
 
 func set_cylinder(top_radius: float, bottom_radius: float):
-#	if current_type != MeshRendererPrimitiveType.MRPT_CYLINDER:
-#		self.mesh = CylinderMesh.new()
-#		self.mesh.set_height(1.0)
-#		current_type = MeshRendererPrimitiveType.MRPT_CYLINDER
-#
-#	self.mesh.set_top_radius(top_radius)
-#	self.mesh.set_bottom_radius(bottom_radius)
-
-	if current_type != MeshRendererPrimitiveType.MRPT_PLANE:
-		current_type = MeshRendererPrimitiveType.MRPT_PLANE
+	if current_type != MeshRendererPrimitiveType.MRPT_CYLINDER:
+		current_type = MeshRendererPrimitiveType.MRPT_CYLINDER
 		self.mesh = ArrayMesh.new()
 	else:
 		self.mesh.clear_surfaces()
