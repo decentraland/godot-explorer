@@ -12,7 +12,7 @@ use crate::{
             SceneComponentId,
         },
         crdt::{
-            last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
+            last_write_wins::LastWriteWinsComponentOperation, InsertIfNotExists, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
     },
@@ -263,24 +263,18 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             .get_transform_mut()
             .put(*entity, Some(new_transform));
 
-        // NOTE: this is commented out because the put already sets the component as dirty
-        //      the current dirty is used to update the scene, and the put is used to update the crdt state
-        //      the current_dirty for Transform was used before and is going to be discarded soon
-
         // set the component as dirty for further processing
-        // if let Some(dirty) = scene
-        //     .current_dirty
-        //     .lww_components
-        //     .get_mut(&SceneComponentId::TRANSFORM)
-        // {
-        //     dirty.insert_if_not_exists(*entity);
-        // } else {
-        //     let mut new_dirty = Vec::new();
-        //     new_dirty.push(*entity);
-        //     scene
-        //         .current_dirty
-        //         .lww_components
-        //         .insert(SceneComponentId::TRANSFORM, new_dirty.clone());
-        // }
+        if let Some(dirty) = scene
+            .current_dirty
+            .lww_components
+            .get_mut(&SceneComponentId::TRANSFORM)
+        {
+            dirty.insert_if_not_exists(*entity);
+        } else {
+            scene
+                .current_dirty
+                .lww_components
+                .insert(SceneComponentId::TRANSFORM, vec![*entity]);
+        }
     }
 }
