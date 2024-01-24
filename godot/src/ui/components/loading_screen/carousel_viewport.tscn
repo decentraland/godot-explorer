@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3 uid="uid://blang7av7p2rm"]
+
+[ext_resource type="PackedScene" uid="uid://bykgikku3dda2" path="res://src/ui/components/loading_screen/carousel.tscn" id="2_0d6ud"]
+
+[node name="CarouselViewport" type="SubViewportContainer"]
+custom_minimum_size = Vector2(946, 546)
+offset_right = 946.0
+offset_bottom = 546.0
+
+[node name="SubViewport" type="SubViewport" parent="."]
+transparent_bg = true
+handle_input_locally = false
+gui_disable_input = true
+size = Vector2i(946, 546)
+render_target_update_mode = 4
+
+[node name="Carousel" parent="SubViewport" instance=ExtResource("2_0d6ud")]

@@ -39,4 +39,9 @@ impl DclSceneNode {
     fn is_global(&self) -> bool {
         self.is_global
     }
+
+    #[func]
+    fn get_last_tick_number(&self) -> i32 {
+        self.last_tick_number
+    }
 }
