@@ -84,14 +84,14 @@ func _ready():
 	virtual_joystick_orig_position = virtual_joystick.get_position()
 	panel_chat.hide()
 
-	if Global.is_mobile:
+	if Global.is_mobile():
 		mobile_ui.show()
 		label_crosshair.show()
 	else:
 		mobile_ui.hide()
 
 	var sky = null
-	if Global.is_mobile:
+	if Global.is_mobile():
 		sky = load("res://assets/sky/sky_basic_without_glow.tscn").instantiate()
 		add_child(sky)
 	elif Global.testing_scene_mode:
@@ -202,7 +202,7 @@ func _on_check_button_toggled(button_pressed):
 
 
 func _unhandled_input(event):
-	if not Global.is_mobile:
+	if not Global.is_mobile():
 		if event is InputEventMouseButton and event.pressed:
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 				capture_mouse()

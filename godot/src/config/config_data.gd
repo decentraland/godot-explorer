@@ -114,7 +114,7 @@ func load_from_default():
 	self.scene_radius = 4
 	self.limit_fps = 0
 
-	if Global.is_mobile:
+	if Global.is_mobile():
 		self.skybox = 0
 	else:
 		self.skybox = 1

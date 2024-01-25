@@ -7,10 +7,10 @@ func _ready() -> void:
 	var window_size: Vector2i = DisplayServer.window_get_size()
 
 	# BASE MARGINS
-	var top: int = 8 if Global.is_mobile else 0
-	var left: int = 8 if Global.is_mobile else 0
-	var bottom: int = 8 if Global.is_mobile else 0
-	var right: int = 8 if Global.is_mobile else 0
+	var top: int = 8 if Global.is_mobile() else 0
+	var left: int = 8 if Global.is_mobile() else 0
+	var bottom: int = 8 if Global.is_mobile() else 0
+	var right: int = 8 if Global.is_mobile() else 0
 
 	if window_size.x >= safe_area.size.x and window_size.y >= safe_area.size.y:
 		var x_factor: float = size.x / window_size.x

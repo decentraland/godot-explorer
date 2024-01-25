@@ -19,7 +19,7 @@ func start():
 	else:
 		print("Running from Server")
 
-	if Global.is_mobile:
+	if Global.is_mobile():
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 	self._start.call_deferred()
