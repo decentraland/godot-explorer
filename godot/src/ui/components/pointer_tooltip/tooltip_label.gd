@@ -52,7 +52,7 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 				key = icon_interactive_pointer if Global.is_mobile() else char(event.unicode).to_upper()
 			elif event is InputEventMouseButton:
 				if event.button_index == 1:
-					key = icon_interactive_pointer if Global.is_mobile() else icon_left_click
+					key = icon_left_click
 
 		if key != null:
 			show()
