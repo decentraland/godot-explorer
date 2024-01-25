@@ -913,8 +913,10 @@ impl INode for SceneManager {
                                 InputAction::from_i32(*info.button.as_ref().unwrap_or(&0))
                                     .unwrap_or(InputAction::IaAny);
 
-                            let is_pet_up = pointer_event.event_type == PointerEventType::PetUp as i32;
-                            let is_pet_down = pointer_event.event_type == PointerEventType::PetDown as i32;
+                            let is_pet_up =
+                                pointer_event.event_type == PointerEventType::PetUp as i32;
+                            let is_pet_down =
+                                pointer_event.event_type == PointerEventType::PetDown as i32;
                             if is_pet_up || is_pet_down {
                                 let text = if let Some(text) = info.hover_text.as_ref() {
                                     GString::from(text)
@@ -936,18 +938,15 @@ impl INode for SceneManager {
                                 });
 
                                 let exists = dict.is_some();
-                                let mut dict = dict.unwrap_or_else(Dictionary::new); 
+                                let mut dict = dict.unwrap_or_else(Dictionary::new);
 
                                 if is_pet_down {
                                     dict.set(StringName::from("text_pet_down"), text);
                                 } else if is_pet_up {
                                     dict.set(StringName::from("text_pet_up"), text);
                                 }
-                                
-                                dict.set(
-                                    StringName::from("action"),
-                                    input_action_gstr,
-                                );
+
+                                dict.set(StringName::from("action"), input_action_gstr);
 
                                 if !exists {
                                     tooltips.push(dict.to_variant());

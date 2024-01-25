@@ -34,8 +34,8 @@ var dcl_android_plugin
 func _ready():
 	# First
 	_set_is_mobile(OS.has_feature("mobile"))
-	_set_is_mobile(true) # Test
-	
+	_set_is_mobile(true)  # Test
+
 	# Setup
 	http_requester = RustHttpQueueRequester.new()
 	animation_importer = AnimationImporter.new()

@@ -1,6 +1,15 @@
 extends PanelContainer
 
+const BG_COLOR_NORMAL: String = "#00000080"
+const BG_COLOR_PRESSED: String = "#44444480"
+
 var action_to_trigger: String = ""
+
+var text_down := ""
+var text_up := ""
+var last_state_pressed := false
+
+var stylebox: StyleBox
 
 @onready var label_action = %Label_Action
 @onready var texture_rect_action_icon = %TextureRect_ActionIcon
@@ -12,21 +21,11 @@ var action_to_trigger: String = ""
 
 @onready var panel_action = $MarginContainer/HBoxContainer/PanelContainer
 
-var theme_bg
-
-var text_down := ""
-var text_up := ""
-var last_state_pressed := false
-
-const BG_COLOR_NORMAL: String = "#00000080"
-const BG_COLOR_PRESSED: String = "#44444480"
-
-var stylebox: StyleBox
 
 func _ready():
 	stylebox = self.get_theme_stylebox("panel").duplicate()
 	add_theme_stylebox_override("panel", stylebox)
-	
+
 	set_bg_color(BG_COLOR_NORMAL)
 	if Global.is_mobile():
 		self.gui_input.connect(self.mobile_on_panel_container_gui_input)
@@ -49,7 +48,11 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 		elif index != -1:
 			var event = InputMap.action_get_events(InputMap.get_actions()[index])[0]
 			if event is InputEventKey:
-				key = icon_interactive_pointer if Global.is_mobile() else char(event.unicode).to_upper()
+				key = (
+					icon_interactive_pointer
+					if Global.is_mobile()
+					else char(event.unicode).to_upper()
+				)
 			elif event is InputEventMouseButton:
 				if event.button_index == 1:
 					key = icon_left_click
@@ -68,18 +71,20 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 			action_to_trigger = ""
 			printerr("Action doesn't exist ", action)
 
+
 func set_action_icon(icon):
 	texture_rect_action_icon.show()
 	label_action.hide()
 	texture_rect_action_icon.texture = icon
-	
+
+
 func set_action_text(text: String):
 	label_action.show()
 	texture_rect_action_icon.hide()
 	label_action.text = text
 
 
-func _physics_process(delta):
+func _physics_process(_delta):
 	var new_pressed = Input.is_action_pressed(action_to_trigger)
 	if last_state_pressed != new_pressed:
 		set_bg_color(BG_COLOR_PRESSED if new_pressed else BG_COLOR_NORMAL)
@@ -87,8 +92,9 @@ func _physics_process(delta):
 		label_text.text = text_up if new_pressed else text_down
 		last_state_pressed = new_pressed
 
+
 func mobile_on_panel_container_gui_input(event):
-	if event is InputEventScreenTouch:	
+	if event is InputEventScreenTouch:
 		if action_to_trigger.is_empty():
 			return
 		if event.pressed:

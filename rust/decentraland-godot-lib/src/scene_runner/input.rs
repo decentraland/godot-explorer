@@ -2,7 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use godot::{engine::input::MouseMode, prelude::*};
 
-use crate::{dcl::components::proto_components::sdk::components::common::InputAction, godot_classes::dcl_global::DclGlobal};
+use crate::{
+    dcl::components::proto_components::sdk::components::common::InputAction,
+    godot_classes::dcl_global::DclGlobal,
+};
 
 pub struct InputState {
     dcl_to_action: HashMap<InputAction, StringName>,
