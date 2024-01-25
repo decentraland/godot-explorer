@@ -181,19 +181,27 @@ impl DclUiBackground {
                     godot::engine::nine_patch_rect::AxisStretchMode::AXIS_STRETCH_MODE_STRETCH,
                 );
 
-                // TODO: BackgroundTextureMode::Stretch
+                if self.current_value.uvs.len() == 8 {
+                    let uvs = self.current_value.uvs.as_slice();
+                    let image_size = godot_texture.get_size();
 
-                // let image_size = godot_texture.get_size();
-                // if self.current_value.uvs.len() == 8 {
-                //     /// default=\[0,0,0,1,1,0,1,0\]: starting from bottom-left vertex clock-wise
-                //     let uvs = self.current_value.uvs.clone().as_slice();
-                //     let [x1, y1, x2, y2, x3, y3, x4, y4] = [uvs[0], uvs[1], uvs[2], uvs[3], uvs[4], uvs[5], uvs[6], uvs[7]];
+                    // default=\[0,0,0,1,1,0,1,0\]: starting from bottom-left vertex clock-wise
+                    let sx = uvs[0].min(uvs[4]).clamp(0.0, 1.0);
+                    let sw = uvs[0].max(uvs[4]).clamp(0.0, 1.0);
 
-                //     let mut rect = Rect2 {
-                //         position: Vector2 { x: 0.0, y: 0.0 },
-                //         size: Vector2 { x: 0.0, y: 0.0 },
-                //     };
-                // }
+                    let sy = (1.0 - uvs[3].min(uvs[1])).clamp(0.0, 1.0);
+                    let sh = (1.0 - uvs[3].max(uvs[1])).clamp(0.0, 1.0);
+
+                    let sx = sx * image_size.x;
+                    let sw = sw * image_size.x - sx;
+                    let sy = sy * image_size.y;
+                    let sh = sh * image_size.y - sy;
+
+                    self.base.set_region_rect(Rect2 {
+                        position: Vector2 { x: sx, y: sy },
+                        size: Vector2 { x: sw, y: sh },
+                    });
+                }
             }
         }
     }

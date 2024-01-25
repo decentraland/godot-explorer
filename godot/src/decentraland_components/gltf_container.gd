@@ -8,9 +8,6 @@ enum GltfContainerLoadingState {
 	FINISHED = 4,
 }
 
-var file_hash: String = ""
-var gltf_node = null
-
 
 func _ready():
 	self.async_load_gltf.call_deferred()
@@ -20,9 +17,7 @@ func async_load_gltf():
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
-	self.file_hash = content_mapping.get_hash(dcl_gltf_src)
-
-	if self.file_hash.is_empty():
+	if content_mapping.get_hash(dcl_gltf_src).is_empty():
 		dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND
 		return
 
@@ -50,26 +45,13 @@ func async_load_gltf():
 		printerr("Error on fetch gltf: ", res_instance.get_error())
 		return
 
-	self.async_deferred_add_child.call_deferred(res_instance)
+	dcl_pending_node = res_instance
 
 
-func _async_on_gltf_loaded():
-	var node = Global.content_provider.get_gltf_from_hash(file_hash)
-	if node == null:
-		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
-		return
+func async_deferred_add_child():
+	var new_gltf_node = dcl_pending_node
+	dcl_pending_node = null
 
-	var promise: Promise = Global.content_provider.instance_gltf_colliders(
-		node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
-	)
-
-	await PromiseUtils.async_awaiter(promise)
-
-	gltf_node = promise.get_data()
-	self.async_deferred_add_child.call_deferred(gltf_node)
-
-
-func async_deferred_add_child(new_gltf_node):
 	# Corner case, when the scene is unloaded before the gltf is loaded
 	if not is_inside_tree():
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
@@ -127,10 +109,10 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 		dcl_visible_cmask = visible_meshes_collision_mask
 		dcl_invisible_cmask = invisible_meshes_collision_mask
 
-		if gltf_node != null:
+		if get_child_count() > 0:
+			var gltf_node = get_child(0)
 			remove_child(gltf_node)
 			gltf_node.queue_free()
-			gltf_node = null
 
 		self.async_load_gltf.call_deferred()
 	else:
@@ -139,8 +121,8 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 				visible_meshes_collision_mask != dcl_visible_cmask
 				or invisible_meshes_collision_mask != dcl_invisible_cmask
 			)
-			and gltf_node != null
+			and get_child_count() > 0
 		):
 			dcl_visible_cmask = visible_meshes_collision_mask
 			dcl_invisible_cmask = invisible_meshes_collision_mask
-			update_mask_colliders(gltf_node)
+			update_mask_colliders(get_child(0))

@@ -90,6 +90,9 @@ pub struct SceneManager {
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
 pub static GLOBAL_TICK_NUMBER: AtomicU32 = AtomicU32::new(0);
 
+const MAX_TIME_PER_SCENE_TICK_US: i64 = 8333; // 50% of update time at 60fps
+const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tick_us (4 scenes per frame)
+
 #[godot_api]
 impl SceneManager {
     #[signal]
@@ -265,7 +268,7 @@ impl SceneManager {
         }
 
         let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
-        let end_time_us = start_time_us + 1000;
+        let end_time_us = start_time_us + MAX_TIME_PER_SCENE_TICK_US;
 
         self.total_time_seconds_time += delta as f32;
 
@@ -337,6 +340,9 @@ impl SceneManager {
             if scene.next_tick_us > current_time_us {
                 break;
             }
+            if (end_time_us - current_time_us) < MIN_TIME_TO_PROCESS_SCENE_US {
+                break;
+            }
 
             if let SceneState::Alive = scene.state {
                 if scene.dcl_scene.thread_join_handle.is_finished() {
@@ -357,12 +363,8 @@ impl SceneManager {
                     &self.begin_time,
                     &self.ui_canvas_information,
                 ) {
-                    current_time_us =
+                    scene.last_tick_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
-                    scene.last_tick_us = current_time_us;
-                    if current_time_us > end_time_us {
-                        break;
-                    }
                 }
             }
         }

@@ -35,7 +35,92 @@
 // }
 
 // declare function fetch(url: string, init?: RequestInit): Promise<Response>
+class Headers {
+    constructor(init = {}) {
+        this.headers = {};
 
+        if (init instanceof Headers) {
+            init.forEach((value, name) => {
+                this.append(name, value);
+            });
+        } else if (Array.isArray(init)) {
+            init.forEach(([name, value]) => {
+                this.append(name, value);
+            });
+        } else if (init && typeof init === 'object') {
+            Object.keys(init).forEach(name => {
+                this.append(name, init[name]);
+            });
+        }
+    }
+
+    append(name, value) {
+        name = name.toLowerCase();
+        if (!this.headers[name]) {
+            this.headers[name] = [];
+        }
+        this.headers[name].push(value);
+    }
+
+    delete(name) {
+        name = name.toLowerCase();
+        delete this.headers[name];
+    }
+
+    entries() {
+        const result = [];
+        this.forEach((value, name) => {
+            result.push([name, value]);
+        });
+        return result;
+    }
+
+    forEach(callback) {
+        for (const name in this.headers) {
+            if (this.headers.hasOwnProperty(name)) {
+                const values = this.headers[name];
+                name.split(',').forEach(callback.bind(null, values, name));
+            }
+        }
+    }
+
+    get(name) {
+        name = name.toLowerCase();
+        return this.headers[name] ? this.headers[name][0] : null;
+    }
+
+    getSetCookie() {
+        const setCookieHeaders = this.getAll('Set-Cookie');
+        return setCookieHeaders.map(header => header.split(';')[0]);
+    }
+
+    has(name) {
+        name = name.toLowerCase();
+        return !!this.headers[name];
+    }
+
+    keys() {
+        return Object.keys(this.headers);
+    }
+
+    set(name, value) {
+        name = name.toLowerCase();
+        this.headers[name] = [value];
+    }
+
+    values() {
+        const result = [];
+        this.forEach(value => {
+            result.push(value);
+        });
+        return result;
+    }
+
+    getAll(name) {
+        name = name.toLowerCase();
+        return this.headers[name] || [];
+    }
+}
 
 async function restrictedFetch(url, init) {
     const canUseFetch = true // TODO: this should be exposed from Deno.env
@@ -72,7 +157,8 @@ async function fetch(url, init) {
         reqMethod, url, reqHeaders, hasBody, body ?? '', reqRedirect, reqTimeout
     )
     const reqId = response._internal_req_id
-    console.log({ reqTimeout })
+
+    response.headers = new Headers(response.headers)
     // TODO: the headers object should be read-only
 
     Object.assign(response, {
