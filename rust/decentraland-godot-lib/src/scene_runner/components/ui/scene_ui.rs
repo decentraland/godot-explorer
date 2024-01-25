@@ -182,6 +182,8 @@ fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformatio
             x: layout.size.width,
             y: layout.size.height,
         });
+        let is_hidden = taffy.style(*key_node).unwrap().display == taffy::style::Display::None;
+        control.set_visible(!is_hidden);
     }
 }
 
