@@ -1,108 +1,24 @@
-[gd_scene load_steps=6 format=3 uid="uid://wuyfsip50bwb"]
+[gd_scene load_steps=4 format=3 uid="uid://wuyfsip50bwb"]
 
 [ext_resource type="Script" path="res://src/ui/components/wearable_button/wearable_button.gd" id="1_8llwr"]
-[ext_resource type="Texture2D" uid="uid://dh84266djh5rq" path="res://assets/wearable_categories/hair_icon.png" id="2_wkqcs"]
-[ext_resource type="Texture2D" uid="uid://dh3uy1elavq14" path="res://assets/ui/EmptyIcon.png" id="3_j8oa3"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8krxp"]
-bg_color = Color(0.92549, 0.443137, 0, 1)
-corner_radius_top_left = 7
-corner_radius_top_right = 7
-corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-expand_margin_left = 2.0
-expand_margin_top = 2.0
-expand_margin_right = 2.0
-expand_margin_bottom = 2.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ew8vf"]
-bg_color = Color(0.807843, 0.807843, 0.807843, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 1, 1, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_qfdci"]
+[ext_resource type="Texture2D" uid="uid://b2kifoj66rvad" path="res://assets/ui/wearable_categories/hair-icon.svg" id="2_024ud"]
 
 [node name="Wearable_Button" type="Button"]
 custom_minimum_size = Vector2(100, 54)
-offset_right = 90.0
+offset_right = 100.0
 offset_bottom = 54.0
 focus_mode = 0
 mouse_default_cursor_shape = 2
-theme_type_variation = &"OrangeButton"
+theme = ExtResource("1_qfdci")
+theme_type_variation = &"ButtonWhite"
+theme_override_constants/h_separation = 5
+theme_override_constants/icon_max_width = 50
 toggle_mode = true
-flat = true
+text = "Body"
+icon = ExtResource("2_024ud")
 script = ExtResource("1_8llwr")
 filter_category = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 2.0
-offset_right = -2.0
-offset_bottom = -2.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_constants/separation = 0
-alignment = 2
-
-[node name="Control" type="Control" parent="HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-mouse_filter = 2
-
-[node name="TextureRect_Icon" type="TextureRect" parent="HBoxContainer/Control"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-scale = Vector2(0.7, 0.7)
-pivot_offset = Vector2(24, 25)
-texture = ExtResource("2_wkqcs")
-expand_mode = 1
-stretch_mode = 4
-
-[node name="Control2" type="Control" parent="HBoxContainer"]
-custom_minimum_size = Vector2(50, 50)
-layout_mode = 2
-mouse_filter = 2
-
-[node name="PanelContainer" type="PanelContainer" parent="HBoxContainer/Control2"]
-visible = false
-custom_minimum_size = Vector2(50, 50)
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_8krxp")
-
-[node name="Panel" type="Panel" parent="HBoxContainer/Control2"]
-custom_minimum_size = Vector2(50, 50)
-layout_mode = 2
-offset_right = 50.0
-offset_bottom = 50.0
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_ew8vf")
-
-[node name="TextureRect_Preview" type="TextureRect" parent="HBoxContainer/Control2/Panel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("3_j8oa3")
-expand_mode = 1
-stretch_mode = 4
 
 [connection signal="mouse_entered" from="." to="." method="_on_mouse_entered"]
 [connection signal="mouse_exited" from="." to="." method="_on_mouse_exited"]
