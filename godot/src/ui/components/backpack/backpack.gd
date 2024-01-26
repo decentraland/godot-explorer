@@ -2,6 +2,9 @@ extends TextureRect
 
 var filtered_data: Array
 const WEARABLE_GROUP = preload("res://src/ui/components/backpack/wearable_group.tres")
+const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
+
+
 
 var avatar_body_shape: String
 var avatar_wearables: PackedStringArray
@@ -20,6 +23,7 @@ var wearable_buttons: Array = []
 const WEARABLE_ITEM_INSTANTIABLE = preload("res://src/ui/components/wearable_item/wearable_item.tscn")
 const FILTER = preload("res://assets/ui/Filter.svg")
 
+@onready var skin_color_picker = $HBoxContainer/ColorRect_Sidebar/MarginContainer/Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/MarginContainer/GridContainer_WearablesList
 
@@ -27,8 +31,6 @@ const FILTER = preload("res://assets/ui/Filter.svg")
 @onready var line_edit_name = $HBoxContainer/Control/VBoxContainer/LineEdit_Name
 @onready var avatar_preview = %AvatarPreview
 @onready var button_save_profile = $HBoxContainer/Control/VBoxContainer/Button_SaveProfile
-
-@onready var skin_color_picker = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/Color_Picker_Button
 
 @onready var v_box_container_category = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category
 @onready var menu_button_filter = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/MenuButton_Filter
@@ -119,12 +121,8 @@ func show_wearables():
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
 	
-	
-
 	for wearable_id in filtered_data:
 		var index = avatar_wearables.find(wearable_id)
-		if index != -1:
-			print(index)
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_item.button_group = WEARABLE_GROUP
@@ -223,13 +221,8 @@ func _on_wearable_unequip(wearable_id: String):
 func _on_button_logout_pressed():
 	Global.comms.disconnect(true)
 
-
-
-
-
 func _on_color_picker_panel_popup_hide():
 	skin_color_picker.set_toggled(false)
-
 
 func _on_color_picker_panel_pick_color(color):
 	match skin_color_picker.color_target:

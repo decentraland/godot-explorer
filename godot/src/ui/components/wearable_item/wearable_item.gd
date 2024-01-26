@@ -2,7 +2,9 @@ extends Button
 
 signal equip(wearable_id: String)
 signal unequip(wearable_id: String)
+signal info(wearable_id: String)
 
+const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
 var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
 var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
@@ -13,35 +15,30 @@ var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 var thumbnail_hash: String
 var wearable_id: String
+var wearable_data: Dictionary
 
-@onready var texture_rect_background = $PanelContainer/VBoxContainer/Panel/TextureRect_Background
-@onready var texture_rect_preview = $PanelContainer/VBoxContainer/Panel/TextureRect_Preview
-@onready var texture_rect_equiped = $PanelContainer/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Equiped
-@onready var texture_rect_category = $PanelContainer/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Category
+@onready var panel_container_black = $PanelContainer_Black
+@onready var panel_container_white = $PanelContainer_Black/PanelContainer_White
 
+@onready var button_equip = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Button_Equip
 
-@onready var panel_container = $PanelContainer
-@onready var button_info = $PanelContainer/VBoxContainer/Button_Info
-@onready var panel = $PanelContainer/VBoxContainer/Panel
+@onready var texture_rect_equiped = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Equiped
+@onready var texture_rect_category = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Category
+@onready var texture_rect_background = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Background
+@onready var texture_rect_preview = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview
 
 
 func _ready():
-	if button_pressed:
-		button_info.show()
-		panel_container.self_modulate = Color("#161518")
-	else:
-		button_info.hide()
-		panel_container.self_modulate = Color("#ffffff")
+	pass
+	
 
 
 func async_set_wearable(wearable: Dictionary):
-
 	wearable_id = wearable.get("id", "")
 	var wearable_thumbnail: String = wearable.get("metadata", {}).get("thumbnail", "")
 	thumbnail_hash = wearable.get("content").get_hash(wearable_thumbnail)
-	print(wearable)
 	_update_category_icon(wearable)
-	
+	wearable_data = wearable
 
 	match wearable.get("rarity", ""):
 		"common":
@@ -73,29 +70,23 @@ func async_set_wearable(wearable: Dictionary):
 			texture_rect_preview.texture = res.texture
 
 
-func _on_mouse_entered():
-	scale = Vector2(1.1, 1.1)
-	
-
-
-func _on_mouse_exited():
-	scale = Vector2(1, 1)
-	
-
-
 func _on_toggled(_button_pressed):
-	
-	if _button_pressed:
+	if button_pressed:
+		size = panel_container_black.size
 		self.equip.emit()
-		button_info.show()
-		panel_container.self_modulate = Color("#161518")
+		button_equip.show()
+		panel_container_white.self_modulate = Color("#ffffff00")
+		panel_container_black.self_modulate = Color("#ffffff")
 		z_index = 5
-
 	else:
 		self.unequip.emit()
-		button_info.hide()
-		panel_container.self_modulate = Color("#ffffff")
+		button_equip.hide()
+		size = panel_container_white.size
+		panel_container_white.self_modulate = Color("#ffffff")
+		panel_container_black.self_modulate = Color("#ffffff00")
 		z_index = 0
+
+
 
 func set_equiped(is_equiped:bool):
 	if is_equiped:
@@ -114,3 +105,4 @@ func _update_category_icon(wearable: Dictionary):
 		var texture = load(texture_path)
 		if texture != null:
 			texture_rect_category.texture = texture
+

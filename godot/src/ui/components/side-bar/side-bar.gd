@@ -23,6 +23,8 @@ func close():
 	tween_h.tween_callback(self.hide).set_delay(0.3)
 
 func open(childNode):
+	for child in margin_container_content.get_children():
+		child.queue_free()
 	push(childNode)
 	show()
 	var tween_m = create_tween()

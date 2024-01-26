@@ -246,11 +246,6 @@ theme_override_constants/h_separation = 15
 theme_override_constants/outline_size = 1
 expand_icon = true
 
-[node name="Color_Picker_Button" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer" instance=ExtResource("7_i1fkq")]
-layout_mode = 2
-size_flags_vertical = 4
-theme = ExtResource("6_t442b")
-
 [node name="LineEdit_PreviewUrl" type="LineEdit" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -455,12 +450,15 @@ theme_override_constants/margin_right = 15
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
-theme_override_constants/h_separation = 10
-theme_override_constants/v_separation = 10
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
 columns = 6
+
+[node name="Color_Picker_Button" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer" instance=ExtResource("7_i1fkq")]
+layout_mode = 2
 
 [node name="Color_Picker_Panel" parent="." instance=ExtResource("10_8s7x3")]
 position = Vector2i(100, 0)
 visible = false
 
-[connection signal="toggle_color_panel" from="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/Color_Picker_Button" to="." method="_on_color_picker_button_toggle_color_panel"]
+[connection signal="toggle_color_panel" from="HBoxContainer/ColorRect_Sidebar/MarginContainer/Color_Picker_Button" to="." method="_on_color_picker_button_toggle_color_panel"]
