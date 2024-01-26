@@ -104,7 +104,7 @@ func _clamp_camera_rotation():
 
 func _input(event):
 	# Receives touchscreen motion
-	if Global.is_mobile:
+	if Global.is_mobile():
 		if event is InputEventScreenDrag:
 			_touch_position = event.relative
 			rotate_y(deg_to_rad(-_touch_position.x) * horizontal_sens)
@@ -113,7 +113,7 @@ func _input(event):
 			_clamp_camera_rotation()
 
 	# Receives mouse motion
-	if not Global.is_mobile && event:
+	if not Global.is_mobile() && event:
 		if event is InputEventMouseMotion && Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 			_mouse_position = event.relative
 			rotate_y(deg_to_rad(-_mouse_position.x) * horizontal_sens)

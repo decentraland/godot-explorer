@@ -889,11 +889,10 @@ impl INode for SceneManager {
             &current_pointer_raycast_result,
         );
 
-        let should_update_tooltip = !changed_inputs.is_empty()
-            || !GodotDclRaycastResult::eq_key(
-                &self.last_raycast_result,
-                &current_pointer_raycast_result,
-            );
+        let should_update_tooltip = !GodotDclRaycastResult::eq_key(
+            &self.last_raycast_result,
+            &current_pointer_raycast_result,
+        );
 
         if should_update_tooltip {
             let mut tooltips = VariantArray::new();
@@ -916,31 +915,44 @@ impl INode for SceneManager {
                                 InputAction::from_i32(*info.button.as_ref().unwrap_or(&0))
                                     .unwrap_or(InputAction::IaAny);
 
-                            let state =
-                                *self.input_state.state.get(&input_action).unwrap_or(&false);
-                            let match_state = (pointer_event.event_type
-                                == PointerEventType::PetUp as i32
-                                && state)
-                                || (pointer_event.event_type == PointerEventType::PetDown as i32
-                                    && !state);
-                            if match_state {
+                            let is_pet_up =
+                                pointer_event.event_type == PointerEventType::PetUp as i32;
+                            let is_pet_down =
+                                pointer_event.event_type == PointerEventType::PetDown as i32;
+                            if is_pet_up || is_pet_down {
                                 let text = if let Some(text) = info.hover_text.as_ref() {
                                     GString::from(text)
                                 } else {
                                     GString::from("Interact")
                                 };
 
-                                let mut dict = Dictionary::new();
-                                dict.set(StringName::from("text"), text);
-                                dict.set(
-                                    StringName::from("action"),
-                                    GString::from(input_action.as_str_name()),
-                                );
-                                dict.set(
-                                    StringName::from("event_type"),
-                                    Variant::from(pointer_event.event_type),
-                                );
-                                tooltips.push(dict.to_variant());
+                                let input_action_gstr = GString::from(input_action.as_str_name());
+
+                                let dict = tooltips.iter_shared().find_map(|tooltip| {
+                                    let dictionary = tooltip.to::<Dictionary>();
+                                    dictionary.get("action").and_then(|action| {
+                                        if action.to_string() == input_action_gstr.to_string() {
+                                            Some(dictionary.clone())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                });
+
+                                let exists = dict.is_some();
+                                let mut dict = dict.unwrap_or_else(Dictionary::new);
+
+                                if is_pet_down {
+                                    dict.set(StringName::from("text_pet_down"), text);
+                                } else if is_pet_up {
+                                    dict.set(StringName::from("text_pet_up"), text);
+                                }
+
+                                dict.set(StringName::from("action"), input_action_gstr);
+
+                                if !exists {
+                                    tooltips.push(dict.to_variant());
+                                }
                             }
                         }
                     }

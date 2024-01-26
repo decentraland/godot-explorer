@@ -68,7 +68,7 @@ var spin_box_walk_speed = $VBoxContainer/HBoxContainer/ColorRect_Background/HBox
 
 
 func _ready():
-	if Global.is_mobile:
+	if Global.is_mobile():
 		window_size_menu_button.disabled = true
 		resolution_menu_button.disabled = true
 
