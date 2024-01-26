@@ -1,116 +1,159 @@
-[gd_scene load_steps=8 format=3 uid="uid://bahsrsgo0jx48"]
+[gd_scene load_steps=12 format=3 uid="uid://bahsrsgo0jx48"]
 
 [ext_resource type="Script" path="res://src/ui/components/wearable_item/wearable_item.gd" id="1_vccc4"]
-[ext_resource type="Shader" uid="uid://dcqv6o28vh465" path="res://src/ui/components/wearable_item/selected_item.tres" id="2_kqxen"]
+[ext_resource type="Texture2D" uid="uid://c0qx68m7rge52" path="res://assets/ui/MythicThumbnail.png" id="2_bnu38"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="2_vuwk7"]
-[ext_resource type="Texture2D" uid="uid://bgjf4umjbsjvm" path="res://assets/ui/BaseThumbnail.png" id="3_g43lx"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_47s0u"]
+[ext_resource type="Texture2D" uid="uid://bheg7fuh5a4p0" path="res://assets/ui/checked.svg" id="4_cqflp"]
+[ext_resource type="Texture2D" uid="uid://vnikogxsqjwe" path="res://assets/ui/Subtract.svg" id="5_dtfap"]
+[ext_resource type="Texture2D" uid="uid://dw4mn6l1jn25f" path="res://assets/ui/Intersect.svg" id="6_ckipv"]
+[ext_resource type="Texture2D" uid="uid://bygnpeber2qmc" path="res://assets/ui/wearable_categories/mask-icon.svg" id="7_h4p8s"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_yp0e4"]
-shader = ExtResource("2_kqxen")
-shader_parameter/strength = 1.0
-shader_parameter/speed = 0.0
-shader_parameter/angle = 135.0
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_24axm"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6655i"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
 bg_color = Color(1, 1, 1, 1)
 corner_radius_top_left = 7
 corner_radius_top_right = 7
 corner_radius_bottom_right = 7
-corner_radius_bottom_left = 7
-expand_margin_left = 1.0
-expand_margin_top = 1.0
-expand_margin_right = 1.0
-expand_margin_bottom = 1.0
+corner_radius_bottom_left = 8
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ew8vf"]
-bg_color = Color(0.807843, 0.807843, 0.807843, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 1, 1, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+draw_center = false
 
 [node name="WearableItem" type="Button"]
-custom_minimum_size = Vector2(100, 100)
-offset_right = 100.0
-offset_bottom = 100.0
-pivot_offset = Vector2(50, 50)
+custom_minimum_size = Vector2(112, 112)
+offset_right = 108.0
+offset_bottom = 108.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 focus_mode = 0
-mouse_default_cursor_shape = 5
 toggle_mode = true
 flat = true
 script = ExtResource("1_vccc4")
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
-visible = false
-material = SubResource("ShaderMaterial_yp0e4")
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -45.0
-offset_top = -45.0
-offset_right = 45.0
-offset_bottom = 45.0
-grow_horizontal = 2
-grow_vertical = 2
-pivot_offset = Vector2(45, 45)
-mouse_filter = 2
+[node name="PanelContainer_Black" type="PanelContainer" parent="."]
+self_modulate = Color(1, 1, 1, 0)
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_24axm")
+
+[node name="PanelContainer_White" type="PanelContainer" parent="PanelContainer_Black"]
+layout_mode = 2
+mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_6655i")
 
-[node name="Panel" type="Panel" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer_Black/PanelContainer_White"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Panel" type="PanelContainer" parent="PanelContainer_Black/PanelContainer_White/VBoxContainer"]
 clip_contents = true
-custom_minimum_size = Vector2(80, 80)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -45.0
-offset_top = -45.0
-offset_right = 45.0
-offset_bottom = 45.0
-grow_horizontal = 2
-grow_vertical = 2
-pivot_offset = Vector2(45, 45)
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+size_flags_vertical = 0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ew8vf")
 
-[node name="TextureRect_Background" type="TextureRect" parent="Panel"]
-layout_mode = 0
-offset_left = 2.0
-offset_top = 2.0
-offset_right = 88.0
-offset_bottom = 88.0
-texture = ExtResource("3_g43lx")
-expand_mode = 2
+[node name="TextureRect_Background" type="TextureRect" parent="PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel"]
+layout_mode = 2
+size_flags_stretch_ratio = 0.0
+texture = ExtResource("2_bnu38")
+expand_mode = 3
+stretch_mode = 4
 
-[node name="TextureRect_Preview" type="TextureRect" parent="Panel"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -128.0
-offset_top = -128.0
-offset_right = 128.0
-offset_bottom = 128.0
-grow_horizontal = 2
-grow_vertical = 2
-scale = Vector2(0.3, 0.3)
-pivot_offset = Vector2(128, 128)
+[node name="TextureRect_Preview" type="TextureRect" parent="PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel"]
+layout_mode = 2
 texture = ExtResource("2_vuwk7")
+expand_mode = 3
+stretch_mode = 4
 
-[connection signal="mouse_entered" from="." to="." method="_on_mouse_entered"]
-[connection signal="mouse_exited" from="." to="." method="_on_mouse_exited"]
+[node name="TextureRect_Equiped" type="TextureRect" parent="PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview"]
+visible = false
+custom_minimum_size = Vector2(18, 10)
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = -15.0
+offset_right = 22.0
+offset_bottom = -3.0
+grow_vertical = 0
+rotation = -0.104189
+size_flags_horizontal = 0
+texture = ExtResource("4_cqflp")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="TextureRect_Preview3" type="TextureRect" parent="PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -100.0
+offset_right = 28.0
+offset_bottom = -72.0
+grow_vertical = 0
+size_flags_horizontal = 0
+texture = ExtResource("5_dtfap")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="TextureRect_Preview4" type="TextureRect" parent="PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -100.0
+offset_right = 28.0
+offset_bottom = -72.0
+grow_vertical = 0
+size_flags_horizontal = 0
+texture = ExtResource("6_ckipv")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="TextureRect_Category" type="TextureRect" parent="PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview"]
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 1
+offset_left = 2.0
+offset_right = 14.0
+offset_bottom = 12.0
+size_flags_horizontal = 0
+texture = ExtResource("7_h4p8s")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="Button_Equip" type="Button" parent="PanelContainer_Black/PanelContainer_White/VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(100, 35)
+layout_mode = 2
+size_flags_vertical = 8
+focus_mode = 0
+theme = ExtResource("4_47s0u")
+theme_type_variation = &"ButtonWhite"
+theme_override_font_sizes/font_size = 12
+text = "EQUIP"
+
+[connection signal="pressed" from="." to="." method="_on_pressed"]
 [connection signal="toggled" from="." to="." method="_on_toggled"]
+[connection signal="pressed" from="PanelContainer_Black/PanelContainer_White/VBoxContainer/Button_Equip" to="." method="_on_button_info_pressed"]

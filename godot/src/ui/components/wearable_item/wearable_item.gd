@@ -1,5 +1,10 @@
 extends Button
 
+signal equip(wearable_id: String)
+signal unequip(wearable_id: String)
+signal info(wearable_id: String)
+
+const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
 var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
 var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
@@ -8,22 +13,32 @@ var epic_thumbnail = preload("res://assets/ui/EpicThumbnail.png")
 var mythic_thumbnail = preload("res://assets/ui/MythicThumbnail.png")
 var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
-
 var thumbnail_hash: String
+var wearable_id: String
+var wearable_data: Dictionary
 
-@onready var panel_container = $PanelContainer
-@onready var texture_rect_background = $Panel/TextureRect_Background
-@onready var texture_rect_preview = $Panel/TextureRect_Preview
+@onready var panel_container_black = $PanelContainer_Black
+@onready var panel_container_white = $PanelContainer_Black/PanelContainer_White
+
+@onready var button_equip = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Button_Equip
+
+@onready var texture_rect_equiped = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Equiped
+@onready var texture_rect_category = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Category
+@onready var texture_rect_background = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Background
+@onready var texture_rect_preview = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview
 
 
 func _ready():
-	if button_pressed:
-		panel_container.show()
+	pass
+	
 
 
 func async_set_wearable(wearable: Dictionary):
+	wearable_id = wearable.get("id", "")
 	var wearable_thumbnail: String = wearable.get("metadata", {}).get("thumbnail", "")
 	thumbnail_hash = wearable.get("content").get_hash(wearable_thumbnail)
+	_update_category_icon(wearable)
+	wearable_data = wearable
 
 	match wearable.get("rarity", ""):
 		"common":
@@ -55,20 +70,39 @@ func async_set_wearable(wearable: Dictionary):
 			texture_rect_preview.texture = res.texture
 
 
-func _on_mouse_entered():
-	scale = Vector2(1.1, 1.1)
-	if not button_pressed:
-		panel_container.show()
-
-
-func _on_mouse_exited():
-	scale = Vector2(1, 1)
-	if not button_pressed:
-		panel_container.hide()
-
-
 func _on_toggled(_button_pressed):
-	if _button_pressed:
-		panel_container.show()
+	if button_pressed:
+		size = panel_container_black.size
+		self.equip.emit()
+		button_equip.show()
+		panel_container_white.self_modulate = Color("#ffffff00")
+		panel_container_black.self_modulate = Color("#ffffff")
+		z_index = 5
 	else:
-		panel_container.hide()
+		self.unequip.emit()
+		button_equip.hide()
+		size = panel_container_white.size
+		panel_container_white.self_modulate = Color("#ffffff")
+		panel_container_black.self_modulate = Color("#ffffff00")
+		z_index = 0
+
+
+
+func set_equiped(is_equiped:bool):
+	if is_equiped:
+		texture_rect_equiped.show()
+	else:
+		texture_rect_equiped.hide()
+
+func _update_category_icon(wearable: Dictionary):
+
+	var texture_path = (
+		"res://assets/wearable_categories/"
+		+ wearable.get("metadata","").get("data","").get("category","")
+		+ "-icon.svg"
+	)
+	if FileAccess.file_exists(texture_path):
+		var texture = load(texture_path)
+		if texture != null:
+			texture_rect_category.texture = texture
+
