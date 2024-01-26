@@ -3,31 +3,20 @@
 [ext_resource type="FontFile" uid="uid://cmc7ku5u0efdy" path="res://assets/themes/fonts/lato_family/Lato-Bold.ttf" id="1_1lcoh"]
 [ext_resource type="Script" path="res://src/ui/components/pointer_tooltip/tooltip_label.gd" id="1_ut63f"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_14y5s"]
-bg_color = Color(0, 0, 0, 0.627451)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_473nw"]
+bg_color = Color(0, 0, 0, 0.501961)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
-[node name="Control_TooltipLabel" type="Control"]
-custom_minimum_size = Vector2(20, 20)
-layout_mode = 3
-anchors_preset = 0
-offset_right = 84.0
+[node name="PanelContainer" type="PanelContainer"]
+offset_right = 85.0
 offset_bottom = 40.0
-pivot_offset = Vector2(0, 20)
-size_flags_horizontal = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_473nw")
 script = ExtResource("1_ut63f")
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
-layout_mode = 2
-offset_right = 84.0
-offset_bottom = 40.0
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_14y5s")
-
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 10
@@ -35,31 +24,44 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 8
 
-[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="PanelContainer" type="PanelContainer" parent="PanelContainer/MarginContainer/HBoxContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="PanelContainer/MarginContainer/HBoxContainer/PanelContainer"]
+[node name="Label_Action" type="Label" parent="MarginContainer/HBoxContainer/PanelContainer"]
+unique_name_in_owner = true
+visible = false
 layout_mode = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_top = 0
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_bottom = 0
-
-[node name="Label_Action" type="Label" parent="PanelContainer/MarginContainer/HBoxContainer/PanelContainer/MarginContainer"]
-layout_mode = 2
+size_flags_vertical = 1
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 12
 text = "1"
+horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Label_Text" type="Label" parent="PanelContainer/MarginContainer/HBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 3
+theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 3
+theme_override_constants/margin_bottom = 3
+
+[node name="TextureRect_ActionIcon" type="TextureRect" parent="MarginContainer/HBoxContainer/PanelContainer/MarginContainer"]
+unique_name_in_owner = true
+visible = false
+self_modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_Text" type="Label" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("1_1lcoh")

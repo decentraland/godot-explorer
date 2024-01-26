@@ -8,7 +8,7 @@ var animation_key_pressed = false
 
 func _input(event):
 	# Receives mouse motion
-	if not Global.is_mobile && event:
+	if not Global.is_mobile() && event:
 		# Release mouse
 		if event is InputEventKey:
 			# Play emotes

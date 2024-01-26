@@ -30,11 +30,12 @@ var nft_frame_loader: NftFrameStyleLoader
 var standalone = false
 var dcl_android_plugin
 
-@onready var is_mobile = OS.has_feature("mobile")
-#@onready var is_mobile = true
-
 
 func _ready():
+	# First
+	# _set_is_mobile(true) # Test
+
+	# Setup
 	http_requester = RustHttpQueueRequester.new()
 	animation_importer = AnimationImporter.new()
 	nft_frame_loader = NftFrameStyleLoader.new()

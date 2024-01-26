@@ -39,6 +39,7 @@ mod android {
 pub struct DclGlobal {
     #[base]
     _base: Base<Node>,
+
     #[var]
     pub scene_runner: Gd<SceneManager>,
     #[var]
@@ -63,6 +64,8 @@ pub struct DclGlobal {
     pub content_provider: Gd<ContentProvider>,
 
     pub ethereum_provider: Arc<EthereumProvider>,
+
+    pub is_mobile: bool,
 }
 
 #[godot_api]
@@ -100,6 +103,7 @@ impl INode for DclGlobal {
 
         Self {
             _base: base,
+            is_mobile: godot::engine::Os::singleton().has_feature("mobile".into()),
             scene_runner,
             comms,
             avatars,
@@ -121,6 +125,16 @@ impl DclGlobal {
     #[func]
     fn set_scene_log_enabled(&self, enabled: bool) {
         set_scene_log_enabled(enabled);
+    }
+
+    #[func]
+    fn is_mobile(&self) -> bool {
+        self.is_mobile
+    }
+
+    #[func]
+    fn _set_is_mobile(&mut self, is_mobile: bool) {
+        self.is_mobile = is_mobile;
     }
 
     pub fn has_singleton() -> bool {
