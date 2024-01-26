@@ -34,8 +34,6 @@ mod android {
     }
 }
 
-const IS_MOBILE: bool = cfg!(target_os = "android");
-
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclGlobal {
@@ -105,7 +103,7 @@ impl INode for DclGlobal {
 
         Self {
             _base: base,
-            is_mobile: IS_MOBILE,
+            is_mobile: godot::engine::Os::singleton().has_feature("mobile".into()),
             scene_runner,
             comms,
             avatars,
