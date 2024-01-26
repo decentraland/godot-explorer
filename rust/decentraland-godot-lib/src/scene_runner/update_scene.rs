@@ -249,6 +249,14 @@ pub fn _process_scene(
             SceneUpdateState::ComputeCrdtState => {
                 update_avatar_scene_updates(scene, crdt_state);
 
+                if scene.godot_dcl_scene.hierarchy_changed_3d {
+                    scene
+                        .godot_dcl_scene
+                        .root_node_3d
+                        .call_deferred("emit_signal".into(), &["tree_changed".to_variant()]);
+                    scene.godot_dcl_scene.hierarchy_changed_3d = false;
+                }
+
                 // Set transform
                 let camera_transform = DclTransformAndParent::from_godot(
                     camera_global_transform,

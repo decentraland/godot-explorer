@@ -7,7 +7,10 @@ use crate::{
         },
         SceneDefinition, SceneId,
     },
-    godot_classes::{dcl_scene_node::DclSceneNode, dcl_ui_control::DclUiControl},
+    godot_classes::{
+        dcl_node_entity_3d::DclNodeEntity3d, dcl_scene_node::DclSceneNode,
+        dcl_ui_control::DclUiControl,
+    },
 };
 use godot::{builtin::meta::ConvertError, engine::Json, prelude::*};
 use std::{
@@ -26,6 +29,7 @@ pub struct GodotDclScene {
 
     pub root_node_3d: Gd<DclSceneNode>,
     pub hierarchy_dirty_3d: bool,
+    pub hierarchy_changed_3d: bool,
     pub unparented_entities_3d: HashSet<SceneEntityId>,
 
     pub parent_node_ui: Gd<DclUiControl>,
@@ -186,6 +190,7 @@ impl GodotDclScene {
 
             root_node_3d,
             hierarchy_dirty_3d: false,
+            hierarchy_changed_3d: false,
             unparented_entities_3d: HashSet::new(),
 
             root_node_ui: root_node_ui_control,
@@ -241,14 +246,9 @@ impl GodotDclScene {
 
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_3d.is_none() {
-            let mut new_node_3d = Node3D::new_alloc();
-            new_node_3d.set_name(GString::from(format!(
-                "e{:?}_{:?}",
-                entity.number, entity.version
-            )));
-
+            let new_node_3d = DclNodeEntity3d::new_alloc(*entity);
             self.root_node_3d.add_child(new_node_3d.clone().upcast());
-            godot_entity_node.base_3d = Some(new_node_3d);
+            godot_entity_node.base_3d = Some(new_node_3d.upcast());
         }
 
         let node_3d = godot_entity_node.base_3d.as_ref().unwrap().clone();

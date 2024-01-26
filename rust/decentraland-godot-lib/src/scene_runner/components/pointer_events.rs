@@ -203,7 +203,7 @@ pub fn pointer_events_system(
                 SceneEntityId::new(0, 0),
                 PbPointerEventsResult {
                     button: *input_action as i32,
-                    hit: None,
+                    hit: raycast_hit.clone(),
                     state,
                     timestamp: global_tick_number,
                     analog: None,

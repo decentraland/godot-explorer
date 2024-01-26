@@ -56,7 +56,8 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
                 avatar_attach_node.set_name(GString::from("AvatarAttach"));
 
-                node_3d.add_child(avatar_attach_node);
+                node_3d.add_child(avatar_attach_node.clone());
+                avatar_attach_node.call("init".into(), &[]);
             }
         }
     }

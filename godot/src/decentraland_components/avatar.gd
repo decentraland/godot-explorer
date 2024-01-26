@@ -302,7 +302,6 @@ func async_load_wearables():
 		return
 
 	wearables_by_category = curated_wearables[0]
-	var hiding_list: PackedStringArray = curated_wearables[1]
 
 	var body_shape = wearables_by_category.get(Wearables.Categories.BODY_SHAPE)
 	if body_shape == null:
