@@ -1,5 +1,14 @@
 extends Control
 
+const BACKPACK_OFF = preload("res://assets/ui/nav-bar-icons/backpack-off.svg")
+const BACKPACK_ON = preload("res://assets/ui/nav-bar-icons/backpack-on.svg")
+const EXPLORER_OFF = preload("res://assets/ui/nav-bar-icons/explorer-off.svg")
+const EXPLORER_ON = preload("res://assets/ui/nav-bar-icons/explorer-on.svg")
+const MAP_OFF = preload("res://assets/ui/nav-bar-icons/map-off.svg")
+const MAP_ON = preload("res://assets/ui/nav-bar-icons/map-on.svg")
+const SETTINGS_OFF = preload("res://assets/ui/nav-bar-icons/settings-off.svg")
+const SETTINGS_ON = preload("res://assets/ui/nav-bar-icons/settings-on.svg")
+
 signal hide_menu
 signal jump_to(Vector2i)
 signal toggle_minimap
@@ -30,10 +39,11 @@ var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
 @onready var control_map = $ColorRect_Background/Control_Map
 @onready var control_backpack = $ColorRect_Background/Control_Backpack
 
-@onready var button_discover = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Discover
-@onready var button_map = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Map
-@onready var button_backpack = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Backpack
-@onready var button_settings = $ColorRect_Header/HBoxContainer_ButtonsPanel/Button_Settings
+
+@onready var button_discover = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover
+@onready var button_map = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map
+@onready var button_backpack = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack
+@onready var button_settings = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings
 
 
 func _ready():
@@ -113,26 +123,51 @@ func show_last():
 
 
 func show_map():
-	self.show()
-
 	if selected_node != control_map:
-		self._on_button_map_pressed()
+		_on_button_map_pressed()
 	button_map.set_pressed(true)
-	var tween = create_tween()
-	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
-	color_rect_header.show()
-
+	_open()
 
 func show_backpack():
-	self.show()
-
-	if selected_node != control_backpack:
-		self._on_button_backpack_pressed()
+	if selected_node != control_map:
+		_on_button_backpack_pressed()
 	button_backpack.set_pressed(true)
+	_open()
+
+func show_settings():
+	if selected_node != control_map:
+		_on_button_settings_pressed()
+	button_settings.set_pressed(true)
+	_open()
+
+func _open():
+	_updated_icons()
+	if not visible:
+		show()
 	var tween = create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
 	color_rect_header.show()
-
+	
+func _updated_icons():
+	if button_map.button_pressed:
+		button_map.icon = MAP_ON
+	else:
+		button_map.icon = MAP_OFF
+		
+	if button_backpack.button_pressed:
+		button_backpack.icon = BACKPACK_ON
+	else:
+		button_backpack.icon = BACKPACK_OFF
+		
+	if button_settings.button_pressed:
+		button_settings.icon = SETTINGS_ON
+	else:
+		button_settings.icon = SETTINGS_OFF
+		
+	if button_discover.button_pressed:
+		button_discover.icon = EXPLORER_ON
+	else:
+		button_discover.icon = EXPLORER_OFF
 
 func _on_control_settings_toggle_fps_visibility(visibility):
 	emit_signal("toggle_fps", visibility)
@@ -147,24 +182,28 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 
 
 func _on_button_settings_pressed():
+	_updated_icons()
 	if selected_node != control_settings:
 		fade_out(selected_node)
 		fade_in(control_settings)
 
 
 func _on_button_map_pressed():
+	_updated_icons()
 	if selected_node != control_map:
 		fade_out(selected_node)
 		fade_in(control_map)
 
 
 func _on_button_discover_pressed():
+	_updated_icons()
 	if selected_node != control_discover:
 		fade_out(selected_node)
 		fade_in(control_discover)
 
 
 func _on_button_backpack_pressed():
+	_updated_icons()
 	if selected_node != control_backpack:
 		fade_out(selected_node)
 		fade_in(control_backpack)
