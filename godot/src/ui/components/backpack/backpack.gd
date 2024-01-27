@@ -1,8 +1,8 @@
 extends TextureRect
 
-const WEARABLE_PANEL: Node = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
-const WEARABLE_GROUP: Node = preload("res://src/ui/components/backpack/wearable_group.tres")
-const WEARABLE_ITEM_INSTANTIABLE: Node = preload(
+const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
+const WEARABLE_GROUP = preload("res://src/ui/components/backpack/wearable_group.tres")
+const WEARABLE_ITEM_INSTANTIABLE = preload(
 	"res://src/ui/components/wearable_item/wearable_item.tscn"
 )
 const FILTER: Texture = preload("res://assets/ui/Filter.svg")
