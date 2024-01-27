@@ -35,11 +35,6 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="ColorRect_Navbar" type="ColorRect" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 80)
-layout_mode = 2
-color = Color(0.0862745, 0.0862745, 0.0862745, 1)
-
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
