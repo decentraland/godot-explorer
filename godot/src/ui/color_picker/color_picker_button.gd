@@ -14,5 +14,5 @@ func set_color(color: Color) -> void:
 	color_rect.color = color
 
 
-func _on_button_color_picker_toggled(toggled_on):
+func _on_button_color_picker_toggled(_toggled_on):
 	emit_signal("toggle_color_panel", button_pressed, color_target)
