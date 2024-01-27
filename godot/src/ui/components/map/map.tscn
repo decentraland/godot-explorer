@@ -48,6 +48,7 @@ text = "x, y"
 horizontal_alignment = 1
 
 [node name="Control_JumpTo" type="Control" parent="."]
+visible = false
 anchors_preset = 0
 
 [node name="Panel_JumpTo" type="Panel" parent="Control_JumpTo"]
