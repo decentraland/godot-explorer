@@ -215,6 +215,7 @@ custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 
 [node name="ColorRect_Background" type="ColorRect" parent="."]
+show_behind_parent = true
 layout_mode = 2
 size_flags_vertical = 3
 color = Color(0.85098, 0.843137, 0.866667, 1)
@@ -230,8 +231,6 @@ layout_mode = 1
 [node name="Control_Map" parent="ColorRect_Background" instance=ExtResource("4_jtsir")]
 visible = false
 layout_mode = 1
-offset_top = 61.0
-offset_bottom = -1.0
 
 [node name="Control_Backpack" parent="ColorRect_Background" instance=ExtResource("8_d38wp")]
 visible = false
