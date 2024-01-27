@@ -1,5 +1,15 @@
 extends Control
 
+signal hide_menu
+signal jump_to(Vector2i)
+signal toggle_minimap
+signal toggle_fps
+signal toggle_ram
+signal request_pause_scenes(enabled: bool)
+signal request_debug_panel(enabled: bool)
+signal preview_hot_reload(scene_type: String, scene_id: String)
+#signals from advanced settings
+
 const BACKPACK_OFF = preload("res://assets/ui/nav-bar-icons/backpack-off.svg")
 const BACKPACK_ON = preload("res://assets/ui/nav-bar-icons/backpack-on.svg")
 const EXPLORER_OFF = preload("res://assets/ui/nav-bar-icons/explorer-off.svg")
@@ -36,16 +46,6 @@ var button_map = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPan
 var button_backpack = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack
 @onready
 var button_settings = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings
-
-signal hide_menu
-signal jump_to(Vector2i)
-signal toggle_minimap
-signal toggle_fps
-signal toggle_ram
-signal request_pause_scenes(enabled: bool)
-signal request_debug_panel(enabled: bool)
-signal preview_hot_reload(scene_type: String, scene_id: String)
-#signals from advanced settings
 
 
 func _ready():
