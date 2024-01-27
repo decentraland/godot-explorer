@@ -1,27 +1,24 @@
 extends TextureRect
 
-var filtered_data: Array
 const WEARABLE_PANEL: Node = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
 const WEARABLE_GROUP: Node = preload("res://src/ui/components/backpack/wearable_group.tres")
+const WEARABLE_ITEM_INSTANTIABLE: Node = preload(
+	"res://src/ui/components/wearable_item/wearable_item.tscn"
+)
+const FILTER: Texture = preload("res://assets/ui/Filter.svg")
 
+var filtered_data: Array
 var avatar_body_shape: String
 var avatar_wearables: PackedStringArray
 var avatar_eyes_color: Color
 var avatar_hair_color: Color
 var avatar_skin_color: Color
 var avatar_emotes: Array
-
 var base_wearable_request_id: int = -1
 var wearable_data: Dictionary = {}
-
 var primary_player_profile_dictionary: Dictionary = {}
-
 var wearable_buttons: Array = []
 
-const WEARABLE_ITEM_INSTANTIABLE: Node = preload(
-	"res://src/ui/components/wearable_item/wearable_item.tscn"
-)
-const FILTER: Texture = preload("res://assets/ui/Filter.svg")
 
 @onready var skin_color_picker = $HBoxContainer/ColorRect_Sidebar/MarginContainer/Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
