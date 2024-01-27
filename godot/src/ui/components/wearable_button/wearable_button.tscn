@@ -1,25 +1,22 @@
-[gd_scene load_steps=4 format=3 uid="uid://wuyfsip50bwb"]
+[gd_scene load_steps=3 format=3 uid="uid://wuyfsip50bwb"]
 
 [ext_resource type="Script" path="res://src/ui/components/wearable_button/wearable_button.gd" id="1_8llwr"]
-[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_qfdci"]
 [ext_resource type="Texture2D" uid="uid://b2kifoj66rvad" path="res://assets/ui/wearable_categories/hair-icon.svg" id="2_024ud"]
 
 [node name="Wearable_Button" type="Button"]
-custom_minimum_size = Vector2(100, 54)
-offset_right = 100.0
-offset_bottom = 54.0
+custom_minimum_size = Vector2(60, 60)
+offset_right = 52.0
+offset_bottom = 52.0
 focus_mode = 0
 mouse_default_cursor_shape = 2
-theme = ExtResource("1_qfdci")
-theme_type_variation = &"ButtonWhite"
+theme_type_variation = &"WhiteButton"
 theme_override_constants/h_separation = 5
 theme_override_constants/icon_max_width = 50
 toggle_mode = true
-text = "Body"
 icon = ExtResource("2_024ud")
+icon_alignment = 1
+expand_icon = true
 script = ExtResource("1_8llwr")
 filter_category = 1
 
-[connection signal="mouse_entered" from="." to="." method="_on_mouse_entered"]
-[connection signal="mouse_exited" from="." to="." method="_on_mouse_exited"]
 [connection signal="toggled" from="." to="." method="_on_toggled"]

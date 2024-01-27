@@ -44,7 +44,7 @@ func _update_category_icon():
 
 func _ready():
 	_update_category_icon()
-	text = type_to_category(self.filter_category).to_upper().replace("_", " ")
+	#text = type_to_category(self.filter_category).to_upper().replace("_", " ")
 
 
 func type_to_category(category_enum: WearableCategoryEnum) -> String:

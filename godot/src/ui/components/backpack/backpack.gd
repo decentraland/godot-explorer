@@ -29,7 +29,7 @@ var grid_container_wearables_list = $HBoxContainer/ColorRect_Sidebar/MarginConta
 @onready var button_save_profile = $HBoxContainer/Control/VBoxContainer/Button_SaveProfile
 
 @onready
-var v_box_container_category = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category
+var v_box_container_category = %HBoxContainer_Categories
 @onready
 var menu_button_filter = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/MenuButton_Filter
 
