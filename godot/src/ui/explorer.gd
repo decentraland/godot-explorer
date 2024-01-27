@@ -343,8 +343,8 @@ func _on_control_menu_request_pause_scenes(enabled):
 
 func move_to(position: Vector3):
 	player.set_position(position)
-	var parcel_position = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
-	if not Global.scene_fetcher.is_scene_loaded(parcel_position.x, parcel_position.y):
+	var cur_parcel_position = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
+	if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
 		loading_ui.enable_loading_screen()
 
 

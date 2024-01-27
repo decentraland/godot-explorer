@@ -113,6 +113,7 @@ pub fn update_transform_and_parent(
     let root_node = godot_dcl_scene.root_node_3d.clone().upcast::<Node>();
     while godot_dcl_scene.hierarchy_dirty_3d {
         godot_dcl_scene.hierarchy_dirty_3d = false;
+        godot_dcl_scene.hierarchy_changed_3d = true;
 
         let unparented = godot_dcl_scene
             .unparented_entities_3d
