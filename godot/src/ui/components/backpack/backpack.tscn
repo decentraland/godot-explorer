@@ -255,7 +255,7 @@ placeholder_text = "Search..."
 
 [node name="ScrollContainer2" type="ScrollContainer" parent="HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer"]
 material = SubResource("ShaderMaterial_6ygo4")
-custom_minimum_size = Vector2(0, 50)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 3

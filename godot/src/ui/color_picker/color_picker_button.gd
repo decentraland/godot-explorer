@@ -10,9 +10,9 @@ enum ColorTarget { SKIN, HAIR, EYE }
 @onready var color_rect = $ColorRect
 
 
-
 func set_color(color: Color) -> void:
 	color_rect.color = color
+
 
 func _on_button_color_picker_toggled(toggled_on):
 	emit_signal("toggle_color_panel", button_pressed, color_target)

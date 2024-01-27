@@ -31,20 +31,21 @@ enum WearableCategoryEnum {
 		_update_category_icon()
 		filter_category = new_value
 
+
 func _update_category_icon():
 	var texture_path = (
-		"res://assets/wearable_categories/"
-		+ type_to_category(self.filter_category)
-		+ "-icon.svg"
+		"res://assets/wearable_categories/" + type_to_category(self.filter_category) + "-icon.svg"
 	)
 	if FileAccess.file_exists(texture_path):
 		var texture = load(texture_path)
 		if texture != null:
 			icon = texture
 
+
 func _ready():
 	_update_category_icon()
 	text = type_to_category(self.filter_category).to_upper().replace("_", " ")
+
 
 func type_to_category(category_enum: WearableCategoryEnum) -> String:
 	var result: String = ""
@@ -87,6 +88,7 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 			result = Wearables.Categories.SKIN
 
 	return result
+
 
 func _on_toggled(_button_pressed):
 	if _button_pressed:

@@ -22,15 +22,18 @@ var wearable_data: Dictionary
 
 @onready var button_equip = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Button_Equip
 
-@onready var texture_rect_equiped = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Equiped
-@onready var texture_rect_category = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Category
-@onready var texture_rect_background = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Background
-@onready var texture_rect_preview = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview
+@onready
+var texture_rect_equiped = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Equiped
+@onready
+var texture_rect_category = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Category
+@onready
+var texture_rect_background = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Background
+@onready
+var texture_rect_preview = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview
 
 
 func _ready():
 	pass
-	
 
 
 func async_set_wearable(wearable: Dictionary):
@@ -87,22 +90,20 @@ func _on_toggled(_button_pressed):
 		z_index = 0
 
 
-
-func set_equiped(is_equiped:bool):
+func set_equiped(is_equiped: bool):
 	if is_equiped:
 		texture_rect_equiped.show()
 	else:
 		texture_rect_equiped.hide()
 
-func _update_category_icon(wearable: Dictionary):
 
+func _update_category_icon(wearable: Dictionary):
 	var texture_path = (
 		"res://assets/wearable_categories/"
-		+ wearable.get("metadata","").get("data","").get("category","")
+		+ wearable.get("metadata", "").get("data", "").get("category", "")
 		+ "-icon.svg"
 	)
 	if FileAccess.file_exists(texture_path):
 		var texture = load(texture_path)
 		if texture != null:
 			texture_rect_category.texture = texture
-

@@ -4,7 +4,6 @@ var filtered_data: Array
 const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
 const WEARABLE_GROUP = preload("res://src/ui/components/backpack/wearable_group.tres")
 
-
 var avatar_body_shape: String
 var avatar_wearables: PackedStringArray
 var avatar_eyes_color: Color
@@ -19,29 +18,34 @@ var primary_player_profile_dictionary: Dictionary = {}
 
 var wearable_buttons: Array = []
 
-const WEARABLE_ITEM_INSTANTIABLE = preload("res://src/ui/components/wearable_item/wearable_item.tscn")
+const WEARABLE_ITEM_INSTANTIABLE = preload(
+	"res://src/ui/components/wearable_item/wearable_item.tscn"
+)
 const FILTER = preload("res://assets/ui/Filter.svg")
 
 @onready var skin_color_picker = $HBoxContainer/ColorRect_Sidebar/MarginContainer/Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
-@onready var grid_container_wearables_list = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/MarginContainer/GridContainer_WearablesList
-
+@onready
+var grid_container_wearables_list = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/MarginContainer/GridContainer_WearablesList
 
 @onready var line_edit_name = $HBoxContainer/Control/VBoxContainer/LineEdit_Name
 @onready var avatar_preview = %AvatarPreview
 @onready var button_save_profile = $HBoxContainer/Control/VBoxContainer/Button_SaveProfile
 
-@onready var v_box_container_category = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category
-@onready var menu_button_filter = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/MenuButton_Filter
+@onready
+var v_box_container_category = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer2/HBoxContainer/VBoxContainer_Category
+@onready
+var menu_button_filter = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/MenuButton_Filter
+
 
 # gdlint:ignore = async-function-name
 func _ready():
 	skin_color_picker.hide()
 	Global.player_identity.profile_changed.connect(self._on_profile_changed)
-	
+
 	menu_button_filter.text = "FILTER"
 	menu_button_filter.icon = FILTER
-	
+
 	for child in v_box_container_category.get_children():
 		# TODO: check if it's a wearable_button
 		for wearable_button in child.get_children():
@@ -110,7 +114,10 @@ func load_filtered_data(filter: String):
 	for wearable_id in wearable_data:
 		var wearable = wearable_data[wearable_id]
 		if Wearables.get_category(wearable) == filter:
-			if Wearables.can_equip(wearable, avatar_body_shape) or Wearables.get_category(wearable) == 'body_shape' :
+			if (
+				Wearables.can_equip(wearable, avatar_body_shape)
+				or Wearables.get_category(wearable) == "body_shape"
+			):
 				filtered_data.push_back(wearable_id)
 
 	show_wearables()
@@ -119,7 +126,7 @@ func load_filtered_data(filter: String):
 func show_wearables():
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
-	
+
 	for wearable_id in filtered_data:
 		var index = avatar_wearables.find(wearable_id)
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
@@ -220,8 +227,10 @@ func _on_wearable_unequip(wearable_id: String):
 func _on_button_logout_pressed():
 	Global.comms.disconnect(true)
 
+
 func _on_color_picker_panel_popup_hide():
 	skin_color_picker.set_toggled(false)
+
 
 func _on_color_picker_panel_pick_color(color):
 	match skin_color_picker.color_target:
@@ -262,4 +271,3 @@ func _on_color_picker_button_toggle_color_panel(toggled, color_target):
 				current_color = avatar_hair_color
 
 		color_picker_panel.custom_popup(rect, current_color)
-
