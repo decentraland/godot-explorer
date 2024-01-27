@@ -19,7 +19,6 @@ var wearable_data: Dictionary = {}
 var primary_player_profile_dictionary: Dictionary = {}
 var wearable_buttons: Array = []
 
-
 @onready var skin_color_picker = $HBoxContainer/ColorRect_Sidebar/MarginContainer/Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready
