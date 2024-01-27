@@ -93,7 +93,6 @@ class AllAwaiter:
 class AllAwaiterEx:
 	var results: Array = []
 	var resolved: Array = []
-	var _mask: int
 	var _promise: Promise = Promise.new()
 
 	func _init(funcs: Array) -> void:
