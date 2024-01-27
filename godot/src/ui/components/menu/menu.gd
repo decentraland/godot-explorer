@@ -39,11 +39,14 @@ var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
 @onready var control_map = $ColorRect_Background/Control_Map
 @onready var control_backpack = $ColorRect_Background/Control_Backpack
 
-
-@onready var button_discover = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover
-@onready var button_map = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map
-@onready var button_backpack = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack
-@onready var button_settings = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings
+@onready
+var button_discover = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover
+@onready
+var button_map = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map
+@onready
+var button_backpack = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack
+@onready
+var button_settings = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings
 
 
 func _ready():
@@ -128,17 +131,20 @@ func show_map():
 	button_map.set_pressed(true)
 	_open()
 
+
 func show_backpack():
 	if selected_node != control_map:
 		_on_button_backpack_pressed()
 	button_backpack.set_pressed(true)
 	_open()
 
+
 func show_settings():
 	if selected_node != control_map:
 		_on_button_settings_pressed()
 	button_settings.set_pressed(true)
 	_open()
+
 
 func _open():
 	_updated_icons()
@@ -147,27 +153,29 @@ func _open():
 	var tween = create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
 	color_rect_header.show()
-	
+
+
 func _updated_icons():
 	if button_map.button_pressed:
 		button_map.icon = MAP_ON
 	else:
 		button_map.icon = MAP_OFF
-		
+
 	if button_backpack.button_pressed:
 		button_backpack.icon = BACKPACK_ON
 	else:
 		button_backpack.icon = BACKPACK_OFF
-		
+
 	if button_settings.button_pressed:
 		button_settings.icon = SETTINGS_ON
 	else:
 		button_settings.icon = SETTINGS_OFF
-		
+
 	if button_discover.button_pressed:
 		button_discover.icon = EXPLORER_ON
 	else:
 		button_discover.icon = EXPLORER_OFF
+
 
 func _on_control_settings_toggle_fps_visibility(visibility):
 	emit_signal("toggle_fps", visibility)
