@@ -29,11 +29,11 @@ func close():
 	tween_h.tween_callback(self.hide).set_delay(0.3)
 
 
-func open(childNode, closeButton: bool):
-	var content = childNode.instantiate()
+func open(child_node, close_button: bool):
+	var content = child_node.instantiate()
 	#margin_container_content.size = Vector2(content.get_size().x, size.y)
 	margin_container_content.add_child(content)
-	if closeButton:
+	if close_button:
 		button_close.show()
 	show()
 	var tween_m = create_tween()
