@@ -2,6 +2,7 @@ extends PanelContainer
 
 @onready var counter = %Counter
 
+
 func _ready():
 	hide()
 

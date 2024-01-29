@@ -1,7 +1,6 @@
 @tool
-
-extends Button
 class_name WearableFilterButton
+extends Button
 
 signal filter_type(type: String)
 signal clear_filter

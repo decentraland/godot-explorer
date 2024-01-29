@@ -394,7 +394,7 @@ class Categories:
 		HANDS_WEAR: [HANDS_WEAR],
 		LOWER_BODY: [LOWER_BODY],
 		FEET: [FEET],
-		HAT: [EARRING, EYEWEAR, HAT, HELMET, MASK, TIARA, TOP_HEAD], # accesories...
+		HAT: [EARRING, EYEWEAR, HAT, HELMET, MASK, TIARA, TOP_HEAD],  # accesories...
 		SKIN: [SKIN],
 	}
 

@@ -12,6 +12,7 @@ var dirty_is_dragging
 @onready var camera_3d = $SubViewport/Camera3D
 @onready var platform = $SubViewport/Sprite3D_Platform
 
+
 func _ready():
 	avatar.hide_name = hide_name
 	platform.set_visible(show_platform)
@@ -31,6 +32,7 @@ func focus_camera_on(type):
 			tween.tween_property(camera_3d, "position", Vector3(0, 0.957, -1.623), 0.5)
 			tween.tween_property(camera_3d, "size", 3, 0.5)
 	tween.play()
+
 
 func _on_gui_input(event):
 	if event is InputEventMouseButton:

@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-signal hided()
+signal hided
 signal pick_color(color: Color)
 
 enum ColorTargetType { SKIN, OTHER }
@@ -40,18 +40,24 @@ var color_button_group: ButtonGroup = ButtonGroup.new()
 var colorable_square = preload("res://src/ui/color_picker/colorable_square.tscn")
 
 @onready var v_box_container_hair = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair
-@onready var grid_container_hair = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/GridContainer_Hair
+@onready
+var grid_container_hair = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/GridContainer_Hair
 @onready var grid_container_skin = $Control/Color_Picker_Panel/VBoxContainer/GridContainer_Skin
 
 @onready var color_slider = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/ColorSlider
-@onready var saturation_slider = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/SaturationSlider
-@onready var brightness_slider = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/BrightnessSlider
-@onready var panel_preview = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/Panel_Preview
+@onready
+var saturation_slider = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/SaturationSlider
+@onready
+var brightness_slider = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/BrightnessSlider
+@onready
+var panel_preview = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/Panel_Preview
 
 @onready var color_picked_panel = $Control/Color_Picker_Panel
 
+
 func _ready():
 	hide()
+
 
 func custom_popup(rect: Rect2, current_color: Color):
 	v_box_container_hair.hide()

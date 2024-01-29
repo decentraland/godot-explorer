@@ -1,12 +1,12 @@
 extends Control
 
 const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
-var WEARABLE_GROUP = preload("res://src/ui/components/backpack/wearable_group.tres")
 const WEARABLE_ITEM_INSTANTIABLE = preload(
 	"res://src/ui/components/wearable_item/wearable_item.tscn"
 )
 const FILTER: Texture = preload("res://assets/ui/Filter.svg")
 
+var wearable_button_group = ButtonGroup.new()
 var filtered_data: Array
 var avatar_body_shape: String
 var avatar_wearables: PackedStringArray
@@ -35,6 +35,7 @@ var main_category_selected: String = "body_shape"
 
 @onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
 
+
 # gdlint:ignore = async-function-name
 func _ready():
 	skin_color_picker.hide()
@@ -50,7 +51,9 @@ func _ready():
 	for wearable_filter_button in container_sub_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
 			wearable_filter_button.filter_type.connect(self._on_wearable_filter_button_filter_type)
-			wearable_filter_button.clear_filter.connect(self._on_wearable_filter_button_clear_filter)
+			wearable_filter_button.clear_filter.connect(
+				self._on_wearable_filter_button_clear_filter
+			)
 			wearable_filter_buttons.push_back(wearable_filter_button)
 
 	for wearable_id in Wearables.BASE_WEARABLES:
@@ -70,6 +73,7 @@ func _ready():
 
 	_update_avatar()
 
+
 func _update_visible_categories():
 	var count_per_category: Dictionary = {}
 	for category in Wearables.Categories.ALL_CATEGORIES:
@@ -77,19 +81,18 @@ func _update_visible_categories():
 
 	for wearable_id in wearable_data:
 		var wearable = wearable_data[wearable_id]
-		
+
 		var category = Wearables.get_category(wearable)
-		if (
-			Wearables.can_equip(wearable, avatar_body_shape)
-			or category == "body_shape"
-		):
+		if Wearables.can_equip(wearable, avatar_body_shape) or category == "body_shape":
 			count_per_category[category] += 1
 
 	var showed_subcategories: int = 0
 	var first_wearable_filter_button: WearableFilterButton = null
 	for wearable_filter_button: WearableFilterButton in wearable_filter_buttons:
 		var category = wearable_filter_button.get_category_name()
-		var filter_categories: Array = Wearables.Categories.MAIN_CATEGORIES.get(main_category_selected)
+		var filter_categories: Array = Wearables.Categories.MAIN_CATEGORIES.get(
+			main_category_selected
+		)
 		var category_is_visible: bool = filter_categories.has(category)
 		# category_is_visible &= count_per_category[category] > 0 # remove comment if we want to hide the categories without objects
 		wearable_filter_button.visible = category_is_visible
@@ -97,11 +100,10 @@ func _update_visible_categories():
 			showed_subcategories += 1
 			if first_wearable_filter_button == null:
 				first_wearable_filter_button = wearable_filter_button
-			
+
 	scroll_container_sub_categories.set_visible(showed_subcategories >= 2)
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
-		
 
 
 func _on_profile_changed(new_profile: Dictionary):
@@ -139,8 +141,6 @@ func _update_avatar():
 	profile_avatar["wearables"] = avatar_wearables
 	profile_avatar["emotes"] = avatar_emotes
 
-	#var wearable_body_shape = Global.content_provider.get_wearable(avatar_body_shape)
-
 	avatar_preview.avatar.async_update_avatar_from_profile(primary_player_profile_dictionary)
 	button_save_profile.disabled = false
 
@@ -160,9 +160,11 @@ func load_filtered_data(filter: String):
 
 
 func can_unequip(category: String) -> bool:
-	return category != Wearables.Categories.BODY_SHAPE and \
-		category != Wearables.Categories.EYES and \
-		category != Wearables.Categories.MOUTH
+	return (
+		category != Wearables.Categories.BODY_SHAPE
+		and category != Wearables.Categories.EYES
+		and category != Wearables.Categories.MOUTH
+	)
 
 
 func show_wearables():
@@ -174,17 +176,21 @@ func show_wearables():
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		var wearable = wearable_data[wearable_id]
 		grid_container_wearables_list.add_child(wearable_item)
-		WEARABLE_GROUP.allow_unpress = can_unequip(Wearables.get_category(wearable))
-		wearable_item.button_group = WEARABLE_GROUP
+		wearable_button_group.allow_unpress = can_unequip(Wearables.get_category(wearable))
+		wearable_item.button_group = wearable_button_group
 		wearable_item.async_set_wearable(wearable)
 		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
 		wearable_item.unequip.connect(self._on_wearable_unequip.bind(wearable_id))
-		var is_wearable_pressed = avatar_wearables.has(wearable_id) or avatar_body_shape == wearable_id
+		var is_wearable_pressed = (
+			avatar_wearables.has(wearable_id) or avatar_body_shape == wearable_id
+		)
 		wearable_item.set_pressed(is_wearable_pressed)
+
 
 func _on_main_category_filter_type(type: String):
 	main_category_selected = type
 	_update_visible_categories()
+
 
 func _on_wearable_filter_button_filter_type(type):
 	load_filtered_data(type)

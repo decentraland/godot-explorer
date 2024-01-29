@@ -1,5 +1,5 @@
-extends Button
 class_name WearableItem
+extends Button
 
 signal equip(wearable_id: String)
 signal unequip(wearable_id: String)
@@ -26,6 +26,7 @@ var was_pressed = false
 @onready var texture_rect_category = %TextureRect_Category
 @onready var texture_rect_background = %TextureRect_Background
 @onready var texture_rect_preview = %TextureRect_Preview
+
 
 func _ready():
 	panel_container_external_orig_rect = panel_container_external.get_rect()
@@ -78,17 +79,23 @@ func effect_toggle():
 			var new_position = (panel_container_external_orig_rect.size - new_size) / 2
 			panel_container_external.set_position(new_position)
 			panel_container_external.set_size(new_size)
-			
+
 			var tween = get_tree().create_tween().set_parallel(true)
-			tween.tween_property(panel_container_external, "position", panel_container_external_orig_rect.position, 0.15)
-			tween.tween_property(panel_container_external, "size", panel_container_external_orig_rect.size, 0.15)
-			
+			tween.tween_property(
+				panel_container_external,
+				"position",
+				panel_container_external_orig_rect.position,
+				0.15
+			)
+			tween.tween_property(
+				panel_container_external, "size", panel_container_external_orig_rect.size, 0.15
+			)
+
 			panel_container_external.show()
 	else:
 		panel_container_external.hide()
-		
+
 	was_pressed = button_pressed
-		
 
 
 func _on_toggled(_button_pressed):

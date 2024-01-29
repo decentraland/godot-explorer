@@ -6,9 +6,9 @@ enum ColorTarget { SKIN, HAIR, EYE }
 
 @export var color_target := ColorTarget.SKIN
 
-@onready var panel_color = $Panel_Color
-
 var stylebox: StyleBoxFlat
+
+@onready var panel_color = $Panel_Color
 
 func _ready():
 	stylebox = panel_color.get_theme_stylebox("panel").duplicate()
