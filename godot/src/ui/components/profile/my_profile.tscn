@@ -1,0 +1,323 @@
+[gd_scene load_steps=16 format=3 uid="uid://beskp5r5fb0hf"]
+
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0b6hs"]
+[ext_resource type="Texture2D" uid="uid://x8gxm5im3o45" path="res://assets/ui/profile_placeholder.svg" id="2_vi8dn"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_xkj2o"]
+[ext_resource type="Texture2D" uid="uid://bskyowm6e7h86" path="res://assets/ui/copy.svg" id="4_vchpx"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_3gvvb"]
+[ext_resource type="Texture2D" uid="uid://bk0sk08y0n0j1" path="res://assets/ui/Wallet.svg" id="6_5nrx8"]
+[ext_resource type="Texture2D" uid="uid://c8s3ic645y8i1" path="res://assets/ui/Mana.svg" id="7_hitm1"]
+[ext_resource type="Texture2D" uid="uid://qmjechb2b3td" path="res://assets/ui/PolygonMana.svg" id="8_jmd2d"]
+[ext_resource type="Texture2D" uid="uid://dj71heyiyjlms" path="res://assets/ui/Account.svg" id="9_q56uw"]
+[ext_resource type="Texture2D" uid="uid://cv6mjte01scg0" path="res://assets/ui/Logout.svg" id="10_klru4"]
+
+[sub_resource type="Animation" id="Animation_70m5k"]
+length = 0.001
+
+[sub_resource type="Animation" id="Animation_vn187"]
+resource_name = "fadeInContent"
+length = 0.2
+
+[sub_resource type="Animation" id="Animation_6q8ci"]
+resource_name = "fadeOutContent"
+length = 0.2
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_qs068"]
+_data = {
+"RESET": SubResource("Animation_70m5k"),
+"fadeInContent": SubResource("Animation_vn187"),
+"fadeOutContent": SubResource("Animation_6q8ci")
+}
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mq5eg"]
+bg_color = Color(0.137255, 0.129412, 0.156863, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[node name="MyProfile" type="VBoxContainer"]
+custom_minimum_size = Vector2(200, 0)
+offset_right = 200.0
+offset_bottom = 444.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+focus_mode = 1
+mouse_force_pass_scroll_events = false
+theme = ExtResource("1_0b6hs")
+theme_override_constants/separation = 20
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_qs068")
+}
+
+[node name="VBoxContainer_Profile" type="VBoxContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Control" type="Control" parent="VBoxContainer_Profile"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer_Profile/Control"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -25.0
+offset_top = -25.0
+offset_right = 25.0
+offset_bottom = 25.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(25, 25)
+texture = ExtResource("2_vi8dn")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_Profile"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="VBoxContainer_Profile/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_fonts/font = ExtResource("3_xkj2o")
+theme_override_font_sizes/font_size = 14
+text = "Carrie"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label2" type="Label" parent="VBoxContainer_Profile/HBoxContainer"]
+modulate = Color(1, 1, 1, 0.627451)
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_fonts/font = ExtResource("3_xkj2o")
+theme_override_font_sizes/font_size = 14
+text = "#b47f"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer_Profile/HBoxContainer"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+texture = ExtResource("4_vchpx")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer_Profile"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="VBoxContainer_Profile/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_fonts/font = ExtResource("5_3gvvb")
+theme_override_font_sizes/font_size = 12
+text = "0x0e...a92"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer_Profile/HBoxContainer2"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+texture = ExtResource("4_vchpx")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer_Profile"]
+layout_mode = 2
+alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer_Profile/HBoxContainer3"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_constants/separation = 13
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_mq5eg")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+alignment = 1
+
+[node name="TextureRect3" type="TextureRect" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+texture = ExtResource("6_5nrx8")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+
+[node name="TextureRect2" type="TextureRect" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+texture = ExtResource("7_hitm1")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer/HBoxContainer2"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("3_xkj2o")
+theme_override_font_sizes/font_size = 10
+text = "32K"
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+
+[node name="TextureRect2" type="TextureRect" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer/HBoxContainer3"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+texture = ExtResource("8_jmd2d")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer/PanelContainer/HBoxContainer/HBoxContainer3"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("3_xkj2o")
+theme_override_font_sizes/font_size = 10
+text = "0
+"
+
+[node name="Button" type="Button" parent="VBoxContainer_Profile/HBoxContainer3/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme = ExtResource("1_0b6hs")
+theme_type_variation = &"OutlinedButton"
+text = "PREVIEW PROFILE"
+
+[node name="HBoxContainer4" type="HBoxContainer" parent="VBoxContainer_Profile"]
+layout_mode = 2
+theme_type_variation = &"OutlinedButton"
+alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="."]
+layout_mode = 2
+
+[node name="HBoxContainer_Actions" type="HBoxContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer_Actions"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_constants/separation = 13
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer_Actions/VBoxContainer"]
+layout_mode = 2
+
+[node name="Control2" type="Control" parent="HBoxContainer_Actions/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer_Actions/VBoxContainer/HBoxContainer/Control2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(25, 25)
+texture = ExtResource("9_q56uw")
+expand_mode = 5
+stretch_mode = 5
+
+[node name="Button" type="Button" parent="HBoxContainer_Actions/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("1_0b6hs")
+theme_type_variation = &"OutlinedButton"
+text = "ACCOUNT SETTINGS"
+flat = true
+alignment = 0
+expand_icon = true
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer_Actions/VBoxContainer"]
+layout_mode = 2
+
+[node name="Control2" type="Control" parent="HBoxContainer_Actions/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer_Actions/VBoxContainer/HBoxContainer2/Control2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(25, 25)
+texture = ExtResource("10_klru4")
+expand_mode = 5
+stretch_mode = 5
+
+[node name="Button" type="Button" parent="HBoxContainer_Actions/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("1_0b6hs")
+theme_type_variation = &"OutlinedButton"
+text = "SIGN OUT"
+flat = true
+alignment = 0
+expand_icon = true
+
+[node name="HSeparator2" type="HSeparator" parent="."]
+layout_mode = 2
+
+[node name="HBoxContainer_Links" type="HBoxContainer" parent="."]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer_Links"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_constants/separation = 3
+alignment = 1
+
+[node name="Button" type="Button" parent="HBoxContainer_Links/VBoxContainer"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("1_0b6hs")
+theme_type_variation = &"OutlinedButtonThin"
+text = "Terms of Service"
+flat = true
+expand_icon = true
+
+[node name="Button2" type="Button" parent="HBoxContainer_Links/VBoxContainer"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("1_0b6hs")
+theme_type_variation = &"OutlinedButtonThin"
+text = "Privacy Policy"
+flat = true
+expand_icon = true
