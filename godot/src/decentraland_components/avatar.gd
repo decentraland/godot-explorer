@@ -37,7 +37,7 @@ var audio_stream_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
-@onready var animation_player = $Armature/AnimationPlayer
+@onready var animation_player: AnimationPlayer = $Armature/AnimationPlayer
 @onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
 @onready var label_3d_name = $Label3D_Name
 @onready var body_shape_root: Node3D = $Armature
@@ -164,6 +164,20 @@ func play_emote(emote_id: String):
 		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_name])
 	playing_emote = true
 
+
+func get_current_animation():
+	return animation_player.current_animation
+
+
+func clear_emote_queue():
+	animation_player.clear_queue()
+
+
+func queue_emote(emote_id: String):
+	if animation_player.has_animation(emote_id):
+		animation_player.queue(emote_id)
+	else:
+		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_name])
 
 func play_remote_emote(_emote_src: String, _looping: bool):
 	# TODO: Implement downloading emote from the scene content, adding to the avatar and then playing the emote

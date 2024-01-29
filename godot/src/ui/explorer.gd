@@ -1,6 +1,6 @@
 extends Node
 
-var sign_in_resource = preload("res://src/ui/components/auth/sign_in.tscn")
+var lobby_resource = preload("res://src/ui/components/auth/lobby.tscn")
 
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
@@ -146,9 +146,9 @@ func _ready():
 
 	if Global.testing_scene_mode:
 		Global.player_identity.create_guest_account()
-	elif not Global.player_identity.try_recover_account(Global.config.session_account):
+	else:
 		Global.scene_runner.set_pause(true)
-		ui_root.add_child(sign_in_resource.instantiate())
+		ui_root.add_child(lobby_resource.instantiate())
 
 	# last
 	ui_root.grab_focus.call_deferred()
@@ -167,7 +167,7 @@ func _on_player_logout():
 	Global.config.session_account = {}
 	Global.config.save_to_settings_file()
 
-	ui_root.add_child(sign_in_resource.instantiate())
+	ui_root.add_child(lobby_resource.instantiate())
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:

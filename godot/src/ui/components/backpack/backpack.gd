@@ -20,6 +20,7 @@ var primary_player_profile_dictionary: Dictionary = {}
 var wearable_filter_buttons: Array[WearableFilterButton] = []
 var main_category_selected: String = "body_shape"
 var request_update_avatar: bool = false  # debounce
+var request_show_wearables: bool = false  # debounce
 
 var avatar_wearables_body_shape_cache: Dictionary = {}
 
@@ -62,9 +63,6 @@ func _ready():
 	for wearable_filter_button in container_sub_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
 			wearable_filter_button.filter_type.connect(self._on_wearable_filter_button_filter_type)
-			wearable_filter_button.clear_filter.connect(
-				self._on_wearable_filter_button_clear_filter
-			)
 			wearable_filter_buttons.push_back(wearable_filter_button)
 
 	for wearable_id in Wearables.BASE_WEARABLES:
@@ -127,13 +125,17 @@ func _on_profile_changed(new_profile: Dictionary):
 		primary_player_profile_dictionary = new_profile.duplicate()
 
 	request_update_avatar = true
-	show_wearables()
+	request_show_wearables = true
 
 
 func _physics_process(_delta):
 	if request_update_avatar:
 		request_update_avatar = false
 		_async_update_avatar()
+		
+	if request_show_wearables:
+		request_show_wearables = false
+		show_wearables()
 
 
 func _async_update_avatar():
@@ -169,7 +171,7 @@ func load_filtered_data(filter: String):
 			):
 				filtered_data.push_back(wearable_id)
 
-	show_wearables()
+	request_show_wearables = true
 
 
 func can_unequip(category: String) -> bool:
@@ -235,16 +237,14 @@ func _on_wearable_filter_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func _on_wearable_filter_button_clear_filter():
-	filtered_data = []
-	show_wearables()
-
-
 func _on_line_edit_name_text_changed(_new_text):
 	button_save_profile.disabled = false
 
 
 func save_profile():
+	if primary_player_profile_dictionary.is_empty():
+		return
+
 	var profile_content = primary_player_profile_dictionary.get("content", {})
 	var profile_avatar = profile_content.get("avatar", {})
 
@@ -312,7 +312,7 @@ func _on_button_logout_pressed():
 	Global.comms.disconnect(true)
 
 
-func _on_color_picker_panel_pick_color(color):
+func _on_color_picker_panel_pick_color(color: Color):
 	match skin_color_picker.color_target:
 		skin_color_picker.ColorTarget.EYE:
 			avatar_eyes_color = color
@@ -324,9 +324,12 @@ func _on_color_picker_panel_pick_color(color):
 	skin_color_picker.set_color(color)
 	avatar_preview.avatar.update_colors(avatar_eyes_color, avatar_skin_color, avatar_hair_color)
 
-	primary_player_profile_dictionary["eyes"] = Avatar.to_color_object(avatar_eyes_color)
-	primary_player_profile_dictionary["hair"] = Avatar.to_color_object(avatar_hair_color)
-	primary_player_profile_dictionary["skin"] = Avatar.to_color_object(avatar_skin_color)
+	var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get(
+		"avatar", {}
+	)
+	profile_avatar["eyes"] = Avatar.to_color_object(avatar_eyes_color)
+	profile_avatar["hair"] = Avatar.to_color_object(avatar_hair_color)
+	profile_avatar["skin"] = Avatar.to_color_object(avatar_skin_color)
 	button_save_profile.disabled = false
 
 

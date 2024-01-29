@@ -17,7 +17,8 @@ enum ConfigParams {
 	SHOW_FPS,
 	LIMIT_FPS,
 	SKY_BOX,
-	SESSION_ACCOUNT
+	SESSION_ACCOUNT,
+	GUEST_PROFILE,
 }
 
 const SETTINGS_FILE = "user://settings.cfg"
@@ -103,6 +104,10 @@ var session_account: Dictionary = {}:
 		session_account = value
 		param_changed.emit(ConfigParams.SESSION_ACCOUNT)
 
+var guest_profile: Dictionary = {}:
+	set(value):
+		guest_profile = value
+		param_changed.emit(ConfigParams.GUEST_PROFILE)
 
 func load_from_default():
 	self.gravity = 55.0
@@ -127,6 +132,7 @@ func load_from_default():
 	self.window_size = "1280 x 720"
 
 	self.session_account = {}
+	self.guest_profile = {}
 
 	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
 	self.last_parcel_position = Vector2i(72, -10)
@@ -164,6 +170,10 @@ func load_from_settings_file():
 	self.session_account = settings_file.get_value(
 		"session", "account", data_default.session_account
 	)
+	
+	self.guest_profile = settings_file.get_value(
+		"session", "guest_profile", data_default.guest_profile
+	)
 
 	self.last_parcel_position = settings_file.get_value(
 		"user", "last_parcel_position", data_default.last_parcel_position
@@ -192,6 +202,7 @@ func save_to_settings_file():
 	settings_file.set_value("config", "window_size", self.window_size)
 	settings_file.set_value("config", "ui_scale", self.ui_scale)
 	settings_file.set_value("session", "account", self.session_account)
+	settings_file.set_value("session", "guest_profile", self.guest_profile)
 	settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	settings_file.save(SETTINGS_FILE)

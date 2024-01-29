@@ -335,6 +335,16 @@ impl DclPlayerIdentity {
     }
 
     #[func]
+    pub fn set_profile(&mut self, dict: Dictionary) {
+        self.profile = Some(UserProfile::from_godot_dictionary(&dict));
+
+        self.base.call_deferred(
+            "emit_signal".into(),
+            &["profile_changed".to_variant(), dict.to_variant()],
+        );
+    }
+
+    #[func]
     pub fn get_address_str(&self) -> GString {
         match self.try_get_address() {
             Some(address) => format!("{:#x}", address).into(),
@@ -432,7 +442,7 @@ impl DclPlayerIdentity {
                     self.profile = Some(UserProfile {
                         version: content.version as u32,
                         content,
-                        base_url: "https://peer.decentraland.zone/content/contents/".to_owned(),
+                        base_url: "https://peer.decentraland.org/content/contents/".to_owned(),
                     });
 
                     let dict = self.get_profile_or_empty();

@@ -43,13 +43,23 @@ func async_fetch_profile(address: String, lambda_server_base_url: String) -> voi
 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool):
 	if is_guest_value:
-		self.set_default_profile()
+		if Global.config.guest_profile.is_empty():
+			self.set_default_profile()
+		else:
+			self.set_profile(Global.config.guest_profile)
 		return
 
 	async_fetch_profile(address, current_lambda_server_base_url)
 
 
 func async_deploy_profile(new_profile: Dictionary) -> void:
+	var is_guest_profile = not new_profile.get("content", {}).get("hasConnectedWeb3", false)
+	if is_guest_profile:
+		Global.config.guest_profile = new_profile
+		Global.config.save_to_settings_file()
+		self._update_profile_from_dictionary(new_profile)
+		return
+	
 	var promise: Promise = self.async_prepare_deploy_profile(new_profile)
 	var ret = await PromiseUtils.async_awaiter(promise)
 	if ret is PromiseError:

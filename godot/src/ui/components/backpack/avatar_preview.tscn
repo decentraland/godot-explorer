@@ -33,7 +33,8 @@ render_target_update_mode = 4
 unique_name_in_owner = true
 
 [node name="Camera3D" type="Camera3D" parent="SubViewport"]
-transform = Transform3D(-1, 0, 0.000663193, 0, 1, 0, -0.000663193, 0, -1, 0, 0.957046, -1.62336)
+transform = Transform3D(-1, -5.16436e-08, 1.4189e-07, 0, 0.939693, 0.34202, -1.50996e-07, 0.34202, -0.939693, 0, 2.3, -3.5)
+fov = 40.0
 size = 3.0
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="SubViewport"]
@@ -49,5 +50,3 @@ environment = SubResource("Environment_lhy6q")
 unique_name_in_owner = true
 transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, 0, -0.09, 0)
 visible = false
-
-[connection signal="gui_input" from="." to="." method="_on_gui_input"]
