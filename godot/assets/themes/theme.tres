@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=70 format=3 uid="uid://bm1rvmngc833v"]
+[gd_resource type="Theme" load_steps=76 format=3 uid="uid://bm1rvmngc833v"]
 
 [ext_resource type="StyleBox" uid="uid://cytydg3clvunm" path="res://assets/themes/button_focused.tres" id="1_fswqt"]
 [ext_resource type="StyleBox" uid="uid://cbh3tfooyufmn" path="res://assets/themes/button_disabled.tres" id="1_vyo3o"]
@@ -38,6 +38,7 @@
 [ext_resource type="StyleBox" uid="uid://bje68jsif1cd6" path="res://assets/themes/tabs/tab_unselected.tres" id="29_30xt1"]
 [ext_resource type="Texture2D" uid="uid://d1ly37tghjvec" path="res://assets/themes/icons/dcl_checkbox_s.png" id="29_avb2o"]
 [ext_resource type="Texture2D" uid="uid://um0t477e350q" path="res://assets/themes/icons/dcl_checkbox_unpressed_s.png" id="30_7shrd"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="38_cwxav"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wj6ch"]
 
@@ -220,6 +221,61 @@ corner_radius_bottom_left = 5
 expand_margin_left = 7.0
 expand_margin_right = 7.0
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mbeps"]
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u4m8m"]
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t446h"]
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+bg_color = Color(0.666667, 0.666667, 0.666667, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8iouc"]
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o7itk"]
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+bg_color = Color(0.956863, 0.458824, 0.247059, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [resource]
 default_font = ExtResource("22_v3qcl")
 default_font_size = 14
@@ -315,8 +371,6 @@ OrangeButton/colors/font_focus_color = Color(1, 1, 1, 1)
 OrangeButton/colors/font_hover_color = Color(1, 1, 1, 1)
 OrangeButton/colors/font_hover_pressed_color = Color(1, 1, 1, 1)
 OrangeButton/colors/font_pressed_color = Color(1, 1, 1, 1)
-OrangeButton/constants/h_separation = 5
-OrangeButton/constants/icon_max_width = 30
 OrangeButton/styles/focus = ExtResource("11_edhok")
 OrangeButton/styles/hover = ExtResource("12_oucya")
 OrangeButton/styles/normal = ExtResource("13_wnhei")
@@ -386,3 +440,26 @@ VScrollBar/styles/scroll_focus = null
 VSlider/styles/grabber_area = SubResource("StyleBoxFlat_ha6x8")
 VSlider/styles/grabber_area_highlight = SubResource("StyleBoxFlat_txu25")
 VSlider/styles/slider = SubResource("StyleBoxFlat_cipmx")
+WhiteButton/base_type = &"Button"
+WhiteButton/colors/font_color = Color(0.333333, 0.333333, 0.333333, 1)
+WhiteButton/colors/font_disabled_color = Color(0.333333, 0.333333, 0.333333, 1)
+WhiteButton/colors/font_focus_color = Color(0.333333, 0.333333, 0.333333, 1)
+WhiteButton/colors/font_hover_color = Color(0.333333, 0.333333, 0.333333, 1)
+WhiteButton/colors/font_hover_pressed_color = Color(0.333333, 0.333333, 0.333333, 1)
+WhiteButton/colors/font_outline_color = Color(0, 0, 0, 1)
+WhiteButton/colors/font_pressed_color = Color(1, 1, 1, 1)
+WhiteButton/colors/icon_disabled_color = Color(0.333333, 0.333333, 0.333333, 1)
+WhiteButton/colors/icon_focus_color = Color(0.333333, 0.333333, 0.333333, 1)
+WhiteButton/colors/icon_hover_color = Color(0.333333, 0.333333, 0.333333, 1)
+WhiteButton/colors/icon_hover_pressed_color = Color(0.333333, 0.333333, 0.333333, 1)
+WhiteButton/colors/icon_normal_color = Color(0.333333, 0.333333, 0.333333, 1)
+WhiteButton/colors/icon_pressed_color = Color(1, 1, 1, 1)
+WhiteButton/constants/h_separation = 5
+WhiteButton/constants/icon_max_width = 30
+WhiteButton/constants/outline_size = 0
+WhiteButton/fonts/font = ExtResource("38_cwxav")
+WhiteButton/styles/disabled = SubResource("StyleBoxFlat_mbeps")
+WhiteButton/styles/focus = SubResource("StyleBoxFlat_u4m8m")
+WhiteButton/styles/hover = SubResource("StyleBoxFlat_t446h")
+WhiteButton/styles/normal = SubResource("StyleBoxFlat_8iouc")
+WhiteButton/styles/pressed = SubResource("StyleBoxFlat_o7itk")
