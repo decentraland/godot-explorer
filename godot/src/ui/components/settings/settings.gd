@@ -17,43 +17,61 @@ var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
 var _dirty_connected: bool = false
 
-@onready var general = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General
-@onready var graphics = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics
-@onready var advanced = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced
+@onready
+var general = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General
+@onready
+var graphics = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics
+@onready
+var advanced = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced
 
 #General items:
-@onready var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
-@onready var checkbox_minimap = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/Checkbox_Minimap
+@onready
+var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
+@onready
+var checkbox_minimap = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/Checkbox_Minimap
 
 #Graphics items:
-@onready var menu_button_window_size = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/WindowSize/MenuButton_WindowSize
-@onready var menu_button_resolution = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution/MenuButton_Resolution
-@onready var h_slider_gui_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GuiScale/HBoxContainer/HSlider_GuiScale
-@onready var label_gui_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GuiScale/HBoxContainer/Label_GuiScale
-@onready var menu_button_limit_fps = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/LimitFps/MenuButton_LimitFps
-@onready var menu_button_skybox = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Skybox/MenuButton_Skybox
-
-
-
+@onready
+var menu_button_window_size = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/WindowSize/MenuButton_WindowSize
+@onready
+var menu_button_resolution = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution/MenuButton_Resolution
+@onready
+var h_slider_gui_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GuiScale/HBoxContainer/HSlider_GuiScale
+@onready
+var label_gui_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GuiScale/HBoxContainer/Label_GuiScale
+@onready
+var menu_button_limit_fps = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/LimitFps/MenuButton_LimitFps
+@onready
+var menu_button_skybox = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Skybox/MenuButton_Skybox
 
 #Advanced items:
-@onready var option_button_realm = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm
-@onready var line_edit_preview_url = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/LineEdit_PreviewUrl
-@onready var label_ws_state = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer2/Label_WsState
+@onready
+var option_button_realm = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm
+@onready
+var line_edit_preview_url = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/LineEdit_PreviewUrl
+@onready
+var label_ws_state = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer2/Label_WsState
 
-@onready var h_slider_process_tick_quota = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota
-@onready var label_process_tick_quota_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/Label_ProcessTickQuotaValue
+@onready
+var h_slider_process_tick_quota = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota
+@onready
+var label_process_tick_quota_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/Label_ProcessTickQuotaValue
 
-@onready var h_slider_scene_radius = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius
-@onready var label_scene_radius_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_SceneRadius/HBoxContainer/Label_SceneRadiusValue
+@onready
+var h_slider_scene_radius = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius
+@onready
+var label_scene_radius_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_SceneRadius/HBoxContainer/Label_SceneRadiusValue
 
-@onready var spin_box_gravity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
-@onready var spin_box_jump_velocity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity
-@onready var spin_box_run_speed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed
-@onready var spin_box_walk_speed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed
-@onready var check_box_raycast_debugger = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger
-
-
+@onready
+var spin_box_gravity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
+@onready
+var spin_box_jump_velocity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity
+@onready
+var spin_box_run_speed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed
+@onready
+var spin_box_walk_speed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed
+@onready
+var check_box_raycast_debugger = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger
 
 
 func _ready():
@@ -64,7 +82,6 @@ func _ready():
 	general.show()
 	graphics.hide()
 	advanced.hide()
-
 
 	text_edit_cache_path.text = Global.config.local_content_dir
 
@@ -310,6 +327,5 @@ func _on_check_box_raycast_debugger_toggled(toggled_on):
 	Global.set_raycast_debugger_enable(toggled_on)
 
 
-
 func _on_button_profile_pressed():
-	pass # Replace with function body.
+	pass  # Replace with function body.
