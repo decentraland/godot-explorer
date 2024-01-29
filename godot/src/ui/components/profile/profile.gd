@@ -11,7 +11,6 @@ var v_box_container_my_profile = $VBoxContainer/ColorRect_MyProfile/MarginContai
 var v_box_container_email = $VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email
 
 
-
 func _ready():
 	self.modulate = Color(1, 1, 1, 0)
 	button_my_profile.set_pressed(true)
