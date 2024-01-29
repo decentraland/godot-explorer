@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=34 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -27,10 +27,16 @@
 [ext_resource type="Texture2D" uid="uid://8mwi1tvyxm5f" path="res://assets/ui/wearable_categories/top_head-icon.svg" id="21_rmg80"]
 [ext_resource type="Texture2D" uid="uid://bmoy7cmuucooq" path="res://assets/ui/wearable_categories/skin-icon.svg" id="25_cd16j"]
 
+[sub_resource type="Gradient" id="Gradient_rc1a6"]
+colors = PackedColorArray(0.294118, 0.105882, 0.498039, 1, 0.368627, 0.0941176, 0.490196, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_20jv8"]
+gradient = SubResource("Gradient_rc1a6")
+
 [sub_resource type="ButtonGroup" id="ButtonGroup_0kgen"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_no6vh"]
-bg_color = Color(0.4, 0.211765, 0.133333, 0.14902)
+bg_color = Color(0, 0, 0, 0.2)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
@@ -83,6 +89,16 @@ grow_vertical = 2
 texture = ExtResource("2_sf31l")
 expand_mode = 2
 stretch_mode = 6
+
+[node name="TextureRect2" type="TextureRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_20jv8")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 layout_mode = 1
@@ -184,6 +200,7 @@ layout_mode = 2
 
 [node name="Button_SaveProfile" type="Button" parent="HBoxContainer/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -560,6 +577,8 @@ columns = 5
 [node name="Color_Picker_Panel" parent="." instance=ExtResource("10_8s7x3")]
 visible = false
 
+[connection signal="hidden" from="." to="." method="_on_hidden"]
+[connection signal="pressed" from="HBoxContainer/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer/Button_SaveProfile" to="." method="_on_button_save_profile_pressed"]
 [connection signal="pressed" from="HBoxContainer/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer/Button_Logout" to="." method="_on_button_logout_pressed"]
 [connection signal="toggle_color_panel" from="HBoxContainer/MarginContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer/Color_Picker_Button" to="." method="_on_color_picker_button_toggle_color_panel"]
 [connection signal="hided" from="Color_Picker_Panel" to="." method="_on_color_picker_panel_hided"]

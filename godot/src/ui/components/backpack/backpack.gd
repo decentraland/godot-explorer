@@ -172,19 +172,23 @@ func show_wearables():
 		child.queue_free()
 
 	for wearable_id in filtered_data:
-		var index = avatar_wearables.find(wearable_id)
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		var wearable = wearable_data[wearable_id]
 		grid_container_wearables_list.add_child(wearable_item)
 		wearable_button_group.allow_unpress = can_unequip(Wearables.get_category(wearable))
 		wearable_item.button_group = wearable_button_group
 		wearable_item.async_set_wearable(wearable)
+
+		# Connect signals
 		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
 		wearable_item.unequip.connect(self._on_wearable_unequip.bind(wearable_id))
+
+		# Check if the item is equipped
 		var is_wearable_pressed = (
 			avatar_wearables.has(wearable_id) or avatar_body_shape == wearable_id
 		)
-		wearable_item.set_pressed(is_wearable_pressed)
+		wearable_item.set_pressed_no_signal(is_wearable_pressed)
+		wearable_item.set_equiped(is_wearable_pressed)
 
 
 func _on_main_category_filter_type(type: String):
@@ -224,9 +228,7 @@ func _on_line_edit_name_text_changed(_new_text):
 	button_save_profile.disabled = false
 
 
-func _on_button_save_profile_pressed():
-	button_save_profile.disabled = true
-
+func save_profile():
 	var profile_content = primary_player_profile_dictionary.get("content", {})
 	var profile_avatar = profile_content.get("avatar", {})
 
@@ -237,12 +239,23 @@ func _on_button_save_profile_pressed():
 	Global.player_identity.async_deploy_profile(primary_player_profile_dictionary)
 
 
+func _on_button_save_profile_pressed():
+	button_save_profile.disabled = true
+	save_profile()
+
+
 func _on_wearable_equip(wearable_id: String):
 	var desired_wearable = wearable_data[wearable_id]
 	var category = Wearables.get_category(desired_wearable)
 
 	if category == Wearables.Categories.BODY_SHAPE:
-		avatar_body_shape = wearable_id
+		if avatar_body_shape != wearable_id:
+			avatar_body_shape = wearable_id
+			avatar_wearables.clear()
+			var default_wearables: Dictionary = Wearables.DefaultWearables.BY_BODY_SHAPES.get(
+				avatar_body_shape
+			)
+			avatar_wearables = default_wearables.values()
 	else:
 		var to_remove = []
 		# Unequip current wearable with category
@@ -324,3 +337,7 @@ func _on_color_picker_button_toggle_color_panel(toggled, color_target):
 
 func _on_color_picker_panel_hided():
 	skin_color_picker.set_pressed(false)
+
+
+func _on_hidden():
+	save_profile()

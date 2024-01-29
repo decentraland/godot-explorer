@@ -104,7 +104,6 @@ func _on_toggled(_button_pressed):
 	else:
 		self.unequip.emit()
 	set_equiped(_button_pressed)
-	effect_toggle()
 
 
 func set_equiped(is_equiped: bool):
@@ -112,6 +111,7 @@ func set_equiped(is_equiped: bool):
 		texture_rect_equiped.show()
 	else:
 		texture_rect_equiped.hide()
+	effect_toggle()
 
 
 func _update_category_icon(wearable: Dictionary):

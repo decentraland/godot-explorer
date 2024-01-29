@@ -10,6 +10,7 @@ var stylebox: StyleBoxFlat
 
 @onready var panel_color = $Panel_Color
 
+
 func _ready():
 	stylebox = panel_color.get_theme_stylebox("panel").duplicate()
 	panel_color.add_theme_stylebox_override("panel", stylebox)
