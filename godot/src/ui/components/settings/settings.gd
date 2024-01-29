@@ -17,70 +17,60 @@ var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
 var _dirty_connected: bool = false
 
-@onready
-var general = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General
-@onready
-var graphics = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Graphics
-@onready
-var advanced = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced
-@onready
-var check_box_raycast_debugger = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger
+@onready var general = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General
+@onready var graphics = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics
+@onready var advanced = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced
 
-@onready
-var text_edit = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
-@onready
-var window_size_menu_button = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Graphics/WindowSize/MenuButton_WindowSize
-@onready
-var resolution_menu_button = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Graphics/Resolution/MenuButton_Resolution
-@onready
-var minimap = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_General/Checkbox_Minimap
-@onready
-var label_gui_scale = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Graphics/GuiScale/HBoxContainer/Label_GuiScale
-@onready
-var h_slider_gui_scale = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Graphics/GuiScale/HBoxContainer/HSlider_GuiScale
-@onready
-var menu_button_limit_fps = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Graphics/LimitFps/MenuButton_LimitFps
-@onready
-var menu_button_skybox = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Graphics/Skybox/MenuButton_Skybox
+#General items:
+@onready var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
+@onready var checkbox_minimap = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/Checkbox_Minimap
 
-@onready
-var option_button_realm = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm
-@onready
-var line_edit_preview_url = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/LineEdit_PreviewUrl
-@onready
-var label_ws_state = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer2/Label_WsState
-@onready
-var h_slider_process_tick_quota = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota
-@onready
-var label_process_tick_quota_value = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/Label_ProcessTickQuotaValue
-@onready
-var h_slider_scene_radius = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius
-@onready
-var label_scene_radius_value = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/VBoxContainer_SceneRadius/HBoxContainer/Label_SceneRadiusValue
-@onready
-var spin_box_gravity = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
-@onready
-var spin_box_jump_velocity = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity
-@onready
-var spin_box_run_speed = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed
-@onready
-var spin_box_walk_speed = $VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed
+#Graphics items:
+@onready var menu_button_window_size = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/WindowSize/MenuButton_WindowSize
+@onready var menu_button_resolution = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution/MenuButton_Resolution
+@onready var h_slider_gui_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GuiScale/HBoxContainer/HSlider_GuiScale
+@onready var label_gui_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GuiScale/HBoxContainer/Label_GuiScale
+@onready var menu_button_limit_fps = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/LimitFps/MenuButton_LimitFps
+@onready var menu_button_skybox = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Skybox/MenuButton_Skybox
+
+
+
+
+#Advanced items:
+@onready var option_button_realm = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm
+@onready var line_edit_preview_url = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/LineEdit_PreviewUrl
+@onready var label_ws_state = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer2/Label_WsState
+
+@onready var h_slider_process_tick_quota = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota
+@onready var label_process_tick_quota_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/Label_ProcessTickQuotaValue
+
+@onready var h_slider_scene_radius = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius
+@onready var label_scene_radius_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_SceneRadius/HBoxContainer/Label_SceneRadiusValue
+
+@onready var spin_box_gravity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
+@onready var spin_box_jump_velocity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity
+@onready var spin_box_run_speed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed
+@onready var spin_box_walk_speed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed
+@onready var check_box_raycast_debugger = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger
+
+
 
 
 func _ready():
-	if Global.is_mobile():
-		window_size_menu_button.disabled = true
-		resolution_menu_button.disabled = true
+	if Global.is_mobile:
+		menu_button_window_size.disabled = true
+		menu_button_resolution.disabled = true
 
 	general.show()
 	graphics.hide()
 	advanced.hide()
 
-	text_edit.text = Global.config.local_content_dir
+
+	text_edit_cache_path.text = Global.config.local_content_dir
 
 	resolution_manager.refresh_window_options()
 	for item in resolution_manager.window_options.keys():
-		window_size_menu_button.add_item(item)
+		menu_button_window_size.add_item(item)
 
 	load_resolutions()
 	refresh_resolution()
@@ -96,7 +86,7 @@ func _on_button_pressed():
 
 
 func _on_window_size_menu_button_item_selected(index):
-	var current_window_size: String = window_size_menu_button.get_item_text(index)
+	var current_window_size: String = menu_button_window_size.get_item_text(index)
 	resolution_manager.change_window_size(get_window(), get_viewport(), current_window_size)
 	load_resolutions()
 	resolution_manager.center_window(get_window())
@@ -107,7 +97,7 @@ func _on_window_size_menu_button_item_selected(index):
 
 
 func _on_resolution_menu_button_item_selected(index):
-	var current_res: String = resolution_menu_button.get_item_text(index)
+	var current_res: String = menu_button_resolution.get_item_text(index)
 	resolution_manager.change_resolution(get_window(), get_viewport(), current_res)
 	resolution_manager.center_window(get_window())
 	resolution_manager.change_ui_scale(get_window(), 1.0)
@@ -118,24 +108,24 @@ func _on_resolution_menu_button_item_selected(index):
 
 
 func refresh_resolution():
-	for index in range(resolution_menu_button.item_count):
-		var current_res: String = resolution_menu_button.get_item_text(index)
+	for index in range(menu_button_resolution.item_count):
+		var current_res: String = menu_button_resolution.get_item_text(index)
 		if current_res == Global.config.resolution:
-			resolution_menu_button.selected = index
+			menu_button_resolution.selected = index
 
-	for index in range(window_size_menu_button.item_count):
-		var current_res: String = window_size_menu_button.get_item_text(index)
+	for index in range(menu_button_window_size.item_count):
+		var current_res: String = menu_button_window_size.get_item_text(index)
 		if current_res == Global.config.window_size:
-			window_size_menu_button.selected = index
+			menu_button_window_size.selected = index
 
 	h_slider_gui_scale.set_value_no_signal(Global.config.ui_scale * 100.0)
 	label_gui_scale.text = str(round(100.0 * Global.config.ui_scale)) + "%"
 
 
 func load_resolutions():
-	resolution_menu_button.clear()
+	menu_button_resolution.clear()
 	for item in resolution_manager.resolution_options:
-		resolution_menu_button.add_item(item)
+		menu_button_resolution.add_item(item)
 
 
 func _on_general_button_toggled(_button_pressed):
@@ -318,3 +308,8 @@ func _on_check_box_scene_pause_toggled(toggled_on):
 
 func _on_check_box_raycast_debugger_toggled(toggled_on):
 	Global.set_raycast_debugger_enable(toggled_on)
+
+
+
+func _on_button_profile_pressed():
+	pass # Replace with function body.
