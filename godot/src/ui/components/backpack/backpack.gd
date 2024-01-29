@@ -19,6 +19,7 @@ var wearable_data: Dictionary = {}
 var primary_player_profile_dictionary: Dictionary = {}
 var wearable_filter_buttons: Array[WearableFilterButton] = []
 var main_category_selected: String = "body_shape"
+var request_update_avatar: bool = false  # debounce
 
 @onready var skin_color_picker = %Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
@@ -72,7 +73,7 @@ func _ready():
 
 	_update_visible_categories()
 
-	_async_update_avatar()
+	request_update_avatar = true
 
 
 func _update_visible_categories():
@@ -124,13 +125,28 @@ func _on_profile_changed(new_profile: Dictionary):
 	if primary_player_profile_dictionary.is_empty():
 		primary_player_profile_dictionary = new_profile.duplicate()
 
-	_async_update_avatar()
+	request_update_avatar = true
 	show_wearables()
+
+
+func _physics_process(_delta):
+	if request_update_avatar:
+		request_update_avatar = false
+		_async_update_avatar()
 
 
 func _async_update_avatar():
 	if primary_player_profile_dictionary.is_empty():
 		return
+
+	prints("_async_update_avatar")
+	for wearable_id in avatar_wearables:
+		var wearable = wearable_data[wearable_id]
+		prints(
+			"equiped: ",
+			wearable_id,
+			Wearables.get_category(wearable) if wearable != null else "NULL!!"
+		)
 
 	var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get(
 		"avatar", {}
@@ -276,7 +292,7 @@ func _on_wearable_equip(wearable_id: String):
 
 		avatar_wearables.append(wearable_id)
 
-	_async_update_avatar()
+	request_update_avatar = true
 
 
 func _on_wearable_unequip(wearable_id: String):
@@ -291,7 +307,7 @@ func _on_wearable_unequip(wearable_id: String):
 	if index != -1:
 		avatar_wearables.remove_at(index)
 
-	_async_update_avatar()
+	request_update_avatar = true
 
 
 func _on_button_logout_pressed():

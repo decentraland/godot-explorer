@@ -240,7 +240,7 @@ func async_fetch_wearables_dependencies():
 
 	await PromiseUtils.async_all(async_calls)
 
-	async_load_wearables()
+	await async_load_wearables()
 
 
 func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappingAndUrl) -> Promise:
