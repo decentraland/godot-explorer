@@ -116,7 +116,7 @@ func set_equiped(is_equiped: bool):
 
 func _update_category_icon(wearable: Dictionary):
 	var texture_path = (
-		"res://assets/wearable_categories/"
+		"res://assets/ui/wearable_categories/"
 		+ wearable.get("metadata", "").get("data", "").get("category", "")
 		+ "-icon.svg"
 	)

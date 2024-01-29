@@ -1,10 +1,11 @@
-[gd_scene load_steps=34 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=35 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
 [ext_resource type="Texture2D" uid="uid://k7ufueequ8k0" path="res://assets/ui/backpack/backpack-bg.png" id="2_sf31l"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="4_4kxkq"]
-[ext_resource type="Texture2D" path="res://assets/ui/wearable_categories/body_shape-icon.svg" id="6_4rdaw"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_saosw"]
+[ext_resource type="Texture2D" uid="uid://dra4ek5p0o6jj" path="res://assets/ui/wearable_categories/body_shape-icon.svg" id="6_4rdaw"]
 [ext_resource type="Shader" path="res://src/ui/components/backpack/backpack.gdshader" id="6_qle00"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="6_t442b"]
 [ext_resource type="Texture2D" uid="uid://bg68xlkrhus8m" path="res://assets/ui/wearable_categories/eyebrows-icon.svg" id="7_a6yyg"]
@@ -133,6 +134,21 @@ size_flags_horizontal = 1
 stretch = true
 hide_name = true
 show_platform = true
+
+[node name="TextureProgressBar_AvatarLoading" parent="HBoxContainer/Control_LeftBar" instance=ExtResource("4_saosw")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/Control_LeftBar"]
 layout_mode = 1

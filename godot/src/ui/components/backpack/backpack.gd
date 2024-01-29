@@ -26,6 +26,7 @@ var main_category_selected: String = "body_shape"
 
 @onready var line_edit_name = %LineEdit_Name
 @onready var avatar_preview = %AvatarPreview
+@onready var avatar_loading = %TextureProgressBar_AvatarLoading
 @onready var button_save_profile = %Button_SaveProfile
 
 @onready var container_main_categories = %HBoxContainer_MainCategories
@@ -71,7 +72,7 @@ func _ready():
 
 	_update_visible_categories()
 
-	_update_avatar()
+	_async_update_avatar()
 
 
 func _update_visible_categories():
@@ -123,11 +124,11 @@ func _on_profile_changed(new_profile: Dictionary):
 	if primary_player_profile_dictionary.is_empty():
 		primary_player_profile_dictionary = new_profile.duplicate()
 
-	_update_avatar()
+	_async_update_avatar()
 	show_wearables()
 
 
-func _update_avatar():
+func _async_update_avatar():
 	if primary_player_profile_dictionary.is_empty():
 		return
 
@@ -141,7 +142,11 @@ func _update_avatar():
 	profile_avatar["wearables"] = avatar_wearables
 	profile_avatar["emotes"] = avatar_emotes
 
-	avatar_preview.avatar.async_update_avatar_from_profile(primary_player_profile_dictionary)
+	avatar_preview.hide()
+	avatar_loading.show()
+	await avatar_preview.avatar.async_update_avatar_from_profile(primary_player_profile_dictionary)
+	avatar_loading.hide()
+	avatar_preview.show()
 	button_save_profile.disabled = false
 
 
@@ -271,7 +276,7 @@ func _on_wearable_equip(wearable_id: String):
 
 		avatar_wearables.append(wearable_id)
 
-	_update_avatar()
+	_async_update_avatar()
 
 
 func _on_wearable_unequip(wearable_id: String):
@@ -286,7 +291,7 @@ func _on_wearable_unequip(wearable_id: String):
 	if index != -1:
 		avatar_wearables.remove_at(index)
 
-	_update_avatar()
+	_async_update_avatar()
 
 
 func _on_button_logout_pressed():

@@ -110,7 +110,7 @@ func async_update_avatar(avatar: Dictionary):
 
 	var promise = Global.content_provider.fetch_wearables(wearable_to_request, current_content_url)
 	await PromiseUtils.async_all(promise)
-	async_fetch_wearables_dependencies()
+	await async_fetch_wearables_dependencies()
 
 
 static func from_color_object(color: Variant, default: Color = Color.WHITE) -> Color:
