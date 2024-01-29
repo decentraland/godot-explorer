@@ -28,8 +28,8 @@ func close():
 	tween_h.tween_callback(self.hide).set_delay(0.3)
 
 
-func open(childNode):
-	push(childNode)
+func open(child_node):
+	push(child_node)
 	show()
 	var tween_m = create_tween()
 	tween_m.tween_property(self, "modulate", Color(1, 1, 1), 0.3)
@@ -43,9 +43,9 @@ func push(scene: PackedScene):
 
 	for child in margin_container_content.get_children():
 		fade_out(child)
-	var instantiatedScene = scene.instantiate()
-	instantiatedScene.set_parent(self)
-	margin_container_content.add_child(instantiatedScene)
+	var instantiated_scene = scene.instantiate()
+	instantiated_scene.set_parent(self)
+	margin_container_content.add_child(instantiated_scene)
 
 	if margin_container_content.get_child_count() <= 1:
 		button_back.hide()
