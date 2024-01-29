@@ -1,7 +1,7 @@
-extends TextureRect
+extends Control
 
 const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
-const WEARABLE_GROUP = preload("res://src/ui/components/backpack/wearable_group.tres")
+var WEARABLE_GROUP = preload("res://src/ui/components/backpack/wearable_group.tres")
 const WEARABLE_ITEM_INSTANTIABLE = preload(
 	"res://src/ui/components/wearable_item/wearable_item.tscn"
 )
@@ -17,22 +17,23 @@ var avatar_emotes: Array
 var base_wearable_request_id: int = -1
 var wearable_data: Dictionary = {}
 var primary_player_profile_dictionary: Dictionary = {}
-var wearable_buttons: Array = []
+var wearable_filter_buttons: Array[WearableFilterButton] = []
+var main_category_selected: String = "body_shape"
 
-@onready var skin_color_picker = $HBoxContainer/ColorRect_Sidebar/MarginContainer/Color_Picker_Button
+@onready var skin_color_picker = %Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
-@onready
-var grid_container_wearables_list = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer/MarginContainer/GridContainer_WearablesList
+@onready var grid_container_wearables_list = %GridContainer_WearablesList
 
-@onready var line_edit_name = $HBoxContainer/Control/VBoxContainer/LineEdit_Name
+@onready var line_edit_name = %LineEdit_Name
 @onready var avatar_preview = %AvatarPreview
-@onready var button_save_profile = $HBoxContainer/Control/VBoxContainer/Button_SaveProfile
+@onready var button_save_profile = %Button_SaveProfile
 
-@onready
-var v_box_container_category = %HBoxContainer_Categories
-@onready
-var menu_button_filter = $HBoxContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/HBoxContainer2/VBoxContainer/ScrollContainer3/HBoxContainer/VBoxContainer_Category/HBoxContainer/MenuButton_Filter
+@onready var container_main_categories = %HBoxContainer_MainCategories
+@onready var container_sub_categories = %HBoxContainer_SubCategories
+@onready var scroll_container_sub_categories = %ScrollContainer_SubCategories
+@onready var menu_button_filter = %MenuButton_Filter
 
+@onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
 
 # gdlint:ignore = async-function-name
 func _ready():
@@ -42,12 +43,15 @@ func _ready():
 	menu_button_filter.text = "FILTER"
 	menu_button_filter.icon = FILTER
 
-	for child in v_box_container_category.get_children():
-		# TODO: check if it's a wearable_button
-		for wearable_button in child.get_children():
-			wearable_button.filter_type.connect(self._on_wearable_button_filter_type)
-			wearable_button.clear_filter.connect(self._on_wearable_button_clear_filter)
-			wearable_buttons.push_back(wearable_button)
+	for wearable_filter_button in container_main_categories.get_children():
+		if wearable_filter_button is WearableFilterButton:
+			wearable_filter_button.filter_type.connect(self._on_main_category_filter_type)
+
+	for wearable_filter_button in container_sub_categories.get_children():
+		if wearable_filter_button is WearableFilterButton:
+			wearable_filter_button.filter_type.connect(self._on_wearable_filter_button_filter_type)
+			wearable_filter_button.clear_filter.connect(self._on_wearable_filter_button_clear_filter)
+			wearable_filter_buttons.push_back(wearable_filter_button)
 
 	for wearable_id in Wearables.BASE_WEARABLES:
 		var key = "urn:decentraland:off-chain:base-avatars:" + wearable_id
@@ -62,7 +66,42 @@ func _ready():
 	for wearable_id in wearable_data:
 		wearable_data[wearable_id] = Global.content_provider.get_wearable(wearable_id)
 
+	_update_visible_categories()
+
 	_update_avatar()
+
+func _update_visible_categories():
+	var count_per_category: Dictionary = {}
+	for category in Wearables.Categories.ALL_CATEGORIES:
+		count_per_category[category] = 0
+
+	for wearable_id in wearable_data:
+		var wearable = wearable_data[wearable_id]
+		
+		var category = Wearables.get_category(wearable)
+		if (
+			Wearables.can_equip(wearable, avatar_body_shape)
+			or category == "body_shape"
+		):
+			count_per_category[category] += 1
+
+	var showed_subcategories: int = 0
+	var first_wearable_filter_button: WearableFilterButton = null
+	for wearable_filter_button: WearableFilterButton in wearable_filter_buttons:
+		var category = wearable_filter_button.get_category_name()
+		var filter_categories: Array = Wearables.Categories.MAIN_CATEGORIES.get(main_category_selected)
+		var category_is_visible: bool = filter_categories.has(category)
+		# category_is_visible &= count_per_category[category] > 0 # remove comment if we want to hide the categories without objects
+		wearable_filter_button.visible = category_is_visible
+		if category_is_visible:
+			showed_subcategories += 1
+			if first_wearable_filter_button == null:
+				first_wearable_filter_button = wearable_filter_button
+			
+	scroll_container_sub_categories.set_visible(showed_subcategories >= 2)
+	if first_wearable_filter_button:
+		first_wearable_filter_button.set_pressed(true)
+		
 
 
 func _on_profile_changed(new_profile: Dictionary):
@@ -83,6 +122,7 @@ func _on_profile_changed(new_profile: Dictionary):
 		primary_player_profile_dictionary = new_profile.duplicate()
 
 	_update_avatar()
+	show_wearables()
 
 
 func _update_avatar():
@@ -119,6 +159,12 @@ func load_filtered_data(filter: String):
 	show_wearables()
 
 
+func can_unequip(category: String) -> bool:
+	return category != Wearables.Categories.BODY_SHAPE and \
+		category != Wearables.Categories.EYES and \
+		category != Wearables.Categories.MOUTH
+
+
 func show_wearables():
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
@@ -126,14 +172,21 @@ func show_wearables():
 	for wearable_id in filtered_data:
 		var index = avatar_wearables.find(wearable_id)
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
+		var wearable = wearable_data[wearable_id]
 		grid_container_wearables_list.add_child(wearable_item)
+		WEARABLE_GROUP.allow_unpress = can_unequip(Wearables.get_category(wearable))
 		wearable_item.button_group = WEARABLE_GROUP
-		wearable_item.async_set_wearable(wearable_data[wearable_id])
+		wearable_item.async_set_wearable(wearable)
 		wearable_item.equip.connect(self._on_wearable_equip.bind(wearable_id))
 		wearable_item.unequip.connect(self._on_wearable_unequip.bind(wearable_id))
+		var is_wearable_pressed = avatar_wearables.has(wearable_id) or avatar_body_shape == wearable_id
+		wearable_item.set_pressed(is_wearable_pressed)
 
+func _on_main_category_filter_type(type: String):
+	main_category_selected = type
+	_update_visible_categories()
 
-func _on_wearable_button_filter_type(type):
+func _on_wearable_filter_button_filter_type(type):
 	load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
 
@@ -141,15 +194,12 @@ func _on_wearable_button_filter_type(type):
 	if type == Wearables.Categories.BODY_SHAPE:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.SKIN
 		skin_color_picker.set_color(avatar_skin_color)
-		skin_color_picker.set_text("SKIN COLOR")
 	elif type == Wearables.Categories.HAIR or type == Wearables.Categories.FACIAL_HAIR:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.HAIR
 		skin_color_picker.set_color(avatar_hair_color)
-		skin_color_picker.set_text("HAIR COLOR")
 	elif type == Wearables.Categories.EYES:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.EYE
 		skin_color_picker.set_color(avatar_eyes_color)
-		skin_color_picker.set_text("EYE COLOR")
 	else:
 		should_hide = true
 
@@ -159,7 +209,7 @@ func _on_wearable_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func _on_wearable_button_clear_filter():
+func _on_wearable_filter_button_clear_filter():
 	filtered_data = []
 	show_wearables()
 
@@ -224,10 +274,6 @@ func _on_button_logout_pressed():
 	Global.comms.disconnect(true)
 
 
-func _on_color_picker_panel_popup_hide():
-	skin_color_picker.set_toggled(false)
-
-
 func _on_color_picker_panel_pick_color(color):
 	match skin_color_picker.color_target:
 		skin_color_picker.ColorTarget.EYE:
@@ -252,6 +298,7 @@ func _on_color_picker_button_toggle_color_panel(toggled, color_target):
 
 	if toggled:
 		var rect = skin_color_picker.get_global_rect()
+		rect.position.x += rect.size.x
 		rect.position.y += rect.size.y + 10
 
 		var current_color: Color
@@ -267,3 +314,7 @@ func _on_color_picker_button_toggle_color_panel(toggled, color_target):
 				current_color = avatar_hair_color
 
 		color_picker_panel.custom_popup(rect, current_color)
+
+
+func _on_color_picker_panel_hided():
+	skin_color_picker.set_pressed(false)

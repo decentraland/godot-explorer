@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=3 uid="uid://cy43hvd5bivso"]
+[gd_scene load_steps=7 format=3 uid="uid://cy43hvd5bivso"]
 
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar.tscn" id="1_dtjd5"]
 [ext_resource type="Script" path="res://src/ui/components/backpack/avatar_preview.gd" id="1_sayag"]
+[ext_resource type="Texture2D" uid="uid://b3kh1bupgvwev" path="res://assets/ui/backpack/platform.png" id="3_wtk2a"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_6yihh"]
 sky_top_color = Color(1, 1, 1, 1)
@@ -16,6 +17,8 @@ background_mode = 2
 sky = SubResource("Sky_0qr0h")
 
 [node name="SubViewportContainer" type="SubViewportContainer"]
+offset_right = 256.0
+offset_bottom = 500.0
 size_flags_horizontal = 4
 script = ExtResource("1_sayag")
 
@@ -31,6 +34,8 @@ unique_name_in_owner = true
 
 [node name="Camera3D" type="Camera3D" parent="SubViewport"]
 transform = Transform3D(-1, 0, 0.000663193, 0, 1, 0, -0.000663193, 0, -1, 0, 0.957046, -1.62336)
+projection = 1
+size = 3.0
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="SubViewport"]
 transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
@@ -40,5 +45,12 @@ shadow_blur = 6.834
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="SubViewport"]
 environment = SubResource("Environment_lhy6q")
+
+[node name="Sprite3D_Platform" type="Sprite3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05, -0.05, 1)
+pixel_size = 0.0025
+billboard = 1
+texture_filter = 1
+texture = ExtResource("3_wtk2a")
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

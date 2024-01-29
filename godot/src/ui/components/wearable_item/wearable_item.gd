@@ -1,4 +1,5 @@
 extends Button
+class_name WearableItem
 
 signal equip(wearable_id: String)
 signal unequip(wearable_id: String)
@@ -16,24 +17,19 @@ var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 var thumbnail_hash: String
 var wearable_id: String
 var wearable_data: Dictionary
+var panel_container_external_orig_rect: Rect2
+var was_pressed = false
 
-@onready var panel_container_black = $PanelContainer_Black
-@onready var panel_container_white = $PanelContainer_Black/PanelContainer_White
+@onready var panel_container_external = $PanelContainer_External
 
-@onready var button_equip = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Button_Equip
-
-@onready
-var texture_rect_equiped = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Equiped
-@onready
-var texture_rect_category = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview/TextureRect_Category
-@onready
-var texture_rect_background = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Background
-@onready
-var texture_rect_preview = $PanelContainer_Black/PanelContainer_White/VBoxContainer/Panel/TextureRect_Preview
-
+@onready var texture_rect_equiped = %TextureRect_Equiped
+@onready var texture_rect_category = %TextureRect_Category
+@onready var texture_rect_background = %TextureRect_Background
+@onready var texture_rect_preview = %TextureRect_Preview
 
 func _ready():
-	pass
+	panel_container_external_orig_rect = panel_container_external.get_rect()
+	panel_container_external.hide()
 
 
 func async_set_wearable(wearable: Dictionary):
@@ -70,24 +66,38 @@ func async_set_wearable(wearable: Dictionary):
 		if res is PromiseError:
 			printerr("Fetch texture error on ", wearable_thumbnail, ": ", res.get_error())
 		else:
+			var current_size = texture_rect_preview.size
 			texture_rect_preview.texture = res.texture
+			texture_rect_preview.size = current_size
+
+
+func effect_toggle():
+	if button_pressed:
+		if was_pressed == false:
+			var new_size = panel_container_external_orig_rect.size * 0.9
+			var new_position = (panel_container_external_orig_rect.size - new_size) / 2
+			panel_container_external.set_position(new_position)
+			panel_container_external.set_size(new_size)
+			
+			var tween = get_tree().create_tween().set_parallel(true)
+			tween.tween_property(panel_container_external, "position", panel_container_external_orig_rect.position, 0.15)
+			tween.tween_property(panel_container_external, "size", panel_container_external_orig_rect.size, 0.15)
+			
+			panel_container_external.show()
+	else:
+		panel_container_external.hide()
+		
+	was_pressed = button_pressed
+		
 
 
 func _on_toggled(_button_pressed):
-	if button_pressed:
-		size = panel_container_black.size
+	if _button_pressed:
 		self.equip.emit()
-		button_equip.show()
-		panel_container_white.self_modulate = Color("#ffffff00")
-		panel_container_black.self_modulate = Color("#ffffff")
-		z_index = 5
 	else:
 		self.unequip.emit()
-		button_equip.hide()
-		size = panel_container_white.size
-		panel_container_white.self_modulate = Color("#ffffff")
-		panel_container_black.self_modulate = Color("#ffffff00")
-		z_index = 0
+	set_equiped(_button_pressed)
+	effect_toggle()
 
 
 func set_equiped(is_equiped: bool):

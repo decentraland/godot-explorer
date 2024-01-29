@@ -1,5 +1,6 @@
-extends PopupPanel
+extends CanvasLayer
 
+signal hided()
 signal pick_color(color: Color)
 
 enum ColorTargetType { SKIN, OTHER }
@@ -38,15 +39,19 @@ var color_button_group: ButtonGroup = ButtonGroup.new()
 
 var colorable_square = preload("res://src/ui/color_picker/colorable_square.tscn")
 
-@onready var v_box_container_hair = $VBoxContainer/VBoxContainer_Hair
-@onready var grid_container_hair = $VBoxContainer/VBoxContainer_Hair/GridContainer_Hair
-@onready var grid_container_skin = $VBoxContainer/GridContainer_Skin
+@onready var v_box_container_hair = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair
+@onready var grid_container_hair = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/GridContainer_Hair
+@onready var grid_container_skin = $Control/Color_Picker_Panel/VBoxContainer/GridContainer_Skin
 
-@onready var color_slider = $VBoxContainer/VBoxContainer_Hair/ColorSlider
-@onready var saturation_slider = $VBoxContainer/VBoxContainer_Hair/SaturationSlider
-@onready var brightness_slider = $VBoxContainer/VBoxContainer_Hair/BrightnessSlider
-@onready var panel_preview = $VBoxContainer/VBoxContainer_Hair/Panel_Preview
+@onready var color_slider = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/ColorSlider
+@onready var saturation_slider = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/SaturationSlider
+@onready var brightness_slider = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/BrightnessSlider
+@onready var panel_preview = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/Panel_Preview
 
+@onready var color_picked_panel = $Control/Color_Picker_Panel
+
+func _ready():
+	hide()
 
 func custom_popup(rect: Rect2, current_color: Color):
 	v_box_container_hair.hide()
@@ -76,7 +81,9 @@ func custom_popup(rect: Rect2, current_color: Color):
 			color_square.toggled.connect(self._on_color_toggled.bind(color))
 			grid_container_skin.add_child(color_square)
 
-	self.popup(rect)
+	self.show()
+	color_picked_panel.set_position(rect.position - Vector2(color_picked_panel.size.x, 0))
+	color_picked_panel.reset_size()
 
 	_on_color_toggled(true, current_color)
 
@@ -137,3 +144,10 @@ func modulate_panel_preview():
 	var s: float = saturation_slider.value / 100.0
 	var v: float = brightness_slider.value / 100.0
 	panel_preview.modulate = Color.from_hsv(h, s, v, 1.0)
+
+
+func _on_control_gui_input(event):
+	if event is InputEventScreenTouch:
+		if !event.pressed:
+			hide()
+			hided.emit()

@@ -4,6 +4,7 @@ extends DclAvatar
 signal avatar_loaded
 
 @export var skip_process: bool = false
+@export var hide_name: bool = false
 
 # Public
 var avatar_name: String = ""
@@ -91,6 +92,9 @@ func async_update_avatar(avatar: Dictionary):
 		avatar_name = avatar.get("name", "")
 
 	label_3d_name.text = avatar_name
+	if hide_name:
+		label_3d_name.hide()
+
 	current_wearables = avatar.get("wearables")
 	current_body_shape = avatar.get("bodyShape")
 	current_eyes_color = Avatar.from_color_object(avatar.get("eyes", {}).get("color", null))

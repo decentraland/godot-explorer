@@ -203,7 +203,7 @@ func _on_check_button_toggled(button_pressed):
 
 func _unhandled_input(event):
 	if not Global.is_mobile():
-		if event is InputEventMouseButton and event.pressed:
+		if event is InputEventMouseButton and event.pressed and ui_root.has_focus():
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 				capture_mouse()
 

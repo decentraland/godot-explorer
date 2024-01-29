@@ -1,5 +1,8 @@
 extends SubViewportContainer
 
+@export var hide_name: bool = false
+@export var show_platform: bool = false
+
 var start_camera_transform
 var start_angle
 var start_dragging_position
@@ -7,9 +10,11 @@ var dirty_is_dragging
 
 @onready var avatar = %Avatar
 @onready var camera_3d = $SubViewport/Camera3D
-
+@onready var platform = $SubViewport/Sprite3D_Platform
 
 func _ready():
+	avatar.hide_name = hide_name
+	platform.set_visible(show_platform)
 	if Global.standalone:
 		pass
 		# TODO: this config no longer exists
@@ -17,14 +22,15 @@ func _ready():
 
 
 func focus_camera_on(type):
-	var tween = create_tween()
+	var tween = create_tween().set_parallel()
 	match type:
 		Wearables.Categories.HAIR, Wearables.Categories.FACIAL_HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.EYES:
 			tween.tween_property(camera_3d, "position", Vector3(0, 1.68, -0.523), 0.5)
+			tween.tween_property(camera_3d, "size", 1, 0.5)
 		_:
 			tween.tween_property(camera_3d, "position", Vector3(0, 0.957, -1.623), 0.5)
+			tween.tween_property(camera_3d, "size", 3, 0.5)
 	tween.play()
-
 
 func _on_gui_input(event):
 	if event is InputEventMouseButton:

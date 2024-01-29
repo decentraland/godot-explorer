@@ -387,6 +387,17 @@ class Categories:
 	const UPPER_BODY_DEFAULT_HIDES: PackedStringArray = [HANDS]
 	const REQUIRED_CATEGORIES: PackedStringArray = [EYES, MOUTH]
 
+	const MAIN_CATEGORIES: Dictionary = {
+		BODY_SHAPE: [BODY_SHAPE],
+		HAIR: [EYES, EYEBROWS, MOUTH, FACIAL_HAIR, HAIR],
+		UPPER_BODY: [UPPER_BODY],
+		HANDS_WEAR: [HANDS_WEAR],
+		LOWER_BODY: [LOWER_BODY],
+		FEET: [FEET],
+		HAT: [EARRING, EYEWEAR, HAT, HELMET, MASK, TIARA, TOP_HEAD], # accesories...
+		SKIN: [SKIN],
+	}
+
 	const ALL_CATEGORIES: PackedStringArray = [
 		EYES,
 		EYEBROWS,

@@ -240,3 +240,8 @@ func _on_control_settings_request_pause_scenes(enabled):
 
 func _on_control_settings_request_debug_panel(enabled):
 	emit_signal("request_debug_panel", enabled)
+
+
+func _on_visibility_changed():
+	if is_visible_in_tree():
+		grab_focus()
