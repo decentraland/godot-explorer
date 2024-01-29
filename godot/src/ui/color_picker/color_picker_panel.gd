@@ -55,10 +55,6 @@ var panel_preview = $Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair
 @onready var color_picked_panel = $Control/Color_Picker_Panel
 
 
-func _ready():
-	hide()
-
-
 func custom_popup(rect: Rect2, current_color: Color):
 	v_box_container_hair.hide()
 	grid_container_skin.hide()
@@ -104,21 +100,6 @@ func _on_color_toggled(toggled: bool, color: Color):
 		pick_color.emit(color)
 
 
-func _on_custom_background_slider_value_change():
-	modulate_panel_preview()
-	pick_color.emit(panel_preview.modulate)
-
-
-func _on_custom_background_slider_2_value_change():
-	modulate_panel_preview()
-	pick_color.emit(panel_preview.modulate)
-
-
-func _on_custom_background_slider_3_value_change():
-	modulate_panel_preview()
-	pick_color.emit(panel_preview.modulate)
-
-
 func to_hsv(color: Color) -> Vector3:
 	var max_component = max(color.r, color.g, color.b)
 	var min_component = min(color.r, color.g, color.b)
@@ -157,3 +138,8 @@ func _on_control_gui_input(event):
 		if !event.pressed:
 			hide()
 			hided.emit()
+
+
+func _on_color_slider_value_change():
+	modulate_panel_preview()
+	pick_color.emit(panel_preview.modulate)

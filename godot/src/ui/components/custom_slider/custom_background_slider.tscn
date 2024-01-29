@@ -39,4 +39,5 @@ texture = ExtResource("3_yably")
 expand_mode = 5
 stretch_mode = 4
 
+[connection signal="resized" from="." to="." method="_on_resized"]
 [connection signal="gui_input" from="TextureRect_Background" to="." method="_on_texture_rect_background_gui_input"]

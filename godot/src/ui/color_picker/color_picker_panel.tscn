@@ -84,6 +84,6 @@ theme_override_constants/v_separation = 10
 columns = 6
 
 [connection signal="gui_input" from="Control" to="." method="_on_control_gui_input"]
-[connection signal="value_change" from="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/ColorSlider" to="Control/Color_Picker_Panel" method="_on_custom_background_slider_value_change"]
-[connection signal="value_change" from="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/SaturationSlider" to="Control/Color_Picker_Panel" method="_on_custom_background_slider_2_value_change"]
-[connection signal="value_change" from="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/BrightnessSlider" to="Control/Color_Picker_Panel" method="_on_custom_background_slider_3_value_change"]
+[connection signal="value_change" from="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/ColorSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="value_change" from="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/SaturationSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="value_change" from="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/BrightnessSlider" to="." method="_on_color_slider_value_change"]
