@@ -1,5 +1,7 @@
 extends Control
 
+var selected_node: Control
+
 @onready var button_my_profile = $ColorRect_Background/MarginContainer/HBoxContainer/Button_MyProfile
 @onready
 var button_email_notifications = $ColorRect_Background/MarginContainer/HBoxContainer/Button_EmailNotifications
@@ -8,7 +10,6 @@ var v_box_container_my_profile = $VBoxContainer/ColorRect_MyProfile/MarginContai
 @onready
 var v_box_container_email = $VBoxContainer/ColorRect_MyProfile/MarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Email
 
-var selected_node: Control
 
 
 func _ready():
