@@ -13,6 +13,7 @@ theme_type_variation = &"WhiteButton"
 theme_override_constants/h_separation = 5
 theme_override_constants/icon_max_width = 50
 toggle_mode = true
+action_mode = 0
 icon = ExtResource("1_rx2nd")
 icon_alignment = 1
 expand_icon = true
