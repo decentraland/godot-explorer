@@ -188,7 +188,7 @@ impl SerializedProfile {
     pub fn to_pb_avatar_equipped_data(&self) -> PbAvatarEquippedData {
         PbAvatarEquippedData {
             wearable_urns: self.avatar.wearables.to_vec(),
-            emotes_urns: self
+            emote_urns: self
                 .avatar
                 .emotes
                 .as_ref()
