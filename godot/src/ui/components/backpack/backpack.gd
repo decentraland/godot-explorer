@@ -21,6 +21,8 @@ var wearable_filter_buttons: Array[WearableFilterButton] = []
 var main_category_selected: String = "body_shape"
 var request_update_avatar: bool = false  # debounce
 
+var avatar_wearables_body_shape_cache: Dictionary = {}
+
 @onready var skin_color_picker = %Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
@@ -140,15 +142,6 @@ func _physics_process(_delta):
 func _async_update_avatar():
 	if primary_player_profile_dictionary.is_empty():
 		return
-
-	prints("_async_update_avatar")
-	for wearable_id in avatar_wearables:
-		var wearable = wearable_data[wearable_id]
-		prints(
-			"equiped: ",
-			wearable_id,
-			Wearables.get_category(wearable) if wearable != null else "NULL!!"
-		)
 
 	var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get(
 		"avatar", {}
@@ -276,12 +269,15 @@ func _on_wearable_equip(wearable_id: String):
 
 	if category == Wearables.Categories.BODY_SHAPE:
 		if avatar_body_shape != wearable_id:
+			avatar_wearables_body_shape_cache[avatar_body_shape] = avatar_wearables.duplicate()
 			avatar_body_shape = wearable_id
 			avatar_wearables.clear()
 			var default_wearables: Dictionary = Wearables.DefaultWearables.BY_BODY_SHAPES.get(
 				avatar_body_shape
 			)
-			avatar_wearables = default_wearables.values()
+			avatar_wearables = avatar_wearables_body_shape_cache.get(avatar_body_shape, [])
+			if avatar_wearables.is_empty():
+				avatar_wearables = default_wearables.values()
 	else:
 		var to_remove = []
 		# Unequip current wearable with category
