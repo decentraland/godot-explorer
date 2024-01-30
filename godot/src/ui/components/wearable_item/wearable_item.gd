@@ -123,7 +123,7 @@ func _update_category_icon(wearable: Dictionary):
 		+ wearable.get("metadata", "").get("data", "").get("category", "")
 		+ "-icon.svg"
 	)
-	if FileAccess.file_exists(texture_path):
+	if ResourceLoader.exists(texture_path):
 		var texture = load(texture_path)
 		if texture != null:
 			texture_rect_category.texture = texture

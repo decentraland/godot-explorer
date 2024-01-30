@@ -1,4 +1,3 @@
-@tool
 class_name WearableFilterButton
 extends Button
 
@@ -38,10 +37,12 @@ func _update_category_icon():
 		+ type_to_category(self.filter_category)
 		+ "-icon.svg"
 	)
-	if FileAccess.file_exists(texture_path):
+	if ResourceLoader.exists(texture_path):
 		var texture = load(texture_path)
 		if texture != null:
 			icon = texture
+	else:
+		printerr("_update_category_icon texture_path not found ", texture_path)
 
 
 func _ready():

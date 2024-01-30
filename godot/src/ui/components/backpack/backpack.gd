@@ -40,10 +40,15 @@ var avatar_wearables_body_shape_cache: Dictionary = {}
 @onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
 
 @onready var control_no_items = %Control_NoItems
+@onready var backpack_loading = %TextureProgressBar_BackpackLoading
+@onready var container_backpack = %HBoxContainer_Backpack
 
 
 # gdlint:ignore = async-function-name
 func _ready():
+	container_backpack.hide()
+	backpack_loading.show()
+
 	skin_color_picker.hide()
 	Global.player_identity.profile_changed.connect(self._on_profile_changed)
 
@@ -79,19 +84,11 @@ func _ready():
 
 	request_update_avatar = true
 
+	container_backpack.show()
+	backpack_loading.hide()
+
 
 func _update_visible_categories():
-	var count_per_category: Dictionary = {}
-	for category in Wearables.Categories.ALL_CATEGORIES:
-		count_per_category[category] = 0
-
-	for wearable_id in wearable_data:
-		var wearable = wearable_data[wearable_id]
-
-		var category = Wearables.get_category(wearable)
-		if Wearables.can_equip(wearable, avatar_body_shape) or category == "body_shape":
-			count_per_category[category] += 1
-
 	var showed_subcategories: int = 0
 	var first_wearable_filter_button: WearableFilterButton = null
 	for wearable_filter_button: WearableFilterButton in wearable_filter_buttons:
@@ -100,7 +97,6 @@ func _update_visible_categories():
 			main_category_selected
 		)
 		var category_is_visible: bool = filter_categories.has(category)
-		# category_is_visible &= count_per_category[category] > 0 # remove comment if we want to hide the categories without objects
 		wearable_filter_button.visible = category_is_visible
 		if category_is_visible:
 			showed_subcategories += 1
