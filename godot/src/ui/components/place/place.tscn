@@ -1,0 +1,211 @@
+[gd_scene load_steps=12 format=3 uid="uid://cqoryjhg3id3x"]
+
+[ext_resource type="Texture2D" uid="uid://bkmdyxq51ksfv" path="res://src/ui/components/place/place.png" id="1_glw55"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_7sf0h"]
+[ext_resource type="Texture2D" uid="uid://bof57drsf215k" path="res://assets/ui/PreviewIcon.svg" id="3_jc5a5"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_lyywl"]
+[ext_resource type="Texture2D" uid="uid://br7qifibb1mco" path="res://assets/ui/Like solid.svg" id="5_wfhjd"]
+[ext_resource type="Texture2D" uid="uid://p70p48ikfonq" path="res://assets/ui/Warning.svg" id="6_1gc1t"]
+[ext_resource type="Texture2D" uid="uid://h6luax2o0d1e" path="res://assets/ui/Members.svg" id="7_p8hxe"]
+[ext_resource type="Texture2D" uid="uid://cqyrx2c6y5tok" path="res://src/ui/components/place/Pic.png" id="8_4cnvm"]
+[ext_resource type="Texture2D" uid="uid://bw2jmh7iq38pu" path="res://src/ui/components/place/Pic-1.png" id="9_17d8c"]
+[ext_resource type="Texture2D" uid="uid://dea6x16agl43a" path="res://src/ui/components/place/Pic-2.png" id="10_1ornw"]
+[ext_resource type="Texture2D" uid="uid://b5spptpq065xd" path="res://assets/ui/JumpIn.svg" id="11_jer0p"]
+
+[node name="Place" type="VBoxContainer"]
+custom_minimum_size = Vector2(500, 0)
+offset_right = 508.0
+offset_bottom = 725.0
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 2
+texture = ExtResource("1_glw55")
+expand_mode = 5
+stretch_mode = 4
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label2" type="RichTextLabel" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 25)
+layout_mode = 2
+theme = ExtResource("2_7sf0h")
+bbcode_enabled = true
+text = "[b]Place's Name[/b]"
+
+[node name="Label3" type="RichTextLabel" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 25)
+layout_mode = 2
+theme = ExtResource("2_7sf0h")
+theme_override_font_sizes/normal_font_size = 16
+theme_override_font_sizes/bold_font_size = 16
+bbcode_enabled = true
+text = "created by [b]Soul Magic[/b]"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 9
+
+[node name="HBoxContainer_Views" type="HBoxContainer" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Views"]
+self_modulate = Color(0.960784, 0.152941, 0.345098, 1)
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+texture = ExtResource("3_jc5a5")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="Label_Views" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Views"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_7sf0h")
+theme_override_colors/font_color = Color(0.960906, 0.152895, 0.344884, 1)
+theme_override_fonts/font = ExtResource("4_lyywl")
+text = "(122)"
+
+[node name="HBoxContainer_Liked" type="HBoxContainer" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Liked"]
+self_modulate = Color(0.960784, 0.152941, 0.345098, 1)
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+texture = ExtResource("5_wfhjd")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="Label_Liked" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Liked"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_7sf0h")
+theme_override_colors/font_color = Color(0.960906, 0.152895, 0.344884, 1)
+theme_override_fonts/font = ExtResource("4_lyywl")
+text = "99%"
+
+[node name="HBoxContainer_Votes" type="HBoxContainer" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Label_Votes" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Votes"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_7sf0h")
+theme_override_colors/font_color = Color(0.992172, 0.458717, 0.51783, 1)
+theme_override_fonts/font = ExtResource("4_lyywl")
+text = "(122)"
+
+[node name="TextureRect2" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Votes"]
+self_modulate = Color(0.992157, 0.458824, 0.517647, 1)
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+texture = ExtResource("6_1gc1t")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="HBoxContainer_Players" type="HBoxContainer" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+alignment = 2
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Players"]
+self_modulate = Color(0.960784, 0.152941, 0.345098, 1)
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+texture = ExtResource("7_p8hxe")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="Label_Liked" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Players"]
+layout_mode = 2
+theme = ExtResource("2_7sf0h")
+theme_override_colors/font_color = Color(0.960906, 0.152895, 0.344884, 1)
+theme_override_fonts/font = ExtResource("4_lyywl")
+text = "11"
+
+[node name="HBoxContainer_Avatars" type="HBoxContainer" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Players"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = -10
+
+[node name="TextureRect_Avatar1" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Players/HBoxContainer_Avatars"]
+custom_minimum_size = Vector2(35, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+texture = ExtResource("8_4cnvm")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="TextureRect_Avatar2" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Players/HBoxContainer_Avatars"]
+custom_minimum_size = Vector2(35, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+texture = ExtResource("9_17d8c")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="TextureRect_Avatar3" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer/HBoxContainer_Players/HBoxContainer_Avatars"]
+custom_minimum_size = Vector2(35, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+texture = ExtResource("10_1ornw")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 50
+
+[node name="Button" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_constants/icon_max_width = 30
+text = "JUMP IN"
+icon = ExtResource("11_jer0p")
+icon_alignment = 2
+expand_icon = true
+
+[node name="Label5" type="RichTextLabel" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 25)
+layout_mode = 2
+theme = ExtResource("2_7sf0h")
+theme_override_font_sizes/normal_font_size = 16
+theme_override_font_sizes/bold_font_size = 16
+bbcode_enabled = true
+text = "[b]DESCRIPTION[/b]"
+
+[node name="Label6" type="RichTextLabel" parent="MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 25)
+layout_mode = 2
+theme = ExtResource("2_7sf0h")
+theme_override_font_sizes/normal_font_size = 20
+theme_override_font_sizes/bold_font_size = 16
+bbcode_enabled = true
+text = "Collect mining ores and magic stones through mining as well as farm magic plant nearby Elswyth Magic School, create wearables through alchemy and crafting!
+"
+fit_content = true
