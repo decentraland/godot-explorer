@@ -1,0 +1,350 @@
+[gd_scene load_steps=14 format=3 uid="uid://c2n0x5c5vwkkl"]
+
+[ext_resource type="Script" path="res://src/ui/components/filter/filter.gd" id="1_8p6ta"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_x8xdb"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="2_2fhy2"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_vox2o"]
+[ext_resource type="Texture2D" uid="uid://dq385xfkknp0e" path="res://assets/ui/CloseIcon.svg" id="3_cr7uq"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="5_hasml"]
+[ext_resource type="ButtonGroup" uid="uid://bfgf84tob7hsq" path="res://src/ui/components/filter/filter_criteria_button_group.tres" id="5_op7qc"]
+[ext_resource type="Texture2D" uid="uid://ct7y04ii1dsg5" path="res://assets/ui/DownArrow.svg" id="6_g7hcf"]
+[ext_resource type="ButtonGroup" uid="uid://c8xfkocpo8d7i" path="res://src/ui/components/filter/collection_criteria_button_group.tres" id="8_mxq6u"]
+[ext_resource type="ButtonGroup" uid="uid://d32halr3g1lym" path="res://src/ui/components/filter/sort_by_criteria_button_group.tres" id="9_chs1l"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_crc4a"]
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8jfmd"]
+bg_color = Color(0.92549, 0.921569, 0.929412, 1)
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_wr2lj"]
+color = Color(0.839216, 0.831373, 0.854902, 1)
+thickness = 2
+
+[node name="Filter" type="VBoxContainer"]
+offset_right = 350.0
+offset_bottom = 328.0
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+script = ExtResource("1_8p6ta")
+metadata/_edit_vertical_guides_ = [-49.0]
+metadata/_edit_horizontal_guides_ = [-50.0]
+
+[node name="Header" type="Panel" parent="."]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_crc4a")
+
+[node name="MarginContainer" type="MarginContainer" parent="Header"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_right = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Header/MarginContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Header/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("1_x8xdb")
+text = "Filter"
+
+[node name="Button" type="Button" parent="Header/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme = ExtResource("1_x8xdb")
+theme_override_constants/icon_max_width = 25
+icon = ExtResource("3_cr7uq")
+icon_alignment = 1
+
+[node name="Content" type="Panel" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_8jfmd")
+
+[node name="MarginContainer" type="MarginContainer" parent="Content"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Content/MarginContainer"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Content/MarginContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 11
+
+[node name="MarginContainer1" type="MarginContainer" parent="Content/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer1"]
+layout_mode = 2
+
+[node name="Button_OnlyCollectibles" type="Button" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer1/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_2fhy2")
+text = "ONLY COLLECTIBLES"
+flat = true
+alignment = 0
+
+[node name="CheckButton" type="CheckButton" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer1/HBoxContainer"]
+layout_mode = 2
+theme = ExtResource("2_vox2o")
+
+[node name="HSeparator" type="HSeparator" parent="Content/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxLine_wr2lj")
+
+[node name="MarginContainer2" type="MarginContainer" parent="Content/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 0
+
+[node name="VBoxContainer_Collection" type="VBoxContainer" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="Button_Collection" type="Button" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer2/VBoxContainer_Collection"]
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_disabled_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 25
+theme_override_fonts/font = ExtResource("2_2fhy2")
+toggle_mode = true
+button_group = ExtResource("5_op7qc")
+text = "COLLECTION"
+icon = ExtResource("6_g7hcf")
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[node name="Button_C1" type="Button" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer2/VBoxContainer_Collection"]
+visible = false
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_focus_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_disabled_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_fonts/font = ExtResource("5_hasml")
+toggle_mode = true
+button_group = ExtResource("8_mxq6u")
+text = "Collection1"
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[node name="Button_C2" type="Button" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer2/VBoxContainer_Collection"]
+visible = false
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_focus_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_disabled_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_fonts/font = ExtResource("5_hasml")
+toggle_mode = true
+button_group = ExtResource("8_mxq6u")
+text = "Collection2"
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[node name="HSeparator2" type="HSeparator" parent="Content/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxLine_wr2lj")
+
+[node name="MarginContainer3" type="MarginContainer" parent="Content/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 0
+
+[node name="VBoxContainer_Sort" type="VBoxContainer" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="Button_SortBy" type="Button" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3/VBoxContainer_Sort"]
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 25
+theme_override_fonts/font = ExtResource("2_2fhy2")
+toggle_mode = true
+button_group = ExtResource("5_op7qc")
+text = "SORT BY"
+icon = ExtResource("6_g7hcf")
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[node name="Button_Newest" type="Button" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3/VBoxContainer_Sort"]
+visible = false
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_focus_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_disabled_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_fonts/font = ExtResource("5_hasml")
+toggle_mode = true
+button_group = ExtResource("9_chs1l")
+text = "Newest"
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[node name="Button_Oldest" type="Button" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3/VBoxContainer_Sort"]
+visible = false
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_focus_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_disabled_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_fonts/font = ExtResource("5_hasml")
+toggle_mode = true
+button_group = ExtResource("9_chs1l")
+text = "Oldest"
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[node name="Button_Rarest" type="Button" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3/VBoxContainer_Sort"]
+visible = false
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_focus_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_disabled_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_fonts/font = ExtResource("5_hasml")
+toggle_mode = true
+button_group = ExtResource("9_chs1l")
+text = "Rarest"
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[node name="Button_LessRare" type="Button" parent="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3/VBoxContainer_Sort"]
+visible = false
+layout_mode = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_focus_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_disabled_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_fonts/font = ExtResource("5_hasml")
+toggle_mode = true
+button_group = ExtResource("9_chs1l")
+text = "Rarest"
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[connection signal="pressed" from="Header/MarginContainer/HBoxContainer/Button" to="." method="_on_button_pressed"]
+[connection signal="toggled" from="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer2/VBoxContainer_Collection/Button_Collection" to="." method="_on_button_collection_toggled"]
+[connection signal="pressed" from="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer2/VBoxContainer_Collection/Button_C1" to="." method="_on_button_c_1_pressed"]
+[connection signal="pressed" from="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer2/VBoxContainer_Collection/Button_C2" to="." method="_on_button_c_2_pressed"]
+[connection signal="toggled" from="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3/VBoxContainer_Sort/Button_SortBy" to="." method="_on_button_sort_by_toggled"]
+[connection signal="pressed" from="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3/VBoxContainer_Sort/Button_Newest" to="." method="_on_button_newest_pressed"]
+[connection signal="pressed" from="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3/VBoxContainer_Sort/Button_Oldest" to="." method="_on_button_oldest_pressed"]
+[connection signal="pressed" from="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3/VBoxContainer_Sort/Button_Rarest" to="." method="_on_button_rarest_pressed"]
+[connection signal="pressed" from="Content/MarginContainer/ScrollContainer/VBoxContainer/MarginContainer3/VBoxContainer_Sort/Button_LessRare" to="." method="_on_button_less_rare_pressed"]
