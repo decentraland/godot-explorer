@@ -369,5 +369,5 @@ func _on_hidden():
 	save_profile()
 
 
-func _on_rich_text_box_open_marketplace_meta_clicked(meta):
+func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
 	Global.open_url("https://decentraland.org/marketplace/browse?section=wearables")
