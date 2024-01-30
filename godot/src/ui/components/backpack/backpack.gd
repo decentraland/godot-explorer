@@ -68,7 +68,7 @@ func _ready():
 			wearable_filter_buttons.push_back(wearable_filter_button)
 
 	for wearable_id in Wearables.BASE_WEARABLES:
-		var key = "urn:decentraland:off-chain:base-avatars:" + wearable_id
+		var key = Wearables.get_base_avatar_urn(wearable_id)
 		wearable_data[key] = null
 
 	var promise = Global.content_provider.fetch_wearables(
@@ -78,6 +78,8 @@ func _ready():
 
 	for wearable_id in wearable_data:
 		wearable_data[wearable_id] = Global.content_provider.get_wearable(wearable_id)
+		if wearable_data[wearable_id] == null:
+			printerr("Error loading wearable_id ", wearable_id)
 
 	_update_visible_categories()
 

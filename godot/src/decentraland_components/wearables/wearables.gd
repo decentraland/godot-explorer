@@ -433,6 +433,10 @@ static func is_texture(category: String) -> bool:
 	return false
 
 
+static func get_base_avatar_urn(wearable_name: String):
+	return "urn:decentraland:off-chain:base-avatars:" + wearable_name
+
+
 static func get_replaces_list(wearable: Dictionary, body_shape_id: String) -> PackedStringArray:
 	var representation = get_representation(wearable, body_shape_id)
 	if representation.is_empty() or representation.get("overrideHides", []).is_empty():
