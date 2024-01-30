@@ -130,7 +130,8 @@ static func to_color_object(color: Color) -> Dictionary:
 
 func _add_animation(index: int, animation_name: String):
 	var animation = Global.animation_importer.get_animation_from_gltf(animation_name)
-	global_animation_library.add_animation(animation_name, animation)
+	if animation:
+		global_animation_library.add_animation(animation_name, animation)
 	index_to_animation_name[index] = animation_name
 
 

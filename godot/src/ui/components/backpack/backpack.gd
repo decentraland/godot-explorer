@@ -74,8 +74,7 @@ func _ready():
 	var promise = Global.content_provider.fetch_wearables(
 		wearable_data.keys(), "https://peer.decentraland.org/content/"
 	)
-	if promise != null:
-		await PromiseUtils.async_all(promise)
+	await PromiseUtils.async_all(promise)
 
 	for wearable_id in wearable_data:
 		wearable_data[wearable_id] = Global.content_provider.get_wearable(wearable_id)
