@@ -2,10 +2,10 @@
 
 [ext_resource type="Script" path="res://src/ui/components/wearable_item/wearable_item.gd" id="1_vccc4"]
 [ext_resource type="Texture2D" uid="uid://c0qx68m7rge52" path="res://assets/ui/MythicThumbnail.png" id="2_bnu38"]
-[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="2_vuwk7"]
 [ext_resource type="Texture2D" uid="uid://bheg7fuh5a4p0" path="res://assets/ui/checked.svg" id="4_cqflp"]
 [ext_resource type="Texture2D" uid="uid://vnikogxsqjwe" path="res://assets/ui/Subtract.svg" id="5_dtfap"]
 [ext_resource type="Texture2D" uid="uid://dw4mn6l1jn25f" path="res://assets/ui/Intersect.svg" id="6_ckipv"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="7_74eud"]
 [ext_resource type="Texture2D" uid="uid://bygnpeber2qmc" path="res://assets/ui/wearable_categories/mask-icon.svg" id="7_h4p8s"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_24axm"]
@@ -87,7 +87,6 @@ stretch_mode = 5
 [node name="TextureRect_Preview" type="TextureRect" parent="MarginContainer/PanelContainer_White"]
 unique_name_in_owner = true
 layout_mode = 2
-texture = ExtResource("2_vuwk7")
 expand_mode = 3
 stretch_mode = 5
 
@@ -145,5 +144,20 @@ size_flags_horizontal = 0
 texture = ExtResource("7_h4p8s")
 expand_mode = 1
 stretch_mode = 4
+
+[node name="TextureProgressBar_Loading" parent="." instance=ExtResource("7_74eud")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [connection signal="toggled" from="." to="." method="_on_toggled"]

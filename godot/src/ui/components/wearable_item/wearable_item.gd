@@ -26,6 +26,7 @@ var was_pressed = false
 @onready var texture_rect_category = %TextureRect_Category
 @onready var texture_rect_background = %TextureRect_Background
 @onready var texture_rect_preview = %TextureRect_Preview
+@onready var texture_progress_bar_loading = %TextureProgressBar_Loading
 
 
 func _ready():
@@ -70,6 +71,8 @@ func async_set_wearable(wearable: Dictionary):
 			var current_size = texture_rect_preview.size
 			texture_rect_preview.texture = res.texture
 			texture_rect_preview.size = current_size
+
+	texture_progress_bar_loading.hide()
 
 
 func effect_toggle():
