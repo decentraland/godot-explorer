@@ -93,10 +93,10 @@ func _on_button_less_rare_pressed():
 
 
 func _on_button_pressed():
-	_close()
+	_async_close()
 
 
-func _close():
+func _async_close():
 	var tween = get_tree().create_tween()
 	tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.3)
 	await tween.finished
