@@ -1,5 +1,5 @@
 class_name WearableItem
-extends Button
+extends CustomTouchButton
 
 signal equip(wearable_id: String)
 signal unequip(wearable_id: String)
