@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://src/ui/components/wearable_button/wearable_filter_button.gd" id="2_5x3mr"]
 
 [node name="Wearable_Button" type="Button"]
-custom_minimum_size = Vector2(60, 60)
+custom_minimum_size = Vector2(70, 70)
 offset_right = 52.0
 offset_bottom = 52.0
 focus_mode = 0

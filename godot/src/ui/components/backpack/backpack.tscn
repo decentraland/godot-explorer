@@ -362,7 +362,7 @@ layout_mode = 2
 
 [node name="ScrollContainer_MainCategories" type="ScrollContainer" parent="HBoxContainer_Backpack/MarginContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer"]
 material = SubResource("ShaderMaterial_6ygo4")
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
 size_flags_horizontal = 3
 horizontal_scroll_mode = 3
@@ -371,7 +371,7 @@ vertical_scroll_mode = 3
 [node name="HBoxContainer_MainCategories" type="HBoxContainer" parent="HBoxContainer_Backpack/MarginContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer/ScrollContainer_MainCategories"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
@@ -438,7 +438,7 @@ toggle_mode = true
 [node name="ScrollContainer_SubCategories" type="ScrollContainer" parent="HBoxContainer_Backpack/MarginContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector"]
 unique_name_in_owner = true
 material = SubResource("ShaderMaterial_6ygo4")
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 3
