@@ -156,11 +156,7 @@ func _ready():
 
 func _on_need_open_url(url: String, _description: String) -> void:
 	if not Global.player_identity.get_address_str().is_empty():
-		if Global.dcl_android_plugin != null:
-			Global.dcl_android_plugin.showDecentralandMobileToast()
-			Global.dcl_android_plugin.openUrl(url)
-		else:
-			OS.shell_open(url)
+		Global.open_url(url)
 
 
 func _on_player_logout():

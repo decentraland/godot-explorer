@@ -37,6 +37,8 @@ var request_update_avatar: bool = false  # debounce
 
 @onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
 
+@onready var control_no_items = %Control_NoItems
+
 
 # gdlint:ignore = async-function-name
 func _ready():
@@ -191,6 +193,9 @@ func can_unequip(category: String) -> bool:
 func show_wearables():
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
+
+	control_no_items.visible = filtered_data.is_empty()
+	grid_container_wearables_list.visible = not filtered_data.is_empty()
 
 	for wearable_id in filtered_data:
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
@@ -362,3 +367,7 @@ func _on_color_picker_panel_hided():
 
 func _on_hidden():
 	save_profile()
+
+
+func _on_rich_text_box_open_marketplace_meta_clicked(meta):
+	Global.open_url("https://decentraland.org/marketplace/browse?section=wearables")

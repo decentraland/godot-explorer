@@ -168,3 +168,11 @@ func release_mouse():
 		explorer.release_mouse()
 	else:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+
+func open_url(url: String):
+	if Global.dcl_android_plugin != null:
+		Global.dcl_android_plugin.showDecentralandMobileToast()
+		Global.dcl_android_plugin.openUrl(url)
+	else:
+		OS.shell_open(url)
