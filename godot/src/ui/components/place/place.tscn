@@ -184,6 +184,7 @@ theme_override_constants/margin_bottom = 50
 [node name="Button" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
+focus_mode = 0
 theme_override_constants/icon_max_width = 30
 text = "JUMP IN"
 icon = ExtResource("11_jer0p")
