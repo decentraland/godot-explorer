@@ -1,0 +1,74 @@
+[gd_scene load_steps=4 format=3 uid="uid://nn0iih4xpn2e"]
+
+[ext_resource type="Texture2D" uid="uid://dnenlhbcgxgph" path="res://assets/themes/dark_dcl_theme/icons/Ellipse.svg" id="1_57o7r"]
+[ext_resource type="Script" path="res://src/ui/components/button_touch_action/button_touch_action.gd" id="2_c0jk1"]
+[ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="2_h4q5h"]
+
+[node name="Button_TouchAction" type="TextureButton"]
+modulate = Color(1, 1, 1, 0.501961)
+offset_right = 80.0
+offset_bottom = 80.0
+texture_normal = ExtResource("1_57o7r")
+ignore_texture_size = true
+stretch_mode = 4
+script = ExtResource("2_c0jk1")
+
+[node name="ShadowOutter" type="TextureRect" parent="."]
+self_modulate = Color(0, 0, 0, 1)
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -82.0
+offset_top = -82.0
+offset_right = 2.0
+offset_bottom = 2.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+texture = ExtResource("1_57o7r")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="ShadowInner" type="TextureRect" parent="."]
+self_modulate = Color(0, 0, 0, 1)
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -78.0
+offset_top = -78.0
+offset_right = -2.0
+offset_bottom = -2.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+texture = ExtResource("1_57o7r")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_fonts/font = ExtResource("2_h4q5h")
+theme_override_font_sizes/font_size = 32
+text = "E"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[connection signal="button_down" from="." to="." method="_on_button_down"]
+[connection signal="button_up" from="." to="." method="_on_button_up"]

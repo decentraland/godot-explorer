@@ -1,60 +1,45 @@
 [gd_scene load_steps=5 format=3 uid="uid://cyf8k77w3gdih"]
 
 [ext_resource type="Script" path="res://src/ui/color_picker/color_picker_button.gd" id="1_vxb5w"]
-[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_40q1a"]
-[ext_resource type="PackedScene" uid="uid://cdd521b6pi2ki" path="res://src/ui/components/right_arrow/right_arrow.tscn" id="3_x8xfs"]
+[ext_resource type="Texture2D" uid="uid://bd7q2ux12a72q" path="res://assets/ui/ColorPalette.svg" id="2_yi1yq"]
 
 [sub_resource type="Theme" id="Theme_2qh7h"]
 
-[node name="Color_Picker_Button" type="VBoxContainer"]
-offset_right = 275.0
-offset_bottom = 27.0
-size_flags_horizontal = 0
-size_flags_vertical = 0
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hpgk3"]
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="Button_ColorPicker" type="Button"]
+custom_minimum_size = Vector2(60, 60)
+offset_right = 60.0
+offset_bottom = 60.0
+size_flags_horizontal = 8
+size_flags_vertical = 8
+focus_mode = 0
+theme_type_variation = &"WhiteButton"
+theme_override_constants/icon_max_width = 48
+icon = ExtResource("2_yi1yq")
+icon_alignment = 1
+expand_icon = true
 script = ExtResource("1_vxb5w")
 
-[node name="Button" type="Button" parent="."]
-custom_minimum_size = Vector2(110, 0)
-layout_mode = 2
-size_flags_horizontal = 0
-mouse_default_cursor_shape = 2
-theme = ExtResource("2_40q1a")
-theme_type_variation = &"WhiteButton"
-toggle_mode = true
-text = "EYE COLOR           "
-alignment = 0
-
-[node name="ColorRect" type="ColorRect" parent="Button"]
+[node name="Panel_Color" type="Panel" parent="."]
 layout_mode = 1
 anchors_preset = 6
 anchor_left = 1.0
 anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
-offset_left = -39.0
-offset_top = -10.0
-offset_right = -19.0
-offset_bottom = 10.0
+offset_left = -69.0
+offset_top = 19.0
+offset_right = -49.0
+offset_bottom = 39.0
 grow_horizontal = 0
 grow_vertical = 2
 mouse_filter = 2
 theme = SubResource("Theme_2qh7h")
-color = Color(0.584314, 0.364706, 0.0784314, 1)
+theme_override_styles/panel = SubResource("StyleBoxFlat_hpgk3")
 
-[node name="Right_Arrow" parent="Button" instance=ExtResource("3_x8xfs")]
-layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -13.0
-offset_top = -4.5
-offset_right = -8.0
-offset_bottom = 4.5
-grow_horizontal = 0
-grow_vertical = 2
-rotation = 1.5708
-pivot_offset = Vector2(2.5, 4.5)
-
-[connection signal="toggled" from="Button" to="." method="_on_button_toggled"]
+[connection signal="toggled" from="." to="." method="_on_toggled"]
