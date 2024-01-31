@@ -16,8 +16,9 @@ pub enum AvatarMovementType {
 struct LerpState {
     initial_position: Vector3,
     target_position: Vector3,
-    target_distance: f32,
     factor: f32,
+    velocity_y: f32,
+    initial_velocity_y: f32,
 }
 
 #[derive(GodotClass)]
@@ -31,6 +32,15 @@ pub struct DclAvatar {
 
     #[var]
     current_parcel_position: Vector2i,
+
+    #[export]
+    walking: bool,
+    #[export]
+    running: bool,
+    #[export]
+    rising: bool,
+    #[export]
+    falling: bool,
 
     lerp_state: LerpState,
     #[base]
@@ -46,6 +56,10 @@ impl INode3D for DclAvatar {
             current_parcel_position: Vector2i::new(i32::MAX, i32::MAX),
             lerp_state: Default::default(),
             base,
+            walking: false,
+            running: false,
+            rising: true,
+            falling: false,
         }
     }
 }
@@ -60,14 +74,22 @@ impl DclAvatar {
 
     #[func]
     pub fn set_target_position(&mut self, new_target: Transform3D) {
-        self.lerp_state.target_distance = self
-            .lerp_state
-            .target_position
-            .distance_to(new_target.origin);
+        let mut diff_xz_plane = new_target.origin - self.lerp_state.target_position;
+        let y_velocity = 10.0 * diff_xz_plane.y;
+        diff_xz_plane.y = 0.0;
+        let target_forward_distance = diff_xz_plane.length();
+
+        // TODO: define const with these values
+        self.walking = target_forward_distance < 0.6 && target_forward_distance > 0.01;
+        self.running = target_forward_distance >= 0.6;
+        self.rising = y_velocity > 0.25;
+        self.falling = y_velocity < -0.25;
 
         self.lerp_state.initial_position = self.lerp_state.target_position;
         self.lerp_state.target_position = new_target.origin;
         self.lerp_state.factor = 0.0;
+        self.lerp_state.velocity_y = y_velocity;
+        self.lerp_state.initial_velocity_y = y_velocity;
 
         // TODO: check euler order
         self.base
@@ -188,15 +210,11 @@ impl DclAvatar {
                             .lerp(self.lerp_state.target_position, self.lerp_state.factor),
                     );
 
-                    if self.lerp_state.target_distance > 0.0 {
-                        if self.lerp_state.target_distance > 0.6 {
-                            self.base.call("set_running".into(), &[]);
-                        } else {
-                            self.base.call("set_walking".into(), &[]);
-                        }
+                    if self.lerp_state.initial_velocity_y > 0.25 {
+                        self.lerp_state.velocity_y -= 55.0 * dt as f32;
+                        self.rising = self.lerp_state.velocity_y > 0.25;
+                        self.falling = self.lerp_state.velocity_y < -0.25;
                     }
-                } else if self.lerp_state.factor > 1.5 {
-                    self.base.call("set_idle".into(), &[]);
                 }
             }
         }

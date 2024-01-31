@@ -8,7 +8,6 @@ signal avatar_loaded
 # Public
 var avatar_name: String = ""
 var avatar_id: String = ""
-var playing_emote = false
 
 # Wearable requesting
 var current_content_url: String = ""
@@ -36,6 +35,7 @@ var audio_stream_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
+@onready var animation_tree = $Armature/AnimationTree
 @onready var animation_player = $Armature/AnimationPlayer
 @onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
 @onready var label_3d_name = $Label3D_Name
@@ -83,9 +83,6 @@ func async_update_avatar(avatar: Dictionary):
 	if avatar.is_empty():
 		printerr("Trying to update an avatar with an empty object")
 		return
-
-	playing_emote = false
-	set_idle()
 
 	if avatar.get("name", "") != null:
 		avatar_name = avatar.get("name", "")
@@ -157,7 +154,7 @@ func play_emote(emote_id: String):
 		animation_player.play(emote_id)
 	else:
 		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_name])
-	playing_emote = true
+	# playing_emote = true
 
 
 func play_remote_emote(_emote_src: String, _looping: bool):
@@ -272,6 +269,7 @@ func try_to_set_body_shape(body_shape_hash):
 
 	var animation_player_parent = animation_player.get_parent()
 	if animation_player_parent != null:
+		animation_player_parent.remove_child(animation_tree)
 		animation_player_parent.remove_child(animation_player)
 
 	if body_shape_root != null:
@@ -283,6 +281,7 @@ func try_to_set_body_shape(body_shape_hash):
 
 	body_shape_skeleton_3d = body_shape_root.find_child("Skeleton3D", true, false)
 	body_shape_skeleton_3d.get_parent().add_child(animation_player)
+	body_shape_skeleton_3d.get_parent().add_child(animation_tree)
 
 	for child in body_shape_skeleton_3d.get_children():
 		child.name = child.name.to_lower()
@@ -449,27 +448,20 @@ func apply_texture_and_mask(
 func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
+	var self_idle = !self.walking && !self.running && !self.rising && !self.falling
+
+	animation_tree.set("parameters/conditions/idle", self_idle)
+
+	animation_tree.set("parameters/conditions/running", self.running)
+	animation_tree.set("parameters/conditions/walking", self.walking)
+
+	animation_tree.set("parameters/conditions/rising", self.rising)
+	animation_tree.set("parameters/conditions/falling", self.falling)
+
+	animation_tree.set("parameters/conditions/nfalling", !self.falling)
 
 
-func set_walking():
-	if animation_player.current_animation != "Walk":
-		animation_player.play("Walk")
-		playing_emote = false
-
-
-func set_running():
-	if animation_player.current_animation != "Run":
-		animation_player.play("Run")
-		playing_emote = false
-
-
-func set_idle():
-	if animation_player.current_animation != "Idle" and playing_emote == false:
-		animation_player.play("Idle")
-
-
-func spawn_voice_channel(sample_rate, num_channels, samples_per_channel):
-	printt("init voice chat ", sample_rate, num_channels, samples_per_channel)
+func spawn_voice_channel(sample_rate, _num_channels, _samples_per_channel):
 	audio_stream_player = AudioStreamPlayer.new()
 	audio_stream_player_gen = AudioStreamGenerator.new()
 
@@ -480,7 +472,6 @@ func spawn_voice_channel(sample_rate, num_channels, samples_per_channel):
 
 
 func push_voice_frame(frame):
-#	print("voice chat ", frame)
 	if not audio_stream_player.playing:
 		audio_stream_player.play()
 
