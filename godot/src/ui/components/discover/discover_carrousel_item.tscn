@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/ui/components/discover/discover_carrousel_item.gd" id="1_50l6s"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_wda0j"]
-[ext_resource type="Texture2D" uid="uid://ddueoxukk4cfu" path="res://assets/ui/Img.png" id="2_yft25"]
+[ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="3_uyr18"]
 [ext_resource type="Texture2D" uid="uid://dra4ek5p0o6jj" path="res://assets/ui/wearable_categories/body_shape-icon.svg" id="4_m37km"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_dvu5w"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="6_bhjcv"]
@@ -57,7 +57,7 @@ theme_override_constants/separation = 0
 layout_mode = 2
 size_flags_vertical = 3
 theme = ExtResource("1_wda0j")
-texture = ExtResource("2_yft25")
+texture = ExtResource("3_uyr18")
 expand_mode = 1
 stretch_mode = 6
 
