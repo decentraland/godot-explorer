@@ -49,9 +49,12 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 			var event = InputMap.action_get_events(InputMap.get_actions()[index])[0]
 			if event is InputEventKey:
 				key = (
-					icon_interactive_pointer
-					if Global.is_mobile()
-					else char(event.unicode).to_upper()
+					(
+						icon_interactive_pointer as Variant
+						if Global.is_mobile()
+						else char(event.unicode).to_upper()
+					)
+					as Variant
 				)
 			elif event is InputEventMouseButton:
 				if event.button_index == 1:
