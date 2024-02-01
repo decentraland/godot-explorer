@@ -156,11 +156,7 @@ func _ready():
 
 func _on_need_open_url(url: String, _description: String) -> void:
 	if not Global.player_identity.get_address_str().is_empty():
-		if Global.dcl_android_plugin != null:
-			Global.dcl_android_plugin.showDecentralandMobileToast()
-			Global.dcl_android_plugin.openUrl(url)
-		else:
-			OS.shell_open(url)
+		Global.open_url(url)
 
 
 func _on_player_logout():
@@ -203,7 +199,7 @@ func _on_check_button_toggled(button_pressed):
 
 func _unhandled_input(event):
 	if not Global.is_mobile():
-		if event is InputEventMouseButton and event.pressed:
+		if event is InputEventMouseButton and event.pressed and ui_root.has_focus():
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 				capture_mouse()
 

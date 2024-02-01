@@ -9,73 +9,81 @@ content_margin_top = 20.0
 content_margin_right = 40.0
 content_margin_bottom = 20.0
 bg_color = Color(0.976563, 0.976563, 0.976563, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-shadow_size = 1
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_size = 2
 shadow_offset = Vector2(2, 2)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_n4u5d"]
 bg_color = Color(1, 1, 1, 1)
 
-[node name="Color_Picker_Panel" type="PopupPanel"]
-size = Vector2i(280, 458)
-visible = true
-theme_override_styles/panel = SubResource("StyleBoxFlat_xl22q")
+[node name="Control" type="CanvasLayer"]
 script = ExtResource("1_vgcr1")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
-offset_left = 40.0
-offset_top = 20.0
-offset_right = 240.0
-offset_bottom = 438.0
+[node name="Control" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="Label_Presets" type="Label" parent="VBoxContainer"]
+[node name="Color_Picker_Panel" type="PanelContainer" parent="Control"]
+layout_mode = 0
+offset_right = 280.0
+offset_bottom = 456.0
+mouse_force_pass_scroll_events = false
+theme_override_styles/panel = SubResource("StyleBoxFlat_xl22q")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/Color_Picker_Panel"]
+layout_mode = 2
+
+[node name="Label_Presets" type="Label" parent="Control/Color_Picker_Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 13
 text = "PRESETS
 "
 
-[node name="VBoxContainer_Hair" type="VBoxContainer" parent="VBoxContainer"]
-visible = false
+[node name="VBoxContainer_Hair" type="VBoxContainer" parent="Control/Color_Picker_Panel/VBoxContainer"]
 layout_mode = 2
 
-[node name="GridContainer_Hair" type="GridContainer" parent="VBoxContainer/VBoxContainer_Hair"]
+[node name="GridContainer_Hair" type="GridContainer" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair"]
 custom_minimum_size = Vector2(0, 65)
 layout_mode = 2
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 6
 
-[node name="ColorSlider" parent="VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
+[node name="ColorSlider" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
 layout_mode = 2
 slider_type = 0
 value = 50
 
-[node name="SaturationSlider" parent="VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
+[node name="SaturationSlider" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
 layout_mode = 2
 value = 50
 
-[node name="BrightnessSlider" parent="VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
+[node name="BrightnessSlider" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair" instance=ExtResource("2_h35qg")]
 layout_mode = 2
 slider_type = 1
 value = 50
 
-[node name="Panel_Preview" type="Panel" parent="VBoxContainer/VBoxContainer_Hair"]
+[node name="Panel_Preview" type="Panel" parent="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_n4u5d")
 
-[node name="GridContainer_Skin" type="GridContainer" parent="VBoxContainer"]
-visible = false
+[node name="GridContainer_Skin" type="GridContainer" parent="Control/Color_Picker_Panel/VBoxContainer"]
 custom_minimum_size = Vector2(0, 65)
 layout_mode = 2
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 6
 
-[connection signal="value_change" from="VBoxContainer/VBoxContainer_Hair/ColorSlider" to="." method="_on_custom_background_slider_value_change"]
-[connection signal="value_change" from="VBoxContainer/VBoxContainer_Hair/SaturationSlider" to="." method="_on_custom_background_slider_2_value_change"]
-[connection signal="value_change" from="VBoxContainer/VBoxContainer_Hair/BrightnessSlider" to="." method="_on_custom_background_slider_3_value_change"]
+[connection signal="gui_input" from="Control" to="." method="_on_control_gui_input"]
+[connection signal="value_change" from="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/ColorSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="value_change" from="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/SaturationSlider" to="." method="_on_color_slider_value_change"]
+[connection signal="value_change" from="Control/Color_Picker_Panel/VBoxContainer/VBoxContainer_Hair/BrightnessSlider" to="." method="_on_color_slider_value_change"]
