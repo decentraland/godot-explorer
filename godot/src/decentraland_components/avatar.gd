@@ -4,6 +4,7 @@ extends DclAvatar
 signal avatar_loaded
 
 @export var skip_process: bool = false
+@export var hide_name: bool = false
 
 # Public
 var avatar_name: String = ""
@@ -89,6 +90,9 @@ func async_update_avatar(avatar: Dictionary):
 		avatar_name = avatar.get("name", "")
 
 	label_3d_name.text = avatar_name
+	if hide_name:
+		label_3d_name.hide()
+
 	current_wearables = avatar.get("wearables")
 	current_body_shape = avatar.get("bodyShape")
 	current_eyes_color = Avatar.from_color_object(avatar.get("eyes", {}).get("color", null))
@@ -104,7 +108,7 @@ func async_update_avatar(avatar: Dictionary):
 
 	var promise = Global.content_provider.fetch_wearables(wearable_to_request, current_content_url)
 	await PromiseUtils.async_all(promise)
-	async_fetch_wearables_dependencies()
+	await async_fetch_wearables_dependencies()
 
 
 static func from_color_object(color: Variant, default: Color = Color.WHITE) -> Color:
@@ -124,7 +128,8 @@ static func to_color_object(color: Color) -> Dictionary:
 
 func _add_animation(index: int, animation_name: String):
 	var animation = Global.animation_importer.get_animation_from_gltf(animation_name)
-	global_animation_library.add_animation(animation_name, animation)
+	if animation:
+		global_animation_library.add_animation(animation_name, animation)
 	index_to_animation_name[index] = animation_name
 
 
@@ -234,7 +239,7 @@ func async_fetch_wearables_dependencies():
 
 	await PromiseUtils.async_all(async_calls)
 
-	async_load_wearables()
+	await async_load_wearables()
 
 
 func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappingAndUrl) -> Promise:

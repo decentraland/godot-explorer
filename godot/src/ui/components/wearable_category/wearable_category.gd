@@ -32,11 +32,11 @@ enum WearableCategoryEnum {
 func _update_category_icon():
 	if is_instance_valid(texture_rect_icon):
 		var texture_path = (
-			"res://assets/wearable_categories/"
+			"res://assets/ui/wearable_categories/"
 			+ type_to_category(self.filter_category)
-			+ "_icon.png"
+			+ "-icon.svg"
 		)
-		if FileAccess.file_exists(texture_path):
+		if ResourceLoader.exists(texture_path):
 			var texture = load(texture_path)
 			if texture != null:
 				texture_rect_icon.texture = texture
