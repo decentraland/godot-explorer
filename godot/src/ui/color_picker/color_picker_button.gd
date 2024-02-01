@@ -1,4 +1,4 @@
-extends Control
+extends Button
 
 signal toggle_color_panel(toggled, color_target)
 
@@ -6,27 +6,19 @@ enum ColorTarget { SKIN, HAIR, EYE }
 
 @export var color_target := ColorTarget.SKIN
 
-@onready var button = $Button
-@onready var right_arrow = $Button/Right_Arrow
+var stylebox: StyleBoxFlat
 
-@onready var color_rect = $Button/ColorRect
+@onready var panel_color = $Panel_Color
 
 
-func _on_button_toggled(button_pressed):
-	set_toggled(button_pressed)
-	emit_signal("toggle_color_panel", button_pressed, color_target)
+func _ready():
+	stylebox = panel_color.get_theme_stylebox("panel").duplicate()
+	panel_color.add_theme_stylebox_override("panel", stylebox)
 
 
 func set_color(color: Color) -> void:
-	color_rect.color = color
+	stylebox.bg_color = color
 
 
-func set_text(text: String) -> void:
-	button.text = text + "           "
-
-
-func set_toggled(value):
-	if value:
-		right_arrow.rotation_degrees = -90
-	else:
-		right_arrow.rotation_degrees = 90
+func _on_toggled(toggled_on):
+	toggle_color_panel.emit(toggled_on, color_target)

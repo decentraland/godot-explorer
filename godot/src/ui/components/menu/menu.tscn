@@ -236,6 +236,7 @@ layout_mode = 1
 visible = false
 layout_mode = 1
 
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="." method="_on_button_discover_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
 [connection signal="pressed" from="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_pressed"]
