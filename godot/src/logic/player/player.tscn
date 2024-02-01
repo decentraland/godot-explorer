@@ -22,7 +22,7 @@ transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 1.1
 shape = SubResource("SeparationRayShape3D_3217e")
 
 [node name="CollisionShape3D_Body" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.153, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 shape = SubResource("CapsuleShape3D_pxti1")
 
 [node name="camera_mode_area_detector" parent="." instance=ExtResource("2_rco65")]

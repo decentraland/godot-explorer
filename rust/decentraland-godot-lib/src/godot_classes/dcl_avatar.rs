@@ -17,7 +17,6 @@ struct LerpState {
     initial_position: Vector3,
     target_position: Vector3,
     factor: f32,
-    velocity_y: f32,
     initial_velocity_y: f32,
 }
 
@@ -81,21 +80,21 @@ impl DclAvatar {
     #[func]
     pub fn set_target_position(&mut self, new_target: Transform3D) {
         let mut diff_xz_plane = new_target.origin - self.lerp_state.target_position;
-        let y_velocity = 10.0 * diff_xz_plane.y;
+        let y_velocity = 10.0 * diff_xz_plane.y; // divide by 0.1s
         diff_xz_plane.y = 0.0;
         let target_forward_distance = diff_xz_plane.length();
 
         // TODO: define const with these values
-        self.walk = target_forward_distance < 0.6 && target_forward_distance > 0.01;
-        self.run = target_forward_distance >= 1.0;
-        self.jog = !(self.walk || self.run);
-        self.rise = y_velocity > 0.25;
-        self.fall = y_velocity < -0.25;
+        self.walk = target_forward_distance < 0.4 && target_forward_distance > 0.01;
+        self.run = target_forward_distance >= 0.65;
+        self.jog = !(self.walk || self.run) && target_forward_distance > 0.01;
+        self.rise = y_velocity > 1.0;
+        self.fall = y_velocity < -1.0;
+        self.land = !self.rise && !self.fall;
 
         self.lerp_state.initial_position = self.lerp_state.target_position;
         self.lerp_state.target_position = new_target.origin;
         self.lerp_state.factor = 0.0;
-        self.lerp_state.velocity_y = y_velocity;
         self.lerp_state.initial_velocity_y = y_velocity;
 
         // TODO: check euler order
@@ -216,13 +215,6 @@ impl DclAvatar {
                             .initial_position
                             .lerp(self.lerp_state.target_position, self.lerp_state.factor),
                     );
-
-                    if self.lerp_state.initial_velocity_y > 0.25 {
-                        self.lerp_state.velocity_y -= 55.0 * dt as f32;
-                        self.rise = self.lerp_state.velocity_y > 0.25;
-                        self.fall = self.lerp_state.velocity_y < -0.25;
-                        self.land = !self.rise && !self.fall;
-                    }
                 }
             }
         }

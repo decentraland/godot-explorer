@@ -12,7 +12,7 @@ var gravity := 10.0
 var jump_height := 1.0
 var jump_velocity_0 := sqrt(2 * jump_height * gravity)
 
-var land_time := 0.0
+var jump_time := 0.0
 
 var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
@@ -140,21 +140,28 @@ func _physics_process(dt: float) -> void:
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	current_direction = current_direction.move_toward(direction, 8 * dt)
 
+	jump_time -= dt
 	if not is_on_floor():
 		avatar.land = false
+		avatar.rise = velocity.y > .3
+		avatar.fall = velocity.y < -.3
 		velocity.y -= gravity * dt
-	elif Input.is_action_pressed("ia_jump") and land_time > 0.15:
-		avatar.land = false
+	elif Input.is_action_pressed("ia_jump") and jump_time < 0:
 		velocity.y = jump_velocity_0
+		avatar.land = false
+		avatar.rise = true
+		avatar.fall = false
+		jump_time = 1.5
 	else:
 		if not avatar.land:
 			avatar.land = true
-			land_time = 0
-		land_time += dt
-		velocity.y = 0
 
-	avatar.rise = velocity.y > 0
-	avatar.fall = velocity.y < 0
+		velocity.y = 0
+		avatar.rise = false
+		avatar.fall = false
+
+	if velocity.y != 0.0:
+		print(velocity.y)
 
 	if current_direction:
 		if Input.is_action_pressed("ia_walk"):

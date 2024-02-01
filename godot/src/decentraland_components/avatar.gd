@@ -24,6 +24,8 @@ var wearables_dict: Dictionary = {}
 var finish_loading = false
 var wearables_by_category
 
+var playing_emote: bool = false
+
 var generate_attach_points: bool = false
 var right_hand_idx: int = -1
 var right_hand_position: Transform3D
@@ -37,6 +39,8 @@ var audio_stream_player_gen: AudioStreamGenerator = null
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
 @onready var animation_tree = $Armature/AnimationTree
+@onready var animation_tree_root: AnimationNodeStateMachine = animation_tree.tree_root
+@onready var animation_emote_node: AnimationNodeAnimation = animation_tree_root.get_node("Emote")
 @onready var animation_player = $Armature/AnimationPlayer
 @onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
 @onready var label_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name/Label3D_Name
@@ -156,11 +160,15 @@ func _load_default_emotes():
 
 func play_emote(emote_id: String):
 	if animation_player.has_animation(emote_id):
-		animation_player.stop()
-		animation_player.play(emote_id)
+		animation_emote_node.animation = emote_id
+
+		var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+		if pb.get_current_node() == "Emote":
+			pb.start("Emote", true)
+		playing_emote = true
 	else:
+		prints(animation_player.get_animation_list())
 		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_name])
-	# playing_emote = true
 
 
 func play_remote_emote(_emote_src: String, _looping: bool):
@@ -169,16 +177,18 @@ func play_remote_emote(_emote_src: String, _looping: bool):
 	pass
 
 
-func play_emote_by_index(index: int):
+func play_emote_by_index(index: int) -> String:
 	# Play emote
 	var emote_id: String = index_to_animation_name[index]
 	play_emote(emote_id)
 
+	return emote_id
 
-func broadcast_avatar_animation():
+
+func broadcast_avatar_animation(emote_id: String) -> void:
 	# Send emote
 	var timestamp = Time.get_unix_time_from_system() * 1000
-	Global.comms.send_chat("␐%s %d" % [animation_player.current_animation, timestamp])
+	Global.comms.send_chat("␐%s %d" % [emote_id, timestamp])
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
@@ -462,7 +472,18 @@ func _process(delta):
 	self.process(delta)
 	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
 
+	if playing_emote:
+		if not self_idle:
+			playing_emote = false
+		else:
+			var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+			if pb.get_current_node() == "Emote":
+				if pb.get_current_play_position() > 0 and not pb.is_playing():
+					playing_emote = false
+
 	animation_tree.set("parameters/conditions/idle", self_idle)
+	animation_tree.set("parameters/conditions/emote", playing_emote)
+	animation_tree.set("parameters/conditions/nemote", not playing_emote)
 
 	animation_tree.set("parameters/conditions/run", self.run)
 	animation_tree.set("parameters/conditions/jog", self.jog)
