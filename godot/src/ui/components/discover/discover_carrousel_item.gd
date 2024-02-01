@@ -5,6 +5,7 @@ extends Control
 @onready var label_online = $MarginContainer/DiscoverCarrouselItem/TextureRect_Background/MarginContainer/VBoxContainer/HBoxContainer/Panel/MarginContainer/HBoxContainer/Label_Online
 @onready var label_views = $MarginContainer/DiscoverCarrouselItem/TextureRect_Background/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer/Label_Views
 @onready var label_liked = $MarginContainer/DiscoverCarrouselItem/TextureRect_Background/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer2/Label_Liked
+@onready var animation_player = $AnimationPlayer
 
 func _ready():
 	set_views(1500)
@@ -28,6 +29,5 @@ func _format_number(num:int):
 		return str(ceil(num/1000.0)) + "k"
 	else:
 		return str(floor(num/1000000.0)) + "M"
-
 
 
