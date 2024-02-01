@@ -173,13 +173,7 @@ func _on_h_slider_drag_ended(value_changed):
 
 func _on_button_clear_cache_pressed():
 	# Clean the content cache folder
-	if DirAccess.dir_exists_absolute(Global.config.local_content_dir):
-		for file in DirAccess.get_files_at(Global.config.local_content_dir):
-			DirAccess.remove_absolute(Global.config.local_content_dir + file)
-		DirAccess.remove_absolute(Global.config.local_content_dir)
-
-	if not DirAccess.dir_exists_absolute(Global.config.local_content_dir):
-		DirAccess.make_dir_absolute(Global.config.local_content_dir)
+	Global.clear_cache()
 
 
 func _on_checkbox_fps_toggled(button_pressed):

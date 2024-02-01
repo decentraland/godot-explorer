@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=24 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
 [ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="5_c8ksg"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
+[ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/button_touch_action/button_touch_action.tscn" id="7_oofwd"]
 [ext_resource type="Texture2D" uid="uid://v1avum5r3l4s" path="res://assets/themes/dark_dcl_theme/icons/JumpButton.svg" id="8_ttlm2"]
 [ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
 [ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="9_hj43f"]
@@ -89,6 +90,36 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="Button_PrimaryAction" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -216.0
+offset_top = -277.0
+offset_right = -136.0
+offset_bottom = -197.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="Button_SecondaryAction" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -274.0
+offset_top = -201.0
+offset_right = -194.0
+offset_bottom = -121.0
+grow_horizontal = 0
+grow_vertical = 0
+text_letter = "F"
+trigger_action = "ia_secondary"
 
 [node name="Button_Jump" type="TextureButton" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI"]
 modulate = Color(1, 1, 1, 0.501961)
@@ -213,20 +244,17 @@ offset_bottom = 390.0
 [node name="Label_FPS" type="Label" parent="UI/SafeMarginContainer/InteractableHUD"]
 unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -173.0
-offset_top = 3.0
-offset_right = -20.0
-offset_bottom = 18.0
-grow_horizontal = 0
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -15.0
+offset_right = 153.0
+grow_vertical = 0
 theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
 theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 text = "ALPHA - FPS"
-horizontal_alignment = 2
 
 [node name="Label_RAM" type="Label" parent="UI/SafeMarginContainer/InteractableHUD"]
 unique_name_in_owner = true

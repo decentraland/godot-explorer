@@ -394,11 +394,7 @@ pub fn process_events_players_stateless(
                         .inner
                         .send(
                             serde_json::to_string(&EventBodyExpressionId {
-                                expression_id: value
-                                    .emote_command
-                                    .as_ref()
-                                    .map(|v| v.emote_urn.clone())
-                                    .unwrap_or_default(),
+                                expression_id: value.emote_urn.clone(),
                             })
                             .expect("fail json serialize"),
                         )

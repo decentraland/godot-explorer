@@ -6,11 +6,11 @@ enum SliderType { COLOR, BRIGHTNESS, SATURATION }
 
 @export var slider_type := SliderType.COLOR
 @export var value: int = 10
-@export var lenght: int = 200
 
 var selected: bool = false
 var grabber_size: Vector2
 var slider_scale: float
+var lenght: int = 200
 
 var color_background_texture = preload("res://assets/ui/BackgroundHUE.png")
 var saturation_background_texture = preload("res://assets/ui/BackgroundSaturation.png")
@@ -29,6 +29,10 @@ var brightness_background_texture = preload("res://assets/ui/BackgroundValue.png
 
 
 func _ready():
+	update_sliders()
+
+
+func update_sliders():
 	match slider_type:
 		SliderType.COLOR:
 			texture_rect_background.texture = color_background_texture
@@ -44,6 +48,7 @@ func _ready():
 			max_value = 100
 
 	label_title.text = SliderType.keys()[slider_type]
+	lenght = self.size.x
 	texture_rect_background.size = Vector2(lenght, heigth)
 
 	if value > max_value:
@@ -100,3 +105,7 @@ func refresh_from_color(color_value: int):
 	else:
 		control_grabber.set_position(Vector2i(0, control_grabber.position.y))
 		value = min_value
+
+
+func _on_resized():
+	update_sliders()
