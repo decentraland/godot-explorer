@@ -3,8 +3,8 @@
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_i5aem"]
 [ext_resource type="Script" path="res://src/ui/components/profile/profile.gd" id="2_rg1ed"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="3_4yj28"]
-[ext_resource type="Texture2D" uid="uid://d1w4x1qnmfuib" path="res://assets/ui/edit-profile.svg" id="4_5d7qp"]
-[ext_resource type="Texture2D" uid="uid://1wo236bkocvd" path="res://assets/ui/envelope.svg" id="5_3yypt"]
+[ext_resource type="Texture2D" path="res://assets/ui/edit-profile.svg" id="4_5d7qp"]
+[ext_resource type="Texture2D" path="res://assets/ui/envelope.svg" id="5_3yypt"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_knjct"]
 
@@ -55,6 +55,7 @@ theme_override_constants/separation = 19
 [node name="Button_MyProfile" type="Button" parent="ColorRect_Background/MarginContainer/HBoxContainer"]
 layout_mode = 2
 theme_type_variation = &"OrangeButton"
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
 theme_override_constants/icon_max_width = 30
 toggle_mode = true
 button_pressed = true
@@ -65,6 +66,7 @@ icon = ExtResource("4_5d7qp")
 [node name="Button_EmailNotifications" type="Button" parent="ColorRect_Background/MarginContainer/HBoxContainer"]
 layout_mode = 2
 theme_type_variation = &"OrangeButton"
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
 theme_override_constants/icon_max_width = 30
 toggle_mode = true
 button_group = SubResource("ButtonGroup_knjct")
