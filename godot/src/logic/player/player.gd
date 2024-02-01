@@ -5,10 +5,14 @@ const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 @export var vertical_sens: float = 0.5
 @export var horizontal_sens: float = 0.5
 
-var walk_speed = 3.0
+var walk_speed = 1.5
+var jog_speed = 5.0
 var run_speed = 8.0
-var gravity := 55.0
-var jump_velocity_0 := 12.0
+var gravity := 10.0
+var jump_height := 1.0
+var jump_velocity_0 := sqrt(2 * jump_height * gravity)
+
+var land_time := 0.0
 
 var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
@@ -81,10 +85,11 @@ func _on_player_profile_changed(new_profile: Dictionary):
 
 
 func _on_param_changed(_param):
-	walk_speed = Global.config.walk_velocity
-	run_speed = Global.config.run_velocity
-	gravity = Global.config.gravity
-	jump_velocity_0 = Global.config.jump_velocity
+	pass
+	#walk_speed = Global.config.walk_velocity
+	#run_speed = Global.config.run_velocity
+	#gravity = Global.config.gravity
+	#jump_velocity_0 = Global.config.jump_velocity
 
 
 func _clamp_camera_rotation():
@@ -126,43 +131,56 @@ func _input(event):
 						set_camera_mode(Global.CameraMode.FIRST_PERSON)
 
 
-func _physics_process(delta: float) -> void:
+func _physics_process(dt: float) -> void:
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 
 	if not Global.explorer_has_focus():  # ignore input
 		input_dir = Vector2(0, 0)
 
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-	current_direction = current_direction.move_toward(direction, 8 * delta)
+	current_direction = current_direction.move_toward(direction, 8 * dt)
 
 	if not is_on_floor():
-		velocity.y -= gravity * delta
-	elif Input.is_action_pressed("ia_jump"):
+		avatar.land = false
+		velocity.y -= gravity * dt
+	elif Input.is_action_pressed("ia_jump") and land_time > 0.15:
+		avatar.land = false
 		velocity.y = jump_velocity_0
 	else:
+		if not avatar.land:
+			avatar.land = true
+			land_time = 0
+		land_time += dt
 		velocity.y = 0
 
-	avatar.rising = velocity.y > 0
-	avatar.falling = velocity.y < 0
+	avatar.rise = velocity.y > 0
+	avatar.fall = velocity.y < 0
 
 	if current_direction:
 		if Input.is_action_pressed("ia_walk"):
-			avatar.walking = true
-			avatar.running = false
-
+			avatar.walk = true
+			avatar.run = false
+			avatar.jog = false
 			velocity.x = current_direction.x * walk_speed
 			velocity.z = current_direction.z * walk_speed
-		else:
-			avatar.walking = false
-			avatar.running = true
-
+		elif Input.is_action_pressed("ia_sprint"):
+			avatar.walk = false
+			avatar.run = true
+			avatar.jog = false
 			velocity.x = current_direction.x * run_speed
 			velocity.z = current_direction.z * run_speed
+		else:
+			avatar.walk = false
+			avatar.run = false
+			avatar.jog = true
+			velocity.x = current_direction.x * jog_speed
+			velocity.z = current_direction.z * jog_speed
 
 		avatar.look_at(current_direction.normalized() + position)
 	else:
-		avatar.walking = false
-		avatar.running = false
+		avatar.walk = false
+		avatar.run = false
+		avatar.jog = false
 
 		velocity.x = move_toward(velocity.x, 0, walk_speed)
 		velocity.z = move_toward(velocity.z, 0, walk_speed)

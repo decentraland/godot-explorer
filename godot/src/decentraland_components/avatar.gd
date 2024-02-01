@@ -38,9 +38,10 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 @onready var animation_tree = $Armature/AnimationTree
 @onready var animation_player = $Armature/AnimationPlayer
 @onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
-@onready var label_3d_name = $Label3D_Name
+@onready var label_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name/Label3D_Name
 @onready var body_shape_root: Node3D = $Armature
 @onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
+@onready var bone_attachment_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name
 
 
 func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
@@ -272,6 +273,10 @@ func try_to_set_body_shape(body_shape_hash):
 		animation_player_parent.remove_child(animation_tree)
 		animation_player_parent.remove_child(animation_player)
 
+	var bone_attachment_3d_name_parent = bone_attachment_3d_name.get_parent()
+	if bone_attachment_3d_name_parent != null:
+		bone_attachment_3d_name_parent.remove_child(bone_attachment_3d_name)
+
 	if body_shape_root != null:
 		remove_child(body_shape_root)
 		_free_old_skeleton.call_deferred(body_shape_root)
@@ -282,6 +287,8 @@ func try_to_set_body_shape(body_shape_hash):
 	body_shape_skeleton_3d = body_shape_root.find_child("Skeleton3D", true, false)
 	body_shape_skeleton_3d.get_parent().add_child(animation_player)
 	body_shape_skeleton_3d.get_parent().add_child(animation_tree)
+	body_shape_skeleton_3d.add_child(bone_attachment_3d_name)
+	bone_attachment_3d_name.bone_name = "Avatar_Head"
 
 	for child in body_shape_skeleton_3d.get_children():
 		child.name = child.name.to_lower()
@@ -448,17 +455,19 @@ func apply_texture_and_mask(
 func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
-	var self_idle = !self.walking && !self.running && !self.rising && !self.falling
+	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
 
 	animation_tree.set("parameters/conditions/idle", self_idle)
 
-	animation_tree.set("parameters/conditions/running", self.running)
-	animation_tree.set("parameters/conditions/walking", self.walking)
+	animation_tree.set("parameters/conditions/run", self.run)
+	animation_tree.set("parameters/conditions/jog", self.jog)
+	animation_tree.set("parameters/conditions/walk", self.walk)
 
-	animation_tree.set("parameters/conditions/rising", self.rising)
-	animation_tree.set("parameters/conditions/falling", self.falling)
+	animation_tree.set("parameters/conditions/rise", self.rise)
+	animation_tree.set("parameters/conditions/fall", self.fall)
+	animation_tree.set("parameters/conditions/land", self.land)
 
-	animation_tree.set("parameters/conditions/nfalling", !self.falling)
+	animation_tree.set("parameters/conditions/nfall", !self.fall)
 
 
 func spawn_voice_channel(sample_rate, _num_channels, _samples_per_channel):
