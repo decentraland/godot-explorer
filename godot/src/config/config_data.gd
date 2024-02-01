@@ -109,6 +109,7 @@ var guest_profile: Dictionary = {}:
 		guest_profile = value
 		param_changed.emit(ConfigParams.GUEST_PROFILE)
 
+
 func load_from_default():
 	self.gravity = 55.0
 	self.jump_velocity = 12.0
@@ -170,7 +171,7 @@ func load_from_settings_file():
 	self.session_account = settings_file.get_value(
 		"session", "account", data_default.session_account
 	)
-	
+
 	self.guest_profile = settings_file.get_value(
 		"session", "guest_profile", data_default.guest_profile
 	)

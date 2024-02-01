@@ -711,3 +711,18 @@ static func set_fallback_for_missing_needed_categories(
 				)
 
 	return wearables_by_category
+
+
+static func from_color_object(color: Variant, default: Color = Color.WHITE) -> Color:
+	if color is Dictionary:
+		return Color(
+			color.get("r", default.r),
+			color.get("g", default.g),
+			color.get("b", default.b),
+			color.get("a", default.a)
+		)
+	return default
+
+
+static func to_color_object(color: Color) -> Dictionary:
+	return {"color": {"r": color.r, "g": color.g, "b": color.b, "a": color.a}}

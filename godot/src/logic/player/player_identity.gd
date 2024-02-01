@@ -59,7 +59,7 @@ func async_deploy_profile(new_profile: Dictionary) -> void:
 		Global.config.save_to_settings_file()
 		self._update_profile_from_dictionary(new_profile)
 		return
-	
+
 	var promise: Promise = self.async_prepare_deploy_profile(new_profile)
 	var ret = await PromiseUtils.async_awaiter(promise)
 	if ret is PromiseError:

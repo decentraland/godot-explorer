@@ -114,9 +114,9 @@ func _on_profile_changed(new_profile: Dictionary):
 	var profile_avatar = profile_content.get("avatar", {})
 	avatar_body_shape = profile_avatar.bodyShape
 	avatar_wearables = profile_avatar.wearables
-	avatar_eyes_color = Avatar.from_color_object(profile_avatar.eyes.color)
-	avatar_hair_color = Avatar.from_color_object(profile_avatar.hair.color)
-	avatar_skin_color = Avatar.from_color_object(profile_avatar.skin.color)
+	avatar_eyes_color = Wearables.from_color_object(profile_avatar.eyes.color)
+	avatar_hair_color = Wearables.from_color_object(profile_avatar.hair.color)
+	avatar_skin_color = Wearables.from_color_object(profile_avatar.skin.color)
 
 	if profile_avatar.emotes != null:
 		avatar_emotes = profile_avatar.emotes
@@ -132,7 +132,7 @@ func _physics_process(_delta):
 	if request_update_avatar:
 		request_update_avatar = false
 		_async_update_avatar()
-		
+
 	if request_show_wearables:
 		request_show_wearables = false
 		show_wearables()
@@ -146,9 +146,9 @@ func _async_update_avatar():
 		"avatar", {}
 	)
 	profile_avatar["bodyShape"] = avatar_body_shape
-	profile_avatar["eyes"] = Avatar.to_color_object(avatar_eyes_color)
-	profile_avatar["hair"] = Avatar.to_color_object(avatar_hair_color)
-	profile_avatar["skin"] = Avatar.to_color_object(avatar_skin_color)
+	profile_avatar["eyes"] = Wearables.to_color_object(avatar_eyes_color)
+	profile_avatar["hair"] = Wearables.to_color_object(avatar_hair_color)
+	profile_avatar["skin"] = Wearables.to_color_object(avatar_skin_color)
 	profile_avatar["wearables"] = avatar_wearables
 	profile_avatar["emotes"] = avatar_emotes
 
@@ -327,9 +327,9 @@ func _on_color_picker_panel_pick_color(color: Color):
 	var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get(
 		"avatar", {}
 	)
-	profile_avatar["eyes"] = Avatar.to_color_object(avatar_eyes_color)
-	profile_avatar["hair"] = Avatar.to_color_object(avatar_hair_color)
-	profile_avatar["skin"] = Avatar.to_color_object(avatar_skin_color)
+	profile_avatar["eyes"] = Wearables.to_color_object(avatar_eyes_color)
+	profile_avatar["hair"] = Wearables.to_color_object(avatar_hair_color)
+	profile_avatar["skin"] = Wearables.to_color_object(avatar_skin_color)
 	button_save_profile.disabled = false
 
 
