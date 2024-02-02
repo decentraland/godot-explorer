@@ -1,6 +1,7 @@
-[gd_scene load_steps=12 format=3 uid="uid://cqoryjhg3id3x"]
+[gd_scene load_steps=19 format=3 uid="uid://cqoryjhg3id3x"]
 
 [ext_resource type="Texture2D" uid="uid://bkmdyxq51ksfv" path="res://src/ui/components/place/place.png" id="1_glw55"]
+[ext_resource type="Script" path="res://src/ui/components/place/place.gd" id="1_ud3rg"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_7sf0h"]
 [ext_resource type="Texture2D" uid="uid://bof57drsf215k" path="res://assets/ui/PreviewIcon.svg" id="3_jc5a5"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_lyywl"]
@@ -11,11 +12,18 @@
 [ext_resource type="Texture2D" uid="uid://bw2jmh7iq38pu" path="res://src/ui/components/place/Pic-1.png" id="9_17d8c"]
 [ext_resource type="Texture2D" uid="uid://dea6x16agl43a" path="res://src/ui/components/place/Pic-2.png" id="10_1ornw"]
 [ext_resource type="Texture2D" uid="uid://b5spptpq065xd" path="res://assets/ui/JumpIn.svg" id="11_jer0p"]
+[ext_resource type="ButtonGroup" uid="uid://c1ufoi2l4xqir" path="res://src/ui/components/place/like_button_group.tres" id="12_xogj6"]
+[ext_resource type="Texture2D" uid="uid://g1qfckijvv71" path="res://assets/ui/Icn/Like.svg" id="13_3cxyl"]
+[ext_resource type="Texture2D" uid="uid://c7mwiejwirw4f" path="res://assets/ui/Icn/Dislike.svg" id="14_qnnfp"]
+[ext_resource type="Texture2D" uid="uid://dlk5kwsy7unyi" path="res://assets/ui/Icn/StarOutline.svg" id="15_e8st2"]
+[ext_resource type="Texture2D" uid="uid://tw45lf40lwvr" path="res://assets/ui/Share.svg" id="16_kxp0u"]
+[ext_resource type="Texture2D" uid="uid://ho7hdasfnqah" path="res://assets/ui/Icn/HomeOutline.svg" id="17_c5aem"]
 
 [node name="Place" type="VBoxContainer"]
 custom_minimum_size = Vector2(500, 0)
 offset_right = 508.0
 offset_bottom = 725.0
+script = ExtResource("1_ud3rg")
 
 [node name="TextureRect" type="TextureRect" parent="."]
 layout_mode = 2
@@ -178,10 +186,14 @@ stretch_mode = 4
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_bottom = 50
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_bottom = 15
 
-[node name="Button" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Button" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 focus_mode = 0
@@ -191,7 +203,93 @@ icon = ExtResource("11_jer0p")
 icon_alignment = 2
 expand_icon = true
 
-[node name="Label5" type="RichTextLabel" parent="MarginContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 9
+
+[node name="Button_Like" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("2_7sf0h")
+theme_override_constants/icon_max_width = 40
+toggle_mode = true
+button_group = ExtResource("12_xogj6")
+icon = ExtResource("13_3cxyl")
+icon_alignment = 1
+
+[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Button_Dislike" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("2_7sf0h")
+theme_override_constants/icon_max_width = 40
+toggle_mode = true
+button_group = ExtResource("12_xogj6")
+icon = ExtResource("14_qnnfp")
+icon_alignment = 1
+
+[node name="Control2" type="Control" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Button_Fav" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("2_7sf0h")
+theme_override_constants/icon_max_width = 40
+toggle_mode = true
+icon = ExtResource("15_e8st2")
+icon_alignment = 1
+
+[node name="Control3" type="Control" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Button_Share" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("2_7sf0h")
+theme_override_constants/icon_max_width = 40
+icon = ExtResource("16_kxp0u")
+icon_alignment = 1
+
+[node name="Control4" type="Control" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Button_Home" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("2_7sf0h")
+theme_override_constants/icon_max_width = 40
+toggle_mode = true
+icon = ExtResource("17_c5aem")
+icon_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="."]
+layout_mode = 2
+
+[node name="MarginContainer2" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer2"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label5" type="RichTextLabel" parent="MarginContainer2/VBoxContainer"]
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
 theme = ExtResource("2_7sf0h")
@@ -200,7 +298,7 @@ theme_override_font_sizes/bold_font_size = 16
 bbcode_enabled = true
 text = "[b]DESCRIPTION[/b]"
 
-[node name="Label6" type="RichTextLabel" parent="MarginContainer/VBoxContainer"]
+[node name="Label6" type="RichTextLabel" parent="MarginContainer2/VBoxContainer"]
 custom_minimum_size = Vector2(0, 25)
 layout_mode = 2
 theme = ExtResource("2_7sf0h")
@@ -210,3 +308,8 @@ bbcode_enabled = true
 text = "Collect mining ores and magic stones through mining as well as farm magic plant nearby Elswyth Magic School, create wearables through alchemy and crafting!
 "
 fit_content = true
+
+[connection signal="toggled" from="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Like" to="." method="_on_button_like_toggled"]
+[connection signal="toggled" from="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Dislike" to="." method="_on_button_dislike_toggled"]
+[connection signal="toggled" from="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Fav" to="." method="_on_button_fav_toggled"]
+[connection signal="toggled" from="MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Home" to="." method="_on_button_home_toggled"]
