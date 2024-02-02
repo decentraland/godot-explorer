@@ -9,7 +9,6 @@ signal avatar_loaded
 # Public
 var avatar_name: String = ""
 var avatar_id: String = ""
-var playing_emote = false
 
 # Wearable requesting
 var current_content_url: String = ""
@@ -25,6 +24,8 @@ var wearables_dict: Dictionary = {}
 var finish_loading = false
 var wearables_by_category
 
+var playing_emote: bool = false
+
 var generate_attach_points: bool = false
 var right_hand_idx: int = -1
 var right_hand_position: Transform3D
@@ -37,11 +38,15 @@ var audio_stream_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
+@onready var animation_tree = $Armature/AnimationTree
+@onready var animation_tree_root: AnimationNodeStateMachine = animation_tree.tree_root
+@onready var animation_emote_node: AnimationNodeAnimation = animation_tree_root.get_node("Emote")
 @onready var animation_player = $Armature/AnimationPlayer
 @onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
-@onready var label_3d_name = $Label3D_Name
+@onready var label_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name/Label3D_Name
 @onready var body_shape_root: Node3D = $Armature
 @onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
+@onready var bone_attachment_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name
 
 
 func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
@@ -84,9 +89,6 @@ func async_update_avatar(avatar: Dictionary):
 	if avatar.is_empty():
 		printerr("Trying to update an avatar with an empty object")
 		return
-
-	playing_emote = false
-	set_idle()
 
 	if avatar.get("name", "") != null:
 		avatar_name = avatar.get("name", "")
@@ -158,11 +160,14 @@ func _load_default_emotes():
 
 func play_emote(emote_id: String):
 	if animation_player.has_animation(emote_id):
-		animation_player.stop()
-		animation_player.play(emote_id)
+		animation_emote_node.animation = emote_id
+
+		var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+		if pb.get_current_node() == "Emote":
+			pb.start("Emote", true)
+		playing_emote = true
 	else:
 		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_name])
-	playing_emote = true
 
 
 func play_remote_emote(_emote_src: String, _looping: bool):
@@ -171,16 +176,24 @@ func play_remote_emote(_emote_src: String, _looping: bool):
 	pass
 
 
-func play_emote_by_index(index: int):
+func play_emote_by_index(index: int) -> String:
 	# Play emote
 	var emote_id: String = index_to_animation_name[index]
 	play_emote(emote_id)
 
+	return emote_id
 
-func broadcast_avatar_animation():
+
+func freeze_on_idle():
+	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED
+	animation_player.stop()
+	animation_player.play("Idle", -1, 0.0)
+
+
+func broadcast_avatar_animation(emote_id: String) -> void:
 	# Send emote
 	var timestamp = Time.get_unix_time_from_system() * 1000
-	Global.comms.send_chat("␐%s %d" % [animation_player.current_animation, timestamp])
+	Global.comms.send_chat("␐%s %d" % [emote_id, timestamp])
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
@@ -277,7 +290,12 @@ func try_to_set_body_shape(body_shape_hash):
 
 	var animation_player_parent = animation_player.get_parent()
 	if animation_player_parent != null:
+		animation_player_parent.remove_child(animation_tree)
 		animation_player_parent.remove_child(animation_player)
+
+	var bone_attachment_3d_name_parent = bone_attachment_3d_name.get_parent()
+	if bone_attachment_3d_name_parent != null:
+		bone_attachment_3d_name_parent.remove_child(bone_attachment_3d_name)
 
 	if body_shape_root != null:
 		remove_child(body_shape_root)
@@ -288,6 +306,9 @@ func try_to_set_body_shape(body_shape_hash):
 
 	body_shape_skeleton_3d = body_shape_root.find_child("Skeleton3D", true, false)
 	body_shape_skeleton_3d.get_parent().add_child(animation_player)
+	body_shape_skeleton_3d.get_parent().add_child(animation_tree)
+	body_shape_skeleton_3d.add_child(bone_attachment_3d_name)
+	bone_attachment_3d_name.bone_name = "Avatar_Head"
 
 	for child in body_shape_skeleton_3d.get_children():
 		child.name = child.name.to_lower()
@@ -454,27 +475,33 @@ func apply_texture_and_mask(
 func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
+	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
+
+	if playing_emote:
+		if not self_idle:
+			playing_emote = false
+		else:
+			var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+			if pb.get_current_node() == "Emote":
+				if pb.get_current_play_position() > 0 and not pb.is_playing():
+					playing_emote = false
+
+	animation_tree.set("parameters/conditions/idle", self_idle)
+	animation_tree.set("parameters/conditions/emote", playing_emote)
+	animation_tree.set("parameters/conditions/nemote", not playing_emote)
+
+	animation_tree.set("parameters/conditions/run", self.run)
+	animation_tree.set("parameters/conditions/jog", self.jog)
+	animation_tree.set("parameters/conditions/walk", self.walk)
+
+	animation_tree.set("parameters/conditions/rise", self.rise)
+	animation_tree.set("parameters/conditions/fall", self.fall)
+	animation_tree.set("parameters/conditions/land", self.land)
+
+	animation_tree.set("parameters/conditions/nfall", !self.fall)
 
 
-func set_walking():
-	if animation_player.current_animation != "Walk":
-		animation_player.play("Walk")
-		playing_emote = false
-
-
-func set_running():
-	if animation_player.current_animation != "Run":
-		animation_player.play("Run")
-		playing_emote = false
-
-
-func set_idle():
-	if animation_player.current_animation != "Idle" and playing_emote == false:
-		animation_player.play("Idle")
-
-
-func spawn_voice_channel(sample_rate, num_channels, samples_per_channel):
-	printt("init voice chat ", sample_rate, num_channels, samples_per_channel)
+func spawn_voice_channel(sample_rate, _num_channels, _samples_per_channel):
 	audio_stream_player = AudioStreamPlayer.new()
 	audio_stream_player_gen = AudioStreamGenerator.new()
 
@@ -485,7 +512,6 @@ func spawn_voice_channel(sample_rate, num_channels, samples_per_channel):
 
 
 func push_voice_frame(frame):
-#	print("voice chat ", frame)
 	if not audio_stream_player.playing:
 		audio_stream_player.play()
 
