@@ -160,9 +160,6 @@ func _physics_process(dt: float) -> void:
 		avatar.rise = false
 		avatar.fall = false
 
-	if velocity.y != 0.0:
-		print(velocity.y)
-
 	if current_direction:
 		if Input.is_action_pressed("ia_walk"):
 			avatar.walk = true

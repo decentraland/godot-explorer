@@ -184,6 +184,11 @@ func play_emote_by_index(index: int) -> String:
 
 	return emote_id
 
+func freeze_on_idle():
+	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED
+	animation_player.stop()
+	animation_player.play("Idle", -1, 0.0)
+
 
 func broadcast_avatar_animation(emote_id: String) -> void:
 	# Send emote
