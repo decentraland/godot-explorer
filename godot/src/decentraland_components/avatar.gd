@@ -184,6 +184,7 @@ func play_emote_by_index(index: int) -> String:
 
 	return emote_id
 
+
 func freeze_on_idle():
 	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED
 	animation_player.stop()

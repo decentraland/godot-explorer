@@ -187,12 +187,14 @@ func async_take_and_compare_snapshot(
 
 	var explorer = Global.get_explorer()
 	explorer.set_visible_ui(false)
-	
+
+	# Hide other avatars
 	for avatar in Global.avatars.get_children():
 		if avatar is Avatar:
-			avatar.freeze_on_idle()
+			avatar.hide()
+
+	# Freeze primary player
 	Global.scene_runner.player_node.avatar.freeze_on_idle()
-	
 
 	await get_tree().process_frame
 	await get_tree().process_frame
