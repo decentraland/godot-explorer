@@ -85,11 +85,13 @@ func _on_player_profile_changed(new_profile: Dictionary):
 
 
 func _on_param_changed(_param):
+	# Disabled for now
+	# TODO: make the panel to change these values
+	# walk_speed = Global.config.walk_velocity
+	# run_speed = Global.config.run_velocity
+	# gravity = Global.config.gravity
+	# jump_velocity_0 = Global.config.jump_velocity
 	pass
-	#walk_speed = Global.config.walk_velocity
-	#run_speed = Global.config.run_velocity
-	#gravity = Global.config.gravity
-	#jump_velocity_0 = Global.config.jump_velocity
 
 
 func _clamp_camera_rotation():

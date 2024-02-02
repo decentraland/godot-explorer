@@ -167,7 +167,6 @@ func play_emote(emote_id: String):
 			pb.start("Emote", true)
 		playing_emote = true
 	else:
-		prints(animation_player.get_animation_list())
 		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_name])
 
 
