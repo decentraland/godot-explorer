@@ -38,5 +38,4 @@ func _format_number(num: int):
 		return num
 	if num < 1e6:
 		return str(ceil(num / 1000.0)) + "k"
-	else:
-		return str(floor(num / 1000000.0)) + "M"
+	return str(floor(num / 1000000.0)) + "M"
