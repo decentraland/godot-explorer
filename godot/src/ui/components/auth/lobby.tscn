@@ -48,7 +48,7 @@ grow_vertical = 2
 theme = ExtResource("1_t2lj5")
 script = ExtResource("2_fu4v6")
 
-[node name="Main" type="MarginContainer" parent="."]
+[node name="Main" type="Control" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -56,12 +56,14 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("3_wk266")
 
 [node name="Start" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
 
 [node name="TextureRect" type="TextureRect" parent="Main/Start"]
 layout_mode = 1
@@ -143,7 +145,11 @@ text = "I ALREADY HAVE AN ACCOUNT"
 
 [node name="Restore" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
 
 [node name="Background_Restore" type="TextureRect" parent="Main/Restore"]
 layout_mode = 1
@@ -259,23 +265,33 @@ speed_scale = 1.5
 
 [node name="Backpack" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
 
 [node name="TextureRect" type="TextureRect" parent="Main/Backpack"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+layout_mode = 2
+offset_right = 1280.0
+offset_bottom = 720.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture2D_vjyug")
 
-[node name="Backpack" parent="Main/Backpack" instance=ExtResource("9_qv8xq")]
+[node name="SafeMarginContainer" type="MarginContainer" parent="Main/Backpack"]
 layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 offset_bottom = -75.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("3_wk266")
 
-[node name="Button_Continue" type="Button" parent="Main/Backpack/Backpack"]
+[node name="Backpack" parent="Main/Backpack/SafeMarginContainer" instance=ExtResource("9_qv8xq")]
+layout_mode = 2
+
+[node name="Button_Continue" type="Button" parent="Main/Backpack/SafeMarginContainer/Backpack"]
 custom_minimum_size = Vector2(250, 56)
 layout_mode = 1
 anchors_preset = 7
@@ -300,6 +316,9 @@ icon_alignment = 2
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
 
 [node name="TextureRect" type="TextureRect" parent="Main/SignIn"]
 layout_mode = 1
@@ -428,6 +447,9 @@ icon = ExtResource("13_43yag")
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
 
 [node name="Background_Restore" type="TextureRect" parent="Main/ChooseName"]
 layout_mode = 1
@@ -615,7 +637,7 @@ text = "Message"
 [connection signal="pressed" from="Main/Start/VBoxContainer/Button_GoToSignIn" to="." method="_on_button_go_to_sign_in_pressed"]
 [connection signal="pressed" from="Main/Restore/VBoxContainer_RestorePanel/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
 [connection signal="pressed" from="Main/Restore/VBoxContainer_RestorePanel/Button_DifferentAccount" to="." method="_on_button_different_account_pressed"]
-[connection signal="pressed" from="Main/Backpack/Backpack/Button_Continue" to="." method="_on_button_continue_pressed"]
+[connection signal="pressed" from="Main/Backpack/SafeMarginContainer/Backpack/Button_Continue" to="." method="_on_button_continue_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1/Button_OpenBrowser" to="." method="_on_button_open_browser_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsGuest" to="." method="_on_button_enter_as_guest_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
