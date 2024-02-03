@@ -158,6 +158,10 @@ func _load_default_emotes():
 	_add_animation(9, "headexplode")
 
 
+func is_playing_emote() -> bool:
+	return playing_emote
+
+
 func play_emote(emote_id: String):
 	if animation_player.has_animation(emote_id):
 		animation_emote_node.animation = emote_id
@@ -483,7 +487,9 @@ func _process(delta):
 		else:
 			var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
 			if pb.get_current_node() == "Emote":
-				if pb.get_current_play_position() > 0 and not pb.is_playing():
+				# BUG: Looks like pb.is_playing() is not working well
+				var is_emote_playing = pb.get_current_play_position() < pb.get_current_length()
+				if pb.get_current_play_position() > 0 and not is_emote_playing:
 					playing_emote = false
 
 	animation_tree.set("parameters/conditions/idle", self_idle)

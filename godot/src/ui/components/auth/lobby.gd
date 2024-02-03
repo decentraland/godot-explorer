@@ -23,6 +23,7 @@ var waiting_for_new_wallet: bool = false
 
 @onready var lineedit_choose_name = %LineEdit_ChooseName
 
+# TODO: Change screen orientation for Mobile
 #func set_portrait():
 ##DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
 #DisplayServer.window_set_size(Vector2i(720, 1280))
@@ -45,9 +46,7 @@ func show_panel(child_node: Control):
 
 
 func close_sign_in():
-	Global.scene_runner.set_pause(false)
-	self.hide()
-	self.queue_free.call_deferred()
+	get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
 func _ready():
@@ -70,7 +69,7 @@ func _async_on_profile_changed(new_profile: Dictionary):
 	label_name.show()
 
 	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
-	avatar_preview.avatar.play_emote("Idle")
+	#avatar_preview.avatar.play_emote("Idle")
 
 
 func connect_signal_wallet_connected():
@@ -121,10 +120,8 @@ func _on_button_continue_pressed():
 func _on_avatar_preview_gui_input(event):
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			if avatar_preview.avatar.get_current_animation() == "Idle":
-				avatar_preview.avatar.clear_emote_queue()
+			if not avatar_preview.avatar.is_playing_emote():
 				avatar_preview.avatar.play_emote("wave")
-				avatar_preview.avatar.queue_emote("Idle")
 
 
 func _on_button_start_pressed():
@@ -196,9 +193,7 @@ func _on_button_enter_as_guest_pressed():
 func _async_show_avatar_preview():
 	await get_tree().create_timer(1.0).timeout
 	avatar_preview.show()
-	avatar_preview.avatar.clear_emote_queue()
 	avatar_preview.avatar.play_emote("raiseHand")
-	avatar_preview.avatar.queue_emote("Idle")
 
 
 func _on_button_jump_in_pressed():
