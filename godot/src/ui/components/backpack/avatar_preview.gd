@@ -6,6 +6,9 @@ const MAX_CAMERA_Z = -1.25
 const MIN_CAMERA_Y = 0.8
 const MAX_CAMERA_Y = 2.3
 
+const BODY_CAMERA_POSITION = Vector3(0, 2.3, -3.5)
+const HEAD_CAMERA_POSITION = Vector3(0, 2, -1.25)
+
 @export var hide_name: bool = false
 @export var show_platform: bool = false
 @export var can_move: bool = true
@@ -36,9 +39,9 @@ func focus_camera_on(type):
 	var tween = create_tween().set_parallel()
 	match type:
 		Wearables.Categories.HAIR, Wearables.Categories.FACIAL_HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.EYES:
-			tween.tween_property(camera_3d, "position", Vector3(0, 2, -1.25), 0.5)
+			tween.tween_property(camera_3d, "position", HEAD_CAMERA_POSITION, 0.5)
 		_:
-			tween.tween_property(camera_3d, "position", Vector3(0, 2.3, -3.5), 0.5)
+			tween.tween_property(camera_3d, "position", BODY_CAMERA_POSITION, 0.5)
 	tween.play()
 
 

@@ -356,7 +356,8 @@ func capture_mouse():
 
 func release_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-	label_crosshair.hide()
+	if not Global.is_mobile():
+		label_crosshair.hide()
 
 
 func set_visible_ui(value: bool):

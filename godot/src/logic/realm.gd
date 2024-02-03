@@ -2,6 +2,7 @@ class_name Realm
 extends DclRealm
 
 signal realm_changed
+var _has_realm = false
 
 
 static func is_dcl_ens(str_param: String) -> bool:
@@ -68,7 +69,12 @@ static func parse_urn(urn: String):
 	return {"urn": matches.get_string(0), "entityId": matches.get_string(2), "baseUrl": base_url}
 
 
+func has_realm():
+	return _has_realm
+
+
 func async_set_realm(new_realm_string: String) -> void:
+	_has_realm = true
 	realm_string = new_realm_string
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)

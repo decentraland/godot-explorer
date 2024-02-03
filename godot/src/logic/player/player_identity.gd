@@ -60,6 +60,10 @@ func async_deploy_profile(new_profile: Dictionary) -> void:
 		self._update_profile_from_dictionary(new_profile)
 		return
 
+	# Block until a realm is set
+	if not Global.realm.has_realm():
+		await Global.realm.realm_changed
+
 	var promise: Promise = self.async_prepare_deploy_profile(new_profile)
 	var ret = await PromiseUtils.async_awaiter(promise)
 	if ret is PromiseError:
