@@ -50,6 +50,12 @@ func _physics_process(delta):
 		var new_progress = minf(loading_screen.progress + delta / 4.0 * 20.0, 20.0)
 		loading_screen.set_progress(new_progress)
 	elif waiting_for_scenes:
+		var scenes_loaded_count: int = Global.scene_runner.get_child_count()
+		if scenes_loaded_count == 0:
+			loading_screen.set_progress(100)
+			hide_loading_screen()
+			return
+
 		# 20% to 100% is waiting for all scene runners hit frame 4 (all gltf are loaded)
 		var scene_progress: int = 0
 		for child in Global.scene_runner.get_children():
@@ -58,8 +64,7 @@ func _physics_process(delta):
 				scene_progress += tick_number
 
 		var current_progress: int = (
-			int(float(scene_progress) / float(Global.scene_runner.get_child_count() * 4) * 80.0)
-			+ 20
+			int(float(scene_progress) / float(scenes_loaded_count * 4) * 80.0) + 20
 		)
 		loading_screen.set_progress(current_progress)
 
