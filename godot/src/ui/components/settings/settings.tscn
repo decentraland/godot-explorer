@@ -354,7 +354,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 tooltip_text = "Select scene to load"
 focus_mode = 1
-item_count = 10
+item_count = 11
 popup/item_0/text = "mannakia.dcl.eth"
 popup/item_0/id = 0
 popup/item_1/text = "http://127.0.0.1:8000"
@@ -375,6 +375,8 @@ popup/item_8/text = "https://leanmendoza.github.io/mannakia-dcl-scene/mannakia-d
 popup/item_8/id = 8
 popup/item_9/text = "https://sdilauro.github.io/dae-unit-tests/dae-unit-tests"
 popup/item_9/id = 9
+popup/item_10/text = "https://realm-provider.decentraland.org/main"
+popup/item_10/id = 10
 
 [node name="HSeparator4" type="HSeparator" parent="VBoxContainer/HBoxContainer/ColorRect_Background/HBoxContainer/VBoxContainer_Advanced"]
 layout_mode = 2
