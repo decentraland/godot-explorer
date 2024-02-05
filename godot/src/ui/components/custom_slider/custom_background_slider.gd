@@ -10,7 +10,7 @@ enum SliderType { COLOR, BRIGHTNESS, SATURATION }
 var selected: bool = false
 var grabber_size: Vector2
 var slider_scale: float
-var lenght: int = 200
+var length: int = 200
 
 var color_background_texture = preload("res://assets/ui/BackgroundHUE.png")
 var saturation_background_texture = preload("res://assets/ui/BackgroundSaturation.png")
@@ -20,7 +20,7 @@ var brightness_background_texture = preload("res://assets/ui/BackgroundValue.png
 @onready var max_value: int
 @onready var step: int = 1
 
-@onready var heigth: int = 35
+@onready var height: int = 35
 
 @onready var control_grabber = $TextureRect_Background/Control_Grabber
 @onready var texture_rect_background = $TextureRect_Background
@@ -48,15 +48,15 @@ func update_sliders():
 			max_value = 100
 
 	label_title.text = SliderType.keys()[slider_type]
-	lenght = self.size.x
-	texture_rect_background.size = Vector2(lenght, heigth)
+	length = int(self.size.x)
+	texture_rect_background.size = Vector2(float(length), height)
 
 	if value > max_value:
 		value = max_value
 	if value < min_value:
 		value = max_value
 
-	slider_scale = float(lenght) / float(max_value)
+	slider_scale = float(length) / float(max_value)
 
 	refresh_grabber_position(int(float(value) * slider_scale))
 
@@ -73,11 +73,11 @@ func follow_mouse(mouse_position: Vector2i):
 
 func refresh_grabber_position(new_x: int):
 	var new_grabber_position: Vector2i = Vector2i(new_x, control_grabber.position.y)
-	if new_grabber_position.x <= lenght and new_grabber_position.x >= 0:
+	if new_grabber_position.x <= length and new_grabber_position.x >= 0:
 		control_grabber.set_position(new_grabber_position)
 		value = int(float(new_x) / slider_scale)
-	elif new_grabber_position.x > lenght:
-		control_grabber.set_position(Vector2i(lenght, control_grabber.position.y))
+	elif new_grabber_position.x > length:
+		control_grabber.set_position(Vector2i(length, control_grabber.position.y))
 		value = max_value
 	else:
 		control_grabber.set_position(Vector2i(0, control_grabber.position.y))
@@ -96,11 +96,11 @@ func refresh_from_color(color_value: int):
 	var new_grabber_position: Vector2i = Vector2i(
 		int(float(color_value) * slider_scale), int(control_grabber.position.y)
 	)
-	if new_grabber_position.x <= lenght and new_grabber_position.x >= 0:
+	if new_grabber_position.x <= length and new_grabber_position.x >= 0:
 		control_grabber.set_position(new_grabber_position)
 		value = color_value
-	elif new_grabber_position.x > lenght:
-		control_grabber.set_position(Vector2i(lenght, control_grabber.position.y))
+	elif new_grabber_position.x > length:
+		control_grabber.set_position(Vector2i(length, control_grabber.position.y))
 		value = max_value
 	else:
 		control_grabber.set_position(Vector2i(0, control_grabber.position.y))
