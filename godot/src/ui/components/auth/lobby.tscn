@@ -1,0 +1,646 @@
+[gd_scene load_steps=23 format=3 uid="uid://brh1yknqh4ux6"]
+
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
+[ext_resource type="Script" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
+[ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="3_p5qhj"]
+[ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="3_wk266"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_ghcwt"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="5_g62s5"]
+[ext_resource type="Texture2D" uid="uid://da50va4kkvhcp" path="res://assets/ui/sign-in/logged-bg.png" id="6_v8mot"]
+[ext_resource type="Texture2D" uid="uid://hp7yhxpf5mat" path="res://assets/ui/sign-in/dots.png" id="7_ug3ga"]
+[ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="8_qtndn"]
+[ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="9_qv8xq"]
+[ext_resource type="FontFile" uid="uid://cvtogigxks73f" path="res://assets/themes/fonts/inter/Inter-Light.ttf" id="10_wurju"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="11_7iulh"]
+[ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="12_s6a2k"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="13_43yag"]
+[ext_resource type="Texture2D" uid="uid://h30g74davjyw" path="res://assets/ui/sign-in/dices.svg" id="14_ku160"]
+[ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="15_n5dun"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="16_2f58j"]
+[ext_resource type="Texture2D" uid="uid://jlijusqci4aw" path="res://assets/ui/warning.svg" id="17_1ct5d"]
+
+[sub_resource type="Gradient" id="Gradient_gj5s1"]
+offsets = PackedFloat32Array(0.373134, 1)
+colors = PackedColorArray(0.862745, 0.176471, 0.827451, 1, 0.286275, 0.0980392, 0.458824, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_vjyug"]
+gradient = SubResource("Gradient_gj5s1")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+metadata/_snap_enabled = true
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8mib7"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vtq8r"]
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="Lobby" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_t2lj5")
+script = ExtResource("2_fu4v6")
+
+[node name="Main" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Start" type="Control" parent="Main"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="TextureRect" type="TextureRect" parent="Main/Start"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_vjyug")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/Start"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -263.0
+offset_top = -175.5
+offset_right = 263.0
+offset_bottom = 175.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureRect" type="TextureRect" parent="Main/Start/VBoxContainer"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+texture = ExtResource("3_p5qhj")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="Main/Start/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Label_Name" type="Label" parent="Main/Start/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 36
+text = "Discover a virtual social world"
+
+[node name="Label" type="Label" parent="Main/Start/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("5_g62s5")
+theme_override_font_sizes/font_size = 36
+text = "shaped by its community
+of creators & explorers."
+
+[node name="HSeparator2" type="HSeparator" parent="Main/Start/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Button_Start" type="Button" parent="Main/Start/VBoxContainer"]
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 24
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 24
+text = "LET'S START!"
+icon_alignment = 2
+
+[node name="HSeparator3" type="HSeparator" parent="Main/Start/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Button_GoToSignIn" type="Button" parent="Main/Start/VBoxContainer"]
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"DarkButton"
+theme_override_font_sizes/font_size = 18
+text = "I ALREADY HAVE AN ACCOUNT"
+
+[node name="Restore" type="Control" parent="Main"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="Background_Restore" type="TextureRect" parent="Main/Restore"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -0.195312
+offset_right = 0.195312
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("6_v8mot")
+expand_mode = 3
+
+[node name="Background_Dots" type="TextureRect" parent="Main/Restore"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -597.0
+offset_right = -0.000244141
+offset_bottom = 525.0
+grow_horizontal = 0
+texture = ExtResource("7_ug3ga")
+expand_mode = 2
+stretch_mode = 4
+
+[node name="VBoxContainer_RestorePanel" type="VBoxContainer" parent="Main/Restore"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 128.0
+offset_top = -152.0
+offset_right = 511.0
+offset_bottom = 152.0
+grow_vertical = 2
+
+[node name="TextureRect" type="TextureRect" parent="Main/Restore/VBoxContainer_RestorePanel"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+texture = ExtResource("3_p5qhj")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="Main/Restore/VBoxContainer_RestorePanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Label_Name" type="Label" parent="Main/Restore/VBoxContainer_RestorePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 36
+text = "Welcome back"
+
+[node name="Label" type="Label" parent="Main/Restore/VBoxContainer_RestorePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("5_g62s5")
+theme_override_font_sizes/font_size = 36
+text = "Ready to Explore?"
+
+[node name="HSeparator2" type="HSeparator" parent="Main/Restore/VBoxContainer_RestorePanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Button_JumpIn" type="Button" parent="Main/Restore/VBoxContainer_RestorePanel"]
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+theme_override_constants/icon_max_width = 24
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 18
+text = "JUMP INTO DECENTRALAND"
+icon = ExtResource("8_qtndn")
+icon_alignment = 2
+
+[node name="HSeparator3" type="HSeparator" parent="Main/Restore/VBoxContainer_RestorePanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Button_DifferentAccount" type="Button" parent="Main/Restore/VBoxContainer_RestorePanel"]
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+theme_type_variation = &"DarkButton"
+theme_override_font_sizes/font_size = 18
+text = "USE DIFFERENT ACCOUNT"
+
+[node name="TextureProgressBar_RestoreLoading" parent="Main/Restore" instance=ExtResource("11_7iulh")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+speed_scale = 1.5
+
+[node name="Backpack" type="Control" parent="Main"]
+unique_name_in_owner = true
+layout_mode = 2
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="TextureRect" type="TextureRect" parent="Main/Backpack"]
+layout_mode = 2
+offset_right = 1280.0
+offset_bottom = 720.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_vjyug")
+
+[node name="SafeMarginContainer" type="MarginContainer" parent="Main/Backpack"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = -75.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("3_wk266")
+
+[node name="Backpack" parent="Main/Backpack/SafeMarginContainer" instance=ExtResource("9_qv8xq")]
+layout_mode = 2
+
+[node name="Button_Continue" type="Button" parent="Main/Backpack/SafeMarginContainer/Backpack"]
+custom_minimum_size = Vector2(250, 56)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 370.0
+offset_right = 620.0
+offset_bottom = 56.0
+grow_horizontal = 2
+grow_vertical = 0
+focus_mode = 0
+theme_override_constants/icon_max_width = 30
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 24
+text = "NEXT"
+icon = ExtResource("8_qtndn")
+icon_alignment = 2
+
+[node name="SignIn" type="Control" parent="Main"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="TextureRect" type="TextureRect" parent="Main/SignIn"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_vjyug")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.5
+offset_top = -155.0
+offset_right = 200.5
+offset_bottom = 155.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureRect" type="TextureRect" parent="Main/SignIn/VBoxContainer"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+texture = ExtResource("3_p5qhj")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="Main/SignIn/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Label_Name" type="Label" parent="Main/SignIn/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 36
+text = "Secure sign-in step"
+
+[node name="Label" type="Label" parent="Main/SignIn/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("5_g62s5")
+theme_override_font_sizes/font_size = 20
+text = "Sign in on your browser using your wallet."
+
+[node name="HSeparator2" type="HSeparator" parent="Main/SignIn/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="VBoxContainer_SignInStep1" type="VBoxContainer" parent="Main/SignIn/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Button_OpenBrowser" type="Button" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 24
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 24
+text = "OPEN BROWSER"
+icon_alignment = 2
+
+[node name="HSeparator3" type="HSeparator" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Button_EnterAsGuest" type="Button" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
+custom_minimum_size = Vector2(320, 46)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"DarkButton"
+theme_override_font_sizes/font_size = 18
+text = "QUICK DIVE AS A GUEST"
+
+[node name="Label2" type="Label" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("10_wurju")
+theme_override_font_sizes/font_size = 12
+text = "Guest account limits transactions, progress lost after logging out."
+horizontal_alignment = 1
+
+[node name="VBoxContainer_SignInStep2" type="VBoxContainer" parent="Main/SignIn/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="TextureProgressBar" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep2" instance=ExtResource("11_7iulh")]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Label2" type="Label" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep2"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("10_wurju")
+theme_override_font_sizes/font_size = 12
+text = "Please, check your browser to sign in"
+horizontal_alignment = 1
+
+[node name="HSeparator4" type="HSeparator" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep2"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Button_Cancel" type="Button" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep2"]
+layout_mode = 2
+size_flags_horizontal = 4
+focus_mode = 0
+theme_type_variation = &"DarkButton"
+theme_override_constants/h_separation = 10
+theme_override_constants/icon_max_width = 13
+theme_override_fonts/font = ExtResource("12_s6a2k")
+theme_override_font_sizes/font_size = 18
+text = "CANCEL"
+icon = ExtResource("13_43yag")
+
+[node name="ChooseName" type="Control" parent="Main"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="Background_Restore" type="TextureRect" parent="Main/ChooseName"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -0.195312
+offset_right = 0.195312
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("6_v8mot")
+expand_mode = 3
+
+[node name="Background_Dots" type="TextureRect" parent="Main/ChooseName"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -597.0
+offset_right = -0.000244141
+offset_bottom = 525.0
+grow_horizontal = 0
+texture = ExtResource("7_ug3ga")
+expand_mode = 2
+stretch_mode = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Main/ChooseName"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 128.0
+offset_top = -158.5
+offset_right = 488.0
+offset_bottom = 158.5
+grow_vertical = 2
+
+[node name="TextureRect" type="TextureRect" parent="Main/ChooseName/VBoxContainer"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+texture = ExtResource("3_p5qhj")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="Main/ChooseName/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Label_Name" type="Label" parent="Main/ChooseName/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 36
+text = "Select your name:"
+
+[node name="Label" type="Label" parent="Main/ChooseName/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("5_g62s5")
+theme_override_font_sizes/font_size = 20
+text = "Avoid using your actual name. Choose
+something distinctive and enjoyable!"
+
+[node name="HSeparator2" type="HSeparator" parent="Main/ChooseName/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Main/ChooseName/VBoxContainer"]
+layout_mode = 2
+
+[node name="LineEdit_ChooseName" type="LineEdit" parent="Main/ChooseName/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_font_sizes/font_size = 24
+placeholder_text = "Username"
+clear_button_enabled = true
+
+[node name="Button_RandomName" type="Button" parent="Main/ChooseName/VBoxContainer/HBoxContainer"]
+texture_filter = 4
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+icon = ExtResource("14_ku160")
+icon_alignment = 1
+expand_icon = true
+
+[node name="HSeparator3" type="HSeparator" parent="Main/ChooseName/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Button_Next" type="Button" parent="Main/ChooseName/VBoxContainer"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 24
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 24
+text = "NEXT"
+icon_alignment = 2
+
+[node name="HSeparator4" type="HSeparator" parent="Main/ChooseName/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="AvatarPreview" parent="." instance=ExtResource("15_n5dun")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -660.0
+offset_top = -360.0
+offset_right = -206.0
+offset_bottom = 340.0
+grow_horizontal = 0
+grow_vertical = 2
+stretch = true
+hide_name = true
+show_platform = true
+can_move = false
+
+[node name="PopupWarning" type="Panel" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -170.0
+offset_top = 50.0
+offset_right = 171.0
+offset_bottom = 115.0
+grow_horizontal = 2
+theme = ExtResource("16_2f58j")
+theme_override_styles/panel = SubResource("StyleBoxFlat_vtq8r")
+
+[node name="MarginContainer" type="MarginContainer" parent="PopupWarning"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -65.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/margin_left = 13
+theme_override_constants/margin_top = 13
+theme_override_constants/margin_right = 13
+theme_override_constants/margin_bottom = 13
+
+[node name="HBoxContainer" type="HBoxContainer" parent="PopupWarning/MarginContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PopupWarning/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="HBoxContainer_Title" type="HBoxContainer" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
+layout_mode = 2
+texture = ExtResource("17_1ct5d")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
+layout_mode = 2
+text = "Warning"
+
+[node name="Label2" type="Label" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Message"
+
+[connection signal="pressed" from="Main/Start/VBoxContainer/Button_Start" to="." method="_on_button_start_pressed"]
+[connection signal="pressed" from="Main/Start/VBoxContainer/Button_GoToSignIn" to="." method="_on_button_go_to_sign_in_pressed"]
+[connection signal="pressed" from="Main/Restore/VBoxContainer_RestorePanel/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[connection signal="pressed" from="Main/Restore/VBoxContainer_RestorePanel/Button_DifferentAccount" to="." method="_on_button_different_account_pressed"]
+[connection signal="pressed" from="Main/Backpack/SafeMarginContainer/Backpack/Button_Continue" to="." method="_on_button_continue_pressed"]
+[connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1/Button_OpenBrowser" to="." method="_on_button_open_browser_pressed"]
+[connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsGuest" to="." method="_on_button_enter_as_guest_pressed"]
+[connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
+[connection signal="pressed" from="Main/ChooseName/VBoxContainer/HBoxContainer/Button_RandomName" to="." method="_on_button_random_name_pressed"]
+[connection signal="pressed" from="Main/ChooseName/VBoxContainer/Button_Next" to="." method="_on_button_next_pressed"]
+[connection signal="gui_input" from="AvatarPreview" to="." method="_on_avatar_preview_gui_input"]

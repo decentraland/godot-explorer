@@ -62,7 +62,7 @@ impl INode3D for DclAvatar {
             walk: false,
             run: false,
             jog: false,
-            rise: true,
+            rise: false,
             fall: false,
             land: false,
         }
