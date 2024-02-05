@@ -35,7 +35,7 @@ func _ready():
 	var args := OS.get_cmdline_args()
 	# _set_is_mobile(true) # Test
 
-	if args.contains("--force-mobile"):
+	if args.has("--force-mobile"):
 		_set_is_mobile(true)
 
 	# Setup
