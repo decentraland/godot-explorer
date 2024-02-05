@@ -34,5 +34,7 @@ func _start():
 		)
 	elif args.has("--scene-renderer"):
 		get_tree().change_scene_to_file("res://src/tool/scene_renderer/scene.tscn")
+	elif args.has("--scene-test"):
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 	else:
 		get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")

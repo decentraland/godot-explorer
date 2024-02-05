@@ -140,7 +140,10 @@ func _ready():
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
-	Global.player_identity.profile_changed.emit(Global.player_identity.get_profile_or_empty())
+
+	var profile = Global.player_identity.get_profile_or_empty()
+	if not profile.is_empty():
+		Global.player_identity.profile_changed.emit(profile)
 
 	Global.player_identity.need_open_url.connect(self._on_need_open_url)
 	Global.scene_runner.set_pause(false)
