@@ -364,10 +364,11 @@ pub fn _process_scene(
             }
         };
 
+        const TICK_TIME_LOGABLE_MS: i64 = 16000;
         let this_update_ms = (std::time::Instant::now() - before_compute_update).as_micros() as i64;
-        if this_update_ms > 5000 {
-            println!(
-                "metric:\"{:?}\",{:?},{:?},{:?}",
+        if this_update_ms > TICK_TIME_LOGABLE_MS {
+            tracing::warn!(
+                "Scene \"{:?}\"(tick={:?}) in state {:?} takes more than {TICK_TIME_LOGABLE_MS}: {:?}ms",
                 scene.definition.title,
                 scene.tick_number,
                 scene.current_dirty.update_state,

@@ -15,7 +15,7 @@ var debug_panel = null
 var virtual_joystick_orig_position: Vector2i
 
 var last_index_scene_ui_root: int = -1
-var _last_parcel_position: Vector2i
+var _last_parcel_position: Vector2i = Vector2i.MAX
 
 @onready var ui_root: Control = $UI
 
