@@ -1,7 +1,6 @@
 class_name DclUrn
 
 const SEPARATOR: String = ":"
-const CHAIN_ETHEREUM: String = "ethereum"
 
 var valid: bool = false
 var chain: String = ""
@@ -21,12 +20,9 @@ func _init(_urn):
 	if urn_parts[1] != "decentraland":
 		return
 
-	# TODO: allow 'matic' chain when Opensea implements its APIv2 "retrieve assets" endpoint in the future
-	# 2: chain/network
-	if urn_parts[2] != CHAIN_ETHEREUM:
-		return
-
 	self.urn = _urn
+
+	# 2: "chain"
 	self.chain = urn_parts[2]
 
 	# 3: contract standard (not used, but we skip it)

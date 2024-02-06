@@ -1,5 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://ca84fs1dxdp6e"]
+[gd_scene load_steps=4 format=3 uid="uid://ca84fs1dxdp6e"]
 
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gqdup"]
 [ext_resource type="Script" path="res://src/ui/dialogs/nft_dialog.gd" id="1_insdf"]
 [ext_resource type="SpriteFrames" uid="uid://bthpplsqs257v" path="res://assets/nftshape/loading_animation_sprite.tres" id="3_6iawc"]
 
@@ -14,14 +15,8 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
+theme = ExtResource("1_gqdup")
 script = ExtResource("1_insdf")
-
-[node name="LoadingAnimation" type="AnimatedSprite2D" parent="."]
-unique_name_in_owner = true
-position = Vector2(350, 141)
-sprite_frames = ExtResource("3_6iawc")
-autoplay = "default"
-centered = false
 
 [node name="VBoxContainer_Main" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -104,45 +99,6 @@ fit_content = true
 custom_minimum_size = Vector2(0, 5)
 layout_mode = 2
 
-[node name="HBoxContainer_Prices" type="HBoxContainer" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel"]
-layout_mode = 2
-
-[node name="VBoxContainer_LastSoldFor" type="VBoxContainer" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Prices"]
-layout_mode = 2
-
-[node name="Label_LastSoldForDesc" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Prices/VBoxContainer_LastSoldFor"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
-theme_override_font_sizes/font_size = 14
-text = "LAST SOLD FOR"
-
-[node name="Label_LastSoldFor" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Prices/VBoxContainer_LastSoldFor"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 14
-
-[node name="Control_Separator" type="Control" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Prices"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="VBoxContainer_AvgPrice" type="VBoxContainer" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Prices"]
-layout_mode = 2
-
-[node name="Label_AvgPriceDesc" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Prices/VBoxContainer_AvgPrice"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
-theme_override_font_sizes/font_size = 14
-text = "COLLECTION AVG PRICE"
-
-[node name="Label_AvgPrice" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Prices/VBoxContainer_AvgPrice"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 14
-
 [node name="Separator" type="Control" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel"]
 custom_minimum_size = Vector2(0, 5)
 layout_mode = 2
@@ -157,6 +113,7 @@ text = "DESCRIPTION"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 180)
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
 theme_override_font_sizes/font_size = 14
 text = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
@@ -180,6 +137,39 @@ theme_override_font_sizes/font_size = 12
 disabled = true
 text = "VIEW ON OPENSEA"
 
+[node name="LoadingAnimation" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LoadingAnimation" type="AnimatedSprite2D" parent="LoadingAnimation"]
+position = Vector2(334, 141)
+sprite_frames = ExtResource("3_6iawc")
+autoplay = "default"
+centered = false
+
+[node name="Button_Cancel" type="Button" parent="LoadingAnimation"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -75.0
+offset_top = -124.0
+offset_right = 75.0
+offset_bottom = -96.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "Cancel"
+
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="meta_clicked" from="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/RichTextBox_Owner" to="." method="_on_rich_text_box_owner_meta_clicked"]
 [connection signal="pressed" from="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Buttons/Button_Cancel" to="." method="_on_button_cancel_pressed"]
 [connection signal="pressed" from="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Buttons/Button_ViewOnOpenSea" to="." method="_on_button_view_on_open_sea_pressed"]
+[connection signal="pressed" from="LoadingAnimation/Button_Cancel" to="." method="_on_button_cancel_pressed"]
