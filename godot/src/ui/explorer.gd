@@ -1,7 +1,5 @@
 extends Node
 
-var sign_in_resource = preload("res://src/ui/components/auth/sign_in.tscn")
-
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
@@ -15,7 +13,7 @@ var debug_panel = null
 var virtual_joystick_orig_position: Vector2i
 
 var last_index_scene_ui_root: int = -1
-var _last_parcel_position: Vector2i
+var _last_parcel_position: Vector2i = Vector2i.MAX
 
 @onready var ui_root: Control = $UI
 
@@ -142,13 +140,16 @@ func _ready():
 
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
+
+	var profile = Global.player_identity.get_profile_or_empty()
+	if not profile.is_empty():
+		Global.player_identity.profile_changed.emit(profile)
+
 	Global.player_identity.need_open_url.connect(self._on_need_open_url)
+	Global.scene_runner.set_pause(false)
 
 	if Global.testing_scene_mode:
 		Global.player_identity.create_guest_account()
-	elif not Global.player_identity.try_recover_account(Global.config.session_account):
-		Global.scene_runner.set_pause(true)
-		ui_root.add_child(sign_in_resource.instantiate())
 
 	# last
 	ui_root.grab_focus.call_deferred()
@@ -166,8 +167,6 @@ func _on_player_logout():
 	# Clean stored session
 	Global.config.session_account = {}
 	Global.config.save_to_settings_file()
-
-	ui_root.add_child(sign_in_resource.instantiate())
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -360,7 +359,8 @@ func capture_mouse():
 
 func release_mouse():
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-	label_crosshair.hide()
+	if not Global.is_mobile():
+		label_crosshair.hide()
 
 
 func set_visible_ui(value: bool):

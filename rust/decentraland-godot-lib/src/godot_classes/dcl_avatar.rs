@@ -16,8 +16,8 @@ pub enum AvatarMovementType {
 struct LerpState {
     initial_position: Vector3,
     target_position: Vector3,
-    target_distance: f32,
     factor: f32,
+    initial_velocity_y: f32,
 }
 
 #[derive(GodotClass)]
@@ -31,6 +31,19 @@ pub struct DclAvatar {
 
     #[var]
     current_parcel_position: Vector2i,
+
+    #[export]
+    walk: bool,
+    #[export]
+    run: bool,
+    #[export]
+    jog: bool,
+    #[export]
+    rise: bool,
+    #[export]
+    fall: bool,
+    #[export]
+    land: bool,
 
     lerp_state: LerpState,
     #[base]
@@ -46,6 +59,12 @@ impl INode3D for DclAvatar {
             current_parcel_position: Vector2i::new(i32::MAX, i32::MAX),
             lerp_state: Default::default(),
             base,
+            walk: false,
+            run: false,
+            jog: false,
+            rise: false,
+            fall: false,
+            land: false,
         }
     }
 }
@@ -60,14 +79,23 @@ impl DclAvatar {
 
     #[func]
     pub fn set_target_position(&mut self, new_target: Transform3D) {
-        self.lerp_state.target_distance = self
-            .lerp_state
-            .target_position
-            .distance_to(new_target.origin);
+        let mut diff_xz_plane = new_target.origin - self.lerp_state.target_position;
+        let y_velocity = 10.0 * diff_xz_plane.y; // divide by 0.1s
+        diff_xz_plane.y = 0.0;
+        let target_forward_distance = diff_xz_plane.length();
+
+        // TODO: define const with these values
+        self.walk = target_forward_distance < 0.4 && target_forward_distance > 0.01;
+        self.run = target_forward_distance >= 0.65;
+        self.jog = !(self.walk || self.run) && target_forward_distance > 0.01;
+        self.rise = y_velocity > 1.0;
+        self.fall = y_velocity < -1.0;
+        self.land = !self.rise && !self.fall;
 
         self.lerp_state.initial_position = self.lerp_state.target_position;
         self.lerp_state.target_position = new_target.origin;
         self.lerp_state.factor = 0.0;
+        self.lerp_state.initial_velocity_y = y_velocity;
 
         // TODO: check euler order
         self.base
@@ -187,16 +215,6 @@ impl DclAvatar {
                             .initial_position
                             .lerp(self.lerp_state.target_position, self.lerp_state.factor),
                     );
-
-                    if self.lerp_state.target_distance > 0.0 {
-                        if self.lerp_state.target_distance > 0.6 {
-                            self.base.call("set_running".into(), &[]);
-                        } else {
-                            self.base.call("set_walking".into(), &[]);
-                        }
-                    }
-                } else if self.lerp_state.factor > 1.5 {
-                    self.base.call("set_idle".into(), &[]);
                 }
             }
         }

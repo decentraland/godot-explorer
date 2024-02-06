@@ -55,10 +55,10 @@ func update_colliders(current_colliders: Array[Node]) -> void:
 	_computed_colliders = current_colliders
 
 
-func async_apply_after_physics(_computed_colliders: Array[Node]):
+func async_apply_after_physics(check_computed_colliders: Array[Node]):
 	await _main_scene_tree.create_timer(TIME_TO_RETURN_BACK_LAYER).timeout
 
-	for old_collider in _computed_colliders:
+	for old_collider in check_computed_colliders:
 		# Corner case when is moved from one avatar attach to other
 		if not is_parented_with_avatar_attach(old_collider):
 			old_collider.collision_layer = old_collider.get_meta("dcl_col")

@@ -26,5 +26,5 @@ func _ready() -> void:
 	add_theme_constant_override("margin_right", right)
 	add_theme_constant_override("margin_bottom", bottom)
 
-	var real_safe_area: Rect2i = Rect2i(top, left, size.x - right, size.y - bottom)
+	var real_safe_area: Rect2i = Rect2i(top, left, int(size.x) - right, int(size.y) - bottom)
 	Global.scene_runner.set_interactable_area(real_safe_area)

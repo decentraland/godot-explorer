@@ -13,13 +13,15 @@ use super::{
 };
 
 #[cfg(feature = "use_livekit")]
-use crate::comms::adapter::livekit::LivekitRoom;
+use crate::comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom};
 
 #[allow(clippy::large_enum_variant)]
 enum CommsConnection {
     None,
     WaitingForIdentity(String),
     SignedLogin(SignedLogin),
+    #[cfg(feature = "use_livekit")]
+    Archipelago(ArchipelagoManager),
     Connected(Box<dyn Adapter>),
 }
 
@@ -70,6 +72,36 @@ impl INode for CommunicationManager {
                     self.current_connection = CommsConnection::None;
                 }
             },
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => {
+                archipelago.poll();
+                if let Some(adapter) = archipelago.adapter() {
+                    let adapter = adapter.as_mut();
+                    let adapter_polling_ok = adapter.poll();
+                    let chats = adapter.consume_chats();
+
+                    if !chats.is_empty() {
+                        let mut chats_variant_array = VariantArray::new();
+                        for (address, profile_name, chat) in chats {
+                            let mut chat_arr = VariantArray::new();
+                            chat_arr.push(address.to_variant());
+                            chat_arr.push(profile_name.to_variant());
+                            chat_arr.push(chat.timestamp.to_variant());
+                            chat_arr.push(chat.message.to_variant());
+
+                            chats_variant_array.push(chat_arr.to_variant());
+                        }
+                        self.base.emit_signal(
+                            "chat_message".into(),
+                            &[chats_variant_array.to_variant()],
+                        );
+                    }
+
+                    if !adapter_polling_ok {
+                        self.current_connection = CommsConnection::None;
+                    }
+                }
+            }
             CommsConnection::Connected(adapter) => {
                 let adapter = adapter.as_mut();
                 let adapter_polling_ok = adapter.poll();
@@ -107,8 +139,19 @@ impl CommunicationManager {
 
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {
-        let CommsConnection::Connected(adapter) = &mut self.current_connection else {
-            return;
+        let adapter = match &mut self.current_connection {
+            CommsConnection::Connected(adapter) => adapter,
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => {
+                let Some(adapter) = archipelago.adapter() else {
+                    return;
+                };
+
+                adapter
+            }
+            _ => {
+                return;
+            }
         };
         if !adapter.support_voice_chat() {
             return;
@@ -156,6 +199,15 @@ impl CommunicationManager {
             | CommsConnection::SignedLogin(_)
             | CommsConnection::WaitingForIdentity(_) => false,
             CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), true),
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => {
+                archipelago.update_position(position);
+                if let Some(adapter) = archipelago.adapter() {
+                    adapter.send_rfc4(get_packet(), true)
+                } else {
+                    false
+                }
+            }
         };
 
         if message_sent {
@@ -178,6 +230,14 @@ impl CommunicationManager {
             | CommsConnection::SignedLogin(_)
             | CommsConnection::WaitingForIdentity(_) => false,
             CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), false),
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => {
+                if let Some(adapter) = archipelago.adapter() {
+                    adapter.send_rfc4(get_packet(), false)
+                } else {
+                    false
+                }
+            }
         }
     }
 
@@ -223,6 +283,8 @@ impl CommunicationManager {
             {
                 if temp.starts_with("fixed-adapter:") {
                     Some(temp.replace("fixed-adapter:", "").into())
+                } else if temp.starts_with("archipelago:") {
+                    Some(temp.to_string()[12..].into())
                 } else {
                     None
                 }
@@ -342,6 +404,15 @@ impl CommunicationManager {
             "offline" => {
                 tracing::info!("set offline");
             }
+            #[cfg(feature = "use_livekit")]
+            "archipelago" => {
+                self.current_connection = CommsConnection::Archipelago(ArchipelagoManager::new(
+                    comms_address,
+                    current_ephemeral_auth_chain.clone(),
+                    player_profile,
+                    avatar_scene,
+                ));
+            }
             _ => {
                 tracing::info!("unknown adapter {:?}", protocol);
             }
@@ -356,6 +427,8 @@ impl CommunicationManager {
             CommsConnection::Connected(adapter) => {
                 adapter.clean();
             }
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => archipelago.clean(),
         }
 
         self.current_connection = CommsConnection::None;
@@ -364,17 +437,18 @@ impl CommunicationManager {
 
     #[func]
     fn _on_update_profile(&mut self) {
+        let dcl_player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity = dcl_player_identity.bind();
+        let Some(player_profile) = player_identity.profile() else {
+            return;
+        };
         match &mut self.current_connection {
-            CommsConnection::None
-            | CommsConnection::SignedLogin(_)
-            | CommsConnection::WaitingForIdentity(_) => {}
-            CommsConnection::Connected(adapter) => {
-                let dcl_player_identity = DclGlobal::singleton().bind().get_player_identity();
-                let player_identity = dcl_player_identity.bind();
-                if let Some(player_profile) = player_identity.profile() {
-                    adapter.change_profile(player_profile.clone());
-                }
+            CommsConnection::Connected(adapter) => adapter.change_profile(player_profile.clone()),
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => {
+                archipelago.change_profile(player_profile.clone())
             }
+            _ => {}
         }
     }
 

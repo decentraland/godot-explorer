@@ -171,9 +171,6 @@ func async_take_and_compare_snapshot(
 	if not pending_promises.is_empty():
 		await PromiseUtils.async_all(Global.content_provider.get_pending_promises())
 
-	# TODO: make this configurable
-	var hide_player := true
-
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 	var viewport = get_viewport()
 	var previous_camera = viewport.get_camera_3d()
@@ -188,9 +185,17 @@ func async_take_and_compare_snapshot(
 	test_camera_3d.global_position = camera_position
 	test_camera_3d.look_at(camera_target)
 
-	get_node("/root/explorer").set_visible_ui(false)
-	if hide_player:
-		get_node("/root/explorer/world/Player").hide()
+	var explorer = Global.get_explorer()
+	explorer.set_visible_ui(false)
+
+	# Freeze avatars animation and hide them
+	for avatar in Global.avatars.get_children():
+		if avatar is Avatar:
+			avatar.hide()
+			avatar.freeze_on_idle()
+
+	Global.scene_runner.player_node.avatar.freeze_on_idle()
+	Global.scene_runner.player_node.avatar.hide()
 
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -198,11 +203,11 @@ func async_take_and_compare_snapshot(
 
 	var viewport_img := viewport.get_texture().get_image()
 
-	#await get_tree().create_timer(10.0).timeout
+	# Test: Uncomment this to see how the snapshot would look like
+	# await get_tree().create_timer(10.0).timeout
 
 	get_node("/root/explorer").set_visible_ui(true)
-	if hide_player:
-		get_node("/root/explorer/world/Player").show()
+	# TODO: should unfreeze avatars?
 
 	viewport.size = previous_viewport_size
 	previous_camera.make_current()

@@ -32,8 +32,11 @@ var dcl_android_plugin
 
 
 func _ready():
-	# First
+	var args := OS.get_cmdline_args()
 	# _set_is_mobile(true) # Test
+
+	if args.has("--force-mobile"):
+		_set_is_mobile(true)
 
 	# Setup
 	http_requester = RustHttpQueueRequester.new()
@@ -41,7 +44,6 @@ func _ready():
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
 
-	var args := OS.get_cmdline_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
 		if args[0] != "res://src/main.tscn":
 			self.standalone = true
