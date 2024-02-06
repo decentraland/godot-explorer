@@ -10,6 +10,18 @@
 [ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/Like.svg" id="8_ghnu7"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="9_2oigk"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c0877"]
+bg_color = Color(0.858824, 0.858824, 0.858824, 1)
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color(0.858824, 0.858824, 0.858824, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_368si"]
 bg_color = Color(0.0392157, 0.0392157, 0.0392157, 1)
 corner_radius_top_left = 8
@@ -35,25 +47,24 @@ colors = PackedColorArray(0.914015, 0.145083, 0.329259, 1, 0.917647, 0.145098, 0
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_b6og1"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c0877"]
-draw_center = false
-border_width_left = 5
-border_width_top = 5
-border_width_right = 5
-border_width_bottom = 5
-border_color = Color(0.858824, 0.858824, 0.858824, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-
 [node name="DiscoverCarrouselItem" type="Control"]
 custom_minimum_size = Vector2(250, 250)
 layout_mode = 3
 anchors_preset = 0
 offset_right = 250.0
 offset_bottom = 250.0
+mouse_filter = 1
 script = ExtResource("1_50l6s")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_c0877")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -213,6 +224,7 @@ horizontal_alignment = 2
 [node name="Panel" type="ColorRect" parent="MarginContainer/DiscoverCarrouselItem"]
 custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
+mouse_filter = 1
 color = Color(0.858824, 0.858824, 0.858824, 1)
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/DiscoverCarrouselItem/Panel"]
@@ -242,15 +254,5 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_fonts/font = ExtResource("9_2oigk")
 text = "Scene Description"
 
-[node name="Panel" type="Panel" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_c0877")
-metadata/_edit_lock_ = true
-
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="toggled" from="MarginContainer/DiscoverCarrouselItem/TextureRect_Background/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer2/Button_Like" to="." method="_on_button_like_toggled"]

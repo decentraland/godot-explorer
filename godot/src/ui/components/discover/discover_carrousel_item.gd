@@ -39,3 +39,7 @@ func _format_number(num: int):
 	if num < 1e6:
 		return str(ceil(num / 1000.0)) + "k"
 	return str(floor(num / 1000000.0)) + "M"
+
+
+func _on_gui_input(event):
+	pass # Replace with function body.
