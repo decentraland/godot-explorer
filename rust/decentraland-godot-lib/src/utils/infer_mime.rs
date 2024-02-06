@@ -63,16 +63,10 @@ pub fn is_tga(buffer: &[u8]) -> bool {
     let pixel_depth = buffer[16];
 
     // Check if the image type is within the typical range for TGA files
-    let valid_image_type = match image_type {
-        0 | 1 | 2 | 3 | 9 | 10 | 11 => true,
-        _ => false,
-    };
+    let valid_image_type = matches!(image_type, 0 | 1 | 2 | 3 | 9 | 10 | 11);
 
     // Check if the pixel depth is one of the common values
-    let valid_pixel_depth = match pixel_depth {
-        8 | 16 | 24 | 32 => true,
-        _ => false,
-    };
+    let valid_pixel_depth = matches!(pixel_depth, 8 | 16 | 24 | 32);
 
     valid_image_type && valid_pixel_depth
 }
