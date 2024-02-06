@@ -19,7 +19,7 @@ use super::{
     audio::load_audio,
     content_notificator::ContentNotificator,
     gltf::{apply_update_set_mask_colliders, load_gltf},
-    texture::{load_png_texture, TextureEntry},
+    texture::{load_image_texture, TextureEntry},
     thread_safety::{set_thread_safety_checks_enabled, then_promise},
     video::download_video,
     wearable_entities::request_wearables,
@@ -209,7 +209,7 @@ impl ContentProvider {
         let content_provider_context = self.get_context();
         let sent_file_hash = file_hash.clone();
         TokioRuntime::spawn(async move {
-            let result = load_png_texture(url, sent_file_hash, content_provider_context).await;
+            let result = load_image_texture(url, sent_file_hash, content_provider_context).await;
             then_promise(get_promise, result);
         });
 
@@ -234,7 +234,7 @@ impl ContentProvider {
         let content_provider_context = self.get_context();
         let sent_file_hash = file_hash.clone();
         TokioRuntime::spawn(async move {
-            let result = load_png_texture(url, sent_file_hash, content_provider_context).await;
+            let result = load_image_texture(url, sent_file_hash, content_provider_context).await;
             then_promise(get_promise, result);
         });
 

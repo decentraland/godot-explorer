@@ -1,7 +1,7 @@
 extends Control
 
 var current_asset: OpenSeaFetcher.Asset = null
-var permalink = "https://decentraland.org/"
+var opensea_url = "https://decentraland.org/"
 
 
 func _ready():
@@ -24,7 +24,7 @@ func async_load_nft(urn: String):
 	var asset = await PromiseUtils.async_awaiter(promise)
 	if asset is OpenSeaFetcher.Asset:
 		%VBoxContainer_InfoPanel.show()
-		permalink = asset.permalink
+		opensea_url = asset.opensea_url
 		%Button_ViewOnOpenSea.disabled = false
 		%LoadingAnimation.hide()
 		current_asset = asset
@@ -41,23 +41,13 @@ func async_load_nft(urn: String):
 		%Label_Title.text = asset.name
 		%Label_Description.text = asset.description
 
-		if asset.last_sell_erc20 != null:
-			var last_sell = asset.last_sell_erc20
-			%Label_LastSoldFor.text = (
-				last_sell.ether_to_string() + " (" + last_sell.dollar_to_string() + ")"
-			)
-		else:
-			%Label_LastSoldFor.text = "NEVER SOLD"
-
-		%Label_AvgPrice.text = asset.average_price_to_string()
-
 
 func _on_button_cancel_pressed():
 	queue_free()
 
 
 func _on_button_view_on_open_sea_pressed():
-	OS.shell_open(permalink)
+	OS.shell_open(opensea_url)
 
 
 func _on_rich_text_box_owner_meta_clicked(meta):
