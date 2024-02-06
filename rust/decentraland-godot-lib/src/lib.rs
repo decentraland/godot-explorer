@@ -18,6 +18,7 @@ pub mod http_request;
 pub mod realm;
 pub mod scene_runner;
 pub mod test_runner;
+pub mod utils;
 
 struct DecentralandGodotLibrary;
 

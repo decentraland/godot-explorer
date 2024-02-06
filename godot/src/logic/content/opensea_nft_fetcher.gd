@@ -3,10 +3,10 @@
 class_name OpenSeaFetcher
 
 # DCL OpenSea
-const RETRIEVE_ASSETS_ENDPOINT := "https://opensea.decentraland.org/api/v1/asset"
+const RETRIEVE_ASSETS_ENDPOINT := "https://opensea.decentraland.org/api/v2/chain/%s/contract/%s/nfts/%s"
 
 # OpenSea
-#const RETRIEVE_ASSETS_ENDPOINT := "https://api.opensea.io/api/v1/asset"
+#const RETRIEVE_ASSETS_ENDPOINT := "https://api.opensea.io/api/v2/chain/%s/contract/%s/nfts/%s"
 const API_KEY := ""
 
 
@@ -15,18 +15,14 @@ class Asset:
 	var endpoint: String = ""
 	var name: String = ""
 	var description: String = ""
-	var permalink: String = ""
+	var opensea_url: String = ""
 	var contract_address: String = ""
 	var token_id: String = ""
 	var image_url: String = ""
 	var background_color: Color
 	var texture: ImageTexture = null
-	var last_sell_erc20: Erc20
-	var number_of_offers: int = 0
-	var username: String = ""
+	var username: String = ""  # TODO: Need to fetch to users
 	var address: String = ""
-	var average_price: float = 0.0
-	var average_price_in_dollars: float = 0.0
 
 	func _get_or_empty_string(dict: Dictionary, key: String) -> String:
 		var value = dict.get(key, null)
@@ -36,81 +32,25 @@ class Asset:
 
 	func _init(_endpoint: String, asset: Dictionary):
 		self.endpoint = _endpoint
-		contract_address = asset.get("asset_contract", {}).get("address", "")
-		token_id = asset.get("token_id")
+		var nft = asset.get("nft")
+		contract_address = nft.get("contract", "")
+		token_id = nft.get("identifier", "")
 
-		self.name = _get_or_empty_string(asset, "name")
-		self.description = _get_or_empty_string(asset, "description")
-		self.permalink = _get_or_empty_string(asset, "permalink")
+		self.name = _get_or_empty_string(nft, "name")
+		self.description = _get_or_empty_string(nft, "description")
+		self.opensea_url = _get_or_empty_string(nft, "opensea_url")
 
-		var color = asset.get("background_color")
-		if color is String:
-			background_color = Color("#" + color)
-		else:
-			background_color = Color.TRANSPARENT
-
-		# average price
-		average_price = asset.get("collection", {}).get("stats", {}).get("average_price", 0.0)
-
-		# last sell
-		var last_sale = asset.get("last_sale", {})
-		if last_sale != null:
-			var total_price = last_sale.get("total_price", "0")
-			var payment_token = last_sale.get("payment_token", {})
-			var decimals = int(payment_token.get("decimals", 18))
-			var symbol = payment_token.get("symbol", "")
-			var usd_price = float(payment_token.get("usd_price"))
-			var eth_price = float(payment_token.get("eth_price"))
-			var value = DclEther.format_units(total_price, decimals)
-			last_sell_erc20 = Erc20.new(value, symbol, usd_price, eth_price)
-
-			# average price
-			if last_sell_erc20 != null:
-				average_price_in_dollars = average_price * eth_price * usd_price
+		background_color = Color.TRANSPARENT
 
 		# image
-		image_url = asset.get("image_url", "")
-		# force format to png
-		image_url = image_url.replace("&auto=format", "")
-		image_url += "&format=png"
+		image_url = nft.get("image_url", "")
 
 		# top ownership
-		var owner = asset.get("top_ownerships", [{}])[0].get("owner", {})
-		var user = owner.get("user", {})
-		if user:
-			self.username = _get_or_empty_string(user, "username")
+		var owner = nft.get("owners", [{}])[0]
 		self.address = _get_or_empty_string(owner, "address")
 
 		if !token_id.is_empty() and !image_url.is_empty() and !contract_address.is_empty():
 			valid = true
-
-	func average_price_to_string():
-		var eth = "ETH " + str(snappedf(average_price, 0.0001))
-		if average_price_in_dollars > 0.1:
-			var usd = "US$" + str(snappedf(average_price_in_dollars, 0.01))
-			return eth + " (" + usd + ")"
-
-		return eth
-
-	func async_load_offers() -> int:
-		# Request
-		var url = endpoint + "/offers"
-		var headers = [
-			"Content-Type: application/json",
-			"X-API-KEY: " + API_KEY,
-		]
-		var offers_promise: Promise = Global.http_requester.request_json(
-			url, HTTPClient.METHOD_GET, "", headers
-		)
-		var offers_result = await PromiseUtils.async_awaiter(offers_promise)
-		if offers_result is PromiseError:
-			printerr("Asset::async_load_offers error loading offers: ", offers_result.get_error())
-			return 0
-		# Parsing
-		var result = offers_result.get_string_response_as_json()
-		var seaport_offers: Array = result.get("seaport_offers", [])
-		number_of_offers = seaport_offers.size()
-		return number_of_offers
 
 	func get_owner_name():
 		var short_address = DclEther.shorten_eth_address(self.address)
@@ -118,15 +58,6 @@ class Asset:
 			return short_address
 
 		return self.username + " (" + short_address + ")"
-
-# Commented code if in the future we want to search for best_offers...
-# 		if seaport_offers.is_empty():
-#			return
-#		var best_offer: BigNumber = BigNumber.new(seaport_offers[0].get("current_price", "0"))
-#		for i in range(1, seaport_offers.size() - 1):
-#			var offer = BigNumber.new(seaport_offers[i].get("current_price", "0"))
-#			if offer.is_larger_than(best_offer):
-#				best_offer = offer
 
 	func async_download_image():
 		var texture_hash = get_hash()
@@ -159,7 +90,7 @@ func fetch_nft(urn: DclUrn) -> Promise:
 
 
 func _async_request_nft(completed_promise: Promise, urn: DclUrn):
-	var url = RETRIEVE_ASSETS_ENDPOINT + "/" + urn.contract_address + "/" + urn.token_id
+	var url = RETRIEVE_ASSETS_ENDPOINT % [urn.chain, urn.contract_address, urn.token_id]
 	var headers = [
 		"Content-Type: application/json",
 		"X-API-KEY: " + API_KEY,

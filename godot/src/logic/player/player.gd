@@ -5,14 +5,14 @@ const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 @export var vertical_sens: float = 0.5
 @export var horizontal_sens: float = 0.5
 
-var captured: bool = true
+var walk_speed = 1.5
+var jog_speed = 5.0
+var run_speed = 8.0
+var gravity := 10.0
+var jump_height := 1.0
+var jump_velocity_0 := sqrt(2 * jump_height * gravity)
 
-var is_on_air: bool
-
-var walk_speed = 2.0
-var run_speed = 6.0
-var gravity := 55.0
-var jump_velocity_0 := 12.0
+var jump_time := 0.0
 
 var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
@@ -72,9 +72,6 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 func _ready():
 	camera.current = true
 
-	# TODO: auto capture mouse
-	# if captured:
-	# 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	set_camera_mode(Global.CameraMode.THIRD_PERSON)
 	avatar.activate_attach_points()
 
@@ -88,10 +85,13 @@ func _on_player_profile_changed(new_profile: Dictionary):
 
 
 func _on_param_changed(_param):
-	walk_speed = Global.config.walk_velocity
-	run_speed = Global.config.run_velocity
-	gravity = Global.config.gravity
-	jump_velocity_0 = Global.config.jump_velocity
+	# Disabled for now
+	# TODO: make the panel to change these values
+	# walk_speed = Global.config.walk_velocity
+	# run_speed = Global.config.run_velocity
+	# gravity = Global.config.gravity
+	# jump_velocity_0 = Global.config.jump_velocity
+	pass
 
 
 func _clamp_camera_rotation():
@@ -133,38 +133,66 @@ func _input(event):
 						set_camera_mode(Global.CameraMode.FIRST_PERSON)
 
 
-func _physics_process(delta: float) -> void:
+func _physics_process(dt: float) -> void:
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 
 	if not Global.explorer_has_focus():  # ignore input
 		input_dir = Vector2(0, 0)
 
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-	current_direction = current_direction.move_toward(direction, 10 * delta)
+	current_direction = current_direction.move_toward(direction, 8 * dt)
 
+	jump_time -= dt
 	if not is_on_floor():
-		velocity.y -= gravity * delta
-
-	elif Input.is_action_pressed("ia_jump"):
+		avatar.land = false
+		avatar.rise = velocity.y > .3
+		avatar.fall = velocity.y < -.3
+		velocity.y -= gravity * dt
+	elif Input.is_action_pressed("ia_jump") and jump_time < 0:
 		velocity.y = jump_velocity_0
+		avatar.land = false
+		avatar.rise = true
+		avatar.fall = false
+		jump_time = 1.5
+	else:
+		if not avatar.land:
+			avatar.land = true
+
+		velocity.y = 0
+		avatar.rise = false
+		avatar.fall = false
 
 	if current_direction:
 		if Input.is_action_pressed("ia_walk"):
-			avatar.set_walking()
+			avatar.walk = true
+			avatar.run = false
+			avatar.jog = false
 			velocity.x = current_direction.x * walk_speed
 			velocity.z = current_direction.z * walk_speed
-		else:
-			avatar.set_running()
+		elif Input.is_action_pressed("ia_sprint"):
+			avatar.walk = false
+			avatar.run = true
+			avatar.jog = false
 			velocity.x = current_direction.x * run_speed
 			velocity.z = current_direction.z * run_speed
+		else:
+			avatar.walk = false
+			avatar.run = false
+			avatar.jog = true
+			velocity.x = current_direction.x * jog_speed
+			velocity.z = current_direction.z * jog_speed
 
 		avatar.look_at(current_direction.normalized() + position)
 	else:
-		avatar.set_idle()
+		avatar.walk = false
+		avatar.run = false
+		avatar.jog = false
+
 		velocity.x = move_toward(velocity.x, 0, walk_speed)
 		velocity.z = move_toward(velocity.z, 0, walk_speed)
 
 	move_and_slide()
+	position.y = max(position.y, -0.025)
 
 
 func avatar_look_at(target_position: Vector3):

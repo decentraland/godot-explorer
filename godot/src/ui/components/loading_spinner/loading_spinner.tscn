@@ -31,7 +31,6 @@ offset_bottom = 40.0
 value = 100.0
 fill_mode = 4
 texture_progress = ExtResource("1_roup2")
-radial_initial_angle = 343.23
 radial_fill_degrees = 60.0
 script = ExtResource("2_rds4p")
 

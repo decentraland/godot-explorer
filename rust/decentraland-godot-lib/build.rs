@@ -300,6 +300,9 @@ fn main() -> io::Result<()> {
     );
     proto_files
         .push(format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto").into());
+    proto_files.push(
+        format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/v3/archipelago.proto").into(),
+    );
 
     generate_enum(&proto_components);
     generate_impl_crdt(&proto_components);
@@ -321,6 +324,11 @@ fn main() -> io::Result<()> {
     #[cfg(feature = "use_livekit")]
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
         webrtc_sys_build::configure_jni_symbols().unwrap();
+    }
+
+    for source in proto_files {
+        let value = source.to_str().unwrap();
+        println!("cargo:rerun-if-changed={value}");
     }
 
     Ok(())

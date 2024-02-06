@@ -288,23 +288,19 @@ impl LivekitRoom {
                     true,
                 );
             }
+
+            self.send_rfc4(
+                rfc4::Packet {
+                    message: Some(rfc4::packet::Message::ProfileVersion(
+                        rfc4::AnnounceProfileVersion {
+                            profile_version: self.last_profile_version_announced,
+                        },
+                    )),
+                },
+                false,
+            );
         }
 
-        if let Some(profile) = self.player_profile.as_ref() {
-            if self.last_profile_version_announced != profile.version {
-                self.last_profile_version_announced = profile.version;
-                self.send_rfc4(
-                    rfc4::Packet {
-                        message: Some(rfc4::packet::Message::ProfileVersion(
-                            rfc4::AnnounceProfileVersion {
-                                profile_version: self.last_profile_version_announced,
-                            },
-                        )),
-                    },
-                    false,
-                );
-            }
-        }
         true
     }
 

@@ -16,8 +16,8 @@ func _input(event):
 				if event.keycode >= KEY_0 and event.keycode <= KEY_9:
 					if event.pressed:
 						if animation_key_pressed == false:
-							avatar.play_emote_by_index(event.keycode - KEY_0)
-							avatar.broadcast_avatar_animation()
+							var id := avatar.play_emote_by_index(event.keycode - KEY_0)
+							avatar.broadcast_avatar_animation(id)
 							animation_key_pressed = true
 					else:
 						animation_key_pressed = false

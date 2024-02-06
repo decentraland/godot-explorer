@@ -1,3 +1,5 @@
+use crate::utils::infer_mime;
+
 use super::{
     bytes::fast_create_packed_byte_array_from_vec, content_provider::ContentProviderContext,
     download::fetch_resource_or_wait, thread_safety::GodotSingleThreadSafety,
@@ -19,7 +21,7 @@ pub struct TextureEntry {
     pub texture: Gd<ImageTexture>,
 }
 
-pub async fn load_png_texture(
+pub async fn load_image_texture(
     url: String,
     file_hash: String,
     ctx: ContentProviderContext,
@@ -40,7 +42,25 @@ pub async fn load_png_texture(
     let bytes = fast_create_packed_byte_array_from_vec(&bytes_vec);
 
     let mut image = Image::new();
-    let err = image.load_png_from_buffer(bytes);
+    let err = if infer_mime::is_png(&bytes_vec) {
+        image.load_png_from_buffer(bytes)
+    } else if infer_mime::is_jpeg(&bytes_vec) || infer_mime::is_jpeg2000(&bytes_vec) {
+        image.load_jpg_from_buffer(bytes)
+    } else if infer_mime::is_webp(&bytes_vec) {
+        image.load_webp_from_buffer(bytes)
+    } else if infer_mime::is_tga(&bytes_vec) {
+        image.load_tga_from_buffer(bytes)
+    } else if infer_mime::is_ktx(&bytes_vec) {
+        image.load_ktx_from_buffer(bytes)
+    } else if infer_mime::is_bmp(&bytes_vec) {
+        image.load_bmp_from_buffer(bytes)
+    } else if infer_mime::is_svg(&bytes_vec) {
+        image.load_svg_from_buffer(bytes)
+    } else {
+        // if we don't know the format... we try to load as png
+        image.load_png_from_buffer(bytes)
+    };
+
     if err != Error::OK {
         DirAccess::remove_absolute(GString::from(&absolute_file_path));
         let err = err.to_variant().to::<i32>();

@@ -101,7 +101,7 @@ pub struct SerializedProfile {
 impl Default for SerializedProfile {
     fn default() -> Self {
         let avatar = AvatarWireFormat {
-            name: Some("Godot User".into()),
+            name: Some("".into()),
             emotes: Some(vec![]),
             body_shape: Some("urn:decentraland:off-chain:base-avatars:BaseFemale".into()),
             wearables: vec![
@@ -133,15 +133,15 @@ impl Default for SerializedProfile {
             }),
             skin: Some(AvatarColor {
                 color: AvatarColor3 {
-                    r: 0.490,
-                    g: 0.364,
-                    b: 0.278,
+                    r: 1.0,
+                    g: 0.867,
+                    b: 0.737,
                 },
             }),
         };
         Self {
             user_id: Some("0x0000000000000000000000000000000000000000".into()),
-            name: "Godot User".to_string(),
+            name: "".to_string(),
             description: Default::default(),
             version: 1,
             eth_address: "0x0000000000000000000000000000000000000000".to_owned(),
@@ -210,7 +210,7 @@ pub struct UserProfile {
 impl Default for UserProfile {
     fn default() -> Self {
         Self {
-            base_url: "https://peer.decentraland.zone/content/contents/".to_owned(),
+            base_url: "https://peer.decentraland.org/content/contents/".to_owned(),
             version: 1,
             content: SerializedProfile::default(),
         }
