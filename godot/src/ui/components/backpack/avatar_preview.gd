@@ -36,7 +36,11 @@ func _ready():
 
 
 func focus_camera_on(type):
-	var tween = create_tween().set_parallel()
+	var tween := create_tween()
+	if tween == null:
+		return
+
+	tween = tween.set_parallel()
 	match type:
 		Wearables.Categories.HAIR, Wearables.Categories.FACIAL_HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.EYES:
 			tween.tween_property(camera_3d, "position", HEAD_CAMERA_POSITION, 0.5)
