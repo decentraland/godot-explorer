@@ -34,7 +34,7 @@ var h_slider_general_volume = $ColorRect_Content/HBoxContainer/ScrollContainer/V
 
 #Graphics items:
 @onready
-var h_slider_rendering_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/RenderingScale/HSlider_RenderingScale
+var h_slider_rendering_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution3DScale/HSlider_Resolution3DScale
 @onready
 var menu_button_ui_zoom = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/UiZoom/MenuButton_UiZoom
 @onready
@@ -318,8 +318,8 @@ func _on_menu_button_ui_zoom_item_selected(index):
 
 
 func _on_h_slider_rendering_scale_drag_ended(_value_changed):
-	Global.config.rendering_3d_scale = h_slider_rendering_scale.value
-	get_window().get_viewport().scaling_3d_scale = Global.config.rendering_3d_scale
+	Global.config.resolution_3d_scale = h_slider_rendering_scale.value
+	get_window().get_viewport().scaling_3d_scale = Global.config.resolution_3d_scale
 	Global.config.save_to_settings_file()
 
 

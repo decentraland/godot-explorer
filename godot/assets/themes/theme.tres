@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=83 format=3 uid="uid://bm1rvmngc833v"]
+[gd_resource type="Theme" load_steps=81 format=3 uid="uid://bm1rvmngc833v"]
 
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_l2aal"]
 [ext_resource type="StyleBox" uid="uid://corto87blbgdd" path="res://assets/themes/panel.tres" id="3_8ip38"]
@@ -10,7 +10,6 @@
 [ext_resource type="StyleBox" uid="uid://b7b33rteyw7y0" path="res://assets/themes/general_slider/grabber_highlight_area.tres" id="8_28h04"]
 [ext_resource type="StyleBox" uid="uid://dyf0um3e02x64" path="res://assets/themes/line_edit.tres" id="8_704en"]
 [ext_resource type="Texture2D" uid="uid://bi265olsdwnpm" path="res://assets/themes/icons/checkbox_unpressed.png" id="8_kvsie"]
-[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="8_y7rao"]
 [ext_resource type="StyleBox" uid="uid://nw2w7vul1wnx" path="res://assets/themes/option_button_disabled.tres" id="9_txtv0"]
 [ext_resource type="StyleBox" uid="uid://bujf67k8oji3g" path="res://assets/themes/general_slider/slider.tres" id="9_yjimp"]
 [ext_resource type="StyleBox" uid="uid://g3qbyl5ohgr" path="res://assets/themes/option_button_normal.tres" id="10_fj4og"]
@@ -470,7 +469,7 @@ DarkButton/colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 DarkButton/constants/h_separation = 0
 DarkButton/constants/icon_max_width = 0
 DarkButton/constants/outline_size = 0
-DarkButton/fonts/font = ExtResource("8_y7rao")
+DarkButton/fonts/font = ExtResource("38_cwxav")
 DarkButton/styles/disabled = SubResource("StyleBoxFlat_dn55y")
 DarkButton/styles/focus = SubResource("StyleBoxFlat_aga4u")
 DarkButton/styles/hover = SubResource("StyleBoxFlat_1t3xs")

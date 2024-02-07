@@ -19,7 +19,7 @@ func start():
 		main_window.move_to_center()
 		GraphicSettings.connect_global_signal(main_window)
 		GraphicSettings.apply_ui_zoom(main_window)
-		main_window.get_viewport().scaling_3d_scale = Global.config.rendering_3d_scale
+		main_window.get_viewport().scaling_3d_scale = Global.config.resolution_3d_scale
 
 		AudioSettings.apply_volume_settings()
 	else:

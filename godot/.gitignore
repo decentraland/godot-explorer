@@ -3,6 +3,7 @@
 .godot/export_credentials.cfg
 .godot/shader_cache
 .godot/exported
+.godot/uid_cache.bin
 
 android/
 

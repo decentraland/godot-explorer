@@ -7,7 +7,7 @@ enum ConfigParams {
 	CONTENT_DIRECTORY,
 	WINDOWED,
 	UI_ZOOM,
-	RENDERING_3D_SCALE,
+	RESOLUTION_3D_SCALE,
 	GRAVITY,
 	JUMP_VELOCITY,
 	WALK_VELOCITY,
@@ -45,10 +45,10 @@ var ui_zoom: float = -1.0:
 		ui_zoom = value
 		param_changed.emit(ConfigParams.UI_ZOOM)
 
-var rendering_3d_scale: float = 1.0:
+var resolution_3d_scale: float = 1.0:
 	set(value):
-		rendering_3d_scale = value
-		param_changed.emit(ConfigParams.RENDERING_3D_SCALE)
+		resolution_3d_scale = value
+		param_changed.emit(ConfigParams.RESOLUTION_3D_SCALE)
 
 var jump_velocity: float = 12.0:
 	set(value):
@@ -171,8 +171,8 @@ func load_from_settings_file():
 	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
 	self.windowed = settings_file.get_value("config", "windowed", data_default.windowed)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
-	self.rendering_3d_scale = settings_file.get_value(
-		"config", "rendering_3d_scale", data_default.rendering_3d_scale
+	self.resolution_3d_scale = settings_file.get_value(
+		"config", "resolution_3d_scale", data_default.resolution_3d_scale
 	)
 	self.audio_general_volume = settings_file.get_value(
 		"config", "audio_general_volume", data_default.audio_general_volume
@@ -211,7 +211,7 @@ func save_to_settings_file():
 	settings_file.set_value("config", "show_fps", self.show_fps)
 	settings_file.set_value("config", "windowed", self.windowed)
 	settings_file.set_value("config", "ui_zoom", self.ui_zoom)
-	settings_file.set_value("config", "rendering_3d_scale", self.rendering_3d_scale)
+	settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
 	settings_file.set_value("config", "audio_general_volume", self.audio_general_volume)
 	settings_file.set_value("session", "account", self.session_account)
 	settings_file.set_value("session", "guest_profile", self.guest_profile)
