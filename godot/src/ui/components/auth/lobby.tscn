@@ -60,10 +60,12 @@ grow_vertical = 2
 [node name="Start" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
-anchors_preset = 0
-offset_right = 1280.0
-offset_bottom = 720.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="TextureRect" type="TextureRect" parent="Main/Start"]
 layout_mode = 1
@@ -146,10 +148,12 @@ text = "I ALREADY HAVE AN ACCOUNT"
 [node name="Restore" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
-anchors_preset = 0
-offset_right = 1280.0
-offset_bottom = 720.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="Background_Restore" type="TextureRect" parent="Main/Restore"]
 layout_mode = 1
@@ -165,12 +169,13 @@ expand_mode = 3
 
 [node name="Background_Dots" type="TextureRect" parent="Main/Restore"]
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
+anchors_preset = -1
+anchor_left = 0.534
 anchor_right = 1.0
-offset_left = -597.0
+anchor_bottom = 0.729
+offset_left = -0.52002
 offset_right = -0.000244141
-offset_bottom = 525.0
+offset_bottom = 0.119995
 grow_horizontal = 0
 texture = ExtResource("7_ug3ga")
 expand_mode = 2
@@ -265,15 +270,19 @@ speed_scale = 1.5
 
 [node name="Backpack" type="Control" parent="Main"]
 unique_name_in_owner = true
-layout_mode = 2
-anchors_preset = 0
-offset_right = 1280.0
-offset_bottom = 720.0
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="TextureRect" type="TextureRect" parent="Main/Backpack"]
-layout_mode = 2
-offset_right = 1280.0
-offset_bottom = 720.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture2D_vjyug")
@@ -315,10 +324,12 @@ icon_alignment = 2
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
-anchors_preset = 0
-offset_right = 1280.0
-offset_bottom = 720.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="TextureRect" type="TextureRect" parent="Main/SignIn"]
 layout_mode = 1
@@ -446,10 +457,12 @@ icon = ExtResource("13_43yag")
 [node name="ChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
-anchors_preset = 0
-offset_right = 1280.0
-offset_bottom = 720.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="Background_Restore" type="TextureRect" parent="Main/ChooseName"]
 layout_mode = 1

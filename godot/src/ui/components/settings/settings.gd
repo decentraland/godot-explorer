@@ -10,8 +10,6 @@ enum SceneLogLevel {
 	SYSTEM_ERROR = 3,
 }
 
-var resolution_manager: ResolutionManager = ResolutionManager.new()
-
 var preview_ws = WebSocketPeer.new()
 var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
@@ -23,22 +21,26 @@ var general = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBo
 var graphics = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics
 @onready
 var advanced = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced
+@onready
+var audio = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio
 
 #General items:
 @onready
 var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
+
+#Audio items
 @onready
-var checkbox_minimap = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/Checkbox_Minimap
+var h_slider_general_volume = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume/HSlider_GeneralVolume
 
 #Graphics items:
 @onready
-var menu_button_window_size = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/WindowSize/MenuButton_WindowSize
+var h_slider_rendering_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/RenderingScale/HSlider_RenderingScale
 @onready
-var menu_button_resolution = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution/MenuButton_Resolution
+var menu_button_ui_zoom = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/UiZoom/MenuButton_UiZoom
 @onready
-var h_slider_gui_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GuiScale/HBoxContainer/HSlider_GuiScale
+var v_box_container_windowed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer_Windowed
 @onready
-var label_gui_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GuiScale/HBoxContainer/Label_GuiScale
+var checkbox_windowed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer_Windowed/Checkbox_Windowed
 @onready
 var menu_button_limit_fps = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/LimitFps/MenuButton_LimitFps
 @onready
@@ -58,9 +60,9 @@ var h_slider_process_tick_quota = $ColorRect_Content/HBoxContainer/ScrollContain
 var label_process_tick_quota_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/Label_ProcessTickQuotaValue
 
 @onready
-var h_slider_scene_radius = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius
+var label_scene_radius_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/Label_SceneRadiusValue
 @onready
-var label_scene_radius_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_SceneRadius/HBoxContainer/Label_SceneRadiusValue
+var h_slider_scene_radius = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius
 
 @onready
 var spin_box_gravity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
@@ -75,23 +77,22 @@ var check_box_raycast_debugger = $ColorRect_Content/HBoxContainer/ScrollContaine
 
 
 func _ready():
-	if Global.is_mobile:
-		menu_button_window_size.disabled = true
-		menu_button_resolution.disabled = true
-
 	general.show()
 	graphics.hide()
 	advanced.hide()
+	audio.hide()
 
 	text_edit_cache_path.text = Global.config.local_content_dir
 
-	resolution_manager.refresh_window_options()
-	for item in resolution_manager.window_options.keys():
-		menu_button_window_size.add_item(item)
+	if Global.is_mobile():
+		v_box_container_windowed.hide()
+		checkbox_windowed.disabled = true
+	else:
+		checkbox_windowed.button_pressed = Global.config.windowed
 
-	load_resolutions()
-	refresh_resolution()
+	refresh_zooms()
 
+	h_slider_general_volume.value = Global.config.audio_general_volume
 	menu_button_limit_fps.selected = Global.config.limit_fps
 	menu_button_skybox.selected = Global.config.skybox
 
@@ -102,73 +103,32 @@ func _on_button_pressed():
 	self.hide()
 
 
-func _on_window_size_menu_button_item_selected(index):
-	var current_window_size: String = menu_button_window_size.get_item_text(index)
-	resolution_manager.change_window_size(get_window(), get_viewport(), current_window_size)
-	load_resolutions()
-	resolution_manager.center_window(get_window())
-	Global.config.window_size = current_window_size
-	Global.config.resolution = current_window_size
-	Global.config.ui_scale = 1.0
-	refresh_resolution()
-
-
-func _on_resolution_menu_button_item_selected(index):
-	var current_res: String = menu_button_resolution.get_item_text(index)
-	resolution_manager.change_resolution(get_window(), get_viewport(), current_res)
-	resolution_manager.center_window(get_window())
-	resolution_manager.change_ui_scale(get_window(), 1.0)
-	Global.config.resolution = current_res
-	Global.config.ui_scale = 1.0
-	Global.config.save_to_settings_file()
-	refresh_resolution()
-
-
-func refresh_resolution():
-	for index in range(menu_button_resolution.item_count):
-		var current_res: String = menu_button_resolution.get_item_text(index)
-		if current_res == Global.config.resolution:
-			menu_button_resolution.selected = index
-
-	for index in range(menu_button_window_size.item_count):
-		var current_res: String = menu_button_window_size.get_item_text(index)
-		if current_res == Global.config.window_size:
-			menu_button_window_size.selected = index
-
-	h_slider_gui_scale.set_value_no_signal(Global.config.ui_scale * 100.0)
-	label_gui_scale.text = str(round(100.0 * Global.config.ui_scale)) + "%"
-
-
-func load_resolutions():
-	menu_button_resolution.clear()
-	for item in resolution_manager.resolution_options:
-		menu_button_resolution.add_item(item)
-
-
 func _on_general_button_toggled(_button_pressed):
 	general.show()
 	graphics.hide()
+	audio.hide()
 	advanced.hide()
 
 
 func _on_graphic_button_toggled(_button_pressed):
 	general.hide()
 	graphics.show()
+	audio.hide()
 	advanced.hide()
 
 
-func _on_monitoring_button_toggled(_button_pressed):
+func _on_devloper_button_toggled(_button_pressed):
 	general.hide()
 	graphics.hide()
+	audio.hide()
 	advanced.show()
 
 
-func _on_h_slider_drag_ended(value_changed):
-	if value_changed:
-		resolution_manager.change_ui_scale(get_window(), h_slider_gui_scale.value / 100.0)
-		Global.config.ui_scale = h_slider_gui_scale.value / 100.0
-		label_gui_scale.text = str(round(100.0 * Global.config.ui_scale)) + "%"
-		Global.config.save_to_settings_file()
+func _on_button_audio_pressed():
+	general.hide()
+	graphics.hide()
+	audio.show()
+	advanced.hide()
 
 
 func _on_button_clear_cache_pressed():
@@ -182,7 +142,7 @@ func _on_checkbox_fps_toggled(button_pressed):
 
 func _on_menu_button_limit_fps_item_selected(index):
 	Global.config.limit_fps = index
-	resolution_manager.apply_fps_limit()
+	GraphicSettings.apply_fps_limit()
 	Global.config.save_to_settings_file()
 
 
@@ -323,3 +283,46 @@ func _on_check_box_raycast_debugger_toggled(toggled_on):
 
 func _on_button_profile_pressed():
 	pass  # Replace with function body.
+
+
+func refresh_zooms():
+	var selected_index: int = -1
+	var i: int = 0
+	var options := GraphicSettings.get_ui_zoom_available(get_window())
+	menu_button_ui_zoom.clear()
+
+	for ui_zoom_option in options.keys():
+		menu_button_ui_zoom.add_item(ui_zoom_option)
+		if options[ui_zoom_option] == get_window().content_scale_factor:
+			selected_index = i
+		i += 1
+	if selected_index == -1:
+		selected_index = i - 1
+	menu_button_ui_zoom.selected = selected_index
+
+
+func _on_checkbox_windowed_toggled(toggled_on):
+	Global.config.windowed = toggled_on
+	GraphicSettings.apply_window_config()
+	refresh_zooms()
+
+
+func _on_menu_button_ui_zoom_item_selected(index):
+	var options := GraphicSettings.get_ui_zoom_available(get_window())
+	var current_ui_zoom: String = menu_button_ui_zoom.get_item_text(index)
+	if not options.has(current_ui_zoom):
+		current_ui_zoom = "Max"
+	Global.config.ui_zoom = options[current_ui_zoom]
+	GraphicSettings.apply_ui_zoom(get_window())
+	Global.config.save_to_settings_file()
+
+
+func _on_h_slider_rendering_scale_drag_ended(_value_changed):
+	Global.config.rendering_3d_scale = h_slider_rendering_scale.value
+	get_window().get_viewport().scaling_3d_scale = Global.config.rendering_3d_scale
+	Global.config.save_to_settings_file()
+
+
+func _on_h_slider_general_volume_drag_ended(_value_changed):
+	Global.config.audio_general_volume = h_slider_general_volume.value
+	AudioSettings.apply_volume_settings()

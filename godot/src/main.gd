@@ -12,10 +12,16 @@ func start():
 
 	if not OS.has_feature("Server"):
 		print("Running from platform")
-		var resolution_manager = ResolutionManager.new()
-		resolution_manager.refresh_window_options()
-		resolution_manager.center_window(get_window())
-		resolution_manager.apply_fps_limit()
+
+		# Apply basic config
+		var main_window: Window = get_node("/root")
+		GraphicSettings.apply_window_config()
+		main_window.move_to_center()
+		GraphicSettings.connect_global_signal(main_window)
+		GraphicSettings.apply_ui_zoom(main_window)
+		main_window.get_viewport().scaling_3d_scale = Global.config.rendering_3d_scale
+
+		AudioSettings.apply_volume_settings()
 	else:
 		print("Running from Server")
 
