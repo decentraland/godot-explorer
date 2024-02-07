@@ -1,0 +1,275 @@
+[gd_scene load_steps=21 format=3 uid="uid://nexo8k0ub5ty"]
+
+[ext_resource type="Script" path="res://src/ui/components/discover/carrousel/discover_carrousel_item.gd" id="1_foqq3"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gao81"]
+[ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="3_o4xes"]
+[ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="4_4uq2a"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_uutqn"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="6_ak6x4"]
+[ext_resource type="Texture2D" uid="uid://beo554etknddh" path="res://assets/ui/PreviewIcon.svg" id="7_marjo"]
+[ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/Like.svg" id="8_8veya"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="9_havap"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c0877"]
+bg_color = Color(0.988235, 0.988235, 0.988235, 1)
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color(0.988235, 0.988235, 0.988235, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="Gradient" id="Gradient_e8nv0"]
+colors = PackedColorArray(0, 0, 0, 1, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_e6dy7"]
+gradient = SubResource("Gradient_e8nv0")
+fill_from = Vector2(1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_368si"]
+bg_color = Color(0.0392157, 0.0392157, 0.0392157, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="Curve" id="Curve_6fe12"]
+max_value = 2.0
+_data = [Vector2(0.09, 1.28552), 0.0, 0.0, 0, 0, Vector2(0.34, 1.87802), 0.0, 0.0, 0, 0, Vector2(0.966667, 0.146113), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Gradient" id="Gradient_w2th8"]
+colors = PackedColorArray(0.914015, 0.145083, 0.329259, 1, 0.917647, 0.145098, 0.329412, 0.509804)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_js3n0"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_pvrec"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_6svxf"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hhrtg"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_b6og1"]
+
+[node name="DiscoverCarrouselItem" type="TextureButton"]
+custom_minimum_size = Vector2(250, 250)
+offset_right = 250.0
+offset_bottom = 250.0
+mouse_filter = 1
+script = ExtResource("1_foqq3")
+
+[node name="Panel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_c0877")
+
+[node name="DiscoverCarrouselItem" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Control" type="Control" parent="Panel/DiscoverCarrouselItem"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="TextureRect_Image" type="TextureRect" parent="Panel/DiscoverCarrouselItem/Control"]
+unique_name_in_owner = true
+layout_mode = 2
+offset_right = 242.0
+offset_bottom = 172.0
+grow_horizontal = 2
+size_flags_vertical = 3
+theme = ExtResource("2_gao81")
+texture = ExtResource("3_o4xes")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TextureRect" type="TextureRect" parent="Panel/DiscoverCarrouselItem/Control/TextureRect_Image"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_e6dy7")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/DiscoverCarrouselItem/Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer"]
+layout_mode = 2
+
+[node name="Container_Online" type="PanelContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 25)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_368si")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_right = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer"]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+texture = ExtResource("4_4uq2a")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_Online" type="Label" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("5_uutqn")
+theme_override_fonts/font = ExtResource("6_ak6x4")
+text = "0"
+horizontal_alignment = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+alignment = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_constants/separation = 11
+alignment = 2
+
+[node name="HBoxContainer_Views" type="HBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Views"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+texture = ExtResource("7_marjo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_Views" type="Label" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Views"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("5_uutqn")
+theme_override_fonts/font = ExtResource("6_ak6x4")
+text = "546"
+horizontal_alignment = 2
+
+[node name="HBoxContainer_Likes" type="HBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="CPUParticles2D" type="CPUParticles2D" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
+position = Vector2(11, 21)
+emitting = false
+amount = 20
+lifetime = 0.2
+one_shot = true
+explosiveness = 1.0
+emission_shape = 1
+emission_sphere_radius = 9.0
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 60.0
+initial_velocity_max = 60.0
+damping_min = 30.0
+damping_max = 30.0
+scale_amount_curve = SubResource("Curve_6fe12")
+color = Color(0.960784, 0.152941, 0.345098, 1)
+color_ramp = SubResource("Gradient_w2th8")
+
+[node name="Button_Like" type="Button" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
+custom_minimum_size = Vector2(25, 0)
+layout_mode = 2
+theme = ExtResource("5_uutqn")
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_js3n0")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_pvrec")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_6svxf")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_hhrtg")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_b6og1")
+toggle_mode = true
+icon = ExtResource("8_8veya")
+flat = true
+icon_alignment = 1
+
+[node name="Label_Likes" type="Label" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("5_uutqn")
+theme_override_fonts/font = ExtResource("6_ak6x4")
+text = "78%"
+horizontal_alignment = 2
+
+[node name="Panel" type="Control" parent="Panel/DiscoverCarrouselItem"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+mouse_filter = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/DiscoverCarrouselItem/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 15
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/DiscoverCarrouselItem/Panel/MarginContainer"]
+layout_mode = 2
+
+[node name="Label_Title" type="Label" parent="Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("6_ak6x4")
+text = "Scene Title"
+autowrap_mode = 2
+clip_text = true
+
+[node name="Label_Description" type="Label" parent="Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("9_havap")
+text = "Scene Description"
+autowrap_mode = 2
+clip_text = true
+
+[connection signal="pressed" from="." to="." method="_on_pressed"]

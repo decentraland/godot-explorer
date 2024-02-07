@@ -51,7 +51,8 @@ func show_panel(child_node: Control):
 
 
 func close_sign_in():
-	get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+	#get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+	get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
 
 
 func _ready():

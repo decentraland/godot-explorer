@@ -1,45 +1,25 @@
+class_name Discover
 extends Control
 
-@onready var button_highlights = $ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Highlights
-@onready var button_places = $ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Places
-@onready var button_events = $ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Events
-@onready var button_favorites = $ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Favorites
-@onready var vbox_highlights = $ColorRect_Background/VBoxContainer/Control/Vbox_Highlights
-@onready var vbox_places = $ColorRect_Background/VBoxContainer/Control/Vbox_Places
-@onready var vbox_events = $ColorRect_Background/VBoxContainer/Control/Vbox_Events
-@onready var vbox_favorites = $ColorRect_Background/VBoxContainer/Control/Vbox_Favorites
-
+@onready var jump_in = %JumpIn
 
 func _ready():
-	button_highlights.button_pressed = true
-	vbox_highlights.show()
-	vbox_places.hide()
-	vbox_events.hide()
-	vbox_favorites.hide()
+	jump_in.hide()
+
+func on_item_pressed(data):
+	jump_in.show()
+	jump_in.set_data(data)
 
 
-func hide_all():
-	vbox_highlights.hide()
-	vbox_places.hide()
-	vbox_events.hide()
-	vbox_favorites.hide()
-
-
-func _on_button_favorites_pressed():
-	hide_all()
-	vbox_favorites.show()
-
-
-func _on_button_events_pressed():
-	hide_all()
-	vbox_events.show()
-
-
-func _on_button_places_pressed():
-	hide_all()
-	vbox_places.show()
-
-
-func _on_button_highlights_pressed():
-	hide_all()
-	vbox_highlights.show()
+func _on_jump_in_jump_in(position, realm):
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		Global.realm.async_set_realm(realm)
+		explorer.teleport_to(position)
+		explorer.loading_ui.enable_loading_screen()
+		jump_in.hide()
+		explorer.hide_menu()
+	else:
+		Global.config.last_realm_joined = realm
+		Global.config.last_parcel_position = position
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")

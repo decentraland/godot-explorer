@@ -1,15 +1,17 @@
-[gd_scene load_steps=6 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=11 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
-[ext_resource type="Texture2D" uid="uid://d1ly37tghjvec" path="res://assets/themes/icons/dcl_checkbox_s.png" id="3_u22ul"]
+[ext_resource type="Script" path="res://src/ui/components/discover/carrousel/discover_carrousel.gd" id="3_s0fys"]
+[ext_resource type="PackedScene" uid="uid://3de823q04ptd" path="res://src/ui/components/discover/carrousel/discover_carrousel.tscn" id="3_s5vyg"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_77psv"]
+[ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/components/discover/places/places_generator.tscn" id="4_q55yj"]
+[ext_resource type="PackedScene" uid="uid://nexo8k0ub5ty" path="res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn" id="5_psuac"]
+[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="6_iqqe3"]
+[ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
+[ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="10_wsgtu"]
 
-[sub_resource type="Theme" id="Theme_5xlkc"]
-Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_jsp7l"]
-
-[node name="Control_Discover" type="Control"]
+[node name="Discover" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -26,239 +28,134 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.85098, 0.843137, 0.866667, 1)
+color = Color(0.921569, 0.921569, 0.929412, 1)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Background"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="ColorRect_Background"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("10_wsgtu")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="ColorRect_Background/SafeMarginContainer"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="PlacesCustom" type="MarginContainer" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+script = ExtResource("3_s0fys")
+
+[node name="DiscoverCarrousel" type="VBoxContainer" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesCustom"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+
+[node name="Label_Title" type="Label" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesCustom/DiscoverCarrousel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_77psv")
+theme_override_font_sizes/font_size = 18
+text = "Customs"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesCustom/DiscoverCarrousel"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="HBoxContainer_Items" type="HBoxContainer" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesCustom/DiscoverCarrousel/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 17
+
+[node name="DiscoverCarrouselItem" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesCustom/DiscoverCarrousel/ScrollContainer/HBoxContainer_Items" instance=ExtResource("5_psuac")]
+layout_mode = 2
+texture = ExtResource("6_iqqe3")
+title = "Goerli Plaza"
+description = "Test plaza for testing"
+metadata = {
+"base_position": "72,-9",
+"description": "Test plaza for testing",
+"title": "Goerli Plaza",
+"world": true,
+"world_name": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+}
+
+[node name="LastVisited" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 visible = false
+layout_mode = 2
+generator = NodePath("../PlacesFavorites/PlacesGenerator")
+title = "Last Visited"
+
+[node name="PlacesFavorites" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+visible = false
+layout_mode = 2
+generator = NodePath("PlacesGenerator")
+title = "Favorites"
+
+[node name="PlacesGenerator" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+order_by = 1
+only_favorites = true
+discover = NodePath("../../../../../..")
+
+[node name="PlacesMostActive" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+layout_mode = 2
+generator = NodePath("PlacesGenerator")
+title = "Most Actives"
+
+[node name="PlacesGenerator" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+order_by = 1
+discover = NodePath("../../../../../..")
+
+[node name="PlacesWorlds" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+layout_mode = 2
+generator = NodePath("PlacesGenerator")
+title = "Worlds"
+
+[node name="PlacesGenerator" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesWorlds" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+order_by = 2
+only_worlds = true
+discover = NodePath("../../../../../..")
+
+[node name="PlacesFeatured" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+layout_mode = 2
+generator = NodePath("PlacesGenerator")
+title = "Featured"
+
+[node name="PlacesGenerator" parent="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+order_by = 1
+categories = "featured"
+discover = NodePath("../../../../../..")
+
+[node name="JumpIn" parent="ColorRect_Background" instance=ExtResource("9_gh6mh")]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -352.5
-offset_top = -272.0
-offset_right = 202.5
-offset_bottom = 272.0
+offset_left = -183.0
+offset_top = -299.5
+offset_right = 183.0
+offset_bottom = 299.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Hbox_Sections" type="HBoxContainer" parent="ColorRect_Background/VBoxContainer"]
-layout_mode = 2
-theme = SubResource("Theme_5xlkc")
-theme_type_variation = &"2"
-theme_override_constants/separation = 25
-alignment = 1
-
-[node name="Button_Highlights" type="Button" parent="ColorRect_Background/VBoxContainer/Hbox_Sections"]
-custom_minimum_size = Vector2(120, 40)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"OrangeButton"
-toggle_mode = true
-button_pressed = true
-button_group = SubResource("ButtonGroup_jsp7l")
-text = "Highlights"
-icon = ExtResource("3_u22ul")
-
-[node name="Button_Places" type="Button" parent="ColorRect_Background/VBoxContainer/Hbox_Sections"]
-custom_minimum_size = Vector2(120, 40)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"OrangeButton"
-toggle_mode = true
-button_group = SubResource("ButtonGroup_jsp7l")
-text = "Places"
-icon = ExtResource("3_u22ul")
-
-[node name="Button_Events" type="Button" parent="ColorRect_Background/VBoxContainer/Hbox_Sections"]
-custom_minimum_size = Vector2(120, 40)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"OrangeButton"
-toggle_mode = true
-button_group = SubResource("ButtonGroup_jsp7l")
-text = "Events"
-icon = ExtResource("3_u22ul")
-
-[node name="Button_Favorites" type="Button" parent="ColorRect_Background/VBoxContainer/Hbox_Sections"]
-custom_minimum_size = Vector2(120, 40)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-focus_mode = 0
-theme_type_variation = &"OrangeButton"
-toggle_mode = true
-button_group = SubResource("ButtonGroup_jsp7l")
-text = "Favorites"
-icon = ExtResource("3_u22ul")
-
-[node name="Control" type="Control" parent="ColorRect_Background/VBoxContainer"]
-custom_minimum_size = Vector2(0, 500)
-layout_mode = 2
-
-[node name="Vbox_Highlights" type="VBoxContainer" parent="ColorRect_Background/VBoxContainer/Control"]
-clip_contents = true
-layout_direction = 1
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -150.0
-offset_top = 52.0
-offset_right = 150.0
-offset_bottom = 152.0
-grow_horizontal = 2
-auto_translate = false
-theme = SubResource("Theme_5xlkc")
-theme_type_variation = &"2"
-theme_override_constants/separation = 15
-alignment = 1
-
-[node name="Label_Title" type="Label" parent="ColorRect_Background/VBoxContainer/Control/Vbox_Highlights"]
-clip_contents = true
-layout_direction = 1
-layout_mode = 2
-auto_translate = false
-text = "Highlights Section"
-
-[node name="RichTextLabel_Content" type="RichTextLabel" parent="ColorRect_Background/VBoxContainer/Control/Vbox_Highlights"]
-layout_direction = 1
-layout_mode = 2
-auto_translate = false
-theme_override_colors/default_color = Color(0, 0, 0, 1)
-text = "This section is in construction."
-fit_content = true
-scroll_active = false
-shortcut_keys_enabled = false
-deselect_on_focus_loss_enabled = false
-
-[node name="Vbox_Places" type="VBoxContainer" parent="ColorRect_Background/VBoxContainer/Control"]
-clip_contents = true
-layout_direction = 1
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -150.0
-offset_top = 52.0
-offset_right = 150.0
-offset_bottom = 152.0
-grow_horizontal = 2
-auto_translate = false
-theme = SubResource("Theme_5xlkc")
-theme_type_variation = &"2"
-theme_override_constants/separation = 15
-alignment = 1
-
-[node name="Label_Title" type="Label" parent="ColorRect_Background/VBoxContainer/Control/Vbox_Places"]
-clip_contents = true
-layout_direction = 1
-layout_mode = 2
-auto_translate = false
-text = "Places Section"
-
-[node name="RichTextLabel_Content" type="RichTextLabel" parent="ColorRect_Background/VBoxContainer/Control/Vbox_Places"]
-layout_direction = 1
-layout_mode = 2
-auto_translate = false
-theme_override_colors/default_color = Color(0, 0, 0, 1)
-text = "This section is in construction."
-fit_content = true
-scroll_active = false
-shortcut_keys_enabled = false
-deselect_on_focus_loss_enabled = false
-
-[node name="Vbox_Events" type="VBoxContainer" parent="ColorRect_Background/VBoxContainer/Control"]
-clip_contents = true
-layout_direction = 1
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -150.0
-offset_top = 52.0
-offset_right = 150.0
-offset_bottom = 152.0
-grow_horizontal = 2
-auto_translate = false
-theme = SubResource("Theme_5xlkc")
-theme_type_variation = &"2"
-theme_override_constants/separation = 15
-alignment = 1
-
-[node name="Label_Title" type="Label" parent="ColorRect_Background/VBoxContainer/Control/Vbox_Events"]
-clip_contents = true
-layout_direction = 1
-layout_mode = 2
-auto_translate = false
-text = "Events Section"
-
-[node name="RichTextLabel_Content" type="RichTextLabel" parent="ColorRect_Background/VBoxContainer/Control/Vbox_Events"]
-layout_direction = 1
-layout_mode = 2
-auto_translate = false
-theme_override_colors/default_color = Color(0, 0, 0, 1)
-text = "This section is in construction."
-fit_content = true
-scroll_active = false
-shortcut_keys_enabled = false
-deselect_on_focus_loss_enabled = false
-
-[node name="Vbox_Favorites" type="VBoxContainer" parent="ColorRect_Background/VBoxContainer/Control"]
-clip_contents = true
-layout_direction = 1
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -150.0
-offset_top = 52.0
-offset_right = 150.0
-offset_bottom = 152.0
-grow_horizontal = 2
-auto_translate = false
-theme = SubResource("Theme_5xlkc")
-theme_type_variation = &"2"
-theme_override_constants/separation = 15
-alignment = 1
-
-[node name="Label_Title" type="Label" parent="ColorRect_Background/VBoxContainer/Control/Vbox_Favorites"]
-layout_mode = 2
-text = "Favorite Section"
-
-[node name="RichTextLabel_Content" type="RichTextLabel" parent="ColorRect_Background/VBoxContainer/Control/Vbox_Favorites"]
-layout_mode = 2
-theme_override_colors/default_color = Color(0, 0, 0, 1)
-text = "This section is in construction."
-fit_content = true
-scroll_active = false
-shortcut_keys_enabled = false
-deselect_on_focus_loss_enabled = false
-
-[node name="Label" type="Label" parent="ColorRect_Background"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -64.5
-offset_top = -10.0
-offset_right = 64.5
-offset_bottom = 10.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_font_sizes/font_size = 42
-text = "Work In Progress"
-
-[connection signal="pressed" from="ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Highlights" to="." method="_on_button_highlights_pressed"]
-[connection signal="pressed" from="ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Places" to="." method="_on_button_places_pressed"]
-[connection signal="pressed" from="ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Events" to="." method="_on_button_events_pressed"]
-[connection signal="pressed" from="ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Favorites" to="." method="_on_button_favorites_pressed"]
+[connection signal="scroll_ended" from="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesCustom/DiscoverCarrousel/ScrollContainer" to="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesCustom" method="_on_scroll_container_scroll_ended"]
+[connection signal="item_pressed" from="ColorRect_Background/SafeMarginContainer/ScrollContainer/VBoxContainer/PlacesCustom/DiscoverCarrousel/ScrollContainer/HBoxContainer_Items/DiscoverCarrouselItem" to="." method="on_item_pressed"]
+[connection signal="jump_in" from="ColorRect_Background/JumpIn" to="." method="_on_jump_in_jump_in"]
