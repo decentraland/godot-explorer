@@ -124,7 +124,7 @@ func _ready():
 	Global.scene_runner.console = self._on_scene_console_message
 	Global.scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
 	ui_root.add_child(Global.scene_runner.base_ui)
-	ui_root.move_child(Global.scene_runner.base_ui, label_crosshair.get_index() + 1)
+	ui_root.move_child(Global.scene_runner.base_ui, 0)
 
 	Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
 

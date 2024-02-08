@@ -14,7 +14,7 @@ use crate::auth::ethereum_provider::EthereumProvider;
 use crate::content::content_mapping::ContentMappingAndUrlRef;
 use crate::dcl::common::{
     is_scene_log_enabled, SceneDying, SceneElapsedTime, SceneJsFileContent, SceneLogLevel,
-    SceneLogMessage, SceneLogs, SceneStartTime,
+    SceneLogMessage, SceneLogs, SceneMainCrdtFileContent, SceneStartTime,
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
@@ -190,7 +190,9 @@ pub(crate) fn scene_thread(
     });
 
     if let Some(scene_main_crdt) = scene_main_crdt {
-        state.borrow_mut().put(scene_main_crdt);
+        state
+            .borrow_mut()
+            .put(SceneMainCrdtFileContent(scene_main_crdt));
     }
 
     state.borrow_mut().put(content_mapping);
