@@ -47,6 +47,7 @@ func enable_loading_screen():
 
 
 func async_hide_loading_screen_effect():
+	Global.loading_finished.emit()
 	timer_check_progress_timeout.stop()
 	var tween = get_tree().create_tween()
 	background.use_parent_material = true  # disable material

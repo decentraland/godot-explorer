@@ -81,6 +81,9 @@ func set_action_text(text: String):
 
 
 func _physics_process(_delta):
+	if action_to_trigger == "ia_any":
+		return
+
 	var new_pressed = Input.is_action_pressed(action_to_trigger)
 	if last_state_pressed != new_pressed:
 		set_bg_color(BG_COLOR_PRESSED if new_pressed else BG_COLOR_NORMAL)
