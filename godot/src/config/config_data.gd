@@ -128,9 +128,10 @@ func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
 		var place = _last_places[i]
 		var place_realm = place.get("realm")
 		var place_position = place.get("position")
-		if place.get("realm") == realm:
-			if Realm.is_genesis_city(realm) and place_position == position:
-				to_remove.push_front(i)
+		if place_realm == realm:
+			if Realm.is_genesis_city(realm):
+				if place_position == position:
+					to_remove.push_front(i)
 			else:
 				to_remove.push_front(i)
 
@@ -139,7 +140,6 @@ func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
 
 
 func add_place_to_last_places(position: Vector2i, realm: String):
-	prints("add_place_to_last_places", realm, position)
 	var place_dict = {
 		"position": position,
 		"realm": realm,

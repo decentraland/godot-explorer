@@ -3,7 +3,7 @@ extends Control
 
 signal item_pressed(data)
 
-@export var texture: Texture2D = load("res://assets/ui/placeholder.png")
+@export var texture: Texture2D = texture_placeholder
 
 @export var title: String = "Scene Title"
 
@@ -16,6 +16,8 @@ signal item_pressed(data)
 @export var likes_percent: float = 0.0
 
 @export var metadata: Dictionary = {}
+
+var texture_placeholder = load("res://assets/ui/placeholder.png")
 
 var _data = null
 
@@ -120,6 +122,8 @@ func set_data(item_data):
 	var image_url = item_data.get("image", "")
 	if not image_url.is_empty():
 		_async_download_image(image_url)
+	else:
+		set_image(texture_placeholder)
 
 
 func _async_download_image(url: String):

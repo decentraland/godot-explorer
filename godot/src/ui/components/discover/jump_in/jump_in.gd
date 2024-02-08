@@ -12,6 +12,10 @@ signal jump_in(position: Vector2i, realm: String)
 
 @onready var label_realm := %Label_Realm
 
+@onready var label_creator := %Label_Creator
+
+@onready var container_creator := %HBoxContainer_Creator
+
 
 func _ready():
 	super()
@@ -28,6 +32,11 @@ func set_realm(_realm: String, _realm_title: String):
 	realm = _realm
 
 
+func set_creator(_creator: String):
+	container_creator.visible = not _creator.is_empty()
+	label_creator.text = _creator
+
+
 func set_data(item_data):
 	super(item_data)
 
@@ -35,10 +44,14 @@ func set_data(item_data):
 	if location_vector.size() == 2:
 		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
 
+	set_creator(_get_or_empty_string(item_data, "contact_name"))
+
 	var world = item_data.get("world", false)
 	if world:
 		var world_name = item_data.get("world_name")
 		set_realm(world_name, world_name)
+	else:
+		set_realm("https://realm-provider.decentraland.org/main", "Genesis City")
 
 
 func _on_button_jump_in_pressed():

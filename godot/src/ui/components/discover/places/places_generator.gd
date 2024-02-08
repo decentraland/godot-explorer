@@ -19,27 +19,45 @@ const DISCOVER_CARROUSEL_ITEM = preload(
 
 var loaded_elements: int = 0
 var no_more_elements: bool = false
+var loading = false
 
 
-func _request_last_places() -> void:
+func _place_exists_in_last_places(realm: String, position: Vector2i, last_places) -> bool:
+	for place in last_places:
+		var place_realm = place.get("realm")
+		var place_position = place.get("position")
+		if realm == place_realm:
+			if Realm.is_genesis_city(realm):
+				if place_position == position:
+					return true
+			else:
+				return true
+	return false
+
+
+func request_last_places() -> void:
+	if loading:
+		return
+
+	for item in item_container.get_children():
+		if item is PlaceItem:
+			item_container.remove_child(item)
+
+	loading = true
 	var last_places = Global.config.last_places.duplicate()
 	var genesis_city_places: Array[Dictionary] = []
 	var worlds_names: Array[Dictionary] = []
 	var custom_realms: Array[Dictionary] = []
 	var index = 0
 
-	(
-		last_places
-		. push_front(
-			{
-				"realm": Global.config.last_realm_joined,
-				"position": Global.config.last_parcel_position,
-			}
-		)
-	)
-
-	for place in last_places:
-		Global.config.fix_last_places_duplicates(place, last_places)
+	var last_realm = Global.config.last_realm_joined
+	var last_position = Global.config.last_parcel_position
+	if not _place_exists_in_last_places(last_realm, last_position, last_places):
+		var last_place = {
+			"realm": Global.config.last_realm_joined,
+			"position": Global.config.last_parcel_position,
+		}
+		last_places.push_front(last_place)
 
 	for place in last_places:
 		var realm: String = Realm.ensure_reduce_url(place.get("realm"))
@@ -91,6 +109,8 @@ func _request_last_places() -> void:
 
 		_async_fetch_places(url)
 
+	loading = false
+
 
 func on_request(offset: int, limit: int) -> void:
 	if no_more_elements:
@@ -98,7 +118,7 @@ func on_request(offset: int, limit: int) -> void:
 
 	if last_places_logic:
 		no_more_elements = true
-		_request_last_places()
+		request_last_places()
 		return
 
 	var url = "https://places.decentraland.org/api/"

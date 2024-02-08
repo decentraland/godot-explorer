@@ -27,4 +27,5 @@ func _on_jump_in_jump_in(parcel_position, realm):
 
 
 func _on_visibility_changed():
-	pass  # Replace with function body.
+	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
+		%LastVisitGenerator.request_last_places()

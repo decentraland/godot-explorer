@@ -18,6 +18,21 @@ fill = 1
 fill_from = Vector2(0.5, 0.5)
 metadata/_snap_enabled = true
 
+[sub_resource type="Animation" id="Animation_okrup"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(0, 0)]
+}
+
 [sub_resource type="Animation" id="Animation_sc3jq"]
 resource_name = "default"
 length = 30.0
@@ -33,21 +48,6 @@ tracks/0/keys = {
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
 "values": [Vector2(0, 0), Vector2(0, 0), Vector2(0, -121), Vector2(0, -121)]
-}
-
-[sub_resource type="Animation" id="Animation_okrup"]
-length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".:position")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Vector2(0, 0)]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_5pduq"]
@@ -108,8 +108,8 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = 7304.0
-offset_bottom = 726.0
+offset_right = 9744.0
+offset_bottom = 1089.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -144,10 +144,11 @@ autoplay = "default"
 
 [node name="LastVisited" parent="TextureRect/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 layout_mode = 2
-generator = NodePath("PlacesGenerator")
+generator = NodePath("LastVisitGenerator")
 title = "Last Visited"
 
-[node name="PlacesGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="LastVisitGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+unique_name_in_owner = true
 last_places_logic = true
 discover = NodePath("../../../../..")
 
@@ -193,7 +194,7 @@ discover = NodePath("../../../../..")
 
 [node name="HSeparator" type="HSeparator" parent="TextureRect/ScrollContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 50
+theme_override_constants/separation = 128
 theme_override_styles/separator = SubResource("StyleBoxEmpty_w46h5")
 
 [node name="JumpIn" parent="TextureRect" instance=ExtResource("9_gh6mh")]
