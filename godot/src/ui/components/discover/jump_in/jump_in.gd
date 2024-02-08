@@ -4,7 +4,7 @@ signal jump_in(position: Vector2i, realm: String)
 
 @export var location: Vector2i = Vector2i(0, 0)
 
-@export var realm: String = "https://realm-provider.decentraland.org/main"
+@export var realm: String = Realm.MAIN_REALM
 
 @export var realm_title: String = "Genesis City"
 
@@ -51,7 +51,7 @@ func set_data(item_data):
 		var world_name = item_data.get("world_name")
 		set_realm(world_name, world_name)
 	else:
-		set_realm("https://realm-provider.decentraland.org/main", "Genesis City")
+		set_realm(Realm.MAIN_REALM, "Genesis City")
 
 
 func _on_button_jump_in_pressed():

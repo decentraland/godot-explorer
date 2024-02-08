@@ -3,6 +3,8 @@ extends DclRealm
 
 signal realm_changed
 
+const MAIN_REALM: String = "https://realm-provider.decentraland.org/main"
+
 const WORLDS_URL: String = "https://worlds-content-server.decentraland.org/world/"
 
 const DAO_SERVERS: Array[String] = [
