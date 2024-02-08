@@ -8,6 +8,7 @@ var scenes_metadata_loaded: bool = false
 var waiting_new_scene_load_report = true
 var waiting_for_scenes = false
 var wait_for: float = 0.0
+var empty_timeout: float = 0.0
 
 
 func _ready():
@@ -21,6 +22,7 @@ func _report_scene_load(done: bool, is_new_loading: bool):
 		enable_loading_screen()
 
 	waiting_new_scene_load_report = false
+	empty_timeout = 1.0
 
 
 func enable_loading_screen():
@@ -52,20 +54,28 @@ func _physics_process(delta):
 	elif waiting_for_scenes:
 		var scenes_loaded_count: int = Global.scene_runner.get_child_count()
 		if scenes_loaded_count == 0:
-			loading_screen.set_progress(100)
-			hide_loading_screen()
+			empty_timeout += delta
+			if empty_timeout < 0.0:
+				loading_screen.set_progress(100)
+				hide_loading_screen()
 			return
 
 		# 20% to 100% is waiting for all scene runners hit frame 4 (all gltf are loaded)
-		var scene_progress: int = 0
+		var scene_progress: float = 0
 		for child in Global.scene_runner.get_children():
+			var this_scene_progress: float = 0.0
 			if child is DclSceneNode:
 				var tick_number = mini(child.get_last_tick_number(), 4)
-				scene_progress += tick_number
+				if tick_number < 4:
+					this_scene_progress = 0.2 * (float(tick_number) / 3.0)
+					this_scene_progress += (
+						0.8 * child.get_gltf_loading_progress() * (float(tick_number) / 3.0)
+					)
+				else:
+					this_scene_progress = 1.0
+			scene_progress += this_scene_progress
 
-		var current_progress: int = (
-			int(float(scene_progress) / float(scenes_loaded_count * 4) * 80.0) + 20
-		)
+		var current_progress: int = int(scene_progress / float(scenes_loaded_count) * 80.0) + 20
 		loading_screen.set_progress(current_progress)
 
 		if current_progress == 100:

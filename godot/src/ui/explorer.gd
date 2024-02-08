@@ -58,6 +58,7 @@ func get_params_from_cmd():
 	var location_vector = null
 	var realm_in_place := args.find("--realm")
 	var location_in_place := args.find("--location")
+	var preview_mode := args.has("--preview")
 
 	if realm_in_place != -1 and args.size() > realm_in_place + 1:
 		realm_string = args[realm_in_place + 1]
@@ -69,7 +70,7 @@ func get_params_from_cmd():
 			location_vector = Vector2i(int(location_vector[0]), int(location_vector[1]))
 		else:
 			location_vector = null
-	return [realm_string, location_vector]
+	return [realm_string, location_vector, preview_mode]
 
 
 func _ready():
@@ -77,6 +78,9 @@ func _ready():
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
+
+	if cmd_params[2]:
+		_on_control_menu_request_debug_panel(true)
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()

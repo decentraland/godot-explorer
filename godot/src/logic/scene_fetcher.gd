@@ -41,6 +41,71 @@ func _ready():
 		DirAccess.remove_absolute(adaptation_layer_js_local_path)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
+	Global.loading_finished.connect(self.on_loading_finished)
+
+
+func get_current_spawn_point():
+	var current_scene_data = get_current_scene_data()
+	if current_scene_data.is_empty():
+		return null
+
+	var spawn_points = current_scene_data.get("entity", {}).get("metadata", {}).get(
+		"spawnPoints", []
+	)
+	if not spawn_points is Array:
+		return null
+
+	var some_spawn_point = null
+	for spawn_point in spawn_points:
+		if not spawn_point is Dictionary:
+			continue
+
+		if some_spawn_point == null:
+			some_spawn_point = spawn_point
+
+		if spawn_point.get("default", false):
+			some_spawn_point = spawn_point
+
+	if some_spawn_point == null:
+		return null
+
+	var target_position = some_spawn_point.get("position")
+	# TODO Camera target
+	# var target_camera_position = some_spawn_point.get("cameraTarget")
+
+	if not target_position is Dictionary:
+		return null
+
+	var target_position_x = target_position.get("x")
+	var target_position_y = target_position.get("y")
+	var target_position_z = target_position.get("z")
+
+	if target_position_x is Array and target_position_x.size() == 2:
+		target_position_x = randf_range(target_position_x[0], target_position_x[1])
+
+	if target_position_y is Array and target_position_y.size() == 2:
+		target_position_y = randf_range(target_position_y[0], target_position_y[1])
+
+	if target_position_z is Array and target_position_z.size() == 2:
+		target_position_z = randf_range(target_position_z[0], target_position_z[1])
+
+	var base_parcel = (
+		current_scene_data
+		. entity
+		. get("metadata", {})
+		. get("scene", {})
+		. get("base", "0,0")
+		. split_floats(",")
+	)
+	target_position_x = base_parcel[0] * 16.0 + target_position_x
+	target_position_z = -(base_parcel[1] * 16.0 + target_position_z)
+	return Vector3(target_position_x, target_position_y, target_position_z)
+
+
+func on_loading_finished():
+	var target_position = get_current_spawn_point()
+	if target_position != null:
+		Global.get_explorer().move_to(target_position)
 
 
 func on_scene_killed(killed_scene_id, _entity_id):

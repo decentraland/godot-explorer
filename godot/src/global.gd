@@ -1,6 +1,7 @@
 extends DclGlobal
 
 signal config_changed
+signal loading_finished
 
 enum CameraMode {
 	FIRST_PERSON = 0,

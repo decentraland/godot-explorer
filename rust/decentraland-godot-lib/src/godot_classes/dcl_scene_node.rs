@@ -10,6 +10,10 @@ pub struct DclSceneNode {
 
     pub last_tick_number: i32,
 
+    // two properties to track the loading progress of the gltf
+    pub max_gltf_loaded_count: i32,
+    pub gltf_loading_count: i32,
+
     #[base]
     _base: Base<Node3D>,
 }
@@ -27,6 +31,8 @@ impl DclSceneNode {
                 scene_id,
                 is_global,
                 last_tick_number: -1,
+                max_gltf_loaded_count: 0,
+                gltf_loading_count: 0,
             }
         });
         obj.set_name(GString::from(format!("scene_id_{:?}", scene_id.clone())));
@@ -46,5 +52,13 @@ impl DclSceneNode {
     #[func]
     fn get_last_tick_number(&self) -> i32 {
         self.last_tick_number
+    }
+
+    #[func]
+    fn get_gltf_loading_progress(&self) -> f32 {
+        if self.max_gltf_loaded_count == 0 {
+            return 1.0;
+        }
+        1.0 - (self.gltf_loading_count as f32 / self.max_gltf_loaded_count as f32)
     }
 }
