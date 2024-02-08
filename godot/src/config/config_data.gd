@@ -123,20 +123,19 @@ var audio_general_volume: float = 100.0:
 func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
 	var realm = place_dict.get("realm")
 	var position = place_dict.get("position")
-	var to_remove: Array[int] = []
-	for i in range(_last_places.size()):
-		var place = _last_places[i]
+	var to_remove: Array = []
+	for place in _last_places:
 		var place_realm = place.get("realm")
 		var place_position = place.get("position")
 		if place_realm == realm:
 			if Realm.is_genesis_city(realm):
 				if place_position == position:
-					to_remove.push_front(i)
+					to_remove.push_back(place)
 			else:
-				to_remove.push_front(i)
+				to_remove.push_back(place)
 
-	for i in to_remove:
-		_last_places.remove_at(i)
+	for place in to_remove:
+		_last_places.erase(place)
 
 
 func add_place_to_last_places(position: Vector2i, realm: String):
