@@ -33,8 +33,8 @@ var left_hand_idx: int = -1
 var left_hand_position: Transform3D
 var index_to_animation_name: Dictionary = {}
 
-var audio_stream_player: AudioStreamPlayer = null
-var audio_stream_player_gen: AudioStreamGenerator = null
+var voice_chat_audio_player: AudioStreamPlayer = null
+var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
@@ -508,20 +508,21 @@ func _process(delta):
 
 
 func spawn_voice_channel(sample_rate, _num_channels, _samples_per_channel):
-	audio_stream_player = AudioStreamPlayer.new()
-	audio_stream_player_gen = AudioStreamGenerator.new()
+	voice_chat_audio_player = AudioStreamPlayer.new()
+	voice_chat_audio_player.set_bus("VoiceChat")
+	voice_chat_audio_player_gen = AudioStreamGenerator.new()
 
-	audio_stream_player.set_stream(audio_stream_player_gen)
-	audio_stream_player_gen.mix_rate = sample_rate
-	add_child(audio_stream_player)
-	audio_stream_player.play()
+	voice_chat_audio_player.set_stream(voice_chat_audio_player_gen)
+	voice_chat_audio_player_gen.mix_rate = sample_rate
+	add_child(voice_chat_audio_player)
+	voice_chat_audio_player.play()
 
 
 func push_voice_frame(frame):
-	if not audio_stream_player.playing:
-		audio_stream_player.play()
+	if not voice_chat_audio_player.playing:
+		voice_chat_audio_player.play()
 
-	audio_stream_player.get_stream_playback().push_buffer(frame)
+	voice_chat_audio_player.get_stream_playback().push_buffer(frame)
 
 
 func activate_attach_points():

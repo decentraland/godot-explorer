@@ -28,26 +28,43 @@ impl IAudioStreamPlayer for VoiceChatRecorder {
                 .emit_signal("audio".into(), &[stereo_data.to_variant()]);
         }
     }
-
-    fn ready(&mut self) {
-        let mut audio_server = AudioServer::singleton();
-        let idx = audio_server.get_bus_index("Capture".into());
-        if idx != -1 {
-            let Some(bus_effect) = audio_server.get_bus_effect(idx, 0) else {
-                return;
-            };
-
-            self.effect_capture = bus_effect.try_cast().ok();
-            self.base.set_stream(AudioStreamMicrophone::new().upcast());
-            self.base.set_bus("Capture".into());
-        }
-    }
 }
 
 #[godot_api]
 impl VoiceChatRecorder {
+    #[func]
+    fn is_audio_server_ready(&self) -> bool {
+        return self.effect_capture.is_some()
+    }
+
+    #[func]
+    fn setup_audio_server(&mut self) {
+        let mut audio_server = AudioServer::singleton();
+        let idx = audio_server.get_bus_index("Capture".into());
+        if idx != -1 {
+            let bus_effect: Option<Gd<AudioEffectCapture>> = {
+                let mut found_effect = None;
+                for i in 0..audio_server.get_bus_effect_count(idx) {
+                    if let Some(bus_effect) = audio_server.get_bus_effect(idx, i) {
+                        // Assuming you want to find the first `AudioEffectCapture`, so break after finding
+                        found_effect = bus_effect.try_cast().ok();
+                        if found_effect.is_some() {
+                            break;
+                        }
+                    }
+                }
+                found_effect
+            };
+            
+
+            self.effect_capture = bus_effect;
+            self.base.set_stream(AudioStreamMicrophone::new().upcast());
+            self.base.set_bus("Capture".into());
+        }
+    }
+
     #[signal]
-    fn audio(enabled: bool);
+    fn audio(frame: PackedVector2Array);
 
     #[func]
     fn set_recording_enabled(&mut self, enabled: bool) {
@@ -55,12 +72,12 @@ impl VoiceChatRecorder {
             return;
         }
 
-        self.recording_enabled = enabled;
         let Some(effect_capture) = &mut self.effect_capture else {
             return;
         };
+        self.recording_enabled = enabled;
 
-        if enabled {
+        if !enabled {
             effect_capture.clear_buffer();
             self.base.stop();
         } else {
