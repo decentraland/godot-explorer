@@ -78,9 +78,12 @@ grow_vertical = 2
 texture = SubResource("GradientTexture2D_05s6u")
 
 [node name="ScrollContainer" type="ScrollContainer" parent="TextureRect"]
-layout_mode = 2
-offset_right = 1280.0
-offset_bottom = 720.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
@@ -108,27 +111,30 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_bottom = 121.0
+offset_bottom = 242.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="TextureRect_GenesisCity" type="TextureRect" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/Control/Content"]
 custom_minimum_size = Vector2(0, 121)
-layout_mode = 2
-offset_right = 1216.0
-offset_bottom = 100.0
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 texture = ExtResource("4_2pq8h")
 expand_mode = 2
-stretch_mode = 4
+stretch_mode = 5
 
 [node name="TextureRect_Worlds" type="TextureRect" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/Control/Content"]
 custom_minimum_size = Vector2(0, 121)
-layout_mode = 2
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
 offset_top = 121.0
-offset_right = 1216.0
 offset_bottom = 242.0
+grow_horizontal = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 texture = ExtResource("5_1hjun")

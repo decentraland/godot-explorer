@@ -22,7 +22,9 @@ var no_more_elements: bool = false
 var loading = false
 
 
-func _place_exists_in_last_places(realm: String, position: Vector2i, last_places: Array[Dictionary]) -> bool:
+func _place_exists_in_last_places(
+	realm: String, position: Vector2i, last_places: Array[Dictionary]
+) -> bool:
 	for place in last_places:
 		var place_realm = place.get("realm")
 		var place_position = place.get("position")
@@ -33,7 +35,7 @@ func _place_exists_in_last_places(realm: String, position: Vector2i, last_places
 			else:
 				return true
 	return false
-	
+
 
 func _try_to_add_to_last_places(realm: String, position: Vector2i, last_places: Array[Dictionary]):
 	if not _place_exists_in_last_places(realm, position, last_places):
@@ -42,6 +44,7 @@ func _try_to_add_to_last_places(realm: String, position: Vector2i, last_places: 
 			"position": position,
 		}
 		last_places.push_front(last_place)
+
 
 func request_last_places() -> void:
 	if loading:
@@ -59,9 +62,15 @@ func request_last_places() -> void:
 	var index = 0
 
 	# Hardcoded goerli plaza
-	_try_to_add_to_last_places("https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main/", Vector2i(72, -10), last_places)
-	
-	_try_to_add_to_last_places(Global.config.last_realm_joined, Global.config.last_parcel_position, last_places)
+	_try_to_add_to_last_places(
+		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main/",
+		Vector2i(72, -10),
+		last_places
+	)
+
+	_try_to_add_to_last_places(
+		Global.config.last_realm_joined, Global.config.last_parcel_position, last_places
+	)
 
 	for place in last_places:
 		var realm: String = Realm.ensure_reduce_url(place.get("realm"))

@@ -163,7 +163,7 @@ clip_text = true
 
 [node name="HBoxContainer3" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 15
+theme_override_constants/separation = 5
 
 [node name="HBoxContainer_Likes" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
 unique_name_in_owner = true
@@ -211,6 +211,7 @@ toggle_mode = true
 icon = ExtResource("6_8ss23")
 flat = true
 icon_alignment = 1
+expand_icon = true
 
 [node name="Label_Likes" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Likes"]
 unique_name_in_owner = true
@@ -219,8 +220,10 @@ size_flags_horizontal = 3
 theme = ExtResource("5_k0ege")
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("6_txpei")
+theme_override_font_sizes/font_size = 14
 text = "78%"
 horizontal_alignment = 2
+vertical_alignment = 1
 
 [node name="HBoxContainer_Views" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
 unique_name_in_owner = true
@@ -243,8 +246,10 @@ size_flags_horizontal = 3
 theme = ExtResource("5_k0ege")
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("6_txpei")
+theme_override_font_sizes/font_size = 14
 text = "546"
 horizontal_alignment = 2
+vertical_alignment = 1
 
 [node name="Container_Online" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
 unique_name_in_owner = true
@@ -267,8 +272,10 @@ size_flags_horizontal = 3
 theme = ExtResource("5_k0ege")
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("6_txpei")
+theme_override_font_sizes/font_size = 14
 text = "0"
 horizontal_alignment = 2
+vertical_alignment = 1
 
 [node name="Label_LocationTitle" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
