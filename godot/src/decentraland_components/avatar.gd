@@ -44,6 +44,8 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 @onready var animation_player = $Armature/AnimationPlayer
 @onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
 @onready var label_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name/Label3D_Name
+@onready var sprite_3d_mic_enabled = %Sprite3D_MicEnabled
+@onready var timer_hide_mic = %Timer_HideMic
 @onready var body_shape_root: Node3D = $Armature
 @onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
 @onready var bone_attachment_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name
@@ -93,6 +95,7 @@ func async_update_avatar(avatar: Dictionary):
 	if avatar.get("name", "") != null:
 		avatar_name = avatar.get("name", "")
 
+	sprite_3d_mic_enabled.hide()
 	label_3d_name.text = avatar_name
 	if hide_name:
 		label_3d_name.hide()
@@ -523,6 +526,8 @@ func push_voice_frame(frame):
 		voice_chat_audio_player.play()
 
 	voice_chat_audio_player.get_stream_playback().push_buffer(frame)
+	sprite_3d_mic_enabled.show()
+	timer_hide_mic.start()
 
 
 func activate_attach_points():
@@ -551,3 +556,7 @@ func _attach_point_bone_pose_changed(bone_idx: int):
 		right_hand_idx:
 			right_hand_position = body_shape_skeleton_3d.get_bone_global_pose(bone_idx)
 			right_hand_position.basis = right_hand_position.basis.scaled(100.0 * Vector3.ONE)
+
+
+func _on_timer_hide_mic_timeout():
+	sprite_3d_mic_enabled.hide()
