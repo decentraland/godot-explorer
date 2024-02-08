@@ -44,19 +44,17 @@ func _ready():
 	Global.loading_finished.connect(self.on_loading_finished)
 
 
-func get_target_position(target_position: Variant) -> int:
+func get_target_position(target_position: Variant) -> float:
 	if target_position is Array:
 		if target_position.is_empty():
-			return 0
+			return 0.0
 
 		if target_position.size() == 1:
-			return target_position[0]
+			return float(target_position[0])
 
 		# size >= 2
 		return randf_range(target_position[0], target_position[1])
-	return target_position
-
-
+	return float(target_position)
 func get_current_spawn_point():
 	var current_scene_data = get_current_scene_data()
 	if current_scene_data.is_empty():
