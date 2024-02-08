@@ -11,6 +11,7 @@ extends Control
 		title = new_value
 
 func _ready():
+	hide()
 	if is_instance_valid(generator):
 		generator.set_consumer_visible.connect(self.set_visible)
 		generator.item_container = item_container
@@ -18,3 +19,7 @@ func _ready():
 		scroll_container.item_container = item_container
 		scroll_container.request.connect(generator.on_request)
 		scroll_container.start()
+
+
+func _on_scroll_container_scroll_ended():
+	pass # Replace with function body.

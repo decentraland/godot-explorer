@@ -114,7 +114,9 @@ func set_data(item_data):
 	set_likes_percent(like_score if like_score is float else 0.0)
 	set_online(item_data.get("user_count", 0))
 	
-	_async_download_image(item_data.get("image", ""))
+	var image_url = item_data.get("image", "")
+	if not image_url.is_empty():
+		_async_download_image(image_url)
 
 func _async_download_image(url: String):
 	var url_hash = get_hash_from_url(url)

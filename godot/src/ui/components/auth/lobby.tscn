@@ -19,12 +19,12 @@
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="16_2f58j"]
 [ext_resource type="Texture2D" uid="uid://jlijusqci4aw" path="res://assets/ui/warning.svg" id="17_1ct5d"]
 
-[sub_resource type="Gradient" id="Gradient_gj5s1"]
+[sub_resource type="Gradient" id="Gradient_yeovc"]
 offsets = PackedFloat32Array(0.373134, 1)
 colors = PackedColorArray(0.862745, 0.176471, 0.827451, 1, 0.286275, 0.0980392, 0.458824, 1)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_vjyug"]
-gradient = SubResource("Gradient_gj5s1")
+gradient = SubResource("Gradient_yeovc")
 fill = 1
 fill_from = Vector2(0.5, 0.5)
 metadata/_snap_enabled = true

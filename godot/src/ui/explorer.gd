@@ -237,7 +237,7 @@ func _on_control_minimap_request_open_map():
 
 
 func _on_control_menu_jump_to(parcel: Vector2i):
-	move_to(Vector3i(parcel.x * 16, 3, -parcel.y * 16))
+	teleport_to(parcel)
 	control_menu.close()
 
 
@@ -343,8 +343,13 @@ func move_to(position: Vector3):
 		loading_ui.enable_loading_screen()
 
 
-func teleport_to(parcel: Vector2i):
+func teleport_to(parcel: Vector2i, realm: String = ""):
+	if realm != Global.realm.get_realm_string():
+		Global.realm.async_set_realm(realm)
 	move_to(Vector3i(parcel.x * 16, 3, -parcel.y * 16))
+
+	Global.config.add_place_to_last_places(parcel, realm)
+	dirty_save_position = true
 
 
 func player_look_at(look_at_position: Vector3):

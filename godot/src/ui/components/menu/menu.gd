@@ -105,7 +105,7 @@ func _on_button_close_pressed():
 
 
 func _jump_to(parcel: Vector2i):
-	emit_signal("jump_to", parcel)
+	jump_to.emit(parcel)
 
 
 func close():

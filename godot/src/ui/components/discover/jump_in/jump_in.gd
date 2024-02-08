@@ -22,7 +22,7 @@ func set_location(_location: Vector2i):
 	label_location.text = "%s, %s" % [_location.x, _location.y]
 	
 func set_realm(_realm: String, _realm_title: String):
-	label_realm.text = realm_title
+	label_realm.text = _realm_title
 	realm = _realm
 	
 func set_data(item_data):
@@ -40,3 +40,9 @@ func set_data(item_data):
 
 func _on_button_jump_in_pressed():
 	jump_in.emit(location, realm)
+
+
+func _on_gui_input(event):
+	if event is InputEventScreenTouch:
+		if !event.pressed:
+			self.hide()

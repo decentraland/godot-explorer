@@ -99,6 +99,10 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 	set(value):
 		last_parcel_position = value
 
+var last_places: Array[Dictionary] = []:
+	set(value):
+		last_places = value
+
 var session_account: Dictionary = {}:
 	set(value):
 		session_account = value
@@ -109,6 +113,35 @@ var guest_profile: Dictionary = {}:
 		guest_profile = value
 		param_changed.emit(ConfigParams.GUEST_PROFILE)
 
+func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
+	var realm = place_dict.get("realm")
+	var position = place_dict.get("position")
+	var to_remove: Array[int] = []
+	for i in range(_last_places.size()):
+		var place = _last_places[i]
+		var place_realm = place.get("realm")
+		var place_position = place.get("position")
+		if place.get("realm") == realm:
+			if Realm.is_genesis_city(realm) and place_position == position:
+				to_remove.push_front(i)
+			else:
+				to_remove.push_front(i)
+				
+	for i in to_remove:
+		_last_places.remove_at(i)
+
+func add_place_to_last_places(position: Vector2i, realm: String):
+	prints("add_place_to_last_places", realm, position)
+	var place_dict = {
+		"position": position,
+		"realm": realm,
+	}
+	fix_last_places_duplicates(place_dict, last_places)
+
+	last_places.push_front(place_dict)
+
+	if last_places.size() >= 10:
+		last_places.pop_back()
 
 func load_from_default():
 	self.gravity = 55.0
@@ -179,8 +212,13 @@ func load_from_settings_file():
 	self.last_parcel_position = settings_file.get_value(
 		"user", "last_parcel_position", data_default.last_parcel_position
 	)
+
 	self.last_realm_joined = settings_file.get_value(
 		"user", "last_realm_joined", data_default.last_realm_joined
+	)
+
+	self.last_places = settings_file.get_value(
+		"user", "last_places", data_default.last_places
 	)
 
 
@@ -206,4 +244,5 @@ func save_to_settings_file():
 	settings_file.set_value("session", "guest_profile", self.guest_profile)
 	settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
+	settings_file.set_value("user", "last_places", self.last_places)
 	settings_file.save(SETTINGS_FILE)
