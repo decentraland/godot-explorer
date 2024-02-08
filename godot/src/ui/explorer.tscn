@@ -174,14 +174,11 @@ texture = ExtResource("8_ttlm2")
 expand_mode = 2
 
 [node name="VirtualJoystick_Left" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("9_lxw33")]
-layout_mode = 0
-anchors_preset = 0
-anchor_top = 0.0
-anchor_bottom = 0.0
-offset_top = 393.0
-offset_right = 450.0
-offset_bottom = 720.0
-grow_vertical = 1
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 0.352
+offset_top = -327.0
+offset_right = -0.560028
 deadzone_size = 0.0
 
 [node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="UI/SafeMarginContainer/InteractableHUD"]

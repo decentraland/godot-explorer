@@ -5,9 +5,9 @@ signal param_changed(param: ConfigParams, new_value)
 
 enum ConfigParams {
 	CONTENT_DIRECTORY,
-	RESOLUTION,
-	WINDOW_SIZE,
-	UI_SCALE,
+	WINDOWED,
+	UI_ZOOM,
+	RESOLUTION_3D_SCALE,
 	GRAVITY,
 	JUMP_VELOCITY,
 	WALK_VELOCITY,
@@ -19,6 +19,7 @@ enum ConfigParams {
 	SKY_BOX,
 	SESSION_ACCOUNT,
 	GUEST_PROFILE,
+	AUDIO_GENERAL_VOLUME
 }
 
 const SETTINGS_FILE = "user://settings.cfg"
@@ -34,20 +35,20 @@ var gravity: float = 55.0:
 		gravity = value
 		param_changed.emit(ConfigParams.GRAVITY)
 
-var resolution: String = "1280 x 720":
+var windowed: bool = true:
 	set(value):
-		resolution = value
-		param_changed.emit(ConfigParams.RESOLUTION)
+		windowed = value
+		param_changed.emit(ConfigParams.WINDOWED)
 
-var window_size: String = "1280 x 720":
+var ui_zoom: float = -1.0:
 	set(value):
-		window_size = value
-		param_changed.emit(ConfigParams.WINDOW_SIZE)
+		ui_zoom = value
+		param_changed.emit(ConfigParams.UI_ZOOM)
 
-var ui_scale: float:
+var resolution_3d_scale: float = 1.0:
 	set(value):
-		ui_scale = value
-		param_changed.emit(ConfigParams.UI_SCALE)
+		resolution_3d_scale = value
+		param_changed.emit(ConfigParams.RESOLUTION_3D_SCALE)
 
 var jump_velocity: float = 12.0:
 	set(value):
@@ -69,7 +70,7 @@ var process_tick_quota_ms: int = 10:
 		process_tick_quota_ms = value
 		param_changed.emit(ConfigParams.PROCESS_TICK_QUOTA_MS)
 
-var scene_radius: int = 4:
+var scene_radius: int = 2:
 	set(value):
 		scene_radius = value
 		param_changed.emit(ConfigParams.SCENE_RADIUS)
@@ -130,6 +131,7 @@ func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
 	for i in to_remove:
 		_last_places.remove_at(i)
 
+
 func add_place_to_last_places(position: Vector2i, realm: String):
 	prints("add_place_to_last_places", realm, position)
 	var place_dict = {
@@ -143,6 +145,13 @@ func add_place_to_last_places(position: Vector2i, realm: String):
 	if last_places.size() >= 10:
 		last_places.pop_back()
 
+
+var audio_general_volume: float = 100.0:
+	set(value):
+		audio_general_volume = value
+		param_changed.emit(ConfigParams.AUDIO_GENERAL_VOLUME)
+
+
 func load_from_default():
 	self.gravity = 55.0
 	self.jump_velocity = 12.0
@@ -150,7 +159,7 @@ func load_from_default():
 	self.run_velocity = 6.0
 
 	self.process_tick_quota_ms = 10
-	self.scene_radius = 4
+	self.scene_radius = 2
 	self.limit_fps = 0
 
 	if Global.is_mobile():
@@ -162,8 +171,7 @@ func load_from_default():
 
 	self.show_fps = true
 
-	self.resolution = "1280 x 720"
-	self.window_size = "1280 x 720"
+	self.windowed = true
 
 	self.session_account = {}
 	self.guest_profile = {}
@@ -197,9 +205,14 @@ func load_from_settings_file():
 		"config", "local_content_dir", data_default.local_content_dir
 	)
 	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
-	self.resolution = settings_file.get_value("config", "resolution", data_default.resolution)
-	self.window_size = settings_file.get_value("config", "window_size", data_default.window_size)
-	self.ui_scale = settings_file.get_value("config", "ui_scale", data_default.ui_scale)
+	self.windowed = settings_file.get_value("config", "windowed", data_default.windowed)
+	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
+	self.resolution_3d_scale = settings_file.get_value(
+		"config", "resolution_3d_scale", data_default.resolution_3d_scale
+	)
+	self.audio_general_volume = settings_file.get_value(
+		"config", "audio_general_volume", data_default.audio_general_volume
+	)
 
 	self.session_account = settings_file.get_value(
 		"session", "account", data_default.session_account
@@ -237,9 +250,10 @@ func save_to_settings_file():
 	settings_file.set_value("config", "skybox", self.skybox)
 	settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	settings_file.set_value("config", "show_fps", self.show_fps)
-	settings_file.set_value("config", "resolution", self.resolution)
-	settings_file.set_value("config", "window_size", self.window_size)
-	settings_file.set_value("config", "ui_scale", self.ui_scale)
+	settings_file.set_value("config", "windowed", self.windowed)
+	settings_file.set_value("config", "ui_zoom", self.ui_zoom)
+	settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
+	settings_file.set_value("config", "audio_general_volume", self.audio_general_volume)
 	settings_file.set_value("session", "account", self.session_account)
 	settings_file.set_value("session", "guest_profile", self.guest_profile)
 	settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)

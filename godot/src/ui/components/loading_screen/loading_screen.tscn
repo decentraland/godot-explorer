@@ -269,10 +269,13 @@ stretch_mode = 5
 
 [node name="Label" type="Label" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
 text = "A Little Longer Than Expected..."
 
 [node name="Label2" type="Label" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 12
 text = "You can try to reload the experience or run it as it is."
 

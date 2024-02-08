@@ -57,7 +57,7 @@ impl INode for ContentProvider {
         ));
         Self {
             content_folder,
-            http_queue_requester: Arc::new(HttpQueueRequester::new(4)),
+            http_queue_requester: Arc::new(HttpQueueRequester::new(6)),
             cached: HashMap::new(),
             content_notificator: Arc::new(ContentNotificator::new()),
             godot_single_thread: Arc::new(Semaphore::new(1)),

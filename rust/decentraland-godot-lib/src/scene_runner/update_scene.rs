@@ -93,8 +93,14 @@ pub fn _process_scene(
 
                 // fix: if the scene is loading, we need to wait until it finishes before spawn the next tick
                 // tick 0 => onStart() => tick=1 => first onUpdate() => tick=2 => second onUpdate() => tick= 3
-                if tick_number < 3 && !scene.gltf_loading.is_empty() {
+                if tick_number <= 3 && !scene.gltf_loading.is_empty() {
                     sync_gltf_loading_state(scene, crdt_state, ref_time, end_time_us);
+
+                    let mut scene_node = scene.godot_dcl_scene.root_node_3d.bind_mut();
+                    scene_node.gltf_loading_count = scene.gltf_loading.len() as i32;
+                    scene_node.max_gltf_loaded_count = scene_node
+                        .gltf_loading_count
+                        .max(scene_node.max_gltf_loaded_count);
                     return false;
                 }
 

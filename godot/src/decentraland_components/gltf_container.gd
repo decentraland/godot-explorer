@@ -27,6 +27,7 @@ func async_load_gltf():
 	var promise = Global.content_provider.fetch_gltf(dcl_gltf_src, content_mapping)
 	if promise == null:
 		printerr("Fatal error on fetch gltf: promise == null")
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		return
 
 	if not promise.is_resolved():
@@ -35,6 +36,7 @@ func async_load_gltf():
 	var res = promise.get_data()
 	if res is PromiseError:
 		printerr("Error on fetch gltf: ", res.get_error())
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		return
 
 	var instance_promise: Promise = Global.content_provider.instance_gltf_colliders(
@@ -43,6 +45,7 @@ func async_load_gltf():
 	var res_instance = await PromiseUtils.async_awaiter(instance_promise)
 	if res_instance is PromiseError:
 		printerr("Error on fetch gltf: ", res_instance.get_error())
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		return
 
 	dcl_pending_node = res_instance
