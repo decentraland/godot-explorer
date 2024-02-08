@@ -22,16 +22,22 @@ pub fn update_visibility(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     for entity in visibility_dirty {
         let new_value = visibility_component.get(entity);
 
-        let Some(new_value) = new_value else {
-            continue;
-        };
-
-        let Some(new_value) = new_value.value.clone() else {
-            continue;
+        let visible = if let Some(new_value) = new_value {
+            if let Some(new_value) = new_value.value.clone() {
+                if let Some(new_value) = new_value.visible {
+                    new_value
+                } else {
+                    true
+                }
+            } else {
+                true
+            }
+        } else {
+            true
         };
 
         let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
-        if new_value.visible() {
+        if visible {
             node_3d.show();
         } else {
             node_3d.hide();
