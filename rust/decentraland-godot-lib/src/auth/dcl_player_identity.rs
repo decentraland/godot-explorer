@@ -353,7 +353,12 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn async_get_identity_headers(&self, uri: GString, metadata: GString, method: GString) -> Gd<Promise> {
+    pub fn async_get_identity_headers(
+        &self,
+        uri: GString,
+        metadata: GString,
+        method: GString,
+    ) -> Gd<Promise> {
         let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();
 
@@ -369,7 +374,6 @@ impl DclPlayerIdentity {
             let metadata = metadata.to_string();
 
             handle.spawn(async move {
-
                 let headers = super::wallet::sign_request(
                     method.as_str(),
                     &uri,

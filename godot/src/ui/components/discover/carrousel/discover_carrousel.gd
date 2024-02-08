@@ -1,14 +1,15 @@
 extends Control
 
-@onready var scroll_container = %ScrollContainer
-@onready var item_container = %HBoxContainer_Items
-
 @export var generator: CarrouselGenerator = null
 
 @export var title: String = "No title":
 	set(new_value):
 		%Label_Title.text = new_value
 		title = new_value
+
+@onready var scroll_container = %ScrollContainer
+@onready var item_container = %HBoxContainer_Items
+
 
 func _ready():
 	hide()
@@ -22,4 +23,4 @@ func _ready():
 
 
 func _on_scroll_container_scroll_ended():
-	pass # Replace with function body.
+	pass  # Replace with function body.

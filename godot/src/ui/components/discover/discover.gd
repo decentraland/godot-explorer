@@ -3,8 +3,10 @@ extends Control
 
 @onready var jump_in = %JumpIn
 
+
 func _ready():
 	jump_in.hide()
+
 
 func on_item_pressed(data):
 	jump_in.show()
@@ -25,4 +27,4 @@ func _on_jump_in_jump_in(parcel_position, realm):
 
 
 func _on_visibility_changed():
-	pass # Replace with function body.
+	pass  # Replace with function body.

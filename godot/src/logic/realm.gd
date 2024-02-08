@@ -1,6 +1,8 @@
 class_name Realm
 extends DclRealm
 
+signal realm_changed
+
 const WORLDS_URL: String = "https://worlds-content-server.decentraland.org/world/"
 
 const DAO_SERVERS: Array[String] = [
@@ -18,7 +20,6 @@ const DAO_SERVERS: Array[String] = [
 	"https://realm-provider.decentraland.org/main/"
 ]
 
-signal realm_changed
 var _has_realm = false
 
 
@@ -38,9 +39,8 @@ static func is_genesis_city(name: String):
 
 
 static func dcl_world_url(dcl_name: String) -> String:
-	return (
-		WORLDS_URL + dcl_name.to_lower().uri_encode()
-	)
+	return WORLDS_URL + dcl_name.to_lower().uri_encode()
+
 
 static func ensure_reduce_url(url):
 	return ensure_remove_slash(ensure_dcl_ens(url))
@@ -54,6 +54,7 @@ static func ensure_remove_slash(str_param: String) -> String:
 	if str_param.ends_with("/"):
 		return str_param.left(str_param.length() - 1)
 	return str_param
+
 
 static func ensure_ends_with_slash(str_param: String) -> String:
 	if str_param.is_empty():

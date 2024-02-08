@@ -114,6 +114,12 @@ var guest_profile: Dictionary = {}:
 		guest_profile = value
 		param_changed.emit(ConfigParams.GUEST_PROFILE)
 
+var audio_general_volume: float = 100.0:
+	set(value):
+		audio_general_volume = value
+		param_changed.emit(ConfigParams.AUDIO_GENERAL_VOLUME)
+
+
 func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
 	var realm = place_dict.get("realm")
 	var position = place_dict.get("position")
@@ -127,7 +133,7 @@ func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
 				to_remove.push_front(i)
 			else:
 				to_remove.push_front(i)
-				
+
 	for i in to_remove:
 		_last_places.remove_at(i)
 
@@ -144,12 +150,6 @@ func add_place_to_last_places(position: Vector2i, realm: String):
 
 	if last_places.size() >= 10:
 		last_places.pop_back()
-
-
-var audio_general_volume: float = 100.0:
-	set(value):
-		audio_general_volume = value
-		param_changed.emit(ConfigParams.AUDIO_GENERAL_VOLUME)
 
 
 func load_from_default():
@@ -230,9 +230,7 @@ func load_from_settings_file():
 		"user", "last_realm_joined", data_default.last_realm_joined
 	)
 
-	self.last_places = settings_file.get_value(
-		"user", "last_places", data_default.last_places
-	)
+	self.last_places = settings_file.get_value("user", "last_places", data_default.last_places)
 
 
 func save_to_settings_file():

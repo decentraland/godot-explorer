@@ -413,6 +413,7 @@ func hide_menu():
 	control_menu.close()
 	release_mouse()
 
+
 func _on_mini_map_pressed():
 	control_menu.show_map()
 	release_mouse()
