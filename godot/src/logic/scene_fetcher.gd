@@ -55,6 +55,8 @@ func get_target_position(target_position: Variant) -> float:
 		# size >= 2
 		return randf_range(target_position[0], target_position[1])
 	return float(target_position)
+
+
 func get_current_spawn_point():
 	var current_scene_data = get_current_scene_data()
 	if current_scene_data.is_empty():
