@@ -34,7 +34,7 @@ impl IAudioStreamPlayer for VoiceChatRecorder {
 impl VoiceChatRecorder {
     #[func]
     fn is_audio_server_ready(&self) -> bool {
-        return self.effect_capture.is_some()
+        self.effect_capture.is_some()
     }
 
     #[func]
@@ -55,7 +55,6 @@ impl VoiceChatRecorder {
                 }
                 found_effect
             };
-            
 
             self.effect_capture = bus_effect;
             self.base.set_stream(AudioStreamMicrophone::new().upcast());
