@@ -1,0 +1,57 @@
+[gd_scene load_steps=6 format=3 uid="uid://3de823q04ptd"]
+
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="1_qm5fw"]
+[ext_resource type="Script" path="res://src/ui/components/discover/carrousel/discover_carrousel.gd" id="1_somjb"]
+[ext_resource type="Script" path="res://src/ui/components/discover/scrollbar_requester.gd" id="3_dtbt6"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_ix28e"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_amqeq"]
+
+[node name="DiscoverCarrousel" type="VBoxContainer"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 35.0
+grow_horizontal = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+script = ExtResource("1_somjb")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 0
+
+[node name="Label_Title" type="Label" parent="MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("1_qm5fw")
+theme_override_font_sizes/font_size = 18
+text = "Section Tittle"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+script = ExtResource("3_dtbt6")
+
+[node name="HBoxContainer_Items" type="HBoxContainer" parent="ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_constants/separation = 10
+
+[node name="TextureProgressBar" parent="ScrollContainer/HBoxContainer_Items" instance=ExtResource("4_ix28e")]
+visible = false
+layout_mode = 2
+
+[node name="VSeparator" type="VSeparator" parent="ScrollContainer/HBoxContainer_Items"]
+layout_mode = 2
+theme_override_constants/separation = 22
+theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
+
+[connection signal="scroll_ended" from="ScrollContainer" to="." method="_on_scroll_container_scroll_ended"]

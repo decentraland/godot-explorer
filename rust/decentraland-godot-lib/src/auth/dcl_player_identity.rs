@@ -353,6 +353,54 @@ impl DclPlayerIdentity {
     }
 
     #[func]
+    pub fn async_get_identity_headers(
+        &self,
+        uri: GString,
+        metadata: GString,
+        method: GString,
+    ) -> Gd<Promise> {
+        let promise = Promise::new_gd();
+        let promise_instance_id = promise.instance_id();
+
+        if let Some(handle) = TokioRuntime::static_clone_handle() {
+            let ephemeral_auth_chain = self
+                .ephemeral_auth_chain
+                .as_ref()
+                .expect("ephemeral auth chain not initialized")
+                .clone();
+
+            let uri = http::Uri::try_from(uri.to_string().as_str()).expect("Invalid url");
+            let method = method.to_string();
+            let metadata = metadata.to_string();
+
+            handle.spawn(async move {
+                let headers = super::wallet::sign_request(
+                    method.as_str(),
+                    &uri,
+                    &ephemeral_auth_chain,
+                    metadata,
+                )
+                .await;
+
+                let mut dict = Dictionary::default();
+                for (key, value) in headers {
+                    dict.set(key.to_godot(), value.to_godot());
+                }
+
+                let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
+                else {
+                    tracing::error!("error getting promise");
+                    return;
+                };
+
+                promise.bind_mut().resolve_with_data(dict.to_variant());
+            });
+        }
+
+        promise
+    }
+
+    #[func]
     pub fn async_prepare_deploy_profile(&self, dict: Dictionary) -> Gd<Promise> {
         let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();

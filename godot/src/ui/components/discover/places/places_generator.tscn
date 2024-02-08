@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://ci4mkq5dpxbys"]
+
+[ext_resource type="Script" path="res://src/ui/components/discover/places/places_generator.gd" id="1_ect71"]
+
+[node name="PlacesGenerator" type="Node"]
+script = ExtResource("1_ect71")

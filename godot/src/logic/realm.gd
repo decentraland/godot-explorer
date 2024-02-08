@@ -2,6 +2,26 @@ class_name Realm
 extends DclRealm
 
 signal realm_changed
+
+const MAIN_REALM: String = "https://realm-provider.decentraland.org/main"
+
+const WORLDS_URL: String = "https://worlds-content-server.decentraland.org/world/"
+
+const DAO_SERVERS: Array[String] = [
+	"https://peer-ec1.decentraland.org/",
+	"https://peer-ec2.decentraland.org/",
+	"https://peer-wc1.decentraland.org/",
+	"https://peer-eu1.decentraland.org/",
+	"https://peer-ap1.decentraland.org/",
+	"https://interconnected.online/",
+	"https://peer.decentral.io/",
+	"https://peer.melonwave.com/",
+	"https://peer.kyllian.me/",
+	"https://peer.uadevops.com/",
+	"https://peer.dclnodes.io/",
+	"https://realm-provider.decentraland.org/main/"
+]
+
 var _has_realm = false
 
 
@@ -11,10 +31,31 @@ static func is_dcl_ens(str_param: String) -> bool:
 	return regex.search(str_param) != null
 
 
+static func is_genesis_city(name: String):
+	name = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(name))
+	name = Realm.ensure_starts_with_https(name)
+	for server in DAO_SERVERS:
+		if server.contains(name):
+			return true
+	return false
+
+
 static func dcl_world_url(dcl_name: String) -> String:
-	return (
-		"https://worlds-content-server.decentraland.org/world/" + dcl_name.to_lower().uri_encode()
-	)
+	return WORLDS_URL + dcl_name.to_lower().uri_encode()
+
+
+static func ensure_reduce_url(url):
+	return ensure_remove_slash(ensure_dcl_ens(url))
+
+
+static func ensure_dcl_ens(url: String) -> String:
+	return url.replace(WORLDS_URL, "")
+
+
+static func ensure_remove_slash(str_param: String) -> String:
+	if str_param.ends_with("/"):
+		return str_param.left(str_param.length() - 1)
+	return str_param
 
 
 static func ensure_ends_with_slash(str_param: String) -> String:

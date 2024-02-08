@@ -234,6 +234,7 @@ visible = false
 layout_mode = 1
 
 [node name="Control_Backpack" parent="ColorRect_Background" instance=ExtResource("8_d38wp")]
+visible = false
 layout_mode = 1
 
 [node name="ColorRect_Background" type="ColorRect" parent="ColorRect_Background/Control_Backpack"]

@@ -41,7 +41,7 @@ func _gui_input(event):
 
 
 func _on_button_pressed():
-	emit_signal("jump_to", parcel_to_jump)
+	jump_to.emit(parcel_to_jump)
 	control_jump_to.hide()
 
 

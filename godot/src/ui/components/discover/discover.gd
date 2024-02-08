@@ -1,45 +1,31 @@
+class_name Discover
 extends Control
 
-@onready var button_highlights = $ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Highlights
-@onready var button_places = $ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Places
-@onready var button_events = $ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Events
-@onready var button_favorites = $ColorRect_Background/VBoxContainer/Hbox_Sections/Button_Favorites
-@onready var vbox_highlights = $ColorRect_Background/VBoxContainer/Control/Vbox_Highlights
-@onready var vbox_places = $ColorRect_Background/VBoxContainer/Control/Vbox_Places
-@onready var vbox_events = $ColorRect_Background/VBoxContainer/Control/Vbox_Events
-@onready var vbox_favorites = $ColorRect_Background/VBoxContainer/Control/Vbox_Favorites
+@onready var jump_in = %JumpIn
 
 
 func _ready():
-	button_highlights.button_pressed = true
-	vbox_highlights.show()
-	vbox_places.hide()
-	vbox_events.hide()
-	vbox_favorites.hide()
+	jump_in.hide()
 
 
-func hide_all():
-	vbox_highlights.hide()
-	vbox_places.hide()
-	vbox_events.hide()
-	vbox_favorites.hide()
+func on_item_pressed(data):
+	jump_in.show()
+	jump_in.set_data(data)
 
 
-func _on_button_favorites_pressed():
-	hide_all()
-	vbox_favorites.show()
+func _on_jump_in_jump_in(parcel_position, realm):
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.teleport_to(parcel_position, realm)
+		jump_in.hide()
+		explorer.hide_menu()
+	else:
+		Global.config.last_realm_joined = realm
+		Global.config.last_parcel_position = parcel_position
+		Global.config.add_place_to_last_places(parcel_position, realm)
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
-func _on_button_events_pressed():
-	hide_all()
-	vbox_events.show()
-
-
-func _on_button_places_pressed():
-	hide_all()
-	vbox_places.show()
-
-
-func _on_button_highlights_pressed():
-	hide_all()
-	vbox_highlights.show()
+func _on_visibility_changed():
+	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
+		%LastVisitGenerator.request_last_places()
