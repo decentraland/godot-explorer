@@ -3,6 +3,20 @@ extends DclAvatar
 
 signal avatar_loaded
 
+const DEFAULT_EMOTES: PackedStringArray = [
+	"handsair",
+	"wave",
+	"fistpump",
+	"dance",
+	"raiseHand",
+	"clap",
+	"money",
+	"kiss",
+	"headexplode",
+	"shrug",
+]
+const AVATAR_EMOTE_SLOTS_COUNT: int = 10
+
 @export var skip_process: bool = false
 @export var hide_name: bool = false
 
@@ -15,6 +29,7 @@ var current_content_url: String = ""
 
 # Current wearables equippoed
 var current_wearables: PackedStringArray
+var current_emotes: PackedStringArray
 var current_body_shape: String = ""
 var current_eyes_color: Color = Color.BLACK
 var current_skin_color: Color = Color.BLACK
@@ -84,6 +99,9 @@ func async_update_avatar_from_profile(profile: Dictionary):
 
 
 func async_update_avatar(avatar: Dictionary):
+	var wearable_to_request := []
+	var emotes := Array(DEFAULT_EMOTES)
+	
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
 		current_content_url = Global.realm.content_base_url
@@ -101,13 +119,30 @@ func async_update_avatar(avatar: Dictionary):
 		label_3d_name.hide()
 
 	current_wearables = avatar.get("wearables")
+	wearable_to_request.append_array(current_wearables)
+	
+	for emote_obj in avatar.get("emotes", []):
+		var emote_urn = emote_obj.get("urn", "")
+		var slot_id = emote_obj.get("slot", -1)
+		if slot_id < 0 or slot_id >= AVATAR_EMOTE_SLOTS_COUNT:
+			continue
+
+		if emote_urn.begins_with("urn"):
+			wearable_to_request.push_back(emote_urn)
+		emotes[slot_id] = emote_urn
+
+	current_emotes = emotes
+	
 	current_body_shape = avatar.get("bodyShape")
+	wearable_to_request.push_back(current_body_shape)
+	
 	current_eyes_color = Avatar.from_color_object(avatar.get("eyes", {}).get("color", null))
 	current_skin_color = Avatar.from_color_object(avatar.get("skin", {}).get("color", null))
 	current_hair_color = Avatar.from_color_object(avatar.get("hair", {}).get("color", null))
 
-	var wearable_to_request := Array(current_wearables)
-	wearable_to_request.push_back(current_body_shape)
+	
+	# TODO: Validate if the current profile can own this wearables
+	# wearable_to_request = filter_owned_wearables(wearable_to_request)
 
 	_load_default_emotes()
 
@@ -270,7 +305,7 @@ func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappin
 	if file_name.ends_with(".png"):
 		promise = Global.content_provider.fetch_texture(file_name, content_mapping)
 	else:
-		promise = Global.content_provider.fetch_gltf(file_name, content_mapping)
+		promise = Global.content_provider.fetch_gltf(file_name, content_mapping, false)
 
 	return promise
 
