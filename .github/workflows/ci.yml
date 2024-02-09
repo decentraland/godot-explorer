@@ -158,10 +158,11 @@ jobs:
   build:
     name: Build and test
     # Comment next line to test this job on PRs
-    if: ${{ github.ref == 'refs/heads/main' }}
+    # if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       matrix:
-        os: [self-hosted-windows, ubuntu-latest, macos-latest]
+        # os: [self-hosted-windows, ubuntu-latest, macos-latest]
+        os: [macos-14-xlarge]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
