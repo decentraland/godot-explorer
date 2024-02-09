@@ -27,7 +27,7 @@ ethers = { version = "2.0", features = ["rustls"] }
 async-trait = "0.1.68"
 
 cpal = { version = "0.15.2", optional = true }
-ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch="audioline-and-mobile-fix", optional = true }
+ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch="audioline-and-mobile-fix-6.1", optional = true }
 
 thiserror = "1.0"
 anyhow = "1.0.70"
@@ -65,7 +65,7 @@ multipart = { version = "0.18.0", default-features = false, features = ["client"
 ethers-providers = { version = "2.0", features = ["ws","rustls"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix", features = ["fix_usize_size_t"], optional = true }
+ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix-6.1", features = ["fix_usize_size_t"], optional = true }
 jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
 

@@ -61,13 +61,6 @@ func request_last_places() -> void:
 	var custom_realms: Array[Dictionary] = []
 	var index = 0
 
-	# Hardcoded goerli plaza
-	_try_to_add_to_last_places(
-		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main/",
-		Vector2i(72, -10),
-		last_places
-	)
-
 	_try_to_add_to_last_places(
 		Global.config.last_realm_joined, Global.config.last_parcel_position, last_places
 	)

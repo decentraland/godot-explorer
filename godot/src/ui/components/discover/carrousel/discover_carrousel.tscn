@@ -41,8 +41,10 @@ script = ExtResource("3_dtbt6")
 
 [node name="HBoxContainer_Items" type="HBoxContainer" parent="ScrollContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 185)
 layout_mode = 2
 size_flags_horizontal = 0
+size_flags_vertical = 0
 theme_override_constants/separation = 10
 
 [node name="TextureProgressBar" parent="ScrollContainer/HBoxContainer_Items" instance=ExtResource("4_ix28e")]
