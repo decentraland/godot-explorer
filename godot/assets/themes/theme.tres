@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=81 format=3 uid="uid://bm1rvmngc833v"]
+[gd_resource type="Theme" load_steps=84 format=3 uid="uid://bm1rvmngc833v"]
 
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_l2aal"]
 [ext_resource type="StyleBox" uid="uid://corto87blbgdd" path="res://assets/themes/panel.tres" id="3_8ip38"]
@@ -10,6 +10,7 @@
 [ext_resource type="StyleBox" uid="uid://b7b33rteyw7y0" path="res://assets/themes/general_slider/grabber_highlight_area.tres" id="8_28h04"]
 [ext_resource type="StyleBox" uid="uid://dyf0um3e02x64" path="res://assets/themes/line_edit.tres" id="8_704en"]
 [ext_resource type="Texture2D" uid="uid://bi265olsdwnpm" path="res://assets/themes/icons/checkbox_unpressed.png" id="8_kvsie"]
+[ext_resource type="Texture2D" uid="uid://c7lblc7w1ymlg" path="res://assets/ui/slider.png" id="9_trtut"]
 [ext_resource type="StyleBox" uid="uid://nw2w7vul1wnx" path="res://assets/themes/option_button_disabled.tres" id="9_txtv0"]
 [ext_resource type="StyleBox" uid="uid://bujf67k8oji3g" path="res://assets/themes/general_slider/slider.tres" id="9_yjimp"]
 [ext_resource type="StyleBox" uid="uid://g3qbyl5ohgr" path="res://assets/themes/option_button_normal.tres" id="10_fj4og"]
@@ -216,6 +217,18 @@ corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
+
+[sub_resource type="Image" id="Image_3otd3"]
+data = {
+"data": PackedByteArray(255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0),
+"format": "RGBA8",
+"height": 16,
+"mipmaps": false,
+"width": 4
+}
+
+[sub_resource type="ImageTexture" id="ImageTexture_6qrnd"]
+image = SubResource("Image_3otd3")
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_uacby"]
 
@@ -482,6 +495,12 @@ HScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_on1kl")
 HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_aqont")
 HScrollBar/styles/scroll = SubResource("StyleBoxFlat_mgwk6")
 HScrollBar/styles/scroll_focus = null
+HSlider/constants/center_grabber = 0
+HSlider/constants/grabber_offset = 0
+HSlider/icons/grabber = ExtResource("9_trtut")
+HSlider/icons/grabber_disabled = ExtResource("9_trtut")
+HSlider/icons/grabber_highlight = ExtResource("9_trtut")
+HSlider/icons/tick = SubResource("ImageTexture_6qrnd")
 HSlider/styles/grabber_area = ExtResource("7_eijsr")
 HSlider/styles/grabber_area_highlight = ExtResource("8_28h04")
 HSlider/styles/slider = ExtResource("9_yjimp")

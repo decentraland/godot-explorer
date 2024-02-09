@@ -3,4 +3,5 @@
 [ext_resource type="Script" path="res://src/decentraland_components/video_player.gd" id="1_oqq6w"]
 
 [node name="video_player" type="DclVideoPlayer"]
+bus = &"Scene"
 script = ExtResource("1_oqq6w")
