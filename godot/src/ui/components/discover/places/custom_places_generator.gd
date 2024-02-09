@@ -14,21 +14,23 @@ func add_item(item_data: Dictionary):
 
 
 func on_request(_offset: int, _limit: int) -> void:
-
 	add_item(
 		{
 			"title": "Genesis Plaza",
-			"description": "Jump in to strike up a chat with other visitors, retake the commands tutorial with a cute floating robot, or dive into the swirling portal to get to Decentraland's visitor center.",
+			"description":
+			"Jump in to strike up a chat with other visitors, retake the commands tutorial with a cute floating robot, or dive into the swirling portal to get to Decentraland's visitor center.",
 			"base_position": "0,0",
 			"contact_name": "Decentraland Foundation",
-			"image": "https://peer.decentraland.org/content/contents/bafybeientwwufhkn6yyfgehqqg64rp2u4pxkqfwsgfj2kldvarretredlm",
+			"image":
+			"https://peer.decentraland.org/content/contents/bafybeientwwufhkn6yyfgehqqg64rp2u4pxkqfwsgfj2kldvarretredlm",
 		}
 	)
 
 	add_item(
 		{
 			"title": "Exodus Town",
-			"description": "Exodus Town is an experiment on Decentraland Worlds, continuous issuance, and DAOs. Originating from the 0,0 coordinate, it expands in a never-ending spiral, growing one parcel per day, forever. Every 24 hours, a TOWN token is auctioned off in exchange for MANA, granting the holder the ability to publish content to Exodus Town. Importantly, all auction proceeds flow directly into the on-chain governed Exodus DAO, steered exclusively by TOWN token holders.",
+			"description":
+			"Exodus Town is an experiment on Decentraland Worlds, continuous issuance, and DAOs. Originating from the 0,0 coordinate, it expands in a never-ending spiral, growing one parcel per day, forever. Every 24 hours, a TOWN token is auctioned off in exchange for MANA, granting the holder the ability to publish content to Exodus Town. Importantly, all auction proceeds flow directly into the on-chain governed Exodus DAO, steered exclusively by TOWN token holders.",
 			"image": "https://i.ibb.co/9s704vF/exodus-Town-Rings.jpg",
 			"base_position": "0,0",
 			"contact_name": "ExodusTown",
