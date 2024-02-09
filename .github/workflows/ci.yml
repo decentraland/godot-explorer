@@ -161,7 +161,7 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       matrix:
-        os: [self-hosted-windows, ubuntu-latest, macos-latest]
+        os: [self-hosted-windows, ubuntu-latest, macos-14-xlarge]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -172,6 +172,7 @@ jobs:
           override: true
 
       - name: Set up cargo cache
+        if: runner.os != 'macos'
         uses: actions/cache@v3
         with:
           path: |
