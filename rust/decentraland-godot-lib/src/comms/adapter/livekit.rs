@@ -235,6 +235,11 @@ impl LivekitRoom {
                             );
                         }
                         ToSceneMessage::VoiceFrame(frame) => {
+                            // If all the frame.data is 0, we skip the frame
+                            if frame.data.iter().all(|&c| c == 0) {
+                                continue;
+                            }
+
                             let frame = PackedVector2Array::from_iter(frame.data.iter().map(|c| {
                                 let val = (*c as f32) / (i16::MAX as f32);
                                 godot::prelude::Vector2 { x: val, y: val }

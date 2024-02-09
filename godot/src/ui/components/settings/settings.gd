@@ -29,8 +29,11 @@ var audio = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxC
 var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
 
 #Audio items
-@onready
-var h_slider_general_volume = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume/HSlider_GeneralVolume
+@onready var h_slider_general_volume = %HSlider_GeneralVolume
+@onready var h_slider_scene_volume = %HSlider_SceneVolume
+@onready var h_slider_voice_chat_volume = %HSlider_VoiceChatVolume
+@onready var h_slider_ui_volume = %HSlider_UIVolume
+@onready var h_slider_mic_amplification = %HSlider_MicAmplification
 
 #Graphics items:
 @onready
@@ -93,6 +96,11 @@ func _ready():
 	refresh_zooms()
 
 	h_slider_general_volume.value = Global.config.audio_general_volume
+	h_slider_scene_volume.value = Global.config.audio_scene_volume
+	h_slider_voice_chat_volume.value = Global.config.audio_voice_chat_volume
+	h_slider_ui_volume.value = Global.config.audio_ui_volume
+	h_slider_mic_amplification.value = Global.config.audio_mic_amplification
+
 	menu_button_limit_fps.selected = Global.config.limit_fps
 	menu_button_skybox.selected = Global.config.skybox
 
@@ -323,6 +331,26 @@ func _on_h_slider_rendering_scale_drag_ended(_value_changed):
 	Global.config.save_to_settings_file()
 
 
-func _on_h_slider_general_volume_drag_ended(_value_changed):
-	Global.config.audio_general_volume = h_slider_general_volume.value
-	AudioSettings.apply_volume_settings()
+func _on_h_slider_mic_amplification_value_changed(value):
+	Global.config.audio_mic_amplification = value
+	AudioSettings.apply_mic_amplification_settings()
+
+
+func _on_h_slider_ui_volume_value_changed(value):
+	Global.config.audio_ui_volume = value
+	AudioSettings.apply_ui_volume_settings()
+
+
+func _on_h_slider_voice_chat_volume_value_changed(value):
+	Global.config.audio_voice_chat_volume = value
+	AudioSettings.apply_voice_chat_volume_settings()
+
+
+func _on_h_slider_scene_volume_value_changed(value):
+	Global.config.audio_scene_volume = value
+	AudioSettings.apply_scene_volume_settings()
+
+
+func _on_h_slider_general_volume_value_changed(value):
+	Global.config.audio_general_volume = value
+	AudioSettings.apply_general_volume_settings()
