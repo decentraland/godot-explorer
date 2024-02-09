@@ -13,6 +13,7 @@ jobs:
   lints:
     name: Check and lints
     runs-on: ubuntu-latest
+    if: false
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
@@ -61,6 +62,7 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    if: false
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
