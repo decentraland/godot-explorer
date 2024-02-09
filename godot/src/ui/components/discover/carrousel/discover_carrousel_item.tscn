@@ -21,6 +21,7 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+shadow_size = 8
 
 [sub_resource type="Gradient" id="Gradient_e8nv0"]
 colors = PackedColorArray(0, 0, 0, 1, 0, 0, 0, 0)
@@ -28,6 +29,7 @@ colors = PackedColorArray(0, 0, 0, 1, 0, 0, 0, 0)
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_e6dy7"]
 gradient = SubResource("Gradient_e8nv0")
 fill_from = Vector2(1, 1)
+fill_to = Vector2(1, 0.632479)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_368si"]
 bg_color = Color(0.0392157, 0.0392157, 0.0392157, 1)
@@ -62,12 +64,10 @@ mouse_filter = 1
 script = ExtResource("1_foqq3")
 
 [node name="Panel" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(225, 175)
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_right = 225.0
+offset_bottom = 175.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_c0877")
 
