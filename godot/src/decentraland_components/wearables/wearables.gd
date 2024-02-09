@@ -315,8 +315,18 @@ class BodyShapes:
 	const MALE: String = "urn:decentraland:off-chain:base-avatars:BaseMale"
 	const ALL_LIST: PackedStringArray = [FEMALE, MALE]
 
+enum ItemRarityEnum {
+	COMMON,
+	UNCOMMON,
+	RARE,
+	EPIC,
+	LEGENDARY,
+	MYTHIC,
+	UNIQUE,
+}
 
 class ItemRarity:
+	const COMMON: String = "common"
 	const RARE: String = "rare"
 	const EPIC: String = "epic"
 	const LEGENDARY: String = "legendary"
