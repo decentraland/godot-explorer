@@ -1,9 +1,9 @@
 use std::ops::Range;
 
 use godot::builtin::{Vector2i, Vector3};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SpawnPosition {
     x: serde_json::Value,
     y: serde_json::Value,
@@ -41,14 +41,15 @@ impl SpawnPosition {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SpawnPoint {
     pub name: Option<String>,
     pub default: bool,
     pub position: SpawnPosition,
 }
 
-#[derive(Deserialize)]
+// This structs is a wrapper for the useful SceneMetaScene struct
+#[derive(Serialize, Deserialize)]
 struct OriginalSceneMetaScene {
     pub base: String,
     pub parcels: Vec<String>,
@@ -60,12 +61,12 @@ pub struct SceneMetaScene {
     pub parcels: Vec<Vector2i>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct SceneDisplay {
     pub title: Option<String>,
 }
 
-#[derive(Default, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SceneEntityMetadata {
     pub display: Option<SceneDisplay>,
@@ -106,5 +107,23 @@ impl<'de> serde::Deserialize<'de> for SceneMetaScene {
             base: base_parcel,
             parcels,
         })
+    }
+}
+
+// Implement serialize for SceneMetaScene
+impl serde::Serialize for SceneMetaScene {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let base = format!("{},{}", self.base.x, self.base.y);
+        let parcels = self
+            .parcels
+            .iter()
+            .map(|p| format!("{},{}", p.x, p.y))
+            .collect::<Vec<String>>();
+
+        let original = OriginalSceneMetaScene { base, parcels };
+        original.serialize(serializer)
     }
 }

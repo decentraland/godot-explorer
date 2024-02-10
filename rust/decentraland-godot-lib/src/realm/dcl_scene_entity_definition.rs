@@ -26,9 +26,7 @@ impl DclSceneEntityDefinition {
         let mut ret = godot::prelude::Array::new();
         let parcels_str = &self.inner.scene_meta_scene.scene.parcels;
         ret.resize(parcels_str.len());
-        parcels_str
-            .iter()
-            .for_each(|parcel| ret.push(parcel.clone()));
+        parcels_str.iter().for_each(|parcel| ret.push(*parcel));
 
         ret
     }
@@ -91,6 +89,11 @@ impl DclSceneEntityDefinition {
     #[func]
     fn get_base_url(&self) -> GString {
         self.inner.content_mapping.base_url.to_string().into()
+    }
+
+    #[func]
+    fn get_global_spawn_position(&self) -> Vector3 {
+        self.inner.get_global_spawn_position()
     }
 }
 

@@ -22,7 +22,7 @@ use crate::{
         },
         crdt::{DirtyEntities, DirtyGosComponents, DirtyLwwComponents},
         scene_apis::RpcCall,
-        DclScene, RendererResponse, SceneDefinition, SceneId,
+        DclScene, RendererResponse, SceneId,
     },
     godot_classes::{
         dcl_audio_source::DclAudioSource, dcl_audio_stream::DclAudioStream,

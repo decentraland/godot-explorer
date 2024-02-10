@@ -160,7 +160,7 @@ impl SceneEntityCoordinator {
         };
 
         // Add the scene data to the cache
-        for entity_pointer in entity_pointers.into_iter() {
+        for entity_pointer in entity_pointers.iter_mut() {
             let base_url = format!("{}contents/", self.content_url);
 
             let entity_definition_json = match SceneEntityDefinition::from_json_ex(
@@ -505,7 +505,7 @@ impl SceneEntityCoordinator {
     #[func]
     pub fn set_current_position(&mut self, x: i16, z: i16) {
         self.update_position(x, z);
-    } 
+    }
 
     #[func]
     pub fn get_scene_definition(&self, entity_id: GString) -> Option<Gd<DclSceneEntityDefinition>> {

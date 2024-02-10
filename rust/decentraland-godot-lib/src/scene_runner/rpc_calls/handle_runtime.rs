@@ -1,9 +1,6 @@
 use crate::{
-    dcl::scene_apis::{
-        ContentMapping, GetRealmResponse, GetSceneInformationResponse, RpcResultSender,
-    },
+    dcl::scene_apis::{GetRealmResponse, RpcResultSender},
     godot_classes::dcl_global::DclGlobal,
-    scene_runner::scene::Scene,
 };
 
 pub fn get_realm(response: &RpcResultSender<GetRealmResponse>) {
@@ -28,27 +25,5 @@ pub fn get_realm(response: &RpcResultSender<GetRealmResponse>) {
         network_id,
         comms_adapter,
         is_preview,
-    })
-}
-
-pub fn get_scene_information(
-    scene: &Scene,
-    response: &RpcResultSender<GetSceneInformationResponse>,
-) {
-    let content: Vec<ContentMapping> = scene
-        .content_mapping
-        .content
-        .iter()
-        .map(|(file, hash)| ContentMapping {
-            file: file.clone(),
-            hash: hash.clone(),
-        })
-        .collect();
-
-    response.send(GetSceneInformationResponse {
-        urn: scene.scene_entity_definition.id.clone(),
-        content,
-        metadata_json: "".into(), // TODO scene.definition.metadata.clone(),
-        base_url: scene.content_mapping.base_url.clone(),
     })
 }

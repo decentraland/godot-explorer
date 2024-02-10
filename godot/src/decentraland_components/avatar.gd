@@ -101,7 +101,7 @@ func async_update_avatar_from_profile(profile: Dictionary):
 func async_update_avatar(avatar: Dictionary):
 	var wearable_to_request := []
 	var emotes := Array(DEFAULT_EMOTES)
-	
+
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
 		current_content_url = Global.realm.content_base_url
@@ -120,7 +120,7 @@ func async_update_avatar(avatar: Dictionary):
 
 	current_wearables = avatar.get("wearables")
 	wearable_to_request.append_array(current_wearables)
-	
+
 	for emote_obj in avatar.get("emotes", []):
 		var emote_urn = emote_obj.get("urn", "")
 		var slot_id = emote_obj.get("slot", -1)
@@ -132,15 +132,14 @@ func async_update_avatar(avatar: Dictionary):
 		emotes[slot_id] = emote_urn
 
 	current_emotes = emotes
-	
+
 	current_body_shape = avatar.get("bodyShape")
 	wearable_to_request.push_back(current_body_shape)
-	
+
 	current_eyes_color = Avatar.from_color_object(avatar.get("eyes", {}).get("color", null))
 	current_skin_color = Avatar.from_color_object(avatar.get("skin", {}).get("color", null))
 	current_hair_color = Avatar.from_color_object(avatar.get("hair", {}).get("color", null))
 
-	
 	# TODO: Validate if the current profile can own this wearables
 	# wearable_to_request = filter_owned_wearables(wearable_to_request)
 

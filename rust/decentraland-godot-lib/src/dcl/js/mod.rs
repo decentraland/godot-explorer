@@ -17,6 +17,7 @@ use crate::dcl::common::{
     SceneLogMessage, SceneLogs, SceneMainCrdtFileContent, SceneStartTime,
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
+use crate::realm::scene_definition::SceneEntityDefinition;
 
 use super::{
     crdt::message::process_many_messages, serialization::reader::DclReader, SharedSceneCrdtState,
@@ -99,6 +100,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn scene_thread(
     scene_id: SceneId,
+    scene_entity_definition: Arc<SceneEntityDefinition>,
     local_main_js_file_path: String,
     local_main_crdt_file_path: String,
     content_mapping: ContentMappingAndUrlRef,
@@ -177,6 +179,7 @@ pub(crate) fn scene_thread(
     state.borrow_mut().put(scene_crdt);
 
     state.borrow_mut().put(ephemeral_wallet);
+    state.borrow_mut().put(scene_entity_definition);
 
     state.borrow_mut().put(Vec::<RpcCall>::new());
     state.borrow_mut().put(Vec::<LocalCall>::new());

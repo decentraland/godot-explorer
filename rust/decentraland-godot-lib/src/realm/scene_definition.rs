@@ -87,6 +87,37 @@ impl SceneEntityDefinition {
             -16.0 * self.scene_meta_scene.scene.base.y as f32,
         )
     }
+
+    pub fn get_global_spawn_position(&self) -> Vector3 {
+        let bounding_box = if let Some(spawn_points) = self.scene_meta_scene.spawn_points.as_ref() {
+            // find the spawnpoint with default=true
+            if let Some(spawn_point) = spawn_points.iter().find(|sp| sp.default) {
+                spawn_point.position.bounding_box()
+            } else if let Some(spawn_point) = spawn_points.first() {
+                spawn_point.position.bounding_box()
+            } else {
+                (Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 0.0))
+            }
+        } else {
+            (Vector3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 0.0, 0.0))
+        };
+
+        self.get_godot_3d_position()
+            + Vector3::new(
+                godot::engine::utilities::randf_range(
+                    bounding_box.0.x as f64,
+                    bounding_box.1.x as f64,
+                ) as f32,
+                godot::engine::utilities::randf_range(
+                    bounding_box.0.y as f64,
+                    bounding_box.1.y as f64,
+                ) as f32,
+                -godot::engine::utilities::randf_range(
+                    bounding_box.0.z as f64,
+                    bounding_box.1.z as f64,
+                ) as f32,
+            )
+    }
 }
 
 impl EntityBase {

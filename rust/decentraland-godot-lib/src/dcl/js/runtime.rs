@@ -1,11 +1,12 @@
 use deno_core::{anyhow::anyhow, error::AnyError, op, Op, OpDecl, OpState};
 use serde::Serialize;
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use crate::{
     content::content_mapping::ContentMappingAndUrlRef,
-    dcl::scene_apis::{GetRealmResponse, GetSceneInformationResponse, RpcCall},
+    dcl::scene_apis::{ContentMapping, GetRealmResponse, GetSceneInformationResponse, RpcCall},
+    realm::scene_definition::SceneEntityDefinition,
 };
 
 pub fn ops() -> Vec<OpDecl> {
@@ -60,17 +61,26 @@ async fn op_get_realm(op_state: Rc<RefCell<OpState>>) -> Result<GetRealmResponse
 }
 
 #[op]
-async fn op_get_scene_information(
-    op_state: Rc<RefCell<OpState>>,
-) -> Result<GetSceneInformationResponse, AnyError> {
-    let (sx, rx) = tokio::sync::oneshot::channel::<GetSceneInformationResponse>();
+fn op_get_scene_information(op_state: &mut OpState) -> GetSceneInformationResponse {
+    let scene_entity_definition = op_state.borrow::<Arc<SceneEntityDefinition>>().clone();
 
-    op_state
-        .borrow_mut()
-        .borrow_mut::<Vec<RpcCall>>()
-        .push(RpcCall::GetSceneInformation {
-            response: sx.into(),
-        });
+    let content: Vec<ContentMapping> = scene_entity_definition
+        .content_mapping
+        .content
+        .iter()
+        .map(|(file, hash)| ContentMapping {
+            file: file.clone(),
+            hash: hash.clone(),
+        })
+        .collect();
 
-    rx.await.map_err(|e| anyhow!(e))
+    let metadata_json =
+        serde_json::ser::to_string(&scene_entity_definition.scene_meta_scene).unwrap();
+
+    GetSceneInformationResponse {
+        urn: scene_entity_definition.id.clone(),
+        content,
+        metadata_json,
+        base_url: scene_entity_definition.content_mapping.base_url.clone(),
+    }
 }

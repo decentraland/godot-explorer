@@ -13,7 +13,7 @@ use crate::{
             },
             SceneEntityId,
         },
-        DclScene, RendererResponse, SceneDefinition, SceneId, SceneResponse,
+        DclScene, RendererResponse, SceneId, SceneResponse,
     },
     godot_classes::{
         dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal, dcl_ui_control::DclUiControl,
@@ -130,6 +130,7 @@ impl SceneManager {
             .try_get_ephemeral_auth_chain();
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(
             new_scene_id,
+            scene_entity_definition.clone(),
             local_main_js_file_path.to_string(),
             local_main_crdt_file_path.to_string(),
             content_mapping.clone(),
@@ -514,13 +515,7 @@ impl SceneManager {
                         response,
                     } => {
                         let offset = if let Some(scene) = self.scenes.get(&scene_id) {
-                            Vector3::new(
-                                scene.scene_entity_definition.scene_meta_scene.scene.base.x as f32
-                                    * 16.0,
-                                0.0,
-                                -scene.scene_entity_definition.scene_meta_scene.scene.base.y as f32
-                                    * 16.0,
-                            )
+                            scene.scene_entity_definition.get_godot_3d_position()
                         } else {
                             Vector3::new(0.0, 0.0, 0.0)
                         };
