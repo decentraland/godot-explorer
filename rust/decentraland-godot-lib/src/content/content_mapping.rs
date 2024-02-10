@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use godot::prelude::*;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct ContentMappingAndUrl {
     pub base_url: String,
     pub content: HashMap<String, String>,

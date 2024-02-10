@@ -28,6 +28,7 @@ use crate::{
         dcl_audio_source::DclAudioSource, dcl_audio_stream::DclAudioStream,
         dcl_ui_control::DclUiControl, dcl_video_player::DclVideoPlayer,
     },
+    realm::scene_definition::SceneEntityDefinition,
 };
 
 use super::{components::tween::Tween, godot_dcl_scene::GodotDclScene};
@@ -167,7 +168,7 @@ pub struct Scene {
     pub scene_id: SceneId,
     pub godot_dcl_scene: GodotDclScene,
     pub dcl_scene: DclScene,
-    pub definition: SceneDefinition,
+    pub scene_entity_definition: Arc<SceneEntityDefinition>,
     pub tick_number: u32,
 
     pub state: SceneState,
@@ -247,19 +248,20 @@ impl Scene {
 
     pub fn new(
         scene_id: SceneId,
-        scene_definition: SceneDefinition,
+        scene_entity_definition: Arc<SceneEntityDefinition>,
         dcl_scene: DclScene,
         content_mapping: ContentMappingAndUrlRef,
         scene_type: SceneType,
         parent_ui_node: Gd<DclUiControl>,
     ) -> Self {
-        let godot_dcl_scene = GodotDclScene::new(&scene_definition, &scene_id, parent_ui_node);
+        let godot_dcl_scene =
+            GodotDclScene::new(scene_entity_definition.clone(), &scene_id, parent_ui_node);
 
         Self {
             scene_id,
             tick_number: 0,
             godot_dcl_scene,
-            definition: scene_definition,
+            scene_entity_definition,
             dcl_scene,
             state: SceneState::Alive,
 
@@ -297,9 +299,9 @@ impl Scene {
     }
 
     pub fn min_distance(&self, parcel_position: &godot::prelude::Vector2i) -> (f32, bool) {
-        let diff = self.definition.base - *parcel_position;
+        let diff = self.scene_entity_definition.get_base_parcel() - *parcel_position;
         let mut distance_squared = diff.x * diff.x + diff.y * diff.y;
-        for parcel in self.definition.parcels.iter() {
+        for parcel in self.scene_entity_definition.get_parcels() {
             let diff = *parcel - *parcel_position;
             distance_squared = distance_squared.min(diff.x * diff.x + diff.y * diff.y);
         }
@@ -307,17 +309,20 @@ impl Scene {
     }
 
     pub fn unsafe_default() -> Self {
-        let scene_definition = SceneDefinition::default();
+        let scene_entity_definition = Arc::new(SceneEntityDefinition::default());
         let scene_id = Scene::new_id();
         let dcl_scene = DclScene::spawn_new_test_scene(scene_id);
-        let godot_dcl_scene =
-            GodotDclScene::new(&scene_definition, &scene_id, DclUiControl::alloc_gd());
+        let godot_dcl_scene = GodotDclScene::new(
+            scene_entity_definition.clone(),
+            &scene_id,
+            DclUiControl::alloc_gd(),
+        );
 
         Self {
             scene_id,
             godot_dcl_scene,
             tick_number: 0,
-            definition: scene_definition,
+            scene_entity_definition,
             dcl_scene,
             state: SceneState::Alive,
             enqueued_dirty: Vec::new(),

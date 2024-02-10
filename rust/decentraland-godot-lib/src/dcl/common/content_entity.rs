@@ -6,7 +6,7 @@ pub struct TypedIpfsRef {
     pub hash: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 pub struct EntityDefinitionJson {
     pub id: Option<String>,
     pub pointers: Vec<String>,

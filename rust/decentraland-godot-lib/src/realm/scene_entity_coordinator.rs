@@ -1,123 +1,20 @@
 use std::{
     collections::{HashMap, HashSet},
-    str::FromStr,
+    sync::Arc,
 };
 
 use godot::{prelude::*, test::itest};
-use serde::{Deserialize, Serialize};
 
 use crate::http_request::{
     http_requester::HttpRequester,
     request_response::{RequestOption, RequestResponse, ResponseEnum, ResponseType},
 };
 
-use super::parcel::*;
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TypedIpfsRef {
-    pub file: String,
-    pub hash: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EntityDefinitionJson {
-    id: Option<String>,
-    base_url: Option<String>,
-    pointers: Vec<String>,
-    content: Vec<TypedIpfsRef>,
-    metadata: Option<serde_json::Value>,
-    is_global: Option<bool>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SceneFieldJson {
-    parcels: Vec<String>,
-    base: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SceneJsonMetadata {
-    scene: SceneFieldJson,
-}
-
-impl EntityDefinitionJson {
-    // TODO: (performance) this could be an custom class type with accessors
-    fn to_godot_dictionary(&self) -> Dictionary {
-        let mut dict = Dictionary::new();
-
-        dict.set(
-            GString::from("id"),
-            Variant::from(self.id.as_ref().unwrap().clone()),
-        );
-        dict.set(
-            GString::from("baseUrl"),
-            Variant::from(self.base_url.as_ref().unwrap().clone()),
-        );
-
-        dict.set(
-            GString::from("is_global"),
-            Variant::from(self.is_global.unwrap_or_default()),
-        );
-
-        let mut content = Dictionary::new();
-        for typed_ipfs_ref in self.content.iter() {
-            content.set(
-                Variant::from(typed_ipfs_ref.file.clone()),
-                Variant::from(typed_ipfs_ref.hash.clone()),
-            );
-        }
-        dict.set(GString::from("content"), content);
-
-        let metadata = match &self.metadata {
-            Some(metadata) => serde_json::ser::to_string(metadata).unwrap_or("{}".to_string()),
-            None => "{}".to_string(),
-        };
-        dict.set(GString::from("metadata"), metadata);
-
-        dict
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-struct EntityBase {
-    hash: String,
-    base_url: String,
-}
-
-impl EntityBase {
-    fn from_urn(urn_str: &str, default_base_url: &String) -> Option<Self> {
-        let Ok(urn) = urn::Urn::from_str(urn_str) else {
-            return None;
-        };
-        let Some((lhs, rhs)) = urn.nss().split_once(':') else {
-            return None;
-        };
-        let hash = match lhs {
-            "entity" => rhs.to_owned(),
-            _ => return None,
-        };
-
-        let key_values = urn
-            .q_component()
-            .unwrap_or("")
-            .split('&')
-            .flat_map(|piece| piece.split_once('='))
-            .flat_map(|(key, value)| match key {
-                "baseUrl" => Some(value.to_string()),
-                _ => None,
-            })
-            .collect::<Vec<String>>();
-
-        Some(EntityBase {
-            hash,
-            base_url: if let Some(base_url) = key_values.first() {
-                base_url.clone()
-            } else {
-                format!("{default_base_url}contents/")
-            },
-        })
-    }
-}
+use super::{
+    dcl_scene_entity_definition::DclSceneEntityDefinition,
+    parcel::*,
+    scene_definition::{EntityBase, SceneEntityDefinition},
+};
 
 #[derive(Debug, Default, GodotClass)]
 #[class(base=Node)]
@@ -131,7 +28,7 @@ struct SceneEntityCoordinator {
 
     global_desired_entities: Vec<EntityBase>,
     requested_entity: HashMap<u32, EntityBase>,
-    cache_scene_data: HashMap<String, EntityDefinitionJson>, // entity_id to SceneData
+    cache_scene_data: HashMap<String, Arc<SceneEntityDefinition>>, // entity_id to SceneData
 
     http_requester: HttpRequester,
     entities_active_url: String,
@@ -213,47 +110,44 @@ impl SceneEntityCoordinator {
             return;
         };
 
-        let entity_definition = serde_json::from_value::<EntityDefinitionJson>(json);
-
-        if entity_definition.is_err() {
-            tracing::info!(
-                "Error handling scene data from entity {:?} Error parsing the JSON {:?}",
-                entity_base.hash,
-                entity_definition
-            );
-            return;
-        }
-
         let is_global_scene = self
             .global_desired_entities
             .iter()
             .any(|value| *value == entity_base);
 
-        let mut entity_definition = entity_definition.unwrap();
-        entity_definition.id = Some(entity_base.hash.clone());
-        entity_definition.base_url = Some(entity_base.base_url.clone());
-        entity_definition.is_global = Some(is_global_scene);
+        let entity_definition_json = match SceneEntityDefinition::from_json_ex(
+            Some(entity_base.hash.clone()),
+            entity_base.base_url.clone(),
+            is_global_scene,
+            json,
+        ) {
+            Ok(entity_definition) => entity_definition,
+            Err(err) => {
+                tracing::info!(
+                    "Error handling scene data from entity {:?}: {:?}",
+                    entity_base,
+                    err
+                );
+                return;
+            }
+        };
 
         // If it's a global scene, it doesn't add the pointers to the cache
         if !is_global_scene {
-            if let Some(metadata) = entity_definition.metadata.as_ref() {
-                if let Ok(metadata) = serde_json::from_value::<SceneJsonMetadata>(metadata.clone())
-                {
-                    let entity_id = entity_definition.id.as_ref().unwrap().clone();
-
-                    for pointer in metadata.scene.parcels.iter() {
-                        let coord = Coord::from(pointer);
-                        self.cache_city_pointers.insert(coord, entity_id.clone());
-                    }
-                }
+            let entity_id = entity_definition_json.id.as_str();
+            for pointer in entity_definition_json.scene_meta_scene.scene.parcels.iter() {
+                let coord = Coord::from(pointer);
+                self.cache_city_pointers
+                    .insert(coord, entity_id.to_string());
             }
         }
 
         self.cache_scene_data
-            .insert(entity_base.hash, entity_definition);
+            .insert(entity_base.hash, Arc::new(entity_definition_json));
     }
 
-    fn handle_entity_pointers(&mut self, request_id: u32, json: serde_json::Value) {
+    fn handle_entity_pointers(&mut self, request_id: u32, mut json: serde_json::Value) {
+        // If the request was dismissed, early return (this typically happens when the realm is changed)
         let mut remaining_pointers =
             if let Some(remaining_pointers) = self.requested_city_pointers.remove(&request_id) {
                 remaining_pointers
@@ -261,31 +155,43 @@ impl SceneEntityCoordinator {
                 return;
             };
 
-        let entity_pointers = json.as_array().unwrap();
+        let Some(entity_pointers) = json.as_array_mut() else {
+            return;
+        };
 
         // Add the scene data to the cache
-        for entity_pointer in entity_pointers.iter() {
-            let entity_definition =
-                serde_json::from_value::<EntityDefinitionJson>(entity_pointer.clone());
+        for entity_pointer in entity_pointers.into_iter() {
+            let base_url = format!("{}contents/", self.content_url);
 
-            if entity_definition.is_err() {
-                tracing::info!("Error handling pointer data {entity_definition:?}");
-                continue;
-            }
+            let entity_definition_json = match SceneEntityDefinition::from_json_ex(
+                None,
+                base_url,
+                false,
+                entity_pointer.take(),
+            ) {
+                Ok(entity_definition) => entity_definition,
+                Err(err) => {
+                    tracing::info!("Error handling pointer from entity {:?}", err);
+                    continue;
+                }
+            };
 
-            let mut entity_definition = entity_definition.unwrap();
-            let entity_id = entity_definition.id.as_ref().unwrap().clone();
-            entity_definition.base_url = Some(format!("{}contents/", self.content_url));
-            entity_definition.is_global = Some(false);
-
-            for pointer in entity_definition.pointers.iter() {
+            for pointer in entity_definition_json
+                .entity_definition_json
+                .pointers
+                .iter()
+            {
                 let coord = Coord::from(pointer);
 
                 remaining_pointers.remove(&coord);
-                self.cache_city_pointers.insert(coord, entity_id.clone());
+                self.cache_city_pointers
+                    .insert(coord, entity_definition_json.id.clone());
             }
 
-            self.cache_scene_data.insert(entity_id, entity_definition);
+            self.cache_scene_data.insert(
+                entity_definition_json.id.clone(),
+                Arc::new(entity_definition_json),
+            );
         }
 
         for pointer in remaining_pointers.into_iter() {
@@ -501,10 +407,6 @@ impl SceneEntityCoordinator {
         }
     }
 
-    pub fn get_entity_definition(&self, entity_id: &String) -> Option<&EntityDefinitionJson> {
-        self.cache_scene_data.get(entity_id)
-    }
-
     pub fn get_loadable_scenes(&self) -> &HashSet<String> {
         &self.loadable_scenes
     }
@@ -603,15 +505,13 @@ impl SceneEntityCoordinator {
     #[func]
     pub fn set_current_position(&mut self, x: i16, z: i16) {
         self.update_position(x, z);
-    }
+    } 
 
     #[func]
-    pub fn get_scene_dict(&self, entity_id: GString) -> Dictionary {
-        if let Some(def) = self.get_entity_definition(&entity_id.to_string()) {
-            def.to_godot_dictionary()
-        } else {
-            Dictionary::new()
-        }
+    pub fn get_scene_definition(&self, entity_id: GString) -> Option<Gd<DclSceneEntityDefinition>> {
+        self.cache_scene_data
+            .get(&entity_id.to_string())
+            .map(DclSceneEntityDefinition::from_ref)
     }
 
     #[func]

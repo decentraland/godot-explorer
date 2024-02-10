@@ -181,7 +181,7 @@ pub fn move_player_to(
 
     let mut explorer_node = get_explorer_node(scene);
 
-    let base_parcel = scene.definition.base;
+    let base_parcel = scene.scene_entity_definition.scene_meta_scene.scene.base;
     let scene_position = Vector3::new(
         base_parcel.x as f32 * 16.0,
         0.0,
@@ -198,7 +198,13 @@ pub fn move_player_to(
         (position_target.z / 16.0).floor() as i32,
     );
 
-    if !scene.definition.parcels.contains(&target_parcel) {
+    if !scene
+        .scene_entity_definition
+        .scene_meta_scene
+        .scene
+        .parcels
+        .contains(&target_parcel)
+    {
         response.send(Err("Target position is outside the scene".to_string()));
         return;
     }

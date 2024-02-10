@@ -219,8 +219,12 @@ impl AvatarScene {
             let dcl_transform = DclTransformAndParent::default(); // TODO: get real transform with scene_offset
 
             let mut avatar_scene_transform = dcl_transform.clone();
-            avatar_scene_transform.translation.x -= (scene.definition.base.x as f32) * 16.0;
-            avatar_scene_transform.translation.z -= (scene.definition.base.y as f32) * 16.0;
+            avatar_scene_transform.translation.x -=
+                (scene.scene_entity_definition.get_base_parcel().x as f32) * 16.0;
+
+            // TODO: should it be added instead of subtracted? (z is inverted in godot and dcl)
+            avatar_scene_transform.translation.z -=
+                (scene.scene_entity_definition.get_base_parcel().y as f32) * 16.0;
 
             scene
                 .avatar_scene_updates
@@ -315,8 +319,12 @@ impl AvatarScene {
         for scene_id in avatar_active_scene_ids {
             if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
                 let mut avatar_scene_transform = dcl_transform.clone();
-                avatar_scene_transform.translation.x -= (scene.definition.base.x as f32) * 16.0;
-                avatar_scene_transform.translation.z -= (scene.definition.base.y as f32) * 16.0;
+                avatar_scene_transform.translation.x -=
+                    (scene.scene_entity_definition.get_base_parcel().x as f32) * 16.0;
+
+                // TODO: should it be added instead of subtracted? (z is inverted in godot and dcl)
+                avatar_scene_transform.translation.z -=
+                    (scene.scene_entity_definition.get_base_parcel().y as f32) * 16.0;
 
                 scene
                     .avatar_scene_updates

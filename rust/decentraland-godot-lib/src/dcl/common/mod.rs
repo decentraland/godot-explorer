@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::godot_classes::JsonGodotClass;
 
 pub mod content_entity;
+pub mod scene;
 pub mod string;
 pub mod wearable;
 

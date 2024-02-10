@@ -20,6 +20,7 @@ use crate::{
         rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse,
         JsonGodotClass,
     },
+    realm::dcl_scene_entity_definition::DclSceneEntityDefinition,
 };
 use godot::{
     engine::{
@@ -105,26 +106,21 @@ impl SceneManager {
     #[func]
     fn start_scene(
         &mut self,
-        scene_definition: Dictionary,
-        shared_content_mapping: Gd<DclContentMappingAndUrl>,
+        local_main_js_file_path: GString,
+        local_main_crdt_file_path: GString,
+        dcl_scene_entity_definition: Gd<DclSceneEntityDefinition>,
     ) -> i32 {
-        let scene_definition = match SceneDefinition::from_dict(scene_definition) {
-            Ok(scene_definition) => scene_definition,
-            Err(e) => {
-                tracing::info!("error parsing scene definition: {e:?}");
-                return 0;
-            }
-        };
+        let scene_entity_definition = dcl_scene_entity_definition.bind().get_ref();
 
-        let content_mapping = shared_content_mapping.bind().get_content_mapping();
-        let scene_type = if scene_definition.is_global {
+        let content_mapping = scene_entity_definition.content_mapping.clone();
+        let scene_type = if scene_entity_definition.is_global {
             SceneType::Global(GlobalSceneType::GlobalRealm)
         } else {
             SceneType::Parcel
         };
 
         let new_scene_id = Scene::new_id();
-        let signal_data = (new_scene_id, scene_definition.entity_id.clone());
+        let signal_data = (new_scene_id, scene_entity_definition.id.clone());
         let testing_mode_active = DclGlobal::singleton().bind().testing_scene_mode;
         let ethereum_provider = DclGlobal::singleton().bind().ethereum_provider.clone();
         let ephemeral_wallet = DclGlobal::singleton()
@@ -134,7 +130,8 @@ impl SceneManager {
             .try_get_ephemeral_auth_chain();
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(
             new_scene_id,
-            scene_definition.clone(),
+            local_main_js_file_path.to_string(),
+            local_main_crdt_file_path.to_string(),
             content_mapping.clone(),
             self.thread_sender_to_main.clone(),
             testing_mode_active,
@@ -144,7 +141,7 @@ impl SceneManager {
 
         let new_scene = Scene::new(
             new_scene_id,
-            scene_definition,
+            scene_entity_definition,
             dcl_scene,
             content_mapping.clone(),
             scene_type.clone(),
@@ -211,7 +208,7 @@ impl SceneManager {
     #[func]
     fn get_scene_title(&self, scene_id: i32) -> GString {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
-            return GString::from(scene.definition.title.clone());
+            return GString::from(scene.scene_entity_definition.get_title());
         }
         GString::default()
     }
@@ -223,7 +220,13 @@ impl SceneManager {
                 continue;
             }
 
-            if scene.definition.parcels.contains(&parcel_position) {
+            if scene
+                .scene_entity_definition
+                .scene_meta_scene
+                .scene
+                .parcels
+                .contains(&parcel_position)
+            {
                 return scene.scene_id.0;
             }
         }
@@ -234,7 +237,7 @@ impl SceneManager {
     #[func]
     fn get_scene_base_parcel(&self, scene_id: i32) -> Vector2i {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
-            return scene.definition.base;
+            return scene.scene_entity_definition.scene_meta_scene.scene.base;
         }
         Vector2i::default()
     }
@@ -408,7 +411,7 @@ impl SceneManager {
 
         for scene_id in scene_to_remove.iter() {
             let mut scene = self.scenes.remove(scene_id).unwrap();
-            let signal_data = (*scene_id, scene.definition.entity_id);
+            let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
             let node_3d = scene
                 .godot_dcl_scene
                 .root_node_3d
@@ -512,9 +515,11 @@ impl SceneManager {
                     } => {
                         let offset = if let Some(scene) = self.scenes.get(&scene_id) {
                             Vector3::new(
-                                scene.definition.base.x as f32 * 16.0,
+                                scene.scene_entity_definition.scene_meta_scene.scene.base.x as f32
+                                    * 16.0,
                                 0.0,
-                                -scene.definition.base.y as f32 * 16.0,
+                                -scene.scene_entity_definition.scene_meta_scene.scene.base.y as f32
+                                    * 16.0,
                             )
                         } else {
                             Vector3::new(0.0, 0.0, 0.0)
@@ -798,17 +803,23 @@ impl SceneManager {
             }
         }
 
-        let mut text = format!("Scene {:?} tests:\n", scene.definition.title);
+        let mut text = format!(
+            "Scene {:?} tests:\n",
+            scene.scene_entity_definition.get_title()
+        );
         text += &format!("{}\n", text_test_list);
         if test_fail == 0 {
             text += &format!(
                 "✅ All tests ({}) passed in the scene {:?}\n",
-                test_total, scene.definition.title
+                test_total,
+                scene.scene_entity_definition.get_title()
             );
         } else {
             text += &format!(
                 "❌ {} tests failed of {} in the scene {:?}\n",
-                test_fail, test_total, scene.definition.title
+                test_fail,
+                test_total,
+                scene.scene_entity_definition.get_title()
             );
         }
 

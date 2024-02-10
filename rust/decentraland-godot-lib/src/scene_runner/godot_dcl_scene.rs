@@ -1,22 +1,20 @@
 use crate::{
     dcl::{
-        components::{
-            material::DclMaterial,
-            proto_components::{self},
-            SceneComponentId, SceneEntityId,
-        },
+        components::{material::DclMaterial, proto_components, SceneComponentId, SceneEntityId},
         SceneDefinition, SceneId,
     },
     godot_classes::{
         dcl_node_entity_3d::DclNodeEntity3d, dcl_scene_node::DclSceneNode,
         dcl_ui_control::DclUiControl,
     },
+    realm::scene_definition::SceneEntityDefinition,
 };
 use godot::{builtin::meta::ConvertError, engine::Json, prelude::*};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     rc::Rc,
+    sync::Arc,
 };
 
 use super::components::ui::{scene_ui::UiResults, style::UiTransform};
@@ -154,16 +152,17 @@ impl GodotEntityNode {
 
 impl GodotDclScene {
     pub fn new(
-        scene_definition: &SceneDefinition,
+        scene_entity_definition: Arc<SceneEntityDefinition>,
         scene_id: &SceneId,
         parent_node_ui: Gd<DclUiControl>,
     ) -> Self {
-        let mut root_node_3d = DclSceneNode::new_alloc(scene_id.0, scene_definition.is_global);
+        let mut root_node_3d =
+            DclSceneNode::new_alloc(scene_id.0, scene_entity_definition.is_global);
 
         root_node_3d.set_position(Vector3 {
-            x: 16.0 * scene_definition.base.x as f32,
+            x: 16.0 * scene_entity_definition.scene_meta_scene.scene.base.x as f32,
             y: 0.0,
-            z: 16.0 * -scene_definition.base.y as f32,
+            z: 16.0 * -scene_entity_definition.scene_meta_scene.scene.base.y as f32,
         });
 
         let mut root_node_ui_control = DclUiControl::alloc_gd();

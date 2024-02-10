@@ -17,7 +17,7 @@ pub fn spawn_portable(
     portable_experience_controller.bind_mut().spawn(
         location,
         response,
-        &scene.definition.entity_id,
+        &scene.scene_entity_definition.id,
         false,
     );
 }

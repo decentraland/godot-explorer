@@ -46,9 +46,9 @@ pub fn get_scene_information(
         .collect();
 
     response.send(GetSceneInformationResponse {
-        urn: scene.definition.entity_id.clone(),
+        urn: scene.scene_entity_definition.id.clone(),
         content,
-        metadata_json: scene.definition.metadata.clone(),
+        metadata_json: "".into(), // TODO scene.definition.metadata.clone(),
         base_url: scene.content_mapping.base_url.clone(),
     })
 }

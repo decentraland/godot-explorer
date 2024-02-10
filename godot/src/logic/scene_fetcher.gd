@@ -19,6 +19,16 @@ const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
+class SceneItem extends RefCounted:
+	var main_js_req_id: int = -1
+	var main_crdt_req_id: int = -1
+	
+	var id: String = ""
+	var scene_entity_definition: DclSceneEntityDefinition = null
+	var scene_number_id: int = -1
+	var parcels: Array[Vector2i] = []
+	var is_global: bool = false
+
 var adaptation_layer_js_request: int = -1
 var adaptation_layer_js_local_path: String = "user://sdk-adaptation-layer.js"
 
@@ -59,51 +69,54 @@ func get_target_position(target_position: Variant) -> float:
 
 func get_current_spawn_point():
 	var current_scene_data = get_current_scene_data()
-	if current_scene_data.is_empty():
-		return null
-
-	var spawn_points = current_scene_data.get("entity", {}).get("metadata", {}).get(
-		"spawnPoints", []
-	)
-	if not spawn_points is Array:
-		return null
-
-	var some_spawn_point = null
-	for spawn_point in spawn_points:
-		if not spawn_point is Dictionary:
-			continue
-
-		if some_spawn_point == null:
-			some_spawn_point = spawn_point
-
-		if spawn_point.get("default", false):
-			some_spawn_point = spawn_point
-
-	if some_spawn_point == null:
-		return null
-
-	var target_position = some_spawn_point.get("position")
-	# TODO Camera target
-	# var target_camera_position = some_spawn_point.get("cameraTarget")
-
-	if not target_position is Dictionary:
-		return null
-
-	var target_position_x = get_target_position(target_position.get("x"))
-	var target_position_y = get_target_position(target_position.get("y"))
-	var target_position_z = get_target_position(target_position.get("z"))
-
-	var base_parcel = (
-		current_scene_data
-		. entity
-		. get("metadata", {})
-		. get("scene", {})
-		. get("base", "0,0")
-		. split_floats(",")
-	)
-	target_position_x = base_parcel[0] * 16.0 + target_position_x
-	target_position_z = -(base_parcel[1] * 16.0 + target_position_z)
-	return Vector3(target_position_x, target_position_y, target_position_z)
+	#if current_scene_data.is_empty():
+		#return null
+	
+	return null
+	
+	# TODO
+	#var spawn_points = current_scene_data.get("entity", {}).get("metadata", {}).get(
+		#"spawnPoints", []
+	#)
+	#if not spawn_points is Array:
+		#return null
+#
+	#var some_spawn_point = null
+	#for spawn_point in spawn_points:
+		#if not spawn_point is Dictionary:
+			#continue
+#
+		#if some_spawn_point == null:
+			#some_spawn_point = spawn_point
+#
+		#if spawn_point.get("default", false):
+			#some_spawn_point = spawn_point
+#
+	#if some_spawn_point == null:
+		#return null
+#
+	#var target_position = some_spawn_point.get("position")
+	## TODO Camera target
+	## var target_camera_position = some_spawn_point.get("cameraTarget")
+#
+	#if not target_position is Dictionary:
+		#return null
+#
+	#var target_position_x = get_target_position(target_position.get("x"))
+	#var target_position_y = get_target_position(target_position.get("y"))
+	#var target_position_z = get_target_position(target_position.get("z"))
+#
+	#var base_parcel = (
+		#current_scene_data
+		#. entity
+		#. get("metadata", {})
+		#. get("scene", {})
+		#. get("base", "0,0")
+		#. split_floats(",")
+	#)
+	#target_position_x = base_parcel[0] * 16.0 + target_position_x
+	#target_position_z = -(base_parcel[1] * 16.0 + target_position_z)
+	#return Vector3(target_position_x, target_position_y, target_position_z)
 
 
 func on_loading_finished():
@@ -114,9 +127,8 @@ func on_loading_finished():
 
 func on_scene_killed(killed_scene_id, _entity_id):
 	for scene_id in loaded_scenes.keys():
-		var scene = loaded_scenes[scene_id]
-		var scene_number_id: int = scene.get("scene_number_id", -1)
-		if scene_number_id == killed_scene_id:
+		var scene: SceneItem = loaded_scenes[scene_id]
+		if scene.scene_number_id == killed_scene_id:
 			loaded_scenes.erase(scene_id)
 			return
 
@@ -126,13 +138,12 @@ func _on_config_changed(param: ConfigData.ConfigParams):
 		scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
 
 
-func get_current_scene_data() -> Dictionary:
+func get_current_scene_data() -> SceneItem:
 	var scene_entity_id = scene_entity_coordinator.get_scene_entity_id(current_position)
 	if scene_entity_id == "empty":
-		return {}
+		return null
 
-	var scene = loaded_scenes.get(scene_entity_id, {})
-	return scene
+	return loaded_scenes.get(scene_entity_id)
 
 
 func set_scene_radius(value: int):
@@ -154,12 +165,11 @@ func is_scene_loaded(x: int, z: int) -> bool:
 
 func get_parcel_scene_id(x: int, z: int) -> int:
 	for scene_id in loaded_scenes.keys():
-		var scene = loaded_scenes[scene_id]
-		var scene_number_id: int = scene.get("scene_number_id", -1)
-		if scene_number_id != -1:
-			for pos in scene.get("parcels", []):
+		var scene: SceneItem = loaded_scenes[scene_id]
+		if scene.scene_number_id != -1:
+			for pos in scene.parcels:
 				if pos.x == x and pos.y == z:
-					return scene_number_id
+					return scene.scene_number_id
 	return -1
 
 
@@ -175,10 +185,12 @@ func _async_on_desired_scene_changed():
 	var loading_promises: Array = []
 	for scene_id in loadable_scenes:
 		if not loaded_scenes.has(scene_id):
-			var dict = scene_entity_coordinator.get_scene_dict(scene_id)
-			if dict.size() > 0:
-				dict["metadata"] = JSON.parse_string(dict.metadata)
-				loading_promises.push_back(async_load_scene.bind(scene_id, dict))
+			var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
+			
+			if scene_definition != null:
+				# TODO: update metadata?
+				# dict["metadata"] = JSON.parse_string(dict.metadata)
+				loading_promises.push_back(async_load_scene.bind(scene_id, scene_definition))
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")
 		else:
@@ -191,10 +203,9 @@ func _async_on_desired_scene_changed():
 
 	for scene_id in loaded_scenes.keys():
 		if not loadable_scenes.has(scene_id) and not keep_alive_scenes.has(scene_id):
-			var scene = loaded_scenes[scene_id]
-			var scene_number_id: int = scene.get("scene_number_id", -1)
-			if scene_number_id != -1:
-				Global.scene_runner.kill_scene(scene_number_id)
+			var scene: SceneItem = loaded_scenes[scene_id]
+			if scene.scene_number_id != -1:
+				Global.scene_runner.kill_scene(scene.scene_number_id)
 
 	var empty_parcels_coords = []
 	for parcel in empty_parcels:
@@ -213,8 +224,8 @@ func _async_on_desired_scene_changed():
 			loaded_empty_scenes[parcel] = scene
 
 	var parcel_filled = []
-	for scene_id in loaded_scenes:
-		parcel_filled.append_array(loaded_scenes[scene_id].parcels)
+	for scene: SceneItem in loaded_scenes.values():
+		parcel_filled.append_array(scene.parcels)
 
 	report_scene_load.emit(true, new_loading)
 
@@ -246,10 +257,9 @@ func _on_realm_changed():
 
 	set_portable_experiences_urns(self.desired_portable_experiences_urns)
 
-	for scene in loaded_scenes.values():
-		var scene_number_id: int = scene.get("scene_number_id", -1)
-		if not scene.is_global and scene_number_id != -1:
-			Global.scene_runner.kill_scene(scene_number_id)
+	for scene: SceneItem in loaded_scenes.values():
+		if not scene.is_global and scene.scene_number_id != -1:
+			Global.scene_runner.kill_scene(scene.scene_number_id)
 
 	for parcel in loaded_empty_scenes:
 		remove_child(loaded_empty_scenes[parcel])
@@ -271,11 +281,10 @@ func set_portable_experiences_urns(urns: Array[String]) -> void:
 
 
 func get_scene_by_req_id(request_id: int):
-	for scene in loaded_scenes.values():
-		var req = scene.get("req", {})
+	for scene: SceneItem in loaded_scenes.values():
 		if (
-			req.get("js_request_id", -1) == request_id
-			or req.get("crdt_request_id", -1) == request_id
+			scene.main_js_req_id == request_id or
+			scene.main_crdt_req_id == request_id
 		):
 			return scene
 
@@ -289,37 +298,30 @@ func update_position(new_position: Vector2i) -> void:
 	current_position = new_position
 	scene_entity_coordinator.set_current_position(current_position.x, current_position.y)
 
+	
+func async_load_scene(scene_entity_id: String, scene_entity_definition: DclSceneEntityDefinition) -> Promise:
+	var parcels := scene_entity_definition.get_parcels()
 
-func async_load_scene(scene_entity_id: String, entity: Dictionary) -> Promise:
-	var metadata = entity.get("metadata", {})
-	var is_global = entity.get("is_global", false)
+	var scene_item: SceneItem = SceneItem.new()
+	scene_item.id = scene_entity_id
+	scene_item.scene_entity_definition = scene_entity_definition
+	scene_item.scene_number_id = -1
+	scene_item.parcels = parcels
+	scene_item.is_global = scene_entity_definition.is_global()
+	
+	loaded_scenes[scene_entity_id] = scene_item
 
-	var parcels_str = metadata.get("scene", {}).get("parcels", [])
-	var parcels = []
-	for parcel in parcels_str:
-		var p = parcel.split_floats(",")
-		parcels.push_back(Vector2i(int(p[0]), int(p[1])))
+	var local_main_js_path: String = ""
 
-	loaded_scenes[scene_entity_id] = {
-		"id": scene_entity_id,
-		"entity": entity,
-		"scene_number_id": -1,
-		"parcels": parcels,
-		"is_global": is_global,
-	}
-
-	var is_sdk7 = metadata.get("runtimeVersion", null) == "7"
-	var local_main_js_path = ""
-
-	if is_sdk7:
-		var main_js_file_hash = entity.get("content", {}).get(metadata.get("main", ""), null)
-		if main_js_file_hash != null:
+	if scene_entity_definition.is_sdk7():
+		var main_js_file_hash := scene_entity_definition.get_main_js_hash()
+		if not main_js_file_hash.is_empty():
 			local_main_js_path = "user://content/" + main_js_file_hash
 			if (
 				not FileAccess.file_exists(local_main_js_path)
 				or main_js_file_hash.begins_with("b64")
 			):
-				var main_js_file_url: String = entity.baseUrl + main_js_file_hash
+				var main_js_file_url: String = scene_entity_definition.get_base_url() + main_js_file_hash
 				var promise: Promise = Global.http_requester.request_file(
 					main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir())
 				)
@@ -350,11 +352,11 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary) -> Promise:
 				)
 				return PromiseUtils.resolved(false)
 
-	var main_crdt_file_hash = entity.get("content", {}).get("main.crdt", null)
-	var local_main_crdt_path = ""
-	if main_crdt_file_hash != null:
+	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
+	var local_main_crdt_path: String = String()
+	if not main_crdt_file_hash.is_empty():
 		local_main_crdt_path = "user://content/" + main_crdt_file_hash
-		var main_crdt_file_url: String = entity.baseUrl + main_crdt_file_hash
+		var main_crdt_file_url: String = scene_entity_definition.get_base_url() + main_crdt_file_hash
 		var promise: Promise = Global.http_requester.request_file(
 			main_crdt_file_url, local_main_crdt_path.replace("user:/", OS.get_user_data_dir())
 		)
@@ -377,7 +379,7 @@ func async_load_scene(scene_entity_id: String, entity: Dictionary) -> Promise:
 	return PromiseUtils.resolved(true)
 
 
-func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):
+func _on_try_spawn_scene(scene_item: SceneItem, local_main_js_path: String, local_main_crdt_path: String):
 	if not local_main_js_path.is_empty() and not FileAccess.file_exists(local_main_js_path):
 		printerr("Couldn't get main.js file")
 		local_main_js_path = ""
@@ -387,31 +389,16 @@ func _on_try_spawn_scene(scene, local_main_js_path, local_main_crdt_path):
 		local_main_crdt_path = ""
 
 	if local_main_crdt_path.is_empty() and local_main_js_path.is_empty():
-		printerr("Couldn't spawn the scene ", scene.id)
+		printerr("Couldn't spawn the scene ", scene_item.id)
 		return false
 
-	var base_parcel = (
-		scene.entity.get("metadata", {}).get("scene", {}).get("base", "0,0").split_floats(",")
-	)
-	var title = scene.entity.get("metadata", {}).get("display", {}).get("title", "No title")
-	var scene_definition: Dictionary = {
-		"base": Vector2i(base_parcel[0], base_parcel[1]),
-		"is_global": scene.is_global,
-		"path": local_main_js_path,
-		"main_crdt_path": local_main_crdt_path,
-		"visible": true,
-		"parcels": scene.parcels,
-		"title": title,
-		"entity_id": scene.id,
-		"metadata": scene.entity.metadata
-	}
 
-	var dcl_content_mapping = DclContentMappingAndUrl.new()
-	dcl_content_mapping.initialize(scene.entity.baseUrl, scene.entity["content"])
 	var scene_number_id: int = Global.scene_runner.start_scene(
-		scene_definition, dcl_content_mapping
+		local_main_js_path,
+		local_main_crdt_path,
+		scene_item.scene_entity_definition
 	)
-	scene.scene_number_id = scene_number_id
+	scene_item.scene_number_id = scene_number_id
 
 	return true
 

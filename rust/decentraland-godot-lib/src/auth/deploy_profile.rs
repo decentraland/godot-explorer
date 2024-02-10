@@ -5,7 +5,7 @@ use anyhow::anyhow;
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
 
-use crate::{comms::profile::UserProfile, realm::scene_entity_coordinator::TypedIpfsRef};
+use crate::{comms::profile::UserProfile, dcl::common::content_entity::TypedIpfsRef};
 
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 
