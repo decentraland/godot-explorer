@@ -305,7 +305,7 @@ func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappin
 	if file_name.ends_with(".png"):
 		promise = Global.content_provider.fetch_texture(file_name, content_mapping)
 	else:
-		promise = Global.content_provider.fetch_gltf(file_name, content_mapping, false)
+		promise = Global.content_provider.fetch_gltf(file_name, content_mapping)
 
 	return promise
 
