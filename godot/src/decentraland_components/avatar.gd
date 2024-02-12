@@ -66,7 +66,9 @@ func _unset_avatar_modifier_area():
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
-	await async_update_avatar(profile.get_avatar())
+	var avatar = profile.get_avatar()
+	avatar.set_name(profile.get_name())
+	await async_update_avatar(avatar)
 
 
 func async_update_avatar(new_avatar: DclAvatarWireFormat):
@@ -554,3 +556,9 @@ func _attach_point_bone_pose_changed(bone_idx: int):
 
 func _on_timer_hide_mic_timeout():
 	sprite_3d_mic_enabled.hide()
+
+
+func get_avatar_name() -> String:
+	if cur_avatar_wf != null:
+		return cur_avatar_wf.get_name()
+	return ""

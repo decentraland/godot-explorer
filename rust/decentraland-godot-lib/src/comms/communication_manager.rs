@@ -1,3 +1,4 @@
+use ethers::types::H160;
 use godot::prelude::*;
 use http::Uri;
 
@@ -81,16 +82,7 @@ impl INode for CommunicationManager {
                     let chats = adapter.consume_chats();
 
                     if !chats.is_empty() {
-                        let mut chats_variant_array = VariantArray::new();
-                        for (address, profile_name, chat) in chats {
-                            let mut chat_arr = VariantArray::new();
-                            chat_arr.push(address.to_variant());
-                            chat_arr.push(profile_name.to_variant());
-                            chat_arr.push(chat.timestamp.to_variant());
-                            chat_arr.push(chat.message.to_variant());
-
-                            chats_variant_array.push(chat_arr.to_variant());
-                        }
+                        let chats_variant_array = get_chat_array(chats);
                         self.base.emit_signal(
                             "chat_message".into(),
                             &[chats_variant_array.to_variant()],
@@ -108,16 +100,7 @@ impl INode for CommunicationManager {
                 let chats = adapter.consume_chats();
 
                 if !chats.is_empty() {
-                    let mut chats_variant_array = VariantArray::new();
-                    for (address, profile_name, chat) in chats {
-                        let mut chat_arr = VariantArray::new();
-                        chat_arr.push(address.to_variant());
-                        chat_arr.push(profile_name.to_variant());
-                        chat_arr.push(chat.timestamp.to_variant());
-                        chat_arr.push(chat.message.to_variant());
-
-                        chats_variant_array.push(chat_arr.to_variant());
-                    }
+                    let chats_variant_array = get_chat_array(chats);
                     self.base
                         .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
                 }
@@ -463,4 +446,18 @@ impl CommunicationManager {
     pub fn get_current_adapter_conn_str(&self) -> GString {
         GString::from(self.current_connection_str.clone())
     }
+}
+
+fn get_chat_array(chats: Vec<(H160, rfc4::Chat)>) -> VariantArray {
+    let mut chats_variant_array = VariantArray::new();
+    for (address, chat) in chats {
+        let mut chat_arr = VariantArray::new();
+        let address = format!("{:#x}", address);
+        chat_arr.push(address.to_variant());
+        chat_arr.push(chat.timestamp.to_variant());
+        chat_arr.push(chat.message.to_variant());
+
+        chats_variant_array.push(chat_arr.to_variant());
+    }
+    chats_variant_array
 }

@@ -331,9 +331,7 @@ func _on_panel_chat_submit_message(message: String):
 			# TODO: unknown command
 	else:
 		Global.comms.send_chat(message)
-		panel_chat.on_chats_arrived(
-			[[player.avatar.avatar_id, player.avatar.avatar_name, 0, message]]
-		)
+		panel_chat.on_chats_arrived([[Global.player_identity.get_address_str(), 0, message]])
 
 
 func _on_control_menu_request_pause_scenes(enabled):
