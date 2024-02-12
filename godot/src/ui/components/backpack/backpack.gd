@@ -8,15 +8,13 @@ const FILTER: Texture = preload("res://assets/ui/Filter.svg")
 
 var wearable_button_group = ButtonGroup.new()
 var filtered_data: Array
-var avatar_body_shape: String
-var avatar_wearables: PackedStringArray
-var avatar_eyes_color: Color
-var avatar_hair_color: Color
-var avatar_skin_color: Color
-var avatar_emotes: Array
+
 var base_wearable_request_id: int = -1
 var wearable_data: Dictionary = {}
-var primary_player_profile_dictionary: Dictionary = {}
+
+var mutable_avatar: DclAvatarWireFormat
+var mutable_profile: DclUserProfile
+
 var wearable_filter_buttons: Array[WearableFilterButton] = []
 var main_category_selected: String = "body_shape"
 var request_update_avatar: bool = false  # debounce
@@ -47,6 +45,9 @@ var avatar_wearables_body_shape_cache: Dictionary = {}
 
 # gdlint:ignore = async-function-name
 func _ready():
+	mutable_profile = DclUserProfile.new()
+	mutable_avatar = mutable_profile.get_avatar()
+
 	container_backpack.hide()
 	backpack_loading.show()
 
@@ -107,22 +108,11 @@ func _update_visible_categories():
 		first_wearable_filter_button.set_pressed(true)
 
 
-func _on_profile_changed(new_profile: Dictionary):
-	var profile_content = new_profile.get("content", {})
-	line_edit_name.text = profile_content.get("name")
+func _on_profile_changed(new_profile: DclUserProfile):
+	line_edit_name.text = new_profile.get_name()
 
-	var profile_avatar = profile_content.get("avatar", {})
-	avatar_body_shape = profile_avatar.bodyShape
-	avatar_wearables = profile_avatar.wearables
-	avatar_eyes_color = Wearables.from_color_object(profile_avatar.eyes.color)
-	avatar_hair_color = Wearables.from_color_object(profile_avatar.hair.color)
-	avatar_skin_color = Wearables.from_color_object(profile_avatar.skin.color)
-
-	if profile_avatar.emotes != null:
-		avatar_emotes = profile_avatar.emotes
-
-	if primary_player_profile_dictionary.is_empty():
-		primary_player_profile_dictionary = new_profile.duplicate()
+	if mutable_profile == null:
+		mutable_profile = new_profile.duplicated()
 
 	request_update_avatar = true
 	request_show_wearables = true
@@ -139,35 +129,30 @@ func _physics_process(_delta):
 
 
 func _async_update_avatar():
-	if primary_player_profile_dictionary.is_empty():
+	if mutable_profile == null:
 		return
 
-	var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get(
-		"avatar", {}
-	)
-	profile_avatar["bodyShape"] = avatar_body_shape
-	profile_avatar["eyes"] = Wearables.to_color_object(avatar_eyes_color)
-	profile_avatar["hair"] = Wearables.to_color_object(avatar_hair_color)
-	profile_avatar["skin"] = Wearables.to_color_object(avatar_skin_color)
-	profile_avatar["wearables"] = avatar_wearables
-	profile_avatar["emotes"] = avatar_emotes
+	mutable_profile.set_avatar(mutable_avatar)
 
 	avatar_preview.hide()
 	avatar_loading.show()
-	await avatar_preview.avatar.async_update_avatar_from_profile(primary_player_profile_dictionary)
+	await avatar_preview.avatar.async_update_avatar_from_profile(mutable_profile)
 	avatar_loading.hide()
 	avatar_preview.show()
 	button_save_profile.disabled = false
 
 
 func load_filtered_data(filter: String):
+	if mutable_avatar == null:
+		return
+
 	filtered_data = []
 	for wearable_id in wearable_data:
 		var wearable = wearable_data[wearable_id]
 		if wearable != null:
 			if wearable.get_category() == filter:
 				if (
-					Wearables.can_equip(wearable, avatar_body_shape)
+					Wearables.can_equip(wearable, mutable_avatar.get_body_shape())
 					or wearable.get_category() == "body_shape"
 				):
 					filtered_data.push_back(wearable_id)
@@ -204,7 +189,8 @@ func show_wearables():
 
 		# Check if the item is equipped
 		var is_wearable_pressed = (
-			avatar_wearables.has(wearable_id) or avatar_body_shape == wearable_id
+			mutable_avatar.get_wearables().has(wearable_id)
+			or mutable_avatar.get_body_shape() == wearable_id
 		)
 		wearable_item.set_pressed_no_signal(is_wearable_pressed)
 		wearable_item.set_equiped(is_wearable_pressed)
@@ -222,13 +208,13 @@ func _on_wearable_filter_button_filter_type(type):
 	var should_hide = false
 	if type == Wearables.Categories.BODY_SHAPE:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.SKIN
-		skin_color_picker.set_color(avatar_skin_color)
+		skin_color_picker.set_color(mutable_avatar.get_skin_color())
 	elif type == Wearables.Categories.HAIR or type == Wearables.Categories.FACIAL_HAIR:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.HAIR
-		skin_color_picker.set_color(avatar_hair_color)
+		skin_color_picker.set_color(mutable_avatar.get_hair_color())
 	elif type == Wearables.Categories.EYES:
 		skin_color_picker.color_target = skin_color_picker.ColorTarget.EYE
-		skin_color_picker.set_color(avatar_eyes_color)
+		skin_color_picker.set_color(mutable_avatar.get_eyes_color())
 	else:
 		should_hide = true
 
@@ -243,17 +229,15 @@ func _on_line_edit_name_text_changed(_new_text):
 
 
 func save_profile():
-	if primary_player_profile_dictionary.is_empty():
+	if mutable_profile == null:
 		return
 
-	var profile_content = primary_player_profile_dictionary.get("content", {})
-	var profile_avatar = profile_content.get("avatar", {})
+	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
+	mutable_profile.set_name(line_edit_name.text)
+	mutable_avatar.set_name(line_edit_name.text)
 
-	profile_content["name"] = line_edit_name.text
-	profile_content["hasConnectedWeb3"] = !Global.player_identity.is_guest
-	profile_avatar["name"] = line_edit_name.text
-
-	Global.player_identity.async_deploy_profile(primary_player_profile_dictionary)
+	mutable_profile.set_avatar(mutable_avatar)
+	Global.player_identity.async_deploy_profile(mutable_profile)
 
 
 func _on_button_save_profile_pressed():
@@ -266,30 +250,38 @@ func _on_wearable_equip(wearable_id: String):
 	var category = desired_wearable.get_category()
 
 	if category == Wearables.Categories.BODY_SHAPE:
-		if avatar_body_shape != wearable_id:
-			avatar_wearables_body_shape_cache[avatar_body_shape] = avatar_wearables.duplicate()
-			avatar_body_shape = wearable_id
-			avatar_wearables.clear()
-			var default_wearables: Dictionary = Wearables.DefaultWearables.BY_BODY_SHAPES.get(
-				avatar_body_shape
+		var current_body_shape_id := mutable_avatar.get_body_shape()
+		var new_body_shape_id := wearable_id
+		if current_body_shape_id != new_body_shape_id:
+			avatar_wearables_body_shape_cache[current_body_shape_id] = (
+				mutable_avatar.get_wearables().duplicate()
 			)
-			avatar_wearables = avatar_wearables_body_shape_cache.get(avatar_body_shape, [])
-			if avatar_wearables.is_empty():
-				avatar_wearables = default_wearables.values()
+
+			mutable_avatar.set_body_shape(new_body_shape_id)
+			var default_wearables: Dictionary = Wearables.DefaultWearables.BY_BODY_SHAPES.get(
+				new_body_shape_id
+			)
+			var new_avatar_wearables = avatar_wearables_body_shape_cache.get(new_body_shape_id, [])
+			if new_avatar_wearables.is_empty():
+				new_avatar_wearables = default_wearables.values()
+
+			mutable_avatar.set_wearables(new_avatar_wearables)
 	else:
+		var new_avatar_wearables := mutable_avatar.get_wearables()
 		var to_remove = []
 		# Unequip current wearable with category
-		for current_wearable_id in avatar_wearables:
+		for current_wearable_id in new_avatar_wearables:
 			# TODO: put the fetch wearable function
 			var wearable = wearable_data[current_wearable_id]
 			if wearable.get_category() == category:
 				to_remove.push_back(current_wearable_id)
 
 		for to_remove_id in to_remove:
-			var index = avatar_wearables.find(to_remove_id)
-			avatar_wearables.remove_at(index)
+			var index = new_avatar_wearables.find(to_remove_id)
+			new_avatar_wearables.remove_at(index)
 
-		avatar_wearables.append(wearable_id)
+		new_avatar_wearables.append(wearable_id)
+		mutable_avatar.set_wearables(new_avatar_wearables)
 
 	request_update_avatar = true
 
@@ -302,10 +294,12 @@ func _on_wearable_unequip(wearable_id: String):
 		# TODO: can not unequip a body shape
 		return
 
-	var index = avatar_wearables.find(wearable_id)
+	var new_avatar_wearables := mutable_avatar.get_wearables()
+	var index = new_avatar_wearables.find(wearable_id)
 	if index != -1:
-		avatar_wearables.remove_at(index)
+		new_avatar_wearables.remove_at(index)
 
+	mutable_avatar.set_wearables(new_avatar_wearables)
 	request_update_avatar = true
 
 
@@ -316,21 +310,25 @@ func _on_button_logout_pressed():
 func _on_color_picker_panel_pick_color(color: Color):
 	match skin_color_picker.color_target:
 		skin_color_picker.ColorTarget.EYE:
-			avatar_eyes_color = color
+			mutable_avatar.set_eyes_color(color)
 		skin_color_picker.ColorTarget.SKIN:
-			avatar_skin_color = color
+			mutable_avatar.set_skin_color(color)
 		skin_color_picker.ColorTarget.HAIR:
-			avatar_hair_color = color
+			mutable_avatar.set_hair_color(color)
 
 	skin_color_picker.set_color(color)
-	avatar_preview.avatar.update_colors(avatar_eyes_color, avatar_skin_color, avatar_hair_color)
-
-	var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get(
-		"avatar", {}
+	avatar_preview.avatar.update_colors(
+		mutable_avatar.get_eyes_color(),
+		mutable_avatar.get_skin_color(),
+		mutable_avatar.get_hair_color()
 	)
-	profile_avatar["eyes"] = Wearables.to_color_object(avatar_eyes_color)
-	profile_avatar["hair"] = Wearables.to_color_object(avatar_hair_color)
-	profile_avatar["skin"] = Wearables.to_color_object(avatar_skin_color)
+#
+	#var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get(
+	#"avatar", {}
+	#)
+	#profile_avatar["eyes"] = Wearables.to_color_object(avatar_eyes_color)
+	#profile_avatar["hair"] = Wearables.to_color_object(avatar_hair_color)
+	#profile_avatar["skin"] = Wearables.to_color_object(avatar_skin_color)
 	button_save_profile.disabled = false
 
 
@@ -347,13 +345,13 @@ func _on_color_picker_button_toggle_color_panel(toggled, color_target):
 		match skin_color_picker.color_target:
 			skin_color_picker.ColorTarget.EYE:
 				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
-				current_color = avatar_eyes_color
+				current_color = mutable_avatar.get_eyes_color()
 			skin_color_picker.ColorTarget.SKIN:
 				color_picker_panel.color_type = color_picker_panel.ColorTargetType.SKIN
-				current_color = avatar_skin_color
+				current_color = mutable_avatar.get_skin_color()
 			skin_color_picker.ColorTarget.HAIR:
 				color_picker_panel.color_type = color_picker_panel.ColorTargetType.OTHER
-				current_color = avatar_hair_color
+				current_color = mutable_avatar.get_hair_color()
 
 		color_picker_panel.custom_popup(rect, current_color)
 

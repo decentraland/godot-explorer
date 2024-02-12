@@ -1,4 +1,3 @@
-use godot::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::dcl::components::proto_components::{
@@ -214,18 +213,5 @@ impl Default for UserProfile {
             version: 1,
             content: SerializedProfile::default(),
         }
-    }
-}
-
-impl UserProfile {
-    pub fn from_godot_dictionary(dictionary: &Dictionary) -> Self {
-        let value = godot::engine::Json::stringify(dictionary.to_variant());
-        serde_json::from_str(value.to_string().as_str()).unwrap_or_default()
-    }
-
-    pub fn to_godot_dictionary(&self) -> Dictionary {
-        let value = serde_json::to_string(self).unwrap_or_default();
-        let value = godot::engine::Json::parse_string(value.into());
-        value.to::<Dictionary>()
     }
 }

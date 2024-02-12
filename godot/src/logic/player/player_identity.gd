@@ -46,18 +46,21 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool)
 		if Global.config.guest_profile.is_empty():
 			self.set_default_profile()
 		else:
-			self.set_profile(Global.config.guest_profile)
+			var guest_profile := DclUserProfile.new()
+			# TODO
+			# guest_profile.update_from_dict(Global.config.guest_profile)
+			self.set_profile(guest_profile)
 		return
 
 	async_fetch_profile(address, current_lambda_server_base_url)
 
 
-func async_deploy_profile(new_profile: Dictionary) -> void:
-	var is_guest_profile = not new_profile.get("content", {}).get("hasConnectedWeb3", false)
+func async_deploy_profile(new_profile: DclUserProfile) -> void:
+	var is_guest_profile = not new_profile.has_connected_web3()
 	if is_guest_profile:
-		Global.config.guest_profile = new_profile
+		Global.config.guest_profile = new_profile.to_dictionary()
 		Global.config.save_to_settings_file()
-		self._update_profile_from_dictionary(new_profile)
+		self.set_profile(new_profile)
 		return
 
 	# Block until a realm is set
@@ -83,4 +86,4 @@ func async_deploy_profile(new_profile: Dictionary) -> void:
 	response = (response as RequestResponse).get_string_response_as_json()
 	if response is Dictionary:
 		if response.get("creationTimestamp") != null:
-			self._update_profile_from_dictionary(new_profile)
+			self.set_profile(new_profile)

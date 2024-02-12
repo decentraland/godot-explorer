@@ -81,7 +81,7 @@ func _ready():
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
 
-func _on_player_profile_changed(new_profile: Dictionary):
+func _on_player_profile_changed(new_profile: DclUserProfile):
 	avatar.async_update_avatar_from_profile(new_profile)
 
 

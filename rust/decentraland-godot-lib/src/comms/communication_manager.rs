@@ -350,7 +350,7 @@ impl CommunicationManager {
             .try_get_ephemeral_auth_chain()
             .expect("ephemeral auth chain needed to start a comms connection");
 
-        let player_profile = player_identity.bind().profile().cloned();
+        let player_profile = player_identity.bind().clone_profile();
 
         match protocol {
             "ws-room" => {
@@ -439,15 +439,13 @@ impl CommunicationManager {
     fn _on_update_profile(&mut self) {
         let dcl_player_identity = DclGlobal::singleton().bind().get_player_identity();
         let player_identity = dcl_player_identity.bind();
-        let Some(player_profile) = player_identity.profile() else {
+        let Some(player_profile) = player_identity.clone_profile() else {
             return;
         };
         match &mut self.current_connection {
-            CommsConnection::Connected(adapter) => adapter.change_profile(player_profile.clone()),
+            CommsConnection::Connected(adapter) => adapter.change_profile(player_profile),
             #[cfg(feature = "use_livekit")]
-            CommsConnection::Archipelago(archipelago) => {
-                archipelago.change_profile(player_profile.clone())
-            }
+            CommsConnection::Archipelago(archipelago) => archipelago.change_profile(player_profile),
             _ => {}
         }
     }

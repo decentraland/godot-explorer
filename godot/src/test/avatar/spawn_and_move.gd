@@ -19,7 +19,7 @@ func get_random_body():
 	var to_pick = []
 	for wearable_id in wearable_data:
 		var wearable = wearable_data[wearable_id]
-		if Wearables.get_category(wearable) == Wearables.Categories.BODY_SHAPE:
+		if wearable.get_category() == Wearables.Categories.BODY_SHAPE:
 			to_pick.push_back(wearable_id)
 
 	return to_pick.pick_random()
@@ -29,7 +29,7 @@ func get_random_wearable(category: String, body_shape_id: String):
 	var to_pick = []
 	for wearable_id in wearable_data:
 		var wearable = wearable_data[wearable_id]
-		if Wearables.get_category(wearable) == category:
+		if wearable.get_category() == category:
 			if Wearables.can_equip(wearable, body_shape_id):
 				to_pick.push_back(wearable_id)
 
@@ -64,7 +64,8 @@ func _process(dt):
 		var transform = Transform3D(Basis.IDENTITY, initial_position)
 		var alias = 10000 + spawning_i
 		Global.avatars.add_avatar(alias, "")
-		Global.avatars.update_avatar_profile(alias, avatar_data)
+		# TODO
+		# Global.avatars.update_avatar_profile(alias, avatar_data)
 		Global.avatars.update_avatar_transform_with_godot_transform(alias, transform)
 
 		spawning_position.append(initial_position)
