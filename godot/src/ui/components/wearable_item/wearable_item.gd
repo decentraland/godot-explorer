@@ -16,7 +16,7 @@ var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 var thumbnail_hash: String
 var wearable_id: String
-var wearable_data: Dictionary
+var wearable_data: DclWearableEntityDefinition
 var panel_container_external_orig_rect: Rect2
 var was_pressed = false
 
@@ -34,14 +34,15 @@ func _ready():
 	panel_container_external.hide()
 
 
-func async_set_wearable(wearable: Dictionary):
-	wearable_id = wearable.get("id", "")
-	var wearable_thumbnail: String = wearable.get("metadata", {}).get("thumbnail", "")
-	thumbnail_hash = wearable.get("content").get_hash(wearable_thumbnail)
+func async_set_wearable(wearable: DclWearableEntityDefinition):
+	wearable_id = wearable.get_id()
+	var dcl_content_mapping = wearable.get_content_mapping()
+	var wearable_thumbnail: String = wearable.get_thumbnail()
+	thumbnail_hash = dcl_content_mapping.get_hash(wearable_thumbnail)
 	_update_category_icon(wearable)
 	wearable_data = wearable
 
-	match wearable.get("rarity", ""):
+	match wearable.get_rarity():
 		"common":
 			texture_rect_background.texture = common_thumbnail
 		"uncommon":
@@ -60,7 +61,6 @@ func async_set_wearable(wearable: Dictionary):
 			texture_rect_background.texture = base_thumbnail
 
 	if not thumbnail_hash.is_empty():
-		var dcl_content_mapping = wearable.get("content")
 		var promise: Promise = Global.content_provider.fetch_texture(
 			wearable_thumbnail, dcl_content_mapping
 		)
@@ -117,11 +117,9 @@ func set_equiped(is_equiped: bool):
 	effect_toggle()
 
 
-func _update_category_icon(wearable: Dictionary):
+func _update_category_icon(wearable: DclWearableEntityDefinition):
 	var texture_path = (
-		"res://assets/ui/wearable_categories/"
-		+ wearable.get("metadata", "").get("data", "").get("category", "")
-		+ "-icon.svg"
+		"res://assets/ui/wearable_categories/" + wearable.get_category() + "-icon.svg"
 	)
 	if ResourceLoader.exists(texture_path):
 		var texture = load(texture_path)

@@ -10,6 +10,7 @@ use godot::{
 use tokio::sync::Semaphore;
 
 use crate::{
+    avatars::wearable::DclWearableEntityDefinition,
     content::content_mapping::DclContentMappingAndUrl, dcl::common::string::FindNthChar,
     godot_classes::promise::Promise, http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
@@ -22,7 +23,7 @@ use super::{
     texture::{load_image_texture, TextureEntry},
     thread_safety::{set_thread_safety_checks_enabled, then_promise},
     video::download_video,
-    wearable_entities::{request_wearables, DclWearableEntityDefinition, WearableManyResolved},
+    wearable_entities::{request_wearables, WearableManyResolved},
 };
 pub struct ContentEntry {
     promise: Gd<Promise>,

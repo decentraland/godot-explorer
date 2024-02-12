@@ -266,8 +266,8 @@ func async_fetch_wearables_dependencies():
 
 	var async_calls: Array = []
 	for wearable_key in wearables_dict.keys():
-		if not wearables_dict[wearable_key] is Dictionary:
-			printerr("wearable ", wearable_key, " not dictionary")
+		if wearables_dict[wearable_key] == null:
+			printerr("wearable ", wearable_key, " null")
 			continue
 
 		var wearable = wearables_dict[wearable_key]
@@ -275,7 +275,7 @@ func async_fetch_wearables_dependencies():
 			continue
 
 		var hashes_to_fetch: Array
-		if Wearables.is_texture(Wearables.get_category(wearable)):
+		if Wearables.is_texture(wearable.get_category()):
 			hashes_to_fetch = Wearables.get_wearable_facial_hashes(wearable, current_body_shape)
 		else:
 			hashes_to_fetch = [Wearables.get_wearable_main_file_hash(wearable, current_body_shape)]
@@ -283,7 +283,7 @@ func async_fetch_wearables_dependencies():
 		if hashes_to_fetch.is_empty():
 			continue
 
-		var content_mapping: DclContentMappingAndUrl = wearable.get("content")
+		var content_mapping: DclContentMappingAndUrl = wearable.get_content_mapping()
 		var files: Array = []
 		for file_name in content_mapping.get_files():
 			for file_hash in hashes_to_fetch:

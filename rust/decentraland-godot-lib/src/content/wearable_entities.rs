@@ -1,9 +1,6 @@
-use super::{
-    content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
-    content_provider::ContentProviderContext,
-};
+use super::content_provider::ContentProviderContext;
 use crate::{
-    dcl::common::{content_entity::EntityDefinitionJson, wearable::WearableEntityMetadata},
+    avatars::wearable::WearableEntityDefinition,
     http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
 };
 use godot::{
@@ -13,6 +10,18 @@ use godot::{
 };
 use serde::Serialize;
 use std::{collections::HashMap, sync::Arc};
+
+#[derive(GodotClass)]
+#[class(base=RefCounted)]
+pub struct WearableManyResolved {
+    pub wearable_map: HashMap<String, Arc<WearableEntityDefinition>>,
+}
+
+impl WearableManyResolved {
+    pub fn from_gd(wearable_map: HashMap<String, Arc<WearableEntityDefinition>>) -> Gd<Self> {
+        Gd::from_init_fn(|_base| Self { wearable_map })
+    }
+}
 
 #[derive(Serialize)]
 struct EntitiesRequest {
@@ -62,81 +71,18 @@ pub async fn request_wearables(
 
     let mut wearable_map = HashMap::new();
     for pointer in entity_pointers.iter_mut() {
-        let Ok(wearable_data) = WearableEntityDefinition::from_json_ex(
-            None,
-            ipfs_content_base_url.clone(),
-            pointer.take(),
-        ) else {
-            continue;
-        };
-        wearable_map.insert(wearable_data.id.clone(), Arc::new(wearable_data));
+        match WearableEntityDefinition::from_json_ex(ipfs_content_base_url.clone(), pointer.take())
+        {
+            Ok(wearable_data) => {
+                wearable_map.insert(wearable_data.id.clone(), Arc::new(wearable_data));
+            }
+            Err(e) => {
+                tracing::error!("Error parsing wearable data: {:?}", e);
+            }
+        }
     }
 
     Ok(Some(
         WearableManyResolved::from_gd(wearable_map).to_variant(),
     ))
-}
-
-pub struct WearableEntityDefinition {
-    pub id: String,
-    pub entity_definition_json: EntityDefinitionJson,
-    pub wearable: WearableEntityMetadata,
-    pub content_mapping: ContentMappingAndUrlRef,
-}
-
-impl WearableEntityDefinition {
-    fn from_json_ex(
-        id: Option<String>,
-        base_url: String,
-        json: serde_json::Value,
-    ) -> Result<WearableEntityDefinition, anyhow::Error> {
-        let mut entity_definition_json = serde_json::from_value::<EntityDefinitionJson>(json)?;
-        let id = id.unwrap_or_else(|| entity_definition_json.id.take().unwrap_or_default());
-        let metadata = entity_definition_json
-            .metadata
-            .take()
-            .ok_or(anyhow::Error::msg("missing entity metadata"))?;
-        let wearable = serde_json::from_value::<WearableEntityMetadata>(metadata)?;
-
-        let content_mapping_vec = std::mem::take(&mut entity_definition_json.content);
-        let content_mapping = Arc::new(ContentMappingAndUrl {
-            base_url,
-            content: HashMap::from_iter(
-                content_mapping_vec
-                    .into_iter()
-                    .map(|item| (item.file.to_lowercase(), item.hash)),
-            ),
-        });
-
-        Ok(WearableEntityDefinition {
-            id,
-            entity_definition_json,
-            wearable,
-            content_mapping,
-        })
-    }
-}
-
-#[derive(GodotClass)]
-#[class(base=RefCounted)]
-pub struct WearableManyResolved {
-    pub wearable_map: HashMap<String, Arc<WearableEntityDefinition>>,
-}
-
-impl WearableManyResolved {
-    pub fn from_gd(wearable_map: HashMap<String, Arc<WearableEntityDefinition>>) -> Gd<Self> {
-        Gd::from_init_fn(|_base| Self { wearable_map })
-    }
-}
-
-#[derive(GodotClass)]
-#[class(base=RefCounted)]
-pub struct DclWearableEntityDefinition {
-    pub inner: Arc<WearableEntityDefinition>,
-}
-
-impl DclWearableEntityDefinition {
-    pub fn from_gd(inner: Arc<WearableEntityDefinition>) -> Gd<Self> {
-        Gd::from_init_fn(|_base| Self { inner })
-    }
 }

@@ -3,19 +3,32 @@ use std::str::FromStr;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
+pub struct I18N {
+    pub code: String,
+    pub text: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct WearableEntityMetadata {
     pub id: String,
     pub description: String,
     pub thumbnail: String,
     pub rarity: Option<String>,
     pub data: WearableData,
+
+    pub name: String,
+    pub i18n: Vec<I18N>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct WearableData {
     pub tags: Vec<String>,
     pub category: WearableCategory,
     pub representations: Vec<WearableRepresentation>,
+    pub replaces: Vec<String>,
+    pub hides: Vec<String>,
+    pub removes_default_hiding: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug, Clone)]

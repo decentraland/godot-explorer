@@ -164,12 +164,13 @@ func load_filtered_data(filter: String):
 	filtered_data = []
 	for wearable_id in wearable_data:
 		var wearable = wearable_data[wearable_id]
-		if Wearables.get_category(wearable) == filter:
-			if (
-				Wearables.can_equip(wearable, avatar_body_shape)
-				or Wearables.get_category(wearable) == "body_shape"
-			):
-				filtered_data.push_back(wearable_id)
+		if wearable != null:
+			if wearable.get_category() == filter:
+				if (
+					Wearables.can_equip(wearable, avatar_body_shape)
+					or wearable.get_category() == "body_shape"
+				):
+					filtered_data.push_back(wearable_id)
 
 	request_show_wearables = true
 
@@ -193,7 +194,7 @@ func show_wearables():
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		var wearable = wearable_data[wearable_id]
 		grid_container_wearables_list.add_child(wearable_item)
-		wearable_button_group.allow_unpress = can_unequip(Wearables.get_category(wearable))
+		wearable_button_group.allow_unpress = can_unequip(wearable.get_category())
 		wearable_item.button_group = wearable_button_group
 		wearable_item.async_set_wearable(wearable)
 
@@ -262,7 +263,7 @@ func _on_button_save_profile_pressed():
 
 func _on_wearable_equip(wearable_id: String):
 	var desired_wearable = wearable_data[wearable_id]
-	var category = Wearables.get_category(desired_wearable)
+	var category = desired_wearable.get_category()
 
 	if category == Wearables.Categories.BODY_SHAPE:
 		if avatar_body_shape != wearable_id:
@@ -281,7 +282,7 @@ func _on_wearable_equip(wearable_id: String):
 		for current_wearable_id in avatar_wearables:
 			# TODO: put the fetch wearable function
 			var wearable = wearable_data[current_wearable_id]
-			if Wearables.get_category(wearable) == category:
+			if wearable.get_category() == category:
 				to_remove.push_back(current_wearable_id)
 
 		for to_remove_id in to_remove:
@@ -295,7 +296,7 @@ func _on_wearable_equip(wearable_id: String):
 
 func _on_wearable_unequip(wearable_id: String):
 	var desired_wearable = wearable_data[wearable_id]
-	var category = Wearables.get_category(desired_wearable)
+	var category = desired_wearable.get_category()
 
 	if category == Wearables.Categories.BODY_SHAPE:
 		# TODO: can not unequip a body shape
