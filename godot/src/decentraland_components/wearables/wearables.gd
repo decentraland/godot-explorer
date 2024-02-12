@@ -290,7 +290,11 @@ const BASE_WEARABLES: PackedStringArray = [
 	"denimdungareesred",
 	"poloblacktshirt",
 	"polobluetshirt",
-	"polocoloredtshirt"
+	"polocoloredtshirt",
+	"black_glove",
+	"cord_bracelet",
+	"dcl_watch",
+	"emerald_ring"
 ]
 
 
