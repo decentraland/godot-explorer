@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://nexo8k0ub5ty"]
+[gd_scene load_steps=22 format=3 uid="uid://nexo8k0ub5ty"]
 
 [ext_resource type="Script" path="res://src/ui/components/discover/carrousel/discover_carrousel_item.gd" id="1_foqq3"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gao81"]
@@ -9,6 +9,15 @@
 [ext_resource type="Texture2D" uid="uid://beo554etknddh" path="res://assets/ui/PreviewIcon.svg" id="7_marjo"]
 [ext_resource type="Texture2D" uid="uid://mkgmqaf7qdvg" path="res://assets/ui/Like solid.svg" id="8_kyqbr"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="9_havap"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mv7ex"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_size = 4
+shadow_offset = Vector2(2, 2)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c0877"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -21,7 +30,6 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
-shadow_size = 8
 
 [sub_resource type="Gradient" id="Gradient_e8nv0"]
 colors = PackedColorArray(0, 0, 0, 1, 0, 0, 0, 0)
@@ -57,30 +65,43 @@ colors = PackedColorArray(0.914015, 0.145083, 0.329259, 1, 0.917647, 0.145098, 0
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_b6og1"]
 
 [node name="DiscoverCarrouselItem" type="TextureButton"]
-custom_minimum_size = Vector2(225, 175)
+custom_minimum_size = Vector2(235, 175)
 offset_right = 225.0
 offset_bottom = 175.0
 mouse_filter = 1
 script = ExtResource("1_foqq3")
 
-[node name="Panel" type="PanelContainer" parent="."]
-custom_minimum_size = Vector2(225, 175)
+[node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
-offset_right = 225.0
-offset_bottom = 175.0
+offset_right = 235.0
+offset_bottom = 185.0
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="PanelShadow" type="Panel" parent="MarginContainer"]
+custom_minimum_size = Vector2(225, 175)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_mv7ex")
+
+[node name="Panel" type="PanelContainer" parent="MarginContainer"]
+clip_children = 2
+custom_minimum_size = Vector2(225, 175)
+layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_c0877")
 
-[node name="DiscoverCarrouselItem" type="VBoxContainer" parent="Panel"]
+[node name="DiscoverCarrouselItem" type="VBoxContainer" parent="MarginContainer/Panel"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Control" type="Control" parent="Panel/DiscoverCarrouselItem"]
+[node name="Control" type="Control" parent="MarginContainer/Panel/DiscoverCarrouselItem"]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="TextureRect_Image" type="TextureRect" parent="Panel/DiscoverCarrouselItem/Control"]
+[node name="TextureRect_Image" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -97,7 +118,7 @@ texture = ExtResource("3_o4xes")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="TextureRect" type="TextureRect" parent="Panel/DiscoverCarrouselItem/Control/TextureRect_Image"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/TextureRect_Image"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -106,7 +127,7 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture2D_e6dy7")
 
-[node name="MarginContainer" type="MarginContainer" parent="Panel/DiscoverCarrouselItem/Control"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -118,10 +139,10 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer"]
 layout_mode = 2
 
-[node name="Container_Online" type="PanelContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer"]
+[node name="Container_Online" type="PanelContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 25)
 layout_mode = 2
@@ -130,22 +151,22 @@ size_flags_vertical = 0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_368si")
 
-[node name="MarginContainer" type="MarginContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online"]
 layout_mode = 2
 theme_override_constants/margin_left = 5
 theme_override_constants/margin_right = 5
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer"]
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 texture = ExtResource("4_4uq2a")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Online" type="Label" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer/HBoxContainer"]
+[node name="Label_Online" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/Container_Online/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -153,29 +174,29 @@ theme_override_fonts/font = ExtResource("6_ak6x4")
 text = "0"
 horizontal_alignment = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 alignment = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_constants/separation = 11
 alignment = 2
 
-[node name="HBoxContainer_Views" type="HBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="HBoxContainer_Views" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Views"]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Views"]
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
 texture = ExtResource("7_marjo")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Views" type="Label" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Views"]
+[node name="Label_Views" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Views"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -183,11 +204,11 @@ theme_override_fonts/font = ExtResource("6_ak6x4")
 text = "546"
 horizontal_alignment = 2
 
-[node name="HBoxContainer_Likes" type="HBoxContainer" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="HBoxContainer_Likes" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="CPUParticles2D" type="CPUParticles2D" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
+[node name="CPUParticles2D" type="CPUParticles2D" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
 position = Vector2(11, 21)
 emitting = false
 amount = 20
@@ -206,7 +227,7 @@ scale_amount_curve = SubResource("Curve_6fe12")
 color = Color(0.960784, 0.152941, 0.345098, 1)
 color_ramp = SubResource("Gradient_w2th8")
 
-[node name="Button_Like" type="Button" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
+[node name="Button_Like" type="Button" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
 custom_minimum_size = Vector2(25, 0)
 layout_mode = 2
 theme = ExtResource("5_uutqn")
@@ -227,7 +248,7 @@ icon = ExtResource("8_kyqbr")
 flat = true
 icon_alignment = 1
 
-[node name="Label_Likes" type="Label" parent="Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
+[node name="Label_Likes" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer2/HBoxContainer_Likes"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -235,13 +256,13 @@ theme_override_fonts/font = ExtResource("6_ak6x4")
 text = "78%"
 horizontal_alignment = 2
 
-[node name="Panel" type="Control" parent="Panel/DiscoverCarrouselItem"]
+[node name="Panel" type="Control" parent="MarginContainer/Panel/DiscoverCarrouselItem"]
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 size_flags_vertical = 0
 mouse_filter = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="Panel/DiscoverCarrouselItem/Panel"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -253,10 +274,10 @@ theme_override_constants/margin_top = 15
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 15
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel/DiscoverCarrouselItem/Panel/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer"]
 layout_mode = 2
 
-[node name="Label_Title" type="Label" parent="Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -266,7 +287,7 @@ text = "Scene Title"
 autowrap_mode = 2
 clip_text = true
 
-[node name="Label_Description" type="Label" parent="Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
+[node name="Label_Description" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 20)
