@@ -1,4 +1,3 @@
-use godot::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::dcl::components::proto_components::{
@@ -98,9 +97,9 @@ pub struct SerializedProfile {
     pub avatar: AvatarWireFormat,
 }
 
-impl Default for SerializedProfile {
+impl Default for AvatarWireFormat {
     fn default() -> Self {
-        let avatar = AvatarWireFormat {
+        Self {
             name: Some("".into()),
             emotes: Some(vec![]),
             body_shape: Some("urn:decentraland:off-chain:base-avatars:BaseFemale".into()),
@@ -138,7 +137,12 @@ impl Default for SerializedProfile {
                     b: 0.737,
                 },
             }),
-        };
+        }
+    }
+}
+
+impl Default for SerializedProfile {
+    fn default() -> Self {
         Self {
             user_id: Some("0x0000000000000000000000000000000000000000".into()),
             name: "".to_string(),
@@ -152,7 +156,7 @@ impl Default for SerializedProfile {
             interests: Default::default(),
             has_claimed_name: Some(false),
             has_connected_web3: Some(false),
-            avatar,
+            avatar: Default::default(),
         }
     }
 }
@@ -214,18 +218,5 @@ impl Default for UserProfile {
             version: 1,
             content: SerializedProfile::default(),
         }
-    }
-}
-
-impl UserProfile {
-    pub fn from_godot_dictionary(dictionary: &Dictionary) -> Self {
-        let value = godot::engine::Json::stringify(dictionary.to_variant());
-        serde_json::from_str(value.to_string().as_str()).unwrap_or_default()
-    }
-
-    pub fn to_godot_dictionary(&self) -> Dictionary {
-        let value = serde_json::to_string(self).unwrap_or_default();
-        let value = godot::engine::Json::parse_string(value.into());
-        value.to::<Dictionary>()
     }
 }

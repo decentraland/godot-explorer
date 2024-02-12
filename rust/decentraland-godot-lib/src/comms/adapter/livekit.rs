@@ -59,7 +59,7 @@ pub struct LivekitRoom {
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
     last_profile_version_announced: u32,
-    chats: Vec<(String, String, rfc4::Chat)>,
+    chats: Vec<(H160, rfc4::Chat)>,
 }
 
 impl LivekitRoom {
@@ -131,15 +131,7 @@ impl LivekitRoom {
                                 .update_avatar_transform_with_rfc4_position(peer.alias, &position);
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Chat(chat)) => {
-                            let address = format!("{:#x}", message.address);
-                            let peer_name = {
-                                if let Some(profile) = peer.profile.as_ref() {
-                                    profile.content.name.clone()
-                                } else {
-                                    address.clone()
-                                }
-                            };
-                            self.chats.push((address, peer_name, chat));
+                            self.chats.push((message.address, chat));
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileVersion(
                             announce_profile_version,
@@ -208,10 +200,6 @@ impl LivekitRoom {
                             };
 
                             if incoming_version <= current_version {
-                                tracing::error!(
-                                    "comms > old or same version ProfileResponse {:?}",
-                                    profile_response
-                                );
                                 continue;
                             }
 
@@ -322,7 +310,7 @@ impl LivekitRoom {
         self.player_profile = Some(new_profile);
     }
 
-    fn _consume_chats(&mut self) -> Vec<(String, String, rfc4::Chat)> {
+    fn _consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
         std::mem::take(&mut self.chats)
     }
 
@@ -344,7 +332,7 @@ impl Adapter for LivekitRoom {
         self._change_profile(new_profile);
     }
 
-    fn consume_chats(&mut self) -> Vec<(String, String, rfc4::Chat)> {
+    fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
         self._consume_chats()
     }
 

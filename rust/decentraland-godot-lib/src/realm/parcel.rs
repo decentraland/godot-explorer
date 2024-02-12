@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use godot::builtin::Vector2i;
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub struct Coord(pub i16, pub i16);
 
@@ -24,6 +26,12 @@ impl From<&String> for Coord {
         };
 
         Coord(x, y)
+    }
+}
+
+impl From<&Vector2i> for Coord {
+    fn from(v: &Vector2i) -> Self {
+        Coord(v.x as i16, v.y as i16)
     }
 }
 

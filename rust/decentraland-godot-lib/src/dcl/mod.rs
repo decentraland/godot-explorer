@@ -11,6 +11,7 @@ use godot::builtin::{Vector2, Vector3};
 use crate::{
     auth::{ephemeral_auth_chain::EphemeralAuthChain, ethereum_provider::EthereumProvider},
     content::content_mapping::ContentMappingAndUrlRef,
+    realm::scene_definition::SceneEntityDefinition,
 };
 
 use self::{
@@ -36,20 +37,6 @@ impl SceneId {
     pub const INVALID: SceneId = SceneId(-1);
 }
 
-// scene metadata
-#[derive(Clone, Default, Debug)]
-pub struct SceneDefinition {
-    pub entity_id: String,
-    pub path: String,
-    pub main_crdt_path: String,
-    pub base: godot::prelude::Vector2i,
-    pub visible: bool,
-    pub title: String,
-
-    pub parcels: Vec<godot::prelude::Vector2i>,
-    pub is_global: bool,
-    pub metadata: String,
-}
 // data from renderer to scene
 #[derive(Debug)]
 pub enum RendererResponse {
@@ -93,7 +80,9 @@ impl DclScene {
     #[allow(clippy::too_many_arguments)]
     pub fn spawn_new_js_dcl_scene(
         id: SceneId,
-        scene_definition: SceneDefinition,
+        scene_entity_definition: Arc<SceneEntityDefinition>,
+        local_main_js_file_path: String,
+        local_main_crdt_file_path: String,
         content_mapping: ContentMappingAndUrlRef,
         thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
         testing_mode: bool,
@@ -112,7 +101,9 @@ impl DclScene {
                 #[cfg(feature = "use_deno")]
                 scene_thread(
                     id,
-                    scene_definition,
+                    scene_entity_definition,
+                    local_main_js_file_path,
+                    local_main_crdt_file_path,
                     content_mapping,
                     thread_sender_to_main,
                     thread_receive_from_renderer,

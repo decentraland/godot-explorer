@@ -1,22 +1,20 @@
 use crate::{
     dcl::{
-        components::{
-            material::DclMaterial,
-            proto_components::{self},
-            SceneComponentId, SceneEntityId,
-        },
-        SceneDefinition, SceneId,
+        components::{material::DclMaterial, proto_components, SceneComponentId, SceneEntityId},
+        SceneId,
     },
     godot_classes::{
         dcl_node_entity_3d::DclNodeEntity3d, dcl_scene_node::DclSceneNode,
         dcl_ui_control::DclUiControl,
     },
+    realm::scene_definition::SceneEntityDefinition,
 };
-use godot::{builtin::meta::ConvertError, engine::Json, prelude::*};
+use godot::prelude::*;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     rc::Rc,
+    sync::Arc,
 };
 
 use super::components::ui::{scene_ui::UiResults, style::UiTransform};
@@ -77,62 +75,6 @@ pub struct GodotEntityNode {
     pub base_ui: Option<UiNode>,
 }
 
-impl SceneDefinition {
-    pub fn from_dict(dict: Dictionary) -> Result<Self, String> {
-        let Some(main_crdt_path) = dict.get("main_crdt_path") else {
-            return Err("main_crdt_path not found".to_string());
-        };
-        let Some(path) = dict.get("path") else {
-            return Err("path not found".to_string());
-        };
-        let Some(base) = dict.get("base") else {
-            return Err("base not found".to_string());
-        };
-        let Some(parcels) = dict.get("parcels") else {
-            return Err("parcels not found".to_string());
-        };
-        let Some(visible) = dict.get("visible") else {
-            return Err("visible not found".to_string());
-        };
-        let Some(is_global) = dict.get("is_global") else {
-            return Err("is_global not found".to_string());
-        };
-        let Some(title) = dict.get("title") else {
-            return Err("title not found".to_string());
-        };
-        let Some(entity_id) = dict.get("entity_id") else {
-            return Err("entity_id not found".to_string());
-        };
-
-        let base =
-            Vector2i::try_from_variant(&base).map_err(|_op| "couldn't get offset as Vector2i")?;
-
-        let parcels = VariantArray::try_from_variant(&parcels)
-            .map_err(|_op| "couldn't get parcels as array")?;
-
-        let parcels = parcels
-            .iter_shared()
-            .map(|v| Vector2i::try_from_variant(&v))
-            .collect::<Result<Vec<_>, ConvertError>>()
-            .map_err(|v| v.to_string())?;
-
-        let metadata =
-            Json::stringify(dict.get("metadata").unwrap_or_default().to_variant()).to_string();
-
-        Ok(Self {
-            main_crdt_path: main_crdt_path.to::<GString>().to_string(),
-            path: path.to::<GString>().to_string(),
-            base,
-            visible: visible.to::<bool>(),
-            parcels,
-            is_global: is_global.to::<bool>(),
-            title: title.to::<GString>().to_string(),
-            entity_id: entity_id.to::<GString>().to_string(),
-            metadata,
-        })
-    }
-}
-
 impl GodotEntityNode {
     fn new(base_3d: Option<Gd<Node3D>>, base_ui: Option<UiNode>) -> Self {
         Self {
@@ -154,17 +96,14 @@ impl GodotEntityNode {
 
 impl GodotDclScene {
     pub fn new(
-        scene_definition: &SceneDefinition,
+        scene_entity_definition: Arc<SceneEntityDefinition>,
         scene_id: &SceneId,
         parent_node_ui: Gd<DclUiControl>,
     ) -> Self {
-        let mut root_node_3d = DclSceneNode::new_alloc(scene_id.0, scene_definition.is_global);
+        let mut root_node_3d =
+            DclSceneNode::new_alloc(scene_id.0, scene_entity_definition.is_global);
 
-        root_node_3d.set_position(Vector3 {
-            x: 16.0 * scene_definition.base.x as f32,
-            y: 0.0,
-            z: 16.0 * -scene_definition.base.y as f32,
-        });
+        root_node_3d.set_position(scene_entity_definition.get_godot_3d_position());
 
         let mut root_node_ui_control = DclUiControl::alloc_gd();
         root_node_ui_control.set_name(GString::from(format!("ui_scene_id_{:?}", scene_id.0)));

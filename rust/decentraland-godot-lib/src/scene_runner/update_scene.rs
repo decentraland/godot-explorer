@@ -375,7 +375,7 @@ pub fn _process_scene(
         if this_update_ms > TICK_TIME_LOGABLE_MS {
             tracing::warn!(
                 "Scene \"{:?}\"(tick={:?}) in state {:?} takes more than {TICK_TIME_LOGABLE_MS}: {:?}ms",
-                scene.definition.title,
+                scene.scene_entity_definition.get_title(),
                 scene.tick_number,
                 scene.current_dirty.update_state,
                 this_update_ms

@@ -59,6 +59,7 @@ func get_params_from_cmd():
 	var realm_in_place := args.find("--realm")
 	var location_in_place := args.find("--location")
 	var preview_mode := args.has("--preview")
+	var spawn_avatars := args.has("--spawn-avatars")
 
 	if realm_in_place != -1 and args.size() > realm_in_place + 1:
 		realm_string = args[realm_in_place + 1]
@@ -70,7 +71,7 @@ func get_params_from_cmd():
 			location_vector = Vector2i(int(location_vector[0]), int(location_vector[1]))
 		else:
 			location_vector = null
-	return [realm_string, location_vector, preview_mode]
+	return [realm_string, location_vector, preview_mode, spawn_avatars]
 
 
 func _ready():
@@ -79,6 +80,12 @@ func _ready():
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
 
+	# --spawn-avatars
+	if cmd_params[3]:
+		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
+		add_child(test_spawn_and_move_avatars)
+
+	# --preview
 	if cmd_params[2]:
 		_on_control_menu_request_debug_panel(true)
 
@@ -145,8 +152,8 @@ func _ready():
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 
-	var profile = Global.player_identity.get_profile_or_empty()
-	if not profile.is_empty():
+	var profile := Global.player_identity.get_profile_or_null()
+	if profile != null:
 		Global.player_identity.profile_changed.emit(profile)
 
 	Global.player_identity.need_open_url.connect(self._on_need_open_url)
@@ -331,9 +338,7 @@ func _on_panel_chat_submit_message(message: String):
 			# TODO: unknown command
 	else:
 		Global.comms.send_chat(message)
-		panel_chat.on_chats_arrived(
-			[[player.avatar.avatar_id, player.avatar.avatar_name, 0, message]]
-		)
+		panel_chat.on_chats_arrived([[Global.player_identity.get_address_str(), 0, message]])
 
 
 func _on_control_menu_request_pause_scenes(enabled):

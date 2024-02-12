@@ -7,18 +7,12 @@ signal avatar_loaded
 @export var hide_name: bool = false
 
 # Public
-var avatar_name: String = ""
 var avatar_id: String = ""
 
 # Wearable requesting
 var current_content_url: String = ""
 
 # Current wearables equippoed
-var current_wearables: PackedStringArray
-var current_body_shape: String = ""
-var current_eyes_color: Color = Color.BLACK
-var current_skin_color: Color = Color.BLACK
-var current_hair_color: Color = Color.BLACK
 var wearables_dict: Dictionary = {}
 
 var finish_loading = false
@@ -70,44 +64,40 @@ func _unset_avatar_modifier_area():
 	# TODO: Passport (enable functionality)
 
 
-func async_update_avatar_from_profile(profile: Dictionary):
-	var profile_content: Dictionary = profile.get("content", {})
-	var id = profile_content.get("userId", "unknown")
-	if id == null:
-		id = "unknown"
-
-	avatar_id = id
-	if profile_content.get("name", "") != null:
-		avatar_name = profile_content.get("name", "")
-
-	await async_update_avatar(profile.get("content", {}).get("avatar", {}))
+func async_update_avatar_from_profile(profile: DclUserProfile):
+	var avatar = profile.get_avatar()
+	avatar.set_name(profile.get_name())
+	await async_update_avatar(avatar)
 
 
-func async_update_avatar(avatar: Dictionary):
+func async_update_avatar(new_avatar: DclAvatarWireFormat):
+	avatar_data = new_avatar
+	if new_avatar == null:
+		printerr("Trying to update an avatar with an null value")
+		return
+
+	var wearable_to_request := []
+
 	current_content_url = "https://peer.decentraland.org/content/"
 	if not Global.realm.content_base_url.is_empty():
 		current_content_url = Global.realm.content_base_url
 
-	if avatar.is_empty():
-		printerr("Trying to update an avatar with an empty object")
-		return
-
-	if avatar.get("name", "") != null:
-		avatar_name = avatar.get("name", "")
-
 	sprite_3d_mic_enabled.hide()
-	label_3d_name.text = avatar_name
+	label_3d_name.text = avatar_data.get_name()
 	if hide_name:
 		label_3d_name.hide()
 
-	current_wearables = avatar.get("wearables")
-	current_body_shape = avatar.get("bodyShape")
-	current_eyes_color = Avatar.from_color_object(avatar.get("eyes", {}).get("color", null))
-	current_skin_color = Avatar.from_color_object(avatar.get("skin", {}).get("color", null))
-	current_hair_color = Avatar.from_color_object(avatar.get("hair", {}).get("color", null))
+	wearable_to_request.append_array(avatar_data.get_wearables())
 
-	var wearable_to_request := Array(current_wearables)
-	wearable_to_request.push_back(current_body_shape)
+	for emote_urn in avatar_data.get_emotes():
+		if emote_urn.begins_with("urn"):
+			wearable_to_request.push_back(emote_urn)
+
+	wearable_to_request.push_back(avatar_data.get_body_shape())
+
+	# TODO: Validate if the current profile can own this wearables
+	# tracked at https://github.com/decentraland/godot-explorer/issues/244
+	# wearable_to_request = filter_owned_wearables(wearable_to_request)
 
 	_load_default_emotes()
 
@@ -174,7 +164,7 @@ func play_emote(emote_id: String):
 			pb.start("Emote", true)
 		playing_emote = true
 	else:
-		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_name])
+		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_data.get_name()])
 
 
 func play_remote_emote(_emote_src: String, _looping: bool):
@@ -204,9 +194,9 @@ func broadcast_avatar_animation(emote_id: String) -> void:
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
-	current_eyes_color = eyes_color
-	current_skin_color = skin_color
-	current_hair_color = hair_color
+	avatar_data.set_eyes_color(eyes_color)
+	avatar_data.set_skin_color(skin_color)
+	avatar_data.set_hair_color(hair_color)
 
 	if finish_loading:
 		apply_color_and_facial()
@@ -226,30 +216,31 @@ func async_fetch_wearables_dependencies():
 	wearables_dict.clear()
 
 	# Fill data
-	wearables_dict[current_body_shape] = Global.content_provider.get_wearable(current_body_shape)
-	for item in current_wearables:
+	var body_shape_id := avatar_data.get_body_shape()
+	wearables_dict[body_shape_id] = Global.content_provider.get_wearable(body_shape_id)
+	for item in avatar_data.get_wearables():
 		wearables_dict[item] = Global.content_provider.get_wearable(item)
 
 	var async_calls: Array = []
 	for wearable_key in wearables_dict.keys():
-		if not wearables_dict[wearable_key] is Dictionary:
-			printerr("wearable ", wearable_key, " not dictionary")
+		if wearables_dict[wearable_key] == null:
+			printerr("wearable ", wearable_key, " null")
 			continue
 
-		var wearable = wearables_dict[wearable_key]
-		if not Wearables.is_valid_wearable(wearable, current_body_shape, true):
+		var wearable: DclWearableEntityDefinition = wearables_dict[wearable_key]
+		if not Wearables.is_valid_wearable(wearable, body_shape_id, true):
 			continue
 
 		var hashes_to_fetch: Array
-		if Wearables.is_texture(Wearables.get_category(wearable)):
-			hashes_to_fetch = Wearables.get_wearable_facial_hashes(wearable, current_body_shape)
+		if Wearables.is_texture(wearable.get_category()):
+			hashes_to_fetch = Wearables.get_wearable_facial_hashes(wearable, body_shape_id)
 		else:
-			hashes_to_fetch = [Wearables.get_wearable_main_file_hash(wearable, current_body_shape)]
+			hashes_to_fetch = [Wearables.get_wearable_main_file_hash(wearable, body_shape_id)]
 
 		if hashes_to_fetch.is_empty():
 			continue
 
-		var content_mapping: DclContentMappingAndUrl = wearable.get("content")
+		var content_mapping: DclContentMappingAndUrl = wearable.get_content_mapping()
 		var files: Array = []
 		for file_name in content_mapping.get_files():
 			for file_hash in hashes_to_fetch:
@@ -328,7 +319,7 @@ func try_to_set_body_shape(body_shape_hash):
 
 func async_load_wearables():
 	var curated_wearables = Wearables.get_curated_wearable_list(
-		current_body_shape, current_wearables, []
+		avatar_data.get_body_shape(), avatar_data.get_wearables(), []
 	)
 	if curated_wearables.is_empty():
 		printerr("couldn't get curated wearables")
@@ -336,12 +327,14 @@ func async_load_wearables():
 
 	wearables_by_category = curated_wearables[0]
 
-	var body_shape = wearables_by_category.get(Wearables.Categories.BODY_SHAPE)
-	if body_shape == null:
+	var body_shape_wearable = wearables_by_category.get(Wearables.Categories.BODY_SHAPE)
+	if body_shape_wearable == null:
 		printerr("body shape not found")
 		return
 
-	try_to_set_body_shape(Wearables.get_wearable_main_file_hash(body_shape, current_body_shape))
+	try_to_set_body_shape(
+		Wearables.get_wearable_main_file_hash(body_shape_wearable, avatar_data.get_body_shape())
+	)
 	wearables_by_category.erase(Wearables.Categories.BODY_SHAPE)
 
 	var has_own_skin = false
@@ -357,7 +350,9 @@ func async_load_wearables():
 		if Wearables.is_texture(category):
 			continue
 
-		var file_hash = Wearables.get_wearable_main_file_hash(wearable, current_body_shape)
+		var file_hash = Wearables.get_wearable_main_file_hash(
+			wearable, avatar_data.get_body_shape()
+		)
 		var obj = Global.content_provider.get_gltf_from_hash(file_hash)
 		var wearable_skeleton: Skeleton3D = obj.find_child("Skeleton3D")
 		for child in wearable_skeleton.get_children():
@@ -423,11 +418,11 @@ func apply_color_and_facial():
 					material.metallic = 0
 					material.metallic_specular = 0
 					if mat_name.find("skin") != -1:
-						material.albedo_color = current_skin_color
+						material.albedo_color = avatar_data.get_skin_color()
 						material.metallic = 0
 					elif mat_name.find("hair") != -1:
 						material.roughness = 1
-						material.albedo_color = current_hair_color
+						material.albedo_color = avatar_data.get_hair_color()
 
 	var eyes = wearables_by_category.get(Wearables.Categories.EYES)
 	var eyebrows = wearables_by_category.get(Wearables.Categories.EYEBROWS)
@@ -436,9 +431,10 @@ func apply_color_and_facial():
 
 
 func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_mouth):
-	var eyes = Wearables.get_wearable_facial_hashes(wearable_eyes, current_body_shape)
-	var eyebrows = Wearables.get_wearable_facial_hashes(wearable_eyebrows, current_body_shape)
-	var mouth = Wearables.get_wearable_facial_hashes(wearable_mouth, current_body_shape)
+	var body_shape_id := avatar_data.get_body_shape()
+	var eyes = Wearables.get_wearable_facial_hashes(wearable_eyes, body_shape_id)
+	var eyebrows = Wearables.get_wearable_facial_hashes(wearable_eyebrows, body_shape_id)
+	var mouth = Wearables.get_wearable_facial_hashes(wearable_mouth, body_shape_id)
 
 	for child in body_shape_skeleton_3d.get_children():
 		if not child.visible or not child is MeshInstance3D:
@@ -446,17 +442,17 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 
 		if child.name.ends_with("mask_eyes"):
 			if not eyes.is_empty():
-				apply_texture_and_mask(child, eyes, current_eyes_color, Color.WHITE)
+				apply_texture_and_mask(child, eyes, avatar_data.get_eyes_color(), Color.WHITE)
 			else:
 				child.hide()
 		elif child.name.ends_with("mask_eyebrows"):
 			if not eyebrows.is_empty():
-				apply_texture_and_mask(child, eyebrows, current_hair_color, Color.BLACK)
+				apply_texture_and_mask(child, eyebrows, avatar_data.get_hair_color(), Color.BLACK)
 			else:
 				child.hide()
 		elif child.name.ends_with("mask_mouth"):
 			if not mouth.is_empty():
-				apply_texture_and_mask(child, mouth, current_skin_color, Color.BLACK)
+				apply_texture_and_mask(child, mouth, avatar_data.get_skin_color(), Color.BLACK)
 			else:
 				child.hide()
 
@@ -560,3 +556,9 @@ func _attach_point_bone_pose_changed(bone_idx: int):
 
 func _on_timer_hide_mic_timeout():
 	sprite_3d_mic_enabled.hide()
+
+
+func get_avatar_name() -> String:
+	if avatar_data != null:
+		return avatar_data.get_name()
+	return ""
