@@ -1,6 +1,16 @@
 class_name Wearables
 extends Node
 
+enum ItemRarityEnum {
+	COMMON,
+	UNCOMMON,
+	RARE,
+	EPIC,
+	LEGENDARY,
+	MYTHIC,
+	UNIQUE,
+}
+
 const BASE_WEARABLES: PackedStringArray = [
 	"BaseFemale",
 	"BaseMale",
@@ -317,6 +327,7 @@ class BodyShapes:
 
 
 class ItemRarity:
+	const COMMON: String = "common"
 	const RARE: String = "rare"
 	const EPIC: String = "epic"
 	const LEGENDARY: String = "legendary"

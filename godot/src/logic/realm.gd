@@ -31,11 +31,11 @@ static func is_dcl_ens(str_param: String) -> bool:
 	return regex.search(str_param) != null
 
 
-static func is_genesis_city(test_name: String):
-	test_name = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(test_name))
-	test_name = Realm.ensure_starts_with_https(test_name)
+static func is_genesis_city(_realm_name: String):
+	_realm_name = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(_realm_name))
+	_realm_name = Realm.ensure_starts_with_https(_realm_name)
 	for server in DAO_SERVERS:
-		if server.contains(test_name):
+		if server.contains(_realm_name):
 			return true
 	return false
 

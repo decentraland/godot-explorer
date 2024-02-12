@@ -1,3 +1,4 @@
+class_name Player
 extends CharacterBody3D
 
 const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)

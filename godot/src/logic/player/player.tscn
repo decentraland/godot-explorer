@@ -1,9 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://blv7r5folt1d5"]
+[gd_scene load_steps=6 format=3 uid="uid://blv7r5folt1d5"]
 
 [ext_resource type="Script" path="res://src/logic/player/player.gd" id="1_5bfm2"]
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar.tscn" id="2_n22nx"]
 [ext_resource type="PackedScene" uid="uid://cbtq7kaarx6mp" path="res://src/logic/player/camera_mode_area_detector.tscn" id="2_rco65"]
-[ext_resource type="Script" path="res://src/logic/player/emote_input_handler.gd" id="4_wtb62"]
 
 [sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
 length = 1.0779
@@ -40,10 +39,6 @@ current = true
 skip_process = true
 
 [node name="AudioStreamPlayer_Camera" type="AudioStreamPlayer" parent="."]
-
-[node name="emote_input_handler" type="Node" parent="." node_paths=PackedStringArray("avatar")]
-script = ExtResource("4_wtb62")
-avatar = NodePath("../Avatar")
 
 [connection signal="block_camera_mode" from="camera_mode_area_detector" to="." method="_on_camera_mode_area_detector_block_camera_mode"]
 [connection signal="unblock_camera_mode" from="camera_mode_area_detector" to="." method="_on_camera_mode_area_detector_unblock_camera_mode"]

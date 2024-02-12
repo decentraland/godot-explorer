@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=28 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="17_0blod"]
 [ext_resource type="Script" path="res://src/ui/components/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="20_uf6rv"]
+[ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="21_pows0"]
 
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
 data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
@@ -140,6 +141,23 @@ grow_horizontal = 0
 grow_vertical = 0
 text_letter = "F"
 trigger_action = "ia_secondary"
+
+[node name="Button_EmoteAction" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -307.0
+offset_top = -111.0
+offset_right = -227.0
+offset_bottom = -31.0
+grow_horizontal = 0
+grow_vertical = 0
+text_letter = "F"
+icon = ExtResource("14_jag8f")
+trigger_action = "ia_open_emote_wheel"
 
 [node name="Button_Jump" type="TextureButton" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI"]
 modulate = Color(1, 1, 1, 0.501961)
@@ -351,6 +369,11 @@ offset_right = 24.0
 offset_bottom = -72.0
 grow_horizontal = 2
 grow_vertical = 0
+
+[node name="EmoteWheel" parent="UI" node_paths=PackedStringArray("player") instance=ExtResource("21_pows0")]
+visible = false
+layout_mode = 1
+player = NodePath("../../world/Player")
 
 [node name="VoiceChatRecorder" type="VoiceChatRecorder" parent="."]
 script = ExtResource("20_064cw")
