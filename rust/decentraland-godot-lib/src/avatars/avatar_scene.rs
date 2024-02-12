@@ -5,7 +5,7 @@ use godot::prelude::*;
 
 use crate::{
     auth::wallet::AsH160,
-    avatars::godot_profile::DclUserProfile,
+    avatars::dcl_godot_profile::DclUserProfile,
     comms::profile::UserProfile,
     dcl::{
         components::{
@@ -224,6 +224,11 @@ impl AvatarScene {
                 .internal_player_data
                 .insert(avatar_entity_id, InternalPlayerData { inside: true });
         }
+    }
+
+    #[func]
+    pub fn update_dcl_avatar_by_alias(&mut self, alias: u32, profile: Gd<DclUserProfile>) {
+        self.update_avatar_by_alias(alias, &profile.bind().inner);
     }
 }
 

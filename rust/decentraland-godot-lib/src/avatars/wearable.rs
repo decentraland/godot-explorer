@@ -4,7 +4,7 @@ use crate::{
     },
     dcl::common::{
         content_entity::EntityDefinitionJson,
-        wearable::{WearableEntityMetadata, WearableRepresentation},
+        wearable::{WearableCategory, WearableEntityMetadata, WearableRepresentation},
     },
 };
 use godot::{
@@ -150,15 +150,15 @@ impl DclWearableEntityDefinition {
         // skin has implicit hides
         if self.get_category().to_string() == "skin" {
             hides.extend(vec![
-                "head".to_string(),
-                "hair".to_string(),
-                "facial_hair".to_string(),
-                "mouth".to_string(),
-                "eyebrows".to_string(),
-                "eyes".to_string(),
-                "upper_body".to_string(),
-                "lower_body".to_string(),
-                "feet".to_string(),
+                WearableCategory::HEAD.slot.to_string(),
+                WearableCategory::HAIR.slot.to_string(),
+                WearableCategory::FACIAL_HAIR.slot.to_string(),
+                WearableCategory::MOUTH.slot.to_string(),
+                WearableCategory::EYEBROWS.slot.to_string(),
+                WearableCategory::EYES.slot.to_string(),
+                WearableCategory::UPPER_BODY.slot.to_string(),
+                WearableCategory::LOWER_BODY.slot.to_string(),
+                WearableCategory::FEET.slot.to_string(),
             ]);
         }
 

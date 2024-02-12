@@ -96,6 +96,7 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat):
 	wearable_to_request.push_back(avatar_data.get_body_shape())
 
 	# TODO: Validate if the current profile can own this wearables
+	# tracked at https://github.com/decentraland/godot-explorer/issues/244
 	# wearable_to_request = filter_owned_wearables(wearable_to_request)
 
 	_load_default_emotes()

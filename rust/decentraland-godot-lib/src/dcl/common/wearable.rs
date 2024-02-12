@@ -58,27 +58,29 @@ impl<'de> serde::Deserialize<'de> for WearableCategory {
 }
 
 impl WearableCategory {
-    const UNKNOWN: WearableCategory = WearableCategory::texture("unknown");
+    pub const UNKNOWN: WearableCategory = WearableCategory::texture("unknown");
 
-    const EYES: WearableCategory = WearableCategory::texture("eyes");
-    const EYEBROWS: WearableCategory = WearableCategory::texture("eyebrows");
-    const MOUTH: WearableCategory = WearableCategory::texture("mouth");
+    pub const EYES: WearableCategory = WearableCategory::texture("eyes");
+    pub const EYEBROWS: WearableCategory = WearableCategory::texture("eyebrows");
+    pub const MOUTH: WearableCategory = WearableCategory::texture("mouth");
 
-    const FACIAL_HAIR: WearableCategory = WearableCategory::model("facial_hair");
-    const HAIR: WearableCategory = WearableCategory::model("hair");
-    const HEAD: WearableCategory = WearableCategory::model("head");
-    const BODY_SHAPE: WearableCategory = WearableCategory::model("body_shape");
-    const UPPER_BODY: WearableCategory = WearableCategory::model("upper_body");
-    const LOWER_BODY: WearableCategory = WearableCategory::model("lower_body");
-    const FEET: WearableCategory = WearableCategory::model("feet");
-    const EARRING: WearableCategory = WearableCategory::model("earring");
-    const EYEWEAR: WearableCategory = WearableCategory::model("eyewear");
-    const HAT: WearableCategory = WearableCategory::model("hat");
-    const HELMET: WearableCategory = WearableCategory::model("helmet");
-    const MASK: WearableCategory = WearableCategory::model("mask");
-    const TIARA: WearableCategory = WearableCategory::model("tiara");
-    const TOP_HEAD: WearableCategory = WearableCategory::model("top_head");
-    const SKIN: WearableCategory = WearableCategory::model("skin");
+    pub const FACIAL_HAIR: WearableCategory = WearableCategory::model("facial_hair");
+    pub const HAIR: WearableCategory = WearableCategory::model("hair");
+    pub const BODY_SHAPE: WearableCategory = WearableCategory::model("body_shape");
+    pub const UPPER_BODY: WearableCategory = WearableCategory::model("upper_body");
+    pub const LOWER_BODY: WearableCategory = WearableCategory::model("lower_body");
+    pub const FEET: WearableCategory = WearableCategory::model("feet");
+    pub const EARRING: WearableCategory = WearableCategory::model("earring");
+    pub const EYEWEAR: WearableCategory = WearableCategory::model("eyewear");
+    pub const HAT: WearableCategory = WearableCategory::model("hat");
+    pub const HELMET: WearableCategory = WearableCategory::model("helmet");
+    pub const MASK: WearableCategory = WearableCategory::model("mask");
+    pub const TIARA: WearableCategory = WearableCategory::model("tiara");
+    pub const TOP_HEAD: WearableCategory = WearableCategory::model("top_head");
+    pub const SKIN: WearableCategory = WearableCategory::model("skin");
+    pub const HANDS_WEAR: WearableCategory = WearableCategory::model("hands_wear");
+    // Note: Hands is not a wearable category, but it's used as an alias of a group of categories
+    pub const HEAD: WearableCategory = WearableCategory::model("head");
 
     const fn model(slot: &'static str) -> Self {
         Self {
