@@ -140,6 +140,9 @@ func _on_button_next_pressed():
 
 	current_profile.set_name(lineedit_choose_name.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
+	var avatar := current_profile.get_avatar()
+	avatar.set_name(current_profile.get_name())
+	current_profile.set_avatar(avatar)
 
 	# Forget, it's going to be lock until a realm is set
 	Global.player_identity.async_deploy_profile(current_profile)
@@ -180,7 +183,7 @@ func create_guest_account_if_needed():
 
 func profile_has_name():
 	var profile = Global.player_identity.get_profile_or_null()
-	return profile != null and profile.get_name().is_empty()
+	return profile != null and not profile.get_name().is_empty()
 
 
 func _on_button_enter_as_guest_pressed():

@@ -66,17 +66,6 @@ func _unset_avatar_modifier_area():
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
-	#
-	#
-	#var profile_content: Dictionary = profile.get("content", {})
-	#var id = profile_content.get("userId", "unknown")
-	#if id == null:
-	#id = "unknown"
-#
-	#avatar_id = id
-	#if profile_content.get("name", "") != null:
-	#avatar_name = profile_content.get("name", "")
-
 	await async_update_avatar(profile.get_avatar())
 
 

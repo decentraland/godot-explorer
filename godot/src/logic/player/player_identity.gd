@@ -47,8 +47,7 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool)
 			self.set_default_profile()
 		else:
 			var guest_profile := DclUserProfile.new()
-			# TODO
-			# guest_profile.update_from_dict(Global.config.guest_profile)
+			guest_profile.from_godot_dictionary(Global.config.guest_profile)
 			self.set_profile(guest_profile)
 		return
 
@@ -58,7 +57,7 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool)
 func async_deploy_profile(new_profile: DclUserProfile) -> void:
 	var is_guest_profile = not new_profile.has_connected_web3()
 	if is_guest_profile:
-		Global.config.guest_profile = new_profile.to_dictionary()
+		Global.config.guest_profile = new_profile.to_godot_dictionary()
 		Global.config.save_to_settings_file()
 		self.set_profile(new_profile)
 		return

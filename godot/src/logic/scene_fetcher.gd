@@ -361,9 +361,9 @@ func reload_scene(scene_id: String) -> void:
 		loaded_scenes.erase(scene_id)
 		scene_entity_coordinator.reload_scene_data(scene_id)
 
-	var dict = scene_entity_coordinator.get_scene_dict(scene_id)
-	if dict.size() > 0:
-		var content_dict: Dictionary = dict.get("content", {})
-		for file_hash in content_dict.values():
-			print("todo clean file hash ", file_hash)
-			# TODO: clean file hash cached
+	# TODO: clean file hash cached
+	# var dict = scene_entity_coordinator.get_scene_dict(scene_id)
+	# if dict.size() > 0:
+	# 	var content_dict: Dictionary = dict.get("content", {})
+	# 	for file_hash in content_dict.values():
+	# 		print("todo clean file hash ", file_hash)
