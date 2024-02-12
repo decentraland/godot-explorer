@@ -79,7 +79,7 @@ impl WearableCategory {
     pub const TOP_HEAD: WearableCategory = WearableCategory::model("top_head");
     pub const SKIN: WearableCategory = WearableCategory::model("skin");
     pub const HANDS_WEAR: WearableCategory = WearableCategory::model("hands_wear");
-    // Note: Hands is not a wearable category, but it's used as an alias of a group of categories
+    // Note: Head is not a wearable category, but it's used as an alias of a group of categories
     pub const HEAD: WearableCategory = WearableCategory::model("head");
 
     const fn model(slot: &'static str) -> Self {

@@ -5,7 +5,7 @@ use godot::prelude::*;
 
 use crate::{
     auth::wallet::AsH160,
-    avatars::dcl_godot_profile::DclUserProfile,
+    avatars::dcl_user_profile::DclUserProfile,
     comms::profile::UserProfile,
     dcl::{
         components::{

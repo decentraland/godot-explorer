@@ -4,7 +4,7 @@ use godot::prelude::*;
 use rand::thread_rng;
 use tokio::task::JoinHandle;
 
-use crate::avatars::dcl_godot_profile::DclUserProfile;
+use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::comms::profile::{LambdaProfiles, UserProfile};
 use crate::content::bytes::fast_create_packed_byte_array_from_vec;
 use crate::dcl::scene_apis::RpcResultSender;
