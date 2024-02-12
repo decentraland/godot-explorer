@@ -179,8 +179,8 @@ func create_guest_account_if_needed():
 
 
 func profile_has_name():
-	var profile = Global.player_identity.get_profile_or_empty()
-	return not profile.get("content", {}).get("name", "").is_empty()
+	var profile = Global.player_identity.get_profile_or_null()
+	return profile != null and profile.get_name().is_empty()
 
 
 func _on_button_enter_as_guest_pressed():

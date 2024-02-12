@@ -22,6 +22,8 @@ var request_show_wearables: bool = false  # debounce
 
 var avatar_wearables_body_shape_cache: Dictionary = {}
 
+var avatar_loading_counter: int = 0
+
 @onready var skin_color_picker = %Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
@@ -111,8 +113,8 @@ func _update_visible_categories():
 func _on_profile_changed(new_profile: DclUserProfile):
 	line_edit_name.text = new_profile.get_name()
 
-	if mutable_profile == null:
-		mutable_profile = new_profile.duplicated()
+	mutable_profile = new_profile.duplicated()
+	mutable_avatar = mutable_profile.get_avatar()
 
 	request_update_avatar = true
 	request_show_wearables = true
@@ -128,17 +130,26 @@ func _physics_process(_delta):
 		show_wearables()
 
 
-func _async_update_avatar():
-	if mutable_profile == null:
-		return
-
-	mutable_profile.set_avatar(mutable_avatar)
-
+func set_avatar_loading() -> int:
 	avatar_preview.hide()
 	avatar_loading.show()
-	await avatar_preview.avatar.async_update_avatar_from_profile(mutable_profile)
+	avatar_loading_counter += 1
+	return avatar_loading_counter
+
+
+func unset_avatar_loading(current: int):
+	if current != avatar_loading_counter:
+		return
 	avatar_loading.hide()
 	avatar_preview.show()
+
+
+func _async_update_avatar():
+	mutable_profile.set_avatar(mutable_avatar)
+
+	var loading_id := set_avatar_loading()
+	await avatar_preview.avatar.async_update_avatar_from_profile(mutable_profile)
+	unset_avatar_loading(loading_id)
 	button_save_profile.disabled = false
 
 
@@ -229,9 +240,6 @@ func _on_line_edit_name_text_changed(_new_text):
 
 
 func save_profile():
-	if mutable_profile == null:
-		return
-
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	mutable_profile.set_name(line_edit_name.text)
 	mutable_avatar.set_name(line_edit_name.text)
@@ -265,7 +273,7 @@ func _on_wearable_equip(wearable_id: String):
 			if new_avatar_wearables.is_empty():
 				new_avatar_wearables = default_wearables.values()
 
-			mutable_avatar.set_wearables(new_avatar_wearables)
+			mutable_avatar.set_wearables(PackedStringArray(new_avatar_wearables))
 	else:
 		var new_avatar_wearables := mutable_avatar.get_wearables()
 		var to_remove = []
