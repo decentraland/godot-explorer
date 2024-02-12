@@ -22,7 +22,7 @@ use super::{
     texture::{load_image_texture, TextureEntry},
     thread_safety::{set_thread_safety_checks_enabled, then_promise},
     video::download_video,
-    wearable_entities::request_wearables,
+    wearable_entities::{request_wearables, DclWearableEntityDefinition, WearableManyResolved},
 };
 pub struct ContentEntry {
     promise: Gd<Promise>,
@@ -416,19 +416,24 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_wearable(&mut self, id: GString) -> Variant {
+    pub fn get_wearable(&mut self, id: GString) -> Option<Gd<DclWearableEntityDefinition>> {
         let id = id.to_string();
         let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
         let id = id[0..token_id_pos].to_lowercase();
 
         if let Some(entry) = self.cached.get(&id) {
-            if let Ok(results) = entry.promise.bind().get_data().try_to::<Dictionary>() {
-                if let Some(wearable) = results.get(id) {
-                    return wearable;
+            if let Ok(results) = entry
+                .promise
+                .bind()
+                .get_data()
+                .try_to::<Gd<WearableManyResolved>>()
+            {
+                if let Some(wearable) = results.bind().wearable_map.get(&id) {
+                    return Some(DclWearableEntityDefinition::from_gd(wearable.clone()));
                 }
             }
         }
-        Variant::nil()
+        None
     }
 
     #[func]

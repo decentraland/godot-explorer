@@ -3,7 +3,7 @@ use std::str::FromStr;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct WearableMeta {
+pub struct WearableEntityMetadata {
     pub id: String,
     pub description: String,
     pub thumbnail: String,
