@@ -330,13 +330,6 @@ func _on_color_picker_panel_pick_color(color: Color):
 		mutable_avatar.get_skin_color(),
 		mutable_avatar.get_hair_color()
 	)
-#
-	#var profile_avatar: Dictionary = primary_player_profile_dictionary.get("content", {}).get(
-	#"avatar", {}
-	#)
-	#profile_avatar["eyes"] = Wearables.to_color_object(avatar_eyes_color)
-	#profile_avatar["hair"] = Wearables.to_color_object(avatar_hair_color)
-	#profile_avatar["skin"] = Wearables.to_color_object(avatar_skin_color)
 	button_save_profile.disabled = false
 
 

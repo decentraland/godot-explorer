@@ -132,10 +132,7 @@ func _async_on_desired_scene_changed():
 	for scene_id in loadable_scenes:
 		if not loaded_scenes.has(scene_id):
 			var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
-
 			if scene_definition != null:
-				# TODO: update metadata?
-				# dict["metadata"] = JSON.parse_string(dict.metadata)
 				loading_promises.push_back(async_load_scene.bind(scene_id, scene_definition))
 			else:
 				printerr("shoud load scene_id ", scene_id, " but data is empty")

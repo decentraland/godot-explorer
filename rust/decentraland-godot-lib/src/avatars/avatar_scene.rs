@@ -89,21 +89,6 @@ impl AvatarScene {
         self.update_avatar(SceneEntityId::PLAYER, &profile.bind().inner);
     }
 
-    // #[func]
-    // pub fn update_avatar_profile(&mut self, alias: u32, profile: UserProfile) {
-    //     let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
-    //         *entity_id
-    //     } else {
-    //         // TODO: handle this condition
-    //         return;
-    //     };
-
-    //     self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
-    //         "async_update_avatar_from_profile".into(),
-    //         &[profile.to_variant()],
-    //     );
-    // }
-
     #[func]
     pub fn update_avatar_transform_with_godot_transform(
         &mut self,
@@ -224,7 +209,8 @@ impl AvatarScene {
             avatar_scene_transform.translation.x -=
                 (scene.scene_entity_definition.get_base_parcel().x as f32) * 16.0;
 
-            // TODO: should it be added instead of subtracted? (z is inverted in godot and dcl)
+            // TODO: I think this is working fine but
+            //   Should it be added instead of subtracted? (z is inverted in godot and dcl)
             avatar_scene_transform.translation.z -=
                 (scene.scene_entity_definition.get_base_parcel().y as f32) * 16.0;
 
@@ -324,7 +310,8 @@ impl AvatarScene {
                 avatar_scene_transform.translation.x -=
                     (scene.scene_entity_definition.get_base_parcel().x as f32) * 16.0;
 
-                // TODO: should it be added instead of subtracted? (z is inverted in godot and dcl)
+                // TODO: I think this is working fine but
+                //   Should it be added instead of subtracted? (z is inverted in godot and dcl)
                 avatar_scene_transform.translation.z -=
                     (scene.scene_entity_definition.get_base_parcel().y as f32) * 16.0;
 

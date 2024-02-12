@@ -64,7 +64,7 @@ func _process(dt):
 		var transform = Transform3D(Basis.IDENTITY, initial_position)
 		var alias = 10000 + spawning_i
 		Global.avatars.add_avatar(alias, "")
-		# TODO
+		# TODO: this actually not working since long time ago
 		# Global.avatars.update_avatar_profile(alias, avatar_data)
 		Global.avatars.update_avatar_transform_with_godot_transform(alias, transform)
 
