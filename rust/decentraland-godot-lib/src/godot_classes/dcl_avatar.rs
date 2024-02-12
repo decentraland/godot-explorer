@@ -1,6 +1,7 @@
 use godot::engine::Node3D;
 use godot::prelude::*;
 
+use crate::avatars::avatar_type::DclAvatarWireFormat;
 use crate::dcl::SceneId;
 
 use super::dcl_global::DclGlobal;
@@ -23,6 +24,9 @@ struct LerpState {
 #[derive(GodotClass)]
 #[class(base=Node3D)]
 pub struct DclAvatar {
+    #[var]
+    avatar_data: Gd<DclAvatarWireFormat>,
+
     #[export]
     movement_type: AvatarMovementType,
 
@@ -65,6 +69,7 @@ impl INode3D for DclAvatar {
             rise: false,
             fall: false,
             land: false,
+            avatar_data: DclAvatarWireFormat::from_gd(Default::default()),
         }
     }
 }

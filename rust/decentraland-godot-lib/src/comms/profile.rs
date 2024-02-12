@@ -97,9 +97,9 @@ pub struct SerializedProfile {
     pub avatar: AvatarWireFormat,
 }
 
-impl Default for SerializedProfile {
+impl Default for AvatarWireFormat {
     fn default() -> Self {
-        let avatar = AvatarWireFormat {
+        Self {
             name: Some("".into()),
             emotes: Some(vec![]),
             body_shape: Some("urn:decentraland:off-chain:base-avatars:BaseFemale".into()),
@@ -137,7 +137,12 @@ impl Default for SerializedProfile {
                     b: 0.737,
                 },
             }),
-        };
+        }
+    }
+}
+
+impl Default for SerializedProfile {
+    fn default() -> Self {
         Self {
             user_id: Some("0x0000000000000000000000000000000000000000".into()),
             name: "".to_string(),
@@ -151,7 +156,7 @@ impl Default for SerializedProfile {
             interests: Default::default(),
             has_claimed_name: Some(false),
             has_connected_web3: Some(false),
-            avatar,
+            avatar: Default::default(),
         }
     }
 }

@@ -13,7 +13,6 @@ var avatar_id: String = ""
 var current_content_url: String = ""
 
 # Current wearables equippoed
-var cur_avatar_wf: DclAvatarWireFormat = null
 var wearables_dict: Dictionary = {}
 
 var finish_loading = false
@@ -72,7 +71,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 
 
 func async_update_avatar(new_avatar: DclAvatarWireFormat):
-	cur_avatar_wf = new_avatar
+	avatar_data = new_avatar
 	if new_avatar == null:
 		printerr("Trying to update an avatar with an null value")
 		return
@@ -84,17 +83,17 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat):
 		current_content_url = Global.realm.content_base_url
 
 	sprite_3d_mic_enabled.hide()
-	label_3d_name.text = cur_avatar_wf.get_name()
+	label_3d_name.text = avatar_data.get_name()
 	if hide_name:
 		label_3d_name.hide()
 
-	wearable_to_request.append_array(cur_avatar_wf.get_wearables())
+	wearable_to_request.append_array(avatar_data.get_wearables())
 
-	for emote_urn in cur_avatar_wf.get_emotes():
+	for emote_urn in avatar_data.get_emotes():
 		if emote_urn.begins_with("urn"):
 			wearable_to_request.push_back(emote_urn)
 
-	wearable_to_request.push_back(cur_avatar_wf.get_body_shape())
+	wearable_to_request.push_back(avatar_data.get_body_shape())
 
 	# TODO: Validate if the current profile can own this wearables
 	# wearable_to_request = filter_owned_wearables(wearable_to_request)
@@ -164,7 +163,7 @@ func play_emote(emote_id: String):
 			pb.start("Emote", true)
 		playing_emote = true
 	else:
-		printerr("Emote %s not found from player '%s'" % [emote_id, cur_avatar_wf.get_name()])
+		printerr("Emote %s not found from player '%s'" % [emote_id, avatar_data.get_name()])
 
 
 func play_remote_emote(_emote_src: String, _looping: bool):
@@ -194,9 +193,9 @@ func broadcast_avatar_animation(emote_id: String) -> void:
 
 
 func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> void:
-	cur_avatar_wf.set_eyes_color(eyes_color)
-	cur_avatar_wf.set_skin_color(skin_color)
-	cur_avatar_wf.set_hair_color(hair_color)
+	avatar_data.set_eyes_color(eyes_color)
+	avatar_data.set_skin_color(skin_color)
+	avatar_data.set_hair_color(hair_color)
 
 	if finish_loading:
 		apply_color_and_facial()
@@ -216,9 +215,9 @@ func async_fetch_wearables_dependencies():
 	wearables_dict.clear()
 
 	# Fill data
-	var body_shape_id := cur_avatar_wf.get_body_shape()
+	var body_shape_id := avatar_data.get_body_shape()
 	wearables_dict[body_shape_id] = Global.content_provider.get_wearable(body_shape_id)
-	for item in cur_avatar_wf.get_wearables():
+	for item in avatar_data.get_wearables():
 		wearables_dict[item] = Global.content_provider.get_wearable(item)
 
 	var async_calls: Array = []
@@ -319,7 +318,7 @@ func try_to_set_body_shape(body_shape_hash):
 
 func async_load_wearables():
 	var curated_wearables = Wearables.get_curated_wearable_list(
-		cur_avatar_wf.get_body_shape(), cur_avatar_wf.get_wearables(), []
+		avatar_data.get_body_shape(), avatar_data.get_wearables(), []
 	)
 	if curated_wearables.is_empty():
 		printerr("couldn't get curated wearables")
@@ -333,7 +332,7 @@ func async_load_wearables():
 		return
 
 	try_to_set_body_shape(
-		Wearables.get_wearable_main_file_hash(body_shape_wearable, cur_avatar_wf.get_body_shape())
+		Wearables.get_wearable_main_file_hash(body_shape_wearable, avatar_data.get_body_shape())
 	)
 	wearables_by_category.erase(Wearables.Categories.BODY_SHAPE)
 
@@ -351,7 +350,7 @@ func async_load_wearables():
 			continue
 
 		var file_hash = Wearables.get_wearable_main_file_hash(
-			wearable, cur_avatar_wf.get_body_shape()
+			wearable, avatar_data.get_body_shape()
 		)
 		var obj = Global.content_provider.get_gltf_from_hash(file_hash)
 		var wearable_skeleton: Skeleton3D = obj.find_child("Skeleton3D")
@@ -418,11 +417,11 @@ func apply_color_and_facial():
 					material.metallic = 0
 					material.metallic_specular = 0
 					if mat_name.find("skin") != -1:
-						material.albedo_color = cur_avatar_wf.get_skin_color()
+						material.albedo_color = avatar_data.get_skin_color()
 						material.metallic = 0
 					elif mat_name.find("hair") != -1:
 						material.roughness = 1
-						material.albedo_color = cur_avatar_wf.get_hair_color()
+						material.albedo_color = avatar_data.get_hair_color()
 
 	var eyes = wearables_by_category.get(Wearables.Categories.EYES)
 	var eyebrows = wearables_by_category.get(Wearables.Categories.EYEBROWS)
@@ -431,7 +430,7 @@ func apply_color_and_facial():
 
 
 func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_mouth):
-	var body_shape_id := cur_avatar_wf.get_body_shape()
+	var body_shape_id := avatar_data.get_body_shape()
 	var eyes = Wearables.get_wearable_facial_hashes(wearable_eyes, body_shape_id)
 	var eyebrows = Wearables.get_wearable_facial_hashes(wearable_eyebrows, body_shape_id)
 	var mouth = Wearables.get_wearable_facial_hashes(wearable_mouth, body_shape_id)
@@ -442,17 +441,17 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 
 		if child.name.ends_with("mask_eyes"):
 			if not eyes.is_empty():
-				apply_texture_and_mask(child, eyes, cur_avatar_wf.get_eyes_color(), Color.WHITE)
+				apply_texture_and_mask(child, eyes, avatar_data.get_eyes_color(), Color.WHITE)
 			else:
 				child.hide()
 		elif child.name.ends_with("mask_eyebrows"):
 			if not eyebrows.is_empty():
-				apply_texture_and_mask(child, eyebrows, cur_avatar_wf.get_hair_color(), Color.BLACK)
+				apply_texture_and_mask(child, eyebrows, avatar_data.get_hair_color(), Color.BLACK)
 			else:
 				child.hide()
 		elif child.name.ends_with("mask_mouth"):
 			if not mouth.is_empty():
-				apply_texture_and_mask(child, mouth, cur_avatar_wf.get_skin_color(), Color.BLACK)
+				apply_texture_and_mask(child, mouth, avatar_data.get_skin_color(), Color.BLACK)
 			else:
 				child.hide()
 
@@ -559,6 +558,6 @@ func _on_timer_hide_mic_timeout():
 
 
 func get_avatar_name() -> String:
-	if cur_avatar_wf != null:
-		return cur_avatar_wf.get_name()
+	if avatar_data != null:
+		return avatar_data.get_name()
 	return ""
