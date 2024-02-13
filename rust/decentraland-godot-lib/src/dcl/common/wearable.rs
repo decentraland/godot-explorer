@@ -9,15 +9,19 @@ pub struct I18N {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct WearableEntityMetadata {
+pub struct BaseItemEntityMetadata {
     pub id: String,
     pub description: String,
     pub thumbnail: String,
     pub rarity: Option<String>,
-    pub data: WearableData,
-
     pub name: String,
     pub i18n: Vec<I18N>,
+
+    #[serde(rename = "data")]
+    pub wearable_data: Option<WearableData>,
+
+    #[serde(rename = "emoteDataADR74")]
+    pub emote_data: Option<EmoteDataADR74>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -33,11 +37,34 @@ pub struct WearableData {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct EmoteDataADR74 {
+    pub representations: Vec<EmoteADR74Representation>,
+    pub category: String, // TODO: should be typed as WearableCategory?
+                          // DANCE = 'dance',
+                          // STUNT = 'stunt',
+                          // GREETINGS = 'greetings',
+                          // FUN = 'fun',
+                          // POSES = 'poses',
+                          // REACTIONS = 'reactions',
+                          // HORROR = 'horror',
+                          // MISCELLANEOUS = 'miscellaneous'
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct WearableRepresentation {
     pub body_shapes: Vec<String>,
     pub main_file: String,
     pub override_replaces: Vec<String>,
     pub override_hides: Vec<String>,
+    pub contents: Vec<String>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct EmoteADR74Representation {
+    pub body_shapes: Vec<String>,
+    pub main_file: String,
     pub contents: Vec<String>,
 }
 

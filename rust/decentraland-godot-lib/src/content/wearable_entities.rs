@@ -1,6 +1,6 @@
 use super::content_provider::ContentProviderContext;
 use crate::{
-    avatars::wearable::WearableEntityDefinition,
+    avatars::item::ItemEntityDefinition,
     http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
 };
 use godot::{
@@ -14,11 +14,11 @@ use std::{collections::HashMap, sync::Arc};
 #[derive(GodotClass)]
 #[class(base=RefCounted)]
 pub struct WearableManyResolved {
-    pub wearable_map: HashMap<String, Arc<WearableEntityDefinition>>,
+    pub wearable_map: HashMap<String, Arc<ItemEntityDefinition>>,
 }
 
 impl WearableManyResolved {
-    pub fn from_gd(wearable_map: HashMap<String, Arc<WearableEntityDefinition>>) -> Gd<Self> {
+    pub fn from_gd(wearable_map: HashMap<String, Arc<ItemEntityDefinition>>) -> Gd<Self> {
         Gd::from_init_fn(|_base| Self { wearable_map })
     }
 }
@@ -71,8 +71,7 @@ pub async fn request_wearables(
 
     let mut wearable_map = HashMap::new();
     for pointer in entity_pointers.iter_mut() {
-        match WearableEntityDefinition::from_json_ex(ipfs_content_base_url.clone(), pointer.take())
-        {
+        match ItemEntityDefinition::from_json_ex(ipfs_content_base_url.clone(), pointer.take()) {
             Ok(wearable_data) => {
                 wearable_map.insert(wearable_data.id.clone(), Arc::new(wearable_data));
             }

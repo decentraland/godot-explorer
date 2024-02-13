@@ -25,8 +25,7 @@ pub async fn load_gltf(
     let base_path = Arc::new(get_base_dir(&file_path));
 
     let file_hash = content_mapping
-        .content
-        .get(&file_path)
+        .get_hash(file_path.as_str())
         .ok_or(anyhow::Error::msg("File not found in the content mappings"))?;
 
     let url = format!("{}{}", content_mapping.base_url, file_hash);
@@ -43,10 +42,9 @@ pub async fn load_gltf(
                 dep.clone()
             } else {
                 format!("{}/{}", base_path, dep)
-            }
-            .to_lowercase();
+            };
 
-            let item = content_mapping.content.get(&full_path).cloned();
+            let item = content_mapping.get_hash(full_path.as_str()).cloned();
             (dep, item)
         })
         .collect::<Vec<(String, Option<String>)>>();

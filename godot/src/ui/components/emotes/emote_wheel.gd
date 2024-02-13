@@ -69,7 +69,7 @@ func _on_avatar_loaded():
 			if emote_data == null:
 				# TODO: set invalid emote reference?, fallback with defualt?
 				continue
-
+			emote_item.emote_id = emote_data.get_display_name()
 			emote_item.rarity = emote_data.get_rarity()
 			emote_item.async_set_texture(emote_data)
 

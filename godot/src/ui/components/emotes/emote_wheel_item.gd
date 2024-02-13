@@ -50,7 +50,7 @@ var inside = false
 @onready var label_number = %Label_Number
 
 
-func async_set_texture(emote: DclWearableEntityDefinition) -> void:
+func async_set_texture(emote: DclItemEntityDefinition) -> void:
 	var promise: Promise = Global.content_provider.fetch_texture(
 		emote.get_thumbnail(), emote.get_content_mapping()
 	)

@@ -54,11 +54,13 @@ func set_image(_texture: Texture2D):
 
 
 func set_title(_title: String):
-	label_title.text = _title
+	if is_instance_valid(label_title):
+		label_title.text = _title
 
 
 func set_description(_description: String):
-	label_description.text = _description
+	if is_instance_valid(label_description):
+		label_description.text = _description
 
 
 func set_views(_views: int):

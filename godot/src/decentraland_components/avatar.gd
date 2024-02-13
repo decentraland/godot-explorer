@@ -32,15 +32,13 @@ var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
-@onready var animation_tree = $Armature/AnimationTree
-@onready var animation_tree_root: AnimationNodeStateMachine = animation_tree.tree_root
-@onready var animation_emote_node: AnimationNodeAnimation = animation_tree_root.get_node("Emote")
-@onready var animation_player = $Armature/AnimationPlayer
+@onready var animation_tree = $AnimationTree
+@onready var animation_emote_node: AnimationNodeAnimation = animation_tree.tree_root.get_node("Emote")
+@onready var animation_player = $AnimationPlayer
 @onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
 @onready var label_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name/Label3D_Name
 @onready var sprite_3d_mic_enabled = %Sprite3D_MicEnabled
 @onready var timer_hide_mic = %Timer_HideMic
-@onready var body_shape_root: Node3D = $Armature
 @onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
 @onready var bone_attachment_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name
 
@@ -138,17 +136,18 @@ func _clear_animations():
 
 
 func _load_default_emotes():
-	_clear_animations()
-	_add_animation(0, "handsair")
-	_add_animation(1, "wave")
-	_add_animation(2, "fistpump")
-	_add_animation(3, "dance")
-	_add_animation(4, "raiseHand")
-	_add_animation(5, "clap")
-	_add_animation(6, "money")
-	_add_animation(7, "kiss")
-	_add_animation(8, "shrug")
-	_add_animation(9, "headexplode")
+	pass
+	#_clear_animations()
+	#_add_animation(0, "handsair")
+	#_add_animation(1, "wave")
+	#_add_animation(2, "fistpump")
+	#_add_animation(3, "dance")
+	#_add_animation(4, "raiseHand")
+	#_add_animation(5, "clap")
+	#_add_animation(6, "money")
+	#_add_animation(7, "kiss")
+	#_add_animation(8, "shrug")
+	#_add_animation(9, "headexplode")
 
 
 func is_playing_emote() -> bool:
@@ -221,13 +220,26 @@ func async_fetch_wearables_dependencies():
 	for item in avatar_data.get_wearables():
 		wearables_dict[item] = Global.content_provider.get_wearable(item)
 
+	var async_calls_info: Array = []
 	var async_calls: Array = []
+	for emote_urn in avatar_data.get_emotes():
+		if emote_urn.begins_with("urn"):
+			var emote = Global.content_provider.get_wearable(emote_urn)
+			if emote != null:
+				var file_name: String = emote.get_representation_main_file(body_shape_id)
+				if file_name.is_empty():
+					continue
+				var content_mapping: DclContentMappingAndUrl = emote.get_content_mapping()
+				var promise: Promise = Global.content_provider.fetch_gltf(file_name, content_mapping)
+				async_calls.push_back(promise)
+				async_calls_info.push_back(emote_urn)
+
 	for wearable_key in wearables_dict.keys():
 		if wearables_dict[wearable_key] == null:
 			printerr("wearable ", wearable_key, " null")
 			continue
 
-		var wearable: DclWearableEntityDefinition = wearables_dict[wearable_key]
+		var wearable: DclItemEntityDefinition = wearables_dict[wearable_key]
 		if not Wearables.is_valid_wearable(wearable, body_shape_id, true):
 			continue
 
@@ -235,7 +247,7 @@ func async_fetch_wearables_dependencies():
 		if Wearables.is_texture(wearable.get_category()):
 			hashes_to_fetch = Wearables.get_wearable_facial_hashes(wearable, body_shape_id)
 		else:
-			hashes_to_fetch = [Wearables.get_wearable_main_file_hash(wearable, body_shape_id)]
+			hashes_to_fetch = [Wearables.get_item_main_file_hash(wearable, body_shape_id)]
 
 		if hashes_to_fetch.is_empty():
 			continue
@@ -249,8 +261,12 @@ func async_fetch_wearables_dependencies():
 
 		for file_name in files:
 			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
+			async_calls_info.push_back(wearable_key)
 
-	await PromiseUtils.async_all(async_calls)
+	var promises_result: Array = await PromiseUtils.async_all(async_calls)
+	for i in range(promises_result.size()):
+		if promises_result[i] is PromiseError:
+			printerr("Error loading ", async_calls_info[i], ":", promises_result[i].get_error())
 
 	await async_load_wearables()
 
@@ -265,57 +281,26 @@ func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappin
 
 	return promise
 
-
-func _free_old_skeleton(skeleton: Node):
-	for child in skeleton.get_children():
-		child.free()
-#		if child is MeshInstance3D:
-#			for i in child.get_surface_override_material_count():
-#				var material = child.mesh.surface_get_material(i)
-#				material.free()
-
-	skeleton.free()
-
-
 func try_to_set_body_shape(body_shape_hash):
 	var body_shape: Node3D = Global.content_provider.get_gltf_from_hash(body_shape_hash)
 	if body_shape == null:
 		return
 
-	var skeleton = body_shape.find_child("Skeleton3D")
-	if skeleton == null:
+	var new_skeleton = body_shape.find_child("Skeleton3D")
+	if new_skeleton == null:
 		return
-
-	var animation_player_parent = animation_player.get_parent()
-	if animation_player_parent != null:
-		animation_player_parent.remove_child(animation_tree)
-		animation_player_parent.remove_child(animation_player)
-
-	var bone_attachment_3d_name_parent = bone_attachment_3d_name.get_parent()
-	if bone_attachment_3d_name_parent != null:
-		bone_attachment_3d_name_parent.remove_child(bone_attachment_3d_name)
-
-	if body_shape_root != null:
-		remove_child(body_shape_root)
-		_free_old_skeleton.call_deferred(body_shape_root)
-
-	body_shape_root = body_shape.duplicate()
-	body_shape_root.name = "BodyShape"
-
-	body_shape_skeleton_3d = body_shape_root.find_child("Skeleton3D", true, false)
-	body_shape_skeleton_3d.get_parent().add_child(animation_player)
-	body_shape_skeleton_3d.get_parent().add_child(animation_tree)
-	body_shape_skeleton_3d.add_child(bone_attachment_3d_name)
-	bone_attachment_3d_name.bone_name = "Avatar_Head"
-
+	
 	for child in body_shape_skeleton_3d.get_children():
-		child.name = child.name.to_lower()
+		body_shape_skeleton_3d.remove_child(child)
 
-	body_shape_skeleton_3d.visible = false
-	add_child(body_shape_root)
-
+	for child in new_skeleton.get_children():
+		var new_child = child.duplicate()
+		new_child.name = "bodyshape_" + child.name.to_lower()
+		body_shape_skeleton_3d.add_child(new_child)
+		if new_child is MeshInstance3D:
+			new_child.skeleton = body_shape_skeleton_3d.get_path()
+	
 	_add_attach_points()
-
 
 func async_load_wearables():
 	var curated_wearables = Wearables.get_curated_wearable_list(
@@ -333,7 +318,7 @@ func async_load_wearables():
 		return
 
 	try_to_set_body_shape(
-		Wearables.get_wearable_main_file_hash(body_shape_wearable, avatar_data.get_body_shape())
+		Wearables.get_item_main_file_hash(body_shape_wearable, avatar_data.get_body_shape())
 	)
 	wearables_by_category.erase(Wearables.Categories.BODY_SHAPE)
 
@@ -350,7 +335,7 @@ func async_load_wearables():
 		if Wearables.is_texture(category):
 			continue
 
-		var file_hash = Wearables.get_wearable_main_file_hash(
+		var file_hash = Wearables.get_item_main_file_hash(
 			wearable, avatar_data.get_body_shape()
 		)
 		var obj = Global.content_provider.get_gltf_from_hash(file_hash)
@@ -404,8 +389,63 @@ func async_load_wearables():
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
 
+	# Emotes
+	for emote_urn in avatar_data.get_emotes():
+		if not emote_urn.begins_with("urn"):
+			# Default
+			continue
+			
+		var emote = Global.content_provider.get_wearable(emote_urn)
+		var file_hash = Wearables.get_item_main_file_hash(
+			emote, avatar_data.get_body_shape()
+		)
+		var obj = Global.content_provider.get_gltf_from_hash(file_hash)
+		if obj != null:
+			add_animation_from_obj(emote, emote_urn, obj)
+		
 	emit_signal("avatar_loaded")
 
+var skeleton_counter: int = 0
+func add_animation_from_obj(emote:DclItemEntityDefinition, urn: String, obj: Node3D):
+	var armature_prop = obj.find_child("Armature_Prop")
+	var skeleton_extra = null
+	
+	if armature_prop != null:
+		skeleton_extra = obj.find_child("Armature_Prop")
+		
+	var anim_player: AnimationPlayer = obj.find_child("AnimationPlayer")
+	if anim_player == null:
+		return
+		
+	var skeleton_prefix = "Armature_Prop/Skeleton3D_" + str(skeleton_counter) + ":"
+	if skeleton_extra != null:
+		skeleton_extra = skeleton_extra.duplicate()
+		skeleton_extra.name = "Skeleton3D_" + str(skeleton_counter)
+		skeleton_counter += 1
+		$Armature_Prop.add_child(skeleton_extra)
+	
+	var index:int = 0
+	for animation_key in anim_player.get_animation_list():
+		var anim: Animation = anim_player.get_animation(animation_key)
+			
+		for track_idx in range(anim.get_track_count()):
+			var track_path = anim.track_get_path(track_idx)
+			var track_name = track_path.get_concatenated_names()
+			if track_name.contains("Skeleton3D") == false:
+				# Requires new path!
+				var last_track_path = track_path.get_name(track_path.get_name_count() - 1)
+				var new_track_path = "Armature/Skeleton3D:" + last_track_path
+				anim.track_set_path(track_idx, new_track_path)
+			
+			if track_name.contains("Armature_Prop/Skeleton3D"):
+				var last_track_path = track_path.get_name(track_path.get_name_count() - 1)
+				var new_track_path = skeleton_prefix + last_track_path
+				anim.track_set_path(track_idx, new_track_path)
+				
+		var anim_name = emote.get_display_name() + "_" + str(index) 
+		if not animation_player.has_animation(anim_name):
+			global_animation_library.add_animation(anim_name, anim)
+		index += 1
 
 func apply_color_and_facial():
 	for child in body_shape_skeleton_3d.get_children():

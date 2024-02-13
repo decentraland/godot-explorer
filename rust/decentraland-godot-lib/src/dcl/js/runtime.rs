@@ -33,7 +33,7 @@ fn op_get_file_url(
     let content_mapping = state.borrow::<ContentMappingAndUrlRef>();
     let filename = filename.to_lowercase();
     let base_url = content_mapping.base_url.as_str();
-    let file = content_mapping.content.get(&filename);
+    let file = content_mapping.get_hash(filename.as_str());
 
     if let Some(hash) = file {
         let url = format!("{base_url}{hash}");
@@ -66,7 +66,7 @@ fn op_get_scene_information(op_state: &mut OpState) -> GetSceneInformationRespon
 
     let content: Vec<ContentMapping> = scene_entity_definition
         .content_mapping
-        .content
+        .files()
         .iter()
         .map(|(file, hash)| ContentMapping {
             file: file.clone(),

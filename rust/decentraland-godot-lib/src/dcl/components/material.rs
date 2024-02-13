@@ -176,7 +176,7 @@ impl From<&TextureUnion> for Option<DclTexture> {
 impl DclTexture {
     fn with_hash(&mut self, content_mapping_files: &ContentMappingAndUrlRef) {
         if let DclSourceTex::Texture(file_path) = &mut self.source {
-            let content_hash = content_mapping_files.content.get(&file_path.to_lowercase());
+            let content_hash = content_mapping_files.get_hash(file_path.as_str());
 
             if content_hash.is_none() {
                 return;

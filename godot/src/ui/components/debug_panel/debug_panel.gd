@@ -8,6 +8,9 @@ enum SceneLogLevel {
 
 const ICON_COLUMN_WIDTH = 20
 
+@onready var expression_text_edit = $TabContainer_DebugPanel/Expression/TextEdit
+@onready var expression_label = $TabContainer_DebugPanel/Expression/Label
+
 var icon_log: Texture2D = preload("res://src/ui/components/debug_panel/icons/Log.svg")
 var icon_error: Texture2D = preload("res://src/ui/components/debug_panel/icons/Error.svg")
 var icon_warning: Texture2D = preload("res://src/ui/components/debug_panel/icons/Warning.svg")
@@ -163,3 +166,19 @@ func _on_button_copy_pressed():
 		if item.visible:
 			text += item.get_text(1) + "\n"
 	DisplayServer.clipboard_set(text)
+
+
+func _on_text_edit_text_changed():
+	var expression = Expression.new()
+	var err = expression.parse(expression_text_edit.text)
+	
+	if err != OK:
+		expression_label.text = "Parse failed: " + expression.get_error_text()
+		return
+		
+	var result = expression.execute([], self)
+	if expression.has_execute_failed():
+		expression_label.text = "Execution failed: " + expression.get_error_text()
+		return
+
+	expression_label.text = "Ok: " + str(result)

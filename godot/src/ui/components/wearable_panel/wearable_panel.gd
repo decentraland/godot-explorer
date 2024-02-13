@@ -39,7 +39,7 @@ func _ready():
 	unset_wearable()
 
 
-func async_set_wearable(wearable: DclWearableEntityDefinition, _wearable_id: String):
+func async_set_wearable(wearable: DclItemEntityDefinition, _wearable_id: String):
 	show()
 
 	wearable_id = _wearable_id

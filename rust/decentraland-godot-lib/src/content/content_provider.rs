@@ -10,9 +10,9 @@ use godot::{
 use tokio::sync::Semaphore;
 
 use crate::{
-    avatars::wearable::DclWearableEntityDefinition,
-    content::content_mapping::DclContentMappingAndUrl, dcl::common::string::FindNthChar,
-    godot_classes::promise::Promise, http_request::http_queue_requester::HttpQueueRequester,
+    avatars::item::DclItemEntityDefinition, content::content_mapping::DclContentMappingAndUrl,
+    dcl::common::string::FindNthChar, godot_classes::promise::Promise,
+    http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
 };
 
@@ -80,10 +80,7 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let content_mapping = content_mapping.bind().get_content_mapping();
-        let Some(file_hash) = content_mapping
-            .content
-            .get(&file_path.to_string().to_lowercase())
-        else {
+        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
@@ -145,10 +142,7 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let content_mapping = content_mapping.bind().get_content_mapping();
-        let Some(file_hash) = content_mapping
-            .content
-            .get(&file_path.to_string().to_lowercase())
-        else {
+        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
@@ -417,7 +411,7 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_wearable(&mut self, id: GString) -> Option<Gd<DclWearableEntityDefinition>> {
+    pub fn get_wearable(&mut self, id: GString) -> Option<Gd<DclItemEntityDefinition>> {
         let id = id.to_string();
         let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
         let id = id[0..token_id_pos].to_lowercase();
@@ -430,7 +424,7 @@ impl ContentProvider {
                 .try_to::<Gd<WearableManyResolved>>()
             {
                 if let Some(wearable) = results.bind().wearable_map.get(&id) {
-                    return Some(DclWearableEntityDefinition::from_gd(wearable.clone()));
+                    return Some(DclItemEntityDefinition::from_gd(wearable.clone()));
                 }
             }
         }
