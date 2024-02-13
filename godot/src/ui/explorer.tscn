@@ -14,8 +14,8 @@
 [ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="9_hj43f"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
 [ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
+[ext_resource type="PackedScene" uid="uid://55g2dvfiog7r" path="res://src/ui/components/mini_map_button/mini_map_button.tscn" id="11_gwcjv"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
-[ext_resource type="Texture2D" uid="uid://2phiy0bi4o0i" path="res://assets/themes/dark_dcl_theme/icons/PinOutline.svg" id="12_tcp5l"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="14_jag8f"]
 [ext_resource type="Texture2D" uid="uid://bxgklimw13m4d" path="res://assets/themes/dark_dcl_theme/icons/Profile.svg" id="16_8okg3"]
 [ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="17_0blod"]
@@ -228,23 +228,8 @@ offset_bottom = 80.0
 theme = ExtResource("4_2vs87")
 theme_override_constants/separation = 10
 
-[node name="MiniMap" type="Button" parent="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
-custom_minimum_size = Vector2(60, 60)
+[node name="MiniMap" parent="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu" instance=ExtResource("11_gwcjv")]
 layout_mode = 2
-theme_override_constants/icon_max_width = 32
-icon = ExtResource("12_tcp5l")
-icon_alignment = 1
-expand_icon = true
-
-[node name="Emotes" type="Button" parent="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
-visible = false
-custom_minimum_size = Vector2(60, 60)
-layout_mode = 2
-theme_override_constants/icon_max_width = 40
-theme_override_font_sizes/font_size = 0
-icon = ExtResource("14_jag8f")
-icon_alignment = 1
-expand_icon = true
 
 [node name="Button_OpenChat" type="Button" parent="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
 custom_minimum_size = Vector2(60, 60)
