@@ -5,7 +5,13 @@ var initial_angle: float
 
 var tooltip_scene = preload("res://src/ui/components/pointer_tooltip/tooltip_label.tscn")
 
-@onready var control_center = $Control_Center
+@onready var control_center = %Control_Center
+@onready var panel_center = %Panel_Crosshair
+
+
+func set_global_cursor_position(position: Vector2):
+	control_center.set_global_position(position)
+	panel_center.set_global_position(position - panel_center.size / 2)
 
 
 func set_pointer_data(interacts_array: Array):

@@ -68,6 +68,9 @@ pub struct SceneManager {
     #[var]
     console: Callable,
 
+    #[var]
+    cursor_position: Vector2,
+
     player_position: Vector2i,
     current_parcel_scene_id: SceneId,
     last_current_parcel_scene_id: SceneId,
@@ -575,11 +578,9 @@ impl SceneManager {
     fn get_current_mouse_entity(&mut self) -> Option<GodotDclRaycastResult> {
         const RAY_LENGTH: f32 = 100.0;
 
-        let viewport_size = self.base.get_viewport()?.get_visible_rect();
-        let mouse_position = Vector2::new(viewport_size.size.x * 0.5, viewport_size.size.y * 0.5);
-        let raycast_from = self.camera_node.project_ray_origin(mouse_position);
+        let raycast_from = self.camera_node.project_ray_origin(self.cursor_position);
         let raycast_to =
-            raycast_from + self.camera_node.project_ray_normal(mouse_position) * RAY_LENGTH;
+            raycast_from + self.camera_node.project_ray_normal(self.cursor_position) * RAY_LENGTH;
         let mut space = self.camera_node.get_world_3d()?.get_direct_space_state()?;
         let mut raycast_query = PhysicsRayQueryParameters3D::new();
         raycast_query.set_from(raycast_from);
@@ -872,6 +873,7 @@ impl INode for SceneManager {
                 canvas_size.x as i32,
                 canvas_size.y as i32,
             ),
+            cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
         }
     }
 
@@ -880,6 +882,12 @@ impl INode for SceneManager {
             .connect("resized".into(), self.base.callable("_on_ui_resize"));
         self.base_ui.set_name("scenes_ui".into());
         self.ui_canvas_information = self.create_ui_canvas_information();
+        let viewport = self.base.get_viewport();
+        if let Some(viewport) = viewport {
+            let viewport_size = viewport.get_visible_rect();
+            self.cursor_position =
+                Vector2::new(viewport_size.size.x * 0.5, viewport_size.size.y * 0.5);
+        }
     }
 
     fn process(&mut self, delta: f64) {
