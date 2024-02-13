@@ -72,7 +72,7 @@ text = "150, 150"
 [node name="TextureRect_Sdk6" type="TextureRect" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(1, 0, 0, 1)
-custom_minimum_size = Vector2(30, 20)
+custom_minimum_size = Vector2(36, 20)
 layout_mode = 2
 texture = ExtResource("5_xa3ne")
 expand_mode = 1
