@@ -72,10 +72,10 @@ func on_loading_finished():
 
 
 func on_scene_killed(killed_scene_id, _entity_id):
-	for scene_id in loaded_scenes.keys():
-		var scene: SceneItem = loaded_scenes[scene_id]
+	for scene_entity_id in loaded_scenes.keys():
+		var scene: SceneItem = loaded_scenes[scene_entity_id]
 		if scene.scene_number_id == killed_scene_id:
-			loaded_scenes.erase(scene_id)
+			loaded_scenes.erase(scene_entity_id)
 			return
 
 
@@ -85,12 +85,23 @@ func _on_config_changed(param: ConfigData.ConfigParams):
 
 
 func get_current_scene_data() -> SceneItem:
-	var scene_entity_id = scene_entity_coordinator.get_scene_entity_id(current_position)
+	return get_scene_data(current_position)
+
+
+func get_scene_data(coord: Vector2i) -> SceneItem:
+	var scene_entity_id = scene_entity_coordinator.get_scene_entity_id(coord)
 	if scene_entity_id == "empty":
 		return null
 
 	return loaded_scenes.get(scene_entity_id)
 
+
+func get_scene_data_by_scene_id(scene_id: int) -> SceneItem:
+	for scene: SceneItem in loaded_scenes.values():
+		if scene.scene_number_id == scene_id:
+			return scene
+
+	return null
 
 func set_scene_radius(value: int):
 	scene_entity_coordinator.set_scene_radius(value)
