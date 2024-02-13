@@ -17,10 +17,10 @@ use crate::dcl::common::{
     SceneLogMessage, SceneLogs, SceneMainCrdtFileContent, SceneStartTime,
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
+use crate::realm::scene_definition::SceneEntityDefinition;
 
 use super::{
-    crdt::message::process_many_messages, serialization::reader::DclReader, SceneDefinition,
-    SharedSceneCrdtState,
+    crdt::message::process_many_messages, serialization::reader::DclReader, SharedSceneCrdtState,
 };
 use super::{RendererResponse, SceneId, SceneResponse};
 
@@ -100,7 +100,9 @@ pub fn create_runtime() -> deno_core::JsRuntime {
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn scene_thread(
     scene_id: SceneId,
-    scene_definition: SceneDefinition,
+    scene_entity_definition: Arc<SceneEntityDefinition>,
+    local_main_js_file_path: String,
+    local_main_crdt_file_path: String,
     content_mapping: ContentMappingAndUrlRef,
     thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
@@ -110,12 +112,11 @@ pub(crate) fn scene_thread(
     ephemeral_wallet: Option<EphemeralAuthChain>,
 ) {
     let mut scene_main_crdt = None;
-    let main_crdt_file_path = scene_definition.main_crdt_path;
 
     // on main.crdt detected
-    if !main_crdt_file_path.is_empty() {
+    if !local_main_crdt_file_path.is_empty() {
         let file = godot::engine::FileAccess::open(
-            godot::prelude::GString::from(main_crdt_file_path),
+            godot::prelude::GString::from(local_main_crdt_file_path),
             godot::engine::file_access::ModeFlags::READ,
         );
 
@@ -142,14 +143,13 @@ pub(crate) fn scene_thread(
         }
     }
 
-    let scene_file_path = scene_definition.path;
     let file = godot::engine::FileAccess::open(
-        godot::prelude::GString::from(scene_file_path.clone()),
+        godot::prelude::GString::from(local_main_js_file_path.clone()),
         godot::engine::file_access::ModeFlags::READ,
     );
 
     if file.is_none() {
-        let err_string = format!("Scene `{scene_file_path}` not found - file is none");
+        let err_string = format!("Scene `{local_main_js_file_path}` not found - file is none");
         if let Err(send_err) =
             thread_sender_to_main.send(SceneResponse::Error(scene_id, format!("{err_string:?}")))
         {
@@ -179,6 +179,7 @@ pub(crate) fn scene_thread(
     state.borrow_mut().put(scene_crdt);
 
     state.borrow_mut().put(ephemeral_wallet);
+    state.borrow_mut().put(scene_entity_definition);
 
     state.borrow_mut().put(Vec::<RpcCall>::new());
     state.borrow_mut().put(Vec::<LocalCall>::new());

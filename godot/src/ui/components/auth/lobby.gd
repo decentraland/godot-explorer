@@ -1,7 +1,6 @@
 extends Control
 
-var current_profile: Dictionary = {}
-
+var current_profile: DclUserProfile
 var guest_account_created: bool = false
 
 var waiting_for_new_wallet: bool = false
@@ -70,13 +69,12 @@ func _ready():
 		show_panel(control_start)
 
 
-func _async_on_profile_changed(new_profile: Dictionary):
+func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
 
 	if loading_first_profile:
 		loading_first_profile = false
-		var profile_content = new_profile.get("content", {})
-		label_name.text = "Welcome back %s" % profile_content.get("name")
+		label_name.text = "Welcome back " + new_profile.get_name()
 		label_name.show()
 
 		restore_loading.hide()
@@ -140,11 +138,11 @@ func _on_button_next_pressed():
 	if lineedit_choose_name.text.is_empty():
 		return  # TODO: Add error message
 
-	var profile_content = current_profile.get("content", {})
-	var profile_avatar = profile_content.get("avatar", {})
-	profile_content["name"] = lineedit_choose_name.text
-	profile_content["hasConnectedWeb3"] = !Global.player_identity.is_guest
-	profile_avatar["name"] = lineedit_choose_name.text
+	current_profile.set_name(lineedit_choose_name.text)
+	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
+	var avatar := current_profile.get_avatar()
+	avatar.set_name(current_profile.get_name())
+	current_profile.set_avatar(avatar)
 
 	# Forget, it's going to be lock until a realm is set
 	Global.player_identity.async_deploy_profile(current_profile)
@@ -184,8 +182,8 @@ func create_guest_account_if_needed():
 
 
 func profile_has_name():
-	var profile = Global.player_identity.get_profile_or_empty()
-	return not profile.get("content", {}).get("name", "").is_empty()
+	var profile = Global.player_identity.get_profile_or_null()
+	return profile != null and not profile.get_name().is_empty()
 
 
 func _on_button_enter_as_guest_pressed():

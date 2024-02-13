@@ -27,13 +27,23 @@ func add_chat_message(bb_text: String) -> void:
 func on_chats_arrived(chats: Array):
 	for chat in chats:
 		var address: String = chat[0]
-		#var _profile_name: StringName = chat[1]
-		#var _timestamp: float = chat[2]
-		var message: StringName = chat[3]
+		# var _timestamp: float = chat[1]
+		var message: String = chat[2]
+
 		var avatar = Global.avatars.get_avatar_by_address(address)
-		var avatar_name = (
-			avatar.avatar_name if avatar != null else DclEther.shorten_eth_address(address)
-		)
+		if avatar == null:
+			if address == Global.player_identity.get_address_str():
+				avatar = Global.scene_runner.player_node.avatar
+
+		var avatar_name: String = ""
+		if avatar != null:
+			avatar_name = avatar.get_avatar_name()
+
+		if avatar_name.is_empty():
+			if address.length() > 32:
+				avatar_name = DclEther.shorten_eth_address(address)
+			else:
+				avatar_name = "Unknown"
 
 		if message.begins_with(EMOTE):
 			message = message.substr(1)  # Remove prefix

@@ -62,7 +62,7 @@ pub struct WebSocketRoom {
 
     // Trade-off with other peers
     avatars: Gd<AvatarScene>,
-    chats: Vec<(String, String, rfc4::Chat)>,
+    chats: Vec<(H160, rfc4::Chat)>,
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
     last_profile_version_announced: u32,
@@ -107,7 +107,7 @@ impl WebSocketRoom {
         }
     }
 
-    fn _consume_chats(&mut self) -> Vec<(String, String, rfc4::Chat)> {
+    fn _consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
         std::mem::take(&mut self.chats)
     }
 
@@ -395,15 +395,7 @@ impl WebSocketRoom {
                                 );
                         }
                         rfc4::packet::Message::Chat(chat) => {
-                            let address = format!("{:#x}", peer.address);
-                            let peer_name = {
-                                if let Some(profile) = peer.profile.as_ref() {
-                                    profile.content.name.clone()
-                                } else {
-                                    address.clone()
-                                }
-                            };
-                            self.chats.push((address, peer_name, chat));
+                            self.chats.push((peer.address, chat));
                         }
                         rfc4::packet::Message::ProfileVersion(announce_profile_version) => {
                             self.peer_identities
@@ -590,7 +582,7 @@ impl Adapter for WebSocketRoom {
         self._change_profile(new_profile);
     }
 
-    fn consume_chats(&mut self) -> Vec<(String, String, rfc4::Chat)> {
+    fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
         self._consume_chats()
     }
 

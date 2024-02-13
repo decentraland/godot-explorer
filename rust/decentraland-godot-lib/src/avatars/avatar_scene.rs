@@ -5,6 +5,7 @@ use godot::prelude::*;
 
 use crate::{
     auth::wallet::AsH160,
+    avatars::dcl_user_profile::DclUserProfile,
     comms::profile::UserProfile,
     dcl::{
         components::{
@@ -17,8 +18,10 @@ use crate::{
         },
         SceneId,
     },
-    godot_classes::dcl_avatar::{AvatarMovementType, DclAvatar},
-    godot_classes::dcl_global::DclGlobal,
+    godot_classes::{
+        dcl_avatar::{AvatarMovementType, DclAvatar},
+        dcl_global::DclGlobal,
+    },
 };
 
 type AvatarAlias = u32;
@@ -82,24 +85,8 @@ macro_rules! sync_crdt_lww_component {
 #[godot_api]
 impl AvatarScene {
     #[func]
-    pub fn update_primary_player_profile(&mut self, profile: Dictionary) {
-        let user_profile = UserProfile::from_godot_dictionary(&profile);
-        self.update_avatar(SceneEntityId::PLAYER, &user_profile);
-    }
-
-    #[func]
-    pub fn update_avatar_profile(&mut self, alias: u32, profile: Dictionary) {
-        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
-            *entity_id
-        } else {
-            // TODO: handle this condition
-            return;
-        };
-
-        self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
-            "async_update_avatar_from_profile".into(),
-            &[profile.to_variant()],
-        );
+    pub fn update_primary_player_profile(&mut self, profile: Gd<DclUserProfile>) {
+        self.update_avatar(SceneEntityId::PLAYER, &profile.bind().inner);
     }
 
     #[func]
@@ -219,8 +206,13 @@ impl AvatarScene {
             let dcl_transform = DclTransformAndParent::default(); // TODO: get real transform with scene_offset
 
             let mut avatar_scene_transform = dcl_transform.clone();
-            avatar_scene_transform.translation.x -= (scene.definition.base.x as f32) * 16.0;
-            avatar_scene_transform.translation.z -= (scene.definition.base.y as f32) * 16.0;
+            avatar_scene_transform.translation.x -=
+                (scene.scene_entity_definition.get_base_parcel().x as f32) * 16.0;
+
+            // TODO: I think this is working fine but
+            //   Should it be added instead of subtracted? (z is inverted in godot and dcl)
+            avatar_scene_transform.translation.z -=
+                (scene.scene_entity_definition.get_base_parcel().y as f32) * 16.0;
 
             scene
                 .avatar_scene_updates
@@ -232,6 +224,11 @@ impl AvatarScene {
                 .internal_player_data
                 .insert(avatar_entity_id, InternalPlayerData { inside: true });
         }
+    }
+
+    #[func]
+    pub fn update_dcl_avatar_by_alias(&mut self, alias: u32, profile: Gd<DclUserProfile>) {
+        self.update_avatar_by_alias(alias, &profile.bind().inner);
     }
 }
 
@@ -315,8 +312,13 @@ impl AvatarScene {
         for scene_id in avatar_active_scene_ids {
             if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
                 let mut avatar_scene_transform = dcl_transform.clone();
-                avatar_scene_transform.translation.x -= (scene.definition.base.x as f32) * 16.0;
-                avatar_scene_transform.translation.z -= (scene.definition.base.y as f32) * 16.0;
+                avatar_scene_transform.translation.x -=
+                    (scene.scene_entity_definition.get_base_parcel().x as f32) * 16.0;
+
+                // TODO: I think this is working fine but
+                //   Should it be added instead of subtracted? (z is inverted in godot and dcl)
+                avatar_scene_transform.translation.z -=
+                    (scene.scene_entity_definition.get_base_parcel().y as f32) * 16.0;
 
                 scene
                     .avatar_scene_updates
@@ -382,9 +384,10 @@ impl AvatarScene {
         self.last_updated_profile.insert(entity_id, profile.clone());
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
+            let dcl_user_profile = DclUserProfile::from_gd(profile.clone());
             avatar_scene.call(
                 "async_update_avatar_from_profile".into(),
-                &[profile.to_godot_dictionary().to_variant()],
+                &[dcl_user_profile.to_variant()],
             );
         }
 

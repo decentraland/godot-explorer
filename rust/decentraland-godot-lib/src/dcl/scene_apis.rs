@@ -146,9 +146,6 @@ pub enum RpcCall {
     GetRealm {
         response: RpcResultSender<GetRealmResponse>,
     },
-    GetSceneInformation {
-        response: RpcResultSender<GetSceneInformationResponse>,
-    },
     // Portable Experiences
     SpawnPortable {
         location: PortableLocation,

@@ -290,7 +290,11 @@ const BASE_WEARABLES: PackedStringArray = [
 	"denimdungareesred",
 	"poloblacktshirt",
 	"polobluetshirt",
-	"polocoloredtshirt"
+	"polocoloredtshirt",
+	"black_glove",
+	"cord_bracelet",
+	"dcl_watch",
+	"emerald_ring"
 ]
 
 
@@ -448,81 +452,8 @@ static func get_base_avatar_urn(wearable_name: String):
 	return "urn:decentraland:off-chain:base-avatars:" + wearable_name
 
 
-static func get_replaces_list(wearable: Dictionary, body_shape_id: String) -> PackedStringArray:
-	var representation = get_representation(wearable, body_shape_id)
-	if representation.is_empty() or representation.get("overrideHides", []).is_empty():
-		return wearable.get("hides", [])
-
-	return representation.get("overrideHides", [])
-
-
-static func get_hides_list(
-	wearable: Dictionary, wearable_category: String, body_shape_id: String
-) -> PackedStringArray:
-	var representation = get_representation(wearable, body_shape_id)
-
-	var hides: PackedStringArray = []
-
-	if representation.is_empty() or representation.get("overrideHides", []).is_empty():
-		hides.append_array(wearable.get("hides", []))
-	else:
-		hides.append_array(representation.get("overrideHides", []))
-
-	# we apply this rule to hide the hands by default if the wearable is an upper body or hides the upper body
-	var is_or_hides_upper_body: bool = (
-		hides.has(Categories.UPPER_BODY) or get_category(wearable) == Categories.UPPER_BODY
-	)
-	# the rule is ignored if the wearable contains the removal of this default rule (newer upper bodies since the release of hands)
-	var removes_hand_default: bool = wearable.get("removesDefaultHiding", []).has(Categories.HANDS)
-	# why we do this? because old upper bodies contains the base hand mesh, and they might clip with the new handwear items
-	if is_or_hides_upper_body and not removes_hand_default:
-		hides.append_array(Categories.UPPER_BODY_DEFAULT_HIDES)
-
-	hides.append_array(get_replaces_list(wearable, body_shape_id))
-
-	if wearable_category == Categories.SKIN:
-		hides.append_array(
-			[
-				"head",
-				"hair",
-				"facial_hair",
-				"mouth",
-				"eyebrows",
-				"eyes",
-				"upper_body",
-				"lower_body",
-				"feet"
-			]
-		)
-
-	# Safeguard the wearable can not hide itself
-	var index := hides.find(wearable_category)
-	if index != -1:
-		hides.remove_at(index)
-
-	return hides
-
-
-# @returns Empty if there is no representation
-static func get_representation(wearable: Dictionary, body_shape_id: String) -> Dictionary:
-	var representation_array = wearable.get("metadata", {}).get("data", {}).get(
-		"representations", []
-	)
-	for representation in representation_array:
-		var index = representation.get("bodyShapes", []).find(body_shape_id)
-		if index != -1:
-			return representation
-
-	return {}
-
-
-static func get_category(wearable: Dictionary) -> String:
-	return wearable.get("metadata", {}).get("data", {}).get("category", "unknown-category")
-
-
-static func can_equip(wearable: Dictionary, body_shape_id: String) -> bool:
-	var representation = get_representation(wearable, body_shape_id)
-	return not representation.is_empty()
+static func can_equip(wearable: DclWearableEntityDefinition, body_shape_id: String) -> bool:
+	return wearable.has_representation(body_shape_id)
 
 
 static func compose_hidden_categories(
@@ -534,12 +465,12 @@ static func compose_hidden_categories(
 	for priority_category in Categories.HIDING_PRIORITY:
 		previously_hidden[priority_category] = []
 
-		var wearable = wearables_by_category.get(priority_category)
+		var wearable: DclWearableEntityDefinition = wearables_by_category.get(priority_category)
 
 		if wearable == null:
 			continue
 
-		var current_hides_list = get_hides_list(wearable, priority_category, body_shape_id)
+		var current_hides_list = wearable.get_hides_list(body_shape_id)
 		if current_hides_list.is_empty():
 			continue
 
@@ -574,20 +505,20 @@ static func get_skeleton_from_content(content_hash: String) -> Skeleton3D:
 	return skeleton
 
 
-static func get_wearable_facial_hashes(wearable: Variant, body_shape_id: String) -> Array[String]:
+static func get_wearable_facial_hashes(
+	wearable: DclWearableEntityDefinition, body_shape_id: String
+) -> Array[String]:
 	if wearable == null:
 		return []
 
-	var category = get_category(wearable)
-	if not is_texture(category):
+	if not is_texture(wearable.get_category()):
 		return []
 
-	var representation = get_representation(wearable, body_shape_id)
-	if representation.is_empty():
+	if not wearable.has_representation(body_shape_id):
 		return []
 
-	var main_file: String = representation.get("mainFile", "").to_lower()
-	var content_mapping: DclContentMappingAndUrl = wearable.get("content")
+	var main_file: String = wearable.get_representation_main_file(body_shape_id)
+	var content_mapping: DclContentMappingAndUrl = wearable.get_content_mapping()
 	var files := content_mapping.get_files()
 	var main_texture_file_hash = content_mapping.get_hash(main_file)
 	if main_texture_file_hash.is_empty():
@@ -611,32 +542,34 @@ static func get_wearable_facial_hashes(wearable: Variant, body_shape_id: String)
 	return [main_texture_file_hash, mask_texture_file_hash]
 
 
-static func get_wearable_main_file_hash(wearable: Variant, body_shape_id: String) -> String:
+static func get_wearable_main_file_hash(
+	wearable: DclWearableEntityDefinition, body_shape_id: String
+) -> String:
 	if wearable == null:
 		return ""
 
-	var representation = get_representation(wearable, body_shape_id)
-	if representation.is_empty():
+	if not wearable.has_representation(body_shape_id):
 		return ""
 
-	var main_file: String = representation.get("mainFile", "").to_lower()
-	var content_mapping: DclContentMappingAndUrl = wearable.get("content")
+	var main_file: String = wearable.get_representation_main_file(body_shape_id)
+	var content_mapping: DclContentMappingAndUrl = wearable.get_content_mapping()
 	var file_hash = content_mapping.get_hash(main_file)
 	return file_hash
 
 
 static func is_valid_wearable(
-	wearable: Variant, body_shape_id: String, skip_content_integrity: bool = false
+	wearable: DclWearableEntityDefinition,
+	body_shape_id: String,
+	skip_content_integrity: bool = false
 ) -> bool:
 	if wearable == null:
 		return false
 
-	var representation = get_representation(wearable, body_shape_id)
-	if representation.is_empty():
+	if not wearable.has_representation(body_shape_id):
 		return false
 
-	var main_file: String = representation.get("mainFile", "").to_lower()
-	var content_mapping: DclContentMappingAndUrl = wearable.get("content")
+	var main_file: String = wearable.get_representation_main_file(body_shape_id)
+	var content_mapping: DclContentMappingAndUrl = wearable.get_content_mapping()
 	var file_hash = content_mapping.get_hash(main_file)
 	if file_hash.is_empty():
 		return false
@@ -649,9 +582,8 @@ static func is_valid_wearable(
 			# printerr("wearable ", wearable_key, " doesn't have resource from hash")
 			return false
 
-		var category: String = get_category(wearable)
 		if obj is Image or obj is ImageTexture:
-			if not is_texture(category):
+			if not is_texture(wearable.get_category()):
 				# Category and the object don't match
 				return false
 		elif obj is Node3D:
@@ -678,9 +610,11 @@ static func get_curated_wearable_list(
 	wearables_by_category[Categories.BODY_SHAPE] = body_shape
 
 	for wearable_id in wearables:
-		var wearable = Global.content_provider.get_wearable(wearable_id)
+		var wearable: DclWearableEntityDefinition = Global.content_provider.get_wearable(
+			wearable_id
+		)
 		if is_valid_wearable(wearable, body_shape_id):
-			var category = get_category(wearable)
+			var category = wearable.get_category()
 			if not wearables_by_category.has(category):
 				wearables_by_category[category] = wearable
 		else:

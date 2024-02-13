@@ -39,15 +39,12 @@ func _ready():
 	unset_wearable()
 
 
-func async_set_wearable(wearable: Dictionary, _wearable_id: String):
+func async_set_wearable(wearable: DclWearableEntityDefinition, _wearable_id: String):
 	show()
 
 	wearable_id = _wearable_id
 
-	var wearable_name: String = wearable.get("metadata", {}).get("name", "")
-	var wearable_display: Array = wearable.get("metadata", {}).get("i18n", [])
-
-	match wearable.get("rarity", ""):
+	match wearable.get_rarity():
 		"common":
 			texture_rect_panel_background.texture = common_panel
 			texture_rect_thumbnail_background.texture = common_thumbnail
@@ -73,13 +70,10 @@ func async_set_wearable(wearable: Dictionary, _wearable_id: String):
 			texture_rect_panel_background.texture = base_panel
 			texture_rect_thumbnail_background.texture = base_thumbnail
 
-	if wearable_display.size() > 0:
-		label_name.text = wearable_display[0].get("text")
-	else:
-		label_name.text = wearable_name
+	label_name.text = wearable.get_display_name()
 
-	var dcl_content_mapping = wearable.get("content")
-	var wearable_thumbnail: String = wearable.get("metadata", {}).get("thumbnail", "")
+	var dcl_content_mapping = wearable.get_content_mapping()
+	var wearable_thumbnail: String = wearable.get_thumbnail()
 	thumbnail_hash = dcl_content_mapping.get_hash(wearable_thumbnail)
 
 	if not thumbnail_hash.is_empty():

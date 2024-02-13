@@ -4,6 +4,7 @@ use godot::prelude::*;
 use rand::thread_rng;
 use tokio::task::JoinHandle;
 
+use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::comms::profile::{LambdaProfiles, UserProfile};
 use crate::content::bytes::fast_create_packed_byte_array_from_vec;
 use crate::dcl::scene_apis::RpcResultSender;
@@ -31,7 +32,7 @@ pub struct DclPlayerIdentity {
     remote_report_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
     remote_report_receiver: tokio::sync::mpsc::Receiver<RemoteReportState>,
 
-    profile: Option<UserProfile>,
+    profile: Option<Gd<DclUserProfile>>,
 
     try_connect_account_handle: Option<JoinHandle<()>>,
 
@@ -89,7 +90,7 @@ impl DclPlayerIdentity {
     fn wallet_connected(&self, address: GString, chain_id: u64, is_guest: bool);
 
     #[signal]
-    fn profile_changed(&self, new_profile: Dictionary);
+    fn profile_changed(&self, new_profile: Gd<DclUserProfile>);
 
     #[func]
     fn try_set_remote_wallet(
@@ -312,12 +313,8 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn get_profile_or_empty(&self) -> Dictionary {
-        if let Some(profile) = &self.profile {
-            profile.to_godot_dictionary()
-        } else {
-            Dictionary::default()
-        }
+    pub fn get_profile_or_null(&self) -> Option<Gd<DclUserProfile>> {
+        self.profile.clone()
     }
 
     #[func]
@@ -325,22 +322,22 @@ impl DclPlayerIdentity {
         let mut profile = UserProfile::default();
         profile.content.user_id = Some(self.get_address_str().to_string());
         profile.content.eth_address = self.get_address_str().to_string();
-        self.profile = Some(profile);
+        let profile = DclUserProfile::from_gd(profile);
+        self.profile = Some(profile.clone());
 
-        let dict = self.get_profile_or_empty();
         self.base.call_deferred(
             "emit_signal".into(),
-            &["profile_changed".to_variant(), dict.to_variant()],
+            &["profile_changed".to_variant(), profile.to_variant()],
         );
     }
 
     #[func]
-    pub fn set_profile(&mut self, dict: Dictionary) {
-        self.profile = Some(UserProfile::from_godot_dictionary(&dict));
+    pub fn set_profile(&mut self, profile: Gd<DclUserProfile>) {
+        self.profile = Some(profile.clone());
 
         self.base.call_deferred(
             "emit_signal".into(),
-            &["profile_changed".to_variant(), dict.to_variant()],
+            &["profile_changed".to_variant(), profile.to_variant()],
         );
     }
 
@@ -401,25 +398,25 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn async_prepare_deploy_profile(&self, dict: Dictionary) -> Gd<Promise> {
+    pub fn async_prepare_deploy_profile(&self, new_profile: Gd<DclUserProfile>) -> Gd<Promise> {
         let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();
 
-        let mut new_profile = UserProfile::from_godot_dictionary(&dict);
         let current_profile = if let Some(profile) = self.profile.clone() {
             profile
         } else {
-            UserProfile {
+            DclUserProfile::from_gd(UserProfile {
                 version: 0,
                 ..Default::default()
-            }
+            })
         };
 
+        let mut new_user_profile = new_profile.bind().inner.clone();
         let eth_address = self.get_address_str().to_string();
-        new_profile.version = current_profile.version + 1;
-        new_profile.content.version = new_profile.version as i64;
-        new_profile.content.user_id = Some(eth_address.clone());
-        new_profile.content.eth_address = eth_address;
+        new_user_profile.version = current_profile.bind().inner.version + 1;
+        new_user_profile.content.version = new_user_profile.version as i64;
+        new_user_profile.content.user_id = Some(eth_address.clone());
+        new_user_profile.content.eth_address = eth_address;
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
             let ephemeral_auth_chain = self
@@ -430,7 +427,7 @@ impl DclPlayerIdentity {
             handle.spawn(async move {
                 let deploy_data = super::deploy_profile::prepare_deploy_profile(
                     ephemeral_auth_chain.clone(),
-                    new_profile,
+                    new_user_profile,
                 )
                 .await;
 
@@ -487,16 +484,16 @@ impl DclPlayerIdentity {
                         }
                     }
 
-                    self.profile = Some(UserProfile {
+                    let new_profile = DclUserProfile::from_gd(UserProfile {
                         version: content.version as u32,
                         content,
                         base_url: "https://peer.decentraland.org/content/contents/".to_owned(),
                     });
+                    self.profile = Some(new_profile.clone());
 
-                    let dict = self.get_profile_or_empty();
                     self.base.call_deferred(
                         "emit_signal".into(),
-                        &["profile_changed".to_variant(), dict.to_variant()],
+                        &["profile_changed".to_variant(), new_profile.to_variant()],
                     );
 
                     return true;
@@ -513,21 +510,6 @@ impl DclPlayerIdentity {
         }
         false
     }
-
-    #[func]
-    pub fn _update_profile_from_dictionary(&mut self, dict: Dictionary) {
-        let eth_address = self.get_address_str().to_string();
-
-        let mut new_profile = UserProfile::from_godot_dictionary(&dict);
-        new_profile.content.user_id = Some(eth_address.clone());
-        new_profile.content.eth_address = eth_address;
-
-        self.profile = Some(new_profile);
-        self.base.call_deferred(
-            "emit_signal".into(),
-            &["profile_changed".to_variant(), dict.to_variant()],
-        );
-    }
 }
 
 impl DclPlayerIdentity {
@@ -535,8 +517,8 @@ impl DclPlayerIdentity {
         self.ephemeral_auth_chain.clone()
     }
 
-    pub fn profile(&self) -> Option<&UserProfile> {
-        self.profile.as_ref()
+    pub fn clone_profile(&self) -> Option<UserProfile> {
+        self.profile.as_ref().map(|v| v.bind().inner.clone())
     }
 
     pub fn try_get_address(&self) -> Option<H160> {
