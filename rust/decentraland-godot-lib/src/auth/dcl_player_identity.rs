@@ -491,7 +491,7 @@ impl DclPlayerIdentity {
                     });
                     self.profile = Some(new_profile.clone());
 
-                    new_profile.bind_mut().inner.content.avatar.wearables = vec![
+                    new_profile.bind_mut().inner.content.avatar.wearables = [
                         "urn:decentraland:off-chain:base-avatars:f_mouth_00",
                         "urn:decentraland:off-chain:base-avatars:double_bun",
                         "urn:decentraland:off-chain:base-avatars:eyes_12",

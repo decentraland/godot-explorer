@@ -50,7 +50,7 @@ var inside = false
 @onready var label_number = %Label_Number
 
 
-func _async_set_texture(emote: DclWearableEntityDefinition) -> void:
+func async_set_texture(emote: DclWearableEntityDefinition) -> void:
 	var promise: Promise = Global.content_provider.fetch_texture(
 		emote.get_thumbnail(), emote.get_content_mapping()
 	)
@@ -59,6 +59,7 @@ func _async_set_texture(emote: DclWearableEntityDefinition) -> void:
 		printerr("Fetch texture error on ", emote.get_thumbnail(), ": ", res.get_error())
 	else:
 		self.picture = res.texture
+
 
 func _ready():
 	if not Engine.is_editor_hint():

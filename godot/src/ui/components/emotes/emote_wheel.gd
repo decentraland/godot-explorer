@@ -5,11 +5,12 @@ extends Control
 var avatar_node: Avatar = null
 var emote_items: Array[EmoteWheelItem] = []
 
+var last_selected_id: String = ""
+
 @onready var emote_wheel_container = %EmoteWheelContainer
 @onready var label_emote_name = %Label_EmoteName
 @onready var label_for_desktop = %Label_ForDesktop
 
-var last_selected_id: String = ""
 
 func _ready():
 	self.hide()
@@ -23,7 +24,7 @@ func _ready():
 	label_for_desktop.set_visible(not Global.is_mobile())
 
 	avatar_node.avatar_loaded.connect(self._on_avatar_loaded)
-	
+
 	# Temporal mock data until we fetch
 	# the emotes of the players with emote v2
 	emote_items[0].emote_id = "handsair"
@@ -45,18 +46,19 @@ func _ready():
 			"res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_item.emote_id
 		)
 
+
 func _on_avatar_loaded():
 	var emote_urns = avatar_node.avatar_data.get_emotes()
 	for i in range(emote_items.size()):
 		# get_emotes() always returns 10 emotes, but just in case
 		if i >= emote_urns.size():
-			# Set default or 
+			# Set default or
 			continue
-			
+
 		var emote_item := emote_items[i]
 		emote_item.emote_id = emote_urns[i]
 		emote_item.number = i
-		
+
 		if is_emote_default(emote_item.emote_id):
 			emote_item.rarity = Wearables.ItemRarity.COMMON
 			emote_item.picture = load(
@@ -67,25 +69,33 @@ func _on_avatar_loaded():
 			if emote_data == null:
 				# TODO: set invalid emote reference?, fallback with defualt?
 				continue
-				
+
 			emote_item.rarity = emote_data.get_rarity()
-			emote_item._async_set_texture(emote_data)
-			
+			emote_item.async_set_texture(emote_data)
+
+
 # TODO: hardcoded until default ones are in the content server
 func is_emote_default(urn: String) -> bool:
-	return ["handsair",
-	"wave",
-	"fistpump",
-	"dance",
-	"raiseHand",
-	"clap",
-	"money",
-	"kiss",
-	"shrug",
-	"headexplode"].has(urn)
+	return (
+		[
+			"handsair",
+			"wave",
+			"fistpump",
+			"dance",
+			"raiseHand",
+			"clap",
+			"money",
+			"kiss",
+			"shrug",
+			"headexplode"
+		]
+		. has(urn)
+	)
+
 
 func async_update_emotes():
 	pass
+
 
 func _gui_input(event):
 	if event is InputEventScreenTouch:
@@ -119,16 +129,16 @@ func _on_play_emote(emote_id: String):
 func _on_select_emote(selected: bool, emote_id: String):
 	if emote_id == last_selected_id:
 		return
-		
+
 	if !selected:
 		label_emote_name.text = ""
 		last_selected_id = ""
 		return
-	
+
 	var emote_name := emote_id
 	var emote_data := Global.content_provider.get_wearable(emote_id)
 	if emote_data != null:
 		emote_name = emote_data.get_display_name()
-	
+
 	last_selected_id = emote_id
 	label_emote_name.text = emote_name
