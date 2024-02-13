@@ -44,6 +44,7 @@ func _process(_dt):
 		_last_parcel_position = parcel_position
 		Global.config.last_parcel_position = parcel_position
 		dirty_save_position = true
+		Global.change_parcel.emit(parcel_position)
 
 
 func _on_parcels_procesed(parcels, empty):
