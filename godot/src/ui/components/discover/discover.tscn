@@ -198,10 +198,11 @@ layout_mode = 2
 theme_override_constants/separation = 128
 theme_override_styles/separator = SubResource("StyleBoxEmpty_w46h5")
 
-[node name="JumpIn" parent="TextureRect" instance=ExtResource("9_gh6mh")]
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="JumpIn" parent="CanvasLayer" instance=ExtResource("9_gh6mh")]
 unique_name_in_owner = true
 visible = false
-layout_mode = 1
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="jump_in" from="TextureRect/JumpIn" to="." method="_on_jump_in_jump_in"]
+[connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]
