@@ -26,7 +26,9 @@ var _touch_position = Vector2(0.0, 0.0)
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
 @onready var direction: Vector3 = Vector3(0, 0, 0)
-@onready var avatar := $Avatar
+@onready var avatar := %Avatar
+@onready var face_camera = %FaceCamera3D
+@onready var face_camera_pivot = %FaceCameraPivot
 
 @onready var camera_fade_in_audio = preload("res://assets/sfx/ui_fade_in.wav")
 @onready var camera_fade_out_audio = preload("res://assets/sfx/ui_fade_out.wav")
@@ -212,3 +214,9 @@ func avatar_look_at(target_position: Vector3):
 	mount_camera.rotation.x = x_rot
 
 	_clamp_camera_rotation()
+
+
+func _process(_delta):
+	face_camera_pivot.position = position
+	var rotation_y = avatar.rotation.y + self.rotation.y
+	face_camera_pivot.set_rotation(Vector3(0.0, rotation_y, 0.0))

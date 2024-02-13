@@ -5,6 +5,7 @@ signal avatar_loaded
 
 @export var skip_process: bool = false
 @export var hide_name: bool = false
+@export var is_player: bool = false
 
 # Public
 var avatar_id: String = ""
@@ -396,6 +397,8 @@ func async_load_wearables():
 	for child in body_shape_skeleton_3d.get_children():
 		if child.visible and child is MeshInstance3D:
 			child.mesh = child.mesh.duplicate(true)
+			if is_player:
+				child.set_layer_mask_value(2, true)
 			meshes.push_back({"n": child.get_surface_override_material_count(), "mesh": child.mesh})
 
 	var promise: Promise = Global.content_provider.duplicate_materials(meshes)

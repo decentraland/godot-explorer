@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=29 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -17,7 +17,6 @@
 [ext_resource type="PackedScene" uid="uid://55g2dvfiog7r" path="res://src/ui/components/mini_map_button/mini_map_button.tscn" id="11_gwcjv"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="14_jag8f"]
-[ext_resource type="Texture2D" uid="uid://bxgklimw13m4d" path="res://assets/themes/dark_dcl_theme/icons/Profile.svg" id="16_8okg3"]
 [ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="17_0blod"]
 [ext_resource type="Script" path="res://src/ui/components/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="20_uf6rv"]
@@ -36,6 +35,16 @@ size = Vector2(4800, 4800)
 albedo_texture = ExtResource("2_7jksa")
 uv1_scale = Vector3(4800, 4800, 4800)
 texture_filter = 0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_n23mv"]
+bg_color = Color(0, 0, 0, 0.501961)
+corner_radius_top_left = 32
+corner_radius_top_right = 32
+corner_radius_bottom_right = 32
+corner_radius_bottom_left = 32
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_8ot7p"]
+viewport_path = NodePath("world/Player/SubViewport")
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_n040o"]
 resource_name = "Tabs"
@@ -240,17 +249,28 @@ icon = ExtResource("9_hj43f")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Profile" type="TextureButton" parent="UI/SafeMarginContainer/InteractableHUD"]
+[node name="ProfilePanel" type="Panel" parent="UI/SafeMarginContainer/InteractableHUD"]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -100.0
+offset_left = -180.0
 offset_top = 20.0
 offset_right = -20.0
-offset_bottom = 100.0
+offset_bottom = 180.0
 grow_horizontal = 0
-texture_normal = ExtResource("16_8okg3")
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_n23mv")
+
+[node name="Profile" type="TextureButton" parent="UI/SafeMarginContainer/InteractableHUD/ProfilePanel"]
+custom_minimum_size = Vector2(200, 200)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture_normal = SubResource("ViewportTexture_8ot7p")
 ignore_texture_size = true
 stretch_mode = 0
 
@@ -367,7 +387,7 @@ script = ExtResource("20_064cw")
 [connection signal="gui_input" from="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
-[connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/Profile" to="." method="_on_profile_pressed"]
+[connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/ProfilePanel/Profile" to="." method="_on_profile_pressed"]
 [connection signal="submit_message" from="UI/SafeMarginContainer/InteractableHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
 [connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
@@ -379,3 +399,5 @@ script = ExtResource("20_064cw")
 [connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
 [connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
+
+[editable path="world/Player"]
