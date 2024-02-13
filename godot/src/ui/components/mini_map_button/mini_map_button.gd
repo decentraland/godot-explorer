@@ -4,6 +4,7 @@ extends Button
 @onready var label_scene_title = %Label_SceneTitle
 @onready var texture_rect_sdk6 = %TextureRect_Sdk6
 
+
 func _ready():
 	texture_rect_sdk6.hide()
 	Global.change_parcel.connect(self._on_change_parcel)
@@ -19,7 +20,7 @@ func _on_change_scene_id(scene_id: int):
 	if scene_id == -1:
 		label_scene_title.hide()
 		return
-		
+
 	var scene = Global.scene_fetcher.get_scene_data_by_scene_id(scene_id)
 	if scene != null:
 		texture_rect_sdk6.set_visible(not scene.scene_entity_definition.is_sdk7())

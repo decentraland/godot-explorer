@@ -103,6 +103,7 @@ func get_scene_data_by_scene_id(scene_id: int) -> SceneItem:
 
 	return null
 
+
 func set_scene_radius(value: int):
 	scene_entity_coordinator.set_scene_radius(value)
 
