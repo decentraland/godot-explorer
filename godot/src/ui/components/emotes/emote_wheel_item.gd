@@ -5,25 +5,25 @@ extends Control
 signal play_emote(emote_id: String)
 signal select_emote(selected: bool, emote_id: String)
 
-@export var rarity: Wearables.ItemRarityEnum = Wearables.ItemRarityEnum.COMMON:
+@export var rarity: String = Wearables.ItemRarity.COMMON:
 	set(new_value):
 		rarity = new_value
-		%Glow.set_visible(rarity != Wearables.ItemRarityEnum.COMMON)
+		%Glow.set_visible(rarity != Wearables.ItemRarity.COMMON)
 		var color = Color("#ECEBED")
 		match rarity:
-			Wearables.ItemRarityEnum.COMMON:
+			Wearables.ItemRarity.COMMON:
 				color = Color("#ECEBED")
-			Wearables.ItemRarityEnum.UNCOMMON:
+			Wearables.ItemRarity.UNCOMMON:
 				color = Color("#FF8362")
-			Wearables.ItemRarityEnum.RARE:
+			Wearables.ItemRarity.RARE:
 				color = Color("#34CE76")
-			Wearables.ItemRarityEnum.EPIC:
+			Wearables.ItemRarity.EPIC:
 				color = Color("#599CFF")
-			Wearables.ItemRarityEnum.LEGENDARY:
+			Wearables.ItemRarity.LEGENDARY:
 				color = Color("#B262FF")
-			Wearables.ItemRarityEnum.MYTHIC:
+			Wearables.ItemRarity.MYTHIC:
 				color = Color("#FF63E1")
-			Wearables.ItemRarityEnum.UNIQUE:
+			Wearables.ItemRarity.UNIQUE:
 				color = Color("#FFB626")
 		%Inner.self_modulate = color
 
@@ -38,6 +38,7 @@ signal select_emote(selected: bool, emote_id: String)
 		picture = new_value
 
 @export var emote_id: String = "wave"
+@export var emote_name: String = "wave"
 
 var pressed = false
 var inside = false
@@ -48,6 +49,16 @@ var inside = false
 @onready var texture_rect_pressed = %Pressed
 @onready var label_number = %Label_Number
 
+
+func _async_set_texture(emote: DclWearableEntityDefinition) -> void:
+	var promise: Promise = Global.content_provider.fetch_texture(
+		emote.get_thumbnail(), emote.get_content_mapping()
+	)
+	var res = await PromiseUtils.async_awaiter(promise)
+	if res is PromiseError:
+		printerr("Fetch texture error on ", emote.get_thumbnail(), ": ", res.get_error())
+	else:
+		self.picture = res.texture
 
 func _ready():
 	if not Engine.is_editor_hint():
