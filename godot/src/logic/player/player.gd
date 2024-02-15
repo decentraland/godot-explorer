@@ -113,6 +113,10 @@ func _input(event):
 			mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * vertical_sens)
 			_clamp_camera_rotation()
 
+			var explorer = Global.get_explorer()
+			if is_instance_valid(explorer):
+				explorer.reset_cursor_position()
+
 	# Receives mouse motion
 	if not Global.is_mobile() && event:
 		if event is InputEventMouseMotion && Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
