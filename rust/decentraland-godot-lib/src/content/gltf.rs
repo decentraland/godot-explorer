@@ -1,11 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
 use godot::{
-    builtin::{meta::ToGodot, Dictionary, GString, Variant},
+    bind::GodotClass,
+    builtin::{meta::ToGodot, Dictionary, GString, Variant, VariantArray},
     engine::{
-        global::Error, node::ProcessMode, AnimatableBody3D, AnimationLibrary, AnimationPlayer,
-        CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, MeshInstance3D, Node,
-        Node3D, NodeExt, StaticBody3D,
+        animation::TrackType, global::Error, node::ProcessMode, AnimatableBody3D, Animation,
+        AnimationLibrary, AnimationPlayer, CollisionShape3D, ConcavePolygonShape3D, GltfDocument,
+        GltfState, MeshInstance3D, Node, Node3D, NodeExt, StaticBody3D,
     },
     obj::{Gd, InstanceId},
 };
@@ -136,18 +137,43 @@ pub async fn internal_load_gltf(
     })?;
 
     node.rotate_y(std::f32::consts::PI);
-    create_colliders(node.clone().upcast());
 
     Ok((node, thread_safe_check))
 }
 
-pub async fn load_gltf(
+pub async fn load_gltf_scene_content(
+    file_path: String,
+    content_mapping: ContentMappingAndUrlRef,
+    ctx: ContentProviderContext,
+) -> Result<Option<Variant>, anyhow::Error> {
+    let (node, _thread_safe_check) = internal_load_gltf(file_path, content_mapping, ctx).await?;
+    create_colliders(node.clone().upcast());
+    Ok(Some(node.to_variant()))
+}
+
+pub async fn load_gltf_wearable(
     file_path: String,
     content_mapping: ContentMappingAndUrlRef,
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
     let (node, _thread_safe_check) = internal_load_gltf(file_path, content_mapping, ctx).await?;
     Ok(Some(node.to_variant()))
+}
+
+pub async fn load_gltf_emote(
+    file_path: String,
+    content_mapping: ContentMappingAndUrlRef,
+    ctx: ContentProviderContext,
+) -> Result<Option<Variant>, anyhow::Error> {
+    let file_hash = content_mapping
+        .clone()
+        .get_hash(file_path.as_str())
+        .ok_or(anyhow::Error::msg("File not found in the content mappings"))?
+        .clone();
+
+    let (gltf_node, _thread_safe_check) =
+        internal_load_gltf(file_path, content_mapping, ctx).await?;
+    Ok(add_animation_from_obj(&file_hash, gltf_node).map(|emote| emote.to_variant()))
 }
 
 pub async fn apply_update_set_mask_colliders(
@@ -416,4 +442,134 @@ fn duplicate_animation_resources(gltf_node: Gd<Node>) {
     for new_animation_library in new_animation_libraries {
         animation_player.add_animation_library(new_animation_library.0, new_animation_library.1);
     }
+}
+
+fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<Gd<DclEmoteGltf>> {
+    // get the last 16 character of file_hash
+    let emote_prefix_id = file_hash
+        .chars()
+        .rev()
+        .take(16)
+        .collect::<String>()
+        .to_lowercase();
+    let armature_prop = gltf_node.find_child("Armature_Prop".into());
+    let Some(anim_player) = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer") else {
+        return None;
+    };
+    let armature_prefix = format!("Armature_Prop_{}/Skeleton3D:", emote_prefix_id);
+
+    let armature_prop = armature_prop
+        .and_then(|v| v.clone().try_cast::<Node3D>().ok())
+        .map(|mut node| {
+            node.set_name(format!("Armature_Prop_{}", emote_prefix_id).into());
+            node.rotate_y(std::f32::consts::PI);
+            node
+        });
+
+    let is_single_animation = anim_player.get_animation_list().len() == 1;
+
+    let anim_list: Vec<String> = anim_player
+        .get_animation_list()
+        .as_slice()
+        .iter()
+        .map(|v| v.to_string())
+        .collect();
+
+    let mut default_animation: Option<Gd<Animation>> = None;
+    let mut prop_animation: Option<Gd<Animation>> = None;
+    let mut default_anim_key = None;
+    let mut prop_anim_key = None;
+
+    for animation_key in anim_list.iter() {
+        if is_single_animation || animation_key.to_lowercase().ends_with("_avatar") {
+            default_anim_key = Some(animation_key.clone());
+        } else if animation_key.to_lowercase().ends_with("_prop") {
+            prop_anim_key = Some(animation_key.clone());
+        }
+    }
+
+    // Corner case, the glb doesn't follow the docs instructions
+    if !is_single_animation {
+        for animation_key in anim_list.iter() {
+            if default_anim_key.is_none() {
+                default_anim_key = Some(animation_key.clone());
+            } else if prop_anim_key.is_none() {
+                prop_anim_key = Some(animation_key.clone());
+            }
+        }
+    }
+
+    let mut play_emote_audio_args = VariantArray::new();
+    play_emote_audio_args.push(file_hash.to_variant());
+    let play_emote_audio_call = Dictionary::from_iter([
+        ("method", "_play_emote_audio".to_variant()),
+        ("args", play_emote_audio_args.to_variant()),
+    ]);
+
+    let mut audio_added = false;
+
+    for animation_key in anim_list.iter() {
+        let Some(mut anim) = anim_player.get_animation(animation_key.into()) else {
+            continue;
+        };
+
+        if default_anim_key.as_ref() == Some(animation_key) {
+            default_animation = Some(anim.clone());
+            anim.set_name(emote_prefix_id.to_string().into())
+        } else if prop_anim_key.as_ref() == Some(animation_key) {
+            prop_animation = Some(anim.clone());
+            anim.set_name(format!("{emote_prefix_id}_prop").into())
+        }
+
+        for track_idx in 0..anim.get_track_count() {
+            let track_path = anim.track_get_path(track_idx).to_string();
+            if !track_path.contains("Skeleton3D") {
+                let last_track_name = track_path.split('/').last().unwrap_or_default();
+                let new_track_path = format!("Armature/Skeleton3D:{}", last_track_name);
+                anim.track_set_path(track_idx, new_track_path.into());
+            }
+            if track_path.contains("Armature_Prop/Skeleton3D") {
+                let track_subname = track_path.split(':').last().unwrap_or_default();
+                let new_track_path = format!("{armature_prefix}{track_subname}");
+                anim.track_set_path(track_idx, new_track_path.into());
+            }
+        }
+
+        if armature_prop.is_some() {
+            let new_track_prop = anim.add_track(TrackType::TYPE_VALUE);
+            anim.track_set_path(
+                new_track_prop,
+                format!("Armature_Prop_{}:visible", emote_prefix_id).into(),
+            );
+            anim.track_insert_key(new_track_prop, 0.0, true.to_variant());
+        }
+
+        if !audio_added {
+            audio_added = true;
+            let new_track_audio = anim.add_track(TrackType::TYPE_METHOD);
+            anim.track_set_path(new_track_audio, ".".into());
+            anim.track_insert_key(
+                new_track_audio,
+                0.0,
+                play_emote_audio_call.clone().to_variant(),
+            );
+        }
+    }
+
+    Some(Gd::from_init_fn(|_base| DclEmoteGltf {
+        armature_prop,
+        default_animation,
+        prop_animation,
+    }))
+}
+
+#[derive(GodotClass)]
+#[class(base=RefCounted)]
+pub struct DclEmoteGltf {
+    #[var]
+    armature_prop: Option<Gd<Node3D>>,
+    #[var]
+    default_animation: Option<Gd<Animation>>,
+    #[var]
+    prop_animation: Option<Gd<Animation>>,
 }

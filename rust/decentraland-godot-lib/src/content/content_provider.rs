@@ -19,7 +19,10 @@ use crate::{
 use super::{
     audio::load_audio,
     content_notificator::ContentNotificator,
-    gltf::{apply_update_set_mask_colliders, load_gltf},
+    gltf::{
+        apply_update_set_mask_colliders, load_gltf_emote, load_gltf_scene_content,
+        load_gltf_wearable, DclEmoteGltf,
+    },
     texture::{load_image_texture, TextureEntry},
     thread_safety::{set_thread_safety_checks_enabled, then_promise},
     video::download_video,
@@ -73,11 +76,13 @@ impl INode for ContentProvider {
 
 #[godot_api]
 impl ContentProvider {
+    // content_type 1: wearable, 2: emote, default: scene
     #[func]
     pub fn fetch_gltf(
         &mut self,
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
+        content_type: i32,
     ) -> Gd<Promise> {
         let content_mapping = content_mapping.bind().get_content_mapping();
         let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
@@ -93,7 +98,24 @@ impl ContentProvider {
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            let result = load_gltf(gltf_file_path, content_mapping, content_provider_context).await;
+            let result = match content_type {
+                1 => {
+                    load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context)
+                        .await
+                }
+                2 => {
+                    load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await
+                }
+                _ => {
+                    load_gltf_scene_content(
+                        gltf_file_path,
+                        content_mapping,
+                        content_provider_context,
+                    )
+                    .await
+                }
+            };
+
             then_promise(get_promise, result);
         });
 
@@ -264,6 +286,17 @@ impl ContentProvider {
             .bind()
             .get_data()
             .try_to::<Gd<Node3D>>()
+            .ok()
+    }
+
+    #[func]
+    pub fn get_emote_gltf_from_hash(&self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
+        self.cached
+            .get(&file_hash.to_string())?
+            .promise
+            .bind()
+            .get_data()
+            .try_to::<Gd<DclEmoteGltf>>()
             .ok()
     }
 
