@@ -1,52 +1,12 @@
-[gd_scene load_steps=6 format=3 uid="uid://dbfqv02fhhl06"]
+[gd_scene load_steps=3 format=3 uid="uid://dbfqv02fhhl06"]
 
 [ext_resource type="Script" path="res://src/tool/avatar_renderer/avatar_renderer_standalone.gd" id="1_24a53"]
-[ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar.tscn" id="2_4dvmo"]
+[ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="2_05642"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_3nntx"]
-sky_top_color = Color(1, 1, 1, 1)
-sky_horizon_color = Color(0.8, 0.79225, 0.78325, 1)
-ground_horizon_color = Color(0.8, 0.79225, 0.78325, 1)
-
-[sub_resource type="Sky" id="Sky_puthh"]
-sky_material = SubResource("ProceduralSkyMaterial_3nntx")
-
-[sub_resource type="Environment" id="Environment_8ly2k"]
-sky = SubResource("Sky_puthh")
-ambient_light_source = 2
-ambient_light_color = Color(1, 1, 1, 1)
-reflected_light_source = 1
-
-[node name="avatar_renderer_scene" type="Node2D"]
+[node name="AvatarRendererScene" type="Node"]
 script = ExtResource("1_24a53")
 
-[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
-offset_right = 1276.0
-offset_bottom = 722.0
-
-[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+[node name="AvatarPreview" parent="." instance=ExtResource("2_05642")]
 unique_name_in_owner = true
-transparent_bg = true
-handle_input_locally = false
-size = Vector2i(2048, 2048)
-render_target_update_mode = 4
-
-[node name="Avatar" parent="SubViewportContainer/SubViewport" instance=ExtResource("2_4dvmo")]
-
-[node name="Camera3D_Perpective" type="Camera3D" parent="SubViewportContainer/SubViewport"]
-unique_name_in_owner = true
-transform = Transform3D(-1, 0, 0.000663193, 0, 1, 0, -0.000663193, 0, -1, 0, 1, -1.645)
-current = true
-fov = 90.0
-size = 0.02
-
-[node name="Camera3D_Orthogonal" type="Camera3D" parent="SubViewportContainer/SubViewport"]
-transform = Transform3D(-1, 0, 0.000663193, 0, 1, 0, -0.000663193, 0, -1, 0, 0.971608, -1.56248)
-visible = false
-projection = 1
-size = 2.5
-
-[node name="WorldEnvironment" type="WorldEnvironment" parent="SubViewportContainer/SubViewport"]
-environment = SubResource("Environment_8ly2k")
-
-[connection signal="avatar_loaded" from="SubViewportContainer/SubViewport/Avatar" to="." method="_async_on_avatar_avatar_loaded"]
+hide_name = true
+can_move = false

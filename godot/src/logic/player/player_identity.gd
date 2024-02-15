@@ -46,15 +46,14 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool)
 		if Global.config.guest_profile.is_empty():
 			self.set_default_profile()
 		else:
-			var guest_profile := DclUserProfile.new()
-			guest_profile.from_godot_dictionary(Global.config.guest_profile)
+			var guest_profile := DclUserProfile.from_godot_dictionary(Global.config.guest_profile)
 			self.set_profile(guest_profile)
 		return
 
 	async_fetch_profile(address, current_lambda_server_base_url)
 
 
-func async_deploy_profile(new_profile: DclUserProfile) -> void:
+func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) -> void:
 	var is_guest_profile = not new_profile.has_connected_web3()
 	if is_guest_profile:
 		Global.config.guest_profile = new_profile.to_godot_dictionary()
@@ -66,16 +65,17 @@ func async_deploy_profile(new_profile: DclUserProfile) -> void:
 	if not Global.realm.has_realm():
 		await Global.realm.realm_changed
 
-	var promise: Promise = self.async_prepare_deploy_profile(new_profile)
+	var promise: Promise = self.async_prepare_deploy_profile(new_profile, has_new_snapshots)
 	var ret = await PromiseUtils.async_awaiter(promise)
 	if ret is PromiseError:
 		printerr("Error preparing deploying profile: ", ret.get_error())
 		return
 
+	var body_payload = (ret as Dictionary).get("body_payload")
 	var headers := ["Content-Type: " + (ret as Dictionary).get("content_type")]
-	var url := Global.realm.content_base_url + "entities/"
+	var url := Global.realm.get_profile_content_url() + "entities/"
 	var promise_req := Global.http_requester.request_json_bin(
-		url, HTTPClient.METHOD_POST, (ret as Dictionary).get("body_payload"), headers
+		url, HTTPClient.METHOD_POST, body_payload, headers
 	)
 	var response = await PromiseUtils.async_awaiter(promise_req)
 	if response is PromiseError:

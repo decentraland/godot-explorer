@@ -19,36 +19,32 @@ const MAP_ON = preload("res://assets/ui/nav-bar-icons/map-on.svg")
 const SETTINGS_OFF = preload("res://assets/ui/nav-bar-icons/settings-off.svg")
 const SETTINGS_ON = preload("res://assets/ui/nav-bar-icons/settings-on.svg")
 
-@export var group: ButtonGroup
-
 var buttons_quantity: int = 0
 var pressed_index: int = 0
 
 var selected_node: Control
 
-var resolutions := [
-	Vector2i(1920, 1080), Vector2i(1280, 720), Vector2i(800, 600), Vector2i(400, 300)
-]
-var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
+@onready var group: ButtonGroup = ButtonGroup.new()
+@onready var color_rect_header = %ColorRect_Header
 
-@onready var color_rect_header = $ColorRect_Header
+@onready var control_discover = %Control_Discover
+@onready var control_settings = %Control_Settings
+@onready var control_map = %Control_Map
+@onready var control_backpack: Backpack = %Control_Backpack
 
-@onready var control_discover = $ColorRect_Background/Control_Discover
-@onready var control_settings = $ColorRect_Background/Control_Settings
-@onready var control_map = $ColorRect_Background/Control_Map
-@onready var control_backpack = $ColorRect_Background/Control_Backpack
-
-@onready
-var button_discover = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover
-@onready
-var button_map = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map
-@onready
-var button_backpack = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack
-@onready
-var button_settings = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings
+@onready var button_discover = %Button_Discover
+@onready var button_map = %Button_Map
+@onready var button_backpack = %Button_Backpack
+@onready var button_settings = %Button_Settings
 
 
 func _ready():
+	control_settings.request_pause_scenes.connect(func(enabled): request_pause_scenes.emit(enabled))
+	control_settings.request_debug_panel.connect(func(enabled): request_debug_panel.emit(enabled))
+	control_settings.preview_hot_reload.connect(
+		func(scene_type, scene_id): preview_hot_reload.emit(scene_type, scene_id)
+	)
+
 	self.modulate = Color(1, 1, 1, 0)
 	button_settings.set_pressed(true)
 	selected_node = control_settings
@@ -74,15 +70,15 @@ func _unhandled_input(event):
 				group.get_buttons()[1].set_pressed(true)
 				group.get_buttons()[1].emit_signal("pressed")
 		if event.pressed and event.keycode == KEY_ESCAPE:
-			emit_signal("hide_menu")
+			request_hide_menu()
 		if event.pressed and event.keycode == KEY_M:
 			if selected_node == control_map:
-				emit_signal("hide_menu")
+				request_hide_menu()
 			else:
 				show_map()
 		if event.pressed and event.keycode == KEY_P:
 			if selected_node == control_settings:
-				emit_signal("hide_menu")
+				request_hide_menu()
 			else:
 				_on_button_settings_pressed()
 
@@ -101,7 +97,7 @@ func hide_all():
 
 
 func _on_button_close_pressed():
-	emit_signal("hide_menu")
+	request_hide_menu()
 
 
 func _jump_to(parcel: Vector2i):
@@ -230,18 +226,14 @@ func fade_out(node: Control):
 	tween_h.tween_callback(node.hide).set_delay(0.3)
 
 
-func _on_control_settings_preview_hot_reload(scene_type, scene_id):
-	emit_signal("preview_hot_reload", scene_type, scene_id)
-
-
-func _on_control_settings_request_pause_scenes(enabled):
-	emit_signal("request_pause_scenes", enabled)
-
-
-func _on_control_settings_request_debug_panel(enabled):
-	emit_signal("request_debug_panel", enabled)
-
-
 func _on_visibility_changed():
 	if is_visible_in_tree():
 		grab_focus()
+
+
+func request_hide_menu():
+	if control_backpack.has_changes():
+		# This can be awaited, if we create a loading screen while the profile is being saved
+		control_backpack.async_save_profile()
+
+	hide_menu.emit()

@@ -427,11 +427,6 @@ func _on_mini_map_pressed():
 	release_mouse()
 
 
-func _on_profile_pressed():
-	control_menu.show_backpack()
-	release_mouse()
-
-
 func _on_button_jump_gui_input(event):
 	if event is InputEventScreenTouch:
 		if event.pressed:
@@ -460,3 +455,8 @@ func _on_ui_root_gui_input(event: InputEvent):
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			set_cursor_position(event.position)
+
+
+func _on_panel_profile_open_profile():
+	control_menu.show_backpack()
+	release_mouse()

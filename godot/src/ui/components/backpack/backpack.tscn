@@ -116,7 +116,6 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="HBoxContainer_Backpack/Control_LeftBar"]
-visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -135,6 +134,7 @@ theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 20
 
 [node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer_Backpack/Control_LeftBar/MarginContainer"]
+visible = false
 layout_mode = 2
 size_flags_vertical = 8
 
@@ -182,7 +182,6 @@ layout_mode = 2
 
 [node name="Button_SaveProfile" type="Button" parent="HBoxContainer_Backpack/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -609,7 +608,6 @@ offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[connection signal="hidden" from="." to="." method="_on_hidden"]
 [connection signal="pressed" from="HBoxContainer_Backpack/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer/Button_SaveProfile" to="." method="_on_button_save_profile_pressed"]
 [connection signal="pressed" from="HBoxContainer_Backpack/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer/Button_Logout" to="." method="_on_button_logout_pressed"]
 [connection signal="toggle_color_panel" from="HBoxContainer_Backpack/MarginContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer/Color_Picker_Button" to="." method="_on_color_picker_button_toggle_color_panel"]
