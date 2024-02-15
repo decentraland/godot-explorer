@@ -65,7 +65,7 @@ func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) 
 	if not Global.realm.has_realm():
 		await Global.realm.realm_changed
 
-	var promise: Promise = self.async_prepare_deploy_profile(new_profile)
+	var promise: Promise = self.async_prepare_deploy_profile(new_profile, has_new_snapshots)
 	var ret = await PromiseUtils.async_awaiter(promise)
 	if ret is PromiseError:
 		printerr("Error preparing deploying profile: ", ret.get_error())

@@ -399,7 +399,11 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn async_prepare_deploy_profile(&self, new_profile: Gd<DclUserProfile>, has_new_snapshots: bool) -> Gd<Promise> {
+    pub fn async_prepare_deploy_profile(
+        &self,
+        new_profile: Gd<DclUserProfile>,
+        has_new_snapshots: bool,
+    ) -> Gd<Promise> {
         let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();
 
