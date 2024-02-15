@@ -76,7 +76,7 @@ offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
 picture = ExtResource("3_poid4")
-emote_name = null
+emote_name = "wave"
 
 [node name="EmoteWheelItem2" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -93,7 +93,7 @@ grow_horizontal = 2
 grow_vertical = 2
 rotation = 0.615341
 picture = ExtResource("3_poid4")
-emote_name = null
+emote_name = "wave"
 
 [node name="EmoteWheelItem3" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -110,7 +110,7 @@ grow_horizontal = 2
 grow_vertical = 2
 rotation = 1.23913
 picture = ExtResource("3_poid4")
-emote_name = null
+emote_name = "wave"
 
 [node name="EmoteWheelItem4" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -127,7 +127,7 @@ grow_horizontal = 2
 grow_vertical = 2
 rotation = 1.8656
 picture = ExtResource("3_poid4")
-emote_name = null
+emote_name = "wave"
 
 [node name="EmoteWheelItem5" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -144,7 +144,7 @@ grow_horizontal = 2
 grow_vertical = 2
 rotation = 2.51246
 picture = ExtResource("3_poid4")
-emote_name = null
+emote_name = "wave"
 
 [node name="EmoteWheelItem6" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -161,7 +161,7 @@ grow_horizontal = 2
 grow_vertical = 2
 rotation = -3.12851
 picture = ExtResource("3_poid4")
-emote_name = null
+emote_name = "wave"
 
 [node name="EmoteWheelItem7" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -178,7 +178,7 @@ grow_horizontal = 2
 grow_vertical = 2
 rotation = -2.49585
 picture = ExtResource("3_poid4")
-emote_name = null
+emote_name = "wave"
 
 [node name="EmoteWheelItem8" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -195,7 +195,7 @@ grow_horizontal = 2
 grow_vertical = 2
 rotation = -1.87016
 picture = ExtResource("3_poid4")
-emote_name = null
+emote_name = "wave"
 
 [node name="EmoteWheelItem9" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -212,7 +212,7 @@ grow_horizontal = 2
 grow_vertical = 2
 rotation = -1.25254
 picture = ExtResource("3_poid4")
-emote_name = null
+emote_name = "wave"
 
 [node name="EmoteWheelItem10" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -229,7 +229,7 @@ grow_horizontal = 2
 grow_vertical = 2
 rotation = -0.625233
 picture = ExtResource("3_poid4")
-emote_name = null
+emote_name = "wave"
 
 [node name="Label" type="Label" parent="Container"]
 layout_mode = 1

@@ -491,34 +491,6 @@ impl DclPlayerIdentity {
                     });
                     self.profile = Some(new_profile.clone());
 
-                    new_profile.bind_mut().inner.content.avatar.wearables = [
-                        "urn:decentraland:off-chain:base-avatars:f_mouth_00",
-                        "urn:decentraland:off-chain:base-avatars:double_bun",
-                        "urn:decentraland:off-chain:base-avatars:eyes_12",
-                        "urn:decentraland:off-chain:base-avatars:eyebrows_00",
-                        "urn:decentraland:matic:collections-v2:0x328abea223c47f16e61f67a5f8f445777f6245d6:1:105312291668557186697918027683670432318895095400549111254310977557",
-                        "urn:decentraland:off-chain:base-avatars:black_jacket",
-                        "urn:decentraland:off-chain:base-avatars:black_glove",
-                        "urn:decentraland:off-chain:base-avatars:corduroypurplepants",
-                        "urn:decentraland:off-chain:base-avatars:citycomfortableshoes",
-                        "urn:decentraland:matic:collections-v2:0x84a1d84f183fa0fd9b6b9cb1ed0ff1b7f5409ebb:0:1073",
-                        "urn:decentraland:matic:collections-v2:0x84a1d84f183fa0fd9b6b9cb1ed0ff1b7f5409ebb:9:947810625017014680281262249153033890870055858604942001288798797876",
-                        "urn:decentraland:matic:collections-v2:0xee77b0a104cd6db1bbbcfa2f13076f234647c017:1:105312291668557186697918027683670432318895095400549111254310977576"
-                    ].iter().map(|s| s.to_string()).collect();
-                    new_profile.bind_mut().inner.content.avatar.emotes = Some(vec![
-                        (0, "handsair"),
-                        (1, "wave"),
-                        (2, "urn:decentraland:matic:collections-v2:0x54bf16bed39a02d5f8bda33664c72c59d367caf7:0"),
-                        (3, "urn:decentraland:matic:collections-v2:0x70eb032d4621a51945b913c3f9488d50fc1fca38:0"),
-                        (5, "urn:decentraland:matic:collections-v2:0x875146d1d26e91c80f25f5966a84b098d3db1fc8:1:105312291668557186697918027683670432318895095400549111254310981119"),
-                        (6, "urn:decentraland:matic:collections-v2:0xa25c20f58ac447621a5f854067b857709cbd60eb:7:737186041679900306885426193785693026232265667803843778780176846151"),
-                        (7, "urn:decentraland:matic:collections-v2:0xbada8a315e84e4d78e3b6914003647226d9b4001:10:1053122916685571866979180276836704323188950954005491112543109777455"),
-                        (8, "urn:decentraland:matic:collections-v2:0xbada8a315e84e4d78e3b6914003647226d9b4001:11:1158435208354129053677098304520374755507846049406040223797420753072"),
-                        (9, "shrug")
-                    ].iter().map(|(slot, urn)| AvatarEmote {slot: *slot, urn: urn.to_string()}).collect());
-
-                    self.profile = Some(new_profile.clone());
-
                     self.base.call_deferred(
                         "emit_signal".into(),
                         &["profile_changed".to_variant(), new_profile.to_variant()],

@@ -106,6 +106,17 @@ impl DclItemEntityDefinition {
 #[godot_api]
 impl DclItemEntityDefinition {
     #[func]
+    fn get_emote_audio(&self) -> GString {
+        self.inner
+            .item
+            .emote_data
+            .as_ref()
+            .and_then(|emote_data| emote_data.audio.clone())
+            .unwrap_or_default()
+            .into()
+    }
+
+    #[func]
     fn is_wearable(&self) -> bool {
         self.inner.item.wearable_data.is_some()
     }

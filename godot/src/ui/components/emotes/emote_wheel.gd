@@ -1,8 +1,7 @@
 extends Control
 
-@export var player: Player = null
+@export var avatar_node: Avatar = null
 
-var avatar_node: Avatar = null
 var emote_items: Array[EmoteWheelItem] = []
 
 var last_selected_id: String = ""
@@ -14,7 +13,6 @@ var last_selected_id: String = ""
 
 func _ready():
 	self.hide()
-	avatar_node = player.avatar
 	for child in emote_wheel_container.get_children():
 		if child is EmoteWheelItem:
 			child.play_emote.connect(self._on_play_emote)
