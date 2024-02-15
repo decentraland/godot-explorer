@@ -2,8 +2,8 @@
 class_name EmoteWheelItem
 extends Control
 
-signal play_emote(emote_id: String)
-signal select_emote(selected: bool, emote_id: String)
+signal play_emote(emote_prefix_id: String)
+signal select_emote(selected: bool, emote_urn_or_id: String)
 
 @export var rarity: String = Wearables.ItemRarity.COMMON:
 	set(new_value):
@@ -37,7 +37,11 @@ signal select_emote(selected: bool, emote_id: String)
 		%TextureRect_Picture.texture = new_value
 		picture = new_value
 
-@export var emote_id: String = "wave"
+# The default emotes are not urns
+@export var emote_urn_or_id: String = "wave"
+# The prefix id depends on the body shape (it's calculated by the main file hash)
+@export var emote_prefix_id: String = "wave"
+# The display name
 @export var emote_name: String = "wave"
 
 var pressed = false
@@ -79,13 +83,13 @@ func _on_item_rect_changed():
 func _on_mouse_exited():
 	texture_rect_selected.hide()
 	inside = false
-	select_emote.emit(false, emote_id)
+	select_emote.emit(false, emote_urn_or_id)
 
 
 func _on_mouse_entered():
 	texture_rect_selected.show()
 	inside = true
-	select_emote.emit(true, emote_id)
+	select_emote.emit(true, emote_urn_or_id)
 
 
 func _on_gui_input(event):
@@ -95,4 +99,4 @@ func _on_gui_input(event):
 			texture_rect_pressed.set_visible(pressed)
 			if !pressed:
 				if inside:
-					play_emote.emit(emote_id)
+					play_emote.emit(emote_prefix_id)

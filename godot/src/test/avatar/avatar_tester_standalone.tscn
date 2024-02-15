@@ -23,10 +23,6 @@ offset_top = 109.0
 offset_right = 1062.0
 offset_bottom = 609.0
 
-[node name="AudioListener3D" type="AudioListener3D" parent="SubViewportContainer/SubViewport/Avatar" index="9"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.68434e-14, -2.38419e-07, 4.76837e-07)
-current = true
-
 [node name="TabContainer" type="TabContainer" parent="."]
 layout_mode = 0
 offset_left = 33.0
@@ -157,5 +153,3 @@ wrap_mode = 1
 [connection signal="pressed" from="TabContainer/Emotes/Button_PlayCustom" to="." method="_on_button_play_custom_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_Clear" to="." method="_on_button_clear_pressed"]
 [connection signal="text_changed" from="TabContainer/Expression/VBoxContainer/TextEdit_Expr" to="." method="_on_text_edit_expr_text_changed"]
-
-[editable path="SubViewportContainer"]

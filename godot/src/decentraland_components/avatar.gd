@@ -732,6 +732,8 @@ func get_avatar_name() -> String:
 
 
 func _play_emote_audio(file_hash: String):
+	audio_player_emote.stop()
+
 	var values = loaded_emotes.filter(func(item): return item.file_hash == file_hash)
 	if values.is_empty():
 		return
@@ -747,6 +749,5 @@ func _play_emote_audio(file_hash: String):
 	var audio_file_hash = emote.get_content_mapping().get_hash(audio_file_name)
 	var audio_stream = Global.content_provider.get_audio_from_hash(audio_file_hash)
 	if audio_stream != null:
-		audio_player_emote.stop()
 		audio_player_emote.stream = audio_stream
 		audio_player_emote.play(0)
