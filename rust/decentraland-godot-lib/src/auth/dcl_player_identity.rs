@@ -8,6 +8,7 @@ use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::comms::profile::{LambdaProfiles, UserProfile};
 use crate::content::bytes::fast_create_packed_byte_array_from_vec;
 use crate::dcl::scene_apis::RpcResultSender;
+use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::{RequestResponse, ResponseEnum};
 use crate::scene_runner::tokio_runtime::TokioRuntime;
@@ -398,7 +399,11 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn async_prepare_deploy_profile(&self, new_profile: Gd<DclUserProfile>) -> Gd<Promise> {
+    pub fn async_prepare_deploy_profile(
+        &self,
+        new_profile: Gd<DclUserProfile>,
+        has_new_snapshots: bool,
+    ) -> Gd<Promise> {
         let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();
 
@@ -411,7 +416,8 @@ impl DclPlayerIdentity {
             })
         };
 
-        let mut new_user_profile = new_profile.bind().inner.clone();
+        let new_profile = new_profile.bind();
+        let mut new_user_profile = new_profile.inner.clone();
         let eth_address = self.get_address_str().to_string();
         new_user_profile.version = current_profile.bind().inner.version + 1;
         new_user_profile.content.version = new_user_profile.version as i64;
@@ -428,6 +434,7 @@ impl DclPlayerIdentity {
                 let deploy_data = super::deploy_profile::prepare_deploy_profile(
                     ephemeral_auth_chain.clone(),
                     new_user_profile,
+                    has_new_snapshots,
                 )
                 .await;
 
@@ -483,11 +490,15 @@ impl DclPlayerIdentity {
                             snapshots.face256 = hash;
                         }
                     }
-
+                    let base_url = DclGlobal::singleton()
+                        .bind()
+                        .get_realm()
+                        .bind()
+                        .get_profile_content_url();
                     let new_profile = DclUserProfile::from_gd(UserProfile {
                         version: content.version as u32,
                         content,
-                        base_url: "https://peer.decentraland.org/content/contents/".to_owned(),
+                        base_url: format!("{}contents/", base_url).to_owned(),
                     });
                     self.profile = Some(new_profile.clone());
 

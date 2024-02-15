@@ -37,4 +37,9 @@ pub struct DclRealm {
 }
 
 #[godot_api]
-impl DclRealm {}
+impl DclRealm {
+    #[func]
+    pub fn get_profile_content_url(&self) -> GString {
+        "https://peer.decentraland.org/content/".to_godot()
+    }
+}

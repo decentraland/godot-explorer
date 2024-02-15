@@ -147,7 +147,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="VBoxContainer_General" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
-visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -343,6 +342,7 @@ popup/item_1/text = "Beauty"
 popup/item_1/id = 1
 
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
+visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"

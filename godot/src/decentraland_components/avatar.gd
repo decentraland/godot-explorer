@@ -38,9 +38,6 @@ var loaded_emotes: Array[EmoteItemData] = []
 # Public
 var avatar_id: String = ""
 
-# Wearable requesting
-var current_content_url: String = ""
-
 # Current wearables equippoed
 var wearables_dict: Dictionary = {}
 
@@ -150,10 +147,6 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat):
 
 	var wearable_to_request := []
 
-	current_content_url = "https://peer.decentraland.org/content/"
-	if not Global.realm.content_base_url.is_empty():
-		current_content_url = Global.realm.content_base_url
-
 	sprite_3d_mic_enabled.hide()
 	label_3d_name.text = avatar_data.get_name()
 	if hide_name:
@@ -173,7 +166,9 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat):
 
 	finish_loading = false
 
-	var promise = Global.content_provider.fetch_wearables(wearable_to_request, current_content_url)
+	var promise = Global.content_provider.fetch_wearables(
+		wearable_to_request, Global.realm.get_profile_content_url()
+	)
 	await PromiseUtils.async_all(promise)
 	await async_fetch_wearables_dependencies()
 
@@ -502,7 +497,7 @@ func async_play_emote(emote_urn: String):
 		return
 
 	var emote_data_promises = Global.content_provider.fetch_wearables(
-		[emote_urn], current_content_url
+		[emote_urn], Global.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(emote_data_promises)
 

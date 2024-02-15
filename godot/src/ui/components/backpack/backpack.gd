@@ -1,3 +1,4 @@
+class_name Backpack
 extends Control
 
 const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
@@ -24,12 +25,14 @@ var avatar_wearables_body_shape_cache: Dictionary = {}
 
 var avatar_loading_counter: int = 0
 
+var _has_changes: bool = false
+
 @onready var skin_color_picker = %Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
 @onready var line_edit_name = %LineEdit_Name
-@onready var avatar_preview = %AvatarPreview
+@onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var avatar_loading = %TextureProgressBar_AvatarLoading
 @onready var button_save_profile = %Button_SaveProfile
 
@@ -73,7 +76,7 @@ func _ready():
 		wearable_data[key] = null
 
 	var promise = Global.content_provider.fetch_wearables(
-		wearable_data.keys(), "https://peer.decentraland.org/content/"
+		wearable_data.keys(), Global.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(promise)
 
@@ -127,17 +130,17 @@ func _physics_process(_delta):
 
 	if request_show_wearables:
 		request_show_wearables = false
-		show_wearables()
+		_show_wearables()
 
 
-func set_avatar_loading() -> int:
+func _set_avatar_loading() -> int:
 	avatar_preview.hide()
 	avatar_loading.show()
 	avatar_loading_counter += 1
 	return avatar_loading_counter
 
 
-func unset_avatar_loading(current: int):
+func _unset_avatar_loading(current: int):
 	if current != avatar_loading_counter:
 		return
 	avatar_loading.hide()
@@ -147,13 +150,14 @@ func unset_avatar_loading(current: int):
 func _async_update_avatar():
 	mutable_profile.set_avatar(mutable_avatar)
 
-	var loading_id := set_avatar_loading()
+	var loading_id := _set_avatar_loading()
 	await avatar_preview.avatar.async_update_avatar_from_profile(mutable_profile)
-	unset_avatar_loading(loading_id)
+	_unset_avatar_loading(loading_id)
 	button_save_profile.disabled = false
+	_has_changes = true
 
 
-func load_filtered_data(filter: String):
+func _load_filtered_data(filter: String):
 	if mutable_avatar == null:
 		return
 
@@ -171,7 +175,7 @@ func load_filtered_data(filter: String):
 	request_show_wearables = true
 
 
-func can_unequip(category: String) -> bool:
+func _can_unequip(category: String) -> bool:
 	return (
 		category != Wearables.Categories.BODY_SHAPE
 		and category != Wearables.Categories.EYES
@@ -179,7 +183,7 @@ func can_unequip(category: String) -> bool:
 	)
 
 
-func show_wearables():
+func _show_wearables():
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
 
@@ -190,7 +194,7 @@ func show_wearables():
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		var wearable = wearable_data[wearable_id]
 		grid_container_wearables_list.add_child(wearable_item)
-		wearable_button_group.allow_unpress = can_unequip(wearable.get_category())
+		wearable_button_group.allow_unpress = _can_unequip(wearable.get_category())
 		wearable_item.button_group = wearable_button_group
 		wearable_item.async_set_wearable(wearable)
 
@@ -213,7 +217,7 @@ func _on_main_category_filter_type(type: String):
 
 
 func _on_wearable_filter_button_filter_type(type):
-	load_filtered_data(type)
+	_load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
 
 	var should_hide = false
@@ -239,18 +243,52 @@ func _on_line_edit_name_text_changed(_new_text):
 	button_save_profile.disabled = false
 
 
-func save_profile():
+func _async_prepare_snapshots(mutable_avatar: DclAvatarWireFormat):
+	var cloned_avatar_preview: AvatarPreview = avatar_preview.duplicate()
+	cloned_avatar_preview.show_platform = false
+	cloned_avatar_preview.hide_name = true
+	cloned_avatar_preview.can_move = false
+
+	get_tree().root.add_child(cloned_avatar_preview)
+
+	cloned_avatar_preview.set_position(get_tree().root.get_visible_rect().size)
+	var face = await cloned_avatar_preview.async_get_viewport_image(true, Vector2i(256, 256))
+	var body = await cloned_avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
+
+	var body_data: PackedByteArray = body.save_png_to_buffer()
+	var body_hash = DclHashing.hash_v1(body_data)
+	var body_file = FileAccess.open(
+		Global.config.local_content_dir + "/" + body_hash, FileAccess.WRITE
+	)
+	body_file.store_buffer(body_data)
+
+	var face_data: PackedByteArray = face.save_png_to_buffer()
+	var face_hash = DclHashing.hash_v1(face_data)
+	var face_file = FileAccess.open(
+		Global.config.local_content_dir + "/" + face_hash, FileAccess.WRITE
+	)
+	face_file.store_buffer(face_data)
+
+	mutable_avatar.set_snapshots(face_hash, body_hash)
+	cloned_avatar_preview.queue_free()
+
+
+func async_save_profile():
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	mutable_profile.set_name(line_edit_name.text)
 	mutable_avatar.set_name(line_edit_name.text)
 
+	await _async_prepare_snapshots(mutable_avatar)
+
 	mutable_profile.set_avatar(mutable_avatar)
-	Global.player_identity.async_deploy_profile(mutable_profile)
+
+	await Global.player_identity.async_deploy_profile(mutable_profile)
+	_has_changes = false
 
 
 func _on_button_save_profile_pressed():
 	button_save_profile.disabled = true
-	save_profile()
+	async_save_profile()
 
 
 func _on_wearable_equip(wearable_id: String):
@@ -361,9 +399,9 @@ func _on_color_picker_panel_hided():
 	skin_color_picker.set_pressed(false)
 
 
-func _on_hidden():
-	save_profile()
-
-
 func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
 	Global.open_url("https://decentraland.org/marketplace/browse?section=wearables")
+
+
+func has_changes():
+	return _has_changes
