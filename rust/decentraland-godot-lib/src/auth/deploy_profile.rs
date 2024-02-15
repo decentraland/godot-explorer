@@ -2,7 +2,6 @@ use std::io::Read;
 
 use anyhow::anyhow;
 
-use godot::log::godot_print;
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
 
