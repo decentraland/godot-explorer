@@ -533,9 +533,7 @@ static func get_wearable_facial_hashes(
 	return [main_texture_file_hash, mask_texture_file_hash]
 
 
-static func get_item_main_file_hash(
-	item: DclItemEntityDefinition, body_shape_id: String
-) -> String:
+static func get_item_main_file_hash(item: DclItemEntityDefinition, body_shape_id: String) -> String:
 	if item == null:
 		return ""
 
@@ -549,9 +547,7 @@ static func get_item_main_file_hash(
 
 
 static func is_valid_wearable(
-	wearable: DclItemEntityDefinition,
-	body_shape_id: String,
-	skip_content_integrity: bool = false
+	wearable: DclItemEntityDefinition, body_shape_id: String, skip_content_integrity: bool = false
 ) -> bool:
 	if wearable == null:
 		return false
@@ -601,9 +597,7 @@ static func get_curated_wearable_list(
 	wearables_by_category[Categories.BODY_SHAPE] = body_shape
 
 	for wearable_id in wearables:
-		var wearable: DclItemEntityDefinition = Global.content_provider.get_wearable(
-			wearable_id
-		)
+		var wearable: DclItemEntityDefinition = Global.content_provider.get_wearable(wearable_id)
 		if is_valid_wearable(wearable, body_shape_id):
 			var category = wearable.get_category()
 			if not wearables_by_category.has(category):

@@ -106,14 +106,17 @@ impl DclItemEntityDefinition {
 #[godot_api]
 impl DclItemEntityDefinition {
     #[func]
-    fn get_emote_audio(&self) -> GString {
-        self.inner
-            .item
-            .emote_data
-            .as_ref()
-            .and_then(|emote_data| emote_data.audio.clone())
+    fn get_emote_audio(&self, body_shape_id: String) -> GString {
+        let Some(representation) = self.get_emote_representation(&body_shape_id) else {
+            return GString::from("");
+        };
+
+        representation
+            .contents
+            .iter()
+            .find(|file_name| file_name.ends_with(".mp3") || file_name.ends_with(".ogg"))
+            .map(GString::from)
             .unwrap_or_default()
-            .into()
     }
 
     #[func]

@@ -5,7 +5,7 @@ use rand::thread_rng;
 use tokio::task::JoinHandle;
 
 use crate::avatars::dcl_user_profile::DclUserProfile;
-use crate::comms::profile::{AvatarEmote, LambdaProfiles, UserProfile};
+use crate::comms::profile::{LambdaProfiles, UserProfile};
 use crate::content::bytes::fast_create_packed_byte_array_from_vec;
 use crate::dcl::scene_apis::RpcResultSender;
 use crate::godot_classes::promise::Promise;
@@ -484,7 +484,7 @@ impl DclPlayerIdentity {
                         }
                     }
 
-                    let mut new_profile = DclUserProfile::from_gd(UserProfile {
+                    let new_profile = DclUserProfile::from_gd(UserProfile {
                         version: content.version as u32,
                         content,
                         base_url: "https://peer.decentraland.org/content/contents/".to_owned(),
