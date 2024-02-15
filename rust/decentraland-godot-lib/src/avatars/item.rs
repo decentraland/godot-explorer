@@ -120,6 +120,15 @@ impl DclItemEntityDefinition {
     }
 
     #[func]
+    fn get_emote_loop(&self) -> bool {
+        let Some(emote_data) = self.inner.item.emote_data.as_ref() else {
+            return false;
+        };
+
+        emote_data.r#loop
+    }
+
+    #[func]
     fn is_wearable(&self) -> bool {
         self.inner.item.wearable_data.is_some()
     }

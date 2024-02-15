@@ -22,13 +22,14 @@ var wearables_by_category
 
 var playing_emote_single: bool = false
 var playing_emote_mixed: bool = false
+var emotes_animation_library: AnimationLibrary
+var idle_anim: Animation
 
 var generate_attach_points: bool = false
 var right_hand_idx: int = -1
 var right_hand_position: Transform3D
 var left_hand_idx: int = -1
 var left_hand_position: Transform3D
-var index_to_animation_name: Dictionary = {}
 
 var voice_chat_audio_player: AudioStreamPlayer = null
 var voice_chat_audio_player_gen: AudioStreamGenerator = null
@@ -42,7 +43,6 @@ var animation_single_emote_node: AnimationNodeAnimation = animation_tree.tree_ro
 	"Emote_Mix"
 )
 @onready var animation_player = $AnimationPlayer
-@onready var global_animation_library: AnimationLibrary = animation_player.get_animation_library("")
 @onready var label_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name/Label3D_Name
 @onready var sprite_3d_mic_enabled = %Sprite3D_MicEnabled
 @onready var timer_hide_mic = %Timer_HideMic
@@ -50,11 +50,20 @@ var animation_single_emote_node: AnimationNodeAnimation = animation_tree.tree_ro
 @onready var bone_attachment_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name
 @onready var audio_player_emote = $AudioPlayer_Emote
 
-
 func _ready():
 	body_shape_skeleton_3d.bone_pose_changed.connect(self._attach_point_bone_pose_changed)
+	
+	# Idle Anim Duplication (so it makes mutable and non-shared-reference)
+	var idle_animation_library = animation_player.get_animation_library("idle")
+	idle_animation_library = idle_animation_library.duplicate(true)
+	idle_anim = idle_animation_library.get_animation("Anim")
+	animation_player.remove_animation_library("idle")
+	animation_player.add_animation_library("idle", idle_animation_library)
 
-
+	# Emote library
+	emotes_animation_library = AnimationLibrary.new()
+	animation_player.add_animation_library("emotes", emotes_animation_library)
+	
 func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 	_unset_avatar_modifier_area()  # Reset state
 
@@ -125,57 +134,11 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat):
 	# tracked at https://github.com/decentraland/godot-explorer/issues/244
 	# wearable_to_request = filter_owned_wearables(wearable_to_request)
 
-	_load_default_emotes()
-
 	finish_loading = false
 
 	var promise = Global.content_provider.fetch_wearables(wearable_to_request, current_content_url)
 	await PromiseUtils.async_all(promise)
 	await async_fetch_wearables_dependencies()
-
-
-static func from_color_object(color: Variant, default: Color = Color.WHITE) -> Color:
-	if color is Dictionary:
-		return Color(
-			color.get("r", default.r),
-			color.get("g", default.g),
-			color.get("b", default.b),
-			color.get("a", default.a)
-		)
-	return default
-
-
-static func to_color_object(color: Color) -> Dictionary:
-	return {"color": {"r": color.r, "g": color.g, "b": color.b, "a": color.a}}
-
-
-func _add_animation(index: int, animation_name: String):
-	var animation = Global.animation_importer.get_animation_from_gltf(animation_name)
-	if animation:
-		global_animation_library.add_animation(animation_name, animation)
-	index_to_animation_name[index] = animation_name
-
-
-func _clear_animations():
-	for index in index_to_animation_name:
-		var animation_name = index_to_animation_name[index]
-		global_animation_library.remove_animation(animation_name)
-	index_to_animation_name.clear()
-
-
-func _load_default_emotes():
-	pass
-	#_clear_animations()
-	#_add_animation(0, "handsair")
-	#_add_animation(1, "wave")
-	#_add_animation(2, "fistpump")
-	#_add_animation(3, "dance")
-	#_add_animation(4, "raiseHand")
-	#_add_animation(5, "clap")
-	#_add_animation(6, "money")
-	#_add_animation(7, "kiss")
-	#_add_animation(8, "shrug")
-	#_add_animation(9, "headexplode")
 
 
 func is_playing_emote() -> bool:
@@ -184,9 +147,9 @@ func is_playing_emote() -> bool:
 
 func play_emote(emote_name: String):
 	var emote_prefix_id = emote_name_to_id(emote_name)
-	var has_prop_anim: bool = animation_player.has_animation(emote_prefix_id + "_Prop")
-	var has_avatar_anim: bool = animation_player.has_animation(emote_prefix_id + "_Avatar")
-	var has_root_anim: bool = animation_player.has_animation(emote_prefix_id)
+	var has_prop_anim: bool = emotes_animation_library.has_animation(emote_prefix_id + "_Prop")
+	var has_avatar_anim: bool = emotes_animation_library.has_animation(emote_prefix_id + "_Avatar")
+	var has_root_anim: bool = emotes_animation_library.has_animation(emote_prefix_id)
 	var conds = [has_prop_anim, has_avatar_anim, has_root_anim].filter(func(a): return a)
 
 	for emote_id in emote_extra_prop:
@@ -198,11 +161,11 @@ func play_emote(emote_name: String):
 	# Single Animation
 	if conds.size() == 1:
 		if has_root_anim:
-			animation_single_emote_node.animation = emote_prefix_id
+			animation_single_emote_node.animation = "emotes/" + emote_prefix_id
 		elif has_avatar_anim:
-			animation_single_emote_node.animation = emote_prefix_id + "_Avatar"
+			animation_single_emote_node.animation = "emotes/" + emote_prefix_id + "_Avatar"
 		elif has_prop_anim:
-			animation_single_emote_node.animation = emote_prefix_id + "_Prop"
+			animation_single_emote_node.animation = "emotes/" + emote_prefix_id + "_Prop"
 
 		var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
 		if pb.get_current_node() == "Emote":
@@ -211,8 +174,8 @@ func play_emote(emote_name: String):
 		playing_emote_single = true
 		playing_emote_mixed = false
 	elif has_prop_anim and has_avatar_anim:
-		animation_mix_emote_node.get_node("A").animation = emote_prefix_id + "_Prop"
-		animation_mix_emote_node.get_node("B").animation = emote_prefix_id + "_Avatar"
+		animation_mix_emote_node.get_node("A").animation = "emotes/" + emote_prefix_id + "_Prop"
+		animation_mix_emote_node.get_node("B").animation = "emotes/" + emote_prefix_id + "_Avatar"
 
 		var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
 		if pb.get_current_node() == "Emote_Mix":
@@ -228,14 +191,6 @@ func play_remote_emote(_emote_src: String, _looping: bool):
 	# TODO: Implement downloading emote from the scene content, adding to the avatar and then playing the emote
 	# Test scene: https://github.com/decentraland/unity-renderer/pull/5501
 	pass
-
-
-func play_emote_by_index(index: int) -> String:
-	# Play emote
-	var emote_id: String = index_to_animation_name[index]
-	play_emote(emote_id)
-
-	return emote_id
 
 
 func freeze_on_idle():
@@ -361,7 +316,8 @@ func try_to_set_body_shape(body_shape_hash):
 		return
 
 	for child in body_shape_skeleton_3d.get_children():
-		body_shape_skeleton_3d.remove_child(child)
+		if child is MeshInstance3D:
+			body_shape_skeleton_3d.remove_child(child)
 
 	for child in new_skeleton.get_children():
 		var new_child = child.duplicate()
@@ -486,41 +442,12 @@ func add_animation_from_obj(emote: DclItemEntityDefinition, urn: String, obj: No
 	var prefix_id = collection_plus_item.substr(collection_plus_item.length() - 12)
 
 	var armature_prop = obj.find_child("Armature_Prop")
-	var skeleton_extra: Skeleton3D = null
-
-	if armature_prop != null:
-		skeleton_extra = armature_prop.get_node("Skeleton3D")
 
 	var anim_player: AnimationPlayer = obj.find_child("AnimationPlayer")
 	if anim_player == null:
 		return
 
-	var audio_stream: AudioStream = null
-	var content_mapping = emote.get_content_mapping()
-	for audio_file in content_mapping.get_files():
-		if audio_file.ends_with(".mp3") or audio_file.ends_with(".ogg"):
-			var audio_promise: Promise = Global.content_provider.fetch_audio(
-				audio_file, content_mapping
-			)
-
-			# They shouldn't happen
-			if not audio_promise.is_resolved():
-				break
-
-			audio_stream = audio_promise.get_data()
-			break
-	#var skeleton_prefix = "Armature_Prop/Skeleton3D_" + str(extra_prop_counter) + ":"
-	#if skeleton_extra != null:
-	#skeleton_extra = skeleton_extra.duplicate()
-	#skeleton_extra.name = "Skeleton3D_" + str(extra_prop_counter)
-	#extra_prop_counter += 1
-	#$Armature_Prop.add_child(skeleton_extra)
-	#
-	#var idle_anim: Animation = animation_player.get_animation("Idle")
-	#var track_id:int = idle_anim.add_track(Animation.TYPE_SCALE_3D)
-	#idle_anim.track_set_path(track_id, skeleton_extra.get_path())
-	#idle_anim.track_insert_key(track_id, 0.0, Vector3.ZERO)
-
+	var track_id:int = -1
 	var emote_name_prefix = emote_name_to_id(emote.get_display_name())
 	var armature_prefix = "Armature_Prop_" + prefix_id + "/Skeleton3D:"
 	if armature_prop != null:
@@ -529,19 +456,16 @@ func add_animation_from_obj(emote: DclItemEntityDefinition, urn: String, obj: No
 		armature_prop.rotate_y(PI)
 		self.add_child(armature_prop)
 
-		var idle_anim: Animation = animation_player.get_animation("Idle")
-		var track_id: int = idle_anim.add_track(Animation.TYPE_VALUE)
+		track_id = idle_anim.add_track(Animation.TYPE_VALUE)
 		idle_anim.track_set_path(track_id, NodePath("Armature_Prop_" + prefix_id + ":visible"))
 		idle_anim.track_insert_key(track_id, 0.0, false)
-		#var track_id:int = idle_anim.add_track(Animation.TYPE_SCALE_3D)
-		#idle_anim.track_set_path(track_id, NodePath("Armature_Prop_" + str(extra_prop_counter)))
-		#idle_anim.track_insert_key(track_id, 0.0, Vector3.ZERO)
-
-		#armature_prop.hide()
+		
+		track_id = idle_anim.add_track(Animation.TYPE_SCALE_3D)
+		idle_anim.track_set_path(track_id, NodePath("Armature_Prop_" + prefix_id))
+		idle_anim.track_insert_key(track_id, 0.0, Vector3.ZERO)
+		
 		emote_extra_prop[emote_name_prefix] = armature_prop
 
-	var avatar_animation_name: String = String()
-	var prop_animation_name: String = String()
 	var is_single_animation: bool = anim_player.get_animation_list().size() == 1
 
 	var anim_mappings: Dictionary = {}
@@ -575,7 +499,7 @@ func add_animation_from_obj(emote: DclItemEntityDefinition, urn: String, obj: No
 			var track_name = track_path.get_concatenated_names()
 			if track_name.contains("Skeleton3D") == false:
 				# Requires new path!
-				var last_track_path = track_path.get_name(track_path.get_name_count() - 1)
+				var last_track_path = track_path.get_name(track_path.get_name_count() - 1)	
 				var new_track_path = "Armature/Skeleton3D:" + last_track_path
 				anim.track_set_path(track_idx, new_track_path)
 
@@ -583,25 +507,18 @@ func add_animation_from_obj(emote: DclItemEntityDefinition, urn: String, obj: No
 				var new_track_path = armature_prefix + track_path.get_concatenated_subnames()
 				anim.track_set_path(track_idx, new_track_path)
 
-		var track_id: int
-
 		if armature_prop != null:
 			track_id = anim.add_track(Animation.TYPE_VALUE)
 			anim.track_set_path(track_id, NodePath("Armature_Prop_" + prefix_id + ":visible"))
 			anim.track_insert_key(track_id, 0.0, true)
 
-		if audio_stream != null:
-			#track_id = anim.add_track(Animation.TYPE_VALUE)
-			#anim.track_set_path(track_id, NodePath("AudioPlayer_" + prefix_id + ":playing"))
-			#anim.track_insert_key(track_id, 0.0, true)
-			#
-			track_id = anim.add_track(Animation.TYPE_METHOD)
-			anim.track_set_path(track_id, NodePath("."))
-			anim.track_insert_key(
-				track_id, 0.0, {"method": "_play_emote_audio", "args": [audio_stream]}
-			)
+		track_id = anim.add_track(Animation.TYPE_METHOD)
+		anim.track_set_path(track_id, NodePath("."))
+		anim.track_insert_key(
+			track_id, 0.0, {"method": "_play_emote_audio", "args": [urn]}
+		)
 
-		global_animation_library.add_animation(anim_mappings[animation_key], anim)
+		emotes_animation_library.add_animation(anim_mappings[animation_key], anim)
 
 
 func apply_color_and_facial():
@@ -764,7 +681,18 @@ func get_avatar_name() -> String:
 	return ""
 
 
-func _play_emote_audio(audio_stream: AudioStream):
-	audio_player_emote.stop()
-	audio_player_emote.stream = audio_stream
-	audio_player_emote.play(0)
+func _play_emote_audio(urn: String):
+	var emote = Global.content_provider.get_wearable(urn)
+	if emote == null:
+		return
+	
+	var audio_file_name = emote.get_emote_audio(avatar_data.get_body_shape())
+	if audio_file_name.is_empty():
+		return
+		
+	var file_hash = emote.get_content_mapping().get_hash(audio_file_name)
+	var audio_stream = Global.content_provider.get_audio_from_hash(file_hash)
+	if audio_stream != null:
+		audio_player_emote.stop()
+		audio_player_emote.stream = audio_stream
+		audio_player_emote.play(0)

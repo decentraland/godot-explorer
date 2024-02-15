@@ -38,7 +38,10 @@ pub struct WearableData {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EmoteDataADR74 {
+    pub tags: Vec<String>,
     pub representations: Vec<EmoteADR74Representation>,
+    #[serde(rename = "loop")]
+    pub r#loop: bool,
     pub category: String, // TODO: should be typed as WearableCategory?
                           // DANCE = 'dance',
                           // STUNT = 'stunt',

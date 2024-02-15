@@ -4,7 +4,7 @@ use std::{
 };
 
 use godot::{
-    engine::{ImageTexture, Material, Mesh},
+    engine::{AudioStream, ImageTexture, Material, Mesh},
     prelude::*,
 };
 use tokio::sync::Semaphore;
@@ -264,6 +264,17 @@ impl ContentProvider {
             .bind()
             .get_data()
             .try_to::<Gd<Node3D>>()
+            .ok()
+    }
+
+    #[func]
+    pub fn get_audio_from_hash(&self, file_hash: GString) -> Option<Gd<AudioStream>> {
+        self.cached
+            .get(&file_hash.to_string())?
+            .promise
+            .bind()
+            .get_data()
+            .try_to::<Gd<AudioStream>>()
             .ok()
     }
 
