@@ -182,7 +182,10 @@ func is_playing_emote() -> bool:
 	return playing_emote_single || playing_emote_mixed
 
 
-func play_default_emote(default_emote_name: String):
+func play_default_emote(default_emote_name: String) -> bool:
+	if not animation_player.has(default_emote_name):
+		return false
+		
 	animation_single_emote_node.animation = default_emote_name
 	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
 	if pb.get_current_node() == "Emote":
@@ -191,30 +194,30 @@ func play_default_emote(default_emote_name: String):
 	playing_emote_single = true
 	playing_emote_mixed = false
 	playing_emote_loop = false
+	return true
 
 
-func play_loaded_emote_by_urn(urn: String):
+func _play_loaded_emote_by_urn(urn: String):
 	var emote_data = Global.content_provider.get_wearable(urn)
 	if emote_data == null:
 		return
-	play_emote(emote_data.get_emote_prefix_id())
+	play_loaded_emote(emote_data.get_emote_prefix_id())
 
 
-func play_emote(emote_prefix_id: String):
+func play_loaded_emote(emote_prefix_id: String) -> bool:
 	if emote_prefix_id.begins_with("default"):
-		play_default_emote(emote_prefix_id)
-		return
+		return play_default_emote(emote_prefix_id)
 
 	var values = loaded_emotes.filter(func(item): return item.emote_prefix_id == emote_prefix_id)
 	if values.is_empty():
 		printerr("Emote %s not found from player '%s'" % [emote_prefix_id, avatar_data.get_name()])
-		return
+		return false
 
 	var emote_item_data: EmoteItemData = values[0]
 	var emote_data = Global.content_provider.get_wearable(emote_item_data.urn)
 
 	if emote_data == null:
-		return
+		return false
 
 	playing_emote_loop = emote_data.get_emote_loop()
 	playing_emote_single = emote_item_data.prop_anim_name.is_empty()
@@ -237,13 +240,19 @@ func play_emote(emote_prefix_id: String):
 		var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
 		if pb.get_current_node() == "Emote_Mix":
 			pb.start("Emote_Mix", true)
+	return true
 
-
-func play_remote_emote(_emote_src: String, _looping: bool):
+func play_remote_emote(urn: String):
 	# TODO: Implement downloading emote from the scene content, adding to the avatar and then playing the emote
 	# Test scene: https://github.com/decentraland/unity-renderer/pull/5501
 	pass
 
+
+func play_emote(id: String) -> bool:
+	if id.contains("scene-remote"):
+		return play_remote_emote(id)
+	else:
+		return play_loaded_emote(id)
 
 func freeze_on_idle():
 	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED
@@ -489,7 +498,7 @@ func async_load_wearables():
 
 func async_play_emote(emote_urn: String):
 	if has_emote(emote_urn):
-		play_loaded_emote_by_urn(emote_urn)
+		_play_loaded_emote_by_urn(emote_urn)
 		return
 
 	var emote_data_promises = Global.content_provider.fetch_wearables(
@@ -509,7 +518,7 @@ func async_play_emote(emote_urn: String):
 	var obj = Global.content_provider.get_emote_gltf_from_hash(file_hash)
 	if obj != null:
 		add_animation_from_dcl_emote_gltf(emote, emote_urn, obj, file_hash)
-		play_emote(emote.get_emote_prefix_id())
+		play_loaded_emote(emote.get_emote_prefix_id())
 
 
 func has_emote(emote_urn: String) -> bool:

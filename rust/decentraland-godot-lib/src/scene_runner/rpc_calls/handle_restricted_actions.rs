@@ -311,10 +311,13 @@ pub fn trigger_scene_emote(
         return;
     }
 
+    let Some(file_hash) = scene.content_mapping.get_hash(emote_src) else {
+        response.send(Err("Emote not found".to_string()));
+        return;
+    };
+
+    let urn = format!("urn:decentraland:off-chain:scene-emote:{file_hash}-{looping}");
     let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call(
-        "play_remote_emote".into(),
-        &[Variant::from(emote_src), Variant::from(*looping)],
-    );
-    avatar_node.call("broadcast_avatar_animation".into(), &[]);
+    avatar_node.call("play_remote_emote".into(), &[Variant::from(urn.as_str())]);
+    avatar_node.call("broadcast_avatar_animation".into(), &[Variant::from(urn)]);
 }

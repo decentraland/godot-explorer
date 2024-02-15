@@ -17,7 +17,7 @@ const DEFAULT_EMOTE_NAMES = {
 
 var emote_items: Array[EmoteWheelItem] = []
 
-var last_selected_urn_or_id: String = ""
+var last_selected_emote_urn: String = ""
 
 @onready var emote_wheel_container = %EmoteWheelContainer
 @onready var label_emote_name = %Label_EmoteName
@@ -54,11 +54,10 @@ func _update_wheel(emote_urns: Array):
 			continue
 
 		var emote_item: EmoteWheelItem = emote_items[i]
-		emote_item.emote_urn_or_id = emote_urns[i]
+		emote_item.emote_urn = emote_urns[i]
 		emote_item.number = i
 
 		if is_emote_default(emote_item.emote_urn_or_id):
-			emote_item.emote_prefix_id = "default_emotes/" + emote_urns[i]
 			emote_item.emote_name = DEFAULT_EMOTE_NAMES[emote_urns[i]]
 			emote_item.rarity = Wearables.ItemRarity.COMMON
 			emote_item.picture = load(
@@ -69,7 +68,6 @@ func _update_wheel(emote_urns: Array):
 			if emote_data == null:
 				# TODO: set invalid emote reference?, fallback with defualt?
 				continue
-			emote_item.emote_prefix_id = emote_data.get_emote_prefix_id()
 			emote_item.emote_name = emote_data.get_display_name()
 			emote_item.rarity = emote_data.get_rarity()
 			emote_item.async_set_texture(emote_data)
@@ -89,8 +87,8 @@ func _gui_input(event):
 		if event.keycode >= KEY_0 and event.keycode <= KEY_9:
 			if event.pressed:
 				var index = event.keycode - KEY_0
-				var emote_id = emote_items[index].emote_id
-				_on_play_emote(emote_id)
+				var emote_urn = emote_items[index].emote_urn
+				_on_play_emote(emote_urn)
 
 
 func _physics_process(_delta):
@@ -100,22 +98,22 @@ func _physics_process(_delta):
 		Global.release_mouse()
 
 
-func _on_play_emote(emote_id: String):
+func _on_play_emote(emote_urn: String):
 	self.hide()
 	Global.explorer_grab_focus()
 	if avatar_node:
-		avatar_node.play_emote(emote_id)
-		avatar_node.broadcast_avatar_animation(emote_id)
+		avatar_node.play_emote(emote_urn)
+		avatar_node.broadcast_avatar_animation(emote_urn)
 
 
-func _on_select_emote(selected: bool, emote_urn_or_id: String, child: EmoteWheelItem):
-	if emote_urn_or_id == last_selected_urn_or_id:
+func _on_select_emote(selected: bool, emote_urn: String, child: EmoteWheelItem):
+	if emote_urn == last_selected_emote_urn:
 		return
 
 	if !selected:
 		label_emote_name.text = ""
-		last_selected_urn_or_id = ""
+		last_selected_emote_urn = ""
 		return
 
-	last_selected_urn_or_id = emote_urn_or_id
+	last_selected_emote_urn = emote_urn
 	label_emote_name.text = child.emote_name
