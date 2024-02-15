@@ -25,8 +25,7 @@ pub async fn load_audio(
     }
 
     let file_hash = content_mapping
-        .content
-        .get(&file_path)
+        .get_hash(file_path.as_str())
         .ok_or(anyhow::Error::msg("File not found in the content mappings"))?;
 
     let url = format!("{}{}", content_mapping.base_url, file_hash);

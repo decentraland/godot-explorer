@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc};
 
 use godot::builtin::{Vector2i, Vector3};
 
@@ -41,14 +41,10 @@ impl SceneEntityDefinition {
         let scene_meta_scene = serde_json::from_value::<SceneEntityMetadata>(metadata)?;
 
         let content_mapping_vec = std::mem::take(&mut entity_definition_json.content);
-        let content_mapping = Arc::new(ContentMappingAndUrl {
+        let content_mapping = Arc::new(ContentMappingAndUrl::from_base_url_and_content(
             base_url,
-            content: HashMap::from_iter(
-                content_mapping_vec
-                    .into_iter()
-                    .map(|item| (item.file.to_lowercase(), item.hash)),
-            ),
-        });
+            content_mapping_vec,
+        ));
 
         Ok(SceneEntityDefinition {
             id,

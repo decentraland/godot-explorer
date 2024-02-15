@@ -4,7 +4,11 @@ use crate::{
     },
     dcl::common::{
         content_entity::EntityDefinitionJson,
-        wearable::{WearableCategory, WearableEntityMetadata, WearableRepresentation},
+        string::FindNthChar,
+        wearable::{
+            BaseItemEntityMetadata, EmoteADR74Representation, WearableCategory,
+            WearableRepresentation,
+        },
     },
 };
 use godot::{
@@ -12,20 +16,20 @@ use godot::{
     builtin::{GString, PackedStringArray},
     obj::Gd,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
-pub struct WearableEntityDefinition {
+pub struct ItemEntityDefinition {
     pub id: String,
     pub entity_definition_json: EntityDefinitionJson,
-    pub wearable: WearableEntityMetadata,
+    pub item: BaseItemEntityMetadata,
     pub content_mapping: ContentMappingAndUrlRef,
 }
 
-impl WearableEntityDefinition {
+impl ItemEntityDefinition {
     pub fn from_json_ex(
         base_url: String,
         json: serde_json::Value,
-    ) -> Result<WearableEntityDefinition, anyhow::Error> {
+    ) -> Result<ItemEntityDefinition, anyhow::Error> {
         let mut entity_definition_json = serde_json::from_value::<EntityDefinitionJson>(json)?;
         let id = entity_definition_json
             .pointers
@@ -35,22 +39,18 @@ impl WearableEntityDefinition {
             .metadata
             .take()
             .ok_or(anyhow::Error::msg("missing entity metadata"))?;
-        let wearable = serde_json::from_value::<WearableEntityMetadata>(metadata)?;
+        let item = serde_json::from_value::<BaseItemEntityMetadata>(metadata)?;
 
         let content_mapping_vec = std::mem::take(&mut entity_definition_json.content);
-        let content_mapping = Arc::new(ContentMappingAndUrl {
+        let content_mapping = Arc::new(ContentMappingAndUrl::from_base_url_and_content(
             base_url,
-            content: HashMap::from_iter(
-                content_mapping_vec
-                    .into_iter()
-                    .map(|item| (item.file.to_lowercase(), item.hash)),
-            ),
-        });
+            content_mapping_vec,
+        ));
 
-        Ok(WearableEntityDefinition {
+        Ok(ItemEntityDefinition {
             id: id.clone(),
             entity_definition_json,
-            wearable,
+            item,
             content_mapping,
         })
     }
@@ -58,19 +58,41 @@ impl WearableEntityDefinition {
 
 #[derive(GodotClass)]
 #[class(base=RefCounted)]
-pub struct DclWearableEntityDefinition {
-    pub inner: Arc<WearableEntityDefinition>,
+pub struct DclItemEntityDefinition {
+    pub inner: Arc<ItemEntityDefinition>,
 }
 
-impl DclWearableEntityDefinition {
-    pub fn from_gd(inner: Arc<WearableEntityDefinition>) -> Gd<Self> {
+impl DclItemEntityDefinition {
+    pub fn from_gd(inner: Arc<ItemEntityDefinition>) -> Gd<Self> {
         Gd::from_init_fn(|_base| Self { inner })
     }
 
-    pub fn get_representation(&self, body_shape_id: &String) -> Option<&WearableRepresentation> {
+    pub fn get_wearable_representation(
+        &self,
+        body_shape_id: &String,
+    ) -> Option<&WearableRepresentation> {
         self.inner
-            .wearable
-            .data
+            .item
+            .wearable_data
+            .as_ref()?
+            .representations
+            .iter()
+            .find(|representation| {
+                representation
+                    .body_shapes
+                    .iter()
+                    .any(|shape| shape == body_shape_id)
+            })
+    }
+
+    pub fn get_emote_representation(
+        &self,
+        body_shape_id: &String,
+    ) -> Option<&EmoteADR74Representation> {
+        self.inner
+            .item
+            .emote_data
+            .as_ref()?
             .representations
             .iter()
             .find(|representation| {
@@ -83,38 +105,111 @@ impl DclWearableEntityDefinition {
 }
 
 #[godot_api]
-impl DclWearableEntityDefinition {
+impl DclItemEntityDefinition {
+    #[func]
+    fn get_emote_audio(&self, body_shape_id: String) -> GString {
+        let Some(representation) = self.get_emote_representation(&body_shape_id) else {
+            return GString::from("");
+        };
+
+        representation
+            .contents
+            .iter()
+            .find(|file_name| file_name.ends_with(".mp3") || file_name.ends_with(".ogg"))
+            .map(GString::from)
+            .unwrap_or_default()
+    }
+
+    #[func]
+    fn get_emote_loop(&self) -> bool {
+        let Some(emote_data) = self.inner.item.emote_data.as_ref() else {
+            return false;
+        };
+
+        emote_data.r#loop
+    }
+
+    /// Returns a 12 character long prefix for the emote id, removing the tokenId if it presents
+    #[func]
+    fn get_emote_prefix_id(&self) -> GString {
+        let id = self.inner.id.to_string();
+        let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
+        let id = id[0..token_id_pos].to_lowercase();
+
+        let result = id.replace(':', "");
+        let pos = (result.len() - 12).max(0);
+
+        GString::from(&result[pos..])
+    }
+
+    #[func]
+    fn is_wearable(&self) -> bool {
+        self.inner.item.wearable_data.is_some()
+    }
+
+    #[func]
+    fn is_emote(&self) -> bool {
+        self.inner.item.emote_data.is_some()
+    }
+
     #[func]
     fn get_category(&self) -> GString {
-        GString::from(self.inner.wearable.data.category.slot)
+        if let Some(wearable_data) = &self.inner.item.wearable_data {
+            GString::from(wearable_data.category.slot)
+        } else if let Some(emote_data) = &self.inner.item.emote_data {
+            GString::from(&emote_data.category)
+        } else {
+            GString::from("unknown")
+        }
     }
 
     #[func]
     fn has_representation(&self, body_shape_id: String) -> bool {
-        self.get_representation(&body_shape_id).is_some()
+        if self.inner.item.wearable_data.is_some() {
+            self.get_wearable_representation(&body_shape_id).is_some()
+        } else if self.inner.item.emote_data.is_some() {
+            self.get_emote_representation(&body_shape_id).is_some()
+        } else {
+            false
+        }
     }
 
     #[func]
     fn get_representation_main_file(&self, body_shape_id: String) -> GString {
-        self.get_representation(&body_shape_id)
-            .map(|representation| representation.main_file.clone())
-            .unwrap_or_default()
-            .into()
+        if self.inner.item.wearable_data.is_some() {
+            self.get_wearable_representation(&body_shape_id)
+                .map(|representation| representation.main_file.clone())
+                .unwrap_or_default()
+                .into()
+        } else if self.inner.item.emote_data.is_some() {
+            self.get_emote_representation(&body_shape_id)
+                .map(|representation| representation.main_file.clone())
+                .unwrap_or_default()
+                .into()
+        } else {
+            GString::from("")
+        }
     }
 
+    /// Only for wearables
     #[func]
     fn get_hides_list(&self, body_shape_id: String) -> PackedStringArray {
+        // Ensure it's a wearable
+        let Some(wearable_data) = &self.inner.item.wearable_data else {
+            return PackedStringArray::new();
+        };
+
+        let representation = self.get_wearable_representation(&body_shape_id);
         let mut hides = vec![];
-        let representation = self.get_representation(&body_shape_id);
 
         if let Some(override_hides) = representation.map(|v| &v.override_hides) {
             if override_hides.is_empty() {
-                hides.extend(self.inner.wearable.data.hides.iter().cloned());
+                hides.extend(wearable_data.hides.iter().cloned());
             } else {
                 hides.extend(override_hides.iter().cloned());
             }
         } else {
-            hides.extend(self.inner.wearable.data.hides.iter().cloned());
+            hides.extend(wearable_data.hides.iter().cloned());
         }
 
         // we apply this rule to hide the hands by default if the wearable is an upper body or hides the upper body
@@ -122,10 +217,7 @@ impl DclWearableEntityDefinition {
             || self.get_category().to_string() == "upper_body";
 
         // the rule is ignored if the wearable contains the removal of this default rule (newer upper bodies since the release of hands)
-        let removes_hand_default = self
-            .inner
-            .wearable
-            .data
+        let removes_hand_default = wearable_data
             .removes_default_hiding
             .as_ref()
             .map_or(false, |removes_default_hiding| {
@@ -139,12 +231,12 @@ impl DclWearableEntityDefinition {
 
         if let Some(override_replaces) = representation.map(|v| &v.override_replaces) {
             if override_replaces.is_empty() {
-                hides.extend(self.inner.wearable.data.replaces.iter().cloned());
+                hides.extend(wearable_data.replaces.iter().cloned());
             } else {
                 hides.extend(override_replaces.iter().cloned());
             }
         } else {
-            hides.extend(self.inner.wearable.data.replaces.iter().cloned());
+            hides.extend(wearable_data.replaces.iter().cloned());
         }
 
         // skin has implicit hides
@@ -189,27 +281,22 @@ impl DclWearableEntityDefinition {
 
     #[func]
     fn get_thumbnail(&self) -> GString {
-        self.inner.wearable.thumbnail.clone().into()
+        self.inner.item.thumbnail.clone().into()
     }
 
     #[func]
     fn get_rarity(&self) -> GString {
-        self.inner
-            .wearable
-            .rarity
-            .clone()
-            .unwrap_or_default()
-            .into()
+        self.inner.item.rarity.clone().unwrap_or_default().into()
     }
 
     #[func]
     fn get_display_name(&self) -> GString {
         GString::from(
             self.inner
-                .wearable
+                .item
                 .i18n
                 .first()
-                .map_or(&self.inner.wearable.name, |i18n| &i18n.text),
+                .map_or(&self.inner.item.name, |i18n| &i18n.text),
         )
     }
 }

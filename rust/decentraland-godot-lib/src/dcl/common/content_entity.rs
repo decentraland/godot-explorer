@@ -12,4 +12,6 @@ pub struct EntityDefinitionJson {
     pub pointers: Vec<String>,
     pub content: Vec<TypedIpfsRef>,
     pub metadata: Option<serde_json::Value>,
+    #[serde(rename = "type")]
+    pub ty: Option<String>,
 }

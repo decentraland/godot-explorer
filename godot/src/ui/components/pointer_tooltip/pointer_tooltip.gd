@@ -9,9 +9,9 @@ var tooltip_scene = preload("res://src/ui/components/pointer_tooltip/tooltip_lab
 @onready var panel_center = %Panel_Crosshair
 
 
-func set_global_cursor_position(position: Vector2):
-	control_center.set_global_position(position)
-	panel_center.set_global_position(position - panel_center.size / 2)
+func set_global_cursor_position(_position: Vector2):
+	control_center.set_global_position(_position)
+	panel_center.set_global_position(_position - panel_center.size / 2)
 
 
 func set_pointer_data(interacts_array: Array):

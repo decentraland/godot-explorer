@@ -16,7 +16,7 @@ var legendary_thumbnail = preload("res://assets/ui/LegendaryThumbnail.png")
 var unique_thumbnail = preload("res://assets/ui/UniqueThumbnail.png")
 var thumbnail_hash: String
 var wearable_id: String
-var wearable_data: DclWearableEntityDefinition
+var wearable_data: DclItemEntityDefinition
 var panel_container_external_orig_rect: Rect2
 var was_pressed = false
 
@@ -34,7 +34,7 @@ func _ready():
 	panel_container_external.hide()
 
 
-func async_set_wearable(wearable: DclWearableEntityDefinition):
+func async_set_wearable(wearable: DclItemEntityDefinition):
 	wearable_id = wearable.get_id()
 	var dcl_content_mapping = wearable.get_content_mapping()
 	var wearable_thumbnail: String = wearable.get_thumbnail()
@@ -117,7 +117,7 @@ func set_equiped(is_equiped: bool):
 	effect_toggle()
 
 
-func _update_category_icon(wearable: DclWearableEntityDefinition):
+func _update_category_icon(wearable: DclItemEntityDefinition):
 	var texture_path = (
 		"res://assets/ui/wearable_categories/" + wearable.get_category() + "-icon.svg"
 	)

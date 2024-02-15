@@ -75,8 +75,8 @@ offset_right = 174.747
 offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
-number = 0
 picture = ExtResource("3_poid4")
+emote_name = "wave"
 
 [node name="EmoteWheelItem2" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -92,8 +92,8 @@ offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
 rotation = 0.615341
-number = 0
 picture = ExtResource("3_poid4")
+emote_name = "wave"
 
 [node name="EmoteWheelItem3" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -109,8 +109,8 @@ offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
 rotation = 1.23913
-number = 0
 picture = ExtResource("3_poid4")
+emote_name = "wave"
 
 [node name="EmoteWheelItem4" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -126,8 +126,8 @@ offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
 rotation = 1.8656
-number = 0
 picture = ExtResource("3_poid4")
+emote_name = "wave"
 
 [node name="EmoteWheelItem5" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -143,8 +143,8 @@ offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
 rotation = 2.51246
-number = 0
 picture = ExtResource("3_poid4")
+emote_name = "wave"
 
 [node name="EmoteWheelItem6" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -160,8 +160,8 @@ offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
 rotation = -3.12851
-number = 0
 picture = ExtResource("3_poid4")
+emote_name = "wave"
 
 [node name="EmoteWheelItem7" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -177,8 +177,8 @@ offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
 rotation = -2.49585
-number = 0
 picture = ExtResource("3_poid4")
+emote_name = "wave"
 
 [node name="EmoteWheelItem8" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -194,8 +194,8 @@ offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
 rotation = -1.87016
-number = 0
 picture = ExtResource("3_poid4")
+emote_name = "wave"
 
 [node name="EmoteWheelItem9" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -211,8 +211,8 @@ offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
 rotation = -1.25254
-number = 0
 picture = ExtResource("3_poid4")
+emote_name = "wave"
 
 [node name="EmoteWheelItem10" parent="Container/EmoteWheelContainer" instance=ExtResource("2_h3qru")]
 layout_mode = 1
@@ -228,8 +228,8 @@ offset_bottom = -73.0766
 grow_horizontal = 2
 grow_vertical = 2
 rotation = -0.625233
-number = 0
 picture = ExtResource("3_poid4")
+emote_name = "wave"
 
 [node name="Label" type="Label" parent="Container"]
 layout_mode = 1
@@ -246,7 +246,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
-custom_minimum_size = Vector2(200, 200)
+custom_minimum_size = Vector2(180, 200)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -267,16 +267,18 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_hlcl2")
 
 [node name="Label_EmoteName" type="Label" parent="VBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ntwf1")
 theme_override_font_sizes/font_size = 16
 text = "Clapping"
 horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_hlcl2")
 
 [node name="Label2" type="Label" parent="VBoxContainer"]

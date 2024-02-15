@@ -1,16 +1,6 @@
 class_name Wearables
 extends Node
 
-enum ItemRarityEnum {
-	COMMON,
-	UNCOMMON,
-	RARE,
-	EPIC,
-	LEGENDARY,
-	MYTHIC,
-	UNIQUE,
-}
-
 const BASE_WEARABLES: PackedStringArray = [
 	"BaseFemale",
 	"BaseMale",
@@ -332,12 +322,13 @@ class BodyShapes:
 
 class ItemRarity:
 	const COMMON: String = "common"
+	const UNCOMMON: String = "uncommon"
 	const RARE: String = "rare"
 	const EPIC: String = "epic"
 	const LEGENDARY: String = "legendary"
 	const MYTHIC: String = "mythic"
 	const UNIQUE: String = "unique"
-	const ALL_LIST: PackedStringArray = [RARE, EPIC, LEGENDARY, MYTHIC, UNIQUE]
+	const ALL_LIST: PackedStringArray = [RARE, UNCOMMON, EPIC, LEGENDARY, MYTHIC, UNIQUE]
 
 
 class Categories:
@@ -452,7 +443,7 @@ static func get_base_avatar_urn(wearable_name: String):
 	return "urn:decentraland:off-chain:base-avatars:" + wearable_name
 
 
-static func can_equip(wearable: DclWearableEntityDefinition, body_shape_id: String) -> bool:
+static func can_equip(wearable: DclItemEntityDefinition, body_shape_id: String) -> bool:
 	return wearable.has_representation(body_shape_id)
 
 
@@ -465,7 +456,7 @@ static func compose_hidden_categories(
 	for priority_category in Categories.HIDING_PRIORITY:
 		previously_hidden[priority_category] = []
 
-		var wearable: DclWearableEntityDefinition = wearables_by_category.get(priority_category)
+		var wearable: DclItemEntityDefinition = wearables_by_category.get(priority_category)
 
 		if wearable == null:
 			continue
@@ -506,7 +497,7 @@ static func get_skeleton_from_content(content_hash: String) -> Skeleton3D:
 
 
 static func get_wearable_facial_hashes(
-	wearable: DclWearableEntityDefinition, body_shape_id: String
+	wearable: DclItemEntityDefinition, body_shape_id: String
 ) -> Array[String]:
 	if wearable == null:
 		return []
@@ -542,25 +533,21 @@ static func get_wearable_facial_hashes(
 	return [main_texture_file_hash, mask_texture_file_hash]
 
 
-static func get_wearable_main_file_hash(
-	wearable: DclWearableEntityDefinition, body_shape_id: String
-) -> String:
-	if wearable == null:
+static func get_item_main_file_hash(item: DclItemEntityDefinition, body_shape_id: String) -> String:
+	if item == null:
 		return ""
 
-	if not wearable.has_representation(body_shape_id):
+	if not item.has_representation(body_shape_id):
 		return ""
 
-	var main_file: String = wearable.get_representation_main_file(body_shape_id)
-	var content_mapping: DclContentMappingAndUrl = wearable.get_content_mapping()
+	var main_file: String = item.get_representation_main_file(body_shape_id)
+	var content_mapping: DclContentMappingAndUrl = item.get_content_mapping()
 	var file_hash = content_mapping.get_hash(main_file)
 	return file_hash
 
 
 static func is_valid_wearable(
-	wearable: DclWearableEntityDefinition,
-	body_shape_id: String,
-	skip_content_integrity: bool = false
+	wearable: DclItemEntityDefinition, body_shape_id: String, skip_content_integrity: bool = false
 ) -> bool:
 	if wearable == null:
 		return false
@@ -610,9 +597,7 @@ static func get_curated_wearable_list(
 	wearables_by_category[Categories.BODY_SHAPE] = body_shape
 
 	for wearable_id in wearables:
-		var wearable: DclWearableEntityDefinition = Global.content_provider.get_wearable(
-			wearable_id
-		)
+		var wearable: DclItemEntityDefinition = Global.content_provider.get_wearable(wearable_id)
 		if is_valid_wearable(wearable, body_shape_id):
 			var category = wearable.get_category()
 			if not wearables_by_category.has(category):
@@ -656,18 +641,3 @@ static func set_fallback_for_missing_needed_categories(
 				)
 
 	return wearables_by_category
-
-
-static func from_color_object(color: Variant, default: Color = Color.WHITE) -> Color:
-	if color is Dictionary:
-		return Color(
-			color.get("r", default.r),
-			color.get("g", default.g),
-			color.get("b", default.b),
-			color.get("a", default.a)
-		)
-	return default
-
-
-static func to_color_object(color: Color) -> Dictionary:
-	return {"color": {"r": color.r, "g": color.g, "b": color.b, "a": color.a}}

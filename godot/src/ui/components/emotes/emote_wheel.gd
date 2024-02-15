@@ -1,9 +1,23 @@
 extends Control
 
-@export var player: Player = null
+const DEFAULT_EMOTE_NAMES = {
+	"handsair": "Hands Air",
+	"wave": "Wave",
+	"fistpump": "Fist Pump",
+	"dance": "Dance",
+	"raiseHand": "Raise Hand",
+	"clap": "Clap",
+	"money": "Money",
+	"kiss": "Kiss",
+	"shrug": "Shrug",
+	"headexplode": "Head Explode"
+}
 
-var avatar: Avatar = null
+@export var avatar_node: Avatar = null
+
 var emote_items: Array[EmoteWheelItem] = []
+
+var last_selected_urn_or_id: String = ""
 
 @onready var emote_wheel_container = %EmoteWheelContainer
 @onready var label_emote_name = %Label_EmoteName
@@ -12,35 +26,57 @@ var emote_items: Array[EmoteWheelItem] = []
 
 func _ready():
 	self.hide()
-	avatar = player.avatar
 	for child in emote_wheel_container.get_children():
 		if child is EmoteWheelItem:
 			child.play_emote.connect(self._on_play_emote)
-			child.select_emote.connect(self._on_select_emote)
+			child.select_emote.connect(self._on_select_emote.bind(child))
 			emote_items.push_back(child)
 
 	label_for_desktop.set_visible(not Global.is_mobile())
 
-	# Temporal mock data until we fetch
-	# the emotes of the players with emote v2
-	emote_items[0].emote_id = "handsair"
-	emote_items[1].emote_id = "wave"
-	emote_items[2].emote_id = "fistpump"
-	emote_items[3].emote_id = "dance"
-	emote_items[4].emote_id = "raiseHand"
-	emote_items[5].emote_id = "clap"
-	emote_items[6].emote_id = "money"
-	emote_items[7].emote_id = "kiss"
-	emote_items[8].emote_id = "shrug"
-	emote_items[9].emote_id = "headexplode"
+	if avatar_node != null:
+		avatar_node.avatar_loaded.connect(self._on_avatar_loaded)
 
+	# Load default emotes as initial state
+	_update_wheel(DEFAULT_EMOTE_NAMES.keys())
+
+
+func _on_avatar_loaded():
+	var emote_urns = avatar_node.avatar_data.get_emotes()
+	_update_wheel(emote_urns)
+
+
+func _update_wheel(emote_urns: Array):
 	for i in range(emote_items.size()):
-		var emote_item = emote_items[i]
+		# get_emotes() always returns 10 emotes, but just in case
+		if i >= emote_urns.size():
+			# Set default or
+			continue
+
+		var emote_item: EmoteWheelItem = emote_items[i]
+		emote_item.emote_urn_or_id = emote_urns[i]
 		emote_item.number = i
-		emote_item.rarity = Wearables.ItemRarityEnum.COMMON
-		emote_item.picture = load(
-			"res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_item.emote_id
-		)
+
+		if is_emote_default(emote_item.emote_urn_or_id):
+			emote_item.emote_prefix_id = "default_emotes/" + emote_urns[i]
+			emote_item.emote_name = DEFAULT_EMOTE_NAMES[emote_urns[i]]
+			emote_item.rarity = Wearables.ItemRarity.COMMON
+			emote_item.picture = load(
+				"res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_urns[i]
+			)
+		else:
+			var emote_data := Global.content_provider.get_wearable(emote_urns[i])
+			if emote_data == null:
+				# TODO: set invalid emote reference?, fallback with defualt?
+				continue
+			emote_item.emote_prefix_id = emote_data.get_emote_prefix_id()
+			emote_item.emote_name = emote_data.get_display_name()
+			emote_item.rarity = emote_data.get_rarity()
+			emote_item.async_set_texture(emote_data)
+
+
+func is_emote_default(urn_or_id: String) -> bool:
+	return DEFAULT_EMOTE_NAMES.keys().has(urn_or_id)
 
 
 func _gui_input(event):
@@ -67,14 +103,19 @@ func _physics_process(_delta):
 func _on_play_emote(emote_id: String):
 	self.hide()
 	Global.explorer_grab_focus()
-	if avatar:
-		avatar.play_emote(emote_id)
-		avatar.broadcast_avatar_animation(emote_id)
+	if avatar_node:
+		avatar_node.play_emote(emote_id)
+		avatar_node.broadcast_avatar_animation(emote_id)
 
 
-func _on_select_emote(selected: bool, emote_id: String):
-	if !selected:
-		label_emote_name.text = ""
+func _on_select_emote(selected: bool, emote_urn_or_id: String, child: EmoteWheelItem):
+	if emote_urn_or_id == last_selected_urn_or_id:
 		return
 
-	label_emote_name.text = emote_id
+	if !selected:
+		label_emote_name.text = ""
+		last_selected_urn_or_id = ""
+		return
+
+	last_selected_urn_or_id = emote_urn_or_id
+	label_emote_name.text = child.emote_name

@@ -347,10 +347,10 @@ offset_bottom = -72.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="EmoteWheel" parent="UI" node_paths=PackedStringArray("player") instance=ExtResource("21_pows0")]
+[node name="EmoteWheel" parent="UI" node_paths=PackedStringArray("avatar_node") instance=ExtResource("21_pows0")]
 visible = false
 layout_mode = 1
-player = NodePath("../../world/Player")
+avatar_node = NodePath("../../world/Player/Avatar")
 
 [node name="VoiceChatRecorder" type="VoiceChatRecorder" parent="."]
 script = ExtResource("20_064cw")
@@ -371,3 +371,5 @@ script = ExtResource("20_064cw")
 [connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
 [connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
+
+[editable path="world/Player"]
