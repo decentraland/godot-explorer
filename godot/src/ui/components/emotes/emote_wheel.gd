@@ -58,16 +58,17 @@ func _on_avatar_loaded():
 		emote_item.number = i
 
 		if is_emote_default(emote_item.emote_id):
+			emote_item.emote_id = "default_emotes/" + emote_urns[i]
 			emote_item.rarity = Wearables.ItemRarity.COMMON
 			emote_item.picture = load(
-				"res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_item.emote_id
+				"res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_urns[i]
 			)
 		else:
 			var emote_data := Global.content_provider.get_wearable(emote_urns[i])
 			if emote_data == null:
 				# TODO: set invalid emote reference?, fallback with defualt?
 				continue
-			emote_item.emote_id = emote_data.get_display_name()
+			emote_item.emote_id = emote_data.get_emote_prefix_id()
 			emote_item.rarity = emote_data.get_rarity()
 			emote_item.async_set_texture(emote_data)
 

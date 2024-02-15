@@ -17,11 +17,11 @@ use super::{
     thread_safety::GodotSingleThreadSafety,
 };
 
-pub async fn load_gltf(
+pub async fn internal_load_gltf(
     file_path: String,
     content_mapping: ContentMappingAndUrlRef,
     ctx: ContentProviderContext,
-) -> Result<Option<Variant>, anyhow::Error> {
+) -> Result<(Gd<Node3D>, GodotSingleThreadSafety), anyhow::Error> {
     let base_path = Arc::new(get_base_dir(&file_path));
 
     let file_hash = content_mapping
@@ -92,7 +92,7 @@ pub async fn load_gltf(
         )));
     }
 
-    let _thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
+    let thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
         .await
         .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
 
@@ -138,6 +138,15 @@ pub async fn load_gltf(
     node.rotate_y(std::f32::consts::PI);
     create_colliders(node.clone().upcast());
 
+    Ok((node, thread_safe_check))
+}
+
+pub async fn load_gltf(
+    file_path: String,
+    content_mapping: ContentMappingAndUrlRef,
+    ctx: ContentProviderContext,
+) -> Result<Option<Variant>, anyhow::Error> {
+    let (node, _thread_safe_check) = internal_load_gltf(file_path, content_mapping, ctx).await?;
     Ok(Some(node.to_variant()))
 }
 

@@ -641,4 +641,3 @@ static func set_fallback_for_missing_needed_categories(
 				)
 
 	return wearables_by_category
-
