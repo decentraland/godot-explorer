@@ -1,11 +1,5 @@
 extends Control
 
-@export var avatar_node: Avatar = null
-
-var emote_items: Array[EmoteWheelItem] = []
-
-var last_selected_urn_or_id: String = ""
-
 const DEFAULT_EMOTE_NAMES = {
 	"handsair": "Hands Air",
 	"wave": "Wave",
@@ -18,6 +12,12 @@ const DEFAULT_EMOTE_NAMES = {
 	"shrug": "Shrug",
 	"headexplode": "Head Explode"
 }
+
+@export var avatar_node: Avatar = null
+
+var emote_items: Array[EmoteWheelItem] = []
+
+var last_selected_urn_or_id: String = ""
 
 @onready var emote_wheel_container = %EmoteWheelContainer
 @onready var label_emote_name = %Label_EmoteName
