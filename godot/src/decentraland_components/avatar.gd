@@ -5,6 +5,7 @@ signal avatar_loaded
 
 @export var skip_process: bool = false
 @export var hide_name: bool = false
+@export var non_3d_audio: bool = false
 
 
 class EmoteItemData:
@@ -14,19 +15,22 @@ class EmoteItemData:
 	var default_anim_name: String = ""
 	var prop_anim_name: String = ""
 	var file_hash: String = ""
+	var armature_prop: Node3D = null
 
 	func _init(
 		_emote_prefix_id: String,
 		_urn: String,
 		_default_anim_name: String,
 		_prop_anim_name: String,
-		_file_hash: String
+		_file_hash: String,
+		_armature_prop: Node3D
 	):
 		emote_prefix_id = _emote_prefix_id
 		urn = _urn
 		default_anim_name = _default_anim_name
 		prop_anim_name = _prop_anim_name
 		file_hash = _file_hash
+		armature_prop = _armature_prop
 
 
 var loaded_emotes: Array[EmoteItemData] = []
@@ -89,6 +93,13 @@ func _ready():
 	emotes_animation_library = AnimationLibrary.new()
 	animation_player.add_animation_library("emotes", emotes_animation_library)
 
+	if non_3d_audio:
+		var audio_player_name = audio_player_emote.get_name()
+		remove_child(audio_player_emote)
+		audio_player_emote = AudioStreamPlayer.new()
+		add_child(audio_player_emote)
+		audio_player_emote.name = audio_player_name
+
 
 func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 	_unset_avatar_modifier_area()  # Reset state
@@ -116,6 +127,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 
 
 func async_update_avatar(new_avatar: DclAvatarWireFormat):
+	# TODO: Hardcoded emotes, change those with the configured emotes
 	var emotes = PackedStringArray(
 		[
 			"handsair",
@@ -127,11 +139,10 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat):
 			"urn:decentraland:matic:collections-v2:0xa25c20f58ac447621a5f854067b857709cbd60eb:7:737186041679900306885426193785693026232265667803843778780176846151",
 			"urn:decentraland:matic:collections-v2:0xbada8a315e84e4d78e3b6914003647226d9b4001:10:1053122916685571866979180276836704323188950954005491112543109777455",
 			"urn:decentraland:matic:collections-v2:0xbada8a315e84e4d78e3b6914003647226d9b4001:11:1158435208354129053677098304520374755507846049406040223797420753072",
-			"shrug"
+			"urn:decentraland:matic:collections-v2:0x0c956c74518ed34afb7b137d9ddfdaea7ca13751:0"
 		]
 	)
 	new_avatar.set_emotes(emotes)
-
 	avatar_data = new_avatar
 	if new_avatar == null:
 		printerr("Trying to update an avatar with an null value")
@@ -180,6 +191,13 @@ func play_default_emote(default_emote_name: String):
 	playing_emote_single = true
 	playing_emote_mixed = false
 	playing_emote_loop = false
+
+
+func play_loaded_emote_by_urn(urn: String):
+	var emote_data = Global.content_provider.get_wearable(urn)
+	if emote_data == null:
+		return
+	play_emote(emote_data.get_emote_prefix_id())
 
 
 func play_emote(emote_prefix_id: String):
@@ -257,6 +275,27 @@ func get_representation(representation_array: Array, desired_body_shape: String)
 	return representation_array[0]
 
 
+func async_fetch_emote(emote_urn: String, body_shape_id: String) -> Array:
+	var ret = []
+	var emote = Global.content_provider.get_wearable(emote_urn)
+	if emote != null:
+		var file_name: String = emote.get_representation_main_file(body_shape_id)
+		if file_name.is_empty():
+			return ret
+		var content_mapping: DclContentMappingAndUrl = emote.get_content_mapping()
+		var promise: Promise = Global.content_provider.fetch_gltf(file_name, content_mapping, 2)
+		ret.push_back(promise)
+
+		for audio_file in content_mapping.get_files():
+			if audio_file.ends_with(".mp3") or audio_file.ends_with(".ogg"):
+				var audio_promise: Promise = Global.content_provider.fetch_audio(
+					audio_file, content_mapping
+				)
+				ret.push_back(audio_promise)
+				break
+	return ret
+
+
 func async_fetch_wearables_dependencies():
 	# Clear last equipped werarables
 	wearables_dict.clear()
@@ -271,26 +310,10 @@ func async_fetch_wearables_dependencies():
 	var async_calls: Array = []
 	for emote_urn in avatar_data.get_emotes():
 		if emote_urn.begins_with("urn"):
-			var emote = Global.content_provider.get_wearable(emote_urn)
-			if emote != null:
-				var file_name: String = emote.get_representation_main_file(body_shape_id)
-				if file_name.is_empty():
-					continue
-				var content_mapping: DclContentMappingAndUrl = emote.get_content_mapping()
-				var promise: Promise = Global.content_provider.fetch_gltf(
-					file_name, content_mapping, 2
-				)
-				async_calls.push_back(promise)
+			var emote_promises = async_fetch_emote(emote_urn, body_shape_id)
+			for emote_promise in emote_promises:
+				async_calls.push_back(emote_promise)
 				async_calls_info.push_back(emote_urn)
-
-				for audio_file in content_mapping.get_files():
-					if audio_file.ends_with(".mp3") or audio_file.ends_with(".ogg"):
-						var audio_promise: Promise = Global.content_provider.fetch_audio(
-							audio_file, content_mapping
-						)
-						async_calls.push_back(audio_promise)
-						async_calls_info.push_back("audio_" + emote_urn)
-						break
 
 	for wearable_key in wearables_dict.keys():
 		if wearables_dict[wearable_key] == null:
@@ -460,7 +483,45 @@ func async_load_wearables():
 		if obj != null:
 			add_animation_from_dcl_emote_gltf(emote, emote_urn, obj, file_hash)
 
+	clean_unused_emotes()
 	emit_signal("avatar_loaded")
+
+
+func async_play_emote(emote_urn: String):
+	if has_emote(emote_urn):
+		play_loaded_emote_by_urn(emote_urn)
+		return
+
+	var emote_data_promises = Global.content_provider.fetch_wearables(
+		[emote_urn], current_content_url
+	)
+	await PromiseUtils.async_all(emote_data_promises)
+
+	var emote_content_promises = async_fetch_emote(emote_urn, avatar_data.get_body_shape())
+	await PromiseUtils.async_all(emote_content_promises)
+
+	var emote = Global.content_provider.get_wearable(emote_urn)
+	if emote == null:
+		printerr("Error loading emote " + emote_urn)
+		return
+
+	var file_hash = Wearables.get_item_main_file_hash(emote, avatar_data.get_body_shape())
+	var obj = Global.content_provider.get_emote_gltf_from_hash(file_hash)
+	if obj != null:
+		add_animation_from_dcl_emote_gltf(emote, emote_urn, obj, file_hash)
+		play_emote(emote.get_emote_prefix_id())
+
+
+func has_emote(emote_urn: String) -> bool:
+	var emote = Global.content_provider.get_wearable(emote_urn)
+	if emote == null:
+		return false
+
+	var emote_prefix_id: String = emote.get_emote_prefix_id()
+	for loaded_emote: EmoteItemData in loaded_emotes:
+		if loaded_emote.emote_prefix_id == emote_prefix_id:
+			return true
+	return false
 
 
 func add_animation_from_dcl_emote_gltf(
@@ -468,19 +529,16 @@ func add_animation_from_dcl_emote_gltf(
 ):
 	var armature_prop: Node3D = null
 	if obj.armature_prop != null:
-		armature_prop = obj.armature_prop.duplicate()
-		self.add_child(armature_prop)
+		if not has_node(NodePath(obj.armature_prop.name)):
+			armature_prop = obj.armature_prop.duplicate()
+			self.add_child(armature_prop)
 
-		var track_id = idle_anim.add_track(Animation.TYPE_VALUE)
-		idle_anim.track_set_path(track_id, NodePath(armature_prop.name + ":visible"))
-		idle_anim.track_insert_key(track_id, 0.0, false)
-
-		track_id = idle_anim.add_track(Animation.TYPE_SCALE_3D)
-		idle_anim.track_set_path(track_id, NodePath(armature_prop.name))
-		idle_anim.track_insert_key(track_id, 0.0, Vector3.ZERO)
+			var track_id = idle_anim.add_track(Animation.TYPE_VALUE)
+			idle_anim.track_set_path(track_id, NodePath(armature_prop.name + ":visible"))
+			idle_anim.track_insert_key(track_id, 0.0, false)
 
 	var emote_prefix_id = emote.get_emote_prefix_id()
-	var emote_item_data = EmoteItemData.new(emote_prefix_id, urn, "", "", file_hash)
+	var emote_item_data = EmoteItemData.new(emote_prefix_id, urn, "", "", file_hash, armature_prop)
 	if obj.default_animation != null:
 		emotes_animation_library.add_animation(
 			obj.default_animation.get_name(), obj.default_animation
@@ -492,6 +550,21 @@ func add_animation_from_dcl_emote_gltf(
 		emote_item_data.prop_anim_name = obj.prop_animation.get_name()
 
 	loaded_emotes.push_back(emote_item_data)
+
+
+func clean_unused_emotes():
+	var emotes = avatar_data.get_emotes()
+	var to_delete_emotes = loaded_emotes.filter(func(item): return not emotes.has(item.urn))
+	for emote_item_data: EmoteItemData in to_delete_emotes:
+		if emotes_animation_library.has_animation(emote_item_data.default_anim_name):
+			emotes_animation_library.remove_animation(emote_item_data.default_anim_name)
+		if emotes_animation_library.has_animation(emote_item_data.prop_anim_name):
+			emotes_animation_library.remove_animation(emote_item_data.prop_anim_name)
+
+		if emote_item_data.armature_prop != null:
+			remove_child(emote_item_data.armature_prop)
+
+		loaded_emotes.erase(emote_item_data)
 
 
 func apply_color_and_facial():
