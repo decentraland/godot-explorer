@@ -68,8 +68,7 @@ impl DclSceneEntityDefinition {
     fn get_main_js_hash(&self) -> GString {
         self.inner
             .content_mapping
-            .content
-            .get(&self.inner.scene_meta_scene.main)
+            .get_hash(self.inner.scene_meta_scene.main.as_str())
             .unwrap_or(&"".to_string())
             .to_string()
             .into()
@@ -79,8 +78,7 @@ impl DclSceneEntityDefinition {
     fn get_main_crdt_hash(&self) -> GString {
         self.inner
             .content_mapping
-            .content
-            .get("main.crdt")
+            .get_hash("main.crdt")
             .unwrap_or(&"".to_string())
             .to_string()
             .into()

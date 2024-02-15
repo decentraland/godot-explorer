@@ -2,15 +2,41 @@ use std::{collections::HashMap, sync::Arc};
 
 use godot::prelude::*;
 
+use crate::dcl::common::content_entity::TypedIpfsRef;
+
 #[derive(Debug, Default)]
 pub struct ContentMappingAndUrl {
     pub base_url: String,
-    pub content: HashMap<String, String>,
+
+    // This field is private because in the constructor
+    //  all the `keys` are converted to lowercase
+    // So the only way to access it is through the `get_hash` method
+    //  which converts the input to lowercase
+    content: HashMap<String, String>,
 }
 
 impl ContentMappingAndUrl {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    pub fn from_base_url_and_content(base_url: String, content: Vec<TypedIpfsRef>) -> Self {
+        ContentMappingAndUrl {
+            base_url,
+            content: content
+                .into_iter()
+                .map(|v| (v.file.to_lowercase(), v.hash))
+                .collect(),
+        }
+    }
+
+    pub fn get_hash(&self, file: &str) -> Option<&String> {
+        let file = file.to_lowercase();
+        self.content.get(&file)
+    }
+
+    pub fn files(&self) -> &HashMap<String, String> {
+        &self.content
     }
 }
 
@@ -88,15 +114,6 @@ impl DclContentMappingAndUrl {
     pub fn empty() -> Gd<DclContentMappingAndUrl> {
         Gd::from_init_fn(move |_base| DclContentMappingAndUrl {
             inner: Arc::new(ContentMappingAndUrl::new()),
-        })
-    }
-
-    pub fn from_values(
-        base_url: String,
-        content: HashMap<String, String>,
-    ) -> Gd<DclContentMappingAndUrl> {
-        Gd::from_init_fn(move |_base| DclContentMappingAndUrl {
-            inner: Arc::new(ContentMappingAndUrl { base_url, content }),
         })
     }
 }

@@ -2,28 +2,28 @@
 class_name EmoteWheelItem
 extends Control
 
-signal play_emote(emote_id: String)
-signal select_emote(selected: bool, emote_id: String)
+signal play_emote(emote_prefix_id: String)
+signal select_emote(selected: bool, emote_urn_or_id: String)
 
-@export var rarity: Wearables.ItemRarityEnum = Wearables.ItemRarityEnum.COMMON:
+@export var rarity: String = Wearables.ItemRarity.COMMON:
 	set(new_value):
 		rarity = new_value
-		%Glow.set_visible(rarity != Wearables.ItemRarityEnum.COMMON)
+		%Glow.set_visible(rarity != Wearables.ItemRarity.COMMON)
 		var color = Color("#ECEBED")
 		match rarity:
-			Wearables.ItemRarityEnum.COMMON:
+			Wearables.ItemRarity.COMMON:
 				color = Color("#ECEBED")
-			Wearables.ItemRarityEnum.UNCOMMON:
+			Wearables.ItemRarity.UNCOMMON:
 				color = Color("#FF8362")
-			Wearables.ItemRarityEnum.RARE:
+			Wearables.ItemRarity.RARE:
 				color = Color("#34CE76")
-			Wearables.ItemRarityEnum.EPIC:
+			Wearables.ItemRarity.EPIC:
 				color = Color("#599CFF")
-			Wearables.ItemRarityEnum.LEGENDARY:
+			Wearables.ItemRarity.LEGENDARY:
 				color = Color("#B262FF")
-			Wearables.ItemRarityEnum.MYTHIC:
+			Wearables.ItemRarity.MYTHIC:
 				color = Color("#FF63E1")
-			Wearables.ItemRarityEnum.UNIQUE:
+			Wearables.ItemRarity.UNIQUE:
 				color = Color("#FFB626")
 		%Inner.self_modulate = color
 
@@ -37,7 +37,12 @@ signal select_emote(selected: bool, emote_id: String)
 		%TextureRect_Picture.texture = new_value
 		picture = new_value
 
-@export var emote_id: String = "wave"
+# The default emotes are not urns
+@export var emote_urn_or_id: String = "wave"
+# The prefix id depends on the body shape (it's calculated by the main file hash)
+@export var emote_prefix_id: String = "wave"
+# The display name
+@export var emote_name: String = "wave"
 
 var pressed = false
 var inside = false
@@ -47,6 +52,17 @@ var inside = false
 @onready var texture_rect_selected = %Selected
 @onready var texture_rect_pressed = %Pressed
 @onready var label_number = %Label_Number
+
+
+func async_set_texture(emote: DclItemEntityDefinition) -> void:
+	var promise: Promise = Global.content_provider.fetch_texture(
+		emote.get_thumbnail(), emote.get_content_mapping()
+	)
+	var res = await PromiseUtils.async_awaiter(promise)
+	if res is PromiseError:
+		printerr("Fetch texture error on ", emote.get_thumbnail(), ": ", res.get_error())
+	else:
+		self.picture = res.texture
 
 
 func _ready():
@@ -67,13 +83,13 @@ func _on_item_rect_changed():
 func _on_mouse_exited():
 	texture_rect_selected.hide()
 	inside = false
-	select_emote.emit(false, emote_id)
+	select_emote.emit(false, emote_urn_or_id)
 
 
 func _on_mouse_entered():
 	texture_rect_selected.show()
 	inside = true
-	select_emote.emit(true, emote_id)
+	select_emote.emit(true, emote_urn_or_id)
 
 
 func _on_gui_input(event):
@@ -83,4 +99,4 @@ func _on_gui_input(event):
 			texture_rect_pressed.set_visible(pressed)
 			if !pressed:
 				if inside:
-					play_emote.emit(emote_id)
+					play_emote.emit(emote_prefix_id)

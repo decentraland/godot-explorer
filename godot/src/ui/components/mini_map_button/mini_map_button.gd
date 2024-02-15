@@ -11,8 +11,8 @@ func _ready():
 	Global.scene_runner.on_change_scene_id.connect(self._on_change_scene_id)
 
 
-func _on_change_parcel(position: Vector2i):
-	label_coords.text = "%d,%d" % [position.x, position.y]
+func _on_change_parcel(_position: Vector2i):
+	label_coords.text = "%d,%d" % [_position.x, _position.y]
 
 
 func _on_change_scene_id(scene_id: int):

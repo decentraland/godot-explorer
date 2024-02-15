@@ -20,6 +20,7 @@ offset_right = 140.0
 offset_bottom = 140.0
 pivot_offset = Vector2(-38, 215)
 script = ExtResource("2_jdnf4")
+emote_name = null
 
 [node name="Control_Inner" type="Control" parent="."]
 unique_name_in_owner = true

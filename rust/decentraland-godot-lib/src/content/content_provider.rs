@@ -4,22 +4,25 @@ use std::{
 };
 
 use godot::{
-    engine::{ImageTexture, Material, Mesh},
+    engine::{AudioStream, ImageTexture, Material, Mesh},
     prelude::*,
 };
 use tokio::sync::Semaphore;
 
 use crate::{
-    avatars::wearable::DclWearableEntityDefinition,
-    content::content_mapping::DclContentMappingAndUrl, dcl::common::string::FindNthChar,
-    godot_classes::promise::Promise, http_request::http_queue_requester::HttpQueueRequester,
+    avatars::item::DclItemEntityDefinition, content::content_mapping::DclContentMappingAndUrl,
+    dcl::common::string::FindNthChar, godot_classes::promise::Promise,
+    http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
 };
 
 use super::{
     audio::load_audio,
     content_notificator::ContentNotificator,
-    gltf::{apply_update_set_mask_colliders, load_gltf},
+    gltf::{
+        apply_update_set_mask_colliders, load_gltf_emote, load_gltf_scene_content,
+        load_gltf_wearable, DclEmoteGltf,
+    },
     texture::{load_image_texture, TextureEntry},
     thread_safety::{set_thread_safety_checks_enabled, then_promise},
     video::download_video,
@@ -73,17 +76,16 @@ impl INode for ContentProvider {
 
 #[godot_api]
 impl ContentProvider {
+    // content_type 1: wearable, 2: emote, default: scene
     #[func]
     pub fn fetch_gltf(
         &mut self,
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
+        content_type: i32,
     ) -> Gd<Promise> {
         let content_mapping = content_mapping.bind().get_content_mapping();
-        let Some(file_hash) = content_mapping
-            .content
-            .get(&file_path.to_string().to_lowercase())
-        else {
+        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
@@ -96,7 +98,24 @@ impl ContentProvider {
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            let result = load_gltf(gltf_file_path, content_mapping, content_provider_context).await;
+            let result = match content_type {
+                1 => {
+                    load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context)
+                        .await
+                }
+                2 => {
+                    load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await
+                }
+                _ => {
+                    load_gltf_scene_content(
+                        gltf_file_path,
+                        content_mapping,
+                        content_provider_context,
+                    )
+                    .await
+                }
+            };
+
             then_promise(get_promise, result);
         });
 
@@ -145,10 +164,7 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let content_mapping = content_mapping.bind().get_content_mapping();
-        let Some(file_hash) = content_mapping
-            .content
-            .get(&file_path.to_string().to_lowercase())
-        else {
+        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
@@ -270,6 +286,28 @@ impl ContentProvider {
             .bind()
             .get_data()
             .try_to::<Gd<Node3D>>()
+            .ok()
+    }
+
+    #[func]
+    pub fn get_emote_gltf_from_hash(&self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
+        self.cached
+            .get(&file_hash.to_string())?
+            .promise
+            .bind()
+            .get_data()
+            .try_to::<Gd<DclEmoteGltf>>()
+            .ok()
+    }
+
+    #[func]
+    pub fn get_audio_from_hash(&self, file_hash: GString) -> Option<Gd<AudioStream>> {
+        self.cached
+            .get(&file_hash.to_string())?
+            .promise
+            .bind()
+            .get_data()
+            .try_to::<Gd<AudioStream>>()
             .ok()
     }
 
@@ -417,7 +455,7 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_wearable(&mut self, id: GString) -> Option<Gd<DclWearableEntityDefinition>> {
+    pub fn get_wearable(&mut self, id: GString) -> Option<Gd<DclItemEntityDefinition>> {
         let id = id.to_string();
         let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
         let id = id[0..token_id_pos].to_lowercase();
@@ -430,7 +468,7 @@ impl ContentProvider {
                 .try_to::<Gd<WearableManyResolved>>()
             {
                 if let Some(wearable) = results.bind().wearable_map.get(&id) {
-                    return Some(DclWearableEntityDefinition::from_gd(wearable.clone()));
+                    return Some(DclItemEntityDefinition::from_gd(wearable.clone()));
                 }
             }
         }

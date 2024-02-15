@@ -22,6 +22,9 @@ var icon_visible: Texture2D = preload(
 	"res://src/ui/components/debug_panel/icons/GuiVisibilityVisible.svg"
 )
 
+@onready var expression_text_edit = $TabContainer_DebugPanel/Expression/TextEdit
+@onready var expression_label = $TabContainer_DebugPanel/Expression/Label
+
 @onready var tree_console: Tree = %Tree_Console
 @onready var tab_container_debug_panel: TabContainer = %TabContainer_DebugPanel
 @onready var button_show_hide: Button = %Button_ShowHide
@@ -163,3 +166,19 @@ func _on_button_copy_pressed():
 		if item.visible:
 			text += item.get_text(1) + "\n"
 	DisplayServer.clipboard_set(text)
+
+
+func _on_text_edit_text_changed():
+	var expression = Expression.new()
+	var err = expression.parse(expression_text_edit.text)
+
+	if err != OK:
+		expression_label.text = "Parse failed: " + expression.get_error_text()
+		return
+
+	var result = expression.execute([], self)
+	if expression.has_execute_failed():
+		expression_label.text = "Execution failed: " + expression.get_error_text()
+		return
+
+	expression_label.text = "Ok: " + str(result)

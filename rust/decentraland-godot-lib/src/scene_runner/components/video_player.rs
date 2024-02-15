@@ -42,8 +42,7 @@ fn get_local_file_hash_future(
     tokio::sync::oneshot::Receiver<String>,
     String,
 )> {
-    let file_path = file_path.to_lowercase().to_string();
-    let file = content_mapping.content.get(&file_path)?.clone();
+    let file = content_mapping.get_hash(file_path)?.clone();
     let (sx, rx) = tokio::sync::oneshot::channel::<String>();
     Some((sx, rx, file))
 }
