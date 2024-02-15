@@ -239,31 +239,32 @@ func _on_line_edit_name_text_changed(_new_text):
 	button_save_profile.disabled = false
 
 
-func _async_prepare_snapshots():
+func _async_prepare_snapshots(mutable_avatar: DclAvatarWireFormat):
 	var face = await avatar_preview.async_get_viewport_image(true, Vector2i(256, 256))
-	#var body = await avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
+	var body = await avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
 
-	#var body_data: PackedByteArray = body.save_png_to_buffer()
-	#var body_path = Global.config.local_content_dir + DclHashing.hash_v1(body_data)
-	#var body_file = FileAccess.open(body_path, FileAccess.WRITE)
-	#body_file.store_buffer(body_data)
+	var body_data: PackedByteArray = body.save_png_to_buffer()
+	var body_hash = DclHashing.hash_v1(body_data)
+	var body_file = FileAccess.open(Global.config.local_content_dir + "/" + body_hash, FileAccess.WRITE)
+	body_file.store_buffer(body_data)
 	
 	var face_data: PackedByteArray = face.save_png_to_buffer()
-	var face_path = Global.config.local_content_dir + DclHashing.hash_v1(face_data)
-	var face_file = FileAccess.open(face_path, FileAccess.WRITE)
+	var face_hash = DclHashing.hash_v1(face_data)
+	var face_file = FileAccess.open(Global.config.local_content_dir + "/" + face_hash, FileAccess.WRITE)
 	face_file.store_buffer(face_data)
 	
-	prints("snapshots", face_path)
+	mutable_avatar.set_snapshots(face_hash, body_hash)
+	prints("snapshots", body_hash, face_hash)
 
 
 func async_save_profile():
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	mutable_profile.set_name(line_edit_name.text)
 	mutable_avatar.set_name(line_edit_name.text)
-
-	mutable_profile.set_avatar(mutable_avatar)
 	
-	await _async_prepare_snapshots()
+	await _async_prepare_snapshots(mutable_avatar)
+	
+	mutable_profile.set_avatar(mutable_avatar)
 
 	Global.player_identity.async_deploy_profile(mutable_profile)
 

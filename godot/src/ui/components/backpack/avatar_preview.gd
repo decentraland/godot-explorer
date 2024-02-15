@@ -104,7 +104,8 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: Variant = nu
 		camera_3d.fov = fov
 	subviewport.size = dest_size
 	
-	await get_tree().process_frame
+	for i in range(60):
+		await get_tree().process_frame
 	
 	var img := subviewport.get_texture().get_image()
 

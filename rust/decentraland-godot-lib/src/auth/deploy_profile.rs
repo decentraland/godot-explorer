@@ -2,6 +2,7 @@ use std::io::Read;
 
 use anyhow::anyhow;
 
+use godot::log::godot_print;
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
 
@@ -93,9 +94,18 @@ pub async fn prepare_deploy_profile(
         None,
     );
 
-    // todo: add images
-    form_data.add_text("files", cid.clone());
-    form_data.add_file(name, path)
+    // add images
+    /*if let Some(snapshots) = profile.content.avatar.snapshots {
+        //form_data.add_text("files", "");
+        let content_folder = format!(
+            "{}/content/",
+            godot::engine::Os::singleton().get_user_data_dir()
+        );
+        let body_path = format!("{}{}", content_folder, snapshots.body);
+        godot_print!("upload snapshots {}", body_path);
+        form_data.add_file(snapshots.body.clone(), body_path);
+        form_data.add_file(snapshots.face256.clone(), format!("{}{}", content_folder, snapshots.face256));
+    }*/
 
     let mut prepared = form_data.prepare()?;
     let mut prepared_data = Vec::default();

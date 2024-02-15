@@ -71,10 +71,11 @@ func async_deploy_profile(new_profile: DclUserProfile) -> void:
 		printerr("Error preparing deploying profile: ", ret.get_error())
 		return
 
+	var body_payload = (ret as Dictionary).get("body_payload")
 	var headers := ["Content-Type: " + (ret as Dictionary).get("content_type")]
 	var url := Global.realm.content_base_url + "entities/"
 	var promise_req := Global.http_requester.request_json_bin(
-		url, HTTPClient.METHOD_POST, (ret as Dictionary).get("body_payload"), headers
+		url, HTTPClient.METHOD_POST, body_payload, headers
 	)
 	var response = await PromiseUtils.async_awaiter(promise_req)
 	if response is PromiseError:
