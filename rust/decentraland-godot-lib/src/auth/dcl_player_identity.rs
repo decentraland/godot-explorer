@@ -8,6 +8,7 @@ use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::comms::profile::{LambdaProfiles, UserProfile};
 use crate::content::bytes::fast_create_packed_byte_array_from_vec;
 use crate::dcl::scene_apis::RpcResultSender;
+use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::{RequestResponse, ResponseEnum};
 use crate::scene_runner::tokio_runtime::TokioRuntime;
@@ -483,11 +484,15 @@ impl DclPlayerIdentity {
                             snapshots.face256 = hash;
                         }
                     }
-
+                    let base_url = DclGlobal::singleton()
+                        .bind()
+                        .get_realm()
+                        .bind()
+                        .get_profile_content_url();
                     let new_profile = DclUserProfile::from_gd(UserProfile {
                         version: content.version as u32,
                         content,
-                        base_url: "https://peer.decentraland.org/content/contents/".to_owned(),
+                        base_url: format!("{}contents/", base_url).to_owned(),
                     });
                     self.profile = Some(new_profile.clone());
 

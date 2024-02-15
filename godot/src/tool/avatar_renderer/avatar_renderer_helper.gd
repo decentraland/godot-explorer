@@ -12,12 +12,12 @@ class AvatarRendererSpecs:
 	var face_width := 256
 	var face_height := 256
 	var face_zoom := 25
-	
+
 	var avatar: DclAvatarWireFormat
 
 	static func from_dictionary(value: Dictionary) -> AvatarRendererSpecs:
 		var ret = AvatarRendererSpecs.new()
-		
+
 		ret.entity = value.get("entity", "")
 		ret.dest_path = value.get("destPath", "")
 		ret.width = value.get("width", 2048)

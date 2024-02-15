@@ -10,6 +10,7 @@ var current_avatar: DclAvatarWireFormat
 
 @onready var avatar_preview = %AvatarPreview
 
+
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
 	if USE_TEST_INPUT:
@@ -79,7 +80,7 @@ func async_update_avatar(index: int):
 	await get_tree().process_frame
 
 	await avatar_preview.avatar.async_update_avatar(current_avatar)
-	
+
 	await _async_on_avatar_avatar_loaded()
 
 
@@ -105,16 +106,20 @@ func _async_on_avatar_avatar_loaded():
 	var dest_path := ensure_ends_with(profile.dest_path, ".png")
 	ensure_base_dir_exists(dest_path)
 
-	var bodyImage = await avatar_preview.async_get_viewport_image(false, Vector2i(profile.width, profile.height))
-	bodyImage.save_png(dest_path)
+	var body_image = await avatar_preview.async_get_viewport_image(
+		false, Vector2i(profile.width, profile.height)
+	)
+	body_image.save_png(dest_path)
 	logs.push_back("🟢 " + dest_path)
 
 	if not profile.face_dest_path.is_empty():
 		var face_dest_path := ensure_ends_with(profile.face_dest_path, ".png")
 		ensure_base_dir_exists(face_dest_path)
 
-		var faceImage = await avatar_preview.async_get_viewport_image(true, Vector2i(profile.face_width, profile.face_height))
-		faceImage.save_png(face_dest_path)
+		var face_image = await avatar_preview.async_get_viewport_image(
+			true, Vector2i(profile.face_width, profile.face_height)
+		)
+		face_image.save_png(face_dest_path)
 		logs.push_back("🟢 " + face_dest_path)
 
 	if current_profile_index >= profiles_to_process.profiles.size() - 1:

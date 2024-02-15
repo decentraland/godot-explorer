@@ -102,9 +102,11 @@ pub async fn prepare_deploy_profile(
             godot::engine::Os::singleton().get_user_data_dir()
         );
         let body_path = format!("{}{}", content_folder, snapshots.body);
-        godot_print!("upload snapshots {}", body_path);
         form_data.add_file(snapshots.body.clone(), body_path);
-        form_data.add_file(snapshots.face256.clone(), format!("{}{}", content_folder, snapshots.face256));
+        form_data.add_file(
+            snapshots.face256.clone(),
+            format!("{}{}", content_folder, snapshots.face256),
+        );
     }
 
     let mut prepared = form_data.prepare()?;

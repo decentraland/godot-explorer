@@ -7,8 +7,6 @@ const WEARABLE_ITEM_INSTANTIABLE = preload(
 )
 const FILTER: Texture = preload("res://assets/ui/Filter.svg")
 
-var _has_changes: bool = false
-
 var wearable_button_group = ButtonGroup.new()
 var filtered_data: Array
 
@@ -26,6 +24,8 @@ var request_show_wearables: bool = false  # debounce
 var avatar_wearables_body_shape_cache: Dictionary = {}
 
 var avatar_loading_counter: int = 0
+
+var _has_changes: bool = false
 
 @onready var skin_color_picker = %Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
@@ -76,7 +76,7 @@ func _ready():
 		wearable_data[key] = null
 
 	var promise = Global.content_provider.fetch_wearables(
-		wearable_data.keys(), "https://peer.decentraland.org/content/"
+		wearable_data.keys(), Global.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(promise)
 
@@ -244,30 +244,37 @@ func _on_line_edit_name_text_changed(_new_text):
 
 
 func _async_prepare_snapshots(mutable_avatar: DclAvatarWireFormat):
-	var face = await avatar_preview.async_get_viewport_image(true, Vector2i(256, 256))
-	var body = await avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
+	var cloned_avatar_preview = avatar_preview.duplicate()
+	get_tree().root.add_child(cloned_avatar_preview)
+	cloned_avatar_preview.set_position(get_tree().root.get_visible_rect().size)
+	var face = await cloned_avatar_preview.async_get_viewport_image(true, Vector2i(256, 256))
+	var body = await cloned_avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
 
 	var body_data: PackedByteArray = body.save_png_to_buffer()
 	var body_hash = DclHashing.hash_v1(body_data)
-	var body_file = FileAccess.open(Global.config.local_content_dir + "/" + body_hash, FileAccess.WRITE)
+	var body_file = FileAccess.open(
+		Global.config.local_content_dir + "/" + body_hash, FileAccess.WRITE
+	)
 	body_file.store_buffer(body_data)
-	
+
 	var face_data: PackedByteArray = face.save_png_to_buffer()
 	var face_hash = DclHashing.hash_v1(face_data)
-	var face_file = FileAccess.open(Global.config.local_content_dir + "/" + face_hash, FileAccess.WRITE)
+	var face_file = FileAccess.open(
+		Global.config.local_content_dir + "/" + face_hash, FileAccess.WRITE
+	)
 	face_file.store_buffer(face_data)
-	
+
 	mutable_avatar.set_snapshots(face_hash, body_hash)
-	prints("snapshots", body_hash, face_hash)
+	cloned_avatar_preview.queue_free()
 
 
 func async_save_profile():
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	mutable_profile.set_name(line_edit_name.text)
 	mutable_avatar.set_name(line_edit_name.text)
-	
+
 	await _async_prepare_snapshots(mutable_avatar)
-	
+
 	mutable_profile.set_avatar(mutable_avatar)
 
 	await Global.player_identity.async_deploy_profile(mutable_profile)

@@ -7,6 +7,7 @@ const MAX_CAMERA_Z = -1.25
 const MIN_CAMERA_Y = 0.8
 const MAX_CAMERA_Y = 2.3
 
+const DEFAULT_ROTATION = Vector3(-20, 180, 0)
 const BODY_CAMERA_POSITION = Vector3(0, 2.3, -3.5)
 const HEAD_CAMERA_POSITION = Vector3(0, 2, -1.25)
 
@@ -20,7 +21,7 @@ var start_dragging_position
 var dirty_is_dragging
 
 @onready var avatar = %Avatar
-@onready var camera_3d = %Camera3D
+@onready var camera_3d: Camera3D = %Camera3D
 @onready var platform = %Platform
 @onready var subviewport: SubViewport = %SubViewport
 
@@ -28,6 +29,9 @@ var dirty_is_dragging
 func _ready():
 	avatar.hide_name = hide_name
 	platform.set_visible(show_platform)
+
+	camera_3d.set_position(BODY_CAMERA_POSITION)
+	camera_3d.set_rotation_degrees(DEFAULT_ROTATION)
 
 	if can_move:
 		gui_input.connect(self._on_gui_input)
@@ -94,26 +98,19 @@ func _on_gui_input(event):
 
 
 func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: Variant = null) -> Image:
-	# Save
-	var orig_size = self.size
-	var orig_fov = camera_3d.fov
-	
-	# Code
-	camera_3d.position = HEAD_CAMERA_POSITION if face else BODY_CAMERA_POSITION
+	const PROFILE_BODY_CAMERA_POSITION = Vector3(0, 2.3, -3.5)
+	const PROFILE_HEAD_CAMERA_POSITION = Vector3(0, 1.6, -1.25)
+	camera_3d.position = PROFILE_HEAD_CAMERA_POSITION if face else PROFILE_BODY_CAMERA_POSITION
+	camera_3d.rotation_degrees = DEFAULT_ROTATION if not face else Vector3(0.0, 180.0, 0.0)
 	if fov is float:
 		camera_3d.fov = fov
-	
+
 	self.size = dest_size
 	subviewport.size = dest_size
-	
-	for i in range(60):
-		await get_tree().process_frame
-	
-	var img := subviewport.get_texture().get_image()
 
-	# Restore
-	self.size = orig_size
-	subviewport.size = orig_size
-	camera_3d.position = BODY_CAMERA_POSITION
-	camera_3d.fov = orig_fov
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var img := subviewport.get_texture().get_image()
 	return img

@@ -607,7 +607,6 @@ offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[connection signal="hidden" from="." to="." method="_on_hidden"]
 [connection signal="pressed" from="HBoxContainer_Backpack/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer/Button_SaveProfile" to="." method="_on_button_save_profile_pressed"]
 [connection signal="pressed" from="HBoxContainer_Backpack/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer/Button_Logout" to="." method="_on_button_logout_pressed"]
 [connection signal="toggle_color_panel" from="HBoxContainer_Backpack/MarginContainer/ColorRect_Sidebar/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer/Color_Picker_Button" to="." method="_on_color_picker_button_toggle_color_panel"]

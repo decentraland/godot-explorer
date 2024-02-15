@@ -18,7 +18,7 @@ func _ready():
 		wearable_data[key] = null
 
 	var promise = Global.content_provider.fetch_wearables(
-		wearable_data.keys(), "https://peer.decentraland.org/content/"
+		wearable_data.keys(), Global.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(promise)
 

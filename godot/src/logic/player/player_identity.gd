@@ -73,7 +73,7 @@ func async_deploy_profile(new_profile: DclUserProfile) -> void:
 
 	var body_payload = (ret as Dictionary).get("body_payload")
 	var headers := ["Content-Type: " + (ret as Dictionary).get("content_type")]
-	var url := Global.realm.content_base_url + "entities/"
+	var url := Global.realm.get_profile_content_url() + "entities/"
 	var promise_req := Global.http_requester.request_json_bin(
 		url, HTTPClient.METHOD_POST, body_payload, headers
 	)

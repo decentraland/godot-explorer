@@ -4,7 +4,10 @@ use godot::{
     prelude::*,
 };
 
-use crate::{comms::profile::{AvatarColor, AvatarEmote, AvatarSnapshots, AvatarWireFormat}, dcl::scene_apis::Snapshots};
+use crate::{
+    comms::profile::{AvatarColor, AvatarEmote, AvatarSnapshots, AvatarWireFormat},
+    dcl::scene_apis::Snapshots,
+};
 
 const AVATAR_EMOTE_SLOTS_COUNT: usize = 10;
 const DEFAULT_EMOTES: [&str; AVATAR_EMOTE_SLOTS_COUNT] = [
@@ -178,14 +181,16 @@ impl DclAvatarWireFormat {
     fn set_snapshots(&mut self, face256: GString, body: GString) {
         self.inner.snapshots = Some(AvatarSnapshots {
             face256: face256.to_string(),
-            body: body.to_string()
+            body: body.to_string(),
         });
     }
 
     #[func]
     pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclAvatarWireFormat> {
         let value = godot::engine::Json::stringify(dictionary.to_variant());
-        DclAvatarWireFormat::from_gd(serde_json::from_str(value.to_string().as_str()).unwrap_or_default())
+        DclAvatarWireFormat::from_gd(
+            serde_json::from_str(value.to_string().as_str()).unwrap_or_default(),
+        )
     }
 
     #[func]
