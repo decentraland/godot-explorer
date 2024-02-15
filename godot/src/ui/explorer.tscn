@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=28 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -37,9 +37,6 @@ size = Vector2(4800, 4800)
 albedo_texture = ExtResource("2_7jksa")
 uv1_scale = Vector3(4800, 4800, 4800)
 texture_filter = 0
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_n040o"]
-resource_name = "Tabs"
 
 [node name="explorer" type="Node"]
 script = ExtResource("1_5n8xk")
@@ -323,7 +320,6 @@ offset_bottom = 15.0
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
 visible = false
 layout_mode = 1
-group = SubResource("ButtonGroup_n040o")
 
 [node name="DialogStack" parent="UI" instance=ExtResource("10_y1lkn")]
 visible = false

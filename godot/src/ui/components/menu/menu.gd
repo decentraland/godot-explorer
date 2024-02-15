@@ -19,33 +19,24 @@ const MAP_ON = preload("res://assets/ui/nav-bar-icons/map-on.svg")
 const SETTINGS_OFF = preload("res://assets/ui/nav-bar-icons/settings-off.svg")
 const SETTINGS_ON = preload("res://assets/ui/nav-bar-icons/settings-on.svg")
 
-@export var group: ButtonGroup
+@onready var group: ButtonGroup = ButtonGroup.new()
 
 var buttons_quantity: int = 0
 var pressed_index: int = 0
 
 var selected_node: Control
 
-var resolutions := [
-	Vector2i(1920, 1080), Vector2i(1280, 720), Vector2i(800, 600), Vector2i(400, 300)
-]
-var sizes := [Vector2i(1152, 648), Vector2i(576, 324)]
+@onready var color_rect_header = %ColorRect_Header
 
-@onready var color_rect_header = $ColorRect_Header
+@onready var control_discover = %Control_Discover
+@onready var control_settings = %Control_Settings
+@onready var control_map = %Control_Map
+@onready var control_backpack: Backpack = %Control_Backpack
 
-@onready var control_discover = $ColorRect_Background/Control_Discover
-@onready var control_settings = $ColorRect_Background/Control_Settings
-@onready var control_map = $ColorRect_Background/Control_Map
-@onready var control_backpack = $ColorRect_Background/Control_Backpack
-
-@onready
-var button_discover = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover
-@onready
-var button_map = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map
-@onready
-var button_backpack = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack
-@onready
-var button_settings = $ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings
+@onready var button_discover = %Button_Discover
+@onready var button_map = %Button_Map
+@onready var button_backpack = %Button_Backpack
+@onready var button_settings = %Button_Settings
 
 
 func _ready():
@@ -101,6 +92,9 @@ func hide_all():
 
 
 func _on_button_close_pressed():
+	if control_backpack.has_changes():
+		await control_backpack.async_save_profile()
+
 	emit_signal("hide_menu")
 
 

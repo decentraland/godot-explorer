@@ -8,7 +8,6 @@
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
 [ext_resource type="Texture2D" uid="uid://ck0o5otm5qv8k" path="res://assets/ui/nav-bar-icons/explorer-off.svg" id="6_hwdsi"]
 [ext_resource type="Texture2D" uid="uid://dpbvomx45a2bu" path="res://assets/ui/nav-bar-icons/map-off.svg" id="7_n821n"]
-[ext_resource type="ButtonGroup" uid="uid://73odg1nwdkof" path="res://src/ui/components/menu/button_group_menu_tabs.tres" id="8_ao4hb"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="8_d38wp"]
 [ext_resource type="Texture2D" uid="uid://3w81orc6dom3" path="res://assets/ui/nav-bar-icons/backpack-off.svg" id="8_dg57i"]
 [ext_resource type="Texture2D" uid="uid://3hwotq2y3fji" path="res://assets/ui/nav-bar-icons/settings-off.svg" id="9_7nnp3"]
@@ -19,6 +18,9 @@
 [ext_resource type="Texture2D" uid="uid://k7ufueequ8k0" path="res://assets/ui/backpack/backpack-bg.png" id="17_8btb2"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_dm3ec"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_yfago"]
+resource_name = "Tabs"
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_60djt"]
 bg_color = Color(0, 0, 0, 1)
@@ -33,7 +35,17 @@ shader_parameter/strength = 0.9
 shader_parameter/speed = 0.025
 shader_parameter/angle = 0.0
 
-[node name="Menu" type="VBoxContainer"]
+[node name="Menu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_cgghr")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -43,15 +55,14 @@ focus_mode = 1
 mouse_force_pass_scroll_events = false
 theme = ExtResource("1_ji0pe")
 theme_override_constants/separation = 0
-script = ExtResource("2_cgghr")
-group = ExtResource("8_ao4hb")
 
-[node name="ColorRect_Header" type="ColorRect" parent="."]
+[node name="ColorRect_Header" type="ColorRect" parent="VBoxContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 color = Color(0.0862745, 0.0784314, 0.105882, 1)
 
-[node name="HBoxContainer_Header" type="HBoxContainer" parent="ColorRect_Header"]
+[node name="HBoxContainer_Header" type="HBoxContainer" parent="VBoxContainer/ColorRect_Header"]
 layout_mode = 1
 anchors_preset = 14
 anchor_top = 0.5
@@ -63,28 +74,28 @@ grow_horizontal = 2
 grow_vertical = 2
 alignment = 1
 
-[node name="MarginContainer_Left" type="MarginContainer" parent="ColorRect_Header/HBoxContainer_Header"]
+[node name="MarginContainer_Left" type="MarginContainer" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header"]
 layout_mode = 2
 theme_override_constants/margin_left = 50
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Header/HBoxContainer_Header/MarginContainer_Left"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/MarginContainer_Left"]
 layout_mode = 2
 alignment = 1
 
-[node name="HBoxContainer_Logo" type="HBoxContainer" parent="ColorRect_Header/HBoxContainer_Header/MarginContainer_Left/VBoxContainer"]
+[node name="HBoxContainer_Logo" type="HBoxContainer" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/MarginContainer_Left/VBoxContainer"]
 layout_mode = 2
 
-[node name="TextureRect_Logo" type="TextureRect" parent="ColorRect_Header/HBoxContainer_Header/MarginContainer_Left/VBoxContainer/HBoxContainer_Logo"]
+[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/MarginContainer_Left/VBoxContainer/HBoxContainer_Logo"]
 custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 texture = ExtResource("12_eucri")
 expand_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="ColorRect_Header/HBoxContainer_Header/MarginContainer_Left/VBoxContainer/HBoxContainer_Logo"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/MarginContainer_Left/VBoxContainer/HBoxContainer_Logo"]
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_dm3ec")
 
-[node name="Label" type="Label" parent="ColorRect_Header/HBoxContainer_Header/MarginContainer_Left/VBoxContainer/HBoxContainer_Logo"]
+[node name="Label" type="Label" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/MarginContainer_Left/VBoxContainer/HBoxContainer_Logo"]
 layout_mode = 2
 size_flags_vertical = 1
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -93,14 +104,15 @@ theme_override_font_sizes/font_size = 18
 text = "ALPHA"
 vertical_alignment = 1
 
-[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="ColorRect_Header/HBoxContainer_Header"]
+[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header"]
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 2
 theme_override_constants/separation = 50
 alignment = 1
 
-[node name="Button_Discover" type="Button" parent="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+[node name="Button_Discover" type="Button" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -113,7 +125,7 @@ theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
-button_group = ExtResource("8_ao4hb")
+button_group = SubResource("ButtonGroup_yfago")
 text = "DISCOVER"
 icon = ExtResource("6_hwdsi")
 flat = true
@@ -121,7 +133,8 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="Button_Map" type="Button" parent="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+[node name="Button_Map" type="Button" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -134,7 +147,7 @@ theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
-button_group = ExtResource("8_ao4hb")
+button_group = SubResource("ButtonGroup_yfago")
 text = "MAP"
 icon = ExtResource("7_n821n")
 flat = true
@@ -142,7 +155,8 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="Button_Backpack" type="Button" parent="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+[node name="Button_Backpack" type="Button" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -155,7 +169,7 @@ theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
-button_group = ExtResource("8_ao4hb")
+button_group = SubResource("ButtonGroup_yfago")
 text = "BACKPACK"
 icon = ExtResource("8_dg57i")
 flat = true
@@ -163,7 +177,8 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="Button_Settings" type="Button" parent="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+[node name="Button_Settings" type="Button" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -176,7 +191,7 @@ theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
-button_group = ExtResource("8_ao4hb")
+button_group = SubResource("ButtonGroup_yfago")
 text = "SETTINGS"
 icon = ExtResource("9_7nnp3")
 flat = true
@@ -184,16 +199,16 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="MarginContainer_Right" type="MarginContainer" parent="ColorRect_Header/HBoxContainer_Header"]
+[node name="MarginContainer_Right" type="MarginContainer" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header"]
 custom_minimum_size = Vector2(152, 0)
 layout_mode = 2
 theme_override_constants/margin_right = 50
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Header/HBoxContainer_Header/MarginContainer_Right"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/MarginContainer_Right"]
 layout_mode = 2
 alignment = 2
 
-[node name="Button_Close" type="Button" parent="ColorRect_Header/HBoxContainer_Header/MarginContainer_Right/HBoxContainer"]
+[node name="Button_Close" type="Button" parent="VBoxContainer/ColorRect_Header/HBoxContainer_Header/MarginContainer_Right/HBoxContainer"]
 custom_minimum_size = Vector2(52, 52)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -205,39 +220,43 @@ theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1
 theme_override_constants/icon_max_width = 20
 theme_override_styles/normal = SubResource("StyleBoxFlat_60djt")
 toggle_mode = true
-button_group = ExtResource("8_ao4hb")
+button_group = SubResource("ButtonGroup_yfago")
 icon = ExtResource("12_rk6dl")
 icon_alignment = 1
 expand_icon = true
 
-[node name="ColorRect_Separator" type="ColorRect" parent="."]
+[node name="ColorRect_Separator" type="ColorRect" parent="VBoxContainer"]
 material = SubResource("ShaderMaterial_t4bn8")
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 
-[node name="ColorRect_Background" type="ColorRect" parent="."]
+[node name="ColorRect_Background" type="ColorRect" parent="VBoxContainer"]
 show_behind_parent = true
 layout_mode = 2
 size_flags_vertical = 3
 color = Color(0.85098, 0.843137, 0.866667, 1)
 
-[node name="Control_Discover" parent="ColorRect_Background" instance=ExtResource("4_5qyiw")]
+[node name="Control_Discover" parent="VBoxContainer/ColorRect_Background" instance=ExtResource("4_5qyiw")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="Control_Settings" parent="ColorRect_Background" instance=ExtResource("3_1stdy")]
+[node name="Control_Settings" parent="VBoxContainer/ColorRect_Background" instance=ExtResource("3_1stdy")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="Control_Map" parent="ColorRect_Background" instance=ExtResource("4_jtsir")]
+[node name="Control_Map" parent="VBoxContainer/ColorRect_Background" instance=ExtResource("4_jtsir")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="Control_Backpack" parent="ColorRect_Background" instance=ExtResource("8_d38wp")]
+[node name="Control_Backpack" parent="VBoxContainer/ColorRect_Background" instance=ExtResource("8_d38wp")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="ColorRect_Background" type="ColorRect" parent="ColorRect_Background/Control_Backpack"]
+[node name="ColorRect_Background" type="ColorRect" parent="VBoxContainer/ColorRect_Background/Control_Backpack"]
 show_behind_parent = true
 layout_mode = 1
 anchors_preset = 15
@@ -248,7 +267,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.898039, 0.882353, 0.87451, 1)
 
-[node name="TextureRect_Background" type="TextureRect" parent="ColorRect_Background/Control_Backpack"]
+[node name="TextureRect_Background" type="TextureRect" parent="VBoxContainer/ColorRect_Background/Control_Backpack"]
 show_behind_parent = true
 layout_mode = 1
 anchors_preset = 15
@@ -261,12 +280,11 @@ texture = ExtResource("17_8btb2")
 expand_mode = 2
 stretch_mode = 6
 
-[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="pressed" from="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="." method="_on_button_discover_pressed"]
-[connection signal="pressed" from="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
-[connection signal="pressed" from="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_pressed"]
-[connection signal="pressed" from="ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings" to="." method="_on_button_settings_pressed"]
-[connection signal="pressed" from="ColorRect_Header/HBoxContainer_Header/MarginContainer_Right/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]
-[connection signal="preview_hot_reload" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_preview_hot_reload"]
-[connection signal="request_debug_panel" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_request_debug_panel"]
-[connection signal="request_pause_scenes" from="ColorRect_Background/Control_Settings" to="." method="_on_control_settings_request_pause_scenes"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="VBoxContainer" method="_on_button_discover_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map" to="VBoxContainer" method="_on_button_map_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="VBoxContainer" method="_on_button_backpack_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings" to="VBoxContainer" method="_on_button_settings_pressed"]
+[connection signal="pressed" from="VBoxContainer/ColorRect_Header/HBoxContainer_Header/MarginContainer_Right/HBoxContainer/Button_Close" to="VBoxContainer" method="_on_button_close_pressed"]
+[connection signal="preview_hot_reload" from="VBoxContainer/ColorRect_Background/Control_Settings" to="VBoxContainer" method="_on_control_settings_preview_hot_reload"]
+[connection signal="request_debug_panel" from="VBoxContainer/ColorRect_Background/Control_Settings" to="VBoxContainer" method="_on_control_settings_request_debug_panel"]
+[connection signal="request_pause_scenes" from="VBoxContainer/ColorRect_Background/Control_Settings" to="VBoxContainer" method="_on_control_settings_request_pause_scenes"]

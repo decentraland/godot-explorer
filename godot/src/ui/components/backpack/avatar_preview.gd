@@ -95,13 +95,15 @@ func _on_gui_input(event):
 
 func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: Variant = null) -> Image:
 	# Save
-	var orig_size = subviewport.size
+	var orig_size = self.size
 	var orig_fov = camera_3d.fov
 	
 	# Code
 	camera_3d.position = HEAD_CAMERA_POSITION if face else BODY_CAMERA_POSITION
 	if fov is float:
 		camera_3d.fov = fov
+	
+	self.size = dest_size
 	subviewport.size = dest_size
 	
 	for i in range(60):
@@ -110,6 +112,7 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: Variant = nu
 	var img := subviewport.get_texture().get_image()
 
 	# Restore
+	self.size = orig_size
 	subviewport.size = orig_size
 	camera_3d.position = BODY_CAMERA_POSITION
 	camera_3d.fov = orig_fov

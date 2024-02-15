@@ -1,3 +1,4 @@
+class_name Backpack
 extends Control
 
 const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
@@ -5,6 +6,8 @@ const WEARABLE_ITEM_INSTANTIABLE = preload(
 	"res://src/ui/components/wearable_item/wearable_item.tscn"
 )
 const FILTER: Texture = preload("res://assets/ui/Filter.svg")
+
+var _has_changes: bool = false
 
 var wearable_button_group = ButtonGroup.new()
 var filtered_data: Array
@@ -127,17 +130,17 @@ func _physics_process(_delta):
 
 	if request_show_wearables:
 		request_show_wearables = false
-		show_wearables()
+		_show_wearables()
 
 
-func set_avatar_loading() -> int:
+func _set_avatar_loading() -> int:
 	avatar_preview.hide()
 	avatar_loading.show()
 	avatar_loading_counter += 1
 	return avatar_loading_counter
 
 
-func unset_avatar_loading(current: int):
+func _unset_avatar_loading(current: int):
 	if current != avatar_loading_counter:
 		return
 	avatar_loading.hide()
@@ -147,13 +150,14 @@ func unset_avatar_loading(current: int):
 func _async_update_avatar():
 	mutable_profile.set_avatar(mutable_avatar)
 
-	var loading_id := set_avatar_loading()
+	var loading_id := _set_avatar_loading()
 	await avatar_preview.avatar.async_update_avatar_from_profile(mutable_profile)
-	unset_avatar_loading(loading_id)
+	_unset_avatar_loading(loading_id)
 	button_save_profile.disabled = false
+	_has_changes = true
 
 
-func load_filtered_data(filter: String):
+func _load_filtered_data(filter: String):
 	if mutable_avatar == null:
 		return
 
@@ -171,7 +175,7 @@ func load_filtered_data(filter: String):
 	request_show_wearables = true
 
 
-func can_unequip(category: String) -> bool:
+func _can_unequip(category: String) -> bool:
 	return (
 		category != Wearables.Categories.BODY_SHAPE
 		and category != Wearables.Categories.EYES
@@ -179,7 +183,7 @@ func can_unequip(category: String) -> bool:
 	)
 
 
-func show_wearables():
+func _show_wearables():
 	for child in grid_container_wearables_list.get_children():
 		child.queue_free()
 
@@ -190,7 +194,7 @@ func show_wearables():
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		var wearable = wearable_data[wearable_id]
 		grid_container_wearables_list.add_child(wearable_item)
-		wearable_button_group.allow_unpress = can_unequip(wearable.get_category())
+		wearable_button_group.allow_unpress = _can_unequip(wearable.get_category())
 		wearable_item.button_group = wearable_button_group
 		wearable_item.async_set_wearable(wearable)
 
@@ -213,7 +217,7 @@ func _on_main_category_filter_type(type: String):
 
 
 func _on_wearable_filter_button_filter_type(type):
-	load_filtered_data(type)
+	_load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
 
 	var should_hide = false
@@ -266,7 +270,8 @@ func async_save_profile():
 	
 	mutable_profile.set_avatar(mutable_avatar)
 
-	Global.player_identity.async_deploy_profile(mutable_profile)
+	await Global.player_identity.async_deploy_profile(mutable_profile)
+	_has_changes = false
 
 
 func _on_button_save_profile_pressed():
@@ -382,9 +387,9 @@ func _on_color_picker_panel_hided():
 	skin_color_picker.set_pressed(false)
 
 
-func _on_hidden():
-	async_save_profile()
-
-
 func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
 	Global.open_url("https://decentraland.org/marketplace/browse?section=wearables")
+
+
+func has_changes():
+	return _has_changes

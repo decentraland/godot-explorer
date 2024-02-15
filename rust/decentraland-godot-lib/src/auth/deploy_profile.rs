@@ -95,7 +95,7 @@ pub async fn prepare_deploy_profile(
     );
 
     // add images
-    /*if let Some(snapshots) = profile.content.avatar.snapshots {
+    if let Some(snapshots) = profile.content.avatar.snapshots {
         //form_data.add_text("files", "");
         let content_folder = format!(
             "{}/content/",
@@ -105,7 +105,7 @@ pub async fn prepare_deploy_profile(
         godot_print!("upload snapshots {}", body_path);
         form_data.add_file(snapshots.body.clone(), body_path);
         form_data.add_file(snapshots.face256.clone(), format!("{}{}", content_folder, snapshots.face256));
-    }*/
+    }
 
     let mut prepared = form_data.prepare()?;
     let mut prepared_data = Vec::default();
