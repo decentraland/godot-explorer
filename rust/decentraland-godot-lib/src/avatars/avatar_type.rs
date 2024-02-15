@@ -4,10 +4,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::{
-    comms::profile::{AvatarColor, AvatarEmote, AvatarSnapshots, AvatarWireFormat},
-    dcl::scene_apis::Snapshots,
-};
+use crate::comms::profile::{AvatarColor, AvatarEmote, AvatarSnapshots, AvatarWireFormat};
 
 const AVATAR_EMOTE_SLOTS_COUNT: usize = 10;
 const DEFAULT_EMOTES: [&str; AVATAR_EMOTE_SLOTS_COUNT] = [
