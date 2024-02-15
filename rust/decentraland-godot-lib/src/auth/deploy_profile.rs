@@ -94,6 +94,8 @@ pub async fn prepare_deploy_profile(
     );
 
     // todo: add images
+    form_data.add_text("files", cid.clone());
+    form_data.add_file(name, path)
 
     let mut prepared = form_data.prepare()?;
     let mut prepared_data = Vec::default();

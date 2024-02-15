@@ -116,7 +116,6 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="HBoxContainer_Backpack/Control_LeftBar"]
-visible = false
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -182,7 +181,6 @@ layout_mode = 2
 
 [node name="Button_SaveProfile" type="Button" parent="HBoxContainer_Backpack/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 size_flags_horizontal = 3

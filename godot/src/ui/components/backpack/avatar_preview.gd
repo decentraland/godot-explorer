@@ -1,3 +1,4 @@
+class_name AvatarPreview
 extends SubViewportContainer
 
 const MIN_CAMERA_Z = -3.5
@@ -19,8 +20,9 @@ var start_dragging_position
 var dirty_is_dragging
 
 @onready var avatar = %Avatar
-@onready var camera_3d = $SubViewport/Camera3D
+@onready var camera_3d = %Camera3D
 @onready var platform = %Platform
+@onready var subviewport: SubViewport = %SubViewport
 
 
 func _ready():
@@ -31,8 +33,9 @@ func _ready():
 		gui_input.connect(self._on_gui_input)
 
 	if Global.standalone:
-		#avatar.async_update_avatar(Global.config.avatar_profile)
-		pass
+		Global.player_identity.set_default_profile()
+		var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+		avatar.async_update_avatar_from_profile(profile)
 
 
 func focus_camera_on(type):
@@ -88,3 +91,25 @@ func _on_gui_input(event):
 			)
 			avatar.rotation.y = start_angle + diff.x
 			camera_3d.transform = changed_transform
+
+
+func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: Variant = null) -> Image:
+	# Save
+	var orig_size = subviewport.size
+	var orig_fov = camera_3d.fov
+	
+	# Code
+	camera_3d.position = HEAD_CAMERA_POSITION if face else BODY_CAMERA_POSITION
+	if fov is float:
+		camera_3d.fov = fov
+	subviewport.size = dest_size
+	
+	await get_tree().process_frame
+	
+	var img := subviewport.get_texture().get_image()
+
+	# Restore
+	subviewport.size = orig_size
+	camera_3d.position = BODY_CAMERA_POSITION
+	camera_3d.fov = orig_fov
+	return img

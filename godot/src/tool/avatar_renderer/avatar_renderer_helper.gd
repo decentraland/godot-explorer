@@ -2,7 +2,7 @@ class_name AvatarRendererHelper
 extends RefCounted
 
 
-class AvatarEntry:
+class AvatarRendererSpecs:
 	var entity := ""
 	var dest_path := ""
 	var width := 2048
@@ -12,14 +12,12 @@ class AvatarEntry:
 	var face_width := 256
 	var face_height := 256
 	var face_zoom := 25
-	var avatar: Dictionary
+	
+	var avatar: DclAvatarWireFormat
 
-	static func from_json(value):
-		if value == null or not value is Dictionary:
-			printerr("avatar is not a dictionary", value)
-			return
-
-		var ret := AvatarEntry.new()
+	static func from_dictionary(value: Dictionary) -> AvatarRendererSpecs:
+		var ret = AvatarRendererSpecs.new()
+		
 		ret.entity = value.get("entity", "")
 		ret.dest_path = value.get("destPath", "")
 		ret.width = value.get("width", 2048)
@@ -28,7 +26,7 @@ class AvatarEntry:
 		ret.face_width = value.get("faceWidth", 256)
 		ret.face_height = value.get("faceHeight", 256)
 		ret.face_zoom = value.get("faceZoom", 25)
-		ret.avatar = value.get("avatar")
+		ret.avatar = DclAvatarWireFormat.from_godot_dictionary(value.get("avatar", {}))
 
 		if ret.dest_path is String and ret.avatar != null:
 			return ret
@@ -38,7 +36,7 @@ class AvatarEntry:
 
 class AvatarFile:
 	var base_url: String
-	var payload: Array[AvatarEntry]
+	var profiles: Array[AvatarRendererSpecs]
 
 	static func from_file_path(file_path: String):
 		var file = FileAccess.open(file_path, FileAccess.READ)
@@ -63,13 +61,9 @@ class AvatarFile:
 		var ret := AvatarFile.new()
 
 		ret.base_url = tmp_base_url
-		ret.payload = []
+		ret.profiles = []
 		for maybe_entry in tmp_payload:
-			var entry = AvatarEntry.from_json(maybe_entry)
-			if entry == null:
-				printerr("payload entry dismissed")
-				continue
-
-			ret.payload.push_back(entry)
+			var profile: AvatarRendererSpecs = AvatarRendererSpecs.from_dictionary(maybe_entry)
+			ret.profiles.push_back(profile)
 
 		return ret

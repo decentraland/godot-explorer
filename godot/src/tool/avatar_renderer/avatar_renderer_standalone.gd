@@ -1,17 +1,14 @@
-extends Node2D
+extends Node
 
 const USE_TEST_INPUT = false
 
 var logs: Array[String] = []
 
-var payload_to_process: AvatarRendererHelper.AvatarFile
-var current_payload_index: int = 0
-var current_avatar = {}
+var profiles_to_process: AvatarRendererHelper.AvatarFile
+var current_profile_index: int = 0
+var current_avatar: DclAvatarWireFormat
 
-@onready var avatar_node: Avatar = $SubViewportContainer/SubViewport/Avatar
-@onready var sub_viewport: SubViewport = $SubViewportContainer/SubViewport
-@onready var camera_3d_perpective = %Camera3D_Perpective
-
+@onready var avatar_preview = %AvatarPreview
 
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
@@ -41,17 +38,17 @@ func _ready():
 		get_tree().quit(1)
 		return
 
-	payload_to_process = from_params[0]
-	if payload_to_process.payload.is_empty():
+	profiles_to_process = from_params[0]
+	if profiles_to_process.profiles.is_empty():
 		printerr("no avatars to process")
 		get_tree().quit(2)
 		return
 
 	# Disable some functions
-	Global.realm.async_set_realm("null")
+	#Global.realm.async_set_realm("null")
 	Global.scene_runner.set_pause(true)
 
-	Global.realm.content_base_url = payload_to_process.base_url
+	Global.realm.content_base_url = profiles_to_process.base_url
 
 	self.start.call_deferred()
 
@@ -67,20 +64,23 @@ func flush_logs():
 
 
 func async_update_avatar(index: int):
-	var avatar_entry: AvatarRendererHelper.AvatarEntry = payload_to_process.payload[index]
-	current_avatar = avatar_entry.avatar
-	current_payload_index = index
+	var profile: AvatarRendererHelper.AvatarRendererSpecs = profiles_to_process.profiles[index]
+
+	current_avatar = profile.avatar
+	current_profile_index = index
 
 	flush_logs()
 
-	if not avatar_entry.entity.is_empty():
-		prints("processing payload entity", avatar_entry.entity)
+	if not profile.entity.is_empty():
+		prints("processing payload entity", profile.entity)
 	else:
-		prints("processing payload", current_payload_index)
+		prints("processing payload", current_profile_index)
 
 	await get_tree().process_frame
 
-	await avatar_node.async_update_avatar(current_avatar)
+	await avatar_preview.avatar.async_update_avatar(current_avatar)
+	
+	await _async_on_avatar_avatar_loaded()
 
 
 func ensure_ends_with(path: String, ends: String) -> String:
@@ -97,40 +97,27 @@ func ensure_base_dir_exists(path: String) -> void:
 
 
 func _async_on_avatar_avatar_loaded():
-	var payload := payload_to_process.payload[current_payload_index]
+	var profile := profiles_to_process.profiles[current_profile_index]
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 
-	# full body fov 90, y=1
-	sub_viewport.size = Vector2(payload.width, payload.height)
-	camera_3d_perpective.set_fov(90)
-	camera_3d_perpective.position.y = 1.0
-
-	await get_tree().process_frame
-	await get_tree().process_frame
 	await get_tree().process_frame
 
-	var img := sub_viewport.get_texture().get_image()
-	var dest_path := ensure_ends_with(payload.dest_path, ".png")
+	var dest_path := ensure_ends_with(profile.dest_path, ".png")
 	ensure_base_dir_exists(dest_path)
 
-	img.save_png(dest_path)
+	var bodyImage = await avatar_preview.async_get_viewport_image(false, Vector2i(profile.width, profile.height))
+	bodyImage.save_png(dest_path)
 	logs.push_back("🟢 " + dest_path)
 
-	if not payload.face_dest_path.is_empty():
-		# face = fov 20, y=1.7
-		sub_viewport.size = Vector2(payload.face_width, payload.face_height)
-		camera_3d_perpective.set_fov(payload.face_zoom)
-		camera_3d_perpective.position.y = 1.75
-		await get_tree().process_frame
-
-		var face_img := sub_viewport.get_texture().get_image()
-		var face_dest_path := ensure_ends_with(payload.face_dest_path, ".png")
+	if not profile.face_dest_path.is_empty():
+		var face_dest_path := ensure_ends_with(profile.face_dest_path, ".png")
 		ensure_base_dir_exists(face_dest_path)
 
-		face_img.save_png(face_dest_path)
+		var faceImage = await avatar_preview.async_get_viewport_image(true, Vector2i(profile.face_width, profile.face_height))
+		faceImage.save_png(face_dest_path)
 		logs.push_back("🟢 " + face_dest_path)
 
-	if current_payload_index >= payload_to_process.payload.size() - 1:
+	if current_profile_index >= profiles_to_process.profiles.size() - 1:
 		Global.testing_tools.exit_gracefully(0)
 	else:
-		async_update_avatar.call_deferred(current_payload_index + 1)
+		async_update_avatar.call_deferred(current_profile_index + 1)

@@ -29,7 +29,7 @@ var avatar_loading_counter: int = 0
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
 @onready var line_edit_name = %LineEdit_Name
-@onready var avatar_preview = %AvatarPreview
+@onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var avatar_loading = %TextureProgressBar_AvatarLoading
 @onready var button_save_profile = %Button_SaveProfile
 
@@ -239,18 +239,38 @@ func _on_line_edit_name_text_changed(_new_text):
 	button_save_profile.disabled = false
 
 
-func save_profile():
+func _async_prepare_snapshots():
+	var face = await avatar_preview.async_get_viewport_image(true, Vector2i(256, 256))
+	#var body = await avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
+
+	#var body_data: PackedByteArray = body.save_png_to_buffer()
+	#var body_path = Global.config.local_content_dir + DclHashing.hash_v1(body_data)
+	#var body_file = FileAccess.open(body_path, FileAccess.WRITE)
+	#body_file.store_buffer(body_data)
+	
+	var face_data: PackedByteArray = face.save_png_to_buffer()
+	var face_path = Global.config.local_content_dir + DclHashing.hash_v1(face_data)
+	var face_file = FileAccess.open(face_path, FileAccess.WRITE)
+	face_file.store_buffer(face_data)
+	
+	prints("snapshots", face_path)
+
+
+func async_save_profile():
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	mutable_profile.set_name(line_edit_name.text)
 	mutable_avatar.set_name(line_edit_name.text)
 
 	mutable_profile.set_avatar(mutable_avatar)
+	
+	await _async_prepare_snapshots()
+
 	Global.player_identity.async_deploy_profile(mutable_profile)
 
 
 func _on_button_save_profile_pressed():
 	button_save_profile.disabled = true
-	save_profile()
+	async_save_profile()
 
 
 func _on_wearable_equip(wearable_id: String):
@@ -362,7 +382,7 @@ func _on_color_picker_panel_hided():
 
 
 func _on_hidden():
-	save_profile()
+	async_save_profile()
 
 
 func _on_rich_text_box_open_marketplace_meta_clicked(_meta):

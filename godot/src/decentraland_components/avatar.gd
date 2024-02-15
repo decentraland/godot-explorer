@@ -180,6 +180,9 @@ func play_emote_by_index(index: int) -> String:
 
 	return emote_id
 
+func restore_freeze():
+	animation_tree.process_mode = Node.PROCESS_MODE_INHERIT
+	animation_player.play("Idle")
 
 func freeze_on_idle():
 	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED

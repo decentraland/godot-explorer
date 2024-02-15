@@ -46,8 +46,7 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool)
 		if Global.config.guest_profile.is_empty():
 			self.set_default_profile()
 		else:
-			var guest_profile := DclUserProfile.new()
-			guest_profile.from_godot_dictionary(Global.config.guest_profile)
+			var guest_profile := DclUserProfile.from_godot_dictionary(Global.config.guest_profile)
 			self.set_profile(guest_profile)
 		return
 

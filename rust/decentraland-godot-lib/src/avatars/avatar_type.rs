@@ -4,7 +4,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::comms::profile::{AvatarColor, AvatarEmote, AvatarWireFormat};
+use crate::{comms::profile::{AvatarColor, AvatarEmote, AvatarSnapshots, AvatarWireFormat}, dcl::scene_apis::Snapshots};
 
 const AVATAR_EMOTE_SLOTS_COUNT: usize = 10;
 const DEFAULT_EMOTES: [&str; AVATAR_EMOTE_SLOTS_COUNT] = [
@@ -106,6 +106,24 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
+    fn get_snapshots_face256(&self) -> GString {
+        if let Some(snapshots) = &self.inner.snapshots {
+            GString::from(snapshots.face256.clone())
+        } else {
+            GString::from("")
+        }
+    }
+
+    #[func]
+    fn get_snapshots_body(&self) -> GString {
+        if let Some(snapshots) = &self.inner.snapshots {
+            GString::from(snapshots.body.clone())
+        } else {
+            GString::from("")
+        }
+    }
+
+    #[func]
     fn set_name(&mut self, name: GString) {
         self.inner.name = Some(name.to_string());
     }
@@ -154,5 +172,26 @@ impl DclAvatarWireFormat {
             });
         }
         self.inner.emotes = Some(emotes_vec);
+    }
+
+    #[func]
+    fn set_snapshots(&mut self, face256: GString, body: GString) {
+        self.inner.snapshots = Some(AvatarSnapshots {
+            face256: face256.to_string(),
+            body: body.to_string()
+        });
+    }
+
+    #[func]
+    pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclAvatarWireFormat> {
+        let value = godot::engine::Json::stringify(dictionary.to_variant());
+        DclAvatarWireFormat::from_gd(serde_json::from_str(value.to_string().as_str()).unwrap_or_default())
+    }
+
+    #[func]
+    pub fn to_godot_dictionary(&self) -> Dictionary {
+        let value = serde_json::to_string(&self.inner).unwrap_or_default();
+        let value = godot::engine::Json::parse_string(value.into());
+        value.to::<Dictionary>()
     }
 }

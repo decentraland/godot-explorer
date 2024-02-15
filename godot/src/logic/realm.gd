@@ -115,7 +115,6 @@ func has_realm():
 
 
 func async_set_realm(new_realm_string: String) -> void:
-	_has_realm = true
 	realm_string = new_realm_string
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)
@@ -183,4 +182,5 @@ func async_set_realm(new_realm_string: String) -> void:
 		Global.config.last_realm_joined = realm_url
 		Global.config.save_to_settings_file()
 
+		_has_realm = true
 		emit_signal("realm_changed")
