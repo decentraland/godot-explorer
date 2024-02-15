@@ -53,7 +53,7 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool)
 	async_fetch_profile(address, current_lambda_server_base_url)
 
 
-func async_deploy_profile(new_profile: DclUserProfile) -> void:
+func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) -> void:
 	var is_guest_profile = not new_profile.has_connected_web3()
 	if is_guest_profile:
 		Global.config.guest_profile = new_profile.to_godot_dictionary()

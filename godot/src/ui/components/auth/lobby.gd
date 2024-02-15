@@ -145,7 +145,7 @@ func _on_button_next_pressed():
 	current_profile.set_avatar(avatar)
 
 	# Forget, it's going to be lock until a realm is set
-	Global.player_identity.async_deploy_profile(current_profile)
+	Global.player_identity.async_deploy_profile(current_profile, true)
 
 	close_sign_in()
 

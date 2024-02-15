@@ -244,8 +244,13 @@ func _on_line_edit_name_text_changed(_new_text):
 
 
 func _async_prepare_snapshots(mutable_avatar: DclAvatarWireFormat):
-	var cloned_avatar_preview = avatar_preview.duplicate()
+	var cloned_avatar_preview: AvatarPreview = avatar_preview.duplicate()
+	cloned_avatar_preview.show_platform = false
+	cloned_avatar_preview.hide_name = true
+	cloned_avatar_preview.can_move = false
+
 	get_tree().root.add_child(cloned_avatar_preview)
+
 	cloned_avatar_preview.set_position(get_tree().root.get_visible_rect().size)
 	var face = await cloned_avatar_preview.async_get_viewport_image(true, Vector2i(256, 256))
 	var body = await cloned_avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))

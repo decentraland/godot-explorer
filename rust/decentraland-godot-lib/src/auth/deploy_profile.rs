@@ -29,6 +29,7 @@ pub struct PrepareDeployProfileData {
 pub async fn prepare_deploy_profile(
     ephemeral_auth_chain: EphemeralAuthChain,
     profile: UserProfile,
+    has_new_snapshots: bool,
 ) -> Result<(String, Vec<u8>), anyhow::Error> {
     let unix_time = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -95,18 +96,19 @@ pub async fn prepare_deploy_profile(
     );
 
     // add images
-    if let Some(snapshots) = profile.content.avatar.snapshots {
-        //form_data.add_text("files", "");
-        let content_folder = format!(
-            "{}/content/",
-            godot::engine::Os::singleton().get_user_data_dir()
-        );
-        let body_path = format!("{}{}", content_folder, snapshots.body);
-        form_data.add_file(snapshots.body.clone(), body_path);
-        form_data.add_file(
-            snapshots.face256.clone(),
-            format!("{}{}", content_folder, snapshots.face256),
-        );
+    if has_new_snapshots {
+        if let Some(snapshots) = profile.content.avatar.snapshots {
+            let content_folder = format!(
+                "{}/content/",
+                godot::engine::Os::singleton().get_user_data_dir()
+            );
+            let body_path = format!("{}{}", content_folder, snapshots.body);
+            form_data.add_file(snapshots.body.clone(), body_path);
+            form_data.add_file(
+                snapshots.face256.clone(),
+                format!("{}{}", content_folder, snapshots.face256),
+            );
+        }
     }
 
     let mut prepared = form_data.prepare()?;

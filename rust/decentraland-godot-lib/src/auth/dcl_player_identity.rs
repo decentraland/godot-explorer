@@ -399,7 +399,7 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn async_prepare_deploy_profile(&self, new_profile: Gd<DclUserProfile>) -> Gd<Promise> {
+    pub fn async_prepare_deploy_profile(&self, new_profile: Gd<DclUserProfile>, has_new_snapshots: bool) -> Gd<Promise> {
         let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();
 
@@ -412,7 +412,8 @@ impl DclPlayerIdentity {
             })
         };
 
-        let mut new_user_profile = new_profile.bind().inner.clone();
+        let new_profile = new_profile.bind();
+        let mut new_user_profile = new_profile.inner.clone();
         let eth_address = self.get_address_str().to_string();
         new_user_profile.version = current_profile.bind().inner.version + 1;
         new_user_profile.content.version = new_user_profile.version as i64;
@@ -429,6 +430,7 @@ impl DclPlayerIdentity {
                 let deploy_data = super::deploy_profile::prepare_deploy_profile(
                     ephemeral_auth_chain.clone(),
                     new_user_profile,
+                    has_new_snapshots,
                 )
                 .await;
 
