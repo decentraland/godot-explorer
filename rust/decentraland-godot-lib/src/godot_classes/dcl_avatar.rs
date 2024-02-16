@@ -82,6 +82,9 @@ impl DclAvatar {
     #[signal]
     fn change_scene_id(&self, new_scene_id: i32, prev_scene_id: i32) {}
 
+    #[signal]
+    fn emote_triggered(&self, id: GString, looping: bool) {}
+
     #[func]
     pub fn set_target_position(&mut self, new_target: Transform3D) {
         let mut diff_xz_plane = new_target.origin - self.lerp_state.target_position;

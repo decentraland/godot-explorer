@@ -1,5 +1,6 @@
 use crate::{
     dcl::crdt::{
+        grow_only_set::GenericGrowOnlySetComponentOperation,
         last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
         SceneCrdtStateProtoComponents,
     },
@@ -48,13 +49,23 @@ pub fn update_avatar_scene_updates(scene: &mut Scene, crdt_state: &mut SceneCrdt
         }
     }
 
-    // {
-    //     let avatar_emote_command_component =
-    //         SceneCrdtStateProtoComponents::get_avatar_emote_command_mut(crdt_state);
-    //     for (entity_id, value) in
-    //         scene.avatar_scene_updates.avatar_emote_command.drain()
-    //     {
-    //         avatar_emote_command_component.put(entity_id, Some(value));
-    //     }
-    // }
+    {
+        let avatar_emote_command_component =
+            SceneCrdtStateProtoComponents::get_avatar_emote_command_mut(crdt_state);
+        for (entity_id, vec_value) in scene.avatar_scene_updates.avatar_emote_command.drain() {
+            let mut timestamp: u32 = {
+                if let Some(commands) = avatar_emote_command_component.get(&entity_id) {
+                    commands.iter().map(|c| c.timestamp).max().unwrap_or(0) + 1
+                } else {
+                    0
+                }
+            };
+
+            for mut value in vec_value {
+                value.timestamp = timestamp;
+                timestamp += 1;
+                avatar_emote_command_component.append(entity_id, value);
+            }
+        }
+    }
 }

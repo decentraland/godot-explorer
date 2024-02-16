@@ -9,8 +9,10 @@ use crate::{
     comms::profile::UserProfile,
     dcl::{
         components::{
-            internal_player_data::InternalPlayerData, proto_components::kernel::comms::rfc4,
-            transform_and_parent::DclTransformAndParent, SceneEntityId,
+            internal_player_data::InternalPlayerData,
+            proto_components::{kernel::comms::rfc4, sdk::components::PbAvatarEmoteCommand},
+            transform_and_parent::DclTransformAndParent,
+            SceneEntityId,
         },
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
@@ -133,29 +135,54 @@ impl AvatarScene {
 
         let instance_id = self.base.instance_id();
         let avatar_entity_id = entity_id;
-        let callable = Callable::from_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
-            if args.len() != 2 {
-                return Err(());
-            }
+        let avatar_changed_scene_callable =
+            Callable::from_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
+                if args.len() != 2 {
+                    return Err(());
+                }
 
-            let scene_id = args[0].try_to::<i32>().map_err(|_e| ())?;
-            let prev_scene_id = args[1].try_to::<i32>().map_err(|_e| ())?;
+                let scene_id = args[0].try_to::<i32>().map_err(|_e| ())?;
+                let prev_scene_id = args[1].try_to::<i32>().map_err(|_e| ())?;
 
-            if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
-                avatar_scene.call_deferred(
-                    "on_avatar_changed_scene".into(),
-                    &[
-                        scene_id.to_variant(),
-                        prev_scene_id.to_variant(),
-                        avatar_entity_id.as_i32().to_variant(),
-                    ],
-                );
-            }
+                if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
+                    avatar_scene.call_deferred(
+                        "on_avatar_changed_scene".into(),
+                        &[
+                            scene_id.to_variant(),
+                            prev_scene_id.to_variant(),
+                            avatar_entity_id.as_i32().to_variant(),
+                        ],
+                    );
+                }
 
-            Ok(Variant::nil())
-        });
+                Ok(Variant::nil())
+            });
 
-        new_avatar.connect("change_scene_id".into(), callable);
+        let emote_triggered_callable =
+            Callable::from_fn("on_avatar_trigger_emote", move |args: &[&Variant]| {
+                if args.len() != 2 {
+                    return Err(());
+                }
+
+                let emote_id = args[0].try_to::<String>().map_err(|_e| ())?;
+                let looping = args[1].try_to::<bool>().map_err(|_e| ())?;
+
+                if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
+                    avatar_scene.call_deferred(
+                        "on_avatar_trigger_emote".into(),
+                        &[
+                            emote_id.to_variant(),
+                            looping.to_variant(),
+                            avatar_entity_id.as_i32().to_variant(),
+                        ],
+                    );
+                }
+
+                Ok(Variant::nil())
+            });
+
+        new_avatar.connect("change_scene_id".into(), avatar_changed_scene_callable);
+        new_avatar.connect("emote_triggered".into(), emote_triggered_callable);
 
         self.base.add_child(new_avatar.clone().upcast());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
@@ -177,6 +204,46 @@ impl AvatarScene {
     pub fn on_scene_spawned(&mut self) {
         for (_, avatar) in self.avatar_godot_scene.iter_mut() {
             avatar.bind_mut().on_parcel_scenes_changed();
+        }
+    }
+
+    #[func]
+    fn on_avatar_trigger_emote(&self, emote_id: GString, looping: bool, avatar_entity_id: i32) {
+        let avatar_entity_id = SceneEntityId::from_i32(avatar_entity_id);
+        let avatar_scene = self
+            .avatar_godot_scene
+            .get(&avatar_entity_id)
+            .expect("avatar not found");
+
+        let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+        let mut scene_runner = scene_runner.bind_mut();
+
+        let avatar_current_parcel_scene_id = avatar_scene.bind().get_current_parcel_scene_id();
+        let avatar_active_scene_ids = {
+            let mut scene_ids = scene_runner.get_global_scene_ids();
+            if avatar_current_parcel_scene_id != SceneId::INVALID.0 {
+                scene_ids.push(SceneId(avatar_current_parcel_scene_id));
+            }
+            scene_ids
+        };
+
+        let emote_command = PbAvatarEmoteCommand {
+            emote_urn: emote_id.to_string(),
+            r#loop: looping,
+            timestamp: 0,
+        };
+
+        // Push dirty state only in active scenes
+        for scene_id in avatar_active_scene_ids {
+            if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
+                let emote_vector = scene
+                    .avatar_scene_updates
+                    .avatar_emote_command
+                    .entry(avatar_entity_id)
+                    .or_insert(Vec::new());
+
+                emote_vector.push(emote_command.clone());
+            }
         }
     }
 

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use crate::dcl::{
-    components::SceneEntityId,
+    components::{SceneCrdtTimestamp, SceneEntityId},
     serialization::{
         reader::{DclReader, FromDclReader},
         writer::{DclWriter, ToDclWriter},
@@ -15,7 +15,12 @@ pub struct GrowOnlySet<T: 'static> {
 }
 
 pub trait GenericGrowOnlySetComponent {
-    fn append_from_binary(&mut self, entity: SceneEntityId, reader: &mut DclReader);
+    fn append_from_binary(
+        &mut self,
+        entity: SceneEntityId,
+        timestamp: SceneCrdtTimestamp,
+        reader: &mut DclReader,
+    );
     fn take_dirty(&mut self) -> HashMap<SceneEntityId, usize>;
     fn clean(&mut self, entity: SceneEntityId);
     fn clean_without_dirty(&mut self, entity: SceneEntityId);
@@ -48,8 +53,16 @@ impl<T> Default for GrowOnlySet<T> {
 }
 
 impl<T: 'static + FromDclReader + ToDclWriter> GenericGrowOnlySetComponent for GrowOnlySet<T> {
-    fn append_from_binary(&mut self, _entity: SceneEntityId, _reader: &mut DclReader) {
-        todo!();
+    fn append_from_binary(
+        &mut self,
+        entity: SceneEntityId,
+        _timestamp: SceneCrdtTimestamp,
+        reader: &mut DclReader,
+    ) {
+        let value = T::from_reader(reader);
+        if let Ok(value) = value {
+            self.append(entity, value)
+        }
     }
     fn take_dirty(&mut self) -> HashMap<SceneEntityId, usize> {
         if self.dirty.is_empty() {

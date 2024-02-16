@@ -1,7 +1,10 @@
 use crate::{
+    avatars::avatar_type::DclAvatarWireFormat,
+    comms::profile::{AvatarColor, AvatarColor3, AvatarEmote, AvatarWireFormat},
     dcl::{
-        components::SceneComponentId,
+        components::{proto_components::common::Color3, SceneComponentId},
         crdt::{
+            grow_only_set::GenericGrowOnlySetComponentOperation,
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
@@ -39,6 +42,16 @@ impl ToDictionaryColorObject for crate::dcl::components::proto_components::commo
     }
 }
 
+fn color3_to_avatar_color(color: Color3) -> AvatarColor {
+    AvatarColor {
+        color: AvatarColor3 {
+            r: color.r,
+            g: color.g,
+            b: color.b,
+        },
+    }
+}
+
 pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
@@ -62,75 +75,42 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     node_3d.remove_child(avatar_node);
                 }
             } else if let Some(new_value) = new_value {
-                // TODO: make dictionary from PbAvatarShape as SerializedProfile
-                let mut dictionary = Dictionary::new();
-                let eyes = new_value.eye_color.as_ref().unwrap_or(
-                    &crate::dcl::components::proto_components::common::Color3 {
-                        r: 0.6,
-                        g: 0.462,
-                        b: 0.356,
-                    },
-                );
-                let hair = new_value.hair_color.as_ref().unwrap_or(
-                    &crate::dcl::components::proto_components::common::Color3 {
-                        r: 0.283,
-                        g: 0.142,
-                        b: 0.0,
-                    },
-                );
-                let skin = new_value.skin_color.as_ref().unwrap_or(
-                    &crate::dcl::components::proto_components::common::Color3 {
-                        r: 0.6,
-                        g: 0.462,
-                        b: 0.356,
-                    },
-                );
-                dictionary.set(
-                    "name",
-                    GString::from(new_value.name.as_ref().unwrap_or(&"NPC".to_string())),
-                );
-                dictionary.set(
-                    "bodyShape",
-                    GString::from(new_value.body_shape.as_ref().unwrap_or(
-                        &"urn:decentraland:off-chain:base-avatars:BaseFemale".to_string(),
-                    )),
-                );
-                dictionary.set("eyes", eyes.to_dictionary_color_object());
-                dictionary.set("hair", hair.to_dictionary_color_object());
-                dictionary.set("skin", skin.to_dictionary_color_object());
-
-                let wearables = {
-                    if new_value.wearables.is_empty() {
-                        vec![
-                            "urn:decentraland:off-chain:base-avatars:f_eyes_00".to_string(),
-                            "urn:decentraland:off-chain:base-avatars:f_eyebrows_00".to_string(),
-                            "urn:decentraland:off-chain:base-avatars:f_mouth_00".to_string(),
-                            "urn:decentraland:off-chain:base-avatars:standard_hair".to_string(),
-                            "urn:decentraland:off-chain:base-avatars:f_simple_yellow_tshirt"
-                                .to_string(),
-                            "urn:decentraland:off-chain:base-avatars:f_brown_trousers".to_string(),
-                            "urn:decentraland:off-chain:base-avatars:bun_shoes".to_string(),
-                        ]
-                    } else {
-                        new_value.wearables
-                    }
+                let mut new_avatar_data = AvatarWireFormat {
+                    name: Some(new_value.name.unwrap_or("NPC".into())),
+                    wearables: new_value.wearables,
+                    emotes: Some(
+                        new_value
+                            .emotes
+                            .iter()
+                            .enumerate()
+                            .map(|(index, urn)| AvatarEmote {
+                                slot: index as u32,
+                                urn: urn.clone(),
+                            })
+                            .collect(),
+                    ),
+                    ..Default::default()
                 };
 
-                dictionary.set(
-                    "wearables",
-                    wearables
-                        .iter()
-                        .map(GString::from)
-                        .collect::<Array<GString>>()
-                        .to_variant(),
-                );
+                if let Some(body_shape) = new_value.body_shape {
+                    new_avatar_data.body_shape = Some(body_shape);
+                }
+                if let Some(eye_color) = new_value.eye_color {
+                    new_avatar_data.eyes = Some(color3_to_avatar_color(eye_color));
+                }
+                if let Some(hair_color) = new_value.hair_color {
+                    new_avatar_data.hair = Some(color3_to_avatar_color(hair_color));
+                }
+                if let Some(skin_color) = new_value.skin_color {
+                    new_avatar_data.skin = Some(color3_to_avatar_color(skin_color));
+                }
 
-                // dictionary.set("emotes", emotes);
+                let new_avatar_data = DclAvatarWireFormat::from_gd(new_avatar_data);
 
                 if let Some(mut avatar_node) = existing {
                     avatar_node.call_deferred(
-                        StringName::from(GString::from("async_update_avatar")),
-                        &[dictionary.to_variant()],
+                        "async_update_avatar".into(),
+                        &[new_avatar_data.to_variant()],
                     );
                 } else {
                     let mut new_avatar_shape = godot::engine::load::<PackedScene>(
@@ -139,17 +119,65 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     .instantiate()
                     .unwrap();
 
-                    new_avatar_shape.set(StringName::from("skip_process"), Variant::from(true));
-
+                    new_avatar_shape.set("skip_process".into(), true.to_variant());
                     new_avatar_shape.set_name(GString::from("AvatarShape"));
                     node_3d.add_child(new_avatar_shape.clone().upcast());
 
                     new_avatar_shape.call_deferred(
-                        StringName::from(GString::from("async_update_avatar")),
-                        &[dictionary.to_variant()],
+                        "async_update_avatar".into(),
+                        &[new_avatar_data.to_variant()],
                     );
                 }
             }
+        }
+    }
+}
+
+pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    let godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let dirty_gos_components = &scene.current_dirty.gos_components;
+    let avatar_shape_component =
+        SceneCrdtStateProtoComponents::get_avatar_emote_command(crdt_state);
+
+    if let Some(avatar_emote_command_dirty) =
+        dirty_gos_components.get(&SceneComponentId::AVATAR_EMOTE_COMMAND)
+    {
+        for entity in avatar_emote_command_dirty.keys() {
+            let Some(emotes) = avatar_shape_component.get(entity) else {
+                continue;
+            };
+            if emotes.is_empty() {
+                continue;
+            }
+            let Some(node_3d) = godot_dcl_scene.get_node_3d(entity) else {
+                continue;
+            };
+
+            let Some(mut avatar_node) =
+                node_3d.try_get_node_as::<Node>(NodePath::from("AvatarShape"))
+            else {
+                continue;
+            };
+
+            let emote = emotes
+                .back()
+                .expect("emotes should have at least one element");
+
+            let local_emote = emote.emote_urn.contains(".glb") || emote.emote_urn.contains(".gltf");
+            let urn = if local_emote {
+                let Some(file_hash) = scene.content_mapping.get_hash(&emote.emote_urn) else {
+                    continue;
+                };
+
+                format!(
+                    "urn:decentraland:off-chain:scene-emote:{file_hash}-{}",
+                    emote.r#loop
+                )
+            } else {
+                emote.emote_urn.clone()
+            };
+
+            avatar_node.call_deferred("async_play_emote".into(), &[urn.to_variant()]);
         }
     }
 }

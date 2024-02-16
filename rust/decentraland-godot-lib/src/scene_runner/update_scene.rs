@@ -48,6 +48,7 @@ use crate::{
         RendererResponse, SceneId,
     },
     godot_classes::dcl_global::DclGlobal,
+    scene_runner::components::avatar_shape::update_avatar_shape_emote_command,
 };
 
 // @returns true if the scene was full processed, or false if it remains something to process
@@ -211,6 +212,10 @@ pub fn _process_scene(
             }
             SceneUpdateState::AvatarShape => {
                 update_avatar_shape(scene, crdt_state);
+                false
+            }
+            SceneUpdateState::AvatarShapeEmoteCommand => {
+                update_avatar_shape_emote_command(scene, crdt_state);
                 false
             }
             SceneUpdateState::Raycasts => {
