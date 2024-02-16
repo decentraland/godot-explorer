@@ -48,7 +48,7 @@ func on_chats_arrived(chats: Array):
 		if message.begins_with(EMOTE):
 			message = message.substr(1)  # Remove prefix
 			var expression_id = message.split(" ")[0]  # Get expression id ([1] is timestamp)
-			avatar.play_emote(expression_id)
+			avatar.emote_controller.async_play_emote(expression_id)
 		elif message.begins_with(REQUEST_PING):
 			pass  # TODO: Send ACK
 		elif message.begins_with(ACK):

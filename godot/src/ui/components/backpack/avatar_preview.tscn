@@ -1,8 +1,9 @@
 [gd_scene load_steps=7 format=3 uid="uid://cy43hvd5bivso"]
 
-[ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar.tscn" id="1_dtjd5"]
+[ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="1_dtjd5"]
 [ext_resource type="Script" path="res://src/ui/components/backpack/avatar_preview.gd" id="1_sayag"]
 [ext_resource type="PackedScene" uid="uid://0ccix5xpw76a" path="res://assets/ui/backpack/platform_compressed.glb" id="3_i62gc"]
+
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_6yihh"]
 sky_top_color = Color(1, 1, 1, 1)

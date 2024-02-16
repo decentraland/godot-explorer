@@ -63,22 +63,18 @@ impl IRefCounted for DclContentMappingAndUrl {
 #[godot_api]
 impl DclContentMappingAndUrl {
     #[func]
-    fn initialize(&mut self, base_url: GString, dict: Dictionary) {
-        if !self.inner.base_url.is_empty() {
-            tracing::error!("Trying to modify an already initialized ContentMapping");
-            return;
-        }
+    fn from_values(base_url: GString, dict: Dictionary) -> Gd<DclContentMappingAndUrl> {
+        let mut value = ContentMappingAndUrl::new();
 
-        let Some(inner_mut) = Arc::get_mut(&mut self.inner) else {
-            tracing::error!("Trying to modify an already initialized ContentMapping");
-            return;
-        };
-
-        inner_mut.base_url = base_url.to_string();
-        inner_mut.content = HashMap::from_iter(
+        value.base_url = base_url.to_string();
+        value.content = HashMap::from_iter(
             dict.iter_shared()
                 .map(|(k, v)| (k.to_string().to_lowercase(), v.to_string())),
         );
+
+        Gd::from_init_fn(|_base| DclContentMappingAndUrl {
+            inner: Arc::new(value),
+        })
     }
 
     #[func]

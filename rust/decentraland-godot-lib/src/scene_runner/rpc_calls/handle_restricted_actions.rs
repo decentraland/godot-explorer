@@ -294,8 +294,13 @@ pub fn trigger_emote(
     }
 
     let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("play_emote".into(), &[Variant::from(emote_id)]);
-    avatar_node.call("broadcast_avatar_animation".into(), &[]);
+    avatar_node.call("async_play_emote".into(), &[emote_id.to_variant()]);
+    avatar_node.call(
+        "broadcast_avatar_animation".into(),
+        &[emote_id.to_variant()],
+    );
+
+    response.send(Ok(()));
 }
 
 pub fn trigger_scene_emote(
@@ -311,10 +316,14 @@ pub fn trigger_scene_emote(
         return;
     }
 
+    let Some(file_hash) = scene.content_mapping.get_hash(emote_src) else {
+        response.send(Err("Emote not found".to_string()));
+        return;
+    };
+
+    let urn = format!("urn:decentraland:off-chain:scene-emote:{file_hash}-{looping}");
     let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call(
-        "play_remote_emote".into(),
-        &[Variant::from(emote_src), Variant::from(*looping)],
-    );
-    avatar_node.call("broadcast_avatar_animation".into(), &[]);
+    avatar_node.call("async_play_emote".into(), &[urn.to_variant()]);
+    avatar_node.call("broadcast_avatar_animation".into(), &[urn.to_variant()]);
+    response.send(Ok(()));
 }

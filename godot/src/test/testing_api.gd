@@ -192,9 +192,9 @@ func async_take_and_compare_snapshot(
 	for avatar in Global.avatars.get_children():
 		if avatar is Avatar:
 			avatar.hide()
-			avatar.freeze_on_idle()
+			avatar.emote_controller.freeze_on_idle()
 
-	Global.scene_runner.player_node.avatar.freeze_on_idle()
+	Global.scene_runner.player_node.avatar.emote_controller.freeze_on_idle()
 	Global.scene_runner.player_node.avatar.hide()
 
 	await get_tree().process_frame

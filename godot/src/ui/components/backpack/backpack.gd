@@ -243,7 +243,7 @@ func _on_line_edit_name_text_changed(_new_text):
 	button_save_profile.disabled = false
 
 
-func _async_prepare_snapshots(mutable_avatar: DclAvatarWireFormat):
+func _async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat):
 	var cloned_avatar_preview: AvatarPreview = avatar_preview.duplicate()
 	cloned_avatar_preview.show_platform = false
 	cloned_avatar_preview.hide_name = true
@@ -269,7 +269,7 @@ func _async_prepare_snapshots(mutable_avatar: DclAvatarWireFormat):
 	)
 	face_file.store_buffer(face_data)
 
-	mutable_avatar.set_snapshots(face_hash, body_hash)
+	new_mutable_avatar.set_snapshots(face_hash, body_hash)
 	cloned_avatar_preview.queue_free()
 
 
