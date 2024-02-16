@@ -123,8 +123,8 @@ func _on_button_continue_pressed():
 func _on_avatar_preview_gui_input(event):
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			if not avatar_preview.avatar.emote_controoler.is_playing_emote():
-				avatar_preview.avatar.emote_controoler.play_emote("default_emotes/wave")
+			if not avatar_preview.avatar.emote_controller.is_playing():
+				avatar_preview.avatar.emote_controller.play_emote("default_emotes/wave")
 
 
 func _on_button_start_pressed():

@@ -299,6 +299,8 @@ pub fn trigger_emote(
         "broadcast_avatar_animation".into(),
         &[emote_id.to_variant()],
     );
+
+    response.send(Ok(()));
 }
 
 pub fn trigger_scene_emote(
@@ -323,4 +325,5 @@ pub fn trigger_scene_emote(
     let mut avatar_node = get_avatar_node(scene);
     avatar_node.call("async_play_emote".into(), &[urn.to_variant()]);
     avatar_node.call("broadcast_avatar_animation".into(), &[urn.to_variant()]);
+    response.send(Ok(()));
 }

@@ -95,11 +95,11 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 
 func play_emote(id: String) -> bool:
 	if not id.begins_with("urn"):
-		return play_default_emote(id)
-	return play_loaded_emote(id)
+		return _play_default_emote(id)
+	return _play_loaded_emote(id)
 
 
-func play_default_emote(default_emote_id: String) -> bool:
+func _play_default_emote(default_emote_id: String) -> bool:
 	var anim_name = "default_emotes/" + default_emote_id
 	if not animation_player.has_animation(anim_name):
 		printerr(
@@ -121,8 +121,8 @@ func play_default_emote(default_emote_id: String) -> bool:
 	return true
 
 
-func play_loaded_emote(emote_urn: String) -> bool:
-	if not loaded_emotes_by_urn.has(emote_urn):
+func _play_loaded_emote(emote_urn: String) -> bool:
+	if not _has_emote(emote_urn):
 		printerr("Emote %s not found from player '%s'" % [emote_urn, avatar.avatar_data.get_name()])
 		return false
 
@@ -160,19 +160,20 @@ func play_loaded_emote(emote_urn: String) -> bool:
 
 
 func async_play_emote(emote_urn: String):
-	if has_emote(emote_urn):
+	# Does it need to be loaded?
+	if _has_emote(emote_urn):
 		play_emote(emote_urn)
 		return
 
 	if emote_urn.contains("scene-emote"):
-		await async_load_scene_emote(emote_urn)
+		await _async_load_scene_emote(emote_urn)
 	else:
-		await async_load_emote(emote_urn)
+		await _async_load_emote(emote_urn)
 
 	play_emote(emote_urn)
 
 
-func async_load_emote(emote_urn: String):
+func _async_load_emote(emote_urn: String):
 	var emote_data_promises = Global.content_provider.fetch_wearables(
 		[emote_urn], Global.realm.get_profile_content_url()
 	)
@@ -189,10 +190,10 @@ func async_load_emote(emote_urn: String):
 	var file_hash = Wearables.get_item_main_file_hash(emote, avatar.avatar_data.get_body_shape())
 	var obj = Global.content_provider.get_emote_gltf_from_hash(file_hash)
 	if obj != null:
-		load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
+		_load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 
-func async_load_scene_emote(urn: String):
+func _async_load_scene_emote(urn: String):
 	var emote_scene_urn = EmoteSceneUrn.new(urn)
 	if emote_scene_urn.glb_hash.is_empty():
 		printerr("Error loading scene-emote ", urn)
@@ -208,24 +209,26 @@ func async_load_scene_emote(urn: String):
 	if obj is PromiseError:
 		printerr("Error loading emote '", urn, "': ", obj.get_error())
 		return
-	# var gltf_promise: Promise = Global.content_provider.fetch_gltf("emote.mp3", content_mapping, 2)
-	# await PromiseUtils.async_awaiter(gltf_promise)
+
+	# TODO: implement also audio for this
+	# var audio_promise: Promise = Global.content_provider.fetch_gltf("emote.mp3", content_mapping, 2)
+	# await PromiseUtils.async_awaiter(audio_promise)
 
 	#var obj = Global.content_provider.get_emote_gltf_from_hash(emote_scene_urn.glb_hash)
 	if obj != null:
-		load_emote_from_dcl_emote_gltf(urn, obj, emote_scene_urn.glb_hash)
-		if loaded_emotes_by_urn.has(urn):
+		_load_emote_from_dcl_emote_gltf(urn, obj, emote_scene_urn.glb_hash)
+		if _has_emote(urn):
 			loaded_emotes_by_urn[urn].looping = emote_scene_urn.looping
 			loaded_emotes_by_urn[urn].from_scene = true
 
 
-func has_emote(emote_urn: String) -> bool:
+func _has_emote(emote_urn: String) -> bool:
 	return loaded_emotes_by_urn.has(emote_urn)
 
 
-func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: String):
+func _load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: String):
 	# Avoid adding the emote twice
-	if loaded_emotes_by_urn.has(urn):
+	if _has_emote(urn):
 		return
 
 	var armature_prop: Node3D = null

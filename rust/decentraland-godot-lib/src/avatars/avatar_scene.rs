@@ -116,11 +116,12 @@ impl AvatarScene {
 
         self.avatar_entity.insert(alias, entity_id);
 
-        let mut new_avatar: Gd<DclAvatar> =
-            godot::engine::load::<PackedScene>("res://src/decentraland_components/avatar.tscn")
-                .instantiate()
-                .unwrap()
-                .cast::<DclAvatar>();
+        let mut new_avatar: Gd<DclAvatar> = godot::engine::load::<PackedScene>(
+            "res://src/decentraland_components/avatar/avatar.tscn",
+        )
+        .instantiate()
+        .unwrap()
+        .cast::<DclAvatar>();
 
         if let Some(address) = address.to_string().as_h160() {
             self.avatar_address.insert(address, alias);
