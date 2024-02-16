@@ -67,6 +67,8 @@ fn process_message(
         CrdtMessageType::AppendValue => {
             let entity = stream.read()?;
             let component: SceneComponentId = stream.read()?;
+            let timestamp: SceneCrdtTimestamp = stream.read()?;
+            let _content_len = stream.read_u32()? as usize;
 
             if !scene_crdt_state.entities.try_init(entity) {
                 return Ok(());
@@ -77,7 +79,7 @@ fn process_message(
                 return Ok(());
             };
 
-            component_definition.append_from_binary(entity, stream);
+            component_definition.append_from_binary(entity, timestamp, stream);
         }
     }
 

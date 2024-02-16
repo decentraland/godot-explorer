@@ -282,7 +282,7 @@ func async_save_profile():
 
 	mutable_profile.set_avatar(mutable_avatar)
 
-	await Global.player_identity.async_deploy_profile(mutable_profile)
+	await Global.player_identity.async_deploy_profile(mutable_profile, false)
 	_has_changes = false
 
 

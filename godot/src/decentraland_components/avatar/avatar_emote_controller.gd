@@ -75,6 +75,11 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 	animation_player = _animation_player
 	animation_tree = _animation_tree
 
+	# TODO: this is a workaround because "Local to scene" is not working when
+	#	is selected in the independent nodes.
+	#	Maybe related to https://github.com/godotengine/godot/issues/82421
+	animation_tree.tree_root = animation_tree.tree_root.duplicate(true)
+
 	# Direct dependencies
 	animation_single_emote_node = animation_tree.tree_root.get_node("Emote")
 	animation_mix_emote_node = animation_tree.tree_root.get_node("Emote_Mix")
@@ -93,10 +98,15 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 	animation_player.add_animation_library("emotes", emotes_animation_library)
 
 
-func play_emote(id: String) -> bool:
+func play_emote(id: String):
+	var triggered: bool = false
 	if not id.begins_with("urn"):
-		return _play_default_emote(id)
-	return _play_loaded_emote(id)
+		triggered = _play_default_emote(id)
+	else:
+		triggered = _play_loaded_emote(id)
+
+	if triggered:
+		avatar.call_deferred("emit_signal", "emote_triggered", id, playing_loop)
 
 
 func _play_default_emote(default_emote_id: String) -> bool:
@@ -159,7 +169,11 @@ func _play_loaded_emote(emote_urn: String) -> bool:
 	return true
 
 
-func async_play_emote(emote_urn: String):
+func async_play_emote(emote_urn: String) -> void:
+	if not emote_urn.begins_with("urn"):
+		play_emote(emote_urn)
+		return
+
 	# Does it need to be loaded?
 	if _has_emote(emote_urn):
 		play_emote(emote_urn)

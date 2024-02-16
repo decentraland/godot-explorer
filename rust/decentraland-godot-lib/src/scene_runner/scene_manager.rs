@@ -8,7 +8,7 @@ use crate::{
                 common::BorderRect,
                 sdk::components::{
                     common::{InputAction, PointerEventType, RaycastHit},
-                    PbUiCanvasInformation,
+                    PbAvatarEmoteCommand, PbUiCanvasInformation,
                 },
             },
             SceneEntityId,
@@ -186,6 +186,26 @@ impl SceneManager {
             }
         }
         false
+    }
+
+    #[func]
+    fn on_primary_player_trigger_emote(&mut self, emote_id: GString, looping: bool) {
+        let emote_command = PbAvatarEmoteCommand {
+            emote_urn: emote_id.to_string(),
+            r#loop: looping,
+            timestamp: 0,
+        };
+
+        // Primary player send to all the scenes
+        for (_, scene) in self.scenes.iter_mut() {
+            let emote_vector = scene
+                .avatar_scene_updates
+                .avatar_emote_command
+                .entry(SceneEntityId::PLAYER)
+                .or_insert(Vec::new());
+
+            emote_vector.push(emote_command.clone());
+        }
     }
 
     #[func]

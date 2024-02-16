@@ -82,6 +82,7 @@ pub enum SceneUpdateState {
     NftShape,
     Animator,
     AvatarShape,
+    AvatarShapeEmoteCommand,
     Raycasts,
     AvatarAttach,
     SceneUi,
@@ -117,7 +118,8 @@ impl SceneUpdateState {
             &Self::SyncGltfContainer => Self::NftShape,
             &Self::NftShape => Self::Animator,
             &Self::Animator => Self::AvatarShape,
-            &Self::AvatarShape => Self::Raycasts,
+            &Self::AvatarShape => Self::AvatarShapeEmoteCommand,
+            &Self::AvatarShapeEmoteCommand => Self::Raycasts,
             #[cfg(feature = "use_ffmpeg")]
             &Self::Raycasts => Self::VideoPlayer,
             #[cfg(feature = "use_ffmpeg")]

@@ -363,7 +363,7 @@ func _on_try_spawn_scene(
 func reload_scene(scene_id: String) -> void:
 	var scene = loaded_scenes.get(scene_id)
 	if scene != null:
-		var scene_number_id: int = scene.get("scene_number_id", -1)
+		var scene_number_id: int = scene.scene_number_id
 		if scene_number_id != -1:
 			Global.scene_runner.kill_scene(scene_number_id)
 
