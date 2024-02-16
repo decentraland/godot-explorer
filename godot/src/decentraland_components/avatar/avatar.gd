@@ -374,6 +374,8 @@ func apply_texture_and_mask(
 		current_material.set_shader_parameter(
 			"mask_texture", Global.content_provider.get_texture_from_hash(textures[1])
 		)
+	else:
+		current_material.set_shader_parameter("mask_texture", null)
 
 	mesh.mesh.surface_set_material(0, current_material)
 
