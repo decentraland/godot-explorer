@@ -53,8 +53,8 @@ func _on_text_edit_expr_text_changed():
 
 
 func _on_button_play_custom_pressed():
-	avatar.async_play_emote(line_edit_custom.text)
+	avatar.emote_controller.async_play_emote(line_edit_custom.text)
 
 
 func _on_button_clear_pressed():
-	avatar.clean_unused_emotes()
+	avatar.emote_controller.clean_unused_emotes()

@@ -444,24 +444,33 @@ fn duplicate_animation_resources(gltf_node: Gd<Node>) {
     }
 }
 
-fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<Gd<DclEmoteGltf>> {
-    // get the last 16 character of file_hash
-    let emote_prefix_id = file_hash
+fn get_last_16_alphanumeric(input: &str) -> String {
+    let alphanumeric: String = input
         .chars()
         .rev()
+        .filter(|c| c.is_ascii_alphanumeric())
         .take(16)
+        .collect();
+
+    alphanumeric
+        .chars()
+        .rev()
         .collect::<String>()
-        .to_lowercase();
+        .to_lowercase()
+}
+
+fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<Gd<DclEmoteGltf>> {
+    let anim_sufix_from_hash = get_last_16_alphanumeric(file_hash.as_str());
     let armature_prop = gltf_node.find_child("Armature_Prop".into());
     let Some(anim_player) = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer") else {
         return None;
     };
-    let armature_prefix = format!("Armature_Prop_{}/Skeleton3D:", emote_prefix_id);
+    let armature_prefix = format!("Armature_Prop_{}/Skeleton3D:", anim_sufix_from_hash);
 
     let armature_prop = armature_prop
         .and_then(|v| v.clone().try_cast::<Node3D>().ok())
         .map(|mut node| {
-            node.set_name(format!("Armature_Prop_{}", emote_prefix_id).into());
+            node.set_name(format!("Armature_Prop_{}", anim_sufix_from_hash).into());
             node.rotate_y(std::f32::consts::PI);
             node
         });
@@ -515,10 +524,10 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
 
         if default_anim_key.as_ref() == Some(animation_key) {
             default_animation = Some(anim.clone());
-            anim.set_name(emote_prefix_id.to_string().into())
+            anim.set_name(anim_sufix_from_hash.to_string().into())
         } else if prop_anim_key.as_ref() == Some(animation_key) {
             prop_animation = Some(anim.clone());
-            anim.set_name(format!("{emote_prefix_id}_prop").into())
+            anim.set_name(format!("{anim_sufix_from_hash}_prop").into())
         }
 
         for track_idx in 0..anim.get_track_count() {
@@ -539,7 +548,7 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
             let new_track_prop = anim.add_track(TrackType::TYPE_VALUE);
             anim.track_set_path(
                 new_track_prop,
-                format!("Armature_Prop_{}:visible", emote_prefix_id).into(),
+                format!("Armature_Prop_{}:visible", anim_sufix_from_hash).into(),
             );
             anim.track_insert_key(new_track_prop, 0.0, true.to_variant());
         }

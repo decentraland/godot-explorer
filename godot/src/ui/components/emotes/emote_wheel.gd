@@ -57,7 +57,7 @@ func _update_wheel(emote_urns: Array):
 		emote_item.emote_urn = emote_urns[i]
 		emote_item.number = i
 
-		if is_emote_default(emote_item.emote_urn_or_id):
+		if is_emote_default(emote_item.emote_urn):
 			emote_item.emote_name = DEFAULT_EMOTE_NAMES[emote_urns[i]]
 			emote_item.rarity = Wearables.ItemRarity.COMMON
 			emote_item.picture = load(
@@ -102,8 +102,8 @@ func _on_play_emote(emote_urn: String):
 	self.hide()
 	Global.explorer_grab_focus()
 	if avatar_node:
-		avatar_node.play_emote(emote_urn)
-		avatar_node.broadcast_avatar_animation(emote_urn)
+		avatar_node.emote_controller.play_emote(emote_urn)
+		avatar_node.emote_controller.broadcast_avatar_animation(emote_urn)
 
 
 func _on_select_emote(selected: bool, emote_urn: String, child: EmoteWheelItem):

@@ -170,13 +170,13 @@ func _on_button_copy_pressed():
 
 func _on_text_edit_text_changed():
 	var expression = Expression.new()
-	var err = expression.parse(expression_text_edit.text)
+	var err = expression.parse(expression_text_edit.text, ["Global"])
 
 	if err != OK:
 		expression_label.text = "Parse failed: " + expression.get_error_text()
 		return
 
-	var result = expression.execute([], self)
+	var result = expression.execute([Global], self)
 	if expression.has_execute_failed():
 		expression_label.text = "Execution failed: " + expression.get_error_text()
 		return

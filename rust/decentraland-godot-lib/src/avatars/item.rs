@@ -4,7 +4,6 @@ use crate::{
     },
     dcl::common::{
         content_entity::EntityDefinitionJson,
-        string::FindNthChar,
         wearable::{
             BaseItemEntityMetadata, EmoteADR74Representation, WearableCategory,
             WearableRepresentation,
@@ -127,19 +126,6 @@ impl DclItemEntityDefinition {
         };
 
         emote_data.r#loop
-    }
-
-    /// Returns a 12 character long prefix for the emote id, removing the tokenId if it presents
-    #[func]
-    fn get_emote_prefix_id(&self) -> GString {
-        let id = self.inner.id.to_string();
-        let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
-        let id = id[0..token_id_pos].to_lowercase();
-
-        let result = id.replace(':', "");
-        let pos = (result.len() - 12).max(0);
-
-        GString::from(&result[pos..])
     }
 
     #[func]

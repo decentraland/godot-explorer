@@ -294,8 +294,11 @@ pub fn trigger_emote(
     }
 
     let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("play_emote".into(), &[Variant::from(emote_id)]);
-    avatar_node.call("broadcast_avatar_animation".into(), &[]);
+    avatar_node.call("async_play_emote".into(), &[emote_id.to_variant()]);
+    avatar_node.call(
+        "broadcast_avatar_animation".into(),
+        &[emote_id.to_variant()],
+    );
 }
 
 pub fn trigger_scene_emote(
@@ -318,6 +321,6 @@ pub fn trigger_scene_emote(
 
     let urn = format!("urn:decentraland:off-chain:scene-emote:{file_hash}-{looping}");
     let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("play_remote_emote".into(), &[Variant::from(urn.as_str())]);
-    avatar_node.call("broadcast_avatar_animation".into(), &[Variant::from(urn)]);
+    avatar_node.call("async_play_emote".into(), &[urn.to_variant()]);
+    avatar_node.call("broadcast_avatar_animation".into(), &[urn.to_variant()]);
 }
