@@ -52,13 +52,38 @@ var inside = false
 @onready var label_number = %Label_Number
 
 
-func async_set_texture(emote: DclItemEntityDefinition) -> void:
+func async_load_from_urn(_emote_urn: String, index: int):
+	emote_urn = _emote_urn
+	number = index
+
+	if Emotes.is_emote_default(emote_urn):
+		emote_name = Emotes.DEFAULT_EMOTE_NAMES[emote_urn]
+		rarity = Wearables.ItemRarity.COMMON
+		picture = load(
+			"res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_urn
+		)
+	else:
+		var emote_data := Global.content_provider.get_wearable(emote_urn)
+		if emote_data == null:
+			# Fallback to default emote
+			await async_load_from_urn(Emotes.DEFAULT_EMOTE_NAMES.keys()[0], index)
+			return
+
+		await async_load_from_entity(emote_data)
+
+func async_load_from_entity(emote_data: DclItemEntityDefinition) -> void:
+	emote_name = emote_data.get_display_name()
+	rarity = emote_data.get_rarity()
+	await async_set_texture(emote_data)
+
+
+func async_set_texture(emote_data: DclItemEntityDefinition) -> void:
 	var promise: Promise = Global.content_provider.fetch_texture(
-		emote.get_thumbnail(), emote.get_content_mapping()
+		emote_data.get_thumbnail(), emote_data.get_content_mapping()
 	)
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:
-		printerr("Fetch texture error on ", emote.get_thumbnail(), ": ", res.get_error())
+		printerr("Fetch texture error on ", emote_data.get_thumbnail(), ": ", res.get_error())
 	else:
 		self.picture = res.texture
 

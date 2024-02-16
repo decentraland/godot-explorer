@@ -1,8 +1,22 @@
-[gd_scene load_steps=6 format=3 uid="uid://c7bnh6p6qygxu"]
+[gd_scene load_steps=8 format=3 uid="uid://blc0mna12dsxo"]
 
-[ext_resource type="Texture2D" uid="uid://c3tpoj72yuxp4" path="res://src/ui/components/emotes/emote_item.svg" id="1_qctv4"]
-[ext_resource type="Script" path="res://src/ui/components/emotes/emote_wheel_item.gd" id="2_jdnf4"]
-[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_lei38"]
+[ext_resource type="Script" path="res://src/ui/components/emotes/emote_wheel_item.gd" id="1_sckcj"]
+[ext_resource type="Texture2D" uid="uid://caviqeg8b20gg" path="res://assets/avatar/default_emotes_thumbnails/clap.png" id="2_ynh3m"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_obw18"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fdf6q"]
+bg_color = Color(0.988235, 0.988235, 0.988235, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_klstf"]
+bg_color = Color(0.988235, 0.988235, 0.988235, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [sub_resource type="Gradient" id="Gradient_mvm8j"]
 colors = PackedColorArray(1, 1, 1, 0.607843, 1, 1, 1, 0)
@@ -13,13 +27,13 @@ fill = 1
 fill_from = Vector2(0.5, 0.5)
 fill_to = Vector2(0.75, 0.25)
 
-[node name="EmoteWheelItem" type="Control"]
+[node name="EmoteSquaseItem" type="Control"]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 140.0
 offset_bottom = 140.0
 pivot_offset = Vector2(-38, 215)
-script = ExtResource("2_jdnf4")
+script = ExtResource("1_sckcj")
 
 [node name="Control_Inner" type="Control" parent="."]
 unique_name_in_owner = true
@@ -31,7 +45,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Selected" type="TextureRect" parent="Control_Inner"]
+[node name="Selected" type="Panel" parent="Control_Inner"]
 unique_name_in_owner = true
 visible = false
 modulate = Color(1, 0.501961, 0, 1)
@@ -42,10 +56,9 @@ offset_top = -3.0
 offset_right = 143.0
 offset_bottom = 143.0
 mouse_filter = 2
-texture = ExtResource("1_qctv4")
-expand_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fdf6q")
 
-[node name="Pressed" type="TextureRect" parent="Control_Inner"]
+[node name="Pressed" type="Panel" parent="Control_Inner"]
 unique_name_in_owner = true
 visible = false
 modulate = Color(0.501961, 0, 0, 1)
@@ -56,38 +69,34 @@ offset_top = -4.0
 offset_right = 144.0
 offset_bottom = 144.0
 mouse_filter = 2
-texture = ExtResource("1_qctv4")
-expand_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fdf6q")
 
-[node name="Background" type="TextureRect" parent="Control_Inner"]
+[node name="Background" type="Panel" parent="Control_Inner"]
 texture_filter = 4
 layout_mode = 1
-offset_right = 139.0
-offset_bottom = 140.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("1_qctv4")
-expand_mode = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_fdf6q")
 
-[node name="Inner" type="TextureRect" parent="Control_Inner/Background"]
+[node name="Inner" type="Panel" parent="Control_Inner/Background"]
 unique_name_in_owner = true
 self_modulate = Color(0.34902, 0.611765, 1, 1)
 texture_filter = 4
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -65.0
-offset_top = -65.0
-offset_right = 65.0
-offset_bottom = 65.0
+anchors_preset = -1
+anchor_left = 0.02
+anchor_top = 0.02
+anchor_right = 0.98
+anchor_bottom = 0.98
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(-38, 215)
 mouse_filter = 2
-texture = ExtResource("1_qctv4")
-expand_mode = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_klstf")
 
 [node name="Glow" type="TextureRect" parent="Control_Inner/Background/Inner"]
 unique_name_in_owner = true
@@ -103,31 +112,28 @@ texture = SubResource("GradientTexture2D_oacma")
 unique_name_in_owner = true
 texture_filter = 2
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -35.0
-offset_top = -31.0
-offset_right = 27.0
-offset_bottom = 31.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(32, 32)
+texture = ExtResource("2_ynh3m")
 expand_mode = 1
 
 [node name="Label_Number" type="Label" parent="Control_Inner/Background/Inner"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(20, 20)
-layout_mode = 0
-offset_left = 21.1893
-offset_top = 92.703
-offset_right = 41.1893
-offset_bottom = 112.703
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+offset_right = 20.0
+grow_vertical = 0
 pivot_offset = Vector2(10, 10)
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_fonts/font = ExtResource("3_lei38")
+theme_override_fonts/font = ExtResource("3_obw18")
 theme_override_font_sizes/font_size = 14
 text = "0"
 horizontal_alignment = 1

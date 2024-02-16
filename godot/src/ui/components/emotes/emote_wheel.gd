@@ -1,18 +1,5 @@
 extends Control
 
-const DEFAULT_EMOTE_NAMES = {
-	"handsair": "Hands Air",
-	"wave": "Wave",
-	"fistpump": "Fist Pump",
-	"dance": "Dance",
-	"raiseHand": "Raise Hand",
-	"clap": "Clap",
-	"money": "Money",
-	"kiss": "Kiss",
-	"shrug": "Shrug",
-	"headexplode": "Head Explode"
-}
-
 @export var avatar_node: Avatar = null
 
 var emote_items: Array[EmoteWheelItem] = []
@@ -38,7 +25,7 @@ func _ready():
 		avatar_node.avatar_loaded.connect(self._on_avatar_loaded)
 
 	# Load default emotes as initial state
-	_update_wheel(DEFAULT_EMOTE_NAMES.keys())
+	_update_wheel(Emotes.DEFAULT_EMOTE_NAMES.keys())
 
 
 func _on_avatar_loaded():
@@ -54,27 +41,7 @@ func _update_wheel(emote_urns: Array):
 			continue
 
 		var emote_item: EmoteWheelItem = emote_items[i]
-		emote_item.emote_urn = emote_urns[i]
-		emote_item.number = i
-
-		if is_emote_default(emote_item.emote_urn):
-			emote_item.emote_name = DEFAULT_EMOTE_NAMES[emote_urns[i]]
-			emote_item.rarity = Wearables.ItemRarity.COMMON
-			emote_item.picture = load(
-				"res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_urns[i]
-			)
-		else:
-			var emote_data := Global.content_provider.get_wearable(emote_urns[i])
-			if emote_data == null:
-				# TODO: set invalid emote reference?, fallback with defualt?
-				continue
-			emote_item.emote_name = emote_data.get_display_name()
-			emote_item.rarity = emote_data.get_rarity()
-			emote_item.async_set_texture(emote_data)
-
-
-func is_emote_default(urn_or_id: String) -> bool:
-	return DEFAULT_EMOTE_NAMES.keys().has(urn_or_id)
+		emote_item.async_load_emote(emote_urns[i], i) # Forget await
 
 
 func _gui_input(event):
