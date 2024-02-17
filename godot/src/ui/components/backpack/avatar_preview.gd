@@ -14,6 +14,8 @@ const HEAD_CAMERA_POSITION = Vector3(0, 2, -1.25)
 @export var hide_name: bool = false
 @export var show_platform: bool = false
 @export var can_move: bool = true
+@export var custom_environment: Environment = null
+@export var with_light: bool = true
 
 var start_camera_transform
 var start_angle
@@ -24,9 +26,15 @@ var dirty_is_dragging
 @onready var camera_3d: Camera3D = %Camera3D
 @onready var platform = %Platform
 @onready var subviewport: SubViewport = %SubViewport
-
+@onready var world_environment = $SubViewport/WorldEnvironment
+@onready var directional_light_3d = $SubViewport/DirectionalLight3D
 
 func _ready():
+	if custom_environment != null:
+		world_environment.environment = custom_environment
+	
+	directional_light_3d.visible = with_light
+		
 	avatar.hide_name = hide_name
 	platform.set_visible(show_platform)
 
