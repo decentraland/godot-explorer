@@ -321,14 +321,15 @@ func broadcast_avatar_animation(emote_id: String) -> void:
 
 func freeze_on_idle():
 	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED
-	
+
 	animation_player.stop()
 	animation_player.play("Idle", -1, 0.0)
-	
+
 	# Idle animation hides all the extra emotes
 	for child in avatar.get_children():
 		if child.name.begins_with("Armature_Prop"):
 			child.hide()
+
 
 func async_fetch_emote(emote_urn: String, body_shape_id: String) -> Array:
 	var ret = []

@@ -29,12 +29,13 @@ var dirty_is_dragging
 @onready var world_environment = $SubViewport/WorldEnvironment
 @onready var directional_light_3d = $SubViewport/DirectionalLight3D
 
+
 func _ready():
 	if custom_environment != null:
 		world_environment.environment = custom_environment
-	
+
 	directional_light_3d.visible = with_light
-		
+
 	avatar.hide_name = hide_name
 	platform.set_visible(show_platform)
 
