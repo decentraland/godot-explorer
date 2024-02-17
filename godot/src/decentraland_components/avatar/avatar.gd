@@ -304,7 +304,7 @@ func async_load_wearables():
 		var file_hash = Wearables.get_item_main_file_hash(emote, avatar_data.get_body_shape())
 		var obj = Global.content_provider.get_emote_gltf_from_hash(file_hash)
 		if obj != null:
-			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
+			emote_controller._load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 	emote_controller.clean_unused_emotes()
 	emit_signal("avatar_loaded")
