@@ -1,6 +1,6 @@
 @tool
 class_name EmoteItemUI
-extends Control
+extends BaseButton
 
 signal play_emote(emote_urn: String)
 signal select_emote(selected: bool, emote_urn: String)
@@ -29,7 +29,8 @@ signal select_emote(selected: bool, emote_urn: String)
 
 @export var number: int = 0:
 	set(new_value):
-		%Label_Number.visible = new_value >= 0
+		var test = new_value >= 0
+		%Label_Number.visible = test
 		%Label_Number.text = str(new_value)
 		number = new_value
 
@@ -43,7 +44,6 @@ signal select_emote(selected: bool, emote_urn: String)
 # The display name
 @export var emote_name: String = "wave"
 
-var pressed = false
 var inside = false
 
 @onready var control_inner = %Control_Inner
@@ -60,9 +60,7 @@ func async_load_from_urn(_emote_urn: String, index: int = -1):
 	if Emotes.is_emote_default(emote_urn):
 		emote_name = Emotes.DEFAULT_EMOTE_NAMES[emote_urn]
 		rarity = Wearables.ItemRarity.COMMON
-		picture = load(
-			"res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_urn
-		)
+		picture = load("res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_urn)
 	else:
 		var emote_data := Global.content_provider.get_wearable(emote_urn)
 		if emote_data == null:
@@ -71,6 +69,7 @@ func async_load_from_urn(_emote_urn: String, index: int = -1):
 			return
 
 		await async_load_from_entity(emote_data)
+
 
 func async_load_from_entity(emote_data: DclItemEntityDefinition) -> void:
 	emote_name = emote_data.get_display_name()
@@ -93,9 +92,14 @@ func _ready():
 	if not Engine.is_editor_hint():
 		mouse_entered.connect(self._on_mouse_entered)
 		mouse_exited.connect(self._on_mouse_exited)
-		gui_input.connect(self._on_gui_input)
 
-		label_number.set_visible(not Global.is_mobile())
+		pressed.connect(self._on_pressed)
+		button_down.connect(self._on_button_down)
+		button_up.connect(self._on_button_up)
+		toggled.connect(self._on_toggled)
+
+		if Global.is_mobile():
+			label_number.hide()
 
 
 # Executed with @tool
@@ -116,11 +120,19 @@ func _on_mouse_entered():
 	select_emote.emit(true, emote_urn)
 
 
-func _on_gui_input(event):
-	if event is InputEventScreenTouch:
-		if event.pressed != pressed:
-			pressed = event.pressed
-			texture_rect_pressed.set_visible(pressed)
-			if !pressed:
-				if inside:
-					play_emote.emit(emote_urn)
+func _on_pressed():
+	play_emote.emit(emote_urn)
+
+
+func _on_toggled(toggled: bool):
+	texture_rect_pressed.set_visible(toggled)
+
+
+func _on_button_down():
+	if !toggle_mode:
+		texture_rect_pressed.set_visible(true)
+
+
+func _on_button_up():
+	if !toggle_mode:
+		texture_rect_pressed.set_visible(false)

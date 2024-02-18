@@ -113,13 +113,14 @@ impl DclItemEntityDefinition {
     #[func]
     pub fn from_json_str(json_str: GString) -> Option<Gd<DclItemEntityDefinition>> {
         if let Ok(json) = serde_json::from_str(json_str.to_string().as_str()) {
-
-            if let Ok(entity_definition) = ItemEntityDefinition::from_json_ex("".to_string(), json) {
-                Some(DclItemEntityDefinition::from_gd(Arc::new(entity_definition)))
+            if let Ok(entity_definition) = ItemEntityDefinition::from_json_ex("".to_string(), json)
+            {
+                Some(DclItemEntityDefinition::from_gd(Arc::new(
+                    entity_definition,
+                )))
             } else {
                 None
             }
-
         } else {
             None
         }

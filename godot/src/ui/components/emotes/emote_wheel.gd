@@ -41,7 +41,7 @@ func _update_wheel(emote_urns: Array):
 			continue
 
 		var emote_item: EmoteItemUI = emote_items[i]
-		emote_item.async_load_from_urn(emote_urns[i], i) # Forget await
+		emote_item.async_load_from_urn(emote_urns[i], i)  # Forget await
 
 
 func _gui_input(event):

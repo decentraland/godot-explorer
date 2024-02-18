@@ -39,7 +39,7 @@ func _ready():
 	tree_console.set_column_clip_content(1, true)
 
 	tree_console.create_item()  # root
-	
+
 	if tab_container_debug_panel.visible:
 		_on_button_show_hide_pressed()
 

@@ -14,5 +14,6 @@ const DEFAULT_EMOTE_NAMES = {
 	"headexplode": "Head Explode"
 }
 
+
 static func is_emote_default(urn_or_id: String) -> bool:
 	return DEFAULT_EMOTE_NAMES.keys().has(urn_or_id)

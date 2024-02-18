@@ -295,6 +295,7 @@ script = ExtResource("3_wk266")
 
 [node name="Backpack" parent="Main/Backpack/SafeMarginContainer" instance=ExtResource("9_qv8xq")]
 layout_mode = 2
+hide_navbar = true
 
 [node name="Button_Continue" type="Button" parent="Main/Backpack/SafeMarginContainer/Backpack"]
 custom_minimum_size = Vector2(250, 56)

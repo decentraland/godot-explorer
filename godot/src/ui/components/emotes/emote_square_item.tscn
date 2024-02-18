@@ -1,10 +1,44 @@
-[gd_scene load_steps=8 format=3 uid="uid://blc0mna12dsxo"]
+[gd_scene load_steps=10 format=3 uid="uid://blc0mna12dsxo"]
 
 [ext_resource type="Script" path="res://src/ui/components/emotes/emote_item_ui.gd" id="1_hlkld"]
 [ext_resource type="Texture2D" uid="uid://caviqeg8b20gg" path="res://assets/avatar/default_emotes_thumbnails/clap.png" id="2_ynh3m"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_obw18"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fdf6q"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ojwu4"]
+bg_color = Color(0.776471, 0.25098, 0.803922, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.984314, 0.054902, 0.333333, 1)
+border_blend = true
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+expand_margin_left = 4.0
+expand_margin_top = 4.0
+expand_margin_right = 4.0
+expand_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hpw41"]
+bg_color = Color(1, 0.501961, 0, 1)
+draw_center = false
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.501961, 0, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+expand_margin_left = 4.0
+expand_margin_top = 4.0
+expand_margin_right = 4.0
+expand_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o5uwa"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
@@ -27,12 +61,12 @@ fill = 1
 fill_from = Vector2(0.5, 0.5)
 fill_to = Vector2(0.75, 0.25)
 
-[node name="EmoteSquareItem" type="Control"]
-layout_mode = 3
-anchors_preset = 0
-offset_right = 140.0
-offset_bottom = 140.0
+[node name="EmoteSquareItem" type="TextureButton"]
+custom_minimum_size = Vector2(118, 118)
+offset_right = 118.0
+offset_bottom = 118.0
 pivot_offset = Vector2(-38, 215)
+toggle_mode = true
 script = ExtResource("1_hlkld")
 
 [node name="Control_Inner" type="Control" parent="."]
@@ -45,41 +79,31 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Selected" type="Panel" parent="Control_Inner"]
-unique_name_in_owner = true
-visible = false
-modulate = Color(1, 0.501961, 0, 1)
-texture_filter = 4
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -3.0
-offset_top = -3.0
-offset_right = 3.0
-offset_bottom = 3.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_fdf6q")
-
 [node name="Pressed" type="Panel" parent="Control_Inner"]
 unique_name_in_owner = true
 visible = false
-modulate = Color(0.501961, 0, 0, 1)
 texture_filter = 4
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -3.0
-offset_top = -3.0
-offset_right = 3.0
-offset_bottom = 3.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_fdf6q")
+theme_override_styles/panel = SubResource("StyleBoxFlat_ojwu4")
+
+[node name="Selected" type="Panel" parent="Control_Inner"]
+unique_name_in_owner = true
+visible = false
+texture_filter = 4
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hpw41")
 
 [node name="Background" type="Panel" parent="Control_Inner"]
 texture_filter = 4
@@ -90,7 +114,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_fdf6q")
+theme_override_styles/panel = SubResource("StyleBoxFlat_o5uwa")
 
 [node name="Inner" type="Panel" parent="Control_Inner/Background"]
 unique_name_in_owner = true

@@ -59,6 +59,7 @@ func _ready():
 	Global.player_identity.wallet_connected.connect(self._on_wallet_connected)
 
 	Global.scene_runner.set_pause(true)
+
 	if Global.player_identity.try_recover_account(Global.config.session_account):
 		loading_first_profile = true
 		restore_panel.hide()
@@ -194,7 +195,6 @@ func _on_button_enter_as_guest_pressed():
 
 
 func _async_show_avatar_preview():
-	await get_tree().create_timer(1.0).timeout
 	avatar_preview.show()
 	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
 

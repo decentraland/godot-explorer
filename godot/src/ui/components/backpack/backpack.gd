@@ -7,6 +7,8 @@ const WEARABLE_ITEM_INSTANTIABLE = preload(
 )
 const FILTER: Texture = preload("res://assets/ui/Filter.svg")
 
+@export var hide_navbar: bool = false
+
 var wearable_button_group = ButtonGroup.new()
 var filtered_data: Array
 
@@ -47,9 +49,22 @@ var _has_changes: bool = false
 @onready var backpack_loading = %TextureProgressBar_BackpackLoading
 @onready var container_backpack = %HBoxContainer_Backpack
 
+@onready var wearable_editor = %WearableEditor
+@onready var emote_editor = %EmoteEditor
+
+@onready var container_navbar = %PanelContainer_Navbar
+
 
 # gdlint:ignore = async-function-name
 func _ready():
+	if hide_navbar:
+		container_navbar.hide()
+
+	emote_editor.avatar = avatar_preview.avatar
+	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
+	wearable_editor.show()
+	emote_editor.hide()
+
 	mutable_profile = DclUserProfile.new()
 	mutable_avatar = mutable_profile.get_avatar()
 
@@ -117,10 +132,14 @@ func _on_profile_changed(new_profile: DclUserProfile):
 	line_edit_name.text = new_profile.get_name()
 
 	mutable_profile = new_profile.duplicated()
-	mutable_avatar = mutable_profile.get_avatar()
 
 	request_update_avatar = true
 	request_show_wearables = true
+
+
+func _on_set_new_emotes(emotes_urns: PackedStringArray):
+	mutable_avatar.set_emotes(emotes_urns)
+	request_update_avatar = true
 
 
 func _physics_process(_delta):
@@ -405,3 +424,13 @@ func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
 
 func has_changes():
 	return _has_changes
+
+
+func _on_button_wearables_pressed():
+	wearable_editor.show()
+	emote_editor.hide()
+
+
+func _on_button_emotes_pressed():
+	wearable_editor.hide()
+	emote_editor.show()
