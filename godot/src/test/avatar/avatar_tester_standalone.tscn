@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://4227l72a8kdu"]
+[gd_scene load_steps=6 format=3 uid="uid://4227l72a8kdu"]
 
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="1_1eenv"]
 [ext_resource type="Script" path="res://src/test/avatar/avatar_tester_standalone.gd" id="1_l1th6"]
+[ext_resource type="Environment" uid="uid://c6yftsnvufsg8" path="res://assets/sky/cli_environment.tres" id="3_2n2br"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="3_ubmva"]
 
 [sub_resource type="CodeHighlighter" id="CodeHighlighter_684t6"]
@@ -22,6 +23,8 @@ offset_left = 806.0
 offset_top = 109.0
 offset_right = 1062.0
 offset_bottom = 609.0
+custom_environment = ExtResource("3_2n2br")
+with_light = false
 
 [node name="TabContainer" type="TabContainer" parent="."]
 layout_mode = 0

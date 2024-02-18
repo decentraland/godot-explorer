@@ -627,7 +627,7 @@ static func set_fallback_for_missing_needed_categories(
 			continue
 
 		# The needed category is present
-		if wearables_by_category.has(hidden_categories):
+		if wearables_by_category.has(needed_catagory):
 			continue
 
 		var fallback_wearable_id = DefaultWearables.BY_BODY_SHAPES.get(body_shape_id, {}).get(
