@@ -1,5 +1,5 @@
 @tool
-class_name EmoteWheelItem
+class_name EmoteItemUI
 extends Control
 
 signal play_emote(emote_urn: String)
@@ -29,6 +29,7 @@ signal select_emote(selected: bool, emote_urn: String)
 
 @export var number: int = 0:
 	set(new_value):
+		%Label_Number.visible = new_value >= 0
 		%Label_Number.text = str(new_value)
 		number = new_value
 
@@ -52,7 +53,7 @@ var inside = false
 @onready var label_number = %Label_Number
 
 
-func async_load_from_urn(_emote_urn: String, index: int):
+func async_load_from_urn(_emote_urn: String, index: int = -1):
 	emote_urn = _emote_urn
 	number = index
 

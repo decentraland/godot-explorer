@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://c7bnh6p6qygxu"]
 
 [ext_resource type="Texture2D" uid="uid://c3tpoj72yuxp4" path="res://src/ui/components/emotes/emote_item.svg" id="1_qctv4"]
-[ext_resource type="Script" path="res://src/ui/components/emotes/emote_wheel_item.gd" id="2_jdnf4"]
+[ext_resource type="Script" path="res://src/ui/components/emotes/emote_item_ui.gd" id="2_jdnf4"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_lei38"]
 
 [sub_resource type="Gradient" id="Gradient_mvm8j"]

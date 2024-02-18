@@ -4,7 +4,6 @@
 [ext_resource type="Script" path="res://src/ui/components/backpack/avatar_preview.gd" id="1_sayag"]
 [ext_resource type="PackedScene" uid="uid://0ccix5xpw76a" path="res://assets/ui/backpack/platform_compressed.glb" id="3_i62gc"]
 
-
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_6yihh"]
 sky_top_color = Color(1, 1, 1, 1)
 sky_horizon_color = Color(0.8, 0.79225, 0.78325, 1)
@@ -17,7 +16,7 @@ sky_material = SubResource("ProceduralSkyMaterial_6yihh")
 background_mode = 2
 sky = SubResource("Sky_0qr0h")
 
-[node name="SubViewportContainer" type="SubViewportContainer"]
+[node name="AvatarPreview" type="SubViewportContainer"]
 offset_right = 256.0
 offset_bottom = 500.0
 size_flags_horizontal = 4

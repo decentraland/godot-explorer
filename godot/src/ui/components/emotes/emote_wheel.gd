@@ -2,7 +2,7 @@ extends Control
 
 @export var avatar_node: Avatar = null
 
-var emote_items: Array[EmoteWheelItem] = []
+var emote_items: Array[EmoteItemUI] = []
 
 var last_selected_emote_urn: String = ""
 
@@ -14,7 +14,7 @@ var last_selected_emote_urn: String = ""
 func _ready():
 	self.hide()
 	for child in emote_wheel_container.get_children():
-		if child is EmoteWheelItem:
+		if child is EmoteItemUI:
 			child.play_emote.connect(self._on_play_emote)
 			child.select_emote.connect(self._on_select_emote.bind(child))
 			emote_items.push_back(child)
@@ -40,8 +40,8 @@ func _update_wheel(emote_urns: Array):
 			# Set default or
 			continue
 
-		var emote_item: EmoteWheelItem = emote_items[i]
-		emote_item.async_load_emote(emote_urns[i], i) # Forget await
+		var emote_item: EmoteItemUI = emote_items[i]
+		emote_item.async_load_from_urn(emote_urns[i], i) # Forget await
 
 
 func _gui_input(event):
@@ -69,11 +69,12 @@ func _on_play_emote(emote_urn: String):
 	self.hide()
 	Global.explorer_grab_focus()
 	if avatar_node:
-		avatar_node.emote_controller.play_emote(emote_urn)
-		avatar_node.emote_controller.broadcast_avatar_animation(emote_urn)
+		var emote_controller = avatar_node.emote_controller
+		emote_controller.play_emote(emote_urn)
+		emote_controller.broadcast_avatar_animation(emote_urn)
 
 
-func _on_select_emote(selected: bool, emote_urn: String, child: EmoteWheelItem):
+func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUI):
 	if emote_urn == last_selected_emote_urn:
 		return
 
