@@ -203,8 +203,6 @@ func try_to_set_body_shape(body_shape_hash):
 		var new_child = child.duplicate()
 		new_child.name = "bodyshape_" + child.name.to_lower()
 		body_shape_skeleton_3d.add_child(new_child)
-		if new_child is MeshInstance3D:
-			new_child.skeleton = body_shape_skeleton_3d.get_path()
 
 	_add_attach_points()
 

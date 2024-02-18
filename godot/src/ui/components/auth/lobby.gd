@@ -124,7 +124,7 @@ func _on_avatar_preview_gui_input(event):
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			if not avatar_preview.avatar.emote_controller.is_playing():
-				avatar_preview.avatar.emote_controller.play_emote("default_emotes/wave")
+				avatar_preview.avatar.emote_controller.play_emote("wave")
 
 
 func _on_button_start_pressed():
@@ -196,7 +196,7 @@ func _on_button_enter_as_guest_pressed():
 func _async_show_avatar_preview():
 	await get_tree().create_timer(1.0).timeout
 	avatar_preview.show()
-	avatar_preview.avatar.emote_controller.play_emote("default_emotes/raiseHand")
+	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
 
 
 func _on_button_jump_in_pressed():

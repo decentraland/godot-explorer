@@ -36,7 +36,48 @@
                         "b": 0.56
                     }
                 },
-                "emotes": [],
+                "emotes": [
+                    {
+                        "slot": 0,
+                        "urn": "handsair"
+                    },
+                    {
+                        "slot": 1,
+                        "urn": "wave"
+                    },
+                    {
+                        "slot": 2,
+                        "urn": "urn:decentraland:matic:collections-v2:0x0b472c2c04325a545a43370b54e93c87f3d5badf:0"
+                    },
+                    {
+                        "slot": 3,
+                        "urn": "urn:decentraland:matic:collections-v2:0x54bf16bed39a02d5f8bda33664c72c59d367caf7:0"
+                    },
+                    {
+                        "slot": 4,
+                        "urn": "urn:decentraland:matic:collections-v2:0x70eb032d4621a51945b913c3f9488d50fc1fca38:0"
+                    },
+                    {
+                        "slot": 5,
+                        "urn": "urn:decentraland:matic:collections-v2:0x875146d1d26e91c80f25f5966a84b098d3db1fc8:1"
+                    },
+                    {
+                        "slot": 6,
+                        "urn": "urn:decentraland:matic:collections-v2:0xa25c20f58ac447621a5f854067b857709cbd60eb:7"
+                    },
+                    {
+                        "slot": 7,
+                        "urn": "urn:decentraland:matic:collections-v2:0xbada8a315e84e4d78e3b6914003647226d9b4001:10"
+                    },
+                    {
+                        "slot": 8,
+                        "urn": "urn:decentraland:matic:collections-v2:0xbada8a315e84e4d78e3b6914003647226d9b4001:11"
+                    },
+                    {
+                        "slot": 9,
+                        "urn": "urn:decentraland:matic:collections-v2:0x0c956c74518ed34afb7b137d9ddfdaea7ca13751:0"
+                    }
+                ],
                 "wearables": [
                     "urn:decentraland:off-chain:base-avatars:eyebrows_06",
                     "urn:decentraland:off-chain:base-avatars:eyes_00",
