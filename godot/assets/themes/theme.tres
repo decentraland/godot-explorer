@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=84 format=3 uid="uid://bm1rvmngc833v"]
+[gd_resource type="Theme" load_steps=83 format=3 uid="uid://bm1rvmngc833v"]
 
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_l2aal"]
 [ext_resource type="StyleBox" uid="uid://corto87blbgdd" path="res://assets/themes/panel.tres" id="3_8ip38"]
@@ -15,6 +15,7 @@
 [ext_resource type="StyleBox" uid="uid://bujf67k8oji3g" path="res://assets/themes/general_slider/slider.tres" id="9_yjimp"]
 [ext_resource type="StyleBox" uid="uid://g3qbyl5ohgr" path="res://assets/themes/option_button_normal.tres" id="10_fj4og"]
 [ext_resource type="Texture2D" uid="uid://kplskruss85n" path="res://assets/themes/icons/checkbutton_pressed.png" id="10_n6cpo"]
+[ext_resource type="Texture2D" uid="uid://bt7jdyunelh1x" path="res://assets/ui/tick.tres" id="10_psrqk"]
 [ext_resource type="Texture2D" uid="uid://dobvuburicvmh" path="res://assets/themes/icons/checkbutton_unpressed.png" id="11_djulf"]
 [ext_resource type="StyleBox" uid="uid://cjf5e2kcj0cs0" path="res://assets/themes/orange_button_focused.tres" id="11_edhok"]
 [ext_resource type="StyleBox" uid="uid://c44b010w0fucm" path="res://assets/themes/orange_button_hover.tres" id="12_oucya"]
@@ -217,18 +218,6 @@ corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
-
-[sub_resource type="Image" id="Image_3otd3"]
-data = {
-"data": PackedByteArray(255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 64, 255, 255, 255, 64, 255, 255, 255, 0),
-"format": "RGBA8",
-"height": 16,
-"mipmaps": false,
-"width": 4
-}
-
-[sub_resource type="ImageTexture" id="ImageTexture_6qrnd"]
-image = SubResource("Image_3otd3")
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_uacby"]
 
@@ -500,7 +489,7 @@ HSlider/constants/grabber_offset = 0
 HSlider/icons/grabber = ExtResource("9_trtut")
 HSlider/icons/grabber_disabled = ExtResource("9_trtut")
 HSlider/icons/grabber_highlight = ExtResource("9_trtut")
-HSlider/icons/tick = SubResource("ImageTexture_6qrnd")
+HSlider/icons/tick = ExtResource("10_psrqk")
 HSlider/styles/grabber_area = ExtResource("7_eijsr")
 HSlider/styles/grabber_area_highlight = ExtResource("8_28h04")
 HSlider/styles/slider = ExtResource("9_yjimp")
