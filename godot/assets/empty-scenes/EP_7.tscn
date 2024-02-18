@@ -12,6 +12,8 @@ skeleton = NodePath("")
 
 [node name="EP_7_StaticBody" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.25745, 5.16703, -1.56218)
+collision_layer = 2
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="EP_7_StaticBody"]
 shape = ExtResource("2_wfbiy")

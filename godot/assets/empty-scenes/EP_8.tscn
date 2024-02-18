@@ -10,6 +10,8 @@ mesh = ExtResource("1_3fd5p")
 skeleton = NodePath("")
 
 [node name="EP_8_StaticBody" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="EP_8_StaticBody"]
 shape = ExtResource("2_ycqvd")

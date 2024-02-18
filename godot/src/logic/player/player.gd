@@ -147,8 +147,9 @@ func _physics_process(dt: float) -> void:
 	direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	current_direction = current_direction.move_toward(direction, 8 * dt)
 
+	var floor = is_on_floor() or position.y <= 0.0
 	jump_time -= dt
-	if not is_on_floor():
+	if not floor:
 		avatar.land = false
 		avatar.rise = velocity.y > .3
 		avatar.fall = velocity.y < -.3
