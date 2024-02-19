@@ -663,6 +663,7 @@ autowrap_mode = 0
 
 [node name="EmoteEditor" parent="VBoxContainer/HBoxContainer_Backpack/MarginContainer" instance=ExtResource("30_vfwc7")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="Color_Picker_Panel" parent="." instance=ExtResource("10_8s7x3")]
