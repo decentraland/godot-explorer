@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://c7bnh6p6qygxu"]
 
 [ext_resource type="Texture2D" uid="uid://c3tpoj72yuxp4" path="res://src/ui/components/emotes/emote_item.svg" id="1_qctv4"]
-[ext_resource type="Script" path="res://src/ui/components/emotes/emote_wheel_item.gd" id="2_jdnf4"]
+[ext_resource type="Script" path="res://src/ui/components/emotes/emote_item_ui.gd" id="2_jdnf4"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_lei38"]
 
 [sub_resource type="Gradient" id="Gradient_mvm8j"]
@@ -13,14 +13,11 @@ fill = 1
 fill_from = Vector2(0.5, 0.5)
 fill_to = Vector2(0.75, 0.25)
 
-[node name="EmoteWheelItem" type="Control"]
-layout_mode = 3
-anchors_preset = 0
+[node name="EmoteWheelItem" type="TextureButton"]
 offset_right = 140.0
 offset_bottom = 140.0
 pivot_offset = Vector2(-38, 215)
 script = ExtResource("2_jdnf4")
-emote_name = null
 
 [node name="Control_Inner" type="Control" parent="."]
 unique_name_in_owner = true

@@ -1,0 +1,96 @@
+[gd_scene load_steps=5 format=3 uid="uid://c6t7jqpx38nxd"]
+
+[ext_resource type="Texture2D" uid="uid://cv6fjk334oiu4" path="res://assets/ui/EmoteWheelDeck.svg" id="1_d7r2t"]
+[ext_resource type="Script" path="res://src/ui/components/emote_editor/emote_editor_item.gd" id="1_myf8i"]
+[ext_resource type="PackedScene" uid="uid://blc0mna12dsxo" path="res://src/ui/components/emotes/emote_square_item.tscn" id="2_w1a3f"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_es0gm"]
+bg_color = Color(1, 0.454902, 0.223529, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="EmoteEditorItem" type="TextureButton"]
+custom_minimum_size = Vector2(220, 50)
+toggle_mode = true
+script = ExtResource("1_myf8i")
+
+[node name="Pressed" type="Panel" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_es0gm")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Control" type="Control" parent="MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TextureRect_Wheel" type="TextureRect" parent="MarginContainer/HBoxContainer/Control"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(46, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(23, 23)
+mouse_filter = 2
+texture = ExtResource("1_d7r2t")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_Number" type="Label" parent="MarginContainer/HBoxContainer/Control"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label_EmoteName" type="Label" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Clap"
+vertical_alignment = 1
+clip_text = true
+
+[node name="EmoteSquareItem" parent="MarginContainer/HBoxContainer" instance=ExtResource("2_w1a3f")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+mouse_filter = 2
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="toggled" from="." to="." method="_on_toggled"]

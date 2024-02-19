@@ -1,6 +1,6 @@
 @tool
-class_name EmoteWheelItem
-extends Control
+class_name EmoteItemUi
+extends BaseButton
 
 signal play_emote(emote_urn: String)
 signal select_emote(selected: bool, emote_urn: String)
@@ -29,6 +29,7 @@ signal select_emote(selected: bool, emote_urn: String)
 
 @export var number: int = 0:
 	set(new_value):
+		%Label_Number.visible = new_value >= 0
 		%Label_Number.text = str(new_value)
 		number = new_value
 
@@ -42,7 +43,6 @@ signal select_emote(selected: bool, emote_urn: String)
 # The display name
 @export var emote_name: String = "wave"
 
-var pressed = false
 var inside = false
 
 @onready var control_inner = %Control_Inner
@@ -52,13 +52,37 @@ var inside = false
 @onready var label_number = %Label_Number
 
 
-func async_set_texture(emote: DclItemEntityDefinition) -> void:
+func async_load_from_urn(_emote_urn: String, index: int = -1):
+	emote_urn = _emote_urn
+	number = index
+
+	if Emotes.is_emote_default(emote_urn):
+		emote_name = Emotes.DEFAULT_EMOTE_NAMES[emote_urn]
+		rarity = Wearables.ItemRarity.COMMON
+		picture = load("res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_urn)
+	else:
+		var emote_data := Global.content_provider.get_wearable(emote_urn)
+		if emote_data == null:
+			# Fallback to default emote
+			await async_load_from_urn(Emotes.DEFAULT_EMOTE_NAMES.keys()[0], index)
+			return
+
+		await async_load_from_entity(emote_data)
+
+
+func async_load_from_entity(emote_data: DclItemEntityDefinition) -> void:
+	emote_name = emote_data.get_display_name()
+	rarity = emote_data.get_rarity()
+	await async_set_texture(emote_data)
+
+
+func async_set_texture(emote_data: DclItemEntityDefinition) -> void:
 	var promise: Promise = Global.content_provider.fetch_texture(
-		emote.get_thumbnail(), emote.get_content_mapping()
+		emote_data.get_thumbnail(), emote_data.get_content_mapping()
 	)
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:
-		printerr("Fetch texture error on ", emote.get_thumbnail(), ": ", res.get_error())
+		printerr("Fetch texture error on ", emote_data.get_thumbnail(), ": ", res.get_error())
 	else:
 		self.picture = res.texture
 
@@ -67,9 +91,14 @@ func _ready():
 	if not Engine.is_editor_hint():
 		mouse_entered.connect(self._on_mouse_entered)
 		mouse_exited.connect(self._on_mouse_exited)
-		gui_input.connect(self._on_gui_input)
 
-		label_number.set_visible(not Global.is_mobile())
+		pressed.connect(self._on_pressed)
+		button_down.connect(self._on_button_down)
+		button_up.connect(self._on_button_up)
+		toggled.connect(self._on_toggled)
+
+		if Global.is_mobile():
+			label_number.hide()
 
 
 # Executed with @tool
@@ -90,11 +119,19 @@ func _on_mouse_entered():
 	select_emote.emit(true, emote_urn)
 
 
-func _on_gui_input(event):
-	if event is InputEventScreenTouch:
-		if event.pressed != pressed:
-			pressed = event.pressed
-			texture_rect_pressed.set_visible(pressed)
-			if !pressed:
-				if inside:
-					play_emote.emit(emote_urn)
+func _on_pressed():
+	play_emote.emit(emote_urn)
+
+
+func _on_toggled(new_toggled: bool):
+	texture_rect_pressed.set_visible(new_toggled)
+
+
+func _on_button_down():
+	if !toggle_mode:
+		texture_rect_pressed.set_visible(true)
+
+
+func _on_button_up():
+	if !toggle_mode:
+		texture_rect_pressed.set_visible(false)
