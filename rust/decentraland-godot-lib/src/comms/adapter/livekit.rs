@@ -60,6 +60,9 @@ pub struct LivekitRoom {
     last_profile_request_sent: Instant,
     last_profile_version_announced: u32,
     chats: Vec<(H160, rfc4::Chat)>,
+
+    // Scene messges
+    incoming_scene_messages: HashMap<String, Vec<(H160, Vec<u8>)>>,
 }
 
 impl LivekitRoom {
@@ -94,6 +97,7 @@ impl LivekitRoom {
             peer_alias_counter: 0,
             last_profile_version_announced: 0,
             chats: Vec::new(),
+            incoming_scene_messages: HashMap::new(),
         }
     }
 
@@ -212,7 +216,15 @@ impl LivekitRoom {
                             avatar_scene.update_avatar_by_alias(peer.alias, &profile);
                             peer.profile = Some(profile);
                         }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::Scene(_scene)) => {}
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::Scene(scene)) => {
+                            let entry = self
+                                .incoming_scene_messages
+                                .entry(scene.scene_id)
+                                .or_default();
+
+                            // TODO: should we limit the size of the queue or accumulated bytes?
+                            entry.push((message.address, scene.data));
+                        }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Voice(_voice)) => {}
                         ToSceneMessage::InitVoice(frame) => {
                             avatar_scene.spawn_voice_channel(
@@ -346,6 +358,14 @@ impl Adapter for LivekitRoom {
 
     fn support_voice_chat(&self) -> bool {
         true
+    }
+
+    fn consume_scene_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
+        if let Some(messages) = self.incoming_scene_messages.get_mut(scene_id) {
+            std::mem::take(messages)
+        } else {
+            Vec::new()
+        }
     }
 }
 

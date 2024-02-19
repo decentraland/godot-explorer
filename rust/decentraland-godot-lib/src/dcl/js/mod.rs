@@ -1,13 +1,14 @@
-pub mod engine;
-pub mod ethereum_controller;
-pub mod events;
-pub mod fetch;
-pub mod players;
-pub mod portables;
-pub mod restricted_actions;
-pub mod runtime;
-pub mod testing;
-pub mod websocket;
+mod comms;
+mod engine;
+mod ethereum_controller;
+mod events;
+mod fetch;
+mod players;
+mod portables;
+mod restricted_actions;
+mod runtime;
+mod testing;
+mod websocket;
 
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::auth::ethereum_provider::EthereumProvider;
@@ -49,7 +50,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 10] = [
+    let op_sets: [Vec<deno_core::OpDecl>; 11] = [
         engine::ops(),
         runtime::ops(),
         fetch::ops(),
@@ -60,6 +61,7 @@ pub fn create_runtime() -> deno_core::JsRuntime {
         events::ops(),
         testing::ops(),
         ethereum_controller::ops(),
+        comms::ops(),
     ];
 
     let mut op_map = HashMap::new();
@@ -130,13 +132,13 @@ pub(crate) fn scene_thread(
 
             let dirty = scene_crdt_state.take_dirty();
             thread_sender_to_main
-                .send(SceneResponse::Ok(
+                .send(SceneResponse::Ok {
                     scene_id,
-                    dirty,
-                    Vec::new(),
-                    0.0,
-                    Vec::new(),
-                ))
+                    dirty_crdt_state: dirty,
+                    logs: Vec::new(),
+                    delta: 0.0,
+                    rpc_calls: Vec::new(),
+                })
                 .expect("error sending scene response!!");
 
             scene_main_crdt = Some(buf);
