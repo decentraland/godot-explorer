@@ -1,5 +1,5 @@
 @tool
-class_name EmoteItemUI
+class_name EmoteItemUi
 extends BaseButton
 
 signal play_emote(emote_urn: String)
@@ -29,8 +29,7 @@ signal select_emote(selected: bool, emote_urn: String)
 
 @export var number: int = 0:
 	set(new_value):
-		var test = new_value >= 0
-		%Label_Number.visible = test
+		%Label_Number.visible = new_value >= 0
 		%Label_Number.text = str(new_value)
 		number = new_value
 
@@ -124,8 +123,8 @@ func _on_pressed():
 	play_emote.emit(emote_urn)
 
 
-func _on_toggled(toggled: bool):
-	texture_rect_pressed.set_visible(toggled)
+func _on_toggled(new_toggled: bool):
+	texture_rect_pressed.set_visible(new_toggled)
 
 
 func _on_button_down():

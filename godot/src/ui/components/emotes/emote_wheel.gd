@@ -2,7 +2,7 @@ extends Control
 
 @export var avatar_node: Avatar = null
 
-var emote_items: Array[EmoteItemUI] = []
+var emote_items: Array[EmoteItemUi] = []
 
 var last_selected_emote_urn: String = ""
 
@@ -14,7 +14,7 @@ var last_selected_emote_urn: String = ""
 func _ready():
 	self.hide()
 	for child in emote_wheel_container.get_children():
-		if child is EmoteItemUI:
+		if child is EmoteItemUi:
 			child.play_emote.connect(self._on_play_emote)
 			child.select_emote.connect(self._on_select_emote.bind(child))
 			emote_items.push_back(child)
@@ -40,7 +40,7 @@ func _update_wheel(emote_urns: Array):
 			# Set default or
 			continue
 
-		var emote_item: EmoteItemUI = emote_items[i]
+		var emote_item: EmoteItemUi = emote_items[i]
 		emote_item.async_load_from_urn(emote_urns[i], i)  # Forget await
 
 
@@ -74,7 +74,7 @@ func _on_play_emote(emote_urn: String):
 		emote_controller.broadcast_avatar_animation(emote_urn)
 
 
-func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUI):
+func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
 	if emote_urn == last_selected_emote_urn:
 		return
 

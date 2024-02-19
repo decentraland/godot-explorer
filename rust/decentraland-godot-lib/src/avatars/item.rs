@@ -12,10 +12,10 @@ use crate::{
 };
 use godot::{
     bind::{godot_api, GodotClass},
-    builtin::{Dictionary, GString, PackedStringArray, Variant},
+    builtin::{GString, PackedStringArray},
     obj::Gd,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 pub struct ItemEntityDefinition {
     pub id: String,
@@ -29,7 +29,6 @@ impl ItemEntityDefinition {
         base_url: String,
         json: serde_json::Value,
     ) -> Result<ItemEntityDefinition, anyhow::Error> {
-        let json_str = json.to_string().clone();
         let mut entity_definition_json = serde_json::from_value::<EntityDefinitionJson>(json)?;
         let id = entity_definition_json
             .pointers
@@ -46,10 +45,6 @@ impl ItemEntityDefinition {
             base_url,
             content_mapping_vec,
         ));
-
-        if item.emote_data.is_some() {
-            println!("ItemEntityDefinition::from_json_ex: {}", json_str);
-        }
 
         Ok(ItemEntityDefinition {
             id: id.clone(),
@@ -110,22 +105,6 @@ impl DclItemEntityDefinition {
 
 #[godot_api]
 impl DclItemEntityDefinition {
-    #[func]
-    pub fn from_json_str(json_str: GString) -> Option<Gd<DclItemEntityDefinition>> {
-        if let Ok(json) = serde_json::from_str(json_str.to_string().as_str()) {
-            if let Ok(entity_definition) = ItemEntityDefinition::from_json_ex("".to_string(), json)
-            {
-                Some(DclItemEntityDefinition::from_gd(Arc::new(
-                    entity_definition,
-                )))
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-
     #[func]
     fn get_emote_audio(&self, body_shape_id: String) -> GString {
         let Some(representation) = self.get_emote_representation(&body_shape_id) else {

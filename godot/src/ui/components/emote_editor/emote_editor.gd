@@ -10,7 +10,7 @@ const EMOTE_SQUARE_ITEM = preload("res://src/ui/components/emotes/emote_square_i
 		avatar.avatar_loaded.connect(self._on_avatar_loaded)
 
 var avatar_emote_items: Array[EmoteEditorItem] = []
-var all_emote_items: Array[EmoteItemUI] = []
+var all_emote_items: Array[EmoteItemUi] = []
 var current_selected_index: int = -1
 
 @onready var container_avatar_emotes = %VBoxContainer_AvatarEmotes
@@ -35,7 +35,7 @@ func _ready():
 
 	# Load default emotes
 	for emote_urn in Emotes.DEFAULT_EMOTE_NAMES.keys():
-		var emote_item: EmoteItemUI = EMOTE_SQUARE_ITEM.instantiate()
+		var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
 		emote_item.button_group = button_group_all_emotes
 		emote_item.async_load_from_urn(emote_urn)
 		emote_item.play_emote.connect(self._on_emote_item_play_emote)
@@ -64,7 +64,7 @@ func _on_emote_editor_item_select_emote(_emote_urn: String, index: int):
 	current_selected_index = index
 
 	for emote_item in all_emote_items:
-		if emote_item is EmoteItemUI:
+		if emote_item is EmoteItemUi:
 			if emote_item.emote_urn == _emote_urn:
 				emote_item.set_pressed(true)
 				break
