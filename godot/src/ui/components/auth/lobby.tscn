@@ -147,6 +147,7 @@ text = "I ALREADY HAVE AN ACCOUNT"
 
 [node name="Restore" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -453,7 +454,6 @@ icon = ExtResource("13_43yag")
 
 [node name="ChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -552,13 +552,36 @@ layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
+[node name="HBoxContainer_Terms" type="HBoxContainer" parent="Main/ChooseName/VBoxContainer"]
+layout_mode = 2
+
+[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="Main/ChooseName/VBoxContainer/HBoxContainer_Terms"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="Main/ChooseName/VBoxContainer/HBoxContainer_Terms"]
+clip_contents = false
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+text = "I agree with Decentraland [b][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/b] and [b][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/b]"
+fit_content = true
+scroll_active = false
+
+[node name="HSeparator5" type="HSeparator" parent="Main/ChooseName/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
 [node name="Button_Next" type="Button" parent="Main/ChooseName/VBoxContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 focus_mode = 0
 theme_override_constants/icon_max_width = 24
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 24
+disabled = true
 text = "NEXT"
 icon_alignment = 2
 
@@ -649,6 +672,10 @@ text = "Message"
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1/Button_OpenBrowser" to="." method="_on_button_open_browser_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsGuest" to="." method="_on_button_enter_as_guest_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
+[connection signal="text_changed" from="Main/ChooseName/VBoxContainer/HBoxContainer/LineEdit_ChooseName" to="." method="_on_line_edit_choose_name_text_changed"]
 [connection signal="pressed" from="Main/ChooseName/VBoxContainer/HBoxContainer/Button_RandomName" to="." method="_on_button_random_name_pressed"]
+[connection signal="toggled" from="Main/ChooseName/VBoxContainer/HBoxContainer_Terms/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
+[connection signal="gui_input" from="Main/ChooseName/VBoxContainer/HBoxContainer_Terms/RichTextLabel" to="." method="_on_rich_text_label_gui_input"]
+[connection signal="meta_clicked" from="Main/ChooseName/VBoxContainer/HBoxContainer_Terms/RichTextLabel" to="." method="_on_rich_text_label_meta_clicked"]
 [connection signal="pressed" from="Main/ChooseName/VBoxContainer/Button_Next" to="." method="_on_button_next_pressed"]
 [connection signal="gui_input" from="AvatarPreview" to="." method="_on_avatar_preview_gui_input"]

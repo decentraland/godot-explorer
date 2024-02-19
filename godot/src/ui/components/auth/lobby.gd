@@ -27,6 +27,9 @@ var loading_first_profile: bool = false
 @onready var restore_panel = %VBoxContainer_RestorePanel
 @onready var restore_loading = %TextureProgressBar_RestoreLoading
 
+@onready var checkbox_terms_and_privacy = %CheckBox_TermsAndPrivacy
+@onready var button_next = %Button_Next
+
 # TODO: Change screen orientation for Mobile
 #func set_portrait():
 ##DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
@@ -136,8 +139,8 @@ func _on_button_start_pressed():
 
 # gdlint:ignore = async-function-name
 func _on_button_next_pressed():
-	if lineedit_choose_name.text.is_empty():
-		return  # TODO: Add error message
+	if lineedit_choose_name.text.is_empty() or checkbox_terms_and_privacy.button_pressed == false:
+		return
 
 	current_profile.set_name(lineedit_choose_name.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
@@ -152,7 +155,8 @@ func _on_button_next_pressed():
 
 
 func _on_button_random_name_pressed():
-	lineedit_choose_name.text = RandomGeneratorUtil.generate_unique_name()
+	lineedit_choose_name.set_text(RandomGeneratorUtil.generate_unique_name())
+	_check_button_finish()
 
 
 func _on_button_open_browser_pressed():
@@ -201,3 +205,38 @@ func _async_show_avatar_preview():
 
 func _on_button_jump_in_pressed():
 	close_sign_in()
+
+
+func toggle_terms_and_privacy_checkbox():
+	checkbox_terms_and_privacy.set_pressed(not checkbox_terms_and_privacy.button_pressed)
+
+
+func _on_rich_text_label_gui_input(event):
+	if event is InputEventScreenTouch:
+		if !event.pressed:
+			toggle_terms_and_privacy_checkbox()
+
+
+func _on_rich_text_label_meta_clicked(meta):
+	Global.open_url(meta)
+	# we're going to toggle in the rich text box gui input
+	# so here we toggle it again compensate, to let as it is
+	# not the best solution.
+	toggle_terms_and_privacy_checkbox()
+
+
+func _on_check_box_terms_and_privacy_toggled(_toggled_on):
+	_check_button_finish()
+
+
+func _on_line_edit_choose_name_text_changed(_new_text):
+	_check_button_finish()
+
+
+func _check_button_finish():
+	var disabled = (
+		lineedit_choose_name.text.is_empty() or not checkbox_terms_and_privacy.button_pressed
+	)
+	if button_next.disabled != disabled:
+		avatar_preview.avatar.emote_controller.play_emote("shrug" if disabled else "clap")
+	button_next.disabled = disabled
