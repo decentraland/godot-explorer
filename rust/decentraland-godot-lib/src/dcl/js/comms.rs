@@ -50,8 +50,6 @@ async fn op_comms_send_binary(
         .borrow_mut()
         .try_take::<InternalPendingBinaryMessages>()
     {
-        // TODO: remove comms message type
-        // Ok(pending_messages.messages)
         let messages = pending_messages
             .messages
             .into_iter()
