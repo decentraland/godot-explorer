@@ -4,7 +4,6 @@
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="2_n22nx"]
 [ext_resource type="PackedScene" uid="uid://cbtq7kaarx6mp" path="res://src/logic/player/camera_mode_area_detector.tscn" id="2_rco65"]
 
-
 [sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
 length = 1.0779
 
@@ -15,6 +14,7 @@ height = 1.5
 
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 0
+collision_mask = 2
 script = ExtResource("1_5bfm2")
 
 [node name="CollisionShape3D_ContactPoint" type="CollisionShape3D" parent="."]

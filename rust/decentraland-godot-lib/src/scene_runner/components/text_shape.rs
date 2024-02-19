@@ -14,6 +14,7 @@ use crate::{
 use godot::{
     engine::{
         global::{HorizontalAlignment, VerticalAlignment},
+        label_3d::AlphaCutMode,
         text_server::AutowrapMode,
         Label3D,
     },
@@ -78,6 +79,7 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 label_3d.set_font_size(font_size as i32);
                 label_3d.set_outline_size(outline_size as i32);
                 label_3d.set_outline_modulate(outline_color);
+                label_3d.set_alpha_cut_mode(AlphaCutMode::ALPHA_CUT_OPAQUE_PREPASS);
 
                 let text_wrapping = new_value.text_wrapping.unwrap_or_default();
                 if text_wrapping {

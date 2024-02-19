@@ -16,7 +16,7 @@ use crate::{
     scene_runner::scene::{MaterialItem, Scene},
 };
 use godot::{
-    engine::{MeshInstance3D, StandardMaterial3D},
+    engine::{base_material_3d::Transparency, MeshInstance3D, StandardMaterial3D},
     prelude::{utilities::weakref, *},
 };
 
@@ -111,11 +111,14 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     godot_material
                 };
 
+                godot_material.set_transparency(Transparency::TRANSPARENCY_ALPHA);
+
                 match &dcl_material {
                     DclMaterial::Unlit(unlit) => {
                         godot_material.set_metallic(0.0);
                         godot_material.set_roughness(0.0);
                         godot_material.set_specular(0.0);
+
                         godot_material.set_albedo(unlit.diffuse_color.0.to_godot());
                     }
                     DclMaterial::Pbr(pbr) => {
