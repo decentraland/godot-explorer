@@ -108,6 +108,8 @@ func update_mask_colliders(node_to_inspect: Node):
 
 func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_collision_mask):
 	if self.dcl_gltf_src != new_gltf:
+		dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
+
 		self.dcl_gltf_src = new_gltf
 		dcl_visible_cmask = visible_meshes_collision_mask
 		dcl_invisible_cmask = invisible_meshes_collision_mask
@@ -116,6 +118,8 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 			var gltf_node = get_child(0)
 			remove_child(gltf_node)
 			gltf_node.queue_free()
+
+		dcl_pending_node = null
 
 		self.async_load_gltf.call_deferred()
 	else:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=27 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -24,9 +24,6 @@
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="20_uf6rv"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="21_pows0"]
 
-[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_xs7js"]
-data = PackedVector3Array(2400, 0, 2400, -2400, 0, 2400, 2400, 0, -2400, -2400, 0, 2400, -2400, 0, -2400, 2400, 0, -2400)
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_x854j"]
@@ -42,11 +39,6 @@ texture_filter = 0
 script = ExtResource("1_5n8xk")
 
 [node name="world" type="Node3D" parent="."]
-
-[node name="StaticBody3D_Floor" type="StaticBody3D" parent="world"]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="world/StaticBody3D_Floor"]
-shape = SubResource("ConcavePolygonShape3D_xs7js")
 
 [node name="Floor" type="MeshInstance3D" parent="world"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
