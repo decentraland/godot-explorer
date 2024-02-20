@@ -449,7 +449,7 @@ impl DclPlayerIdentity {
                     promise
                         .bind_mut()
                         .reject(format!("error preparing deploy profile: {}", e).into());
-                    return;    
+                    return;
                 }
 
                 let (content_type, body_payload) = deploy_data.unwrap(); // checked before
