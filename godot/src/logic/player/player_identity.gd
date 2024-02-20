@@ -68,6 +68,9 @@ func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) 
 	var promise: Promise = self.async_prepare_deploy_profile(new_profile, has_new_snapshots)
 	var ret = await PromiseUtils.async_awaiter(promise)
 	if ret is PromiseError:
+		Global.async_create_popup_warning(
+			PopupWarning.WarningType.WARNING, "Error deploying profile", ret.get_error()
+		)
 		printerr("Error preparing deploying profile: ", ret.get_error())
 		return
 
@@ -79,6 +82,9 @@ func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) 
 	)
 	var response = await PromiseUtils.async_awaiter(promise_req)
 	if response is PromiseError:
+		Global.async_create_popup_warning(
+			PopupWarning.WarningType.WARNING, "Error deploying profile", response.get_error()
+		)
 		printerr("Error deploying profile: ", response.get_error())
 		return
 

@@ -17,6 +17,7 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 
 @onready var ui_root: Control = $UI
 
+@onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
 @onready var control_pointer_tooltip = %Control_PointerTooltip
 

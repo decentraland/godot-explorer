@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3 uid="uid://dx873niilktrw"]
+
+[ext_resource type="Script" path="res://src/ui/components/warning_messages/warning_messages.gd" id="1_7f5aa"]
+
+[node name="WarningMessages" type="VBoxContainer"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -179.0
+offset_top = 25.0
+offset_right = 179.0
+offset_bottom = 325.0
+grow_horizontal = 2
+theme_override_constants/separation = 20
+script = ExtResource("1_7f5aa")

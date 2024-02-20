@@ -36,9 +36,11 @@ var selected_node: Control
 @onready var button_map = %Button_Map
 @onready var button_backpack = %Button_Backpack
 @onready var button_settings = %Button_Settings
+@onready var control_deploying_profile = %Control_DeployingProfile
 
 
 func _ready():
+	control_deploying_profile.hide()
 	control_settings.request_pause_scenes.connect(func(enabled): request_pause_scenes.emit(enabled))
 	control_settings.request_debug_panel.connect(func(enabled): request_debug_panel.emit(enabled))
 	control_settings.preview_hot_reload.connect(
@@ -70,15 +72,15 @@ func _unhandled_input(event):
 				group.get_buttons()[1].set_pressed(true)
 				group.get_buttons()[1].emit_signal("pressed")
 		if event.pressed and event.keycode == KEY_ESCAPE:
-			request_hide_menu()
+			_async_request_hide_menu()
 		if event.pressed and event.keycode == KEY_M:
 			if selected_node == control_map:
-				request_hide_menu()
+				_async_request_hide_menu()
 			else:
 				show_map()
 		if event.pressed and event.keycode == KEY_P:
 			if selected_node == control_settings:
-				request_hide_menu()
+				_async_request_hide_menu()
 			else:
 				_on_button_settings_pressed()
 
@@ -97,7 +99,7 @@ func hide_all():
 
 
 func _on_button_close_pressed():
-	request_hide_menu()
+	_async_request_hide_menu()
 
 
 func _jump_to(parcel: Vector2i):
@@ -231,9 +233,13 @@ func _on_visibility_changed():
 		grab_focus()
 
 
-func request_hide_menu():
+func _async_request_hide_menu():
+	if control_deploying_profile.visible:  # loading...
+		return
+
 	if control_backpack.has_changes():
-		# This can be awaited, if we create a loading screen while the profile is being saved
-		control_backpack.async_save_profile()
+		control_deploying_profile.show()
+		await control_backpack.async_save_profile()
+		control_deploying_profile.hide()
 
 	hide_menu.emit()
