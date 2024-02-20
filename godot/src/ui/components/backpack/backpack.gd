@@ -171,6 +171,7 @@ func _async_update_avatar():
 	mutable_profile.set_avatar(mutable_avatar)
 
 	var loading_id := _set_avatar_loading()
+	avatar_preview.avatar.emote_controller.stop_emote()
 	await avatar_preview.avatar.async_update_avatar_from_profile(mutable_profile)
 	_unset_avatar_loading(loading_id)
 	button_save_profile.disabled = false
@@ -428,6 +429,7 @@ func has_changes():
 
 
 func _on_button_wearables_pressed():
+	avatar_preview.avatar.emote_controller.stop_emote()
 	wearable_editor.show()
 	emote_editor.hide()
 
@@ -435,3 +437,7 @@ func _on_button_wearables_pressed():
 func _on_button_emotes_pressed():
 	wearable_editor.hide()
 	emote_editor.show()
+
+
+func _on_check_box_only_collectibles_toggled(toggled_on):
+	emote_editor.async_set_only_collectibles(toggled_on)
