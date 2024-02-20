@@ -132,6 +132,7 @@ func _on_profile_changed(new_profile: DclUserProfile):
 	line_edit_name.text = new_profile.get_name()
 
 	mutable_profile = new_profile.duplicated()
+	mutable_avatar = mutable_profile.get_avatar()
 
 	request_update_avatar = true
 	request_show_wearables = true
@@ -262,7 +263,7 @@ func _on_line_edit_name_text_changed(_new_text):
 	button_save_profile.disabled = false
 
 
-func _async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat):
+func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat):
 	var cloned_avatar_preview: AvatarPreview = avatar_preview.duplicate()
 	cloned_avatar_preview.show_platform = false
 	cloned_avatar_preview.hide_name = true
@@ -297,11 +298,11 @@ func async_save_profile():
 	mutable_profile.set_name(line_edit_name.text)
 	mutable_avatar.set_name(line_edit_name.text)
 
-	await _async_prepare_snapshots(mutable_avatar)
+	await async_prepare_snapshots(mutable_avatar)
 
 	mutable_profile.set_avatar(mutable_avatar)
 
-	await Global.player_identity.async_deploy_profile(mutable_profile, false)
+	await Global.player_identity.async_deploy_profile(mutable_profile, true)
 	_has_changes = false
 
 

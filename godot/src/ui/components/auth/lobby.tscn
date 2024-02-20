@@ -1,7 +1,8 @@
-[gd_scene load_steps=23 format=3 uid="uid://brh1yknqh4ux6"]
+[gd_scene load_steps=21 format=3 uid="uid://brh1yknqh4ux6"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
 [ext_resource type="Script" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
+[ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="3_mwmw7"]
 [ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="3_p5qhj"]
 [ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="3_wk266"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_ghcwt"]
@@ -16,8 +17,6 @@
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="13_43yag"]
 [ext_resource type="Texture2D" uid="uid://h30g74davjyw" path="res://assets/ui/sign-in/dices.svg" id="14_ku160"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="15_n5dun"]
-[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="16_2f58j"]
-[ext_resource type="Texture2D" uid="uid://jlijusqci4aw" path="res://assets/ui/warning.svg" id="17_1ct5d"]
 
 [sub_resource type="Gradient" id="Gradient_yeovc"]
 offsets = PackedFloat32Array(0.373134, 1)
@@ -30,13 +29,6 @@ fill_from = Vector2(0.5, 0.5)
 metadata/_snap_enabled = true
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8mib7"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vtq8r"]
-bg_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
 
 [node name="Lobby" type="Control"]
 layout_mode = 3
@@ -56,6 +48,56 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="Loading" type="Control" parent="Main"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureRect" type="TextureRect" parent="Main/Loading"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_vjyug")
+
+[node name="TextureProgressBar" parent="Main/Loading" instance=ExtResource("11_7iulh")]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+speed_scale = 2.0
+
+[node name="TextureRect2" type="TextureRect" parent="Main/Loading"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -48.0
+offset_top = -48.0
+offset_right = 48.0
+offset_bottom = 48.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_mwmw7")
+expand_mode = 1
+stretch_mode = 4
 
 [node name="Start" type="Control" parent="Main"]
 unique_name_in_owner = true
@@ -249,23 +291,7 @@ theme_type_variation = &"DarkButton"
 theme_override_font_sizes/font_size = 18
 text = "USE DIFFERENT ACCOUNT"
 
-[node name="TextureProgressBar_RestoreLoading" parent="Main/Restore" instance=ExtResource("11_7iulh")]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -64.0
-offset_right = 64.0
-offset_bottom = 64.0
-grow_horizontal = 2
-grow_vertical = 2
-speed_scale = 1.5
-
-[node name="Backpack" type="Control" parent="Main"]
+[node name="BackpackContainer" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -275,7 +301,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="TextureRect" type="TextureRect" parent="Main/Backpack"]
+[node name="TextureRect" type="TextureRect" parent="Main/BackpackContainer"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -284,7 +310,7 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture2D_vjyug")
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="Main/Backpack"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="Main/BackpackContainer"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -294,11 +320,12 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("3_wk266")
 
-[node name="Backpack" parent="Main/Backpack/SafeMarginContainer" instance=ExtResource("9_qv8xq")]
+[node name="Backpack" parent="Main/BackpackContainer/SafeMarginContainer" instance=ExtResource("9_qv8xq")]
+unique_name_in_owner = true
 layout_mode = 2
 hide_navbar = true
 
-[node name="Button_Continue" type="Button" parent="Main/Backpack/SafeMarginContainer/Backpack"]
+[node name="Button_Continue" type="Button" parent="Main/BackpackContainer/SafeMarginContainer/Backpack"]
 custom_minimum_size = Vector2(250, 56)
 layout_mode = 1
 anchors_preset = 7
@@ -454,6 +481,7 @@ icon = ExtResource("13_43yag")
 
 [node name="ChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -610,65 +638,11 @@ hide_name = true
 show_platform = true
 can_move = false
 
-[node name="PopupWarning" type="Panel" parent="."]
-visible = false
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -170.0
-offset_top = 50.0
-offset_right = 171.0
-offset_bottom = 115.0
-grow_horizontal = 2
-theme = ExtResource("16_2f58j")
-theme_override_styles/panel = SubResource("StyleBoxFlat_vtq8r")
-
-[node name="MarginContainer" type="MarginContainer" parent="PopupWarning"]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -65.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_constants/margin_left = 13
-theme_override_constants/margin_top = 13
-theme_override_constants/margin_right = 13
-theme_override_constants/margin_bottom = 13
-
-[node name="HBoxContainer" type="HBoxContainer" parent="PopupWarning/MarginContainer"]
-layout_mode = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="PopupWarning/MarginContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-
-[node name="HBoxContainer_Title" type="HBoxContainer" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
-layout_mode = 2
-texture = ExtResource("17_1ct5d")
-expand_mode = 2
-stretch_mode = 5
-
-[node name="Label" type="Label" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Title"]
-layout_mode = 2
-text = "Warning"
-
-[node name="Label2" type="Label" parent="PopupWarning/MarginContainer/HBoxContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "Message"
-
 [connection signal="pressed" from="Main/Start/VBoxContainer/Button_Start" to="." method="_on_button_start_pressed"]
 [connection signal="pressed" from="Main/Start/VBoxContainer/Button_GoToSignIn" to="." method="_on_button_go_to_sign_in_pressed"]
 [connection signal="pressed" from="Main/Restore/VBoxContainer_RestorePanel/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
 [connection signal="pressed" from="Main/Restore/VBoxContainer_RestorePanel/Button_DifferentAccount" to="." method="_on_button_different_account_pressed"]
-[connection signal="pressed" from="Main/Backpack/SafeMarginContainer/Backpack/Button_Continue" to="." method="_on_button_continue_pressed"]
+[connection signal="pressed" from="Main/BackpackContainer/SafeMarginContainer/Backpack/Button_Continue" to="." method="_on_button_continue_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1/Button_OpenBrowser" to="." method="_on_button_open_browser_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsGuest" to="." method="_on_button_enter_as_guest_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]

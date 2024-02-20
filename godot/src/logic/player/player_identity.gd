@@ -30,24 +30,28 @@ func async_fetch_profile(address: String, lambda_server_base_url: String) -> voi
 	if response is PromiseError:
 		if response.get_error().find("404") != -1:
 			# Deploy profile?
-			self.set_default_profile()
+			self.set_default_profile_or_guest_profile()
 			print("Profile not found " + url)
 		else:
-			self.set_default_profile()
+			self.set_default_profile_or_guest_profile()
 			printerr("Error while fetching profile " + url, " reason: ", response.get_error())
 			return
 
 	if not self._update_profile_from_lambda(response):
+		self.set_default_profile_or_guest_profile()
+
+
+func set_default_profile_or_guest_profile():
+	if Global.config.guest_profile.is_empty():
 		self.set_default_profile()
+	else:
+		var guest_profile := DclUserProfile.from_godot_dictionary(Global.config.guest_profile)
+		self.set_profile(guest_profile)
 
 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool):
 	if is_guest_value:
-		if Global.config.guest_profile.is_empty():
-			self.set_default_profile()
-		else:
-			var guest_profile := DclUserProfile.from_godot_dictionary(Global.config.guest_profile)
-			self.set_profile(guest_profile)
+		set_default_profile_or_guest_profile()
 		return
 
 	async_fetch_profile(address, current_lambda_server_base_url)
@@ -60,10 +64,6 @@ func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) 
 		Global.config.save_to_settings_file()
 		self.set_profile(new_profile)
 		return
-
-	# Block until a realm is set
-	if not Global.realm.has_realm():
-		await Global.realm.realm_changed
 
 	var promise: Promise = self.async_prepare_deploy_profile(new_profile, has_new_snapshots)
 	var ret = await PromiseUtils.async_awaiter(promise)
