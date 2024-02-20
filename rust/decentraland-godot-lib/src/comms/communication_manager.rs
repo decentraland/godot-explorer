@@ -113,7 +113,40 @@ impl INode for CommunicationManager {
     }
 }
 
-impl CommunicationManager {}
+impl CommunicationManager {
+    pub fn send_scene_message(&mut self, scene_id: String, data: Vec<u8>) {
+        let scene_message = rfc4::Packet {
+            message: Some(rfc4::packet::Message::Scene(rfc4::Scene { scene_id, data })),
+        };
+        match &mut self.current_connection {
+            CommsConnection::Connected(adapter) => {
+                adapter.send_rfc4(scene_message, true);
+            }
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => {
+                if let Some(adapter) = archipelago.adapter() {
+                    adapter.send_rfc4(scene_message, true);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub fn get_pending_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
+        match &mut self.current_connection {
+            CommsConnection::Connected(adapter) => adapter.consume_scene_messages(scene_id),
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => {
+                if let Some(adapter) = archipelago.adapter() {
+                    adapter.consume_scene_messages(scene_id)
+                } else {
+                    vec![]
+                }
+            }
+            _ => vec![],
+        }
+    }
+}
 
 #[godot_api]
 impl CommunicationManager {
