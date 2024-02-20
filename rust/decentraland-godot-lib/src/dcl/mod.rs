@@ -6,6 +6,7 @@ pub mod js;
 pub mod scene_apis;
 pub mod serialization;
 
+use ethers::types::H160;
 use godot::builtin::{Vector2, Vector3};
 
 use crate::{
@@ -40,7 +41,10 @@ impl SceneId {
 // data from renderer to scene
 #[derive(Debug)]
 pub enum RendererResponse {
-    Ok(DirtyCrdtState),
+    Ok {
+        dirty_crdt_state: Box<DirtyCrdtState>,
+        incoming_comms_message: Vec<(H160, Vec<u8>)>,
+    },
     Kill,
 }
 
@@ -48,13 +52,13 @@ pub enum RendererResponse {
 #[derive(Debug)]
 pub enum SceneResponse {
     Error(SceneId, String),
-    Ok(
-        SceneId,
-        DirtyCrdtState,
-        Vec<SceneLogMessage>,
-        f32,
-        Vec<RpcCall>,
-    ),
+    Ok {
+        scene_id: SceneId,
+        dirty_crdt_state: DirtyCrdtState,
+        logs: Vec<SceneLogMessage>,
+        delta: f32,
+        rpc_calls: Vec<RpcCall>,
+    },
     RemoveGodotScene(SceneId, Vec<SceneLogMessage>),
     TakeSnapshot {
         scene_id: SceneId,

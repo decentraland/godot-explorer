@@ -490,7 +490,13 @@ impl SceneManager {
                         arguments.push(GString::from(&msg).to_variant());
                         self.console.callv(arguments);
                     }
-                    SceneResponse::Ok(scene_id, dirty_crdt_state, logs, _, rpc_calls) => {
+                    SceneResponse::Ok {
+                        scene_id,
+                        dirty_crdt_state,
+                        logs,
+                        rpc_calls,
+                        delta: _,
+                    } => {
                         if let Some(scene) = self.scenes.get_mut(&scene_id) {
                             let dirty = Dirty {
                                 waiting_process: true,

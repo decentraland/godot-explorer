@@ -4,11 +4,13 @@ use crate::dcl::{
         SceneComponentId, SceneEntityId,
     },
     crdt::{
-        grow_only_set::GenericGrowOnlySetComponentOperation, DirtyCrdtState, SceneCrdtState,
+        grow_only_set::GenericGrowOnlySetComponentOperation,
+        last_write_wins::LastWriteWinsComponentOperation, DirtyCrdtState, SceneCrdtState,
         SceneCrdtStateProtoComponents,
     },
 };
 use deno_core::{op, Op, OpDecl, OpState};
+use ethers::types::H160;
 use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -52,10 +54,9 @@ struct EventBodyRealmChanged {
 }
 
 #[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct EventBodyPlayerClicked {
-    user_id: String,
-    ray: EventBodyRay,
+struct EventComms {
+    sender: String,
+    message: String,
 }
 
 #[derive(Serialize)]
@@ -70,6 +71,13 @@ struct EventBodyVector3 {
     x: f32,
     y: f32,
     z: f32,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EventBodyPlayerClicked {
+    user_id: String,
+    ray: EventBodyRay,
 }
 
 impl From<Option<&RaycastHit>> for EventBodyRay {
@@ -260,13 +268,51 @@ pub fn process_events(
     op_state: &mut OpState,
     crdt_state: &SceneCrdtState,
     dirty_crdt_state: &DirtyCrdtState,
+    comms_string: Vec<(H160, Vec<u8>)>,
 ) {
     process_events_players_stateful(op_state, crdt_state, dirty_crdt_state);
     process_events_players_stateless(op_state, crdt_state, dirty_crdt_state);
 
+    let messages = comms_string
+        .into_iter()
+        .map(|(sender_address, data)| {
+            let sender = format!("{:#x}", sender_address);
+            let message = String::from_utf8_lossy(&data[1..]).to_string();
+            EventComms { sender, message }
+        })
+        .collect::<Vec<_>>();
+
+    if !messages.is_empty() {
+        if let Some(player_clicked_sender) = op_state.try_take::<EventSender<MessageBus>>() {
+            messages.into_iter().for_each(|message| {
+                player_clicked_sender
+                    .inner
+                    .send(serde_json::to_string(&message).unwrap())
+                    .unwrap();
+            });
+            op_state.put(player_clicked_sender);
+        }
+    }
+
+    let engine_info_component = SceneCrdtStateProtoComponents::get_engine_info(crdt_state);
+    let tick_number = if let Some(entry) = engine_info_component.get(&SceneEntityId::ROOT) {
+        if let Some(value) = entry.value.as_ref() {
+            value.tick_number
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+
+    if tick_number == 4 {
+        if let Some(scene_ready_sender) = op_state.try_take::<EventSender<SceneReady>>() {
+            scene_ready_sender.inner.send("{}".to_string()).unwrap();
+            op_state.put(scene_ready_sender);
+        }
+    }
+
     // TODO: RealmChanged, it needs to add a new component to the crdt (realmInfo or something)
-    // TODO: MessageBus, sender should be on the main thread side
-    // TODO: SceneReady, in the tick == 4, send the event
 }
 
 struct EventPlayerState {

@@ -20,6 +20,7 @@ use crate::dcl::{
 };
 
 use super::{
+    comms::{InternalPendingBinaryMessages, COMMS_MSG_TYPE_BINARY},
     events::process_events,
     players::{get_player_data, get_players},
 };
@@ -69,13 +70,13 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
     let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
 
     sender
-        .send(SceneResponse::Ok(
+        .send(SceneResponse::Ok {
             scene_id,
-            dirty,
-            logs.0,
-            elapsed_time,
+            dirty_crdt_state: dirty,
+            logs: logs.0,
+            delta: elapsed_time,
             rpc_calls,
-        ))
+        })
         .expect("error sending scene response!!")
 }
 
@@ -105,11 +106,14 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
     let scene_crdt_state = cloned_scene_crdt.lock().unwrap();
 
     let data = match response {
-        Some(RendererResponse::Ok(dirty)) => {
+        Some(RendererResponse::Ok {
+            dirty_crdt_state,
+            incoming_comms_message,
+        }) => {
             let mut data_buf = Vec::new();
             let mut data_writter = DclWriter::new(&mut data_buf);
 
-            for (component_id, entities) in dirty.lww.iter() {
+            for (component_id, entities) in dirty_crdt_state.lww.iter() {
                 for entity_id in entities {
                     if let Err(err) = put_or_delete_lww_component(
                         &scene_crdt_state,
@@ -122,7 +126,7 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
                 }
             }
 
-            for (component_id, entities) in dirty.gos.iter() {
+            for (component_id, entities) in dirty_crdt_state.gos.iter() {
                 for (entity_id, element_count) in entities {
                     if let Err(err) = append_gos_component(
                         &scene_crdt_state,
@@ -136,12 +140,33 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
                 }
             }
 
-            for entity_id in dirty.entities.died.iter() {
+            for entity_id in dirty_crdt_state.entities.died.iter() {
                 delete_entity(entity_id, &mut data_writter);
             }
 
+            let (comms_binary, comms_string): (_, Vec<_>) = incoming_comms_message
+                .into_iter()
+                .filter(|v| !v.1.is_empty())
+                .partition(|v| v.1[0] == COMMS_MSG_TYPE_BINARY);
+
+            if !comms_binary.is_empty() {
+                let mut internal_pending_binary_messages = op_state
+                    .try_take::<InternalPendingBinaryMessages>()
+                    .unwrap_or_default();
+
+                internal_pending_binary_messages
+                    .messages
+                    .extend(comms_binary.into_iter());
+                op_state.put(internal_pending_binary_messages);
+            }
+
             process_local_api_calls(local_api_calls, &scene_crdt_state);
-            process_events(&mut op_state, &scene_crdt_state, &dirty);
+            process_events(
+                &mut op_state,
+                &scene_crdt_state,
+                &dirty_crdt_state,
+                comms_string,
+            );
 
             data_buf
         }

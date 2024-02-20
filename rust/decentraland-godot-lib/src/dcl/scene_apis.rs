@@ -168,6 +168,10 @@ pub enum RpcCall {
         body: RPCSendableMessage,
         response: RpcResultSender<Result<serde_json::Value, String>>,
     },
+    SendCommsMessage {
+        body: Vec<Vec<u8>>,
+        response: RpcResultSender<Result<(), String>>,
+    },
 }
 
 #[derive(Debug)]

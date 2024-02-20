@@ -333,9 +333,18 @@ pub fn _process_scene(
                     pointer_events_result_component.append(entity, value);
                 }
 
+                let incoming_comms_message = DclGlobal::singleton()
+                    .bind_mut()
+                    .comms
+                    .bind_mut()
+                    .get_pending_messages(&scene.scene_entity_definition.id);
+
                 // Set renderer response to the scene
-                let dirty = crdt_state.take_dirty();
-                scene.current_dirty.renderer_response = Some(RendererResponse::Ok(dirty));
+                let dirty_crdt_state = crdt_state.take_dirty();
+                scene.current_dirty.renderer_response = Some(RendererResponse::Ok {
+                    dirty_crdt_state: Box::new(dirty_crdt_state),
+                    incoming_comms_message,
+                });
                 false
             }
             SceneUpdateState::ProcessRpcs => {

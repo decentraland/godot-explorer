@@ -66,6 +66,9 @@ pub struct WebSocketRoom {
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
     last_profile_version_announced: u32,
+
+    // Scene messges
+    incoming_scene_messages: HashMap<String, Vec<(H160, Vec<u8>)>>,
 }
 
 impl WebSocketRoom {
@@ -104,6 +107,7 @@ impl WebSocketRoom {
             last_profile_request_sent: old_time,
             last_try_to_connect: old_time,
             last_profile_version_announced: 0,
+            incoming_scene_messages: HashMap::new(),
         }
     }
 
@@ -483,7 +487,15 @@ impl WebSocketRoom {
                                 .unwrap()
                                 .profile = Some(profile);
                         }
-                        rfc4::packet::Message::Scene(_scene) => {}
+                        rfc4::packet::Message::Scene(scene) => {
+                            let entry = self
+                                .incoming_scene_messages
+                                .entry(scene.scene_id)
+                                .or_default();
+
+                            // TODO: should we limit the size of the queue or accumulated bytes?
+                            entry.push((peer.address, scene.data));
+                        }
                         rfc4::packet::Message::Voice(_voice) => {}
                     }
                 }
@@ -594,5 +606,13 @@ impl Adapter for WebSocketRoom {
 
     fn support_voice_chat(&self) -> bool {
         false
+    }
+
+    fn consume_scene_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
+        if let Some(messages) = self.incoming_scene_messages.get_mut(scene_id) {
+            std::mem::take(messages)
+        } else {
+            Vec::new()
+        }
     }
 }

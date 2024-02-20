@@ -7,6 +7,7 @@ pub trait Adapter {
     fn clean(&mut self);
 
     fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)>;
+    fn consume_scene_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)>;
     fn change_profile(&mut self, new_profile: UserProfile);
 
     fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool;
