@@ -444,12 +444,15 @@ impl DclPlayerIdentity {
                     return;
                 };
 
-                let Ok((content_type, body_payload)) = deploy_data else {
+                if let Err(e) = deploy_data {
+                    println!("Deployment error: {:?}", e);
                     promise
                         .bind_mut()
-                        .reject("error preparing deploy profile".into());
-                    return;
-                };
+                        .reject(format!("error preparing deploy profile: {}", e).into());
+                    return;    
+                }
+
+                let (content_type, body_payload) = deploy_data.unwrap(); // checked before
 
                 let body_payload = fast_create_packed_byte_array_from_vec(&body_payload);
                 let mut dict = Dictionary::default();

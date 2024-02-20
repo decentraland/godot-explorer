@@ -9,10 +9,11 @@ var loading_first_profile: bool = false
 
 @onready var control_main = %Main
 
+@onready var control_loading = %Loading
 @onready var control_restore = %Restore
 @onready var control_signin = %SignIn
 @onready var control_start = %Start
-@onready var control_backpack = %Backpack
+@onready var control_backpack = %BackpackContainer
 @onready var control_choose_name = %ChooseName
 
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
@@ -25,10 +26,11 @@ var loading_first_profile: bool = false
 @onready var lineedit_choose_name = %LineEdit_ChooseName
 
 @onready var restore_panel = %VBoxContainer_RestorePanel
-@onready var restore_loading = %TextureProgressBar_RestoreLoading
 
 @onready var checkbox_terms_and_privacy = %CheckBox_TermsAndPrivacy
 @onready var button_next = %Button_Next
+
+@onready var backpack = %Backpack
 
 # TODO: Change screen orientation for Mobile
 #func set_portrait():
@@ -65,10 +67,7 @@ func _ready():
 
 	if Global.player_identity.try_recover_account(Global.config.session_account):
 		loading_first_profile = true
-		restore_panel.hide()
-		restore_loading.hide()
-		show_panel(control_restore)
-		_async_show_avatar_preview()
+		show_panel(control_loading)
 	else:
 		show_panel(control_start)
 
@@ -76,13 +75,21 @@ func _ready():
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
 
+	if !new_profile.has_connected_web3():
+		Global.config.guest_profile = new_profile.to_godot_dictionary()
+		Global.config.save_to_settings_file()
+
 	if loading_first_profile:
 		loading_first_profile = false
-		label_name.text = "Welcome back " + new_profile.get_name()
-		label_name.show()
+		if profile_has_name():
+			label_name.text = "Welcome back " + new_profile.get_name()
+			label_name.show()
 
-		restore_loading.hide()
-		restore_panel.show()
+			restore_panel.show()
+			show_panel(control_restore)
+			_show_avatar_preview()
+		else:
+			show_panel(control_start)
 
 	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
 
@@ -92,7 +99,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			close_sign_in()
 		else:
 			show_panel(control_choose_name)
-			_async_show_avatar_preview()
+			_show_avatar_preview()
 
 
 func show_connect():
@@ -121,6 +128,7 @@ func _on_button_different_account_pressed():
 
 
 func _on_button_continue_pressed():
+	_async_on_profile_changed(backpack.mutable_profile)
 	show_connect()
 
 
@@ -142,14 +150,18 @@ func _on_button_next_pressed():
 	if lineedit_choose_name.text.is_empty() or checkbox_terms_and_privacy.button_pressed == false:
 		return
 
+	avatar_preview.hide()
+	show_panel(control_loading)
 	current_profile.set_name(lineedit_choose_name.text)
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
+
+	await backpack.async_prepare_snapshots(avatar)
+
 	avatar.set_name(current_profile.get_name())
 	current_profile.set_avatar(avatar)
 
-	# Forget, it's going to be lock until a realm is set
-	Global.player_identity.async_deploy_profile(current_profile, true)
+	await Global.player_identity.async_deploy_profile(current_profile, true)
 
 	close_sign_in()
 
@@ -195,10 +207,10 @@ func _on_button_enter_as_guest_pressed():
 	create_guest_account_if_needed()
 
 	show_panel(control_choose_name)
-	_async_show_avatar_preview()
+	_show_avatar_preview()
 
 
-func _async_show_avatar_preview():
+func _show_avatar_preview():
 	avatar_preview.show()
 	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
 
