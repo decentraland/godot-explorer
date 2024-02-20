@@ -204,23 +204,23 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
     };
 
     PbRaycastResult {
-        /// timestamp is a correlation id, copied from the PBRaycast
+        // timestamp is a correlation id, copied from the PBRaycast
         timestamp: raycast.timestamp,
-        /// the starting point of the ray in global coordinates
+        // the starting point of the ray in global coordinates
         global_origin: Some(proto_components::common::Vector3 {
             x: raycast_from.x - scene_position.x,
             y: raycast_from.y - scene_position.y,
             z: -(raycast_from.z - scene_position.z),
         }),
-        /// the direction vector of the ray in global coordinates
+        // the direction vector of the ray in global coordinates
         direction: Some(proto_components::common::Vector3 {
             x: direction.x,
             y: direction.y,
             z: -direction.z,
         }),
-        /// zero or more hits
+        // zero or more hits
         hits,
-        /// number of tick in which the event was produced, equals to EngineInfo.tick_number
+        // number of tick in which the event was produced, equals to EngineInfo.tick_number
         tick_number,
     }
 }
