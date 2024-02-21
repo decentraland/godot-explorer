@@ -5,6 +5,7 @@ signal filter_type(type: String)
 signal clear_filter
 
 enum WearableCategoryEnum {
+	ALL,
 	BODY,
 	HAIR,
 	EYEBROWS,
@@ -56,6 +57,8 @@ func get_category_name():
 func type_to_category(category_enum: WearableCategoryEnum) -> String:
 	var result: String = ""
 	match category_enum:
+		WearableCategoryEnum.ALL:
+			result = Wearables.Categories.ALL
 		WearableCategoryEnum.BODY:
 			result = Wearables.Categories.BODY_SHAPE
 		WearableCategoryEnum.HAIR:

@@ -150,6 +150,7 @@ impl FromStr for WearableCategory {
             "tiara" => Ok(Self::TIARA),
             "top_head" => Ok(Self::TOP_HEAD),
             "skin" => Ok(Self::SKIN),
+            "hands_wear" => Ok(Self::HANDS_WEAR),
             _ => {
                 tracing::warn!("unrecognised wearable category: {slot}");
                 Err(anyhow::anyhow!("unrecognised wearable category: {slot}"))
@@ -178,6 +179,7 @@ impl WearableCategory {
             Self::TIARA,
             Self::TOP_HEAD,
             Self::SKIN,
+            Self::HANDS_WEAR,
         ]
         .iter()
     }

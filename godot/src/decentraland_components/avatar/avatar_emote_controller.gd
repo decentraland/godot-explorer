@@ -194,7 +194,7 @@ func async_play_emote(emote_urn: String) -> void:
 
 
 func _async_load_emote(emote_urn: String):
-	await EmotesRequest.async_fetch_emote(emote_urn)
+	await WearableRequest.async_fetch_emote(emote_urn)
 
 	var emote_content_promises = async_fetch_emote(emote_urn, avatar.avatar_data.get_body_shape())
 	await PromiseUtils.async_all(emote_content_promises)

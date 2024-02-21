@@ -237,6 +237,7 @@ impl DclItemEntityDefinition {
                 WearableCategory::UPPER_BODY.slot.to_string(),
                 WearableCategory::LOWER_BODY.slot.to_string(),
                 WearableCategory::FEET.slot.to_string(),
+                WearableCategory::HANDS_WEAR.slot.to_string(),
             ]);
         }
 
