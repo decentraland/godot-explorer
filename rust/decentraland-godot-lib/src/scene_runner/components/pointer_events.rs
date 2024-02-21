@@ -41,35 +41,35 @@ impl crate::dcl::components::proto_components::sdk::components::common::RaycastH
             .get("normal")?
             .to::<godot::prelude::Vector3>();
         Some(Self {
-            /// the intersection point in global coordinates
+            // the intersection point in global coordinates
             position: Some(crate::dcl::components::proto_components::common::Vector3 {
                 x: position.x,
                 y: position.y,
                 z: -position.z,
             }),
-            /// the starting point of the ray in global coordinates
+            // the starting point of the ray in global coordinates
             global_origin: Some(crate::dcl::components::proto_components::common::Vector3 {
                 x: global_origin.x,
                 y: global_origin.y,
                 z: -global_origin.z,
             }),
-            /// the direction vector of the ray in global coordinates
+            // the direction vector of the ray in global coordinates
             direction: Some(crate::dcl::components::proto_components::common::Vector3 {
                 x: direction.x,
                 y: direction.y,
                 z: -direction.z,
             }),
-            /// normal of the hit surface in global coordinates
+            // normal of the hit surface in global coordinates
             normal_hit: Some(crate::dcl::components::proto_components::common::Vector3 {
                 x: normal.x,
                 y: normal.y,
                 z: -normal.z,
             }),
-            /// the distance between the ray origin and the hit position
+            // the distance between the ray origin and the hit position
             length: position.length(),
-            /// mesh name, if collision happened inside a GltfContainer
+            // mesh name, if collision happened inside a GltfContainer
             mesh_name: None,
-            /// the ID of the Entity that has the impacted mesh attached
+            // the ID of the Entity that has the impacted mesh attached
             entity_id,
         })
     }
