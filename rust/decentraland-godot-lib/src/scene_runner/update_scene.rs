@@ -275,7 +275,7 @@ pub fn _process_scene(
                 );
                 let player_transform = DclTransformAndParent::from_godot(
                     player_global_transform,
-                    scene.godot_dcl_scene.root_node_3d.get_position(),
+                    scene.godot_dcl_scene.root_node_3d.get_position() - godot::builtin::Vector3::new(0.0, 0.88, 0.0),
                 );
                 crdt_state
                     .get_transform_mut()
