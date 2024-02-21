@@ -108,6 +108,7 @@ func _on_gui_input(event):
 
 func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: Variant = null) -> Image:
 	avatar.emote_controller.freeze_on_idle()
+	avatar.rotation.y = 0.0
 	const PROFILE_BODY_CAMERA_POSITION = Vector3(0, 2.3, -3.5)
 	const PROFILE_HEAD_CAMERA_POSITION = Vector3(0, 1.6, -1.25)
 	camera_3d.position = PROFILE_HEAD_CAMERA_POSITION if face else PROFILE_BODY_CAMERA_POSITION

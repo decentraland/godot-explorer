@@ -98,6 +98,12 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 	animation_player.add_animation_library("emotes", emotes_animation_library)
 
 
+func stop_emote():
+	playing_single = false
+	playing_mixed = false
+	playing_loop = false
+
+
 func play_emote(id: String):
 	var triggered: bool = false
 	if not id.begins_with("urn"):
@@ -188,10 +194,7 @@ func async_play_emote(emote_urn: String) -> void:
 
 
 func _async_load_emote(emote_urn: String):
-	var emote_data_promises = Global.content_provider.fetch_wearables(
-		[emote_urn], Global.realm.get_profile_content_url()
-	)
-	await PromiseUtils.async_all(emote_data_promises)
+	await EmotesRequest.async_fetch_emote(emote_urn)
 
 	var emote_content_promises = async_fetch_emote(emote_urn, avatar.avatar_data.get_body_shape())
 	await PromiseUtils.async_all(emote_content_promises)

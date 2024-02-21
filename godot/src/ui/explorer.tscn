@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=28 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -23,6 +23,7 @@
 [ext_resource type="Script" path="res://src/ui/components/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="20_uf6rv"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="21_pows0"]
+[ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_bi432"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
 
@@ -343,6 +344,11 @@ grow_vertical = 0
 visible = false
 layout_mode = 1
 avatar_node = NodePath("../../world/Player/Avatar")
+
+[node name="WarningMessages" parent="UI" instance=ExtResource("23_bi432")]
+unique_name_in_owner = true
+layout_mode = 1
+mouse_filter = 2
 
 [node name="VoiceChatRecorder" type="VoiceChatRecorder" parent="."]
 script = ExtResource("20_064cw")

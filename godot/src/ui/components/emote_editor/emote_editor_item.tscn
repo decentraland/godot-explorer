@@ -12,7 +12,9 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [node name="EmoteEditorItem" type="TextureButton"]
-custom_minimum_size = Vector2(220, 50)
+custom_minimum_size = Vector2(240, 50)
+offset_right = 240.0
+offset_bottom = 50.0
 toggle_mode = true
 script = ExtResource("1_myf8i")
 

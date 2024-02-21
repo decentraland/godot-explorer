@@ -195,3 +195,11 @@ func clear_cache():
 
 	if not DirAccess.dir_exists_absolute(Global.config.local_content_dir):
 		DirAccess.make_dir_absolute(Global.config.local_content_dir)
+
+
+func async_create_popup_warning(
+	warning_type: PopupWarning.WarningType, title: String, description: String
+):
+	var explorer = get_explorer()
+	if is_instance_valid(explorer):
+		await explorer.warning_messages.async_create_popup_warning(warning_type, title, description)

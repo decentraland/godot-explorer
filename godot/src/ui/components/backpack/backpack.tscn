@@ -1,4 +1,4 @@
-[gd_scene load_steps=39 format=3 uid="uid://c8dlajk0at8no"]
+[gd_scene load_steps=40 format=3 uid="uid://c8dlajk0at8no"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_0pkvk"]
 [ext_resource type="Script" path="res://src/ui/components/backpack/backpack.gd" id="1_a5ql5"]
@@ -36,6 +36,8 @@
 bg_color = Color(0, 0, 0, 0.2)
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_wyk6q"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_yj6kw"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_0kgen"]
 
@@ -76,6 +78,23 @@ size_flags_vertical = 3
 theme = ExtResource("1_0pkvk")
 script = ExtResource("1_a5ql5")
 
+[node name="AvatarPreview" parent="." instance=ExtResource("4_4kxkq")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -360.0
+offset_right = 485.0
+offset_bottom = 340.0
+grow_vertical = 2
+size_flags_horizontal = 1
+mouse_filter = 0
+stretch = true
+hide_name = true
+show_platform = true
+
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -83,6 +102,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 
 [node name="PanelContainer_Navbar" type="PanelContainer" parent="VBoxContainer"]
 unique_name_in_owner = true
@@ -144,32 +164,35 @@ button_group = SubResource("ButtonGroup_wyk6q")
 text = "Emotes"
 icon = ExtResource("5_ldi16")
 
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxEmpty_yj6kw")
+
+[node name="CheckBox_OnlyCollectibles" type="Button" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"WhiteButton"
+toggle_mode = true
+text = "ONLY COLLECTIBLES"
+
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_yj6kw")
+
 [node name="HBoxContainer_Backpack" type="HBoxContainer" parent="VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+mouse_filter = 2
 theme_override_constants/separation = 0
 
 [node name="Control_LeftBar" type="Control" parent="VBoxContainer/HBoxContainer_Backpack"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(385, 0)
 layout_mode = 2
-
-[node name="AvatarPreview" parent="VBoxContainer/HBoxContainer_Backpack/Control_LeftBar" instance=ExtResource("4_4kxkq")]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -100.0
-offset_right = 100.0
-offset_bottom = 0.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_horizontal = 1
-stretch = true
-hide_name = true
-show_platform = true
+mouse_filter = 2
 
 [node name="TextureProgressBar_AvatarLoading" parent="VBoxContainer/HBoxContainer_Backpack/Control_LeftBar" instance=ExtResource("4_saosw")]
 unique_name_in_owner = true
@@ -687,6 +710,7 @@ grow_vertical = 2
 
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Wearables" to="." method="_on_button_wearables_pressed"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_Emotes" to="." method="_on_button_emotes_pressed"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/CheckBox_OnlyCollectibles" to="." method="_on_check_box_only_collectibles_toggled"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer/Button_SaveProfile" to="." method="_on_button_save_profile_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer/VBoxContainer/HBoxContainer/Button_Logout" to="." method="_on_button_logout_pressed"]
 [connection signal="toggle_color_panel" from="VBoxContainer/HBoxContainer_Backpack/MarginContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/HBoxContainer/Color_Picker_Button" to="." method="_on_color_picker_button_toggle_color_panel"]

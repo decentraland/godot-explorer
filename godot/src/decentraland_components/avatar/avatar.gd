@@ -464,7 +464,7 @@ func _play_emote_audio(file_hash: String):
 
 
 func async_play_emote(emote_urn: String):
-	emote_controller.async_play_emote(emote_urn)
+	await emote_controller.async_play_emote(emote_urn)
 
 
 func broadcast_avatar_animation(emote_id: String) -> void:
