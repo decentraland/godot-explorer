@@ -43,3 +43,4 @@ skip_process = true
 
 [connection signal="block_camera_mode" from="camera_mode_area_detector" to="." method="_on_camera_mode_area_detector_block_camera_mode"]
 [connection signal="unblock_camera_mode" from="camera_mode_area_detector" to="." method="_on_camera_mode_area_detector_unblock_camera_mode"]
+[connection signal="visibility_changed" from="Avatar" to="." method="_on_avatar_visibility_changed"]

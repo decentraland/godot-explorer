@@ -3,9 +3,6 @@ extends CharacterBody3D
 
 const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 
-@export var vertical_sens: float = 0.5
-@export var horizontal_sens: float = 0.5
-
 var walk_speed = 1.5
 var jog_speed = 5.0
 var run_speed = 8.0
@@ -19,9 +16,6 @@ var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
 
 var current_direction: Vector3 = Vector3()
-
-var _mouse_position = Vector2(0.0, 0.0)
-var _touch_position = Vector2(0.0, 0.0)
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
@@ -71,6 +65,11 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 
 
 func _ready():
+	if Global.is_mobile():
+		add_child(PlayerMobileInput.new(self))
+	else:
+		add_child(PlayerDesktopInput.new(self))
+
 	camera.current = true
 
 	set_camera_mode(Global.CameraMode.THIRD_PERSON)
@@ -95,47 +94,12 @@ func _on_param_changed(_param):
 	pass
 
 
-func _clamp_camera_rotation():
+func clamp_camera_rotation():
 	# Maybe mobile wants a requires values
 	if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
 		mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-60), deg_to_rad(90))
 	elif camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
 		mount_camera.rotation.x = clamp(mount_camera.rotation.x, deg_to_rad(-70), deg_to_rad(35))
-
-
-func _input(event):
-	# Receives touchscreen motion
-	if Global.is_mobile():
-		if event is InputEventScreenDrag:
-			_touch_position = event.relative
-			rotate_y(deg_to_rad(-_touch_position.x) * horizontal_sens)
-			avatar.rotate_y(deg_to_rad(_touch_position.x) * horizontal_sens)
-			mount_camera.rotate_x(deg_to_rad(-_touch_position.y) * vertical_sens)
-			_clamp_camera_rotation()
-
-			var explorer = Global.get_explorer()
-			if is_instance_valid(explorer):
-				explorer.reset_cursor_position()
-
-	# Receives mouse motion
-	if not Global.is_mobile() && event:
-		if event is InputEventMouseMotion && Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-			_mouse_position = event.relative
-			rotate_y(deg_to_rad(-_mouse_position.x) * horizontal_sens)
-			avatar.rotate_y(deg_to_rad(_mouse_position.x) * horizontal_sens)
-			mount_camera.rotate_x(deg_to_rad(-_mouse_position.y) * vertical_sens)
-			_clamp_camera_rotation()
-
-		# Toggle first or third person camera
-		if event is InputEventMouseButton and Global.explorer_has_focus():
-			if !camera_mode_change_blocked:
-				if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-					if camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
-						set_camera_mode(Global.CameraMode.THIRD_PERSON)
-
-				if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-					if camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
-						set_camera_mode(Global.CameraMode.FIRST_PERSON)
 
 
 func _physics_process(dt: float) -> void:
@@ -216,4 +180,8 @@ func avatar_look_at(target_position: Vector3):
 	avatar.set_rotation(Vector3(0, 0, 0))
 	mount_camera.rotation.x = x_rot
 
-	_clamp_camera_rotation()
+	clamp_camera_rotation()
+
+
+func _on_avatar_visibility_changed():
+	pass  # Replace with function body.
