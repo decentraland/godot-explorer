@@ -9,8 +9,10 @@ const FILTER: Texture = preload("res://assets/ui/Filter.svg")
 
 @export var hide_navbar: bool = false
 
-var wearable_button_group = ButtonGroup.new()
+var wearable_button_group_per_category: Dictionary = {}
 var filtered_data: Array
+var current_filter: String = ""
+var only_collectibles: bool = false
 
 var base_wearable_request_id: int = -1
 var wearable_data: Dictionary = {}
@@ -57,6 +59,11 @@ var _has_changes: bool = false
 
 # gdlint:ignore = async-function-name
 func _ready():
+	for category in Wearables.Categories.ALL_CATEGORIES:
+		var button_group = ButtonGroup.new()
+		button_group.allow_unpress = _can_unequip(category)
+		wearable_button_group_per_category[category] = button_group
+
 	if hide_navbar:
 		container_navbar.hide()
 
@@ -90,14 +97,21 @@ func _ready():
 		var key = Wearables.get_base_avatar_urn(wearable_id)
 		wearable_data[key] = null
 
+	# Load all remote wearables that you own...
+	var remote_wearables = await WearableRequest.async_request_all_wearables()
+	if remote_wearables != null:
+		for wearable_item in remote_wearables.elements:
+			wearable_data[wearable_item.urn] = null
+
 	var promise = Global.content_provider.fetch_wearables(
 		wearable_data.keys(), Global.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(promise)
 
 	for wearable_id in wearable_data:
-		wearable_data[wearable_id] = Global.content_provider.get_wearable(wearable_id)
-		if wearable_data[wearable_id] == null:
+		var wearable = Global.content_provider.get_wearable(wearable_id)
+		wearable_data[wearable_id] = wearable
+		if wearable == null:
 			printerr("Error loading wearable_id ", wearable_id)
 
 	_update_visible_categories()
@@ -182,14 +196,20 @@ func _load_filtered_data(filter: String):
 		return
 
 	filtered_data = []
+	current_filter = filter
 	for wearable_id in wearable_data:
 		var wearable = wearable_data[wearable_id]
 		if wearable != null:
-			if wearable.get_category() == filter:
-				if (
-					Wearables.can_equip(wearable, mutable_avatar.get_body_shape())
-					or wearable.get_category() == "body_shape"
-				):
+			var is_filter_all = filter == "all"
+			if wearable.get_category() == filter or is_filter_all:
+				var is_body_shape = wearable.get_category() == "body_shape"
+				var is_equipable = Wearables.can_equip(wearable, mutable_avatar.get_body_shape())
+				var is_base_wearable = Wearables.is_base_wearable(wearable_id)
+				var can_use = (
+					(is_equipable and (!is_base_wearable or !only_collectibles))
+					or (is_body_shape and !is_filter_all)
+				)
+				if can_use:
 					filtered_data.push_back(wearable_id)
 
 	request_show_wearables = true
@@ -214,8 +234,7 @@ func _show_wearables():
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
 		var wearable = wearable_data[wearable_id]
 		grid_container_wearables_list.add_child(wearable_item)
-		wearable_button_group.allow_unpress = _can_unequip(wearable.get_category())
-		wearable_item.button_group = wearable_button_group
+		wearable_item.button_group = wearable_button_group_per_category.get(wearable.get_category())
 		wearable_item.async_set_wearable(wearable)
 
 		# Connect signals
@@ -360,7 +379,7 @@ func _on_wearable_unequip(wearable_id: String):
 	var category = desired_wearable.get_category()
 
 	if category == Wearables.Categories.BODY_SHAPE:
-		# TODO: can not unequip a body shape
+		# can not unequip a body shape
 		return
 
 	var new_avatar_wearables := mutable_avatar.get_wearables()
@@ -445,3 +464,5 @@ func _on_button_emotes_pressed():
 
 func _on_check_box_only_collectibles_toggled(toggled_on):
 	emote_editor.async_set_only_collectibles(toggled_on)
+	only_collectibles = toggled_on
+	_load_filtered_data(current_filter)
