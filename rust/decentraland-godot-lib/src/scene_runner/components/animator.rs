@@ -1,32 +1,21 @@
 use crate::{
     dcl::{
-        components::{proto_components::sdk::components::PbAnimator, SceneComponentId},
+        components::SceneComponentId,
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
     },
-    godot_classes::dcl_gltf_container::{DclGltfContainer, GltfContainerLoadingState},
+    godot_classes::{animator_controller::apply_anims, dcl_gltf_container::DclGltfContainer},
     scene_runner::{godot_dcl_scene::GodotEntityNode, scene::Scene},
 };
-use godot::{
-    engine::{animation::LoopMode, AnimationPlayer},
-    prelude::*,
-};
+use godot::prelude::*;
 
-fn get_animation_player(godot_entity_node: &mut GodotEntityNode) -> Option<Gd<AnimationPlayer>> {
-    let gltf_container = godot_entity_node
+fn get_gltf_container(godot_entity_node: &mut GodotEntityNode) -> Option<Gd<DclGltfContainer>> {
+    godot_entity_node
         .base_3d
         .as_ref()?
-        .try_get_node_as::<DclGltfContainer>(NodePath::from("GltfContainer"))?;
-
-    if gltf_container.bind().get_state() != GltfContainerLoadingState::Finished {
-        return None;
-    }
-
-    gltf_container
-        .get_child(0)?
-        .try_get_node_as::<AnimationPlayer>("AnimationPlayer")
+        .try_get_node_as::<DclGltfContainer>(NodePath::from("GltfContainer"))
 }
 
 pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -42,11 +31,10 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 continue;
             }
 
-            let (godot_entity_node, _node_3d) = godot_dcl_scene.ensure_node_3d(entity);
-            let animation_player = get_animation_player(godot_entity_node);
             let entry = new_value.unwrap();
+            let (godot_entity_node, _node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
-            if animation_player.is_none() {
+            let Some(gltf_container_node) = get_gltf_container(godot_entity_node) else {
                 let value = entry.value.clone();
                 if let Some(value) = value {
                     scene.dup_animator.insert(*entity, value);
@@ -54,10 +42,10 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     scene.dup_animator.remove(entity);
                 }
                 continue;
-            }
+            };
 
             let value = entry.value.clone().unwrap_or_default();
-            apply_animator_value(&value, animation_player.unwrap());
+            apply_anims(gltf_container_node.upcast(), &value);
 
             if entry.value.is_none() {
                 scene.dup_animator.remove(entity);
@@ -65,59 +53,5 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 scene.dup_animator.insert(*entity, value);
             }
         }
-    }
-}
-
-pub fn apply_animator_value(value: &PbAnimator, mut animation_player: Gd<AnimationPlayer>) {
-    let states = value.states.iter().filter(|s| {
-        animation_player
-            .get_animation(StringName::from(&s.clip))
-            .is_some()
-    });
-
-    let mut should_reset_current_animation = false;
-    let current_anim_name = animation_player.get_current_animation();
-
-    let (_, req_state) = states.fold((0.0, None), |v, state| {
-        if state.should_reset() && current_anim_name.eq(&GString::from(&state.clip)) {
-            should_reset_current_animation = true;
-        }
-
-        if !state.playing.unwrap_or_default() {
-            return v;
-        }
-
-        let current_weight = v.0;
-        let state_weight = state.weight.unwrap_or(1.0);
-        if state_weight > current_weight {
-            (state_weight, Some(state))
-        } else {
-            v
-        }
-    });
-
-    if let Some(state) = req_state {
-        if let Some(mut animation) = animation_player.get_animation(StringName::from(&state.clip)) {
-            if state.r#loop() {
-                animation.set_loop_mode(LoopMode::LOOP_LINEAR);
-            } else {
-                animation.set_loop_mode(LoopMode::LOOP_NONE);
-            }
-
-            animation_player
-                .play_ex()
-                .name(StringName::from(&state.clip))
-                .custom_speed(state.speed.unwrap_or(1.0))
-                .done();
-
-            if should_reset_current_animation {
-                animation_player.seek(0.0);
-            }
-        }
-    } else {
-        animation_player
-            .stop_ex()
-            .keep_state(!should_reset_current_animation)
-            .done();
     }
 }
