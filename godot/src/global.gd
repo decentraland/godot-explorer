@@ -21,7 +21,6 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 var config: ConfigData
 
 var raycast_debugger: RaycastDebugger
-var animation_importer: AnimationImporter
 
 var scene_fetcher: SceneFetcher
 var http_requester: RustHttpQueueRequester
@@ -42,7 +41,6 @@ func _ready():
 
 	# Setup
 	http_requester = RustHttpQueueRequester.new()
-	animation_importer = AnimationImporter.new()
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
 

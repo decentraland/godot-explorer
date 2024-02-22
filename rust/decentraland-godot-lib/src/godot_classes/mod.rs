@@ -1,3 +1,4 @@
+pub mod animator_controller;
 pub mod dcl_audio_source;
 pub mod dcl_audio_stream;
 pub mod dcl_avatar;
@@ -22,7 +23,6 @@ pub mod font;
 pub mod portables;
 pub mod promise;
 pub mod rpc_sender;
-
 pub trait JsonGodotClass
 where
     Self: serde::Serialize + serde::de::DeserializeOwned,
