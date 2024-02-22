@@ -6,7 +6,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    godot_classes::{animator::apply_anims, dcl_gltf_container::DclGltfContainer},
+    godot_classes::{animator_controller::apply_anims, dcl_gltf_container::DclGltfContainer},
     scene_runner::{godot_dcl_scene::GodotEntityNode, scene::Scene},
 };
 use godot::prelude::*;

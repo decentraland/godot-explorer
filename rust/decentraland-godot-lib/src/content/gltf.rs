@@ -206,11 +206,11 @@ pub async fn apply_update_set_mask_colliders(
     );
 
     // TODO: Check if remove this logic is needed
-    //      animation duplication is no longer needed for AnimationBlendBuilder.
+    //      animation duplication is no longer needed for MultipleAnimationController.
     // duplicate_animation_resources(gltf_node.clone());
 
     //  The duplication was done because the loop property could be modified
-    //      in the AnimationBlendBuilder the looping is handled by replaying every time
+    //      in the MultipleAnimationController the looping is handled by replaying every time
     //      the animation emits the finished signal
 
     for mut node in to_remove_nodes {

@@ -13,6 +13,9 @@ use godot::{
 
 use crate::dcl::components::proto_components::sdk::components::{PbAnimationState, PbAnimator};
 
+pub const DUMMY_ANIMATION_NAME: &str = "__dummy__";
+const MULTIPLE_ANIMATION_CONTROLLER_NAME: &str = "MultipleAnimator";
+
 struct AnimationItem {
     value: PbAnimationState,
     anim_name_node: StringName,
@@ -24,7 +27,7 @@ struct AnimationItem {
 
 #[derive(GodotClass)]
 #[class(base=AnimationTree)]
-pub struct AnimationBlendBuilder {
+pub struct MultipleAnimationController {
     #[base]
     base: Base<AnimationTree>,
 
@@ -35,7 +38,7 @@ pub struct AnimationBlendBuilder {
 }
 
 #[godot_api]
-impl IAnimationTree for AnimationBlendBuilder {
+impl IAnimationTree for MultipleAnimationController {
     fn ready(&mut self) {
         let callable = self.base.callable("_animation_finished");
         self.base.connect("animation_finished".into(), callable);
@@ -43,7 +46,7 @@ impl IAnimationTree for AnimationBlendBuilder {
 }
 
 #[godot_api]
-impl AnimationBlendBuilder {
+impl MultipleAnimationController {
     #[func]
     fn _animation_finished(&mut self, anim_name: StringName) {
         let anim_name = anim_name.to_string();
@@ -68,12 +71,8 @@ impl AnimationBlendBuilder {
     }
 }
 
-const DUMMY_ANIMATION_NAME: &str = "__dummy__";
-const ANIMATION_BLEND_BUILDER_NAME: &str = "AnimBlend";
-
-impl AnimationBlendBuilder {
-    // Private constructor, only used by get_animation_blend_builder
-    fn new() -> Gd<AnimationBlendBuilder> {
+impl MultipleAnimationController {
+    fn new() -> Gd<MultipleAnimationController> {
         Gd::from_init_fn(|base| Self {
             base,
             current_capacity: 0,
@@ -119,15 +118,16 @@ impl AnimationBlendBuilder {
             };
             self.base
                 .set(anim_state.speed_param_ref_str.clone(), speed.to_variant());
-            anim_state.value.playing = new_state.playing;
-            anim_state.value.speed = new_state.speed;
-            anim_state.value.r#loop = new_state.r#loop;
 
             if new_state.should_reset.unwrap_or_default() {
-                anim_state.value.should_reset = new_state.should_reset;
                 self.base
                     .set(anim_state.time_param_ref_str.clone(), 0_f32.to_variant());
             }
+
+            anim_state.value.playing = new_state.playing;
+            anim_state.value.speed = new_state.speed;
+            anim_state.value.r#loop = new_state.r#loop;
+            anim_state.value.should_reset = new_state.should_reset;
         }
     }
 
@@ -323,13 +323,37 @@ impl AnimationBlendBuilder {
     }
 }
 
+fn create_and_add_multiple_animation_controller(
+    mut gltf_node: Gd<Node>,
+) -> Option<Gd<MultipleAnimationController>> {
+    let _anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
+    if _anim_player.get_animation_list().is_empty() {
+        return None;
+    }
+
+    let mut anim_builder = MultipleAnimationController::new();
+    anim_builder.set_name(MULTIPLE_ANIMATION_CONTROLLER_NAME.into());
+    anim_builder.set_animation_player("../AnimationPlayer".into());
+
+    if !_anim_player.has_animation(DUMMY_ANIMATION_NAME.into()) {
+        _anim_player
+            .get_animation_library("".into())
+            .unwrap()
+            .add_animation(DUMMY_ANIMATION_NAME.into(), Default::default());
+    }
+
+    gltf_node.add_child(anim_builder.clone().upcast());
+
+    Some(anim_builder)
+}
+
 pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
     let Some(gltf_node) = gltf_container_node.get_child(0) else {
         return;
     };
 
     if let Some(mut already_exist_node) =
-        gltf_node.try_get_node_as::<AnimationBlendBuilder>(ANIMATION_BLEND_BUILDER_NAME)
+        gltf_node.try_get_node_as::<MultipleAnimationController>(MULTIPLE_ANIMATION_CONTROLLER_NAME)
     {
         already_exist_node.bind_mut().apply_anims(value);
         return;
@@ -351,9 +375,10 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
 
     let need_multiple_animation = true;
 
-    // For handling multiple animations, we need to create a new AnimationBlendBuilder
+    // For handling multiple animations, we need to create a new MultipleAnimationController
     if need_multiple_animation {
-        let Some(mut new_blend_builder) = create_and_add_animation_blend_builder(gltf_node) else {
+        let Some(mut new_blend_builder) = create_and_add_multiple_animation_controller(gltf_node)
+        else {
             // No animations available
             return;
         };
@@ -361,28 +386,4 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
     } else {
         todo!("single animation not implemented yet")
     }
-}
-
-fn create_and_add_animation_blend_builder(
-    mut gltf_node: Gd<Node>,
-) -> Option<Gd<AnimationBlendBuilder>> {
-    let _anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
-    if _anim_player.get_animation_list().is_empty() {
-        return None;
-    }
-
-    let mut anim_builder = AnimationBlendBuilder::new();
-    anim_builder.set_name(ANIMATION_BLEND_BUILDER_NAME.into());
-    anim_builder.set_animation_player("../AnimationPlayer".into());
-
-    if !_anim_player.has_animation(DUMMY_ANIMATION_NAME.into()) {
-        _anim_player
-            .get_animation_library("".into())
-            .unwrap()
-            .add_animation(DUMMY_ANIMATION_NAME.into(), Default::default());
-    }
-
-    gltf_node.add_child(anim_builder.clone().upcast());
-
-    Some(anim_builder)
 }

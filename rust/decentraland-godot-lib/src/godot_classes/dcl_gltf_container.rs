@@ -5,7 +5,7 @@ use crate::dcl::components::proto_components::sdk::components::{PbAnimationState
 use crate::dcl::components::SceneEntityId;
 use crate::dcl::SceneId;
 
-use super::animator::apply_anims;
+use super::animator_controller::{apply_anims, DUMMY_ANIMATION_NAME};
 use super::dcl_global::DclGlobal;
 
 #[repr(i32)]
@@ -123,7 +123,19 @@ impl DclGltfContainer {
                 apply_anims(gltf_container_node, pending_animator_value);
             } else {
                 let animation_list = animation_player.get_animation_list();
-                let animation_name = animation_list.get(0).into();
+                let animation_name = if animation_list.len() > 1 {
+                    let value = animation_list.get(0).to_string();
+                    if value == DUMMY_ANIMATION_NAME {
+                        animation_list.get(1).to_string()
+                    } else {
+                        value
+                    }
+                } else if !animation_list.is_empty() {
+                    animation_list.get(0).to_string()
+                } else {
+                    return;
+                };
+
                 apply_anims(
                     gltf_container_node,
                     &PbAnimator {
