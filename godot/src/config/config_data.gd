@@ -191,7 +191,7 @@ func load_from_default():
 	self.session_account = {}
 	self.guest_profile = {}
 
-	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-update-asset-pack-lib"
 	self.last_parcel_position = Vector2i(72, -10)
 
 

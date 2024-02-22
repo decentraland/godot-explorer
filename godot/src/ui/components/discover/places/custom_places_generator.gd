@@ -59,7 +59,8 @@ func on_request(_offset: int, _limit: int) -> void:
 			"contact_name": "SDK Team",
 			"image": "https://i.imgur.com/Zsl1r2d.png",
 			"world": true,
-			"world_name": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main"
+			"world_name":
+			"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-update-asset-pack-lib"
 		}
 	)
 
