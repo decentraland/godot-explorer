@@ -587,7 +587,7 @@ mod tests {
         let entities_active_url =
             "https://sdk-test-scenes.decentraland.zone/content/entities/active".to_string();
         let content_url =
-            "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main/contents".to_string();
+            "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-update-asset-pack-lib/contents".to_string();
 
         let mut scene_entity_coordinator =
             SceneEntityCoordinator::new(entities_active_url.clone(), content_url.clone(), false);
