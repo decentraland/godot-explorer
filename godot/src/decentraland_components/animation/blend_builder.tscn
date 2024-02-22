@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://8aunh8lnqol3"]
+
+[ext_resource type="Script" path="res://src/decentraland_components/animation/blend_builder.gd" id="1_wsr0x"]
+
+[node name="BlendBuilder" type="AnimationTree"]
+script = ExtResource("1_wsr0x")
+
+[connection signal="animation_player_changed" from="." to="." method="_on_animation_player_changed"]

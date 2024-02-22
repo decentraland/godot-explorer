@@ -73,6 +73,11 @@ func async_deferred_add_child():
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
 
 	self.check_animations()
+	
+	var anim_player: AnimationPlayer = get_child(0).get_node_or_null("AnimationPlayer")
+	if anim_player != null:
+		prints("gltf has ",anim_player.get_animation_list().size(), " anims")
+		
 
 
 func get_animatable_body_3d(mesh_instance: MeshInstance3D):

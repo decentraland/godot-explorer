@@ -4,8 +4,8 @@ use godot::prelude::*;
 use crate::dcl::components::proto_components::sdk::components::{PbAnimationState, PbAnimator};
 use crate::dcl::components::SceneEntityId;
 use crate::dcl::SceneId;
-use crate::scene_runner::components::animator::apply_animator_value;
 
+use super::animator::AnimationBlendBuilder;
 use super::dcl_global::DclGlobal;
 
 #[repr(i32)]
@@ -110,6 +110,13 @@ impl DclGltfContainer {
         let Some(animation_player) = get_animation_player(&self.base) else {
             return;
         };
+
+        let Some(mut anim_blend_builder) =
+            AnimationBlendBuilder::get_animation_blend_builder_from_base(&self.base)
+        else {
+            return;
+        };
+
         let entity_id = SceneEntityId::from_i32(self.dcl_entity_id);
 
         let global = DclGlobal::singleton();
@@ -117,24 +124,21 @@ impl DclGltfContainer {
         let dcl_scene_runner = scene_runner.bind();
         if let Some(scene) = dcl_scene_runner.get_scene(&SceneId(self.dcl_scene_id)) {
             if let Some(pending_animator_value) = scene.dup_animator.get(&entity_id) {
-                apply_animator_value(pending_animator_value, animation_player);
+                anim_blend_builder
+                    .bind_mut()
+                    .apply_anims(pending_animator_value);
             } else {
                 let animation_list = animation_player.get_animation_list();
-                if !animation_list.is_empty() {
-                    let animation_name = animation_list.get(0).into();
-                    apply_animator_value(
-                        &PbAnimator {
-                            states: vec![PbAnimationState {
-                                clip: animation_name,
-                                playing: Some(true),
-                                r#loop: Some(true),
-                                should_reset: Some(true),
-                                ..Default::default()
-                            }],
-                        },
-                        animation_player,
-                    );
-                }
+                let animation_name = animation_list.get(0).into();
+                anim_blend_builder.bind_mut().apply_anims(&PbAnimator {
+                    states: vec![PbAnimationState {
+                        clip: animation_name,
+                        playing: Some(true),
+                        r#loop: Some(true),
+                        should_reset: Some(true),
+                        ..Default::default()
+                    }],
+                });
             }
         }
     }

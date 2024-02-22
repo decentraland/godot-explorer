@@ -1,24 +1,28 @@
 use crate::{
     dcl::{
-        components::{proto_components::sdk::components::PbAnimator, SceneComponentId},
+        components::SceneComponentId,
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
     },
-    godot_classes::dcl_gltf_container::{DclGltfContainer, GltfContainerLoadingState},
+    godot_classes::{
+        animator::AnimationBlendBuilder,
+        dcl_gltf_container::{DclGltfContainer, GltfContainerLoadingState},
+    },
     scene_runner::{godot_dcl_scene::GodotEntityNode, scene::Scene},
 };
-use godot::{
-    engine::{animation::LoopMode, AnimationPlayer},
-    prelude::*,
-};
+use godot::{engine::AnimationPlayer, prelude::*};
 
-fn get_animation_player(godot_entity_node: &mut GodotEntityNode) -> Option<Gd<AnimationPlayer>> {
-    let gltf_container = godot_entity_node
+fn get_gltf_container(godot_entity_node: &mut GodotEntityNode) -> Option<Gd<DclGltfContainer>> {
+    godot_entity_node
         .base_3d
         .as_ref()?
-        .try_get_node_as::<DclGltfContainer>(NodePath::from("GltfContainer"))?;
+        .try_get_node_as::<DclGltfContainer>(NodePath::from("GltfContainer"))
+}
+
+fn get_animation_player(godot_entity_node: &mut GodotEntityNode) -> Option<Gd<AnimationPlayer>> {
+    let gltf_container = get_gltf_container(godot_entity_node)?;
 
     if gltf_container.bind().get_state() != GltfContainerLoadingState::Finished {
         return None;
@@ -56,8 +60,19 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 continue;
             }
 
+            let Some(mut anim_blend_builder) =
+                get_gltf_container(godot_entity_node).and_then(|gltf_node| {
+                    AnimationBlendBuilder::get_animation_blend_builder_from_node(
+                        &gltf_node.upcast(),
+                    )
+                })
+            else {
+                continue;
+            };
+
             let value = entry.value.clone().unwrap_or_default();
-            apply_animator_value(&value, animation_player.unwrap());
+            anim_blend_builder.bind_mut().apply_anims(&value);
+            // apply_animator_value(&value, animation_player.unwrap());
 
             if entry.value.is_none() {
                 scene.dup_animator.remove(entity);
@@ -68,56 +83,56 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     }
 }
 
-pub fn apply_animator_value(value: &PbAnimator, mut animation_player: Gd<AnimationPlayer>) {
-    let states = value.states.iter().filter(|s| {
-        animation_player
-            .get_animation(StringName::from(&s.clip))
-            .is_some()
-    });
+// pub fn apply_animator_value(value: &PbAnimator, mut animation_player: Gd<AnimationPlayer>) {
+//     let states = value.states.iter().filter(|s| {
+//         animation_player
+//             .get_animation(StringName::from(&s.clip))
+//             .is_some()
+//     });
 
-    let mut should_reset_current_animation = false;
-    let current_anim_name = animation_player.get_current_animation();
+//     let mut should_reset_current_animation = false;
+//     let current_anim_name = animation_player.get_current_animation();
 
-    let (_, req_state) = states.fold((0.0, None), |v, state| {
-        if state.should_reset() && current_anim_name.eq(&GString::from(&state.clip)) {
-            should_reset_current_animation = true;
-        }
+//     let (_, req_state) = states.fold((0.0, None), |v, state| {
+//         if state.should_reset() && current_anim_name.eq(&GString::from(&state.clip)) {
+//             should_reset_current_animation = true;
+//         }
 
-        if !state.playing.unwrap_or_default() {
-            return v;
-        }
+//         if !state.playing.unwrap_or_default() {
+//             return v;
+//         }
 
-        let current_weight = v.0;
-        let state_weight = state.weight.unwrap_or(1.0);
-        if state_weight > current_weight {
-            (state_weight, Some(state))
-        } else {
-            v
-        }
-    });
+//         let current_weight = v.0;
+//         let state_weight = state.weight.unwrap_or(1.0);
+//         if state_weight > current_weight {
+//             (state_weight, Some(state))
+//         } else {
+//             v
+//         }
+//     });
 
-    if let Some(state) = req_state {
-        if let Some(mut animation) = animation_player.get_animation(StringName::from(&state.clip)) {
-            if state.r#loop() {
-                animation.set_loop_mode(LoopMode::LOOP_LINEAR);
-            } else {
-                animation.set_loop_mode(LoopMode::LOOP_NONE);
-            }
+//     if let Some(state) = req_state {
+//         if let Some(mut animation) = animation_player.get_animation(StringName::from(&state.clip)) {
+//             if state.r#loop() {
+//                 animation.set_loop_mode(LoopMode::LOOP_LINEAR);
+//             } else {
+//                 animation.set_loop_mode(LoopMode::LOOP_NONE);
+//             }
 
-            animation_player
-                .play_ex()
-                .name(StringName::from(&state.clip))
-                .custom_speed(state.speed.unwrap_or(1.0))
-                .done();
+//             animation_player
+//                 .play_ex()
+//                 .name(StringName::from(&state.clip))
+//                 .custom_speed(state.speed.unwrap_or(1.0))
+//                 .done();
 
-            if should_reset_current_animation {
-                animation_player.seek(0.0);
-            }
-        }
-    } else {
-        animation_player
-            .stop_ex()
-            .keep_state(!should_reset_current_animation)
-            .done();
-    }
-}
+//             if should_reset_current_animation {
+//                 animation_player.seek(0.0);
+//             }
+//         }
+//     } else {
+//         animation_player
+//             .stop_ex()
+//             .keep_state(!should_reset_current_animation)
+//             .done();
+//     }
+// }

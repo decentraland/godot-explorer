@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3 uid="uid://byjcff2mbvw1x"]
+
+[ext_resource type="Script" path="res://src/test/animation_importer/blend_builder_test.gd" id="1_scuh8"]
+[ext_resource type="Script" path="res://src/logic/camera.gd" id="2_k2s7b"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_4yuai"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_exyoj"]
+sky_material = SubResource("ProceduralSkyMaterial_4yuai")
+
+[sub_resource type="Environment" id="Environment_fd5ks"]
+background_mode = 2
+sky = SubResource("Sky_exyoj")
+tonemap_mode = 2
+glow_enabled = true
+
+[node name="BlendBuilderTest" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_scuh8")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_right = 1278.0
+offset_bottom = 722.0
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+handle_input_locally = false
+size = Vector2i(1280, 512)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport"]
+transform = Transform3D(0.553377, 0, 0.832931, 0, 1, 0, -0.832931, 0, 0.553377, 2.82727, 0.993109, 2.2077)
+script = ExtResource("2_k2s7b")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="SubViewportContainer/SubViewport"]
+environment = SubResource("Environment_fd5ks")
