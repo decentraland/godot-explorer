@@ -34,7 +34,6 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let entry = new_value.unwrap();
             let (godot_entity_node, _node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
-            // If it
             let Some(gltf_container_node) = get_gltf_container(godot_entity_node) else {
                 let value = entry.value.clone();
                 if let Some(value) = value {
