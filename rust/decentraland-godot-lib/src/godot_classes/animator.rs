@@ -46,19 +46,21 @@ impl IAnimationTree for AnimationBlendBuilder {
 impl AnimationBlendBuilder {
     #[func]
     fn _animation_finished(&mut self, anim_name: StringName) {
+        let anim_name = anim_name.to_string();
+        if anim_name == DUMMY_ANIMATION_NAME {
+            return;
+        }
+
         if let Some(anim_item) = self.playing_anims.get(&anim_name.to_string()) {
-            if anim_item.value.should_reset.unwrap_or_default() {
-                self.base.set(
-                    anim_item.time_param_ref_str.clone(),
-                    (0.0 as f32).to_variant(),
-                );
+            let looping = anim_item.value.r#loop.unwrap_or(true);
+            if looping || anim_item.value.should_reset.unwrap_or_default() {
+                self.base
+                    .set(anim_item.time_param_ref_str.clone(), 0_f32.to_variant());
             }
 
-            if anim_item.value.r#loop.unwrap_or(true) {
-                self.base.set(
-                    anim_item.time_param_ref_str.clone(),
-                    (0.0 as f32).to_variant(),
-                );
+            if !looping {
+                self.base
+                    .set(anim_item.speed_param_ref_str.clone(), 0_f32.to_variant());
             }
         } else {
             tracing::error!("finished animation {} not found!", anim_name);
@@ -80,48 +82,6 @@ impl AnimationBlendBuilder {
         })
     }
 
-    fn get_animation_blend_builder_from_gltf_node(
-        mut gltf_node: Gd<Node>,
-    ) -> Option<Gd<AnimationBlendBuilder>> {
-        if let Some(already_exist_node) =
-            gltf_node.try_get_node_as::<AnimationBlendBuilder>(ANIMATION_BLEND_BUILDER_NAME)
-        {
-            return Some(already_exist_node);
-        } else {
-            let _anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
-            if _anim_player.get_animation_list().is_empty() {
-                return None;
-            }
-
-            let mut anim_builder = AnimationBlendBuilder::new();
-            anim_builder.set_name(ANIMATION_BLEND_BUILDER_NAME.into());
-            anim_builder.set_animation_player("../AnimationPlayer".into());
-
-            if !_anim_player.has_animation(DUMMY_ANIMATION_NAME.into()) {
-                _anim_player
-                    .get_animation_library("".into())
-                    .unwrap()
-                    .add_animation(DUMMY_ANIMATION_NAME.into(), Default::default());
-            }
-
-            gltf_node.add_child(anim_builder.clone().upcast());
-
-            Some(anim_builder)
-        }
-    }
-
-    pub fn get_animation_blend_builder_from_node(
-        godot_entity_node: &Gd<Node3D>,
-    ) -> Option<Gd<AnimationBlendBuilder>> {
-        Self::get_animation_blend_builder_from_gltf_node(godot_entity_node.get_child(0)?)
-    }
-
-    pub fn get_animation_blend_builder_from_base(
-        godot_entity_node: &Base<Node3D>,
-    ) -> Option<Gd<AnimationBlendBuilder>> {
-        Self::get_animation_blend_builder_from_gltf_node(godot_entity_node.get_child(0)?)
-    }
-
     pub fn apply_anims(&mut self, value: &PbAnimator) {
         let (playing_animations, stopped_animations): (_, Vec<_>) = value
             .states
@@ -139,34 +99,34 @@ impl AnimationBlendBuilder {
             self.remap_animation(&playing_animations, &stopped_animations);
         }
 
-        for playing in playing_animations {
-            let Some(anim_state) = self.playing_anims.get_mut(&playing.clip) else {
-                tracing::error!("Animation {} not found!", playing.clip);
+        for new_state in value.states.iter() {
+            let Some(anim_state) = self.playing_anims.get_mut(&new_state.clip) else {
                 continue;
             };
 
-            if anim_state.value.speed != playing.speed {
-                anim_state.value.speed = playing.speed;
-                self.base.set(
-                    anim_state.speed_param_ref_str.clone(),
-                    playing.speed.unwrap_or(1.0).to_variant(),
-                );
-            }
-
-            if anim_state.value.weight != playing.weight {
-                anim_state.value.weight = playing.weight;
+            if anim_state.value.weight != new_state.weight {
+                anim_state.value.weight = new_state.weight;
                 self.base.set(
                     anim_state.blend_param_ref_str.clone(),
-                    playing.weight.unwrap_or(1.0).to_variant(),
+                    new_state.weight.unwrap_or(1.0).to_variant(),
                 );
             }
 
-            if playing.should_reset.unwrap_or_default() {
-                anim_state.value.should_reset = playing.should_reset;
-                self.base.set(
-                    anim_state.time_param_ref_str.clone(),
-                    (0.0 as f32).to_variant(),
-                );
+            let speed = if new_state.playing.unwrap_or_default() {
+                new_state.speed.unwrap_or(1.0)
+            } else {
+                0.0
+            };
+            self.base
+                .set(anim_state.speed_param_ref_str.clone(), speed.to_variant());
+            anim_state.value.playing = new_state.playing;
+            anim_state.value.speed = new_state.speed;
+            anim_state.value.r#loop = new_state.r#loop;
+
+            if new_state.should_reset.unwrap_or_default() {
+                anim_state.value.should_reset = new_state.should_reset;
+                self.base
+                    .set(anim_state.time_param_ref_str.clone(), 0_f32.to_variant());
             }
         }
     }
@@ -186,10 +146,8 @@ impl AnimationBlendBuilder {
             };
 
             if anim_state.value.should_reset.unwrap_or_default() {
-                self.base.set(
-                    anim_state.time_param_ref_str.clone(),
-                    (0.0 as f32).to_variant(),
-                );
+                self.base
+                    .set(anim_state.time_param_ref_str.clone(), 0_f32.to_variant());
                 self.current_time.remove(&anim.clip);
             } else {
                 let time = self.base.get(anim_state.time_param_ref_str.clone());
@@ -238,10 +196,8 @@ impl AnimationBlendBuilder {
                 anim.weight.unwrap_or(1.0).to_variant(),
             );
 
-            self.base.set(
-                anim_item.time_param_ref_str.clone(),
-                (0.0 as f32).to_variant(),
-            );
+            self.base
+                .set(anim_item.time_param_ref_str.clone(), 0_f32.to_variant());
 
             if let Some(playing_time) = self.current_time.remove(&anim.clip) {
                 self.base.set(
@@ -330,7 +286,7 @@ impl AnimationBlendBuilder {
 
             self.base.set(
                 format!("parameters/blend_{}/blend_amount", i).into(),
-                (1.0 as f32).to_variant(),
+                1_f32.to_variant(),
             );
 
             if i < n - 1 {
@@ -358,11 +314,75 @@ impl AnimationBlendBuilder {
 
             self.base.set(
                 format!("parameters/add_{}/add_amount", i).into(),
-                (1.0 as f32).to_variant(),
+                1_f32.to_variant(),
             );
         }
 
         tree.connect_node("output".into(), 0, format!("add_{}", n - 2).into());
         self.current_capacity = n;
     }
+}
+
+pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
+    let Some(gltf_node) = gltf_container_node.get_child(0) else {
+        return;
+    };
+
+    if let Some(mut already_exist_node) =
+        gltf_node.try_get_node_as::<AnimationBlendBuilder>(ANIMATION_BLEND_BUILDER_NAME)
+    {
+        already_exist_node.bind_mut().apply_anims(value);
+        return;
+    }
+
+    let mut playing_count = 0;
+    for state in value.states.iter() {
+        if state.playing.unwrap_or_default() {
+            playing_count += 1;
+            if playing_count > 1 {
+                break;
+            }
+        }
+    }
+
+    // TODO: this is an optimizacion to avoid creating AnimationTree for every animation player
+    //  with just one animation, we can use the AnimationPlayer directly, but a proper controller is needed
+    // let need_multiple_animation = playing_count > 1;
+
+    let need_multiple_animation = true;
+
+    // For handling multiple animations, we need to create a new AnimationBlendBuilder
+    if need_multiple_animation {
+        let Some(mut new_blend_builder) = create_and_add_animation_blend_builder(gltf_node) else {
+            // No animations available
+            return;
+        };
+        new_blend_builder.bind_mut().apply_anims(value);
+    } else {
+        todo!("single animation not implemented yet")
+    }
+}
+
+fn create_and_add_animation_blend_builder(
+    mut gltf_node: Gd<Node>,
+) -> Option<Gd<AnimationBlendBuilder>> {
+    let _anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
+    if _anim_player.get_animation_list().is_empty() {
+        return None;
+    }
+
+    let mut anim_builder = AnimationBlendBuilder::new();
+    anim_builder.set_name(ANIMATION_BLEND_BUILDER_NAME.into());
+    anim_builder.set_animation_player("../AnimationPlayer".into());
+
+    if !_anim_player.has_animation(DUMMY_ANIMATION_NAME.into()) {
+        _anim_player
+            .get_animation_library("".into())
+            .unwrap()
+            .add_animation(DUMMY_ANIMATION_NAME.into(), Default::default());
+    }
+
+    gltf_node.add_child(anim_builder.clone().upcast());
+
+    Some(anim_builder)
 }

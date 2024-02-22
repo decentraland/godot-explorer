@@ -5,7 +5,7 @@ use crate::dcl::components::proto_components::sdk::components::{PbAnimationState
 use crate::dcl::components::SceneEntityId;
 use crate::dcl::SceneId;
 
-use super::animator::AnimationBlendBuilder;
+use super::animator::apply_anims;
 use super::dcl_global::DclGlobal;
 
 #[repr(i32)]
@@ -111,11 +111,7 @@ impl DclGltfContainer {
             return;
         };
 
-        let Some(mut anim_blend_builder) =
-            AnimationBlendBuilder::get_animation_blend_builder_from_base(&self.base)
-        else {
-            return;
-        };
+        let gltf_container_node = self.base.clone().cast::<Node3D>();
 
         let entity_id = SceneEntityId::from_i32(self.dcl_entity_id);
 
@@ -124,21 +120,22 @@ impl DclGltfContainer {
         let dcl_scene_runner = scene_runner.bind();
         if let Some(scene) = dcl_scene_runner.get_scene(&SceneId(self.dcl_scene_id)) {
             if let Some(pending_animator_value) = scene.dup_animator.get(&entity_id) {
-                anim_blend_builder
-                    .bind_mut()
-                    .apply_anims(pending_animator_value);
+                apply_anims(gltf_container_node, pending_animator_value);
             } else {
                 let animation_list = animation_player.get_animation_list();
                 let animation_name = animation_list.get(0).into();
-                anim_blend_builder.bind_mut().apply_anims(&PbAnimator {
-                    states: vec![PbAnimationState {
-                        clip: animation_name,
-                        playing: Some(true),
-                        r#loop: Some(true),
-                        should_reset: Some(true),
-                        ..Default::default()
-                    }],
-                });
+                apply_anims(
+                    gltf_container_node,
+                    &PbAnimator {
+                        states: vec![PbAnimationState {
+                            clip: animation_name,
+                            playing: Some(true),
+                            r#loop: Some(true),
+                            should_reset: Some(true),
+                            ..Default::default()
+                        }],
+                    },
+                );
             }
         }
     }

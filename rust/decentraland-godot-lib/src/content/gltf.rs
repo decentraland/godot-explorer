@@ -205,7 +205,13 @@ pub async fn apply_update_set_mask_colliders(
         &mut to_remove_nodes,
     );
 
-    duplicate_animation_resources(gltf_node.clone());
+    // TODO: Check if remove this logic is needed
+    //      animation duplication is no longer needed for AnimationBlendBuilder.
+    // duplicate_animation_resources(gltf_node.clone());
+
+    //  The duplication was done because the loop property could be modified
+    //      in the AnimationBlendBuilder the looping is handled by replaying every time
+    //      the animation emits the finished signal
 
     for mut node in to_remove_nodes {
         node.queue_free();
@@ -395,7 +401,8 @@ fn update_set_mask_colliders(
     }
 }
 
-fn duplicate_animation_resources(gltf_node: Gd<Node>) {
+// TODO: maybe remove
+fn _duplicate_animation_resources(gltf_node: Gd<Node>) {
     let Some(mut animation_player) =
         gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")
     else {
