@@ -61,7 +61,7 @@ func async_load_from_urn(_emote_urn: String, index: int = -1):
 		rarity = Wearables.ItemRarity.COMMON
 		picture = load("res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_urn)
 	else:
-		await EmotesRequest.async_fetch_emote(emote_urn)
+		await WearableRequest.async_fetch_emote(emote_urn)
 		var emote_data := Global.content_provider.get_wearable(emote_urn)
 		if emote_data == null:
 			# Fallback to default emote
