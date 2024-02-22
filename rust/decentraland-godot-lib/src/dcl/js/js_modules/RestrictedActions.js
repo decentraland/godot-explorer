@@ -15,8 +15,8 @@ module.exports.movePlayerTo = async function (body) {
 };
 module.exports.teleportTo = async function (body) {
   return await Deno.core.ops.op_teleport_to([
-    body.worldCoordinates.x,
-    body.worldCoordinates.y,
+    parseInt(body.worldCoordinates.x),
+    parseInt(body.worldCoordinates.y),
   ]);
 };
 module.exports.triggerEmote = async function (body) {

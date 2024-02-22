@@ -1,11 +1,11 @@
-use godot::engine::{Button, IPanel, Label, Panel};
+use godot::engine::{Button, Control, IControl, Label};
 use godot::prelude::*;
 
 #[derive(GodotClass)]
-#[class(base=Panel)]
+#[class(base=Control)]
 pub struct DclConfirmDialog {
     #[base]
-    base: Base<Panel>,
+    base: Base<Control>,
 
     title_label: Option<Gd<Label>>,
     description_label: Option<Gd<Label>>,
@@ -70,8 +70,8 @@ impl DclConfirmDialog {
 }
 
 #[godot_api]
-impl IPanel for DclConfirmDialog {
-    fn init(base: Base<Panel>) -> Self {
+impl IControl for DclConfirmDialog {
+    fn init(base: Base<Control>) -> Self {
         Self {
             base,
             confirm_callback: None,
