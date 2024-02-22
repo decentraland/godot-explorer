@@ -345,7 +345,7 @@ fn create_colliders(node_to_inspect: Gd<Node>, inside_skeleton: bool) {
             }
         }
 
-        let is_skeleton = child.clone().try_cast::<Skeleton3D>().is_err();
+        let is_skeleton = child.clone().try_cast::<Skeleton3D>().is_ok();
         create_colliders(child, inside_skeleton | is_skeleton);
     }
 }
