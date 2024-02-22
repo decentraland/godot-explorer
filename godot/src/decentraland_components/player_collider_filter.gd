@@ -10,7 +10,6 @@ const TIME_TO_RETURN_BACK_LAYER = 0.5
 
 var _computed_colliders: Array[Node]
 var _main_scene_tree: SceneTree
-var _player_node: Node3D
 
 
 # This function MUST be called manually
