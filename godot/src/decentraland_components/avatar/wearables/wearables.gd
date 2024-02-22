@@ -332,6 +332,7 @@ class ItemRarity:
 
 
 class Categories:
+	const ALL: String = "all"
 	const EYES: String = "eyes"
 	const EYEBROWS: String = "eyebrows"
 	const MOUTH: String = "mouth"
@@ -402,6 +403,7 @@ class Categories:
 		FEET: [FEET],
 		HAT: [EARRING, EYEWEAR, HAT, HELMET, MASK, TIARA, TOP_HEAD],  # accesories...
 		SKIN: [SKIN],
+		ALL: [ALL],
 	}
 
 	const ALL_CATEGORIES: PackedStringArray = [
@@ -437,6 +439,10 @@ static func is_texture(category: String) -> bool:
 	):
 		return true
 	return false
+
+
+static func is_base_wearable(wearable_name: String) -> bool:
+	return wearable_name.begins_with("urn:decentraland:off-chain:base-avatars:")
 
 
 static func get_base_avatar_urn(wearable_name: String):

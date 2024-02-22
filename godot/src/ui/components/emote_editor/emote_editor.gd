@@ -51,7 +51,7 @@ func async_set_only_collectibles(new_state: bool):
 
 
 func _async_add_remote_emotes(page_number: int):
-	var remote_emotes = await EmotesRequest.async_request_emotes(page_number, PAGE_SIZE)
+	var remote_emotes = await WearableRequest.async_request_emotes(page_number, PAGE_SIZE)
 	if remote_emotes != null:
 		_can_load_more = remote_emotes.elements.size() == PAGE_SIZE
 		for emotes in remote_emotes.elements:
