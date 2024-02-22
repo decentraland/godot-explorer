@@ -13,13 +13,13 @@ pub fn get_explorer_node(scene: &Scene) -> Gd<Node> {
         .expect("Missing explorer node.")
 }
 
-pub fn get_dialog_stack_node(scene: &Scene) -> Gd<PanelContainer> {
+pub fn get_dialog_stack_node(scene: &Scene) -> Gd<Node> {
     scene
         .godot_dcl_scene
         .root_node_3d
-        .get_node("/root/explorer/UI/DialogStack".into())
+        .get_node("/root/explorer/UI/DialogStack/Stack".into())
         .expect("DialogStack not found")
-        .cast::<PanelContainer>()
+        .cast::<Node>()
 }
 
 pub fn get_realm_node(scene: &Scene) -> Gd<Node> {
