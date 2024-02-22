@@ -121,20 +121,27 @@ vertical_alignment = 1
 
 [node name="LoadingBar" type="Control" parent="VBox_Loading/VBox_Header"]
 layout_mode = 2
+size_flags_vertical = 3
 
 [node name="ColorRect_LoadingProgress_BG" type="ColorRect" parent="VBox_Loading/VBox_Header/LoadingBar"]
 material = SubResource("ShaderMaterial_t4bn8")
 custom_minimum_size = Vector2(0, 6)
-layout_mode = 2
-offset_top = -6.0
-offset_right = 1280.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="ColorRect_LoadingProgress" type="ColorRect" parent="VBox_Loading/VBox_Header/LoadingBar/ColorRect_LoadingProgress_BG"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 6)
-layout_mode = 2
-offset_right = 1280.0
-offset_bottom = 6.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 color = Color(0, 0, 0, 1)
 
 [node name="ColorRect_Background" type="ColorRect" parent="VBox_Loading"]
