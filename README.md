@@ -66,7 +66,7 @@ This repo is set up to be opened with Visual Studio Code. In the section `Run an
 
 ## Run test with coverage
 1. Ensure you are in `rust/xtask` folder first
-2. Run `cargo run -- coverage --dev`. It'll create a `coverage` folder with the index.html with the all information. For running this commands you need to have lvvm tools and grcov, you can install them with `rustup component add llvm-tools-preview` and `cargo install grcov`.
+2. Run `cargo run -- coverage --dev`. It'll create a `coverage` folder with the index.html with the all information. In order to run these commands, you need to have llvm-tools and grcov installed. You can install them with `rustup component add llvm-tools-preview` and `cargo install grcov`.
 
 # Mobile targets
 See `rust/decentraland-godot-lib/builds.md`
