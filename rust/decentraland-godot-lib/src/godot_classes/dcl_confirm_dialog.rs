@@ -1,4 +1,4 @@
-use godot::engine::{Button, Label, Control, IControl};
+use godot::engine::{Button, Control, IControl, Label};
 use godot::prelude::*;
 
 #[derive(GodotClass)]

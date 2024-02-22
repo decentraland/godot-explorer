@@ -4,6 +4,7 @@ extends Control
 
 @onready var stack = %Stack
 
+
 func _ready():
 	hide()
 
