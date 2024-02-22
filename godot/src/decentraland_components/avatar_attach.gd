@@ -3,7 +3,7 @@ extends PlayerColliderFilter
 @export var user_id: String = "":
 	set(value):
 		if user_id != value:
-			_player_node = null
+			_player_avatar_node = null
 			user_id = value
 
 #  AAPT_POSITION = 0;
@@ -11,6 +11,8 @@ extends PlayerColliderFilter
 #  AAPT_LEFT_HAND = 2;
 #  AAPT_RIGHT_HAND = 3;
 var attach_point: int = -1
+
+var _player_avatar_node: Avatar
 
 
 func init():
@@ -26,25 +28,25 @@ func _process(_delta):
 	if p == null:
 		return
 
-	if _player_node == null:
+	if _player_avatar_node == null:
 		look_up_player()
-		if _player_node == null:
+		if _player_avatar_node == null:
 			return
 
 	match attach_point:
 		0:
-			p.global_transform = _player_node.global_transform
+			p.global_transform = _player_avatar_node.global_transform
 		1:
-			p.global_transform = _player_node.label_3d_name.global_transform
+			p.global_transform = _player_avatar_node.label_3d_name.global_transform
 		2:
 			p.global_transform = (
-				_player_node.body_shape_skeleton_3d.global_transform
-				* _player_node.left_hand_position
+				_player_avatar_node.body_shape_skeleton_3d.global_transform
+				* _player_avatar_node.left_hand_position
 			)
 		3:
 			p.global_transform = (
-				_player_node.body_shape_skeleton_3d.global_transform
-				* _player_node.right_hand_position
+				_player_avatar_node.body_shape_skeleton_3d.global_transform
+				* _player_avatar_node.right_hand_position
 			)
 		_:
 			p.transform = Transform3D.IDENTITY
@@ -56,6 +58,6 @@ func look_up_player():
 	# default to current player
 	var look_up_player_user_id := user_id if not user_id.is_empty() else primary_player_user_id
 	if primary_player_user_id == look_up_player_user_id:
-		_player_node = get_node("/root/explorer/world/Player/Avatar")
+		_player_avatar_node = get_node("/root/explorer/world/Player/Avatar")
 	else:
-		_player_node = Global.avatars.get_avatar_by_address(user_id)
+		_player_avatar_node = Global.avatars.get_avatar_by_address(user_id)

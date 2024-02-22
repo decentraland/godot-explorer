@@ -10,7 +10,6 @@ const TIME_TO_RETURN_BACK_LAYER = 0.5
 
 var _computed_colliders: Array[Node]
 var _main_scene_tree: SceneTree
-var _player_node: Node3D
 
 
 # This function MUST be called manually
@@ -49,8 +48,9 @@ func _async_apply_after_physics(check_computed_colliders: Array[Node]):
 	await _main_scene_tree.create_timer(TIME_TO_RETURN_BACK_LAYER).timeout
 
 	for old_collider in check_computed_colliders:
-		if not _is_filter_still_needed(old_collider):
-			old_collider.collision_layer = old_collider.get_meta("dcl_col")
+		if old_collider != null:
+			if not _is_filter_still_needed(old_collider):
+				old_collider.collision_layer = old_collider.get_meta("dcl_col")
 
 
 # Corner case when is moved from one collider filtered to another

@@ -406,9 +406,14 @@ fn op_require(
 }
 
 #[op(v8)]
-fn op_log(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
+fn op_log(state: Rc<RefCell<OpState>>, mut message: String, immediate: bool) {
     if !is_scene_log_enabled() {
         return;
+    }
+
+    if message.len() > 8192 {
+        tracing::warn!("log message too long, truncating");
+        message = message[..8192].to_string();
     }
 
     if immediate {
@@ -429,9 +434,14 @@ fn op_log(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
 }
 
 #[op(v8)]
-fn op_error(state: Rc<RefCell<OpState>>, message: String, immediate: bool) {
+fn op_error(state: Rc<RefCell<OpState>>, mut message: String, immediate: bool) {
     if !is_scene_log_enabled() {
         return;
+    }
+
+    if message.len() > 8192 {
+        tracing::warn!("log message too long, truncating");
+        message = message[..8192].to_string();
     }
 
     if immediate {
