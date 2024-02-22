@@ -1,7 +1,4 @@
-use godot::{
-    engine::PanelContainer,
-    prelude::{Gd, Node},
-};
+use godot::prelude::{Gd, Node};
 
 use super::scene::Scene;
 
