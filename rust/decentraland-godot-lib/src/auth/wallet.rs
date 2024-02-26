@@ -74,7 +74,7 @@ impl ObjSafeWalletSigner for LocalWallet {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct SimpleAuthChain(Vec<ChainLink>);
 
 impl SimpleAuthChain {
@@ -150,7 +150,7 @@ impl SimpleAuthChain {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChainLink {
     #[serde(rename = "type")]
     ty: String,

@@ -1,13 +1,15 @@
+use std::str::FromStr;
+
 use super::{
+    decentraland_auth_server::{do_request, CreateRequest, RemoteReportState},
     ephemeral_auth_chain::EphemeralAuthChain,
-    wallet::{ObjSafeWalletSigner, SimpleAuthChain, Wallet},
-    with_browser_and_server::{remote_sign_message, RemoteReportState},
+    wallet::{AsH160, ObjSafeWalletSigner, SimpleAuthChain, Wallet},
 };
 use chrono::{DateTime, Utc};
-use ethers::signers::LocalWallet;
+use ethers::{signers::LocalWallet, types::Signature};
 use rand::thread_rng;
 
-fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
+pub fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
     let datetime: DateTime<Utc> = expiration.into();
     let formatted_time = datetime.format("%Y-%m-%dT%H:%M:%S%.3fZ");
     format!(
@@ -16,7 +18,7 @@ fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemT
 }
 
 pub async fn try_create_remote_ephemeral(
-    sender: tokio::sync::mpsc::Sender<RemoteReportState>,
+    url_reporter_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
 ) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
     let local_wallet = LocalWallet::new(&mut thread_rng());
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
@@ -25,8 +27,19 @@ pub async fn try_create_remote_ephemeral(
     let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
     let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
 
-    let (signer, signature, chain_id) =
-        remote_sign_message(ephemeral_message.as_bytes(), None, sender).await?;
+    let request = CreateRequest::from_new_ephemeral(ephemeral_message.as_str());
+    let (owner_address, result) = do_request(request, url_reporter_sender).await?;
+
+    let result = result
+        .as_str()
+        .ok_or(anyhow::Error::msg("response is not a string"))?;
+    let signer = owner_address
+        .as_str()
+        .as_h160()
+        .ok_or(anyhow::Error::msg("invalid address"))?;
+
+    let signature = Signature::from_str(result)?;
+    let chain_id = 1;
 
     let auth_chain =
         SimpleAuthChain::new_ephemeral_identity_auth_chain(signer, ephemeral_message, signature);

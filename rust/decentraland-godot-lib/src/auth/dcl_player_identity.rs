@@ -14,10 +14,10 @@ use crate::http_request::request_response::{RequestResponse, ResponseEnum};
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
 use super::auth_identity::create_local_ephemeral;
+use super::decentraland_auth_server::{do_request, CreateRequest, RemoteReportState};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
 use super::wallet::{AsH160, Wallet};
-use super::with_browser_and_server::{remote_send_async, RPCSendableMessage, RemoteReportState};
 
 enum CurrentWallet {
     Remote(RemoteWallet),
@@ -134,7 +134,6 @@ impl DclPlayerIdentity {
         self.wallet = Some(CurrentWallet::Remote(RemoteWallet::new(
             account_address,
             chain_id,
-            self.remote_report_sender.clone(),
         )));
         self.ephemeral_auth_chain = Some(ephemeral_auth_chain);
 
@@ -562,13 +561,18 @@ impl DclPlayerIdentity {
 
     pub fn send_async(
         &self,
-        body: RPCSendableMessage,
+        mut body: CreateRequest,
         response: RpcResultSender<Result<serde_json::Value, String>>,
     ) {
         let url_sender = self.remote_report_sender.clone();
+        let Some(auth_chain) = self.ephemeral_auth_chain.clone() else {
+            return;
+        };
+        body.auth_chain = Some(auth_chain.auth_chain().clone());
+
         if let Some(handle) = TokioRuntime::static_clone_handle() {
             handle.spawn(async move {
-                let result = remote_send_async(body, None, url_sender).await;
+                let result = do_request(body, url_sender).await.map(|(_, result)| result);
                 response.send(result.map_err(|err| err.to_string()));
             });
         }

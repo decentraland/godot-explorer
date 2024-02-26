@@ -6,7 +6,7 @@ use deno_core::{
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use crate::{
-    auth::{ethereum_provider::EthereumProvider, with_browser_and_server::RPCSendableMessage},
+    auth::{decentraland_auth_server::CreateRequest, ethereum_provider::EthereumProvider},
     dcl::scene_apis::RpcCall,
 };
 
@@ -31,11 +31,10 @@ async fn op_send_async(
                 .borrow_mut()
                 .borrow_mut::<Vec<RpcCall>>()
                 .push(RpcCall::SendAsync {
-                    body: RPCSendableMessage {
-                        jsonrpc: "2.0".into(),
-                        id: 1,
+                    body: CreateRequest {
                         method,
                         params,
+                        auth_chain: None,
                     },
                     response: sx.into(),
                 });
