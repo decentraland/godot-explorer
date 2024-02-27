@@ -35,13 +35,10 @@ impl DclAvatarWireFormat {
 #[godot_api]
 impl DclAvatarWireFormat {
     #[func]
-    fn get_name(&self) -> GString {
-        if let Some(name) = self.inner.name.as_ref() {
-            GString::from(name)
-        } else {
-            GString::from("")
-        }
+    fn equal(&self, other: Gd<DclAvatarWireFormat>) -> bool {
+        self.inner == other.bind().inner
     }
+
     #[func]
     fn get_body_shape(&self) -> GString {
         if let Some(body_shape) = self.inner.body_shape.as_ref() {
@@ -121,11 +118,6 @@ impl DclAvatarWireFormat {
         } else {
             GString::from("")
         }
-    }
-
-    #[func]
-    fn set_name(&mut self, name: GString) {
-        self.inner.name = Some(name.to_string());
     }
 
     #[func]

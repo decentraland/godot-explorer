@@ -15,7 +15,7 @@ func _ready():
 	emote_editor.avatar = avatar
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
 
-	avatar.async_update_avatar(avatar_wf)
+	avatar.async_update_avatar(avatar_wf, "No Name")
 
 
 func _on_set_new_emotes(emotes: PackedStringArray):

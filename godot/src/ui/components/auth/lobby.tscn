@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://brh1yknqh4ux6"]
+[gd_scene load_steps=22 format=3 uid="uid://brh1yknqh4ux6"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
 [ext_resource type="Script" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://hp7yhxpf5mat" path="res://assets/ui/sign-in/dots.png" id="7_ug3ga"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="8_qtndn"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="9_qv8xq"]
+[ext_resource type="PackedScene" uid="uid://di2rgjpkv0c11" path="res://src/ui/components/label_avatar_name/label_avatar_name.tscn" id="10_lq0cw"]
 [ext_resource type="FontFile" uid="uid://cvtogigxks73f" path="res://assets/themes/fonts/inter/Inter-Light.ttf" id="10_wurju"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="11_7iulh"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="12_s6a2k"]
@@ -51,6 +52,7 @@ grow_vertical = 2
 
 [node name="Loading" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -189,7 +191,6 @@ text = "I ALREADY HAVE AN ACCOUNT"
 
 [node name="Restore" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -228,7 +229,7 @@ anchor_top = 0.5
 anchor_bottom = 0.5
 offset_left = 128.0
 offset_top = -152.0
-offset_right = 511.0
+offset_right = 762.0
 offset_bottom = 152.0
 grow_vertical = 2
 
@@ -244,13 +245,27 @@ layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="Label_Name" type="Label" parent="Main/Restore/VBoxContainer_RestorePanel"]
-unique_name_in_owner = true
+[node name="HBoxContainer" type="HBoxContainer" parent="Main/Restore/VBoxContainer_RestorePanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label_Name" type="Label" parent="Main/Restore/VBoxContainer_RestorePanel/HBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 36
 text = "Welcome back"
+
+[node name="LabelAvatarName" parent="Main/Restore/VBoxContainer_RestorePanel/HBoxContainer" instance=ExtResource("10_lq0cw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+avatar_name = ""
+avatar_subaddress = ""
+fit_text_to_label = false
+max_font_size = 36
+font = ExtResource("4_ghcwt")
+hbox_alignament = 0
 
 [node name="Label" type="Label" parent="Main/Restore/VBoxContainer_RestorePanel"]
 unique_name_in_owner = true

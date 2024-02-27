@@ -72,11 +72,15 @@ func _unset_avatar_modifier_area():
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
 	var avatar = profile.get_avatar()
-	avatar.set_name(profile.get_name())
-	await async_update_avatar(avatar)
+	var avatar_name: String = profile.get_name()
+	if not profile.has_claimed_name():
+		avatar_name += "#" + profile.get_ethereum_address().right(4)
+	label_3d_name.modulate = Color.GOLD if profile.has_claimed_name() else Color.WHITE
+
+	await async_update_avatar(avatar, avatar_name)
 
 
-func async_update_avatar(new_avatar: DclAvatarWireFormat):
+func async_update_avatar(new_avatar: DclAvatarWireFormat, avatar_name: String):
 	avatar_data = new_avatar
 	if new_avatar == null:
 		printerr("Trying to update an avatar with an null value")
@@ -85,7 +89,7 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat):
 	var wearable_to_request := []
 
 	sprite_3d_mic_enabled.hide()
-	label_3d_name.text = avatar_data.get_name()
+	label_3d_name.text = avatar_name
 	if hide_name:
 		label_3d_name.hide()
 
