@@ -19,7 +19,7 @@ const CUSTOM_PLACES: Array[Dictionary] = [
 		"base_position": "0,0",
 		"contact_name": "ExodusTown",
 		"world": true,
-		"world_name": "https://exodus.town/city-loader/"
+		"world_name": "https://exodus.town/"
 	},
 	{
 		"title": "Goerli Plaza ZONE",
