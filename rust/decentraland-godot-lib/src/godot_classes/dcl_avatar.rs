@@ -27,6 +27,9 @@ pub struct DclAvatar {
     #[var]
     avatar_data: Gd<DclAvatarWireFormat>,
 
+    #[var]
+    avatar_name: GString,
+
     #[export]
     movement_type: AvatarMovementType,
 
@@ -70,6 +73,7 @@ impl INode3D for DclAvatar {
             fall: false,
             land: false,
             avatar_data: DclAvatarWireFormat::from_gd(Default::default()),
+            avatar_name: "".into(),
         }
     }
 }

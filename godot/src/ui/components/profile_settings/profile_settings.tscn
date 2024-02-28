@@ -1,0 +1,239 @@
+[gd_scene load_steps=10 format=3 uid="uid://cuduuu2b4u4bn"]
+
+[ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="1_0j6l3"]
+[ext_resource type="Script" path="res://src/ui/components/profile_settings/profile_settings.gd" id="1_t2la2"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_auqtd"]
+[ext_resource type="Texture2D" uid="uid://7fya3pcmhbsp" path="res://assets/ui/Account.png" id="3_8spyp"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_3t0sv"]
+[ext_resource type="Texture2D" uid="uid://bioxsnq7x5u5w" path="res://assets/ui/ClaimNameBanner.png" id="5_s8r2t"]
+
+[sub_resource type="Gradient" id="Gradient_6v8vt"]
+colors = PackedColorArray(0.705882, 0.733333, 0.776471, 1, 0.945098, 0.945098, 0.945098, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_ce3ey"]
+gradient = SubResource("Gradient_6v8vt")
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_tfrrd"]
+
+[node name="ProfileSettings" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_t2la2")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_ce3ey")
+
+[node name="Label" type="Label" parent="Background"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 70.0
+offset_right = 707.0
+offset_bottom = 243.0
+grow_vertical = 0
+rotation = -1.5708
+theme_override_colors/font_color = Color(1, 1, 1, 0.0705882)
+theme_override_fonts/font = ExtResource("1_0j6l3")
+theme_override_font_sizes/font_size = 180
+text = "Account"
+horizontal_alignment = 1
+clip_text = true
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="Header" type="ColorRect" parent="VBoxContainer"]
+z_index = 1
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+color = Color(0.0862745, 0.0823529, 0.0941176, 0.301961)
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Header"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_right = 20
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Header/MarginContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/Header/MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_auqtd")
+theme_override_font_sizes/font_size = 28
+text = "Profile Settings"
+
+[node name="HSeparator" type="VSeparator" parent="VBoxContainer/Header/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxEmpty_tfrrd")
+
+[node name="Button_Logout" type="Button" parent="VBoxContainer/Header/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "LOGOUT & EXIT"
+
+[node name="PanelContainer" type="ColorRect" parent="VBoxContainer"]
+custom_minimum_size = Vector2(641, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+color = Color(1, 1, 1, 0.247059)
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/PanelContainer"]
+clip_contents = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 60
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 60
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer_ProfileHeader" type="HBoxContainer" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="TextureRect_Account" type="TextureRect" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer_ProfileHeader"]
+layout_mode = 2
+texture = ExtResource("3_8spyp")
+stretch_mode = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer_ProfileHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label_TitleMyProfile" type="Label" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer_ProfileHeader/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_fonts/font = ExtResource("4_3t0sv")
+theme_override_font_sizes/font_size = 24
+text = "My profile"
+
+[node name="Label_DescriptionMyProfile" type="Label" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/HBoxContainer_ProfileHeader/VBoxContainer"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_font_sizes/font_size = 16
+text = "Complete the fields below with information that your will like to share with the rest of the Decentraland community about you!
+"
+autowrap_mode = 2
+
+[node name="Label_TitleName" type="Label" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_fonts/font = ExtResource("4_3t0sv")
+theme_override_font_sizes/font_size = 24
+text = "Name"
+
+[node name="Label2" type="Label" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_font_sizes/font_size = 16
+text = "Choose a name that you like and would let people recognise you."
+autowrap_mode = 2
+
+[node name="CheckButton_UseClaimedName" type="CheckButton" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+text = "Use claimed name"
+
+[node name="LineEdit_Name" type="LineEdit" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 39)
+layout_mode = 2
+placeholder_text = "Choose your name"
+max_length = 18
+clear_button_enabled = true
+select_all_on_focus = true
+
+[node name="ItemList_ClaimedNames" type="OptionButton" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 39)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+item_count = 3
+selected = 0
+popup/item_0/text = "Test1"
+popup/item_0/id = 0
+popup/item_1/text = "Test2"
+popup/item_1/id = 1
+popup/item_2/text = "Test3"
+popup/item_2/id = 2
+
+[node name="Control_ClaimImage" type="TextureButton" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/Control_ClaimImage"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -33.0
+offset_right = 31.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("5_s8r2t")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_TitleAbout" type="Label" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+theme_override_fonts/font = ExtResource("4_3t0sv")
+theme_override_font_sizes/font_size = 24
+text = "About"
+
+[node name="Label_DescriptionAbout" type="Label" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_font_sizes/font_size = 16
+text = "Use this space to describe yourself in a few words"
+autowrap_mode = 2
+
+[node name="TextEdit_About" type="TextEdit" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 149)
+layout_mode = 2
+
+[connection signal="pressed" from="VBoxContainer/Header/MarginContainer/HBoxContainer/Button_Logout" to="." method="_on_button_logout_pressed"]
+[connection signal="toggled" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/CheckButton_UseClaimedName" to="." method="_on_check_button_toggled"]
+[connection signal="text_changed" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/LineEdit_Name" to="." method="_on_line_edit_name_text_changed"]
+[connection signal="item_selected" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/ItemList_ClaimedNames" to="." method="_on_item_list_claimed_names_item_selected"]
+[connection signal="pressed" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/Control_ClaimImage" to="." method="_on_control_claim_image_pressed"]
+[connection signal="text_changed" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/TextEdit_About" to="." method="_on_text_edit_about_text_changed"]

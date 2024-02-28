@@ -23,6 +23,11 @@ impl DclUserProfile {
 #[godot_api]
 impl DclUserProfile {
     #[func]
+    fn equal(&self, other: Gd<DclUserProfile>) -> bool {
+        self.inner == other.bind().inner
+    }
+
+    #[func]
     fn duplicated(&self) -> Gd<DclUserProfile> {
         Self::from_gd(self.inner.clone())
     }
@@ -49,6 +54,26 @@ impl DclUserProfile {
     }
 
     #[func]
+    fn has_claimed_name(&self) -> bool {
+        self.inner.content.has_claimed_name.unwrap_or(false)
+    }
+
+    #[func]
+    fn get_description(&self) -> GString {
+        GString::from(self.inner.content.description.clone())
+    }
+
+    #[func]
+    fn get_ethereum_address(&self) -> GString {
+        GString::from(self.inner.content.eth_address.clone())
+    }
+
+    #[func]
+    fn set_description(&mut self, description: GString) {
+        self.inner.content.description = description.to_string();
+    }
+
+    #[func]
     fn set_name(&mut self, name: GString) {
         self.inner.content.name = name.to_string();
     }
@@ -56,6 +81,11 @@ impl DclUserProfile {
     #[func]
     fn set_has_connected_web3(&mut self, has_connected_web3: bool) {
         self.inner.content.has_connected_web3 = Some(has_connected_web3);
+    }
+
+    #[func]
+    fn set_has_claimed_nlame(&mut self, has_claimed_name: bool) {
+        self.inner.content.has_claimed_name = Some(has_claimed_name);
     }
 
     #[func]

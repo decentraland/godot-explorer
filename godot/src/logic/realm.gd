@@ -114,6 +114,20 @@ func has_realm():
 	return _has_realm
 
 
+func async_clear_realm():
+	_has_realm = false
+	realm_url = ""
+	realm_string = ""
+	realm_about = {}
+	realm_scene_urns.clear()
+	realm_global_scene_urns.clear()
+	realm_city_loader_content_base_url = ""
+	realm_name = ""
+	network_id = 0
+	content_base_url = ""
+	Global.scene_runner.kill_all_scenes()
+
+
 func async_set_realm(new_realm_string: String) -> void:
 	realm_string = new_realm_string
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))

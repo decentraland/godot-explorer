@@ -73,7 +73,7 @@ func _process(dt):
 		var profile_data: DclUserProfile = DclUserProfile.new()
 		var avatar_data: DclAvatarWireFormat = profile_data.get_avatar()
 
-		avatar_data.set_name("Avatar#" + str(spawning_i))
+		profile_data.set_name("Avatar#" + str(spawning_i))
 		avatar_data.set_eyes_color(Color(randf(), randf(), randf()))
 		avatar_data.set_hair_color(Color(randf(), randf(), randf()))
 		avatar_data.set_skin_color(Color(0.8, 0.6078, 0.4667, 1))
