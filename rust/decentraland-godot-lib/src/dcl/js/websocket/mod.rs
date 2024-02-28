@@ -76,34 +76,45 @@ async fn ws_poll(
 
     let sender_a = sender.clone();
 
+    // make local channel
+    let (int_sender, mut int_receiver) = tokio::sync::mpsc::channel(5);
+
     tokio::join!(
         async move {
             loop {
-                let to_send = receiver.recv().await;
-                tracing::debug!("to send {:?}", to_send);
+                // With select approach
+                let final_data: Option<tokio_tungstenite::tungstenite::Message>;
+                let mut critical_cond = false;
 
-                let result = match to_send {
-                    Some(WsSendData::Binary { data }) => ws_send
-                        .send(tokio_tungstenite::tungstenite::Message::Binary(data))
-                        .await
-                        .ok(),
-                    Some(WsSendData::Text { data }) => ws_send
-                        .send(tokio_tungstenite::tungstenite::Message::Text(data))
-                        .await
-                        .ok(),
-                    Some(WsSendData::Close) => {
-                        let _ = ws_send.close().await;
-                        None
+                tokio::select! {
+                    to_send = receiver.recv() => {
+                        final_data = match to_send {
+                            Some(WsSendData::Binary { data }) => Some(tokio_tungstenite::tungstenite::Message::Binary(data)),
+                            Some(WsSendData::Text { data }) => Some(tokio_tungstenite::tungstenite::Message::Text(data)),
+                            Some(WsSendData::Close) => None,
+                            None => {
+                                critical_cond = true;
+                                None
+                            }
+                        };
+
+                    },
+                    to_send = int_receiver.recv() => {
+                        final_data = to_send;
                     }
-                    None => {
+                };
+
+                if let Some(data) = final_data {
+                    if ws_send.send(data).await.is_err() {
+                        break;
+                    }
+                } else {
+                    if critical_cond {
                         let _ = sender_a
                             .send(WsReceiveData::Error(anyhow::Error::msg("none from sender")))
                             .await;
-                        let _ = ws_send.close().await;
-                        None
                     }
-                };
-                if result.is_none() {
+                    let _ = ws_send.close().await;
                     break;
                 }
             }
@@ -123,12 +134,11 @@ async fn ws_poll(
                     Some(Ok(tokio_tungstenite::tungstenite::Message::Text(data))) => {
                         sender.send(WsReceiveData::TextData(data)).await.ok()
                     }
-                    Some(Ok(tokio_tungstenite::tungstenite::Message::Ping(data))) => {
-                        sender.send(WsReceiveData::BinaryData(data)).await.ok()
-                    }
-                    Some(Ok(tokio_tungstenite::tungstenite::Message::Pong(data))) => {
-                        sender.send(WsReceiveData::BinaryData(data)).await.ok()
-                    }
+                    Some(Ok(tokio_tungstenite::tungstenite::Message::Ping(data))) => int_sender
+                        .send(tokio_tungstenite::tungstenite::Message::Pong(data))
+                        .await
+                        .ok(),
+                    Some(Ok(tokio_tungstenite::tungstenite::Message::Pong(_data))) => Some(()),
                     Some(Ok(tokio_tungstenite::tungstenite::Message::Close(data))) => {
                         let _ = sender.send(WsReceiveData::Close(data)).await;
                         None
