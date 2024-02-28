@@ -19,7 +19,7 @@ var loading_first_profile: bool = false
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
 
-@onready var label_name = %Label_Name
+@onready var label_avatar_name = %LabelAvatarName
 
 @onready var avatar_preview = %AvatarPreview
 
@@ -82,8 +82,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if loading_first_profile:
 		loading_first_profile = false
 		if profile_has_name():
-			label_name.text = "Welcome back " + new_profile.get_name()
-			label_name.show()
+			label_avatar_name.load_from_profile(new_profile)
 
 			restore_panel.show()
 			show_panel(control_restore)
@@ -158,7 +157,6 @@ func _on_button_next_pressed():
 
 	await backpack.async_prepare_snapshots(avatar)
 
-	avatar.set_name(current_profile.get_name())
 	current_profile.set_avatar(avatar)
 
 	await Global.player_identity.async_deploy_profile(current_profile, true)

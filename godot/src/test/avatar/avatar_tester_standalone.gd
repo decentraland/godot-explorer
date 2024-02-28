@@ -25,7 +25,7 @@ func _ready():
 	# urn:decentraland:matic:collections-v2:0x0c956c74518ed34afb7b137d9ddfdaea7ca13751:0
 
 	avatar.avatar_loaded.connect(self._on_avatar_loaded)
-	avatar.async_update_avatar(avatar_wf)
+	avatar.async_update_avatar(avatar_wf, "")
 
 
 func _on_avatar_loaded():

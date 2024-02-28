@@ -19,6 +19,7 @@ var wearable_data: Dictionary = {}
 
 var mutable_avatar: DclAvatarWireFormat
 var mutable_profile: DclUserProfile
+var current_profile: DclUserProfile
 
 var wearable_filter_buttons: Array[WearableFilterButton] = []
 var main_category_selected: String = "body_shape"
@@ -35,15 +36,12 @@ var _has_changes: bool = false
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
-@onready var line_edit_name = %LineEdit_Name
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var avatar_loading = %TextureProgressBar_AvatarLoading
-@onready var button_save_profile = %Button_SaveProfile
 
 @onready var container_main_categories = %HBoxContainer_MainCategories
 @onready var container_sub_categories = %HBoxContainer_SubCategories
 @onready var scroll_container_sub_categories = %ScrollContainer_SubCategories
-@onready var menu_button_filter = %MenuButton_Filter
 
 @onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
 
@@ -73,6 +71,7 @@ func _ready():
 	emote_editor.hide()
 
 	mutable_profile = DclUserProfile.new()
+	current_profile = DclUserProfile.new()
 	mutable_avatar = mutable_profile.get_avatar()
 
 	container_backpack.hide()
@@ -80,9 +79,6 @@ func _ready():
 
 	skin_color_picker.hide()
 	Global.player_identity.profile_changed.connect(self._on_profile_changed)
-
-	menu_button_filter.text = "FILTER"
-	menu_button_filter.icon = FILTER
 
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
@@ -143,9 +139,8 @@ func _update_visible_categories():
 
 
 func _on_profile_changed(new_profile: DclUserProfile):
-	line_edit_name.text = new_profile.get_name()
-
 	mutable_profile = new_profile.duplicated()
+	current_profile = new_profile.duplicated()
 	mutable_avatar = mutable_profile.get_avatar()
 
 	request_update_avatar = true
@@ -153,7 +148,6 @@ func _on_profile_changed(new_profile: DclUserProfile):
 
 
 func _on_set_new_emotes(emotes_urns: PackedStringArray):
-	_has_changes = true
 	mutable_avatar.set_emotes(emotes_urns)
 	request_update_avatar = true
 
@@ -188,7 +182,6 @@ func _async_update_avatar():
 	var loading_id := _set_avatar_loading()
 	await avatar_preview.avatar.async_update_avatar_from_profile(mutable_profile)
 	_unset_avatar_loading(loading_id)
-	button_save_profile.disabled = false
 
 
 func _load_filtered_data(filter: String):
@@ -278,10 +271,6 @@ func _on_wearable_filter_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func _on_line_edit_name_text_changed(_new_text):
-	button_save_profile.disabled = false
-
-
 func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat):
 	var cloned_avatar_preview: AvatarPreview = avatar_preview.duplicate()
 	cloned_avatar_preview.show_platform = false
@@ -315,24 +304,15 @@ func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat):
 func async_save_profile():
 	avatar_preview.avatar.emote_controller.stop_emote()
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
-	mutable_profile.set_name(line_edit_name.text)
-	mutable_avatar.set_name(line_edit_name.text)
 
 	await async_prepare_snapshots(mutable_avatar)
 
 	mutable_profile.set_avatar(mutable_avatar)
 
 	await Global.player_identity.async_deploy_profile(mutable_profile, true)
-	_has_changes = false
-
-
-func _on_button_save_profile_pressed():
-	button_save_profile.disabled = true
-	async_save_profile()
 
 
 func _on_wearable_equip(wearable_id: String):
-	_has_changes = true
 	var desired_wearable = wearable_data[wearable_id]
 	var category = desired_wearable.get_category()
 
@@ -374,7 +354,6 @@ func _on_wearable_equip(wearable_id: String):
 
 
 func _on_wearable_unequip(wearable_id: String):
-	_has_changes = true
 	var desired_wearable = wearable_data[wearable_id]
 	var category = desired_wearable.get_category()
 
@@ -396,7 +375,6 @@ func _on_button_logout_pressed():
 
 
 func _on_color_picker_panel_pick_color(color: Color):
-	_has_changes = true
 	match skin_color_picker.color_target:
 		skin_color_picker.ColorTarget.EYE:
 			mutable_avatar.set_eyes_color(color)
@@ -411,7 +389,6 @@ func _on_color_picker_panel_pick_color(color: Color):
 		mutable_avatar.get_skin_color(),
 		mutable_avatar.get_hair_color()
 	)
-	button_save_profile.disabled = false
 
 
 func _on_color_picker_button_toggle_color_panel(toggled, color_target):
@@ -447,7 +424,7 @@ func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
 
 
 func has_changes():
-	return _has_changes
+	return not current_profile.equal(mutable_profile)
 
 
 func _on_button_wearables_pressed():

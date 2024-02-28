@@ -179,12 +179,15 @@ func _on_need_open_url(url: String, _description: String) -> void:
 
 
 func _on_player_logout():
-	# TODO: clean all UI ?
-	control_menu.close()
-
 	# Clean stored session
 	Global.config.session_account = {}
 	Global.config.save_to_settings_file()
+
+	# TODO: It's crashing. Logout = exit app
+	#get_tree().change_scene_to_file("res://src/main.tscn")
+
+	# TODO: Temporal solution
+	get_tree().quit()
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -337,6 +340,8 @@ func _on_panel_chat_submit_message(message: String):
 			)
 			Global.realm.async_set_realm(params[1])
 			loading_ui.enable_loading_screen()
+		elif command_str == "/clear":
+			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
 			loading_ui.enable_loading_screen()

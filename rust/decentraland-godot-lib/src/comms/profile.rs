@@ -59,7 +59,6 @@ impl From<&godot::prelude::Color> for AvatarColor {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AvatarWireFormat {
-    pub name: Option<String>,
     #[serde(rename = "bodyShape")]
     pub body_shape: Option<String>,
     pub eyes: Option<AvatarColor>,
@@ -100,7 +99,6 @@ pub struct SerializedProfile {
 impl Default for AvatarWireFormat {
     fn default() -> Self {
         Self {
-            name: Some("".into()),
             emotes: Some(vec![]),
             body_shape: Some("urn:decentraland:off-chain:base-avatars:BaseFemale".into()),
             wearables: vec![
@@ -180,7 +178,7 @@ impl SerializedProfile {
                 .as_deref()
                 .map(ToString::to_string)
                 .unwrap_or("urn:decentraland:off-chain:base-avatars:BaseFemale".to_owned()),
-            name: self.avatar.name.as_deref().unwrap_or("???").to_owned(),
+            name: self.name.to_owned(),
         }
     }
     pub fn to_pb_player_identity_data(&self) -> PbPlayerIdentityData {

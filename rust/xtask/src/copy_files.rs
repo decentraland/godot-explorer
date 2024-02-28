@@ -1,10 +1,15 @@
-use std::{path::Path, io, fs, env};
+use std::{env, fs, io, path::Path};
 
-use crate::{consts::{
-    BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER,
-}, path::adjust_canonicalization};
+use crate::{
+    consts::{BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    path::adjust_canonicalization,
+};
 
-pub fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q, link: bool) -> io::Result<()> {
+pub fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(
+    src: P,
+    dest: Q,
+    link: bool,
+) -> io::Result<()> {
     let src_path = src.as_ref();
     let dest_path = dest.as_ref();
 
@@ -28,11 +33,14 @@ pub fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dest: Q, link: b
     // Only linux: If link=true, link the file instead of copying
     if link && env::consts::OS == "linux" {
         if dest_path.exists() {
-            fs::remove_file(dest_path).map(|_| println!("Remove {}", dest_path.to_string_lossy()))?;
+            fs::remove_file(dest_path)
+                .map(|_| println!("Remove {}", dest_path.to_string_lossy()))?;
         }
-        fs::hard_link(src_path, dest_path).map(|_| println!("Link {}", dest_path.to_string_lossy()))?;
+        fs::hard_link(src_path, dest_path)
+            .map(|_| println!("Link {}", dest_path.to_string_lossy()))?;
     } else {
-        fs::copy(src_path, dest_path).map(|_| println!("Copying {}", dest_path.to_string_lossy()))?;
+        fs::copy(src_path, dest_path)
+            .map(|_| println!("Copying {}", dest_path.to_string_lossy()))?;
     }
     Ok(())
 }
