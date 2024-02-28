@@ -132,7 +132,7 @@ layout_mode = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_right = 1214.0
+offset_right = 2434.0
 grow_horizontal = 2
 
 [node name="TextureRect_GenesisCity" type="TextureRect" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/Control/Content"]
@@ -166,54 +166,58 @@ libraries = {
 }
 autoplay = "default"
 
-[node name="LastVisited" parent="TextureRect/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="LastVisited" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("LastVisitGenerator")
 title = "Last Visited"
 
-[node name="LastVisitGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="LastVisitGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 unique_name_in_owner = true
 last_places_logic = true
-discover = NodePath("../../../../..")
+discover = NodePath("../../../../../..")
 
-[node name="PlacesFavorites" parent="TextureRect/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesFavorites" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 visible = false
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Favorites"
 
-[node name="PlacesGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
 only_favorites = true
-discover = NodePath("../../../../..")
+discover = NodePath("../../../../../..")
 
-[node name="PlacesFeatured" parent="TextureRect/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesFeatured" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 layout_mode = 2
 generator = NodePath("CustomPlacesGenerator")
 title = "Featured"
 
-[node name="CustomPlacesGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("7_ehm1e")]
-discover = NodePath("../../../../..")
+[node name="CustomPlacesGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("7_ehm1e")]
+discover = NodePath("../../../../../..")
 
-[node name="PlacesMostActive" parent="TextureRect/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesMostActive" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Most Actives"
 
-[node name="PlacesGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
-discover = NodePath("../../../../..")
+discover = NodePath("../../../../../..")
 
-[node name="PlacesWorlds" parent="TextureRect/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesWorlds" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Worlds"
 
-[node name="PlacesGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/PlacesWorlds" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer/PlacesWorlds" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 2
 only_worlds = true
-discover = NodePath("../../../../..")
+discover = NodePath("../../../../../..")
 
 [node name="HSeparator" type="HSeparator" parent="TextureRect/ScrollContainer/VBoxContainer"]
 layout_mode = 2
