@@ -12,7 +12,6 @@ extends Control
 
 
 func _ready():
-	hide()
 	if is_instance_valid(generator):
 		generator.set_consumer_visible.connect(self.set_visible)
 		generator.item_container = item_container

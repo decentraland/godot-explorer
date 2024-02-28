@@ -11,13 +11,13 @@
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="9_havap"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mv7ex"]
-bg_color = Color(0.6, 0.6, 0.6, 0)
+bg_color = Color(1, 1, 1, 0.635294)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
-shadow_size = 4
-shadow_offset = Vector2(2, 2)
+shadow_color = Color(1, 1, 1, 0.176471)
+shadow_size = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c0877"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -32,12 +32,12 @@ corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
 [sub_resource type="Gradient" id="Gradient_e8nv0"]
-colors = PackedColorArray(0, 0, 0, 1, 0, 0, 0, 0)
+colors = PackedColorArray(0, 0, 0, 0.686275, 0, 0, 0, 0)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_e6dy7"]
 gradient = SubResource("Gradient_e8nv0")
 fill_from = Vector2(1, 1)
-fill_to = Vector2(1, 0.632479)
+fill_to = Vector2(1, 0.82906)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_368si"]
 bg_color = Color(0.0392157, 0.0392157, 0.0392157, 1)
@@ -65,7 +65,7 @@ colors = PackedColorArray(0.914015, 0.145083, 0.329259, 1, 0.917647, 0.145098, 0
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_b6og1"]
 
 [node name="DiscoverCarrouselItem" type="TextureButton"]
-custom_minimum_size = Vector2(235, 175)
+custom_minimum_size = Vector2(235, 226)
 offset_right = 225.0
 offset_bottom = 175.0
 mouse_filter = 1
@@ -74,13 +74,14 @@ script = ExtResource("1_foqq3")
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
 offset_right = 235.0
-offset_bottom = 185.0
+offset_bottom = 226.0
 theme_override_constants/margin_left = 5
 theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
 [node name="PanelShadow" type="Panel" parent="MarginContainer"]
+visible = false
 custom_minimum_size = Vector2(225, 175)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_mv7ex")
@@ -180,7 +181,7 @@ size_flags_vertical = 3
 alignment = 2
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/Panel/DiscoverCarrouselItem/Control/MarginContainer/VBoxContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 theme_override_constants/separation = 11
 alignment = 2
@@ -257,7 +258,7 @@ text = "78%"
 horizontal_alignment = 2
 
 [node name="Panel" type="Control" parent="MarginContainer/Panel/DiscoverCarrouselItem"]
-custom_minimum_size = Vector2(0, 28)
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 size_flags_vertical = 0
 mouse_filter = 1
@@ -279,23 +280,38 @@ layout_mode = 2
 
 [node name="Label_Title" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_fonts/font = ExtResource("6_ak6x4")
 text = "Scene Title"
-autowrap_mode = 2
+vertical_alignment = 1
 clip_text = true
 
 [node name="Label_Description" type="Label" parent="MarginContainer/Panel/DiscoverCarrouselItem/Panel/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_fonts/font = ExtResource("9_havap")
 text = "Scene Description"
-autowrap_mode = 2
 clip_text = true
+
+[node name="MouseHover" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="MouseHover"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [connection signal="pressed" from="." to="." method="_on_pressed"]

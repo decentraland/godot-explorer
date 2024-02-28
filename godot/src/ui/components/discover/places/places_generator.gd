@@ -83,18 +83,19 @@ func request_last_places() -> void:
 		var position: Vector2i = custom_realm.get("position")
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
+		var place = {
+			"title": realm,
+			"world": true,
+			"world_name": realm,
+		}
 
-		(
-			item
-			. set_data(
-				{
-					"title": realm,
-					"base_position": "%d,%d" % [position.x, position.y],
-					"world": true,
-					"world_name": realm,
-				}
-			)
-		)
+		for custom_place in CustomPlacesGenerator.CUSTOM_PLACES:
+			if custom_place.get("world_name", "") == realm:
+				place = custom_place.duplicate()
+				break
+
+		place["base_position"] = "%d,%d" % [position.x, position.y]
+		item.set_data(place)
 		item.item_pressed.connect(discover.on_item_pressed)
 
 	if not genesis_city_places.is_empty():
