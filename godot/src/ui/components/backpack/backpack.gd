@@ -36,15 +36,12 @@ var _has_changes: bool = false
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
-@onready var line_edit_name = %LineEdit_Name
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var avatar_loading = %TextureProgressBar_AvatarLoading
-@onready var button_save_profile = %Button_SaveProfile
 
 @onready var container_main_categories = %HBoxContainer_MainCategories
 @onready var container_sub_categories = %HBoxContainer_SubCategories
 @onready var scroll_container_sub_categories = %ScrollContainer_SubCategories
-@onready var menu_button_filter = %MenuButton_Filter
 
 @onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
 
@@ -82,9 +79,6 @@ func _ready():
 
 	skin_color_picker.hide()
 	Global.player_identity.profile_changed.connect(self._on_profile_changed)
-
-	menu_button_filter.text = "FILTER"
-	menu_button_filter.icon = FILTER
 
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
@@ -145,8 +139,6 @@ func _update_visible_categories():
 
 
 func _on_profile_changed(new_profile: DclUserProfile):
-	line_edit_name.text = new_profile.get_name()
-
 	mutable_profile = new_profile.duplicated()
 	current_profile = new_profile.duplicated()
 	mutable_avatar = mutable_profile.get_avatar()
@@ -190,7 +182,6 @@ func _async_update_avatar():
 	var loading_id := _set_avatar_loading()
 	await avatar_preview.avatar.async_update_avatar_from_profile(mutable_profile)
 	_unset_avatar_loading(loading_id)
-	button_save_profile.disabled = false
 
 
 func _load_filtered_data(filter: String):
@@ -280,10 +271,6 @@ func _on_wearable_filter_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func _on_line_edit_name_text_changed(_new_text):
-	button_save_profile.disabled = false
-
-
 func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat):
 	var cloned_avatar_preview: AvatarPreview = avatar_preview.duplicate()
 	cloned_avatar_preview.show_platform = false
@@ -323,11 +310,6 @@ func async_save_profile():
 	mutable_profile.set_avatar(mutable_avatar)
 
 	await Global.player_identity.async_deploy_profile(mutable_profile, true)
-
-
-func _on_button_save_profile_pressed():
-	button_save_profile.disabled = true
-	async_save_profile()
 
 
 func _on_wearable_equip(wearable_id: String):
@@ -407,7 +389,6 @@ func _on_color_picker_panel_pick_color(color: Color):
 		mutable_avatar.get_skin_color(),
 		mutable_avatar.get_hair_color()
 	)
-	button_save_profile.disabled = false
 
 
 func _on_color_picker_button_toggle_color_panel(toggled, color_target):

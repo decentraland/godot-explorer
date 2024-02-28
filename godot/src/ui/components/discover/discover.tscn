@@ -111,7 +111,7 @@ layout_mode = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_right = 2440.0
+offset_right = 1214.0
 grow_horizontal = 2
 
 [node name="TextureRect_GenesisCity" type="TextureRect" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/Control/Content"]
