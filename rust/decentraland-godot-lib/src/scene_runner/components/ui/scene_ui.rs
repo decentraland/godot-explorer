@@ -146,20 +146,11 @@ fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformatio
         .compute_layout(root_node, size)
         .expect("failed to compute layout");
 
-    tracing::debug!("number of node to process {}", processed_nodes.len());
-
     for (entity, key_node) in processed_nodes_sorted.iter() {
         let ui_node = godot_dcl_scene.get_node_ui(entity).unwrap();
         let parent_node = processed_nodes
             .get_mut(&ui_node.ui_transform.parent)
             .expect("parent not found, it was processed before");
-
-        tracing::debug!(
-            "entity {} was parented to {} as child index {} ",
-            entity,
-            ui_node.ui_transform.parent,
-            parent_node.1
-        );
 
         if let Some(parent) = godot_dcl_scene.get_node_ui(&ui_node.ui_transform.parent) {
             parent.base_control.clone().move_child(
