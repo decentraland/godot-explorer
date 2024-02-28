@@ -1,7 +1,8 @@
-[gd_scene load_steps=15 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=17 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_17slp"]
 [ext_resource type="PackedScene" uid="uid://3de823q04ptd" path="res://src/ui/components/discover/carrousel/discover_carrousel.tscn" id="3_s5vyg"]
 [ext_resource type="Texture2D" uid="uid://b5p8bwrk06ov8" path="res://assets/ui/discover/discover_banner.png" id="4_2pq8h"]
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/components/discover/places/places_generator.tscn" id="4_q55yj"]
@@ -9,15 +10,14 @@
 [ext_resource type="PackedScene" uid="uid://kfsjxah2khkg" path="res://src/ui/components/discover/places/custom_places_generator.tscn" id="7_ehm1e"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
 
-[sub_resource type="Gradient" id="Gradient_gj5s1"]
-offsets = PackedFloat32Array(0.373134, 1)
-colors = PackedColorArray(0.862745, 0.176471, 0.827451, 1, 0.286275, 0.0980392, 0.458824, 1)
+[sub_resource type="Gradient" id="Gradient_m47k4"]
+colors = PackedColorArray(0.796078, 0.811765, 0.835294, 1, 0.796078, 0.811765, 0.835294, 1)
 
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_05s6u"]
-gradient = SubResource("Gradient_gj5s1")
-fill = 1
-fill_from = Vector2(0.5, 0.5)
-metadata/_snap_enabled = true
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_6lhmr"]
+gradient = SubResource("Gradient_m47k4")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_746xu"]
+bg_color = Color(0, 0, 0, 0.2)
 
 [sub_resource type="Animation" id="Animation_okrup"]
 length = 0.001
@@ -76,7 +76,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = SubResource("GradientTexture2D_05s6u")
+texture = SubResource("GradientTexture2D_6lhmr")
 
 [node name="ScrollContainer" type="ScrollContainer" parent="TextureRect"]
 layout_mode = 1
@@ -92,7 +92,28 @@ vertical_scroll_mode = 3
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 20
+theme_override_constants/separation = 0
+
+[node name="PanelContainer_Navbar" type="PanelContainer" parent="TextureRect/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_746xu")
+
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Label" type="Label" parent="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_17slp")
+theme_override_font_sizes/font_size = 28
+text = "Discover"
 
 [node name="MarginContainer" type="MarginContainer" parent="TextureRect/ScrollContainer/VBoxContainer"]
 layout_mode = 2
@@ -111,7 +132,7 @@ layout_mode = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_right = 1220.0
+offset_right = 4880.0
 grow_horizontal = 2
 
 [node name="TextureRect_GenesisCity" type="TextureRect" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/Control/Content"]
@@ -146,6 +167,7 @@ libraries = {
 autoplay = "default"
 
 [node name="LastVisited" parent="TextureRect/ScrollContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("LastVisitGenerator")
 title = "Last Visited"
@@ -197,6 +219,9 @@ discover = NodePath("../../../../..")
 layout_mode = 2
 theme_override_constants/separation = 128
 theme_override_styles/separator = SubResource("StyleBoxEmpty_w46h5")
+
+[node name="PanelContainer" type="PanelContainer" parent="TextureRect/ScrollContainer/VBoxContainer"]
+layout_mode = 2
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
