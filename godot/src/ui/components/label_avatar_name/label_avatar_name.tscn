@@ -5,11 +5,11 @@
 [node name="LabelAvatarName" type="Control"]
 layout_mode = 3
 anchors_preset = 0
-offset_right = 140.0
+offset_right = 81.0
 offset_bottom = 20.0
 mouse_filter = 2
 script = ExtResource("1_pplfg")
-fit_text_to_label = true
+hbox_alignament = 1
 
 [node name="Container_Label" type="HBoxContainer" parent="."]
 unique_name_in_owner = true
@@ -21,6 +21,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
+alignment = 1
 
 [node name="Label_Name" type="Label" parent="Container_Label"]
 unique_name_in_owner = true
@@ -28,6 +29,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "Kiko"
+vertical_alignment = 1
 
 [node name="Label_Subaddress" type="Label" parent="Container_Label"]
 unique_name_in_owner = true
@@ -35,3 +37,4 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.501961, 0.501961, 0.501961, 1)
 theme_override_font_sizes/font_size = 16
 text = "#1234"
+vertical_alignment = 1

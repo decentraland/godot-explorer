@@ -119,10 +119,7 @@ func _play_default_emote(default_emote_id: String) -> bool:
 	var anim_name = "default_emotes/" + default_emote_id
 	if not animation_player.has_animation(anim_name):
 		printerr(
-			(
-				"Emote %s not found from player '%s'"
-				% [default_emote_id, avatar.avatar_data.get_name()]
-			)
+			"Emote %s not found from player '%s'" % [default_emote_id, avatar.get_avatar_name()]
 		)
 		return false
 
@@ -139,7 +136,7 @@ func _play_default_emote(default_emote_id: String) -> bool:
 
 func _play_loaded_emote(emote_urn: String) -> bool:
 	if not _has_emote(emote_urn):
-		printerr("Emote %s not found from player '%s'" % [emote_urn, avatar.avatar_data.get_name()])
+		printerr("Emote %s not found from player '%s'" % [emote_urn, avatar.get_avatar_name()])
 		return false
 
 	var emote_item_data: EmoteItemData = loaded_emotes_by_urn[emote_urn]

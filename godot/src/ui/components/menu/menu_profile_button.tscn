@@ -74,10 +74,18 @@ stretch_mode = 5
 
 [node name="LabelAvatarName" parent="HBoxContainer" instance=ExtResource("3_31d1k")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 0)
+custom_minimum_size = Vector2(100, 20)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+fit_text_to_label = true
 font = ExtResource("4_vryu4")
-hbox_alignament = 1
+
+[node name="Label_Name" parent="HBoxContainer/LabelAvatarName/Container_Label" index="0"]
+theme_override_fonts/font = ExtResource("4_vryu4")
+
+[node name="Label_Subaddress" parent="HBoxContainer/LabelAvatarName/Container_Label" index="1"]
+theme_override_fonts/font = ExtResource("4_vryu4")
 
 [node name="Separator" type="VSeparator" parent="HBoxContainer"]
 layout_mode = 2
@@ -90,3 +98,5 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_wap7v")
 [connection signal="mouse_exited" from="ProfileButton" to="." method="_on_profile_button_mouse_exited"]
 [connection signal="pressed" from="ProfileButton" to="." method="_on_profile_button_pressed"]
 [connection signal="toggled" from="ProfileButton" to="." method="_on_texture_button_toggled"]
+
+[editable path="HBoxContainer/LabelAvatarName"]

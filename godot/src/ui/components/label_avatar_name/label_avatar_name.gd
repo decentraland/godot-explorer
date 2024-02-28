@@ -11,6 +11,11 @@ extends Control
 		avatar_subaddress = new_value
 		_update_node()
 
+@export var hide_subaddress: bool = false:
+	set(new_value):
+		hide_subaddress = new_value
+		_update_node()
+
 @export var avatar_has_claimed_name: bool = false:
 	set(new_value):
 		avatar_has_claimed_name = new_value
@@ -36,37 +41,53 @@ extends Control
 		hbox_alignament = new_value
 		_update_node()
 
+@onready var container_label = %Container_Label
+@onready var label_name = %Label_Name
+@onready var label_subaddress = %Label_Subaddress
+
 
 func _update_node():
 	if not is_node_ready():
 		return
 
-	%Label_Name.text = avatar_name
-	%Label_Subaddress.text = "#" + avatar_subaddress
+	label_name.text = avatar_name
+	label_subaddress.text = "#" + avatar_subaddress
 
-	%Label_Name.add_theme_color_override(
+	label_name.add_theme_color_override(
 		"font_color", Color.GOLD if avatar_has_claimed_name else Color.WHITE
 	)
-	%Label_Subaddress.visible = not avatar_has_claimed_name
+	label_subaddress.visible = not avatar_has_claimed_name and not hide_subaddress
 
 	if font:
-		%Label_Name.add_theme_font_override("font", font)
-		%Label_Subaddress.add_theme_font_override("font", font)
+		label_name.add_theme_font_override("font", font)
+		label_subaddress.add_theme_font_override("font", font)
 
-	%Container_Label.set_alignment(hbox_alignament)
+	container_label.set_alignment(hbox_alignament)
+
+	var profile_name = avatar_name
+	if not avatar_has_claimed_name and not hide_subaddress:
+		profile_name += "#" + avatar_subaddress
 
 	if fit_text_to_label:
-		var profile_name = avatar_name
-		if not avatar_has_claimed_name:
-			profile_name += "#" + avatar_subaddress
+		var font_size = get_font_size_adapted(label_name, profile_name)
+		label_name.add_theme_font_size_override("font_size", font_size)
+		label_subaddress.add_theme_font_size_override("font_size", font_size)
 
-		var font_size = get_font_size_adapted(%Label_Name, profile_name)
-		%Label_Name.add_theme_font_size_override("font_size", font_size)
-		%Label_Subaddress.add_theme_font_size_override("font_size", font_size)
+		container_label.size = self.size
 	else:
-		self.size = %Container_Label.size
-		%Label_Name.add_theme_font_size_override("font_size", max_font_size)
-		%Label_Subaddress.add_theme_font_size_override("font_size", max_font_size)
+		label_name.add_theme_font_size_override("font_size", max_font_size)
+		label_subaddress.add_theme_font_size_override("font_size", max_font_size)
+
+		var text_size = get_string_size(label_name, profile_name)
+		self.size = text_size
+		container_label.size = text_size
+
+		container_label.set_position(Vector2(0, 0))
+
+
+func get_string_size(label: Label, profile_name: String):
+	var font = label.get_theme_font("font")
+	return font.get_string_size(profile_name, HORIZONTAL_ALIGNMENT_CENTER, -1, max_font_size)
 
 
 func get_font_size_adapted(label: Label, profile_name: String) -> int:
