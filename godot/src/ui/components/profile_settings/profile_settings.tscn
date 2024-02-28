@@ -1,7 +1,7 @@
 [gd_scene load_steps=10 format=3 uid="uid://cuduuu2b4u4bn"]
 
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="1_0j6l3"]
-[ext_resource type="Script" path="res://src/ui/components/account_settings/account_settings.gd" id="1_t2la2"]
+[ext_resource type="Script" path="res://src/ui/components/profile_settings/profile_settings.gd" id="1_t2la2"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_auqtd"]
 [ext_resource type="Texture2D" uid="uid://7fya3pcmhbsp" path="res://assets/ui/Account.png" id="3_8spyp"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_3t0sv"]
@@ -15,7 +15,7 @@ gradient = SubResource("Gradient_6v8vt")
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_tfrrd"]
 
-[node name="AccountSettings" type="Control"]
+[node name="ProfileSettings" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -82,7 +82,7 @@ layout_mode = 2
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_auqtd")
 theme_override_font_sizes/font_size = 28
-text = "Account Settings"
+text = "Profile Settings"
 
 [node name="HSeparator" type="VSeparator" parent="VBoxContainer/Header/MarginContainer/HBoxContainer"]
 layout_mode = 2

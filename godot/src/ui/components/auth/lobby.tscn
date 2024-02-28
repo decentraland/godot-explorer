@@ -265,7 +265,6 @@ avatar_subaddress = ""
 fit_text_to_label = false
 max_font_size = 36
 font = ExtResource("4_ghcwt")
-hbox_alignament = 0
 
 [node name="Label" type="Label" parent="Main/Restore/VBoxContainer_RestorePanel"]
 unique_name_in_owner = true

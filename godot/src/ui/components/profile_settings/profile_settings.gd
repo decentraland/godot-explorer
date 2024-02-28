@@ -1,4 +1,4 @@
-class_name AccountSettings
+class_name ProfileSettings
 extends Control
 
 # Depends on backpack for the mutable profile

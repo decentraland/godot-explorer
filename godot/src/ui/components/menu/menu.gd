@@ -31,7 +31,7 @@ var selected_node: Control
 @onready var control_settings = %Control_Settings
 @onready var control_map = %Control_Map
 @onready var control_backpack: Backpack = %Control_Backpack
-@onready var control_account: AccountSettings = %AccountSettings
+@onready var control_profile_settings: ProfileSettings = %Control_ProfileSettings
 
 @onready var button_discover = %Button_Discover
 @onready var button_map = %Button_Map
@@ -55,7 +55,7 @@ func _ready():
 	control_settings.show()
 	control_discover.hide()
 	control_backpack.hide()
-	control_account.hide()
+	control_profile_settings.hide()
 	control_map.jump_to.connect(_jump_to)
 
 
@@ -177,9 +177,9 @@ func _on_button_backpack_pressed():
 
 
 func _on_menu_profile_button_open_menu_profile():
-	if selected_node != control_account:
+	if selected_node != control_profile_settings:
 		fade_out(selected_node)
-		fade_in(control_account)
+		fade_in(control_profile_settings)
 
 
 func fade_in(node: Control):

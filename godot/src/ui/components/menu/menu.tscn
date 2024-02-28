@@ -19,7 +19,7 @@
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="13_likvk"]
 [ext_resource type="Texture2D" uid="uid://k7ufueequ8k0" path="res://assets/ui/backpack/backpack-bg.png" id="17_8btb2"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="17_tc0me"]
-[ext_resource type="PackedScene" uid="uid://cuduuu2b4u4bn" path="res://src/ui/components/account_settings/account_settings.tscn" id="18_x0kg3"]
+[ext_resource type="PackedScene" uid="uid://cuduuu2b4u4bn" path="res://src/ui/components/profile_settings/profile_settings.tscn" id="18_x0kg3"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5emsx"]
 
@@ -332,7 +332,7 @@ texture = ExtResource("17_8btb2")
 expand_mode = 2
 stretch_mode = 6
 
-[node name="AccountSettings" parent="VBoxContainer/ColorRect_Background" node_paths=PackedStringArray("backpack") instance=ExtResource("18_x0kg3")]
+[node name="Control_ProfileSettings" parent="VBoxContainer/ColorRect_Background" node_paths=PackedStringArray("backpack") instance=ExtResource("18_x0kg3")]
 unique_name_in_owner = true
 layout_mode = 1
 backpack = NodePath("../Control_Backpack")
