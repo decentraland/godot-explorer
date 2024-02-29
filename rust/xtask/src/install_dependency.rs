@@ -196,6 +196,9 @@ pub fn get_godot_executable_path() -> Option<String> {
 }
 
 pub fn install(skip_download_templates: bool) -> Result<(), anyhow::Error> {
+    let persistent_path = get_persistent_path(Some("test.zip".into())).unwrap();
+    println!("Using persistent path: {persistent_path:?}");
+
     install_dcl_protocol()?;
 
     if env::consts::OS == "windows" {
