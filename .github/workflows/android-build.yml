@@ -39,3 +39,4 @@ jobs:
           name: Android APK
           path: |
             android.apk
+            godot/lib/android/arm64/libdecentraland_godot_lib.so
