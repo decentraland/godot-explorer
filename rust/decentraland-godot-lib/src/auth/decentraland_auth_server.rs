@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::wallet::SimpleAuthChain;
@@ -162,14 +161,6 @@ pub async fn do_request(
     fetch_polling_server(req_id).await
 }
 
-pub fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
-    let datetime: DateTime<Utc> = expiration.into();
-    let formatted_time = datetime.format("%Y-%m-%dT%H:%M:%S%.3fZ");
-    format!(
-        "Decentraland Login\nEphemeral address: {ephemeral_address}\nExpiration: {formatted_time}",
-    )
-}
-
 impl CreateRequest {
     pub fn from_new_ephemeral(ephemeral_message: &str) -> Self {
         Self {
@@ -196,6 +187,7 @@ impl CreateRequest {
 mod test {
     use crate::auth::wallet::Wallet;
 
+    use super::super::auth_identity::get_ephemeral_message;
     use super::*;
     use ethers::signers::LocalWallet;
     use rand::thread_rng;
@@ -238,39 +230,4 @@ mod test {
 
         tracing::info!("result {:?}", result);
     }
-
-    // #[traced_test]
-    // #[tokio::test]
-    // async fn test_send_async() {
-    //     let (sx, mut rx) = tokio::sync::mpsc::channel(100);
-
-    //     tokio::spawn(async move {
-    //         loop {
-    //             match rx.recv().await {
-    //                 Some(RemoteReportState::OpenUrl { url, description }) => {
-    //                     tracing::info!("url {:?} description {:?}", url, description);
-    //                 }
-    //                 None => {
-    //                     break;
-    //                 }
-    //             }
-    //         }
-    //     });
-
-    //     let Ok(value) = remote_send_async(
-    //         RPCSendableMessage {
-    //             jsonrpc: "2.0".to_owned(),
-    //             id: 1,
-    //             method: "eth_chainId".to_owned(),
-    //             params: vec![],
-    //         },
-    //         None,
-    //         sx,
-    //     )
-    //     .await
-    //     else {
-    //         return;
-    //     };
-    //     tracing::info!("value {:?} ", value);
-    // }
 }
