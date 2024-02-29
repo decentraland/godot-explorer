@@ -1,7 +1,7 @@
 on:
   push:
-    branches:
-      - main
+    # branches:
+      # - main
   workflow_dispatch:
     inputs:
       branch:
@@ -39,4 +39,5 @@ jobs:
           name: Android APK
           path: |
             android.apk
+            android-unsigned.aab
             godot/lib/android/arm64/libdecentraland_godot_lib.so
