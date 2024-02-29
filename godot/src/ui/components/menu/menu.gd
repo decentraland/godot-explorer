@@ -31,6 +31,7 @@ var selected_node: Control
 @onready var control_settings = %Control_Settings
 @onready var control_map = %Control_Map
 @onready var control_backpack: Backpack = %Control_Backpack
+@onready var control_profile_settings: ProfileSettings = %Control_ProfileSettings
 
 @onready var button_discover = %Button_Discover
 @onready var button_map = %Button_Map
@@ -54,6 +55,7 @@ func _ready():
 	control_settings.show()
 	control_discover.hide()
 	control_backpack.hide()
+	control_profile_settings.hide()
 	control_map.jump_to.connect(_jump_to)
 
 
@@ -83,19 +85,6 @@ func _unhandled_input(event):
 				_async_request_hide_menu()
 			else:
 				_on_button_settings_pressed()
-
-
-func modulate_all():
-	var tween_m = create_tween()
-	tween_m.tween_property(control_discover, "modulate", Color(1, 1, 1, 0), 0.125)
-	tween_m.tween_property(control_map, "modulate", Color(1, 1, 1, 0), 0.125)
-	tween_m.tween_property(control_settings, "modulate", Color(1, 1, 1, 0), 0.125)
-
-
-func hide_all():
-	control_discover.hide()
-	control_map.hide()
-	control_settings.hide()
 
 
 func _on_button_close_pressed():
@@ -144,34 +133,11 @@ func show_settings():
 
 
 func _open():
-	_updated_icons()
 	if not visible:
 		show()
 	var tween = create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1), 0.25).set_ease(Tween.EASE_IN_OUT)
 	color_rect_header.show()
-
-
-func _updated_icons():
-	if button_map.button_pressed:
-		button_map.icon = MAP_ON
-	else:
-		button_map.icon = MAP_OFF
-
-	if button_backpack.button_pressed:
-		button_backpack.icon = BACKPACK_ON
-	else:
-		button_backpack.icon = BACKPACK_OFF
-
-	if button_settings.button_pressed:
-		button_settings.icon = SETTINGS_ON
-	else:
-		button_settings.icon = SETTINGS_OFF
-
-	if button_discover.button_pressed:
-		button_discover.icon = EXPLORER_ON
-	else:
-		button_discover.icon = EXPLORER_OFF
 
 
 func _on_control_settings_toggle_fps_visibility(visibility):
@@ -187,45 +153,46 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 
 
 func _on_button_settings_pressed():
-	_updated_icons()
 	if selected_node != control_settings:
 		fade_out(selected_node)
 		fade_in(control_settings)
 
 
 func _on_button_map_pressed():
-	_updated_icons()
 	if selected_node != control_map:
 		fade_out(selected_node)
 		fade_in(control_map)
 
 
 func _on_button_discover_pressed():
-	_updated_icons()
 	if selected_node != control_discover:
 		fade_out(selected_node)
 		fade_in(control_discover)
 
 
 func _on_button_backpack_pressed():
-	_updated_icons()
 	if selected_node != control_backpack:
 		fade_out(selected_node)
 		fade_in(control_backpack)
 
 
+func _on_menu_profile_button_open_menu_profile():
+	if selected_node != control_profile_settings:
+		fade_out(selected_node)
+		fade_in(control_profile_settings)
+
+
 func fade_in(node: Control):
 	selected_node = node
 	node.show()
-	var tween_m = create_tween()
-	tween_m.tween_property(node, "modulate", Color(1, 1, 1), 0.3)
+	var tween = create_tween()
+	tween.tween_property(node, "modulate", Color(1, 1, 1), 0.3)
 
 
 func fade_out(node: Control):
-	var tween_m = create_tween()
-	tween_m.tween_property(node, "modulate", Color(1, 1, 1, 0), 0.3)
-	var tween_h = create_tween()
-	tween_h.tween_callback(node.hide).set_delay(0.3)
+	var tween = create_tween().set_parallel(true)
+	tween.tween_property(node, "modulate", Color(1, 1, 1, 0), 0.3)
+	tween.tween_callback(node.hide).set_delay(0.3)
 
 
 func _on_visibility_changed():
@@ -233,13 +200,35 @@ func _on_visibility_changed():
 		grab_focus()
 
 
-func _async_request_hide_menu():
-	if control_deploying_profile.visible:  # loading...
-		return
-
+func _async_deploy_if_has_changes():
 	if control_backpack.has_changes():
 		control_deploying_profile.show()
 		await control_backpack.async_save_profile()
 		control_deploying_profile.hide()
 
+
+func _async_request_hide_menu():
+	if control_deploying_profile.visible:  # loading...
+		return
+
+	await _async_deploy_if_has_changes()
+
 	hide_menu.emit()
+
+
+func _on_button_discover_toggled(toggled_on):
+	button_discover.icon = EXPLORER_ON if toggled_on else EXPLORER_OFF
+
+
+func _on_button_map_toggled(toggled_on):
+	button_map.icon = MAP_ON if toggled_on else MAP_OFF
+
+
+func _on_button_backpack_toggled(toggled_on):
+	button_backpack.icon = BACKPACK_ON if toggled_on else BACKPACK_OFF
+	if !toggled_on:
+		_async_deploy_if_has_changes()
+
+
+func _on_button_settings_toggled(toggled_on):
+	button_settings.icon = SETTINGS_ON if toggled_on else SETTINGS_OFF

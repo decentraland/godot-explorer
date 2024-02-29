@@ -189,6 +189,16 @@ impl SceneManager {
     }
 
     #[func]
+    fn kill_all_scenes(&mut self) {
+        for (scene_id, scene) in self.scenes.iter_mut() {
+            if let SceneState::Alive = scene.state {
+                scene.state = SceneState::ToKill;
+                self.dying_scene_ids.push(*scene_id);
+            }
+        }
+    }
+
+    #[func]
     fn on_primary_player_trigger_emote(&mut self, emote_id: GString, looping: bool) {
         let emote_command = PbAvatarEmoteCommand {
             emote_urn: emote_id.to_string(),

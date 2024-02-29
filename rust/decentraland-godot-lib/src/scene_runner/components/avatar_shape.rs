@@ -75,8 +75,9 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     node_3d.remove_child(avatar_node);
                 }
             } else if let Some(new_value) = new_value {
+                let avatar_name = new_value.name.unwrap_or("NPC".into());
+
                 let mut new_avatar_data = AvatarWireFormat {
-                    name: Some(new_value.name.unwrap_or("NPC".into())),
                     wearables: new_value.wearables,
                     emotes: Some(
                         new_value
@@ -110,7 +111,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 if let Some(mut avatar_node) = existing {
                     avatar_node.call_deferred(
                         "async_update_avatar".into(),
-                        &[new_avatar_data.to_variant()],
+                        &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 } else {
                     let mut new_avatar_shape = godot::engine::load::<PackedScene>(
@@ -125,7 +126,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                     new_avatar_shape.call_deferred(
                         "async_update_avatar".into(),
-                        &[new_avatar_data.to_variant()],
+                        &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 }
             }

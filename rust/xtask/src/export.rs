@@ -2,10 +2,9 @@ use std::{fs, io, path::Path};
 
 use crate::{
     consts::{BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_PROJECT_FOLDER},
-    install_dependency::{
-        self, download_and_extract_zip, set_executable_permission,
-    },
-    path::adjust_canonicalization, copy_files::copy_ffmpeg_libraries,
+    copy_files::copy_ffmpeg_libraries,
+    install_dependency::{self, download_and_extract_zip, set_executable_permission},
+    path::adjust_canonicalization,
 };
 
 #[allow(dead_code)]

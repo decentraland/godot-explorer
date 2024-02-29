@@ -27,7 +27,7 @@ theme_override_constants/margin_bottom = 0
 [node name="Label_Title" type="Label" parent="MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_fonts/font = ExtResource("1_qm5fw")
 theme_override_font_sizes/font_size = 18
 text = "Section Tittle"

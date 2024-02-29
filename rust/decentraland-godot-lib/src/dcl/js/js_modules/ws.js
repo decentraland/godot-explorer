@@ -103,6 +103,13 @@ class WebSocket {
             Deno.core.opAsync("op_ws_send", this._internal_ws_id, { "type": "Text", data }).then().catch(console.error)
         } else if (typeof data === 'object' && data instanceof Uint8Array) {
             Deno.core.opAsync("op_ws_send", this._internal_ws_id, { "type": "Binary", data: Array.from(data) }).then().catch(console.error)
+        } else if (typeof data === 'object' && data instanceof ArrayBuffer) {
+            Deno.core.opAsync("op_ws_send", this._internal_ws_id, { "type": "Binary", data: Array.from(new Uint8Array(data)) }).then().catch(console.error)
+        } else if (Array.isArray(data)) {
+            Deno.core.opAsync("op_ws_send", this._internal_ws_id, { "type": "Binary", data }).then().catch(console.error)
+        } else {
+            console.error(`Unsupported data type: ${typeof data}`, data)
+            throw new Error("Unsupported data type")
         }
     }
 
@@ -147,6 +154,7 @@ class WebSocket {
             }
             return true
         }
+        await new Promise((resolve) => setImmediate(resolve))
 
         try {
             while (true) {

@@ -72,12 +72,17 @@ func _unset_avatar_modifier_area():
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
 	var avatar = profile.get_avatar()
-	avatar.set_name(profile.get_name())
-	await async_update_avatar(avatar)
+	var new_avatar_name: String = profile.get_name()
+	if not profile.has_claimed_name():
+		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
+	label_3d_name.modulate = Color.GOLD if profile.has_claimed_name() else Color.WHITE
+
+	await async_update_avatar(avatar, new_avatar_name)
 
 
-func async_update_avatar(new_avatar: DclAvatarWireFormat):
-	avatar_data = new_avatar
+func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: String):
+	set_avatar_data(new_avatar)
+	set_avatar_name(new_avatar_name)
 	if new_avatar == null:
 		printerr("Trying to update an avatar with an null value")
 		return
@@ -85,7 +90,7 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat):
 	var wearable_to_request := []
 
 	sprite_3d_mic_enabled.hide()
-	label_3d_name.text = avatar_data.get_name()
+	label_3d_name.text = new_avatar_name
 	if hide_name:
 		label_3d_name.hide()
 
@@ -451,12 +456,6 @@ func _attach_point_bone_pose_changed(bone_idx: int):
 
 func _on_timer_hide_mic_timeout():
 	sprite_3d_mic_enabled.hide()
-
-
-func get_avatar_name() -> String:
-	if avatar_data != null:
-		return avatar_data.get_name()
-	return ""
 
 
 func _play_emote_audio(file_hash: String):
