@@ -33,11 +33,15 @@ jobs:
       - name: Build
         run: |
           bash build-android-apk.sh
+      - name: Copy artifacts
+        if: success() || failure()
+        run: |
+          mkdir -p android-artifacts
+          mv android.apk android-artifacts/
+          mv android-unsigned.aab android-artifacts/
+          mv godot/lib/android/arm64/libdecentraland_godot_lib.so android-artifacts/
       - uses: actions/upload-artifact@v3
         if: success() || failure()
         with:
           name: Android APK
-          path: |
-            android.apk
-            android-unsigned.aab
-            godot/lib/android/arm64/libdecentraland_godot_lib.so
+          path: android-artifacts/

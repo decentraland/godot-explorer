@@ -1,3 +1,4 @@
+use directories::ProjectDirs;
 use flate2::read::GzDecoder;
 use reqwest::blocking::Client;
 use serde_json::Value;
@@ -11,7 +12,10 @@ use zip::ZipArchive;
 use crate::download_file::download_file;
 use crate::export::prepare_templates;
 
-use crate::consts::{BIN_FOLDER, GODOT4_BIN_BASE_URL, PROTOC_BASE_URL, RUST_LIB_PROJECT_FOLDER};
+use crate::consts::{
+    BIN_FOLDER, GODOT4_BIN_BASE_URL, GODOT_CURRENT_VERSION, PROTOC_BASE_URL,
+    RUST_LIB_PROJECT_FOLDER,
+};
 
 fn create_directory_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
@@ -84,13 +88,51 @@ fn get_protoc_url() -> Option<String> {
     Some(format!("{PROTOC_BASE_URL}{os_url}"))
 }
 
-pub fn download_and_extract_zip(url: &str, destination_path: &str) -> Result<(), anyhow::Error> {
-    println!("Downloading {url:?}");
+fn get_existing_cached_file(persistent_cache: Option<String>) -> Option<String> {
+    let persistent_cache = persistent_cache?;
+    let dirs = ProjectDirs::from("org", "decentraland", "devgodot")?;
+
+    fs::create_dir_all(dirs.cache_dir()).ok()?;
+    let cache_file_path = dirs.cache_dir().join(persistent_cache);
+    if cache_file_path.exists() {
+        Some(cache_file_path.to_str().unwrap().to_string())
+    } else {
+        None
+    }
+}
+
+fn get_persistent_path(persistent_cache: Option<String>) -> Option<String> {
+    let persistent_cache = persistent_cache?;
+    let dirs = ProjectDirs::from("org", "decentraland", "devgodot")?;
+    fs::create_dir_all(dirs.cache_dir()).ok()?;
+    let cache_file_path = dirs.cache_dir().join(persistent_cache);
+    Some(cache_file_path.to_str().unwrap().to_string())
+}
+
+pub fn download_and_extract_zip(
+    url: &str,
+    destination_path: &str,
+    persistent_cache: Option<String>,
+) -> Result<(), anyhow::Error> {
     if Path::new("./tmp-file.zip").exists() {
         fs::remove_file("./tmp-file.zip")?;
     }
 
-    download_file(url, "./tmp-file.zip")?;
+    // If the cached file exist, use it
+    if let Some(already_existing_file) = get_existing_cached_file(persistent_cache.clone()) {
+        println!("Getting cached file of {url:?}");
+        fs::copy(already_existing_file, "./tmp-file.zip")?;
+    } else {
+        println!("Downloading {url:?}");
+        download_file(url, "./tmp-file.zip")?;
+
+        // when the download is done, copy the file to the persistent cache if it applies
+        if let Some(persistent_cache) = persistent_cache {
+            let persistent_path = get_persistent_path(Some(persistent_cache)).unwrap();
+            fs::copy("./tmp-file.zip", persistent_path)?;
+        }
+    }
+
     let file = File::open("./tmp-file.zip")?;
     let mut zip_archive = ZipArchive::new(file)?;
 
@@ -160,16 +202,19 @@ pub fn install(skip_download_templates: bool) -> Result<(), anyhow::Error> {
         download_and_extract_zip(
             "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-full_build-shared.zip",
             format!("{BIN_FOLDER}ffmpeg").as_str(),
+            Some("ffmpeg-6.0-full_build-shared.zip".to_string()),
         )?;
     }
 
     download_and_extract_zip(
         get_protoc_url().unwrap().as_str(),
         format!("{BIN_FOLDER}protoc").as_str(),
+        None,
     )?;
     download_and_extract_zip(
         get_godot_url().unwrap().as_str(),
         format!("{BIN_FOLDER}godot").as_str(),
+        Some(format!("{GODOT_CURRENT_VERSION}.executable.zip")),
     )?;
 
     let program_path = format!("{BIN_FOLDER}godot/{}", get_godot_executable_path().unwrap());

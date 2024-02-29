@@ -7,8 +7,8 @@ pub fn adjust_canonicalization<P: AsRef<std::path::Path>>(p: P) -> String {
 pub fn adjust_canonicalization<P: AsRef<std::path::Path>>(p: P) -> String {
     const VERBATIM_PREFIX: &str = r#"\\?\"#;
     let p = p.as_ref().display().to_string();
-    if p.starts_with(VERBATIM_PREFIX) {
-        p[VERBATIM_PREFIX.len()..].to_string()
+    if let Some(stripped) = p.strip_prefix(VERBATIM_PREFIX) {
+        stripped.to_string()
     } else {
         p
     }
