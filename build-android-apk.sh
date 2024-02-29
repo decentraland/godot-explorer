@@ -45,7 +45,7 @@ export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
 cd ${EXPLORER_PATH}/godot/
 
 # Build the .aab without x86_64 architecture
-echo "Export Godot APK"
+echo "Export Godot android.apk"
 ${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk || true
 
 

@@ -21,8 +21,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'push' && 'main' || github.event.inputs.branch }}
       - name: Setup Rust
         run: |
           echo $ANDROID_HOME
