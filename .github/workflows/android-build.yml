@@ -16,6 +16,8 @@ jobs:
     runs-on: self-hosted-ubuntu
     container:
       image: docker://kuruk/dcl-godot-android-builder:latest
+      volumes:
+        - /home/user/.cache/devgodot:/root/.cache/devgodot
 
     steps:
       - uses: actions/checkout@v4
@@ -33,13 +35,16 @@ jobs:
       - name: Build
         run: |
           bash build-android-apk.sh
+      
+      # if libdecentraland_godot_lib.so does not exist, the build failed, nothing to upload
       - name: Copy artifacts
         if: success() || failure()
         run: |
           mkdir -p android-artifacts
-          mv android.apk android-artifacts/
-          mv android-unsigned.aab android-artifacts/
           mv godot/lib/android/arm64/libdecentraland_godot_lib.so android-artifacts/
+          mv android.apk android-artifacts/ || true
+          mv android-unsigned.aab android-artifacts/ || true
+          
       - uses: actions/upload-artifact@v3
         if: success() || failure()
         with:
