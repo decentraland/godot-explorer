@@ -48,11 +48,22 @@ cd ${EXPLORER_PATH}/godot/
 echo "Export Godot APK"
 ${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk || true
 
+
+# Build the .aab without x86_64 architecture
+echo "Setting up to export godot .aab"
+# Use aab
+sed -i 's/gradle_build\/export_format=0/gradle_build\/export_format=1/' ${EXPLORER_PATH}/godot/export_presets.cfg
+# remove x86_64
+sed -i 's/architectures\/x86_64=true/architectures\/x86_64=false/' ${EXPLORER_PATH}/godot/export_presets.cfg
+# remove signed
+sed -i 's/package\/signed=true/package\/signed=false/' ${EXPLORER_PATH}/godot/export_presets.cfg
+
+# copy debug libraries
+cp -r ${EXPLORER_PATH}/godot/android/build/libs/debug/arm64-v8a ${EXPLORER_PATH}/godot/android/build/libs/release/arm64-v8a
+cp -r ${EXPLORER_PATH}/godot/android/build/libs/debug/libwebrtc.jar ${EXPLORER_PATH}/godot/android/build/libs/release/libwebrtc.jar
+
 # Build the .aab without x86_64 architecture
 echo "Export Godot AAB"
-sed -i 's/gradle_build\/export_format=0/gradle_build\/export_format=1/' ${EXPLORER_PATH}/godot/export_presets.cfg
-sed -i 's/architectures\/x86_64=true/architectures\/x86_64=false/' ${EXPLORER_PATH}/godot/export_presets.cfg
-sed -i 's/package\/signed=true/package\/signed=false/' ${EXPLORER_PATH}/godot/export_presets.cfg
 ${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-release Android ${EXPLORER_PATH}/android-unsigned.aab || true
 
 echo "Finished"
