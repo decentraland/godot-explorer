@@ -13,7 +13,7 @@ name: Android Build
 
 jobs:
   build:
-    runs-on: self-hosted-ubuntu
+    runs-on: bigrunner
     container:
       image: docker://kuruk/dcl-godot-android-builder:latest
       volumes:
