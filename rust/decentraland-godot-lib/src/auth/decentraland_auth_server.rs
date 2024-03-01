@@ -6,8 +6,8 @@ use super::wallet::SimpleAuthChain;
 
 const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
 const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
-// const AUTH_FRONT_URL: &str = "http://localhost:5173/";
-// const AUTH_SERVER_ENDPOINT_URL: &str = "http://localhost:5545/task/";
+// const AUTH_FRONT_URL: &str = "http://localhost:5173/auth/requests";
+// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
@@ -150,7 +150,7 @@ pub async fn do_request(
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     let request = create_new_request(message).await?;
     let req_id = request.request_id;
-    let url = format!("{AUTH_FRONT_URL}/{req_id}");
+    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId=alternative");
     url_reporter
         .send(RemoteReportState::OpenUrl {
             url,
