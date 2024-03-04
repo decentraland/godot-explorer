@@ -654,7 +654,7 @@ impl SceneManager {
         let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
         let raycast_data = RaycastHit::from_godot_raycast(
             scene_position,
-            raycast_from,
+            self.player_node.get_position(),
             &raycast_result,
             Some(dcl_entity_id as u32),
         )?;
@@ -939,79 +939,68 @@ impl INode for SceneManager {
             &current_pointer_raycast_result,
         );
 
-        let should_update_tooltip = !GodotDclRaycastResult::eq_key(
-            &self.last_raycast_result,
-            &current_pointer_raycast_result,
-        );
+        let mut tooltips = VariantArray::new();
+        if let Some(raycast) = current_pointer_raycast_result.as_ref() {
+            if let Some(pointer_events) =
+                get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
+            {
+                for pointer_event in pointer_events.pointer_events.iter() {
+                    if let Some(info) = pointer_event.event_info.as_ref() {
+                        let show_feedback = info.show_feedback.as_ref().unwrap_or(&true);
+                        let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
+                        if !show_feedback || raycast.hit.length > max_distance {
+                            continue;
+                        }
 
-        if should_update_tooltip {
-            let mut tooltips = VariantArray::new();
-            if let Some(raycast) = current_pointer_raycast_result.as_ref() {
-                if let Some(pointer_events) =
-                    get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
-                {
-                    for pointer_event in pointer_events.pointer_events.iter() {
-                        if let Some(info) = pointer_event.event_info.as_ref() {
-                            // TODO: filter by show_beedback and max_distance
-                            // let (show_feedback, max_distance) = (
-                            //     info.show_feedback.as_ref().unwrap_or(&true).clone(),
-                            //     info.max_distance.as_ref().unwrap_or(&10.0).clone(),
-                            // );
-                            // if !show_feedback || raycast.hit.length > max_distance {
-                            //     continue;
-                            // }
+                        let input_action =
+                            InputAction::from_i32(*info.button.as_ref().unwrap_or(&0))
+                                .unwrap_or(InputAction::IaAny);
 
-                            let input_action =
-                                InputAction::from_i32(*info.button.as_ref().unwrap_or(&0))
-                                    .unwrap_or(InputAction::IaAny);
+                        let is_pet_up = pointer_event.event_type == PointerEventType::PetUp as i32;
+                        let is_pet_down =
+                            pointer_event.event_type == PointerEventType::PetDown as i32;
+                        if is_pet_up || is_pet_down {
+                            let text = if let Some(text) = info.hover_text.as_ref() {
+                                GString::from(text)
+                            } else {
+                                GString::from("Interact")
+                            };
 
-                            let is_pet_up =
-                                pointer_event.event_type == PointerEventType::PetUp as i32;
-                            let is_pet_down =
-                                pointer_event.event_type == PointerEventType::PetDown as i32;
-                            if is_pet_up || is_pet_down {
-                                let text = if let Some(text) = info.hover_text.as_ref() {
-                                    GString::from(text)
-                                } else {
-                                    GString::from("Interact")
-                                };
+                            let input_action_gstr = GString::from(input_action.as_str_name());
 
-                                let input_action_gstr = GString::from(input_action.as_str_name());
+                            let dict = tooltips.iter_shared().find_map(|tooltip| {
+                                let dictionary = tooltip.to::<Dictionary>();
+                                dictionary.get("action").and_then(|action| {
+                                    if action.to_string() == input_action_gstr.to_string() {
+                                        Some(dictionary.clone())
+                                    } else {
+                                        None
+                                    }
+                                })
+                            });
 
-                                let dict = tooltips.iter_shared().find_map(|tooltip| {
-                                    let dictionary = tooltip.to::<Dictionary>();
-                                    dictionary.get("action").and_then(|action| {
-                                        if action.to_string() == input_action_gstr.to_string() {
-                                            Some(dictionary.clone())
-                                        } else {
-                                            None
-                                        }
-                                    })
-                                });
+                            let exists = dict.is_some();
+                            let mut dict = dict.unwrap_or_else(Dictionary::new);
 
-                                let exists = dict.is_some();
-                                let mut dict = dict.unwrap_or_else(Dictionary::new);
+                            if is_pet_down {
+                                dict.set(StringName::from("text_pet_down"), text);
+                            } else if is_pet_up {
+                                dict.set(StringName::from("text_pet_up"), text);
+                            }
 
-                                if is_pet_down {
-                                    dict.set(StringName::from("text_pet_down"), text);
-                                } else if is_pet_up {
-                                    dict.set(StringName::from("text_pet_up"), text);
-                                }
+                            dict.set(StringName::from("action"), input_action_gstr);
 
-                                dict.set(StringName::from("action"), input_action_gstr);
-
-                                if !exists {
-                                    tooltips.push(dict.to_variant());
-                                }
+                            if !exists {
+                                tooltips.push(dict.to_variant());
                             }
                         }
                     }
                 }
             }
-
-            self.set_pointer_tooltips(tooltips);
-            self.base.emit_signal("pointer_tooltip_changed".into(), &[]);
         }
+
+        self.set_pointer_tooltips(tooltips);
+        self.base.emit_signal("pointer_tooltip_changed".into(), &[]);
 
         // This update the mirror node that copies every frame the global transform of the player/camera
         //  every entity attached to the player/camera is really attached to these mirror nodes
