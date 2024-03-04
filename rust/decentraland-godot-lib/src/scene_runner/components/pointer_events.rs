@@ -3,6 +3,8 @@ use std::{
     sync::atomic::Ordering,
 };
 
+use godot::{engine::Node3D, obj::Gd};
+
 use crate::{
     dcl::{
         components::{
@@ -40,6 +42,22 @@ impl crate::dcl::components::proto_components::sdk::components::common::RaycastH
         let normal = raycast_result
             .get("normal")?
             .to::<godot::prelude::Vector3>();
+
+        let distance = global_origin.distance_to(position);
+
+        // Get node name from the collider, and remove everything that is after `_colgen`
+        let mesh_name: Option<String> = raycast_result
+            .get("collider")
+            .and_then(|collider| collider.try_to::<Gd<Node3D>>().ok())
+            .map(|mesh| mesh.get_name().to_string())
+            .map(|mesh_name| {
+                mesh_name
+                    .split("_colgen")
+                    .next()
+                    .unwrap_or(&mesh_name)
+                    .to_string()
+            });
+
         Some(Self {
             // the intersection point in global coordinates
             position: Some(crate::dcl::components::proto_components::common::Vector3 {
@@ -66,9 +84,9 @@ impl crate::dcl::components::proto_components::sdk::components::common::RaycastH
                 z: -normal.z,
             }),
             // the distance between the ray origin and the hit position
-            length: position.length(),
+            length: distance,
             // mesh name, if collision happened inside a GltfContainer
-            mesh_name: None,
+            mesh_name,
             // the ID of the Entity that has the impacted mesh attached
             entity_id,
         })
@@ -191,7 +209,7 @@ pub fn pointer_events_system(
             (SceneId::default(), SceneEntityId::new(0, 0), None)
         };
 
-    for (_scene_id, scene) in scenes.iter_mut() {
+    for (scene_id, scene) in scenes.iter_mut() {
         for (input_action, state) in changed_inputs {
             let state = if *state {
                 PointerEventType::PetDown
@@ -199,11 +217,18 @@ pub fn pointer_events_system(
                 PointerEventType::PetUp
             } as i32;
 
+            // Just send the raycast data if we hit something of that scene
+            let raycast_hit = if current_raycast_scene_id == *scene_id {
+                raycast_hit.clone()
+            } else {
+                None
+            };
+
             scene.pointer_events_result.push((
                 SceneEntityId::new(0, 0),
                 PbPointerEventsResult {
                     button: *input_action as i32,
-                    hit: raycast_hit.clone(),
+                    hit: raycast_hit,
                     state,
                     timestamp: global_tick_number,
                     analog: None,
@@ -232,6 +257,13 @@ pub fn pointer_events_system(
 
         let event_info = pointer_event.event_info.as_ref().unwrap();
         let pointer_event_button = event_info.button.unwrap_or(InputAction::IaAny as i32);
+
+        if let Some(raycast_hit) = raycast_hit.clone() {
+            let max_distance = *event_info.max_distance.as_ref().unwrap_or(&10.0);
+            if raycast_hit.length > max_distance {
+                continue;
+            }
+        }
 
         for (input_action, state) in changed_inputs {
             if *input_action == InputAction::IaAny // FIX: Is this possible? :S
