@@ -3,7 +3,7 @@ use std::sync::{Arc, RwLock};
 use http::Uri;
 use serde::Serialize;
 
-use crate::auth::with_browser_and_server::RPCSendableMessage;
+use crate::auth::decentraland_auth_server::CreateRequest;
 
 use super::common::{SceneTestPlan, SceneTestResult};
 
@@ -165,7 +165,7 @@ pub enum RpcCall {
         body: SceneTestResult,
     },
     SendAsync {
-        body: RPCSendableMessage,
+        body: CreateRequest,
         response: RpcResultSender<Result<serde_json::Value, String>>,
     },
     SendCommsMessage {

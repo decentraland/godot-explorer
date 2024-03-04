@@ -4,16 +4,13 @@ use async_trait::async_trait;
 use ethers::{signers::WalletError, types::H160};
 
 use super::{
-    auth_identity::try_create_remote_ephemeral,
-    ephemeral_auth_chain::EphemeralAuthChain,
-    wallet::ObjSafeWalletSigner,
-    with_browser_and_server::{remote_sign_message, RemoteReportState},
+    auth_identity::try_create_remote_ephemeral, decentraland_auth_server::RemoteReportState,
+    ephemeral_auth_chain::EphemeralAuthChain, wallet::ObjSafeWalletSigner,
 };
 
 #[derive(Clone)]
 pub struct RemoteWallet {
     address: H160,
-    report_url_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
     chain_id: u64,
 }
 
@@ -36,23 +33,14 @@ impl RemoteWallet {
         Ok((
             Self {
                 address: ephemeral_wallet.signer(),
-                report_url_sender,
                 chain_id,
             },
             ephemeral_wallet,
         ))
     }
 
-    pub fn new(
-        address: H160,
-        chain_id: u64,
-        report_url_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
-    ) -> Self {
-        Self {
-            address,
-            report_url_sender,
-            chain_id,
-        }
+    pub fn new(address: H160, chain_id: u64) -> Self {
+        Self { address, chain_id }
     }
 
     pub fn address(&self) -> H160 {
@@ -66,13 +54,8 @@ impl RemoteWallet {
 
 #[async_trait]
 impl ObjSafeWalletSigner for RemoteWallet {
-    async fn sign_message(&self, message: &[u8]) -> Result<ethers::types::Signature, WalletError> {
-        let (_, signature, _chain_id) =
-            remote_sign_message(message, Some(self.address), self.report_url_sender.clone())
-                .await
-                .map_err(|_| WalletError::Eip712Error("Unknown error".to_owned()))?;
-
-        Ok(signature)
+    async fn sign_message(&self, _message: &[u8]) -> Result<ethers::types::Signature, WalletError> {
+        Err(WalletError::Eip712Error("Not implemented".to_owned()))
     }
 
     async fn sign_transaction(
