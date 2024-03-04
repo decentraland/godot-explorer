@@ -10,6 +10,7 @@ use crate::{
     path::adjust_canonicalization,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     editor: bool,
     release_mode: bool,
@@ -83,7 +84,7 @@ pub fn run(
         args.push("--test");
     }
 
-    if extras.len() > 0 {
+    if !extras.is_empty() {
         for extra in &extras {
             args.push(extra.as_str());
         }
@@ -115,12 +116,10 @@ pub fn run(
                     test_ok.1 = false;
                     test_ok.2 = line;
                 }
-            } else {
-                if line.contains("test-exiting with code ") {
-                    test_ok.0 = true;
-                    test_ok.1 = line.contains("test-exiting with code 0");
-                    test_ok.2 = line;
-                }
+            } else if line.contains("test-exiting with code ") {
+                test_ok.0 = true;
+                test_ok.1 = line.contains("test-exiting with code 0");
+                test_ok.2 = line;
             }
         }
 

@@ -11,3 +11,5 @@ pub const GODOT4_BIN_BASE_URL: &str =
 
 pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
     "https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_export_templates.tpz";
+
+pub const GODOT_CURRENT_VERSION: &str = "4.2.1";

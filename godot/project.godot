@@ -10,8 +10,8 @@ config_version=5
 
 [application]
 
-config/name="Decentraland Godot Rust"
-config/description="Decentraland Godot Client - Protocol Squad"
+config/name="Decentraland"
+config/description="Decentraland Explorer powered by Decentraland DAO"
 run/main_scene="res://src/main.tscn"
 config/features=PackedStringArray("4.2")
 config/icon="res://decentraland_logo.png"

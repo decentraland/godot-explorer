@@ -1,7 +1,10 @@
 use std::{fs, io, path::Path};
 
 use crate::{
-    consts::{BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_PROJECT_FOLDER},
+    consts::{
+        BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
+        GODOT_PROJECT_FOLDER,
+    },
     copy_files::copy_ffmpeg_libraries,
     install_dependency::{self, download_and_extract_zip, set_executable_permission},
     path::adjust_canonicalization,
@@ -127,7 +130,11 @@ pub fn export() -> Result<(), anyhow::Error> {
 
 pub fn prepare_templates() -> Result<(), anyhow::Error> {
     let dest_path = format!("{BIN_FOLDER}godot/templates");
-    download_and_extract_zip(GODOT4_EXPORT_TEMPLATES_BASE_URL, dest_path.as_str())?;
+    download_and_extract_zip(
+        GODOT4_EXPORT_TEMPLATES_BASE_URL,
+        dest_path.as_str(),
+        Some(format!("{GODOT_CURRENT_VERSION}.export-templates.zip")),
+    )?;
 
     Ok(())
 }
