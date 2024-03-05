@@ -46,6 +46,7 @@ var desired_portable_experiences_urns: Array[String] = []
 # Special-case: one-shot to skip loading screen
 var _is_reloading: bool = false
 
+
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
 

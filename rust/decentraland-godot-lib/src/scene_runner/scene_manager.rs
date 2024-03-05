@@ -13,7 +13,7 @@ use crate::{
             },
             SceneEntityId,
         },
-        DclScene, RendererResponse, SceneId, SceneResponse,
+        DclScene, DclSceneRealmData, RendererResponse, SceneId, SceneResponse, SpawnDclSceneData,
     },
     godot_classes::{
         dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal, dcl_ui_control::DclUiControl,
@@ -131,17 +131,40 @@ impl SceneManager {
             .player_identity
             .bind()
             .try_get_ephemeral_auth_chain();
-        let dcl_scene = DclScene::spawn_new_js_dcl_scene(
-            new_scene_id,
-            scene_entity_definition.clone(),
-            local_main_js_file_path.to_string(),
-            local_main_crdt_file_path.to_string(),
-            content_mapping.clone(),
-            self.thread_sender_to_main.clone(),
-            testing_mode_active,
+
+        let realm = DclGlobal::singleton().bind().realm.clone();
+        let realm = realm.bind();
+        let realm_name = realm.get_realm_name().to_string();
+        let base_url = realm.get_realm_url().to_string();
+        let network_id = realm.get_network_id();
+
+        let is_preview = DclGlobal::singleton().bind().get_preview_mode();
+
+        let comms_adapter = DclGlobal::singleton()
+            .bind()
+            .comms
+            .bind()
+            .get_current_adapter_conn_str()
+            .to_string();
+
+        let dcl_scene = DclScene::spawn_new_js_dcl_scene(SpawnDclSceneData {
+            scene_id: new_scene_id,
+            scene_entity_definition: scene_entity_definition.clone(),
+            local_main_js_file_path: local_main_js_file_path.to_string(),
+            local_main_crdt_file_path: local_main_crdt_file_path.to_string(),
+            content_mapping: content_mapping.clone(),
+            thread_sender_to_main: self.thread_sender_to_main.clone(),
+            testing_mode: testing_mode_active,
             ethereum_provider,
             ephemeral_wallet,
-        );
+            realm_info: DclSceneRealmData {
+                base_url,
+                realm_name,
+                network_id,
+                comms_adapter,
+                is_preview,
+            },
+        });
 
         let new_scene = Scene::new(
             new_scene_id,

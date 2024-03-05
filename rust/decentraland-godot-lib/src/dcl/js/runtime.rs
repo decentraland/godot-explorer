@@ -5,7 +5,10 @@ use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use crate::{
     content::content_mapping::ContentMappingAndUrlRef,
-    dcl::scene_apis::{ContentMapping, GetRealmResponse, GetSceneInformationResponse, RpcCall},
+    dcl::{
+        scene_apis::{ContentMapping, GetSceneInformationResponse},
+        DclSceneRealmData,
+    },
     realm::scene_definition::SceneEntityDefinition,
 };
 
@@ -47,17 +50,8 @@ fn op_get_file_url(
 }
 
 #[op]
-async fn op_get_realm(op_state: Rc<RefCell<OpState>>) -> Result<GetRealmResponse, AnyError> {
-    let (sx, rx) = tokio::sync::oneshot::channel::<GetRealmResponse>();
-
-    op_state
-        .borrow_mut()
-        .borrow_mut::<Vec<RpcCall>>()
-        .push(RpcCall::GetRealm {
-            response: sx.into(),
-        });
-
-    rx.await.map_err(|e| anyhow!(e))
+fn op_get_realm(op_state: &mut OpState) -> DclSceneRealmData {
+    op_state.borrow::<DclSceneRealmData>().clone()
 }
 
 #[op]

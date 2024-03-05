@@ -209,12 +209,28 @@ impl ContentProvider {
     #[func]
     pub fn fetch_texture_by_hash(
         &mut self,
-        file_hash: GString,
+        file_hash_godot: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
-        let file_hash = file_hash.to_string();
+        let file_hash = file_hash_godot.to_string();
         if let Some(entry) = self.cached.get(&file_hash) {
             return entry.promise.clone();
+        }
+
+        // TODO: In the future, this would be handled by each component handler
+        //  and check if the hostname is allowed (set up in the scene.json)
+        //  https://github.com/decentraland/godot-explorer/issues/363
+        if file_hash.starts_with("http") {
+            // get file_hash from url
+            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash());
+            let promise = self.fetch_texture_by_url(GString::from(new_file_hash), file_hash_godot);
+            self.cached.insert(
+                file_hash,
+                ContentEntry {
+                    promise: promise.clone(),
+                },
+            );
+            return promise;
         }
 
         let url = format!(

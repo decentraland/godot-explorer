@@ -10,25 +10,20 @@ mod runtime;
 mod testing;
 mod websocket;
 
-use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
-use crate::auth::ethereum_provider::EthereumProvider;
-use crate::content::content_mapping::ContentMappingAndUrlRef;
 use crate::dcl::common::{
     is_scene_log_enabled, SceneDying, SceneElapsedTime, SceneJsFileContent, SceneLogLevel,
     SceneLogMessage, SceneLogs, SceneMainCrdtFileContent, SceneStartTime,
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
-use crate::realm::scene_definition::SceneEntityDefinition;
 
-use super::{
-    crdt::message::process_many_messages, serialization::reader::DclReader, SharedSceneCrdtState,
-};
-use super::{RendererResponse, SceneId, SceneResponse};
+use super::crdt::SceneCrdtState;
+use super::{crdt::message::process_many_messages, serialization::reader::DclReader};
+use super::{RendererResponse, SceneId, SceneResponse, SpawnDclSceneData};
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use deno_core::error::JsError;
@@ -101,19 +96,22 @@ pub fn create_runtime() -> deno_core::JsRuntime {
 // main scene processing thread - constructs an isolate and runs the scene
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn scene_thread(
-    scene_id: SceneId,
-    scene_entity_definition: Arc<SceneEntityDefinition>,
-    local_main_js_file_path: String,
-    local_main_crdt_file_path: String,
-    content_mapping: ContentMappingAndUrlRef,
-    thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     thread_receive_from_main: tokio::sync::mpsc::Receiver<RendererResponse>,
-    scene_crdt: SharedSceneCrdtState,
-    testing_mode: bool,
-    ethereum_provider: Arc<EthereumProvider>,
-    ephemeral_wallet: Option<EphemeralAuthChain>,
+    scene_crdt: Arc<Mutex<SceneCrdtState>>,
+    spawn_dcl_scene_data: SpawnDclSceneData,
 ) {
     let mut scene_main_crdt = None;
+
+    let scene_id = spawn_dcl_scene_data.scene_id;
+    let scene_entity_definition = spawn_dcl_scene_data.scene_entity_definition;
+    let local_main_js_file_path = spawn_dcl_scene_data.local_main_js_file_path;
+    let local_main_crdt_file_path = spawn_dcl_scene_data.local_main_crdt_file_path;
+    let content_mapping = spawn_dcl_scene_data.content_mapping;
+    let thread_sender_to_main = spawn_dcl_scene_data.thread_sender_to_main;
+    let testing_mode = spawn_dcl_scene_data.testing_mode;
+    let ethereum_provider = spawn_dcl_scene_data.ethereum_provider;
+    let ephemeral_wallet = spawn_dcl_scene_data.ephemeral_wallet;
+    let realm_info = spawn_dcl_scene_data.realm_info;
 
     // on main.crdt detected
     if !local_main_crdt_file_path.is_empty() {
@@ -183,10 +181,11 @@ pub(crate) fn scene_thread(
     state.borrow_mut().put(ephemeral_wallet);
     state.borrow_mut().put(scene_entity_definition);
 
+    state.borrow_mut().put(realm_info);
+
     state.borrow_mut().put(Vec::<RpcCall>::new());
     state.borrow_mut().put(Vec::<LocalCall>::new());
 
-    // TODO: receive from main thread, and managed by command line params
     state.borrow_mut().put(SceneEnv {
         enable_know_env: testing_mode,
         testing_enable: testing_mode,

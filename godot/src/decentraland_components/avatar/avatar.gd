@@ -40,12 +40,17 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 
 @onready var avatar_modifier_area_detector = $avatar_modifier_area_detector
 
+
 func _ready():
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
 	body_shape_skeleton_3d.bone_pose_changed.connect(self._attach_point_bone_pose_changed)
-	
-	avatar_modifier_area_detector.set_avatar_modifier_area.connect(self._on_set_avatar_modifier_area)
-	avatar_modifier_area_detector.unset_avatar_modifier_area.connect(self._unset_avatar_modifier_area)
+
+	avatar_modifier_area_detector.set_avatar_modifier_area.connect(
+		self._on_set_avatar_modifier_area
+	)
+	avatar_modifier_area_detector.unset_avatar_modifier_area.connect(
+		self._unset_avatar_modifier_area
+	)
 
 	if non_3d_audio:
 		var audio_player_name = audio_player_emote.get_name()
@@ -53,6 +58,7 @@ func _ready():
 		audio_player_emote = AudioStreamPlayer.new()
 		add_child(audio_player_emote)
 		audio_player_emote.name = audio_player_name
+
 
 func try_show():
 	avatar_modifier_area_detector.check_areas()

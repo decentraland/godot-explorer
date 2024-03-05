@@ -15,7 +15,7 @@ module.exports.getBootstrapData = async function (body) {
     }
 }
 module.exports.isPreviewMode = async function (body) {
-    const realm = await Deno.core.ops.op_get_realm()
+    const realm = Deno.core.ops.op_get_realm()
     return {
         isPreview: realm.isPreview
     }
@@ -31,7 +31,7 @@ module.exports.areUnsafeRequestAllowed = async function (body) {
     }
 }
 module.exports.getCurrentRealm = async function (body) {
-    const realm = await Deno.core.ops.op_get_realm()
+    const realm = Deno.core.ops.op_get_realm()
     return {
         currentRealm: {
             protocol: 'v3',

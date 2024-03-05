@@ -112,6 +112,13 @@ impl DclUiBackground {
         self.texture_loaded = true;
         self.base.set_texture(godot_texture.clone().upcast());
 
+        self._set_texture_params();
+    }
+
+    fn _set_texture_params(&mut self) {
+        let Some(godot_texture) = self.base.get_texture() else {
+            return;
+        };
         match self.current_value.texture_mode() {
             BackgroundTextureMode::NineSlices => {
                 self.base
@@ -225,6 +232,8 @@ impl DclUiBackground {
 
         // texture change if
         if texture_changed {
+            self.texture_loaded = false;
+
             let texture =
                 DclTexture::from_proto_with_hash(&self.current_value.texture, &content_mapping);
 
@@ -237,6 +246,7 @@ impl DclUiBackground {
                             GString::from(texture_hash),
                             DclContentMappingAndUrl::from_ref(content_mapping),
                         );
+
                         self.waiting_hash = GString::from(texture_hash);
 
                         if !promise.bind().is_resolved() {
@@ -278,6 +288,8 @@ impl DclUiBackground {
                     godot::engine::nine_patch_rect::AxisStretchMode::AXIS_STRETCH_MODE_STRETCH,
                 );
             }
+        } else {
+            self._set_texture_params();
         }
 
         let modulate_color = self
