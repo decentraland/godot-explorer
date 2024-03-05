@@ -87,6 +87,11 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			restore_panel.show()
 			show_panel(control_restore)
 			_show_avatar_preview()
+			
+			
+			var args = OS.get_cmdline_args()
+			if args.has("--skip-lobby-web3"):
+				get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 		else:
 			show_panel(control_start)
 

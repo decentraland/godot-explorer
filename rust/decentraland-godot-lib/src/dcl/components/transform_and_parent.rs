@@ -1,6 +1,6 @@
 use super::SceneEntityId;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DclTransformAndParent {
     pub translation: godot::prelude::Vector3,
     pub rotation: godot::prelude::Quaternion,

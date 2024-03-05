@@ -34,6 +34,10 @@ gdscript/warnings/redundant_await=false
 window/size/viewport_width=1280
 window/size/viewport_height=720
 
+[editor]
+
+run/main_run_args="--preview --realm https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-update-asset-pack-lib --location 80,-8 --skip-lobby-web3"
+
 [filesystem]
 
 import/blender/enabled=false

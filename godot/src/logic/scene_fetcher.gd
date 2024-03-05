@@ -43,6 +43,8 @@ var last_version_updated: int = -1
 
 var desired_portable_experiences_urns: Array[String] = []
 
+# Special-case: one-shot to skip loading screen
+var _is_reloading: bool = false
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
@@ -139,6 +141,9 @@ func _async_on_desired_scene_changed():
 
 	# Report new load, when I dont have scenes loaded, and there are a lot of new scenes...
 	var new_loading = loaded_scenes.is_empty() and not loadable_scenes.is_empty()
+	if new_loading and _is_reloading:
+		_is_reloading = false
+		new_loading = false
 
 	var loading_promises: Array = []
 	for scene_id in loadable_scenes:
@@ -369,6 +374,7 @@ func reload_scene(scene_id: String) -> void:
 
 		loaded_scenes.erase(scene_id)
 		scene_entity_coordinator.reload_scene_data(scene_id)
+		_is_reloading = true
 
 	# TODO: clean file hash cached
 	# var dict = scene_entity_coordinator.get_scene_dict(scene_id)

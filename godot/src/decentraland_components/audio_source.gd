@@ -22,6 +22,8 @@ func apply_audio_props(action_on_playing: bool):
 			self.stop()
 		elif not self.playing and dcl_playing:
 			self.play()
+		else:
+			self.play(0)
 
 
 func _async_refresh_data():

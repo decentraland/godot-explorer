@@ -691,6 +691,13 @@ impl SceneManager {
     #[func]
     fn _on_ui_resize(&mut self) {
         self.ui_canvas_information = self.create_ui_canvas_information();
+
+        let viewport = self.base.get_viewport();
+        if let Some(viewport) = viewport {
+            let viewport_size = viewport.get_visible_rect();
+            self.cursor_position =
+                Vector2::new(viewport_size.size.x * 0.5, viewport_size.size.y * 0.5);
+        }
     }
 
     #[func]

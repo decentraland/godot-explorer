@@ -268,21 +268,33 @@ pub fn _process_scene(
                     scene.godot_dcl_scene.hierarchy_changed_3d = false;
                 }
 
-                // Set transform
-                let camera_transform = DclTransformAndParent::from_godot(
-                    camera_global_transform,
-                    scene.godot_dcl_scene.root_node_3d.get_position(),
-                );
-                let player_transform = DclTransformAndParent::from_godot(
-                    player_global_transform,
-                    scene.godot_dcl_scene.root_node_3d.get_position(),
-                );
-                crdt_state
-                    .get_transform_mut()
-                    .put(SceneEntityId::PLAYER, Some(player_transform));
-                crdt_state
-                    .get_transform_mut()
-                    .put(SceneEntityId::CAMERA, Some(camera_transform));
+                // Set transforms
+                {
+                    let camera_transform = DclTransformAndParent::from_godot(
+                        camera_global_transform,
+                        scene.godot_dcl_scene.root_node_3d.get_position(),
+                    );
+                    let player_transform = DclTransformAndParent::from_godot(
+                        player_global_transform,
+                        scene.godot_dcl_scene.root_node_3d.get_position(),
+                    );
+
+                    let transform_mut = crdt_state.get_transform_mut();
+
+                    let stored_player_transform = transform_mut
+                        .get(&SceneEntityId::PLAYER)
+                        .and_then(|value| value.value.as_ref());
+                    if stored_player_transform != Some(&player_transform) {
+                        transform_mut.put(SceneEntityId::PLAYER, Some(player_transform));
+                    }
+
+                    let stored_camera_transform = transform_mut
+                        .get(&SceneEntityId::CAMERA)
+                        .and_then(|value| value.value.as_ref());
+                    if stored_camera_transform != Some(&camera_transform) {
+                        transform_mut.put(SceneEntityId::CAMERA, Some(camera_transform));
+                    }
+                }
 
                 // Set camera mode
                 let maybe_current_camera_mode =
