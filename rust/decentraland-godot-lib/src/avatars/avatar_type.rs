@@ -103,7 +103,7 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_snapshots_face256(&self) -> GString {
+    pub fn get_snapshots_face256(&self) -> GString {
         if let Some(snapshots) = &self.inner.snapshots {
             GString::from(snapshots.face256.clone())
         } else {

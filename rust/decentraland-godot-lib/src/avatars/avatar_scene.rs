@@ -15,8 +15,8 @@ use crate::{
             SceneEntityId,
         },
         crdt::{
-            last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
-            SceneCrdtStateProtoComponents,
+            last_write_wins::{LastWriteWins, LastWriteWinsComponentOperation},
+            SceneCrdtState, SceneCrdtStateProtoComponents,
         },
         SceneId,
     },
@@ -65,23 +65,23 @@ impl INode for AvatarScene {
     }
 }
 
-macro_rules! sync_crdt_lww_component {
-    ($entity_id:ident, $target_component:ident, $local_component:ident) => {
-        let local_value_entry = $local_component.get($entity_id);
+fn sync_crdt_lww_component<T>(
+    entity_id: &SceneEntityId,
+    target_component: &mut LastWriteWins<T>,
+    local_component: &LastWriteWins<T>,
+) where
+    T: Clone,
+{
+    let local_value_entry = local_component.get(entity_id);
 
-        if let Some(value_entry) = local_value_entry {
-            let diff_timestamp = local_value_entry.map(|v| v.timestamp)
-                != $target_component.get($entity_id).map(|v| v.timestamp);
+    if let Some(value_entry) = local_value_entry {
+        let diff_timestamp = local_value_entry.map(|v| v.timestamp)
+            != target_component.get(entity_id).map(|v| v.timestamp);
 
-            if diff_timestamp {
-                $target_component.set(
-                    *$entity_id,
-                    value_entry.timestamp,
-                    value_entry.value.clone(),
-                );
-            }
+        if diff_timestamp {
+            target_component.set(*entity_id, value_entry.timestamp, value_entry.value.clone());
         }
-    };
+    }
 }
 
 #[godot_api]
@@ -615,10 +615,10 @@ impl AvatarScene {
                 }
             } else {
                 // todo: transform to local coordinates
-                sync_crdt_lww_component!(
+                sync_crdt_lww_component(
                     entity_id,
                     target_transform_component,
-                    local_transform_component
+                    local_transform_component,
                 );
             }
 
@@ -632,44 +632,44 @@ impl AvatarScene {
 
             let target_player_identity_data =
                 SceneCrdtStateProtoComponents::get_player_identity_data_mut(target_crdt_state);
-            sync_crdt_lww_component!(
+            sync_crdt_lww_component(
                 entity_id,
                 target_player_identity_data,
-                local_player_identity_data
+                local_player_identity_data,
             );
 
             let target_avatar_base =
                 SceneCrdtStateProtoComponents::get_avatar_base_mut(target_crdt_state);
-            sync_crdt_lww_component!(entity_id, target_avatar_base, local_avatar_base);
+            sync_crdt_lww_component(entity_id, target_avatar_base, local_avatar_base);
 
             let target_avatar_equipped_data =
                 SceneCrdtStateProtoComponents::get_avatar_equipped_data_mut(target_crdt_state);
-            sync_crdt_lww_component!(
+            sync_crdt_lww_component(
                 entity_id,
                 target_avatar_equipped_data,
-                local_avatar_equipped_data
+                local_avatar_equipped_data,
             );
         }
 
         let entity_id = &SceneEntityId::PLAYER;
         let target_player_identity_data =
             SceneCrdtStateProtoComponents::get_player_identity_data_mut(target_crdt_state);
-        sync_crdt_lww_component!(
+        sync_crdt_lww_component(
             entity_id,
             target_player_identity_data,
-            local_player_identity_data
+            local_player_identity_data,
         );
 
         let target_avatar_base =
             SceneCrdtStateProtoComponents::get_avatar_base_mut(target_crdt_state);
-        sync_crdt_lww_component!(entity_id, target_avatar_base, local_avatar_base);
+        sync_crdt_lww_component(entity_id, target_avatar_base, local_avatar_base);
 
         let target_avatar_equipped_data =
             SceneCrdtStateProtoComponents::get_avatar_equipped_data_mut(target_crdt_state);
-        sync_crdt_lww_component!(
+        sync_crdt_lww_component(
             entity_id,
             target_avatar_equipped_data,
-            local_avatar_equipped_data
+            local_avatar_equipped_data,
         );
 
         let target_internal_player_data = target_crdt_state.get_internal_player_data_mut();

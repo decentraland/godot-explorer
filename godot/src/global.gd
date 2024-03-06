@@ -23,7 +23,6 @@ var config: ConfigData
 var raycast_debugger: RaycastDebugger
 
 var scene_fetcher: SceneFetcher
-var http_requester: RustHttpQueueRequester
 
 var nft_fetcher: OpenSeaFetcher
 var nft_frame_loader: NftFrameStyleLoader

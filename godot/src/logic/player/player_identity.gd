@@ -16,10 +16,10 @@ func _on_realm_changed():
 		async_fetch_profile(get_address_str(), current_lambda_server_base_url)
 
 
+# TODO: replace with Global.content_provider.fetch_profile when it supports multiple lambda server
 func async_fetch_profile(address: String, lambda_server_base_url: String) -> void:
 	var url = lambda_server_base_url + "profiles/" + address
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", [])
-
 	var response = await PromiseUtils.async_awaiter(promise)
 
 	# Are we still needing to fetch this profile?

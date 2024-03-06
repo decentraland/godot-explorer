@@ -162,7 +162,7 @@ func _physics_process(dt: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, walk_speed)
 
 	move_and_slide()
-	position.y = max(position.y, -0.025)
+	position.y = max(position.y, 0)
 
 
 func avatar_look_at(target_position: Vector3):

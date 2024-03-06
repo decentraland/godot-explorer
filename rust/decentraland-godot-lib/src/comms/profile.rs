@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use crate::dcl::components::proto_components::{
-    common::Color3,
-    sdk::components::{PbAvatarBase, PbAvatarEquippedData, PbPlayerIdentityData},
+use crate::{
+    dcl::components::proto_components::{
+        common::Color3,
+        sdk::components::{PbAvatarBase, PbAvatarEquippedData, PbPlayerIdentityData},
+    },
+    http_request::request_response::{RequestResponse, ResponseEnum},
 };
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
@@ -200,6 +203,26 @@ impl SerializedProfile {
                 .collect(),
         }
     }
+
+    pub fn convert_snapshots(&mut self) {
+        // clean up the lambda result
+        if let Some(snapshots) = self.avatar.snapshots.as_mut() {
+            if let Some(hash) = snapshots
+                .body
+                .rsplit_once('/')
+                .map(|(_, hash)| hash.to_owned())
+            {
+                snapshots.body = hash;
+            }
+            if let Some(hash) = snapshots
+                .face256
+                .rsplit_once('/')
+                .map(|(_, hash)| hash.to_owned())
+            {
+                snapshots.face256 = hash;
+            }
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -215,6 +238,36 @@ impl Default for UserProfile {
             base_url: "https://peer.decentraland.org/content/contents/".to_owned(),
             version: 1,
             content: SerializedProfile::default(),
+        }
+    }
+}
+
+impl UserProfile {
+    // Not sure if it's the best place to add this here
+    pub fn from_lambda_response(
+        response: &RequestResponse,
+        base_url: &str,
+    ) -> Result<Self, anyhow::Error> {
+        match &response.response_data {
+            Ok(ResponseEnum::String(json)) => {
+                if let Ok(response) = serde_json::from_str::<LambdaProfiles>(json.as_str()) {
+                    let Some(mut content) = response.avatars.into_iter().next() else {
+                        return Err(anyhow::anyhow!("profile not found"));
+                    };
+
+                    // clean up the lambda result
+                    content.convert_snapshots();
+                    Ok(UserProfile {
+                        version: content.version as u32,
+                        content,
+                        base_url: format!("{}contents/", base_url).to_owned(),
+                    })
+                } else {
+                    Err(anyhow::anyhow!("error parsing lambda response"))
+                }
+            }
+            Err(e) => Err(anyhow::anyhow!("profile not reached: {:?}", e)),
+            _ => Err(anyhow::anyhow!("profile not reached")),
         }
     }
 }

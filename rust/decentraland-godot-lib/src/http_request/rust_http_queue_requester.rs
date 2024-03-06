@@ -24,6 +24,16 @@ impl IRefCounted for RustHttpQueueRequester {
     }
 }
 
+impl Default for RustHttpQueueRequester {
+    fn default() -> Self {
+        Self {
+            http_queue_requester: Arc::new(super::http_queue_requester::HttpQueueRequester::new(
+                10,
+            )),
+        }
+    }
+}
+
 #[godot_api]
 impl RustHttpQueueRequester {
     #[func]
@@ -122,5 +132,9 @@ impl RustHttpQueueRequester {
             send_result_to_promise(result, promise);
         });
         ret_promise
+    }
+
+    pub fn get_http_queue_requester(&self) -> Arc<super::http_queue_requester::HttpQueueRequester> {
+        self.http_queue_requester.clone()
     }
 }

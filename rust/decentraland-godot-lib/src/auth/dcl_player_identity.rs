@@ -5,12 +5,12 @@ use rand::thread_rng;
 use tokio::task::JoinHandle;
 
 use crate::avatars::dcl_user_profile::DclUserProfile;
-use crate::comms::profile::{LambdaProfiles, UserProfile};
+use crate::comms::profile::UserProfile;
 use crate::content::bytes::fast_create_packed_byte_array_from_vec;
 use crate::dcl::scene_apis::RpcResultSender;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
-use crate::http_request::request_response::{RequestResponse, ResponseEnum};
+use crate::http_request::request_response::RequestResponse;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
 use super::auth_identity::create_local_ephemeral;
@@ -467,61 +467,31 @@ impl DclPlayerIdentity {
 
     #[func]
     fn _update_profile_from_lambda(&mut self, response: Gd<RequestResponse>) -> bool {
-        match &response.bind().response_data {
-            Ok(ResponseEnum::String(json)) => {
-                if let Ok(response) = serde_json::from_str::<LambdaProfiles>(json.as_str()) {
-                    let Some(mut content) = response.avatars.into_iter().next() else {
-                        tracing::error!("error parsing lambda response");
-                        return false;
-                    };
+        let base_url = DclGlobal::singleton()
+            .bind()
+            .get_realm()
+            .bind()
+            .get_profile_content_url()
+            .to_string();
 
-                    // clean up the lambda result
-                    if let Some(snapshots) = content.avatar.snapshots.as_mut() {
-                        if let Some(hash) = snapshots
-                            .body
-                            .rsplit_once('/')
-                            .map(|(_, hash)| hash.to_owned())
-                        {
-                            snapshots.body = hash;
-                        }
-                        if let Some(hash) = snapshots
-                            .face256
-                            .rsplit_once('/')
-                            .map(|(_, hash)| hash.to_owned())
-                        {
-                            snapshots.face256 = hash;
-                        }
-                    }
-                    let base_url = DclGlobal::singleton()
-                        .bind()
-                        .get_realm()
-                        .bind()
-                        .get_profile_content_url();
-                    let new_profile = DclUserProfile::from_gd(UserProfile {
-                        version: content.version as u32,
-                        content,
-                        base_url: format!("{}contents/", base_url).to_owned(),
-                    });
-                    self.profile = Some(new_profile.clone());
+        let request_response = response.bind();
 
-                    self.base.call_deferred(
-                        "emit_signal".into(),
-                        &["profile_changed".to_variant(), new_profile.to_variant()],
-                    );
+        match UserProfile::from_lambda_response(&request_response, base_url.as_str()) {
+            Ok(profile) => {
+                let new_profile = DclUserProfile::from_gd(profile);
+                self.profile = Some(new_profile.clone());
 
-                    return true;
-                } else {
-                    tracing::error!("error parsing lambda response");
-                }
+                self.base.call_deferred(
+                    "emit_signal".into(),
+                    &["profile_changed".to_variant(), new_profile.to_variant()],
+                );
+                true
             }
             Err(e) => {
                 tracing::error!("error updating profile {:?}", e);
-            }
-            _ => {
-                tracing::error!("error updating profile");
+                false
             }
         }
-        false
     }
 }
 
