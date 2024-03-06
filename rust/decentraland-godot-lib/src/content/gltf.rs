@@ -6,7 +6,7 @@ use godot::{
     engine::{
         animation::TrackType, global::Error, node::ProcessMode, AnimatableBody3D, Animation,
         AnimationLibrary, AnimationPlayer, CollisionShape3D, ConcavePolygonShape3D, GltfDocument,
-        GltfState, MeshInstance3D, Node, Node3D, NodeExt, Skeleton3D, StaticBody3D,
+        GltfState, MeshInstance3D, Node, Node3D, NodeExt, StaticBody3D,
     },
     obj::{Gd, InstanceId},
 };
@@ -147,7 +147,7 @@ pub async fn load_gltf_scene_content(
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
     let (node, _thread_safe_check) = internal_load_gltf(file_path, content_mapping, ctx).await?;
-    create_colliders(node.clone().upcast(), false);
+    create_colliders(node.clone().upcast());
     Ok(Some(node.to_variant()))
 }
 
@@ -281,7 +281,7 @@ fn get_collider(mesh_instance: &Gd<MeshInstance3D>) -> Option<Gd<StaticBody3D>> 
     None
 }
 
-fn create_colliders(node_to_inspect: Gd<Node>, inside_skeleton: bool) {
+fn create_colliders(node_to_inspect: Gd<Node>) {
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mut mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
             let invisible_mesh = mesh_instance_3d
@@ -294,49 +294,43 @@ fn create_colliders(node_to_inspect: Gd<Node>, inside_skeleton: bool) {
                 mesh_instance_3d.set_visible(false);
             }
 
-            if !inside_skeleton {
-                let mut static_body_3d = get_collider(&mesh_instance_3d);
-                if static_body_3d.is_none() {
-                    mesh_instance_3d.create_trimesh_collision();
-                    static_body_3d = get_collider(&mesh_instance_3d);
-                }
+            let mut static_body_3d = get_collider(&mesh_instance_3d);
+            if static_body_3d.is_none() {
+                mesh_instance_3d.create_trimesh_collision();
+                static_body_3d = get_collider(&mesh_instance_3d);
+            }
 
-                if let Some(mut static_body_3d) = static_body_3d {
-                    if let Some(mut parent) = static_body_3d.get_parent() {
-                        let mut new_animatable = AnimatableBody3D::new_alloc();
-                        new_animatable.set_sync_to_physics(false);
-                        new_animatable.set_process_mode(ProcessMode::PROCESS_MODE_DISABLED);
-                        new_animatable.set_meta("dcl_col".into(), 0.to_variant());
-                        new_animatable
-                            .set_meta("invisible_mesh".into(), invisible_mesh.to_variant());
-                        new_animatable.set_collision_layer(0);
-                        new_animatable.set_collision_mask(0);
-                        new_animatable.set_name(GString::from(format!(
-                            "{}_colgen",
-                            mesh_instance_3d.get_name()
-                        )));
+            if let Some(mut static_body_3d) = static_body_3d {
+                if let Some(mut parent) = static_body_3d.get_parent() {
+                    let mut new_animatable = AnimatableBody3D::new_alloc();
+                    new_animatable.set_sync_to_physics(false);
+                    new_animatable.set_process_mode(ProcessMode::PROCESS_MODE_DISABLED);
+                    new_animatable.set_meta("dcl_col".into(), 0.to_variant());
+                    new_animatable.set_meta("invisible_mesh".into(), invisible_mesh.to_variant());
+                    new_animatable.set_collision_layer(0);
+                    new_animatable.set_collision_mask(0);
+                    new_animatable.set_name(GString::from(format!(
+                        "{}_colgen",
+                        mesh_instance_3d.get_name()
+                    )));
 
-                        parent.add_child(new_animatable.clone().upcast());
-                        parent.remove_child(static_body_3d.clone().upcast());
+                    parent.add_child(new_animatable.clone().upcast());
+                    parent.remove_child(static_body_3d.clone().upcast());
 
-                        for body_child in static_body_3d
-                            .get_children_ex()
-                            .include_internal(true)
-                            .done()
-                            .iter_shared()
-                        {
-                            static_body_3d.remove_child(body_child.clone());
-                            new_animatable.add_child(body_child.clone());
-                            if let Ok(collision_shape_3d) =
-                                body_child.try_cast::<CollisionShape3D>()
-                            {
-                                if let Some(shape) = collision_shape_3d.get_shape() {
-                                    if let Ok(mut concave_polygon_shape_3d) =
-                                        shape.try_cast::<ConcavePolygonShape3D>()
-                                    {
-                                        concave_polygon_shape_3d
-                                            .set_backface_collision_enabled(true);
-                                    }
+                    for body_child in static_body_3d
+                        .get_children_ex()
+                        .include_internal(true)
+                        .done()
+                        .iter_shared()
+                    {
+                        static_body_3d.remove_child(body_child.clone());
+                        new_animatable.add_child(body_child.clone());
+                        if let Ok(collision_shape_3d) = body_child.try_cast::<CollisionShape3D>() {
+                            if let Some(shape) = collision_shape_3d.get_shape() {
+                                if let Ok(mut concave_polygon_shape_3d) =
+                                    shape.try_cast::<ConcavePolygonShape3D>()
+                                {
+                                    concave_polygon_shape_3d.set_backface_collision_enabled(true);
                                 }
                             }
                         }
@@ -345,8 +339,7 @@ fn create_colliders(node_to_inspect: Gd<Node>, inside_skeleton: bool) {
             }
         }
 
-        let is_skeleton = child.clone().try_cast::<Skeleton3D>().is_ok();
-        create_colliders(child, inside_skeleton | is_skeleton);
+        create_colliders(child);
     }
 }
 
