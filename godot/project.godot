@@ -34,6 +34,10 @@ gdscript/warnings/redundant_await=false
 window/size/viewport_width=1280
 window/size/viewport_height=720
 
+[editor]
+
+run/main_run_args="--preview --skip-lobby"
+
 [filesystem]
 
 import/blender/enabled=false

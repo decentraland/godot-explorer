@@ -1,5 +1,4 @@
 mod handle_restricted_actions;
-mod handle_runtime;
 mod portables;
 
 use crate::{
@@ -12,7 +11,6 @@ use self::{
         change_realm, move_player_to, open_external_url, open_nft_dialog, teleport_to,
         trigger_emote, trigger_scene_emote,
     },
-    handle_runtime::get_realm,
     portables::{kill_portable, list_portables, spawn_portable},
 };
 
@@ -71,8 +69,6 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 &looping,
                 &response,
             ),
-            // Runtime
-            RpcCall::GetRealm { response } => get_realm(&response),
             // Portable Experiences
             RpcCall::SpawnPortable { location, response } => {
                 spawn_portable(scene, location, response)

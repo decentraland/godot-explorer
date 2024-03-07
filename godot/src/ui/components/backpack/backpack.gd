@@ -30,8 +30,6 @@ var avatar_wearables_body_shape_cache: Dictionary = {}
 
 var avatar_loading_counter: int = 0
 
-var _has_changes: bool = false
-
 @onready var skin_color_picker = %Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList

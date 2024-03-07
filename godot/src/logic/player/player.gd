@@ -48,7 +48,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		tween_out.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25).set_ease(
 			Tween.EASE_IN_OUT
 		)
-		avatar.show()
+		avatar.try_show()
 		avatar.set_rotation(Vector3(0, 0, 0))
 		if play_sound:
 			audio_stream_player_camera.stream = camera_fade_out_audio
@@ -162,7 +162,7 @@ func _physics_process(dt: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, walk_speed)
 
 	move_and_slide()
-	position.y = max(position.y, -0.025)
+	position.y = max(position.y, 0)
 
 
 func avatar_look_at(target_position: Vector3):

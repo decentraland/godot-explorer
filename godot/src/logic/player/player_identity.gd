@@ -1,6 +1,6 @@
 class_name PlayerIdentity extends DclPlayerIdentity
 
-var current_lambda_server_base_url: String = "https://peer.decentraland.org/lambdas/"
+var _current_lambda_server_base_url: String = "https://peer.decentraland.org/lambdas/"
 
 
 func _ready():
@@ -9,21 +9,24 @@ func _ready():
 
 
 func _on_realm_changed():
-	if Global.realm.lambda_server_base_url == current_lambda_server_base_url:
+	if Global.realm.get_lambda_server_base_url() == _current_lambda_server_base_url:
 		return
-	current_lambda_server_base_url = Global.realm.lambda_server_base_url
+	_current_lambda_server_base_url = Global.realm.get_lambda_server_base_url()
 	if not get_address_str().is_empty() and not self.is_guest:
-		async_fetch_profile(get_address_str(), current_lambda_server_base_url)
+		async_fetch_profile(get_address_str(), _current_lambda_server_base_url)
 
 
-func async_fetch_profile(address: String, lambda_server_base_url: String) -> void:
-	var url = lambda_server_base_url + "profiles/" + address
+# TODO: replace with Global.content_provider.fetch_profile when it supports multiple lambda server
+func async_fetch_profile(address: String, requested_lambda_server_base_url: String) -> void:
+	var url = requested_lambda_server_base_url + "profiles/" + address
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", [])
-
 	var response = await PromiseUtils.async_awaiter(promise)
 
 	# Are we still needing to fetch this profile?
-	if get_address_str() != address or current_lambda_server_base_url != lambda_server_base_url:
+	if (
+		get_address_str() != address
+		or _current_lambda_server_base_url != requested_lambda_server_base_url
+	):
 		print("fetc profile dismissed")
 		return
 
@@ -54,7 +57,7 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool)
 		set_default_profile_or_guest_profile()
 		return
 
-	async_fetch_profile(address, current_lambda_server_base_url)
+	async_fetch_profile(address, _current_lambda_server_base_url)
 
 
 func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) -> void:

@@ -1,6 +1,6 @@
 // @deprecated, only available for SDK6 compatibility. Use RestrictedActions/TeleportTo
 module.exports.requestTeleport = async function (body) {
-    const { destination } = req
+    const { destination } = body
     if (destination === 'magic' || destination === 'crowd') {
         return await Deno.core.ops.op_teleport_to([
             0,

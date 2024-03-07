@@ -10,8 +10,11 @@ use godot::{
 use tokio::sync::Semaphore;
 
 use crate::{
-    avatars::item::DclItemEntityDefinition, content::content_mapping::DclContentMappingAndUrl,
-    dcl::common::string::FindNthChar, godot_classes::promise::Promise,
+    auth::wallet::AsH160,
+    avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
+    content::content_mapping::DclContentMappingAndUrl,
+    dcl::common::string::FindNthChar,
+    godot_classes::promise::Promise,
     http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
 };
@@ -23,8 +26,9 @@ use super::{
         apply_update_set_mask_colliders, load_gltf_emote, load_gltf_scene_content,
         load_gltf_wearable, DclEmoteGltf,
     },
+    profile::{prepare_request_requirements, request_lambda_profile},
     texture::{load_image_texture, TextureEntry},
-    thread_safety::{set_thread_safety_checks_enabled, then_promise},
+    thread_safety::{set_thread_safety_checks_enabled, then_promise, GodotSingleThreadSafety},
     video::download_video,
     wearable_entities::{request_wearables, WearableManyResolved},
 };
@@ -209,12 +213,28 @@ impl ContentProvider {
     #[func]
     pub fn fetch_texture_by_hash(
         &mut self,
-        file_hash: GString,
+        file_hash_godot: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
-        let file_hash = file_hash.to_string();
+        let file_hash = file_hash_godot.to_string();
         if let Some(entry) = self.cached.get(&file_hash) {
             return entry.promise.clone();
+        }
+
+        // TODO: In the future, this would be handled by each component handler
+        //  and check if the hostname is allowed (set up in the scene.json)
+        //  https://github.com/decentraland/godot-explorer/issues/363
+        if file_hash.starts_with("http") {
+            // get file_hash from url
+            let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash());
+            let promise = self.fetch_texture_by_url(GString::from(new_file_hash), file_hash_godot);
+            self.cached.insert(
+                file_hash,
+                ContentEntry {
+                    promise: promise.clone(),
+                },
+            );
+            return promise;
         }
 
         let url = format!(
@@ -483,6 +503,60 @@ impl ContentProvider {
                 .filter(|(_, entry)| !entry.promise.bind().is_resolved())
                 .map(|(_, entry)| entry.promise.clone()),
         )
+    }
+
+    #[func]
+    pub fn get_profile(&self, user_id: GString) -> Option<Gd<DclUserProfile>> {
+        let user_id = user_id.to_string().as_str().as_h160()?;
+        let hash = format!("profile_{:x}", user_id);
+        let promise_data = self.cached.get(&hash)?.promise.bind().get_data();
+        promise_data.try_to::<Gd<DclUserProfile>>().ok()
+    }
+
+    #[func]
+    pub fn fetch_profile(&mut self, user_id: GString) -> Gd<Promise> {
+        let Some(user_id) = user_id.to_string().as_str().as_h160() else {
+            return Promise::from_rejected("Invalid user id".to_string());
+        };
+
+        let hash = format!("profile_{:x}", user_id);
+        if let Some(entry) = self.cached.get(&hash) {
+            return entry.promise.clone();
+        }
+
+        let (lamda_server_base_url, profile_base_url, http_requester) =
+            prepare_request_requirements();
+        let (promise, get_promise) = Promise::make_to_async();
+        let content_provider_context = self.get_context();
+
+        TokioRuntime::spawn(async move {
+            let result = request_lambda_profile(
+                user_id,
+                lamda_server_base_url.as_str(),
+                profile_base_url.as_str(),
+                http_requester,
+            )
+            .await;
+
+            let Some(_thread_safe_check) =
+                GodotSingleThreadSafety::acquire_owned(&content_provider_context).await
+            else {
+                tracing::error!("Failed to acquire semaphore");
+                return;
+            };
+            let result = result.map(|value| Some(DclUserProfile::from_gd(value).to_variant()));
+
+            then_promise(get_promise, result)
+        });
+
+        self.cached.insert(
+            hash,
+            ContentEntry {
+                promise: promise.clone(),
+            },
+        );
+
+        promise
     }
 }
 

@@ -161,15 +161,35 @@ async function fetch(url, init) {
     response.headers = new Headers(response.headers)
     // TODO: the headers object should be read-only
 
+    let alreadyConsumed = false
+    function notifyConsume() {
+        if (alreadyConsumed) {
+            throw new Error("Response body has already been consumed.")
+        }
+        alreadyConsumed = true
+    }
+
+    function throwErrorFailed() {
+        if (response.type === "error") {
+            throw new Error("Failed to fetch " + response.statusText)
+        }
+    }
+
+
     Object.assign(response, {
         async arrayBuffer() {
+            notifyConsume()
+            throwErrorFailed()
             const data = await Deno.core.opAsync(
                 "op_fetch_consume_bytes",
                 reqId
             )
+            alreadyConsumed = true
             return data
         },
         async json() {
+            notifyConsume()
+            throwErrorFailed()
             const data = await Deno.core.opAsync(
                 "op_fetch_consume_text",
                 reqId
@@ -177,6 +197,8 @@ async function fetch(url, init) {
             return JSON.parse(data)
         },
         async text() {
+            notifyConsume()
+            throwErrorFailed()
             const data = await Deno.core.opAsync(
                 "op_fetch_consume_text",
                 reqId
@@ -184,6 +206,8 @@ async function fetch(url, init) {
             return data
         },
         async bytes() {
+            throwErrorFailed()
+            notifyConsume()
             const data = await Deno.core.opAsync(
                 "op_fetch_consume_bytes",
                 reqId

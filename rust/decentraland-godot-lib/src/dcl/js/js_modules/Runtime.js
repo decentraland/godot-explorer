@@ -1,6 +1,6 @@
 module.exports.getRealm = async function (body) {
     return {
-        realmInfo: await Deno.core.ops.op_get_realm()
+        realmInfo: Deno.core.ops.op_get_realm()
     }
 }
 module.exports.getWorldTime = async function (body) {

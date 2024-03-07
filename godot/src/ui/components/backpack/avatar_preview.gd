@@ -52,6 +52,9 @@ func _ready():
 
 
 func focus_camera_on(type):
+	if not is_inside_tree():
+		return
+
 	var tween := create_tween()
 	if tween == null:
 		return

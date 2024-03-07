@@ -52,16 +52,6 @@ pub struct UserData {
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GetRealmResponse {
-    pub base_url: String,
-    pub realm_name: String,
-    pub network_id: i32,
-    pub comms_adapter: String,
-    pub is_preview: bool,
-}
-
-#[derive(Serialize, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct ContentMapping {
     pub file: String,
     pub hash: String,
@@ -141,10 +131,6 @@ pub enum RpcCall {
         emote_src: String,
         looping: bool,
         response: RpcResultSender<Result<(), String>>,
-    },
-    // Runtime
-    GetRealm {
-        response: RpcResultSender<GetRealmResponse>,
     },
     // Portable Experiences
     SpawnPortable {

@@ -95,6 +95,48 @@ impl DclUiBackground {
     }
 
     #[func]
+    fn _on_profile_for_texture_loaded(&mut self) {
+        let current_user_id = match self.current_value.texture.as_ref() {
+            Some(texture) => match texture.tex.as_ref() {
+                Some(crate::dcl::components::proto_components::common::texture_union::Tex::AvatarTexture(user_id)) => user_id.user_id.as_str(),
+                _ => return,
+            },
+            None => return,
+        };
+
+        let mut content_provider = DclGlobal::singleton().bind().get_content_provider();
+        let Some(profile) = content_provider
+            .bind()
+            .get_profile(GString::from(current_user_id))
+        else {
+            return;
+        };
+
+        let binded_profile = profile.bind();
+        let Some(snapshots) = binded_profile.inner.content.avatar.snapshots.as_ref() else {
+            return;
+        };
+        let face256_url = format!("{}{}", binded_profile.inner.base_url, snapshots.face256);
+
+        let mut promise = content_provider.bind_mut().fetch_texture_by_url(
+            GString::from(snapshots.face256.as_str()),
+            face256_url.into(),
+        );
+
+        self.waiting_hash = GString::from(snapshots.face256.as_str());
+
+        if !promise.bind().is_resolved() {
+            promise.connect(
+                "on_resolved".into(),
+                self.base.callable("_on_texture_loaded"),
+            );
+        }
+
+        self.first_texture_load_shot = true;
+        self.base.call_deferred("_on_texture_loaded".into(), &[]);
+    }
+
+    #[func]
     fn _on_texture_loaded(&mut self) {
         let global = DclGlobal::singleton();
         let mut content_provider = global.bind().get_content_provider();
@@ -112,6 +154,13 @@ impl DclUiBackground {
         self.texture_loaded = true;
         self.base.set_texture(godot_texture.clone().upcast());
 
+        self._set_texture_params();
+    }
+
+    fn _set_texture_params(&mut self) {
+        let Some(godot_texture) = self.base.get_texture() else {
+            return;
+        };
         match self.current_value.texture_mode() {
             BackgroundTextureMode::NineSlices => {
                 self.base
@@ -225,6 +274,8 @@ impl DclUiBackground {
 
         // texture change if
         if texture_changed {
+            self.texture_loaded = false;
+
             let texture =
                 DclTexture::from_proto_with_hash(&self.current_value.texture, &content_mapping);
 
@@ -237,6 +288,7 @@ impl DclUiBackground {
                             GString::from(texture_hash),
                             DclContentMappingAndUrl::from_ref(content_mapping),
                         );
+
                         self.waiting_hash = GString::from(texture_hash);
 
                         if !promise.bind().is_resolved() {
@@ -252,8 +304,22 @@ impl DclUiBackground {
                     DclSourceTex::VideoTexture(_) => {
                         // TODO: implement video texture
                     }
-                    DclSourceTex::AvatarTexture(_) => {
-                        // TODO: implement avatar texture
+                    DclSourceTex::AvatarTexture(user_id) => {
+                        let global = DclGlobal::singleton();
+                        let mut content_provider = global.bind().get_content_provider();
+                        let mut promise = content_provider
+                            .bind_mut()
+                            .fetch_profile(GString::from(user_id));
+
+                        if !promise.bind().is_resolved() {
+                            promise.connect(
+                                "on_resolved".into(),
+                                self.base.callable("_on_profile_for_texture_loaded"),
+                            );
+                        } else {
+                            self.base
+                                .call_deferred("_on_profile_for_texture_loaded".into(), &[]);
+                        }
                     }
                 }
             } else {
@@ -278,6 +344,8 @@ impl DclUiBackground {
                     godot::engine::nine_patch_rect::AxisStretchMode::AXIS_STRETCH_MODE_STRETCH,
                 );
             }
+        } else {
+            self._set_texture_params();
         }
 
         let modulate_color = self

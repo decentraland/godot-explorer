@@ -86,15 +86,17 @@ func _update_node():
 
 
 func get_string_size(label: Label, profile_name: String):
-	var font = label.get_theme_font("font")
-	return font.get_string_size(profile_name, HORIZONTAL_ALIGNMENT_CENTER, -1, max_font_size)
+	var current_font = label.get_theme_font("font")
+	return current_font.get_string_size(
+		profile_name, HORIZONTAL_ALIGNMENT_CENTER, -1, max_font_size
+	)
 
 
 func get_font_size_adapted(label: Label, profile_name: String) -> int:
-	var font = label.get_theme_font("font")
+	var current_font = label.get_theme_font("font")
 	var current_font_size = max_font_size
 	while true:
-		var string_size = font.get_string_size(
+		var string_size = current_font.get_string_size(
 			profile_name, HORIZONTAL_ALIGNMENT_CENTER, -1, current_font_size
 		)
 		if string_size.x <= self.size.x or current_font_size <= 8:

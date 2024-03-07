@@ -8,6 +8,7 @@ pub mod serialization;
 
 use ethers::types::H160;
 use godot::builtin::{Vector2, Vector3};
+use serde::Serialize;
 
 use crate::{
     auth::{ephemeral_auth_chain::EphemeralAuthChain, ethereum_provider::EthereumProvider},
@@ -80,47 +81,61 @@ pub struct DclScene {
     pub thread_join_handle: JoinHandle<()>,
 }
 
+#[derive(Clone, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DclSceneRealmData {
+    pub base_url: String,
+    pub realm_name: String,
+    pub network_id: i32,
+    pub comms_adapter: String,
+    pub is_preview: bool,
+}
+pub struct SpawnDclSceneData {
+    // Identifier to reference the scene spawned
+    pub scene_id: SceneId,
+    // Scene entity definition
+    pub scene_entity_definition: Arc<SceneEntityDefinition>,
+    // Path to the main JS file
+    pub local_main_js_file_path: String,
+    // Path to the main CRDT file
+    pub local_main_crdt_file_path: String,
+    // Content mapping and URL reference
+    pub content_mapping: ContentMappingAndUrlRef,
+    // Sender to send messages to the main thread
+    pub thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
+    // Whether the scene is in testing mode
+    pub testing_mode: bool,
+    // Ethereum provider
+    pub ethereum_provider: Arc<EthereumProvider>,
+    // Ephemeral wallet
+    pub ephemeral_wallet: Option<EphemeralAuthChain>,
+    // Realm Data
+    pub realm_info: DclSceneRealmData,
+}
+
 impl DclScene {
-    #[allow(clippy::too_many_arguments)]
-    pub fn spawn_new_js_dcl_scene(
-        id: SceneId,
-        scene_entity_definition: Arc<SceneEntityDefinition>,
-        local_main_js_file_path: String,
-        local_main_crdt_file_path: String,
-        content_mapping: ContentMappingAndUrlRef,
-        thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
-        testing_mode: bool,
-        ethereum_provider: Arc<EthereumProvider>,
-        ephemeral_wallet: Option<EphemeralAuthChain>,
-    ) -> Self {
+    pub fn spawn_new_js_dcl_scene(spawn_dcl_scene_data: SpawnDclSceneData) -> Self {
         let (main_sender_to_thread, thread_receive_from_renderer) =
             tokio::sync::mpsc::channel::<RendererResponse>(1);
 
+        let scene_id = spawn_dcl_scene_data.scene_id;
         let scene_crdt = Arc::new(Mutex::new(SceneCrdtState::from_proto()));
         let thread_scene_crdt = scene_crdt.clone();
 
         let thread_join_handle = std::thread::Builder::new()
-            .name(format!("scene thread {}", id.0))
+            .name(format!("scene thread {}", spawn_dcl_scene_data.scene_id.0))
             .spawn(move || {
                 #[cfg(feature = "use_deno")]
                 scene_thread(
-                    id,
-                    scene_entity_definition,
-                    local_main_js_file_path,
-                    local_main_crdt_file_path,
-                    content_mapping,
-                    thread_sender_to_main,
                     thread_receive_from_renderer,
                     thread_scene_crdt,
-                    testing_mode,
-                    ethereum_provider,
-                    ephemeral_wallet,
+                    spawn_dcl_scene_data,
                 )
             })
             .unwrap();
 
         DclScene {
-            scene_id: id,
+            scene_id,
             scene_crdt,
             main_sender_to_thread,
             thread_join_handle,

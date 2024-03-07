@@ -23,8 +23,8 @@ class LambdaNamesResponse:
 	static func from_dictionary(dictionary: Dictionary) -> LambdaNamesResponse:
 		var response = LambdaNamesResponse.new()
 
-		var elements = dictionary.get("elements", [])
-		for element in elements:
+		var el = dictionary.get("elements", [])
+		for element in el:
 			response.elements.push_back(LambdaNameItemResponse.from_dictionary(element))
 
 		response.total_amount = dictionary.get("totalAmount", 0)
@@ -55,7 +55,7 @@ static func async_request_names(page_number: int = 1, page_size: int = 10) -> La
 	if address.is_empty():
 		return
 
-	var url = Global.player_identity.current_lambda_server_base_url + "users/" + address + "/names"
+	var url = Global.realm.get_lambda_server_base_url() + "users/" + address + "/names"
 
 	return await _async_request(url, page_number, page_size)
 

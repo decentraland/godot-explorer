@@ -11,6 +11,7 @@ use crate::{
     comms::communication_manager::CommunicationManager,
     content::content_provider::ContentProvider,
     dcl::common::set_scene_log_enabled,
+    http_request::rust_http_queue_requester::RustHttpQueueRequester,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
     test_runner::testing_tools::DclTestingTools,
 };
@@ -62,6 +63,8 @@ pub struct DclGlobal {
     pub player_identity: Gd<DclPlayerIdentity>,
     #[var]
     pub content_provider: Gd<ContentProvider>,
+    #[var]
+    pub http_requester: Gd<RustHttpQueueRequester>,
 
     pub ethereum_provider: Arc<EthereumProvider>,
 
@@ -85,6 +88,7 @@ impl INode for DclGlobal {
         let mut comms: Gd<CommunicationManager> = CommunicationManager::alloc_gd();
         let mut scene_runner: Gd<SceneManager> = SceneManager::alloc_gd();
         let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::alloc_gd();
+        let http_requester: Gd<RustHttpQueueRequester> = RustHttpQueueRequester::new_gd();
 
         tokio_runtime.set_name("tokio_runtime".into());
         scene_runner.set_name("scene_runner".into());
@@ -115,6 +119,7 @@ impl INode for DclGlobal {
             testing_scene_mode,
             player_identity: DclPlayerIdentity::alloc_gd(),
             content_provider: ContentProvider::alloc_gd(),
+            http_requester,
             ethereum_provider: Arc::new(EthereumProvider::new()),
         }
     }

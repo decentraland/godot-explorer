@@ -875,6 +875,4 @@ one_shot = true
 [node name="AudioPlayer_Emote" type="AudioStreamPlayer3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
 
-[connection signal="set_avatar_modifier_area" from="avatar_modifier_area_detector" to="." method="_on_set_avatar_modifier_area"]
-[connection signal="unset_avatar_modifier_area" from="avatar_modifier_area_detector" to="." method="_unset_avatar_modifier_area"]
 [connection signal="timeout" from="Timer_HideMic" to="." method="_on_timer_hide_mic_timeout"]
