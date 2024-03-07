@@ -26,7 +26,6 @@ pub struct DclRealm {
     #[var]
     realm_city_loader_content_base_url: GString,
 
-    #[var]
     lambda_server_base_url: GString,
 
     #[var]
@@ -41,5 +40,19 @@ impl DclRealm {
     #[func]
     pub fn get_profile_content_url(&self) -> GString {
         "https://peer.decentraland.org/content/".to_godot()
+    }
+
+    #[func]
+    pub fn get_lambda_server_base_url(&self) -> GString {
+        if self.lambda_server_base_url.is_empty() {
+            "https://peer.decentraland.org/lambdas/".to_godot()
+        } else {
+            self.lambda_server_base_url.clone()
+        }
+    }
+
+    #[func]
+    pub fn set_lambda_server_base_url(&mut self, new_value: GString) {
+        self.lambda_server_base_url = new_value;
     }
 }

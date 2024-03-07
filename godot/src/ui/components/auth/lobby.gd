@@ -7,6 +7,8 @@ var waiting_for_new_wallet: bool = false
 
 var loading_first_profile: bool = false
 
+var _skip_lobby: bool = false
+
 @onready var control_main = %Main
 
 @onready var control_loading = %Loading
@@ -65,11 +67,24 @@ func _ready():
 
 	Global.scene_runner.set_pause(true)
 
+	var args = OS.get_cmdline_args()
+	if args.has("--skip-lobby"):
+		_skip_lobby = true
+
 	if Global.player_identity.try_recover_account(Global.config.session_account):
 		loading_first_profile = true
 		show_panel(control_loading)
+	elif _skip_lobby:
+		show_panel(control_loading)
+		create_guest_account_if_needed()
+		go_to_explorer.call_deferred()
 	else:
 		show_panel(control_start)
+
+
+func go_to_explorer():
+	if is_inside_tree():
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
@@ -87,12 +102,13 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 			restore_panel.show()
 			show_panel(control_restore)
 			_show_avatar_preview()
-
-			var args = OS.get_cmdline_args()
-			if args.has("--skip-lobby-web3"):
-				get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+			if _skip_lobby:
+				go_to_explorer.call_deferred()
 		else:
 			show_panel(control_start)
+
+	if _skip_lobby:
+		go_to_explorer()
 
 	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
 

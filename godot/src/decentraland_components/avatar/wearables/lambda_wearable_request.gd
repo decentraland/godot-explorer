@@ -75,7 +75,7 @@ static func async_request_emotes(
 	if address.is_empty():
 		return
 
-	var url = Global.player_identity.current_lambda_server_base_url + "users/" + address + "/emotes"
+	var url = Global.realm.get_lambda_server_base_url() + "users/" + address + "/emotes"
 
 	return await _async_request(url, page_number, page_size)
 
@@ -104,8 +104,6 @@ static func async_request_wearables(
 	if address.is_empty():
 		return null
 
-	var url = (
-		Global.player_identity.current_lambda_server_base_url + "users/" + address + "/wearables"
-	)
+	var url = Global.realm.get_lambda_server_base_url() + "users/" + address + "/wearables"
 
 	return await _async_request(url, page_number, page_size)

@@ -40,7 +40,7 @@ func _start():
 		)
 	elif args.has("--scene-renderer"):
 		get_tree().change_scene_to_file("res://src/tool/scene_renderer/scene.tscn")
-	elif args.has("--scene-test") or args.has("--skip-lobby-guest"):
+	elif args.has("--scene-test"):
 		Global.config.guest_profile = {}
 		Global.config.save_to_settings_file()
 		Global.player_identity.set_default_profile()

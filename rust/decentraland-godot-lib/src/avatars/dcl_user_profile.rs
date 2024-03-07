@@ -34,7 +34,7 @@ impl DclUserProfile {
 
     /// Returns a copy of the inner avatar. Use `set_avatar` to modify the avatar.
     #[func]
-    pub fn get_avatar(&self) -> Gd<DclAvatarWireFormat> {
+    fn get_avatar(&self) -> Gd<DclAvatarWireFormat> {
         DclAvatarWireFormat::from_gd(self.inner.content.avatar.clone())
     }
 

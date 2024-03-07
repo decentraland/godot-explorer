@@ -36,7 +36,7 @@ window/size/viewport_height=720
 
 [editor]
 
-run/main_run_args="--preview --skip-lobby-web3"
+run/main_run_args="--preview --skip-lobby"
 
 [filesystem]
 
