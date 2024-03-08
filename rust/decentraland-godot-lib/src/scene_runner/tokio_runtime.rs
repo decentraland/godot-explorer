@@ -15,6 +15,7 @@ pub struct TokioRuntime {
 impl INode for TokioRuntime {
     fn init(_base: Base<Node>) -> Self {
         let rt = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)  // Set the number of threads to 1
             .enable_all()
             .thread_name("dcl-godot-tokio")
             .build();
