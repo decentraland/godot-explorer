@@ -14,6 +14,10 @@ After cloning `ffmpeg-kit` ensure you have the right environment to build it. So
 1. Install one-by-one the brew dependencies `autoconf automake libtool pkg-config curl git doxygen nasm cmake gcc gperf texinfo yasm bison autogen wget gettext meson ninja ragel groff gtk-doc-tools libtasn1`
 2. Ensure you `bison` version in your path is > 2.4 (`bison --help`), probably you need to add the brew isntalled to PATH
 
+Add Rust target for iOS with:
+`rustup target add aarch64-apple-ios`
+
+
 The command to build it:
 `bash ios.sh --full --disable-armv7 --disable-armv7s --disable-arm64-mac-catalyst --disable-arm64-simulator --disable-arm64e --disable-i386 --disable-x86-64 --disable-x86-64-mac-catalyst --disable-lib-fribidi --disable-lib-openssl --disable-lib-libass`
 This only buils for arm64. `fribidi` and `libass` should be compiled but I got errors when I tried to include them.

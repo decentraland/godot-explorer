@@ -6,7 +6,10 @@
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot"],
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot"
+      ],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [
@@ -26,7 +29,11 @@
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot", "--test"],
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot",
+        "--test"
+      ],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [
@@ -43,7 +50,11 @@
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot", "-e"],
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot",
+        "-e"
+      ],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
@@ -55,7 +66,11 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot", "-e"],
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot",
+        "-e"
+      ],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
@@ -67,7 +82,10 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot"],
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot"
+      ],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [
@@ -93,7 +111,11 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot", "--test"],
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot",
+        "--test"
+      ],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
@@ -114,7 +136,11 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot", "-e"],
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot",
+        "-e"
+      ],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
@@ -126,12 +152,23 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot"],
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot"
+      ],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
       "externalConsole": true,
-      "preLaunchTask": "Build GDExtension Lib"
+      "preLaunchTask": "Build GDExtension Lib",
+      "MIMode": "lldb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
     }
   ]
 }
