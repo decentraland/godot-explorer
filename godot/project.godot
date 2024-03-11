@@ -36,7 +36,7 @@ window/size/viewport_height=720
 
 [editor]
 
-run/main_run_args="--preview --skip-lobby"
+run/main_run_args="--preview --realm http://127.0.0.1:8000  --skip-lobby --location 0,0"
 
 [filesystem]
 

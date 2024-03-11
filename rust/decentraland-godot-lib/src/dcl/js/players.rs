@@ -27,6 +27,7 @@ async fn op_get_player_data(
 ) -> Result<Option<UserData>, AnyError> {
     let (sx, rx) = tokio::sync::oneshot::channel::<Option<UserData>>();
 
+    tracing::debug!("requesting op_get_player_data user_id: {:?}", user_id);
     op_state
         .borrow_mut()
         .borrow_mut::<Vec<LocalCall>>()
@@ -35,7 +36,18 @@ async fn op_get_player_data(
             response: sx.into(),
         });
 
-    rx.await.map_err(|e| anyhow::anyhow!(e))
+    return Ok(Some(UserData {
+        display_name: "test".to_string(),
+        public_key: None,
+        has_connected_web3: false,
+        user_id: "0x0000000000000000000000000000000000000000".to_owned(),
+        version: 0,
+        avatar: None,
+    }));
+
+    let result = rx.await.map_err(|e| anyhow::anyhow!(e));
+    tracing::debug!("op_get_player_data result: {:?}", result);
+    result
 }
 
 #[op]

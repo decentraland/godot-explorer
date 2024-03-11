@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use godot::{
     bind::{godot_api, GodotClass},
@@ -32,6 +32,7 @@ pub struct MultipleAnimationController {
     base: Base<AnimationTree>,
 
     current_capacity: usize,
+    existing_anims: HashSet<String>,
 
     current_time: HashMap<String, f32>,
     playing_anims: HashMap<String, AnimationItem>,
@@ -55,8 +56,10 @@ impl MultipleAnimationController {
         }
 
         if let Some(anim_item) = self.playing_anims.get(&anim_name.to_string()) {
-            let looping = anim_item.value.r#loop.unwrap_or(true);
-            if looping || anim_item.value.should_reset.unwrap_or_default() {
+            let looping = anim_item.value.r#loop.unwrap_or(true);  
+            // TODO: should_reset will be deprecated
+            let should_reset = false; // anim_item.value.should_reset.unwrap_or_default();
+            if looping || should_reset {
                 self.base
                     .set(anim_item.time_param_ref_str.clone(), 0_f32.to_variant());
             }
@@ -72,16 +75,22 @@ impl MultipleAnimationController {
 }
 
 impl MultipleAnimationController {
-    fn new() -> Gd<MultipleAnimationController> {
+    fn new(existing_anims: HashSet<String>) -> Gd<MultipleAnimationController> {
         Gd::from_init_fn(|base| Self {
             base,
             current_capacity: 0,
             current_time: HashMap::new(),
             playing_anims: HashMap::new(),
+            existing_anims,
         })
     }
 
-    pub fn apply_anims(&mut self, value: &PbAnimator) {
+    pub fn apply_anims(&mut self, suggested_value: &PbAnimator) {
+        let mut value = suggested_value.clone();
+        value
+            .states
+            .retain(|state| self.existing_anims.contains(&state.clip));
+
         let (playing_animations, stopped_animations): (_, Vec<_>) = value
             .states
             .iter()
@@ -119,7 +128,9 @@ impl MultipleAnimationController {
             self.base
                 .set(anim_state.speed_param_ref_str.clone(), speed.to_variant());
 
-            if new_state.should_reset.unwrap_or_default() {
+            // TODO: should_reset will be deprecated
+            let should_reset = false; // new_state.should_reset.unwrap_or_default();
+            if should_reset {
                 self.base
                     .set(anim_state.time_param_ref_str.clone(), 0_f32.to_variant());
             }
@@ -145,7 +156,9 @@ impl MultipleAnimationController {
                 continue;
             };
 
-            if anim_state.value.should_reset.unwrap_or_default() {
+            // TODO: should_reset will be deprecated
+            let should_reset = false; // anim_state.value.should_reset.unwrap_or_default();
+            if should_reset {
                 self.base
                     .set(anim_state.time_param_ref_str.clone(), 0_f32.to_variant());
                 self.current_time.remove(&anim.clip);
@@ -326,17 +339,24 @@ impl MultipleAnimationController {
 fn create_and_add_multiple_animation_controller(
     mut gltf_node: Gd<Node>,
 ) -> Option<Gd<MultipleAnimationController>> {
-    let _anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
-    if _anim_player.get_animation_list().is_empty() {
+    let anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
+    let anim_list = anim_player.get_animation_list();
+    if anim_list.is_empty() {
         return None;
     }
 
-    let mut anim_builder = MultipleAnimationController::new();
+    let mut anim_builder = MultipleAnimationController::new(
+        anim_list
+            .as_slice()
+            .iter()
+            .map(|anim_clip| anim_clip.to_string())
+            .collect(),
+    );
     anim_builder.set_name(MULTIPLE_ANIMATION_CONTROLLER_NAME.into());
     anim_builder.set_animation_player("../AnimationPlayer".into());
 
-    if !_anim_player.has_animation(DUMMY_ANIMATION_NAME.into()) {
-        _anim_player
+    if !anim_player.has_animation(DUMMY_ANIMATION_NAME.into()) {
+        anim_player
             .get_animation_library("".into())
             .unwrap()
             .add_animation(DUMMY_ANIMATION_NAME.into(), Default::default());
