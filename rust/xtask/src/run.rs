@@ -47,7 +47,7 @@ pub fn run(
     let build_args = if release_mode {
         vec!["build", "--release"]
     } else {
-        vec!["build", "--no-default-features", "-F", "use_deno"]
+        vec!["build", "--no-default-features", "-F", "use_deno", "-F", "use_monothread"]
     };
 
     let build_cwd =
