@@ -14,11 +14,9 @@ pub struct TokioRuntime {
 #[godot_api]
 impl INode for TokioRuntime {
     fn init(_base: Base<Node>) -> Self {
-        let rt = tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(1)  // Set the number of threads to 1
-            .enable_all()
-            .thread_name("dcl-godot-tokio")
-            .build();
+        
+        let rt = TokioRuntime::create_runtime();
+
         match rt {
             Ok(rt) => Self {
                 runtime: Some(Arc::new(rt)),
@@ -27,6 +25,16 @@ impl INode for TokioRuntime {
                 godot_error!("{e}");
                 Self { runtime: None }
             }
+        }
+    }
+
+    #[cfg(feature = "use_monothread")]
+    fn process(&mut self, _dt: f64) {
+        if let Some(runtime) = &self.runtime {
+            // Process Tokio tasks for a brief time each frame.
+            runtime.block_on(async {
+                tokio::task::yield_now().await; // This yields to the scheduler to process tasks.
+            });
         }
     }
 }
@@ -48,6 +56,21 @@ impl TokioRuntime {
 }
 
 impl TokioRuntime {
+    #[cfg(feature = "use_monothread")]
+    fn create_runtime() -> Result<Runtime, std::io::Error> {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+    }
+
+    #[cfg(not(feature = "use_monothread"))]
+    fn create_runtime() -> Result<Runtime, std::io::Error>  {
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .thread_name("dcl-godot-tokio")
+            .build()
+    }
+
     pub fn static_clone_handle() -> Option<Handle> {
         Some(
             DclGlobal::try_singleton()?
