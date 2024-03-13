@@ -14,7 +14,6 @@ pub struct TokioRuntime {
 #[godot_api]
 impl INode for TokioRuntime {
     fn init(_base: Base<Node>) -> Self {
-        
         let rt = TokioRuntime::create_runtime();
 
         match rt {
@@ -64,7 +63,7 @@ impl TokioRuntime {
     }
 
     #[cfg(not(feature = "use_monothread"))]
-    fn create_runtime() -> Result<Runtime, std::io::Error>  {
+    fn create_runtime() -> Result<Runtime, std::io::Error> {
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .thread_name("dcl-godot-tokio")

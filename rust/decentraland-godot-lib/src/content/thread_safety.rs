@@ -32,7 +32,8 @@ impl Drop for GodotSingleThreadSafety {
 // When this option is triggered (as false), be sure to not use async/await until you set it back to true
 // Following the same logic, do not exit of sync closure until you set it back to true
 pub fn set_thread_safety_checks_enabled(_enabled: bool) {
-    #[cfg(not(feature = "use_monothread"))] {
+    #[cfg(not(feature = "use_monothread"))]
+    {
         let mut temp_script = godot::engine::load::<GdScript>("res://src/logic/thread_safety.gd");
         temp_script.call(
             "set_thread_safety_checks_enabled".into(),
