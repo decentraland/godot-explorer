@@ -70,10 +70,11 @@ jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
 
 [features]
-default = ["use_ffmpeg", "use_livekit", "use_deno"]
+default = ["use_ffmpeg", "use_livekit", "use_deno", "use_monothread"]
 use_ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
 use_livekit = ["use_ffmpeg", "dep:livekit"]
 use_deno = ["dep:deno_core", "dep:v8"]
+use_monothread = []
 
 [build-dependencies]
 webrtc-sys-build = "0.2.0"

@@ -1,8 +1,10 @@
 use godot::{
     builtin::{meta::ToGodot, Variant},
-    engine::GdScript,
     obj::Gd,
 };
+
+#[cfg(not(feature = "use_monothread"))]
+use godot::engine::GdScript;
 
 use crate::godot_classes::promise::Promise;
 
@@ -29,12 +31,14 @@ impl Drop for GodotSingleThreadSafety {
 // Interacting with Godot API is not thread safe, so we need to disable thread safety checks
 // When this option is triggered (as false), be sure to not use async/await until you set it back to true
 // Following the same logic, do not exit of sync closure until you set it back to true
-pub fn set_thread_safety_checks_enabled(enabled: bool) {
-    let mut temp_script = godot::engine::load::<GdScript>("res://src/logic/thread_safety.gd");
-    temp_script.call(
-        "set_thread_safety_checks_enabled".into(),
-        &[enabled.to_variant()],
-    );
+pub fn set_thread_safety_checks_enabled(_enabled: bool) {
+    #[cfg(not(feature = "use_monothread"))] {
+        let mut temp_script = godot::engine::load::<GdScript>("res://src/logic/thread_safety.gd");
+        temp_script.call(
+            "set_thread_safety_checks_enabled".into(),
+            &[_enabled.to_variant()],
+        );
+    }
 }
 
 fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: String) -> bool {
