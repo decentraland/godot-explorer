@@ -22,7 +22,7 @@ use crate::{
     },
     scene_runner::{
         scene::{GodotDclRaycastResult, Scene},
-        scene_manager::GLOBAL_TICK_NUMBER,
+        scene_manager::{GLOBAL_TICK_NUMBER, GLOBAL_TIMESTAMP},
     },
 };
 
@@ -158,7 +158,7 @@ pub fn pointer_events_system(
                         button: InputAction::IaAny as i32,
                         hit: None,
                         state: PointerEventType::PetHoverLeave as i32,
-                        timestamp: global_tick_number,
+                        timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
                         analog: None,
                         tick_number: global_tick_number,
                     };
@@ -182,7 +182,7 @@ pub fn pointer_events_system(
                         button: InputAction::IaAny as i32,
                         hit: None,
                         state: PointerEventType::PetHoverEnter as i32,
-                        timestamp: global_tick_number,
+                        timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
                         analog: None,
                         tick_number: global_tick_number,
                     };
@@ -230,7 +230,7 @@ pub fn pointer_events_system(
                     button: *input_action as i32,
                     hit: raycast_hit,
                     state,
-                    timestamp: global_tick_number,
+                    timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
                     analog: None,
                     tick_number: global_tick_number,
                 },
@@ -279,7 +279,7 @@ pub fn pointer_events_system(
                         button: *input_action as i32,
                         hit: raycast_hit.clone(),
                         state: pointer_event.event_type,
-                        timestamp: global_tick_number,
+                        timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
                         analog: None,
                         tick_number: global_tick_number,
                     };
