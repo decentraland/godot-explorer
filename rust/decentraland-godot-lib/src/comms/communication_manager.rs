@@ -32,6 +32,7 @@ pub struct CommunicationManager {
     current_connection: CommsConnection,
     current_connection_str: String,
     last_position_broadcast_index: u64,
+    voice_chat_enabled: bool,
 
     #[base]
     base: Base<Node>,
@@ -44,6 +45,7 @@ impl INode for CommunicationManager {
             current_connection: CommsConnection::None,
             current_connection_str: String::default(),
             last_position_broadcast_index: 0,
+            voice_chat_enabled: false,
             base,
         }
     }
@@ -76,7 +78,7 @@ impl INode for CommunicationManager {
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 archipelago.poll();
-                if let Some(adapter) = archipelago.adapter() {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
                     let adapter = adapter.as_mut();
                     let adapter_polling_ok = adapter.poll();
                     let chats = adapter.consume_chats();
@@ -124,7 +126,7 @@ impl CommunicationManager {
             }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
-                if let Some(adapter) = archipelago.adapter() {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.send_rfc4(scene_message, true);
                 }
             }
@@ -137,7 +139,7 @@ impl CommunicationManager {
             CommsConnection::Connected(adapter) => adapter.consume_scene_messages(scene_id),
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
-                if let Some(adapter) = archipelago.adapter() {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.consume_scene_messages(scene_id)
                 } else {
                     vec![]
@@ -153,13 +155,16 @@ impl CommunicationManager {
     #[signal]
     fn chat_message(chats: VariantArray) {}
 
+    #[signal]
+    fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString) {}
+
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {
         let adapter = match &mut self.current_connection {
             CommsConnection::Connected(adapter) => adapter,
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
-                let Some(adapter) = archipelago.adapter() else {
+                let Some(adapter) = archipelago.adapter_as_mut() else {
                     return;
                 };
 
@@ -191,6 +196,11 @@ impl CommunicationManager {
     }
 
     #[func]
+    fn is_voice_chat_enabled(&self) -> bool {
+        self.voice_chat_enabled
+    }
+
+    #[func]
     fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
         let index = self.last_position_broadcast_index;
         let get_packet = || {
@@ -218,7 +228,7 @@ impl CommunicationManager {
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 archipelago.update_position(position);
-                if let Some(adapter) = archipelago.adapter() {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.send_rfc4(get_packet(), true)
                 } else {
                     false
@@ -248,7 +258,7 @@ impl CommunicationManager {
             CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), false),
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
-                if let Some(adapter) = archipelago.adapter() {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.send_rfc4(get_packet(), false)
                 } else {
                     false
@@ -340,8 +350,8 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn change_adapter(&mut self, comms_fixed_adapter_str: GString) {
-        let comms_fixed_adapter_str = comms_fixed_adapter_str.to_string();
+    fn change_adapter(&mut self, comms_fixed_adapter_gstr: GString) {
+        let comms_fixed_adapter_str = comms_fixed_adapter_gstr.to_string();
         let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
         else {
             tracing::warn!("unrecognised fixed adapter string: {comms_fixed_adapter_str}");
@@ -433,6 +443,27 @@ impl CommunicationManager {
                 tracing::info!("unknown adapter {:?}", protocol);
             }
         }
+
+        self.voice_chat_enabled = match &self.current_connection {
+            CommsConnection::Connected(adapter) => adapter.support_voice_chat(),
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => {
+                if let Some(adapter) = archipelago.adapter() {
+                    adapter.support_voice_chat()
+                } else {
+                    true
+                }
+            }
+            _ => false,
+        };
+
+        self.base.emit_signal(
+            "on_adapter_changed".into(),
+            &[
+                self.voice_chat_enabled.to_variant(),
+                comms_fixed_adapter_gstr.to_variant(),
+            ],
+        );
     }
 
     fn clean(&mut self) {
