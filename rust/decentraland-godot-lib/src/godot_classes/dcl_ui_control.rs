@@ -17,7 +17,10 @@ use crate::{
         },
         SceneEntityId,
     },
-    scene_runner::{components::ui::scene_ui::UiResults, scene_manager::GLOBAL_TICK_NUMBER},
+    scene_runner::{
+        components::ui::scene_ui::UiResults,
+        scene_manager::{GLOBAL_TICK_NUMBER, GLOBAL_TIMESTAMP},
+    },
 };
 
 #[derive(GodotClass)]
@@ -74,7 +77,7 @@ impl DclUiControl {
                             button: InputAction::IaPointer as i32,
                             hit: None,
                             state: PointerEventType::PetDown as i32,
-                            timestamp: global_tick_number,
+                            timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
                             analog: None,
                             tick_number: global_tick_number,
                         },
@@ -88,7 +91,7 @@ impl DclUiControl {
                             button: InputAction::IaPointer as i32,
                             hit: None,
                             state: PointerEventType::PetUp as i32,
-                            timestamp: global_tick_number,
+                            timestamp: GLOBAL_TIMESTAMP.fetch_add(1, Ordering::Relaxed),
                             analog: None,
                             tick_number: global_tick_number,
                         },
