@@ -2,6 +2,7 @@ extends Control
 
 var is_enabled = false
 
+
 func _ready():
 	hide()
 

@@ -143,7 +143,7 @@ func _ready():
 	ui_root.move_child(Global.scene_runner.base_ui, 0)
 
 	Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
-	
+
 	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
 
 	if cmd_realm != null:
@@ -473,6 +473,7 @@ func _on_ui_root_gui_input(event: InputEvent):
 func _on_panel_profile_open_profile():
 	control_menu.show_backpack()
 	release_mouse()
+
 
 func _on_adapter_changed(voice_chat_enabled, _adapter_str):
 	button_mic.visible = voice_chat_enabled

@@ -78,7 +78,7 @@ impl INode for CommunicationManager {
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 archipelago.poll();
-                if let Some(adapter) = archipelago.adapter() {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
                     let adapter = adapter.as_mut();
                     let adapter_polling_ok = adapter.poll();
                     let chats = adapter.consume_chats();
@@ -126,7 +126,7 @@ impl CommunicationManager {
             }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
-                if let Some(adapter) = archipelago.adapter() {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.send_rfc4(scene_message, true);
                 }
             }
@@ -139,7 +139,7 @@ impl CommunicationManager {
             CommsConnection::Connected(adapter) => adapter.consume_scene_messages(scene_id),
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
-                if let Some(adapter) = archipelago.adapter() {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.consume_scene_messages(scene_id)
                 } else {
                     vec![]
@@ -228,7 +228,7 @@ impl CommunicationManager {
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 archipelago.update_position(position);
-                if let Some(adapter) = archipelago.adapter() {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.send_rfc4(get_packet(), true)
                 } else {
                     false
@@ -258,7 +258,7 @@ impl CommunicationManager {
             CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), false),
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
-                if let Some(adapter) = archipelago.adapter() {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.send_rfc4(get_packet(), false)
                 } else {
                     false

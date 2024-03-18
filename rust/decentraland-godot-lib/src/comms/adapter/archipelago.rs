@@ -84,6 +84,7 @@ impl ArchipelagoManager {
         self.adapter.as_mut()
     }
 
+    #[allow(clippy::borrowed_box)]
     pub fn adapter(&self) -> Option<&Box<dyn Adapter>> {
         self.adapter.as_ref()
     }
