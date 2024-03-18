@@ -17,7 +17,10 @@ use crate::{
         },
         SceneEntityId,
     },
-    scene_runner::{components::ui::scene_ui::UiResults, scene_manager::{GLOBAL_TICK_NUMBER, GLOBAL_TIMESTAMP}},
+    scene_runner::{
+        components::ui::scene_ui::UiResults,
+        scene_manager::{GLOBAL_TICK_NUMBER, GLOBAL_TIMESTAMP},
+    },
 };
 
 #[derive(GodotClass)]

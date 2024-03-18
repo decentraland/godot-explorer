@@ -147,7 +147,7 @@ pub fn pointer_events_system(
     current_raycast: &Option<GodotDclRaycastResult>,
 ) {
     let global_tick_number = GLOBAL_TICK_NUMBER.load(Ordering::Relaxed);
-    
+
     if !GodotDclRaycastResult::eq_key(current_raycast, previous_raycast) {
         if let Some(raycast) = previous_raycast.as_ref() {
             if let Some(pointer_event) =
