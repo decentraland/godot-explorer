@@ -454,14 +454,15 @@ impl CommunicationManager {
                     false
                 }
             }
-            _ => {
-                false
-            }
+            _ => false,
         };
 
         self.base.emit_signal(
             "on_adapter_changed".into(),
-            &[self.voice_chat_enabled.to_variant(), comms_fixed_adapter_gstr.to_variant()],
+            &[
+                self.voice_chat_enabled.to_variant(),
+                comms_fixed_adapter_gstr.to_variant(),
+            ],
         );
     }
 
