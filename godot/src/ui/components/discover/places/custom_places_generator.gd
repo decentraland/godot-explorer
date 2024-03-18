@@ -37,8 +37,7 @@ const CUSTOM_PLACES: Array[Dictionary] = [
 		"contact_name": "SDK Team",
 		"image": "https://i.imgur.com/Zsl1r2d.png",
 		"world": true,
-		"world_name":
-		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-update-asset-pack-lib"
+		"world_name": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-fix-protocol-squad-1"
 	}
 ]
 
