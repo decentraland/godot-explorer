@@ -334,8 +334,7 @@ pub fn _process_scene(
                     SceneCrdtStateProtoComponents::get_pointer_events_result_mut(crdt_state);
 
                 let results = scene.pointer_events_result.drain(0..);
-                for (entity, mut value) in results {
-                    value.timestamp = scene.tick_number;
+                for (entity, value) in results {
                     pointer_events_result_component.append(entity, value);
                 }
 
