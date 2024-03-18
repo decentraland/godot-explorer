@@ -65,7 +65,7 @@ func get_params_from_cmd():
 
 	if realm_in_place != -1 and args.size() > realm_in_place + 1:
 		realm_string = args[realm_in_place + 1]
-		
+
 	if location_in_place != -1 and args.size() > location_in_place + 1:
 		location_vector = args[location_in_place + 1]
 		location_vector = location_vector.split(",")
@@ -82,7 +82,7 @@ func _ready():
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
 	var cmd_preview_mode = cmd_params[2]
-	
+
 	# --spawn-avatars
 	if cmd_params[3]:
 		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
@@ -91,8 +91,6 @@ func _ready():
 	# --preview
 	if cmd_preview_mode:
 		_on_control_menu_request_debug_panel(true)
-		
-		
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()

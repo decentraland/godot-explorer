@@ -269,9 +269,13 @@ func _on_h_slider_scene_radius_value_changed(value):
 
 func _on_button_connect_preview_pressed():
 	set_preview_url(line_edit_preview_url.text)
-	
+
+
 func set_preview_url(url: String) -> void:
-	_preview_connect_to_url = url.to_lower().replace("http://", "ws://").replace("https://", "wss://")
+	_preview_connect_to_url = url.to_lower().replace("http://", "ws://").replace(
+		"https://", "wss://"
+	)
+
 
 func _on_check_box_scene_log_toggled(toggled_on):
 	request_debug_panel.emit(toggled_on)
