@@ -182,6 +182,12 @@ impl sdk::components::common::TextAlignMode {
     }
 }
 
+impl sdk::components::PbAnimationState {
+    pub fn playing_backward(&self) -> bool {
+        self.speed() < 0.0
+    }
+}
+
 pub mod kernel {
     #[allow(clippy::all)]
     pub mod comms {

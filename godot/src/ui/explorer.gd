@@ -83,6 +83,7 @@ func _ready():
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
+	var cmd_preview_mode = cmd_params[2]
 
 	# --spawn-avatars
 	if cmd_params[3]:
@@ -90,7 +91,7 @@ func _ready():
 		add_child(test_spawn_and_move_avatars)
 
 	# --preview
-	if cmd_params[2]:
+	if cmd_preview_mode:
 		_on_control_menu_request_debug_panel(true)
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -148,10 +149,11 @@ func _ready():
 
 	if cmd_realm != null:
 		Global.realm.async_set_realm(cmd_realm)
+		control_menu.control_settings.set_preview_url(cmd_realm)
 	else:
 		if Global.config.last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
-				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-update-asset-pack-lib"
+				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-fix-protocol-squad-1"
 			)
 		else:
 			Global.realm.async_set_realm(Global.config.last_realm_joined)

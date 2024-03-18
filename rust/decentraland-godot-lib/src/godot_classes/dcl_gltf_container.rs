@@ -143,7 +143,6 @@ impl DclGltfContainer {
                             clip: animation_name,
                             playing: Some(true),
                             r#loop: Some(true),
-                            should_reset: Some(true),
                             ..Default::default()
                         }],
                     },

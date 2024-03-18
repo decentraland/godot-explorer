@@ -284,7 +284,9 @@ pub fn _process_scene(
                     let stored_player_transform = transform_mut
                         .get(&SceneEntityId::PLAYER)
                         .and_then(|value| value.value.as_ref());
-                    if stored_player_transform != Some(&player_transform) {
+                    if stored_player_transform.map(|value| &value.translation)
+                        != Some(&player_transform.translation)
+                    {
                         transform_mut.put(SceneEntityId::PLAYER, Some(player_transform));
                     }
 
