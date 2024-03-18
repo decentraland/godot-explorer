@@ -451,7 +451,7 @@ impl CommunicationManager {
                 if let Some(adapter) = archipelago.adapter() {
                     adapter.support_voice_chat()
                 } else {
-                    false
+                    true
                 }
             }
             _ => false,
