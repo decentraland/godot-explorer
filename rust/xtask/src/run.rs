@@ -1,6 +1,5 @@
 use std::{
-    collections::HashMap,
-    io::{BufRead, BufReader},
+    collections::HashMap, env, io::{BufRead, BufReader}
 };
 
 use crate::{
@@ -44,11 +43,16 @@ pub fn run(
         args.push("-e");
     }
 
-    let build_args = if release_mode {
+    let mut build_args = if release_mode {
         vec!["build", "--release"]
     } else {
         vec!["build"]
     };
+
+    #[cfg(target_os = "macos")]
+    {
+        build_args.extend(&["--no-default-features", "-F", "use_deno"]);
+    }
 
     let build_cwd =
         adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER).unwrap());
