@@ -80,8 +80,12 @@ impl ArchipelagoManager {
         }
     }
 
-    pub fn adapter(&mut self) -> Option<&mut Box<dyn Adapter>> {
+    pub fn adapter_as_mut(&mut self) -> Option<&mut Box<dyn Adapter>> {
         self.adapter.as_mut()
+    }
+
+    pub fn adapter(&self) -> Option<&Box<dyn Adapter>> {
+        self.adapter.as_ref()
     }
 
     fn ws_internal_send<T>(&mut self, packet: T, only_when_active: bool) -> bool

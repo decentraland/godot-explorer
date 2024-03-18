@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap, env, io::{BufRead, BufReader}
+    collections::HashMap, io::{BufRead, BufReader}
 };
 
 use crate::{
