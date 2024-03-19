@@ -3,13 +3,23 @@ extends CarrouselGenerator
 
 const CUSTOM_PLACES: Array[Dictionary] = [
 	{
-		"title": "Genesis Plaza",
+		"title": "Custom Rat Scape",
 		"description":
-		"Jump in to strike up a chat with other visitors, retake the commands tutorial with a cute floating robot, or dive into the swirling portal to get to Decentraland's visitor center.",
-		"base_position": "0,0",
-		"contact_name": "Decentraland Foundation",
+		"Exodus Town is an experiment on Decentraland Worlds, continuous issuance, and DAOs. Originating from the 0,0 coordinate, it expands in a never-ending spiral, growing one parcel per day, forever. Every 24 hours, a TOWN token is auctioned off in exchange for MANA, granting the holder the ability to publish content to Exodus Town. Importantly, all auction proceeds flow directly into the on-chain governed Exodus DAO, steered exclusively by TOWN token holders.",
 		"image":
-		"https://peer.decentraland.org/content/contents/bafybeientwwufhkn6yyfgehqqg64rp2u4pxkqfwsgfj2kldvarretredlm",
+		"https://worlds-content-server.decentraland.org/contents/bafybeidm7nyllf7d5j4nvdrtvggk2nyizvwtccqzvpztc7fhmyjxsaouza",
+		"base_position": "0,0",
+		"contact_name": "SDK",
+		"world": true,
+		"world_name": "kuruk.dcl.eth"
+	},
+	{
+		"title": "SDK7 Unity Cafe",
+		"description": "Dancing, Music, Networking, Partying, Social!",
+		"base_position": "16,102",
+		"contact_name": "Carl Fravel",
+		"image":
+		"https://peer.decentraland.org/content/contents/bafybeibixxqiejsizqvf2rs6z6l4wt6q3mjlzuzabvjbkxxl57qusnz4ii",
 	},
 	{
 		"title": "Exodus Town",
@@ -22,16 +32,7 @@ const CUSTOM_PLACES: Array[Dictionary] = [
 		"world_name": "https://exodus.town/"
 	},
 	{
-		"title": "Goerli Plaza ZONE",
-		"description": "SDK7 Scenes for testing",
-		"image": "https://i.imgur.com/uuWymQh.png",
-		"base_position": "72,-10",
-		"contact_name": "SDK Team",
-		"world": true,
-		"world_name": "https://sdk-test-scenes.decentraland.zone"
-	},
-	{
-		"title": "Goerli Plaza IPFS",
+		"title": "Goerli Plaza",
 		"description": "SDK7 Scenes for testing",
 		"base_position": "72,-10",
 		"contact_name": "SDK Team",
