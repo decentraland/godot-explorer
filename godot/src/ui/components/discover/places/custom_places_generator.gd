@@ -38,7 +38,17 @@ const CUSTOM_PLACES: Array[Dictionary] = [
 		"contact_name": "SDK Team",
 		"image": "https://i.imgur.com/Zsl1r2d.png",
 		"world": true,
-		"world_name": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-fix-protocol-squad-1"
+		"world_name":
+		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-fix-protocol-squad-1/"
+	},
+	{
+		"title": "In World Builder",
+		"description": "SDK7 Scene for In World Builder",
+		"base_position": "0,0",
+		"contact_name": "In World Builder",
+		"image": "https://pbs.twimg.com/profile_images/1715100604002193408/y8HcKT6j_400x400.jpg",
+		"world": true,
+		"world_name": "https://worlds.dcl-iwb.co/world/BuilderWorld.dcl.eth/"
 	}
 ]
 
