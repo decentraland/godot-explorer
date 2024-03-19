@@ -115,6 +115,11 @@ async fn fetch_polling_server(
             }
         };
 
+        if response.is_err() {
+            tracing::error!("error fetching task: {:?}", response.err().unwrap());
+            continue;
+        }
+
         return response;
     }
 }
