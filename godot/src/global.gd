@@ -95,6 +95,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
+	get_tree().root.add_child.call_deferred(self.tokio_runtime)
 	get_tree().root.add_child.call_deferred(self.realm)
 	get_tree().root.add_child.call_deferred(self.player_identity)
 	get_tree().root.add_child.call_deferred(self.comms)

@@ -46,7 +46,7 @@ pub fn run(
     let mut build_args = if release_mode {
         vec!["build", "--release"]
     } else {
-        vec!["build"]
+        vec!["build", "--no-default-features", "-F", "use_deno", "-F", "use_monothread"]
     };
 
     #[cfg(target_os = "macos")]
