@@ -1,12 +1,12 @@
-use godot::engine::RefCounted;
+use godot::engine::Object;
 use godot::prelude::*;
 
 #[derive(GodotClass)]
-#[class(init, base=RefCounted)]
+#[class(init, base=Object)]
 pub struct PromiseError {
     pub error_description: GString,
     #[base]
-    base: Base<RefCounted>,
+    base: Base<Object>,
 }
 
 #[godot_api]
@@ -19,20 +19,20 @@ impl PromiseError {
 
 impl PromiseError {
     fn new(error_description: GString) -> Gd<Self> {
-        let mut promise_error = Self::new_gd();
+        let mut promise_error = Self::alloc_gd();
         promise_error.bind_mut().error_description = error_description;
         promise_error
     }
 }
 
 #[derive(GodotClass)]
-#[class(init, base=RefCounted)]
+#[class(init, base=Object)]
 pub struct Promise {
     resolved: bool,
     data: Variant,
 
     #[base]
-    base: Base<RefCounted>,
+    base: Base<Object>,
 }
 
 #[godot_api]
@@ -88,7 +88,7 @@ impl Promise {
     }
 
     pub fn make_to_async() -> (Gd<Promise>, impl Fn() -> Option<Gd<Promise>>) {
-        let this_promise = Promise::new_gd();
+        let this_promise = Promise::alloc_gd();
         let promise_instance_id = this_promise.instance_id();
         let get_promise = move || Gd::<Promise>::try_from_instance_id(promise_instance_id).ok();
         (this_promise, get_promise)
@@ -103,7 +103,7 @@ impl Promise {
     }
 
     pub fn from_rejected(reason: String) -> Gd<Self> {
-        let mut data = PromiseError::new_gd();
+        let mut data = PromiseError::alloc_gd();
         data.bind_mut().error_description = GString::from(reason);
 
         Gd::from_init_fn(|base| Self {
