@@ -34,10 +34,6 @@ gdscript/warnings/redundant_await=false
 window/size/viewport_width=1280
 window/size/viewport_height=720
 
-[editor]
-
-run/main_run_args="--realm https://realm-provider.decentraland.org/main/ --location 60,61 --skip-lobby"
-
 [filesystem]
 
 import/blender/enabled=false
