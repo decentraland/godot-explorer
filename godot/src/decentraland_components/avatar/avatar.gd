@@ -4,7 +4,7 @@ extends DclAvatar
 signal avatar_loaded
 
 # Debug to store each avatar loaded in user://avatars
-const DEBUG_SAVE_AVATAR_DATA = true
+const DEBUG_SAVE_AVATAR_DATA = false
 
 @export var skip_process: bool = false
 @export var hide_name: bool = false
