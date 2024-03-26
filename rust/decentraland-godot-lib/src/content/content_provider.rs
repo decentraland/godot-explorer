@@ -367,10 +367,11 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn duplicate_materials(&mut self, target_meshes: Array<Dictionary>) -> Gd<Promise> {
+    pub fn duplicate_materials(&mut self, target_meshes: VariantArray) -> Gd<Promise> {
         let data = target_meshes
             .iter_shared()
             .map(|dict| {
+                let dict = dict.try_to::<Dictionary>().ok()?;
                 let mesh = dict.get("mesh")?.try_to::<Gd<Mesh>>().ok()?;
                 let n = dict.get("n")?.try_to::<i32>().ok()?;
 

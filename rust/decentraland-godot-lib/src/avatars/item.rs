@@ -324,11 +324,9 @@ impl DclItemEntityDefinition {
             } else if let Some(_obj) =
                 content_provider.get_texture_from_hash(GString::from(main_file_hash))
             {
-                let is_texture_category = wearable_data.category == WearableCategory::EYES
+                wearable_data.category == WearableCategory::EYES
                     || wearable_data.category == WearableCategory::EYEBROWS
-                    || wearable_data.category == WearableCategory::MOUTH;
-
-                is_texture_category
+                    || wearable_data.category == WearableCategory::MOUTH
             } else {
                 false
             }

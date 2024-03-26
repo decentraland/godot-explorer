@@ -33,7 +33,27 @@ offset_top = 24.0
 offset_right = 633.0
 offset_bottom = 688.0
 
+[node name="Avatars" type="Panel" parent="TabContainer"]
+custom_minimum_size = Vector2(600, 600)
+layout_mode = 2
+
+[node name="OptionButton_AvatarList" type="OptionButton" parent="TabContainer/Avatars"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 10.0
+offset_right = 583.0
+offset_bottom = 47.0
+
+[node name="Button_DownloadWearables" type="Button" parent="TabContainer/Avatars"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 64.0
+offset_right = 581.0
+offset_bottom = 111.0
+text = "Download wearables"
+
 [node name="Emotes" type="Panel" parent="TabContainer"]
+visible = false
 custom_minimum_size = Vector2(600, 600)
 layout_mode = 2
 
@@ -152,6 +172,8 @@ text = "asdasd"
 editable = false
 wrap_mode = 1
 
+[connection signal="item_selected" from="TabContainer/Avatars/OptionButton_AvatarList" to="." method="_on_option_button_avatar_list_item_selected"]
+[connection signal="pressed" from="TabContainer/Avatars/Button_DownloadWearables" to="." method="_on_button_download_wearables_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_OpenWheel" to="." method="_on_button_open_wheel_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_PlayCustom" to="." method="_on_button_play_custom_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_Clear" to="." method="_on_button_clear_pressed"]

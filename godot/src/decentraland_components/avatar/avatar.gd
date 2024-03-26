@@ -196,6 +196,7 @@ func async_load_wearables():
 		printerr("body shape not found")
 		return
 
+	# If some wearables are needed but they weren't included in the first request (fallback wearables)
 	if not curated_wearables.need_to_fetch.is_empty():
 		var need_to_fetch_promise = Global.content_provider.fetch_wearables(
 			Array(curated_wearables.need_to_fetch), Global.realm.get_profile_content_url()
