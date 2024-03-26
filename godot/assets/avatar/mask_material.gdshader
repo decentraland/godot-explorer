@@ -16,4 +16,5 @@ void fragment() {
 	
 	ALBEDO = final_color.rgb;
 	ALPHA = final_color.a;
+	ALPHA_SCISSOR_THRESHOLD = 0.5;
 }

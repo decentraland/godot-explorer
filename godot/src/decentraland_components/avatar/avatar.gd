@@ -3,6 +3,9 @@ extends DclAvatar
 
 signal avatar_loaded
 
+# Debug to store each avatar loaded in user://avatars
+const DEBUG_SAVE_AVATAR_DATA = false
+
 @export var skip_process: bool = false
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
@@ -10,11 +13,8 @@ signal avatar_loaded
 # Public
 var avatar_id: String = ""
 
-# Current wearables equippoed
-var wearables_dict: Dictionary = {}
-
 var finish_loading = false
-var wearables_by_category
+var wearables_by_category: Dictionary = {}
 
 var emote_controller: AvatarEmoteController
 
@@ -90,6 +90,8 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
 	label_3d_name.modulate = Color.GOLD if profile.has_claimed_name() else Color.WHITE
 
+	avatar_id = profile.get_ethereum_address()
+
 	await async_update_avatar(avatar, new_avatar_name)
 
 
@@ -115,6 +117,37 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 
 	wearable_to_request.push_back(avatar_data.get_body_shape())
 
+	# Enable to store a bunch of avatar of a session
+	if DEBUG_SAVE_AVATAR_DATA:
+		DirAccess.make_dir_absolute("user://avatars")
+		var file_path = (
+			"user://avatars/"
+			+ (
+				(
+					avatar_id
+					+ "_"
+					+ new_avatar_name
+					+ "_"
+					+ str(Time.get_unix_time_from_system())
+					+ ".json"
+				)
+				. validate_filename()
+			)
+		)
+		var dict: Dictionary = {
+			"userId": avatar_id,
+			"name": new_avatar_name,
+			"time": Time.get_unix_time_from_system(),
+			"wearables": avatar_data.get_wearables(),
+			"bodyShape": avatar_data.get_body_shape(),
+			"forceRender": avatar_data.get_force_render(),
+			"emotes": avatar_data.get_emotes()
+		}
+		var file = FileAccess.open(file_path, FileAccess.WRITE)
+		if file != null:
+			file.store_string(JSON.stringify(dict))
+			file.close()
+
 	# TODO: Validate if the current profile can own this wearables
 	# tracked at https://github.com/decentraland/godot-explorer/issues/244
 	# wearable_to_request = filter_owned_wearables(wearable_to_request)
@@ -138,8 +171,7 @@ func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> v
 
 
 func async_fetch_wearables_dependencies():
-	# Clear last equipped werarables
-	wearables_dict.clear()
+	var wearables_dict: Dictionary = {}
 
 	# Fill data
 	var body_shape_id := avatar_data.get_body_shape()
@@ -156,52 +188,13 @@ func async_fetch_wearables_dependencies():
 				async_calls.push_back(emote_promise)
 				async_calls_info.push_back(emote_urn)
 
-	for wearable_key in wearables_dict.keys():
-		if wearables_dict[wearable_key] == null:
-			printerr("wearable ", wearable_key, " null")
-			continue
-
-		var wearable: DclItemEntityDefinition = wearables_dict[wearable_key]
-		if not Wearables.is_valid_wearable(wearable, body_shape_id, true):
-			continue
-
-		var hashes_to_fetch: Array
-		if Wearables.is_texture(wearable.get_category()):
-			hashes_to_fetch = Wearables.get_wearable_facial_hashes(wearable, body_shape_id)
-		else:
-			hashes_to_fetch = [Wearables.get_item_main_file_hash(wearable, body_shape_id)]
-
-		if hashes_to_fetch.is_empty():
-			continue
-
-		var content_mapping: DclContentMappingAndUrl = wearable.get_content_mapping()
-		var files: Array = []
-		for file_name in content_mapping.get_files():
-			for file_hash in hashes_to_fetch:
-				if content_mapping.get_hash(file_name) == file_hash:
-					files.push_back(file_name)
-
-		for file_name in files:
-			async_calls.push_back(_fetch_texture_or_gltf(file_name, content_mapping))
-			async_calls_info.push_back(wearable_key)
-
+	await Wearables.async_load_wearables(wearables_dict.keys(), body_shape_id)
 	var promises_result: Array = await PromiseUtils.async_all(async_calls)
 	for i in range(promises_result.size()):
 		if promises_result[i] is PromiseError:
 			printerr("Error loading ", async_calls_info[i], ":", promises_result[i].get_error())
 
 	await async_load_wearables()
-
-
-func _fetch_texture_or_gltf(file_name: String, content_mapping: DclContentMappingAndUrl) -> Promise:
-	var promise: Promise
-
-	if file_name.ends_with(".png"):
-		promise = Global.content_provider.fetch_texture(file_name, content_mapping)
-	else:
-		promise = Global.content_provider.fetch_gltf(file_name, content_mapping, 1)
-
-	return promise
 
 
 func try_to_set_body_shape(body_shape_hash):
@@ -226,19 +219,33 @@ func try_to_set_body_shape(body_shape_hash):
 
 
 func async_load_wearables():
-	var curated_wearables = Wearables.get_curated_wearable_list(
-		avatar_data.get_body_shape(), avatar_data.get_wearables(), []
+	var curated_wearables := Wearables.get_curated_wearable_list(
+		avatar_data.get_body_shape(), avatar_data.get_wearables(), avatar_data.get_force_render()
 	)
-	if curated_wearables.is_empty():
+	if curated_wearables.wearables_by_category.is_empty():
 		printerr("couldn't get curated wearables")
 		return
 
-	wearables_by_category = curated_wearables[0]
-
+	wearables_by_category = curated_wearables.wearables_by_category
 	var body_shape_wearable = wearables_by_category.get(Wearables.Categories.BODY_SHAPE)
 	if body_shape_wearable == null:
 		printerr("body shape not found")
 		return
+
+	# If some wearables are needed but they weren't included in the first request (fallback wearables)
+	if not curated_wearables.need_to_fetch.is_empty():
+		var need_to_fetch_promise = Global.content_provider.fetch_wearables(
+			Array(curated_wearables.need_to_fetch), Global.realm.get_profile_content_url()
+		)
+		await PromiseUtils.async_all(need_to_fetch_promise)
+		await Wearables.async_load_wearables(
+			curated_wearables.need_to_fetch, body_shape_wearable.get_id()
+		)
+
+		for wearable_id in curated_wearables.need_to_fetch:
+			var wearable = Global.content_provider.get_wearable(wearable_id)
+			if wearable != null:
+				wearables_by_category[wearable.get_category()] = wearable
 
 	try_to_set_body_shape(
 		Wearables.get_item_main_file_hash(body_shape_wearable, avatar_data.get_body_shape())
@@ -249,6 +256,7 @@ func async_load_wearables():
 	var has_own_upper_body = false
 	var has_own_lower_body = false
 	var has_own_feet = false
+	var has_own_hands = false
 	var has_own_head = false
 
 	for category in wearables_by_category:
@@ -273,32 +281,48 @@ func async_load_wearables():
 				has_own_lower_body = true
 			Wearables.Categories.FEET:
 				has_own_feet = true
+			Wearables.Categories.HANDS:
+				has_own_hands = true
 			Wearables.Categories.HEAD:
 				has_own_head = true
 			Wearables.Categories.SKIN:
 				has_own_skin = true
 
-	var hidings = {
-		"ubody_basemesh": has_own_skin or has_own_upper_body,
-		"lbody_basemesh": has_own_skin or has_own_lower_body,
-		"feet_basemesh": has_own_skin or has_own_feet,
-		"head": has_own_skin or has_own_head,
-		"head_basemesh": has_own_skin or has_own_head,
-		"mask_eyes": has_own_skin or has_own_head,
-		"mask_eyebrows": has_own_skin or has_own_head,
-		"mask_mouth": has_own_skin or has_own_head,
-	}
+	var hidings: Dictionary = {}
+
+	for category in curated_wearables.hidden_categories:
+		hidings[category] = true
+
+	(
+		hidings
+		. merge(
+			{
+				"ubody_basemesh": has_own_skin or has_own_upper_body or hidings.has("upper_body"),
+				"lbody_basemesh": has_own_skin or has_own_lower_body or hidings.has("lower_body"),
+				"feet_basemesh": has_own_skin or has_own_feet or hidings.has("feet"),
+				"hands_basemesh": has_own_skin or has_own_hands or hidings.has("hands"),
+				"head_basemesh": has_own_skin or has_own_head or hidings.has("head"),
+				"mask_eyes":
+				has_own_skin or has_own_head or hidings.has("eyes") or hidings.has("head"),
+				"mask_eyebrows":
+				has_own_skin or has_own_head or hidings.has("eyebrows") or hidings.has("head"),
+				"mask_mouth":
+				has_own_skin or has_own_head or hidings.has("mouth") or hidings.has("head"),
+			}
+		)
+	)
 
 	for child in body_shape_skeleton_3d.get_children():
 		var should_hide = false
 		for ends_with in hidings:
 			if child.name.ends_with(ends_with) and hidings[ends_with]:
 				should_hide = true
+				break
 
 		if should_hide:
 			child.hide()
 
-	var meshes: Array[Dictionary] = []
+	var meshes: Array = []
 	for child in body_shape_skeleton_3d.get_children():
 		if child.visible and child is MeshInstance3D:
 			child.mesh = child.mesh.duplicate(true)
@@ -376,9 +400,7 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 				child.hide()
 
 
-func apply_texture_and_mask(
-	mesh: MeshInstance3D, textures: Array[String], color: Color, mask_color: Color
-):
+func apply_texture_and_mask(mesh: MeshInstance3D, textures: Array, color: Color, mask_color: Color):
 	var current_material = mask_material.duplicate()
 	current_material.set_shader_parameter(
 		"base_texture", Global.content_provider.get_texture_from_hash(textures[0])

@@ -61,8 +61,8 @@ impl From<&godot::prelude::Color> for AvatarColor {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct AvatarWireFormat {
-    #[serde(rename = "bodyShape")]
     pub body_shape: Option<String>,
     pub eyes: Option<AvatarColor>,
     pub hair: Option<AvatarColor>,
@@ -70,6 +70,7 @@ pub struct AvatarWireFormat {
     pub wearables: Vec<String>,
     pub emotes: Option<Vec<AvatarEmote>>,
     pub snapshots: Option<AvatarSnapshots>,
+    pub force_render: Option<Vec<String>>,
 }
 
 #[derive(Deserialize)]
@@ -138,6 +139,7 @@ impl Default for AvatarWireFormat {
                     b: 0.737,
                 },
             }),
+            force_render: Some(vec![]),
         }
     }
 }

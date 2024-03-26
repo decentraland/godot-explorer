@@ -9,6 +9,7 @@ use crate::{
             WearableRepresentation,
         },
     },
+    godot_classes::dcl_global::DclGlobal,
 };
 use godot::{
     bind::{godot_api, GodotClass},
@@ -68,7 +69,7 @@ impl DclItemEntityDefinition {
 
     pub fn get_wearable_representation(
         &self,
-        body_shape_id: &String,
+        body_shape_id: &str,
     ) -> Option<&WearableRepresentation> {
         self.inner
             .item
@@ -80,13 +81,13 @@ impl DclItemEntityDefinition {
                 representation
                     .body_shapes
                     .iter()
-                    .any(|shape| shape == body_shape_id)
+                    .any(|shape| shape.to_lowercase() == body_shape_id.to_lowercase())
             })
     }
 
     pub fn get_emote_representation(
         &self,
-        body_shape_id: &String,
+        body_shape_id: &str,
     ) -> Option<&EmoteADR74Representation> {
         self.inner
             .item
@@ -278,12 +279,59 @@ impl DclItemEntityDefinition {
 
     #[func]
     fn get_display_name(&self) -> GString {
-        GString::from(
-            self.inner
-                .item
-                .i18n
-                .first()
-                .map_or(&self.inner.item.name, |i18n| &i18n.text),
-        )
+        GString::from(self.inner.item.i18n.first().map_or(
+            self.inner.item.name.as_ref().unwrap_or(&String::new()),
+            |i18n| &i18n.text,
+        ))
+    }
+
+    #[func]
+    fn is_valid_wearable(
+        value: Option<Gd<DclItemEntityDefinition>>,
+        body_shape_id: String,
+        skip_content_integrity: bool,
+    ) -> bool {
+        let Some(item) = value else {
+            return false;
+        };
+        tracing::info!("is_valid_wearable: {:?}", item.bind().inner.id);
+        let internal_check = item
+            .bind()
+            ._is_valid_wearable(body_shape_id.as_str(), skip_content_integrity);
+        internal_check
+    }
+
+    fn _is_valid_wearable(&self, body_shape_id: &str, skip_content_integrity: bool) -> bool {
+        let Some(wearable_data) = &self.inner.item.wearable_data else {
+            return false;
+        };
+
+        let Some(repr) = self.get_wearable_representation(body_shape_id) else {
+            return false;
+        };
+
+        let Some(main_file_hash) = self.inner.content_mapping.get_hash(&repr.main_file) else {
+            return false;
+        };
+
+        if !skip_content_integrity {
+            let _content_provider: Gd<crate::content::content_provider::ContentProvider> =
+                DclGlobal::singleton().bind().get_content_provider().clone();
+            let content_provider = _content_provider.bind();
+
+            if let Some(obj) = content_provider.get_gltf_from_hash(GString::from(main_file_hash)) {
+                obj.find_child("Skeleton3D".into()).is_some()
+            } else if let Some(_obj) =
+                content_provider.get_texture_from_hash(GString::from(main_file_hash))
+            {
+                wearable_data.category == WearableCategory::EYES
+                    || wearable_data.category == WearableCategory::EYEBROWS
+                    || wearable_data.category == WearableCategory::MOUTH
+            } else {
+                false
+            }
+        } else {
+            true
+        }
     }
 }
