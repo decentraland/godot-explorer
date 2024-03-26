@@ -112,12 +112,28 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
+    fn get_force_render(&self) -> Array<GString> {
+        if let Some(array) = &self.inner.force_render {
+            Array::from_iter(array.iter().map(GString::from))
+        } else {
+            Array::new()
+        }
+    }
+
+    #[func]
     fn get_snapshots_body(&self) -> GString {
         if let Some(snapshots) = &self.inner.snapshots {
             GString::from(snapshots.body.clone())
         } else {
             GString::from("")
         }
+    }
+
+    #[func]
+    fn set_force_render(&mut self, force_render: Array<Variant>) {
+        self.inner.force_render = Some(Vec::from_iter(
+            force_render.iter_shared().map(|v| v.to_string()),
+        ));
     }
 
     #[func]

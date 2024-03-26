@@ -455,15 +455,14 @@ static func can_equip(wearable: DclItemEntityDefinition, body_shape_id: String) 
 
 static func compose_hidden_categories(
 	body_shape_id: String, force_render: PackedStringArray, wearables_by_category: Dictionary
-) -> PackedStringArray:
-	var result: PackedStringArray = []
+) -> Array:
+	var result: Array = []
 	var previously_hidden: Dictionary = {}
 
 	for priority_category in Categories.HIDING_PRIORITY:
 		previously_hidden[priority_category] = []
 
 		var wearable: DclItemEntityDefinition = wearables_by_category.get(priority_category)
-
 		if wearable == null:
 			continue
 
@@ -487,24 +486,9 @@ static func compose_hidden_categories(
 	return result
 
 
-static func get_skeleton_from_content(content_hash: String) -> Skeleton3D:
-	var content = Global.content_provider.get_gltf_from_hash(content_hash)
-	if content == null:
-		return null
-
-	if not content is Node:
-		return null
-
-	var skeleton = content.find_node("Skeleton3D")
-	if skeleton == null:
-		return null
-
-	return skeleton
-
-
 static func get_wearable_facial_hashes(
 	wearable: DclItemEntityDefinition, body_shape_id: String
-) -> Array[String]:
+) -> Array:
 	if wearable == null:
 		return []
 
@@ -552,81 +536,49 @@ static func get_item_main_file_hash(item: DclItemEntityDefinition, body_shape_id
 	return file_hash
 
 
-static func is_valid_wearable(
-	wearable: DclItemEntityDefinition, body_shape_id: String, skip_content_integrity: bool = false
-) -> bool:
-	if wearable == null:
-		return false
-
-	if not wearable.has_representation(body_shape_id):
-		return false
-
-	var main_file: String = wearable.get_representation_main_file(body_shape_id)
-	var content_mapping: DclContentMappingAndUrl = wearable.get_content_mapping()
-	var file_hash = content_mapping.get_hash(main_file)
-	if file_hash.is_empty():
-		return false
-
-	if not skip_content_integrity:
-		var obj = Global.content_provider.get_gltf_from_hash(file_hash)
-		if obj == null:
-			obj = Global.content_provider.get_texture_from_hash(file_hash)
-		if obj == null:
-			# printerr("wearable ", wearable_key, " doesn't have resource from hash")
-			return false
-
-		if obj is Image or obj is ImageTexture:
-			if not is_texture(wearable.get_category()):
-				# Category and the object don't match
-				return false
-		elif obj is Node3D:
-			var wearable_skeleton: Skeleton3D = obj.find_child("Skeleton3D")
-			if wearable_skeleton == null:
-				# The wearable doesn't have a skeleton
-				return false
-		else:
-			# Invalid object
-			return false
-
-	return true
+class CuratedWearableList:
+	var wearables_by_category: Dictionary = {}
+	var hidden_categories: Array = []
+	var need_to_fetch: Array = []
 
 
 static func get_curated_wearable_list(
 	body_shape_id: String, wearables: PackedStringArray, force_render: PackedStringArray
-) -> Array:
-	var wearables_by_category: Dictionary = {}
+) -> CuratedWearableList:
+	var ret = CuratedWearableList.new()
 
 	var body_shape = Global.content_provider.get_wearable(body_shape_id)
-	if not is_valid_wearable(body_shape, body_shape_id):
-		return []
+	if not DclItemEntityDefinition.is_valid_wearable(body_shape, body_shape_id, false):
+		return ret
 
-	wearables_by_category[Categories.BODY_SHAPE] = body_shape
+	ret.wearables_by_category[Categories.BODY_SHAPE] = body_shape
 
 	for wearable_id in wearables:
 		var wearable: DclItemEntityDefinition = Global.content_provider.get_wearable(wearable_id)
-		if is_valid_wearable(wearable, body_shape_id):
+		if DclItemEntityDefinition.is_valid_wearable(wearable, body_shape_id, false):
 			var category = wearable.get_category()
-			if not wearables_by_category.has(category):
-				wearables_by_category[category] = wearable
+			if not ret.wearables_by_category.has(category):
+				ret.wearables_by_category[category] = wearable
 		else:
 			printerr("invalid wearable ", wearable_id)
 
-	var hidden_categories = compose_hidden_categories(
-		body_shape_id, force_render, wearables_by_category
+	ret.hidden_categories = compose_hidden_categories(
+		body_shape_id, force_render, ret.wearables_by_category
 	)
-	for hide_category in hidden_categories:
-		if wearables_by_category.has(hide_category):
-			wearables_by_category.erase(hide_category)
+	for hide_category in ret.hidden_categories:
+		if ret.wearables_by_category.has(hide_category):
+			ret.wearables_by_category.erase(hide_category)
+	ret.need_to_fetch = set_fallback_for_missing_needed_categories(
+		body_shape_id, ret.wearables_by_category, ret.hidden_categories
+	)
 
-	wearables_by_category = set_fallback_for_missing_needed_categories(
-		body_shape_id, wearables_by_category, hidden_categories
-	)
-	return [wearables_by_category, hidden_categories]
+	return ret
 
 
 static func set_fallback_for_missing_needed_categories(
 	body_shape_id: String, wearables_by_category: Dictionary, hidden_categories: PackedStringArray
-):
+) -> Array:
+	var need_to_fetch: Array = []
 	for needed_catagory in Categories.REQUIRED_CATEGORIES:
 		# If a needed category is hidden we dont need to fallback, we skipped it on purpose
 		if hidden_categories.has(needed_catagory):
@@ -641,9 +593,64 @@ static func set_fallback_for_missing_needed_categories(
 		)
 		if fallback_wearable_id != null:
 			var fallback_wearable = Global.content_provider.get_wearable(fallback_wearable_id)
-			if is_valid_wearable(fallback_wearable, body_shape_id):
+			if DclItemEntityDefinition.is_valid_wearable(fallback_wearable, body_shape_id, false):
 				wearables_by_category[needed_catagory] = Global.content_provider.get_wearable(
 					fallback_wearable_id
 				)
+			else:
+				prints("trying to fallback within an invalid wearable", fallback_wearable_id)
+				need_to_fetch.push_back(fallback_wearable_id)
 
-	return wearables_by_category
+	return need_to_fetch
+
+
+static func promise_get_wearable(wearable: DclItemEntityDefinition, body_shape_id: String) -> Array:
+	if not DclItemEntityDefinition.is_valid_wearable(wearable, body_shape_id, true):
+		return []
+
+	var hashes_to_fetch: Array
+	if Wearables.is_texture(wearable.get_category()):
+		hashes_to_fetch = Wearables.get_wearable_facial_hashes(wearable, body_shape_id)
+	else:
+		hashes_to_fetch = [Wearables.get_item_main_file_hash(wearable, body_shape_id)]
+
+	if hashes_to_fetch.is_empty():
+		return []
+
+	var content_mapping: DclContentMappingAndUrl = wearable.get_content_mapping()
+	var files: Array = []
+	for file_name in content_mapping.get_files():
+		for file_hash in hashes_to_fetch:
+			if content_mapping.get_hash(file_name) == file_hash:
+				files.push_back(file_name)
+
+	var ret: Array = []
+	for file_name in files:
+		var promise
+		if file_name.ends_with(".png"):
+			promise = Global.content_provider.fetch_texture(file_name, content_mapping)
+		else:
+			promise = Global.content_provider.fetch_gltf(file_name, content_mapping, 1)
+		ret.push_back(promise)
+	return ret
+
+
+static func async_load_wearables(wearable_keys: Array, body_shape_id: String):
+	var async_calls_info: Array = []
+	var async_calls: Array = []
+
+	for wearable_key in wearable_keys:
+		var wearable = Global.content_provider.get_wearable(wearable_key)
+		if wearable == null:
+			printerr("wearable ", wearable_key, " null")
+			continue
+
+		var wearable_promises: Array = Wearables.promise_get_wearable(wearable, body_shape_id)
+		for promises in wearable_promises:
+			async_calls.push_back(promises)
+			async_calls_info.push_back(wearable_key)
+
+	var promises_result: Array = await PromiseUtils.async_all(async_calls)
+	for i in range(promises_result.size()):
+		if promises_result[i] is PromiseError:
+			printerr("Error loading ", async_calls_info[i], ":", promises_result[i].get_error())
