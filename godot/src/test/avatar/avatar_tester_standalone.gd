@@ -49,7 +49,6 @@ func download_wearable(id: String):
 
 
 func download_avatar():
-	var body_shape = Global.content_provider.get_wearable(avatar.avatar_data.get_body_shape())
 	download_wearable(avatar.avatar_data.get_body_shape())
 	for wearable_id in avatar.avatar_data.get_wearables():
 		download_wearable(wearable_id)

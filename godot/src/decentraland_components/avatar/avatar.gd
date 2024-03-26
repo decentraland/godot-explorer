@@ -3,6 +3,9 @@ extends DclAvatar
 
 signal avatar_loaded
 
+# Debug to store each avatar loaded in user://avatars
+const DEBUG_SAVE_AVATAR_DATA = true
+
 @export var skip_process: bool = false
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
@@ -87,6 +90,8 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
 	label_3d_name.modulate = Color.GOLD if profile.has_claimed_name() else Color.WHITE
 
+	avatar_id = profile.get_ethereum_address()
+
 	await async_update_avatar(avatar, new_avatar_name)
 
 
@@ -111,6 +116,37 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 			wearable_to_request.push_back(emote_urn)
 
 	wearable_to_request.push_back(avatar_data.get_body_shape())
+
+	# Enable to store a bunch of avatar of a session
+	if DEBUG_SAVE_AVATAR_DATA:
+		DirAccess.make_dir_absolute("user://avatars")
+		var file_path = (
+			"user://avatars/"
+			+ (
+				(
+					avatar_id
+					+ "_"
+					+ new_avatar_name
+					+ "_"
+					+ str(Time.get_unix_time_from_system())
+					+ ".json"
+				)
+				. validate_filename()
+			)
+		)
+		var dict: Dictionary = {
+			"userId": avatar_id,
+			"name": new_avatar_name,
+			"time": Time.get_unix_time_from_system(),
+			"wearables": avatar_data.get_wearables(),
+			"bodyShape": avatar_data.get_body_shape(),
+			"forceRender": avatar_data.get_force_render(),
+			"emotes": avatar_data.get_emotes()
+		}
+		var file = FileAccess.open(file_path, FileAccess.WRITE)
+		if file != null:
+			file.store_string(JSON.stringify(dict))
+			file.close()
 
 	# TODO: Validate if the current profile can own this wearables
 	# tracked at https://github.com/decentraland/godot-explorer/issues/244

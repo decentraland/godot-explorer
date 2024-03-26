@@ -598,7 +598,6 @@ static func set_fallback_for_missing_needed_categories(
 					fallback_wearable_id
 				)
 			else:
-				prints("trying to fallback within an invalid wearable", fallback_wearable_id)
 				need_to_fetch.push_back(fallback_wearable_id)
 
 	return need_to_fetch
