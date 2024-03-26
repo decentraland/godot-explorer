@@ -14,7 +14,7 @@ pub struct BaseItemEntityMetadata {
     pub description: String,
     pub thumbnail: String,
     pub rarity: Option<String>,
-    pub name: String,
+    pub name: Option<String>,
     pub i18n: Vec<I18N>,
 
     #[serde(rename = "data")]
