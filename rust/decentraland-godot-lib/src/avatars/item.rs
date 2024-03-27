@@ -294,7 +294,6 @@ impl DclItemEntityDefinition {
         let Some(item) = value else {
             return false;
         };
-        tracing::info!("is_valid_wearable: {:?}", item.bind().inner.id);
         let internal_check = item
             .bind()
             ._is_valid_wearable(body_shape_id.as_str(), skip_content_integrity);

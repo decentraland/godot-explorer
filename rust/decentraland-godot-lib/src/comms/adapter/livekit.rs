@@ -424,7 +424,6 @@ fn spawn_livekit_task(
         'stream: loop {
             tokio::select!(
                 incoming = network_rx.recv() => {
-                    tracing::debug!("in: {:?}", incoming);
                     let Some(incoming) = incoming else {
                         tracing::debug!("network pipe broken, exiting loop");
                         break 'stream;
@@ -444,7 +443,6 @@ fn spawn_livekit_task(
                                     tracing::warn!("received empty packet body");
                                     continue;
                                 };
-                                tracing::warn!("received packet {message:?} from {address}");
                                 if let Err(e) = sender.send(IncomingMessage {
                                     message: ToSceneMessage::Rfc4(message),
                                     address,

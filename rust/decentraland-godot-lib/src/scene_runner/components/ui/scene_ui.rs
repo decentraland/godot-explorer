@@ -190,6 +190,27 @@ pub fn update_scene_ui(
         true
     };
 
+    let need_update_ui_canvas = {
+        let ui_canvas_information_component =
+            SceneCrdtStateProtoComponents::get_ui_canvas_information(crdt_state);
+        if let Some(entry) = ui_canvas_information_component.get(&SceneEntityId::ROOT) {
+            if let Some(current_value) = entry.value.as_ref() {
+                current_value != ui_canvas_information
+            } else {
+                true
+            }
+        } else {
+            true
+        }
+    };
+
+    if need_update_ui_canvas {
+        let ui_canvas_information_component =
+            SceneCrdtStateProtoComponents::get_ui_canvas_information_mut(crdt_state);
+        ui_canvas_information_component
+            .put(SceneEntityId::ROOT, Some(ui_canvas_information.clone()));
+    }
+
     if !ui_is_visible {
         for component_id in UI_COMPONENT_IDS {
             if let Some(dirty) = scene.current_dirty.lww_components.get(&component_id) {
@@ -226,19 +247,6 @@ pub fn update_scene_ui(
     }
 
     let dirty_lww_components = &scene.current_dirty.lww_components;
-    let need_update_ui_canvas = {
-        let ui_canvas_information_component =
-            SceneCrdtStateProtoComponents::get_ui_canvas_information(crdt_state);
-        if let Some(entry) = ui_canvas_information_component.get(&SceneEntityId::ROOT) {
-            if let Some(current_value) = entry.value.as_ref() {
-                current_value != ui_canvas_information
-            } else {
-                true
-            }
-        } else {
-            true
-        }
-    };
     let need_skip: bool = dirty_lww_components
         .get(&SceneComponentId::UI_TRANSFORM)
         .is_none()
@@ -255,13 +263,6 @@ pub fn update_scene_ui(
             .get(&SceneComponentId::UI_INPUT)
             .is_none()
         && !need_update_ui_canvas;
-
-    if need_update_ui_canvas {
-        let ui_canvas_information_component =
-            SceneCrdtStateProtoComponents::get_ui_canvas_information_mut(crdt_state);
-        ui_canvas_information_component
-            .put(SceneEntityId::ROOT, Some(ui_canvas_information.clone()));
-    }
 
     if need_skip {
         update_input_result(scene, crdt_state);

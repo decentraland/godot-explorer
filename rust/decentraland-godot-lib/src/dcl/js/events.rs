@@ -283,14 +283,14 @@ pub fn process_events(
         .collect::<Vec<_>>();
 
     if !messages.is_empty() {
-        if let Some(player_clicked_sender) = op_state.try_take::<EventSender<MessageBus>>() {
+        if let Some(message_bus_sender) = op_state.try_take::<EventSender<MessageBus>>() {
             messages.into_iter().for_each(|message| {
-                player_clicked_sender
+                message_bus_sender
                     .inner
                     .send(serde_json::to_string(&message).unwrap())
                     .unwrap();
             });
-            op_state.put(player_clicked_sender);
+            op_state.put(message_bus_sender);
         }
     }
 

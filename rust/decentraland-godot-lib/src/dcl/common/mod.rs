@@ -9,7 +9,6 @@ pub mod scene;
 pub mod string;
 pub mod wearable;
 
-pub struct SceneJsFileContent(pub String);
 pub struct SceneMainCrdtFileContent(pub Vec<u8>);
 
 pub struct SceneStartTime(pub std::time::SystemTime);

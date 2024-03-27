@@ -88,8 +88,10 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 
 	# Idle Anim Duplication (so it makes mutable and non-shared-reference)
 	var idle_animation_library = animation_player.get_animation_library("idle")
-	idle_animation_library = idle_animation_library.duplicate(true)
-	idle_anim = idle_animation_library.get_animation("Anim")
+	idle_animation_library = idle_animation_library.duplicate(false)
+	idle_anim = idle_animation_library.get_animation("Anim").duplicate()
+	idle_animation_library.remove_animation("Anim")
+	idle_animation_library.add_animation("Anim", idle_anim)
 	animation_player.remove_animation_library("idle")
 	animation_player.add_animation_library("idle", idle_animation_library)
 

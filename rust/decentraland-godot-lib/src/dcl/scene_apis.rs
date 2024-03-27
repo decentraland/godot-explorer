@@ -156,7 +156,6 @@ pub enum RpcCall {
     },
     SendCommsMessage {
         body: Vec<Vec<u8>>,
-        response: RpcResultSender<Result<(), String>>,
     },
 }
 
