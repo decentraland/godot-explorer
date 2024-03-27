@@ -276,9 +276,10 @@ pub(crate) fn scene_thread(
     // Workaround: this piece of code is to make v8-runtime to process the microqueue tasks
     //  and let it to tokio-runtime resolve the promises (futures)
     rt.block_on(async {
-        tokio::time::sleep(tokio::time::Duration::from_millis(32)).await;
+        let magic_duration = tokio::time::Duration::from_millis(0);
+        tokio::time::sleep(magic_duration).await;
         let _ = run_script(&mut runtime, &script, "__after__", |_| Vec::new()).await;
-        tokio::time::sleep(tokio::time::Duration::from_millis(32)).await;
+        tokio::time::sleep(magic_duration).await;
     });
 
     let start_time = std::time::SystemTime::now();
