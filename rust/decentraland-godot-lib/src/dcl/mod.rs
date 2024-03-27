@@ -101,7 +101,7 @@ pub struct SpawnDclSceneData {
     pub local_main_crdt_file_path: String,
     // Content mapping and URL reference
     pub content_mapping: ContentMappingAndUrlRef,
-    // Sender to send messages to the main thread
+    // Sender to send messages to the main thread (renderer)
     pub thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     // Whether the scene is in testing mode
     pub testing_mode: bool,
@@ -111,6 +111,8 @@ pub struct SpawnDclSceneData {
     pub ephemeral_wallet: Option<EphemeralAuthChain>,
     // Realm Data
     pub realm_info: DclSceneRealmData,
+    // Inspect
+    pub inspect: bool,
 }
 
 impl DclScene {

@@ -359,7 +359,7 @@ func _on_try_spawn_scene(
 		return false
 
 	var scene_number_id: int = Global.scene_runner.start_scene(
-		local_main_js_path, local_main_crdt_path, scene_item.scene_entity_definition
+		local_main_js_path, local_main_crdt_path, scene_item.scene_entity_definition, false
 	)
 	scene_item.scene_number_id = scene_number_id
 

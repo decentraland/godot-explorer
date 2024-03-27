@@ -88,17 +88,10 @@ async fn comms_send(
     state: Rc<RefCell<OpState>>,
     message: Vec<Vec<u8>>,
 ) -> Result<(), anyhow::Error> {
-    let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
-
     state
         .borrow_mut()
         .borrow_mut::<Vec<RpcCall>>()
-        .push(RpcCall::SendCommsMessage {
-            body: message,
-            response: sx.into(),
-        });
+        .push(RpcCall::SendCommsMessage { body: message });
 
-    rx.await
-        .map_err(|e| anyhow::anyhow!(e))?
-        .map_err(anyhow::Error::msg)
+    Ok(())
 }

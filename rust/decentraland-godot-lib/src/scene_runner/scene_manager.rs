@@ -113,6 +113,7 @@ impl SceneManager {
         local_main_js_file_path: GString,
         local_main_crdt_file_path: GString,
         dcl_scene_entity_definition: Gd<DclSceneEntityDefinition>,
+        inspect: bool,
     ) -> i32 {
         let scene_entity_definition = dcl_scene_entity_definition.bind().get_ref();
 
@@ -165,6 +166,7 @@ impl SceneManager {
                 comms_adapter,
                 is_preview,
             },
+            inspect,
         });
 
         let new_scene = Scene::new(

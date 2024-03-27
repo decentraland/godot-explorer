@@ -3,6 +3,8 @@ mod engine;
 mod ethereum_controller;
 mod events;
 mod fetch;
+#[cfg(feature = "enable_inspector")]
+mod inspector;
 mod players;
 mod portables;
 mod restricted_actions;
@@ -11,8 +13,8 @@ mod testing;
 mod websocket;
 
 use crate::dcl::common::{
-    is_scene_log_enabled, SceneDying, SceneElapsedTime, SceneJsFileContent, SceneLogLevel,
-    SceneLogMessage, SceneLogs, SceneMainCrdtFileContent, SceneStartTime,
+    is_scene_log_enabled, SceneDying, SceneElapsedTime, SceneLogLevel, SceneLogMessage, SceneLogs,
+    SceneMainCrdtFileContent, SceneStartTime,
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
@@ -36,10 +38,17 @@ use once_cell::sync::Lazy;
 use serde::Serialize;
 use v8::IsolateHandle;
 
+#[cfg(feature = "enable_inspector")]
+use inspector::InspectorServer;
+#[cfg(feature = "enable_inspector")]
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+#[cfg(not(feature = "enable_inspector"))]
+pub struct InspectorServer;
+
 pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
     Lazy::new(Default::default);
 
-pub fn create_runtime() -> deno_core::JsRuntime {
+pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorServer>) {
     let mut ext = &mut Extension::builder_with_deps("decentraland", &[]);
 
     // add core ops
@@ -86,11 +95,36 @@ pub fn create_runtime() -> deno_core::JsRuntime {
         .build();
 
     // create runtime
-    deno_core::JsRuntime::new(RuntimeOptions {
+    #[allow(unused_mut)]
+    let mut runtime = deno_core::JsRuntime::new(RuntimeOptions {
         v8_platform: v8::Platform::new(1, false).make_shared().into(),
         extensions: vec![ext],
+        inspector: inspect,
         ..Default::default()
-    })
+    });
+
+    #[cfg(feature = "enable_inspector")]
+    if inspect {
+        tracing::info!(
+            "[{}] inspector attached",
+            std::thread::current().name().unwrap()
+        );
+        let server = InspectorServer::new(
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 9222),
+            "bevy-explorer",
+        );
+        server.register_inspector("decentraland".to_owned(), &mut runtime, true);
+        (runtime, Some(server))
+    } else {
+        (runtime, None)
+    }
+
+    #[cfg(not(feature = "enable_inspector"))]
+    if inspect {
+        panic!("can't inspect without `enable_inspector` feature")
+    } else {
+        (runtime, None)
+    }
 }
 
 // main scene processing thread - constructs an isolate and runs the scene
@@ -157,9 +191,13 @@ pub(crate) fn scene_thread(
         }
         return;
     }
-    let scene_code = SceneJsFileContent(file.unwrap().get_as_text().to_string());
 
-    let mut runtime = create_runtime();
+    let scene_code = format!(
+        "var module = {{ exports: {{}} }};{};module.exports",
+        file.unwrap().get_as_text()
+    );
+
+    let (mut runtime, inspector) = create_runtime(spawn_dcl_scene_data.inspect);
 
     // store handle
     let vm_handle = runtime.v8_isolate().thread_safe_handle();
@@ -168,8 +206,6 @@ pub(crate) fn scene_thread(
     drop(guard);
 
     let state = runtime.op_state();
-
-    state.borrow_mut().put(scene_code);
 
     state.borrow_mut().put(thread_sender_to_main);
     state.borrow_mut().put(thread_receive_from_main);
@@ -206,18 +242,22 @@ pub(crate) fn scene_thread(
         .borrow_mut()
         .put(SceneStartTime(std::time::SystemTime::now()));
 
+    if inspector.is_some() {
+        // TODO: maybe send a message to announce the inspector is being waited
+
+        runtime
+            .inspector()
+            .borrow_mut()
+            .wait_for_session_and_break_on_next_statement();
+    }
+
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_time()
         .enable_io()
         .build()
         .unwrap();
 
-    let script = rt.block_on(async {
-        runtime.execute_script(
-            "<loader>",
-            ascii_str!("const env = require('env');globalThis.DEBUG=true;require (\"~scene.js\")"),
-        )
-    });
+    let script = rt.block_on(async { runtime.execute_script("<loader>", scene_code.into()) });
 
     let script = match script {
         Err(e) => {
@@ -370,7 +410,6 @@ fn op_require(
 ) -> Result<String, deno_core::error::AnyError> {
     match module_spec.as_str() {
         // user module load
-        "~scene.js" => Ok(state.take::<SceneJsFileContent>().0),
         "~utils.js" => Ok(include_str!("js_modules/utils.js").to_owned()),
         // core module load
         "~system/CommunicationsController" => {

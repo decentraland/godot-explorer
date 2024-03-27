@@ -93,14 +93,13 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                     .bind()
                     .send_async(body, response);
             }
-            RpcCall::SendCommsMessage { body, response } => {
+            RpcCall::SendCommsMessage { body } => {
                 let scene_id = scene.scene_entity_definition.id.clone();
                 let mut comms = DclGlobal::singleton().bind().get_comms();
                 let mut communication_manager = comms.bind_mut();
                 for data in body {
                     communication_manager.send_scene_message(scene_id.clone(), data);
                 }
-                response.send(Ok(()));
             }
         }
     }
