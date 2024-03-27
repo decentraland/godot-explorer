@@ -30,7 +30,6 @@ pub fn ops() -> Vec<OpDecl> {
     vec![
         op_crdt_send_to_renderer::DECL,
         op_crdt_recv_from_renderer::DECL,
-        op_run_async::DECL,
     ]
 }
 
@@ -78,11 +77,6 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
             rpc_calls,
         })
         .expect("error sending scene response!!")
-}
-
-#[op(v8)]
-async fn op_run_async(op_state: Rc<RefCell<OpState>>) {
-    let _ = op_state.borrow_mut();
 }
 
 #[op(v8)]

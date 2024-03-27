@@ -77,7 +77,9 @@ impl<T: 'static> RpcResultSender<T> {
     pub fn send(&self, result: T) {
         if let Ok(mut guard) = self.0.write() {
             if let Some(response) = guard.take() {
-                let _ = response.send(result);
+                if response.send(result).is_err() {
+                    tracing::error!("Failed to send rpc response");
+                }
             }
         }
     }
