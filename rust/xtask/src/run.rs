@@ -1,5 +1,6 @@
 use std::{
-    collections::HashMap, io::{BufRead, BufReader}
+    collections::HashMap,
+    io::{BufRead, BufReader},
 };
 
 use crate::{
@@ -43,6 +44,7 @@ pub fn run(
         args.push("-e");
     }
 
+    #[allow(unused_mut)]
     let mut build_args = if release_mode {
         vec!["build", "--release"]
     } else {

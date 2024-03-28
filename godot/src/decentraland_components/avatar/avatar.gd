@@ -6,6 +6,9 @@ signal avatar_loaded
 # Debug to store each avatar loaded in user://avatars
 const DEBUG_SAVE_AVATAR_DATA = false
 
+# Useful to filter wearable categories (and distinguish between top_head and head)
+const WEARABLE_NAME_PREFIX = "__"
+
 @export var skip_process: bool = false
 @export var hide_name: bool = false
 @export var non_3d_audio: bool = false
@@ -58,6 +61,9 @@ func _ready():
 		audio_player_emote = AudioStreamPlayer.new()
 		add_child(audio_player_emote)
 		audio_player_emote.name = audio_player_name
+
+	# Hide mic when the avatar is spawned
+	sprite_3d_mic_enabled.hide()
 
 
 func try_show():
@@ -268,11 +274,13 @@ func async_load_wearables():
 
 		var file_hash = Wearables.get_item_main_file_hash(wearable, avatar_data.get_body_shape())
 		var obj = Global.content_provider.get_gltf_from_hash(file_hash)
-		var wearable_skeleton: Skeleton3D = obj.find_child("Skeleton3D")
-		for child in wearable_skeleton.get_children():
-			var new_wearable = child.duplicate()
-			new_wearable.name = new_wearable.name.to_lower() + "_" + category
-			body_shape_skeleton_3d.add_child(new_wearable)
+		# Some wearables have many Skeleton3d
+		var wearable_skeletons = obj.find_children("Skeleton3D")
+		for skeleton_3d in wearable_skeletons:
+			for child in skeleton_3d.get_children():
+				var new_wearable = child.duplicate()
+				new_wearable.name = new_wearable.name.to_lower() + WEARABLE_NAME_PREFIX + category
+				body_shape_skeleton_3d.add_child(new_wearable)
 
 		match category:
 			Wearables.Categories.UPPER_BODY:
@@ -291,7 +299,7 @@ func async_load_wearables():
 	var hidings: Dictionary = {}
 
 	for category in curated_wearables.hidden_categories:
-		hidings[category] = true
+		hidings[WEARABLE_NAME_PREFIX + category] = true
 
 	(
 		hidings

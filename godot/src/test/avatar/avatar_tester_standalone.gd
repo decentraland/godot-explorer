@@ -15,7 +15,8 @@ var avatar_list: Array = []
 func _ready():
 	load_avatar_list()
 	avatar.avatar_loaded.connect(self._on_avatar_loaded)
-	_on_option_button_avatar_list_item_selected(0)
+	option_button_avatar_list.selected = -1
+	option_button_avatar_list.text = "Select an avatar"
 
 
 func load_avatar_list():
@@ -46,6 +47,20 @@ func download_wearable(id: String):
 		var file_path = dir_name + "/" + file_name.validate_filename()
 		if FileAccess.file_exists("user://content/" + file_hash):
 			DirAccess.copy_absolute("user://content/" + file_hash, file_path)
+
+
+func download_wearable_json(id: String):
+	var wearable = Global.content_provider.get_wearable(id)
+	return JSON.parse_string(wearable.to_json_string())
+
+
+func download_wearables_avatar_json():
+	var items = []
+	items.push_back(download_wearable_json(avatar.avatar_data.get_body_shape()))
+	for wearable_id in avatar.avatar_data.get_wearables():
+		items.push_back(download_wearable_json(wearable_id))
+
+	DisplayServer.clipboard_set(JSON.stringify({"wearables": items}, "\t"))
 
 
 func download_avatar():
@@ -102,3 +117,11 @@ func _on_option_button_avatar_list_item_selected(index):
 
 func _on_button_download_wearables_pressed():
 	download_avatar()
+
+
+func _on_button_copy_wearable_data_pressed():
+	download_wearables_avatar_json()
+
+
+func _on_button_refresh_pressed():
+	_on_option_button_avatar_list_item_selected(option_button_avatar_list.selected)
