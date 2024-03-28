@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://4227l72a8kdu"]
+[gd_scene load_steps=7 format=3 uid="uid://4227l72a8kdu"]
 
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="1_1eenv"]
 [ext_resource type="Script" path="res://src/test/avatar/avatar_tester_standalone.gd" id="1_l1th6"]
 [ext_resource type="Environment" uid="uid://c6yftsnvufsg8" path="res://assets/sky/cli_environment.tres" id="3_2n2br"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="3_ubmva"]
+[ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/debug_panel/icons/Clear.svg" id="4_wetld"]
 
 [sub_resource type="CodeHighlighter" id="CodeHighlighter_684t6"]
 number_color = Color(0, 0.670588, 0, 1)
@@ -41,7 +42,7 @@ layout_mode = 2
 layout_mode = 0
 offset_left = 14.0
 offset_top = 10.0
-offset_right = 583.0
+offset_right = 526.0
 offset_bottom = 47.0
 
 [node name="Button_DownloadWearables" type="Button" parent="TabContainer/Avatars"]
@@ -51,6 +52,22 @@ offset_top = 64.0
 offset_right = 581.0
 offset_bottom = 111.0
 text = "Download wearables"
+
+[node name="Button_CopyWearableData" type="Button" parent="TabContainer/Avatars"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 120.0
+offset_right = 581.0
+offset_bottom = 167.0
+text = "Copy wearables data"
+
+[node name="Button_Refresh" type="Button" parent="TabContainer/Avatars"]
+layout_mode = 0
+offset_left = 535.0
+offset_top = 9.0
+offset_right = 575.0
+offset_bottom = 48.0
+icon = ExtResource("4_wetld")
 
 [node name="Emotes" type="Panel" parent="TabContainer"]
 visible = false
@@ -174,6 +191,8 @@ wrap_mode = 1
 
 [connection signal="item_selected" from="TabContainer/Avatars/OptionButton_AvatarList" to="." method="_on_option_button_avatar_list_item_selected"]
 [connection signal="pressed" from="TabContainer/Avatars/Button_DownloadWearables" to="." method="_on_button_download_wearables_pressed"]
+[connection signal="pressed" from="TabContainer/Avatars/Button_CopyWearableData" to="." method="_on_button_copy_wearable_data_pressed"]
+[connection signal="pressed" from="TabContainer/Avatars/Button_Refresh" to="." method="_on_button_refresh_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_OpenWheel" to="." method="_on_button_open_wheel_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_PlayCustom" to="." method="_on_button_play_custom_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_Clear" to="." method="_on_button_clear_pressed"]

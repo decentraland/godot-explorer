@@ -1,14 +1,14 @@
 use std::str::FromStr;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct I18N {
     pub code: String,
     pub text: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BaseItemEntityMetadata {
     pub id: String,
     pub description: String,
@@ -24,7 +24,7 @@ pub struct BaseItemEntityMetadata {
     pub emote_data: Option<EmoteDataADR74>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WearableData {
     pub tags: Vec<String>,
@@ -35,7 +35,7 @@ pub struct WearableData {
     pub removes_default_hiding: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EmoteDataADR74 {
     pub tags: Vec<String>,
@@ -53,7 +53,7 @@ pub struct EmoteDataADR74 {
                           // MISCELLANEOUS = 'miscellaneous'
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WearableRepresentation {
     pub body_shapes: Vec<String>,
@@ -63,7 +63,7 @@ pub struct WearableRepresentation {
     pub contents: Vec<String>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EmoteADR74Representation {
     pub body_shapes: Vec<String>,
@@ -71,7 +71,7 @@ pub struct EmoteADR74Representation {
     pub contents: Vec<String>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
+#[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub struct WearableCategory {
     pub slot: &'static str,
     pub is_texture: bool,
