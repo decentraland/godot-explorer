@@ -333,4 +333,11 @@ impl DclItemEntityDefinition {
             true
         }
     }
+
+    #[func]
+    fn to_json_string(&self) -> GString {
+        serde_json::to_string(&self.inner.item)
+            .unwrap_or_default()
+            .into()
+    }
 }
