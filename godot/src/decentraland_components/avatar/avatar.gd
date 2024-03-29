@@ -281,7 +281,11 @@ func async_load_wearables():
 				var new_wearable = child.duplicate()
 				new_wearable.name = new_wearable.name.to_lower() + WEARABLE_NAME_PREFIX + category
 				body_shape_skeleton_3d.add_child(new_wearable)
-
+				if new_wearable is MeshInstance3D:
+					var mat = new_wearable.mesh.surface_get_material(0)
+					if mat != null and mat is BaseMaterial3D:
+						mat.specular_mode = BaseMaterial3D.SPECULAR_TOON
+						mat.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
 		match category:
 			Wearables.Categories.UPPER_BODY:
 				has_own_upper_body = true
