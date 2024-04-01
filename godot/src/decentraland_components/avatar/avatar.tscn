@@ -793,7 +793,7 @@ bone_idx = 61
 [node name="Label3D_Name" type="Label3D" parent="Armature/Skeleton3D/BoneAttachment3D_Name"]
 transform = Transform3D(-100, -1.2776e-06, 1.0215e-05, -1.14584e-06, 99.9906, 1.37115, -1.32296e-05, 1.37115, -99.9906, 0, 38.112, 0)
 billboard = 1
-text = "Test"
+text = ""
 font_size = 20
 outline_size = 6
 

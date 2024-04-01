@@ -104,6 +104,103 @@
 				"urn:decentraland:off-chain:base-avatars:f_mouth_05"
 			],
 			"forceRender": []
+		},
+		{
+			"ref": "MarianoPlayground - pants not present",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+			"wearables": [
+				"urn:decentraland:matic:collections-v2:0x6e78e8aacddbf96296dbcc9a1cb682a4b16b60de:1:105312291668557186697918027683670432318895095400549111254310977550",
+				"urn:decentraland:matic:collections-v2:0xb055cc2916bf8857ad1ae19b0c8a4d128180c4a9:0:96",
+				"urn:decentraland:matic:collections-v2:0xf3df68b5748f1955f68b4fefda3f65b2e0250325:0:95",
+				"urn:decentraland:matic:collections-v2:0xc310120b36d9ecdca1e318497254e204cd21c70f:0:38",
+				"urn:decentraland:matic:collections-v2:0x2b5e68e51dd54fe100150a6f52547f4f0b3d32aa:0:8",
+				"urn:decentraland:off-chain:base-avatars:eyebrows_00",
+				"urn:decentraland:off-chain:base-avatars:mouth_00",
+				"urn:decentraland:matic:collections-v2:0xa83c8951dd73843bf5f7e9936e72a345a3e79874:4:421249166674228746791672110734681729275580381602196445017243910160",
+				"urn:decentraland:off-chain:base-avatars:standard_hair",
+				"urn:decentraland:off-chain:base-avatars:eyes_02",
+				"urn:decentraland:off-chain:base-avatars:horseshoe_beard",
+				"urn:decentraland:matic:collections-v2:0xd48a73c9bb4ccd57b7e31f9695c4237df6e246d5:1:105312291668557186697918027683670432318895095400549111254310977539",
+				"urn:decentraland:matic:collections-v2:0x2b5e68e51dd54fe100150a6f52547f4f0b3d32aa:2:210624583337114373395836055367340864637790190801098222508621955081",
+				"urn:decentraland:matic:collections-v2:0x2929bbb4f18b40ac52a7f0b91629c695e3f96504:0:98",
+				"urn:decentraland:matic:collections-v2:0x34f266ed68b877dd98ee2697f09bc0481be828bd:0:55",
+				"urn:decentraland:matic:collections-v2:0x2929bbb4f18b40ac52a7f0b91629c695e3f96504:1:105312291668557186697918027683670432318895095400549111254310977602"
+			],
+			"forceRender": [
+				"feet",
+				"earring",
+				"mask",
+				"tiara"
+			]
+		},
+		{
+			"ref": "MarianoPlayground - pants not present v2",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+			"wearables": [
+				"urn:decentraland:off-chain:base-avatars:eyes_21",
+				"urn:decentraland:off-chain:base-avatars:mouth_07",
+				"urn:decentraland:matic:collections-v2:0xa363ab292b42bb31ac14e4959865f38e8b8deeae:3:315936875005671560093754083051011296956685286201647333762932932613",
+				"urn:decentraland:matic:collections-v2:0xfb8f85195aa9412918366a2d8a6e6ad02f22b9e3:1:105312291668557186697918027683670432318895095400549111254310977547",
+				"urn:decentraland:matic:collections-v2:0x844a933934fba88434dfade0b04b1d211e92d7c4:0:273",
+				"urn:decentraland:matic:collections-v2:0x8ba28b533378a384ade9b497511fcecfcfa1449e:1:105312291668557186697918027683670432318895095400549111254310977785",
+				"urn:decentraland:matic:collections-v2:0x74a5c53d1c9a7daf38b789a3b37cc9c1e8f95363:0:397",
+				"urn:decentraland:matic:collections-v2:0x8ba28b533378a384ade9b497511fcecfcfa1449e:0:109",
+				"urn:decentraland:matic:collections-v2:0xe608235fe5d05a7a4b3532d90718481c2156e396:3:315936875005671560093754083051011296956685286201647333762932932699",
+				"urn:decentraland:matic:collections-v2:0x2113853d20f7b6d08fa756c294fb6f36e9108b22:0:26",
+				"urn:decentraland:matic:collections-v2:0x2929bbb4f18b40ac52a7f0b91629c695e3f96504:2:210624583337114373395836055367340864637790190801098222508621955096"
+			],
+			"forceRender": []
+		},
+		{
+			"ref": "MarianoPlayground - pants not present v3",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+			"wearables": [
+				"urn:decentraland:off-chain:base-avatars:sport_colored_shoes",
+				"urn:decentraland:off-chain:base-avatars:pony_tail",
+				"urn:decentraland:off-chain:base-avatars:f_mouth_05",
+				"urn:decentraland:off-chain:base-avatars:f_eyebrows_02",
+				"urn:decentraland:off-chain:base-avatars:f_eyes_06",
+				"urn:decentraland:matic:collections-v2:0xd8f18e6791dbb3468a793791e6ad9ca782643c69:4:421249166674228746791672110734681729275580381602196445017243910483",
+				"urn:decentraland:matic:collections-v2:0xbf83965191065487db0644812649d5238435c723:4:421249166674228746791672110734681729275580381602196445017243911444",
+				"urn:decentraland:matic:collections-v2:0xbf83965191065487db0644812649d5238435c723:7:737186041679900306885426193785693026232265667803843778780176844143"
+			],
+			"forceRender": []
+		},
+		{
+			"ref": "MarianoPlayground - feet not present",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
+			"wearables": [
+				"urn:decentraland:off-chain:base-avatars:school_shirt",
+				"urn:decentraland:off-chain:base-avatars:f_school_skirt",
+				"urn:decentraland:off-chain:base-avatars:Moccasin",
+				"urn:decentraland:off-chain:base-avatars:hair_anime_01",
+				"urn:decentraland:off-chain:base-avatars:f_eyes_08",
+				"urn:decentraland:off-chain:base-avatars:blue_star_earring"
+			],
+			"forceRender": []
+		},
+		{
+			"ref": "MarianoPlayground - green shadow not present",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
+			"wearables": [
+				"urn:decentraland:off-chain:base-avatars:eyebrows_00",
+				"urn:decentraland:off-chain:base-avatars:eyes_04",
+				"urn:decentraland:off-chain:base-avatars:mouth_03",
+				"urn:decentraland:off-chain:base-avatars:standard_hair",
+				"urn:decentraland:off-chain:base-avatars:emerald_ring",
+				"urn:decentraland:matic:collections-v2:0x413b986f219e31286e355fd81bb23357f9834222:0:31",
+				"urn:decentraland:matic:collections-v2:0xf6d8e606c862143556b342149a7fe0558c220375:3:315936875005671560093754083051011296956685286201647333762932938521",
+				"urn:decentraland:matic:collections-v2:0x6864caa38390340ae83ec0e4c67308733393ad90:0:489",
+				"urn:decentraland:matic:collections-v2:0xc65c3e0dd85d993678e02a1407be7d804fae4667:1:105312291668557186697918027683670432318895095400549111254310977563",
+				"urn:decentraland:matic:collections-v2:0xc65c3e0dd85d993678e02a1407be7d804fae4667:0:14",
+				"urn:decentraland:matic:collections-v2:0xc65c3e0dd85d993678e02a1407be7d804fae4667:4:421249166674228746791672110734681729275580381602196445017243910187",
+				"urn:decentraland:matic:collections-v2:0x378cd34662fcd2311743fad74b5a196ad0cb2544:6:631873750011343120187508166102022593913370572403294667525865865361",
+				"urn:decentraland:matic:collections-v2:0xcbd17d94f5be12fff27566c23888d6936b8e70b8:3:315936875005671560093754083051011296956685286201647333762932932715",
+				"urn:decentraland:matic:collections-v2:0xfb8f85195aa9412918366a2d8a6e6ad02f22b9e3:1:105312291668557186697918027683670432318895095400549111254310977589",
+				"urn:decentraland:matic:collections-v2:0x07d03ca2c27f29ec3c4cf3afad857c5af13f61cd:7:737186041679900306885426193785693026232265667803843778780176842874",
+				"urn:decentraland:matic:collections-v2:0xc65c3e0dd85d993678e02a1407be7d804fae4667:2:210624583337114373395836055367340864637790190801098222508621955084"
+			],
+			"forceRender": []
 		}
 	],
 	"emotes": [
