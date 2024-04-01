@@ -1,0 +1,39 @@
+[gd_scene load_steps=10 format=3 uid="uid://j86kd5vcss3h"]
+
+[ext_resource type="Script" path="res://src/logic/player/xr_player.gd" id="1_ukhx2"]
+[ext_resource type="PackedScene" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="1_wg7s4"]
+[ext_resource type="PackedScene" uid="uid://bx1xdisoqo1f6" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/left_tac_glove_low.tscn" id="2_larcu"]
+[ext_resource type="PackedScene" uid="uid://fiul51tsyoop" path="res://addons/godot-xr-tools/functions/function_teleport.tscn" id="4_wrsbf"]
+[ext_resource type="PackedScene" uid="uid://chumpejwiub7f" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/right_tac_glove_low.tscn" id="4_y0cfq"]
+[ext_resource type="PackedScene" uid="uid://b6bk2pj8vbj28" path="res://addons/godot-xr-tools/functions/movement_turn.tscn" id="6_1eggb"]
+[ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="6_24dki"]
+[ext_resource type="PackedScene" uid="uid://bl2nuu3qhlb5k" path="res://addons/godot-xr-tools/functions/movement_direct.tscn" id="7_ergla"]
+[ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="8_4m0vb"]
+
+[node name="XRPlayer" type="XROrigin3D"]
+script = ExtResource("1_ukhx2")
+
+[node name="XRCamera3D" type="XRCamera3D" parent="."]
+
+[node name="VRCommonShaderCache" parent="XRCamera3D" instance=ExtResource("1_wg7s4")]
+
+[node name="LeftHand" type="XRController3D" parent="."]
+tracker = &"left_hand"
+
+[node name="LeftHand" parent="LeftHand" instance=ExtResource("2_larcu")]
+
+[node name="FunctionTeleport" parent="LeftHand" instance=ExtResource("4_wrsbf")]
+
+[node name="RightHand" type="XRController3D" parent="."]
+tracker = &"right_hand"
+
+[node name="RightHand" parent="RightHand" instance=ExtResource("4_y0cfq")]
+
+[node name="MovementTurn" parent="RightHand" instance=ExtResource("6_1eggb")]
+
+[node name="MovementDirect" parent="RightHand" instance=ExtResource("7_ergla")]
+
+[node name="PlayerBody" parent="." instance=ExtResource("8_4m0vb")]
+
+[node name="Avatar" parent="." instance=ExtResource("6_24dki")]
+visible = false

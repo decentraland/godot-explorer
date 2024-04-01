@@ -1,5 +1,5 @@
 extends Node
-
+var xr_interface: XRInterface
 
 func _ready():
 	start.call_deferred()
@@ -34,7 +34,9 @@ func start():
 func _start():
 	var args = OS.get_cmdline_args()
 
-	if args.has("--avatar-renderer"):
+	if Global.is_xr():
+		get_tree().change_scene_to_file("res://src/vr/vr_lobby.tscn")
+	elif args.has("--avatar-renderer"):
 		get_tree().change_scene_to_file(
 			"res://src/tool/avatar_renderer/avatar_renderer_standalone.tscn"
 		)

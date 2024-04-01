@@ -15,24 +15,25 @@ var virtual_joystick_orig_position: Vector2i
 var last_index_scene_ui_root: int = -1
 var _last_parcel_position: Vector2i = Vector2i.MAX
 
-@onready var ui_root: Control = $UI
+var player: Node3D = null
+
+@onready var ui_root: Control = $ui
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
 @onready var control_pointer_tooltip = %Control_PointerTooltip
 
-@onready var panel_chat = $UI/SafeMarginContainer/InteractableHUD/Panel_Chat
+@onready var panel_chat = $ui/SafeMarginContainer/InteractableHUD/Panel_Chat
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
-@onready var control_menu = $UI/Control_Menu
-@onready var control_minimap = $UI/Control_Minimap
-@onready var player := $world/Player
-@onready var mobile_ui = $UI/SafeMarginContainer/InteractableHUD/MobileUI
+@onready var control_menu = $ui/Control_Menu
+@onready var control_minimap = $ui/Control_Minimap
+@onready var mobile_ui = $ui/SafeMarginContainer/InteractableHUD/MobileUI
 @onready
-var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left
+var virtual_joystick: Control = $ui/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left
 
-@onready var loading_ui = $UI/Loading
+@onready var loading_ui = $ui/Loading
 
 @onready var button_mic = %Button_Mic
 
@@ -79,6 +80,13 @@ func get_params_from_cmd():
 
 
 func _ready():
+	if Global.is_xr():
+		player = preload("res://src/logic/player/xr_player.tscn").instantiate()
+	else:
+		player = preload("res://src/logic/player/player.tscn").instantiate()
+	player.set_name("Player")
+	$world.add_child(player)
+
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
@@ -291,7 +299,9 @@ func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 
 
 func _on_timer_broadcast_position_timeout():
-	var transform: Transform3D = player.avatar.global_transform
+	var transform: Transform3D = (
+		player.avatar.global_transform if !Global.is_xr() else player.global_transform
+	)
 	var position = transform.origin
 	var rotation = transform.basis.get_rotation_quaternion()
 

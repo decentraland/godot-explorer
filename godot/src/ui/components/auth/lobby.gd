@@ -57,7 +57,10 @@ func show_panel(child_node: Control):
 
 
 func close_sign_in():
-	get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
+	if Global.is_xr():
+		go_to_explorer()
+	else:
+		get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
 
 
 func _ready():

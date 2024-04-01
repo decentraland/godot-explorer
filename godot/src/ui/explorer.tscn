@@ -1,35 +1,39 @@
-[gd_scene load_steps=28 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=29 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
-[ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://src/logic/player/player.tscn" id="3_fr1df"]
-[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
-[ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
-[ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="5_c8ksg"]
-[ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
-[ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="7_1fkrq"]
-[ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/button_touch_action/button_touch_action.tscn" id="7_oofwd"]
-[ext_resource type="Texture2D" uid="uid://v1avum5r3l4s" path="res://assets/themes/dark_dcl_theme/icons/JumpButton.svg" id="8_ttlm2"]
-[ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="9_4ktln"]
-[ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="9_hj43f"]
-[ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
-[ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="10_y1lkn"]
-[ext_resource type="PackedScene" uid="uid://55g2dvfiog7r" path="res://src/ui/components/mini_map_button/mini_map_button.tscn" id="11_gwcjv"]
-[ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
-[ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="13_tdhdx"]
-[ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="14_jag8f"]
-[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="16_karsc"]
-[ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="17_0blod"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="3_y21kc"]
+[ext_resource type="Script" path="res://src/ui/ui.gd" id="4_27w5f"]
+[ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="5_dpatn"]
+[ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/button_touch_action/button_touch_action.tscn" id="6_hvdcn"]
+[ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="7_knp0o"]
+[ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="8_4jvx4"]
+[ext_resource type="Texture2D" uid="uid://v1avum5r3l4s" path="res://assets/themes/dark_dcl_theme/icons/JumpButton.svg" id="9_v5646"]
+[ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="10_v8dws"]
+[ext_resource type="PackedScene" uid="uid://55g2dvfiog7r" path="res://src/ui/components/mini_map_button/mini_map_button.tscn" id="11_2iykp"]
+[ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="12_4qxys"]
+[ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="13_imhra"]
+[ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="14_c8bxh"]
+[ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="15_cp715"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="16_conk8"]
+[ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="17_owpie"]
+[ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="18_axrn4"]
+[ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="19_h7fir"]
+[ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="20_3c31s"]
 [ext_resource type="Script" path="res://src/ui/components/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
-[ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="20_uf6rv"]
-[ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="21_pows0"]
-[ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_bi432"]
+[ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="21_1jhrs"]
+[ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="22_xmvwl"]
+[ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_4wpis"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_4sur7"]
+size = Vector3(4800, 0.1, 4800)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_x854j"]
 material = SubResource("ShaderMaterial_lovo8")
 size = Vector2(4800, 4800)
+center_offset = Vector3(0, -0.01, 0)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fstik"]
 albedo_texture = ExtResource("2_7jksa")
@@ -41,18 +45,22 @@ script = ExtResource("1_5n8xk")
 
 [node name="world" type="Node3D" parent="."]
 
-[node name="Floor" type="MeshInstance3D" parent="world"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
-mesh = SubResource("PlaneMesh_x854j")
-surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
+[node name="StaticBody3D" type="StaticBody3D" parent="world"]
 
-[node name="Player" parent="world" instance=ExtResource("3_fr1df")]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="world/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+shape = SubResource("BoxShape3D_4sur7")
+
+[node name="Floor" type="MeshInstance3D" parent="world/StaticBody3D/CollisionShape3D"]
+mesh = SubResource("PlaneMesh_x854j")
+skeleton = NodePath("../../..")
+surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
 
 [node name="Timer_BroadcastPosition" type="Timer" parent="world"]
 wait_time = 0.1
 autostart = true
 
-[node name="UI" type="Control" parent="."]
+[node name="ui" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -61,9 +69,10 @@ grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 1
 mouse_filter = 1
-theme = ExtResource("4_2vs87")
+theme = ExtResource("3_y21kc")
+script = ExtResource("4_27w5f")
 
-[node name="SafeMarginContainer" type="MarginContainer" parent="UI"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="ui"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -71,13 +80,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("5_c8ksg")
+script = ExtResource("5_dpatn")
 
-[node name="InteractableHUD" type="Control" parent="UI/SafeMarginContainer"]
+[node name="InteractableHUD" type="Control" parent="ui/SafeMarginContainer"]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="MobileUI" type="Control" parent="UI/SafeMarginContainer/InteractableHUD"]
+[node name="MobileUI" type="Control" parent="ui/SafeMarginContainer/InteractableHUD"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -86,7 +95,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Button_PrimaryAction" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
+[node name="Button_PrimaryAction" parent="ui/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("6_hvdcn")]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -100,7 +109,7 @@ offset_bottom = -197.0
 grow_horizontal = 0
 grow_vertical = 0
 
-[node name="Button_Mic" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
+[node name="Button_Mic" parent="ui/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("6_hvdcn")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 3
@@ -115,10 +124,10 @@ offset_bottom = -245.0
 grow_horizontal = 0
 grow_vertical = 0
 text_letter = "T"
-icon = ExtResource("7_1fkrq")
+icon = ExtResource("7_knp0o")
 trigger_action = "ia_record_mic"
 
-[node name="Button_SecondaryAction" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
+[node name="Button_SecondaryAction" parent="ui/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("6_hvdcn")]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -134,7 +143,7 @@ grow_vertical = 0
 text_letter = "F"
 trigger_action = "ia_secondary"
 
-[node name="Button_EmoteAction" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_oofwd")]
+[node name="Button_EmoteAction" parent="ui/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("6_hvdcn")]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -148,10 +157,10 @@ offset_bottom = -31.0
 grow_horizontal = 0
 grow_vertical = 0
 text_letter = "F"
-icon = ExtResource("14_jag8f")
+icon = ExtResource("8_4jvx4")
 trigger_action = "ia_open_emote_wheel"
 
-[node name="Button_Jump" type="TextureButton" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI"]
+[node name="Button_Jump" type="TextureButton" parent="ui/SafeMarginContainer/InteractableHUD/MobileUI"]
 modulate = Color(1, 1, 1, 0.501961)
 layout_mode = 1
 anchors_preset = 3
@@ -166,12 +175,12 @@ offset_bottom = -54.0
 grow_horizontal = 0
 grow_vertical = 0
 focus_mode = 0
-theme = ExtResource("4_2vs87")
-texture_normal = ExtResource("8_ttlm2")
+theme = ExtResource("3_y21kc")
+texture_normal = ExtResource("9_v5646")
 ignore_texture_size = true
 stretch_mode = 4
 
-[node name="ShadowOutter" type="TextureRect" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
+[node name="ShadowOutter" type="TextureRect" parent="ui/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
 modulate = Color(0, 0, 0, 1)
 show_behind_parent = true
 layout_mode = 1
@@ -184,10 +193,10 @@ offset_right = 2.0
 offset_bottom = 2.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("8_ttlm2")
+texture = ExtResource("9_v5646")
 expand_mode = 2
 
-[node name="ShadowInner" type="TextureRect" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
+[node name="ShadowInner" type="TextureRect" parent="ui/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
 modulate = Color(0, 0, 0, 1)
 show_behind_parent = true
 layout_mode = 1
@@ -200,10 +209,10 @@ offset_right = -2.0
 offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("8_ttlm2")
+texture = ExtResource("9_v5646")
 expand_mode = 2
 
-[node name="VirtualJoystick_Left" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("9_lxw33")]
+[node name="VirtualJoystick_Left" parent="ui/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("10_v8dws")]
 layout_mode = 1
 anchors_preset = -1
 anchor_right = 0.352
@@ -211,38 +220,38 @@ offset_top = -327.0
 offset_right = -0.560028
 deadzone_size = 0.0
 
-[node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="UI/SafeMarginContainer/InteractableHUD"]
+[node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="ui/SafeMarginContainer/InteractableHUD"]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 327.0
 offset_bottom = 80.0
-theme = ExtResource("4_2vs87")
+theme = ExtResource("3_y21kc")
 theme_override_constants/separation = 10
 
-[node name="MiniMap" parent="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu" instance=ExtResource("11_gwcjv")]
+[node name="MiniMap" parent="ui/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu" instance=ExtResource("11_2iykp")]
 layout_mode = 2
 
-[node name="Button_OpenChat" type="Button" parent="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
+[node name="Button_OpenChat" type="Button" parent="ui/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 focus_mode = 0
 theme_override_constants/icon_max_width = 48
-icon = ExtResource("9_hj43f")
+icon = ExtResource("12_4qxys")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Panel_Profile" parent="UI/SafeMarginContainer/InteractableHUD" instance=ExtResource("13_tdhdx")]
+[node name="Panel_Profile" parent="ui/SafeMarginContainer/InteractableHUD" instance=ExtResource("13_imhra")]
 layout_mode = 1
 
-[node name="Panel_Chat" parent="UI/SafeMarginContainer/InteractableHUD" instance=ExtResource("9_4ktln")]
+[node name="Panel_Chat" parent="ui/SafeMarginContainer/InteractableHUD" instance=ExtResource("14_c8bxh")]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 90.0
 offset_right = 320.0
 offset_bottom = 390.0
 
-[node name="Label_FPS" type="Label" parent="UI/SafeMarginContainer/InteractableHUD"]
+[node name="Label_FPS" type="Label" parent="ui/SafeMarginContainer/InteractableHUD"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 2
@@ -257,7 +266,7 @@ theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 text = "ALPHA - FPS"
 
-[node name="Label_RAM" type="Label" parent="UI/SafeMarginContainer/InteractableHUD"]
+[node name="Label_RAM" type="Label" parent="ui/SafeMarginContainer/InteractableHUD"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -271,14 +280,14 @@ grow_horizontal = 0
 text = "RAM"
 horizontal_alignment = 2
 
-[node name="Timer_FPSLabel" type="Timer" parent="UI"]
+[node name="Timer_FPSLabel" type="Timer" parent="ui"]
 autostart = true
 
-[node name="Control_PointerTooltip" parent="UI" instance=ExtResource("11_qjs00")]
+[node name="Control_PointerTooltip" parent="ui" instance=ExtResource("15_cp715")]
 unique_name_in_owner = true
 layout_mode = 1
 
-[node name="Label_Crosshair" type="Label" parent="UI"]
+[node name="Label_Crosshair" type="Label" parent="ui"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -295,13 +304,13 @@ grow_vertical = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
-theme_override_fonts/font = ExtResource("16_karsc")
+theme_override_fonts/font = ExtResource("16_conk8")
 theme_override_font_sizes/font_size = 20
 text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Control_Minimap" parent="UI" instance=ExtResource("4_6aqla")]
+[node name="Control_Minimap" parent="ui" instance=ExtResource("17_owpie")]
 visible = false
 anchors_preset = 0
 anchor_right = 0.0
@@ -311,11 +320,11 @@ offset_top = 0.0
 offset_right = 15.0
 offset_bottom = 15.0
 
-[node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
+[node name="Control_Menu" parent="ui" instance=ExtResource("18_axrn4")]
 visible = false
 layout_mode = 1
 
-[node name="DialogStack" parent="UI" instance=ExtResource("10_y1lkn")]
+[node name="DialogStack" parent="ui" instance=ExtResource("19_h7fir")]
 visible = false
 layout_mode = 1
 offset_left = -180.0
@@ -323,11 +332,11 @@ offset_top = -140.0
 offset_right = 180.0
 offset_bottom = 140.0
 
-[node name="Loading" parent="UI" instance=ExtResource("17_0blod")]
+[node name="Loading" parent="ui" instance=ExtResource("20_3c31s")]
 visible = false
 layout_mode = 1
 
-[node name="RecordingNotification" parent="UI" instance=ExtResource("20_uf6rv")]
+[node name="RecordingNotification" parent="ui" instance=ExtResource("21_1jhrs")]
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -341,12 +350,11 @@ offset_bottom = -72.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="EmoteWheel" parent="UI" node_paths=PackedStringArray("avatar_node") instance=ExtResource("21_pows0")]
+[node name="EmoteWheel" parent="ui" instance=ExtResource("22_xmvwl")]
 visible = false
 layout_mode = 1
-avatar_node = NodePath("../../world/Player/Avatar")
 
-[node name="WarningMessages" parent="UI" instance=ExtResource("23_bi432")]
+[node name="WarningMessages" parent="ui" instance=ExtResource("23_4wpis")]
 unique_name_in_owner = true
 layout_mode = 1
 mouse_filter = 2
@@ -355,20 +363,3 @@ mouse_filter = 2
 script = ExtResource("20_064cw")
 
 [connection signal="timeout" from="world/Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]
-[connection signal="gui_input" from="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]
-[connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
-[connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
-[connection signal="open_profile" from="UI/SafeMarginContainer/InteractableHUD/Panel_Profile" to="." method="_on_panel_profile_open_profile"]
-[connection signal="submit_message" from="UI/SafeMarginContainer/InteractableHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
-[connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
-[connection signal="request_open_map" from="UI/Control_Minimap" to="." method="_on_control_minimap_request_open_map"]
-[connection signal="hide_menu" from="UI/Control_Menu" to="." method="_on_control_menu_hide_menu"]
-[connection signal="jump_to" from="UI/Control_Menu" to="." method="_on_control_menu_jump_to"]
-[connection signal="preview_hot_reload" from="UI/Control_Menu" to="." method="_on_control_menu_preview_hot_reload"]
-[connection signal="request_debug_panel" from="UI/Control_Menu" to="." method="_on_control_menu_request_debug_panel"]
-[connection signal="request_pause_scenes" from="UI/Control_Menu" to="." method="_on_control_menu_request_pause_scenes"]
-[connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
-[connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
-[connection signal="toggle_ram" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_ram"]
-
-[editable path="world/Player"]

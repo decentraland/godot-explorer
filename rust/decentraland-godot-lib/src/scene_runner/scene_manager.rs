@@ -60,7 +60,7 @@ pub struct SceneManager {
     scenes: HashMap<SceneId, Scene>,
 
     #[export]
-    camera_node: Gd<DclCamera3D>,
+    camera_node: Option<Gd<Camera3D>>,
 
     #[export]
     player_node: Gd<Node3D>,
@@ -247,11 +247,11 @@ impl SceneManager {
     #[func]
     fn set_camera_and_player_node(
         &mut self,
-        camera_node: Gd<DclCamera3D>,
+        camera_node: Gd<Camera3D>,
         player_node: Gd<Node3D>,
         console: Callable,
     ) {
-        self.camera_node = camera_node.clone();
+        self.camera_node = Some(camera_node.clone());
         self.player_node = player_node.clone();
         self.console = console;
     }
@@ -337,9 +337,20 @@ impl SceneManager {
 
         self.receive_from_thread();
 
-        let camera_global_transform = self.camera_node.get_global_transform();
+        if self.camera_node.is_none() {
+            return;
+        }
+        let camera_node = self.camera_node.clone().unwrap();
+
         let player_global_transform = self.player_node.get_global_transform();
-        let camera_mode = self.camera_node.bind().get_camera_mode();
+        let camera_global_transform = camera_node.get_global_transform();
+
+        let camera_node = camera_node.try_cast::<DclCamera3D>();
+        let camera_mode = if let Ok(camera_node) = camera_node {
+            camera_node.bind().get_camera_mode()
+        } else {
+            0
+        };
 
         let frames_count = godot::engine::Engine::singleton().get_physics_frames();
 
@@ -640,10 +651,15 @@ impl SceneManager {
     fn get_current_mouse_entity(&mut self) -> Option<GodotDclRaycastResult> {
         const RAY_LENGTH: f32 = 100.0;
 
-        let raycast_from = self.camera_node.project_ray_origin(self.cursor_position);
+        if self.camera_node.is_none() {
+            return None;
+        }
+        let camera_node = self.camera_node.clone().unwrap();
+
+        let raycast_from = camera_node.project_ray_origin(self.cursor_position);
         let raycast_to =
-            raycast_from + self.camera_node.project_ray_normal(self.cursor_position) * RAY_LENGTH;
-        let mut space = self.camera_node.get_world_3d()?.get_direct_space_state()?;
+            raycast_from + camera_node.project_ray_normal(self.cursor_position) * RAY_LENGTH;
+        let mut space = camera_node.get_world_3d()?.get_direct_space_state()?;
         let mut raycast_query = PhysicsRayQueryParameters3D::new();
         raycast_query.set_from(raycast_from);
         raycast_query.set_to(raycast_to);
@@ -925,7 +941,7 @@ impl INode for SceneManager {
             main_receiver_from_thread,
             thread_sender_to_main,
 
-            camera_node: DclCamera3D::alloc_gd(),
+            camera_node: None,
             player_node: Node3D::new_alloc(),
 
             player_position: Vector2i::new(-1000, -1000),
@@ -1035,6 +1051,11 @@ impl INode for SceneManager {
         self.set_pointer_tooltips(tooltips);
         self.base.emit_signal("pointer_tooltip_changed".into(), &[]);
 
+        if self.camera_node.is_none() {
+            return;
+        }
+        let player_camera_node = self.camera_node.clone().unwrap();
+
         // This update the mirror node that copies every frame the global transform of the player/camera
         //  every entity attached to the player/camera is really attached to these mirror nodes
         // TODO: should only update the current scnes + globals?
@@ -1050,7 +1071,7 @@ impl INode for SceneManager {
                 .godot_dcl_scene
                 .get_node_3d_mut(&SceneEntityId::CAMERA)
             {
-                camera_node.set_global_transform(self.camera_node.get_global_transform());
+                camera_node.set_global_transform(player_camera_node.get_global_transform());
             }
         }
 
