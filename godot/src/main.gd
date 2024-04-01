@@ -1,5 +1,4 @@
 extends Node
-var xr_interface: XRInterface
 
 func _ready():
 	start.call_deferred()

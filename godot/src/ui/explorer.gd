@@ -1,5 +1,7 @@
 extends Node
 
+var player: Node3D = null
+
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
@@ -15,7 +17,6 @@ var virtual_joystick_orig_position: Vector2i
 var last_index_scene_ui_root: int = -1
 var _last_parcel_position: Vector2i = Vector2i.MAX
 
-var player: Node3D = null
 
 @onready var ui_root: Control = $ui
 
