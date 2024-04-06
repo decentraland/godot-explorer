@@ -9,20 +9,22 @@ var waiting_new_scene_load_report = true
 var waiting_for_scenes = false
 var wait_for: float = 0.0
 var empty_timeout: float = 0.0
+var pending_to_load: int = 0
 
 
 func _ready():
 	Global.scene_fetcher.report_scene_load.connect(_report_scene_load)
 
 
-func _report_scene_load(done: bool, is_new_loading: bool):
+func _report_scene_load(done: bool, is_new_loading: bool, pending: int):
 	scenes_metadata_loaded = done
 	waiting_for_scenes = done
 	if done == false and is_new_loading:  # start
 		enable_loading_screen()
 
 	waiting_new_scene_load_report = false
-	empty_timeout = 1.0
+	empty_timeout = 2.0
+	pending_to_load = pending
 
 
 func enable_loading_screen():
@@ -53,8 +55,8 @@ func _physics_process(delta):
 		loading_screen.set_progress(new_progress)
 	elif waiting_for_scenes:
 		var scenes_loaded_count: int = Global.scene_runner.get_child_count()
-		if scenes_loaded_count == 0:
-			empty_timeout += delta
+		if scenes_loaded_count == 0 and pending_to_load == 0:
+			empty_timeout -= delta
 			if empty_timeout < 0.0:
 				loading_screen.set_progress(100)
 				hide_loading_screen()

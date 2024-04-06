@@ -39,7 +39,7 @@ const CUSTOM_PLACES: Array[Dictionary] = [
 		"image": "https://i.imgur.com/Zsl1r2d.png",
 		"world": true,
 		"world_name":
-		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-fix-protocol-squad-1/"
+		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-test-psquad-demo-latest/"
 	},
 	{
 		"title": "In World Builder",
