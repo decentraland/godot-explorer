@@ -61,3 +61,5 @@ func look_up_player():
 		_player_avatar_node = get_node("/root/explorer/world/Player/Avatar")
 	else:
 		_player_avatar_node = Global.avatars.get_avatar_by_address(user_id)
+		if _player_avatar_node != null:
+			_player_avatar_node.activate_attach_points()
