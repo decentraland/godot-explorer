@@ -153,7 +153,7 @@ func _ready():
 	else:
 		if Global.config.last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
-				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-fix-protocol-squad-1"
+				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-test-psquad-demo-latest"
 			)
 		else:
 			Global.realm.async_set_realm(Global.config.last_realm_joined)
