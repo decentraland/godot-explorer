@@ -235,6 +235,7 @@ expand_mode = 2
 
 [node name="CarouselViewport" parent="VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content" instance=ExtResource("8_s5q41")]
 layout_mode = 2
+size_flags_vertical = 4
 
 [node name="Control_Right" type="Control" parent="VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content"]
 custom_minimum_size = Vector2(100, 0)
