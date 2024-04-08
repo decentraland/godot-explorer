@@ -587,7 +587,7 @@ mod tests {
         let entities_active_url =
             "https://sdk-test-scenes.decentraland.zone/content/entities/active".to_string();
         let content_url =
-            "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-fix-protocol-squad-1/contents"
+            "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-test-psquad-demo-latest/contents"
                 .to_string();
 
         let mut scene_entity_coordinator =

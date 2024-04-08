@@ -2,7 +2,7 @@ class_name SceneFetcher
 extends Node
 
 signal parcels_processed(parcel_filled, empty)
-signal report_scene_load(done: bool, is_new_loading: bool)
+signal report_scene_load(done: bool, is_new_loading: bool, pending: int)
 
 const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_0.tscn"),
@@ -46,6 +46,9 @@ var desired_portable_experiences_urns: Array[String] = []
 # Special-case: one-shot to skip loading screen
 var _is_reloading: bool = false
 
+# This counter is to control the async-flow
+var _scene_changed_counter: int = 0
+
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
@@ -71,7 +74,7 @@ func get_current_spawn_point():
 func on_loading_finished():
 	var target_position = get_current_spawn_point()
 	if target_position != null:
-		Global.get_explorer().move_to(target_position)
+		Global.get_explorer().move_to(target_position, true)
 
 
 func on_scene_killed(killed_scene_id, _entity_id):
@@ -140,6 +143,9 @@ func _async_on_desired_scene_changed():
 	var keep_alive_scenes = d.get("keep_alive_scenes", [])
 	var empty_parcels = d.get("empty_parcels", [])
 
+	_scene_changed_counter += 1
+	var counter_this_call := _scene_changed_counter
+
 	# Report new load, when I dont have scenes loaded, and there are a lot of new scenes...
 	var new_loading = loaded_scenes.is_empty() and not loadable_scenes.is_empty()
 	if new_loading and _is_reloading:
@@ -158,9 +164,14 @@ func _async_on_desired_scene_changed():
 			# When we already have loaded the scene...
 			new_loading = false
 
-	report_scene_load.emit(false, new_loading)
+	report_scene_load.emit(false, new_loading, loadable_scenes.size())
 
-	await PromiseUtils.async_all(loading_promises)
+	var results = await PromiseUtils.async_all(loading_promises)
+
+	# If there is other calls processing the scene, early return
+	# 	the next block of code will be executed by the last request
+	if counter_this_call != _scene_changed_counter:
+		return
 
 	for scene_id in loaded_scenes.keys():
 		if not loadable_scenes.has(scene_id) and not keep_alive_scenes.has(scene_id):
@@ -188,7 +199,7 @@ func _async_on_desired_scene_changed():
 	for scene: SceneItem in loaded_scenes.values():
 		parcel_filled.append_array(scene.parcels)
 
-	report_scene_load.emit(true, new_loading)
+	report_scene_load.emit(true, new_loading, loadable_scenes.size())
 
 	parcels_processed.emit(parcel_filled, empty_parcels_coords)
 
@@ -234,7 +245,6 @@ func set_portable_experiences_urns(urns: Array[String]) -> void:
 	var global_scenes_urns: Array = (
 		Global.realm.realm_about.get("configurations", {}).get("globalScenesUrn", []).duplicate()
 	)
-	prints("set_portable_experiences_urns ", global_scenes_urns, " with ", urns)
 
 	desired_portable_experiences_urns = urns
 	global_scenes_urns.append_array(desired_portable_experiences_urns)
@@ -337,6 +347,7 @@ func async_load_scene(
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):
+		printerr("the scene was removed while was loading ", scene_entity_id)
 		return PromiseUtils.resolved(false)
 
 	_on_try_spawn_scene(loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path)

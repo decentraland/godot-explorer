@@ -214,8 +214,8 @@ func create_guest_account_if_needed():
 	if not guest_account_created:
 		Global.config.guest_profile = {}
 		Global.config.save_to_settings_file()
-		Global.player_identity.set_default_profile()
 		Global.player_identity.create_guest_account()
+		Global.player_identity.set_default_profile()
 		guest_account_created = true
 
 

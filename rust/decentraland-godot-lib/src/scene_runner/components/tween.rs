@@ -24,13 +24,12 @@ pub struct Tween {
     pub ease_fn: fn(f32) -> f32,
     pub start_time: std::time::Instant,
     pub paused_time: Option<std::time::Instant>,
-    pub duration: Duration,
     pub playing: Option<bool>,
 }
 
 impl Tween {
     fn get_progress(&self, elapsed_time: Duration) -> f32 {
-        elapsed_time.as_millis() as f32 / self.duration.as_millis() as f32 // 0 to 1...
+        elapsed_time.as_millis() as f32 / self.data.duration // 0 to 1...
     }
 }
 
@@ -98,7 +97,6 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             } else if let Some(new_value) = new_value {
                 let offset_time_ms = new_value.duration * new_value.current_time();
                 let offset_time = std::time::Duration::from_millis(offset_time_ms as u64);
-                let duration = std::time::Duration::from_millis(new_value.duration as u64);
 
                 if let Some(existing_tween) = existing {
                     // update tween
@@ -144,7 +142,6 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             data: new_value,
                             start_time: now - offset_time,
                             paused_time,
-                            duration,
                             playing: None,
                         },
                     );
@@ -168,8 +165,9 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         let mut current_tween_state: TweenStateStatus = TweenStateStatus::TsActive;
 
         let elapsed_time = now - tween.start_time;
+        let duration = std::time::Duration::from_millis(tween.data.duration as u64);
 
-        let progress = if elapsed_time >= tween.duration {
+        let progress = if elapsed_time >= duration {
             tween.playing = Some(false);
             current_tween_state = TweenStateStatus::TsCompleted;
             1.0 // finished

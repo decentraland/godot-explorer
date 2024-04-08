@@ -111,7 +111,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     godot_material
                 };
 
-                godot_material.set_transparency(Transparency::TRANSPARENCY_ALPHA);
+                godot_material.set_transparency(Transparency::TRANSPARENCY_ALPHA_DEPTH_PRE_PASS);
 
                 match &dcl_material {
                     DclMaterial::Unlit(unlit) => {
