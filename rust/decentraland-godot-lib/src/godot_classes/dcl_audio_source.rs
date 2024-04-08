@@ -28,6 +28,12 @@ pub struct DclAudioSource {
     dcl_audio_clip_url: GString,
 
     #[var]
+    dcl_current_time: f32,
+
+    #[var]
+    dcl_global: bool,
+
+    #[var]
     dcl_scene_id: i32,
 
     #[base]

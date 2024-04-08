@@ -74,7 +74,7 @@ func get_current_spawn_point():
 func on_loading_finished():
 	var target_position = get_current_spawn_point()
 	if target_position != null:
-		Global.get_explorer().move_to(target_position)
+		Global.get_explorer().move_to(target_position, true)
 
 
 func on_scene_killed(killed_scene_id, _entity_id):

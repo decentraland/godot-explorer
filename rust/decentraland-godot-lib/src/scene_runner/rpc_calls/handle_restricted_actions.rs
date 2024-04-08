@@ -211,7 +211,10 @@ pub fn move_player_to(
 
     // Set player position
     let position_target = Vector3::new(position_target.x, position_target.y, -position_target.z);
-    explorer_node.call("move_to".into(), &[Variant::from(position_target)]);
+    explorer_node.call(
+        "move_to".into(),
+        &[Variant::from(position_target), false.to_variant()],
+    );
 
     // Set camera to look at camera target position
     if let Some(camera_target) = camera_target {
