@@ -410,7 +410,8 @@ func _update_render() -> void:
 			scene_node = scene.instantiate()
 			$Viewport.add_child(scene_node)
 		elif instantiate_scene:
-			instantiate_scene.reparent($Viewport)
+			if not Engine.is_editor_hint():
+				instantiate_scene.reparent($Viewport)
 		elif $Viewport.get_child_count() == 1:
 			# Use already-provided scene
 			scene_node = $Viewport.get_child(0)

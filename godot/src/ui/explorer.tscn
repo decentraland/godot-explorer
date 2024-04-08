@@ -1,7 +1,8 @@
-[gd_scene load_steps=29 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=31 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
+[ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="3_ur0v0"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="3_y21kc"]
 [ext_resource type="Script" path="res://src/ui/ui.gd" id="4_27w5f"]
 [ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="5_dpatn"]
@@ -24,6 +25,7 @@
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="21_1jhrs"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="22_xmvwl"]
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_4wpis"]
+[ext_resource type="PackedScene" uid="uid://clujaf3u776a3" path="res://addons/godot-xr-tools/objects/viewport_2d_in_3d.tscn" id="26_pcvs7"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_4sur7"]
 size = Vector3(4800, 0.1, 4800)
@@ -56,9 +58,8 @@ mesh = SubResource("PlaneMesh_x854j")
 skeleton = NodePath("../../..")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
 
-[node name="Timer_BroadcastPosition" type="Timer" parent="world"]
-wait_time = 0.1
-autostart = true
+[node name="Timer_BroadcastPosition" parent="world" instance=ExtResource("3_ur0v0")]
+unique_name_in_owner = true
 
 [node name="ui" type="Control" parent="."]
 layout_mode = 3
@@ -362,4 +363,20 @@ mouse_filter = 2
 [node name="VoiceChatRecorder" type="VoiceChatRecorder" parent="."]
 script = ExtResource("20_064cw")
 
-[connection signal="timeout" from="world/Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]
+[node name="VrScreen" parent="." instance=ExtResource("26_pcvs7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.27442, -2.4884)
+viewport_size = Vector2(1280, 720)
+transparent = 0
+
+[connection signal="pressed" from="ui/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
+[connection signal="pressed" from="ui/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
+[connection signal="open_profile" from="ui/SafeMarginContainer/InteractableHUD/Panel_Profile" to="." method="_on_panel_profile_open_profile"]
+[connection signal="submit_message" from="ui/SafeMarginContainer/InteractableHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
+[connection signal="hide_menu" from="ui/Control_Menu" to="." method="_on_control_menu_hide_menu"]
+[connection signal="jump_to" from="ui/Control_Menu" to="." method="_on_control_menu_jump_to"]
+[connection signal="preview_hot_reload" from="ui/Control_Menu" to="." method="_on_control_menu_preview_hot_reload"]
+[connection signal="request_debug_panel" from="ui/Control_Menu" to="." method="_on_control_menu_request_debug_panel"]
+[connection signal="request_pause_scenes" from="ui/Control_Menu" to="." method="_on_control_menu_request_pause_scenes"]
+[connection signal="toggle_fps" from="ui/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
+[connection signal="toggle_minimap" from="ui/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
+[connection signal="toggle_ram" from="ui/Control_Menu" to="." method="_on_control_menu_toggle_ram"]

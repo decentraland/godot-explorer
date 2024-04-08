@@ -81,8 +81,10 @@ func get_params_from_cmd():
 func _ready():
 	if Global.is_xr():
 		player = preload("res://src/logic/player/xr_player.tscn").instantiate()
+		$VrScreen.set_instantiate_scene(ui_root)
 	else:
 		player = preload("res://src/logic/player/player.tscn").instantiate()
+		$VrScreen.queue_free()
 	player.set_name("Player")
 	$world.add_child(player)
 	%Timer_BroadcastPosition.follow_node = player
