@@ -1,0 +1,44 @@
+[gd_scene load_steps=10 format=3 uid="uid://dbd732n0ga06l"]
+
+[ext_resource type="Script" path="res://src/ui/vr/VrExplorer.gd" id="1_3rxmp"]
+[ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_2pup1"]
+[ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="3_sr8vi"]
+[ext_resource type="PackedScene" uid="uid://vwdeof50oue7" path="res://src/ui/components/voice_chat_recorder/voice_chat_recorder.tscn" id="4_iwhsq"]
+[ext_resource type="PackedScene" uid="uid://clujaf3u776a3" path="res://addons/godot-xr-tools/objects/viewport_2d_in_3d.tscn" id="5_q2oda"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_rsn0h"]
+size = Vector3(4800, 0.1, 4800)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_vw4rd"]
+material = SubResource("ShaderMaterial_lovo8")
+size = Vector2(4800, 4800)
+center_offset = Vector3(0, -0.01, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bwyi7"]
+albedo_texture = ExtResource("2_2pup1")
+uv1_scale = Vector3(4800, 4800, 4800)
+texture_filter = 0
+
+[node name="VrExplorer" type="Node"]
+script = ExtResource("1_3rxmp")
+
+[node name="world" type="Node3D" parent="."]
+
+[node name="StaticBody3D" type="StaticBody3D" parent="world"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="world/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+shape = SubResource("BoxShape3D_rsn0h")
+
+[node name="Floor" type="MeshInstance3D" parent="world/StaticBody3D/CollisionShape3D"]
+mesh = SubResource("PlaneMesh_vw4rd")
+skeleton = NodePath("../../..")
+surface_material_override/0 = SubResource("StandardMaterial3D_bwyi7")
+
+[node name="Timer_BroadcastPosition" parent="world" instance=ExtResource("3_sr8vi")]
+
+[node name="VoiceChatRecorder" parent="." instance=ExtResource("4_iwhsq")]
+
+[node name="Viewport2Din3D" parent="." instance=ExtResource("5_q2oda")]

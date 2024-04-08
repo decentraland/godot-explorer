@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://cb6bcbjrusl4p"]
+
+[ext_resource type="Script" path="res://src/helpers_components/broadcast_position.gd" id="1_5ao47"]
+
+[node name="Timer_BroadcastPosition" type="Timer"]
+wait_time = 0.1
+autostart = true
+script = ExtResource("1_5ao47")
+
+[connection signal="timeout" from="." to="." method="_on_timeout"]
