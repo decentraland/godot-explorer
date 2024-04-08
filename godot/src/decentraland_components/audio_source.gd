@@ -2,6 +2,7 @@ extends DclAudioSource
 
 var last_loaded_audio_clip := ""
 var valid := false
+var _time_specified := false
 
 
 func apply_audio_props(action_on_playing: bool):
@@ -9,6 +10,11 @@ func apply_audio_props(action_on_playing: bool):
 		return
 
 	self.pitch_scale = dcl_pitch
+
+	if dcl_global:
+		attenuation_model = AudioStreamPlayer3D.ATTENUATION_DISABLED
+	else:
+		attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
 
 	if not dcl_enable:
 		self.volume_db = -80
@@ -20,12 +26,13 @@ func apply_audio_props(action_on_playing: bool):
 	if action_on_playing:
 		if self.playing and not dcl_playing:
 			self.stop()
-		elif not self.playing and dcl_playing:
-			self.play()
+		elif dcl_playing and (not self.playing or _time_specified):
+			self.play(dcl_current_time)
 
 
-func _async_refresh_data():
+func _async_refresh_data(time_specified: bool):
 	dcl_audio_clip_url = dcl_audio_clip_url.to_lower()
+	_time_specified = time_specified
 
 	if last_loaded_audio_clip == dcl_audio_clip_url:
 		apply_audio_props(true)

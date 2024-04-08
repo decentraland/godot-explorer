@@ -363,17 +363,18 @@ func _on_control_menu_request_pause_scenes(enabled):
 	Global.scene_runner.set_pause(enabled)
 
 
-func move_to(position: Vector3):
+func move_to(position: Vector3, skip_loading: bool):
 	player.set_position(position)
 	var cur_parcel_position = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
-	if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
-		loading_ui.enable_loading_screen()
+	if not skip_loading:
+		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
+			loading_ui.enable_loading_screen()
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
 	if realm != Global.realm.get_realm_string():
 		Global.realm.async_set_realm(realm)
-	move_to(Vector3i(parcel.x * 16, 3, -parcel.y * 16))
+	move_to(Vector3i(parcel.x * 16, 3, -parcel.y * 16), false)
 
 	Global.config.add_place_to_last_places(parcel, realm)
 	dirty_save_position = true
