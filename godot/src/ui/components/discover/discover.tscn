@@ -87,6 +87,7 @@ grow_horizontal = 2
 grow_vertical = 2
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
+scroll_deadzone = 100
 
 [node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/ScrollContainer"]
 layout_mode = 2
@@ -132,7 +133,7 @@ layout_mode = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_right = 2434.0
+offset_right = 3654.0
 grow_horizontal = 2
 
 [node name="TextureRect_GenesisCity" type="TextureRect" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/Control/Content"]

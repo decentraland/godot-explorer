@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://ctq07phfygt70"]
+
+[ext_resource type="Script" path="res://src/ui/VrScreen.gd" id="1_m2vce"]
+
+[node name="VrScreen" type="Node3D"]
+script = ExtResource("1_m2vce")
