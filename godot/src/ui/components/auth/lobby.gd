@@ -1,5 +1,7 @@
 extends Control
 
+signal change_scene(new_scene_path: String)
+
 var current_profile: DclUserProfile
 var guest_account_created: bool = false
 
@@ -58,7 +60,7 @@ func show_panel(child_node: Control):
 
 func close_sign_in():
 	if Global.is_xr():
-		go_to_explorer()
+		change_scene.emit("res://src/ui/components/discover/discover.tscn")
 	else:
 		get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
 

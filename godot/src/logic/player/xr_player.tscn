@@ -1,16 +1,20 @@
-[gd_scene load_steps=10 format=3 uid="uid://j86kd5vcss3h"]
+[gd_scene load_steps=12 format=3 uid="uid://j86kd5vcss3h"]
 
 [ext_resource type="Script" path="res://src/logic/player/xr_player.gd" id="1_ukhx2"]
 [ext_resource type="PackedScene" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="1_wg7s4"]
 [ext_resource type="PackedScene" uid="uid://bx1xdisoqo1f6" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/left_tac_glove_low.tscn" id="2_larcu"]
 [ext_resource type="PackedScene" uid="uid://fiul51tsyoop" path="res://addons/godot-xr-tools/functions/function_teleport.tscn" id="4_wrsbf"]
 [ext_resource type="PackedScene" uid="uid://chumpejwiub7f" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/right_tac_glove_low.tscn" id="4_y0cfq"]
+[ext_resource type="PackedScene" uid="uid://clujaf3u776a3" path="res://addons/godot-xr-tools/objects/viewport_2d_in_3d.tscn" id="5_4o7md"]
 [ext_resource type="PackedScene" uid="uid://b6bk2pj8vbj28" path="res://addons/godot-xr-tools/functions/movement_turn.tscn" id="6_1eggb"]
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="6_24dki"]
 [ext_resource type="PackedScene" uid="uid://bl2nuu3qhlb5k" path="res://addons/godot-xr-tools/functions/movement_direct.tscn" id="7_ergla"]
 [ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="8_4m0vb"]
+[ext_resource type="PackedScene" uid="uid://cqhw276realc" path="res://addons/godot-xr-tools/functions/function_pointer.tscn" id="8_qhqyf"]
 
 [node name="XRPlayer" type="XROrigin3D"]
+world_scale = 1.2
+current = true
 script = ExtResource("1_ukhx2")
 
 [node name="XRCamera3D" type="XRCamera3D" parent="."]
@@ -23,6 +27,16 @@ tracker = &"left_hand"
 [node name="LeftHand" parent="LeftHand" instance=ExtResource("2_larcu")]
 
 [node name="FunctionTeleport" parent="LeftHand" instance=ExtResource("4_wrsbf")]
+collision_mask = 2147483648
+valid_teleport_mask = 2147483648
+
+[node name="VrScreen" parent="LeftHand" instance=ExtResource("5_4o7md")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
+visible = false
+screen_size = Vector2(1.5, 1)
+viewport_size = Vector2(1280, 720)
+transparent = 0
+unshaded = true
 
 [node name="RightHand" type="XRController3D" parent="."]
 tracker = &"right_hand"
@@ -33,7 +47,18 @@ tracker = &"right_hand"
 
 [node name="MovementDirect" parent="RightHand" instance=ExtResource("7_ergla")]
 
+[node name="FunctionPointer" parent="RightHand" instance=ExtResource("8_qhqyf")]
+show_laser = 2
+laser_length = 1
+
 [node name="PlayerBody" parent="." instance=ExtResource("8_4m0vb")]
+collision_mask = 2147483648
+slide_on_ceiling = false
+floor_stop_on_slope = false
+platform_on_leave = 1
+platform_floor_layers = 2147483648
+push_rigid_bodies = false
+ground_control = 1
 
 [node name="Avatar" parent="." instance=ExtResource("6_24dki")]
 visible = false

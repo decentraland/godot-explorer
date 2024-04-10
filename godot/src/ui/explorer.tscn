@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=30 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -25,7 +25,6 @@
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="21_1jhrs"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="22_xmvwl"]
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_4wpis"]
-[ext_resource type="PackedScene" uid="uid://clujaf3u776a3" path="res://addons/godot-xr-tools/objects/viewport_2d_in_3d.tscn" id="26_pcvs7"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_4sur7"]
 size = Vector3(4800, 0.1, 4800)
@@ -48,9 +47,10 @@ script = ExtResource("1_5n8xk")
 [node name="world" type="Node3D" parent="."]
 
 [node name="StaticBody3D" type="StaticBody3D" parent="world"]
+collision_layer = 2147483649
+collision_mask = 2147483649
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="world/StaticBody3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 shape = SubResource("BoxShape3D_4sur7")
 
 [node name="Floor" type="MeshInstance3D" parent="world/StaticBody3D/CollisionShape3D"]
@@ -363,15 +363,11 @@ mouse_filter = 2
 [node name="VoiceChatRecorder" type="VoiceChatRecorder" parent="."]
 script = ExtResource("20_064cw")
 
-[node name="VrScreen" parent="." instance=ExtResource("26_pcvs7")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.27442, -2.4884)
-viewport_size = Vector2(1280, 720)
-transparent = 0
-
 [connection signal="pressed" from="ui/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
 [connection signal="pressed" from="ui/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
 [connection signal="open_profile" from="ui/SafeMarginContainer/InteractableHUD/Panel_Profile" to="." method="_on_panel_profile_open_profile"]
 [connection signal="submit_message" from="ui/SafeMarginContainer/InteractableHUD/Panel_Chat" to="." method="_on_panel_chat_submit_message"]
+[connection signal="timeout" from="ui/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
 [connection signal="hide_menu" from="ui/Control_Menu" to="." method="_on_control_menu_hide_menu"]
 [connection signal="jump_to" from="ui/Control_Menu" to="." method="_on_control_menu_jump_to"]
 [connection signal="preview_hot_reload" from="ui/Control_Menu" to="." method="_on_control_menu_preview_hot_reload"]

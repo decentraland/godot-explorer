@@ -386,6 +386,7 @@ skeleton = NodePath("")
 [node name="Default light" type="Node3D" parent="Scene/baseDarkWithCollider/screen"]
 
 [node name="Viewport2Din3D" parent="Scene/baseDarkWithCollider/screen" instance=ExtResource("6_dmvnc")]
+unique_name_in_owner = true
 transform = Transform3D(-2, 6.06974e-08, 1.63972e-07, -1.24345e-14, 1.87562, -0.694297, -1.74846e-07, -0.694297, -1.87562, -3.58936e-07, 6.4607, 4.10579)
 screen_size = Vector2(7, 4)
 scene = ExtResource("7_kbcta")

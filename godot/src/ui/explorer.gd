@@ -81,13 +81,17 @@ func get_params_from_cmd():
 func _ready():
 	if Global.is_xr():
 		player = preload("res://src/logic/player/xr_player.tscn").instantiate()
-		$VrScreen.set_instantiate_scene(ui_root)
 	else:
 		player = preload("res://src/logic/player/player.tscn").instantiate()
-		$VrScreen.queue_free()
+		
 	player.set_name("Player")
 	$world.add_child(player)
-	%Timer_BroadcastPosition.follow_node = player
+	
+	if Global.is_xr():
+		%Timer_BroadcastPosition.follow_node = player
+		player.vr_screen.set_instantiate_scene(ui_root)
+	else:
+		%Timer_BroadcastPosition.follow_node = player.avatar
 
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
@@ -376,7 +380,8 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 
 
 func player_look_at(look_at_position: Vector3):
-	player.avatar_look_at(look_at_position)
+	if not Global.is_xr():
+		player.avatar_look_at(look_at_position)
 
 
 func capture_mouse():

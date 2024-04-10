@@ -1,11 +1,12 @@
 extends Node3D
 
+@onready var ui_root = %Viewport2Din3D
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	prints("Vr Lobby")
+	ui_root.scene_node.change_scene.connect(self.change_scene)
 
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(_dt):
-	pass
+func change_scene(new_scene: String):
+	ui_root.set_scene(load(new_scene))

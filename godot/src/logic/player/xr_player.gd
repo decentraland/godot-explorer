@@ -4,6 +4,10 @@ extends XROrigin3D
 @onready var camera: Camera3D = $XRCamera3D
 @onready var avatar := $Avatar
 
+@onready var left_hand := $LeftHand/LeftHand
+
+@onready var vr_screen := $LeftHand/VrScreen
+
 func _ready():
 	prints("Starts XRPlayer")
 
