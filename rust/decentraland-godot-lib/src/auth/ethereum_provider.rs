@@ -1,10 +1,11 @@
 const PROVIDER_URL: &str = "wss://rpc.decentraland.org/mainnet?project=kernel-local";
 
-use ethers_providers::{Provider, Ws};
-use tokio::sync::Mutex;
+//use ethers_providers::{Provider, Ws};
+//use ethers::providers::{Provider, Ws};
+//use tokio::sync::Mutex;
 
 pub struct EthereumProvider {
-    provider: Mutex<Option<Provider<Ws>>>,
+    //provider: Mutex<Option<Provider<Ws>>>,
 }
 
 impl Default for EthereumProvider {
@@ -16,7 +17,7 @@ impl Default for EthereumProvider {
 impl EthereumProvider {
     pub fn new() -> Self {
         Self {
-            provider: Mutex::new(None),
+            //provider: Mutex::new(None),
         }
     }
 
@@ -25,7 +26,7 @@ impl EthereumProvider {
         method: &str,
         params: &[serde_json::Value],
     ) -> Result<serde_json::Value, anyhow::Error> {
-        let mut this_provider = self.provider.lock().await;
+        /*let mut this_provider = self.provider.lock().await;
 
         if this_provider.is_none() {
             let provider = Provider::<Ws>::connect(PROVIDER_URL).await?;
@@ -42,6 +43,7 @@ impl EthereumProvider {
                 Err(anyhow::Error::new(e))
             }
             Ok(result) => Ok(result),
-        }
+        }*/
+        Err(anyhow::anyhow!("ERR NOT IMPLEMENTED"))
     }
 }
