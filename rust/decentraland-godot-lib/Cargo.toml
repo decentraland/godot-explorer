@@ -8,25 +8,28 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { git = "https://github.com/godot-rust/gdext", rev = "5e18af87a13bf8d40b4f50bfcb180228e227b773", features=["experimental-threads", "serde"] }
+godot = { git = "https://github.com/godot-rust/gdext", rev = "5e18af87a13bf8d40b4f50bfcb180228e227b773", features=["experimental-threads", "serde", "experimental-wasm"] }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
-tokio = { version = "1.37.0", features = ["full"] }
+
+tokio = { version = "1.37.0", features = ["sync", "macros", "io-util", "rt", "time"] } # tokio wasm support: https://docs.rs/tokio/latest/tokio/#wasm-support
+
 protobuf = "3.2.0"
 prost = "0.11.8"
 once_cell = "1.16.0"
 futures-lite = "1.12.0"
 
-hyper = { version = "1.2.0", features = ["http1"] }
+#hyper = { version = "1.2.0", features = ["http1"] } # looks like we are not using hyper... just for the inspector
 http-body-util = "0.1.0-rc.2"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "blocking"] }
 regex = "*"
 urn = "0.7.0"
 
-#ethers = { git = "https://github.com/kuruk-mm/ethers-rs/", branch = "patch-1", features = ["rustls", "ws"] }
+#ethers = { git = "https://github.com/kuruk-mm/ethers-rs/", branch = "patch-1", features = ["rustls", "ws"] } # this include all the ethers-* libs, that some of those are not compatible with wasm
 ethers-core = "2.0"
 ethers-signers = "2.0"
+# ethers-providers = "2.0" # ethers-providers uses jsonwebtoken, that is not compatible with wasm
 
 async-trait = "0.1.68"
 
@@ -52,7 +55,7 @@ num = "0.4"
 http = "0.2.9"
 bytes = "1.4.0"
 
-tokio-tungstenite = "0.20.1"
+#tokio-tungstenite = "0.21.0" # wasm: this is adding the `mio` library to tokio, because it requires `net` from tokio
 futures-util = "0.3.30"
 
 livekit = { git = "https://github.com/robtfm/client-sdk-rust", branch="h264-false", features=["rustls-tls-webpki-roots"], optional = true }
@@ -75,20 +78,17 @@ jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
 
 [features]
-default = ["use_ffmpeg", "use_livekit", "use_deno", "use_crypto"]
+default = ["use_ffmpeg", "use_livekit", "use_deno"]
 use_ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
 use_livekit = ["use_ffmpeg", "dep:livekit"]
 use_deno = ["dep:deno_core", "dep:v8"]
-use_crypto = []
 enable_inspector = ["use_deno", "dep:uuid", "dep:fastwebsockets", "dep:hyper1"]
 
 [build-dependencies]
-webrtc-sys-build = "0.2.0"
+#webrtc-sys-build = "0.2.0" # wasm: this requires mio, even when it is disabled is being compiled
 prost-build = "0.11.8"
 
 [patch."https://github.com/godot-rust/godot4-prebuilt".godot4-prebuilt]
 git = "https://github.com//godot-rust/godot4-prebuilt"
 branch = "4.2.1"
 
-[dependencies.ring]
-features = ["std", "wasm32_c"]
