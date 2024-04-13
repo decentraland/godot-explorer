@@ -1,5 +1,5 @@
-use ethers::signers::LocalWallet;
-use ethers::types::H160;
+use ethers_signers::LocalWallet;
+use ethers_core::types::H160;
 use godot::prelude::*;
 use rand::thread_rng;
 use tokio::task::JoinHandle;

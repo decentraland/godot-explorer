@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ethers::types::H160;
+use ethers_core::types::H160;
 
 use crate::{
     comms::profile::UserProfile,

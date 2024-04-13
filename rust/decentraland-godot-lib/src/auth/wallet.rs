@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use ethers::{
-    signers::{LocalWallet, Signer, WalletError},
-    types::{transaction::eip2718::TypedTransaction, Address, Signature, H160},
-    utils::hex,
-};
+
+use ethers_signers::{LocalWallet, Signer, WalletError};
+use ethers_core::types::{transaction::eip2718::TypedTransaction, Address, Signature, H160};
+use ethers_core::utils::hex;
+
 use http::Uri;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};

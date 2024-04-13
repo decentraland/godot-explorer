@@ -6,7 +6,8 @@ use super::{
     wallet::{AsH160, ObjSafeWalletSigner, SimpleAuthChain, Wallet},
 };
 use chrono::{DateTime, Utc};
-use ethers::{signers::LocalWallet, types::Signature};
+use ethers_signers::LocalWallet;
+use ethers_core::types::Signature;
 use rand::thread_rng;
 
 pub fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {

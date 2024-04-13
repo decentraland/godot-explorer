@@ -10,7 +10,7 @@ use crate::dcl::{
     },
 };
 use deno_core::{op, Op, OpDecl, OpState};
-use ethers::types::H160;
+use ethers_core::types::H160;
 use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet},

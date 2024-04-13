@@ -23,7 +23,11 @@ http-body-util = "0.1.0-rc.2"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "blocking"] }
 regex = "*"
 urn = "0.7.0"
-ethers = { git = "https://github.com/kuruk-mm/ethers-rs/", branch = "patch-1", features = ["rustls", "ws"] }
+
+#ethers = { git = "https://github.com/kuruk-mm/ethers-rs/", branch = "patch-1", features = ["rustls", "ws"] }
+ethers-core = "2.0"
+ethers-signers = "2.0"
+
 async-trait = "0.1.68"
 
 cpal = { version = "0.15.2", optional = true }
