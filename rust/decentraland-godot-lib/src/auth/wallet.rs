@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use ethers_signers::{LocalWallet, Signer, WalletError};
 use ethers_core::types::{transaction::eip2718::TypedTransaction, Address, Signature, H160};
 use ethers_core::utils::hex;
+use ethers_signers::{LocalWallet, Signer, WalletError};
 
 use http::Uri;
 use rand::thread_rng;
@@ -55,6 +55,7 @@ pub trait ObjSafeWalletSigner {
     fn chain_id(&self) -> u64;
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 impl ObjSafeWalletSigner for LocalWallet {
     async fn sign_message(&self, message: &[u8]) -> Result<Signature, WalletError> {
@@ -63,6 +64,26 @@ impl ObjSafeWalletSigner for LocalWallet {
 
     async fn sign_transaction(&self, message: &TypedTransaction) -> Result<Signature, WalletError> {
         Signer::sign_transaction(self, message).await
+    }
+
+    fn address(&self) -> Address {
+        Signer::address(self)
+    }
+
+    fn chain_id(&self) -> u64 {
+        Signer::chain_id(self)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[async_trait]
+impl ObjSafeWalletSigner for LocalWallet {
+    async fn sign_message(&self, message: &[u8]) -> Result<Signature, WalletError> {
+        todo!("sign_message not implemented for wasm")
+    }
+
+    async fn sign_transaction(&self, message: &TypedTransaction) -> Result<Signature, WalletError> {
+        todo!("sign_message not implemented for wasm")
     }
 
     fn address(&self) -> Address {

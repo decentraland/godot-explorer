@@ -46,6 +46,96 @@ pub struct HttpQueueRequester {
     semaphore: Arc<Semaphore>,
 }
 
+async fn process_queue_request(
+    queue: Arc<Mutex<BinaryHeap<QueueRequest>>>,
+    semaphore: Arc<Semaphore>,
+    client: Arc<Client>,
+) {
+    let _permit = semaphore.acquire_owned().await;
+    let request = {
+        let mut queue = queue.lock().unwrap();
+        queue.pop()
+    };
+
+    if let Some(mut queue_request) = request {
+        let request_option = queue_request.request_option.take().unwrap();
+        let response_result = process_request(client, request_option).await;
+        let _ = queue_request.response_sender.send(response_result);
+    }
+}
+
+async fn process_request(
+    client: Arc<Client>,
+    mut request_option: RequestOption,
+) -> Result<RequestResponse, RequestResponseError> {
+    let timeout = request_option
+        .timeout
+        .unwrap_or(std::time::Duration::from_secs(60));
+    let mut request = client.request(request_option.method.clone(), request_option.url.clone());
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let mut request = request.timeout(timeout);
+
+    if let Some(body) = request_option.body.take() {
+        request = request.body(body);
+    }
+
+    if let Some(headers) = request_option.headers.take() {
+        for header in headers {
+            let parts: Vec<&str> = header.splitn(2, ':').collect();
+            if parts.len() == 2 {
+                request = request.header(parts[0], parts[1].trim());
+            }
+        }
+    }
+
+    let map_err_func = |e: reqwest::Error| RequestResponseError {
+        id: request_option.id,
+        error_message: e.to_string(),
+    };
+
+    let response = request.send().await.map_err(map_err_func)?;
+    let status_code = response.status();
+
+    let response_data = match request_option.response_type.clone() {
+        ResponseType::AsString => {
+            ResponseEnum::String(response.text().await.map_err(map_err_func)?)
+        }
+        ResponseType::AsBytes => {
+            ResponseEnum::Bytes(response.bytes().await.map_err(map_err_func)?.to_vec())
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        ResponseType::ToFile(file_path) => {
+            let content = response.bytes().await.map_err(map_err_func)?.to_vec();
+            let mut file = tokio::fs::File::create(file_path.clone())
+                .await
+                .map_err(|e| RequestResponseError {
+                    id: request_option.id,
+                    error_message: e.to_string(),
+                })?;
+            let result = file.write_all(&content).await;
+            let result = result.map(|_| file_path);
+            ResponseEnum::ToFile(result)
+        }
+        ResponseType::AsJson => {
+            let json_string = &response.text().await.map_err(map_err_func)?;
+            ResponseEnum::Json(serde_json::from_str(json_string))
+        }
+        _ => {
+            return Err(RequestResponseError {
+                id: request_option.id,
+                error_message: "Response type not supported".to_string(),
+            });
+        }
+    };
+
+    Ok(RequestResponse {
+        request_option,
+        status_code,
+        response_data: Ok(response_data),
+    })
+}
+
 impl HttpQueueRequester {
     pub fn new(max_parallel_requests: usize) -> Self {
         Self {
@@ -72,86 +162,10 @@ impl HttpQueueRequester {
     }
 
     async fn process_queue(&self) {
-        let queue = Arc::clone(&self.queue);
-        let semaphore = Arc::clone(&self.semaphore);
-        let client = self.client.clone();
+        let queue: Arc<Mutex<BinaryHeap<QueueRequest>>> = Arc::clone(&self.queue);
+        let semaphore: Arc<Semaphore> = Arc::clone(&self.semaphore);
+        let client: Arc<Client> = self.client.clone();
 
-        tokio::spawn(async move {
-            let _permit = semaphore.acquire_owned().await;
-            let request = {
-                let mut queue = queue.lock().unwrap();
-                queue.pop()
-            };
-
-            if let Some(mut queue_request) = request {
-                let request_option = queue_request.request_option.take().unwrap();
-                let response_result = Self::process_request(client, request_option).await;
-                let _ = queue_request.response_sender.send(response_result);
-            }
-        });
-    }
-
-    async fn process_request(
-        client: Arc<Client>,
-        mut request_option: RequestOption,
-    ) -> Result<RequestResponse, RequestResponseError> {
-        let timeout = request_option
-            .timeout
-            .unwrap_or(std::time::Duration::from_secs(60));
-        let mut request = client
-            .request(request_option.method.clone(), request_option.url.clone())
-            .timeout(timeout);
-
-        if let Some(body) = request_option.body.take() {
-            request = request.body(body);
-        }
-
-        if let Some(headers) = request_option.headers.take() {
-            for header in headers {
-                let parts: Vec<&str> = header.splitn(2, ':').collect();
-                if parts.len() == 2 {
-                    request = request.header(parts[0], parts[1].trim());
-                }
-            }
-        }
-
-        let map_err_func = |e: reqwest::Error| RequestResponseError {
-            id: request_option.id,
-            error_message: e.to_string(),
-        };
-
-        let response = request.send().await.map_err(map_err_func)?;
-        let status_code = response.status();
-
-        let response_data = match request_option.response_type.clone() {
-            ResponseType::AsString => {
-                ResponseEnum::String(response.text().await.map_err(map_err_func)?)
-            }
-            ResponseType::AsBytes => {
-                ResponseEnum::Bytes(response.bytes().await.map_err(map_err_func)?.to_vec())
-            }
-            ResponseType::ToFile(file_path) => {
-                let content = response.bytes().await.map_err(map_err_func)?.to_vec();
-                let mut file = tokio::fs::File::create(file_path.clone())
-                    .await
-                    .map_err(|e| RequestResponseError {
-                        id: request_option.id,
-                        error_message: e.to_string(),
-                    })?;
-                let result = file.write_all(&content).await;
-                let result = result.map(|_| file_path);
-                ResponseEnum::ToFile(result)
-            }
-            ResponseType::AsJson => {
-                let json_string = &response.text().await.map_err(map_err_func)?;
-                ResponseEnum::Json(serde_json::from_str(json_string))
-            }
-        };
-
-        Ok(RequestResponse {
-            request_option,
-            status_code,
-            response_data: Ok(response_data),
-        })
+        process_queue_request(queue, semaphore, client);
     }
 }

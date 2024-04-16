@@ -22,31 +22,34 @@ impl Default for HttpRequester {
     }
 }
 
+async fn process_request(
+    sender: Sender<Result<RequestResponse, RequestResponseError>>,
+    request_option: RequestOption,
+) {
+    let client = reqwest::Client::new();
+    let url = request_option.url.clone();
+    let response = HttpRequester::do_request(&client, request_option).await;
+    if response.is_err() {
+        tracing::info!("Error in request: {url:?}");
+    } else {
+        // tracing::info!("Ok in request: {:?}", url);
+    }
+    match sender.send(response).await {
+        Ok(_) => {
+            // tracing::info!("Ok sending reqsuest: {:?}", url);
+        }
+        Err(_) => {
+            panic!("Failed to send response");
+        }
+    }
+}
+
 async fn request_pool(
     sender_to_parent: Sender<Result<RequestResponse, RequestResponseError>>,
     mut receiver_from_parent: Receiver<RequestOption>,
 ) {
     while let Some(request_option) = receiver_from_parent.recv().await {
-        let sender = sender_to_parent.clone();
-        // TODO: limit the concurrent requests
-        tokio::spawn(async move {
-            let client = reqwest::Client::new();
-            let url = request_option.url.clone();
-            let response = HttpRequester::do_request(&client, request_option).await;
-            if response.is_err() {
-                tracing::info!("Error in request: {url:?}");
-            } else {
-                // tracing::info!("Ok in request: {:?}", url);
-            }
-            match sender.send(response).await {
-                Ok(_) => {
-                    // tracing::info!("Ok sending reqsuest: {:?}", url);
-                }
-                Err(_) => {
-                    panic!("Failed to send response");
-                }
-            }
-        });
+        process_request(sender_to_parent.clone(), request_option);
     }
 }
 
@@ -62,6 +65,7 @@ impl HttpRequester {
                 request_pool(sender_to_parent, receiver_from_parent).await;
             });
         } else {
+            #[cfg(not(target_arch = "wasm32"))]
             std::thread::spawn(move || {
                 let runtime = tokio::runtime::Runtime::new();
                 if runtime.is_err() {
@@ -73,6 +77,9 @@ impl HttpRequester {
                     request_pool(sender_to_parent, receiver_from_parent).await;
                 });
             });
+
+            #[cfg(target_arch = "wasm32")]
+            panic!("No runtime provided")
         }
 
         Self {
@@ -93,9 +100,10 @@ impl HttpRequester {
         client: &reqwest::Client,
         mut request_option: RequestOption,
     ) -> Result<RequestResponse, RequestResponseError> {
-        let mut request = client
-            .request(request_option.method.clone(), request_option.url.clone())
-            .timeout(std::time::Duration::from_secs(10));
+        let mut request = client.request(request_option.method.clone(), request_option.url.clone());
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let mut request = request.timeout(std::time::Duration::from_secs(10));
 
         if let Some(body) = request_option.body.take() {
             request = request.body(body);

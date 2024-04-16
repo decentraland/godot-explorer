@@ -64,8 +64,12 @@ async fn fetch_polling_server(
         }
         attempt += 1;
 
-        let response = reqwest::Client::builder()
-            .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
+        let request_builder = reqwest::Client::builder();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let response = request_builder.timeout(AUTH_SERVER_REQUEST_TIMEOUT);
+
+        let response = request_builder
             .build()
             .expect("reqwest build error")
             .get(url.clone())
@@ -128,8 +132,12 @@ async fn create_new_request(
     message: CreateRequest,
 ) -> Result<CreateRequestResponse, anyhow::Error> {
     let body = serde_json::to_string(&message).expect("valid json");
-    let response = reqwest::Client::builder()
-        .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
+    let request_builder = reqwest::Client::builder();
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let response = request_builder.timeout(AUTH_SERVER_REQUEST_TIMEOUT);
+
+    let response = request_builder
         .build()
         .expect("reqwest build error")
         .post(AUTH_SERVER_ENDPOINT_URL)

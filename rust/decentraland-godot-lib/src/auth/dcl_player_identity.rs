@@ -1,5 +1,5 @@
-use ethers_signers::LocalWallet;
 use ethers_core::types::H160;
+use ethers_signers::LocalWallet;
 use godot::prelude::*;
 use rand::thread_rng;
 use tokio::task::JoinHandle;
@@ -196,44 +196,48 @@ impl DclPlayerIdentity {
 
     #[func]
     fn try_connect_account(&mut self) {
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
-            panic!("tokio runtime not initialized")
-        };
-
-        let instance_id = self.base.instance_id();
-        let sender = self.remote_report_sender.clone();
-        let try_connect_account_handle = handle.spawn(async move {
-            let wallet = RemoteWallet::with_auth_identity(sender).await;
-            let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
-                return;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let Some(handle) = TokioRuntime::static_clone_handle() else {
+                panic!("tokio runtime not initialized")
             };
 
-            match wallet {
-                Ok((wallet, ephemeral_auth_chain)) => {
-                    let ephemeral_auth_chain_json_str =
-                        serde_json::to_string(&ephemeral_auth_chain)
-                            .expect("serialize ephemeral auth chain");
+            let instance_id = self.base.instance_id();
+            let sender = self.remote_report_sender.clone();
+            let try_connect_account_handle = handle.spawn(async move {
+                let wallet = RemoteWallet::with_auth_identity(sender).await;
+                let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
+                else {
+                    return;
+                };
 
-                    this.call_deferred(
-                        "try_set_remote_wallet".into(),
-                        &[
-                            format!("{:#x}", wallet.address()).to_variant(),
-                            wallet.chain_id().to_variant(),
-                            ephemeral_auth_chain_json_str.to_variant(),
-                        ],
-                    );
-                }
-                Err(err) => {
-                    tracing::error!("error getting wallet {:?}", err);
-                    this.call_deferred(
-                        "_error_getting_wallet".into(),
-                        &["Unknown error".to_variant()],
-                    );
-                }
-            }
-        });
+                match wallet {
+                    Ok((wallet, ephemeral_auth_chain)) => {
+                        let ephemeral_auth_chain_json_str =
+                            serde_json::to_string(&ephemeral_auth_chain)
+                                .expect("serialize ephemeral auth chain");
 
-        self.try_connect_account_handle = Some(try_connect_account_handle);
+                        this.call_deferred(
+                            "try_set_remote_wallet".into(),
+                            &[
+                                format!("{:#x}", wallet.address()).to_variant(),
+                                wallet.chain_id().to_variant(),
+                                ephemeral_auth_chain_json_str.to_variant(),
+                            ],
+                        );
+                    }
+                    Err(err) => {
+                        tracing::error!("error getting wallet {:?}", err);
+                        this.call_deferred(
+                            "_error_getting_wallet".into(),
+                            &["Unknown error".to_variant()],
+                        );
+                    }
+                }
+            });
+
+            self.try_connect_account_handle = Some(try_connect_account_handle);
+        }
     }
 
     #[func]
@@ -540,6 +544,7 @@ impl DclPlayerIdentity {
         };
         body.auth_chain = Some(auth_chain.auth_chain().clone());
 
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(handle) = TokioRuntime::static_clone_handle() {
             handle.spawn(async move {
                 let result = do_request(body, url_sender).await.map(|(_, result)| result);

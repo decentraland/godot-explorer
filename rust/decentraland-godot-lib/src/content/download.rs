@@ -23,6 +23,7 @@ pub async fn fetch_resource_or_wait(
         }
         ContentState::Released(result) => result,
         ContentState::RequestOwner => {
+            #[cfg(not(target_arch = "wasm32"))]
             if tokio::fs::metadata(&absolute_file_path).await.is_err() {
                 let request = RequestOption::new(
                     0,
@@ -50,6 +51,7 @@ pub async fn fetch_resource_or_wait(
                 ctx.content_notificator.resolve(file_hash, Ok(())).await;
                 Ok(())
             }
+            Err("Wasm32 not supported".to_string())
         }
     }
 }
