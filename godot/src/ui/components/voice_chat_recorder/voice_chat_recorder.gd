@@ -6,9 +6,10 @@ var is_enabled = false
 
 
 func _ready():
-	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
-	audio.connect(Global.comms.broadcast_voice)
-	setup_audio_server()
+	if ProjectSettings.get_setting_with_override("audio/driver/enable_input"):
+		Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
+		audio.connect(Global.comms.broadcast_voice)
+		setup_audio_server()
 
 
 func _on_adapter_changed(voice_chat_enabled, _adapter_str):
