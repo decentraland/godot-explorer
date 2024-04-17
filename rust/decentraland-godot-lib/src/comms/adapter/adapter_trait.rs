@@ -1,4 +1,4 @@
-use ethers::types::H160;
+use ethers_core::types::H160;
 
 use crate::{comms::profile::UserProfile, dcl::components::proto_components::kernel::comms::rfc4};
 

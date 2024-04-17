@@ -1,4 +1,4 @@
-use ethers::{types::U256, utils::format_units};
+use ethers_core::{types::U256, utils::format_units};
 use godot::prelude::*;
 
 #[derive(GodotClass)]

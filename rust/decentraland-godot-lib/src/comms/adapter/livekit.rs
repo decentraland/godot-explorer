@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc, time::Instant};
 
-use ethers::types::H160;
+use ethers_core::types::H160;
 use futures_util::StreamExt;
 use godot::prelude::{GString, Gd, PackedVector2Array};
 use http::Uri;

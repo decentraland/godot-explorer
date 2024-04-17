@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ethers::types::H160;
+use ethers_core::types::H160;
 use godot::prelude::*;
 
 use crate::{

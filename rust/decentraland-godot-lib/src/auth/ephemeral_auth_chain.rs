@@ -1,6 +1,7 @@
 use std::fmt;
 
-use ethers::{signers::LocalWallet, types::H160};
+use ethers_core::types::H160;
+use ethers_signers::LocalWallet;
 use serde::{
     de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor},
     ser::SerializeStruct,

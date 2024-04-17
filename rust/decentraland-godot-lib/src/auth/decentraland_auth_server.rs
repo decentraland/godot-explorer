@@ -194,7 +194,7 @@ mod test {
 
     use super::super::auth_identity::get_ephemeral_message;
     use super::*;
-    use ethers::signers::LocalWallet;
+    use ethers_signers::LocalWallet;
     use rand::thread_rng;
     use tracing_test::traced_test;
 

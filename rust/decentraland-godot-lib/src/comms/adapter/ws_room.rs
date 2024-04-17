@@ -12,7 +12,7 @@ use crate::{
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
     },
 };
-use ethers::types::{Signature, H160};
+use ethers_core::types::{Signature, H160};
 use godot::{engine::WebSocketPeer, prelude::*};
 use prost::Message;
 use tracing::error;
