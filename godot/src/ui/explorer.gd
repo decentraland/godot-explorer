@@ -98,6 +98,8 @@ func _ready():
 	virtual_joystick_orig_position = virtual_joystick.get_position()
 	panel_chat.hide()
 
+	label_ram.visible = OS.has_feature("ios")
+
 	if Global.is_mobile():
 		mobile_ui.show()
 		label_crosshair.show()
@@ -250,13 +252,6 @@ func _unhandled_input(event):
 				panel_chat.show()
 
 
-func _toggle_ram_usage(visibility: bool):
-	if visibility:
-		label_ram.show()
-	else:
-		label_ram.hide()
-
-
 func _on_control_minimap_request_open_map():
 	if !control_menu.visible:
 		control_menu.show_map()
@@ -272,10 +267,6 @@ func _on_control_menu_hide_menu():
 	control_menu.close()
 	control_menu.control_map.clear()
 	ui_root.grab_focus()
-
-
-func _on_control_menu_toggle_ram(visibility):
-	label_ram.visible = visibility
 
 
 func _on_control_menu_toggle_fps(visibility):
@@ -426,7 +417,9 @@ func _on_control_menu_request_debug_panel(enabled):
 
 
 func _on_timer_fps_label_timeout():
-	label_ram.set_text("RAM Usage: " + str(OS.get_static_memory_usage() / 1024.0 / 1024.0) + " MB")
+	var usage_memory_mb: int = roundf(OS.get_static_memory_usage() / 1024.0 / 1024.0)
+	var usage_peak_memory_mb: int = roundf(OS.get_static_memory_peak_usage() / 1024.0 / 1024.0)
+	label_ram.set_text("RAM Usage: %d MB (%d MB peak)" % [usage_memory_mb, usage_peak_memory_mb])
 	label_fps.set_text("ALPHA - " + str(Engine.get_frames_per_second()) + " FPS")
 	if dirty_save_position:
 		dirty_save_position = false
