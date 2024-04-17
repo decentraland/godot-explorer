@@ -98,8 +98,7 @@ func _ready():
 	virtual_joystick_orig_position = virtual_joystick.get_position()
 	panel_chat.hide()
 
-	if OS.has_feature("ios"):
-		label_ram.show()
+	label_ram.visible = OS.has_feature("ios")
 
 	if Global.is_mobile():
 		mobile_ui.show()
