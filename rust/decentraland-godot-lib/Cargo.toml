@@ -23,7 +23,11 @@ http-body-util = "0.1.0-rc.2"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "blocking"] }
 regex = "*"
 urn = "0.7.0"
-ethers = { version = "2.0", features = ["rustls"] }
+
+ethers-core = { version = "2.0" }
+ethers-signers = { version = "2.0" }
+ethers-providers = { version = "2.0", features = ["ws","rustls"] }
+
 async-trait = "0.1.68"
 
 cpal = { version = "0.15.2", optional = true }
@@ -64,8 +68,6 @@ simple-easing = "1.0.1"
 multihash-codetable = { version = "0.1.1", features = ["digest", "sha2"] }
 cid = "0.11.0"
 multipart = { version = "0.18.0", default-features = false, features = ["client", "lazy_static"] }
-
-ethers-providers = { version = "2.0", features = ["ws","rustls"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix-6.1", features = ["fix_usize_size_t"], optional = true }

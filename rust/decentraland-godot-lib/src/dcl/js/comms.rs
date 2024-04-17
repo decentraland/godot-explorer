@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use deno_core::{op, JsBuffer, Op, OpDecl, OpState};
-use ethers::types::H160;
+use ethers_core::types::H160;
 
 use crate::dcl::scene_apis::RpcCall;
 

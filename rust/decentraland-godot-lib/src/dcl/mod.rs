@@ -6,7 +6,7 @@ pub mod js;
 pub mod scene_apis;
 pub mod serialization;
 
-use ethers::types::H160;
+use ethers_core::types::H160;
 use godot::builtin::{Vector2, Vector3};
 use serde::Serialize;
 
