@@ -26,10 +26,9 @@ reqwest = { version = "0.11", default-features = false, features = ["json", "rus
 regex = "*"
 urn = "0.7.0"
 
-#ethers = { git = "https://github.com/kuruk-mm/ethers-rs/", branch = "patch-1", features = ["rustls", "ws"] } # this include all the ethers-* libs, that some of those are not compatible with wasm
-ethers-core = "2.0"
-ethers-signers = "2.0"
-# ethers-providers = "2.0" # ethers-providers uses jsonwebtoken, that is not compatible with wasm
+ethers-core = { version = "2.0" }
+ethers-signers = { version = "2.0" }
+# ethers-providers = { version = "2.0", features = ["ws","rustls"] } # ethers-providers uses jsonwebtoken, that is not compatible with wasm
 
 async-trait = "0.1.68"
 

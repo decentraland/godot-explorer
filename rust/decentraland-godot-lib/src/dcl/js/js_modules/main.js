@@ -1,8 +1,10 @@
-globalThis.WebAssembly.Instance = function () {
-    throw new Error('Wasm is not allowed in scene runtimes')
-}
-globalThis.WebAssembly.Module = function () {
-    throw new Error('Wasm is not allowed in scene runtimes')
+if (globalThis.WebAssembly !== undefined) {
+    globalThis.WebAssembly.Instance = function () {
+        throw new Error('Wasm is not allowed in scene runtimes')
+    }
+    globalThis.WebAssembly.Module = function () {
+        throw new Error('Wasm is not allowed in scene runtimes')
+    }
 }
 
 

@@ -55,7 +55,10 @@ impl RemoteWallet {
 
 #[async_trait]
 impl ObjSafeWalletSigner for RemoteWallet {
-    async fn sign_message(&self, _message: &[u8]) -> Result<ethers_core::types::Signature, WalletError> {
+    async fn sign_message(
+        &self,
+        _message: &[u8],
+    ) -> Result<ethers_core::types::Signature, WalletError> {
         Err(WalletError::Eip712Error("Not implemented".to_owned()))
     }
 

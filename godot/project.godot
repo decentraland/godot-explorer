@@ -20,6 +20,7 @@ config/icon="res://decentraland_logo.png"
 
 driver/enable_input=true
 driver/mix_rate=48000
+driver/enable_input.ios=false
 
 [autoload]
 
