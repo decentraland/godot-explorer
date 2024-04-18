@@ -60,6 +60,17 @@ impl SceneEntityCoordinator {
         should_load_city_scenes: bool,
     ) -> Self {
         let (http_request_sender, http_request_receiver) = tokio::sync::mpsc::channel(100);
+        // let runtime = if DclGlobal::has_singleton() {
+        //     TokioRuntime::static_clone_handle()
+        // } else {
+        //     None
+        // };
+
+        // let mut _self = SceneEntityCoordinator {
+        //     parcel_radius_calculator: ParcelRadiusCalculator::new(3),
+        //     http_requester: HttpRequester::new(runtime),
+        //     ..Default::default()
+        // };
 
         SceneEntityCoordinator {
             entities_active_url,

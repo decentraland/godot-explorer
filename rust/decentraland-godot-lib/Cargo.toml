@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { git = "https://github.com/godot-rust/gdext", rev = "5e18af87a13bf8d40b4f50bfcb180228e227b773", features=["experimental-threads", "serde", "experimental-wasm"] }
+godot = { git = "https://github.com/leanmendoza/gdext", branch = "text/exclude-openxr", features=["experimental-threads", "serde", "experimental-wasm"] }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
