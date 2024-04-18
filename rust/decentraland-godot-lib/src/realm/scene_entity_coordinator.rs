@@ -5,9 +5,14 @@ use std::{
 
 use godot::{prelude::*, test::itest};
 
-use crate::http_request::{
-    http_requester::HttpRequester,
-    request_response::{RequestOption, RequestResponse, ResponseEnum, ResponseType},
+use crate::{
+    http_request::{
+        http_queue_requester::HttpQueueRequester,
+        request_response::{
+            RequestOption, RequestResponse, RequestResponseError, ResponseEnum, ResponseType,
+        },
+    },
+    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 use super::{
@@ -16,7 +21,7 @@ use super::{
     scene_definition::{EntityBase, SceneEntityDefinition},
 };
 
-#[derive(Debug, Default, GodotClass)]
+#[derive(Debug, GodotClass)]
 #[class(base=Node)]
 struct SceneEntityCoordinator {
     parcel_radius_calculator: ParcelRadiusCalculator,
@@ -30,7 +35,6 @@ struct SceneEntityCoordinator {
     requested_entity: HashMap<u32, EntityBase>,
     cache_scene_data: HashMap<String, Arc<SceneEntityDefinition>>, // entity_id to SceneData
 
-    http_requester: HttpRequester,
     entities_active_url: String,
     content_url: String,
 
@@ -39,6 +43,11 @@ struct SceneEntityCoordinator {
     loadable_scenes: HashSet<String>,
     keep_alive_scenes: HashSet<String>,
     empty_parcels: HashSet<String>,
+
+    http_request_sender: tokio::sync::mpsc::Sender<Result<RequestResponse, RequestResponseError>>,
+    http_request_receiver:
+        tokio::sync::mpsc::Receiver<Result<RequestResponse, RequestResponseError>>,
+    http_requester: Arc<HttpQueueRequester>,
 }
 
 impl SceneEntityCoordinator {
@@ -50,13 +59,42 @@ impl SceneEntityCoordinator {
         content_url: String,
         should_load_city_scenes: bool,
     ) -> Self {
-        let mut _self = SceneEntityCoordinator {
-            parcel_radius_calculator: ParcelRadiusCalculator::new(3),
-            ..Default::default()
-        };
+        let (http_request_sender, http_request_receiver) = tokio::sync::mpsc::channel(100);
 
-        _self._config(entities_active_url, content_url, should_load_city_scenes);
-        _self
+        SceneEntityCoordinator {
+            entities_active_url,
+            content_url,
+            should_load_city_scenes,
+
+            parcel_radius_calculator: ParcelRadiusCalculator::new(3),
+            http_requester: Arc::new(HttpQueueRequester::new(4)),
+
+            // Default
+            current_position: Coord(-1000, -1000),
+            requested_city_pointers: HashMap::new(),
+            cache_city_pointers: HashMap::new(),
+            global_desired_entities: Vec::new(),
+            requested_entity: HashMap::new(),
+            cache_scene_data: HashMap::new(),
+            version: 0,
+            dirty_loadable_scenes: true,
+            loadable_scenes: HashSet::new(),
+            keep_alive_scenes: HashSet::new(),
+            empty_parcels: HashSet::new(),
+
+            http_request_sender,
+            http_request_receiver,
+        }
+    }
+
+    fn send_request(&self, request: RequestOption) {
+        let requester = self.http_requester.clone();
+        let sender = self.http_request_sender.clone();
+
+        TokioRuntime::spawn(async move {
+            let response = requester.request(request, 0).await;
+            sender.send(response).await.unwrap();
+        });
     }
 
     pub fn _config(
@@ -99,7 +137,7 @@ impl SceneEntityCoordinator {
             );
             self.requested_city_pointers
                 .insert(request.id, set_request_pointers);
-            self.http_requester.send_request(request);
+            self.send_request(request);
         }
     }
 
@@ -313,7 +351,7 @@ impl SceneEntityCoordinator {
             );
 
             self.requested_entity.insert(request.id, entity_base);
-            self.http_requester.send_request(request);
+            self.send_request(request);
         }
     }
 
@@ -347,7 +385,7 @@ impl SceneEntityCoordinator {
 
             self.global_desired_entities.push(entity_base.clone());
             self.requested_entity.insert(request.id, entity_base);
-            self.http_requester.send_request(request);
+            self.send_request(request);
         }
     }
 
@@ -380,9 +418,9 @@ impl SceneEntityCoordinator {
     }
 
     pub fn _update(&mut self) {
-        while let Some(response) = self.http_requester.poll() {
-            match response {
-                Ok(response) => {
+        loop {
+            match self.http_request_receiver.try_recv() {
+                Ok(Ok(response)) => {
                     if response.status_code.as_u16() >= 200 && response.status_code.as_u16() < 300 {
                         self.handle_response(response);
                         self.dirty_loadable_scenes = true;
@@ -395,8 +433,11 @@ impl SceneEntityCoordinator {
                         tracing::info!("{response:?}");
                     }
                 }
-                Err(err) => {
+                Ok(Err(err)) => {
                     tracing::info!("Error while doing a request: {err:?}");
+                }
+                Err(_) => {
+                    break;
                 }
             }
         }
