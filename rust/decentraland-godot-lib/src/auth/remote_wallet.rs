@@ -1,12 +1,10 @@
 use std::fmt;
 
-use async_trait::async_trait;
-use ethers_signers::WalletError;
 use ethers_core::types::H160;
 
 use super::{
     auth_identity::try_create_remote_ephemeral, decentraland_auth_server::RemoteReportState,
-    ephemeral_auth_chain::EphemeralAuthChain, wallet::ObjSafeWalletSigner,
+    ephemeral_auth_chain::EphemeralAuthChain,
 };
 
 #[derive(Clone)]
@@ -53,30 +51,6 @@ impl RemoteWallet {
     }
 }
 
-#[async_trait]
-impl ObjSafeWalletSigner for RemoteWallet {
-    async fn sign_message(
-        &self,
-        _message: &[u8],
-    ) -> Result<ethers_core::types::Signature, WalletError> {
-        Err(WalletError::Eip712Error("Not implemented".to_owned()))
-    }
-
-    async fn sign_transaction(
-        &self,
-        _message: &ethers_core::types::transaction::eip2718::TypedTransaction,
-    ) -> Result<ethers_core::types::Signature, WalletError> {
-        Err(WalletError::Eip712Error("Not implemented".to_owned()))
-    }
-
-    fn address(&self) -> ethers_core::types::Address {
-        self.address
-    }
-
-    fn chain_id(&self) -> u64 {
-        self.chain_id
-    }
-}
 #[cfg(test)]
 mod test {
     use super::*;

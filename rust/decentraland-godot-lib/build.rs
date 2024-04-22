@@ -323,7 +323,7 @@ fn main() -> io::Result<()> {
 
     #[cfg(feature = "use_livekit")]
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
-        webrtc_sys_build::configure_jni_symbols().unwrap();
+        webrtc_sys_build::configure_jni_symbols().unwrap(); // disable-wasm
     }
 
     for source in proto_files {

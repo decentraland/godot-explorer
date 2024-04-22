@@ -2,9 +2,12 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use deno_core::{error::AnyError, op, Op, OpDecl, OpState};
 use futures_util::{SinkExt, StreamExt};
-use http::{HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
-use tokio_tungstenite::tungstenite::{client::IntoClientRequest, protocol::CloseFrame};
+use tokio_tungstenite::tungstenite::{
+    client::IntoClientRequest,
+    http::{HeaderName, HeaderValue},
+    protocol::CloseFrame,
+};
 
 pub fn ops() -> Vec<OpDecl> {
     vec![

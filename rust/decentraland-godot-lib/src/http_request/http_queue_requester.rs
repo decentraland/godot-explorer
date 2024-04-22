@@ -71,7 +71,7 @@ async fn process_request(
     let timeout = request_option
         .timeout
         .unwrap_or(std::time::Duration::from_secs(60));
-    let mut request = client.request(request_option.method.clone(), request_option.url.clone());
+    let request = client.request(request_option.method.clone(), request_option.url.clone());
 
     #[cfg(not(target_arch = "wasm32"))]
     let mut request = request.timeout(timeout);
@@ -121,6 +121,7 @@ async fn process_request(
             let json_string = &response.text().await.map_err(map_err_func)?;
             ResponseEnum::Json(serde_json::from_str(json_string))
         }
+        #[cfg(target_arch = "wasm32")]
         _ => {
             return Err(RequestResponseError {
                 id: request_option.id,
@@ -166,6 +167,10 @@ impl HttpQueueRequester {
         let semaphore: Arc<Semaphore> = Arc::clone(&self.semaphore);
         let client: Arc<Client> = self.client.clone();
 
+        #[cfg(not(target_arch = "wasm32"))]
+        process_queue_request(queue, semaphore, client).await;
+
+        #[cfg(target_arch = "wasm32")]
         process_queue_request(queue, semaphore, client);
     }
 }

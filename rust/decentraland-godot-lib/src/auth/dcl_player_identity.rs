@@ -17,7 +17,7 @@ use super::auth_identity::create_local_ephemeral;
 use super::decentraland_auth_server::{do_request, CreateRequest, RemoteReportState};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
-use super::wallet::{AsH160, Wallet};
+use super::wallet::{AsH160, Wallet, WalletType};
 
 enum CurrentWallet {
     Remote(RemoteWallet),
@@ -155,7 +155,7 @@ impl DclPlayerIdentity {
         local_wallet_bytes: &[u8],
         ephemeral_auth_chain: EphemeralAuthChain,
     ) {
-        let local_wallet = Wallet::new_from_inner(Box::new(
+        let local_wallet = Wallet::new_from_inner(WalletType::Local(
             LocalWallet::from_bytes(local_wallet_bytes).unwrap(),
         ));
 
@@ -354,54 +354,6 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn async_get_identity_headers(
-        &self,
-        uri: GString,
-        metadata: GString,
-        method: GString,
-    ) -> Gd<Promise> {
-        let promise = Promise::alloc_gd();
-        let promise_instance_id = promise.instance_id();
-
-        if let Some(handle) = TokioRuntime::static_clone_handle() {
-            let ephemeral_auth_chain = self
-                .ephemeral_auth_chain
-                .as_ref()
-                .expect("ephemeral auth chain not initialized")
-                .clone();
-
-            let uri = http::Uri::try_from(uri.to_string().as_str()).expect("Invalid url");
-            let method = method.to_string();
-            let metadata = metadata.to_string();
-
-            handle.spawn(async move {
-                let headers = super::wallet::sign_request(
-                    method.as_str(),
-                    &uri,
-                    &ephemeral_auth_chain,
-                    metadata,
-                )
-                .await;
-
-                let mut dict = Dictionary::default();
-                for (key, value) in headers {
-                    dict.set(key.to_godot(), value.to_godot());
-                }
-
-                let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
-                else {
-                    tracing::error!("error getting promise");
-                    return;
-                };
-
-                promise.bind_mut().resolve_with_data(dict.to_variant());
-            });
-        }
-
-        promise
-    }
-
-    #[func]
     pub fn async_prepare_deploy_profile(
         &self,
         new_profile: Gd<DclUserProfile>,
@@ -427,12 +379,14 @@ impl DclPlayerIdentity {
         new_user_profile.content.user_id = Some(eth_address.clone());
         new_user_profile.content.eth_address = eth_address;
 
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(handle) = TokioRuntime::static_clone_handle() {
             let ephemeral_auth_chain = self
                 .ephemeral_auth_chain
                 .as_ref()
                 .expect("ephemeral auth chain not initialized")
                 .clone();
+
             handle.spawn(async move {
                 let deploy_data = super::deploy_profile::prepare_deploy_profile(
                     ephemeral_auth_chain.clone(),

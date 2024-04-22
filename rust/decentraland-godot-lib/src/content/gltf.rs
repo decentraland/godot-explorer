@@ -494,9 +494,7 @@ fn get_last_16_alphanumeric(input: &str) -> String {
 fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<Gd<DclEmoteGltf>> {
     let anim_sufix_from_hash = get_last_16_alphanumeric(file_hash.as_str());
     let armature_prop = gltf_node.find_child("Armature_Prop".into());
-    let Some(anim_player) = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer") else {
-        return None;
-    };
+    let anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
     let armature_prefix = format!("Armature_Prop_{}/Skeleton3D:", anim_sufix_from_hash);
 
     let armature_prop = armature_prop

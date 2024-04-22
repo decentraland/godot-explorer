@@ -51,6 +51,7 @@ pub async fn fetch_resource_or_wait(
                 ctx.content_notificator.resolve(file_hash, Ok(())).await;
                 Ok(())
             }
+            #[cfg(target_arch = "wasm32")]
             Err("Wasm32 not supported".to_string())
         }
     }

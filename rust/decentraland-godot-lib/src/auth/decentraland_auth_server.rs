@@ -67,7 +67,7 @@ async fn fetch_polling_server(
         let request_builder = reqwest::Client::builder();
 
         #[cfg(not(target_arch = "wasm32"))]
-        let response = request_builder.timeout(AUTH_SERVER_REQUEST_TIMEOUT);
+        let request_builder = request_builder.timeout(AUTH_SERVER_REQUEST_TIMEOUT);
 
         let response = request_builder
             .build()
@@ -135,7 +135,7 @@ async fn create_new_request(
     let request_builder = reqwest::Client::builder();
 
     #[cfg(not(target_arch = "wasm32"))]
-    let response = request_builder.timeout(AUTH_SERVER_REQUEST_TIMEOUT);
+    let request_builder = request_builder.timeout(AUTH_SERVER_REQUEST_TIMEOUT);
 
     let response = request_builder
         .build()
@@ -198,7 +198,7 @@ impl CreateRequest {
 
 #[cfg(test)]
 mod test {
-    use crate::auth::wallet::Wallet;
+    use crate::auth::wallet::{Wallet, WalletType};
 
     use super::super::auth_identity::get_ephemeral_message;
     use super::*;
@@ -225,7 +225,7 @@ mod test {
         });
 
         let local_wallet = LocalWallet::new(&mut thread_rng());
-        let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
+        let ephemeral_wallet = Wallet::new_from_inner(WalletType::Local(local_wallet));
         let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
         let expiration =
             std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);

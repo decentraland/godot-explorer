@@ -10,7 +10,8 @@ mod portables;
 mod restricted_actions;
 mod runtime;
 mod testing;
-//mod websocket;
+#[cfg(not(target_arch = "wasm32"))]
+mod websocket;
 
 use crate::dcl::common::{
     is_scene_log_enabled, SceneDying, SceneElapsedTime, SceneLogLevel, SceneLogMessage, SceneLogs,
@@ -57,7 +58,7 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         engine::ops(),
         runtime::ops(),
         fetch::ops(),
-        //websocket::ops(),
+        websocket::ops(),
         restricted_actions::ops(),
         portables::ops(),
         players::ops(),
