@@ -177,4 +177,15 @@ limits/debugger/max_chars_per_second=3276800
 
 [rendering]
 
+renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
+lights_and_shadows/directional_shadow/size=2048
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
+lights_and_shadows/positional_shadow/soft_shadow_filter_quality=0
+reflections/sky_reflections/texture_array_reflections=false
+reflections/sky_reflections/ggx_samples=16
+shading/overrides/force_vertex_shading=true
+shading/overrides/force_lambert_over_burley=true
+environment/glow/upscale_mode=0
+lights_and_shadows/positional_shadow/atlas_size=2048
+lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3

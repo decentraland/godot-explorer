@@ -157,6 +157,7 @@ func _on_menu_button_limit_fps_item_selected(index):
 func _on_menu_button_skybox_item_selected(index):
 	Global.config.skybox = index
 	Global.config.save_to_settings_file()
+	Global.get_explorer().environment.set_quality_level(index)
 
 
 func refresh_values():

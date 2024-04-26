@@ -28,6 +28,7 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
 @onready var player := $world/Player
+@onready var environment := %EnvironmentSelector
 @onready var mobile_ui = $UI/SafeMarginContainer/InteractableHUD/MobileUI
 @onready
 var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left
@@ -107,25 +108,6 @@ func _ready():
 		ui_root.gui_input.connect(self._on_ui_root_gui_input)
 	else:
 		mobile_ui.hide()
-
-	var sky = null
-	if Global.is_mobile():
-		sky = load("res://assets/sky/sky_basic_without_glow.tscn").instantiate()
-		add_child(sky)
-	elif Global.testing_scene_mode:
-		sky = load("res://assets/sky/sky_test.tscn").instantiate()
-		add_child(sky)
-	else:
-		match Global.config.skybox:
-			0:
-				sky = load("res://assets/sky/sky_basic.tscn").instantiate()
-			1:
-				sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
-				sky.day_time = 14.9859
-
-		add_child(sky)
-		if Global.config.skybox == 1:
-			sky.day_time = 10
 
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)

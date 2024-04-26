@@ -1,0 +1,37 @@
+[gd_scene load_steps=6 format=3 uid="uid://y5q8yolbxvfv"]
+
+[ext_resource type="Texture2D" uid="uid://cbqxx4vdb574k" path="res://assets/environment/sky_medium/AllSkyFree_Sky_ClearBlueSky_Equirect.png" id="1_b3rsq"]
+[ext_resource type="Script" path="res://assets/environment/sky_base.gd" id="2_5v3h1"]
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_klpcs"]
+panorama = ExtResource("1_b3rsq")
+
+[sub_resource type="Sky" id="Sky_5ff4i"]
+sky_material = SubResource("PanoramaSkyMaterial_klpcs")
+
+[sub_resource type="Environment" id="Environment_mvu0t"]
+background_mode = 2
+sky = SubResource("Sky_5ff4i")
+ambient_light_color = Color(0.501961, 0.501961, 0.501961, 1)
+ambient_light_sky_contribution = 0.2
+tonemap_mode = 3
+glow_levels/1 = 16.0
+glow_levels/2 = 16.0
+glow_levels/3 = 16.0
+glow_levels/4 = 16.0
+glow_levels/5 = 16.0
+glow_levels/6 = 16.0
+glow_levels/7 = 2.95
+glow_blend_mode = 0
+fog_sky_affect = 0.0
+
+[node name="SkyMedium" type="Node"]
+script = ExtResource("2_5v3h1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_mvu0t")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.5, 0.866025, 0, -0.866025, -0.5, 0, 0, 0)
+light_bake_mode = 0
+shadow_enabled = true

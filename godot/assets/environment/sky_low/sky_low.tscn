@@ -1,0 +1,35 @@
+[gd_scene load_steps=5 format=3 uid="uid://dsqq58ubnjwen"]
+
+[ext_resource type="Script" path="res://assets/environment/sky_base.gd" id="1_u1jk8"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_bfvnp"]
+sky_top_color = Color(0.0313726, 0.501961, 1, 1)
+sky_horizon_color = Color(0.737255, 0.745098, 0.760784, 1)
+ground_bottom_color = Color(0.0980392, 0.184314, 0.247059, 1)
+ground_horizon_color = Color(0.8, 0.607843, 0.513726, 1)
+
+[sub_resource type="Sky" id="Sky_0guyp"]
+sky_material = SubResource("ProceduralSkyMaterial_bfvnp")
+
+[sub_resource type="Environment" id="Environment_mvu0t"]
+background_mode = 2
+sky = SubResource("Sky_0guyp")
+glow_levels/1 = 16.0
+glow_levels/2 = 16.0
+glow_levels/3 = 16.0
+glow_levels/4 = 16.0
+glow_levels/5 = 16.0
+glow_levels/6 = 16.0
+glow_levels/7 = 2.95
+glow_blend_mode = 0
+fog_density = 0.001
+
+[node name="SkyMedium" type="Node"]
+script = ExtResource("1_u1jk8")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_mvu0t")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.5, 0.866025, 0, -0.866025, -0.5, 0, 0, 0)
+light_color = Color(1, 0.988235, 0.768627, 1)
