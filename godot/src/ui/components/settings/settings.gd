@@ -36,18 +36,12 @@ var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBox
 @onready var h_slider_mic_amplification = %HSlider_MicAmplification
 
 #Graphics items:
-@onready
-var h_slider_rendering_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution3DScale/HSlider_Resolution3DScale
-@onready
-var menu_button_ui_zoom = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/UiZoom/MenuButton_UiZoom
-@onready
-var v_box_container_windowed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer_Windowed
-@onready
-var checkbox_windowed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer_Windowed/Checkbox_Windowed
-@onready
-var menu_button_limit_fps = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/LimitFps/MenuButton_LimitFps
-@onready
-var menu_button_skybox = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Skybox/MenuButton_Skybox
+@onready var h_slider_rendering_scale = %HSlider_Resolution3DScale
+@onready var menu_button_ui_zoom = %MenuButton_UiZoom
+@onready var v_box_container_windowed = %VBoxContainer_Windowed
+@onready var checkbox_windowed = %Checkbox_Windowed
+@onready var menu_button_limit_fps = %MenuButton_LimitFps
+@onready var menu_button_skybox = %MenuButton_Skybox
 
 #Advanced items:
 @onready
@@ -157,7 +151,7 @@ func _on_menu_button_limit_fps_item_selected(index):
 func _on_menu_button_skybox_item_selected(index):
 	Global.config.skybox = index
 	Global.config.save_to_settings_file()
-	Global.get_explorer().environment.set_quality_level(index)
+	Global.get_explorer().environment.set_skybox(index)
 
 
 func refresh_values():

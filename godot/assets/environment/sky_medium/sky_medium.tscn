@@ -35,3 +35,4 @@ environment = SubResource("Environment_mvu0t")
 transform = Transform3D(1, 0, 0, 0, -0.5, 0.866025, 0, -0.866025, -0.5, 0, 0, 0)
 light_bake_mode = 0
 shadow_enabled = true
+shadow_opacity = 0.7
