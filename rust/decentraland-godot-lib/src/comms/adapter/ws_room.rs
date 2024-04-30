@@ -283,6 +283,7 @@ impl WebSocketRoom {
                                                     base_url: profile.base_url.clone(),
                                                 },
                                             )),
+                                            protocol_version: 0,
                                         },
                                         false,
                                     );
@@ -297,6 +298,7 @@ impl WebSocketRoom {
                                                         .last_profile_version_announced,
                                                 },
                                             )),
+                                            protocol_version: 0,
                                         },
                                         false,
                                     );
@@ -437,6 +439,7 @@ impl WebSocketRoom {
                                                         },
                                                     ),
                                                 ),
+                                                protocol_version: 0,
                                             },
                                             false,
                                         );
@@ -497,6 +500,9 @@ impl WebSocketRoom {
                             entry.push((peer.address, scene.data));
                         }
                         rfc4::packet::Message::Voice(_voice) => {}
+                        _ => {
+                            tracing::error!("comms > unknown message");
+                        }
                     }
                 }
                 ws_packet::Message::PeerKicked(reason) => {
@@ -539,6 +545,7 @@ impl WebSocketRoom {
                                 profile_version,
                             },
                         )),
+                        protocol_version: 0,
                     },
                     true,
                 );
@@ -555,6 +562,7 @@ impl WebSocketRoom {
                                 profile_version: self.last_profile_version_announced,
                             },
                         )),
+                        protocol_version: 0,
                     },
                     false,
                 );
