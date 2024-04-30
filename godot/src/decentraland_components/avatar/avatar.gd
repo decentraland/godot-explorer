@@ -305,17 +305,17 @@ func async_load_wearables():
 		hidings
 		. merge(
 			{
-				"ubody_basemesh": has_own_skin or has_own_upper_body or hidings.has("upper_body"),
-				"lbody_basemesh": has_own_skin or has_own_lower_body or hidings.has("lower_body"),
-				"feet_basemesh": has_own_skin or has_own_feet or hidings.has("feet"),
-				"hands_basemesh": has_own_skin or has_own_hands or hidings.has("hands"),
-				"head_basemesh": has_own_skin or has_own_head or hidings.has("head"),
+				"ubody_basemesh": has_own_skin or has_own_upper_body or hidings.has(WEARABLE_NAME_PREFIX + "upper_body"),
+				"lbody_basemesh": has_own_skin or has_own_lower_body or hidings.has(WEARABLE_NAME_PREFIX + "lower_body"),
+				"feet_basemesh": has_own_skin or has_own_feet or hidings.has(WEARABLE_NAME_PREFIX + "feet"),
+				"hands_basemesh": has_own_skin or has_own_hands or hidings.has(WEARABLE_NAME_PREFIX + "hands"),
+				"head_basemesh": has_own_skin or has_own_head or hidings.has(WEARABLE_NAME_PREFIX + "head"),
 				"mask_eyes":
-				has_own_skin or has_own_head or hidings.has("eyes") or hidings.has("head"),
+				has_own_skin or has_own_head or hidings.has(WEARABLE_NAME_PREFIX + "eyes") or hidings.has(WEARABLE_NAME_PREFIX + "head"),
 				"mask_eyebrows":
-				has_own_skin or has_own_head or hidings.has("eyebrows") or hidings.has("head"),
+				has_own_skin or has_own_head or hidings.has(WEARABLE_NAME_PREFIX + "eyebrows") or hidings.has(WEARABLE_NAME_PREFIX + "head"),
 				"mask_mouth":
-				has_own_skin or has_own_head or hidings.has("mouth") or hidings.has("head"),
+				has_own_skin or has_own_head or hidings.has(WEARABLE_NAME_PREFIX + "mouth") or hidings.has(WEARABLE_NAME_PREFIX + "head"),
 			}
 		)
 	)
