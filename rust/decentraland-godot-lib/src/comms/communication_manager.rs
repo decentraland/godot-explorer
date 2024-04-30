@@ -119,6 +119,7 @@ impl CommunicationManager {
     pub fn send_scene_message(&mut self, scene_id: String, data: Vec<u8>) {
         let scene_message = rfc4::Packet {
             message: Some(rfc4::packet::Message::Scene(rfc4::Scene { scene_id, data })),
+            protocol_version: 0,
         };
         match &mut self.current_connection {
             CommsConnection::Connected(adapter) => {
@@ -217,6 +218,7 @@ impl CommunicationManager {
 
             rfc4::Packet {
                 message: Some(rfc4::packet::Message::Position(position_packet)),
+                protocol_version: 0,
             }
         };
 
@@ -249,6 +251,7 @@ impl CommunicationManager {
                 message: text.to_string(),
                 timestamp: 0.0,
             })),
+            protocol_version: 0,
         };
 
         match &mut self.current_connection {

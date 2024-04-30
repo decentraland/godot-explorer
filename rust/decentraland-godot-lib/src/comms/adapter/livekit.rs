@@ -162,6 +162,7 @@ impl LivekitRoom {
 
                                         self.send_rfc4(
                                             rfc4::Packet {
+                                                protocol_version: 0,
                                                 message: Some(
                                                     rfc4::packet::Message::ProfileResponse(
                                                         rfc4::ProfileResponse {
@@ -247,6 +248,9 @@ impl LivekitRoom {
 
                             avatar_scene.push_voice_frame(peer.alias, frame);
                         }
+                        _ => {
+                            tracing::debug!("comms > unhandled message");
+                        }
                     }
                 }
 
@@ -289,6 +293,7 @@ impl LivekitRoom {
                                 profile_version,
                             },
                         )),
+                        protocol_version: 0,
                     },
                     true,
                 );
@@ -301,6 +306,7 @@ impl LivekitRoom {
                             profile_version: self.last_profile_version_announced,
                         },
                     )),
+                    protocol_version: 0,
                 },
                 false,
             );
