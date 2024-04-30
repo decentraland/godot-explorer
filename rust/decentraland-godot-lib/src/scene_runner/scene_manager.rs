@@ -960,7 +960,14 @@ impl INode for SceneManager {
     }
 
     fn process(&mut self, delta: f64) {
+        let instant = Instant::now();
         self.scene_runner_update(delta);
+        if instant.elapsed().as_millis() > 30 {
+            tracing::info!(
+                "Scene manager process took too long: {:?}",
+                instant.elapsed()
+            );
+        }
 
         let changed_inputs = self.input_state.get_new_inputs();
         let current_pointer_raycast_result = self.get_current_mouse_entity();

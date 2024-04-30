@@ -60,6 +60,8 @@ func get_params_from_cmd():
 	var args := OS.get_cmdline_args()
 	var realm_string = null
 	var location_vector = null
+	var scene_radius = null
+	var scene_radius_in_place := args.find("--scene-radius")
 	var realm_in_place := args.find("--realm")
 	var location_in_place := args.find("--location")
 	var preview_mode := args.has("--preview")
@@ -67,6 +69,9 @@ func get_params_from_cmd():
 
 	if realm_in_place != -1 and args.size() > realm_in_place + 1:
 		realm_string = args[realm_in_place + 1]
+		
+	if scene_radius_in_place != -1 and args.size() > scene_radius_in_place + 1:
+		scene_radius = args[scene_radius_in_place + 1]
 
 	if location_in_place != -1 and args.size() > location_in_place + 1:
 		location_vector = args[location_in_place + 1]
@@ -75,7 +80,7 @@ func get_params_from_cmd():
 			location_vector = Vector2i(int(location_vector[0]), int(location_vector[1]))
 		else:
 			location_vector = null
-	return [realm_string, location_vector, preview_mode, spawn_avatars]
+	return [realm_string, location_vector, preview_mode, spawn_avatars, scene_radius]
 
 
 func _ready():
@@ -84,6 +89,7 @@ func _ready():
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
 	var cmd_preview_mode = cmd_params[2]
+	var cmd_scene_radius = cmd_params[4]
 
 	# --spawn-avatars
 	if cmd_params[3]:
@@ -93,6 +99,11 @@ func _ready():
 	# --preview
 	if cmd_preview_mode:
 		_on_control_menu_request_debug_panel(true)
+		
+	# --scene-radius
+	if cmd_scene_radius != null:
+		cmd_scene_radius = int(cmd_scene_radius)
+		Global.scene_fetcher.set_scene_radius(cmd_scene_radius)
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()

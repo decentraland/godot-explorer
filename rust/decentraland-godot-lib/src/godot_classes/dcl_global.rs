@@ -16,7 +16,9 @@ use crate::{
     test_runner::testing_tools::DclTestingTools,
 };
 
-use super::{dcl_realm::DclRealm, portables::DclPortableExperienceController};
+use super::{
+    dcl_metrics::DclMetrics, dcl_realm::DclRealm, portables::DclPortableExperienceController,
+};
 
 #[cfg(target_os = "android")]
 mod android {
@@ -69,6 +71,9 @@ pub struct DclGlobal {
     pub ethereum_provider: Arc<EthereumProvider>,
 
     pub is_mobile: bool,
+
+    #[var]
+    pub metrics: Gd<DclMetrics>,
 }
 
 #[godot_api]
@@ -114,6 +119,7 @@ impl INode for DclGlobal {
             tokio_runtime,
             testing_tools: DclTestingTools::alloc_gd(),
             realm: DclRealm::alloc_gd(),
+            metrics: DclMetrics::alloc_gd(),
             portable_experience_controller: DclPortableExperienceController::alloc_gd(),
             preview_mode,
             testing_scene_mode,

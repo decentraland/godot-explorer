@@ -74,6 +74,9 @@ func _ready():
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 
+	self.metrics = DclMetrics.new()
+	self.metrics.set_name("metrics")
+
 	self.player_identity = PlayerIdentity.new()
 	self.player_identity.set_name("player_identity")
 
@@ -96,6 +99,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
+	get_tree().root.add_child.call_deferred(self.metrics)
 	get_tree().root.add_child.call_deferred(self.player_identity)
 	get_tree().root.add_child.call_deferred(self.comms)
 	get_tree().root.add_child.call_deferred(self.avatars)
