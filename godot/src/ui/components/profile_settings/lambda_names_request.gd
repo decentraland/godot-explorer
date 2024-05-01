@@ -66,7 +66,7 @@ static func async_request_all_names() -> LambdaNamesResponse:
 	while true:
 		var names = await async_request_names(page_number, NAMES_PAGE_SIZE)
 		if not is_instance_valid(names):
-			return null
+			return response
 		response.total_amount = names.total_amount
 		response.elements.append_array(names.elements)
 		var loaded_elements = page_number * NAMES_PAGE_SIZE
