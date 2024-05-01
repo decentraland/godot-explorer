@@ -24,7 +24,7 @@ func set_skybox_and_shadow(skybox_index: int):
 		sky.queue_free()
 
 	if Global.testing_scene_mode:
-		sky = load("res://assets/sky/sky_test.tscn").instantiate()
+		sky = load("res://assets/environment/sky_test/sky_test.tscn").instantiate()
 	else:
 		match skybox_index:
 			0:
