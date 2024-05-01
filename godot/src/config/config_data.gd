@@ -91,13 +91,13 @@ var limit_fps: int = 0:
 		param_changed.emit(ConfigParams.GRAVITY)
 
 # 0- performance, 1- balanced, 2- high quality
-var skybox: int = 1:
+var skybox: int = 0:
 	set(value):
 		skybox = value
 		param_changed.emit(ConfigParams.SKY_BOX)
 
 # 0- no shadow, 1- low res shadow, 2- high res shadow
-var shadow_quality: int = 1:
+var shadow_quality: int = 0:
 	set(value):
 		shadow_quality = value
 		param_changed.emit(ConfigParams.SHADOW_QUALITY)
@@ -199,11 +199,11 @@ func load_from_default():
 	self.scene_radius = 2
 	self.limit_fps = 0
 
-	self.skybox = 1  # balanced
+	self.skybox = 0 # basic
 
-	self.shadow_quality = 1  # low res shadow
-	self.anti_aliasing = 1  # x2
-	self.graphic_profile = 1
+	self.shadow_quality = 0 # disabled
+	self.anti_aliasing = 0  # off
+	self.graphic_profile = 0
 
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
 
