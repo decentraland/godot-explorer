@@ -28,7 +28,6 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
 @onready var player := $world/Player
-@onready var environment := %EnvironmentSelector
 @onready var mobile_ui = $UI/SafeMarginContainer/InteractableHUD/MobileUI
 @onready
 var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left

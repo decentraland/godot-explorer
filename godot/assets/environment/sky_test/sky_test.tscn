@@ -23,6 +23,10 @@ glow_levels/7 = 2.95
 glow_blend_mode = 0
 fog_density = 0.001
 
-[node name="SkyBasic" type="WorldEnvironment"]
-environment = SubResource("Environment_ncxa3")
+[node name="SkyTest" type="Node"]
 script = ExtResource("1_sxikl")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_ncxa3")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]

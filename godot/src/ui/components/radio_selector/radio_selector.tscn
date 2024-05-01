@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://b5lfwgmd7h8cj"]
+
+[ext_resource type="Script" path="res://src/ui/components/radio_selector/radio_selector.gd" id="1_4st25"]
+
+[node name="RadioSelector" type="HBoxContainer"]
+theme_override_constants/separation = 12
+script = ExtResource("1_4st25")
+items = Array[String](["Item 1", "Item 2", "Item 3"])

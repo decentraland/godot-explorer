@@ -37,11 +37,21 @@ var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBox
 
 #Graphics items:
 @onready var h_slider_rendering_scale = %HSlider_Resolution3DScale
-@onready var menu_button_ui_zoom = %MenuButton_UiZoom
+@onready var radio_selector_ui_zoom = %RadioSelector_UiZoom
+
 @onready var v_box_container_windowed = %VBoxContainer_Windowed
 @onready var checkbox_windowed = %Checkbox_Windowed
-@onready var menu_button_limit_fps = %MenuButton_LimitFps
-@onready var menu_button_skybox = %MenuButton_Skybox
+@onready var radio_selector_windowed = %RadioSelector_Windowed
+
+@onready var box_container_custom = %VBoxContainer_Custom
+
+@onready var radio_selector_graphic_profile = %RadioSelector_GraphicProfile
+
+@onready var radio_selector_skybox = %RadioSelector_Skybox
+@onready var radio_selector_shadow = %RadioSelector_Shadow
+@onready var radio_selector_aa = %RadioSelector_AA
+
+@onready var radio_selector_limit_fps = %RadioSelector_LimitFps
 
 #Advanced items:
 @onready
@@ -81,13 +91,7 @@ func _ready():
 
 	text_edit_cache_path.text = Global.config.local_content_dir
 
-	if Global.is_mobile():
-		v_box_container_windowed.hide()
-		checkbox_windowed.disabled = true
-	else:
-		checkbox_windowed.button_pressed = Global.config.windowed
-
-	refresh_zooms()
+	refresh_graphic_settings()
 
 	h_slider_general_volume.value = Global.config.audio_general_volume
 	h_slider_scene_volume.value = Global.config.audio_scene_volume
@@ -95,11 +99,27 @@ func _ready():
 	h_slider_ui_volume.value = Global.config.audio_ui_volume
 	h_slider_mic_amplification.value = Global.config.audio_mic_amplification
 
-	menu_button_limit_fps.selected = Global.config.limit_fps
-	menu_button_skybox.selected = Global.config.skybox
-
 	refresh_values()
 
+
+func refresh_graphic_settings():
+	# We only show the custom settings if the graphic profile is custom
+	box_container_custom.visible = Global.config.graphic_profile == 3
+	
+	radio_selector_graphic_profile.selected = Global.config.graphic_profile
+
+	if Global.is_mobile():
+		v_box_container_windowed.hide()
+	else:
+		radio_selector_windowed.selected = Global.config.window_mode
+
+	radio_selector_limit_fps.selected = Global.config.limit_fps
+	radio_selector_skybox.selected = Global.config.skybox
+	radio_selector_shadow.selected = Global.config.shadow_quality
+	radio_selector_aa.selected = Global.config.anti_aliasing
+	
+	h_slider_rendering_scale.value = Global.config.resolution_3d_scale
+	refresh_zooms()
 
 func _on_button_pressed():
 	self.hide()
@@ -140,18 +160,6 @@ func _on_button_clear_cache_pressed():
 
 func _on_checkbox_fps_toggled(button_pressed):
 	Global.config.show_fps = button_pressed
-
-
-func _on_menu_button_limit_fps_item_selected(index):
-	Global.config.limit_fps = index
-	GraphicSettings.apply_fps_limit()
-	Global.config.save_to_settings_file()
-
-
-func _on_menu_button_skybox_item_selected(index):
-	Global.config.skybox = index
-	Global.config.save_to_settings_file()
-	Global.get_explorer().environment.set_skybox(index)
 
 
 func refresh_values():
@@ -284,40 +292,20 @@ func _on_check_box_raycast_debugger_toggled(toggled_on):
 	Global.set_raycast_debugger_enable(toggled_on)
 
 
-func _on_button_profile_pressed():
-	pass  # Replace with function body.
-
-
 func refresh_zooms():
 	var selected_index: int = -1
 	var i: int = 0
 	var options := GraphicSettings.get_ui_zoom_available(get_window())
-	menu_button_ui_zoom.clear()
+	radio_selector_ui_zoom.clear()
 
 	for ui_zoom_option in options.keys():
-		menu_button_ui_zoom.add_item(ui_zoom_option)
+		radio_selector_ui_zoom.add_item(ui_zoom_option)
 		if options[ui_zoom_option] == get_window().content_scale_factor:
 			selected_index = i
 		i += 1
 	if selected_index == -1:
 		selected_index = i - 1
-	menu_button_ui_zoom.selected = selected_index
-
-
-func _on_checkbox_windowed_toggled(toggled_on):
-	Global.config.windowed = toggled_on
-	GraphicSettings.apply_window_config()
-	refresh_zooms()
-
-
-func _on_menu_button_ui_zoom_item_selected(index):
-	var options := GraphicSettings.get_ui_zoom_available(get_window())
-	var current_ui_zoom: String = menu_button_ui_zoom.get_item_text(index)
-	if not options.has(current_ui_zoom):
-		current_ui_zoom = "Max"
-	Global.config.ui_zoom = options[current_ui_zoom]
-	GraphicSettings.apply_ui_zoom(get_window())
-	Global.config.save_to_settings_file()
+	radio_selector_ui_zoom.selected = selected_index
 
 
 func _on_h_slider_rendering_scale_drag_ended(_value_changed):
@@ -349,3 +337,64 @@ func _on_h_slider_scene_volume_value_changed(value):
 func _on_h_slider_general_volume_value_changed(value):
 	Global.config.audio_general_volume = value
 	AudioSettings.apply_general_volume_settings()
+
+
+func _on_radio_selector_ui_zoom_select_item(index, item):
+	var options := GraphicSettings.get_ui_zoom_available(get_window())
+	var current_ui_zoom: String = item
+	if not options.has(current_ui_zoom):
+		current_ui_zoom = "Max"
+	Global.config.ui_zoom = options[current_ui_zoom]
+	GraphicSettings.apply_ui_zoom(get_window())
+	Global.config.save_to_settings_file()
+
+
+func _on_radio_selector_select_item(index, item):
+	Global.config.limit_fps = index
+	GraphicSettings.apply_fps_limit()
+	Global.config.save_to_settings_file()
+
+
+func _on_radio_selector_skybox_select_item(index, item):
+	Global.config.skybox = index
+	Global.config.save_to_settings_file()
+
+
+func _on_radio_selector_shadow_select_item(index, item):
+	Global.config.shadow_quality = index
+	Global.config.save_to_settings_file()
+
+
+func _on_radio_selector_windowed_select_item(index, item):
+	Global.config.window_mode = index
+	GraphicSettings.apply_window_config()
+	await get_tree().process_frame
+	refresh_zooms()
+
+
+func _on_radio_selector_aa_select_item(index, item):
+	Global.config.anti_aliasing = index
+	Global.config.save_to_settings_file()
+
+
+func _on_radio_selector_graphic_profile_select_item(index, item):
+	Global.config.graphic_profile = index
+	
+	match index:
+		0: # Performance
+			Global.config.anti_aliasing = 0 # off
+			Global.config.shadow_quality = 0 # disabled
+			Global.config.skybox = 0 # low
+		1: # Balanced
+			Global.config.anti_aliasing = 1 # x2
+			Global.config.shadow_quality = 1 # normal
+			Global.config.skybox = 1 # medium
+		2: # Quality
+			Global.config.anti_aliasing = 3 # x8
+			Global.config.shadow_quality = 2 # high quality
+			Global.config.skybox = 2 # high
+		3: # Custom
+			pass
+
+	refresh_graphic_settings()
+	Global.config.save_to_settings_file()

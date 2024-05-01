@@ -1,11 +1,11 @@
 class_name ConfigData
 extends RefCounted
 
-signal param_changed(param: ConfigParams, new_value)
+signal param_changed(param: ConfigParams)
 
 enum ConfigParams {
 	CONTENT_DIRECTORY,
-	WINDOWED,
+	WINDOW_MODE,
 	UI_ZOOM,
 	RESOLUTION_3D_SCALE,
 	GRAVITY,
@@ -19,7 +19,10 @@ enum ConfigParams {
 	SKY_BOX,
 	SESSION_ACCOUNT,
 	GUEST_PROFILE,
-	AUDIO_GENERAL_VOLUME
+	AUDIO_GENERAL_VOLUME,
+	SHADOW_QUALITY,
+	ANTI_ALIASING,
+	GRAPHIC_PROFILE,
 }
 
 const SETTINGS_FILE = "user://settings.cfg"
@@ -35,10 +38,11 @@ var gravity: float = 55.0:
 		gravity = value
 		param_changed.emit(ConfigParams.GRAVITY)
 
-var windowed: bool = true:
+# 0: Windowed, 1: Borderless, 2: Full Screen
+var window_mode: int = 0:
 	set(value):
-		windowed = value
-		param_changed.emit(ConfigParams.WINDOWED)
+		window_mode = value
+		param_changed.emit(ConfigParams.WINDOW_MODE)
 
 var ui_zoom: float = -1.0:
 	set(value):
@@ -86,11 +90,29 @@ var limit_fps: int = 0:
 		limit_fps = value
 		param_changed.emit(ConfigParams.GRAVITY)
 
-# 0- without, 1 - pretty, skybox -default env
+# 0- performance, 1- balanced, 2- high quality
 var skybox: int = 1:
 	set(value):
 		skybox = value
 		param_changed.emit(ConfigParams.SKY_BOX)
+
+# 0- no shadow, 1- low res shadow, 2- high res shadow
+var shadow_quality: int = 1:
+	set(value):
+		shadow_quality = value
+		param_changed.emit(ConfigParams.SHADOW_QUALITY)
+
+# 0: Performance, 1: Balanced, 2: Quality, 3: Custom
+var graphic_profile: int = 0:
+	set(value):
+		graphic_profile = value
+		param_changed.emit(ConfigParams.GRAPHIC_PROFILE)
+
+# 0: Off, 1: x2, 2: x4, 3: x8
+var anti_aliasing: int = 0:
+	set(value):
+		anti_aliasing = value
+		param_changed.emit(ConfigParams.ANTI_ALIASING)
 
 var last_realm_joined: String = "":
 	set(value):
@@ -177,16 +199,17 @@ func load_from_default():
 	self.scene_radius = 2
 	self.limit_fps = 0
 
-	if Global.is_mobile():
-		self.skybox = 0
-	else:
-		self.skybox = 1
+	self.skybox = 1 # balanced
+	
+	self.shadow_quality = 1 # low res shadow
+	self.anti_aliasing = 1 # x2
+	self.graphic_profile = 1
 
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
 
 	self.show_fps = true
 
-	self.windowed = true
+	self.window_mode = 0
 
 	self.session_account = {}
 	self.guest_profile = {}
@@ -216,11 +239,14 @@ func load_from_settings_file():
 	self.scene_radius = settings_file.get_value("config", "scene_radius", data_default.scene_radius)
 	self.limit_fps = settings_file.get_value("config", "limit_fps", data_default.limit_fps)
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
+	self.shadow_quality = settings_file.get_value("config", "shadow_quality", data_default.shadow_quality)
+	self.anti_aliasing = settings_file.get_value("config", "anti_aliasing", data_default.anti_aliasing)
+	self.graphic_profile = settings_file.get_value("config", "graphic_profile", data_default.graphic_profile)
 	self.local_content_dir = settings_file.get_value(
 		"config", "local_content_dir", data_default.local_content_dir
 	)
 	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
-	self.windowed = settings_file.get_value("config", "windowed", data_default.windowed)
+	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
 	self.resolution_3d_scale = settings_file.get_value(
 		"config", "resolution_3d_scale", data_default.resolution_3d_scale
@@ -278,9 +304,12 @@ func save_to_settings_file():
 	settings_file.set_value("config", "scene_radius", self.scene_radius)
 	settings_file.set_value("config", "limit_fps", self.limit_fps)
 	settings_file.set_value("config", "skybox", self.skybox)
+	settings_file.set_value("config", "shadow_quality", self.shadow_quality)
+	settings_file.set_value("config", "anti_aliasing", self.anti_aliasing)
+	settings_file.set_value("config", "graphic_profile", self.graphic_profile)
 	settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	settings_file.set_value("config", "show_fps", self.show_fps)
-	settings_file.set_value("config", "windowed", self.windowed)
+	settings_file.set_value("config", "window_mode", self.window_mode)
 	settings_file.set_value("config", "ui_zoom", self.ui_zoom)
 	settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
 	settings_file.set_value("config", "audio_general_volume", self.audio_general_volume)
