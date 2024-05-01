@@ -201,6 +201,23 @@
 				"urn:decentraland:matic:collections-v2:0xc65c3e0dd85d993678e02a1407be7d804fae4667:2:210624583337114373395836055367340864637790190801098222508621955084"
 			],
 			"forceRender": []
+		},
+		{
+			"ref": "With lower body not hidden",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+			"wearables": [
+				"urn:decentraland:off-chain:base-avatars:f_eyebrows_03",
+				"urn:decentraland:off-chain:base-avatars:mouth_01",
+				"urn:decentraland:off-chain:base-avatars:eyes_04",
+				"urn:decentraland:off-chain:base-avatars:standard_hair",
+				"urn:decentraland:matic:collections-v2:0x75899709f39626c2112bd8311ab61cdbbc2cecde:0:346",
+				"urn:decentraland:matic:collections-v2:0x8eca0601c9141a0cbed98c41161e92d6c010d78e:0:53",
+				"urn:decentraland:matic:collections-v2:0x343537a2fc40efbc56a99cff7d70b947f2968ccd:0:63",
+				"urn:decentraland:matic:collections-v2:0x6525616757a04f94b737803b9a80ba4664243cbb:0:231",
+				"urn:decentraland:matic:collections-v2:0x3ec01a62bbbad1b49a8a51b86d4d7eeffa0775c0:1:105312291668557186697918027683670432318895095400549111254310977684",
+				"urn:decentraland:matic:collections-v2:0x3338d5294e0312dd39f77a725a65e1ab8f009fd0:0:328"
+			],
+			"forceRender": []
 		}
 	],
 	"emotes": [

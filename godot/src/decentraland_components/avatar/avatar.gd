@@ -287,6 +287,7 @@ func async_load_wearables():
 		for skeleton_3d in wearable_skeletons:
 			for child in skeleton_3d.get_children():
 				var new_wearable = child.duplicate()
+				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
 				new_wearable.name = new_wearable.name.to_lower() + WEARABLE_NAME_PREFIX + category
 				body_shape_skeleton_3d.add_child(new_wearable)
 
@@ -304,29 +305,25 @@ func async_load_wearables():
 			Wearables.Categories.SKIN:
 				has_own_skin = true
 
-	var hidings: Dictionary = {}
+	# Here hidings is an alias
+	var hidings = curated_wearables.hidden_categories
+	var base_bodyshape_hidings = {
+		"ubody_basemesh": has_own_skin or has_own_upper_body or hidings.has("upper_body"),
+		"lbody_basemesh": has_own_skin or has_own_lower_body or hidings.has("lower_body"),
+		"feet_basemesh": has_own_skin or has_own_feet or hidings.has("feet"),
+		"hands_basemesh": has_own_skin or has_own_hands or hidings.has("hands"),
+		"head_basemesh": has_own_skin or has_own_head or hidings.has("head"),
+		"mask_eyes": has_own_skin or has_own_head or hidings.has("eyes") or hidings.has("head"),
+		"mask_eyebrows":
+		has_own_skin or has_own_head or hidings.has("eyebrows") or hidings.has("head"),
+		"mask_mouth": has_own_skin or has_own_head or hidings.has("mouth") or hidings.has("head"),
+	}
 
+	# Final computation of hidings
+	hidings = Dictionary()
+	hidings.merge(base_bodyshape_hidings)
 	for category in curated_wearables.hidden_categories:
 		hidings[WEARABLE_NAME_PREFIX + category] = true
-
-	(
-		hidings
-		. merge(
-			{
-				"ubody_basemesh": has_own_skin or has_own_upper_body or hidings.has("upper_body"),
-				"lbody_basemesh": has_own_skin or has_own_lower_body or hidings.has("lower_body"),
-				"feet_basemesh": has_own_skin or has_own_feet or hidings.has("feet"),
-				"hands_basemesh": has_own_skin or has_own_hands or hidings.has("hands"),
-				"head_basemesh": has_own_skin or has_own_head or hidings.has("head"),
-				"mask_eyes":
-				has_own_skin or has_own_head or hidings.has("eyes") or hidings.has("head"),
-				"mask_eyebrows":
-				has_own_skin or has_own_head or hidings.has("eyebrows") or hidings.has("head"),
-				"mask_mouth":
-				has_own_skin or has_own_head or hidings.has("mouth") or hidings.has("head"),
-			}
-		)
-	)
 
 	for child in body_shape_skeleton_3d.get_children():
 		var should_hide = false
