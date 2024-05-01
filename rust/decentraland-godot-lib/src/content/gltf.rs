@@ -1,6 +1,5 @@
 use std::{collections::HashMap, sync::Arc};
 
-use cid::multibase::Base;
 use godot::{
     bind::GodotClass,
     builtin::{meta::ToGodot, Dictionary, GString, Variant, VariantArray},
