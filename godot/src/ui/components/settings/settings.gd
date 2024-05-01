@@ -40,7 +40,6 @@ var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBox
 @onready var radio_selector_ui_zoom = %RadioSelector_UiZoom
 
 @onready var v_box_container_windowed = %VBoxContainer_Windowed
-@onready var checkbox_windowed = %Checkbox_Windowed
 @onready var radio_selector_windowed = %RadioSelector_Windowed
 
 @onready var box_container_custom = %VBoxContainer_Custom
