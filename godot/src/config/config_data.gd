@@ -199,10 +199,10 @@ func load_from_default():
 	self.scene_radius = 2
 	self.limit_fps = 0
 
-	self.skybox = 1 # balanced
-	
-	self.shadow_quality = 1 # low res shadow
-	self.anti_aliasing = 1 # x2
+	self.skybox = 1  # balanced
+
+	self.shadow_quality = 1  # low res shadow
+	self.anti_aliasing = 1  # x2
 	self.graphic_profile = 1
 
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
@@ -239,9 +239,15 @@ func load_from_settings_file():
 	self.scene_radius = settings_file.get_value("config", "scene_radius", data_default.scene_radius)
 	self.limit_fps = settings_file.get_value("config", "limit_fps", data_default.limit_fps)
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
-	self.shadow_quality = settings_file.get_value("config", "shadow_quality", data_default.shadow_quality)
-	self.anti_aliasing = settings_file.get_value("config", "anti_aliasing", data_default.anti_aliasing)
-	self.graphic_profile = settings_file.get_value("config", "graphic_profile", data_default.graphic_profile)
+	self.shadow_quality = settings_file.get_value(
+		"config", "shadow_quality", data_default.shadow_quality
+	)
+	self.anti_aliasing = settings_file.get_value(
+		"config", "anti_aliasing", data_default.anti_aliasing
+	)
+	self.graphic_profile = settings_file.get_value(
+		"config", "graphic_profile", data_default.graphic_profile
+	)
 	self.local_content_dir = settings_file.get_value(
 		"config", "local_content_dir", data_default.local_content_dir
 	)

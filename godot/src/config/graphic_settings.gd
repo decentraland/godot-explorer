@@ -51,18 +51,18 @@ static func apply_ui_zoom(root: Window):
 		Global.config.ui_zoom = factor
 
 	root.content_scale_factor = factor
-			
+
 
 static func apply_window_config() -> void:
 	if Global.is_mobile():
 		return
 
 	match Global.config.window_mode:
-		0: # Windowed
+		0:  # Windowed
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-		1: # Borderless
+		1:  # Borderless
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-		2: # Full screen
+		2:  # Full screen
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 
 

@@ -105,7 +105,7 @@ func _ready():
 func refresh_graphic_settings():
 	# We only show the custom settings if the graphic profile is custom
 	box_container_custom.visible = Global.config.graphic_profile == 3
-	
+
 	radio_selector_graphic_profile.selected = Global.config.graphic_profile
 
 	if Global.is_mobile():
@@ -117,9 +117,10 @@ func refresh_graphic_settings():
 	radio_selector_skybox.selected = Global.config.skybox
 	radio_selector_shadow.selected = Global.config.shadow_quality
 	radio_selector_aa.selected = Global.config.anti_aliasing
-	
+
 	h_slider_rendering_scale.value = Global.config.resolution_3d_scale
 	refresh_zooms()
+
 
 func _on_button_pressed():
 	self.hide()
@@ -339,7 +340,7 @@ func _on_h_slider_general_volume_value_changed(value):
 	AudioSettings.apply_general_volume_settings()
 
 
-func _on_radio_selector_ui_zoom_select_item(index, item):
+func _on_radio_selector_ui_zoom_select_item(_index, item):
 	var options := GraphicSettings.get_ui_zoom_available(get_window())
 	var current_ui_zoom: String = item
 	if not options.has(current_ui_zoom):
@@ -349,51 +350,52 @@ func _on_radio_selector_ui_zoom_select_item(index, item):
 	Global.config.save_to_settings_file()
 
 
-func _on_radio_selector_select_item(index, item):
+func _on_radio_selector_select_item(index, _item):
 	Global.config.limit_fps = index
 	GraphicSettings.apply_fps_limit()
 	Global.config.save_to_settings_file()
 
 
-func _on_radio_selector_skybox_select_item(index, item):
+func _on_radio_selector_skybox_select_item(index, _item):
 	Global.config.skybox = index
 	Global.config.save_to_settings_file()
 
 
-func _on_radio_selector_shadow_select_item(index, item):
+func _on_radio_selector_shadow_select_item(index, _item):
 	Global.config.shadow_quality = index
 	Global.config.save_to_settings_file()
 
 
-func _on_radio_selector_windowed_select_item(index, item):
+# gdlint:ignore = async-function-name
+func _on_radio_selector_windowed_select_item(index, _item):
 	Global.config.window_mode = index
 	GraphicSettings.apply_window_config()
 	await get_tree().process_frame
 	refresh_zooms()
 
 
-func _on_radio_selector_aa_select_item(index, item):
+func _on_radio_selector_aa_select_item(index, _item):
 	Global.config.anti_aliasing = index
 	Global.config.save_to_settings_file()
 
 
-func _on_radio_selector_graphic_profile_select_item(index, item):
+func _on_radio_selector_graphic_profile_select_item(index, _item):
 	Global.config.graphic_profile = index
-	
+
 	match index:
-		0: # Performance
-			Global.config.anti_aliasing = 0 # off
-			Global.config.shadow_quality = 0 # disabled
-			Global.config.skybox = 0 # low
-		1: # Balanced
-			Global.config.anti_aliasing = 1 # x2
-			Global.config.shadow_quality = 1 # normal
-			Global.config.skybox = 1 # medium
-		2: # Quality
-			Global.config.anti_aliasing = 3 # x8
-			Global.config.shadow_quality = 2 # high quality
-			Global.config.skybox = 2 # high
-		3: # Custom
+		0:  # Performance
+			Global.config.anti_aliasing = 0  # off
+			Global.config.shadow_quality = 0  # disabled
+			Global.config.skybox = 0  # low
+		1:  # Balanced
+			Global.config.anti_aliasing = 1  # x2
+			Global.config.shadow_quality = 1  # normal
+			Global.config.skybox = 1  # medium
+		2:  # Quality
+			Global.config.anti_aliasing = 3  # x8
+			Global.config.shadow_quality = 2  # high quality
+			Global.config.skybox = 2  # high
+		3:  # Custom
 			pass
 
 	refresh_graphic_settings()

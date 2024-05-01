@@ -223,12 +223,14 @@ func try_to_set_body_shape(body_shape_hash):
 
 	_add_attach_points()
 
+
 func apply_unshaded_mode(node_to_apply: Node):
 	if node_to_apply is MeshInstance3D:
 		for surface_idx in range(node_to_apply.mesh.get_surface_count()):
 			var mat = node_to_apply.mesh.surface_get_material(surface_idx)
 			if mat != null and mat is BaseMaterial3D:
 				mat.disable_receive_shadows = true
+
 
 func async_load_wearables():
 	var curated_wearables := Wearables.get_curated_wearable_list(
@@ -345,11 +347,11 @@ func async_load_wearables():
 	var promise: Promise = Global.content_provider.duplicate_materials(meshes)
 	await PromiseUtils.async_awaiter(promise)
 	apply_color_and_facial()
-	
+
 	apply_unshaded_mode(body_shape_skeleton_3d)
 	for child in body_shape_skeleton_3d.get_children():
 		apply_unshaded_mode(child)
-		
+
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
 

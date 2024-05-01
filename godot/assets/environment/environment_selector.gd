@@ -1,5 +1,5 @@
-extends Node
 class_name EnvironmentSelector
+extends Node
 
 var sky: SkyBase = null
 
@@ -9,6 +9,7 @@ func _ready():
 	set_anti_aliasing(Global.config.anti_aliasing)
 	Global.config.param_changed.connect(self._on_config_changed)
 
+
 func _on_config_changed(param: ConfigData.ConfigParams):
 	if param == ConfigData.ConfigParams.SKY_BOX:
 		set_skybox_and_shadow(Global.config.skybox)
@@ -16,6 +17,7 @@ func _on_config_changed(param: ConfigData.ConfigParams):
 		set_shadow(Global.config.shadow_quality)
 	elif param == ConfigData.ConfigParams.ANTI_ALIASING:
 		set_anti_aliasing(Global.config.anti_aliasing)
+
 
 func set_skybox_and_shadow(skybox_index: int):
 	if sky != null:
@@ -35,18 +37,20 @@ func set_skybox_and_shadow(skybox_index: int):
 	add_child(sky)
 	set_shadow(Global.config.shadow_quality)
 
+
 func set_shadow(shadow_quality: int):
 	var quality: RenderingServer.ShadowQuality = RenderingServer.SHADOW_QUALITY_HARD
 	match shadow_quality:
-		0: # no shadow
+		0:  # no shadow
 			sky.sun_light.shadow_enabled = false
-		1: # low res shadow
+		1:  # low res shadow
 			sky.sun_light.shadow_enabled = true
-		2: # high res shadow
+		2:  # high res shadow
 			sky.sun_light.shadow_enabled = true
 			quality = RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM
 
 	RenderingServer.directional_soft_shadow_filter_set_quality(quality)
+
 
 # Reason that anti aliasing is here it's because
 # it applies to the viewport that is being rendered
@@ -54,13 +58,13 @@ func set_shadow(shadow_quality: int):
 func set_anti_aliasing(anti_aliasing: int):
 	var value: RenderingServer.ViewportMSAA = RenderingServer.VIEWPORT_MSAA_DISABLED
 	match Global.config.anti_aliasing:
-		0: # OFF
+		0:  # OFF
 			value = RenderingServer.VIEWPORT_MSAA_DISABLED
-		1: # x2
+		1:  # x2
 			value = RenderingServer.VIEWPORT_MSAA_2X
-		2: # x4
+		2:  # x4
 			value = RenderingServer.VIEWPORT_MSAA_4X
-		3: # x8
+		3:  # x8
 			value = RenderingServer.VIEWPORT_MSAA_8X
-	
+
 	RenderingServer.viewport_set_msaa_3d(get_viewport().get_viewport_rid(), value)
