@@ -199,9 +199,9 @@ func load_from_default():
 	self.scene_radius = 2
 	self.limit_fps = 0
 
-	self.skybox = 0 # basic
+	self.skybox = 0  # basic
 
-	self.shadow_quality = 0 # disabled
+	self.shadow_quality = 0  # disabled
 	self.anti_aliasing = 0  # off
 	self.graphic_profile = 0
 
