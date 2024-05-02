@@ -164,6 +164,7 @@ jobs:
     # Comment next line to test this job on PRs
     if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
+      fail-fast: false
       matrix:
         os: [self-hosted-windows, ubuntu-latest, macos-14-xlarge]
     runs-on: ${{ matrix.os }}
