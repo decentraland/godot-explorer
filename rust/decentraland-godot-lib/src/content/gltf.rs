@@ -4,9 +4,13 @@ use godot::{
     bind::GodotClass,
     builtin::{meta::ToGodot, Dictionary, GString, Variant, VariantArray},
     engine::{
-        animation::TrackType, global::Error, node::ProcessMode, AnimatableBody3D, Animation,
-        AnimationLibrary, AnimationPlayer, CollisionShape3D, ConcavePolygonShape3D, GltfDocument,
-        GltfState, MeshInstance3D, Node, Node3D, NodeExt, StaticBody3D,
+        animation::TrackType,
+        base_material_3d::{DiffuseMode, SpecularMode},
+        global::Error,
+        node::ProcessMode,
+        AnimatableBody3D, Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D,
+        CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, MeshInstance3D, Node,
+        Node3D, NodeExt, StaticBody3D,
     },
     obj::{Gd, InstanceId},
 };
@@ -132,6 +136,8 @@ pub async fn internal_load_gltf(
             "Error loading gltf when generating scene".to_string(),
         ))?;
 
+    set_toon_material_modes(node.clone());
+
     let mut node = node.try_cast::<Node3D>().map_err(|err| {
         anyhow::Error::msg(format!("Error loading gltf when casting to Node3D: {err}"))
     })?;
@@ -139,6 +145,24 @@ pub async fn internal_load_gltf(
     node.rotate_y(std::f32::consts::PI);
 
     Ok((node, thread_safe_check))
+}
+
+pub fn set_toon_material_modes(node_to_inspect: Gd<Node>) {
+    for child in node_to_inspect.get_children().iter_shared() {
+        if let Ok(mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
+            if let Some(mesh) = mesh_instance_3d.get_mesh() {
+                for surface_index in 0..mesh.get_surface_count() {
+                    if let Some(material) = mesh.surface_get_material(surface_index) {
+                        if let Ok(mut base_material) = material.try_cast::<BaseMaterial3D>() {
+                            base_material.set_specular_mode(SpecularMode::SPECULAR_TOON);
+                            base_material.set_diffuse_mode(DiffuseMode::DIFFUSE_TOON);
+                        }
+                    }
+                }
+            }
+        }
+        set_toon_material_modes(child);
+    }
 }
 
 pub async fn load_gltf_scene_content(

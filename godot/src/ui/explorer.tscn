@@ -1,10 +1,11 @@
-[gd_scene load_steps=28 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=29 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
 [ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://src/logic/player/player.tscn" id="3_fr1df"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
+[ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
 [ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="5_c8ksg"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="7_1fkrq"]
@@ -51,6 +52,9 @@ surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
 [node name="Timer_BroadcastPosition" type="Timer" parent="world"]
 wait_time = 0.1
 autostart = true
+
+[node name="EnvironmentSelector" parent="world" instance=ExtResource("4_f5cdi")]
+unique_name_in_owner = true
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3

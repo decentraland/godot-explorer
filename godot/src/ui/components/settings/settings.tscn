@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=14 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://fx5fj4f8uf7k" path="res://assets/ui/Filter.svg" id="6_br0rl"]
 [ext_resource type="Texture2D" uid="uid://bqypc3fidla5s" path="res://assets/ui/SettingsOff.png" id="6_gugrl"]
 [ext_resource type="Texture2D" uid="uid://g38eqwq311ph" path="res://assets/ui/speaker-on.svg" id="6_q1ods"]
+[ext_resource type="PackedScene" uid="uid://b5lfwgmd7h8cj" path="res://src/ui/components/radio_selector/radio_selector.tscn" id="7_u8bs2"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_jdndg"]
 
@@ -13,6 +14,8 @@
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
 
 [sub_resource type="Theme" id="Theme_eontw"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_nra8i"]
 
 [sub_resource type="Theme" id="Theme_3h20j"]
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
@@ -147,6 +150,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="VBoxContainer_General" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
+visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -221,55 +225,92 @@ focus_mode = 0
 text = "Clear Cache"
 
 [node name="VBoxContainer_Graphics" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
-visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
-theme_override_constants/separation = 15
+theme_override_constants/separation = 30
 
-[node name="VBoxContainer_Windowed" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
+[node name="GraphicProfile" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GraphicProfile"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Graphic Profile"
+
+[node name="RadioSelector_GraphicProfile" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GraphicProfile" instance=ExtResource("7_u8bs2")]
+unique_name_in_owner = true
+layout_mode = 2
+items = Array[String](["LOW QUALITY", "MEDIUM QUALITY", "HIGH QUALITY", "CUSTOM"])
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="VBoxContainer_Windowed" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
-theme_type_variation = &"2"
-theme_override_constants/separation = 25
 
-[node name="Checkbox_Windowed" type="CheckBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer_Windowed"]
+[node name="Label_Windowed" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/VBoxContainer_Windowed"]
 layout_mode = 2
-focus_mode = 0
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-button_pressed = true
-text = "Windowed mode"
-flat = true
+theme = SubResource("Theme_eontw")
+text = "Window mode"
 
-[node name="UiZoom" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
+[node name="RadioSelector_Windowed" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/VBoxContainer_Windowed" instance=ExtResource("7_u8bs2")]
+unique_name_in_owner = true
+layout_mode = 2
+items = Array[String](["Windowed", "Borderless", "Full Screen"])
+
+[node name="UiZoom" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="Label_UiZoom" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/UiZoom"]
+[node name="Label_UiZoom" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/UiZoom"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "2D UI Zoom"
 
-[node name="MenuButton_UiZoom" type="OptionButton" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/UiZoom"]
+[node name="RadioSelector_UiZoom" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/UiZoom" instance=ExtResource("7_u8bs2")]
+unique_name_in_owner = true
 layout_mode = 2
-focus_mode = 1
-fit_to_longest_item = false
+items = Array[String](["Max"])
 
-[node name="Resolution3DScale" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
+[node name="LimitFps" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Label_LimitFps" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/LimitFps"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "Limit FPS"
+
+[node name="RadioSelector_LimitFps" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/LimitFps" instance=ExtResource("7_u8bs2")]
+unique_name_in_owner = true
+layout_mode = 2
+items = Array[String](["VSync", "No limit", "30 FPS", "60 FPS"])
+
+[node name="Resolution3DScale" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution3DScale"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/Resolution3DScale"]
 layout_mode = 2
 
-[node name="Label_Resolution3DScale" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution3DScale/HBoxContainer"]
+[node name="Label_Resolution3DScale" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/Resolution3DScale/HBoxContainer"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "3D Resolution scale"
 
-[node name="Label_Resolution3DScale2" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution3DScale/HBoxContainer"]
+[node name="Label_Resolution3DScale2" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/Resolution3DScale/HBoxContainer"]
 self_modulate = Color(1, 1, 1, 0.784314)
 layout_mode = 2
 theme = SubResource("Theme_eontw")
@@ -277,69 +318,77 @@ theme_override_font_sizes/font_size = 12
 text = "(lower value might improve performance)"
 vertical_alignment = 1
 
-[node name="HSlider_Resolution3DScale" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution3DScale"]
+[node name="HSlider_Resolution3DScale" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/Resolution3DScale"]
+unique_name_in_owner = true
 layout_mode = 2
 min_value = 0.5
 max_value = 1.0
 step = 0.1
 value = 1.0
 
-[node name="LimitFps" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
+[node name="VSeparator" type="VSeparator" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 70
+theme_override_styles/separator = SubResource("StyleBoxEmpty_nra8i")
+
+[node name="VBoxContainer_Custom" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="Skybox" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom"]
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
 
-[node name="Label_LimitFps" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/LimitFps"]
-layout_mode = 2
-theme = SubResource("Theme_eontw")
-text = "Limit FPS"
-
-[node name="MenuButton_LimitFps" type="OptionButton" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/LimitFps"]
-layout_mode = 2
-focus_mode = 1
-item_count = 5
-selected = 0
-popup/item_0/text = "VSync"
-popup/item_0/id = 0
-popup/item_1/text = "No Limit"
-popup/item_1/id = 1
-popup/item_2/text = "30"
-popup/item_2/id = 2
-popup/item_3/text = "60"
-popup/item_3/id = 3
-popup/item_4/text = "120"
-popup/item_4/id = 4
-
-[node name="Skybox" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
-layout_mode = 2
-size_flags_vertical = 0
-alignment = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Skybox"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Skybox"]
 layout_mode = 2
 
-[node name="Label_Skybox" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Skybox/HBoxContainer"]
+[node name="Label_Skybox" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Skybox/HBoxContainer"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Skybox"
 
-[node name="Label_Skybox2" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Skybox/HBoxContainer"]
-self_modulate = Color(1, 1, 1, 0.784314)
+[node name="RadioSelector_Skybox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Skybox" instance=ExtResource("7_u8bs2")]
+unique_name_in_owner = true
+layout_mode = 2
+items = Array[String](["BASIC", "NORMAL", "REALISTIC"])
+
+[node name="Shadows" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom"]
+layout_mode = 2
+size_flags_vertical = 0
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Shadows"]
+layout_mode = 2
+
+[node name="Label_Skybox" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Shadows/HBoxContainer"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
-theme_override_font_sizes/font_size = 12
-text = "(require to restart the client)"
-vertical_alignment = 1
+text = "Shadows"
 
-[node name="MenuButton_Skybox" type="OptionButton" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Skybox"]
+[node name="RadioSelector_Shadow" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Shadows" instance=ExtResource("7_u8bs2")]
+unique_name_in_owner = true
 layout_mode = 2
-focus_mode = 1
-item_count = 2
-selected = 0
-popup/item_0/text = "Default"
-popup/item_0/id = 0
-popup/item_1/text = "Beauty"
-popup/item_1/id = 1
+items = Array[String](["DISABLED", "NORMAL", "HIGH QUALITY"])
+
+[node name="Antialiasing" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom"]
+layout_mode = 2
+size_flags_vertical = 0
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Antialiasing"]
+layout_mode = 2
+
+[node name="Label_Antialiasing" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Antialiasing/HBoxContainer"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "Anti-aliasing"
+
+[node name="RadioSelector_AA" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Antialiasing" instance=ExtResource("7_u8bs2")]
+unique_name_in_owner = true
+layout_mode = 2
+items = Array[String](["OFF", "X2", "X4", "X8"])
 
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
 visible = false
@@ -671,11 +720,14 @@ focus_mode = 1
 [connection signal="toggled" from="ColorRect_Navbar/MarginContainer/HBoxContainer/HBoxContainer2/Button_ResetAll" to="." method="_on_monitoring_button_toggled"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_value_changed"]
 [connection signal="pressed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_CachePath/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
-[connection signal="toggled" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer_Windowed/Checkbox_Windowed" to="." method="_on_checkbox_windowed_toggled"]
-[connection signal="item_selected" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/UiZoom/MenuButton_UiZoom" to="." method="_on_menu_button_ui_zoom_item_selected"]
-[connection signal="drag_ended" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution3DScale/HSlider_Resolution3DScale" to="." method="_on_h_slider_rendering_scale_drag_ended"]
-[connection signal="item_selected" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/LimitFps/MenuButton_LimitFps" to="." method="_on_menu_button_limit_fps_item_selected"]
-[connection signal="item_selected" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Skybox/MenuButton_Skybox" to="." method="_on_menu_button_skybox_item_selected"]
+[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GraphicProfile/RadioSelector_GraphicProfile" to="." method="_on_radio_selector_graphic_profile_select_item"]
+[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/VBoxContainer_Windowed/RadioSelector_Windowed" to="." method="_on_radio_selector_windowed_select_item"]
+[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/UiZoom/RadioSelector_UiZoom" to="." method="_on_radio_selector_ui_zoom_select_item"]
+[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/LimitFps/RadioSelector_LimitFps" to="." method="_on_radio_selector_select_item"]
+[connection signal="drag_ended" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/Resolution3DScale/HSlider_Resolution3DScale" to="." method="_on_h_slider_rendering_scale_drag_ended"]
+[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Skybox/RadioSelector_Skybox" to="." method="_on_radio_selector_skybox_select_item"]
+[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Shadows/RadioSelector_Shadow" to="." method="_on_radio_selector_shadow_select_item"]
+[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Antialiasing/RadioSelector_AA" to="." method="_on_radio_selector_aa_select_item"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume/HSlider_GeneralVolume" to="." method="_on_h_slider_general_volume_value_changed"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/SceneVolume/HSlider_SceneVolume" to="." method="_on_h_slider_scene_volume_value_changed"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VoiceChatVolume/HSlider_VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]

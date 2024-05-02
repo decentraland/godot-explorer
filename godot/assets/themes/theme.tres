@@ -1,10 +1,14 @@
-[gd_resource type="Theme" load_steps=87 format=3 uid="uid://bm1rvmngc833v"]
+[gd_resource type="Theme" load_steps=95 format=3 uid="uid://bm1rvmngc833v"]
 
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_l2aal"]
 [ext_resource type="StyleBox" uid="uid://corto87blbgdd" path="res://assets/themes/panel.tres" id="3_8ip38"]
+[ext_resource type="Texture2D" uid="uid://drkr11fgdf3sj" path="res://assets/themes/icons/checkbox_pressed.png" id="3_i2vuu"]
 [ext_resource type="Texture2D" uid="uid://bmqhk7e74vv4y" path="res://assets/ui/switch-on.svg" id="3_xf1lv"]
+[ext_resource type="Texture2D" uid="uid://bi265olsdwnpm" path="res://assets/themes/icons/checkbox_unpressed.png" id="4_11iue"]
 [ext_resource type="Texture2D" uid="uid://druvtx8hs4m2x" path="res://assets/ui/switch-off.svg" id="4_heft8"]
+[ext_resource type="Texture2D" uid="uid://bqaohwme0rs6h" path="res://assets/themes/icons/radiobutton_checked.svg" id="4_hpiu7"]
 [ext_resource type="StyleBox" uid="uid://bh17sqn8188gg" path="res://assets/themes/flat_panel.tres" id="5_2imde"]
+[ext_resource type="Texture2D" uid="uid://bk3ioa0uh6ynf" path="res://assets/themes/icons/radiobutton_unchecked.svg" id="5_vf2ta"]
 [ext_resource type="StyleBox" uid="uid://bagpmfxlu8c0l" path="res://assets/themes/style_box_empty.tres" id="6_6fkyn"]
 [ext_resource type="StyleBox" uid="uid://byma35fnmo730" path="res://assets/themes/line_edit_focused.tres" id="7_72dks"]
 [ext_resource type="StyleBox" uid="uid://df8k6h14mxhcr" path="res://assets/themes/general_slider/grabber_area.tres" id="7_eijsr"]
@@ -31,7 +35,11 @@
 [ext_resource type="Texture2D" uid="uid://cb0lipd2f3quo" path="res://assets/themes/icons/dcl_collapsed_arrow_mirrored.png" id="28_kwb7d"]
 [ext_resource type="StyleBox" uid="uid://bje68jsif1cd6" path="res://assets/themes/tabs/tab_unselected.tres" id="29_30xt1"]
 [ext_resource type="Texture2D" uid="uid://d1ly37tghjvec" path="res://assets/themes/icons/dcl_checkbox_s.png" id="29_avb2o"]
+[ext_resource type="StyleBox" uid="uid://dqnmlmtbjgoft" path="res://assets/themes/red_button_focused.tres" id="30_6wjqn"]
 [ext_resource type="Texture2D" uid="uid://um0t477e350q" path="res://assets/themes/icons/dcl_checkbox_unpressed_s.png" id="30_7shrd"]
+[ext_resource type="StyleBox" uid="uid://ek2qwrov3tye" path="res://assets/themes/red_button_hover.tres" id="31_cvasn"]
+[ext_resource type="StyleBox" uid="uid://duqixjmemsk2" path="res://assets/themes/red_button_normal.tres" id="32_pntas"]
+[ext_resource type="StyleBox" uid="uid://bplfwutea65mx" path="res://assets/themes/red_buton_pressed.tres" id="33_nab2d"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="38_cwxav"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xtskn"]
@@ -538,8 +546,11 @@ CheckBox/colors/font_hover_color = Color(0.4, 0.388235, 0.419608, 1)
 CheckBox/colors/font_hover_pressed_color = Color(0.188235, 0.184314, 0.203922, 1)
 CheckBox/colors/font_pressed_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 CheckBox/constants/h_separation = 10
-CheckBox/icons/checked = ExtResource("3_xf1lv")
-CheckBox/icons/unchecked = ExtResource("4_heft8")
+CheckBox/font_sizes/font_size = 16
+CheckBox/icons/checked = ExtResource("3_i2vuu")
+CheckBox/icons/radio_checked = ExtResource("4_hpiu7")
+CheckBox/icons/radio_unchecked = ExtResource("5_vf2ta")
+CheckBox/icons/unchecked = ExtResource("4_11iue")
 CheckBox/styles/disabled = ExtResource("6_6fkyn")
 CheckBox/styles/focus = ExtResource("6_6fkyn")
 CheckBox/styles/hover = ExtResource("6_6fkyn")
@@ -682,6 +693,16 @@ ProgressBar/colors/font_outline_color = Color(1, 0.180392, 0.333333, 1)
 ProgressBar/constants/outline_size = 4
 ProgressBar/styles/background = ExtResource("17_8xvh3")
 ProgressBar/styles/fill = ExtResource("18_tlppg")
+RedButton/base_type = &"Button"
+RedButton/colors/font_color = Color(0, 0, 0, 1)
+RedButton/colors/font_focus_color = Color(1, 1, 1, 1)
+RedButton/colors/font_hover_color = Color(1, 1, 1, 1)
+RedButton/colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+RedButton/colors/font_pressed_color = Color(1, 1, 1, 1)
+RedButton/styles/focus = ExtResource("30_6wjqn")
+RedButton/styles/hover = ExtResource("31_cvasn")
+RedButton/styles/normal = ExtResource("32_pntas")
+RedButton/styles/pressed = ExtResource("33_nab2d")
 RichTextLabel/colors/default_color = Color(1, 1, 1, 1)
 RichTextLabel/colors/font_outline_color = Color(1, 1, 1, 1)
 RichTextLabel/colors/font_selected_color = Color(0, 0, 0, 0)

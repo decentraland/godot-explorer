@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/tool/avatar_renderer/avatar_renderer_standalone.gd" id="1_24a53"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="2_05642"]
-[ext_resource type="Environment" uid="uid://c6yftsnvufsg8" path="res://assets/sky/cli_environment.tres" id="3_2p2fp"]
+[ext_resource type="Environment" uid="uid://c6yftsnvufsg8" path="res://assets/environment/cli_environment.tres" id="3_2p2fp"]
 
 [node name="AvatarRendererScene" type="Node"]
 script = ExtResource("1_24a53")
