@@ -194,6 +194,12 @@ fn detect_entity_id_in_parent_chain(
         if node.desired_parent_3d == search_entity {
             return true;
         }
+
+        // self-parenting?
+        if current_entity == node.desired_parent_3d {
+            return false;
+        }
+
         current_entity = node.desired_parent_3d;
     }
 
