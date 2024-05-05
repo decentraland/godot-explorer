@@ -31,8 +31,9 @@ var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBox
 #Audio items
 @onready var h_slider_general_volume = %HSlider_GeneralVolume
 @onready var h_slider_scene_volume = %HSlider_SceneVolume
-@onready var h_slider_voice_chat_volume = %HSlider_VoiceChatVolume
 @onready var h_slider_ui_volume = %HSlider_UIVolume
+@onready var h_slider_music_volume = %HSlider_MusicVolume
+@onready var h_slider_voice_chat_volume = %HSlider_VoiceChatVolume
 @onready var h_slider_mic_amplification = %HSlider_MicAmplification
 
 #Graphics items:
@@ -96,6 +97,7 @@ func _ready():
 	h_slider_scene_volume.value = Global.config.audio_scene_volume
 	h_slider_voice_chat_volume.value = Global.config.audio_voice_chat_volume
 	h_slider_ui_volume.value = Global.config.audio_ui_volume
+	h_slider_music_volume.value = Global.config.audio_music_volume
 	h_slider_mic_amplification.value = Global.config.audio_mic_amplification
 
 	refresh_values()
@@ -317,26 +319,31 @@ func _on_h_slider_rendering_scale_drag_ended(_value_changed):
 func _on_h_slider_mic_amplification_value_changed(value):
 	Global.config.audio_mic_amplification = value
 	AudioSettings.apply_mic_amplification_settings()
+	Global.config.save_to_settings_file()
 
 
 func _on_h_slider_ui_volume_value_changed(value):
 	Global.config.audio_ui_volume = value
 	AudioSettings.apply_ui_volume_settings()
+	Global.config.save_to_settings_file()
 
 
 func _on_h_slider_voice_chat_volume_value_changed(value):
 	Global.config.audio_voice_chat_volume = value
 	AudioSettings.apply_voice_chat_volume_settings()
+	Global.config.save_to_settings_file()
 
 
 func _on_h_slider_scene_volume_value_changed(value):
 	Global.config.audio_scene_volume = value
 	AudioSettings.apply_scene_volume_settings()
+	Global.config.save_to_settings_file()
 
 
 func _on_h_slider_general_volume_value_changed(value):
 	Global.config.audio_general_volume = value
 	AudioSettings.apply_general_volume_settings()
+	Global.config.save_to_settings_file()
 
 
 func _on_radio_selector_ui_zoom_select_item(_index, item):
@@ -398,4 +405,10 @@ func _on_radio_selector_graphic_profile_select_item(index, _item):
 			pass
 
 	refresh_graphic_settings()
+	Global.config.save_to_settings_file()
+
+
+func _on_h_slider_music_volume_value_changed(value):
+	Global.config.audio_music_volume = value
+	AudioSettings.apply_music_volume_settings()
 	Global.config.save_to_settings_file()

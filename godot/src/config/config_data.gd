@@ -153,6 +153,10 @@ var audio_ui_volume: float = 100.0:
 	set(value):
 		audio_ui_volume = value
 
+var audio_music_volume: float = 100.0:
+	set(value):
+		audio_music_volume = value
+
 var audio_mic_amplification: float = 100.0:
 	set(value):
 		audio_mic_amplification = value
@@ -274,6 +278,10 @@ func load_from_settings_file():
 		"config", "audio_ui_volume", data_default.audio_ui_volume
 	)
 
+	self.audio_music_volume = settings_file.get_value(
+		"config", "audio_music_volume", data_default.audio_music_volume
+	)
+
 	self.audio_mic_amplification = settings_file.get_value(
 		"config", "audio_mic_amplification", data_default.audio_mic_amplification
 	)
@@ -320,8 +328,9 @@ func save_to_settings_file():
 	settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
 	settings_file.set_value("config", "audio_general_volume", self.audio_general_volume)
 	settings_file.set_value("config", "audio_scene_volume", self.audio_scene_volume)
-	settings_file.set_value("config", "audio_voice_chat_volume", self.audio_voice_chat_volume)
 	settings_file.set_value("config", "audio_ui_volume", self.audio_ui_volume)
+	settings_file.set_value("config", "audio_music_volume", self.audio_music_volume)
+	settings_file.set_value("config", "audio_voice_chat_volume", self.audio_voice_chat_volume)
 	settings_file.set_value("config", "audio_mic_amplification", self.audio_mic_amplification)
 	settings_file.set_value("session", "account", self.session_account)
 	settings_file.set_value("session", "guest_profile", self.guest_profile)

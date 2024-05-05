@@ -22,10 +22,6 @@ var current_direction: Vector3 = Vector3()
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 
-@onready var camera_fade_in_audio = preload("res://assets/sfx/ui_fade_in.wav")
-@onready var camera_fade_out_audio = preload("res://assets/sfx/ui_fade_out.wav")
-@onready var audio_stream_player_camera = $AudioStreamPlayer_Camera
-
 
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
 	if !camera_mode_change_blocked:  # if it's already blocked, we don't store the state again...
@@ -51,8 +47,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		avatar.try_show()
 		avatar.set_rotation(Vector3(0, 0, 0))
 		if play_sound:
-			audio_stream_player_camera.stream = camera_fade_out_audio
-			audio_stream_player_camera.play()
+			UiSounds.play_sound("ui_fade_out")
 	elif mode == Global.CameraMode.FIRST_PERSON:
 		var tween_in = create_tween()
 		tween_in.tween_property(camera, "position", Vector3(0, 0, -0.2), 0.25).set_ease(
@@ -60,8 +55,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		)
 		avatar.hide()
 		if play_sound:
-			audio_stream_player_camera.stream = camera_fade_in_audio
-			audio_stream_player_camera.play()
+			UiSounds.play_sound("ui_fade_in")
 
 
 func _ready():

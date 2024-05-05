@@ -225,6 +225,7 @@ focus_mode = 0
 text = "Clear Cache"
 
 [node name="VBoxContainer_Graphics" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
+visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -391,7 +392,6 @@ layout_mode = 2
 items = Array[String](["OFF", "X2", "X4", "X8"])
 
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
-visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -427,6 +427,36 @@ unique_name_in_owner = true
 layout_mode = 2
 value = 100.0
 
+[node name="UIVolume" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
+layout_mode = 2
+size_flags_vertical = 4
+alignment = 1
+
+[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "UI Volume"
+
+[node name="HSlider_UIVolume" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume"]
+unique_name_in_owner = true
+layout_mode = 2
+value = 100.0
+
+[node name="MusicVolume" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
+layout_mode = 2
+size_flags_vertical = 4
+alignment = 1
+
+[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MusicVolume"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "Ambient / Music"
+
+[node name="HSlider_MusicVolume" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MusicVolume"]
+unique_name_in_owner = true
+layout_mode = 2
+value = 100.0
+
 [node name="VoiceChatVolume" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
 layout_mode = 2
 size_flags_vertical = 4
@@ -439,21 +469,6 @@ text = "VoiceChat
 "
 
 [node name="HSlider_VoiceChatVolume" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VoiceChatVolume"]
-unique_name_in_owner = true
-layout_mode = 2
-value = 100.0
-
-[node name="UIVolume" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
-layout_mode = 2
-size_flags_vertical = 4
-alignment = 1
-
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume"]
-layout_mode = 2
-theme = SubResource("Theme_eontw")
-text = "UI Volume"
-
-[node name="HSlider_UIVolume" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume"]
 unique_name_in_owner = true
 layout_mode = 2
 value = 100.0
@@ -730,8 +745,9 @@ focus_mode = 1
 [connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Antialiasing/RadioSelector_AA" to="." method="_on_radio_selector_aa_select_item"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume/HSlider_GeneralVolume" to="." method="_on_h_slider_general_volume_value_changed"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/SceneVolume/HSlider_SceneVolume" to="." method="_on_h_slider_scene_volume_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VoiceChatVolume/HSlider_VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume/HSlider_UIVolume" to="." method="_on_h_slider_ui_volume_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MusicVolume/HSlider_MusicVolume" to="." method="_on_h_slider_music_volume_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VoiceChatVolume/HSlider_VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MicAmplification/HSlider_MicAmplification" to="." method="_on_h_slider_mic_amplification_value_changed"]
 [connection signal="toggled" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_SceneLog" to="." method="_on_check_box_scene_log_toggled"]
 [connection signal="toggled" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger" to="." method="_on_check_box_raycast_debugger_toggled"]

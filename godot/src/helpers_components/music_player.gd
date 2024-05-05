@@ -9,7 +9,7 @@ var _last_music: String = ""
 
 
 func _ready():
-	_audio_stream.bus = &"Ambient"
+	_audio_stream.bus = &"Music"
 	add_child(_audio_stream)
 
 

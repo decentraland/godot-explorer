@@ -25,6 +25,8 @@ const _SOUNDS_TO_LOAD = [
 	&"widget_emotes_close",
 	&"widget_emotes_highlight",
 	&"widget_emotes_open",
+	&"ui_fade_in",
+	&"ui_fade_out",
 ]
 
 var _sounds: Dictionary = {}
