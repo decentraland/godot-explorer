@@ -46,6 +46,7 @@ func _update_wheel(emote_urns: Array):
 
 func _gui_input(event):
 	if event is InputEventScreenTouch:
+		UiSounds.play_sound("widget_emotes_close")
 		hide()
 		Global.explorer_grab_focus()
 
@@ -60,6 +61,8 @@ func _gui_input(event):
 
 func _physics_process(_delta):
 	if Input.is_action_just_pressed("ia_open_emote_wheel"):
+		if not is_visible_in_tree():
+			UiSounds.play_sound("widget_emotes_open")
 		show()
 		grab_focus()
 		Global.release_mouse()
@@ -85,3 +88,4 @@ func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
 
 	last_selected_emote_urn = emote_urn
 	label_emote_name.text = child.emote_name
+	UiSounds.play_sound("backpack_item_highlight")

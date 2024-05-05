@@ -1,9 +1,8 @@
 class_name WearableItem
 extends CustomTouchButton
 
-signal equip(wearable_id: String)
-signal unequip(wearable_id: String)
-signal info(wearable_id: String)
+signal equip
+signal unequip
 
 const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")

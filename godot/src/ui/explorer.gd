@@ -79,6 +79,7 @@ func get_params_from_cmd():
 
 
 func _ready():
+	Global.music_player.stop()
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
@@ -96,7 +97,6 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
-	panel_chat.hide()
 
 	label_ram.visible = OS.has_feature("ios")
 
