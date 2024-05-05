@@ -5,8 +5,6 @@ var _current_music: String = ""
 
 var _last_music: String = ""
 
-var _priority: Dictionary = {}
-
 @onready var _audio_stream: AudioStreamPlayer = AudioStreamPlayer.new()
 
 

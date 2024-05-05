@@ -1,4 +1,4 @@
-[gd_scene load_steps=75 format=3 uid="uid://dvu5i0n51gph3"]
+[gd_scene load_steps=76 format=3 uid="uid://dvu5i0n51gph3"]
 
 [ext_resource type="Script" path="res://src/decentraland_components/avatar/avatar.gd" id="1_stmqn"]
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="2_uh4pv"]
@@ -6,6 +6,7 @@
 [ext_resource type="AnimationLibrary" uid="uid://by2djy1ah7psb" path="res://assets/animations/default_emotes.tres" id="4_mgm58"]
 [ext_resource type="AnimationLibrary" uid="uid://bt3bj0k3qqmbn" path="res://assets/animations/idle.res" id="5_h07gr"]
 [ext_resource type="PackedScene" uid="uid://ci0fn7h7pxdmc" path="res://src/helpers_components/avatar_modifier_area_detector.tscn" id="6_yae5p"]
+[ext_resource type="PackedScene" uid="uid://1llql2trpa5s" path="res://src/decentraland_components/avatar/avatar_sfxs.tscn" id="7_xt6ge"]
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_v3xl2"]
 resource_local_to_scene = true
@@ -874,5 +875,7 @@ one_shot = true
 
 [node name="AudioPlayer_Emote" type="AudioStreamPlayer3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
+
+[node name="Avatar_SFXs" parent="." instance=ExtResource("7_xt6ge")]
 
 [connection signal="timeout" from="Timer_HideMic" to="." method="_on_timer_hide_mic_timeout"]
