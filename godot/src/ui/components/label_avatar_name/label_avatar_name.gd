@@ -80,7 +80,8 @@ func _update_node():
 
 		var text_size = get_string_size(label_name, profile_name)
 		self.size = text_size
-		container_label.size = text_size
+		#container_label.size = text_size
+		container_label.set_size.call_deferred(text_size)
 
 		container_label.set_position(Vector2(0, 0))
 

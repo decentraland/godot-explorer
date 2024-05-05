@@ -15,15 +15,15 @@ func _ready():
 	add_child(_audio_stream)
 
 
-func play(name: StringName):
-	var new_stream = load("res://assets/sfx/ambient/%s.wav" % name)
+func play(music_name: StringName):
+	var new_stream = load("res://assets/sfx/ambient/%s.wav" % music_name)
 	if is_instance_valid(new_stream):
 		if not _current_music.is_empty():
 			_last_music = _current_music
 
 		_audio_stream.stream = new_stream
 		_audio_stream.play()
-		_current_music = name
+		_current_music = music_name
 
 
 func restore_music():

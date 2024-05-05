@@ -10,8 +10,6 @@ const _SOUNDS_TO_LOAD = [
 	&"generic_button_hover",
 	&"backpack_item_equip",
 	&"backpack_item_highlight",
-	&"chat_text_join",
-	&"chat_text_leave",
 	&"widget_chat_open",  # Open chat
 	&"widget_chat_close",  # Close chat
 	&"widget_chat_message_private_send",  # Send message
@@ -82,9 +80,9 @@ func _play_sound_toggle(name_on: StringName, name_off: StringName, toggled_on: b
 	play_sound(name_on if toggled_on else name_off)
 
 
-func play_sound(name: StringName):
-	var audio_stream: AudioStreamPlayer = _sounds.get(name)
+func play_sound(sound_name: StringName):
+	var audio_stream: AudioStreamPlayer = _sounds.get(sound_name)
 	if is_instance_valid(audio_stream):
 		audio_stream.play()
 	else:
-		printerr("Audio %s doesn't exists.", name)
+		printerr("Audio %s doesn't exists.", sound_name)
