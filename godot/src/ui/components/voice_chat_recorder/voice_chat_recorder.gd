@@ -11,6 +11,7 @@ func _ready():
 		audio.connect(Global.comms.broadcast_voice)
 		setup_audio_server()
 
+
 func set_recording_enabled_with_sfx(enabled: bool):
 	UiSounds.play_sound("voice_chat_mic_on" if enabled else "voice_chat_mic_off")
 	set_recording_enabled(enabled)

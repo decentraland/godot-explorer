@@ -1,7 +1,5 @@
 extends Node3D
 
-@onready var avatar: Avatar = get_parent()
-
 const WALK_SOUNDS = [
 	preload("res://assets/sfx/avatar/avatar_footstep_walk01.wav"),
 	preload("res://assets/sfx/avatar/avatar_footstep_walk02.wav"),
@@ -61,9 +59,12 @@ var last_land: bool = false
 
 @onready var audio_player_steps: AudioStreamPlayer3D = $AudioPlayer_Steps
 @onready var audio_player_effects: AudioStreamPlayer3D = $AudioPlayer_Effects
+@onready var avatar: Avatar = get_parent()
+
 
 func _ready():
 	last_land = avatar.land
+
 
 func _process(_delta):
 	var current_time = Time.get_ticks_msec()
@@ -71,25 +72,25 @@ func _process(_delta):
 		if avatar.run:
 			audio_player_steps.stream = RUN_SOUNDS[run_index]
 			audio_player_steps.play()
-			run_index = run_index + 1 if run_index < RUN_SOUNDS.size()-1 else 0
+			run_index = run_index + 1 if run_index < RUN_SOUNDS.size() - 1 else 0
 			next_tick = current_time + RUN_INTERVAL
 		elif avatar.jog:
 			audio_player_steps.stream = JOG_SOUNDS[jog_index]
 			audio_player_steps.play()
-			jog_index = jog_index + 1 if jog_index < JOG_SOUNDS.size()-1 else 0
+			jog_index = jog_index + 1 if jog_index < JOG_SOUNDS.size() - 1 else 0
 			next_tick = current_time + JOG_INTERVAL
 		elif avatar.walk:
 			audio_player_steps.stream = WALK_SOUNDS[walk_index]
 			audio_player_steps.play()
-			walk_index = walk_index + 1 if walk_index < WALK_SOUNDS.size()-1 else 0
+			walk_index = walk_index + 1 if walk_index < WALK_SOUNDS.size() - 1 else 0
 			next_tick = current_time + WALK_INTERVAL
 
 	if last_land != avatar.land:
 		# Start/stop land
 		last_land = avatar.land
-		if last_rise == false: # This sould be trigger on jumps
+		if last_rise == false:  # This sould be trigger on jumps
 			audio_player_effects.stream = JUMP_SOUNDS.pick_random()
 			audio_player_effects.play()
-		else: # This sould be trigger when it landed...
+		else:  # This sould be trigger when it landed...
 			audio_player_effects.stream = LAND_SOUNDS.pick_random()
 			audio_player_effects.play()
