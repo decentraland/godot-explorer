@@ -166,7 +166,7 @@ func _async_on_desired_scene_changed():
 
 	report_scene_load.emit(false, new_loading, loadable_scenes.size())
 
-	var results = await PromiseUtils.async_all(loading_promises)
+	await PromiseUtils.async_all(loading_promises)
 
 	# If there is other calls processing the scene, early return
 	# 	the next block of code will be executed by the last request

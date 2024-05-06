@@ -61,6 +61,7 @@ func close_sign_in():
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	Global.player_identity.need_open_url.connect(self._on_need_open_url)
 	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
 	Global.player_identity.wallet_connected.connect(self._on_wallet_connected)

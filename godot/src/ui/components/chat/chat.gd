@@ -18,6 +18,12 @@ func _ready():
 
 	Global.comms.chat_message.connect(self.on_chats_arrived)
 
+	submit_message.connect(self._on_submit_message)
+
+
+func _on_submit_message():
+	UiSounds.play_sound("widget_chat_message_private_send")
+
 
 func add_chat_message(bb_text: String) -> void:
 	rich_text_label_chat.append_text(bb_text)
@@ -56,6 +62,7 @@ func on_chats_arrived(chats: Array):
 		else:
 			var text = "[b][color=#1cc]%s[/color] > [color=#fff]%s[/color]" % [avatar_name, message]
 			add_chat_message(text)
+			UiSounds.play_sound("notification_chatmessage_public_appear")
 
 
 func _on_button_send_pressed():
@@ -80,8 +87,10 @@ func _on_visibility_changed():
 		line_edit_command.text = ""
 		if visible:
 			line_edit_command.grab_focus()
+			UiSounds.play_sound("widget_chat_open")
 		else:
 			Global.explorer_grab_focus()
+			UiSounds.play_sound("widget_chat_close")
 
 
 func _on_line_edit_command_focus_exited():

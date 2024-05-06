@@ -24,6 +24,7 @@ driver/enable_input.ios=false
 
 [autoload]
 
+UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
 
 [debug]

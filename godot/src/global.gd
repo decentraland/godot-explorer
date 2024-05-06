@@ -27,6 +27,8 @@ var scene_fetcher: SceneFetcher
 var nft_fetcher: OpenSeaFetcher
 var nft_frame_loader: NftFrameStyleLoader
 
+var music_player: MusicPlayer
+
 var standalone = false
 var dcl_android_plugin
 
@@ -42,6 +44,7 @@ func _ready():
 	http_requester = RustHttpQueueRequester.new()
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
+	music_player = MusicPlayer.new()
 
 	if args.size() == 1 and args[0].begins_with("res://"):
 		if args[0] != "res://src/main.tscn":
@@ -92,6 +95,7 @@ func _ready():
 	self.avatars = AvatarScene.new()
 	self.avatars.set_name("avatar_scene")
 
+	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)

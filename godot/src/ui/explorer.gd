@@ -79,6 +79,8 @@ func get_params_from_cmd():
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
+	Global.music_player.stop()
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
@@ -96,7 +98,6 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
-	panel_chat.hide()
 
 	label_ram.visible = OS.has_feature("ios")
 
@@ -398,8 +399,8 @@ func _on_control_menu_request_debug_panel(enabled):
 
 
 func _on_timer_fps_label_timeout():
-	var usage_memory_mb: int = roundf(OS.get_static_memory_usage() / 1024.0 / 1024.0)
-	var usage_peak_memory_mb: int = roundf(OS.get_static_memory_peak_usage() / 1024.0 / 1024.0)
+	var usage_memory_mb: int = int(roundf(OS.get_static_memory_usage() / 1024.0 / 1024.0))
+	var usage_peak_memory_mb: int = int(roundf(OS.get_static_memory_peak_usage() / 1024.0 / 1024.0))
 	label_ram.set_text("RAM Usage: %d MB (%d MB peak)" % [usage_memory_mb, usage_peak_memory_mb])
 	label_fps.set_text("ALPHA - " + str(Engine.get_frames_per_second()) + " FPS")
 	if dirty_save_position:

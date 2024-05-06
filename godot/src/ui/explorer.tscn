@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=30 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -25,6 +25,7 @@
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="20_uf6rv"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="21_pows0"]
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_bi432"]
+[ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
 
@@ -240,6 +241,7 @@ expand_icon = true
 layout_mode = 1
 
 [node name="Panel_Chat" parent="UI/SafeMarginContainer/InteractableHUD" instance=ExtResource("9_4ktln")]
+visible = false
 layout_mode = 0
 offset_left = 20.0
 offset_top = 90.0
@@ -363,6 +365,8 @@ mouse_filter = 2
 
 [node name="VoiceChatRecorder" type="VoiceChatRecorder" parent="."]
 script = ExtResource("20_064cw")
+
+[node name="SceneMusicChanger" parent="." instance=ExtResource("26_5hhk2")]
 
 [connection signal="timeout" from="world/Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]
 [connection signal="gui_input" from="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]

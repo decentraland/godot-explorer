@@ -51,4 +51,5 @@ func _start():
 			Global.config.session_account = new_stored_account
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 	else:
+		Global.music_player.play("music_authentication")
 		get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
