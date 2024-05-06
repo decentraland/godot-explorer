@@ -90,6 +90,7 @@ func async_set_texture(emote_data: DclItemEntityDefinition) -> void:
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	if not Engine.is_editor_hint():
 		mouse_entered.connect(self._on_mouse_entered)
 		mouse_exited.connect(self._on_mouse_exited)

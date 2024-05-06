@@ -79,6 +79,7 @@ func get_params_from_cmd():
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()

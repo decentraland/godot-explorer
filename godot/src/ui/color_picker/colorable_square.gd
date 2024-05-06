@@ -13,6 +13,7 @@ signal select_color
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	panel_container_border.hide()
 	panel_color.modulate = background_color
 

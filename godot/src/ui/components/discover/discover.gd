@@ -5,6 +5,7 @@ extends Control
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	jump_in.hide()
 
 

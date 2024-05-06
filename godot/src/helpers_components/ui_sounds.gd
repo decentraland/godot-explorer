@@ -45,17 +45,19 @@ func _ready():
 
 		add_child(audio_stream)
 
-	#install_audio_recusirve(get_node(root_path))
-
-	# Mateo: Im concerned about performance
-	get_tree().node_added.connect(self.install_audio)
-
 
 func install_audio(node: Node):
 	if node.has_meta("disable_ui_sounds"):
-		pass
-	elif node is WearableItem:
+		return
+
+	var sound_added = true
+
+	if node is WearableItem:
 		node.equip.connect(self.play_sound.bind(&"backpack_item_equip"))
+	elif node is EmoteItemUi:
+		node.play_emote.connect(func(_data): self.play_sound(&"backpack_item_equip"))
+	elif node is EmoteEditorItem:
+		node.select_emote.connect(func(_data): self.play_sound(&"mainmenu_tile_highlight"))
 	elif node is PlaceItem:
 		node.item_pressed.connect(func(_data): play_sound(&"mainmenu_tile_highlight"))
 	elif node is CheckBox or node is OptionButton:
@@ -69,11 +71,17 @@ func install_audio(node: Node):
 		node.button_up.connect(self.play_sound.bind(&"generic_button_release"))
 	elif node is LineEdit:
 		node.text_changed.connect(func(_new_text): play_sound(&"inputfield_entertext"))
+	else:
+		sound_added = false
+
+	if sound_added:
+		node.set_meta("disable_ui_sounds", true)
 
 
 func install_audio_recusirve(node: Node):
+	install_audio(node)
+
 	for child in node.get_children():
-		install_audio(child)
 		# recursion
 		install_audio_recusirve(child)
 

@@ -29,6 +29,7 @@ var was_pressed = false
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	panel_container_external_orig_rect = panel_container_external.get_rect()
 	panel_container_external.hide()
 
