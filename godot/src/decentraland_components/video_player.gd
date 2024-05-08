@@ -11,7 +11,7 @@ func stream_buffer(data: PackedVector2Array):
 func async_request_video(file_hash):
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
-	var promise = Global.content_provider.fetch_video(file_hash, content_mapping)
+	var promise = Global.content_provider.fetch_video(self, file_hash, content_mapping)
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:
 		printerr("Error on fetching video: ", res.get_error())

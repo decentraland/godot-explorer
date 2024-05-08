@@ -42,9 +42,9 @@ class LambdaWearableResponse:
 		return response
 
 
-static func async_fetch_emote(emote_urn: String):
+static func async_fetch_emote(owner: Node, emote_urn: String):
 	var emote_data_promises = Global.content_provider.fetch_wearables(
-		[emote_urn], Global.realm.get_profile_content_url()
+		owner, [emote_urn], Global.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(emote_data_promises)
 

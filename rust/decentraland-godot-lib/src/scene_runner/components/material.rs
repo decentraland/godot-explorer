@@ -72,6 +72,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             content_provider.call_deferred(
                                 "fetch_texture_by_hash".into(),
                                 &[
+                                    node_3d.clone().to_variant(),
                                     GString::from(hash).to_variant(),
                                     DclContentMappingAndUrl::from_ref(
                                         scene.content_mapping.clone(),

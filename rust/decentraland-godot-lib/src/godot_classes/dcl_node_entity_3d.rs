@@ -1,4 +1,3 @@
-use godot::engine::Node3D;
 use godot::prelude::*;
 
 use crate::dcl::components::SceneEntityId;

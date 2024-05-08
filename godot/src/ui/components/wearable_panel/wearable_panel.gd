@@ -77,7 +77,7 @@ func async_set_wearable(wearable: DclItemEntityDefinition, _wearable_id: String)
 	thumbnail_hash = dcl_content_mapping.get_hash(wearable_thumbnail)
 
 	if not thumbnail_hash.is_empty():
-		var promise = Global.content_provider.fetch_texture(wearable_thumbnail, dcl_content_mapping)
+		var promise = Global.content_provider.fetch_texture(self, wearable_thumbnail, dcl_content_mapping)
 		var res = await PromiseUtils.async_awaiter(promise)
 		if res is PromiseError:
 			printerr("Fetch texture error on ", wearable_thumbnail, ": ", res.get_error())

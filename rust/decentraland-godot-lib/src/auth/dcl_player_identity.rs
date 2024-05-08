@@ -356,7 +356,7 @@ impl DclPlayerIdentity {
         metadata: GString,
         method: GString,
     ) -> Gd<Promise> {
-        let promise = Promise::alloc_gd();
+        let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
@@ -403,7 +403,7 @@ impl DclPlayerIdentity {
         new_profile: Gd<DclUserProfile>,
         has_new_snapshots: bool,
     ) -> Gd<Promise> {
-        let promise = Promise::alloc_gd();
+        let promise = Promise::new_gd();
         let promise_instance_id = promise.instance_id();
 
         let current_profile = if let Some(profile) = self.profile.clone() {

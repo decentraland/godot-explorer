@@ -39,7 +39,7 @@ pub fn set_thread_safety_checks_enabled(enabled: bool) {
 
 fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: String) -> bool {
     if let Some(mut promise) = get_promise() {
-        promise.call_deferred("reject".into(), &[reason.to_variant()]);
+        promise.bind_mut().reject(reason.to_godot());
         true
     } else {
         false
@@ -49,9 +49,9 @@ fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: String)
 fn resolve_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, value: Option<Variant>) -> bool {
     if let Some(mut promise) = get_promise() {
         if let Some(value) = value {
-            promise.call_deferred("resolve_with_data".into(), &[value]);
+            promise.bind_mut().resolve_with_data(value);
         } else {
-            promise.call_deferred("resolve".into(), &[]);
+            promise.bind_mut().resolve();
         }
         true
     } else {

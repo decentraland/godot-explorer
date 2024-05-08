@@ -20,7 +20,7 @@ func async_load_nft(urn: String):
 		printerr("NftShape::load_nft Error, invalid urn: ", urn)
 		return
 
-	var promise = Global.nft_fetcher.fetch_nft(dcl_urn)
+	var promise = Global.nft_fetcher.fetch_nft(self, dcl_urn)
 	var asset = await PromiseUtils.async_awaiter(promise)
 	if asset is OpenSeaFetcher.Asset:
 		%VBoxContainer_InfoPanel.show()

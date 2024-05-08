@@ -1,6 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
+    collections::{HashMap, HashSet}, sync::Arc
 };
 
 use godot::{
@@ -14,7 +13,7 @@ use crate::{
     avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
     content::content_mapping::DclContentMappingAndUrl,
     dcl::common::string::FindNthChar,
-    godot_classes::promise::Promise,
+    godot_classes::{promise::Promise, resource_owner::ResourceOwner},
     http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
 };
@@ -32,6 +31,8 @@ use super::{
     video::download_video,
     wearable_entities::{request_wearables, WearableManyResolved},
 };
+
+#[derive(Clone)]
 pub struct ContentEntry {
     promise: Gd<Promise>,
 }
@@ -76,6 +77,21 @@ impl INode for ContentProvider {
         self.cached.clear();
         tracing::info!("ContentProvider::exit_tree");
     }
+
+    fn process(&mut self, _dt: f64) {
+        self.clear_cache();
+
+        /*for (_hash, content) in &self.cached {
+            let promise = &content.promise;
+            let data = &promise.bind().get_data();
+            if data.get_type() == VariantType::Object {
+                let node_3d = &data.try_to::<Gd<Node3D>>();
+                if let Ok(node_3d) = &node_3d {
+                    godot_print!("data: {} {}", node_3d.get_name(), promise.get_reference_count());
+                }
+            }
+        }*/
+    }
 }
 
 #[godot_api]
@@ -84,6 +100,7 @@ impl ContentProvider {
     #[func]
     pub fn fetch_gltf(
         &mut self,
+        node_owner: Gd<Node>,
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
         content_type: i32,
@@ -94,6 +111,7 @@ impl ContentProvider {
         };
 
         if let Some(entry) = self.cached.get(file_hash) {
+            ResourceOwner::add_to(node_owner, entry.promise.clone());
             return entry.promise.clone();
         }
 
@@ -123,6 +141,7 @@ impl ContentProvider {
             then_promise(get_promise, result);
         });
 
+        ResourceOwner::add_to(node_owner, promise.clone());
         self.cached.insert(
             file_hash,
             ContentEntry {
@@ -164,6 +183,7 @@ impl ContentProvider {
     #[func]
     pub fn fetch_audio(
         &mut self,
+        node_owner: Gd<Node>,
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
@@ -173,6 +193,7 @@ impl ContentProvider {
         };
 
         if let Some(entry) = self.cached.get(file_hash) {
+            ResourceOwner::add_to(node_owner, entry.promise.clone());
             return entry.promise.clone();
         }
 
@@ -186,6 +207,7 @@ impl ContentProvider {
             then_promise(get_promise, result);
         });
 
+        ResourceOwner::add_to(node_owner, promise.clone());
         self.cached.insert(
             file_hash,
             ContentEntry {
@@ -199,6 +221,7 @@ impl ContentProvider {
     #[func]
     pub fn fetch_texture(
         &mut self,
+        node_owner: Gd<Node>,
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
@@ -207,17 +230,19 @@ impl ContentProvider {
             return Promise::from_rejected("Texture not found in the mappings.".to_string());
         };
 
-        self.fetch_texture_by_hash(file_hash, content_mapping)
+        self.fetch_texture_by_hash(node_owner, file_hash, content_mapping)
     }
 
     #[func]
     pub fn fetch_texture_by_hash(
         &mut self,
+        node_owner: Gd<Node>,
         file_hash_godot: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
         if let Some(entry) = self.cached.get(&file_hash) {
+            ResourceOwner::add_to(node_owner, entry.promise.clone());
             return entry.promise.clone();
         }
 
@@ -227,7 +252,7 @@ impl ContentProvider {
         if file_hash.starts_with("http") {
             // get file_hash from url
             let new_file_hash = format!("hashed_{:x}", file_hash_godot.hash());
-            let promise = self.fetch_texture_by_url(GString::from(new_file_hash), file_hash_godot);
+            let promise = self.fetch_texture_by_url(node_owner, GString::from(new_file_hash), file_hash_godot);
             self.cached.insert(
                 file_hash,
                 ContentEntry {
@@ -250,6 +275,7 @@ impl ContentProvider {
             then_promise(get_promise, result);
         });
 
+        ResourceOwner::add_to(node_owner, promise.clone());
         self.cached.insert(
             file_hash,
             ContentEntry {
@@ -261,9 +287,10 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
+    pub fn fetch_texture_by_url(&mut self, node_owner: Gd<Node>, file_hash: GString, url: GString) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
         if let Some(entry) = self.cached.get(&file_hash) {
+            ResourceOwner::add_to(node_owner, entry.promise.clone());
             return entry.promise.clone();
         }
         let url = url.to_string();
@@ -275,6 +302,7 @@ impl ContentProvider {
             then_promise(get_promise, result);
         });
 
+        ResourceOwner::add_to(node_owner, promise.clone());
         self.cached.insert(
             file_hash,
             ContentEntry {
@@ -342,12 +370,18 @@ impl ContentProvider {
     #[func]
     pub fn fetch_video(
         &mut self,
+        node_owner: Gd<Node>,
         file_hash: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
+        let file_hash = file_hash.to_string();
+        if let Some(entry) = self.cached.get(&file_hash) {
+            ResourceOwner::add_to(node_owner, entry.promise.clone());
+            return entry.promise.clone();
+        }
+
         let content_mapping = content_mapping.bind().get_content_mapping();
         let (promise, get_promise) = Promise::make_to_async();
-        let file_hash = file_hash.to_string();
         let video_file_hash = file_hash.clone();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
@@ -356,6 +390,7 @@ impl ContentProvider {
             then_promise(get_promise, result);
         });
 
+        ResourceOwner::add_to(node_owner, promise.clone());
         self.cached.insert(
             file_hash,
             ContentEntry {
@@ -410,6 +445,7 @@ impl ContentProvider {
     #[func]
     pub fn fetch_wearables(
         &mut self,
+        node_owner: Gd<Node>,
         wearables: VariantArray,
         content_base_url: GString,
     ) -> Array<Gd<Promise>> {
@@ -425,6 +461,7 @@ impl ContentProvider {
             let wearable_id = wearable_id[0..token_id_pos].to_lowercase();
 
             if let Some(entry) = self.cached.get(&wearable_id) {
+                ResourceOwner::add_to(node_owner.clone(), entry.promise.clone());
                 promise_ids.insert(entry.promise.instance_id());
             } else {
                 wearable_to_fetch.insert(wearable_id.clone());
@@ -434,10 +471,12 @@ impl ContentProvider {
                     new_promise = Some((promise, get_promise));
                 }
 
+                let promise = &new_promise.as_ref().unwrap().0;
+                ResourceOwner::add_to(node_owner.clone(), promise.clone());
                 self.cached.insert(
                     wearable_id,
                     ContentEntry {
-                        promise: new_promise.as_ref().unwrap().0.clone(),
+                        promise: promise.clone(),
                     },
                 );
             }
@@ -464,6 +503,8 @@ impl ContentProvider {
                 .await;
                 then_promise(get_promise, result);
             });
+
+            ResourceOwner::add_to(node_owner.clone(), promise.clone());
             self.cached.insert(
                 "wearables".to_string(),
                 ContentEntry {
@@ -507,6 +548,31 @@ impl ContentProvider {
     }
 
     #[func]
+    pub fn get_all_promises(&self) -> Array<Gd<Promise>> {
+        Array::from_iter(
+            self.cached
+                .iter()
+                .map(|(_, entry)| entry.promise.clone()),
+        )
+    }
+
+    #[func]
+    pub fn clear_cache(&mut self) {
+        self.cached =
+            self.cached
+            .iter()
+            .filter(|(_, entry)| {
+                if entry.promise.get_reference_count() == 1 {
+                    println!("byeeeeeeeeeeeee")
+                }
+                entry.promise.get_reference_count() != 1
+            })
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+    }
+
+
+    #[func]
     pub fn get_profile(&self, user_id: GString) -> Option<Gd<DclUserProfile>> {
         let user_id = user_id.to_string().as_str().as_h160()?;
         let hash = format!("profile_{:x}", user_id);
@@ -515,13 +581,14 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn fetch_profile(&mut self, user_id: GString) -> Gd<Promise> {
+    pub fn fetch_profile(&mut self, node_owner: Gd<Node>, user_id: GString) -> Gd<Promise> {
         let Some(user_id) = user_id.to_string().as_str().as_h160() else {
             return Promise::from_rejected("Invalid user id".to_string());
         };
 
         let hash = format!("profile_{:x}", user_id);
         if let Some(entry) = self.cached.get(&hash) {
+            ResourceOwner::add_to(node_owner, entry.promise.clone());
             return entry.promise.clone();
         }
 
@@ -550,6 +617,7 @@ impl ContentProvider {
             then_promise(get_promise, result)
         });
 
+        ResourceOwner::add_to(node_owner, promise.clone());
         self.cached.insert(
             hash,
             ContentEntry {

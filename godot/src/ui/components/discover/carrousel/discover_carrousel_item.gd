@@ -131,7 +131,7 @@ func set_data(item_data):
 
 func _async_download_image(url: String):
 	var url_hash = get_hash_from_url(url)
-	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
+	var promise = Global.content_provider.fetch_texture_by_url(self, url_hash, url)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr("places_generator::_async_download_image promise error: ", result.get_error())

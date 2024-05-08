@@ -59,9 +59,9 @@ class Asset:
 
 		return self.username + " (" + short_address + ")"
 
-	func async_download_image():
+	func async_download_image(owner: Node):
 		var texture_hash = get_hash()
-		var promise = Global.content_provider.fetch_texture_by_url(texture_hash, image_url)
+		var promise = Global.content_provider.fetch_texture_by_url(owner, texture_hash, image_url)
 		var result = await PromiseUtils.async_awaiter(promise)
 		if result is PromiseError:
 			printerr(
@@ -77,19 +77,19 @@ class Asset:
 var cached_promises: Dictionary
 
 
-func fetch_nft(urn: DclUrn) -> Promise:
+func fetch_nft(owner: Node, urn: DclUrn) -> Promise:
 	var cached_promise: Promise = cached_promises.get(urn.get_hash(), null)
 	if cached_promise != null:
 		return cached_promise
 
 	var promise = Promise.new()
 	cached_promises[urn.get_hash()] = promise
-	_async_request_nft(promise, urn)
+	_async_request_nft(owner, promise, urn)
 
 	return promise
 
 
-func _async_request_nft(completed_promise: Promise, urn: DclUrn):
+func _async_request_nft(owner: Node, completed_promise: Promise, urn: DclUrn):
 	var url = RETRIEVE_ASSETS_ENDPOINT % [urn.chain, urn.contract_address, urn.token_id]
 	var headers = [
 		"Content-Type: application/json",
@@ -116,6 +116,6 @@ func _async_request_nft(completed_promise: Promise, urn: DclUrn):
 		completed_promise.reject("Error on opensea nft asset: " + asset.get_hash())
 		return
 
-	await asset.async_download_image()
+	await asset.async_download_image(owner)
 
 	completed_promise.resolve_with_data(asset)

@@ -19,7 +19,7 @@ func _on_gui_input(event: InputEvent):
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	var face256_hash = new_profile.get_avatar().get_snapshots_face256()
 	var face256_url = new_profile.get_base_url() + face256_hash
-	var promise = Global.content_provider.fetch_texture_by_url(face256_hash, face256_url)
+	var promise = Global.content_provider.fetch_texture_by_url(self, face256_hash, face256_url)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr("places_generator::_async_download_image promise error: ", result.get_error())

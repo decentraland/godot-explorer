@@ -119,6 +119,7 @@ impl DclUiBackground {
         let face256_url = format!("{}{}", binded_profile.inner.base_url, snapshots.face256);
 
         let mut promise = content_provider.bind_mut().fetch_texture_by_url(
+            self.base.clone().upcast(),
             GString::from(snapshots.face256.as_str()),
             face256_url.into(),
         );
@@ -285,6 +286,7 @@ impl DclUiBackground {
                         let global = DclGlobal::singleton();
                         let mut content_provider = global.bind().get_content_provider();
                         let mut promise = content_provider.bind_mut().fetch_texture_by_hash(
+                            self.base.clone().upcast(),
                             GString::from(texture_hash),
                             DclContentMappingAndUrl::from_ref(content_mapping),
                         );
@@ -309,7 +311,7 @@ impl DclUiBackground {
                         let mut content_provider = global.bind().get_content_provider();
                         let mut promise = content_provider
                             .bind_mut()
-                            .fetch_profile(GString::from(user_id));
+                            .fetch_profile(self.base.clone().upcast(), GString::from(user_id));
 
                         if !promise.bind().is_resolved() {
                             promise.connect(

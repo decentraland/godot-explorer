@@ -61,7 +61,7 @@ func async_load_from_urn(_emote_urn: String, index: int = -1):
 		rarity = Wearables.ItemRarity.COMMON
 		picture = load("res://assets/avatar/default_emotes_thumbnails/%s.png" % emote_urn)
 	else:
-		await WearableRequest.async_fetch_emote(emote_urn)
+		await WearableRequest.async_fetch_emote(self, emote_urn)
 		var emote_data := Global.content_provider.get_wearable(emote_urn)
 		if emote_data == null:
 			# Fallback to default emote
@@ -80,7 +80,7 @@ func async_load_from_entity(emote_data: DclItemEntityDefinition) -> void:
 
 func async_set_texture(emote_data: DclItemEntityDefinition) -> void:
 	var promise: Promise = Global.content_provider.fetch_texture(
-		emote_data.get_thumbnail(), emote_data.get_content_mapping()
+		self, emote_data.get_thumbnail(), emote_data.get_content_mapping()
 	)
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:

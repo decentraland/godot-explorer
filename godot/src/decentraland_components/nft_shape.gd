@@ -116,7 +116,7 @@ func _async_load_nft(picture_frame: Node3D, urn: String, style: NftFrameStyleLoa
 		printerr("NftShape::load_nft Error, invalid urn: ", urn)
 		return
 
-	var promise = Global.nft_fetcher.fetch_nft(dcl_urn)
+	var promise = Global.nft_fetcher.fetch_nft(self, dcl_urn)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr("NftShape::load_nft Error on fetching nft: ", result.get_error())

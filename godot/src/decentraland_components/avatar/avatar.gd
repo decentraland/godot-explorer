@@ -46,6 +46,8 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 
 func _ready():
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
+	add_child(emote_controller)
+
 	body_shape_skeleton_3d.bone_pose_changed.connect(self._attach_point_bone_pose_changed)
 
 	avatar_modifier_area_detector.set_avatar_modifier_area.connect(
@@ -161,7 +163,7 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 	finish_loading = false
 
 	var promise = Global.content_provider.fetch_wearables(
-		wearable_to_request, Global.realm.get_profile_content_url()
+		self, wearable_to_request, Global.realm.get_profile_content_url()
 	)
 	await PromiseUtils.async_all(promise)
 	await async_fetch_wearables_dependencies()
@@ -194,7 +196,7 @@ func async_fetch_wearables_dependencies():
 				async_calls.push_back(emote_promise)
 				async_calls_info.push_back(emote_urn)
 
-	await Wearables.async_load_wearables(wearables_dict.keys(), body_shape_id)
+	await Wearables.async_load_wearables(self, wearables_dict.keys(), body_shape_id)
 	var promises_result: Array = await PromiseUtils.async_all(async_calls)
 	for i in range(promises_result.size()):
 		if promises_result[i] is PromiseError:
@@ -249,11 +251,11 @@ func async_load_wearables():
 	# If some wearables are needed but they weren't included in the first request (fallback wearables)
 	if not curated_wearables.need_to_fetch.is_empty():
 		var need_to_fetch_promise = Global.content_provider.fetch_wearables(
-			Array(curated_wearables.need_to_fetch), Global.realm.get_profile_content_url()
+			self, Array(curated_wearables.need_to_fetch), Global.realm.get_profile_content_url()
 		)
 		await PromiseUtils.async_all(need_to_fetch_promise)
 		await Wearables.async_load_wearables(
-			curated_wearables.need_to_fetch, body_shape_wearable.get_id()
+			self, curated_wearables.need_to_fetch, body_shape_wearable.get_id()
 		)
 
 		for wearable_id in curated_wearables.need_to_fetch:

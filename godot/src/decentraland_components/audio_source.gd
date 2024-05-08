@@ -48,7 +48,7 @@ func _async_refresh_data(time_specified: bool):
 			return
 
 		var promise: Promise = Global.content_provider.fetch_audio(
-			last_loaded_audio_clip, content_mapping
+			self, last_loaded_audio_clip, content_mapping
 		)
 		var res = await PromiseUtils.async_awaiter(promise)
 		if res is PromiseError:

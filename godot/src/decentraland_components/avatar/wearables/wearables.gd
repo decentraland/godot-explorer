@@ -603,7 +603,7 @@ static func set_fallback_for_missing_needed_categories(
 	return need_to_fetch
 
 
-static func promise_get_wearable(wearable: DclItemEntityDefinition, body_shape_id: String) -> Array:
+static func promise_fetch_wearable(owner: Node, wearable: DclItemEntityDefinition, body_shape_id: String) -> Array:
 	if not DclItemEntityDefinition.is_valid_wearable(wearable, body_shape_id, true):
 		return []
 
@@ -627,14 +627,14 @@ static func promise_get_wearable(wearable: DclItemEntityDefinition, body_shape_i
 	for file_name in files:
 		var promise
 		if file_name.ends_with(".png"):
-			promise = Global.content_provider.fetch_texture(file_name, content_mapping)
+			promise = Global.content_provider.fetch_texture(owner, file_name, content_mapping)
 		else:
-			promise = Global.content_provider.fetch_gltf(file_name, content_mapping, 1)
+			promise = Global.content_provider.fetch_gltf(owner, file_name, content_mapping, 1)
 		ret.push_back(promise)
 	return ret
 
 
-static func async_load_wearables(wearable_keys: Array, body_shape_id: String):
+static func async_load_wearables(owner: Node, wearable_keys: Array, body_shape_id: String):
 	var async_calls_info: Array = []
 	var async_calls: Array = []
 
@@ -644,7 +644,7 @@ static func async_load_wearables(wearable_keys: Array, body_shape_id: String):
 			printerr("wearable ", wearable_key, " null")
 			continue
 
-		var wearable_promises: Array = Wearables.promise_get_wearable(wearable, body_shape_id)
+		var wearable_promises: Array = Wearables.promise_fetch_wearable(owner, wearable, body_shape_id)
 		for promises in wearable_promises:
 			async_calls.push_back(promises)
 			async_calls_info.push_back(wearable_key)
