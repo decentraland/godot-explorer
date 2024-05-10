@@ -77,11 +77,12 @@ impl DclTestingTools {
             let diff_sum_i = ((*r as i32) * (*r as i32))
                 + ((*g as i32) * (*g as i32))
                 + ((*b as i32) * (*b as i32));
-            let diff_factor_i = (diff_sum_i as f64) / (3. * (u8::MAX as f64).powi(2));
-            data_diff_factor.push(1.0 - diff_factor_i);
+            data_diff_factor.push(diff_sum_i);
         }
 
-        let score: f64 = (data_diff_factor.iter().sum::<f64>() / (pixel_count as f64)).sqrt();
+        let summatory = data_diff_factor.iter().sum::<i32>() as f64;
+        let factor = 1.0 / (3 * (u8::MAX as usize).pow(2) * pixel_count) as f64;
+        let score: f64 = (1.0 - factor * summatory).sqrt();
 
         score
     }
