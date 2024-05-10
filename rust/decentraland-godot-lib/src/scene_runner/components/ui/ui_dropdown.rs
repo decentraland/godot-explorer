@@ -32,11 +32,12 @@ pub fn update_ui_dropdown(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 .unwrap();
 
             if value.is_none() {
-                if let Some(node) = existing_ui_dropdown
+                if let Some(mut node) = existing_ui_dropdown
                     .base_control
                     .get_node("dropdown".into())
                 {
-                    existing_ui_dropdown.base_control.remove_child(node);
+                    //existing_ui_dropdown.base_control.remove_child(node);
+                    node.queue_free();
                 }
                 existing_ui_dropdown.text_size = None;
                 continue;

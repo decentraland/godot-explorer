@@ -40,8 +40,8 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let existing = node_3d.try_get_node_as::<Label3D>(NodePath::from("TextShape"));
 
             if new_value.is_none() {
-                if let Some(text_shape_node) = existing {
-                    node_3d.remove_child(text_shape_node.upcast());
+                if let Some(mut text_shape_node) = existing {
+                    text_shape_node.queue_free();
                 }
             } else if let Some(new_value) = new_value {
                 let (mut label_3d, add_to_base) = match existing {

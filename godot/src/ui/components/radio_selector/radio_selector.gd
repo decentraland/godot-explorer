@@ -7,7 +7,7 @@ signal select_item(index: int, item: String)
 	set(new_value):
 		items = new_value
 		for child in self.get_children():
-			remove_child(child)
+			child.queue_free()
 
 		for item in new_value:
 			add_item(item)

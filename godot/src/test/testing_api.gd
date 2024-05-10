@@ -211,7 +211,6 @@ func async_take_and_compare_snapshot(
 
 	viewport.size = previous_viewport_size
 	previous_camera.make_current()
-	remove_child(test_camera_3d)
 	test_camera_3d.queue_free()
 
 	var base_path := (

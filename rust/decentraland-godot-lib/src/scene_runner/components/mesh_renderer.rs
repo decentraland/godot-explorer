@@ -96,8 +96,8 @@ pub fn update_mesh_renderer(
                 node_3d.try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
 
             if new_value.is_none() {
-                if let Some(mesh_renderer_node) = existing {
-                    node_3d.remove_child(mesh_renderer_node.upcast());
+                if let Some(mut mesh_renderer_node) = existing {
+                    mesh_renderer_node.queue_free();
                 }
             } else if let Some(new_value) = new_value {
                 let (mut mesh_instance_3d, add_to_base) = match existing {

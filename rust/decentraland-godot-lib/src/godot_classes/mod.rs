@@ -22,6 +22,7 @@ pub mod dcl_video_player;
 pub mod font;
 pub mod portables;
 pub mod promise;
+pub mod resource_locker;
 pub mod rpc_sender;
 pub trait JsonGodotClass
 where

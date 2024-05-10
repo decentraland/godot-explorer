@@ -71,8 +71,8 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarShape"));
 
             if new_value.is_none() {
-                if let Some(avatar_node) = existing {
-                    node_3d.remove_child(avatar_node);
+                if let Some(mut avatar_node) = existing {
+                    avatar_node.queue_free();
                 }
             } else if let Some(new_value) = new_value {
                 let avatar_name = new_value.name.unwrap_or("NPC".into());

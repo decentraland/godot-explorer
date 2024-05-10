@@ -34,8 +34,8 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
             let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarModifierArea"));
 
             if new_value.is_none() {
-                if let Some(avatar_modifier_area_node) = existing {
-                    node_3d.remove_child(avatar_modifier_area_node);
+                if let Some(mut avatar_modifier_area_node) = existing {
+                    avatar_modifier_area_node.queue_free();
                 }
             } else if let Some(new_value) = new_value {
                 let area = new_value

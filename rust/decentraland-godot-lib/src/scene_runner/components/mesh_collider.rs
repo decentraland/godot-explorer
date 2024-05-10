@@ -320,8 +320,8 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 node_3d.try_get_node_as::<AnimatableBody3D>(NodePath::from("MeshCollider"));
 
             if new_value.is_none() {
-                if let Some(mesh_collider_node) = existing {
-                    node_3d.remove_child(mesh_collider_node.upcast());
+                if let Some(mut mesh_collider_node) = existing {
+                    mesh_collider_node.queue_free();
                 }
             } else if let Some(new_value) = new_value {
                 let (mut animatable_body_3d, add_to_base) = match existing {

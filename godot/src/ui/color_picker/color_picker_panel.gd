@@ -61,7 +61,7 @@ func custom_popup(rect: Rect2, current_color: Color):
 
 	if color_type == ColorTargetType.OTHER:
 		for child in grid_container_hair.get_children():
-			grid_container_hair.remove_child(child)
+			child.queue_free()
 
 		v_box_container_hair.show()
 		for color in example_colors:
@@ -73,7 +73,7 @@ func custom_popup(rect: Rect2, current_color: Color):
 
 	if color_type == ColorTargetType.SKIN:
 		for child in grid_container_skin.get_children():
-			grid_container_skin.remove_child(child)
+			child.queue_free()
 
 		grid_container_skin.show()
 		for color in skin_colors:

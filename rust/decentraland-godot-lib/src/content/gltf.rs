@@ -16,6 +16,8 @@ use godot::{
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
+use crate::godot_classes::resource_locker::ResourceLocker;
+
 use super::{
     content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
     download::fetch_resource_or_wait, file_string::get_base_dir,
@@ -135,6 +137,9 @@ pub async fn internal_load_gltf(
         .ok_or(anyhow::Error::msg(
             "Error loading gltf when generating scene".to_string(),
         ))?;
+
+    // Attach a ResourceLocker to the Node to control the lifecycle
+    ResourceLocker::attach_to(node.clone());
 
     set_toon_material_modes(node.clone());
 

@@ -14,7 +14,7 @@ use crate::{
     avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
     content::content_mapping::DclContentMappingAndUrl,
     dcl::common::string::FindNthChar,
-    godot_classes::promise::Promise,
+    godot_classes::{promise::Promise, resource_locker::ResourceLocker},
     http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
 };
@@ -32,6 +32,8 @@ use super::{
     video::download_video,
     wearable_entities::{request_wearables, WearableManyResolved},
 };
+
+#[derive(Clone)]
 pub struct ContentEntry {
     promise: Gd<Promise>,
 }
@@ -44,6 +46,7 @@ pub struct ContentProvider {
     content_notificator: Arc<ContentNotificator>,
     cached: HashMap<String, ContentEntry>,
     godot_single_thread: Arc<Semaphore>,
+    tick: f64,
 }
 
 #[derive(Clone)]
@@ -69,12 +72,47 @@ impl INode for ContentProvider {
             cached: HashMap::new(),
             content_notificator: Arc::new(ContentNotificator::new()),
             godot_single_thread: Arc::new(Semaphore::new(1)),
+            tick: 0.0,
         }
     }
     fn ready(&mut self) {}
     fn exit_tree(&mut self) {
         self.cached.clear();
         tracing::info!("ContentProvider::exit_tree");
+    }
+
+    fn process(&mut self, dt: f64) {
+        self.tick += dt;
+        if self.tick >= 1.0 {
+            self.tick = 0.0;
+
+            self.cached =
+            self.cached
+            .iter()
+            .filter(|(_, content)| {
+                let data = content.promise.bind().get_data();
+                if let Ok(node_3d) = Gd::<Node3D>::try_from_variant(&data) {
+                    if let Some(resource_locker) = node_3d.get_node(NodePath::from("ResourceLocker")) {
+                        if let Ok(resource_locker) = resource_locker.try_cast::<ResourceLocker>() {
+                            let reference_count = resource_locker.bind().get_reference_count();
+                            if reference_count == 1 {
+                                godot_print!("Delete Node3D: {}", resource_locker.instance_id());
+                                return false;
+                            }
+                        }
+                    }
+                } else if let Ok(ref_counted) = Gd::<RefCounted>::try_from_variant(&data) {
+                    let reference_count = ref_counted.get_reference_count();
+                    if reference_count == 1 {
+                        godot_print!("Delete RefCounted: {}", ref_counted.instance_id());
+                        return false;
+                    }
+                }
+                return true;
+            })
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect();
+        }
     }
 }
 

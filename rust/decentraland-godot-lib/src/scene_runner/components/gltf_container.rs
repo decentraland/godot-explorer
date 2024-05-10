@@ -44,8 +44,8 @@ pub fn update_gltf_container(
             let existing = node_3d.try_get_node_as::<Node>(NodePath::from("GltfContainer"));
 
             if new_value.is_none() {
-                if let Some(gltf_node) = existing {
-                    node_3d.remove_child(gltf_node);
+                if let Some(mut gltf_node) = existing {
+                    gltf_node.queue_free();
                     scene.gltf_loading.remove(entity);
                 }
             } else if let Some(new_value) = new_value {

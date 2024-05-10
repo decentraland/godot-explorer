@@ -286,7 +286,7 @@ func clean_unused_emotes():
 			emotes_animation_library.remove_animation(emote_item_data.prop_anim_name)
 
 		if emote_item_data.armature_prop != null:
-			avatar.remove_child(emote_item_data.armature_prop)
+			emote_item_data.armature_prop.queue_free()
 
 		loaded_emotes_by_urn.erase(urn)
 

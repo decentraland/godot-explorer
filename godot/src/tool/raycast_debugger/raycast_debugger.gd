@@ -17,7 +17,7 @@ func _process(delta):
 
 func remove_raycast(id):
 	var raycast = raycasts[id]
-	remove_child(raycast)
+	raycast.queue_free()
 	raycasts.erase(id)
 
 

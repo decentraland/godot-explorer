@@ -32,8 +32,9 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 .unwrap();
 
             if value.is_none() {
-                if let Some(node) = existing_ui_background.base_control.get_node("bkg".into()) {
-                    existing_ui_background.base_control.remove_child(node);
+                if let Some(mut node) = existing_ui_background.base_control.get_node("bkg".into()) {
+                    //existing_ui_background.base_control.remove_child(node);
+                    node.queue_free();
                 }
                 existing_ui_background.has_background = false;
                 continue;
