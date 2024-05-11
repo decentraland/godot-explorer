@@ -258,6 +258,6 @@ impl GodotDclScene {
 
     #[allow(dead_code)]
     pub fn exist_node(&self, entity: &SceneEntityId) -> bool {
-        self.entities.get(entity).is_some()
+        self.entities.contains_key(entity)
     }
 }

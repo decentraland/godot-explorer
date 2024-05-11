@@ -56,13 +56,7 @@ impl Default for ParcelRadiusCalculator {
 impl ParcelRadiusCalculator {
     pub fn new(parcel_radius: i16) -> Self {
         // Clamp
-        let parcel_radius = if parcel_radius < 0 {
-            0
-        } else if parcel_radius > 5 {
-            5
-        } else {
-            parcel_radius
-        };
+        let parcel_radius = parcel_radius.clamp(0, 5);
 
         let parcel_radius_squared = (parcel_radius * parcel_radius) as f32;
         let mut outter_parcels = HashSet::new();

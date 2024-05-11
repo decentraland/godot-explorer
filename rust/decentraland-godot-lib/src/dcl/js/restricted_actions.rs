@@ -1,10 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use deno_core::{
-    anyhow::{self, anyhow},
-    error::AnyError,
-    op, Op, OpDecl, OpState,
-};
+use deno_core::{anyhow::anyhow, error::AnyError, op, Op, OpDecl, OpState};
 use http::Uri;
 
 use crate::dcl::scene_apis::RpcCall;

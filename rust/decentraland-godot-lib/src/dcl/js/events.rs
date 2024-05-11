@@ -38,22 +38,6 @@ struct EventBodyExpressionId {
 }
 
 #[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct EventBodyProfileChanged {
-    eth_address: String,
-    version: i32,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct EventBodyRealmChanged {
-    domain: String,
-    room: String,
-    server_name: String,
-    display_name: String,
-}
-
-#[derive(Serialize)]
 struct EventComms {
     sender: String,
     message: String,

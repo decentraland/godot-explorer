@@ -1,7 +1,4 @@
-use crate::{
-    godot_classes::{dcl_config::TextureQuality, dcl_global::DclGlobal},
-    utils::infer_mime,
-};
+use crate::utils::infer_mime;
 
 use super::{
     bytes::fast_create_packed_byte_array_from_vec, content_provider::ContentProviderContext,

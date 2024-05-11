@@ -1,4 +1,3 @@
-use godot::engine::Camera3D;
 use godot::prelude::*;
 
 #[derive(GodotClass)]

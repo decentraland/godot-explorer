@@ -1,10 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use deno_core::{
-    anyhow::{self},
-    error::AnyError,
-    op, Op, OpDecl, OpState,
-};
+use deno_core::{error::AnyError, op, Op, OpDecl, OpState};
 
 use crate::dcl::{
     components::{proto_components::common::Color3, SceneEntityId},

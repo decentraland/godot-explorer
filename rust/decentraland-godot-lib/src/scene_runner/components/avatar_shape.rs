@@ -13,6 +13,7 @@ use crate::{
 };
 use godot::prelude::*;
 
+#[allow(dead_code)]
 trait ToDictionaryColorObject {
     fn to_dictionary_color_object(&self) -> Dictionary;
 }

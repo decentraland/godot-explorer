@@ -1,10 +1,6 @@
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
-use deno_core::{
-    anyhow::{self},
-    error::AnyError,
-    op, OpState,
-};
+use deno_core::{error::AnyError, op, OpState};
 use http::Uri;
 
 use crate::{

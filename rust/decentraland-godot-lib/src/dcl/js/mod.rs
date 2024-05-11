@@ -31,7 +31,7 @@ use std::time::Duration;
 use deno_core::error::JsError;
 use deno_core::{
     error::{generic_error, AnyError},
-    include_js_files, op, v8, Extension, Op, OpState, RuntimeOptions,
+    include_js_files, op, Extension, Op, OpState, RuntimeOptions,
 };
 use once_cell::sync::Lazy;
 use serde::Serialize;
