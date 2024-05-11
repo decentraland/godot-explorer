@@ -4,24 +4,16 @@ use godot::{
     bind::GodotClass,
     builtin::{meta::ToGodot, Dictionary, GString, Variant, VariantArray},
     engine::{
-        animation::TrackType,
-        base_material_3d::{DiffuseMode, SpecularMode},
-        global::Error,
-        node::ProcessMode,
-        AnimatableBody3D, Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D,
-        CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, MeshInstance3D, Node,
-        Node3D, NodeExt, StaticBody3D,
+        animation::TrackType, base_material_3d::{DiffuseMode, SpecularMode, TextureParam}, global::Error, node::ProcessMode, AnimatableBody3D, Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D, CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D, NodeExt, StaticBody3D
     },
-    obj::{Gd, InstanceId},
+    obj::{EngineEnum, Gd, InstanceId},
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
 use crate::godot_classes::resource_locker::ResourceLocker;
 
 use super::{
-    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
-    download::fetch_resource_or_wait, file_string::get_base_dir,
-    thread_safety::GodotSingleThreadSafety,
+    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext, download::fetch_resource_or_wait, file_string::get_base_dir, texture, thread_safety::GodotSingleThreadSafety
 };
 
 pub async fn internal_load_gltf(
@@ -141,7 +133,7 @@ pub async fn internal_load_gltf(
     // Attach a ResourceLocker to the Node to control the lifecycle
     ResourceLocker::attach_to(node.clone());
 
-    set_toon_material_modes(node.clone());
+    post_import_process(node.clone());
 
     let mut node = node.try_cast::<Node3D>().map_err(|err| {
         anyhow::Error::msg(format!("Error loading gltf when casting to Node3D: {err}"))
@@ -152,13 +144,45 @@ pub async fn internal_load_gltf(
     Ok((node, thread_safe_check))
 }
 
-pub fn set_toon_material_modes(node_to_inspect: Gd<Node>) {
+pub fn post_import_process(node_to_inspect: Gd<Node>) {
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
             if let Some(mesh) = mesh_instance_3d.get_mesh() {
                 for surface_index in 0..mesh.get_surface_count() {
                     if let Some(material) = mesh.surface_get_material(surface_index) {
                         if let Ok(mut base_material) = material.try_cast::<BaseMaterial3D>() {
+                            // Resize images
+                            for ord in 0..TextureParam::TEXTURE_MAX.ord() {
+                                let texture_param = TextureParam::from_ord(ord);
+                                if let Some(texture) = base_material.get_texture(texture_param) {
+                                    if let Ok(mut texture_image) = texture.try_cast::<ImageTexture>() {
+                                        if let Some(mut image) = texture_image.get_image() {
+
+                                            // TODO: Add max_width / max_height to the settings as 'Texture Quality'...
+                                            let image_width = image.get_width();
+                                            let image_height = image.get_height();
+                                            if image_width > image_height {
+                                                let max_width = 32;
+                                                if image_width > max_width {
+                                                    image.resize(max_width, (image_height * max_width) / image_width);
+                                                    println!("ImageTexture Resize! res={}x{}", image_width, image_height);
+                                                }
+                                            } else {
+                                                let max_height = 32;
+                                                if image_height > max_height {
+                                                    image.resize((image_width * max_height) / image_height, max_height);
+                                                    println!("ImageTexture Resize! res={}x{}", image_width, image_height);
+                                                }
+                                            }
+
+                                            texture_image.set_image(image);
+                                            println!("Resize ImageTexture!")
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Set Toon
                             base_material.set_specular_mode(SpecularMode::SPECULAR_TOON);
                             base_material.set_diffuse_mode(DiffuseMode::DIFFUSE_TOON);
                         }
@@ -166,7 +190,7 @@ pub fn set_toon_material_modes(node_to_inspect: Gd<Node>) {
                 }
             }
         }
-        set_toon_material_modes(child);
+        post_import_process(child);
     }
 }
 

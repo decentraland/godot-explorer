@@ -46,8 +46,9 @@ class Asset:
 		image_url = nft.get("image_url", "")
 
 		# top ownership
-		var owner = nft.get("owners", [{}])[0]
-		self.address = _get_or_empty_string(owner, "address")
+		var owners = nft.get("owners", null)
+		if owners is Array and owners.size() >= 1:
+			self.address = _get_or_empty_string(owners[0], "address")
 
 		if !token_id.is_empty() and !image_url.is_empty() and !contract_address.is_empty():
 			valid = true

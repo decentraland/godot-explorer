@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc, time::Instant,
+    sync::Arc, time::{Duration, Instant},
 };
 
 use godot::{
@@ -90,16 +90,19 @@ impl INode for ContentProvider {
             self.cached =
             self.cached
             .iter()
-            .filter(|(_, content)| {
-                if content.promise.get_reference_count() == 1 {
-                    //godot_print!("Hello!: {}", content.promise.instance_id());
-                    let data = content.promise.bind().get_data();
+            .filter(|(_, entry)| {
+                // don't add a timeout for promise to be resolved,
+                // that timeout should be done on the fetch process
+                // resolved doesn't mean that is resolved correctly
+                let process_promise = entry.last_access.elapsed() > Duration::from_secs(30)
+                                        && entry.promise.bind().is_resolved();
+                if process_promise {
+                    let data = entry.promise.bind().get_data();
                     if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
                         if let Some(resource_locker) = node_3d.get_node(NodePath::from("ResourceLocker")) {
                             if let Ok(resource_locker) = resource_locker.try_cast::<ResourceLocker>() {
                                 let reference_count = resource_locker.bind().get_reference_count();
                                 if reference_count == 1 {
-                                    godot_print!("Delete Node3D: {}", resource_locker.instance_id());
                                     node_3d.queue_free();
                                     return false;
                                 }
@@ -108,7 +111,6 @@ impl INode for ContentProvider {
                     } else if let Ok(ref_counted) = Gd::<RefCounted>::try_from_variant(&data) {
                         let reference_count = ref_counted.get_reference_count();
                         if reference_count == 1 {
-                            godot_print!("Delete RefCounted: {}", ref_counted.instance_id());
                             return false;
                         }
                     }

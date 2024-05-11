@@ -25,13 +25,13 @@ impl PromiseError {
 }
 
 #[derive(GodotClass)]
-#[class(init, base=RefCounted)]
+#[class(init, base=Object)]
 pub struct Promise {
     resolved: bool,
     data: Variant,
 
     #[base]
-    base: Base<RefCounted>,
+    base: Base<Object>,
 }
 
 #[godot_api]
@@ -87,7 +87,7 @@ impl Promise {
     }
 
     pub fn make_to_async() -> (Gd<Promise>, impl Fn() -> Option<Gd<Promise>>) {
-        let this_promise = Promise::new_gd();
+        let this_promise = Promise::alloc_gd();
         let promise_instance_id = this_promise.instance_id();
         let get_promise = move || Gd::<Promise>::try_from_instance_id(promise_instance_id).ok();
         (this_promise, get_promise)
