@@ -16,7 +16,9 @@ use crate::{
     test_runner::testing_tools::DclTestingTools,
 };
 
-use super::{dcl_config::DclConfig, dcl_realm::DclRealm, portables::DclPortableExperienceController};
+use super::{
+    dcl_config::DclConfig, dcl_realm::DclRealm, portables::DclPortableExperienceController,
+};
 
 #[cfg(target_os = "android")]
 mod android {

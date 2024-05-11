@@ -743,7 +743,8 @@ impl SceneManager {
                 .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: false });
 
             // leave it orphan! it will be re-added when you are in the scene, and deleted on scene deletion
-            self.base_ui.remove_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
+            self.base_ui
+                .remove_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {

@@ -16,11 +16,11 @@ impl INode for ResourceLocker {
         let reference = Resource::new();
         base.set_name("ResourceLocker".to_godot());
 
-        base.set_meta(StringName::from("instance_id"), reference.instance_id().to_variant());
-        Self {
-            base,
-            reference,
-        }
+        base.set_meta(
+            StringName::from("instance_id"),
+            reference.instance_id().to_variant(),
+        );
+        Self { base, reference }
     }
 }
 

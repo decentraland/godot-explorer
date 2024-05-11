@@ -4,7 +4,13 @@ use godot::{
     bind::GodotClass,
     builtin::{meta::ToGodot, Dictionary, GString, Variant, VariantArray},
     engine::{
-        animation::TrackType, base_material_3d::{DiffuseMode, SpecularMode, TextureParam}, global::Error, node::ProcessMode, AnimatableBody3D, Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D, CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D, NodeExt, StaticBody3D
+        animation::TrackType,
+        base_material_3d::{DiffuseMode, SpecularMode, TextureParam},
+        global::Error,
+        node::ProcessMode,
+        AnimatableBody3D, Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D,
+        CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture,
+        MeshInstance3D, Node, Node3D, NodeExt, StaticBody3D,
     },
     obj::{EngineEnum, Gd, InstanceId},
 };
@@ -13,7 +19,9 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use crate::{content::texture::resize_image, godot_classes::resource_locker::ResourceLocker};
 
 use super::{
-    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext, download::fetch_resource_or_wait, file_string::get_base_dir, thread_safety::GodotSingleThreadSafety
+    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
+    download::fetch_resource_or_wait, file_string::get_base_dir,
+    thread_safety::GodotSingleThreadSafety,
 };
 
 pub async fn internal_load_gltf(
@@ -156,9 +164,10 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                             for ord in 0..TextureParam::TEXTURE_MAX.ord() {
                                 let texture_param = TextureParam::from_ord(ord);
                                 if let Some(texture) = base_material.get_texture(texture_param) {
-                                    if let Ok(mut texture_image) = texture.try_cast::<ImageTexture>() {
+                                    if let Ok(mut texture_image) =
+                                        texture.try_cast::<ImageTexture>()
+                                    {
                                         if let Some(mut image) = texture_image.get_image() {
-
                                             if resize_image(&mut image, max_size) {
                                                 texture_image.set_image(image);
                                             }

@@ -1,4 +1,7 @@
-use crate::{godot_classes::{dcl_config::TextureQuality, dcl_global::DclGlobal}, utils::infer_mime};
+use crate::{
+    godot_classes::{dcl_config::TextureQuality, dcl_global::DclGlobal},
+    utils::infer_mime,
+};
 
 use super::{
     bytes::fast_create_packed_byte_array_from_vec, content_provider::ContentProviderContext,
@@ -93,12 +96,10 @@ pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
             //println!("Resize! {}x{} to {}x{}", image_width, image_height, image.get_width(), image.get_height());
             return true;
         }
-    } else {
-        if image_height > max_size {
-            image.resize((image_width * max_size) / image_height, max_size);
-            //println!("Resize! {}x{} to {}x{}", image_width, image_height, image.get_width(), image.get_height());
-            return true;
-        }
+    } else if image_height > max_size {
+        image.resize((image_width * max_size) / image_height, max_size);
+        //println!("Resize! {}x{} to {}x{}", image_width, image_height, image.get_width(), image.get_height());
+        return true;
     }
     false
 }

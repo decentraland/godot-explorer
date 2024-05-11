@@ -220,7 +220,7 @@ func try_to_set_body_shape(body_shape_hash):
 	for child in new_skeleton.get_children():
 		var new_child = child.duplicate()
 		new_child.name = "bodyshape_" + child.name.to_lower()
-		
+
 		new_child.add_child(body_shape.get_node("ResourceLocker").duplicate())
 		body_shape_skeleton_3d.add_child(new_child)
 

@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc, time::{Duration, Instant},
+    sync::Arc,
+    time::{Duration, Instant},
 };
 
 use godot::{
@@ -14,7 +15,11 @@ use crate::{
     avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
     content::content_mapping::DclContentMappingAndUrl,
     dcl::common::string::FindNthChar,
-    godot_classes::{dcl_config::{DclConfig, TextureQuality}, promise::Promise, resource_locker::ResourceLocker},
+    godot_classes::{
+        dcl_config::{DclConfig, TextureQuality},
+        promise::Promise,
+        resource_locker::ResourceLocker,
+    },
     http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
 };
@@ -90,38 +95,43 @@ impl INode for ContentProvider {
         if self.tick >= 1.0 {
             self.tick = 0.0;
 
-            self.cached =
-            self.cached
-            .iter()
-            .filter(|(_, entry)| {
-                // don't add a timeout for promise to be resolved,
-                // that timeout should be done on the fetch process
-                // resolved doesn't mean that is resolved correctly
-                let process_promise = entry.last_access.elapsed() > Duration::from_secs(30)
-                                        && entry.promise.bind().is_resolved();
-                if process_promise {
-                    let data = entry.promise.bind().get_data();
-                    if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
-                        if let Some(resource_locker) = node_3d.get_node(NodePath::from("ResourceLocker")) {
-                            if let Ok(resource_locker) = resource_locker.try_cast::<ResourceLocker>() {
-                                let reference_count = resource_locker.bind().get_reference_count();
-                                if reference_count == 1 {
-                                    node_3d.queue_free();
-                                    return false;
+            self.cached = self
+                .cached
+                .iter()
+                .filter(|(_, entry)| {
+                    // don't add a timeout for promise to be resolved,
+                    // that timeout should be done on the fetch process
+                    // resolved doesn't mean that is resolved correctly
+                    let process_promise = entry.last_access.elapsed() > Duration::from_secs(30)
+                        && entry.promise.bind().is_resolved();
+                    if process_promise {
+                        let data = entry.promise.bind().get_data();
+                        if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
+                            if let Some(resource_locker) =
+                                node_3d.get_node(NodePath::from("ResourceLocker"))
+                            {
+                                if let Ok(resource_locker) =
+                                    resource_locker.try_cast::<ResourceLocker>()
+                                {
+                                    let reference_count =
+                                        resource_locker.bind().get_reference_count();
+                                    if reference_count == 1 {
+                                        node_3d.queue_free();
+                                        return false;
+                                    }
                                 }
                             }
-                        }
-                    } else if let Ok(ref_counted) = Gd::<RefCounted>::try_from_variant(&data) {
-                        let reference_count = ref_counted.get_reference_count();
-                        if reference_count == 1 {
-                            return false;
+                        } else if let Ok(ref_counted) = Gd::<RefCounted>::try_from_variant(&data) {
+                            let reference_count = ref_counted.get_reference_count();
+                            if reference_count == 1 {
+                                return false;
+                            }
                         }
                     }
-                }
-                return true;
-            })
-            .map(|(key, value)| (key.clone(), value.clone()))
-            .collect();
+                    true
+                })
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect();
 
             //Node::print_orphan_nodes();
         }
@@ -371,7 +381,12 @@ impl ContentProvider {
     pub fn get_emote_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
         if let Some(entry) = self.cached.get_mut(&file_hash.to_string()) {
             entry.last_access = Instant::now();
-            entry.promise.bind().get_data().try_to::<Gd<DclEmoteGltf>>().ok()
+            entry
+                .promise
+                .bind()
+                .get_data()
+                .try_to::<Gd<DclEmoteGltf>>()
+                .ok()
         } else {
             None
         }
@@ -381,7 +396,12 @@ impl ContentProvider {
     pub fn get_audio_from_hash(&mut self, file_hash: GString) -> Option<Gd<AudioStream>> {
         if let Some(entry) = self.cached.get_mut(&file_hash.to_string()) {
             entry.last_access = Instant::now();
-            entry.promise.bind().get_data().try_to::<Gd<AudioStream>>().ok()
+            entry
+                .promise
+                .bind()
+                .get_data()
+                .try_to::<Gd<AudioStream>>()
+                .ok()
         } else {
             None
         }

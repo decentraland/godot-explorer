@@ -419,6 +419,6 @@ func _on_h_slider_music_volume_value_changed(value):
 	Global.get_config().save_to_settings_file()
 
 
-func _on_radio_selector_texture_quality_select_item(index, item):
+func _on_radio_selector_texture_quality_select_item(index, _item):
 	Global.get_config().texture_quality = index
 	Global.get_config().save_to_settings_file()

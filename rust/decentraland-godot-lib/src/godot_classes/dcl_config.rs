@@ -50,7 +50,6 @@ pub struct DclConfig {
 
     #[export(enum = (Low, Medium, High, Source))]
     pub texture_quality: TextureQuality,
-
 }
 
 #[godot_api]
@@ -59,8 +58,11 @@ impl IRefCounted for DclConfig {
         let mut settings_file: Gd<ConfigFile> = ConfigFile::new();
         settings_file.load(DclConfig::get_settings_file_path());
 
-        let texture_quality = settings_file.get_value("config".to_godot(), "texture_quality".to_godot());
-        let texture_quality = texture_quality.try_to::<i32>().unwrap_or(TextureQuality::Medium.to_i32());
+        let texture_quality =
+            settings_file.get_value("config".to_godot(), "texture_quality".to_godot());
+        let texture_quality = texture_quality
+            .try_to::<i32>()
+            .unwrap_or(TextureQuality::Medium.to_i32());
 
         Self {
             _base: base,
@@ -80,8 +82,11 @@ impl DclConfig {
     pub fn static_get_texture_quality() -> TextureQuality {
         let mut settings_file: Gd<ConfigFile> = ConfigFile::new();
         settings_file.load(DclConfig::get_settings_file_path());
-        let texture_quality = settings_file.get_value("config".to_godot(), "texture_quality".to_godot());
-        let texture_quality = texture_quality.try_to::<i32>().unwrap_or(TextureQuality::Medium.to_i32());
+        let texture_quality =
+            settings_file.get_value("config".to_godot(), "texture_quality".to_godot());
+        let texture_quality = texture_quality
+            .try_to::<i32>()
+            .unwrap_or(TextureQuality::Medium.to_i32());
         TextureQuality::from_i32(texture_quality)
     }
 }
