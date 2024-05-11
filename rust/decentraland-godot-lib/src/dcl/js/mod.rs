@@ -10,6 +10,7 @@ mod portables;
 mod restricted_actions;
 mod runtime;
 mod testing;
+#[cfg(not(target_arch = "wasm32"))]
 mod websocket;
 
 use crate::dcl::common::{

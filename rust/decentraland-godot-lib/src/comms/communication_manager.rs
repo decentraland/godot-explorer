@@ -369,7 +369,8 @@ impl CommunicationManager {
         }
 
         self.current_connection = CommsConnection::None;
-        self.current_connection_str = comms_fixed_adapter_str.clone();
+        self.current_connection_str
+            .clone_from(&comms_fixed_adapter_str);
         let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
         tracing::info!("change_adapter to protocol {protocol} and address {comms_address}");

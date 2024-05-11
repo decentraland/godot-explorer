@@ -64,8 +64,12 @@ async fn fetch_polling_server(
         }
         attempt += 1;
 
-        let response = reqwest::Client::builder()
-            .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
+        let request_builder = reqwest::Client::builder();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let request_builder = request_builder.timeout(AUTH_SERVER_REQUEST_TIMEOUT);
+
+        let response = request_builder
             .build()
             .expect("reqwest build error")
             .get(url.clone())
@@ -128,8 +132,12 @@ async fn create_new_request(
     message: CreateRequest,
 ) -> Result<CreateRequestResponse, anyhow::Error> {
     let body = serde_json::to_string(&message).expect("valid json");
-    let response = reqwest::Client::builder()
-        .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
+    let request_builder = reqwest::Client::builder();
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let request_builder = request_builder.timeout(AUTH_SERVER_REQUEST_TIMEOUT);
+
+    let response = request_builder
         .build()
         .expect("reqwest build error")
         .post(AUTH_SERVER_ENDPOINT_URL)
@@ -190,7 +198,7 @@ impl CreateRequest {
 
 #[cfg(test)]
 mod test {
-    use crate::auth::wallet::Wallet;
+    use crate::auth::wallet::{Wallet, WalletType};
 
     use super::super::auth_identity::get_ephemeral_message;
     use super::*;
@@ -217,7 +225,7 @@ mod test {
         });
 
         let local_wallet = LocalWallet::new(&mut thread_rng());
-        let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
+        let ephemeral_wallet = Wallet::new_from_inner(WalletType::Local(local_wallet));
         let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
         let expiration =
             std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);

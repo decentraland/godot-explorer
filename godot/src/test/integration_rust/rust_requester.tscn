@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://0r0fn0onxq44"]
-
-[ext_resource type="Script" path="res://src/test/integration_rust/rust_requester.gd" id="1_gjm00"]
-
-[node name="rust_requester" type="Node2D"]
-script = ExtResource("1_gjm00")

@@ -22,6 +22,7 @@ use super::{
     thread_safety::GodotSingleThreadSafety,
 };
 
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn internal_load_gltf(
     file_path: String,
     content_mapping: ContentMappingAndUrlRef,
@@ -170,36 +171,59 @@ pub async fn load_gltf_scene_content(
     content_mapping: ContentMappingAndUrlRef,
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
-    let (node, _thread_safe_check) = internal_load_gltf(file_path, content_mapping, ctx).await?;
-    create_colliders(node.clone().upcast());
-    Ok(Some(node.to_variant()))
-}
+    #[cfg(target_arch = "wasm32")]
+    {
+        return Err(anyhow::Error::msg("GLTF loading is not supported in WASM"));
+    }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let (node, _thread_safe_check) =
+            internal_load_gltf(file_path, content_mapping, ctx).await?;
+        create_colliders(node.clone().upcast());
+        Ok(Some(node.to_variant()))
+    }
+}
 pub async fn load_gltf_wearable(
     file_path: String,
     content_mapping: ContentMappingAndUrlRef,
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
-    let (node, _thread_safe_check) = internal_load_gltf(file_path, content_mapping, ctx).await?;
-    Ok(Some(node.to_variant()))
-}
+    #[cfg(target_arch = "wasm32")]
+    {
+        return Err(anyhow::Error::msg("GLTF loading is not supported in WASM"));
+    }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let (node, _thread_safe_check) =
+            internal_load_gltf(file_path, content_mapping, ctx).await?;
+        Ok(Some(node.to_variant()))
+    }
+}
 pub async fn load_gltf_emote(
     file_path: String,
     content_mapping: ContentMappingAndUrlRef,
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
-    let file_hash = content_mapping
-        .clone()
-        .get_hash(file_path.as_str())
-        .ok_or(anyhow::Error::msg("File not found in the content mappings"))?
-        .clone();
+    #[cfg(target_arch = "wasm32")]
+    {
+        return Err(anyhow::Error::msg("GLTF loading is not supported in WASM"));
+    }
 
-    let (gltf_node, _thread_safe_check) =
-        internal_load_gltf(file_path, content_mapping, ctx).await?;
-    Ok(add_animation_from_obj(&file_hash, gltf_node).map(|emote| emote.to_variant()))
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let file_hash = content_mapping
+            .clone()
+            .get_hash(file_path.as_str())
+            .ok_or(anyhow::Error::msg("File not found in the content mappings"))?
+            .clone();
+
+        let (gltf_node, _thread_safe_check) =
+            internal_load_gltf(file_path, content_mapping, ctx).await?;
+        Ok(add_animation_from_obj(&file_hash, gltf_node).map(|emote| emote.to_variant()))
+    }
 }
-
 pub async fn apply_update_set_mask_colliders(
     gltf_node_instance_id: InstanceId,
     dcl_visible_cmask: i32,
@@ -244,6 +268,7 @@ pub async fn apply_update_set_mask_colliders(
     Ok(Some(gltf_node.to_variant()))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
     let mut dependencies = Vec::new();
     let mut file = tokio::fs::File::open(file_path).await?;
@@ -493,9 +518,7 @@ fn get_last_16_alphanumeric(input: &str) -> String {
 fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<Gd<DclEmoteGltf>> {
     let anim_sufix_from_hash = get_last_16_alphanumeric(file_hash.as_str());
     let armature_prop = gltf_node.find_child("Armature_Prop".into());
-    let Some(anim_player) = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer") else {
-        return None;
-    };
+    let anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
     let armature_prefix = format!("Armature_Prop_{}/Skeleton3D:", anim_sufix_from_hash);
 
     let armature_prop = armature_prop

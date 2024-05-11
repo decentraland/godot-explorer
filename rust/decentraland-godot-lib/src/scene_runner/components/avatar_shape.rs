@@ -13,35 +13,6 @@ use crate::{
 };
 use godot::prelude::*;
 
-trait ToDictionaryColorObject {
-    fn to_dictionary_color_object(&self) -> Dictionary;
-}
-
-impl ToDictionaryColorObject for crate::dcl::components::proto_components::common::Color3 {
-    fn to_dictionary_color_object(&self) -> Dictionary {
-        let mut dictionary = Dictionary::new();
-        dictionary.set("r", self.r);
-        dictionary.set("g", self.g);
-        dictionary.set("b", self.b);
-        dictionary.set("a", 1.0);
-        let mut ret_dictionary = Dictionary::new();
-        ret_dictionary.set("color", dictionary);
-        ret_dictionary
-    }
-}
-impl ToDictionaryColorObject for crate::dcl::components::proto_components::common::Color4 {
-    fn to_dictionary_color_object(&self) -> Dictionary {
-        let mut dictionary = Dictionary::new();
-        dictionary.set("r", self.r);
-        dictionary.set("g", self.g);
-        dictionary.set("b", self.b);
-        dictionary.set("a", self.a);
-        let mut ret_dictionary = Dictionary::new();
-        ret_dictionary.set("color", dictionary);
-        ret_dictionary
-    }
-}
-
 fn color3_to_avatar_color(color: Color3) -> AvatarColor {
     AvatarColor {
         color: AvatarColor3 {

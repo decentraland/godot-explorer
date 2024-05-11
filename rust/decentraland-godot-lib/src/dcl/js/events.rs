@@ -37,21 +37,23 @@ struct EventBodyExpressionId {
     expression_id: String,
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct EventBodyProfileChanged {
-    eth_address: String,
-    version: i32,
-}
+// TODO: should this be implemented?
+// #[derive(Serialize)]
+// #[serde(rename_all = "camelCase")]
+// struct EventBodyProfileChanged {
+//     eth_address: String,
+//     version: i32,
+// }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct EventBodyRealmChanged {
-    domain: String,
-    room: String,
-    server_name: String,
-    display_name: String,
-}
+// TODO: should this be implemented?
+// #[derive(Serialize)]
+// #[serde(rename_all = "camelCase")]
+// struct EventBodyRealmChanged {
+//     domain: String,
+//     room: String,
+//     server_name: String,
+//     display_name: String,
+// }
 
 #[derive(Serialize)]
 struct EventComms {
