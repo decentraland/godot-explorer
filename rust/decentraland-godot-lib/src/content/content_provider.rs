@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc,
+    sync::Arc, time::Instant,
 };
 
 use godot::{
@@ -36,6 +36,7 @@ use super::{
 #[derive(Clone)]
 pub struct ContentEntry {
     promise: Gd<Promise>,
+    last_access: Instant,
 }
 
 #[derive(GodotClass)]
@@ -137,7 +138,8 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get(file_hash) {
+        if let Some(entry) = self.cached.get_mut(file_hash) {
+            entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
@@ -170,6 +172,7 @@ impl ContentProvider {
         self.cached.insert(
             file_hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -216,7 +219,8 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get(file_hash) {
+        if let Some(entry) = self.cached.get_mut(file_hash) {
+            entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
@@ -233,6 +237,7 @@ impl ContentProvider {
         self.cached.insert(
             file_hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -261,7 +266,8 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
-        if let Some(entry) = self.cached.get(&file_hash) {
+        if let Some(entry) = self.cached.get_mut(&file_hash) {
+            entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
@@ -275,6 +281,7 @@ impl ContentProvider {
             self.cached.insert(
                 file_hash,
                 ContentEntry {
+                    last_access: Instant::now(),
                     promise: promise.clone(),
                 },
             );
@@ -297,6 +304,7 @@ impl ContentProvider {
         self.cached.insert(
             file_hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -307,7 +315,8 @@ impl ContentProvider {
     #[func]
     pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
-        if let Some(entry) = self.cached.get(&file_hash) {
+        if let Some(entry) = self.cached.get_mut(&file_hash) {
+            entry.last_access = Instant::now();
             return entry.promise.clone();
         }
         let url = url.to_string();
@@ -322,6 +331,7 @@ impl ContentProvider {
         self.cached.insert(
             file_hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -330,49 +340,46 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_texture_from_hash(&self, file_hash: GString) -> Option<Gd<ImageTexture>> {
-        let promise_data = self
-            .cached
-            .get(&file_hash.to_string())?
-            .promise
-            .bind()
-            .get_data();
-        let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
-        let texture = texture_entry.bind().texture.clone();
-        Some(texture)
+    pub fn get_texture_from_hash(&mut self, file_hash: GString) -> Option<Gd<ImageTexture>> {
+        if let Some(entry) = self.cached.get_mut(&file_hash.to_string()) {
+            entry.last_access = Instant::now();
+            let promise_data = entry.promise.bind().get_data();
+            let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
+            let texture = texture_entry.bind().texture.clone();
+            Some(texture)
+        } else {
+            None
+        }
     }
 
     #[func]
-    pub fn get_gltf_from_hash(&self, file_hash: GString) -> Option<Gd<Node3D>> {
-        self.cached
-            .get(&file_hash.to_string())?
-            .promise
-            .bind()
-            .get_data()
-            .try_to::<Gd<Node3D>>()
-            .ok()
+    pub fn get_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<Node3D>> {
+        if let Some(entry) = self.cached.get_mut(&file_hash.to_string()) {
+            entry.last_access = Instant::now();
+            entry.promise.bind().get_data().try_to::<Gd<Node3D>>().ok()
+        } else {
+            None
+        }
     }
 
     #[func]
-    pub fn get_emote_gltf_from_hash(&self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
-        self.cached
-            .get(&file_hash.to_string())?
-            .promise
-            .bind()
-            .get_data()
-            .try_to::<Gd<DclEmoteGltf>>()
-            .ok()
+    pub fn get_emote_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
+        if let Some(entry) = self.cached.get_mut(&file_hash.to_string()) {
+            entry.last_access = Instant::now();
+            entry.promise.bind().get_data().try_to::<Gd<DclEmoteGltf>>().ok()
+        } else {
+            None
+        }
     }
 
     #[func]
-    pub fn get_audio_from_hash(&self, file_hash: GString) -> Option<Gd<AudioStream>> {
-        self.cached
-            .get(&file_hash.to_string())?
-            .promise
-            .bind()
-            .get_data()
-            .try_to::<Gd<AudioStream>>()
-            .ok()
+    pub fn get_audio_from_hash(&mut self, file_hash: GString) -> Option<Gd<AudioStream>> {
+        if let Some(entry) = self.cached.get_mut(&file_hash.to_string()) {
+            entry.last_access = Instant::now();
+            entry.promise.bind().get_data().try_to::<Gd<AudioStream>>().ok()
+        } else {
+            None
+        }
     }
 
     #[func]
@@ -403,6 +410,7 @@ impl ContentProvider {
         self.cached.insert(
             file_hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -468,7 +476,8 @@ impl ContentProvider {
                 .unwrap_or(wearable_id.len());
             let wearable_id = wearable_id[0..token_id_pos].to_lowercase();
 
-            if let Some(entry) = self.cached.get(&wearable_id) {
+            if let Some(entry) = self.cached.get_mut(&wearable_id) {
+                entry.last_access = Instant::now();
                 promise_ids.insert(entry.promise.instance_id());
             } else {
                 wearable_to_fetch.insert(wearable_id.clone());
@@ -481,6 +490,7 @@ impl ContentProvider {
                 self.cached.insert(
                     wearable_id,
                     ContentEntry {
+                        last_access: Instant::now(),
                         promise: new_promise.as_ref().unwrap().0.clone(),
                     },
                 );
@@ -511,6 +521,7 @@ impl ContentProvider {
             self.cached.insert(
                 "wearables".to_string(),
                 ContentEntry {
+                    last_access: Instant::now(),
                     promise: promise.clone(),
                 },
             );
@@ -525,7 +536,8 @@ impl ContentProvider {
         let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
         let id = id[0..token_id_pos].to_lowercase();
 
-        if let Some(entry) = self.cached.get(&id) {
+        if let Some(entry) = self.cached.get_mut(&id) {
+            entry.last_access = Instant::now();
             if let Ok(results) = entry
                 .promise
                 .bind()
@@ -551,11 +563,16 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_profile(&self, user_id: GString) -> Option<Gd<DclUserProfile>> {
+    pub fn get_profile(&mut self, user_id: GString) -> Option<Gd<DclUserProfile>> {
         let user_id = user_id.to_string().as_str().as_h160()?;
         let hash = format!("profile_{:x}", user_id);
-        let promise_data = self.cached.get(&hash)?.promise.bind().get_data();
-        promise_data.try_to::<Gd<DclUserProfile>>().ok()
+        if let Some(entry) = self.cached.get_mut(&hash) {
+            entry.last_access = Instant::now();
+            let promise_data = entry.promise.bind().get_data();
+            promise_data.try_to::<Gd<DclUserProfile>>().ok()
+        } else {
+            None
+        }
     }
 
     #[func]
@@ -565,7 +582,8 @@ impl ContentProvider {
         };
 
         let hash = format!("profile_{:x}", user_id);
-        if let Some(entry) = self.cached.get(&hash) {
+        if let Some(entry) = self.cached.get_mut(&hash) {
+            entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
@@ -597,6 +615,7 @@ impl ContentProvider {
         self.cached.insert(
             hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
