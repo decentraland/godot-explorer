@@ -45,10 +45,10 @@ func async_fetch_profile(address: String, requested_lambda_server_base_url: Stri
 
 
 func set_default_profile_or_guest_profile():
-	if Global.config.guest_profile.is_empty():
+	if Global.get_config().guest_profile.is_empty():
 		self.set_default_profile()
 	else:
-		var guest_profile := DclUserProfile.from_godot_dictionary(Global.config.guest_profile)
+		var guest_profile := DclUserProfile.from_godot_dictionary(Global.get_config().guest_profile)
 		self.set_profile(guest_profile)
 
 
@@ -63,8 +63,8 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool)
 func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) -> void:
 	var is_guest_profile = not new_profile.has_connected_web3()
 	if is_guest_profile:
-		Global.config.guest_profile = new_profile.to_godot_dictionary()
-		Global.config.save_to_settings_file()
+		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
+		Global.get_config().save_to_settings_file()
 		self.set_profile(new_profile)
 		return
 

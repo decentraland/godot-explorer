@@ -24,6 +24,7 @@ pub mod portables;
 pub mod promise;
 pub mod resource_locker;
 pub mod rpc_sender;
+pub mod dcl_config;
 pub trait JsonGodotClass
 where
     Self: serde::Serialize + serde::de::DeserializeOwned,

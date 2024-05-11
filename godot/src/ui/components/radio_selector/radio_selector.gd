@@ -8,6 +8,7 @@ signal select_item(index: int, item: String)
 		items = new_value
 		for child in self.get_children():
 			child.queue_free()
+			remove_child(child)
 
 		for item in new_value:
 			add_item(item)
@@ -17,7 +18,7 @@ signal select_item(index: int, item: String)
 @export var selected: int = 0:
 	set(new_value):
 		selected = new_value
-		var radio_button: CheckBox = get_child(selected) as CheckBox
+		var radio_button = get_child(selected)
 		if is_instance_valid(radio_button):
 			for child in self.get_children():
 				child.set_pressed_no_signal(false)

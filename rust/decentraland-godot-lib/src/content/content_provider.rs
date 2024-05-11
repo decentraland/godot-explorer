@@ -14,7 +14,7 @@ use crate::{
     avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
     content::content_mapping::DclContentMappingAndUrl,
     dcl::common::string::FindNthChar,
-    godot_classes::{promise::Promise, resource_locker::ResourceLocker},
+    godot_classes::{dcl_config::{DclConfig, TextureQuality}, promise::Promise, resource_locker::ResourceLocker},
     http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
 };
@@ -47,6 +47,7 @@ pub struct ContentProvider {
     content_notificator: Arc<ContentNotificator>,
     cached: HashMap<String, ContentEntry>,
     godot_single_thread: Arc<Semaphore>,
+    texture_quality: TextureQuality, // copy from DclGlobal on startup
     tick: f64,
 }
 
@@ -56,6 +57,7 @@ pub struct ContentProviderContext {
     pub http_queue_requester: Arc<HttpQueueRequester>,
     pub content_notificator: Arc<ContentNotificator>,
     pub godot_single_thread: Arc<Semaphore>,
+    pub texture_quality: TextureQuality, // copy from DclGlobal on startup
 }
 
 unsafe impl Send for ContentProviderContext {}
@@ -73,6 +75,7 @@ impl INode for ContentProvider {
             cached: HashMap::new(),
             content_notificator: Arc::new(ContentNotificator::new()),
             godot_single_thread: Arc::new(Semaphore::new(1)),
+            texture_quality: DclConfig::static_get_texture_quality(),
             tick: 0.0,
         }
     }
@@ -633,6 +636,7 @@ impl ContentProvider {
             http_queue_requester: self.http_queue_requester.clone(),
             content_notificator: self.content_notificator.clone(),
             godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
         }
     }
 }

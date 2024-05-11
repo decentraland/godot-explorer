@@ -1,4 +1,4 @@
-use crate::utils::infer_mime;
+use crate::{godot_classes::{dcl_config::TextureQuality, dcl_global::DclGlobal}, utils::infer_mime};
 
 use super::{
     bytes::fast_create_packed_byte_array_from_vec, content_provider::ContentProviderContext,
@@ -70,22 +70,8 @@ pub async fn load_image_texture(
         )));
     }
 
-    // TODO: Add max_width / max_height to the settings...
-    let image_width = image.get_width();
-    let image_height = image.get_height();
-    if image_width > image_height {
-        let max_width = 32;
-        if image_width > max_width {
-            image.resize(max_width, (image_height * max_width) / image_width);
-            println!("Resize! res={}x{}", image_width, image_height);
-        }
-    } else {
-        let max_height = 32;
-        if image_height > max_height {
-            image.resize((image_width * max_height) / image_height, max_height);
-            println!("Resize! res={}x{}", image_width, image_height);
-        }
-    }
+    let max_size = ctx.texture_quality.to_max_size();
+    resize_image(&mut image, max_size);
 
     let mut texture = ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
         format!("Error creating texture from image {}", absolute_file_path),
@@ -96,4 +82,23 @@ pub async fn load_image_texture(
     let texture_entry = Gd::from_init_fn(|_base| TextureEntry { texture, image });
 
     Ok(Some(texture_entry.to_variant()))
+}
+
+pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
+    let image_width = image.get_width();
+    let image_height = image.get_height();
+    if image_width > image_height {
+        if image_width > max_size {
+            image.resize(max_size, (image_height * max_size) / image_width);
+            //println!("Resize! {}x{} to {}x{}", image_width, image_height, image.get_width(), image.get_height());
+            return true;
+        }
+    } else {
+        if image_height > max_size {
+            image.resize((image_width * max_size) / image_height, max_size);
+            //println!("Resize! {}x{} to {}x{}", image_width, image_height, image.get_width(), image.get_height());
+            return true;
+        }
+    }
+    false
 }

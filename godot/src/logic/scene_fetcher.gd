@@ -53,8 +53,8 @@ var _scene_changed_counter: int = 0
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
 
-	scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
-	Global.config.param_changed.connect(self._on_config_changed)
+	scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
+	Global.get_config().param_changed.connect(self._on_config_changed)
 
 	if FileAccess.file_exists(adaptation_layer_js_local_path):
 		DirAccess.remove_absolute(adaptation_layer_js_local_path)
@@ -87,7 +87,7 @@ func on_scene_killed(killed_scene_id, _entity_id):
 
 func _on_config_changed(param: ConfigData.ConfigParams):
 	if param == ConfigData.ConfigParams.SCENE_RADIUS:
-		scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
+		scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
 
 
 func get_current_scene_data() -> SceneItem:
@@ -208,8 +208,8 @@ func _on_realm_changed():
 	var should_load_city_pointers = true
 	var content_base_url = Global.realm.content_base_url
 
-	Global.config.last_realm_joined = Global.realm.realm_url
-	Global.config.save_to_settings_file()
+	Global.get_config().last_realm_joined = Global.realm.realm_url
+	Global.get_config().save_to_settings_file()
 
 	if not Global.realm.realm_city_loader_content_base_url.is_empty():
 		content_base_url = Global.realm.realm_city_loader_content_base_url

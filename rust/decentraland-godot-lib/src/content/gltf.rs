@@ -10,10 +10,10 @@ use godot::{
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
-use crate::godot_classes::resource_locker::ResourceLocker;
+use crate::{content::texture::resize_image, godot_classes::resource_locker::ResourceLocker};
 
 use super::{
-    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext, download::fetch_resource_or_wait, file_string::get_base_dir, texture, thread_safety::GodotSingleThreadSafety
+    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext, download::fetch_resource_or_wait, file_string::get_base_dir, thread_safety::GodotSingleThreadSafety
 };
 
 pub async fn internal_load_gltf(
@@ -133,7 +133,8 @@ pub async fn internal_load_gltf(
     // Attach a ResourceLocker to the Node to control the lifecycle
     ResourceLocker::attach_to(node.clone());
 
-    post_import_process(node.clone());
+    let max_size = ctx.texture_quality.to_max_size();
+    post_import_process(node.clone(), max_size);
 
     let mut node = node.try_cast::<Node3D>().map_err(|err| {
         anyhow::Error::msg(format!("Error loading gltf when casting to Node3D: {err}"))
@@ -144,7 +145,7 @@ pub async fn internal_load_gltf(
     Ok((node, thread_safe_check))
 }
 
-pub fn post_import_process(node_to_inspect: Gd<Node>) {
+pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
             if let Some(mesh) = mesh_instance_3d.get_mesh() {
@@ -158,25 +159,9 @@ pub fn post_import_process(node_to_inspect: Gd<Node>) {
                                     if let Ok(mut texture_image) = texture.try_cast::<ImageTexture>() {
                                         if let Some(mut image) = texture_image.get_image() {
 
-                                            // TODO: Add max_width / max_height to the settings as 'Texture Quality'...
-                                            let image_width = image.get_width();
-                                            let image_height = image.get_height();
-                                            if image_width > image_height {
-                                                let max_width = 32;
-                                                if image_width > max_width {
-                                                    image.resize(max_width, (image_height * max_width) / image_width);
-                                                    println!("ImageTexture Resize! res={}x{}", image_width, image_height);
-                                                }
-                                            } else {
-                                                let max_height = 32;
-                                                if image_height > max_height {
-                                                    image.resize((image_width * max_height) / image_height, max_height);
-                                                    println!("ImageTexture Resize! res={}x{}", image_width, image_height);
-                                                }
+                                            if resize_image(&mut image, max_size) {
+                                                texture_image.set_image(image);
                                             }
-
-                                            texture_image.set_image(image);
-                                            println!("Resize ImageTexture!")
                                         }
                                     }
                                 }
@@ -190,7 +175,8 @@ pub fn post_import_process(node_to_inspect: Gd<Node>) {
                 }
             }
         }
-        post_import_process(child);
+
+        post_import_process(child, max_size);
     }
 }
 

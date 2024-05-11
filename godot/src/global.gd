@@ -18,8 +18,6 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
 ## Global classes (singleton pattern)
-var config: ConfigData
-
 var raycast_debugger: RaycastDebugger
 
 var scene_fetcher: SceneFetcher
@@ -189,13 +187,13 @@ func open_url(url: String):
 
 func clear_cache():
 	# Clean the content cache folder
-	if DirAccess.dir_exists_absolute(Global.config.local_content_dir):
-		for file in DirAccess.get_files_at(Global.config.local_content_dir):
-			DirAccess.remove_absolute(Global.config.local_content_dir + file)
-		DirAccess.remove_absolute(Global.config.local_content_dir)
+	if DirAccess.dir_exists_absolute(Global.get_config().local_content_dir):
+		for file in DirAccess.get_files_at(Global.get_config().local_content_dir):
+			DirAccess.remove_absolute(Global.get_config().local_content_dir + file)
+		DirAccess.remove_absolute(Global.get_config().local_content_dir)
 
-	if not DirAccess.dir_exists_absolute(Global.config.local_content_dir):
-		DirAccess.make_dir_absolute(Global.config.local_content_dir)
+	if not DirAccess.dir_exists_absolute(Global.get_config().local_content_dir):
+		DirAccess.make_dir_absolute(Global.get_config().local_content_dir)
 
 
 func async_create_popup_warning(
