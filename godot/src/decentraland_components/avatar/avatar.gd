@@ -214,6 +214,7 @@ func try_to_set_body_shape(body_shape_hash):
 
 	for child in body_shape_skeleton_3d.get_children():
 		if child is MeshInstance3D:
+			body_shape_skeleton_3d.remove_child(child)
 			child.queue_free()
 
 	for child in new_skeleton.get_children():
