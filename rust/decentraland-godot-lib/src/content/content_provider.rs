@@ -95,45 +95,37 @@ impl INode for ContentProvider {
         if self.tick >= 1.0 {
             self.tick = 0.0;
 
-            self.cached = self
-                .cached
-                .iter()
-                .filter(|(_, entry)| {
-                    // don't add a timeout for promise to be resolved,
-                    // that timeout should be done on the fetch process
-                    // resolved doesn't mean that is resolved correctly
-                    let process_promise = entry.last_access.elapsed() > Duration::from_secs(30)
-                        && entry.promise.bind().is_resolved();
-                    if process_promise {
-                        let data = entry.promise.bind().get_data();
-                        if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
-                            if let Some(resource_locker) =
-                                node_3d.get_node(NodePath::from("ResourceLocker"))
+            self.cached.retain(|_, entry| {
+                // don't add a timeout for promise to be resolved,
+                // that timeout should be done on the fetch process
+                // resolved doesn't mean that is resolved correctly
+                let process_promise = entry.last_access.elapsed() > Duration::from_secs(30)
+                    && entry.promise.bind().is_resolved();
+                if process_promise {
+                    let data = entry.promise.bind().get_data();
+                    if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
+                        if let Some(resource_locker) =
+                            node_3d.get_node(NodePath::from("ResourceLocker"))
+                        {
+                            if let Ok(resource_locker) =
+                                resource_locker.try_cast::<ResourceLocker>()
                             {
-                                if let Ok(resource_locker) =
-                                    resource_locker.try_cast::<ResourceLocker>()
-                                {
-                                    let reference_count =
-                                        resource_locker.bind().get_reference_count();
-                                    if reference_count == 1 {
-                                        node_3d.queue_free();
-                                        return false;
-                                    }
+                                let reference_count = resource_locker.bind().get_reference_count();
+                                if reference_count == 1 {
+                                    node_3d.queue_free();
+                                    return false;
                                 }
                             }
-                        } else if let Ok(ref_counted) = Gd::<RefCounted>::try_from_variant(&data) {
-                            let reference_count = ref_counted.get_reference_count();
-                            if reference_count == 1 {
-                                return false;
-                            }
+                        }
+                    } else if let Ok(ref_counted) = Gd::<RefCounted>::try_from_variant(&data) {
+                        let reference_count = ref_counted.get_reference_count();
+                        if reference_count == 1 {
+                            return false;
                         }
                     }
-                    true
-                })
-                .map(|(key, value)| (key.clone(), value.clone()))
-                .collect();
-
-            //Node::print_orphan_nodes();
+                }
+                true
+            });
         }
     }
 }
