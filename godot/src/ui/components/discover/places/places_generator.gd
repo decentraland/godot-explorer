@@ -52,6 +52,7 @@ func request_last_places() -> void:
 
 	for item in item_container.get_children():
 		if item is PlaceItem:
+			item_container.remove_child(item)
 			item.queue_free()
 
 	loading = true

@@ -98,6 +98,7 @@ pub fn update_mesh_renderer(
             if new_value.is_none() {
                 if let Some(mut mesh_renderer_node) = existing {
                     mesh_renderer_node.queue_free();
+                    node_3d.remove_child(mesh_renderer_node.upcast());
                 }
             } else if let Some(new_value) = new_value {
                 let (mut mesh_instance_3d, add_to_base) = match existing {

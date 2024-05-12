@@ -114,7 +114,9 @@ func set_used_parcels(used_parcel, emtpy_parcels):
 
 	if to_delete > 0:
 		for i in range(to_delete):
-			color_rect_map.get_child(0).queue_free()
+			var child = color_rect_map.get_child(0)
+			color_rect_map.remove_child(child)
+			child.queue_free()
 	elif to_delete < 0:
 		for i in range(-to_delete):
 			var new_child: ColorRect = ColorRect.new()

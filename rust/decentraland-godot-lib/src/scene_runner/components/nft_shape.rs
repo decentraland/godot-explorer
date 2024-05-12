@@ -32,6 +32,7 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             if new_value.is_none() {
                 if let Some(mut nft_shape_node) = existing {
                     nft_shape_node.queue_free();
+                    node_3d.remove_child(nft_shape_node);
                 }
             } else if let Some(new_value) = new_value {
                 let urn = new_value.urn.to_godot();

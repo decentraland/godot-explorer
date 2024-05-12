@@ -322,6 +322,7 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             if new_value.is_none() {
                 if let Some(mut mesh_collider_node) = existing {
                     mesh_collider_node.queue_free();
+                    node_3d.remove_child(mesh_collider_node.upcast());
                 }
             } else if let Some(new_value) = new_value {
                 let (mut animatable_body_3d, add_to_base) = match existing {

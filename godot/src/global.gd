@@ -122,6 +122,7 @@ func set_raycast_debugger_enable(enable: bool):
 		raycast_debugger = RaycastDebugger.new()
 		add_child(raycast_debugger)
 	else:
+		remove_child(raycast_debugger)
 		raycast_debugger.queue_free()
 		raycast_debugger = null
 

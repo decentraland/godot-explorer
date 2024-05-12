@@ -33,8 +33,8 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             if value.is_none() {
                 if let Some(mut node) = existing_ui_input.base_control.get_node("input".into()) {
-                    //existing_ui_input.base_control.remove_child(node);
                     node.queue_free();
+                    existing_ui_input.base_control.remove_child(node);
                 }
                 existing_ui_input.text_size = None;
                 continue;

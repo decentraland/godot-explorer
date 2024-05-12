@@ -38,6 +38,7 @@ pub fn update_audio_source(
             if new_value.is_none() {
                 if let Some(mut audio_source_node) = existing {
                     audio_source_node.queue_free();
+                    node_3d.remove_child(audio_source_node);
                 }
                 scene.audio_sources.remove(entity);
             } else if let Some(new_value) = new_value {

@@ -46,6 +46,7 @@ pub fn update_gltf_container(
             if new_value.is_none() {
                 if let Some(mut gltf_node) = existing {
                     gltf_node.queue_free();
+                    node_3d.remove_child(gltf_node);
                     scene.gltf_loading.remove(entity);
                 }
             } else if let Some(new_value) = new_value {

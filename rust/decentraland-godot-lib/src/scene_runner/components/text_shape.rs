@@ -42,6 +42,7 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             if new_value.is_none() {
                 if let Some(mut text_shape_node) = existing {
                     text_shape_node.queue_free();
+                    node_3d.remove_child(text_shape_node.upcast());
                 }
             } else if let Some(new_value) = new_value {
                 let (mut label_3d, add_to_base) = match existing {

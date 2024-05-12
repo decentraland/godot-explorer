@@ -234,7 +234,9 @@ func _on_realm_changed():
 			Global.scene_runner.kill_scene(scene.scene_number_id)
 
 	for parcel in loaded_empty_scenes:
-		loaded_empty_scenes[parcel].queue_free()
+		var empty_parcel = loaded_empty_scenes[parcel]
+		remove_child(empty_parcel)
+		empty_parcel.queue_free()
 
 	loaded_empty_scenes.clear()
 

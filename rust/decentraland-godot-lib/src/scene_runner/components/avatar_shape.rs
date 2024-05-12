@@ -74,6 +74,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             if new_value.is_none() {
                 if let Some(mut avatar_node) = existing {
                     avatar_node.queue_free();
+                    node_3d.remove_child(avatar_node);
                 }
             } else if let Some(new_value) = new_value {
                 let avatar_name = new_value.name.unwrap_or("NPC".into());

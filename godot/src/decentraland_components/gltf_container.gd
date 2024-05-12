@@ -116,6 +116,7 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 
 		if get_child_count() > 0:
 			var gltf_node = get_child(0)
+			remove_child(gltf_node)
 			gltf_node.queue_free()
 
 		dcl_pending_node = null

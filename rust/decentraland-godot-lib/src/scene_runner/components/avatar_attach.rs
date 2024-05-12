@@ -30,8 +30,8 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
             if new_value.is_none() {
                 if let Some(mut avatar_attach_node) = existing {
-                    //node_3d.remove_child(avatar_attach_node);
                     avatar_attach_node.queue_free();
+                    node_3d.remove_child(avatar_attach_node);
                     // TODO: resolve the current transform
                 }
             } else if let Some(new_value) = new_value {

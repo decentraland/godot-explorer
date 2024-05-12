@@ -36,6 +36,7 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
             if new_value.is_none() {
                 if let Some(mut camera_mode_area_node) = existing {
                     camera_mode_area_node.queue_free();
+                    node_3d.remove_child(camera_mode_area_node);
                 }
             } else if let Some(new_value) = new_value {
                 let area = new_value

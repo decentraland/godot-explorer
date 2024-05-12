@@ -33,8 +33,8 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             if value.is_none() {
                 if let Some(mut node) = existing_ui_text.base_control.get_node("text".into()) {
-                    //existing_ui_text.base_control.remove_child(node);
                     node.queue_free();
+                    existing_ui_text.base_control.remove_child(node);
                 }
                 existing_ui_text.text_size = None;
                 continue;

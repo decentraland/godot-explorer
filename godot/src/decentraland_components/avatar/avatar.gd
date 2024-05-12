@@ -57,7 +57,9 @@ func _ready():
 
 	if non_3d_audio:
 		var audio_player_name = audio_player_emote.get_name()
+		remove_child(audio_player_emote)
 		audio_player_emote.queue_free()
+
 		audio_player_emote = AudioStreamPlayer.new()
 		add_child(audio_player_emote)
 		audio_player_emote.name = audio_player_name

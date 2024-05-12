@@ -391,6 +391,7 @@ func _on_control_menu_request_debug_panel(enabled):
 			ui_root.move_child(debug_panel, control_menu.get_index() - 1)
 	else:
 		if is_instance_valid(debug_panel):
+			ui_root.remove_child(debug_panel)
 			debug_panel.queue_free()
 			debug_panel = null
 
