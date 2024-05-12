@@ -29,7 +29,8 @@ impl ResourceLocker {
     #[func]
     pub fn attach_to(mut node: Gd<Node>) {
         if node.has_node(NodePath::from("ResourceLocker")) {
-            panic!("You cannot attach two times ResourceLocker to a Node")
+            tracing::error!("You cannot attach two times ResourceLocker to a Node");
+            return;
         }
 
         let resource_locker = ResourceLocker::alloc_gd();

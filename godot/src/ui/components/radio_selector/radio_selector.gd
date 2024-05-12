@@ -19,8 +19,8 @@ signal select_item(index: int, item: String)
 	set(new_value):
 		selected = new_value
 		var radio_button = get_child(selected)
-		if is_instance_valid(radio_button):
-			for child in self.get_children() and child is CheckBox:
+		if is_instance_valid(radio_button) and radio_button is CheckBox:
+			for child in self.get_children():
 				child.set_pressed_no_signal(false)
 
 			radio_button.set_pressed_no_signal(true)
