@@ -356,55 +356,43 @@ impl ContentProvider {
 
     #[func]
     pub fn get_texture_from_hash(&mut self, file_hash: GString) -> Option<Gd<ImageTexture>> {
-        if let Some(entry) = self.cached.get_mut(&file_hash.to_string()) {
-            entry.last_access = Instant::now();
-            let promise_data = entry.promise.bind().get_data();
-            let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
-            let texture = texture_entry.bind().texture.clone();
-            Some(texture)
-        } else {
-            None
-        }
+        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        entry.last_access = Instant::now();
+        let promise_data = entry.promise.bind().get_data();
+        let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
+        let texture = texture_entry.bind().texture.clone();
+        Some(texture)
     }
 
     #[func]
     pub fn get_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<Node3D>> {
-        if let Some(entry) = self.cached.get_mut(&file_hash.to_string()) {
-            entry.last_access = Instant::now();
-            entry.promise.bind().get_data().try_to::<Gd<Node3D>>().ok()
-        } else {
-            None
-        }
+        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        entry.last_access = Instant::now();
+        entry.promise.bind().get_data().try_to::<Gd<Node3D>>().ok()
     }
 
     #[func]
     pub fn get_emote_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
-        if let Some(entry) = self.cached.get_mut(&file_hash.to_string()) {
-            entry.last_access = Instant::now();
-            entry
-                .promise
-                .bind()
-                .get_data()
-                .try_to::<Gd<DclEmoteGltf>>()
-                .ok()
-        } else {
-            None
-        }
+        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        entry.last_access = Instant::now();
+        entry
+            .promise
+            .bind()
+            .get_data()
+            .try_to::<Gd<DclEmoteGltf>>()
+            .ok()
     }
 
     #[func]
     pub fn get_audio_from_hash(&mut self, file_hash: GString) -> Option<Gd<AudioStream>> {
-        if let Some(entry) = self.cached.get_mut(&file_hash.to_string()) {
-            entry.last_access = Instant::now();
-            entry
-                .promise
-                .bind()
-                .get_data()
-                .try_to::<Gd<AudioStream>>()
-                .ok()
-        } else {
-            None
-        }
+        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        entry.last_access = Instant::now();
+        entry
+            .promise
+            .bind()
+            .get_data()
+            .try_to::<Gd<AudioStream>>()
+            .ok()
     }
 
     #[func]
