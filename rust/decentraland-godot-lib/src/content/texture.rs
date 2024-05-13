@@ -90,12 +90,24 @@ pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
     if image_width > image_height {
         if image_width > max_size {
             image.resize(max_size, (image_height * max_size) / image_width);
-            tracing::debug!("Resize! {}x{} to {}x{}", image_width, image_height, image.get_width(), image.get_height());
+            tracing::debug!(
+                "Resize! {}x{} to {}x{}",
+                image_width,
+                image_height,
+                image.get_width(),
+                image.get_height()
+            );
             return true;
         }
     } else if image_height > max_size {
         image.resize((image_width * max_size) / image_height, max_size);
-        tracing::debug!("Resize! {}x{} to {}x{}", image_width, image_height, image.get_width(), image.get_height());
+        tracing::debug!(
+            "Resize! {}x{} to {}x{}",
+            image_width,
+            image_height,
+            image.get_width(),
+            image.get_height()
+        );
         return true;
     }
     false
