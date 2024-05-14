@@ -70,12 +70,45 @@ pub async fn load_image_texture(
         )));
     }
 
+    let max_size = ctx.texture_quality.to_max_size();
+    resize_image(&mut image, max_size);
+
     let mut texture = ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
         format!("Error creating texture from image {}", absolute_file_path),
     ))?;
+
     texture.set_name(GString::from(&url));
 
     let texture_entry = Gd::from_init_fn(|_base| TextureEntry { texture, image });
 
     Ok(Some(texture_entry.to_variant()))
+}
+
+pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
+    let image_width = image.get_width();
+    let image_height = image.get_height();
+    if image_width > image_height {
+        if image_width > max_size {
+            image.resize(max_size, (image_height * max_size) / image_width);
+            tracing::debug!(
+                "Resize! {}x{} to {}x{}",
+                image_width,
+                image_height,
+                image.get_width(),
+                image.get_height()
+            );
+            return true;
+        }
+    } else if image_height > max_size {
+        image.resize((image_width * max_size) / image_height, max_size);
+        tracing::debug!(
+            "Resize! {}x{} to {}x{}",
+            image_width,
+            image_height,
+            image.get_width(),
+            image.get_height()
+        );
+        return true;
+    }
+    false
 }

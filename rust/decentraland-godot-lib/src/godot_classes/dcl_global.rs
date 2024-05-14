@@ -16,7 +16,9 @@ use crate::{
     test_runner::testing_tools::DclTestingTools,
 };
 
-use super::{dcl_realm::DclRealm, portables::DclPortableExperienceController};
+use super::{
+    dcl_config::DclConfig, dcl_realm::DclRealm, portables::DclPortableExperienceController,
+};
 
 #[cfg(target_os = "android")]
 mod android {
@@ -41,6 +43,8 @@ pub struct DclGlobal {
     #[base]
     _base: Base<Node>,
 
+    #[var]
+    pub config: Gd<DclConfig>,
     #[var]
     pub scene_runner: Gd<SceneManager>,
     #[var]
@@ -88,7 +92,6 @@ impl INode for DclGlobal {
         let mut comms: Gd<CommunicationManager> = CommunicationManager::alloc_gd();
         let mut scene_runner: Gd<SceneManager> = SceneManager::alloc_gd();
         let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::alloc_gd();
-        let http_requester: Gd<RustHttpQueueRequester> = RustHttpQueueRequester::new_gd();
 
         tokio_runtime.set_name("tokio_runtime".into());
         scene_runner.set_name("scene_runner".into());
@@ -119,7 +122,8 @@ impl INode for DclGlobal {
             testing_scene_mode,
             player_identity: DclPlayerIdentity::alloc_gd(),
             content_provider: ContentProvider::alloc_gd(),
-            http_requester,
+            http_requester: RustHttpQueueRequester::new_gd(),
+            config: DclConfig::new_gd(),
             ethereum_provider: Arc::new(EthereumProvider::new()),
         }
     }

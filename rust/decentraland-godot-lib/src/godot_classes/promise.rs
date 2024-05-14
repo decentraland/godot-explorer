@@ -1,4 +1,3 @@
-use godot::engine::Object;
 use godot::prelude::*;
 
 #[derive(GodotClass)]

@@ -1,6 +1,5 @@
 use godot::{
     bind::{godot_api, GodotClass},
-    obj::Gd,
     prelude::*,
 };
 

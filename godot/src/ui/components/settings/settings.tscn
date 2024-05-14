@@ -225,7 +225,6 @@ focus_mode = 0
 text = "Clear Cache"
 
 [node name="VBoxContainer_Graphics" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
-visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -391,7 +390,34 @@ unique_name_in_owner = true
 layout_mode = 2
 items = Array[String](["OFF", "X2", "X4", "X8"])
 
+[node name="TextureQuality" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom"]
+layout_mode = 2
+size_flags_vertical = 0
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/TextureQuality"]
+layout_mode = 2
+
+[node name="Label_Antialiasing" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/TextureQuality/HBoxContainer"]
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+text = "Texture Quality"
+
+[node name="Label_Resolution3DScale2" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/TextureQuality/HBoxContainer"]
+self_modulate = Color(1, 1, 1, 0.784314)
+layout_mode = 2
+theme = SubResource("Theme_eontw")
+theme_override_font_sizes/font_size = 12
+text = "(requires restart of the client to take effect)"
+vertical_alignment = 1
+
+[node name="RadioSelector_TextureQuality" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/TextureQuality" instance=ExtResource("7_u8bs2")]
+unique_name_in_owner = true
+layout_mode = 2
+items = Array[String](["LOW", "MEDIUM", "HIGH", "SOURCE"])
+
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
+visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -743,6 +769,7 @@ focus_mode = 1
 [connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Skybox/RadioSelector_Skybox" to="." method="_on_radio_selector_skybox_select_item"]
 [connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Shadows/RadioSelector_Shadow" to="." method="_on_radio_selector_shadow_select_item"]
 [connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Antialiasing/RadioSelector_AA" to="." method="_on_radio_selector_aa_select_item"]
+[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/TextureQuality/RadioSelector_TextureQuality" to="." method="_on_radio_selector_texture_quality_select_item"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume/HSlider_GeneralVolume" to="." method="_on_h_slider_general_volume_value_changed"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/SceneVolume/HSlider_SceneVolume" to="." method="_on_h_slider_scene_volume_value_changed"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume/HSlider_UIVolume" to="." method="_on_h_slider_ui_volume_value_changed"]

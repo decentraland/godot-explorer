@@ -45,7 +45,7 @@ func _process(_dt):
 	if _last_parcel_position != parcel_position:
 		Global.scene_fetcher.update_position(parcel_position)
 		_last_parcel_position = parcel_position
-		Global.config.last_parcel_position = parcel_position
+		Global.get_config().last_parcel_position = parcel_position
 		dirty_save_position = true
 		Global.change_parcel.emit(parcel_position)
 
@@ -110,7 +110,7 @@ func _ready():
 		mobile_ui.hide()
 
 	control_pointer_tooltip.hide()
-	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)
+	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
 	if cmd_location != null:
 		start_parcel_position = cmd_location
 
@@ -135,12 +135,12 @@ func _ready():
 		Global.realm.async_set_realm(cmd_realm)
 		control_menu.control_settings.set_preview_url(cmd_realm)
 	else:
-		if Global.config.last_realm_joined.is_empty():
+		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
 				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-test-psquad-demo-latest"
 			)
 		else:
-			Global.realm.async_set_realm(Global.config.last_realm_joined)
+			Global.realm.async_set_realm(Global.get_config().last_realm_joined)
 
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
@@ -170,8 +170,8 @@ func _on_need_open_url(url: String, _description: String) -> void:
 
 func _on_player_logout():
 	# Clean stored session
-	Global.config.session_account = {}
-	Global.config.save_to_settings_file()
+	Global.get_config().session_account = {}
+	Global.get_config().save_to_settings_file()
 
 	# TODO: It's crashing. Logout = exit app
 	#get_tree().change_scene_to_file("res://src/main.tscn")
@@ -349,7 +349,7 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 		Global.realm.async_set_realm(realm)
 	move_to(Vector3i(parcel.x * 16, 3, -parcel.y * 16), false)
 
-	Global.config.add_place_to_last_places(parcel, realm)
+	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true
 
 
@@ -405,7 +405,7 @@ func _on_timer_fps_label_timeout():
 	label_fps.set_text("ALPHA - " + str(Engine.get_frames_per_second()) + " FPS")
 	if dirty_save_position:
 		dirty_save_position = false
-		Global.config.save_to_settings_file()
+		Global.get_config().save_to_settings_file()
 
 
 func hide_menu():

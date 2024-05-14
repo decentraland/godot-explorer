@@ -13,6 +13,7 @@ use crate::{
 };
 use godot::prelude::*;
 
+#[allow(dead_code)]
 trait ToDictionaryColorObject {
     fn to_dictionary_color_object(&self) -> Dictionary;
 }
@@ -71,7 +72,8 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarShape"));
 
             if new_value.is_none() {
-                if let Some(avatar_node) = existing {
+                if let Some(mut avatar_node) = existing {
+                    avatar_node.queue_free();
                     node_3d.remove_child(avatar_node);
                 }
             } else if let Some(new_value) = new_value {

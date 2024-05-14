@@ -72,7 +72,7 @@ func _ready():
 	if args.has("--skip-lobby"):
 		_skip_lobby = true
 
-	if Global.player_identity.try_recover_account(Global.config.session_account):
+	if Global.player_identity.try_recover_account(Global.get_config().session_account):
 		loading_first_profile = true
 		show_panel(control_loading)
 	elif _skip_lobby:
@@ -92,8 +92,8 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
 
 	if !new_profile.has_connected_web3():
-		Global.config.guest_profile = new_profile.to_godot_dictionary()
-		Global.config.save_to_settings_file()
+		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
+		Global.get_config().save_to_settings_file()
 
 	if loading_first_profile:
 		loading_first_profile = false
@@ -131,18 +131,18 @@ func _on_need_open_url(url: String, _description: String) -> void:
 
 
 func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
-	Global.config.session_account = {}
+	Global.get_config().session_account = {}
 
 	var new_stored_account := {}
 	if Global.player_identity.get_recover_account_to(new_stored_account):
-		Global.config.session_account = new_stored_account
+		Global.get_config().session_account = new_stored_account
 
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_button_different_account_pressed():
-	Global.config.session_account = {}
-	Global.config.save_to_settings_file()
+	Global.get_config().session_account = {}
+	Global.get_config().save_to_settings_file()
 	show_connect()
 	avatar_preview.hide()
 
@@ -210,8 +210,8 @@ func _on_button_cancel_pressed():
 
 func create_guest_account_if_needed():
 	if not guest_account_created:
-		Global.config.guest_profile = {}
-		Global.config.save_to_settings_file()
+		Global.get_config().guest_profile = {}
+		Global.get_config().save_to_settings_file()
 		Global.player_identity.create_guest_account()
 		Global.player_identity.set_default_profile()
 		guest_account_created = true

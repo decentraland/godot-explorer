@@ -37,6 +37,8 @@ struct EventBodyExpressionId {
     expression_id: String,
 }
 
+// TODO: Implement
+#[allow(unused)]
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct EventBodyProfileChanged {
@@ -44,6 +46,8 @@ struct EventBodyProfileChanged {
     version: i32,
 }
 
+// TODO: Implement
+#[allow(unused)]
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct EventBodyRealmChanged {

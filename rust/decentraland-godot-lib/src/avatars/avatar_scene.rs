@@ -322,8 +322,9 @@ impl AvatarScene {
         self.avatar_entity.clear();
 
         let avatars = std::mem::take(&mut self.avatar_godot_scene);
-        for (_, avatar) in avatars {
-            self.base.remove_child(avatar.upcast());
+        for (_, mut avatar) in avatars {
+            self.base.remove_child(avatar.clone().upcast());
+            avatar.queue_free()
         }
     }
 
@@ -331,13 +332,13 @@ impl AvatarScene {
         if let Some(entity_id) = self.avatar_entity.remove(&alias) {
             self.crdt_state.kill_entity(&entity_id);
             let mut avatar = self.avatar_godot_scene.remove(&entity_id).unwrap();
-            self.base.remove_child(avatar.clone().upcast());
 
             self.avatar_address.retain(|_, v| *v != alias);
 
             self.last_updated_profile.remove(&entity_id);
 
             avatar.queue_free();
+            self.base.remove_child(avatar.upcast());
 
             // Push dirty state in all the scenes
             let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();

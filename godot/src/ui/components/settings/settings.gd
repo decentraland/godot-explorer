@@ -47,6 +47,7 @@ var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBox
 
 @onready var radio_selector_graphic_profile = %RadioSelector_GraphicProfile
 
+@onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
 @onready var radio_selector_skybox = %RadioSelector_Skybox
 @onready var radio_selector_shadow = %RadioSelector_Shadow
 @onready var radio_selector_aa = %RadioSelector_AA
@@ -89,37 +90,38 @@ func _ready():
 	advanced.hide()
 	audio.hide()
 
-	text_edit_cache_path.text = Global.config.local_content_dir
+	text_edit_cache_path.text = Global.get_config().local_content_dir
 
 	refresh_graphic_settings()
 
-	h_slider_general_volume.value = Global.config.audio_general_volume
-	h_slider_scene_volume.value = Global.config.audio_scene_volume
-	h_slider_voice_chat_volume.value = Global.config.audio_voice_chat_volume
-	h_slider_ui_volume.value = Global.config.audio_ui_volume
-	h_slider_music_volume.value = Global.config.audio_music_volume
-	h_slider_mic_amplification.value = Global.config.audio_mic_amplification
+	h_slider_general_volume.value = Global.get_config().audio_general_volume
+	h_slider_scene_volume.value = Global.get_config().audio_scene_volume
+	h_slider_voice_chat_volume.value = Global.get_config().audio_voice_chat_volume
+	h_slider_ui_volume.value = Global.get_config().audio_ui_volume
+	h_slider_music_volume.value = Global.get_config().audio_music_volume
+	h_slider_mic_amplification.value = Global.get_config().audio_mic_amplification
 
 	refresh_values()
 
 
 func refresh_graphic_settings():
 	# We only show the custom settings if the graphic profile is custom
-	box_container_custom.visible = Global.config.graphic_profile == 3
-
-	radio_selector_graphic_profile.selected = Global.config.graphic_profile
+	box_container_custom.visible = Global.get_config().graphic_profile == 3
+	var graphic_profile = Global.get_config().graphic_profile
+	radio_selector_graphic_profile.selected = graphic_profile
 
 	if Global.is_mobile():
 		v_box_container_windowed.hide()
 	else:
-		radio_selector_windowed.selected = Global.config.window_mode
+		radio_selector_windowed.selected = Global.get_config().window_mode
 
-	radio_selector_limit_fps.selected = Global.config.limit_fps
-	radio_selector_skybox.selected = Global.config.skybox
-	radio_selector_shadow.selected = Global.config.shadow_quality
-	radio_selector_aa.selected = Global.config.anti_aliasing
+	radio_selector_limit_fps.selected = Global.get_config().limit_fps
+	radio_selector_texture_quality.selected = Global.get_config().texture_quality
+	radio_selector_skybox.selected = Global.get_config().skybox
+	radio_selector_shadow.selected = Global.get_config().shadow_quality
+	radio_selector_aa.selected = Global.get_config().anti_aliasing
 
-	h_slider_rendering_scale.value = Global.config.resolution_3d_scale
+	h_slider_rendering_scale.value = Global.get_config().resolution_3d_scale
 	refresh_zooms()
 
 
@@ -161,18 +163,18 @@ func _on_button_clear_cache_pressed():
 
 
 func _on_checkbox_fps_toggled(button_pressed):
-	Global.config.show_fps = button_pressed
+	Global.get_config().show_fps = button_pressed
 
 
 func refresh_values():
-	spin_box_gravity.value = Global.config.gravity
-	spin_box_walk_speed.value = Global.config.walk_velocity
-	spin_box_run_speed.value = Global.config.run_velocity
-	spin_box_jump_velocity.value = Global.config.jump_velocity
-	h_slider_process_tick_quota.set_value_no_signal(Global.config.process_tick_quota_ms)
-	h_slider_scene_radius.set_value_no_signal(Global.config.scene_radius)
-	label_process_tick_quota_value.text = str(Global.config.process_tick_quota_ms)
-	label_scene_radius_value.text = str(Global.config.scene_radius)
+	spin_box_gravity.value = Global.get_config().gravity
+	spin_box_walk_speed.value = Global.get_config().walk_velocity
+	spin_box_run_speed.value = Global.get_config().run_velocity
+	spin_box_jump_velocity.value = Global.get_config().jump_velocity
+	h_slider_process_tick_quota.set_value_no_signal(Global.get_config().process_tick_quota_ms)
+	h_slider_scene_radius.set_value_no_signal(Global.get_config().scene_radius)
+	label_process_tick_quota_value.text = str(Global.get_config().process_tick_quota_ms)
+	label_scene_radius_value.text = str(Global.get_config().scene_radius)
 
 	if is_instance_valid(Global.raycast_debugger):
 		check_box_raycast_debugger.set_pressed_no_signal(true)
@@ -246,30 +248,30 @@ func _process(_delta):
 
 
 func _on_spin_box_walk_speed_value_changed(value):
-	Global.config.walk_velocity = value
-	Global.config.save_to_settings_file()
+	Global.get_config().walk_velocity = value
+	Global.get_config().save_to_settings_file()
 
 
 func _on_spin_box_run_speed_value_changed(value):
-	Global.config.run_velocity = value
-	Global.config.save_to_settings_file()
+	Global.get_config().run_velocity = value
+	Global.get_config().save_to_settings_file()
 
 
 func _on_spin_box_jump_velocity_value_changed(value):
-	Global.config.jump_velocity = value
-	Global.config.save_to_settings_file()
+	Global.get_config().jump_velocity = value
+	Global.get_config().save_to_settings_file()
 
 
 func _on_spin_box_gravity_value_changed(value):
-	Global.config.gravity = value
-	Global.config.save_to_settings_file()
+	Global.get_config().gravity = value
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_scene_radius_value_changed(value):
-	if value != Global.config.scene_radius:
-		Global.config.scene_radius = h_slider_scene_radius.value
+	if value != Global.get_config().scene_radius:
+		Global.get_config().scene_radius = h_slider_scene_radius.value
 		label_scene_radius_value.text = str(h_slider_scene_radius.value)
-		Global.config.save_to_settings_file()
+		Global.get_config().save_to_settings_file()
 
 
 func _on_button_connect_preview_pressed():
@@ -311,39 +313,39 @@ func refresh_zooms():
 
 
 func _on_h_slider_rendering_scale_drag_ended(_value_changed):
-	Global.config.resolution_3d_scale = h_slider_rendering_scale.value
-	get_window().get_viewport().scaling_3d_scale = Global.config.resolution_3d_scale
-	Global.config.save_to_settings_file()
+	Global.get_config().resolution_3d_scale = h_slider_rendering_scale.value
+	get_window().get_viewport().scaling_3d_scale = Global.get_config().resolution_3d_scale
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_mic_amplification_value_changed(value):
-	Global.config.audio_mic_amplification = value
+	Global.get_config().audio_mic_amplification = value
 	AudioSettings.apply_mic_amplification_settings()
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_ui_volume_value_changed(value):
-	Global.config.audio_ui_volume = value
+	Global.get_config().audio_ui_volume = value
 	AudioSettings.apply_ui_volume_settings()
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_voice_chat_volume_value_changed(value):
-	Global.config.audio_voice_chat_volume = value
+	Global.get_config().audio_voice_chat_volume = value
 	AudioSettings.apply_voice_chat_volume_settings()
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_scene_volume_value_changed(value):
-	Global.config.audio_scene_volume = value
+	Global.get_config().audio_scene_volume = value
 	AudioSettings.apply_scene_volume_settings()
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_general_volume_value_changed(value):
-	Global.config.audio_general_volume = value
+	Global.get_config().audio_general_volume = value
 	AudioSettings.apply_general_volume_settings()
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_radio_selector_ui_zoom_select_item(_index, item):
@@ -351,64 +353,72 @@ func _on_radio_selector_ui_zoom_select_item(_index, item):
 	var current_ui_zoom: String = item
 	if not options.has(current_ui_zoom):
 		current_ui_zoom = "Max"
-	Global.config.ui_zoom = options[current_ui_zoom]
+	Global.get_config().ui_zoom = options[current_ui_zoom]
 	GraphicSettings.apply_ui_zoom(get_window())
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_radio_selector_select_item(index, _item):
-	Global.config.limit_fps = index
+	Global.get_config().limit_fps = index
 	GraphicSettings.apply_fps_limit()
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_radio_selector_skybox_select_item(index, _item):
-	Global.config.skybox = index
-	Global.config.save_to_settings_file()
+	Global.get_config().skybox = index
+	Global.get_config().save_to_settings_file()
 
 
 func _on_radio_selector_shadow_select_item(index, _item):
-	Global.config.shadow_quality = index
-	Global.config.save_to_settings_file()
+	Global.get_config().shadow_quality = index
+	Global.get_config().save_to_settings_file()
 
 
 # gdlint:ignore = async-function-name
 func _on_radio_selector_windowed_select_item(index, _item):
-	Global.config.window_mode = index
+	Global.get_config().window_mode = index
 	GraphicSettings.apply_window_config()
 	await get_tree().process_frame
 	refresh_zooms()
 
 
 func _on_radio_selector_aa_select_item(index, _item):
-	Global.config.anti_aliasing = index
-	Global.config.save_to_settings_file()
+	Global.get_config().anti_aliasing = index
+	Global.get_config().save_to_settings_file()
 
 
 func _on_radio_selector_graphic_profile_select_item(index, _item):
-	Global.config.graphic_profile = index
+	Global.get_config().graphic_profile = index
 
 	match index:
 		0:  # Performance
-			Global.config.anti_aliasing = 0  # off
-			Global.config.shadow_quality = 0  # disabled
-			Global.config.skybox = 0  # low
+			Global.get_config().anti_aliasing = 0  # off
+			Global.get_config().shadow_quality = 0  # disabled
+			Global.get_config().skybox = 0  # low
+			Global.get_config().texture_quality = 0  # low
 		1:  # Balanced
-			Global.config.anti_aliasing = 1  # x2
-			Global.config.shadow_quality = 1  # normal
-			Global.config.skybox = 1  # medium
+			Global.get_config().anti_aliasing = 1  # x2
+			Global.get_config().shadow_quality = 1  # normal
+			Global.get_config().skybox = 1  # medium
+			Global.get_config().texture_quality = 1  # medium
 		2:  # Quality
-			Global.config.anti_aliasing = 3  # x8
-			Global.config.shadow_quality = 2  # high quality
-			Global.config.skybox = 2  # high
+			Global.get_config().anti_aliasing = 3  # x8
+			Global.get_config().shadow_quality = 2  # high quality
+			Global.get_config().skybox = 2  # high
+			Global.get_config().texture_quality = 2  # high
 		3:  # Custom
 			pass
 
 	refresh_graphic_settings()
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_music_volume_value_changed(value):
-	Global.config.audio_music_volume = value
+	Global.get_config().audio_music_volume = value
 	AudioSettings.apply_music_volume_settings()
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
+
+
+func _on_radio_selector_texture_quality_select_item(index, _item):
+	Global.get_config().texture_quality = index
+	Global.get_config().save_to_settings_file()

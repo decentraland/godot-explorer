@@ -1,8 +1,4 @@
-use deno_core::{
-    anyhow::{self, anyhow},
-    error::AnyError,
-    op, Op, OpDecl, OpState,
-};
+use deno_core::{anyhow::anyhow, error::AnyError, op, Op, OpDecl, OpState};
 use godot::builtin::{Vector2, Vector3};
 
 use crate::dcl::{

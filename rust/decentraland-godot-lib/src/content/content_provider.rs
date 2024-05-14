@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
+    time::{Duration, Instant},
 };
 
 use godot::{
@@ -14,7 +15,11 @@ use crate::{
     avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
     content::content_mapping::DclContentMappingAndUrl,
     dcl::common::string::FindNthChar,
-    godot_classes::promise::Promise,
+    godot_classes::{
+        dcl_config::{DclConfig, TextureQuality},
+        promise::Promise,
+        resource_locker::ResourceLocker,
+    },
     http_request::http_queue_requester::HttpQueueRequester,
     scene_runner::tokio_runtime::TokioRuntime,
 };
@@ -32,8 +37,11 @@ use super::{
     video::download_video,
     wearable_entities::{request_wearables, WearableManyResolved},
 };
+
+#[derive(Clone)]
 pub struct ContentEntry {
     promise: Gd<Promise>,
+    last_access: Instant,
 }
 
 #[derive(GodotClass)]
@@ -44,6 +52,8 @@ pub struct ContentProvider {
     content_notificator: Arc<ContentNotificator>,
     cached: HashMap<String, ContentEntry>,
     godot_single_thread: Arc<Semaphore>,
+    texture_quality: TextureQuality, // copy from DclGlobal on startup
+    tick: f64,
 }
 
 #[derive(Clone)]
@@ -52,6 +62,7 @@ pub struct ContentProviderContext {
     pub http_queue_requester: Arc<HttpQueueRequester>,
     pub content_notificator: Arc<ContentNotificator>,
     pub godot_single_thread: Arc<Semaphore>,
+    pub texture_quality: TextureQuality, // copy from DclGlobal on startup
 }
 
 unsafe impl Send for ContentProviderContext {}
@@ -69,12 +80,53 @@ impl INode for ContentProvider {
             cached: HashMap::new(),
             content_notificator: Arc::new(ContentNotificator::new()),
             godot_single_thread: Arc::new(Semaphore::new(1)),
+            texture_quality: DclConfig::static_get_texture_quality(),
+            tick: 0.0,
         }
     }
     fn ready(&mut self) {}
     fn exit_tree(&mut self) {
         self.cached.clear();
         tracing::info!("ContentProvider::exit_tree");
+    }
+
+    fn process(&mut self, dt: f64) {
+        self.tick += dt;
+        if self.tick >= 1.0 {
+            self.tick = 0.0;
+
+            self.cached.retain(|_, entry| {
+                // don't add a timeout for promise to be resolved,
+                // that timeout should be done on the fetch process
+                // resolved doesn't mean that is resolved correctly
+                let process_promise = entry.last_access.elapsed() > Duration::from_secs(30)
+                    && entry.promise.bind().is_resolved();
+                if process_promise {
+                    let data = entry.promise.bind().get_data();
+                    if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
+                        if let Some(resource_locker) =
+                            node_3d.get_node(NodePath::from("ResourceLocker"))
+                        {
+                            if let Ok(resource_locker) =
+                                resource_locker.try_cast::<ResourceLocker>()
+                            {
+                                let reference_count = resource_locker.bind().get_reference_count();
+                                if reference_count == 1 {
+                                    node_3d.queue_free();
+                                    return false;
+                                }
+                            }
+                        }
+                    } else if let Ok(ref_counted) = Gd::<RefCounted>::try_from_variant(&data) {
+                        let reference_count = ref_counted.get_reference_count();
+                        if reference_count == 1 {
+                            return false;
+                        }
+                    }
+                }
+                true
+            });
+        }
     }
 }
 
@@ -93,7 +145,8 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get(file_hash) {
+        if let Some(entry) = self.cached.get_mut(file_hash) {
+            entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
@@ -126,6 +179,7 @@ impl ContentProvider {
         self.cached.insert(
             file_hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -172,7 +226,8 @@ impl ContentProvider {
             return Promise::from_rejected(format!("File not found: {}", file_path));
         };
 
-        if let Some(entry) = self.cached.get(file_hash) {
+        if let Some(entry) = self.cached.get_mut(file_hash) {
+            entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
@@ -189,6 +244,7 @@ impl ContentProvider {
         self.cached.insert(
             file_hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -217,7 +273,8 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
     ) -> Gd<Promise> {
         let file_hash = file_hash_godot.to_string();
-        if let Some(entry) = self.cached.get(&file_hash) {
+        if let Some(entry) = self.cached.get_mut(&file_hash) {
+            entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
@@ -231,6 +288,7 @@ impl ContentProvider {
             self.cached.insert(
                 file_hash,
                 ContentEntry {
+                    last_access: Instant::now(),
                     promise: promise.clone(),
                 },
             );
@@ -253,6 +311,7 @@ impl ContentProvider {
         self.cached.insert(
             file_hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -263,7 +322,8 @@ impl ContentProvider {
     #[func]
     pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
-        if let Some(entry) = self.cached.get(&file_hash) {
+        if let Some(entry) = self.cached.get_mut(&file_hash) {
+            entry.last_access = Instant::now();
             return entry.promise.clone();
         }
         let url = url.to_string();
@@ -278,6 +338,7 @@ impl ContentProvider {
         self.cached.insert(
             file_hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -286,33 +347,27 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_texture_from_hash(&self, file_hash: GString) -> Option<Gd<ImageTexture>> {
-        let promise_data = self
-            .cached
-            .get(&file_hash.to_string())?
-            .promise
-            .bind()
-            .get_data();
+    pub fn get_texture_from_hash(&mut self, file_hash: GString) -> Option<Gd<ImageTexture>> {
+        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        entry.last_access = Instant::now();
+        let promise_data = entry.promise.bind().get_data();
         let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
         let texture = texture_entry.bind().texture.clone();
         Some(texture)
     }
 
     #[func]
-    pub fn get_gltf_from_hash(&self, file_hash: GString) -> Option<Gd<Node3D>> {
-        self.cached
-            .get(&file_hash.to_string())?
-            .promise
-            .bind()
-            .get_data()
-            .try_to::<Gd<Node3D>>()
-            .ok()
+    pub fn get_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<Node3D>> {
+        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        entry.last_access = Instant::now();
+        entry.promise.bind().get_data().try_to::<Gd<Node3D>>().ok()
     }
 
     #[func]
-    pub fn get_emote_gltf_from_hash(&self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
-        self.cached
-            .get(&file_hash.to_string())?
+    pub fn get_emote_gltf_from_hash(&mut self, file_hash: GString) -> Option<Gd<DclEmoteGltf>> {
+        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        entry.last_access = Instant::now();
+        entry
             .promise
             .bind()
             .get_data()
@@ -321,9 +376,10 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_audio_from_hash(&self, file_hash: GString) -> Option<Gd<AudioStream>> {
-        self.cached
-            .get(&file_hash.to_string())?
+    pub fn get_audio_from_hash(&mut self, file_hash: GString) -> Option<Gd<AudioStream>> {
+        let entry = self.cached.get_mut(&file_hash.to_string())?;
+        entry.last_access = Instant::now();
+        entry
             .promise
             .bind()
             .get_data()
@@ -359,6 +415,7 @@ impl ContentProvider {
         self.cached.insert(
             file_hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -424,7 +481,8 @@ impl ContentProvider {
                 .unwrap_or(wearable_id.len());
             let wearable_id = wearable_id[0..token_id_pos].to_lowercase();
 
-            if let Some(entry) = self.cached.get(&wearable_id) {
+            if let Some(entry) = self.cached.get_mut(&wearable_id) {
+                entry.last_access = Instant::now();
                 promise_ids.insert(entry.promise.instance_id());
             } else {
                 wearable_to_fetch.insert(wearable_id.clone());
@@ -437,6 +495,7 @@ impl ContentProvider {
                 self.cached.insert(
                     wearable_id,
                     ContentEntry {
+                        last_access: Instant::now(),
                         promise: new_promise.as_ref().unwrap().0.clone(),
                     },
                 );
@@ -467,6 +526,7 @@ impl ContentProvider {
             self.cached.insert(
                 "wearables".to_string(),
                 ContentEntry {
+                    last_access: Instant::now(),
                     promise: promise.clone(),
                 },
             );
@@ -481,7 +541,8 @@ impl ContentProvider {
         let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
         let id = id[0..token_id_pos].to_lowercase();
 
-        if let Some(entry) = self.cached.get(&id) {
+        if let Some(entry) = self.cached.get_mut(&id) {
+            entry.last_access = Instant::now();
             if let Ok(results) = entry
                 .promise
                 .bind()
@@ -507,11 +568,16 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_profile(&self, user_id: GString) -> Option<Gd<DclUserProfile>> {
+    pub fn get_profile(&mut self, user_id: GString) -> Option<Gd<DclUserProfile>> {
         let user_id = user_id.to_string().as_str().as_h160()?;
         let hash = format!("profile_{:x}", user_id);
-        let promise_data = self.cached.get(&hash)?.promise.bind().get_data();
-        promise_data.try_to::<Gd<DclUserProfile>>().ok()
+        if let Some(entry) = self.cached.get_mut(&hash) {
+            entry.last_access = Instant::now();
+            let promise_data = entry.promise.bind().get_data();
+            promise_data.try_to::<Gd<DclUserProfile>>().ok()
+        } else {
+            None
+        }
     }
 
     #[func]
@@ -521,7 +587,8 @@ impl ContentProvider {
         };
 
         let hash = format!("profile_{:x}", user_id);
-        if let Some(entry) = self.cached.get(&hash) {
+        if let Some(entry) = self.cached.get_mut(&hash) {
+            entry.last_access = Instant::now();
             return entry.promise.clone();
         }
 
@@ -553,6 +620,7 @@ impl ContentProvider {
         self.cached.insert(
             hash,
             ContentEntry {
+                last_access: Instant::now(),
                 promise: promise.clone(),
             },
         );
@@ -568,6 +636,7 @@ impl ContentProvider {
             http_queue_requester: self.http_queue_requester.clone(),
             content_notificator: self.content_notificator.clone(),
             godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
         }
     }
 }

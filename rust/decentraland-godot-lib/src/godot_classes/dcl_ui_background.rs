@@ -106,7 +106,7 @@ impl DclUiBackground {
 
         let mut content_provider = DclGlobal::singleton().bind().get_content_provider();
         let Some(profile) = content_provider
-            .bind()
+            .bind_mut()
             .get_profile(GString::from(current_user_id))
         else {
             return;

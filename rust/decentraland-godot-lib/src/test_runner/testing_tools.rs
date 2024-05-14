@@ -1,4 +1,4 @@
-use godot::engine::{Image, Node};
+use godot::engine::Image;
 use godot::prelude::*;
 
 #[derive(GodotClass)]

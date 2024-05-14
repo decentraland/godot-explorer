@@ -472,23 +472,19 @@ impl SceneManager {
         for scene_id in scene_to_remove.iter() {
             let mut scene = self.scenes.remove(scene_id).unwrap();
             let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
-            let node_3d = scene
-                .godot_dcl_scene
-                .root_node_3d
-                .clone()
-                .upcast::<Node>()
-                .clone();
-            let node_ui = scene
-                .godot_dcl_scene
-                .root_node_ui
-                .clone()
-                .upcast::<Node>()
-                .clone();
-            self.base.remove_child(node_3d);
+
+            scene.godot_dcl_scene.root_node_ui.queue_free();
+            scene.godot_dcl_scene.root_node_3d.queue_free();
+
+            self.base
+                .remove_child(scene.godot_dcl_scene.root_node_3d.upcast());
+
+            let node_ui = scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>();
+
             if node_ui.get_parent().is_some() {
                 self.base_ui.remove_child(node_ui);
             }
-            scene.godot_dcl_scene.root_node_3d.queue_free();
+
             self.sorted_scene_ids.retain(|x| x != scene_id);
             self.dying_scene_ids.retain(|x| x != scene_id);
             self.scenes.remove(scene_id);
@@ -756,6 +752,7 @@ impl SceneManager {
                 .internal_player_data
                 .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: false });
 
+            // leave it orphan! it will be re-added when you are in the scene, and deleted on scene deletion
             self.base_ui
                 .remove_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
         }

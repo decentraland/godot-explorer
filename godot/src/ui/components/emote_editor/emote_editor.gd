@@ -67,6 +67,7 @@ func _async_load_emotes():
 	# Clear
 	for child in container_all_emotes.get_children():
 		container_all_emotes.remove_child(child)
+		child.queue_free()
 
 	all_emote_items.clear()
 

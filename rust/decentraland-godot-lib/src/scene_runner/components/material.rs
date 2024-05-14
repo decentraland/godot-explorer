@@ -243,7 +243,7 @@ fn check_texture(
     param: godot::engine::base_material_3d::TextureParam,
     dcl_texture: &Option<DclTexture>,
     material: &mut Gd<StandardMaterial3D>,
-    content_provider: GdMut<ContentProvider>,
+    mut content_provider: GdMut<ContentProvider>,
     _scene: &Scene,
 ) -> bool {
     if dcl_texture.is_none() {

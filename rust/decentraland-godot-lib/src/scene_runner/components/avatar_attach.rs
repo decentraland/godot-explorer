@@ -29,7 +29,8 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarAttach"));
 
             if new_value.is_none() {
-                if let Some(avatar_attach_node) = existing {
+                if let Some(mut avatar_attach_node) = existing {
+                    avatar_attach_node.queue_free();
                     node_3d.remove_child(avatar_attach_node);
                     // TODO: resolve the current transform
                 }

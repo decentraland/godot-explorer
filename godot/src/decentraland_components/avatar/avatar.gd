@@ -58,6 +58,8 @@ func _ready():
 	if non_3d_audio:
 		var audio_player_name = audio_player_emote.get_name()
 		remove_child(audio_player_emote)
+		audio_player_emote.queue_free()
+
 		audio_player_emote = AudioStreamPlayer.new()
 		add_child(audio_player_emote)
 		audio_player_emote.name = audio_player_name
@@ -215,10 +217,13 @@ func try_to_set_body_shape(body_shape_hash):
 	for child in body_shape_skeleton_3d.get_children():
 		if child is MeshInstance3D:
 			body_shape_skeleton_3d.remove_child(child)
+			child.queue_free()
 
 	for child in new_skeleton.get_children():
 		var new_child = child.duplicate()
 		new_child.name = "bodyshape_" + child.name.to_lower()
+
+		new_child.add_child(body_shape.get_node("ResourceLocker").duplicate())
 		body_shape_skeleton_3d.add_child(new_child)
 
 	_add_attach_points()
@@ -289,6 +294,7 @@ func async_load_wearables():
 				var new_wearable = child.duplicate()
 				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
 				new_wearable.name = new_wearable.name.to_lower() + WEARABLE_NAME_PREFIX + category
+				new_wearable.add_child(obj.get_node("ResourceLocker").duplicate())
 				body_shape_skeleton_3d.add_child(new_wearable)
 
 		match category:

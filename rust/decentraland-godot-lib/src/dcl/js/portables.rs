@@ -1,8 +1,4 @@
-use deno_core::{
-    anyhow::{self, anyhow},
-    error::AnyError,
-    op, Op, OpDecl, OpState,
-};
+use deno_core::{anyhow::anyhow, error::AnyError, op, Op, OpDecl, OpState};
 use std::{cell::RefCell, rc::Rc};
 
 use crate::dcl::scene_apis::{PortableLocation, RpcCall, SpawnResponse};

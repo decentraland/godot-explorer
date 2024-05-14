@@ -121,9 +121,7 @@ impl EntityBase {
         let Ok(urn) = urn::Urn::from_str(urn_str) else {
             return None;
         };
-        let Some((lhs, rhs)) = urn.nss().split_once(':') else {
-            return None;
-        };
+        let (lhs, rhs) = urn.nss().split_once(':')?;
         let hash = match lhs {
             "entity" => rhs.to_owned(),
             _ => return None,

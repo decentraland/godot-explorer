@@ -314,9 +314,12 @@ impl DclItemEntityDefinition {
         };
 
         if !skip_content_integrity {
-            let _content_provider: Gd<crate::content::content_provider::ContentProvider> =
-                DclGlobal::singleton().bind().get_content_provider().clone();
-            let content_provider = _content_provider.bind();
+            let mut _content_provider: Gd<crate::content::content_provider::ContentProvider> =
+                DclGlobal::singleton()
+                    .bind_mut()
+                    .get_content_provider()
+                    .clone();
+            let mut content_provider = _content_provider.bind_mut();
 
             if let Some(obj) = content_provider.get_gltf_from_hash(GString::from(main_file_hash)) {
                 obj.find_child("Skeleton3D".into()).is_some()

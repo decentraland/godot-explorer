@@ -36,7 +36,8 @@ pub fn update_audio_source(
             let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AudioSource"));
 
             if new_value.is_none() {
-                if let Some(audio_source_node) = existing {
+                if let Some(mut audio_source_node) = existing {
+                    audio_source_node.queue_free();
                     node_3d.remove_child(audio_source_node);
                 }
                 scene.audio_sources.remove(entity);

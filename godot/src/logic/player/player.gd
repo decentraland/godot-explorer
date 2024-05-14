@@ -81,10 +81,10 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 func _on_param_changed(_param):
 	# Disabled for now
 	# TODO: make the panel to change these values
-	# walk_speed = Global.config.walk_velocity
-	# run_speed = Global.config.run_velocity
-	# gravity = Global.config.gravity
-	# jump_velocity_0 = Global.config.jump_velocity
+	# walk_speed = Global.get_config().walk_velocity
+	# run_speed = Global.get_config().run_velocity
+	# gravity = Global.get_config().gravity
+	# jump_velocity_0 = Global.get_config().jump_velocity
 	pass
 
 

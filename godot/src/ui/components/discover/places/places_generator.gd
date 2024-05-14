@@ -53,16 +53,17 @@ func request_last_places() -> void:
 	for item in item_container.get_children():
 		if item is PlaceItem:
 			item_container.remove_child(item)
+			item.queue_free()
 
 	loading = true
-	var last_places = Global.config.last_places.duplicate()
+	var last_places = Global.get_config().last_places.duplicate()
 	var genesis_city_places: Array[Dictionary] = []
 	var worlds_names: Array[Dictionary] = []
 	var custom_realms: Array[Dictionary] = []
 	var index = 0
 
 	_try_to_add_to_last_places(
-		Global.config.last_realm_joined, Global.config.last_parcel_position, last_places
+		Global.get_config().last_realm_joined, Global.get_config().last_parcel_position, last_places
 	)
 
 	for place in last_places:

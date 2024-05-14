@@ -1,5 +1,5 @@
 class_name ConfigData
-extends RefCounted
+extends DclConfig
 
 signal param_changed(param: ConfigParams)
 
@@ -24,8 +24,6 @@ enum ConfigParams {
 	ANTI_ALIASING,
 	GRAPHIC_PROFILE,
 }
-
-const SETTINGS_FILE = "user://settings.cfg"
 
 var local_content_dir: String = OS.get_user_data_dir() + "/content":
 	set(value):
@@ -226,9 +224,6 @@ func load_from_settings_file():
 	var data_default := ConfigData.new()
 	data_default.load_from_default()
 
-	var settings_file: ConfigFile = ConfigFile.new()
-	settings_file.load(SETTINGS_FILE)
-
 	self.gravity = settings_file.get_value("config", "gravity", data_default.gravity)
 	self.jump_velocity = settings_file.get_value(
 		"config", "jump_velocity", data_default.jump_velocity
@@ -332,9 +327,10 @@ func save_to_settings_file():
 	settings_file.set_value("config", "audio_music_volume", self.audio_music_volume)
 	settings_file.set_value("config", "audio_voice_chat_volume", self.audio_voice_chat_volume)
 	settings_file.set_value("config", "audio_mic_amplification", self.audio_mic_amplification)
+	settings_file.set_value("config", "texture_quality", self.get_texture_quality())
 	settings_file.set_value("session", "account", self.session_account)
 	settings_file.set_value("session", "guest_profile", self.guest_profile)
 	settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	settings_file.set_value("user", "last_places", self.last_places)
-	settings_file.save(SETTINGS_FILE)
+	settings_file.save(DclConfig.get_settings_file_path())

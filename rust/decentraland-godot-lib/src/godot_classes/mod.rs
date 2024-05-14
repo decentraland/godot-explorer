@@ -5,6 +5,7 @@ pub mod dcl_avatar;
 pub mod dcl_avatar_modifier_area_3d;
 pub mod dcl_camera_3d;
 pub mod dcl_camera_mode_area_3d;
+pub mod dcl_config;
 pub mod dcl_confirm_dialog;
 pub mod dcl_ether;
 pub mod dcl_global;
@@ -22,6 +23,7 @@ pub mod dcl_video_player;
 pub mod font;
 pub mod portables;
 pub mod promise;
+pub mod resource_locker;
 pub mod rpc_sender;
 pub trait JsonGodotClass
 where
