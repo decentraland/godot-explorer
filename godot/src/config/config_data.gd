@@ -30,7 +30,7 @@ var local_content_dir: String = OS.get_user_data_dir() + "/content":
 		if DirAccess.dir_exists_absolute(value):
 			local_content_dir = value
 			param_changed.emit(ConfigParams.CONTENT_DIRECTORY)
-			
+
 # 0=512mb 1=1gb 2=2gb
 var max_cache_size: int = 1:
 	set(value):
@@ -256,7 +256,7 @@ func load_from_settings_file():
 	self.local_content_dir = settings_file.get_value(
 		"config", "local_content_dir", data_default.local_content_dir
 	)
-	
+
 	self.max_cache_size = settings_file.get_value(
 		"config", "max_cache_size", data_default.max_cache_size
 	)

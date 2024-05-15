@@ -24,8 +24,7 @@ var advanced = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VB
 var audio = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio
 
 #General items:
-@onready
-var text_edit_cache_path = %TextEdit_CachePath
+@onready var text_edit_cache_path = %TextEdit_CachePath
 @onready var label_current_cache_size = %Label_CurrentCacheSize
 @onready var radio_selector_max_cache_size = %RadioSelector_MaxCacheSize
 
@@ -68,10 +67,8 @@ var h_slider_process_tick_quota = $ColorRect_Content/HBoxContainer/ScrollContain
 @onready
 var label_process_tick_quota_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/Label_ProcessTickQuotaValue
 
-@onready
-var label_scene_radius_value = %Label_SceneRadiusValue
-@onready
-var h_slider_scene_radius = %HSlider_SceneRadius
+@onready var label_scene_radius_value = %Label_SceneRadiusValue
+@onready var h_slider_scene_radius = %HSlider_SceneRadius
 
 @onready
 var spin_box_gravity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
@@ -433,7 +430,9 @@ func _on_radio_selector_max_cache_size_select_item(index, _item):
 
 
 func _update_current_cache_size():
-	var current_size_mb = roundf(Global.content_provider.get_cache_folder_total_size() / 1000 / 1000)
+	var current_size_mb = roundf(
+		Global.content_provider.get_cache_folder_total_size() / 1000 / 1000
+	)
 	label_current_cache_size.text = "(current size: %dmb)" % current_size_mb
 
 

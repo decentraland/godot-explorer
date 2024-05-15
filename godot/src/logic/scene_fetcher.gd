@@ -31,6 +31,7 @@ class SceneItem:
 	var parcels: Array[Vector2i] = []
 	var is_global: bool = false
 
+
 var current_position: Vector2i = Vector2i(-1000, -1000)
 var loaded_empty_scenes: Dictionary = {}
 var loaded_scenes: Dictionary = {}
@@ -277,18 +278,21 @@ func async_load_scene(
 	loaded_scenes[scene_entity_id] = scene_item
 
 	var content_mapping := scene_entity_definition.get_content_mapping()
-	
+
 	var local_main_js_path: String = ""
 	var script_promise: Promise
 	if scene_entity_definition.is_sdk7():
 		var script_path := scene_entity_definition.get_main_js_path()
-		script_promise = Global.content_provider.fetch_file(script_path, content_mapping)		
+		script_promise = Global.content_provider.fetch_file(script_path, content_mapping)
 		local_main_js_path = "user://content/" + scene_entity_definition.get_main_js_hash()
 	else:
 		var script_hash = "sdk-adaptation-layer.js"
-		script_promise = Global.content_provider.fetch_file_by_url(script_hash, "https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/dev/index.min.js")
+		script_promise = Global.content_provider.fetch_file_by_url(
+			script_hash,
+			"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/dev/index.min.js"
+		)
 		local_main_js_path = "user://content/" + script_hash
-		
+
 	var script_res = await PromiseUtils.async_awaiter(script_promise)
 	if script_res is PromiseError:
 		printerr(
