@@ -30,6 +30,11 @@ var local_content_dir: String = OS.get_user_data_dir() + "/content":
 		if DirAccess.dir_exists_absolute(value):
 			local_content_dir = value
 			param_changed.emit(ConfigParams.CONTENT_DIRECTORY)
+			
+# 0=512mb 1=1gb 2=2gb
+var max_cache_size: int = 1:
+	set(value):
+		max_cache_size = value
 
 var gravity: float = 55.0:
 	set(value):
@@ -208,6 +213,7 @@ func load_from_default():
 	self.graphic_profile = 0
 
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
+	self.max_cache_size = 1
 
 	self.show_fps = true
 
@@ -249,6 +255,10 @@ func load_from_settings_file():
 	)
 	self.local_content_dir = settings_file.get_value(
 		"config", "local_content_dir", data_default.local_content_dir
+	)
+	
+	self.max_cache_size = settings_file.get_value(
+		"config", "max_cache_size", data_default.max_cache_size
 	)
 	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
 	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
@@ -317,6 +327,7 @@ func save_to_settings_file():
 	settings_file.set_value("config", "anti_aliasing", self.anti_aliasing)
 	settings_file.set_value("config", "graphic_profile", self.graphic_profile)
 	settings_file.set_value("config", "local_content_dir", self.local_content_dir)
+	settings_file.set_value("config", "max_cache_size", self.max_cache_size)
 	settings_file.set_value("config", "show_fps", self.show_fps)
 	settings_file.set_value("config", "window_mode", self.window_mode)
 	settings_file.set_value("config", "ui_zoom", self.ui_zoom)

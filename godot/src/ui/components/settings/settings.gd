@@ -15,8 +15,7 @@ var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
 var _dirty_connected: bool = false
 
-@onready
-var general = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General
+@onready var general = %Container_General
 @onready
 var graphics = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics
 @onready
@@ -26,7 +25,9 @@ var audio = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxC
 
 #General items:
 @onready
-var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
+var text_edit_cache_path = %TextEdit_CachePath
+@onready var label_current_cache_size = %Label_CurrentCacheSize
+@onready var radio_selector_max_cache_size = %RadioSelector_MaxCacheSize
 
 #Audio items
 @onready var h_slider_general_volume = %HSlider_GeneralVolume
@@ -68,9 +69,9 @@ var h_slider_process_tick_quota = $ColorRect_Content/HBoxContainer/ScrollContain
 var label_process_tick_quota_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/Label_ProcessTickQuotaValue
 
 @onready
-var label_scene_radius_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/Label_SceneRadiusValue
+var label_scene_radius_value = %Label_SceneRadiusValue
 @onready
-var h_slider_scene_radius = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius
+var h_slider_scene_radius = %HSlider_SceneRadius
 
 @onready
 var spin_box_gravity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
@@ -85,15 +86,16 @@ var check_box_raycast_debugger = $ColorRect_Content/HBoxContainer/ScrollContaine
 
 
 func _ready():
-	general.show()
-	graphics.hide()
-	advanced.hide()
-	audio.hide()
+	_on_general_button_toggled(true)
 
+	# general
 	text_edit_cache_path.text = Global.get_config().local_content_dir
+	radio_selector_max_cache_size.selected = Global.get_config().max_cache_size
 
+	# graphic
 	refresh_graphic_settings()
 
+	# volume
 	h_slider_general_volume.value = Global.get_config().audio_general_volume
 	h_slider_scene_volume.value = Global.get_config().audio_scene_volume
 	h_slider_voice_chat_volume.value = Global.get_config().audio_voice_chat_volume
@@ -159,7 +161,7 @@ func _on_button_audio_pressed():
 
 func _on_button_clear_cache_pressed():
 	# Clean the content cache folder
-	Global.clear_cache()
+	Global.content_provider.clear_cache_folder()
 
 
 func _on_checkbox_fps_toggled(button_pressed):
@@ -422,3 +424,18 @@ func _on_h_slider_music_volume_value_changed(value):
 func _on_radio_selector_texture_quality_select_item(index, _item):
 	Global.get_config().texture_quality = index
 	Global.get_config().save_to_settings_file()
+
+
+func _on_radio_selector_max_cache_size_select_item(index, _item):
+	Global.get_config().max_cache_size = index
+	GeneralSettings.apply_max_cache_size()
+	Global.get_config().save_to_settings_file()
+
+
+func _update_current_cache_size():
+	var current_size_mb = roundf(Global.content_provider.get_cache_folder_total_size() / 1000 / 1000)
+	label_current_cache_size.text = "(current size: %dmb)" % current_size_mb
+
+
+func _on_container_general_visibility_changed():
+	_update_current_cache_size()

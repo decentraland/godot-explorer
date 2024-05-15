@@ -27,7 +27,8 @@ pub async fn load_image_texture(
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-    ctx.resource_provider.fetch_resource_or_wait(&url, &file_hash, &absolute_file_path)
+    ctx.resource_provider
+        .fetch_resource_or_wait(&url, &file_hash, &absolute_file_path)
         .await
         .map_err(anyhow::Error::msg)?;
 

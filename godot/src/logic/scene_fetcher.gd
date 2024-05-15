@@ -31,10 +31,6 @@ class SceneItem:
 	var parcels: Array[Vector2i] = []
 	var is_global: bool = false
 
-
-var adaptation_layer_js_request: int = -1
-var adaptation_layer_js_local_path: String = "user://sdk-adaptation-layer.js"
-
 var current_position: Vector2i = Vector2i(-1000, -1000)
 var loaded_empty_scenes: Dictionary = {}
 var loaded_scenes: Dictionary = {}
@@ -55,9 +51,6 @@ func _ready():
 
 	scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
 	Global.get_config().param_changed.connect(self._on_config_changed)
-
-	if FileAccess.file_exists(adaptation_layer_js_local_path):
-		DirAccess.remove_absolute(adaptation_layer_js_local_path)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
 	Global.loading_finished.connect(self.on_loading_finished)
@@ -283,59 +276,34 @@ func async_load_scene(
 
 	loaded_scenes[scene_entity_id] = scene_item
 
+	var content_mapping := scene_entity_definition.get_content_mapping()
+	
 	var local_main_js_path: String = ""
-
+	var script_promise: Promise
 	if scene_entity_definition.is_sdk7():
-		var main_js_file_hash := scene_entity_definition.get_main_js_hash()
-		if not main_js_file_hash.is_empty():
-			local_main_js_path = "user://content/" + main_js_file_hash
-			if (
-				not FileAccess.file_exists(local_main_js_path)
-				or main_js_file_hash.begins_with("b64")
-			):
-				var main_js_file_url: String = (
-					scene_entity_definition.get_base_url() + main_js_file_hash
-				)
-				var promise: Promise = Global.http_requester.request_file(
-					main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir())
-				)
-
-				var res = await PromiseUtils.async_awaiter(promise)
-				if res is PromiseError:
-					printerr(
-						"Scene ",
-						scene_entity_id,
-						" fail getting the script code content, error message: ",
-						res.get_error()
-					)
-					return PromiseUtils.resolved(false)
+		var script_path := scene_entity_definition.get_main_js_path()
+		script_promise = Global.content_provider.fetch_file(script_path, content_mapping)		
+		local_main_js_path = "user://content/" + scene_entity_definition.get_main_js_hash()
 	else:
-		local_main_js_path = String(adaptation_layer_js_local_path)
-		if not FileAccess.file_exists(local_main_js_path):
-			var promise: Promise = Global.http_requester.request_file(
-				"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/dev/index.min.js",
-				local_main_js_path.replace("user:/", OS.get_user_data_dir())
-			)
-			var res = await PromiseUtils.async_awaiter(promise)
-			if res is PromiseError:
-				printerr(
-					"Scene ",
-					scene_entity_id,
-					" fail getting the adaptation layer content, error message: ",
-					res.get_error()
-				)
-				return PromiseUtils.resolved(false)
+		var script_hash = "sdk-adaptation-layer.js"
+		script_promise = Global.content_provider.fetch_file_by_url(script_hash, "https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/dev/index.min.js")
+		local_main_js_path = "user://content/" + script_hash
+		
+	var script_res = await PromiseUtils.async_awaiter(script_promise)
+	if script_res is PromiseError:
+		printerr(
+			"Scene ",
+			scene_entity_id,
+			" fail getting the script code content, error message: ",
+			script_res.get_error()
+		)
+		return PromiseUtils.resolved(false)
 
 	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
 	var local_main_crdt_path: String = String()
 	if not main_crdt_file_hash.is_empty():
 		local_main_crdt_path = "user://content/" + main_crdt_file_hash
-		var main_crdt_file_url: String = (
-			scene_entity_definition.get_base_url() + main_crdt_file_hash
-		)
-		var promise: Promise = Global.http_requester.request_file(
-			main_crdt_file_url, local_main_crdt_path.replace("user:/", OS.get_user_data_dir())
-		)
+		var promise: Promise = Global.content_provider.fetch_file("main.crdt", content_mapping)
 
 		var res = await PromiseUtils.async_awaiter(promise)
 		if res is PromiseError:

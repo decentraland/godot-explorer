@@ -7,8 +7,8 @@ use tokio::io::AsyncReadExt;
 
 use super::{
     bytes::fast_create_packed_byte_array_from_vec, content_mapping::ContentMappingAndUrlRef,
-    content_provider::ContentProviderContext,
-    file_string::get_extension, thread_safety::GodotSingleThreadSafety,
+    content_provider::ContentProviderContext, file_string::get_extension,
+    thread_safety::GodotSingleThreadSafety,
 };
 
 pub async fn load_audio(
@@ -31,7 +31,8 @@ pub async fn load_audio(
     let url = format!("{}{}", content_mapping.base_url, file_hash);
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
 
-    ctx.resource_provider.fetch_resource_or_wait(&url, file_hash, &absolute_file_path)
+    ctx.resource_provider
+        .fetch_resource_or_wait(&url, file_hash, &absolute_file_path)
         .await
         .map_err(anyhow::Error::msg)?;
 
