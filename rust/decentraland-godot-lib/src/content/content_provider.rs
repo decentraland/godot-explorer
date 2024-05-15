@@ -11,31 +11,18 @@ use godot::{
 use tokio::sync::Semaphore;
 
 use crate::{
-    auth::wallet::AsH160,
-    avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
-    content::content_mapping::DclContentMappingAndUrl,
-    dcl::common::string::FindNthChar,
-    godot_classes::{
+    auth::wallet::AsH160, avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition}, content::content_mapping::DclContentMappingAndUrl, dcl::common::string::FindNthChar, godot_classes::{
         dcl_config::{DclConfig, TextureQuality},
         promise::Promise,
         resource_locker::ResourceLocker,
-    },
-    http_request::http_queue_requester::HttpQueueRequester,
-    scene_runner::tokio_runtime::TokioRuntime,
+    }, http_request::http_queue_requester::HttpQueueRequester, scene_runner::tokio_runtime::TokioRuntime
 };
 
 use super::{
-    audio::load_audio,
-    content_notificator::ContentNotificator,
-    gltf::{
+    audio::load_audio, gltf::{
         apply_update_set_mask_colliders, load_gltf_emote, load_gltf_scene_content,
         load_gltf_wearable, DclEmoteGltf,
-    },
-    profile::{prepare_request_requirements, request_lambda_profile},
-    texture::{load_image_texture, TextureEntry},
-    thread_safety::{set_thread_safety_checks_enabled, then_promise, GodotSingleThreadSafety},
-    video::download_video,
-    wearable_entities::{request_wearables, WearableManyResolved},
+    }, profile::{prepare_request_requirements, request_lambda_profile}, resource_provider::ResourceProvider, texture::{load_image_texture, TextureEntry}, thread_safety::{set_thread_safety_checks_enabled, then_promise, GodotSingleThreadSafety}, video::download_video, wearable_entities::{request_wearables, WearableManyResolved}
 };
 
 #[derive(Clone)]
@@ -48,8 +35,8 @@ pub struct ContentEntry {
 #[class(base=Node)]
 pub struct ContentProvider {
     content_folder: Arc<String>,
+    resource_provider: Arc<ResourceProvider>,
     http_queue_requester: Arc<HttpQueueRequester>,
-    content_notificator: Arc<ContentNotificator>,
     cached: HashMap<String, ContentEntry>,
     godot_single_thread: Arc<Semaphore>,
     texture_quality: TextureQuality, // copy from DclGlobal on startup
@@ -59,8 +46,8 @@ pub struct ContentProvider {
 #[derive(Clone)]
 pub struct ContentProviderContext {
     pub content_folder: Arc<String>,
+    pub resource_provider: Arc<ResourceProvider>,
     pub http_queue_requester: Arc<HttpQueueRequester>,
-    pub content_notificator: Arc<ContentNotificator>,
     pub godot_single_thread: Arc<Semaphore>,
     pub texture_quality: TextureQuality, // copy from DclGlobal on startup
 }
@@ -75,10 +62,10 @@ impl INode for ContentProvider {
             godot::engine::Os::singleton().get_user_data_dir()
         ));
         Self {
-            content_folder,
+            resource_provider: Arc::new(ResourceProvider::new(content_folder.clone().as_str(), 1024 * 1024 * 1024, 6)),
             http_queue_requester: Arc::new(HttpQueueRequester::new(6)),
+            content_folder,
             cached: HashMap::new(),
-            content_notificator: Arc::new(ContentNotificator::new()),
             godot_single_thread: Arc::new(Semaphore::new(1)),
             texture_quality: DclConfig::static_get_texture_quality(),
             tick: 0.0,
@@ -634,7 +621,7 @@ impl ContentProvider {
         ContentProviderContext {
             content_folder: self.content_folder.clone(),
             http_queue_requester: self.http_queue_requester.clone(),
-            content_notificator: self.content_notificator.clone(),
+            resource_provider: self.resource_provider.clone(),
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
         }

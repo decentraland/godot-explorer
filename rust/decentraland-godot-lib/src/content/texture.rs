@@ -2,7 +2,7 @@ use crate::utils::infer_mime;
 
 use super::{
     bytes::fast_create_packed_byte_array_from_vec, content_provider::ContentProviderContext,
-    download::fetch_resource_or_wait, thread_safety::GodotSingleThreadSafety,
+    thread_safety::GodotSingleThreadSafety,
 };
 use godot::{
     bind::GodotClass,
@@ -27,7 +27,7 @@ pub async fn load_image_texture(
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-    fetch_resource_or_wait(&url, &file_hash, &absolute_file_path, ctx.clone())
+    ctx.resource_provider.fetch_resource_or_wait(&url, &file_hash, &absolute_file_path)
         .await
         .map_err(anyhow::Error::msg)?;
 
