@@ -1,16 +1,15 @@
 use crate::utils::infer_mime;
 
 use super::{
-    bytes::fast_create_packed_byte_array_from_vec, content_provider::ContentProviderContext,
+    content_provider::ContentProviderContext, packed_array::PackedByteArrayFromVec,
     thread_safety::GodotSingleThreadSafety,
 };
 use godot::{
     bind::GodotClass,
-    builtin::{meta::ToGodot, GString, Variant},
+    builtin::{meta::ToGodot, GString, PackedByteArray, Variant},
     engine::{global::Error, DirAccess, Image, ImageTexture},
     obj::Gd,
 };
-use tokio::io::AsyncReadExt;
 
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
@@ -27,20 +26,17 @@ pub async fn load_image_texture(
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-    ctx.resource_provider
-        .fetch_resource_or_wait(&url, &file_hash, &absolute_file_path)
+    let bytes_vec = ctx
+        .resource_provider
+        .fetch_resource_with_data(&url, &file_hash, &absolute_file_path)
         .await
         .map_err(anyhow::Error::msg)?;
-
-    let mut file = tokio::fs::File::open(&absolute_file_path).await?;
-    let mut bytes_vec = Vec::new();
-    file.read_to_end(&mut bytes_vec).await?;
 
     let _thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
         .await
         .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
 
-    let bytes = fast_create_packed_byte_array_from_vec(&bytes_vec);
+    let bytes = PackedByteArray::from_vec(&bytes_vec);
 
     let mut image = Image::new();
     let err = if infer_mime::is_png(&bytes_vec) {

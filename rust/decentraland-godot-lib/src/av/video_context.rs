@@ -5,13 +5,14 @@ use ffmpeg_next::ffi::AVPixelFormat;
 use ffmpeg_next::format::Pixel;
 use ffmpeg_next::software::scaling::{context::Context, flag::Flags};
 use ffmpeg_next::{decoder, format::context::Input, media::Type, util::frame, Packet};
+use godot::builtin::PackedByteArray;
 use godot::engine::image::Format;
 use godot::engine::{Image, ImageTexture};
 use godot::prelude::{Gd, Vector2};
 use thiserror::Error;
 use tracing::debug;
 
-use crate::content::bytes::fast_create_packed_byte_array_from_slice;
+use crate::content::packed_array::PackedByteArrayFromVec;
 
 use super::stream_processor::FfmpegContext;
 
@@ -152,7 +153,7 @@ impl FfmpegContext for VideoContext {
         // let data_arr = PackedByteArray::from(current_frame.data(0));
 
         let raw_data = current_frame.data(0);
-        let data_arr = fast_create_packed_byte_array_from_slice(raw_data);
+        let data_arr = PackedByteArray::from_vec(raw_data);
 
         let diff = self.last_frame_time.elapsed().as_secs_f32();
         debug!(

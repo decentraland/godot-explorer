@@ -77,7 +77,7 @@ impl INode for ContentProvider {
         Self {
             resource_provider: Arc::new(ResourceProvider::new(
                 content_folder.clone().as_str(),
-                1024 * 1024 * 1024,
+                2048 * 1000 * 1000,
                 32,
             )),
             http_queue_requester: Arc::new(HttpQueueRequester::new(6)),
@@ -245,7 +245,32 @@ impl ContentProvider {
 
             if ctx
                 .resource_provider
-                .fetch_resource_or_wait(&url, &r_file_hash, &absolute_file_path)
+                .fetch_resource(&url, &r_file_hash, &absolute_file_path)
+                .await
+                .is_ok()
+            {
+                then_promise(get_promise, Ok(None));
+            } else {
+                then_promise(get_promise, Err(anyhow::anyhow!("Failed to download file")));
+            }
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn store_file(&mut self, file_hash: GString, bytes: PackedByteArray) -> Gd<Promise> {
+        let file_hash = file_hash.to_string();
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let bytes = bytes.to_vec();
+
+        TokioRuntime::spawn(async move {
+            if ctx
+                .resource_provider
+                .store_file(&file_hash.as_str(), bytes.as_slice())
                 .await
                 .is_ok()
             {
@@ -643,7 +668,8 @@ impl ContentProvider {
 
     #[func]
     pub fn set_max_concurrent_downloads(&mut self, number: i32) {
-        self.resource_provider.set_max_concurrent_downloads(number)
+        self.resource_provider
+            .set_max_concurrent_downloads(number as usize)
     }
 
     #[func]

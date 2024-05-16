@@ -1,5 +1,4 @@
 use futures_util::StreamExt;
-use num::ToPrimitive;
 use reqwest::Client;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -9,9 +8,11 @@ use std::sync::{
     Arc, Mutex,
 };
 use tokio::fs;
-use tokio::io::{self, AsyncWriteExt};
-use tokio::sync::{Notify, RwLock, Semaphore};
+use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
+use tokio::sync::{Notify, OnceCell, RwLock, Semaphore};
 use tokio::time::Instant;
+
+use crate::content::semaphore_ext::SemaphoreExt;
 
 struct FileMetadata {
     file_size: i64,
@@ -24,7 +25,7 @@ pub struct ResourceProvider {
     max_cache_size: AtomicI64,
     pending_downloads: Mutex<HashMap<String, Arc<Notify>>>,
     client: Client,
-    initialized: AtomicBool,
+    initialized: OnceCell<()>,
     semaphore: Arc<Semaphore>,
 }
 
@@ -37,7 +38,7 @@ impl ResourceProvider {
             max_cache_size: AtomicI64::new(max_cache_size),
             pending_downloads: Mutex::new(HashMap::new()),
             client: Client::new(),
-            initialized: AtomicBool::new(false),
+            initialized: OnceCell::new(),
             semaphore: Arc::new(Semaphore::new(max_concurrent_downloads)),
         }
     }
@@ -62,13 +63,13 @@ impl ResourceProvider {
                     .await;
             }
         }
+        self.ensure_space_for(&mut existing_files, 0).await;
         Ok(())
     }
 
-    async fn add_file(
+    async fn ensure_space_for(
         &self,
         existing_files: &mut HashMap<String, FileMetadata>,
-        file_path: String,
         file_size: i64,
     ) {
         // If adding the new file exceeds the cache size, remove less used files
@@ -78,7 +79,14 @@ impl ResourceProvider {
                 break;
             }
         }
+    }
 
+    async fn add_file(
+        &self,
+        existing_files: &mut HashMap<String, FileMetadata>,
+        file_path: String,
+        file_size: i64,
+    ) {
         let metadata = FileMetadata {
             file_size,
             last_accessed: Instant::now(),
@@ -152,24 +160,61 @@ impl ResourceProvider {
         Ok(())
     }
 
-    async fn ensure_initialized(&self) -> Result<(), String> {
-        if !self.initialized.load(Ordering::SeqCst) {
-            self.initialize()
+    async fn download_file_with_buffer(&self, url: &str, dest: &Path) -> Result<Vec<u8>, String> {
+        let tmp_dest = dest.with_extension("tmp");
+        let response = self
+            .client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| format!("Request error: {:?}", e))?;
+        let mut file = fs::File::create(&tmp_dest)
+            .await
+            .map_err(|e| format!("File creation error: {:?}", e))?;
+        let mut stream = response.bytes_stream();
+        let mut buffer = Vec::new();
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| format!("Stream error: {:?}", e))?;
+            file.write_all(&chunk)
                 .await
-                .map_err(|_| "Error initializing the ResourceLoader")?;
-            self.initialized.store(true, Ordering::SeqCst);
+                .map_err(|e| format!("File write error: {:?}", e))?;
+            buffer.extend_from_slice(&chunk);
         }
-        Ok(())
+
+        fs::rename(&tmp_dest, dest)
+            .await
+            .map_err(|e| format!("Failed to rename file: {:?}", e))?;
+
+        Ok(buffer)
     }
 
-    pub async fn fetch_resource_or_wait(
+    async fn ensure_initialized(&self) -> Result<(), String> {
+        self.initialized
+            .get_or_try_init(|| async { self.initialize().await.map_err(|e| e.to_string()) })
+            .await
+            .map(|_| ())
+    }
+
+    async fn handle_existing_file(&self, absolute_file_path: &String) -> Result<Vec<u8>, String> {
+        let mut existing_files = self.existing_files.write().await;
+        self.touch_file(&mut existing_files, absolute_file_path);
+
+        let mut file = fs::File::open(absolute_file_path)
+            .await
+            .map_err(|e| format!("Failed to open file: {:?}", e))?;
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)
+            .await
+            .map_err(|e| format!("Failed to read file: {:?}", e))?;
+        Ok(buffer)
+    }
+
+    async fn handle_pending_download(
         &self,
-        url: &str,
         file_hash: &String,
         absolute_file_path: &String,
     ) -> Result<(), String> {
-        self.ensure_initialized().await?;
-
         let notify = {
             let mut pending_downloads = self.pending_downloads.lock().unwrap();
             if let Some(notify) = pending_downloads.get(file_hash) {
@@ -191,6 +236,50 @@ impl ResourceProvider {
             }
         }
 
+        Ok(())
+    }
+
+    pub async fn store_file(&self, file_hash: &str, bytes: &[u8]) -> Result<(), String> {
+        self.ensure_initialized().await?;
+        let absolute_file_path = self.cache_folder.join(file_hash);
+
+        // Write the bytes to a temporary file first
+        let tmp_dest = absolute_file_path.with_extension("tmp");
+        let mut file = fs::File::create(&tmp_dest)
+            .await
+            .map_err(|e| format!("File creation error: {:?}", e))?;
+        file.write_all(&bytes)
+            .await
+            .map_err(|e| format!("File write error: {:?}", e))?;
+        fs::rename(&tmp_dest, &absolute_file_path)
+            .await
+            .map_err(|e| format!("Failed to rename file: {:?}", e))?;
+
+        // Update the cache map
+        let file_size = bytes.len() as i64;
+        let mut existing_files = self.existing_files.write().await;
+        self.ensure_space_for(&mut existing_files, file_size).await;
+        self.add_file(
+            &mut existing_files,
+            absolute_file_path.to_str().unwrap().to_string(),
+            file_size,
+        )
+        .await;
+
+        Ok(())
+    }
+
+    pub async fn fetch_resource(
+        &self,
+        url: &str,
+        file_hash: &String,
+        absolute_file_path: &String,
+    ) -> Result<(), String> {
+        self.ensure_initialized().await?;
+
+        self.handle_pending_download(file_hash, absolute_file_path)
+            .await?;
+
         let permit = self.semaphore.acquire().await.unwrap();
 
         if tokio::fs::metadata(&absolute_file_path).await.is_err() {
@@ -203,11 +292,11 @@ impl ResourceProvider {
             let file_size = metadata.len() as i64;
 
             let mut existing_files = self.existing_files.write().await;
+            self.ensure_space_for(&mut existing_files, file_size).await;
             self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
                 .await;
         } else {
-            let mut existing_files = self.existing_files.write().await;
-            self.touch_file(&mut existing_files, absolute_file_path);
+            self.handle_existing_file(absolute_file_path).await?;
         }
 
         let mut pending_downloads = self.pending_downloads.lock().unwrap();
@@ -218,6 +307,46 @@ impl ResourceProvider {
         drop(permit);
 
         Ok(())
+    }
+
+    // Method to fetch resource and wait for the data
+    pub async fn fetch_resource_with_data(
+        &self,
+        url: &str,
+        file_hash: &String,
+        absolute_file_path: &String,
+    ) -> Result<Vec<u8>, String> {
+        self.ensure_initialized().await?;
+
+        self.handle_pending_download(file_hash, absolute_file_path)
+            .await?;
+
+        let permit = self.semaphore.acquire().await.unwrap();
+        let data = if tokio::fs::metadata(&absolute_file_path).await.is_err() {
+            let data = self
+                .download_file_with_buffer(url, Path::new(absolute_file_path))
+                .await?;
+            let metadata = tokio::fs::metadata(absolute_file_path)
+                .await
+                .map_err(|e| format!("Failed to get metadata: {:?}", e))?;
+            let file_size = metadata.len() as i64;
+            let mut existing_files = self.existing_files.write().await;
+            self.ensure_space_for(&mut existing_files, file_size).await;
+            self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
+                .await;
+            data
+        } else {
+            self.handle_existing_file(absolute_file_path).await?
+        };
+
+        let mut pending_downloads = self.pending_downloads.lock().unwrap();
+        if let Some(notify) = pending_downloads.remove(file_hash) {
+            notify.notify_waiters();
+        }
+
+        drop(permit);
+
+        Ok(data)
     }
 
     // Method to clear the cache and delete all files from the file system
@@ -235,20 +364,8 @@ impl ResourceProvider {
     }
 
     // Method to change the number of concurrent downloads
-    pub fn set_max_concurrent_downloads(&self, max: i32) {
-        let permits_diffs = max
-            - self
-                .semaphore
-                .available_permits()
-                .to_i32()
-                .unwrap_or_default();
-        if permits_diffs > 0 {
-            self.semaphore
-                .add_permits(permits_diffs.to_usize().unwrap_or_default());
-        } else {
-            self.semaphore
-                .forget_permits((-permits_diffs).to_usize().unwrap_or_default());
-        }
+    pub fn set_max_concurrent_downloads(&self, max: usize) {
+        self.semaphore.set_permits(max)
     }
 
     // Method to change the max cache size
@@ -314,7 +431,7 @@ mod tests {
                 let provider_clone = provider.clone();
                 tokio::spawn(async move {
                     provider_clone
-                        .fetch_resource_or_wait(&url, &file_hash, &absolute_file_path)
+                        .fetch_resource(&url, &file_hash, &absolute_file_path)
                         .await
                         .expect("Failed to fetch resource");
                 })

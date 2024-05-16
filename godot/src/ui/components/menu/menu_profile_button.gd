@@ -20,7 +20,6 @@ var profile_panel_stylebox: StyleBoxFlat = null
 
 func _ready():
 	profile_button.set_button_group(button_group)
-	prints(button_group.get_buttons().size())
 
 	profile_stylebox = get_theme_stylebox("panel")
 	add_theme_stylebox_override("panel", profile_stylebox)

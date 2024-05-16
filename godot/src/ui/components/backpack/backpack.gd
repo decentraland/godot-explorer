@@ -283,17 +283,11 @@ func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat):
 
 	var body_data: PackedByteArray = body.save_png_to_buffer()
 	var body_hash = DclHashing.hash_v1(body_data)
-	var body_file = FileAccess.open(
-		Global.get_config().local_content_dir + "/" + body_hash, FileAccess.WRITE
-	)
-	body_file.store_buffer(body_data)
+	await PromiseUtils.async_awaiter(Global.content_provider.store_file(body_hash, body_data))
 
 	var face_data: PackedByteArray = face.save_png_to_buffer()
 	var face_hash = DclHashing.hash_v1(face_data)
-	var face_file = FileAccess.open(
-		Global.get_config().local_content_dir + "/" + face_hash, FileAccess.WRITE
-	)
-	face_file.store_buffer(face_data)
+	await PromiseUtils.async_awaiter(Global.content_provider.store_file(face_hash, face_data))
 
 	new_mutable_avatar.set_snapshots(face_hash, body_hash)
 	cloned_avatar_preview.queue_free()

@@ -37,7 +37,7 @@ pub async fn internal_load_gltf(
     let url = format!("{}{}", content_mapping.base_url, file_hash);
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
     ctx.resource_provider
-        .fetch_resource_or_wait(&url, file_hash, &absolute_file_path)
+        .fetch_resource(&url, file_hash, &absolute_file_path)
         .await
         .map_err(anyhow::Error::msg)?;
 
@@ -74,7 +74,7 @@ pub async fn internal_load_gltf(
             let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
             let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
             ctx.resource_provider
-                .fetch_resource_or_wait(&url, dependency_file_hash, &absolute_file_path)
+                .fetch_resource(&url, dependency_file_hash, &absolute_file_path)
                 .await
                 .map_err(|e| {
                     format!(

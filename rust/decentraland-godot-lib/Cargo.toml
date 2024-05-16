@@ -12,7 +12,7 @@ godot = { git = "https://github.com/leanmendoza/gdext", branch = "fix/ios", feat
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
-tokio = { version = "1.26.0", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 protobuf = "3.2.0"
 prost = "0.11.8"
 once_cell = "1.16.0"
