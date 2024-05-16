@@ -3,10 +3,7 @@ use reqwest::Client;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicI64;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
-};
+use std::sync::{atomic::Ordering, Arc, Mutex};
 use tokio::fs;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Notify, OnceCell, RwLock, Semaphore};
@@ -248,7 +245,7 @@ impl ResourceProvider {
         let mut file = fs::File::create(&tmp_dest)
             .await
             .map_err(|e| format!("File creation error: {:?}", e))?;
-        file.write_all(&bytes)
+        file.write_all(bytes)
             .await
             .map_err(|e| format!("File write error: {:?}", e))?;
         fs::rename(&tmp_dest, &absolute_file_path)

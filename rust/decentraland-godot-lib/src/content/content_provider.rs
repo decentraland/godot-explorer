@@ -270,7 +270,7 @@ impl ContentProvider {
         TokioRuntime::spawn(async move {
             if ctx
                 .resource_provider
-                .store_file(&file_hash.as_str(), bytes.as_slice())
+                .store_file(file_hash.as_str(), bytes.as_slice())
                 .await
                 .is_ok()
             {
