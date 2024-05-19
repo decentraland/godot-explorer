@@ -1,10 +1,14 @@
+use deno_core::{
+    anyhow::{self, anyhow},
+    op, Op, OpDecl, OpState,
+};
+use serde::Serialize;
+
 use std::{
     cell::RefCell,
     rc::Rc,
     sync::{Arc, Mutex},
 };
-
-use deno_core::{op, Op, OpDecl, OpState};
 
 use crate::dcl::{
     common::{SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent},
@@ -30,6 +34,7 @@ pub fn ops() -> Vec<OpDecl> {
     vec![
         op_crdt_send_to_renderer::DECL,
         op_crdt_recv_from_renderer::DECL,
+        op_get_texture_size::DECL,
     ]
 }
 
@@ -199,4 +204,41 @@ fn process_local_api_calls(local_api_calls: Vec<LocalCall>, crdt_state: &SceneCr
             }
         }
     }
+}
+
+#[derive(Serialize)]
+struct TextureSize {
+    width: f32,
+    height: f32,
+}
+
+#[op(v8)]
+async fn op_get_texture_size(state: Rc<RefCell<OpState>>, src: String) -> TextureSize {
+    let (sx, rx) = tokio::sync::oneshot::channel::<Result<godot::builtin::Vector2, String>>();
+
+    state
+        .borrow_mut()
+        .borrow_mut::<Vec<RpcCall>>()
+        .push(RpcCall::GetTextureSize {
+            src,
+            response: sx.into(),
+        });
+
+    let Ok(result) = rx.await.map_err(|e| anyhow::anyhow!(e)) else {
+        return TextureSize {
+            width: 1.0,
+            height: 1.0,
+        };
+    };
+
+    result
+        .map_err(|e| anyhow!(e))
+        .map(|v| TextureSize {
+            width: v.x,
+            height: v.y,
+        })
+        .unwrap_or(TextureSize {
+            width: 1.0,
+            height: 1.0,
+        })
 }

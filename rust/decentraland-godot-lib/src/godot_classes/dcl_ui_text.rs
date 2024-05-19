@@ -50,8 +50,24 @@ impl DclUiText {
                 a: v.a,
             })
             .unwrap_or(godot::prelude::Color::WHITE);
+        let outline_font_color = new_value
+            .outline_color
+            .as_ref()
+            .map(|v| godot::prelude::Color {
+                r: v.r,
+                g: v.g,
+                b: v.b,
+                a: v.a,
+            })
+            .unwrap_or(godot::prelude::Color::BLACK);
+        let outline_width = new_value.outline_width.unwrap_or(0.0) as i32;
+
         self.base
             .add_theme_color_override("font_color".into(), font_color);
+        self.base
+            .add_theme_color_override("font_outline_color".into(), outline_font_color);
+        self.base
+            .add_theme_constant_override("outline_size".into(), outline_width);
 
         let text_align = new_value
             .text_align
@@ -106,6 +122,14 @@ impl DclUiText {
             self.current_font = new_value.font();
             self.base
                 .add_theme_font_override("font".into(), self.current_font.get_font_resource());
+        }
+
+        if new_value.text_wrapping() {
+            self.base
+                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::AUTOWRAP_WORD_SMART);
+        } else {
+            self.base
+                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::AUTOWRAP_OFF);
         }
     }
 }

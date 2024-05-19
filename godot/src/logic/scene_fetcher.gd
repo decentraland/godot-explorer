@@ -33,7 +33,8 @@ class SceneItem:
 
 
 var adaptation_layer_js_request: int = -1
-var adaptation_layer_js_local_path: String = "user://sdk-adaptation-layer.js"
+#var adaptation_layer_js_local_path: String = "user://sdk-adaptation-layer.js"
+var adaptation_layer_js_local_path: String = "C:/Users/Usuario/Documents/github/sdk6-adaption-layer/bin/index.js"
 
 var current_position: Vector2i = Vector2i(-1000, -1000)
 var loaded_empty_scenes: Dictionary = {}
@@ -56,8 +57,8 @@ func _ready():
 	scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
 	Global.get_config().param_changed.connect(self._on_config_changed)
 
-	if FileAccess.file_exists(adaptation_layer_js_local_path):
-		DirAccess.remove_absolute(adaptation_layer_js_local_path)
+	#if FileAccess.file_exists(adaptation_layer_js_local_path):
+		#DirAccess.remove_absolute(adaptation_layer_js_local_path)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
 	Global.loading_finished.connect(self.on_loading_finished)

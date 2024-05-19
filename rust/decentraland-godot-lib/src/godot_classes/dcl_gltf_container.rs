@@ -88,6 +88,9 @@ pub struct DclGltfContainer {
     dcl_gltf_loading_state: GltfContainerLoadingState,
 
     #[export]
+    dcl_loading_time_ms: i32,
+
+    #[export]
     dcl_pending_node: Option<Gd<Node>>,
 
     #[base]
@@ -167,6 +170,7 @@ impl INode for DclGltfContainer {
             dcl_entity_id: SceneEntityId::INVALID.as_i32(),
             dcl_gltf_loading_state: GltfContainerLoadingState::Unknown,
             dcl_pending_node: None,
+            dcl_loading_time_ms: 0,
             base,
         }
     }
