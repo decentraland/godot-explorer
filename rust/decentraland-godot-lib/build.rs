@@ -1,3 +1,5 @@
+use chrono::prelude::*;
+use std::process::Command;
 use std::{
     env,
     fs::{self, File},
@@ -331,10 +333,32 @@ fn main() -> io::Result<()> {
         println!("cargo:rerun-if-changed={value}");
     }
 
+    set_godot_explorer_version();
+
     Ok(())
 }
 
 fn generate_file<P: AsRef<Path>>(path: P, text: &[u8]) {
     let mut f = File::create(path).unwrap();
     f.write_all(text).unwrap()
+}
+
+fn set_godot_explorer_version() {
+    let snapshot = if let Ok(output) = Command::new("git").args(["rev-parse", "HEAD"]).output() {
+        let long_hash = String::from_utf8(output.stdout).unwrap();
+        format!("commit-{}", &long_hash[..8])
+    } else {
+        Utc::now()
+            .to_rfc3339()
+            .replace(|c: char| !c.is_digit(10), "")
+    };
+
+    // get the CARGO_PKG_VERSION env var
+    let version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".to_string());
+    let snapshot_version = format!("{}-{}", version, snapshot);
+
+    println!(
+        "cargo:rustc-env=GODOT_EXPLORER_VERSION={}",
+        snapshot_version
+    );
 }
