@@ -55,7 +55,7 @@ bytes = "1.4.0"
 tokio-tungstenite = "0.20.1"
 futures-util = "0.3.30"
 
-livekit = { git = "https://github.com/robtfm/client-sdk-rust", branch="h264-false", features=["rustls-tls-webpki-roots"], optional = true }
+livekit = { git = "https://github.com/livekit/rust-sdks", features=["rustls-tls-webpki-roots"], optional = true }
 
 taffy = { git = "https://github.com/DioxusLabs/taffy", rev="7eee673c5ea65f64f35c53f5ee2fe5faf62b9c1e" }
 tracing-test = "0.2.4"
@@ -82,7 +82,7 @@ use_deno = ["dep:deno_core", "dep:v8"]
 enable_inspector = ["use_deno", "dep:uuid", "dep:fastwebsockets", "dep:hyper1"]
 
 [build-dependencies]
-webrtc-sys-build = "0.2.0"
+webrtc-sys-build = "0.3.2"
 prost-build = "0.11.8"
 
 [patch."https://github.com/godot-rust/godot4-prebuilt".godot4-prebuilt]
