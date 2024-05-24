@@ -5,10 +5,13 @@ use futures_util::StreamExt;
 use godot::prelude::{GString, Gd, PackedVector2Array};
 use http::Uri;
 use livekit::{
-    options::TrackPublishOptions, track::{LocalAudioTrack, LocalTrack, TrackSource}, webrtc::{
+    options::TrackPublishOptions,
+    track::{LocalAudioTrack, LocalTrack, TrackSource},
+    webrtc::{
         audio_source::native::NativeAudioSource,
         prelude::{AudioSourceOptions, RtcAudioSource},
-    }, DataPacket, DataPacketKind, RoomOptions
+    },
+    DataPacket, DataPacketKind, RoomOptions,
 };
 use prost::Message;
 
