@@ -5,8 +5,17 @@
       "name": "(Windows) Launch",
       "type": "cppvsdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot"],
+      "program": "C:/Users/Usuario/Documents/github/godot/bin/godot.windows.editor.dev.x86_64.exe",
+      "args": [
+        "--path",
+        "${workspaceFolder}/godot",
+        "--preview",
+        "--skip-lobby",
+        "--realm",
+        "http://localhost:8000",
+        "--location",
+        "0,0"
+      ],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [

@@ -1,5 +1,6 @@
 use godot::{
     engine::{
+        control::{LayoutPreset, LayoutPresetMode},
         global::{HorizontalAlignment, VerticalAlignment},
         Label,
     },
@@ -75,42 +76,51 @@ impl DclUiText {
             .unwrap_or(Some(TextAlignMode::TamMiddleCenter))
             .unwrap();
 
-        let (hor_align, vert_align) = match text_align {
+        let (hor_align, vert_align, anchor) = match text_align {
             TextAlignMode::TamTopLeft => (
                 HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
                 VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
+                LayoutPreset::PRESET_TOP_LEFT,
             ),
             TextAlignMode::TamTopCenter => (
                 HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
                 VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
+                LayoutPreset::PRESET_CENTER_TOP,
             ),
             TextAlignMode::TamTopRight => (
                 HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
                 VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
+                LayoutPreset::PRESET_TOP_RIGHT,
             ),
             TextAlignMode::TamMiddleLeft => (
                 HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
                 VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
+                LayoutPreset::PRESET_CENTER_LEFT,
             ),
             TextAlignMode::TamMiddleCenter => (
                 HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
                 VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
+                LayoutPreset::PRESET_CENTER,
             ),
             TextAlignMode::TamMiddleRight => (
                 HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
                 VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
+                LayoutPreset::PRESET_CENTER_RIGHT,
             ),
             TextAlignMode::TamBottomLeft => (
                 HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
                 VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
+                LayoutPreset::PRESET_BOTTOM_LEFT,
             ),
             TextAlignMode::TamBottomCenter => (
                 HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
                 VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
+                LayoutPreset::PRESET_CENTER_BOTTOM,
             ),
             TextAlignMode::TamBottomRight => (
                 HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
                 VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
+                LayoutPreset::PRESET_BOTTOM_RIGHT,
             ),
         };
 
@@ -131,5 +141,9 @@ impl DclUiText {
             self.base
                 .set_autowrap_mode(godot::engine::text_server::AutowrapMode::AUTOWRAP_OFF);
         }
+        self.base
+            .set_anchors_and_offsets_preset_ex(anchor)
+            .resize_mode(LayoutPresetMode::PRESET_MODE_KEEP_SIZE)
+            .done();
     }
 }

@@ -31,9 +31,9 @@ func async_load_gltf():
 		return
 
 	if not promise.is_resolved():
-		print("resolving ", self.dcl_gltf_src)
+		#print("resolving ", self.dcl_gltf_src)
 		await PromiseUtils.async_awaiter(promise)
-		print("resolved ", self.dcl_gltf_src)
+		#print("resolved ", self.dcl_gltf_src)
 
 	var res = promise.get_data()
 	if res is PromiseError:
@@ -44,9 +44,9 @@ func async_load_gltf():
 	var instance_promise: Promise = Global.content_provider.instance_gltf_colliders(
 		res, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
 	)
-	print("resolving b ", self.dcl_gltf_src)
+	#print("resolving b ", self.dcl_gltf_src)
 	var res_instance = await PromiseUtils.async_awaiter(instance_promise)
-	print("resolved b ", self.dcl_gltf_src)
+	#print("resolved b ", self.dcl_gltf_src)
 	if res_instance is PromiseError:
 		printerr("Error on fetch gltf: ", res_instance.get_error())
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR

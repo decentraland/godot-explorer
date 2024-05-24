@@ -4,6 +4,8 @@ use std::{
     rc::Rc,
 };
 
+use godot::engine::NodeExt;
+
 use crate::{
     dcl::{
         components::{
@@ -110,34 +112,22 @@ fn update_layout(
                 }
             }
 
-            if let Some(ui_text) = ui_text_components
-                .get(entity)
-                .and_then(|v| v.value.as_ref())
-            {
-                let any_axis_specified = [
-                    ui_node.ui_transform.taffy_style.size.width,
-                    ui_node.ui_transform.taffy_style.size.height,
-                ]
-                .iter()
-                .any(|v| !matches!(v, taffy::style::Dimension::Auto));
-            }
-
             let child = taffy
                 .new_leaf(ui_node.ui_transform.taffy_style.clone())
                 .expect("failed to create node");
-            // if let Some(text_size) = ui_node.text_size {
-            //     let size_child = taffy
-            //         .new_leaf(taffy::style::Style {
-            //             size: taffy::Size {
-            //                 width: taffy::style::Dimension::Length(text_size.x),
-            //                 height: taffy::style::Dimension::Length(text_size.y),
-            //             },
-            //             ..Default::default()
-            //         })
-            //         .expect("failed to create node");
+            if let Some(text_size) = ui_node.text_size {
+                let size_child = taffy
+                    .new_leaf(taffy::style::Style {
+                        size: taffy::Size {
+                            width: taffy::style::Dimension::Length(text_size.x),
+                            height: taffy::style::Dimension::Length(text_size.y),
+                        },
+                        ..Default::default()
+                    })
+                    .expect("failed to create node");
 
-            //     let _ = taffy.add_child(child, size_child);
-            // }
+                let _ = taffy.add_child(child, size_child);
+            }
 
             let _ = taffy.add_child(parent.0, child);
             processed_nodes.insert(*entity, (child, 0));
@@ -193,6 +183,23 @@ fn update_layout(
         });
         let is_hidden = taffy.style(*key_node).unwrap().display == taffy::style::Display::None;
         control.set_visible(!is_hidden);
+
+        if let Some(ui_text) = ui_text_components
+            .get(entity)
+            .and_then(|v| v.value.as_ref())
+        {
+            if ui_text.text_wrapping() {
+                if let Some(mut ui_text_control) = ui_node
+                    .base_control
+                    .try_get_node_as::<godot::engine::Control>("text")
+                {
+                    ui_text_control.set_size(godot::builtin::Vector2::new(
+                        layout.size.width,
+                        layout.size.height,
+                    ));
+                }
+            }
+        }
     }
 }
 
