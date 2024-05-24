@@ -48,6 +48,7 @@ func _process(_dt):
 		Global.get_config().last_parcel_position = parcel_position
 		dirty_save_position = true
 		Global.change_parcel.emit(parcel_position)
+		Global.metrics.update_position("%d,%d" % [parcel_position.x, parcel_position.y])
 
 
 func _on_parcels_procesed(parcels, empty):
@@ -158,6 +159,10 @@ func _ready():
 
 	if Global.testing_scene_mode:
 		Global.player_identity.create_guest_account()
+
+	Global.metrics.update_identity(
+		Global.player_identity.get_address_str(), Global.player_identity.is_guest
+	)
 
 	# last
 	ui_root.grab_focus.call_deferred()

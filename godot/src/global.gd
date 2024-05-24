@@ -72,6 +72,11 @@ func _ready():
 	if Engine.has_singleton("DclAndroidPlugin"):
 		dcl_android_plugin = Engine.get_singleton("DclAndroidPlugin")
 
+	self.metrics = Metrics.create_metrics(
+		self.config.analytics_user_id, DclConfig.generate_uuid_v4()
+	)
+	self.metrics.set_name("metrics")
+
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 
@@ -103,6 +108,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.avatars)
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
 	get_tree().root.add_child.call_deferred(self.testing_tools)
+	get_tree().root.add_child.call_deferred(self.metrics)
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)

@@ -142,37 +142,31 @@ impl Metrics {
             base,
         })
     }
-}
 
-impl Metrics {
+    #[func]
     pub fn update_realm(&mut self, realm: String) {
-        self.events.push(SegmentEvent::ExplorerMoveToParcel(
-            SegmentEventExplorerMoveToParcel {
-                old_parcel: self.common.position.clone(),
-            },
-        ));
         self.common.realm = realm;
     }
 
+    #[func]
     pub fn update_identity(&mut self, dcl_eth_address: String, dcl_is_guest: bool) {
-        self.events.push(SegmentEvent::ExplorerMoveToParcel(
-            SegmentEventExplorerMoveToParcel {
-                old_parcel: self.common.position.clone(),
-            },
-        ));
         self.common.dcl_eth_address = dcl_eth_address;
         self.common.dcl_is_guest = dcl_is_guest;
     }
 
+    #[func]
     pub fn update_position(&mut self, position: String) {
         self.events.push(SegmentEvent::ExplorerMoveToParcel(
+            position.clone(),
             SegmentEventExplorerMoveToParcel {
                 old_parcel: self.common.position.clone(),
             },
         ));
         self.common.position = position;
     }
+}
 
+impl Metrics {
     async fn send_segment_batch(
         http_requester: Arc<HttpQueueRequester>,
         write_key: &str,

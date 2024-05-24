@@ -350,7 +350,7 @@ fn set_godot_explorer_version() {
     } else {
         Utc::now()
             .to_rfc3339()
-            .replace(|c: char| !c.is_digit(10), "")
+            .replace(|c: char| !c.is_ascii_digit(), "")
     };
 
     // get the CARGO_PKG_VERSION env var

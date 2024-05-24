@@ -10,6 +10,12 @@ pub struct Frame {
     sum_dt: f32,
 }
 
+impl Default for Frame {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Frame {
     pub fn new() -> Self {
         Self {
