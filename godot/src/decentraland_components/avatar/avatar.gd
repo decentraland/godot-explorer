@@ -32,6 +32,10 @@ var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
+# Retain promises of the current loaded wearables for avoid deletion
+var wearable_dependencies_promises = null
+var wearable_promises = null
+
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
 @onready var label_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name/Label3D_Name
@@ -196,7 +200,9 @@ func async_fetch_wearables_dependencies():
 				async_calls.push_back(emote_promise)
 				async_calls_info.push_back(emote_urn)
 
-	await Wearables.async_load_wearables(wearables_dict.keys(), body_shape_id)
+	wearable_dependencies_promises = await Wearables.async_load_wearables(
+		wearables_dict.keys(), body_shape_id
+	)
 	var promises_result: Array = await PromiseUtils.async_all(async_calls)
 	for i in range(promises_result.size()):
 		if promises_result[i] is PromiseError:
@@ -257,7 +263,7 @@ func async_load_wearables():
 			Array(curated_wearables.need_to_fetch), Global.realm.get_profile_content_url()
 		)
 		await PromiseUtils.async_all(need_to_fetch_promise)
-		await Wearables.async_load_wearables(
+		wearable_promises = await Wearables.async_load_wearables(
 			curated_wearables.need_to_fetch, body_shape_wearable.get_id()
 		)
 

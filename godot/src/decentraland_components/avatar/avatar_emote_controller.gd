@@ -219,7 +219,9 @@ func _async_load_scene_emote(urn: String):
 		Global.realm.content_base_url + "contents/", {"emote.glb": emote_scene_urn.glb_hash}
 	)
 
-	var gltf_promise: Promise = Global.content_provider.fetch_emote_gltf("emote.glb", content_mapping)
+	var gltf_promise: Promise = Global.content_provider.fetch_emote_gltf(
+		"emote.glb", content_mapping
+	)
 	var obj = await PromiseUtils.async_awaiter(gltf_promise)
 
 	if obj is PromiseError:

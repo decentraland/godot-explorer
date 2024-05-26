@@ -157,7 +157,8 @@ impl ContentProvider {
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            let result = load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context).await;
+            let result =
+                load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context).await;
 
             then_promise(get_promise, result);
         });
@@ -194,11 +195,8 @@ impl ContentProvider {
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            let result = load_gltf_scene_content(
-                        gltf_file_path,
-                        content_mapping,
-                        content_provider_context,
-                    )
+            let result =
+                load_gltf_scene_content(gltf_file_path, content_mapping, content_provider_context)
                     .await;
 
             then_promise(get_promise, result);
@@ -236,7 +234,8 @@ impl ContentProvider {
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            let result = load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await;
+            let result =
+                load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await;
 
             then_promise(get_promise, result);
         });

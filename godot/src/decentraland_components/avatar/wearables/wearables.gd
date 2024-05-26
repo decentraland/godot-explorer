@@ -634,7 +634,7 @@ static func promise_get_wearable(wearable: DclItemEntityDefinition, body_shape_i
 	return ret
 
 
-static func async_load_wearables(wearable_keys: Array, body_shape_id: String):
+static func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Array[Promise]:
 	var async_calls_info: Array = []
 	var async_calls: Array = []
 
@@ -653,3 +653,5 @@ static func async_load_wearables(wearable_keys: Array, body_shape_id: String):
 	for i in range(promises_result.size()):
 		if promises_result[i] is PromiseError:
 			printerr("Error loading ", async_calls_info[i], ":", promises_result[i].get_error())
+
+	return promises_result
