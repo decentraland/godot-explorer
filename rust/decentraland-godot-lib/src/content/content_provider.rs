@@ -136,13 +136,11 @@ impl INode for ContentProvider {
 
 #[godot_api]
 impl ContentProvider {
-    // content_type 1: wearable, 2: emote, default: scene
     #[func]
-    pub fn fetch_gltf(
+    pub fn fetch_wearable_gltf(
         &mut self,
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
-        content_type: i32,
     ) -> Gd<Promise> {
         let content_mapping = content_mapping.bind().get_content_mapping();
         let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
@@ -159,23 +157,86 @@ impl ContentProvider {
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            let result = match content_type {
-                1 => {
-                    load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context)
-                        .await
-                }
-                2 => {
-                    load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await
-                }
-                _ => {
-                    load_gltf_scene_content(
+            let result = load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context).await;
+
+            then_promise(get_promise, result);
+        });
+
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                last_access: Instant::now(),
+                promise: promise.clone(),
+            },
+        );
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_scene_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
+            return Promise::from_rejected(format!("File not found: {}", file_path));
+        };
+
+        if let Some(entry) = self.cached.get_mut(file_hash) {
+            entry.last_access = Instant::now();
+            return entry.promise.clone();
+        }
+
+        let file_hash = file_hash.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+        let gltf_file_path = file_path.to_string();
+        let content_provider_context = self.get_context();
+        TokioRuntime::spawn(async move {
+            let result = load_gltf_scene_content(
                         gltf_file_path,
                         content_mapping,
                         content_provider_context,
                     )
-                    .await
-                }
-            };
+                    .await;
+
+            then_promise(get_promise, result);
+        });
+
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                last_access: Instant::now(),
+                promise: promise.clone(),
+            },
+        );
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_emote_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
+            return Promise::from_rejected(format!("File not found: {}", file_path));
+        };
+
+        if let Some(entry) = self.cached.get_mut(file_hash) {
+            entry.last_access = Instant::now();
+            return entry.promise.clone();
+        }
+
+        let file_hash = file_hash.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+        let gltf_file_path = file_path.to_string();
+        let content_provider_context = self.get_context();
+        TokioRuntime::spawn(async move {
+            let result = load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await;
 
             then_promise(get_promise, result);
         });

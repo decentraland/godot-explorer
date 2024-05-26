@@ -219,7 +219,7 @@ func _async_load_scene_emote(urn: String):
 		Global.realm.content_base_url + "contents/", {"emote.glb": emote_scene_urn.glb_hash}
 	)
 
-	var gltf_promise: Promise = Global.content_provider.fetch_gltf("emote.glb", content_mapping, 2)
+	var gltf_promise: Promise = Global.content_provider.fetch_emote_gltf("emote.glb", content_mapping)
 	var obj = await PromiseUtils.async_awaiter(gltf_promise)
 
 	if obj is PromiseError:
@@ -227,7 +227,7 @@ func _async_load_scene_emote(urn: String):
 		return
 
 	# TODO: implement also audio for this
-	# var audio_promise: Promise = Global.content_provider.fetch_gltf("emote.mp3", content_mapping, 2)
+	# var audio_promise: Promise = Global.content_provider.fetch_emote_gltf("emote.mp3", content_mapping)
 	# await PromiseUtils.async_awaiter(audio_promise)
 
 	#var obj = Global.content_provider.get_emote_gltf_from_hash(emote_scene_urn.glb_hash)
@@ -342,7 +342,7 @@ func async_fetch_emote(emote_urn: String, body_shape_id: String) -> Array:
 		if file_name.is_empty():
 			return ret
 		var content_mapping: DclContentMappingAndUrl = emote.get_content_mapping()
-		var promise: Promise = Global.content_provider.fetch_gltf(file_name, content_mapping, 2)
+		var promise: Promise = Global.content_provider.fetch_emote_gltf(file_name, content_mapping)
 		ret.push_back(promise)
 
 		for audio_file in content_mapping.get_files():

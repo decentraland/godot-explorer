@@ -629,7 +629,7 @@ static func promise_get_wearable(wearable: DclItemEntityDefinition, body_shape_i
 		if file_name.ends_with(".png"):
 			promise = Global.content_provider.fetch_texture(file_name, content_mapping)
 		else:
-			promise = Global.content_provider.fetch_gltf(file_name, content_mapping, 1)
+			promise = Global.content_provider.fetch_wearable_gltf(file_name, content_mapping)
 		ret.push_back(promise)
 	return ret
 
