@@ -43,7 +43,7 @@ log-panics = { version = "2", features = ["with-backtrace"]}
 
 v8 = { version = "0.74.3", optional = true }
 deno_core = { version = "0.197", optional = true }
-uuid = { version = "1.3.0", features = ["v4"], optional = true }
+uuid = { version = "1.3.0", features = ["v4"] }
 fastwebsockets = { version = "0.3.1", features = ["upgrade"], optional = true }
 hyper1 = { package = "hyper", version = "0.14.26", features = ["server","runtime", "http1"], optional = true }
 num-traits = "0.2"
@@ -79,11 +79,12 @@ default = ["use_ffmpeg", "use_livekit", "use_deno"]
 use_ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
 use_livekit = ["use_ffmpeg", "dep:livekit"]
 use_deno = ["dep:deno_core", "dep:v8"]
-enable_inspector = ["use_deno", "dep:uuid", "dep:fastwebsockets", "dep:hyper1"]
+enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 
 [build-dependencies]
 webrtc-sys-build = "0.3.2"
 prost-build = "0.11.8"
+chrono = "0.4.31"
 
 [patch."https://github.com/godot-rust/godot4-prebuilt".godot4-prebuilt]
 git = "https://github.com//godot-rust/godot4-prebuilt"
