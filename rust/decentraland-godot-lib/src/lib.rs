@@ -6,6 +6,7 @@
 
 use godot::prelude::*;
 
+pub mod analytics;
 pub mod auth;
 #[cfg(feature = "use_ffmpeg")]
 pub mod av;

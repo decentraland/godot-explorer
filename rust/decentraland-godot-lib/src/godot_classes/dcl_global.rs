@@ -6,6 +6,7 @@ use godot::{
 };
 
 use crate::{
+    analytics::metrics::Metrics,
     auth::{dcl_player_identity::DclPlayerIdentity, ethereum_provider::EthereumProvider},
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
@@ -72,6 +73,9 @@ pub struct DclGlobal {
 
     pub ethereum_provider: Arc<EthereumProvider>,
 
+    #[var]
+    pub metrics: Gd<Metrics>,
+
     pub is_mobile: bool,
 }
 
@@ -125,6 +129,7 @@ impl INode for DclGlobal {
             http_requester: RustHttpQueueRequester::new_gd(),
             config: DclConfig::new_gd(),
             ethereum_provider: Arc::new(EthereumProvider::new()),
+            metrics: Metrics::alloc_gd(),
         }
     }
 }

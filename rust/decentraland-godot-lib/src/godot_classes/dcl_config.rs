@@ -89,4 +89,9 @@ impl DclConfig {
             .unwrap_or(TextureQuality::Medium.to_i32());
         TextureQuality::from_i32(texture_quality)
     }
+
+    #[func]
+    pub fn generate_uuid_v4() -> GString {
+        uuid::Uuid::new_v4().to_string().to_godot()
+    }
 }
