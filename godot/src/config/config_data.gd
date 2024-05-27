@@ -159,6 +159,10 @@ var audio_mic_amplification: float = 100.0:
 	set(value):
 		audio_mic_amplification = value
 
+var analytics_user_id: String = "":
+	set(value):
+		analytics_user_id = value
+
 
 func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
 	var realm = place_dict.get("realm")
@@ -218,6 +222,8 @@ func load_from_default():
 
 	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-test-psquad-demo-latest"
 	self.last_parcel_position = Vector2i(72, -10)
+
+	self.analytics_user_id = DclConfig.generate_uuid_v4()
 
 
 func load_from_settings_file():
@@ -297,6 +303,10 @@ func load_from_settings_file():
 		"user", "last_realm_joined", data_default.last_realm_joined
 	)
 
+	self.analytics_user_id = settings_file.get_value(
+		"analytics", "user_id", DclConfig.generate_uuid_v4()
+	)
+
 	self.last_places = settings_file.get_value("user", "last_places", data_default.last_places)
 
 
@@ -333,4 +343,5 @@ func save_to_settings_file():
 	settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	settings_file.set_value("user", "last_places", self.last_places)
+	settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	settings_file.save(DclConfig.get_settings_file_path())
