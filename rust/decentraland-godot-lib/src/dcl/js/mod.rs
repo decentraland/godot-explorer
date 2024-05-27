@@ -1,3 +1,4 @@
+mod adaptation_layer_helper;
 mod comms;
 mod engine;
 mod ethereum_controller;
@@ -53,8 +54,9 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
     // add core ops
     ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
 
-    let op_sets: [Vec<deno_core::OpDecl>; 11] = [
+    let op_sets: [Vec<deno_core::OpDecl>; 12] = [
         engine::ops(),
+        adaptation_layer_helper::ops(),
         runtime::ops(),
         fetch::ops(),
         websocket::ops(),
@@ -422,6 +424,9 @@ fn op_require(
         "~system/UserActionModule" => Ok(include_str!("js_modules/UserActionModule.js").to_owned()),
         "~system/UserIdentity" => Ok(include_str!("js_modules/UserIdentity.js").to_owned()),
         "~system/CommsApi" => Ok(include_str!("js_modules/CommsApi.js").to_owned()),
+        "~system/AdaptationLayerHelper" => {
+            Ok(include_str!("js_modules/AdaptationLayerHelper.js").to_owned())
+        }
         "env" => Ok(get_env_for_scene(state)),
         _ => Err(generic_error(format!(
             "invalid module request `{module_spec}`"

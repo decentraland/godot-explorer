@@ -194,7 +194,13 @@ async function fetch(url, init) {
                 "op_fetch_consume_text",
                 reqId
             )
-            return JSON.parse(data)
+            try {
+                let jsonData = JSON.parse(data)
+                return jsonData
+            } catch (err) {
+                console.error("Failed to parse response as JSON.", { url, init }, ' data ', data)
+                throw new Error(err)
+            }
         },
         async text() {
             notifyConsume()

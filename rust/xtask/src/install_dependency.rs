@@ -24,7 +24,14 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
+const PROTOCOL_FIXED_VERSION_URL: Option<&str> = None; // Some("https://sdk-team-cdn.decentraland.org/@dcl/protocol/branch//dcl-protocol-1.0.0-9110137086.commit-1d6d5b0.tgz");
+const PROTOCOL_TAG: &str = "protocol-squad";
+
 fn get_protocol_url() -> Result<String, anyhow::Error> {
+    if let Some(fixed_version_url) = PROTOCOL_FIXED_VERSION_URL {
+        return Ok(fixed_version_url.to_string());
+    }
+
     let package_name = "@dcl/protocol";
 
     let client = Client::new();
@@ -33,7 +40,7 @@ fn get_protocol_url() -> Result<String, anyhow::Error> {
         .send()?
         .json::<Value>()?;
 
-    let next_version = response["dist-tags"]["next"].as_str().unwrap();
+    let next_version = response["dist-tags"][PROTOCOL_TAG].as_str().unwrap();
     let tarball_url = response["versions"][next_version]["dist"]["tarball"]
         .as_str()
         .unwrap();
