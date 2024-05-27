@@ -19,6 +19,8 @@ const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
+const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/feat-add-ui/index.js"
+
 
 class SceneItem:
 	extends RefCounted
@@ -313,8 +315,7 @@ func async_load_scene(
 		local_main_js_path = String(adaptation_layer_js_local_path)
 		if not FileAccess.file_exists(local_main_js_path):
 			var promise: Promise = Global.http_requester.request_file(
-				"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/dev/index.min.js",
-				local_main_js_path.replace("user:/", OS.get_user_data_dir())
+				ADAPTATION_LAYER_URL, local_main_js_path.replace("user:/", OS.get_user_data_dir())
 			)
 			var res = await PromiseUtils.async_awaiter(promise)
 			if res is PromiseError:

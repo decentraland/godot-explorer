@@ -35,6 +35,14 @@ pub fn update_ui_transform(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 node.base_control.set_clip_contents(
                     node.ui_transform.overflow == crate::dcl::components::proto_components::sdk::components::YgOverflow::YgoHidden,
                 );
+
+                let opacity = pb_ui_transform.opacity.unwrap_or(1.0);
+                let mut modulate = node.base_control.get_modulate();
+                if modulate.a != opacity {
+                    modulate.a = opacity;
+                    node.base_control.set_modulate(modulate);
+                }
+
                 node.base_control
                     .bind_mut()
                     .set_pointer_filter(node.ui_transform.pointer_filter_mode);
