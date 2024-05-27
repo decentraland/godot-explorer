@@ -135,7 +135,7 @@ impl Metrics {
         Gd::from_init_fn(|base| Self {
             user_id,
             common: SegmentEventCommonExplorerFields::new(session_id),
-            write_key: "syp64BBsJUd6SHQRKv6b9G4Lgt3ny8Q8".into(),
+            write_key: "EAdAcIyGP6lIQAfpFF2BXpNzpj7XNWMm".into(),
             frame: Frame::new(),
             events: Vec::new(),
             serialized_events: Vec::new(),

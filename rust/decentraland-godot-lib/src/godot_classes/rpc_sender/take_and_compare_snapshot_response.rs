@@ -1,4 +1,4 @@
-use godot::prelude::*;
+use godot::{builtin::Vector2, prelude::*};
 
 use crate::{
     dcl::common::{GreyPixelDiffResult, TakeAndCompareSnapshotResponse},
@@ -6,7 +6,7 @@ use crate::{
 };
 
 impl TakeAndCompareSnapshotResponse {
-    fn from_variant(via: Variant) -> Option<Self> {
+    fn try_from_variant(via: &Variant) -> Option<Self> {
         let via = via.to::<Dictionary>();
         let stored_snapshot_found = via.get("stored_snapshot_found")?.to::<bool>();
         let grey_pixel_diff = via.get("grey_pixel_diff").map(|grey| GreyPixelDiffResult {
@@ -28,3 +28,5 @@ generate_dcl_rpc_sender!(
     DclRpcSenderTakeAndCompareSnapshotResponse,
     TakeAndCompareSnapshotResponse
 );
+
+generate_dcl_rpc_sender!(DclRpcSenderGetTextureSize, Vector2);

@@ -4,6 +4,8 @@ use std::{
     rc::Rc,
 };
 
+use godot::engine::NodeExt;
+
 use crate::{
     dcl::{
         components::{
@@ -53,12 +55,18 @@ const UI_COMPONENT_IDS: [SceneComponentId; 5] = [
     SceneComponentId::UI_BACKGROUND,
 ];
 
-fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformation) {
+fn update_layout(
+    scene: &mut Scene,
+    crdt_state: &SceneCrdtState,
+    ui_canvas_information: &PbUiCanvasInformation,
+) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
 
     let mut unprocessed_uis = godot_dcl_scene.ui_entities.clone();
     let mut processed_nodes = HashMap::with_capacity(unprocessed_uis.len());
     let mut processed_nodes_sorted = Vec::with_capacity(unprocessed_uis.len());
+
+    let ui_text_components = SceneCrdtStateProtoComponents::get_ui_text(crdt_state);
 
     let mut taffy: taffy::Taffy<()> = taffy::Taffy::new();
     let root_node = taffy
@@ -175,6 +183,23 @@ fn update_layout(scene: &mut Scene, ui_canvas_information: &PbUiCanvasInformatio
         });
         let is_hidden = taffy.style(*key_node).unwrap().display == taffy::style::Display::None;
         control.set_visible(!is_hidden);
+
+        if let Some(ui_text) = ui_text_components
+            .get(entity)
+            .and_then(|v| v.value.as_ref())
+        {
+            if ui_text.text_wrapping() {
+                if let Some(mut ui_text_control) = ui_node
+                    .base_control
+                    .try_get_node_as::<godot::engine::Control>("text")
+                {
+                    ui_text_control.set_size(godot::builtin::Vector2::new(
+                        layout.size.width,
+                        layout.size.height,
+                    ));
+                }
+            }
+        }
     }
 }
 
@@ -272,7 +297,7 @@ pub fn update_scene_ui(
         update_ui_text(scene, crdt_state);
         update_ui_input(scene, crdt_state);
         update_ui_dropdown(scene, crdt_state);
-        update_layout(scene, ui_canvas_information);
+        update_layout(scene, crdt_state, ui_canvas_information);
 
         update_input_result(scene, crdt_state);
     }

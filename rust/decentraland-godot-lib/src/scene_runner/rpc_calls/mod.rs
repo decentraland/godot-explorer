@@ -1,9 +1,15 @@
 mod handle_restricted_actions;
 mod portables;
 
+use godot::{builtin::meta::ToGodot, obj::UserClass};
+
 use crate::{
+    content::content_mapping::DclContentMappingAndUrl,
     dcl::{scene_apis::RpcCall, SceneId},
-    godot_classes::dcl_global::DclGlobal,
+    godot_classes::{
+        dcl_global::DclGlobal,
+        rpc_sender::take_and_compare_snapshot_response::DclRpcSenderGetTextureSize,
+    },
 };
 
 use self::{
@@ -100,6 +106,22 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 for data in body {
                     communication_manager.send_scene_message(scene_id.clone(), data);
                 }
+            }
+            RpcCall::GetTextureSize { src, response } => {
+                let mut rpc_sender = DclRpcSenderGetTextureSize::new_gd();
+                rpc_sender.bind_mut().set_sender(response);
+
+                let content_mapping =
+                    DclContentMappingAndUrl::from_ref(scene.content_mapping.clone());
+
+                DclGlobal::singleton().call_deferred(
+                    "async_get_texture_size".into(),
+                    &[
+                        content_mapping.to_variant(),
+                        src.to_variant(),
+                        rpc_sender.to_variant(),
+                    ],
+                );
             }
         }
     }

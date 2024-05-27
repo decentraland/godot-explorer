@@ -209,3 +209,18 @@ func async_create_popup_warning(
 	var explorer = get_explorer()
 	if is_instance_valid(explorer):
 		await explorer.warning_messages.async_create_popup_warning(warning_type, title, description)
+
+
+func async_get_texture_size(content_mapping, src, sender) -> void:
+	var hash: String = content_mapping.get_hash(src)
+	if hash.is_empty():
+		hash = src
+
+	var promise = Global.content_provider.fetch_texture_by_hash(hash, content_mapping)
+	var result = await PromiseUtils.async_awaiter(promise)
+	if result is PromiseError:
+		printerr(src, "couldn't get the size", result.get_error())
+		sender.send(Vector2(2048.0, 2048))
+		return
+
+	sender.send(Vector2(result.original_size))
