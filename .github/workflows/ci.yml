@@ -16,7 +16,7 @@ concurrency:
 jobs:
   lints:
     name: Check and lints
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
@@ -24,7 +24,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.76
+          toolchain: 1.78
           override: true
           components: clippy, rustfmt
       - run: rustup component add rustfmt
@@ -64,7 +64,7 @@ jobs:
 
   coverage:
     name: Coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
@@ -166,7 +166,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [self-hosted-windows, ubuntu-latest, macos-14-xlarge]
+        os: [self-hosted-windows, ubuntu-24.04, macos-14-xlarge]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -207,7 +207,7 @@ jobs:
       # => MacOS
       - name: install ffmpeg deps (macOs)
         if: runner.os == 'macos'
-        run: brew install ffmpeg pkg-config
+        run: brew install ffmpeg@6 pkg-config
 
       # TODO: cross-build deprecated with the ffmpeg integration
       # - name: Set up target platform
@@ -295,7 +295,7 @@ jobs:
             exports/**/*
 
       - name: Build Docker Image
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
@@ -308,7 +308,7 @@ jobs:
             COMMIT_HASH=${{ github.sha }}
 
       - name: Push To quay.io
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu'
         id: push-to-quay
         uses: redhat-actions/push-to-registry@v2
         with:
