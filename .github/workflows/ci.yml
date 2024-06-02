@@ -209,9 +209,9 @@ jobs:
         if: runner.os == 'macos'
         run: |
           brew install ffmpeg@6 pkg-config
-          export PKG_CONFIG_PATH="/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig"
-          export CPPFLAGS="-I/opt/homebrew/opt/ffmpeg@6/include"
-          export LDFLAGS="-L/opt/homebrew/opt/ffmpeg@6/lib"
+          echo "PKG_CONFIG_PATH=/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I/opt/homebrew/opt/ffmpeg@6/include" >> $GITHUB_ENV
+          echo "LDFLAGS=-L/opt/homebrew/opt/ffmpeg@6/lib" >> $GITHUB_ENV
 
       # TODO: cross-build deprecated with the ffmpeg integration
       # - name: Set up target platform
