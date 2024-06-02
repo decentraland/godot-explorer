@@ -207,7 +207,11 @@ jobs:
       # => MacOS
       - name: install ffmpeg deps (macOs)
         if: runner.os == 'macos'
-        run: brew install ffmpeg@6 pkg-config
+        run: |
+          brew install ffmpeg@6 pkg-config
+          export PKG_CONFIG_PATH="/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig"
+          export CPPFLAGS="-I/opt/homebrew/opt/ffmpeg@6/include"
+          export LDFLAGS="-L/opt/homebrew/opt/ffmpeg@6/lib"
 
       # TODO: cross-build deprecated with the ffmpeg integration
       # - name: Set up target platform
