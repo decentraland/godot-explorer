@@ -55,7 +55,7 @@ bytes = "1.4.0"
 tokio-tungstenite = "0.20.1"
 futures-util = "0.3.30"
 
-livekit = { git = "https://github.com/livekit/rust-sdks", features=["rustls-tls-webpki-roots"], optional = true }
+livekit = { git = "https://github.com/livekit/rust-sdks", features=["rustls-tls-webpki-roots"], optional = true, rev="8b276f9d4b98437a139e1cbe41cfda1332ce1120" }
 
 taffy = { git = "https://github.com/DioxusLabs/taffy", rev="7eee673c5ea65f64f35c53f5ee2fe5faf62b9c1e" }
 tracing-test = "0.2.4"
@@ -77,12 +77,12 @@ paranoid-android = "0.2.1"
 [features]
 default = ["use_ffmpeg", "use_livekit", "use_deno"]
 use_ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
-use_livekit = ["use_ffmpeg", "dep:livekit"]
+use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
 use_deno = ["dep:deno_core", "dep:v8"]
 enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 
 [build-dependencies]
-webrtc-sys-build = "0.3.2"
+webrtc-sys-build = { git = "https://github.com/livekit/rust-sdks", optional = true, rev="8b276f9d4b98437a139e1cbe41cfda1332ce1120" }
 prost-build = "0.11.8"
 chrono = "0.4.31"
 
