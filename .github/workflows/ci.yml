@@ -241,8 +241,15 @@ jobs:
 
       # Build section
       - name: cargo build
+        if: runner.os != 'windows'
         working-directory: rust/decentraland-godot-lib
         run: cargo build --release
+
+      # Build section
+      - name: cargo build (windows)
+        if: runner.os == 'windows'
+        working-directory: rust/decentraland-godot-lib
+        run: cargo build --release --no-default-features -F use_deno -F use_ffmpeg
 
       # TODO: cross-build deprecated with the ffmpeg integration
 
