@@ -353,9 +353,14 @@ fn check_safe_repo() -> Result<(), String> {
     let mut repo_path = env::current_dir().map_err(|e| e.to_string())?;
     repo_path.pop(); // Go up one level
     repo_path.pop(); // Go up another level
-    let repo_path_str = repo_path.to_str().ok_or("Failed to convert repo path to string")?;
+    let repo_path_str = repo_path
+        .to_str()
+        .ok_or("Failed to convert repo path to string")?;
 
-    let output = Command::new("git").args(["rev-parse", "HEAD"]).output().map_err(|e| e.to_string())?;
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .output()
+        .map_err(|e| e.to_string())?;
     if output.status.success() {
         return Ok(());
     }
@@ -363,15 +368,25 @@ fn check_safe_repo() -> Result<(), String> {
     let stderr = String::from_utf8(output.stderr).map_err(|e| e.to_string())?;
     if stderr.contains("detected dubious ownership") {
         Command::new("git")
-            .args(["config", "--global", "--add", "safe.directory", repo_path_str])
+            .args([
+                "config",
+                "--global",
+                "--add",
+                "safe.directory",
+                repo_path_str,
+            ])
             .output()
             .map_err(|e| e.to_string())?;
-        
-        let output_retry = Command::new("git").args(["rev-parse", "HEAD"]).output().map_err(|e| e.to_string())?;
+
+        let output_retry = Command::new("git")
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .map_err(|e| e.to_string())?;
         if output_retry.status.success() {
             return Ok(());
         } else {
-            return Err(String::from_utf8(output_retry.stderr).unwrap_or_else(|_| "Unknown error".to_string()));
+            return Err(String::from_utf8(output_retry.stderr)
+                .unwrap_or_else(|_| "Unknown error".to_string()));
         }
     }
 
