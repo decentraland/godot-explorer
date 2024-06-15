@@ -267,9 +267,15 @@ jobs:
       #     command: build
       #     args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=aarch64-apple-darwin
 
-      - name: cargo test
+      - name: cargo build
+        if: runner.os != 'windows'
         working-directory: rust/decentraland-godot-lib
         run: cargo test --release -- --skip auth
+
+      - name: cargo build (windows)
+        if: runner.os == 'windows'
+        working-directory: rust/decentraland-godot-lib
+        run: cargo test --release --no-default-features -F use_deno -F use_ffmpeg -- --skip auth
         
       # TODO: cross-build deprecated with the ffmpeg integration 
       # Package section
