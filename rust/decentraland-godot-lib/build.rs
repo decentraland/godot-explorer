@@ -281,6 +281,11 @@ impl SceneCrdtStateProtoComponents {{
 }
 
 fn main() -> io::Result<()> {
+    if let Err(err) = check_safe_repo() {
+        eprintln!("Error checking repository safety: {}", err);
+        std::process::exit(1);
+    }
+
     let mut proto_components = vec![];
     let mut proto_files = vec![];
     let dir_path = Path::new(COMPONENT_BASE_DIR);
@@ -341,6 +346,36 @@ fn main() -> io::Result<()> {
 fn generate_file<P: AsRef<Path>>(path: P, text: &[u8]) {
     let mut f = File::create(path).unwrap();
     f.write_all(text).unwrap()
+}
+
+fn check_safe_repo() -> Result<(), String> {
+    // Get the current working directory and navigate up two levels
+    let mut repo_path = env::current_dir().map_err(|e| e.to_string())?;
+    repo_path.pop(); // Go up one level
+    repo_path.pop(); // Go up another level
+    let repo_path_str = repo_path.to_str().ok_or("Failed to convert repo path to string")?;
+
+    let output = Command::new("git").args(["rev-parse", "HEAD"]).output().map_err(|e| e.to_string())?;
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8(output.stderr).map_err(|e| e.to_string())?;
+    if stderr.contains("detected dubious ownership") {
+        Command::new("git")
+            .args(["config", "--global", "--add", "safe.directory", repo_path_str])
+            .output()
+            .map_err(|e| e.to_string())?;
+        
+        let output_retry = Command::new("git").args(["rev-parse", "HEAD"]).output().map_err(|e| e.to_string())?;
+        if output_retry.status.success() {
+            return Ok(());
+        } else {
+            return Err(String::from_utf8(output_retry.stderr).unwrap_or_else(|_| "Unknown error".to_string()));
+        }
+    }
+
+    Err(stderr)
 }
 
 fn set_godot_explorer_version() {
