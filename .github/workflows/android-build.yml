@@ -2,6 +2,7 @@ on:
   push:
     branches:
       - main
+      - refactor/update-livekit
   workflow_dispatch:
     inputs:
       branch:
@@ -34,7 +35,6 @@ jobs:
           rustup target add x86_64-linux-android
       - name: Build
         run: |
-          git config --global --add safe.directory $(pwd)
           bash build-android-apk.sh
       
       # if libdecentraland_godot_lib.so does not exist, the build failed, nothing to upload
