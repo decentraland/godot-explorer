@@ -2,7 +2,6 @@ on:
   push:
     branches:
       - main
-      - refactor/update-livekit
   workflow_dispatch:
     inputs:
       branch:
