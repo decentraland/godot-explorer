@@ -56,6 +56,11 @@ pub fn run(
         build_args.extend(&["--no-default-features", "-F", "use_deno"]);
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        build_args.extend(&["--no-default-features", "-F", "use_deno", "-F", "use_ffmpeg"]);
+    }
+
     let build_cwd =
         adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER).unwrap());
 

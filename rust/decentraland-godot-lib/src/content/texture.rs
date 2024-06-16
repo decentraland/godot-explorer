@@ -6,7 +6,7 @@ use super::{
 };
 use godot::{
     bind::GodotClass,
-    builtin::{meta::ToGodot, GString, PackedByteArray, Variant},
+    builtin::{meta::ToGodot, GString, PackedByteArray, Variant, Vector2i},
     engine::{global::Error, DirAccess, Image, ImageTexture},
     obj::Gd,
 };
@@ -18,6 +18,8 @@ pub struct TextureEntry {
     pub image: Gd<Image>,
     #[var]
     pub texture: Gd<ImageTexture>,
+    #[var]
+    pub original_size: Vector2i,
 }
 
 pub async fn load_image_texture(
@@ -67,6 +69,8 @@ pub async fn load_image_texture(
         )));
     }
 
+    let original_size = image.get_size();
+
     let max_size = ctx.texture_quality.to_max_size();
     resize_image(&mut image, max_size);
 
@@ -76,7 +80,11 @@ pub async fn load_image_texture(
 
     texture.set_name(GString::from(&url));
 
-    let texture_entry = Gd::from_init_fn(|_base| TextureEntry { texture, image });
+    let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
+        texture,
+        image,
+        original_size,
+    });
 
     Ok(Some(texture_entry.to_variant()))
 }

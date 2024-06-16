@@ -11,7 +11,7 @@ use livekit::{
         audio_source::native::NativeAudioSource,
         prelude::{AudioSourceOptions, RtcAudioSource},
     },
-    DataPacketKind, RoomOptions,
+    DataPacket, DataPacketKind, RoomOptions,
 };
 use prost::Message;
 
@@ -29,14 +29,14 @@ pub struct NetworkMessage {
     pub unreliable: bool,
 }
 
-enum ToSceneMessage {
+enum ToSceneMessage<'a> {
     Rfc4(rfc4::packet::Message),
-    InitVoice(livekit::webrtc::prelude::AudioFrame),
-    VoiceFrame(livekit::webrtc::prelude::AudioFrame),
+    InitVoice(livekit::webrtc::prelude::AudioFrame<'a>),
+    VoiceFrame(livekit::webrtc::prelude::AudioFrame<'a>),
 }
 
-struct IncomingMessage {
-    message: ToSceneMessage,
+struct IncomingMessage<'a> {
+    message: ToSceneMessage<'a>,
     address: H160,
 }
 
@@ -50,7 +50,7 @@ struct Peer {
 pub struct LivekitRoom {
     sender_to_thread: tokio::sync::mpsc::Sender<NetworkMessage>,
     mic_sender_to_thread: tokio::sync::mpsc::Sender<Vec<i16>>,
-    receiver_from_thread: tokio::sync::mpsc::Receiver<IncomingMessage>,
+    receiver_from_thread: tokio::sync::mpsc::Receiver<IncomingMessage<'static>>,
     player_address: H160,
     player_profile: Option<UserProfile>,
     avatars: Gd<AvatarScene>,
@@ -378,7 +378,7 @@ impl Adapter for LivekitRoom {
 fn spawn_livekit_task(
     remote_address: String,
     mut receiver: tokio::sync::mpsc::Receiver<NetworkMessage>,
-    sender: tokio::sync::mpsc::Sender<IncomingMessage>,
+    sender: tokio::sync::mpsc::Sender<IncomingMessage<'static>>,
     mut mic_receiver: tokio::sync::mpsc::Receiver<Vec<i16>>,
 ) {
     let url = Uri::try_from(remote_address).unwrap();
@@ -406,24 +406,28 @@ fn spawn_livekit_task(
     let rt2 = rt.clone();
 
     let task = rt.spawn(async move {
-        let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe: true, adaptive_stream: false, dynacast: false }).await.unwrap();
+        let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe: true, adaptive_stream: false, dynacast: false, ..Default::default() }).await.unwrap();
         let native_source = NativeAudioSource::new(AudioSourceOptions{
             echo_cancellation: true,
             noise_suppression: true,
             auto_gain_control: true,
-        });
+        }, 48000, 1);
         let mic_track = LocalTrack::Audio(LocalAudioTrack::create_audio_track("mic", RtcAudioSource::Native(native_source.clone())));
         room.local_participant().publish_track(mic_track, TrackPublishOptions{ source: TrackSource::Microphone, ..Default::default() }).await.unwrap();
 
         rt2.spawn(async move {
             while let Some(data) = mic_receiver.recv().await {
                 let samples_per_channel = data.len() as u32;
-                native_source.capture_frame(&livekit::webrtc::prelude::AudioFrame {
-                    data,
+                let res = native_source.capture_frame(&livekit::webrtc::prelude::AudioFrame {
+                    data: data.into(),
                     sample_rate: 48000,
                     num_channels: 1,
                     samples_per_channel
-                })
+                }).await;
+
+                if res.is_err() {
+                    break;
+                }
             }
         });
 
@@ -437,6 +441,11 @@ fn spawn_livekit_task(
 
                     match incoming {
                         livekit::RoomEvent::DataReceived { payload, participant, .. } => {
+                            if participant.is_none() {
+                                return;
+                            }
+                            let participant = participant.unwrap();
+
                             if let Some(address) = participant.identity().0.as_str().as_h160() {
                                 let packet = match rfc4::Packet::decode(payload.as_slice()) {
                                     Ok(packet) => packet,
@@ -515,7 +524,7 @@ fn spawn_livekit_task(
                     } else {
                         DataPacketKind::Reliable
                     };
-                    if let Err(e) = room.local_participant().publish_data(outgoing.data, kind, Default::default()).await {
+                    if let Err(e) = room.local_participant().publish_data(DataPacket { payload: outgoing.data, kind, ..Default::default() }).await {
                         tracing::debug!("outgoing failed: {e}; not exiting loop though since it often fails at least once or twice at the start...");
                         // break 'stream;
                     };
