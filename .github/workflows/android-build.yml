@@ -2,6 +2,7 @@ on:
   push:
     branches:
       - main
+      - refactor/update-livekit
   workflow_dispatch:
     inputs:
       branch:
@@ -16,8 +17,8 @@ jobs:
     runs-on: bigrunner
     container:
       image: docker://kuruk/dcl-godot-android-builder:latest
-      volumes:
-        - /home/user/.cache/devgodot:/github/home/.cache/devgodot
+#      volumes:
+#        - /home/user/.cache/devgodot:/github/home/.cache/devgodot
 
     steps:
       - uses: actions/checkout@v4
