@@ -88,4 +88,4 @@ chrono = "0.4.31"
 
 [patch."https://github.com/godot-rust/godot4-prebuilt".godot4-prebuilt]
 git = "https://github.com//godot-rust/godot4-prebuilt"
-branch = "4.2.1"
+rev = "bc1e77856d181c14c59d2a5cb6a7e138ea5a2b39"
