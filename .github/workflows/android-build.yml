@@ -2,6 +2,7 @@ on:
   push:
     branches:
       - main
+      - refactor/update-livekit
   workflow_dispatch:
     inputs:
       branch:
@@ -23,13 +24,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'push' && github.ref || github.event.inputs.branch }}
-      - name: Setup Rust
+      - name: Install Android targets
         run: |
-          echo $ANDROID_HOME
-          ls -la /root/
-          ls -la /root/.cargo/bin/
-          export PATH="/root/.cargo/bin:${PATH}"
-          rustup default stable
+          echo $PATH
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.77.2
+          override: true
+          components: clippy, rustfmt
+
+      - name: Install Android targets
+        run: |
           rustup target add aarch64-linux-android
           rustup target add x86_64-linux-android
       - name: Build
