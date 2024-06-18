@@ -28,10 +28,10 @@ if [[ "$1" == "x86_64" ]]; then
     GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --release --no-default-features --target x86_64-linux-android -vv --verbose 
 
     mkdir -p ../../godot/lib/android/x86_64/
-    mkdir -p ../../godot/android/build/libs/debug/x86_64/
+    mkdir -p ../../godot/android/build/libs/release/x86_64/
 
     cp target/x86_64-linux-android/release/libdecentraland_godot_lib.so ../../godot/lib/android/x86_64/libdecentraland_godot_lib.so
-    cp target/x86_64-linux-android/release/libdecentraland_godot_lib.so ../../godot/android/build/libs/debug/x86_64/libdecentraland_godot_lib.so
+    cp target/x86_64-linux-android/release/libdecentraland_godot_lib.so ../../godot/android/build/libs/release/x86_64/libdecentraland_godot_lib.so
 
 else
     # Run the specified commands
@@ -42,14 +42,14 @@ else
     export CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE=1
     export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
 
-    GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --release --target aarch64-linux-android -vv --verbose
+    GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --release --target aarch64-linux-android
 
     # Dependencies 
     # - from web-rtc: libwebrtc.jar 
     # - from ffmpeg: libavcodec, libavfilter, libavdevice, libavformat, libavutil, libswresample, libswscale
     mkdir -p ../../godot/lib/android/arm64/
-    mkdir -p ../../godot/android/build/libs/debug/arm64-v8a/
+    mkdir -p ../../godot/android/build/libs/release/arm64-v8a/
 
     cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/lib/android/arm64/libdecentraland_godot_lib.so
-    cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/android/build/libs/debug/arm64-v8a/libdecentraland_godot_lib.so
+    cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/android/build/libs/release/arm64-v8a/libdecentraland_godot_lib.so
 fi
