@@ -21,6 +21,7 @@ const EMPTY_SCENES = [
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/feat-add-ui/index.js"
 
+
 class SceneItem:
 	extends RefCounted
 	var main_js_req_id: int = -1
@@ -289,8 +290,7 @@ func async_load_scene(
 	else:
 		var script_hash = "sdk-adaptation-layer.js"
 		script_promise = Global.content_provider.fetch_file_by_url(
-			script_hash,
-			ADAPTATION_LAYER_URL
+			script_hash, ADAPTATION_LAYER_URL
 		)
 		local_main_js_path = "user://content/" + script_hash
 
