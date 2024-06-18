@@ -88,7 +88,10 @@ impl INode for DclGlobal {
         #[cfg(not(target_os = "android"))]
         let _ = tracing_subscriber::fmt::try_init();
 
-        tracing::info!("DclGlobal init invoked version={}", env!("GODOT_EXPLORER_VERSION"));
+        tracing::info!(
+            "DclGlobal init invoked version={}",
+            env!("GODOT_EXPLORER_VERSION")
+        );
 
         log_panics::init();
 
