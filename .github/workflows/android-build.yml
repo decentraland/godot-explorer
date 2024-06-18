@@ -30,8 +30,15 @@ jobs:
           ls -la /root/
           ls -la /root/.cargo/bin/
           export PATH="/root/.cargo/bin:${PATH}"
-          rustup default stable
+          echo "Install"
           rustup install 1.77.2
+
+          echo "Default"
+          rustup default 1.77.2
+
+          ls -la /root/.cargo/bin/
+
+          echo "Aarch"
           rustup target add aarch64-linux-android
           rustup target add x86_64-linux-android
       - name: Build
