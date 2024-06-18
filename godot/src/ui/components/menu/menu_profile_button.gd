@@ -39,7 +39,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	var promise = Global.content_provider.fetch_texture_by_url(face256_hash, face256_url)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
-		printerr("places_generator::_async_download_image promise error: ", result.get_error())
+		printerr("menu_profile_button::_async_download_image promise error: ", result.get_error())
 		return
 	texture_rect_profile.texture = result.texture
 

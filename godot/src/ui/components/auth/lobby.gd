@@ -56,7 +56,12 @@ func show_panel(child_node: Control):
 	child_node.show()
 
 
-func close_sign_in():
+# gdlint:ignore = async-function-name
+func close_sign_in(generate_snapshots: bool = true):
+	if generate_snapshots:
+		var avatar := current_profile.get_avatar()
+		await backpack.async_prepare_snapshots(avatar)
+
 	get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
 
 
@@ -182,7 +187,7 @@ func _on_button_next_pressed():
 
 	await Global.player_identity.async_deploy_profile(current_profile, true)
 
-	close_sign_in()
+	close_sign_in(false)
 
 
 func _on_button_random_name_pressed():

@@ -156,9 +156,12 @@ func _on_button_audio_pressed():
 	advanced.hide()
 
 
+# gdlint:ignore = async-function-name
 func _on_button_clear_cache_pressed():
 	# Clean the content cache folder
 	Global.content_provider.clear_cache_folder()
+	await get_tree().process_frame
+	_update_current_cache_size()
 
 
 func _on_checkbox_fps_toggled(button_pressed):

@@ -16,9 +16,13 @@ static func apply_general_volume_settings():
 	AudioServer.set_bus_volume_db(bus_index, general_db)
 
 
-static func apply_scene_volume_settings():
+static func apply_scene_volume_settings(force_value = null):
+	var scene_volume: float = Global.get_config().audio_scene_volume
+	if force_value is float:
+		scene_volume = force_value
+
 	var bus_index := AudioServer.get_bus_index("Scene")
-	var general_db = -80.0 + (80.0 * (float(Global.get_config().audio_scene_volume) / 100.0))
+	var general_db = -80.0 + (80.0 * (float(scene_volume) / 100.0))
 	AudioServer.set_bus_volume_db(bus_index, general_db)
 
 
