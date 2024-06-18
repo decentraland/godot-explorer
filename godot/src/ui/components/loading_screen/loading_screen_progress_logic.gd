@@ -30,9 +30,9 @@ func _report_scene_load(done: bool, is_new_loading: bool, pending: int):
 func enable_loading_screen():
 	Global.content_provider.set_max_concurrent_downloads(32)
 
-	# Disable scene sound
-	prints("Disable scene sound")
+	# Mute voice chat and scene volume
 	AudioSettings.apply_scene_volume_settings(0.0)
+	AudioSettings.apply_voice_chat_volume_settings(0.0)
 
 	loading_screen.show()
 	set_physics_process(true)
@@ -46,9 +46,9 @@ func enable_loading_screen():
 func hide_loading_screen():
 	Global.content_provider.set_max_concurrent_downloads(6)
 
-	# Enable scene sound
-	prints("Enable scene sound")
+	# Restore voice chat and scene volume
 	AudioSettings.apply_scene_volume_settings()
+	AudioSettings.apply_voice_chat_volume_settings()
 
 	set_physics_process(false)
 	loading_screen.async_hide_loading_screen_effect()

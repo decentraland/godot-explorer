@@ -26,9 +26,13 @@ static func apply_scene_volume_settings(force_value = null):
 	AudioServer.set_bus_volume_db(bus_index, general_db)
 
 
-static func apply_voice_chat_volume_settings():
+static func apply_voice_chat_volume_settings(force_value = null):
+	var voice_volume: float = Global.get_config().audio_voice_chat_volume
+	if force_value is float:
+		voice_volume = force_value
+
 	var bus_index := AudioServer.get_bus_index("VoiceChat")
-	var general_db = -80.0 + (80.0 * (float(Global.get_config().audio_voice_chat_volume) / 100.0))
+	var general_db = -80.0 + (80.0 * (float(voice_volume) / 100.0))
 	AudioServer.set_bus_volume_db(bus_index, general_db)
 
 
