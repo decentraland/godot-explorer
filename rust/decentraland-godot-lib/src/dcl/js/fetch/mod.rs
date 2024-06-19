@@ -1,6 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
 
 use deno_core::{error::AnyError, op, Op, OpDecl, OpState};
+use http::HeaderValue;
 use reqwest::Response;
 use serde::Serialize;
 
@@ -100,10 +101,12 @@ async fn op_fetch_custom(
         _ => http::Method::GET,
     };
 
-    let headers = headers
+    let mut headers = headers
         .into_iter()
         .map(|(key, value)| (key.parse().unwrap(), value.parse().unwrap()))
         .collect::<reqwest::header::HeaderMap>();
+
+    headers.append("User-Agent", HeaderValue::from_static("DCLExplorer/0.1"));
 
     let mut request = client
         .request(method, url.clone())

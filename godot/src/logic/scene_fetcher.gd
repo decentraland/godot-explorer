@@ -19,7 +19,8 @@ const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
-const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/feat-add-ui/index.js"
+const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
+const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 
 
 class SceneItem:
@@ -312,7 +313,14 @@ func async_load_scene(
 					)
 					return PromiseUtils.resolved(false)
 	else:
-		local_main_js_path = String(adaptation_layer_js_local_path)
+		if (
+			not FIXED_LOCAL_ADAPTATION_LAYER.is_empty()
+			and FileAccess.file_exists(FIXED_LOCAL_ADAPTATION_LAYER)
+		):
+			local_main_js_path = String(FIXED_LOCAL_ADAPTATION_LAYER)
+		else:
+			local_main_js_path = String(adaptation_layer_js_local_path)
+
 		if not FileAccess.file_exists(local_main_js_path):
 			var promise: Promise = Global.http_requester.request_file(
 				ADAPTATION_LAYER_URL, local_main_js_path.replace("user:/", OS.get_user_data_dir())
