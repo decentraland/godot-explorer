@@ -26,6 +26,7 @@ struct SignedFetchMeta {
     scene_id: Option<String>,
     parcel: Option<String>,
     tld: Option<String>,
+    signer: Option<String>,
     network: Option<String>,
     is_guest: Option<bool>,
     realm: SignedFetchMetaRealm,
@@ -66,6 +67,7 @@ pub async fn op_signed_fetch_headers(
                 scene_entity_definition.get_base_parcel().y
             )),
             tld: Some("org".to_owned()),
+            signer: Some("decentraland-kernel-scene".to_owned()),
             network: Some(network.to_owned()),
             is_guest: Some(false),
             realm: SignedFetchMetaRealm {
