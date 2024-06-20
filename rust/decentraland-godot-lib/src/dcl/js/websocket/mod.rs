@@ -64,10 +64,41 @@ async fn ws_poll(
         );
     }
 
+    http_request.headers_mut().insert(
+        HeaderName::from_static("user-agent"),
+        HeaderValue::from_static("DCLExplorer/0.1"),
+    );
+
+    http_request.headers_mut().insert(
+        HeaderName::from_static("origin"),
+        HeaderValue::from_static("https://decentraland.org"),
+    );
+
+    http_request.headers_mut().insert(
+        HeaderName::from_static("accept"),
+        HeaderValue::from_static("*/*"),
+    );
+
     tracing::debug!("request to {:?}", http_request);
 
-    let (ws_stream, _) = tokio_tungstenite::connect_async(http_request).await?;
+    let connection_result = tokio_tungstenite::connect_async(http_request).await;
 
+    let (ws_stream, _) = match connection_result {
+        Ok(connection_result) => connection_result,
+        Err(err) => match err {
+            tokio_tungstenite::tungstenite::Error::Http(http_err) => {
+                let body_error = http_err
+                    .body()
+                    .as_ref()
+                    .map(|body| String::from_utf8_lossy(body));
+                return Err(anyhow::Error::msg(format!("http error: {:?}", body_error)));
+            }
+            err => {
+                tracing::error!("error connecting to {:?}: {:?}", url, err);
+                return Err(err.into());
+            }
+        },
+    };
     tracing::debug!("connected to {:?}", url);
     sender.send(WsReceiveData::Connected).await?;
 

@@ -107,6 +107,10 @@ async fn op_fetch_custom(
         .collect::<reqwest::header::HeaderMap>();
 
     headers.append("User-Agent", HeaderValue::from_static("DCLExplorer/0.1"));
+    headers.append(
+        "Origin",
+        HeaderValue::from_static("https://decentraland.org"),
+    );
 
     let mut request = client
         .request(method, url.clone())
