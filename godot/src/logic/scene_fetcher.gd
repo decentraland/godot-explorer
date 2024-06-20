@@ -19,7 +19,8 @@ const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
-const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/feat-add-ui/index.js"
+const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
+const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 
 
 class SceneItem:
@@ -282,27 +283,34 @@ func async_load_scene(
 	var content_mapping := scene_entity_definition.get_content_mapping()
 
 	var local_main_js_path: String = ""
-	var script_promise: Promise
+	var script_promise: Promise = null
 	if scene_entity_definition.is_sdk7():
 		var script_path := scene_entity_definition.get_main_js_path()
 		script_promise = Global.content_provider.fetch_file(script_path, content_mapping)
 		local_main_js_path = "user://content/" + scene_entity_definition.get_main_js_hash()
 	else:
-		var script_hash = "sdk-adaptation-layer.js"
-		script_promise = Global.content_provider.fetch_file_by_url(
-			script_hash, ADAPTATION_LAYER_URL
-		)
-		local_main_js_path = "user://content/" + script_hash
+		if (
+			not FIXED_LOCAL_ADAPTATION_LAYER.is_empty()
+			and FileAccess.file_exists(FIXED_LOCAL_ADAPTATION_LAYER)
+		):
+			local_main_js_path = String(FIXED_LOCAL_ADAPTATION_LAYER)
+		else:
+			var script_hash = "sdk-adaptation-layer.js"
+			script_promise = Global.content_provider.fetch_file_by_url(
+				script_hash, ADAPTATION_LAYER_URL
+			)
+			local_main_js_path = "user://content/" + script_hash
 
-	var script_res = await PromiseUtils.async_awaiter(script_promise)
-	if script_res is PromiseError:
-		printerr(
-			"Scene ",
-			scene_entity_id,
-			" fail getting the script code content, error message: ",
-			script_res.get_error()
-		)
-		return PromiseUtils.resolved(false)
+	if script_promise != null:
+		var script_res = await PromiseUtils.async_awaiter(script_promise)
+		if script_res is PromiseError:
+			printerr(
+				"Scene ",
+				scene_entity_id,
+				" fail getting the script code content, error message: ",
+				script_res.get_error()
+			)
+			return PromiseUtils.resolved(false)
 
 	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
 	var local_main_crdt_path: String = String()

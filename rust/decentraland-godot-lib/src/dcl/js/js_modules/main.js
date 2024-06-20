@@ -126,5 +126,4 @@ globalThis.performance = {
 
 Deno.core.ops.op_set_promise_reject_callback((type, promise, reason) => {
     console.error('Unhandled promise: ', reason)
-    Deno.core.ops.op_promise_reject();
 })
