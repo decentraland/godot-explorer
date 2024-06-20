@@ -20,8 +20,7 @@ use crate::{content::texture::resize_image, godot_classes::resource_locker::Reso
 
 use super::{
     content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
-    download::fetch_resource_or_wait, file_string::get_base_dir,
-    thread_safety::GodotSingleThreadSafety,
+    file_string::get_base_dir, thread_safety::GodotSingleThreadSafety,
 };
 
 pub async fn internal_load_gltf(
@@ -37,7 +36,8 @@ pub async fn internal_load_gltf(
 
     let url = format!("{}{}", content_mapping.base_url, file_hash);
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-    fetch_resource_or_wait(&url, file_hash, &absolute_file_path, ctx.clone())
+    ctx.resource_provider
+        .fetch_resource(&url, file_hash, &absolute_file_path)
         .await
         .map_err(anyhow::Error::msg)?;
 
@@ -73,7 +73,8 @@ pub async fn internal_load_gltf(
         async move {
             let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
             let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
-            fetch_resource_or_wait(&url, dependency_file_hash, &absolute_file_path, ctx.clone())
+            ctx.resource_provider
+                .fetch_resource(&url, dependency_file_hash, &absolute_file_path)
                 .await
                 .map_err(|e| {
                     format!(

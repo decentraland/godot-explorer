@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use godot::prelude::*;
 
+use crate::content::content_mapping::DclContentMappingAndUrl;
+
 use super::scene_definition::SceneEntityDefinition;
 
 #[derive(GodotClass)]
@@ -72,6 +74,16 @@ impl DclSceneEntityDefinition {
             .unwrap_or(&"".to_string())
             .to_string()
             .into()
+    }
+
+    #[func]
+    fn get_main_js_path(&self) -> GString {
+        self.inner.scene_meta_scene.main.as_str().into_godot()
+    }
+
+    #[func]
+    fn get_content_mapping(&self) -> Gd<DclContentMappingAndUrl> {
+        DclContentMappingAndUrl::from_ref(self.inner.content_mapping.clone())
     }
 
     #[func]

@@ -6,7 +6,7 @@ use tokio::task::JoinHandle;
 
 use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::comms::profile::UserProfile;
-use crate::content::bytes::fast_create_packed_byte_array_from_vec;
+use crate::content::packed_array::PackedByteArrayFromVec;
 use crate::dcl::scene_apis::RpcResultSender;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
@@ -453,7 +453,7 @@ impl DclPlayerIdentity {
 
                 let (content_type, body_payload) = deploy_data.unwrap(); // checked before
 
-                let body_payload = fast_create_packed_byte_array_from_vec(&body_payload);
+                let body_payload = PackedByteArray::from_vec(&body_payload);
                 let mut dict = Dictionary::default();
                 dict.set("content_type", content_type.to_variant());
                 dict.set("body_payload", body_payload.to_variant());

@@ -56,7 +56,7 @@ func _ready():
 
 	if args.has("--clear-cache-startup"):
 		prints("Clear cache startup!")
-		Global.clear_cache()
+		Global.content_provider.clear_cache_folder()
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if args.has("--test"):
@@ -190,17 +190,6 @@ func open_url(url: String):
 		Global.dcl_android_plugin.openUrl(url)
 	else:
 		OS.shell_open(url)
-
-
-func clear_cache():
-	# Clean the content cache folder
-	if DirAccess.dir_exists_absolute(Global.get_config().local_content_dir):
-		for file in DirAccess.get_files_at(Global.get_config().local_content_dir):
-			DirAccess.remove_absolute(Global.get_config().local_content_dir + file)
-		DirAccess.remove_absolute(Global.get_config().local_content_dir)
-
-	if not DirAccess.dir_exists_absolute(Global.get_config().local_content_dir):
-		DirAccess.make_dir_absolute(Global.get_config().local_content_dir)
 
 
 func async_create_popup_warning(

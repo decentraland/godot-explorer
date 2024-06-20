@@ -56,7 +56,11 @@ func show_panel(child_node: Control):
 	child_node.show()
 
 
-func close_sign_in():
+func async_close_sign_in(generate_snapshots: bool = true):
+	if generate_snapshots:
+		var avatar := current_profile.get_avatar()
+		await backpack.async_prepare_snapshots(avatar)
+
 	get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
 
 
@@ -90,6 +94,7 @@ func go_to_explorer():
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
+	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
 
 	if !new_profile.has_connected_web3():
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
@@ -111,12 +116,10 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if _skip_lobby:
 		go_to_explorer()
 
-	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
-
 	if waiting_for_new_wallet:
 		waiting_for_new_wallet = false
 		if profile_has_name():
-			close_sign_in()
+			await async_close_sign_in()
 		else:
 			show_panel(control_choose_name)
 			_show_avatar_preview()
@@ -182,7 +185,7 @@ func _on_button_next_pressed():
 
 	await Global.player_identity.async_deploy_profile(current_profile, true)
 
-	close_sign_in()
+	await async_close_sign_in(false)
 
 
 func _on_button_random_name_pressed():
@@ -234,8 +237,9 @@ func _show_avatar_preview():
 	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
 
 
+# gdlint:ignore = async-function-name
 func _on_button_jump_in_pressed():
-	close_sign_in()
+	await async_close_sign_in()
 
 
 func toggle_terms_and_privacy_checkbox():

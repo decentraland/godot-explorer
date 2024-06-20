@@ -28,7 +28,7 @@ func async_load_gltf():
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 	timer.start()
 
-	var promise = Global.content_provider.fetch_gltf(dcl_gltf_src, content_mapping, 0)
+	var promise = Global.content_provider.fetch_scene_gltf(dcl_gltf_src, content_mapping)
 	if promise == null:
 		printerr("Fatal error on fetch gltf: promise == null")
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR

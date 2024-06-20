@@ -26,12 +26,12 @@ use crate::{
 
 use super::{
     audio::load_audio,
-    content_notificator::ContentNotificator,
     gltf::{
         apply_update_set_mask_colliders, load_gltf_emote, load_gltf_scene_content,
         load_gltf_wearable, DclEmoteGltf,
     },
     profile::{prepare_request_requirements, request_lambda_profile},
+    resource_provider::ResourceProvider,
     texture::{load_image_texture, TextureEntry},
     thread_safety::{set_thread_safety_checks_enabled, then_promise, GodotSingleThreadSafety},
     video::download_video,
@@ -48,8 +48,8 @@ pub struct ContentEntry {
 #[class(base=Node)]
 pub struct ContentProvider {
     content_folder: Arc<String>,
+    resource_provider: Arc<ResourceProvider>,
     http_queue_requester: Arc<HttpQueueRequester>,
-    content_notificator: Arc<ContentNotificator>,
     cached: HashMap<String, ContentEntry>,
     godot_single_thread: Arc<Semaphore>,
     texture_quality: TextureQuality, // copy from DclGlobal on startup
@@ -59,8 +59,8 @@ pub struct ContentProvider {
 #[derive(Clone)]
 pub struct ContentProviderContext {
     pub content_folder: Arc<String>,
+    pub resource_provider: Arc<ResourceProvider>,
     pub http_queue_requester: Arc<HttpQueueRequester>,
-    pub content_notificator: Arc<ContentNotificator>,
     pub godot_single_thread: Arc<Semaphore>,
     pub texture_quality: TextureQuality, // copy from DclGlobal on startup
 }
@@ -75,10 +75,14 @@ impl INode for ContentProvider {
             godot::engine::Os::singleton().get_user_data_dir()
         ));
         Self {
-            content_folder,
+            resource_provider: Arc::new(ResourceProvider::new(
+                content_folder.clone().as_str(),
+                2048 * 1000 * 1000,
+                32,
+            )),
             http_queue_requester: Arc::new(HttpQueueRequester::new(6)),
+            content_folder,
             cached: HashMap::new(),
-            content_notificator: Arc::new(ContentNotificator::new()),
             godot_single_thread: Arc::new(Semaphore::new(1)),
             texture_quality: DclConfig::static_get_texture_quality(),
             tick: 0.0,
@@ -132,13 +136,11 @@ impl INode for ContentProvider {
 
 #[godot_api]
 impl ContentProvider {
-    // content_type 1: wearable, 2: emote, default: scene
     #[func]
-    pub fn fetch_gltf(
+    pub fn fetch_wearable_gltf(
         &mut self,
         file_path: GString,
         content_mapping: Gd<DclContentMappingAndUrl>,
-        content_type: i32,
     ) -> Gd<Promise> {
         let content_mapping = content_mapping.bind().get_content_mapping();
         let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
@@ -155,23 +157,85 @@ impl ContentProvider {
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
         TokioRuntime::spawn(async move {
-            let result = match content_type {
-                1 => {
-                    load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context)
-                        .await
-                }
-                2 => {
-                    load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await
-                }
-                _ => {
-                    load_gltf_scene_content(
-                        gltf_file_path,
-                        content_mapping,
-                        content_provider_context,
-                    )
-                    .await
-                }
-            };
+            let result =
+                load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context).await;
+
+            then_promise(get_promise, result);
+        });
+
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                last_access: Instant::now(),
+                promise: promise.clone(),
+            },
+        );
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_scene_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
+            return Promise::from_rejected(format!("File not found: {}", file_path));
+        };
+
+        if let Some(entry) = self.cached.get_mut(file_hash) {
+            entry.last_access = Instant::now();
+            return entry.promise.clone();
+        }
+
+        let file_hash = file_hash.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+        let gltf_file_path = file_path.to_string();
+        let content_provider_context = self.get_context();
+        TokioRuntime::spawn(async move {
+            let result =
+                load_gltf_scene_content(gltf_file_path, content_mapping, content_provider_context)
+                    .await;
+
+            then_promise(get_promise, result);
+        });
+
+        self.cached.insert(
+            file_hash,
+            ContentEntry {
+                last_access: Instant::now(),
+                promise: promise.clone(),
+            },
+        );
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_emote_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
+            return Promise::from_rejected(format!("File not found: {}", file_path));
+        };
+
+        if let Some(entry) = self.cached.get_mut(file_hash) {
+            entry.last_access = Instant::now();
+            return entry.promise.clone();
+        }
+
+        let file_hash = file_hash.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+        let gltf_file_path = file_path.to_string();
+        let content_provider_context = self.get_context();
+        TokioRuntime::spawn(async move {
+            let result =
+                load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await;
 
             then_promise(get_promise, result);
         });
@@ -210,6 +274,70 @@ impl ContentProvider {
             )
             .await;
             then_promise(get_promise, result);
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_file(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let file_hash = content_mapping.bind().get_hash(file_path);
+        let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
+
+        self.fetch_file_by_url(file_hash, url.into_godot())
+    }
+
+    #[func]
+    pub fn fetch_file_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
+        let file_hash = file_hash.to_string();
+
+        let url = url.to_string();
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let r_file_hash = file_hash.clone();
+        TokioRuntime::spawn(async move {
+            let absolute_file_path = format!("{}{}", ctx.content_folder, r_file_hash);
+
+            if ctx
+                .resource_provider
+                .fetch_resource(&url, &r_file_hash, &absolute_file_path)
+                .await
+                .is_ok()
+            {
+                then_promise(get_promise, Ok(None));
+            } else {
+                then_promise(get_promise, Err(anyhow::anyhow!("Failed to download file")));
+            }
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn store_file(&mut self, file_hash: GString, bytes: PackedByteArray) -> Gd<Promise> {
+        let file_hash = file_hash.to_string();
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let bytes = bytes.to_vec();
+
+        TokioRuntime::spawn(async move {
+            if ctx
+                .resource_provider
+                .store_file(file_hash.as_str(), bytes.as_slice())
+                .await
+                .is_ok()
+            {
+                then_promise(get_promise, Ok(None));
+            } else {
+                then_promise(get_promise, Err(anyhow::anyhow!("Failed to download file")));
+            }
         });
 
         promise
@@ -581,6 +709,30 @@ impl ContentProvider {
     }
 
     #[func]
+    pub fn clear_cache_folder(&self) {
+        let resource_provider = self.resource_provider.clone();
+        TokioRuntime::spawn(async move {
+            resource_provider.clear().await;
+        });
+    }
+
+    #[func]
+    pub fn set_cache_folder_max_size(&mut self, size: i64) {
+        self.resource_provider.set_max_cache_size(size)
+    }
+
+    #[func]
+    pub fn get_cache_folder_total_size(&mut self) -> i64 {
+        self.resource_provider.get_cache_total_size()
+    }
+
+    #[func]
+    pub fn set_max_concurrent_downloads(&mut self, number: i32) {
+        self.resource_provider
+            .set_max_concurrent_downloads(number as usize)
+    }
+
+    #[func]
     pub fn fetch_profile(&mut self, user_id: GString) -> Gd<Promise> {
         let Some(user_id) = user_id.to_string().as_str().as_h160() else {
             return Promise::from_rejected("Invalid user id".to_string());
@@ -634,7 +786,7 @@ impl ContentProvider {
         ContentProviderContext {
             content_folder: self.content_folder.clone(),
             http_queue_requester: self.http_queue_requester.clone(),
-            content_notificator: self.content_notificator.clone(),
+            resource_provider: self.resource_provider.clone(),
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
         }

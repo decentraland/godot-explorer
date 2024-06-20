@@ -7,6 +7,8 @@ script = ExtResource("1_q3p8f")
 
 [node name="AudioPlayer_Steps" type="AudioStreamPlayer3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
+bus = &"Scene"
 
 [node name="AudioPlayer_Effects" type="AudioStreamPlayer3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
+bus = &"Scene"

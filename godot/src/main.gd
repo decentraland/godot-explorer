@@ -22,6 +22,8 @@ func start():
 		main_window.get_viewport().scaling_3d_scale = Global.get_config().resolution_3d_scale
 
 		AudioSettings.apply_volume_settings()
+
+		GeneralSettings.apply_max_cache_size()
 	else:
 		print("Running from Server")
 
