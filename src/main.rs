@@ -241,11 +241,11 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         Some(build_envs.clone()),
     )?;
 
-    let err = glob::glob("./../../godot/*.profraw")?
+    let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())
         .map(|entry| {
-            println!("moving {:?} to ./../decentraland-godot-lib/", entry);
-            cmd!("mv", entry, "./../decentraland-godot-lib/").run()
+            println!("moving {:?} to ./lib", entry);
+            cmd!("mv", entry, "./lib").run()
         })
         .any(|res| res.is_err());
 
@@ -265,7 +265,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         "grcov",
         ".",
         "--binary-path",
-        "./decentraland-godot-lib/target/debug/deps",
+        "./lib/target/debug/deps",
         "-s",
         ".",
         "-t",
@@ -283,12 +283,11 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         "-o",
         file,
     )
-    .dir("..")
     .run()?;
     println!("ok.");
 
     println!("=== cleaning up ===");
-    clean_files("../**/*.profraw")?;
+    clean_files("./**/*.profraw")?;
     println!("ok.");
     if devmode {
         if confirm("open report folder?") {

@@ -36,7 +36,7 @@ Execute the following commands for building Godot:
 docker run -v {godot-explorer-repo-path}:/app/ -it kuruk/dcl-godot-android-builder:latest
 
 # Compile for Android
-cd rust/decentraland-godot-lib
+cd lib
 ./android-build.sh # arm64
 ./android-build.sh x86_64 # android x86_64 if needed
 cd ../../ # return
@@ -69,7 +69,7 @@ This repo is set up to be opened with Visual Studio Code. In the section `Run an
 2. Run `cargo run -- coverage --dev`. It'll create a `coverage` folder with the index.html with the all information. In order to run these commands, you need to have llvm-tools and grcov installed. You can install them with `rustup component add llvm-tools-preview` and `cargo install grcov`.
 
 # Mobile targets
-See `rust/decentraland-godot-lib/builds.md`
+See `lib/builds.md`
 
 Powered by the Decentraland DAO
 ![Decentraland DAO logo](https://bafkreibci6gg3wbjvxzlqpuh353upzrssalqqoddb6c4rez33bcagqsc2a.ipfs.nftstorage.link/)

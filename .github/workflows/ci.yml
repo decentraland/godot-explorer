@@ -50,15 +50,15 @@ jobs:
         run: cargo run -- install --no-templates
 
       - name: cargo check
-        working-directory: rust/decentraland-godot-lib
+        working-directory: lib
         run: cargo check
 
       - name: cargo fmt
-        working-directory: rust/decentraland-godot-lib
+        working-directory: lib
         run: cargo fmt --all -- --check
 
       - name: cargo clippy
-        working-directory: rust/decentraland-godot-lib
+        working-directory: lib
         run: cargo clippy -- -D warnings
 
 
@@ -103,8 +103,8 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            rust/decentraland-godot-lib/target/
-            rust/decentraland-godot-lib/Cargo.lock
+            lib/target/
+            lib/Cargo.lock
             rust/xtask/target/
             rust/xtask/Cargo.lock
           key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -162,7 +162,7 @@ jobs:
   build:
     name: Build and test
     # Comment next line to test this job on PRs
-    if: ${{ github.ref == 'refs/heads/main' }}
+    # if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       fail-fast: false
       matrix:
@@ -185,8 +185,8 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            rust/decentraland-godot-lib/target/
-            rust/decentraland-godot-lib/Cargo.lock
+            lib/target/
+            lib/Cargo.lock
             rust/xtask/target/
             rust/xtask/Cargo.lock
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -242,13 +242,13 @@ jobs:
       # Build section
       - name: cargo build
         if: runner.os != 'windows'
-        working-directory: rust/decentraland-godot-lib
+        working-directory: lib
         run: cargo build --release
 
       # Build section
       - name: cargo build (windows)
         if: runner.os == 'windows'
-        working-directory: rust/decentraland-godot-lib
+        working-directory: lib
         run: cargo build --release --no-default-features -F use_deno -F use_ffmpeg
 
       # TODO: cross-build deprecated with the ffmpeg integration
@@ -258,23 +258,23 @@ jobs:
       #   if: ${{ matrix.os == 'macos-latest' }}
       #   with:
       #     command: build
-      #     args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=x86_64-apple-darwin
+      #     args: --manifest-path lib/Cargo.toml --release --target=x86_64-apple-darwin
 
       # - uses: actions-rs/cargo@v1
       #   name: build for arm64 (macos)
       #   if: ${{ matrix.os == 'macos-latest' }}
       #   with:
       #     command: build
-      #     args: --manifest-path rust/decentraland-godot-lib/Cargo.toml --release --target=aarch64-apple-darwin
+      #     args: --manifest-path lib/Cargo.toml --release --target=aarch64-apple-darwin
 
       - name: cargo build
         if: runner.os != 'windows'
-        working-directory: rust/decentraland-godot-lib
+        working-directory: lib
         run: cargo test --release -- --skip auth
 
       - name: cargo build (windows)
         if: runner.os == 'windows'
-        working-directory: rust/decentraland-godot-lib
+        working-directory: lib
         run: cargo test --release --no-default-features -F use_deno -F use_ffmpeg -- --skip auth
         
       # TODO: cross-build deprecated with the ffmpeg integration 
@@ -283,21 +283,21 @@ jobs:
       # - name: Make universal library
       #   if: ${{ matrix.os == 'macos-latest' }}
       #   run: |
-      #     mkdir rust/decentraland-godot-lib/target/release || true
-      #     lipo -create rust/decentraland-godot-lib/target/x86_64-apple-darwin/release/libdecentraland_godot_lib.dylib rust/decentraland-godot-lib/target/aarch64-apple-darwin/release/libdecentraland_godot_lib.dylib -output rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.dylib
+      #     mkdir lib/target/release || true
+      #     lipo -create lib/target/x86_64-apple-darwin/release/libdclgodot.dylib lib/target/aarch64-apple-darwin/release/libdclgodot.dylib -output lib/target/release/libdclgodot.dylib
 
       # => Linux/MacOS (unix)
       - name: Copy library (linux/macos)
         if: runner.os != 'windows'
         run: |
-            cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.so godot/lib/ || true
-            cp rust/decentraland-godot-lib/target/release/libdecentraland_godot_lib.dylib godot/lib/ || true
+            cp lib/target/release/libdclgodot.so godot/lib/ || true
+            cp lib/target/release/libdclgodot.dylib godot/lib/ || true
 
       # => Windows
       - name: Copy library (windows)
         if: runner.os == 'windows'
         run: |
-            cp rust/decentraland-godot-lib/target/release/decentraland_godot_lib.dll godot/lib/
+            cp lib/target/release/dclgodot.dll godot/lib/
             cp .bin/ffmpeg/ffmpeg-6.0-full_build-shared/bin/*.dll godot/lib/
 
       # Export section (multi platform)

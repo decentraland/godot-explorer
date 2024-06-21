@@ -52,7 +52,7 @@ This only buils for arm64. `fribidi` and `libass` should be compiled but I got e
 ```
 	// This block calls the JNI_OnLoad, needed for livekit 
 	static {
-		System.loadLibrary("decentraland_godot_lib");
+		System.loadLibrary("dclgodot");
 	}
 ```
 3. Ensure the dependencies are copied: 

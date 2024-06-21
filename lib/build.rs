@@ -317,7 +317,7 @@ fn main() -> io::Result<()> {
 
     let mut protoc_path = std::env::current_dir()
         .unwrap()
-        .join("../../.bin/protoc/bin/protoc");
+        .join("../.bin/protoc/bin/protoc");
     if std::env::consts::OS == "windows" {
         protoc_path.set_extension("exe");
     }

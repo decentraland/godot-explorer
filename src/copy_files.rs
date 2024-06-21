@@ -49,9 +49,9 @@ pub fn copy_library(debug_mode: bool, link_libs: bool) -> Result<(), anyhow::Err
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
     let file_name = match (os, arch) {
-        ("linux", _) => Some("libdecentraland_godot_lib.so".to_string()),
-        ("windows", _) => Some("decentraland_godot_lib.dll".to_string()),
-        ("macos", _) => Some("libdecentraland_godot_lib.dylib".to_string()),
+        ("linux", _) => Some("libdclgodot.so".to_string()),
+        ("windows", _) => Some("dclgodot.dll".to_string()),
+        ("macos", _) => Some("libdclgodot.dylib".to_string()),
         _ => None,
     }
     .expect("Couldn't find a library for this platform");

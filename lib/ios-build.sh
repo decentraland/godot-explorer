@@ -5,6 +5,6 @@ export RUSTY_V8_MIRROR=https://github.com/leanmendoza/rusty_v8/releases/download
 
 GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --target aarch64-apple-ios --release --no-default-features -F use_deno -F use_livekit
 mkdir -p ../../godot/lib/ios/
-cp target/aarch64-apple-ios/release/libdecentraland_godot_lib.dylib ../../godot/lib/ios/libdecentralandgodot.dylib
+cp target/aarch64-apple-ios/release/libdclgodot.dylib ../../godot/lib/ios/libdclgodot.dylib
 # Temp
-cp target/aarch64-apple-ios/release/libdecentraland_godot_lib.dylib "/Users/kuruk/Projects/ios-export/Decentraland Mobile Client/dylibs/lib/ios/libdecentralandgodot.framework/libdecentralandgodot"
+cp target/aarch64-apple-ios/release/libdclgodot.dylib "/Users/kuruk/Projects/ios-export/Decentraland Mobile Client/dylibs/lib/ios/libdclgodot.framework/libdclgodot"

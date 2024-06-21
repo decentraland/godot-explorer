@@ -30,8 +30,8 @@ if [[ "$1" == "x86_64" ]]; then
     mkdir -p ../../godot/lib/android/x86_64/
     mkdir -p ../../godot/android/build/libs/release/x86_64/
 
-    cp target/x86_64-linux-android/release/libdecentraland_godot_lib.so ../../godot/lib/android/x86_64/libdecentraland_godot_lib.so
-    cp target/x86_64-linux-android/release/libdecentraland_godot_lib.so ../../godot/android/build/libs/release/x86_64/libdecentraland_godot_lib.so
+    cp target/x86_64-linux-android/release/libdclgodot.so ../../godot/lib/android/x86_64/libdclgodot.so
+    cp target/x86_64-linux-android/release/libdclgodot.so ../../godot/android/build/libs/release/x86_64/libdclgodot.so
 
 else
     # Run the specified commands
@@ -50,6 +50,6 @@ else
     mkdir -p ../../godot/lib/android/arm64/
     mkdir -p ../../godot/android/build/libs/release/arm64-v8a/
 
-    cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/lib/android/arm64/libdecentraland_godot_lib.so
-    cp target/aarch64-linux-android/release/libdecentraland_godot_lib.so ../../godot/android/build/libs/release/arm64-v8a/libdecentraland_godot_lib.so
+    cp target/aarch64-linux-android/release/libdclgodot.so ../../godot/lib/android/arm64/libdclgodot.so
+    cp target/aarch64-linux-android/release/libdclgodot.so ../../godot/android/build/libs/release/arm64-v8a/libdclgodot.so
 fi
