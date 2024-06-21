@@ -11,7 +11,7 @@ then
 fi
 
 echo "Build for Linux x86_64"
-cd ${EXPLORER_PATH}/rust/xtask
+cd ${EXPLORER_PATH}
 cargo run -- install
 cargo run -- run --only-build
 

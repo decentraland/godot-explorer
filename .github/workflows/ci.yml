@@ -46,7 +46,6 @@ jobs:
         if: runner.os == 'linux'
 
       - name: cargo xtask install
-        working-directory: rust/xtask
         run: cargo run -- install --no-templates
 
       - name: cargo check
@@ -105,8 +104,8 @@ jobs:
             ~/.cargo/git/db/
             lib/target/
             lib/Cargo.lock
-            rust/xtask/target/
-            rust/xtask/Cargo.lock
+            target/
+            Cargo.lock
           key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: coverage-cargo-
 
@@ -128,7 +127,6 @@ jobs:
         if: runner.os == 'linux'
 
       - name: cargo xtask install
-        working-directory: rust/xtask
         run: cargo run -- install --no-templates
 
       # Build section
@@ -140,7 +138,6 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Run xtask coverage
-        working-directory: rust/xtask
         run: |
           export DISPLAY=:99
           sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
@@ -187,8 +184,8 @@ jobs:
             ~/.cargo/git/db/
             lib/target/
             lib/Cargo.lock
-            rust/xtask/target/
-            rust/xtask/Cargo.lock
+            target/
+            Cargo.lock
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
@@ -236,7 +233,6 @@ jobs:
 
       # => All platforms
       - name: cargo xtask install
-        working-directory: rust/xtask
         run: cargo run -- install
 
       # Build section
@@ -302,7 +298,6 @@ jobs:
 
       # Export section (multi platform)
       - name: Export
-        working-directory: rust/xtask
         run: cargo run -- export
 
       - uses: actions/upload-artifact@master
