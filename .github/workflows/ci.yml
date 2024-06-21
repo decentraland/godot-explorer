@@ -245,7 +245,7 @@ jobs:
       - name: cargo build (windows)
         if: runner.os == 'windows'
         working-directory: lib
-        run: cargo build --release --no-default-features -F use_deno -F use_ffmpeg
+        run: cargo build --release
 
       # TODO: cross-build deprecated with the ffmpeg integration
 

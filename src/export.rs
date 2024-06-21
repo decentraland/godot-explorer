@@ -90,7 +90,7 @@ pub fn export() -> Result<(), anyhow::Error> {
     }
 
     // See this exports path differ from EXPORT_FOLDER because it's relative to godot project dir
-    let output_path_godot_param = format!("../exports/{output_file_name}");
+    let output_path_godot_param = format!("./exports/{output_file_name}");
     let args = vec![
         "-e",
         "--rendering-driver",
