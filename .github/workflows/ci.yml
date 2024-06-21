@@ -237,13 +237,6 @@ jobs:
 
       # Build section
       - name: cargo build
-        if: runner.os != 'windows'
-        working-directory: lib
-        run: cargo build --release
-
-      # Build section
-      - name: cargo build (windows)
-        if: runner.os == 'windows'
         working-directory: lib
         run: cargo build --release
 
@@ -264,15 +257,9 @@ jobs:
       #     args: --manifest-path lib/Cargo.toml --release --target=aarch64-apple-darwin
 
       - name: cargo build
-        if: runner.os != 'windows'
         working-directory: lib
         run: cargo test --release -- --skip auth
 
-      - name: cargo build (windows)
-        if: runner.os == 'windows'
-        working-directory: lib
-        run: cargo test --release --no-default-features -F use_deno -F use_ffmpeg -- --skip auth
-        
       # TODO: cross-build deprecated with the ffmpeg integration 
       # Package section
       # # => MacOS
