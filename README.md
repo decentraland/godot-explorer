@@ -5,6 +5,7 @@
 ## Set up project
 
 1. Clone the repo using `git clone https://github.com/decentraland/godot-explorer`
+  - If you're in Windows we suggest to clone the repo in a very short path like `C:/gexplorer` due https://developercommunity.visualstudio.com/t/clexe-compiler-driver-cannot-handle-long-file-path/975889
 2. Install [rust](https://www.rust-lang.org/tools/install)
 3. Download and install third party libraries
     - **Linux** (apt-get based):
@@ -19,7 +20,7 @@
       - add `ffmpeg\bin` to your `PATH`
     - the `.github/workflows/ci.yml` file can be useful to guide you
 
-2. Run `cargo run -- install` in the repo root folder.
+4. Run `cargo run -- install` in the repo root folder.
 
 ## Running and editing the project
 
