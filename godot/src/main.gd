@@ -11,7 +11,7 @@ func start():
 		return
 
 	if not OS.has_feature("Server"):
-		print("Running from platform")
+		print("Running from platform - version ", Global.renderer_version)
 
 		# Apply basic config
 		var main_window: Window = get_node("/root")
@@ -25,7 +25,7 @@ func start():
 
 		GeneralSettings.apply_max_cache_size()
 	else:
-		print("Running from Server")
+		print("Running from Server - version ", Global.renderer_version)
 
 	if Global.is_mobile():
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
