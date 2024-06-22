@@ -281,11 +281,6 @@ impl SceneCrdtStateProtoComponents {{
 }
 
 fn main() -> io::Result<()> {
-    if let Err(err) = check_safe_repo() {
-        eprintln!("Error checking repository safety: {}", err);
-        std::process::exit(1);
-    }
-
     let mut proto_components = vec![];
     let mut proto_files = vec![];
     let dir_path = Path::new(COMPONENT_BASE_DIR);
@@ -349,6 +344,8 @@ fn generate_file<P: AsRef<Path>>(path: P, text: &[u8]) {
 }
 
 fn check_safe_repo() -> Result<(), String> {
+    // GITHUB_SHA
+
     // Get the current working directory and navigate up two levels
     let mut repo_path = env::current_dir().map_err(|e| e.to_string())?;
     repo_path.pop(); // Go up one level
@@ -385,8 +382,12 @@ fn check_safe_repo() -> Result<(), String> {
         if output_retry.status.success() {
             return Ok(());
         } else {
-            return Err(String::from_utf8(output_retry.stderr)
-                .unwrap_or_else(|_| "Unknown error".to_string()));
+            let err_str = format!(
+                "After retrying the git command, the error persisted: {}",
+                String::from_utf8(output_retry.stderr)
+                    .unwrap_or_else(|_| "Unknown error".to_string())
+            );
+            return Err(err_str);
         }
     }
 
@@ -394,14 +395,32 @@ fn check_safe_repo() -> Result<(), String> {
 }
 
 fn set_godot_explorer_version() {
-    let snapshot = if let Ok(output) = Command::new("git").args(["rev-parse", "HEAD"]).output() {
-        let long_hash = String::from_utf8(output.stdout).unwrap();
-        format!("commit-{}", &long_hash[..8])
-    } else {
-        Utc::now()
-            .to_rfc3339()
-            .replace(|c: char| !c.is_ascii_digit(), "")
+    let hash_from_command = match check_safe_repo() {
+        Ok(_) => {
+            if let Ok(output) = Command::new("git").args(["rev-parse", "HEAD"]).output() {
+                let long_hash = String::from_utf8(output.stdout).unwrap();
+                Some(long_hash)
+            } else {
+                eprintln!("After checking if the repo is safe, couldn't get the hash");
+                None
+            }
+        }
+        Err(e) => {
+            eprintln!("Check if the repo is safe: {}", e);
+            None
+        }
     };
+
+    let hash_from_env = env::var("GITHUB_SHA").ok();
+    let timestamp = Utc::now()
+        .to_rfc3339()
+        .replace(|c: char| !c.is_ascii_digit(), "");
+
+    let commit_hash = hash_from_command
+        .or(hash_from_env)
+        .map(|hash| format!("commit-{}", hash));
+
+    let snapshot = commit_hash.unwrap_or(format!("timestamp-{}", timestamp));
 
     // get the CARGO_PKG_VERSION env var
     let version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".to_string());

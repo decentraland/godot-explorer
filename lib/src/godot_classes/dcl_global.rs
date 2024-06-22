@@ -76,6 +76,9 @@ pub struct DclGlobal {
     #[var]
     pub metrics: Gd<Metrics>,
 
+    #[var]
+    pub renderer_version: GString,
+
     pub is_mobile: bool,
 }
 
@@ -133,6 +136,7 @@ impl INode for DclGlobal {
             config: DclConfig::new_gd(),
             ethereum_provider: Arc::new(EthereumProvider::new()),
             metrics: Metrics::alloc_gd(),
+            renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
         }
     }
 }
