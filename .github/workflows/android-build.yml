@@ -2,7 +2,6 @@ on:
   push:
     branches:
       - main
-      - refactor/reorg-repo
       
   workflow_dispatch:
     inputs:
