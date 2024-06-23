@@ -25,7 +25,7 @@ gdlint godot/
 
 Format rust
 ```bash
-cd rust/decentraland-godot-lib
+cd lib
 cargo fmt --all
 cargo clippy -- -D warnings
 ```
@@ -82,13 +82,13 @@ fi
 ## FORMAT RUST
 
 # Change to the specific Rust directory
-cd rust/decentraland-godot-lib
+cd lib
 
 # Check if cargo fmt would make changes
 if ! cargo fmt -- --check
 then
-  echo "Code formatting in 'rust/decentraland-godot-lib' differs from cargo fmt's style"
-  echo "Run 'cargo fmt --all' inside 'rust/decentraland-godot-lib' to format the code."
+  echo "Code formatting in 'lib' differs from cargo fmt's style"
+  echo "Run 'cargo fmt --all' inside 'lib' to format the code."
   exit 1
 fi
 

@@ -2,7 +2,7 @@ on:
   push:
     branches:
       - main
-      - refactor/update-livekit
+      
   workflow_dispatch:
     inputs:
       branch:
@@ -42,12 +42,12 @@ jobs:
         run: |
           bash build-android-apk.sh
       
-      # if libdecentraland_godot_lib.so does not exist, the build failed, nothing to upload
+      # if libdclgodot.so does not exist, the build failed, nothing to upload
       - name: Copy artifacts
         if: success() || failure()
         run: |
           mkdir -p android-artifacts
-          mv godot/lib/android/arm64/libdecentraland_godot_lib.so android-artifacts/
+          mv godot/lib/android/arm64/libdclgodot.so android-artifacts/
           mv android.apk android-artifacts/ || true
           mv android-unsigned.aab android-artifacts/ || true
           

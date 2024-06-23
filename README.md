@@ -5,6 +5,7 @@
 ## Set up project
 
 1. Clone the repo using `git clone https://github.com/decentraland/godot-explorer`
+  - If you're in Windows we suggest to clone the repo in a very short path like `C:/gexplorer` due https://developercommunity.visualstudio.com/t/clexe-compiler-driver-cannot-handle-long-file-path/975889
 2. Install [rust](https://www.rust-lang.org/tools/install)
 3. Download and install third party libraries
     - **Linux** (apt-get based):
@@ -19,11 +20,11 @@
       - add `ffmpeg\bin` to your `PATH`
     - the `.github/workflows/ci.yml` file can be useful to guide you
 
-2. Go to `rust/xtask` folder, and run `cargo run -- install`.
+4. Run `cargo run -- install` in the repo root folder.
 
 ## Running and editing the project
 
-1. Ensure you are in `rust/xtask` folder first
+1. Ensure you are in the root folder first
 2. You can run `cargo run -- run` to build the Rust library and execute the client. 
 - With adding `-r` it builds the library in release mode. Note: the Godot executable is an editor, so it's a `release_debug` build, see the Target section [here](https://docs.godotengine.org/en/stable/contributing/development/compiling/introduction_to_the_buildsystem.html) for more infromation.
 - With adding `-e` it also builds the library, but the project edition is executed instead of the client.
@@ -36,13 +37,12 @@ Execute the following commands for building Godot:
 docker run -v {godot-explorer-repo-path}:/app/ -it kuruk/dcl-godot-android-builder:latest
 
 # Compile for Android
-cd rust/decentraland-godot-lib
+cd lib
 ./android-build.sh # arm64
 ./android-build.sh x86_64 # android x86_64 if needed
 cd ../../ # return
 
 # Compile for Linux
-cd rust/xtask
 cargo run -- install
 cargo run -- run --only-build
 cd ../../ # return
@@ -65,11 +65,11 @@ More details on [CONTRIBUTING.md](CONTRIBUTING.md)
 This repo is set up to be opened with Visual Studio Code. In the section `Run and Debug` in the Activity bar, you can find the configuration for your platform.
 
 ## Run test with coverage
-1. Ensure you are in `rust/xtask` folder first
+1. Ensure you are in the root folder first
 2. Run `cargo run -- coverage --dev`. It'll create a `coverage` folder with the index.html with the all information. In order to run these commands, you need to have llvm-tools and grcov installed. You can install them with `rustup component add llvm-tools-preview` and `cargo install grcov`.
 
 # Mobile targets
-See `rust/decentraland-godot-lib/builds.md`
+See `lib/builds.md`
 
 Powered by the Decentraland DAO
 ![Decentraland DAO logo](https://bafkreibci6gg3wbjvxzlqpuh353upzrssalqqoddb6c4rez33bcagqsc2a.ipfs.nftstorage.link/)

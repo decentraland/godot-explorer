@@ -17,7 +17,7 @@
                 "GODOT4_BIN": "${workspaceFolder}/.bin/godot/godot4_bin"
             },
             "options": {
-                "cwd": "${workspaceFolder}/rust/xtask"
+                "cwd": "${workspaceFolder}"
             }
         }
     ]

@@ -1,6 +1,6 @@
 [package]
-name = "decentraland-godot-lib"
-version = "0.1.0"
+name = "dclgodot"
+version = "0.11.0"
 edition = "2021"
 publish = false
 

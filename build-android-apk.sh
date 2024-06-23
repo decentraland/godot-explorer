@@ -11,7 +11,7 @@ then
 fi
 
 echo "Build for Linux x86_64"
-cd ${EXPLORER_PATH}/rust/xtask
+cd ${EXPLORER_PATH}
 cargo run -- install
 cargo run -- run --only-build
 
@@ -23,11 +23,11 @@ ln -sf ${EXPLORER_PATH}/.bin/godot/templates/templates/ 4.2.1.stable
 set -e 
 
 echo "Build for Android (arm64)"
-cd ${EXPLORER_PATH}/rust/decentraland-godot-lib
+cd ${EXPLORER_PATH}/lib
 bash android-build.sh
 
 echo "Build for Android (x86_64)"
-cd ${EXPLORER_PATH}/rust/decentraland-godot-lib
+cd ${EXPLORER_PATH}/lib
 bash android-build.sh x86_64
 
 set +e
