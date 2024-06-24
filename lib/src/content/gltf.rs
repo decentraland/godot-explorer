@@ -76,7 +76,6 @@ pub async fn internal_load_gltf(
     let futures = dependencies_hash
         .iter()
         .map(|(file_path, dependency_file_hash)| {
-            tracing::error!("file_path: {} {}", file_path, dependency_file_hash);
             let ctx = ctx.clone();
             let content_mapping = content_mapping.clone();
             async move {

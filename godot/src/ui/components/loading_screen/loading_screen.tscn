@@ -1,7 +1,8 @@
-[gd_scene load_steps=19 format=3 uid="uid://bmjwqm6jgri7c"]
+[gd_scene load_steps=20 format=3 uid="uid://bmjwqm6jgri7c"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_uio8w"]
 [ext_resource type="Script" path="res://src/ui/components/loading_screen/loading_screen.gd" id="2_7hdbk"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_fygee"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_uxxaw"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_w6anr"]
 [ext_resource type="Shader" path="res://src/ui/components/loading_screen/loading_screen.gdshader" id="6_u88hd"]
@@ -86,22 +87,40 @@ custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 
-[node name="Label_LoadingProgress" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header"]
-unique_name_in_owner = true
+[node name="BoxContainer" type="VBoxContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header"]
 layout_mode = 1
-anchors_preset = 1
+anchors_preset = 6
 anchor_left = 1.0
+anchor_top = 0.5
 anchor_right = 1.0
-offset_left = -97.0
-offset_top = 26.0
-offset_right = -34.0
-offset_bottom = 54.0
+anchor_bottom = 0.5
+offset_left = -413.0
+offset_top = -23.0
+offset_right = -20.0
+offset_bottom = 24.0
 grow_horizontal = 0
+grow_vertical = 2
+alignment = 1
+
+[node name="Label_LoadingProgress" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/BoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
 size_flags_vertical = 1
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_uxxaw")
 theme_override_font_sizes/font_size = 18
 text = "LOADING 0%"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Label_LoadingState" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/BoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("4_fygee")
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 2
 vertical_alignment = 1
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header"]
@@ -264,6 +283,7 @@ one_shot = true
 autostart = true
 
 [node name="Timer_CheckProgressTimeout" type="Timer" parent="."]
+wait_time = 0.5
 
 [node name="LoadingScreenProgressLogic" type="Node" parent="." node_paths=PackedStringArray("loading_screen")]
 script = ExtResource("10_xsh10")

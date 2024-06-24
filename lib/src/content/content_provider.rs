@@ -1,6 +1,9 @@
 use std::{
     collections::{HashMap, HashSet},
-    sync::{atomic::{AtomicU64, Ordering}, Arc},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
     time::{Duration, Instant},
 };
 
@@ -221,7 +224,7 @@ impl ContentProvider {
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
-            
+
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
             let result =
@@ -421,7 +424,7 @@ impl ContentProvider {
             report_resource_start(&hash_id);
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
-            
+
             let absolute_file_path = format!("{}{}", ctx.content_folder, hash_id);
 
             if ctx
@@ -457,8 +460,6 @@ impl ContentProvider {
 
         let bytes = bytes.to_vec();
 
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
         TokioRuntime::spawn(async move {
             if ctx
                 .resource_provider
@@ -588,7 +589,7 @@ impl ContentProvider {
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
-            
+
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
             let result = load_image_texture(url, hash_id.clone(), content_provider_context).await;
@@ -828,7 +829,6 @@ impl ContentProvider {
                     new_promise = Some((promise, get_promise));
                 }
 
-                tracing::error!("wearable_id: {}", wearable_id);
                 self.cached.insert(
                     wearable_id,
                     ContentEntry {
@@ -936,17 +936,17 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_download_speed_mbs(&self) -> u64 {
+    pub fn get_download_speed_mbs(&self) -> f64 {
         self.download_speed_mbs
     }
 
     #[func]
-    pub fn count_downloaded_files(&self) -> u64 {
+    pub fn count_loaded_resources(&self) -> u64 {
         self.loaded_resources.load(Ordering::Relaxed)
     }
 
     #[func]
-    pub fn count_downloading_files(&self) -> u64 {
+    pub fn count_loading_resources(&self) -> u64 {
         self.loading_resources.load(Ordering::Relaxed)
     }
 

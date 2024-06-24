@@ -31,6 +31,8 @@ pub struct ResourceProvider {
     download_tracking: Arc<ResourceDownloadTracking>,
 }
 
+const UPDATE_THRESHOLD: u64 = 1_024 * 1_024; // 1 MB threshold
+
 impl ResourceProvider {
     // Synchronous constructor that sets up the ResourceProvider
     pub fn new(
@@ -168,16 +170,35 @@ impl ResourceProvider {
             .map_err(|e| format!("File creation error: {:?}", e))?;
         let mut stream = response.bytes_stream();
 
+        let mut accumulated_size = 0;
+
         while let Some(chunk) = stream.next().await {
             let chunk = chunk.map_err(|e| format!("Stream error: {:?}", e))?;
             file.write_all(&chunk)
                 .await
                 .map_err(|e| format!("File write error: {:?}", e))?;
 
-            self.downloaded_size.fetch_add(chunk.len() as u64, Ordering::Relaxed);
+            accumulated_size += chunk.len() as u64;
+            if accumulated_size > UPDATE_THRESHOLD {
+                self.downloaded_size
+                    .fetch_add(accumulated_size, Ordering::Relaxed);
+                #[cfg(feature = "use_resource_tracking")]
+                {
+                    current_size += accumulated_size;
+                    self.download_tracking
+                        .report_progress(file_hash, current_size)
+                        .await;
+                }
+                accumulated_size = 0;
+            }
+        }
+
+        if accumulated_size > UPDATE_THRESHOLD {
+            self.downloaded_size
+                .fetch_add(accumulated_size, Ordering::Relaxed);
             #[cfg(feature = "use_resource_tracking")]
             {
-                current_size += chunk.len() as u64;
+                current_size += accumulated_size;
                 self.download_tracking
                     .report_progress(file_hash, current_size)
                     .await;
@@ -219,6 +240,8 @@ impl ResourceProvider {
         let mut stream = response.bytes_stream();
         let mut buffer = Vec::new();
 
+        let mut accumulated_size = 0;
+
         while let Some(chunk) = stream.next().await {
             let chunk = chunk.map_err(|e| format!("Stream error: {:?}", e))?;
             file.write_all(&chunk)
@@ -226,10 +249,27 @@ impl ResourceProvider {
                 .map_err(|e| format!("File write error: {:?}", e))?;
             buffer.extend_from_slice(&chunk);
 
-            self.downloaded_size.fetch_add(chunk.len() as u64, Ordering::Relaxed);
+            accumulated_size += chunk.len() as u64;
+            if accumulated_size > UPDATE_THRESHOLD {
+                self.downloaded_size
+                    .fetch_add(accumulated_size, Ordering::Relaxed);
+                #[cfg(feature = "use_resource_tracking")]
+                {
+                    current_size += accumulated_size;
+                    self.download_tracking
+                        .report_progress(file_hash, current_size)
+                        .await;
+                }
+                accumulated_size = 0;
+            }
+        }
+
+        if accumulated_size > UPDATE_THRESHOLD {
+            self.downloaded_size
+                .fetch_add(accumulated_size, Ordering::Relaxed);
             #[cfg(feature = "use_resource_tracking")]
             {
-                current_size += chunk.len() as u64;
+                current_size += accumulated_size;
                 self.download_tracking
                     .report_progress(file_hash, current_size)
                     .await;
