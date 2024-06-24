@@ -12,5 +12,6 @@ pub async fn download_video(
         .fetch_resource(&url, &file_hash, &absolute_file_path)
         .await
         .map_err(anyhow::Error::msg)?;
+
     Ok(None)
 }

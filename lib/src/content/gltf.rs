@@ -18,6 +18,9 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
 use crate::{content::texture::resize_image, godot_classes::resource_locker::ResourceLocker};
 
+#[cfg(feature = "use_resource_tracking")]
+use crate::godot_classes::dcl_resource_tracker::report_resource_loading;
+
 use super::{
     content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
     file_string::get_base_dir, thread_safety::GodotSingleThreadSafety,
@@ -40,6 +43,9 @@ pub async fn internal_load_gltf(
         .fetch_resource(&url, file_hash, &absolute_file_path)
         .await
         .map_err(anyhow::Error::msg)?;
+
+    #[cfg(feature = "use_resource_tracking")]
+    report_resource_loading(file_hash, &"0%".to_string(), &"gltf started".to_string());
 
     let dependencies = get_dependencies(&absolute_file_path)
         .await?
@@ -67,23 +73,26 @@ pub async fn internal_load_gltf(
         .map(|(file_path, hash)| (file_path, hash.unwrap()))
         .collect::<Vec<(String, String)>>();
 
-    let futures = dependencies_hash.iter().map(|(_, dependency_file_hash)| {
-        let ctx = ctx.clone();
-        let content_mapping = content_mapping.clone();
-        async move {
-            let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
-            let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
-            ctx.resource_provider
-                .fetch_resource(&url, dependency_file_hash, &absolute_file_path)
-                .await
-                .map_err(|e| {
-                    format!(
-                        "Dependency {} failed to fetch: {:?}",
-                        dependency_file_hash, e
-                    )
-                })
-        }
-    });
+    let futures = dependencies_hash
+        .iter()
+        .map(|(file_path, dependency_file_hash)| {
+            tracing::error!("file_path: {} {}", file_path, dependency_file_hash);
+            let ctx = ctx.clone();
+            let content_mapping = content_mapping.clone();
+            async move {
+                let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
+                let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
+                ctx.resource_provider
+                    .fetch_resource(&url, dependency_file_hash, &absolute_file_path)
+                    .await
+                    .map_err(|e| {
+                        format!(
+                            "Dependency {} failed to fetch: {:?}",
+                            dependency_file_hash, e
+                        )
+                    })
+            }
+        });
 
     let result = futures_util::future::join_all(futures).await;
     if result.iter().any(|res| res.is_err()) {

@@ -101,6 +101,16 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
+                    Arg::new("resource-tracking")
+                        .short('t')
+                        .help("enables resource tracking feature")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("build-args")
+                        .help("extra build args for rust")
+                )
+                .arg(
                     Arg::new("extras")
                         .last(true)
                         .allow_hyphen_values(true)
@@ -118,21 +128,34 @@ fn main() -> Result<(), anyhow::Error> {
     println!("Running subcommand `{:?}`", subcommand.0);
 
     let root = xtaskops::ops::root_dir();
+
     let res = match subcommand {
         ("install", sm) => install_dependency::install(sm.is_present("no-templates")),
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
-        ("run", sm) => run::run(
-            sm.is_present("editor"),
-            sm.is_present("release"),
-            sm.is_present("itest"),
-            sm.is_present("only-build"),
-            sm.is_present("link-libs"),
-            sm.is_present("stest"),
-            sm.values_of("extras")
+        ("run", sm) => {
+            let mut build_args: Vec<&str> = sm
+                .values_of("build-args")
                 .map(|v| v.map(|it| it.into()).collect())
-                .unwrap_or_default(),
-            None,
-        ),
+                .unwrap_or_default();
+        
+            if sm.is_present("resource-tracking") {
+                build_args.extend(&["-F", "use_resource_tracking"]);
+            }
+
+            run::run(
+                sm.is_present("editor"),
+                sm.is_present("release"),
+                sm.is_present("itest"),
+                sm.is_present("only-build"),
+                sm.is_present("link-libs"),
+                sm.is_present("stest"),
+                build_args,
+                sm.values_of("extras")
+                    .map(|v| v.map(|it| it.into()).collect())
+                    .unwrap_or_default(),
+                None,
+            )
+        }
         ("export", _m) => export::export(),
         ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),
         ("vars", _) => {
@@ -192,6 +215,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         false,
         false,
         vec![],
+        vec![],
         Some(build_envs.clone()),
     )?;
 
@@ -237,6 +261,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         false,
         false,
         true,
+        vec![],
         extra_args,
         Some(build_envs.clone()),
     )?;

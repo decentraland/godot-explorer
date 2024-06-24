@@ -13,6 +13,8 @@ pub mod dcl_gltf_container;
 pub mod dcl_hashing;
 pub mod dcl_node_entity_3d;
 pub mod dcl_realm;
+#[cfg(feature = "use_resource_tracking")]
+pub mod dcl_resource_tracker;
 pub mod dcl_scene_node;
 pub mod dcl_ui_background;
 pub mod dcl_ui_control;

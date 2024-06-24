@@ -2,16 +2,18 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicI64;
-use std::sync::{atomic::Ordering, Arc, Mutex};
+use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::Arc;
 use tokio::fs;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Notify, OnceCell, RwLock, Semaphore};
 use tokio::time::Instant;
 
+#[cfg(feature = "use_resource_tracking")]
+use super::resource_download_tracking::ResourceDownloadTracking;
 use crate::content::semaphore_ext::SemaphoreExt;
 
-struct FileMetadata {
+pub struct FileMetadata {
     file_size: i64,
     last_accessed: Instant,
 }
@@ -20,23 +22,32 @@ pub struct ResourceProvider {
     cache_folder: PathBuf,
     existing_files: RwLock<HashMap<String, FileMetadata>>,
     max_cache_size: AtomicI64,
-    pending_downloads: Mutex<HashMap<String, Arc<Notify>>>,
+    pending_downloads: RwLock<HashMap<String, Arc<Notify>>>,
     client: Client,
     initialized: OnceCell<()>,
     semaphore: Arc<Semaphore>,
+    #[cfg(feature = "use_resource_tracking")]
+    download_tracking: Arc<ResourceDownloadTracking>,
 }
 
 impl ResourceProvider {
     // Synchronous constructor that sets up the ResourceProvider
-    pub fn new(cache_folder: &str, max_cache_size: i64, max_concurrent_downloads: usize) -> Self {
+    pub fn new(
+        cache_folder: &str,
+        max_cache_size: i64,
+        max_concurrent_downloads: usize,
+        #[cfg(feature = "use_resource_tracking")] download_tracking: Arc<ResourceDownloadTracking>,
+    ) -> Self {
         ResourceProvider {
             cache_folder: PathBuf::from(cache_folder),
             existing_files: RwLock::new(HashMap::new()),
             max_cache_size: AtomicI64::new(max_cache_size),
-            pending_downloads: Mutex::new(HashMap::new()),
+            pending_downloads: RwLock::new(HashMap::new()),
             client: Client::new(),
             initialized: OnceCell::new(),
             semaphore: Arc::new(Semaphore::new(max_concurrent_downloads)),
+            #[cfg(feature = "use_resource_tracking")]
+            download_tracking,
         }
     }
 
@@ -130,7 +141,12 @@ impl ResourceProvider {
         }
     }
 
-    async fn download_file(&self, url: &str, dest: &Path) -> Result<(), String> {
+    async fn download_file(
+        &self,
+        url: &str,
+        dest: &Path,
+        #[cfg(feature = "use_resource_tracking")] file_hash: &str,
+    ) -> Result<(), String> {
         let tmp_dest = dest.with_extension("tmp");
         let response = self
             .client
@@ -138,6 +154,13 @@ impl ResourceProvider {
             .send()
             .await
             .map_err(|e| format!("Request error: {:?}", e))?;
+
+        #[cfg(feature = "use_resource_tracking")]
+        self.download_tracking.start(file_hash.to_string()).await;
+
+        #[cfg(feature = "use_resource_tracking")]
+        let mut current_size = 0;
+
         let mut file = fs::File::create(&tmp_dest)
             .await
             .map_err(|e| format!("File creation error: {:?}", e))?;
@@ -148,16 +171,32 @@ impl ResourceProvider {
             file.write_all(&chunk)
                 .await
                 .map_err(|e| format!("File write error: {:?}", e))?;
+
+            #[cfg(feature = "use_resource_tracking")]
+            {
+                current_size += chunk.len() as u64;
+                self.download_tracking
+                    .report_progress(file_hash, current_size)
+                    .await;
+            }
         }
 
         fs::rename(&tmp_dest, dest)
             .await
             .map_err(|e| format!("Failed to rename file: {:?}", e))?;
 
+        #[cfg(feature = "use_resource_tracking")]
+        self.download_tracking.end(file_hash).await;
+
         Ok(())
     }
 
-    async fn download_file_with_buffer(&self, url: &str, dest: &Path) -> Result<Vec<u8>, String> {
+    async fn download_file_with_buffer(
+        &self,
+        url: &str,
+        dest: &Path,
+        #[cfg(feature = "use_resource_tracking")] file_hash: &str,
+    ) -> Result<Vec<u8>, String> {
         let tmp_dest = dest.with_extension("tmp");
         let response = self
             .client
@@ -165,6 +204,12 @@ impl ResourceProvider {
             .send()
             .await
             .map_err(|e| format!("Request error: {:?}", e))?;
+
+        #[cfg(feature = "use_resource_tracking")]
+        self.download_tracking.start(file_hash.to_string()).await;
+        #[cfg(feature = "use_resource_tracking")]
+        let mut current_size = 0;
+
         let mut file = fs::File::create(&tmp_dest)
             .await
             .map_err(|e| format!("File creation error: {:?}", e))?;
@@ -177,11 +222,22 @@ impl ResourceProvider {
                 .await
                 .map_err(|e| format!("File write error: {:?}", e))?;
             buffer.extend_from_slice(&chunk);
+
+            #[cfg(feature = "use_resource_tracking")]
+            {
+                current_size += chunk.len() as u64;
+                self.download_tracking
+                    .report_progress(file_hash, current_size)
+                    .await;
+            }
         }
 
         fs::rename(&tmp_dest, dest)
             .await
             .map_err(|e| format!("Failed to rename file: {:?}", e))?;
+
+        #[cfg(feature = "use_resource_tracking")]
+        self.download_tracking.end(file_hash).await;
 
         Ok(buffer)
     }
@@ -213,7 +269,7 @@ impl ResourceProvider {
         absolute_file_path: &String,
     ) -> Result<(), String> {
         let notify = {
-            let mut pending_downloads = self.pending_downloads.lock().unwrap();
+            let mut pending_downloads = self.pending_downloads.write().await;
             if let Some(notify) = pending_downloads.get(file_hash) {
                 Some(notify.clone())
             } else {
@@ -280,8 +336,13 @@ impl ResourceProvider {
         let permit = self.semaphore.acquire().await.unwrap();
 
         if tokio::fs::metadata(&absolute_file_path).await.is_err() {
-            self.download_file(url, Path::new(absolute_file_path))
-                .await?;
+            self.download_file(
+                url,
+                Path::new(absolute_file_path),
+                #[cfg(feature = "use_resource_tracking")]
+                file_hash,
+            )
+            .await?;
 
             let metadata = tokio::fs::metadata(absolute_file_path)
                 .await
@@ -296,7 +357,7 @@ impl ResourceProvider {
             self.handle_existing_file(absolute_file_path).await?;
         }
 
-        let mut pending_downloads = self.pending_downloads.lock().unwrap();
+        let mut pending_downloads = self.pending_downloads.write().await;
         if let Some(notify) = pending_downloads.remove(file_hash) {
             notify.notify_waiters();
         }
@@ -321,7 +382,12 @@ impl ResourceProvider {
         let permit = self.semaphore.acquire().await.unwrap();
         let data = if tokio::fs::metadata(&absolute_file_path).await.is_err() {
             let data = self
-                .download_file_with_buffer(url, Path::new(absolute_file_path))
+                .download_file_with_buffer(
+                    url,
+                    Path::new(absolute_file_path),
+                    #[cfg(feature = "use_resource_tracking")]
+                    file_hash,
+                )
                 .await?;
             let metadata = tokio::fs::metadata(absolute_file_path)
                 .await
@@ -336,7 +402,7 @@ impl ResourceProvider {
             self.handle_existing_file(absolute_file_path).await?
         };
 
-        let mut pending_downloads = self.pending_downloads.lock().unwrap();
+        let mut pending_downloads = self.pending_downloads.write().await;
         if let Some(notify) = pending_downloads.remove(file_hash) {
             notify.notify_waiters();
         }
@@ -398,7 +464,16 @@ mod tests {
             .await
             .expect("Failed to create cache folder");
 
-        let provider = Arc::new(ResourceProvider::new(path, max_cache_size, 2));
+        #[cfg(feature = "use_resource_tracking")]
+        let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
+
+        let provider = Arc::new(ResourceProvider::new(
+            path,
+            max_cache_size,
+            2,
+            #[cfg(feature = "use_resource_tracking")]
+            resource_download_tracking.clone(),
+        ));
         provider.clear().await;
 
         let files_to_download = vec![
