@@ -631,6 +631,8 @@ impl ContentProvider {
 
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
+
+        #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]

@@ -50,13 +50,13 @@ pub fn run(
     if release_mode {
         build_args.push("--release");
     }
-    
+
     #[cfg(target_os = "macos")]
     {
         build_args.extend(&["--no-default-features", "-F", "use_deno"]);
     }
     build_args.extend(extra_build_args);
-    
+
     let build_cwd =
         adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER).unwrap());
 

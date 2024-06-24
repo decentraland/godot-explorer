@@ -1,4 +1,4 @@
-use godot::{builtin::Vector2, prelude::*};
+use godot::prelude::*;
 
 use crate::{
     dcl::common::{GreyPixelDiffResult, TakeAndCompareSnapshotResponse},

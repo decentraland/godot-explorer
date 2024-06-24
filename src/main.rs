@@ -106,10 +106,7 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("enables resource tracking feature")
                         .takes_value(false),
                 )
-                .arg(
-                    Arg::new("build-args")
-                        .help("extra build args for rust")
-                )
+                .arg(Arg::new("build-args").help("extra build args for rust"))
                 .arg(
                     Arg::new("extras")
                         .last(true)
@@ -137,7 +134,7 @@ fn main() -> Result<(), anyhow::Error> {
                 .values_of("build-args")
                 .map(|v| v.map(|it| it.into()).collect())
                 .unwrap_or_default();
-        
+
             if sm.is_present("resource-tracking") {
                 build_args.extend(&["-F", "use_resource_tracking"]);
             }
