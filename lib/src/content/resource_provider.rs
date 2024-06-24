@@ -2,7 +2,7 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::fs;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
@@ -22,6 +22,7 @@ pub struct ResourceProvider {
     cache_folder: PathBuf,
     existing_files: RwLock<HashMap<String, FileMetadata>>,
     max_cache_size: AtomicI64,
+    downloaded_size: AtomicU64,
     pending_downloads: RwLock<HashMap<String, Arc<Notify>>>,
     client: Client,
     initialized: OnceCell<()>,
@@ -46,6 +47,7 @@ impl ResourceProvider {
             client: Client::new(),
             initialized: OnceCell::new(),
             semaphore: Arc::new(Semaphore::new(max_concurrent_downloads)),
+            downloaded_size: AtomicU64::new(0),
             #[cfg(feature = "use_resource_tracking")]
             download_tracking,
         }
@@ -172,6 +174,7 @@ impl ResourceProvider {
                 .await
                 .map_err(|e| format!("File write error: {:?}", e))?;
 
+            self.downloaded_size.fetch_add(chunk.len() as u64, Ordering::Relaxed);
             #[cfg(feature = "use_resource_tracking")]
             {
                 current_size += chunk.len() as u64;
@@ -223,6 +226,7 @@ impl ResourceProvider {
                 .map_err(|e| format!("File write error: {:?}", e))?;
             buffer.extend_from_slice(&chunk);
 
+            self.downloaded_size.fetch_add(chunk.len() as u64, Ordering::Relaxed);
             #[cfg(feature = "use_resource_tracking")]
             {
                 current_size += chunk.len() as u64;
@@ -424,6 +428,10 @@ impl ResourceProvider {
         for file_path in file_paths {
             self.remove_file(&mut existing_files, &file_path).await;
         }
+    }
+
+    pub fn consume_download_size(&self) -> u64 {
+        self.downloaded_size.swap(0, Ordering::AcqRel)
     }
 
     // Method to change the number of concurrent downloads

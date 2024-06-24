@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc,
+    sync::{atomic::{AtomicU64, Ordering}, Arc},
     time::{Duration, Instant},
 };
 
@@ -64,7 +64,10 @@ pub struct ContentProvider {
     cached: HashMap<String, ContentEntry>,
     godot_single_thread: Arc<Semaphore>,
     texture_quality: TextureQuality, // copy from DclGlobal on startup
-    clean_tick: f64,
+    every_second_tick: f64,
+    download_speed_mbs: f64,
+    loading_resources: Arc<AtomicU64>,
+    loaded_resources: Arc<AtomicU64>,
     #[cfg(feature = "use_resource_tracking")]
     tracking_tick: f64,
 }
@@ -106,7 +109,10 @@ impl INode for ContentProvider {
             cached: HashMap::new(),
             godot_single_thread: Arc::new(Semaphore::new(1)),
             texture_quality: DclConfig::static_get_texture_quality(),
-            clean_tick: 0.0,
+            every_second_tick: 0.0,
+            loading_resources: Arc::new(AtomicU64::new(0)),
+            loaded_resources: Arc::new(AtomicU64::new(0)),
+            download_speed_mbs: 0.0,
             #[cfg(feature = "use_resource_tracking")]
             tracking_tick: 0.0,
         }
@@ -142,9 +148,12 @@ impl INode for ContentProvider {
             }
         }
 
-        self.clean_tick += dt;
-        if self.clean_tick >= 1.0 {
-            self.clean_tick = 0.0;
+        self.every_second_tick += dt;
+        if self.every_second_tick >= 1.0 {
+            self.every_second_tick = 0.0;
+
+            let downloaded_size = self.resource_provider.consume_download_size();
+            self.download_speed_mbs = (downloaded_size as f64) / 1024.0 / 1024.0;
 
             // Clean cache
             self.cached.retain(|_, entry| {
@@ -205,11 +214,15 @@ impl ContentProvider {
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
 
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
+            
+            loading_resources.fetch_add(1, Ordering::Relaxed);
 
             let result =
                 load_gltf_wearable(gltf_file_path, content_mapping, content_provider_context).await;
@@ -222,6 +235,8 @@ impl ContentProvider {
             }
 
             then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
         self.cached.insert(
@@ -255,11 +270,16 @@ impl ContentProvider {
         let (promise, get_promise) = Promise::make_to_async();
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
 
             let result =
                 load_gltf_scene_content(gltf_file_path, content_mapping, content_provider_context)
@@ -273,6 +293,8 @@ impl ContentProvider {
             }
 
             then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
         self.cached.insert(
@@ -307,11 +329,15 @@ impl ContentProvider {
         let gltf_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
 
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
 
             let result =
                 load_gltf_emote(gltf_file_path, content_mapping, content_provider_context).await;
@@ -324,6 +350,8 @@ impl ContentProvider {
             }
 
             then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
         self.cached.insert(
@@ -385,10 +413,15 @@ impl ContentProvider {
         let (promise, get_promise) = Promise::make_to_async();
         let ctx = self.get_context();
 
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+            
             let absolute_file_path = format!("{}{}", ctx.content_folder, hash_id);
 
             if ctx
@@ -409,6 +442,7 @@ impl ContentProvider {
 
                 then_promise(get_promise, Err(error));
             }
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
         promise
@@ -423,12 +457,9 @@ impl ContentProvider {
 
         let bytes = bytes.to_vec();
 
-        #[cfg(feature = "use_resource_tracking")]
-        let hash_id = file_hash.clone();
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
         TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
-
             if ctx
                 .resource_provider
                 .store_file(file_hash.as_str(), bytes.as_slice())
@@ -437,7 +468,7 @@ impl ContentProvider {
             {
                 then_promise(get_promise, Ok(None));
             } else {
-                then_promise(get_promise, Err(anyhow::anyhow!("Failed to download file")));
+                then_promise(get_promise, Err(anyhow::anyhow!("Failed to store file")));
             }
         });
 
@@ -465,11 +496,16 @@ impl ContentProvider {
         let audio_file_path = file_path.to_string();
         let content_provider_context = self.get_context();
 
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
             let result =
                 load_audio(audio_file_path, content_mapping, content_provider_context).await;
 
@@ -480,6 +516,8 @@ impl ContentProvider {
                 report_resource_loaded(&hash_id);
             }
             then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
         self.cached.insert(
@@ -543,10 +581,16 @@ impl ContentProvider {
         );
         let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
+            
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
             let result = load_image_texture(url, hash_id.clone(), content_provider_context).await;
 
             #[cfg(feature = "use_resource_tracking")]
@@ -557,6 +601,8 @@ impl ContentProvider {
             }
 
             then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
         self.cached.insert(
@@ -581,10 +627,16 @@ impl ContentProvider {
         let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
         let sent_file_hash = file_hash.clone();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
             let result = load_image_texture(url, sent_file_hash, content_provider_context).await;
 
             #[cfg(feature = "use_resource_tracking")]
@@ -595,6 +647,8 @@ impl ContentProvider {
             }
 
             then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
         self.cached.insert(
@@ -668,11 +722,17 @@ impl ContentProvider {
         let file_hash = file_hash.to_string();
         let video_file_hash = file_hash.clone();
         let content_provider_context = self.get_context();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
             let result =
                 download_video(video_file_hash, content_mapping, content_provider_context).await;
 
@@ -684,6 +744,8 @@ impl ContentProvider {
             }
 
             then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
         self.cached.insert(
@@ -871,6 +933,21 @@ impl ContentProvider {
     #[func]
     pub fn get_cache_folder_total_size(&mut self) -> i64 {
         self.resource_provider.get_cache_total_size()
+    }
+
+    #[func]
+    pub fn get_download_speed_mbs(&self) -> u64 {
+        self.download_speed_mbs
+    }
+
+    #[func]
+    pub fn count_downloaded_files(&self) -> u64 {
+        self.loaded_resources.load(Ordering::Relaxed)
+    }
+
+    #[func]
+    pub fn count_downloading_files(&self) -> u64 {
+        self.loading_resources.load(Ordering::Relaxed)
     }
 
     #[func]
