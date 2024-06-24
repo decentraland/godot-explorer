@@ -193,7 +193,7 @@ impl ResourceProvider {
             }
         }
 
-        if accumulated_size > UPDATE_THRESHOLD {
+        if accumulated_size > 0 {
             self.downloaded_size
                 .fetch_add(accumulated_size, Ordering::Relaxed);
             #[cfg(feature = "use_resource_tracking")]
@@ -264,7 +264,7 @@ impl ResourceProvider {
             }
         }
 
-        if accumulated_size > UPDATE_THRESHOLD {
+        if accumulated_size > 0 {
             self.downloaded_size
                 .fetch_add(accumulated_size, Ordering::Relaxed);
             #[cfg(feature = "use_resource_tracking")]
