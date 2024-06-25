@@ -44,6 +44,10 @@ func async_load_gltf():
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
 		return
+	
+	var resource_locker = res.get_node("ResourceLocker")
+	if is_instance_valid(resource_locker):
+		self.add_child(resource_locker.duplicate())
 
 	var instance_promise: Promise = Global.content_provider.instance_gltf_colliders(
 		res, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id

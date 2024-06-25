@@ -47,7 +47,7 @@ func report_resource(
 	if resource_statuses.has(hash_id):
 		# Update existing resource
 		var resource = resource_statuses[hash_id]
-		if resource["state"] < state:  # only update the state when is greater
+		if resource["state"] < state or state == ResourceTrackerDebugger.ResourceTrackerState.DELETED:  # only update the state when is greater
 			resource["state"] = state
 
 		if not progress.is_empty():
@@ -130,3 +130,13 @@ func _on_option_box_filter_item_selected(_index):
 		resource_statuses[hash_id]["item"] = null
 
 	_update_ui()
+
+
+func _on_tree_item_mouse_selected(_position, mouse_button_index):
+	if mouse_button_index != MOUSE_BUTTON_RIGHT:
+		return
+
+	var selected: TreeItem = tree.get_selected()
+	if selected:
+		var text = selected.get_text(0)
+		DisplayServer.clipboard_set(text)

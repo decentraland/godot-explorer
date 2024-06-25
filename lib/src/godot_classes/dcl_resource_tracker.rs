@@ -8,6 +8,7 @@ pub enum ResourceTrackerState {
     Loading = 3,
     Failed = 4,
     Finished = 5,
+    Deleted = 6,
 }
 
 fn send_resource_tracker_message(
@@ -70,4 +71,8 @@ pub fn report_resource_loading(hash_id: &String, progress: &String, detail: &Str
 
 pub fn report_resource_loaded(hash_id: &String) {
     send_resource_tracker_message(ResourceTrackerState::Finished, hash_id, "Done", "", "");
+}
+
+pub fn report_resource_deleted(hash_id: &String) {
+    send_resource_tracker_message(ResourceTrackerState::Deleted, hash_id, "", "", "");
 }
