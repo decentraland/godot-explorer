@@ -1,8 +1,5 @@
 use crate::dcl::scene_apis::RpcCall;
-use deno_core::{
-    anyhow::{self, anyhow},
-    op, Op, OpDecl, OpState,
-};
+use deno_core::{anyhow::anyhow, op, Op, OpDecl, OpState};
 use serde::Serialize;
 use std::{cell::RefCell, rc::Rc};
 

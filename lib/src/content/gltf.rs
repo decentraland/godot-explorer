@@ -18,6 +18,9 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
 use crate::{content::texture::resize_image, godot_classes::resource_locker::ResourceLocker};
 
+#[cfg(feature = "use_resource_tracking")]
+use crate::godot_classes::dcl_resource_tracker::report_resource_loading;
+
 use super::{
     content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
     file_string::get_base_dir, thread_safety::GodotSingleThreadSafety,
@@ -40,6 +43,9 @@ pub async fn internal_load_gltf(
         .fetch_resource(&url, file_hash, &absolute_file_path)
         .await
         .map_err(anyhow::Error::msg)?;
+
+    #[cfg(feature = "use_resource_tracking")]
+    report_resource_loading(file_hash, &"0%".to_string(), &"gltf started".to_string());
 
     let dependencies = get_dependencies(&absolute_file_path)
         .await?

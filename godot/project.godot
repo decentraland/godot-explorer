@@ -40,6 +40,10 @@ window/size/viewport_height=720
 
 run/main_run_args="--clear-cache-startup"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/resource_tracker/plugin.cfg")
+
 [filesystem]
 
 import/blender/enabled=false

@@ -18,6 +18,7 @@ pub fn run(
     only_build: bool,
     link_libs: bool,
     scene_tests: bool,
+    extra_build_args: Vec<&str>,
     extras: Vec<String>,
     with_build_envs: Option<HashMap<String, String>>,
 ) -> Result<(), anyhow::Error> {
@@ -45,17 +46,17 @@ pub fn run(
     }
 
     #[allow(unused_mut)]
-    let mut build_args = if release_mode {
-        vec!["build", "--release"]
-    } else {
-        vec!["build"]
-    };
+    let mut build_args = vec!["build"];
+    if release_mode {
+        build_args.push("--release");
+    }
 
     #[cfg(target_os = "macos")]
     {
         build_args.extend(&["--no-default-features", "-F", "use_deno"]);
     }
-    
+    build_args.extend(extra_build_args);
+
     let build_cwd =
         adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER).unwrap());
 
