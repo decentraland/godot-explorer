@@ -47,7 +47,10 @@ func report_resource(
 	if resource_statuses.has(hash_id):
 		# Update existing resource
 		var resource = resource_statuses[hash_id]
-		if resource["state"] < state or state == ResourceTrackerDebugger.ResourceTrackerState.DELETED:  # only update the state when is greater
+		if (
+			resource["state"] < state
+			or state == ResourceTrackerDebugger.ResourceTrackerState.DELETED
+		):  # only update the state when is greater
 			resource["state"] = state
 
 		if not progress.is_empty():

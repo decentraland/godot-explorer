@@ -29,8 +29,9 @@ use crate::{
 
 #[cfg(feature = "use_resource_tracking")]
 use crate::godot_classes::dcl_resource_tracker::{
-    report_download_speed, report_resource_download_done, report_resource_downloading,
-    report_resource_error, report_resource_loaded, report_resource_start, report_resource_deleted
+    report_download_speed, report_resource_deleted, report_resource_download_done,
+    report_resource_downloading, report_resource_error, report_resource_loaded,
+    report_resource_start,
 };
 
 use super::{
