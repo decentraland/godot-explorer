@@ -7,6 +7,7 @@ enum ResourceTrackerState {
 	LOADING = 3,
 	FAILED = 4,
 	FINISHED = 5,
+	DELETED = 6,
 }
 
 
@@ -33,5 +34,7 @@ static func get_resource_state_string(state: ResourceTrackerState) -> String:
 			return "Failed"
 		ResourceTrackerState.FINISHED:
 			return "Finished"
+		ResourceTrackerState.DELETED:
+			return "Deleted"
 		_:
 			return "Unknown State"

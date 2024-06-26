@@ -29,8 +29,9 @@ use crate::{
 
 #[cfg(feature = "use_resource_tracking")]
 use crate::godot_classes::dcl_resource_tracker::{
-    report_download_speed, report_resource_download_done, report_resource_downloading,
-    report_resource_error, report_resource_loaded, report_resource_start,
+    report_download_speed, report_resource_deleted, report_resource_download_done,
+    report_resource_downloading, report_resource_error, report_resource_loaded,
+    report_resource_start,
 };
 
 use super::{
@@ -159,7 +160,7 @@ impl INode for ContentProvider {
             self.download_speed_mbs = (downloaded_size as f64) / 1024.0 / 1024.0;
 
             // Clean cache
-            self.cached.retain(|_, entry| {
+            self.cached.retain(|_hash_id, entry| {
                 // don't add a timeout for promise to be resolved,
                 // that timeout should be done on the fetch process
                 // resolved doesn't mean that is resolved correctly
@@ -176,6 +177,8 @@ impl INode for ContentProvider {
                             {
                                 let reference_count = resource_locker.bind().get_reference_count();
                                 if reference_count == 1 {
+                                    #[cfg(feature = "use_resource_tracking")]
+                                    report_resource_deleted(&_hash_id);
                                     node_3d.queue_free();
                                     return false;
                                 }
