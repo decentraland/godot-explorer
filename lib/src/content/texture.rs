@@ -1,4 +1,4 @@
-use crate::utils::infer_mime;
+use crate::{content::texture_compression::ResourceImporterTexture, utils::infer_mime};
 
 use super::{
     content_provider::ContentProviderContext, packed_array::PackedByteArrayFromVec,
@@ -7,7 +7,7 @@ use super::{
 use godot::{
     bind::GodotClass,
     builtin::{meta::ToGodot, GString, PackedByteArray, Variant, Vector2i},
-    engine::{global::Error, image::{CompressMode, CompressSource}, DirAccess, Image, ImageTexture, Texture2D},
+    engine::{global::Error, image::CompressMode, CompressedTexture2D, DirAccess, Image, ImageTexture, Texture2D},
     obj::Gd,
 };
 
@@ -40,56 +40,82 @@ pub async fn load_image_texture(
 
     let bytes = PackedByteArray::from_vec(&bytes_vec);
 
-    let mut image = Image::new();
-    let err = if infer_mime::is_png(&bytes_vec) {
-        image.load_png_from_buffer(bytes)
-    } else if infer_mime::is_jpeg(&bytes_vec) || infer_mime::is_jpeg2000(&bytes_vec) {
-        image.load_jpg_from_buffer(bytes)
-    } else if infer_mime::is_webp(&bytes_vec) {
-        image.load_webp_from_buffer(bytes)
-    } else if infer_mime::is_tga(&bytes_vec) {
-        image.load_tga_from_buffer(bytes)
-    } else if infer_mime::is_ktx(&bytes_vec) {
-        image.load_ktx_from_buffer(bytes)
-    } else if infer_mime::is_bmp(&bytes_vec) {
-        image.load_bmp_from_buffer(bytes)
-    } else if infer_mime::is_svg(&bytes_vec) {
-        image.load_svg_from_buffer(bytes)
+    let mut texture_entry: TextureEntry = if ResourceImporterTexture::is_ctex(&bytes_vec) {
+        let mut texture = CompressedTexture2D::new();
+        texture.load(absolute_file_path.into_godot());
+
+        let image = texture.get_image().unwrap_or_default();
+        TextureEntry {
+            texture: texture.upcast(), 
+            original_size: image.get_size(),
+            image,
+        }
     } else {
-        // if we don't know the format... we try to load as png
-        image.load_png_from_buffer(bytes)
+        let mut image = Image::new();
+        let err = if infer_mime::is_png(&bytes_vec) {
+            image.load_png_from_buffer(bytes)
+        } else if infer_mime::is_jpeg(&bytes_vec) || infer_mime::is_jpeg2000(&bytes_vec) {
+            image.load_jpg_from_buffer(bytes)
+        } else if infer_mime::is_webp(&bytes_vec) {
+            image.load_webp_from_buffer(bytes)
+        } else if infer_mime::is_tga(&bytes_vec) {
+            image.load_tga_from_buffer(bytes)
+        } else if infer_mime::is_ktx(&bytes_vec) {
+            image.load_ktx_from_buffer(bytes)
+        } else if infer_mime::is_bmp(&bytes_vec) {
+            image.load_bmp_from_buffer(bytes)
+        } else if infer_mime::is_svg(&bytes_vec) {
+            image.load_svg_from_buffer(bytes)
+        } else {
+            // if we don't know the format... we try to load as png
+            image.load_png_from_buffer(bytes)
+        };
+
+        if err != Error::OK {
+            DirAccess::remove_absolute(GString::from(&absolute_file_path));
+            let err = err.to_variant().to::<i32>();
+            return Err(anyhow::Error::msg(format!(
+                "Error loading texture {absolute_file_path}: {}",
+                err
+            )));
+        }
+
+        let original_size = image.get_size();
+
+        let texture = if std::env::consts::OS == "non-at-os" {
+            if !image.is_compressed() {
+                image.compress(CompressMode::COMPRESS_ETC2);
+                let _ = ResourceImporterTexture::save_ctex(image.clone(), absolute_file_path.clone(), false);
+            }
+            let mut texture = CompressedTexture2D::new();
+
+            texture.load(absolute_file_path.into_godot());
+
+            texture.upcast()
+        } else {
+            let texture = ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
+                format!("Error creating texture from image {}", absolute_file_path),
+            ))?;
+            texture.upcast()
+        };
+
+        TextureEntry {
+            image,
+            texture,
+            original_size
+        }
     };
 
-    if err != Error::OK {
-        DirAccess::remove_absolute(GString::from(&absolute_file_path));
-        let err = err.to_variant().to::<i32>();
-        return Err(anyhow::Error::msg(format!(
-            "Error loading texture {absolute_file_path}: {}",
-            err
-        )));
-    }
-
-    let original_size = image.get_size();
-
-    let mut texture = ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
-        format!("Error creating texture from image {}", absolute_file_path),
-    ))?;
-
     let max_size = ctx.texture_quality.to_max_size();
-    resize_image(&mut image, max_size);
-    texture.set_name(GString::from(&url));
+    resize_image(&mut texture_entry.image, max_size);
+    texture_entry.texture.set_name(GString::from(&url));
 
-    let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
-        image,
-        texture: texture.upcast(),
-        original_size
-    });
+    let texture_entry = Gd::from_init_fn(|_base| texture_entry);
 
     Ok(Some(texture_entry.to_variant()))
 }
 
 pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
-    let max_size = 32;
     let image_width = image.get_width();
     let image_height = image.get_height();
     let resized = if image_width > image_height {
@@ -120,10 +146,9 @@ pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
         false
     };
 
-    /*if !image.is_compressed() {
-        println!("COMPRESS!!");
+    if !image.is_compressed() {
         image.compress(CompressMode::COMPRESS_ETC2);
-    }*/
+    }
 
     return resized;
 }
