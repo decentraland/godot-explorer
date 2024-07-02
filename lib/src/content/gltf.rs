@@ -22,8 +22,7 @@ use crate::{content::texture::resize_image, godot_classes::resource_locker::Reso
 use crate::godot_classes::dcl_resource_tracker::report_resource_loading;
 
 use super::{
-    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
-    file_string::get_base_dir, thread_safety::GodotSingleThreadSafety,
+    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext, file_string::get_base_dir, texture::create_compressed_texture, thread_safety::GodotSingleThreadSafety
 };
 
 pub async fn internal_load_gltf(
@@ -149,7 +148,7 @@ pub async fn internal_load_gltf(
     ResourceLocker::attach_to(node.clone());
 
     let max_size = ctx.texture_quality.to_max_size();
-    post_import_process(node.clone(), max_size);
+    post_import_process(node.clone(), max_size, &ctx.content_folder.to_string());
 
     let mut node = node.try_cast::<Node3D>().map_err(|err| {
         anyhow::Error::msg(format!("Error loading gltf when casting to Node3D: {err}"))
@@ -160,7 +159,7 @@ pub async fn internal_load_gltf(
     Ok((node, thread_safe_check))
 }
 
-pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
+pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, content_folder: &String) {
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
             if let Some(mesh) = mesh_instance_3d.get_mesh() {
@@ -175,8 +174,13 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                                         texture.try_cast::<ImageTexture>()
                                     {
                                         if let Some(mut image) = texture_image.get_image() {
-                                            if resize_image(&mut image, max_size) {
-                                                texture_image.set_image(image);
+                                            if std::env::consts::OS == "ios" {
+                                                let texture = create_compressed_texture(&mut image, &content_folder, max_size);
+                                                base_material.set_texture(texture_param, texture);
+                                            } else {
+                                                if resize_image(&mut image, max_size) {
+                                                    texture_image.set_image(image);
+                                                }
                                             }
                                         }
                                     }
@@ -192,7 +196,7 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
             }
         }
 
-        post_import_process(child, max_size);
+        post_import_process(child, max_size, content_folder);
     }
 }
 
