@@ -1,4 +1,4 @@
-use crate::{content::texture_compression::ResourceImporterTexture, utils::infer_mime};
+use crate::utils::infer_mime;
 
 use super::{
     content_provider::ContentProviderContext, packed_array::PackedByteArrayFromVec,
@@ -7,7 +7,10 @@ use super::{
 use godot::{
     bind::GodotClass,
     builtin::{meta::ToGodot, GString, PackedByteArray, Variant, Vector2i},
-    engine::{global::Error, image::CompressMode, portable_compressed_texture_2d::CompressionMode, CompressedTexture2D, DirAccess, Image, ImageTexture, PortableCompressedTexture2D, Texture2D},
+    engine::{
+        global::Error, image::CompressMode, portable_compressed_texture_2d::CompressionMode,
+        DirAccess, Image, ImageTexture, PortableCompressedTexture2D, Texture2D,
+    },
     obj::Gd,
 };
 
@@ -73,7 +76,7 @@ pub async fn load_image_texture(
 
     let max_size = ctx.texture_quality.to_max_size();
     let mut texture: Gd<Texture2D> = if std::env::consts::OS == "ios" {
-        create_compressed_texture(&mut image, &ctx.content_folder.to_string(), max_size)
+        create_compressed_texture(&mut image, max_size)
     } else {
         resize_image(&mut image, max_size);
         let texture = ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
@@ -87,56 +90,28 @@ pub async fn load_image_texture(
     let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
         image,
         texture,
-        original_size
+        original_size,
     });
 
     Ok(Some(texture_entry.to_variant()))
 }
 
-pub fn create_compressed_texture(image: &mut Gd<Image>, content_folder: &String, max_size: i32) -> Gd<Texture2D> {
-    if std::env::consts::OS == "ios" && max_size != 256 {
-        resize_image(image, max_size);
+pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
+    resize_image(image, max_size);
 
-        if !image.is_compressed() {
-            image.compress(CompressMode::COMPRESS_ETC2);
-        }
-
-        let mut texture = PortableCompressedTexture2D::new();
-        texture.create_from_image(image.clone(), CompressionMode::COMPRESSION_MODE_ETC2);
-        texture.upcast()
-
-        /*
-        let hash = ethers_core::utils::keccak256(&image.get_data().as_slice());
-        
-        let hash_str = ethers_core::utils::hex::encode(hash);
-        
-        let absolute_file_path = format!("{}{}.ctex", content_folder, hash_str);
-        
-        // Check if the file already exists
-        if std::path::Path::new(&absolute_file_path).exists() {
-            // Load the existing compressed texture
-            let mut texture = CompressedTexture2D::new();
-            texture.load(absolute_file_path.into_godot());
-            return texture.upcast();
-        }
-
-        let _ = ResourceImporterTexture::save_ctex(image.clone(), absolute_file_path.clone(), false);
-        
-        let mut texture = CompressedTexture2D::new();
-        texture.load(absolute_file_path.into_godot());
-        texture.upcast()
-        */
-    } else {
-        resize_image(image, max_size);
-        let texture = ImageTexture::create_from_image(image.clone()).expect("Error creating texture from image");
-        texture.upcast()
+    if !image.is_compressed() {
+        image.compress(CompressMode::COMPRESS_ETC2);
     }
+
+    let mut texture = PortableCompressedTexture2D::new();
+    texture.create_from_image(image.clone(), CompressionMode::COMPRESSION_MODE_ETC2);
+    texture.upcast()
 }
 
 pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
     let image_width = image.get_width();
     let image_height = image.get_height();
-    let resized = if image_width > image_height {
+    if image_width > image_height {
         if image_width > max_size {
             image.resize(max_size, (image_height * max_size) / image_width);
             tracing::debug!(
@@ -146,9 +121,7 @@ pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
                 image.get_width(),
                 image.get_height()
             );
-            true
-        } else {
-            false
+            return true;
         }
     } else if image_height > max_size {
         image.resize((image_width * max_size) / image_height, max_size);
@@ -159,10 +132,8 @@ pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
             image.get_width(),
             image.get_height()
         );
-        true
-    } else {
-        false
-    };
+        return true;
+    }
 
-    return resized;
+    false
 }

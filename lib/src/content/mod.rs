@@ -14,4 +14,3 @@ mod texture;
 mod thread_safety;
 mod video;
 mod wearable_entities;
-mod texture_compression;
