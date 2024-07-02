@@ -8,7 +8,7 @@ use std::{
 };
 
 use godot::{
-    engine::{AudioStream, ImageTexture, Material, Mesh},
+    engine::{AudioStream, Material, Mesh, Texture2D},
     prelude::*,
 };
 use tokio::sync::Semaphore;
@@ -669,7 +669,7 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_texture_from_hash(&mut self, file_hash: GString) -> Option<Gd<ImageTexture>> {
+    pub fn get_texture_from_hash(&mut self, file_hash: GString) -> Option<Gd<Texture2D>> {
         let entry = self.cached.get_mut(&file_hash.to_string())?;
         entry.last_access = Instant::now();
         let promise_data = entry.promise.bind().get_data();
