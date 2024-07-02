@@ -11,6 +11,7 @@ use crate::{
         components::{
             proto_components::sdk::components::{
                 PbPointerEventsResult, PbUiCanvasInformation, PbUiDropdownResult, PbUiInputResult,
+                TextWrap,
             },
             SceneComponentId, SceneEntityId,
         },
@@ -188,7 +189,7 @@ fn update_layout(
             .get(entity)
             .and_then(|v| v.value.as_ref())
         {
-            if ui_text.text_wrapping() {
+            if ui_text.text_wrap() == TextWrap::TwWrap {
                 if let Some(mut ui_text_control) = ui_node
                     .base_control
                     .try_get_node_as::<godot::engine::Control>("text")

@@ -23,7 +23,8 @@ use crate::godot_classes::dcl_resource_tracker::report_resource_loading;
 
 use super::{
     content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
-    file_string::get_base_dir, thread_safety::GodotSingleThreadSafety,
+    file_string::get_base_dir, texture::create_compressed_texture,
+    thread_safety::GodotSingleThreadSafety,
 };
 
 pub async fn internal_load_gltf(
@@ -175,7 +176,11 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                                         texture.try_cast::<ImageTexture>()
                                     {
                                         if let Some(mut image) = texture_image.get_image() {
-                                            if resize_image(&mut image, max_size) {
+                                            if std::env::consts::OS == "ios" {
+                                                let texture =
+                                                    create_compressed_texture(&mut image, max_size);
+                                                base_material.set_texture(texture_param, texture);
+                                            } else if resize_image(&mut image, max_size) {
                                                 texture_image.set_image(image);
                                             }
                                         }

@@ -7,7 +7,10 @@ use super::{
 use godot::{
     bind::GodotClass,
     builtin::{meta::ToGodot, GString, PackedByteArray, Variant, Vector2i},
-    engine::{global::Error, DirAccess, Image, ImageTexture},
+    engine::{
+        global::Error, image::CompressMode, portable_compressed_texture_2d::CompressionMode,
+        DirAccess, Image, ImageTexture, PortableCompressedTexture2D, Texture2D,
+    },
     obj::Gd,
 };
 
@@ -17,7 +20,7 @@ pub struct TextureEntry {
     #[var]
     pub image: Gd<Image>,
     #[var]
-    pub texture: Gd<ImageTexture>,
+    pub texture: Gd<Texture2D>,
     #[var]
     pub original_size: Vector2i,
 }
@@ -72,21 +75,37 @@ pub async fn load_image_texture(
     let original_size = image.get_size();
 
     let max_size = ctx.texture_quality.to_max_size();
-    resize_image(&mut image, max_size);
-
-    let mut texture = ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
-        format!("Error creating texture from image {}", absolute_file_path),
-    ))?;
+    let mut texture: Gd<Texture2D> = if std::env::consts::OS == "ios" {
+        create_compressed_texture(&mut image, max_size)
+    } else {
+        resize_image(&mut image, max_size);
+        let texture = ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
+            format!("Error creating texture from image {}", absolute_file_path),
+        ))?;
+        texture.upcast()
+    };
 
     texture.set_name(GString::from(&url));
 
     let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
-        texture,
         image,
+        texture,
         original_size,
     });
 
     Ok(Some(texture_entry.to_variant()))
+}
+
+pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
+    resize_image(image, max_size);
+
+    if !image.is_compressed() {
+        image.compress(CompressMode::COMPRESS_ETC2);
+    }
+
+    let mut texture = PortableCompressedTexture2D::new();
+    texture.create_from_image(image.clone(), CompressionMode::COMPRESSION_MODE_ETC2);
+    texture.upcast()
 }
 
 pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
@@ -115,5 +134,6 @@ pub fn resize_image(image: &mut Gd<Image>, max_size: i32) -> bool {
         );
         return true;
     }
+
     false
 }
