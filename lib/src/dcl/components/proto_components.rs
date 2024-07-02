@@ -1,3 +1,5 @@
+use sdk::components::TextWrap;
+
 pub mod sdk {
     #[allow(clippy::all)]
     pub mod components {
@@ -185,6 +187,16 @@ impl sdk::components::common::TextAlignMode {
 impl sdk::components::PbAnimationState {
     pub fn playing_backward(&self) -> bool {
         self.speed() < 0.0
+    }
+}
+
+impl sdk::components::PbUiText {
+    pub fn text_wrap_compat(&self) -> TextWrap {
+        if self.text_wrap.is_none() {
+            return TextWrap::TwNoWrap;
+        }
+
+        self.text_wrap()
     }
 }
 

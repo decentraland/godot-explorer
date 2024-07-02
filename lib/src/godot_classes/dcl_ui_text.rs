@@ -134,7 +134,7 @@ impl DclUiText {
                 .add_theme_font_override("font".into(), self.current_font.get_font_resource());
         }
 
-        if new_value.text_wrap() == TextWrap::TwWrap {
+        if new_value.text_wrap_compat() == TextWrap::TwWrap {
             self.base
                 .set_autowrap_mode(godot::engine::text_server::AutowrapMode::AUTOWRAP_WORD_SMART);
         } else {

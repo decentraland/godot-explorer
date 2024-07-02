@@ -189,7 +189,7 @@ fn update_layout(
             .get(entity)
             .and_then(|v| v.value.as_ref())
         {
-            if ui_text.text_wrap() == TextWrap::TwWrap {
+            if ui_text.text_wrap_compat() == TextWrap::TwWrap {
                 if let Some(mut ui_text_control) = ui_node
                     .base_control
                     .try_get_node_as::<godot::engine::Control>("text")
