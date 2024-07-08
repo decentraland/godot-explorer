@@ -34,7 +34,9 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let entry = new_value.unwrap();
             let (godot_entity_node, _node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
-            let Some(gltf_container_node) = get_gltf_container(godot_entity_node) else {
+            let Some(gltf_container_node) =
+                get_gltf_container(godot_entity_node).and_then(|v| v.bind().get_gltf_resource())
+            else {
                 let value = entry.value.clone();
                 if let Some(value) = value {
                     scene.dup_animator.insert(*entity, value);
@@ -45,7 +47,7 @@ pub fn update_animator(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             };
 
             let value = entry.value.clone().unwrap_or_default();
-            apply_anims(gltf_container_node.upcast(), &value);
+            apply_anims(gltf_container_node, &value);
 
             if entry.value.is_none() {
                 scene.dup_animator.remove(entity);

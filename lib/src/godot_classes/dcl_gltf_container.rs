@@ -94,24 +94,42 @@ pub struct DclGltfContainer {
     base: Base<Node3D>,
 }
 
-fn get_animation_player(godot_entity_node: &Base<Node3D>) -> Option<Gd<AnimationPlayer>> {
-    godot_entity_node
-        .get_child(0)?
-        .try_get_node_as::<AnimationPlayer>("AnimationPlayer")
-}
-
 #[godot_api]
 impl DclGltfContainer {
+    // This function
+    #[func]
+    pub fn get_gltf_resource(&self) -> Option<Gd<Node3D>> {
+        let child_count = self.base.get_child_count();
+        if child_count == 0 {
+            return None;
+        }
+
+        for i in 0..child_count {
+            if let Some(child) = self.base.get_child(i) {
+                if let Ok(node) = child.try_cast::<Node3D>() {
+                    return Some(node);
+                }
+            }
+        }
+
+        None
+    }
+
     #[func]
     fn check_animations(&mut self) {
         if self.dcl_gltf_loading_state != GltfContainerLoadingState::Finished {
             return;
         }
-        let Some(animation_player) = get_animation_player(&self.base) else {
+
+        let Some(gltf_container_node) = self.get_gltf_resource() else {
             return;
         };
 
-        let gltf_container_node = self.base.clone().cast::<Node3D>();
+        let Some(animation_player) =
+            gltf_container_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")
+        else {
+            return;
+        };
 
         let entity_id = SceneEntityId::from_i32(self.dcl_entity_id);
 
