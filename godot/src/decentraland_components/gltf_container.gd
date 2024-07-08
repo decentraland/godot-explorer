@@ -147,8 +147,7 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 		):
 			dcl_visible_cmask = visible_meshes_collision_mask
 			dcl_invisible_cmask = invisible_meshes_collision_mask
-			# TODO: warn: check if get_child(0) is properly set
-			update_mask_colliders(get_child(0))
+			update_mask_colliders(gltf_node)
 
 
 func _on_timer_timeout():
