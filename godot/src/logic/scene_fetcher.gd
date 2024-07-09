@@ -367,6 +367,13 @@ func reload_scene(scene_id: String) -> void:
 		if scene_number_id != -1:
 			Global.scene_runner.kill_scene(scene_number_id)
 
+		var scene_entity_definition: DclSceneEntityDefinition = scene.scene_entity_definition
+		var local_main_js_path: String = (
+			"user://content/" + scene_entity_definition.get_main_js_hash()
+		)
+		if not local_main_js_path.is_empty() and FileAccess.file_exists(local_main_js_path):
+			DirAccess.remove_absolute(local_main_js_path)
+
 		loaded_scenes.erase(scene_id)
 		scene_entity_coordinator.reload_scene_data(scene_id)
 		_is_reloading = true
