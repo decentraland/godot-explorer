@@ -5,8 +5,7 @@ use godot::{
     builtin::{meta::ToGodot, StringName},
     engine::{
         AnimationNodeAdd2, AnimationNodeAnimation, AnimationNodeBlend2, AnimationNodeBlendTree,
-        AnimationNodeTimeScale, AnimationPlayer, AnimationTree, IAnimationTree, Node, Node3D,
-        NodeExt,
+        AnimationNodeTimeScale, AnimationPlayer, AnimationTree, IAnimationTree, Node3D, NodeExt,
     },
     obj::{Base, Gd},
 };
@@ -368,7 +367,7 @@ impl MultipleAnimationController {
 }
 
 fn create_and_add_multiple_animation_controller(
-    mut gltf_node: Gd<Node>,
+    mut gltf_node: Gd<Node3D>,
 ) -> Option<Gd<MultipleAnimationController>> {
     let anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
     let anim_list = anim_player.get_animation_list();
@@ -390,7 +389,6 @@ fn create_and_add_multiple_animation_controller(
             .collect(),
     );
     anim_builder.set_name(MULTIPLE_ANIMATION_CONTROLLER_NAME.into());
-    anim_builder.set_animation_player("../AnimationPlayer".into());
 
     if !anim_player.has_animation(DUMMY_ANIMATION_NAME.into()) {
         anim_player
@@ -400,17 +398,14 @@ fn create_and_add_multiple_animation_controller(
     }
 
     gltf_node.add_child(anim_builder.clone().upcast());
+    anim_builder.set_animation_player("../AnimationPlayer".into());
 
     Some(anim_builder)
 }
 
 pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
-    let Some(gltf_node) = gltf_container_node.get_child(0) else {
-        return;
-    };
-
-    if let Some(mut already_exist_node) =
-        gltf_node.try_get_node_as::<MultipleAnimationController>(MULTIPLE_ANIMATION_CONTROLLER_NAME)
+    if let Some(mut already_exist_node) = gltf_container_node
+        .try_get_node_as::<MultipleAnimationController>(MULTIPLE_ANIMATION_CONTROLLER_NAME)
     {
         already_exist_node.bind_mut().apply_anims(value);
         return;
@@ -434,7 +429,8 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
 
     // For handling multiple animations, we need to create a new MultipleAnimationController
     if need_multiple_animation {
-        let Some(mut new_blend_builder) = create_and_add_multiple_animation_controller(gltf_node)
+        let Some(mut new_blend_builder) =
+            create_and_add_multiple_animation_controller(gltf_container_node)
         else {
             // No animations available
             return;
