@@ -1,7 +1,8 @@
 use godot::{
     engine::{
-        control::{LayoutPreset, LayoutPresetMode},
+        control::LayoutPreset,
         global::{HorizontalAlignment, VerticalAlignment},
+        text_server::JustificationFlag,
         Label,
     },
     prelude::*,
@@ -69,6 +70,8 @@ impl DclUiText {
             .add_theme_color_override("font_outline_color".into(), outline_font_color);
         self.base
             .add_theme_constant_override("outline_size".into(), outline_width);
+        self.base
+            .add_theme_constant_override("line_spacing".into(), 0);
 
         let text_align = new_value
             .text_align
@@ -76,7 +79,7 @@ impl DclUiText {
             .unwrap_or(Some(TextAlignMode::TamMiddleCenter))
             .unwrap();
 
-        let (hor_align, vert_align, anchor) = match text_align {
+        let (hor_align, vert_align, _) = match text_align {
             TextAlignMode::TamTopLeft => (
                 HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
                 VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
@@ -127,6 +130,8 @@ impl DclUiText {
         self.base.set_vertical_alignment(vert_align);
         self.base.set_horizontal_alignment(hor_align);
         self.base.set_text(new_value.value.clone().into());
+        self.base
+            .set_justification_flags(JustificationFlag::JUSTIFICATION_NONE);
 
         if new_value.font() != self.current_font {
             self.current_font = new_value.font();
@@ -141,9 +146,5 @@ impl DclUiText {
             self.base
                 .set_autowrap_mode(godot::engine::text_server::AutowrapMode::AUTOWRAP_OFF);
         }
-        self.base
-            .set_anchors_and_offsets_preset_ex(anchor)
-            .resize_mode(LayoutPresetMode::PRESET_MODE_KEEP_SIZE)
-            .done();
     }
 }

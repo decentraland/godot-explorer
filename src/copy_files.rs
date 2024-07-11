@@ -65,12 +65,22 @@ pub fn copy_library(debug_mode: bool, link_libs: bool) -> Result<(), anyhow::Err
     let source_folder = format!("{RUST_LIB_PROJECT_FOLDER}{source_folder}");
 
     let source_file =
-        adjust_canonicalization(fs::canonicalize(source_folder)?.join(file_name.clone()));
+        adjust_canonicalization(fs::canonicalize(source_folder.clone())?.join(file_name.clone()));
 
     let lib_folder = format!("{GODOT_PROJECT_FOLDER}lib/");
     let destination_file =
-        adjust_canonicalization(fs::canonicalize(lib_folder.as_str())?.join(file_name));
+        adjust_canonicalization(fs::canonicalize(lib_folder.as_str())?.join(file_name.clone()));
     copy_if_modified(source_file, destination_file, link_libs)?;
+
+    if debug_mode && os == "windows" {
+        let source_file = adjust_canonicalization(
+            fs::canonicalize(source_folder)?.join("dclgodot.pdb".to_string()),
+        );
+        let destination_file = adjust_canonicalization(
+            fs::canonicalize(lib_folder.as_str())?.join("dclgodot.pdb".to_string()),
+        );
+        copy_if_modified(source_file, destination_file, link_libs)?;
+    }
 
     copy_ffmpeg_libraries(lib_folder, link_libs)?;
 

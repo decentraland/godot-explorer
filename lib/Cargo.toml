@@ -57,7 +57,7 @@ futures-util = "0.3.30"
 
 livekit = { git = "https://github.com/livekit/rust-sdks", features=["rustls-tls-webpki-roots"], optional = true, rev="8b276f9d4b98437a139e1cbe41cfda1332ce1120" }
 
-taffy = { git = "https://github.com/DioxusLabs/taffy", rev="7eee673c5ea65f64f35c53f5ee2fe5faf62b9c1e" }
+taffy = "0.5.2"
 tracing-test = "0.2.4"
 
 base64 = "0.21.5"
