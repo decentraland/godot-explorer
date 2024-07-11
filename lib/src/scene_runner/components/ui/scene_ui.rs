@@ -4,7 +4,13 @@ use std::{
     rc::Rc,
 };
 
-use godot::engine::NodeExt;
+use godot::{
+    engine::{
+        text_server::{JustificationFlag, LineBreakFlag},
+        NodeExt,
+    },
+    obj::Gd,
+};
 
 use crate::{
     dcl::{
@@ -56,6 +62,10 @@ const UI_COMPONENT_IDS: [SceneComponentId; 5] = [
     SceneComponentId::UI_BACKGROUND,
 ];
 
+enum ContextNode {
+    UiText(bool, Gd<godot::engine::Label>),
+}
+
 fn update_layout(
     scene: &mut Scene,
     crdt_state: &SceneCrdtState,
@@ -69,7 +79,7 @@ fn update_layout(
 
     let ui_text_components = SceneCrdtStateProtoComponents::get_ui_text(crdt_state);
 
-    let mut taffy: taffy::Taffy<()> = taffy::Taffy::new();
+    let mut taffy: taffy::TaffyTree<ContextNode> = taffy::TaffyTree::new();
     let root_node = taffy
         .new_leaf(taffy::style::Style {
             size: taffy::Size {
@@ -116,18 +126,24 @@ fn update_layout(
             let child = taffy
                 .new_leaf(ui_node.ui_transform.taffy_style.clone())
                 .expect("failed to create node");
-            if let Some(text_size) = ui_node.text_size {
-                let size_child = taffy
-                    .new_leaf(taffy::style::Style {
-                        size: taffy::Size {
-                            width: taffy::style::Dimension::Length(text_size.x),
-                            height: taffy::style::Dimension::Length(text_size.y),
-                        },
-                        ..Default::default()
-                    })
-                    .expect("failed to create node");
 
-                let _ = taffy.add_child(child, size_child);
+            if let Some(ui_text_control) = ui_node
+                .base_control
+                .try_get_node_as::<godot::engine::Label>("text")
+            {
+                let text_wrapping = if let Some(ui_text) = ui_text_components
+                    .get(entity)
+                    .and_then(|v| v.value.as_ref())
+                {
+                    ui_text.text_wrap_compat() == TextWrap::TwWrap
+                } else {
+                    false
+                };
+
+                let _ = taffy.set_node_context(
+                    child,
+                    Some(ContextNode::UiText(text_wrapping, ui_text_control)),
+                );
             }
 
             let _ = taffy.add_child(parent.0, child);
@@ -152,7 +168,76 @@ fn update_layout(
     };
 
     taffy
-        .compute_layout(root_node, size)
+        .compute_layout_with_measure(
+            root_node,
+            size,
+            |size, available, node_id, node_context, _style| match node_context {
+                Some(ContextNode::UiText(wrapping, text_node)) => {
+                    let Some(font) = text_node.get_theme_font("font".into()) else {
+                        return taffy::Size::ZERO;
+                    };
+                    let line_width = match size.width {
+                        Some(value) => value,
+                        None => match available.width {
+                            taffy::AvailableSpace::Definite(v) => v,
+                            taffy::AvailableSpace::MinContent => 1.0,
+                            taffy::AvailableSpace::MaxContent => -1.0,
+                        },
+                    };
+
+                    let font_size = text_node.get_theme_font_size("font_size".into());
+                    let font_rect = if *wrapping {
+                        font.get_multiline_string_size_ex(text_node.get_text())
+                            .max_lines(-1)
+                            .width(line_width)
+                            .font_size(font_size)
+                            .alignment(text_node.get_horizontal_alignment())
+                            .justification_flags(JustificationFlag::JUSTIFICATION_NONE)
+                            .brk_flags(
+                                LineBreakFlag::BREAK_WORD_BOUND | LineBreakFlag::BREAK_MANDATORY,
+                            )
+                            .done()
+                    } else {
+                        font.get_string_size_ex(text_node.get_text())
+                            .width(line_width)
+                            .alignment(text_node.get_horizontal_alignment())
+                            .justification_flags(JustificationFlag::JUSTIFICATION_NONE)
+                            .font_size(font_size)
+                            .done()
+                    };
+
+                    let width = match size.width {
+                        Some(value) => value,
+                        None => match available.width {
+                            taffy::AvailableSpace::Definite(v) => v.clamp(0.0, font_rect.x),
+                            taffy::AvailableSpace::MinContent => 1.0,
+                            taffy::AvailableSpace::MaxContent => font_rect.x,
+                        },
+                    };
+
+                    let height = match size.height {
+                        Some(value) => value,
+                        None => match available.height {
+                            taffy::AvailableSpace::Definite(v) => v.clamp(0.0, font_rect.y),
+                            taffy::AvailableSpace::MinContent => 1.0,
+                            taffy::AvailableSpace::MaxContent => font_rect.y,
+                        },
+                    };
+
+                    tracing::debug!(
+                        "text node {:?}, wrapping {:?}, size: {:?}, font_rect {:?}, available {:?}",
+                        node_id,
+                        *wrapping,
+                        size,
+                        font_rect,
+                        available
+                    );
+
+                    taffy::Size { width, height }
+                }
+                None => taffy::Size::ZERO,
+            },
+        )
         .expect("failed to compute layout");
 
     for (entity, key_node) in processed_nodes_sorted.iter() {
@@ -185,22 +270,13 @@ fn update_layout(
         let is_hidden = taffy.style(*key_node).unwrap().display == taffy::style::Display::None;
         control.set_visible(!is_hidden);
 
-        if let Some(ui_text) = ui_text_components
-            .get(entity)
-            .and_then(|v| v.value.as_ref())
-        {
-            if ui_text.text_wrap_compat() == TextWrap::TwWrap {
-                if let Some(mut ui_text_control) = ui_node
-                    .base_control
-                    .try_get_node_as::<godot::engine::Control>("text")
-                {
-                    ui_text_control.set_size(godot::builtin::Vector2::new(
-                        layout.size.width,
-                        layout.size.height,
-                    ));
-                }
-            }
-        }
+        tracing::debug!(
+            "node {:?}, entity: {:?}, location: {:?}, size: {:?}",
+            key_node,
+            entity,
+            layout.location,
+            layout.size
+        );
     }
 }
 

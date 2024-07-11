@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::{collections::HashMap, ops::Range};
 
 use godot::builtin::{Vector2i, Vector3};
 use serde::{Deserialize, Serialize};
@@ -74,6 +74,8 @@ pub struct SceneEntityMetadata {
     pub scene: SceneMetaScene,
     pub runtime_version: Option<String>,
     pub spawn_points: Option<Vec<SpawnPoint>>,
+    #[serde(flatten)]
+    pub extra: HashMap<String, serde_json::Value>,
 }
 
 impl<'de> serde::Deserialize<'de> for SceneMetaScene {
