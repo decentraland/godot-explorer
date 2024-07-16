@@ -37,7 +37,7 @@ jobs:
       - name: GDScript Linter
         run: gdlint godot/
       # Dependencies section
-      # => Linux 
+      # => Linux
       - name: Install alsa and udev
         if: runner.os == 'linux'
         run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
@@ -113,9 +113,9 @@ jobs:
         run: |
             sudo apt-get -y install xvfb
             sudo /usr/bin/Xvfb :0 -screen 0 1280x1024x24 &
-            
+
       # Dependencies section
-      # => Linux 
+      # => Linux
       - name: Install alsa and udev
         if: runner.os == 'linux'
         run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
@@ -260,7 +260,7 @@ jobs:
         working-directory: lib
         run: cargo test --release -- --skip auth
 
-      # TODO: cross-build deprecated with the ffmpeg integration 
+      # TODO: cross-build deprecated with the ffmpeg integration
       # Package section
       # # => MacOS
       # - name: Make universal library
@@ -307,7 +307,7 @@ jobs:
             COMMIT_HASH=${{ github.sha }}
 
       - name: Push To quay.io
-        if: matrix.os == 'ubuntu'
+        if: matrix.os == 'ubuntu-22.04'
         id: push-to-quay
         uses: redhat-actions/push-to-registry@v2
         with:
