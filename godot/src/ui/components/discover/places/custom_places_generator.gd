@@ -38,8 +38,7 @@ const CUSTOM_PLACES: Array[Dictionary] = [
 		"contact_name": "SDK Team",
 		"image": "https://i.imgur.com/Zsl1r2d.png",
 		"world": true,
-		"world_name":
-		"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-test-psquad-demo-latest/"
+		"world_name": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest/"
 	},
 	{
 		"title": "In World Builder",
