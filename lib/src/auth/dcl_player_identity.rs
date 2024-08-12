@@ -14,8 +14,9 @@ use crate::http_request::request_response::RequestResponse;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
 use super::auth_identity::create_local_ephemeral;
-use super::decentraland_auth_server::{do_request, CreateRequest, RemoteReportState};
+use super::decentraland_auth_server::{do_request, CreateRequest};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
+use super::magic_wallet::MagicWallet;
 use super::remote_wallet::RemoteWallet;
 use super::wallet::{AsH160, Wallet};
 
@@ -29,9 +30,7 @@ enum CurrentWallet {
 pub struct DclPlayerIdentity {
     wallet: Option<CurrentWallet>,
     ephemeral_auth_chain: Option<EphemeralAuthChain>,
-
-    remote_report_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
-    remote_report_receiver: tokio::sync::mpsc::Receiver<RemoteReportState>,
+    magic_auth: bool,
 
     profile: Option<Gd<DclUserProfile>>,
 
@@ -47,43 +46,20 @@ pub struct DclPlayerIdentity {
 #[godot_api]
 impl INode for DclPlayerIdentity {
     fn init(base: Base<Node>) -> Self {
-        let (remote_report_sender, remote_report_receiver) = tokio::sync::mpsc::channel(100);
-
         Self {
             wallet: None,
             ephemeral_auth_chain: None,
-            remote_report_receiver,
-            remote_report_sender,
             profile: None,
             base,
             is_guest: false,
+            magic_auth: false,
             try_connect_account_handle: None,
-        }
-    }
-
-    fn process(&mut self, _dt: f64) {
-        while let Ok(state) = self.remote_report_receiver.try_recv() {
-            match state {
-                RemoteReportState::OpenUrl { url, description } => {
-                    self.base.call_deferred(
-                        "emit_signal".into(),
-                        &[
-                            "need_open_url".to_variant(),
-                            url.to_variant(),
-                            description.to_variant(),
-                        ],
-                    );
-                }
-            }
         }
     }
 }
 
 #[godot_api]
 impl DclPlayerIdentity {
-    #[signal]
-    fn need_open_url(&self, url: GString, description: GString);
-
     #[signal]
     fn logout(&self);
 
@@ -200,10 +176,64 @@ impl DclPlayerIdentity {
             panic!("tokio runtime not initialized")
         };
 
+        self.magic_auth = false;
+
         let instance_id = self.base.instance_id();
-        let sender = self.remote_report_sender.clone();
+        let sender = DclGlobal::singleton()
+            .bind()
+            .get_dcl_tokio_rpc()
+            .bind()
+            .get_sender();
         let try_connect_account_handle = handle.spawn(async move {
             let wallet = RemoteWallet::with_auth_identity(sender).await;
+            let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
+                return;
+            };
+
+            match wallet {
+                Ok((wallet, ephemeral_auth_chain)) => {
+                    let ephemeral_auth_chain_json_str =
+                        serde_json::to_string(&ephemeral_auth_chain)
+                            .expect("serialize ephemeral auth chain");
+
+                    this.call_deferred(
+                        "try_set_remote_wallet".into(),
+                        &[
+                            format!("{:#x}", wallet.address()).to_variant(),
+                            wallet.chain_id().to_variant(),
+                            ephemeral_auth_chain_json_str.to_variant(),
+                        ],
+                    );
+                }
+                Err(err) => {
+                    tracing::error!("error getting wallet {:?}", err);
+                    this.call_deferred(
+                        "_error_getting_wallet".into(),
+                        &["Unknown error".to_variant()],
+                    );
+                }
+            }
+        });
+
+        self.try_connect_account_handle = Some(try_connect_account_handle);
+    }
+
+    #[func]
+    fn try_connect_account_with_magic(&mut self) {
+        let Some(handle) = TokioRuntime::static_clone_handle() else {
+            panic!("tokio runtime not initialized")
+        };
+
+        self.magic_auth = true;
+
+        let instance_id = self.base.instance_id();
+        let sender = DclGlobal::singleton()
+            .bind()
+            .get_dcl_tokio_rpc()
+            .bind()
+            .get_sender();
+        let try_connect_account_handle = handle.spawn(async move {
+            let wallet = MagicWallet::with_auth_identity(sender).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -299,6 +329,8 @@ impl DclPlayerIdentity {
                 PackedByteArray::from_iter(keys.iter().cloned()).to_variant(),
             );
         }
+
+        dict.insert("magic_auth", self.magic_auth.to_variant());
 
         dict.insert("account_address", self.get_address_str().to_variant());
         dict.insert("chain_id", chain_id.to_variant());
@@ -534,7 +566,11 @@ impl DclPlayerIdentity {
         mut body: CreateRequest,
         response: RpcResultSender<Result<serde_json::Value, String>>,
     ) {
-        let url_sender = self.remote_report_sender.clone();
+        let url_sender = DclGlobal::singleton()
+            .bind()
+            .get_dcl_tokio_rpc()
+            .bind()
+            .get_sender();
         let Some(auth_chain) = self.ephemeral_auth_chain.clone() else {
             return;
         };

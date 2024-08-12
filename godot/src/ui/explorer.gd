@@ -154,7 +154,7 @@ func _ready():
 	if profile != null:
 		Global.player_identity.profile_changed.emit(profile)
 
-	Global.player_identity.need_open_url.connect(self._on_need_open_url)
+	Global.dcl_tokio_rpc.need_open_url.connect(self._on_need_open_url)
 	Global.scene_runner.set_pause(false)
 
 	if Global.testing_scene_mode:

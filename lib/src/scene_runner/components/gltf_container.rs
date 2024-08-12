@@ -2,7 +2,9 @@ use std::time::Instant;
 
 use crate::{
     dcl::{
-        components::SceneComponentId,
+        components::{
+            proto_components::sdk::components::PbGltfContainerLoadingState, SceneComponentId,
+        },
         crdt::{
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
@@ -148,7 +150,16 @@ pub fn sync_gltf_loading_state(
         };
 
         if current_state_godot != current_state {
-            gltf_container_loading_state_component.put(*entity, Some(crate::dcl::components::proto_components::sdk::components::PbGltfContainerLoadingState { current_state: current_state_godot.to_i32() }));
+            let pb_gltf_container_loading_state = PbGltfContainerLoadingState {
+                current_state: current_state_godot.to_i32(),
+                node_paths: Vec::new(),
+                mesh_names: Vec::new(),
+                material_names: Vec::new(),
+                skin_names: Vec::new(),
+                animation_names: Vec::new(),
+            };
+            gltf_container_loading_state_component
+                .put(*entity, Some(pb_gltf_container_loading_state));
         }
 
         if current_state_godot == GltfContainerLoadingState::Finished

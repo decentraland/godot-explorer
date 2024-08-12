@@ -4,9 +4,11 @@ use async_trait::async_trait;
 use ethers_core::types::H160;
 use ethers_signers::WalletError;
 
+use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
+
 use super::{
-    auth_identity::try_create_remote_ephemeral, decentraland_auth_server::RemoteReportState,
-    ephemeral_auth_chain::EphemeralAuthChain, wallet::ObjSafeWalletSigner,
+    auth_identity::try_create_remote_ephemeral, ephemeral_auth_chain::EphemeralAuthChain,
+    wallet::ObjSafeWalletSigner,
 };
 
 #[derive(Clone)]
@@ -26,7 +28,7 @@ impl fmt::Debug for RemoteWallet {
 
 impl RemoteWallet {
     pub async fn with_auth_identity(
-        report_url_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
+        report_url_sender: tokio::sync::mpsc::Sender<GodotTokioCall>,
     ) -> Result<(Self, EphemeralAuthChain), anyhow::Error> {
         let (ephemeral_wallet, chain_id) =
             try_create_remote_ephemeral(report_url_sender.clone()).await?;
