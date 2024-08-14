@@ -41,6 +41,8 @@ var fade_out_tween: Tween = null
 @onready var button_settings = %Button_Settings
 @onready var control_deploying_profile = %Control_DeployingProfile
 
+@onready var button_magic_wallet = %Button_MagicWallet
+
 
 func _ready():
 	control_deploying_profile.hide()
@@ -59,6 +61,8 @@ func _ready():
 	control_backpack.hide()
 	control_profile_settings.hide()
 	control_map.jump_to.connect(_jump_to)
+
+	button_magic_wallet.visible = Global.magic_link.is_using_magic()
 
 
 func _unhandled_input(event):
@@ -238,3 +242,7 @@ func _on_button_backpack_toggled(toggled_on):
 
 func _on_button_settings_toggled(toggled_on):
 	button_settings.icon = SETTINGS_ON if toggled_on else SETTINGS_OFF
+
+
+func _on_button_magic_wallet_pressed():
+	Global.magic_link.open_wallet()

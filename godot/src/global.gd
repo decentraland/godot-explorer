@@ -80,6 +80,12 @@ func _ready():
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 
+	self.dcl_tokio_rpc = DclTokioRpc.new()
+	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
+
+	self.magic_link = MagicLink.new()
+	self.magic_link.set_name("magic_link")
+
 	self.player_identity = PlayerIdentity.new()
 	self.player_identity.set_name("player_identity")
 
@@ -103,6 +109,8 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
+	get_tree().root.add_child.call_deferred(self.dcl_tokio_rpc)
+	get_tree().root.add_child.call_deferred(self.magic_link)
 	get_tree().root.add_child.call_deferred(self.player_identity)
 	get_tree().root.add_child.call_deferred(self.comms)
 	get_tree().root.add_child.call_deferred(self.avatars)

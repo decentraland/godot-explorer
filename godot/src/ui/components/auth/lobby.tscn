@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://brh1yknqh4ux6"]
+[gd_scene load_steps=23 format=3 uid="uid://brh1yknqh4ux6"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
 [ext_resource type="Script" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
@@ -16,6 +16,7 @@
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="11_7iulh"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="12_s6a2k"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="13_43yag"]
+[ext_resource type="PackedScene" uid="uid://cf78je1y8dpu3" path="res://src/ui/components/auth/magic_login.tscn" id="14_a8lfo"]
 [ext_resource type="Texture2D" uid="uid://h30g74davjyw" path="res://assets/ui/sign-in/dices.svg" id="14_ku160"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="15_n5dun"]
 
@@ -191,6 +192,7 @@ text = "I ALREADY HAVE AN ACCOUNT"
 
 [node name="Restore" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -362,7 +364,6 @@ icon_alignment = 2
 
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -428,17 +429,21 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 unique_name_in_owner = true
 layout_mode = 2
 
+[node name="MagicLogin" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1" instance=ExtResource("14_a8lfo")]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="Button_OpenBrowser" type="Button" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
 custom_minimum_size = Vector2(320, 56)
 layout_mode = 2
 focus_mode = 0
 theme_override_constants/icon_max_width = 24
 theme_override_fonts/font = ExtResource("4_ghcwt")
-theme_override_font_sizes/font_size = 24
-text = "OPEN BROWSER"
+theme_override_font_sizes/font_size = 18
+text = "BROWSER MULTILOGIN (LEGACY)"
 icon_alignment = 2
 
-[node name="HSeparator3" type="HSeparator" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
+[node name="HSeparator4" type="HSeparator" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")

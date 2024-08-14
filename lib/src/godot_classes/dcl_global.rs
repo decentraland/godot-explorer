@@ -18,7 +18,8 @@ use crate::{
 };
 
 use super::{
-    dcl_config::DclConfig, dcl_realm::DclRealm, portables::DclPortableExperienceController,
+    dcl_config::DclConfig, dcl_realm::DclRealm, dcl_tokio_rpc::DclTokioRpc, magic_link::MagicLink,
+    portables::DclPortableExperienceController,
 };
 
 #[cfg(target_os = "android")]
@@ -70,6 +71,10 @@ pub struct DclGlobal {
     pub content_provider: Gd<ContentProvider>,
     #[var]
     pub http_requester: Gd<RustHttpQueueRequester>,
+    #[var]
+    pub dcl_tokio_rpc: Gd<DclTokioRpc>,
+    #[var]
+    pub magic_link: Gd<MagicLink>,
 
     pub ethereum_provider: Arc<EthereumProvider>,
 
@@ -130,6 +135,8 @@ impl INode for DclGlobal {
             portable_experience_controller: DclPortableExperienceController::alloc_gd(),
             preview_mode,
             testing_scene_mode,
+            dcl_tokio_rpc: DclTokioRpc::alloc_gd(),
+            magic_link: MagicLink::alloc_gd(),
             player_identity: DclPlayerIdentity::alloc_gd(),
             content_provider: ContentProvider::alloc_gd(),
             http_requester: RustHttpQueueRequester::new_gd(),

@@ -53,6 +53,9 @@ pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMe
 
                 mesh_instance.call("set_plane".into(), &[uvs]);
             }
+            pb_mesh_renderer::Mesh::Gltf(_) => {
+                todo!("Implement Gltf Mesh Renderer")
+            }
         },
         _ => {
             let box_mesh = match current_mesh {

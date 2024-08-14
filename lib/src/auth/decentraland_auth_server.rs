@@ -2,6 +2,8 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
+
 use super::wallet::SimpleAuthChain;
 
 const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
@@ -47,9 +49,6 @@ struct RequestResult {
     sender: String,
     result: Option<serde_json::Value>,
     error: Option<RequestResultError>,
-}
-pub enum RemoteReportState {
-    OpenUrl { url: String, description: String },
 }
 
 async fn fetch_polling_server(
@@ -151,13 +150,13 @@ async fn create_new_request(
 
 pub async fn do_request(
     message: CreateRequest,
-    url_reporter: tokio::sync::mpsc::Sender<RemoteReportState>,
+    url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     let request = create_new_request(message).await?;
     let req_id = request.request_id;
     let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId=alternative");
     url_reporter
-        .send(RemoteReportState::OpenUrl {
+        .send(GodotTokioCall::OpenUrl {
             url,
             description: "".into(),
         })
@@ -206,10 +205,10 @@ mod test {
         tokio::spawn(async move {
             loop {
                 match rx.recv().await {
-                    Some(RemoteReportState::OpenUrl { url, description }) => {
+                    Some(GodotTokioCall::OpenUrl { url, description }) => {
                         tracing::info!("url {:?} description {:?}", url, description);
                     }
-                    None => {
+                    _ => {
                         break;
                     }
                 }

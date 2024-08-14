@@ -1,3 +1,4 @@
+class_name Lobby
 extends Control
 
 var current_profile: DclUserProfile
@@ -64,9 +65,16 @@ func async_close_sign_in(generate_snapshots: bool = true):
 	get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
 
 
+# gdlint:ignore = async-function-name
 func _ready():
+	var magic_login = %MagicLogin
+	if is_instance_valid(magic_login):
+		magic_login.set_lobby(self)
+
+	show_panel(control_loading)
+
 	UiSounds.install_audio_recusirve(self)
-	Global.player_identity.need_open_url.connect(self._on_need_open_url)
+	Global.dcl_tokio_rpc.need_open_url.connect(self._on_need_open_url)
 	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
 	Global.player_identity.wallet_connected.connect(self._on_wallet_connected)
 
@@ -76,7 +84,14 @@ func _ready():
 	if args.has("--skip-lobby"):
 		_skip_lobby = true
 
-	if Global.player_identity.try_recover_account(Global.get_config().session_account):
+	var session_account: Dictionary = Global.get_config().session_account
+	if session_account.get("magic_auth", false):
+		# Check if Magic session is still alive
+		Global.magic_link.check_connection()
+		if !await Global.magic_link.connection_state:
+			session_account = {}
+
+	if Global.player_identity.try_recover_account(session_account):
 		loading_first_profile = true
 		show_panel(control_loading)
 	elif _skip_lobby:

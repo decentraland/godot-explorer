@@ -1,7 +1,9 @@
 use std::str::FromStr;
 
+use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
+
 use super::{
-    decentraland_auth_server::{do_request, CreateRequest, RemoteReportState},
+    decentraland_auth_server::{do_request, CreateRequest},
     ephemeral_auth_chain::EphemeralAuthChain,
     wallet::{AsH160, ObjSafeWalletSigner, SimpleAuthChain, Wallet},
 };
@@ -19,7 +21,7 @@ pub fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::Sys
 }
 
 pub async fn try_create_remote_ephemeral(
-    url_reporter_sender: tokio::sync::mpsc::Sender<RemoteReportState>,
+    url_reporter_sender: tokio::sync::mpsc::Sender<GodotTokioCall>,
 ) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
     let local_wallet = LocalWallet::new(&mut thread_rng());
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();

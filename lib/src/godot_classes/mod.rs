@@ -16,6 +16,7 @@ pub mod dcl_realm;
 #[cfg(feature = "use_resource_tracking")]
 pub mod dcl_resource_tracker;
 pub mod dcl_scene_node;
+pub mod dcl_tokio_rpc;
 pub mod dcl_ui_background;
 pub mod dcl_ui_control;
 pub mod dcl_ui_dropdown;
@@ -23,10 +24,12 @@ pub mod dcl_ui_input;
 pub mod dcl_ui_text;
 pub mod dcl_video_player;
 pub mod font;
+pub mod magic_link;
 pub mod portables;
 pub mod promise;
 pub mod resource_locker;
 pub mod rpc_sender;
+
 pub trait JsonGodotClass
 where
     Self: serde::Serialize + serde::de::DeserializeOwned,
