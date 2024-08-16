@@ -18,8 +18,11 @@ var popup_warning_pos_y: int = 0
 
 var last_hide_click := 0.0
 
+var loaded_resources_offset := 0
+
 @onready var loading_progress = %ColorRect_LoadingProgress
 @onready var loading_progress_label = %Label_LoadingProgress
+@onready var label_loading_state = %Label_LoadingState
 
 @onready
 var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer/HBoxContainer_Content/CarouselViewport/SubViewport/Carousel
@@ -131,6 +134,17 @@ func _on_timer_check_progress_timeout_timeout():
 		last_progress_change = Time.get_ticks_msec()
 		return
 
+	var loading_resources = (
+		Global.content_provider.count_loading_resources() - loaded_resources_offset
+	)
+	var loaded_resources = (
+		Global.content_provider.count_loaded_resources() - loaded_resources_offset
+	)
+	var download_speed_mbs: float = Global.content_provider.get_download_speed_mbs()
+	label_loading_state.text = (
+		"(%d/%d resources at %.2fmb/s)" % [loaded_resources, loading_resources, download_speed_mbs]
+	)
+
 	var inactive_seconds: int = int(floor((Time.get_ticks_msec() - last_progress_change) / 1000.0))
 	if inactive_seconds > 20:
 		var tween = get_tree().create_tween()
@@ -166,6 +180,7 @@ func _on_loading_screen_progress_logic_loading_show_requested():
 	last_progress_change = Time.get_ticks_msec()
 	popup_warning.hide()
 	timer_check_progress_timeout.start()
+	loaded_resources_offset = Global.content_provider.count_loaded_resources()
 
 
 # For dev purposes

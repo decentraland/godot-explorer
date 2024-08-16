@@ -20,9 +20,11 @@ config/icon="res://decentraland_logo.png"
 
 driver/enable_input=true
 driver/mix_rate=48000
+driver/enable_input.ios=false
 
 [autoload]
 
+UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
 XRToolsUserSettings="*res://addons/godot-xr-tools/user_settings/user_settings.gd"
 
@@ -35,9 +37,13 @@ gdscript/warnings/redundant_await=false
 window/size/viewport_width=1280
 window/size/viewport_height=720
 
-[editor_plugins]
+[editor]
 
+run/main_run_args="--clear-cache-startup"
+
+[editor_plugins]
 enabled=PackedStringArray("res://addons/godot-xr-tools/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotAndroidPluginMagicLink/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
 
 [filesystem]
 
@@ -181,7 +187,18 @@ limits/debugger/max_chars_per_second=3276800
 
 [rendering]
 
+renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
+lights_and_shadows/directional_shadow/size=2048
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
+lights_and_shadows/positional_shadow/soft_shadow_filter_quality=0
+reflections/sky_reflections/texture_array_reflections=false
+reflections/sky_reflections/ggx_samples=16
+shading/overrides/force_vertex_shading=true
+shading/overrides/force_lambert_over_burley=true
+environment/glow/upscale_mode=0
+lights_and_shadows/positional_shadow/atlas_size=2048
+lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
 [xr]
 

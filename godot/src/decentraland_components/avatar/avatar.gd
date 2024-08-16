@@ -32,6 +32,10 @@ var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
+# Retain promises of the current loaded wearables for avoid deletion
+var wearable_dependencies_promises = null
+var wearable_promises = null
+
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
 @onready var label_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name/Label3D_Name
@@ -58,6 +62,8 @@ func _ready():
 	if non_3d_audio:
 		var audio_player_name = audio_player_emote.get_name()
 		remove_child(audio_player_emote)
+		audio_player_emote.queue_free()
+
 		audio_player_emote = AudioStreamPlayer.new()
 		add_child(audio_player_emote)
 		audio_player_emote.name = audio_player_name
@@ -194,7 +200,9 @@ func async_fetch_wearables_dependencies():
 				async_calls.push_back(emote_promise)
 				async_calls_info.push_back(emote_urn)
 
-	await Wearables.async_load_wearables(wearables_dict.keys(), body_shape_id)
+	wearable_dependencies_promises = await Wearables.async_load_wearables(
+		wearables_dict.keys(), body_shape_id
+	)
 	var promises_result: Array = await PromiseUtils.async_all(async_calls)
 	for i in range(promises_result.size()):
 		if promises_result[i] is PromiseError:
@@ -215,13 +223,24 @@ func try_to_set_body_shape(body_shape_hash):
 	for child in body_shape_skeleton_3d.get_children():
 		if child is MeshInstance3D:
 			body_shape_skeleton_3d.remove_child(child)
+			child.queue_free()
 
 	for child in new_skeleton.get_children():
 		var new_child = child.duplicate()
 		new_child.name = "bodyshape_" + child.name.to_lower()
+
+		new_child.add_child(body_shape.get_node("ResourceLocker").duplicate())
 		body_shape_skeleton_3d.add_child(new_child)
 
 	_add_attach_points()
+
+
+func apply_unshaded_mode(node_to_apply: Node):
+	if node_to_apply is MeshInstance3D:
+		for surface_idx in range(node_to_apply.mesh.get_surface_count()):
+			var mat = node_to_apply.mesh.surface_get_material(surface_idx)
+			if mat != null and mat is BaseMaterial3D:
+				mat.disable_receive_shadows = true
 
 
 func async_load_wearables():
@@ -244,7 +263,7 @@ func async_load_wearables():
 			Array(curated_wearables.need_to_fetch), Global.realm.get_profile_content_url()
 		)
 		await PromiseUtils.async_all(need_to_fetch_promise)
-		await Wearables.async_load_wearables(
+		wearable_promises = await Wearables.async_load_wearables(
 			curated_wearables.need_to_fetch, body_shape_wearable.get_id()
 		)
 
@@ -279,7 +298,9 @@ func async_load_wearables():
 		for skeleton_3d in wearable_skeletons:
 			for child in skeleton_3d.get_children():
 				var new_wearable = child.duplicate()
+				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
 				new_wearable.name = new_wearable.name.to_lower() + WEARABLE_NAME_PREFIX + category
+				new_wearable.add_child(obj.get_node("ResourceLocker").duplicate())
 				body_shape_skeleton_3d.add_child(new_wearable)
 
 		match category:
@@ -296,29 +317,25 @@ func async_load_wearables():
 			Wearables.Categories.SKIN:
 				has_own_skin = true
 
-	var hidings: Dictionary = {}
+	# Here hidings is an alias
+	var hidings = curated_wearables.hidden_categories
+	var base_bodyshape_hidings = {
+		"ubody_basemesh": has_own_skin or has_own_upper_body or hidings.has("upper_body"),
+		"lbody_basemesh": has_own_skin or has_own_lower_body or hidings.has("lower_body"),
+		"feet_basemesh": has_own_skin or has_own_feet or hidings.has("feet"),
+		"hands_basemesh": has_own_skin or has_own_hands or hidings.has("hands"),
+		"head_basemesh": has_own_skin or has_own_head or hidings.has("head"),
+		"mask_eyes": has_own_skin or has_own_head or hidings.has("eyes") or hidings.has("head"),
+		"mask_eyebrows":
+		has_own_skin or has_own_head or hidings.has("eyebrows") or hidings.has("head"),
+		"mask_mouth": has_own_skin or has_own_head or hidings.has("mouth") or hidings.has("head"),
+	}
 
+	# Final computation of hidings
+	hidings = Dictionary()
+	hidings.merge(base_bodyshape_hidings)
 	for category in curated_wearables.hidden_categories:
 		hidings[WEARABLE_NAME_PREFIX + category] = true
-
-	(
-		hidings
-		. merge(
-			{
-				"ubody_basemesh": has_own_skin or has_own_upper_body or hidings.has("upper_body"),
-				"lbody_basemesh": has_own_skin or has_own_lower_body or hidings.has("lower_body"),
-				"feet_basemesh": has_own_skin or has_own_feet or hidings.has("feet"),
-				"hands_basemesh": has_own_skin or has_own_hands or hidings.has("hands"),
-				"head_basemesh": has_own_skin or has_own_head or hidings.has("head"),
-				"mask_eyes":
-				has_own_skin or has_own_head or hidings.has("eyes") or hidings.has("head"),
-				"mask_eyebrows":
-				has_own_skin or has_own_head or hidings.has("eyebrows") or hidings.has("head"),
-				"mask_mouth":
-				has_own_skin or has_own_head or hidings.has("mouth") or hidings.has("head"),
-			}
-		)
-	)
 
 	for child in body_shape_skeleton_3d.get_children():
 		var should_hide = false
@@ -339,6 +356,11 @@ func async_load_wearables():
 	var promise: Promise = Global.content_provider.duplicate_materials(meshes)
 	await PromiseUtils.async_awaiter(promise)
 	apply_color_and_facial()
+
+	apply_unshaded_mode(body_shape_skeleton_3d)
+	for child in body_shape_skeleton_3d.get_children():
+		apply_unshaded_mode(child)
+
 	body_shape_skeleton_3d.visible = true
 	finish_loading = true
 

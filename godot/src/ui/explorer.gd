@@ -45,9 +45,10 @@ func _process(_dt):
 	if _last_parcel_position != parcel_position:
 		Global.scene_fetcher.update_position(parcel_position)
 		_last_parcel_position = parcel_position
-		Global.config.last_parcel_position = parcel_position
+		Global.get_config().last_parcel_position = parcel_position
 		dirty_save_position = true
 		Global.change_parcel.emit(parcel_position)
+		Global.metrics.update_position("%d,%d" % [parcel_position.x, parcel_position.y])
 
 
 func _on_parcels_procesed(parcels, empty):
@@ -79,6 +80,9 @@ func get_params_from_cmd():
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
+	Global.music_player.stop()
+
 	if Global.is_xr():
 		player = preload("res://src/logic/player/xr_player.tscn").instantiate()
 	else:
@@ -110,7 +114,8 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
-	panel_chat.hide()
+
+	label_ram.visible = OS.has_feature("ios")
 
 	if Global.is_mobile():
 		mobile_ui.show()
@@ -120,27 +125,8 @@ func _ready():
 	else:
 		mobile_ui.hide()
 
-	var sky = null
-	if Global.is_mobile():
-		sky = load("res://assets/sky/sky_basic_without_glow.tscn").instantiate()
-		add_child(sky)
-	elif Global.testing_scene_mode:
-		sky = load("res://assets/sky/sky_test.tscn").instantiate()
-		add_child(sky)
-	else:
-		match Global.config.skybox:
-			0:
-				sky = load("res://assets/sky/sky_basic.tscn").instantiate()
-			1:
-				sky = load("res://assets/sky/krzmig/world_environment.tscn").instantiate()
-				sky.day_time = 14.9859
-
-		add_child(sky)
-		if Global.config.skybox == 1:
-			sky.day_time = 10
-
 	control_pointer_tooltip.hide()
-	var start_parcel_position: Vector2i = Vector2i(Global.config.last_parcel_position)
+	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
 	if cmd_location != null:
 		start_parcel_position = cmd_location
 
@@ -165,12 +151,12 @@ func _ready():
 		Global.realm.async_set_realm(cmd_realm)
 		control_menu.control_settings.set_preview_url(cmd_realm)
 	else:
-		if Global.config.last_realm_joined.is_empty():
+		if Global.get_config().last_realm_joined.is_empty():
 			Global.realm.async_set_realm(
-				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-test-psquad-demo-latest"
+				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
 			)
 		else:
-			Global.realm.async_set_realm(Global.config.last_realm_joined)
+			Global.realm.async_set_realm(Global.get_config().last_realm_joined)
 
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
@@ -183,11 +169,15 @@ func _ready():
 	if profile != null:
 		Global.player_identity.profile_changed.emit(profile)
 
-	Global.player_identity.need_open_url.connect(self._on_need_open_url)
+	Global.dcl_tokio_rpc.need_open_url.connect(self._on_need_open_url)
 	Global.scene_runner.set_pause(false)
 
 	if Global.testing_scene_mode:
 		Global.player_identity.create_guest_account()
+
+	Global.metrics.update_identity(
+		Global.player_identity.get_address_str(), Global.player_identity.is_guest
+	)
 
 	# last
 	ui_root.grab_focus.call_deferred()
@@ -200,8 +190,8 @@ func _on_need_open_url(url: String, _description: String) -> void:
 
 func _on_player_logout():
 	# Clean stored session
-	Global.config.session_account = {}
-	Global.config.save_to_settings_file()
+	Global.get_config().session_account = {}
+	Global.get_config().save_to_settings_file()
 
 	# TODO: It's crashing. Logout = exit app
 	#get_tree().change_scene_to_file("res://src/main.tscn")
@@ -264,13 +254,6 @@ func _unhandled_input(event):
 				panel_chat.show()
 
 
-func _toggle_ram_usage(visibility: bool):
-	if visibility:
-		label_ram.show()
-	else:
-		label_ram.hide()
-
-
 func _on_control_minimap_request_open_map():
 	if !control_menu.visible:
 		control_menu.show_map()
@@ -286,10 +269,6 @@ func _on_control_menu_hide_menu():
 	control_menu.close()
 	control_menu.control_map.clear()
 	ui_root.grab_focus()
-
-
-func _on_control_menu_toggle_ram(visibility):
-	label_ram.visible = visibility
 
 
 func _on_control_menu_toggle_fps(visibility):
@@ -375,7 +354,7 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 		Global.realm.async_set_realm(realm)
 	move_to(Vector3i(parcel.x * 16, 3, -parcel.y * 16), false)
 
-	Global.config.add_place_to_last_places(parcel, realm)
+	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true
 
 
@@ -426,11 +405,13 @@ func _on_control_menu_request_debug_panel(enabled):
 
 
 func _on_timer_fps_label_timeout():
-	label_ram.set_text("RAM Usage: " + str(OS.get_static_memory_usage() / 1024.0 / 1024.0) + " MB")
+	var usage_memory_mb: int = int(roundf(OS.get_static_memory_usage() / 1024.0 / 1024.0))
+	var usage_peak_memory_mb: int = int(roundf(OS.get_static_memory_peak_usage() / 1024.0 / 1024.0))
+	label_ram.set_text("RAM Usage: %d MB (%d MB peak)" % [usage_memory_mb, usage_peak_memory_mb])
 	label_fps.set_text("ALPHA - " + str(Engine.get_frames_per_second()) + " FPS")
 	if dirty_save_position:
 		dirty_save_position = false
-		Global.config.save_to_settings_file()
+		Global.get_config().save_to_settings_file()
 
 
 func hide_menu():

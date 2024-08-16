@@ -73,14 +73,15 @@ func _update_node():
 		label_name.add_theme_font_size_override("font_size", font_size)
 		label_subaddress.add_theme_font_size_override("font_size", font_size)
 
-		container_label.size = self.size
+		container_label.set_size.call_deferred(self.size)
 	else:
 		label_name.add_theme_font_size_override("font_size", max_font_size)
 		label_subaddress.add_theme_font_size_override("font_size", max_font_size)
 
 		var text_size = get_string_size(label_name, profile_name)
 		self.size = text_size
-		container_label.size = text_size
+		#container_label.size = text_size
+		container_label.set_size.call_deferred(text_size)
 
 		container_label.set_position(Vector2(0, 0))
 

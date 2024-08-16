@@ -10,6 +10,7 @@ var waiting_for_scenes = false
 var wait_for: float = 0.0
 var empty_timeout: float = 0.0
 var pending_to_load: int = 0
+var loaded_resources_offset := 0
 
 
 func _ready():
@@ -28,6 +29,12 @@ func _report_scene_load(done: bool, is_new_loading: bool, pending: int):
 
 
 func enable_loading_screen():
+	Global.content_provider.set_max_concurrent_downloads(32)
+
+	# Mute voice chat and scene volume
+	AudioSettings.apply_scene_volume_settings(0.0)
+	AudioSettings.apply_voice_chat_volume_settings(0.0)
+
 	loading_screen.show()
 	set_physics_process(true)
 	scenes_metadata_loaded = false
@@ -36,8 +43,16 @@ func enable_loading_screen():
 	loading_show_requested.emit()
 	wait_for = 1.0
 
+	loaded_resources_offset = Global.content_provider.count_loaded_resources()
+
 
 func hide_loading_screen():
+	Global.content_provider.set_max_concurrent_downloads(6)
+
+	# Restore voice chat and scene volume
+	AudioSettings.apply_scene_volume_settings()
+	AudioSettings.apply_voice_chat_volume_settings()
+
 	set_physics_process(false)
 	loading_screen.async_hide_loading_screen_effect()
 
@@ -77,7 +92,17 @@ func _physics_process(delta):
 					this_scene_progress = 1.0
 			scene_progress += this_scene_progress
 
-		var current_progress: int = int(scene_progress / float(scenes_loaded_count) * 80.0) + 20
+		var loading_resources = (
+			Global.content_provider.count_loading_resources() - loaded_resources_offset
+		)
+		var loaded_resources = (
+			Global.content_provider.count_loaded_resources() - loaded_resources_offset
+		)
+		var scene_loading_progress = scene_progress / float(scenes_loaded_count)
+		var loading_progress = float(loaded_resources) / float(loading_resources)
+		var current_progress: int = (
+			int(scene_loading_progress * 40.0) + int(loading_progress * 40.0) + 20
+		)
 		loading_screen.set_progress(current_progress)
 
 		if current_progress == 100:

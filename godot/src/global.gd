@@ -18,14 +18,14 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
 ## Global classes (singleton pattern)
-var config: ConfigData
-
 var raycast_debugger: RaycastDebugger
 
 var scene_fetcher: SceneFetcher
 
 var nft_fetcher: OpenSeaFetcher
 var nft_frame_loader: NftFrameStyleLoader
+
+var music_player: MusicPlayer
 
 var standalone = false
 var dcl_android_plugin
@@ -44,6 +44,7 @@ func _ready():
 	http_requester = RustHttpQueueRequester.new()
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
+	music_player = MusicPlayer.new()
 
 	if args.size() == 1 and args[0].begins_with("res://"):
 		if args[0] != "res://src/main.tscn":
@@ -57,7 +58,7 @@ func _ready():
 
 	if args.has("--clear-cache-startup"):
 		prints("Clear cache startup!")
-		Global.clear_cache()
+		Global.content_provider.clear_cache_folder()
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if args.has("--test"):
@@ -73,8 +74,19 @@ func _ready():
 	if Engine.has_singleton("DclAndroidPlugin"):
 		dcl_android_plugin = Engine.get_singleton("DclAndroidPlugin")
 
+	self.metrics = Metrics.create_metrics(
+		self.config.analytics_user_id, DclConfig.generate_uuid_v4()
+	)
+	self.metrics.set_name("metrics")
+
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
+
+	self.dcl_tokio_rpc = DclTokioRpc.new()
+	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
+
+	self.magic_link = MagicLink.new()
+	self.magic_link.set_name("magic_link")
 
 	self.player_identity = PlayerIdentity.new()
 	self.player_identity.set_name("player_identity")
@@ -94,15 +106,19 @@ func _ready():
 	self.avatars = AvatarScene.new()
 	self.avatars.set_name("avatar_scene")
 
+	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
+	get_tree().root.add_child.call_deferred(self.dcl_tokio_rpc)
+	get_tree().root.add_child.call_deferred(self.magic_link)
 	get_tree().root.add_child.call_deferred(self.player_identity)
 	get_tree().root.add_child.call_deferred(self.comms)
 	get_tree().root.add_child.call_deferred(self.avatars)
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
 	get_tree().root.add_child.call_deferred(self.testing_tools)
+	get_tree().root.add_child.call_deferred(self.metrics)
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
@@ -123,6 +139,7 @@ func set_raycast_debugger_enable(enable: bool):
 		add_child(raycast_debugger)
 	else:
 		remove_child(raycast_debugger)
+		raycast_debugger.queue_free()
 		raycast_debugger = null
 
 
@@ -185,20 +202,24 @@ func open_url(url: String):
 		OS.shell_open(url)
 
 
-func clear_cache():
-	# Clean the content cache folder
-	if DirAccess.dir_exists_absolute(Global.config.local_content_dir):
-		for file in DirAccess.get_files_at(Global.config.local_content_dir):
-			DirAccess.remove_absolute(Global.config.local_content_dir + file)
-		DirAccess.remove_absolute(Global.config.local_content_dir)
-
-	if not DirAccess.dir_exists_absolute(Global.config.local_content_dir):
-		DirAccess.make_dir_absolute(Global.config.local_content_dir)
-
-
 func async_create_popup_warning(
 	warning_type: PopupWarning.WarningType, title: String, description: String
 ):
 	var explorer = get_explorer()
 	if is_instance_valid(explorer):
 		await explorer.warning_messages.async_create_popup_warning(warning_type, title, description)
+
+
+func async_get_texture_size(content_mapping, src, sender) -> void:
+	var hash: String = content_mapping.get_hash(src)
+	if hash.is_empty():
+		hash = src
+
+	var promise = Global.content_provider.fetch_texture_by_hash(hash, content_mapping)
+	var result = await PromiseUtils.async_awaiter(promise)
+	if result is PromiseError:
+		printerr(src, "couldn't get the size", result.get_error())
+		sender.send(Vector2(2048.0, 2048))
+		return
+
+	sender.send(Vector2(result.original_size))

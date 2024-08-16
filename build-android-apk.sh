@@ -11,7 +11,7 @@ then
 fi
 
 echo "Build for Linux x86_64"
-cd ${EXPLORER_PATH}/rust/xtask
+cd ${EXPLORER_PATH}
 cargo run -- install
 cargo run -- run --only-build
 
@@ -23,11 +23,11 @@ ln -sf ${EXPLORER_PATH}/.bin/godot/templates/templates/ 4.2.1.stable
 set -e 
 
 echo "Build for Android (arm64)"
-cd ${EXPLORER_PATH}/rust/decentraland-godot-lib
+cd ${EXPLORER_PATH}/lib
 bash android-build.sh
 
 echo "Build for Android (x86_64)"
-cd ${EXPLORER_PATH}/rust/decentraland-godot-lib
+cd ${EXPLORER_PATH}/lib
 bash android-build.sh x86_64
 
 set +e
@@ -57,10 +57,6 @@ sed -i 's/gradle_build\/export_format=0/gradle_build\/export_format=1/' ${EXPLOR
 sed -i 's/architectures\/x86_64=true/architectures\/x86_64=false/' ${EXPLORER_PATH}/godot/export_presets.cfg
 # remove signed
 sed -i 's/package\/signed=true/package\/signed=false/' ${EXPLORER_PATH}/godot/export_presets.cfg
-
-# copy debug libraries
-cp -r ${EXPLORER_PATH}/godot/android/build/libs/debug/arm64-v8a ${EXPLORER_PATH}/godot/android/build/libs/release/arm64-v8a
-cp -r ${EXPLORER_PATH}/godot/android/build/libs/debug/libwebrtc.jar ${EXPLORER_PATH}/godot/android/build/libs/release/libwebrtc.jar
 
 # Build the .aab without x86_64 architecture
 echo "Export Godot AAB"

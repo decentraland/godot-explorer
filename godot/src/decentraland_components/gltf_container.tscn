@@ -4,3 +4,9 @@
 
 [node name="gltf_container" type="DclGltfContainer"]
 script = ExtResource("1_t3d20")
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 120.0
+one_shot = true
+
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

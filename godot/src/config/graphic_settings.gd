@@ -35,9 +35,9 @@ static func get_ui_zoom_available(root: Window) -> Dictionary:
 
 
 static func apply_ui_zoom(root: Window):
-	var factor = max(0.75, min(get_max_ui_zoom(root), Global.config.ui_zoom))
+	var factor = max(0.75, min(get_max_ui_zoom(root), Global.get_config().ui_zoom))
 
-	if Global.config.ui_zoom < 0.0:
+	if Global.get_config().ui_zoom < 0.0:
 		var dpi := DisplayServer.screen_get_dpi()
 
 		if dpi < 120:
@@ -48,7 +48,7 @@ static func apply_ui_zoom(root: Window):
 			factor = 2.0
 
 		factor = max(0.75, min(get_max_ui_zoom(root), factor))
-		Global.config.ui_zoom = factor
+		Global.get_config().ui_zoom = factor
 
 	root.content_scale_factor = factor
 
@@ -57,14 +57,17 @@ static func apply_window_config() -> void:
 	if Global.is_mobile():
 		return
 
-	if Global.config.windowed:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-	else:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	match Global.get_config().window_mode:
+		0:  # Windowed
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		1:  # Borderless
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		2:  # Full screen
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 
 
 static func apply_fps_limit():
-	match Global.config.limit_fps:
+	match Global.get_config().limit_fps:
 		0:  # VSync
 			Engine.max_fps = 0
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)

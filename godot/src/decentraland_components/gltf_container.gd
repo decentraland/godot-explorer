@@ -8,6 +8,8 @@ enum GltfContainerLoadingState {
 	FINISHED = 4,
 }
 
+@onready var timer = $Timer
+
 
 func _ready():
 	self.async_load_gltf.call_deferred()
@@ -19,15 +21,18 @@ func async_load_gltf():
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
 	if content_mapping.get_hash(dcl_gltf_src).is_empty():
 		dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND
+		timer.stop()
 		return
 
 	# TODO: should we set a timeout?
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
+	timer.start()
 
-	var promise = Global.content_provider.fetch_gltf(dcl_gltf_src, content_mapping, 0)
+	var promise = Global.content_provider.fetch_scene_gltf(dcl_gltf_src, content_mapping)
 	if promise == null:
 		printerr("Fatal error on fetch gltf: promise == null")
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
 		return
 
 	if not promise.is_resolved():
@@ -37,7 +42,12 @@ func async_load_gltf():
 	if res is PromiseError:
 		printerr("Error on fetch gltf: ", res.get_error())
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
 		return
+
+	var resource_locker = res.get_node("ResourceLocker")
+	if is_instance_valid(resource_locker):
+		self.add_child(resource_locker.duplicate())
 
 	var instance_promise: Promise = Global.content_provider.instance_gltf_colliders(
 		res, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
@@ -46,6 +56,7 @@ func async_load_gltf():
 	if res_instance is PromiseError:
 		printerr("Error on fetch gltf: ", res_instance.get_error())
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
 		return
 
 	dcl_pending_node = res_instance
@@ -58,11 +69,13 @@ func async_deferred_add_child():
 	# Corner case, when the scene is unloaded before the gltf is loaded
 	if not is_inside_tree():
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
 		return
 
 	var main_tree = get_tree()
 	if not is_instance_valid(main_tree):
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
 		return
 
 	add_child(new_gltf_node)
@@ -71,6 +84,7 @@ func async_deferred_add_child():
 
 	# Colliders and rendering is ensured to be ready at this point
 	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED
+	timer.stop()
 
 	self.check_animations()
 
@@ -107,15 +121,16 @@ func update_mask_colliders(node_to_inspect: Node):
 
 
 func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_collision_mask):
+	var gltf_node = self.get_gltf_resource()
 	if self.dcl_gltf_src != new_gltf:
 		dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
+		timer.start()
 
 		self.dcl_gltf_src = new_gltf
 		dcl_visible_cmask = visible_meshes_collision_mask
 		dcl_invisible_cmask = invisible_meshes_collision_mask
 
-		if get_child_count() > 0:
-			var gltf_node = get_child(0)
+		if gltf_node != null:
 			remove_child(gltf_node)
 			gltf_node.queue_free()
 
@@ -128,8 +143,13 @@ func change_gltf(new_gltf, visible_meshes_collision_mask, invisible_meshes_colli
 				visible_meshes_collision_mask != dcl_visible_cmask
 				or invisible_meshes_collision_mask != dcl_invisible_cmask
 			)
-			and get_child_count() > 0
+			and gltf_node != null
 		):
 			dcl_visible_cmask = visible_meshes_collision_mask
 			dcl_invisible_cmask = invisible_meshes_collision_mask
-			update_mask_colliders(get_child(0))
+			update_mask_colliders(gltf_node)
+
+
+func _on_timer_timeout():
+	printerr("gltf loading timeout ", dcl_gltf_src)
+	dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR

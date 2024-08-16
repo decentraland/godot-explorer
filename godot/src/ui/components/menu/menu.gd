@@ -24,6 +24,8 @@ var pressed_index: int = 0
 
 var selected_node: Control
 
+var fade_out_tween: Tween = null
+
 @onready var group: ButtonGroup = ButtonGroup.new()
 @onready var color_rect_header = %ColorRect_Header
 
@@ -38,6 +40,8 @@ var selected_node: Control
 @onready var button_backpack = %Button_Backpack
 @onready var button_settings = %Button_Settings
 @onready var control_deploying_profile = %Control_DeployingProfile
+
+@onready var button_magic_wallet = %Button_MagicWallet
 
 
 func _ready():
@@ -57,6 +61,8 @@ func _ready():
 	control_backpack.hide()
 	control_profile_settings.hide()
 	control_map.jump_to.connect(_jump_to)
+
+	button_magic_wallet.visible = Global.magic_link.is_using_magic()
 
 
 func _unhandled_input(event):
@@ -112,22 +118,19 @@ func show_last():
 
 
 func show_map():
-	if selected_node != control_map:
-		_on_button_map_pressed()
+	select_node(control_map, false)
 	button_map.set_pressed(true)
 	_open()
 
 
 func show_backpack():
-	if selected_node != control_map:
-		_on_button_backpack_pressed()
+	select_node(control_backpack, false)
 	button_backpack.set_pressed(true)
 	_open()
 
 
 func show_settings():
-	if selected_node != control_map:
-		_on_button_settings_pressed()
+	select_node(control_settings, false)
 	button_settings.set_pressed(true)
 	_open()
 
@@ -152,34 +155,33 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 	emit_signal("toggle_ram", visibility)
 
 
-func _on_button_settings_pressed():
-	if selected_node != control_settings:
+func select_node(node: Node, play_sfx: bool = true):
+	if selected_node != node:
 		fade_out(selected_node)
-		fade_in(control_settings)
+		fade_in(node)
+
+		if play_sfx:
+			UiSounds.play_sound("mainmenu_tab_switch")
+
+
+func _on_button_settings_pressed():
+	select_node(control_settings)
 
 
 func _on_button_map_pressed():
-	if selected_node != control_map:
-		fade_out(selected_node)
-		fade_in(control_map)
+	select_node(control_map)
 
 
 func _on_button_discover_pressed():
-	if selected_node != control_discover:
-		fade_out(selected_node)
-		fade_in(control_discover)
+	select_node(control_discover)
 
 
 func _on_button_backpack_pressed():
-	if selected_node != control_backpack:
-		fade_out(selected_node)
-		fade_in(control_backpack)
+	select_node(control_backpack)
 
 
 func _on_menu_profile_button_open_menu_profile():
-	if selected_node != control_profile_settings:
-		fade_out(selected_node)
-		fade_in(control_profile_settings)
+	select_node(control_profile_settings)
 
 
 func fade_in(node: Control):
@@ -190,14 +192,22 @@ func fade_in(node: Control):
 
 
 func fade_out(node: Control):
-	var tween = create_tween().set_parallel(true)
-	tween.tween_property(node, "modulate", Color(1, 1, 1, 0), 0.3)
-	tween.tween_callback(node.hide).set_delay(0.3)
+	if is_instance_valid(fade_out_tween):
+		if fade_out_tween.is_running():
+			selected_node.hide()
+			fade_out_tween.stop()
+
+	fade_out_tween = create_tween().set_parallel(true)
+	fade_out_tween.tween_property(node, "modulate", Color(1, 1, 1, 0), 0.3)
+	fade_out_tween.tween_callback(node.hide).set_delay(0.3)
 
 
 func _on_visibility_changed():
 	if is_visible_in_tree():
+		UiSounds.play_sound("mainmenu_widget_open")
 		grab_focus()
+	else:
+		UiSounds.play_sound("mainmenu_widget_close")
 
 
 func _async_deploy_if_has_changes():
@@ -232,3 +242,7 @@ func _on_button_backpack_toggled(toggled_on):
 
 func _on_button_settings_toggled(toggled_on):
 	button_settings.icon = SETTINGS_ON if toggled_on else SETTINGS_OFF
+
+
+func _on_button_magic_wallet_pressed():
+	Global.magic_link.open_wallet()

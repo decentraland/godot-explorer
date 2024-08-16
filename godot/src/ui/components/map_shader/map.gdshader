@@ -36,7 +36,6 @@ void fragment() {
 
 	bool topMask = (flagsR & 0x8) > 0;
 	bool leftMask = (flagsR & 0x10) > 0;
-	bool topLeftMask = (flagsR & 0x20) > 0;
 	
 	vec3 parcel_color;
 	if (flagsG == 32) {
@@ -54,17 +53,17 @@ void fragment() {
 	bool borderLeft = false;
 	bool borderTop = false;
 
-	if (!topMask && !leftMask) {
+	if (topMask == false && leftMask == false) {
 		borderLeft = true;
 		borderTop = true;
-	} else if (topMask && leftMask && topLeftMask) {
+	} else if (topMask && leftMask) {
 		borderLeft = false;
 		borderTop = false;
 	} else {
-		if (!topMask) {
+		if (topMask == false) {
 			borderTop = true;
 		}
-		if (!leftMask) {
+		if (leftMask == false) {
 			borderLeft = true;
 		}
 	}

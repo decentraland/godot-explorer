@@ -15,8 +15,7 @@ var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
 var _dirty_connected: bool = false
 
-@onready
-var general = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General
+@onready var general = %Container_General
 @onready
 var graphics = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics
 @onready
@@ -25,29 +24,35 @@ var advanced = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VB
 var audio = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio
 
 #General items:
-@onready
-var text_edit_cache_path = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_CachePath/TextEdit_CachePath
+@onready var text_edit_cache_path = %TextEdit_CachePath
+@onready var label_current_cache_size = %Label_CurrentCacheSize
+@onready var radio_selector_max_cache_size = %RadioSelector_MaxCacheSize
 
 #Audio items
 @onready var h_slider_general_volume = %HSlider_GeneralVolume
 @onready var h_slider_scene_volume = %HSlider_SceneVolume
-@onready var h_slider_voice_chat_volume = %HSlider_VoiceChatVolume
 @onready var h_slider_ui_volume = %HSlider_UIVolume
+@onready var h_slider_music_volume = %HSlider_MusicVolume
+@onready var h_slider_voice_chat_volume = %HSlider_VoiceChatVolume
 @onready var h_slider_mic_amplification = %HSlider_MicAmplification
 
 #Graphics items:
-@onready
-var h_slider_rendering_scale = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Resolution3DScale/HSlider_Resolution3DScale
-@onready
-var menu_button_ui_zoom = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/UiZoom/MenuButton_UiZoom
-@onready
-var v_box_container_windowed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer_Windowed
-@onready
-var checkbox_windowed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer_Windowed/Checkbox_Windowed
-@onready
-var menu_button_limit_fps = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/LimitFps/MenuButton_LimitFps
-@onready
-var menu_button_skybox = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/Skybox/MenuButton_Skybox
+@onready var h_slider_rendering_scale = %HSlider_Resolution3DScale
+@onready var radio_selector_ui_zoom = %RadioSelector_UiZoom
+
+@onready var v_box_container_windowed = %VBoxContainer_Windowed
+@onready var radio_selector_windowed = %RadioSelector_Windowed
+
+@onready var box_container_custom = %VBoxContainer_Custom
+
+@onready var radio_selector_graphic_profile = %RadioSelector_GraphicProfile
+
+@onready var radio_selector_texture_quality = %RadioSelector_TextureQuality
+@onready var radio_selector_skybox = %RadioSelector_Skybox
+@onready var radio_selector_shadow = %RadioSelector_Shadow
+@onready var radio_selector_aa = %RadioSelector_AA
+
+@onready var radio_selector_limit_fps = %RadioSelector_LimitFps
 
 #Advanced items:
 @onready
@@ -62,10 +67,8 @@ var h_slider_process_tick_quota = $ColorRect_Content/HBoxContainer/ScrollContain
 @onready
 var label_process_tick_quota_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/Label_ProcessTickQuotaValue
 
-@onready
-var label_scene_radius_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/Label_SceneRadiusValue
-@onready
-var h_slider_scene_radius = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius
+@onready var label_scene_radius_value = %Label_SceneRadiusValue
+@onready var h_slider_scene_radius = %HSlider_SceneRadius
 
 @onready
 var spin_box_gravity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
@@ -80,31 +83,45 @@ var check_box_raycast_debugger = $ColorRect_Content/HBoxContainer/ScrollContaine
 
 
 func _ready():
-	general.show()
-	graphics.hide()
-	advanced.hide()
-	audio.hide()
+	_on_general_button_toggled(true)
 
-	text_edit_cache_path.text = Global.config.local_content_dir
+	# general
+	text_edit_cache_path.text = Global.get_config().local_content_dir
+	radio_selector_max_cache_size.selected = Global.get_config().max_cache_size
+
+	# graphic
+	refresh_graphic_settings()
+
+	# volume
+	h_slider_general_volume.value = Global.get_config().audio_general_volume
+	h_slider_scene_volume.value = Global.get_config().audio_scene_volume
+	h_slider_voice_chat_volume.value = Global.get_config().audio_voice_chat_volume
+	h_slider_ui_volume.value = Global.get_config().audio_ui_volume
+	h_slider_music_volume.value = Global.get_config().audio_music_volume
+	h_slider_mic_amplification.value = Global.get_config().audio_mic_amplification
+
+	refresh_values()
+
+
+func refresh_graphic_settings():
+	# We only show the custom settings if the graphic profile is custom
+	box_container_custom.visible = Global.get_config().graphic_profile == 3
+	var graphic_profile = Global.get_config().graphic_profile
+	radio_selector_graphic_profile.selected = graphic_profile
 
 	if Global.is_mobile():
 		v_box_container_windowed.hide()
-		checkbox_windowed.disabled = true
 	else:
-		checkbox_windowed.button_pressed = Global.config.windowed
+		radio_selector_windowed.selected = Global.get_config().window_mode
 
+	radio_selector_limit_fps.selected = Global.get_config().limit_fps
+	radio_selector_texture_quality.selected = Global.get_config().texture_quality
+	radio_selector_skybox.selected = Global.get_config().skybox
+	radio_selector_shadow.selected = Global.get_config().shadow_quality
+	radio_selector_aa.selected = Global.get_config().anti_aliasing
+
+	h_slider_rendering_scale.value = Global.get_config().resolution_3d_scale
 	refresh_zooms()
-
-	h_slider_general_volume.value = Global.config.audio_general_volume
-	h_slider_scene_volume.value = Global.config.audio_scene_volume
-	h_slider_voice_chat_volume.value = Global.config.audio_voice_chat_volume
-	h_slider_ui_volume.value = Global.config.audio_ui_volume
-	h_slider_mic_amplification.value = Global.config.audio_mic_amplification
-
-	menu_button_limit_fps.selected = Global.config.limit_fps
-	menu_button_skybox.selected = Global.config.skybox
-
-	refresh_values()
 
 
 func _on_button_pressed():
@@ -139,35 +156,27 @@ func _on_button_audio_pressed():
 	advanced.hide()
 
 
+# gdlint:ignore = async-function-name
 func _on_button_clear_cache_pressed():
 	# Clean the content cache folder
-	Global.clear_cache()
+	Global.content_provider.clear_cache_folder()
+	await get_tree().process_frame
+	_update_current_cache_size()
 
 
 func _on_checkbox_fps_toggled(button_pressed):
-	Global.config.show_fps = button_pressed
-
-
-func _on_menu_button_limit_fps_item_selected(index):
-	Global.config.limit_fps = index
-	GraphicSettings.apply_fps_limit()
-	Global.config.save_to_settings_file()
-
-
-func _on_menu_button_skybox_item_selected(index):
-	Global.config.skybox = index
-	Global.config.save_to_settings_file()
+	Global.get_config().show_fps = button_pressed
 
 
 func refresh_values():
-	spin_box_gravity.value = Global.config.gravity
-	spin_box_walk_speed.value = Global.config.walk_velocity
-	spin_box_run_speed.value = Global.config.run_velocity
-	spin_box_jump_velocity.value = Global.config.jump_velocity
-	h_slider_process_tick_quota.set_value_no_signal(Global.config.process_tick_quota_ms)
-	h_slider_scene_radius.set_value_no_signal(Global.config.scene_radius)
-	label_process_tick_quota_value.text = str(Global.config.process_tick_quota_ms)
-	label_scene_radius_value.text = str(Global.config.scene_radius)
+	spin_box_gravity.value = Global.get_config().gravity
+	spin_box_walk_speed.value = Global.get_config().walk_velocity
+	spin_box_run_speed.value = Global.get_config().run_velocity
+	spin_box_jump_velocity.value = Global.get_config().jump_velocity
+	h_slider_process_tick_quota.set_value_no_signal(Global.get_config().process_tick_quota_ms)
+	h_slider_scene_radius.set_value_no_signal(Global.get_config().scene_radius)
+	label_process_tick_quota_value.text = str(Global.get_config().process_tick_quota_ms)
+	label_scene_radius_value.text = str(Global.get_config().scene_radius)
 
 	if is_instance_valid(Global.raycast_debugger):
 		check_box_raycast_debugger.set_pressed_no_signal(true)
@@ -241,30 +250,30 @@ func _process(_delta):
 
 
 func _on_spin_box_walk_speed_value_changed(value):
-	Global.config.walk_velocity = value
-	Global.config.save_to_settings_file()
+	Global.get_config().walk_velocity = value
+	Global.get_config().save_to_settings_file()
 
 
 func _on_spin_box_run_speed_value_changed(value):
-	Global.config.run_velocity = value
-	Global.config.save_to_settings_file()
+	Global.get_config().run_velocity = value
+	Global.get_config().save_to_settings_file()
 
 
 func _on_spin_box_jump_velocity_value_changed(value):
-	Global.config.jump_velocity = value
-	Global.config.save_to_settings_file()
+	Global.get_config().jump_velocity = value
+	Global.get_config().save_to_settings_file()
 
 
 func _on_spin_box_gravity_value_changed(value):
-	Global.config.gravity = value
-	Global.config.save_to_settings_file()
+	Global.get_config().gravity = value
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_scene_radius_value_changed(value):
-	if value != Global.config.scene_radius:
-		Global.config.scene_radius = h_slider_scene_radius.value
+	if value != Global.get_config().scene_radius:
+		Global.get_config().scene_radius = h_slider_scene_radius.value
 		label_scene_radius_value.text = str(h_slider_scene_radius.value)
-		Global.config.save_to_settings_file()
+		Global.get_config().save_to_settings_file()
 
 
 func _on_button_connect_preview_pressed():
@@ -289,68 +298,146 @@ func _on_check_box_raycast_debugger_toggled(toggled_on):
 	Global.set_raycast_debugger_enable(toggled_on)
 
 
-func _on_button_profile_pressed():
-	pass  # Replace with function body.
-
-
 func refresh_zooms():
 	var selected_index: int = -1
 	var i: int = 0
 	var options := GraphicSettings.get_ui_zoom_available(get_window())
-	menu_button_ui_zoom.clear()
+	radio_selector_ui_zoom.clear()
 
 	for ui_zoom_option in options.keys():
-		menu_button_ui_zoom.add_item(ui_zoom_option)
+		radio_selector_ui_zoom.add_item(ui_zoom_option)
 		if options[ui_zoom_option] == get_window().content_scale_factor:
 			selected_index = i
 		i += 1
 	if selected_index == -1:
 		selected_index = i - 1
-	menu_button_ui_zoom.selected = selected_index
-
-
-func _on_checkbox_windowed_toggled(toggled_on):
-	Global.config.windowed = toggled_on
-	GraphicSettings.apply_window_config()
-	refresh_zooms()
-
-
-func _on_menu_button_ui_zoom_item_selected(index):
-	var options := GraphicSettings.get_ui_zoom_available(get_window())
-	var current_ui_zoom: String = menu_button_ui_zoom.get_item_text(index)
-	if not options.has(current_ui_zoom):
-		current_ui_zoom = "Max"
-	Global.config.ui_zoom = options[current_ui_zoom]
-	GraphicSettings.apply_ui_zoom(get_window())
-	Global.config.save_to_settings_file()
+	radio_selector_ui_zoom.selected = selected_index
 
 
 func _on_h_slider_rendering_scale_drag_ended(_value_changed):
-	Global.config.resolution_3d_scale = h_slider_rendering_scale.value
-	get_window().get_viewport().scaling_3d_scale = Global.config.resolution_3d_scale
-	Global.config.save_to_settings_file()
+	Global.get_config().resolution_3d_scale = h_slider_rendering_scale.value
+	get_window().get_viewport().scaling_3d_scale = Global.get_config().resolution_3d_scale
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_mic_amplification_value_changed(value):
-	Global.config.audio_mic_amplification = value
+	Global.get_config().audio_mic_amplification = value
 	AudioSettings.apply_mic_amplification_settings()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_ui_volume_value_changed(value):
-	Global.config.audio_ui_volume = value
+	Global.get_config().audio_ui_volume = value
 	AudioSettings.apply_ui_volume_settings()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_voice_chat_volume_value_changed(value):
-	Global.config.audio_voice_chat_volume = value
+	Global.get_config().audio_voice_chat_volume = value
 	AudioSettings.apply_voice_chat_volume_settings()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_scene_volume_value_changed(value):
-	Global.config.audio_scene_volume = value
+	Global.get_config().audio_scene_volume = value
 	AudioSettings.apply_scene_volume_settings()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_h_slider_general_volume_value_changed(value):
-	Global.config.audio_general_volume = value
+	Global.get_config().audio_general_volume = value
 	AudioSettings.apply_general_volume_settings()
+	Global.get_config().save_to_settings_file()
+
+
+func _on_radio_selector_ui_zoom_select_item(_index, item):
+	var options := GraphicSettings.get_ui_zoom_available(get_window())
+	var current_ui_zoom: String = item
+	if not options.has(current_ui_zoom):
+		current_ui_zoom = "Max"
+	Global.get_config().ui_zoom = options[current_ui_zoom]
+	GraphicSettings.apply_ui_zoom(get_window())
+	Global.get_config().save_to_settings_file()
+
+
+func _on_radio_selector_select_item(index, _item):
+	Global.get_config().limit_fps = index
+	GraphicSettings.apply_fps_limit()
+	Global.get_config().save_to_settings_file()
+
+
+func _on_radio_selector_skybox_select_item(index, _item):
+	Global.get_config().skybox = index
+	Global.get_config().save_to_settings_file()
+
+
+func _on_radio_selector_shadow_select_item(index, _item):
+	Global.get_config().shadow_quality = index
+	Global.get_config().save_to_settings_file()
+
+
+# gdlint:ignore = async-function-name
+func _on_radio_selector_windowed_select_item(index, _item):
+	Global.get_config().window_mode = index
+	GraphicSettings.apply_window_config()
+	await get_tree().process_frame
+	refresh_zooms()
+
+
+func _on_radio_selector_aa_select_item(index, _item):
+	Global.get_config().anti_aliasing = index
+	Global.get_config().save_to_settings_file()
+
+
+func _on_radio_selector_graphic_profile_select_item(index, _item):
+	Global.get_config().graphic_profile = index
+
+	match index:
+		0:  # Performance
+			Global.get_config().anti_aliasing = 0  # off
+			Global.get_config().shadow_quality = 0  # disabled
+			Global.get_config().skybox = 0  # low
+			Global.get_config().texture_quality = 0  # low
+		1:  # Balanced
+			Global.get_config().anti_aliasing = 1  # x2
+			Global.get_config().shadow_quality = 1  # normal
+			Global.get_config().skybox = 1  # medium
+			Global.get_config().texture_quality = 1  # medium
+		2:  # Quality
+			Global.get_config().anti_aliasing = 3  # x8
+			Global.get_config().shadow_quality = 2  # high quality
+			Global.get_config().skybox = 2  # high
+			Global.get_config().texture_quality = 2  # high
+		3:  # Custom
+			pass
+
+	refresh_graphic_settings()
+	Global.get_config().save_to_settings_file()
+
+
+func _on_h_slider_music_volume_value_changed(value):
+	Global.get_config().audio_music_volume = value
+	AudioSettings.apply_music_volume_settings()
+	Global.get_config().save_to_settings_file()
+
+
+func _on_radio_selector_texture_quality_select_item(index, _item):
+	Global.get_config().texture_quality = index
+	Global.get_config().save_to_settings_file()
+
+
+func _on_radio_selector_max_cache_size_select_item(index, _item):
+	Global.get_config().max_cache_size = index
+	GeneralSettings.apply_max_cache_size()
+	Global.get_config().save_to_settings_file()
+
+
+func _update_current_cache_size():
+	var current_size_mb = roundf(
+		Global.content_provider.get_cache_folder_total_size() / 1000 / 1000
+	)
+	label_current_cache_size.text = "(current size: %dmb)" % current_size_mb
+
+
+func _on_container_general_visibility_changed():
+	_update_current_cache_size()

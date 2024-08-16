@@ -21,6 +21,8 @@ func _on_button_pressed():
 	var urns = $LineEdit.text.split("\n")
 	for children in $GridContainer.get_children():
 		$GridContainer.remove_child(children)
+		children.queue_free()
+
 	for urn in urns:
 		prints("urn", urn)
 		async_add_nft(urn)

@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:22.04
 
 RUN apt-get update && apt-get upgrade -y
 
@@ -11,7 +11,7 @@ WORKDIR /app
 
 COPY exports/decentraland.godot.client.x86_64 \
     exports/decentraland.godot.client.pck \
-    exports/libdecentraland_godot_lib.so  \
+    exports/libdclgodot.so  \
     entry-point.sh \
     /app/
 

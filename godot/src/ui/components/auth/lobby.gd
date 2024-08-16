@@ -1,3 +1,4 @@
+class_name Lobby
 extends Control
 
 signal change_scene(new_scene_path: String)
@@ -65,8 +66,16 @@ func close_sign_in():
 		get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
 
 
+# gdlint:ignore = async-function-name
 func _ready():
-	Global.player_identity.need_open_url.connect(self._on_need_open_url)
+	var magic_login = %MagicLogin
+	if is_instance_valid(magic_login):
+		magic_login.set_lobby(self)
+
+	show_panel(control_loading)
+
+	UiSounds.install_audio_recusirve(self)
+	Global.dcl_tokio_rpc.need_open_url.connect(self._on_need_open_url)
 	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
 	Global.player_identity.wallet_connected.connect(self._on_wallet_connected)
 
@@ -76,7 +85,14 @@ func _ready():
 	if args.has("--skip-lobby"):
 		_skip_lobby = true
 
-	if Global.player_identity.try_recover_account(Global.config.session_account):
+	var session_account: Dictionary = Global.get_config().session_account
+	if session_account.get("magic_auth", false):
+		# Check if Magic session is still alive
+		Global.magic_link.check_connection()
+		if !await Global.magic_link.connection_state:
+			session_account = {}
+
+	if Global.player_identity.try_recover_account(session_account):
 		loading_first_profile = true
 		show_panel(control_loading)
 	elif _skip_lobby:
@@ -94,10 +110,11 @@ func go_to_explorer():
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
+	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
 
 	if !new_profile.has_connected_web3():
-		Global.config.guest_profile = new_profile.to_godot_dictionary()
-		Global.config.save_to_settings_file()
+		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
+		Global.get_config().save_to_settings_file()
 
 	if loading_first_profile:
 		loading_first_profile = false
@@ -115,12 +132,10 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if _skip_lobby:
 		go_to_explorer()
 
-	await avatar_preview.avatar.async_update_avatar_from_profile(new_profile)
-
 	if waiting_for_new_wallet:
 		waiting_for_new_wallet = false
 		if profile_has_name():
-			close_sign_in()
+			await async_close_sign_in()
 		else:
 			show_panel(control_choose_name)
 			_show_avatar_preview()
@@ -135,18 +150,18 @@ func _on_need_open_url(url: String, _description: String) -> void:
 
 
 func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
-	Global.config.session_account = {}
+	Global.get_config().session_account = {}
 
 	var new_stored_account := {}
 	if Global.player_identity.get_recover_account_to(new_stored_account):
-		Global.config.session_account = new_stored_account
+		Global.get_config().session_account = new_stored_account
 
-	Global.config.save_to_settings_file()
+	Global.get_config().save_to_settings_file()
 
 
 func _on_button_different_account_pressed():
-	Global.config.session_account = {}
-	Global.config.save_to_settings_file()
+	Global.get_config().session_account = {}
+	Global.get_config().save_to_settings_file()
 	show_connect()
 	avatar_preview.hide()
 
@@ -186,7 +201,7 @@ func _on_button_next_pressed():
 
 	await Global.player_identity.async_deploy_profile(current_profile, true)
 
-	close_sign_in()
+	await async_close_sign_in(false)
 
 
 func _on_button_random_name_pressed():
@@ -214,8 +229,8 @@ func _on_button_cancel_pressed():
 
 func create_guest_account_if_needed():
 	if not guest_account_created:
-		Global.config.guest_profile = {}
-		Global.config.save_to_settings_file()
+		Global.get_config().guest_profile = {}
+		Global.get_config().save_to_settings_file()
 		Global.player_identity.create_guest_account()
 		Global.player_identity.set_default_profile()
 		guest_account_created = true
@@ -238,8 +253,9 @@ func _show_avatar_preview():
 	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
 
 
+# gdlint:ignore = async-function-name
 func _on_button_jump_in_pressed():
-	close_sign_in()
+	await async_close_sign_in()
 
 
 func toggle_terms_and_privacy_checkbox():

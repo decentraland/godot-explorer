@@ -2,6 +2,7 @@ on:
   push:
     branches:
       - main
+      
   workflow_dispatch:
     inputs:
       branch:
@@ -22,26 +23,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'push' && 'main' || github.event.inputs.branch }}
-      - name: Setup Rust
+          ref: ${{ github.event_name == 'push' && github.ref || github.event.inputs.branch }}
+      - name: Install Android targets
         run: |
-          echo $ANDROID_HOME
-          ls -la /root/
-          ls -la /root/.cargo/bin/
-          export PATH="/root/.cargo/bin:${PATH}"
-          rustup default stable
+          echo $PATH
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.77.2
+          override: true
+          components: clippy, rustfmt
+
+      - name: Install Android targets
+        run: |
           rustup target add aarch64-linux-android
           rustup target add x86_64-linux-android
       - name: Build
         run: |
           bash build-android-apk.sh
       
-      # if libdecentraland_godot_lib.so does not exist, the build failed, nothing to upload
+      # if libdclgodot.so does not exist, the build failed, nothing to upload
       - name: Copy artifacts
         if: success() || failure()
         run: |
           mkdir -p android-artifacts
-          mv godot/lib/android/arm64/libdecentraland_godot_lib.so android-artifacts/
+          mv godot/lib/android/arm64/libdclgodot.so android-artifacts/
           mv android.apk android-artifacts/ || true
           mv android-unsigned.aab android-artifacts/ || true
           

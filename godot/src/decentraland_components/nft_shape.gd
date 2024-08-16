@@ -46,6 +46,7 @@ func _load_frame_style(
 
 	for child in get_children():
 		remove_child(child)
+		child.queue_free()
 
 	current_frame = Global.nft_frame_loader.instantiate(style)
 

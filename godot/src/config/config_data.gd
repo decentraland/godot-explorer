@@ -1,11 +1,11 @@
 class_name ConfigData
-extends RefCounted
+extends DclConfig
 
-signal param_changed(param: ConfigParams, new_value)
+signal param_changed(param: ConfigParams)
 
 enum ConfigParams {
 	CONTENT_DIRECTORY,
-	WINDOWED,
+	WINDOW_MODE,
 	UI_ZOOM,
 	RESOLUTION_3D_SCALE,
 	GRAVITY,
@@ -19,10 +19,11 @@ enum ConfigParams {
 	SKY_BOX,
 	SESSION_ACCOUNT,
 	GUEST_PROFILE,
-	AUDIO_GENERAL_VOLUME
+	AUDIO_GENERAL_VOLUME,
+	SHADOW_QUALITY,
+	ANTI_ALIASING,
+	GRAPHIC_PROFILE,
 }
-
-const SETTINGS_FILE = "user://settings.cfg"
 
 var local_content_dir: String = OS.get_user_data_dir() + "/content":
 	set(value):
@@ -30,15 +31,21 @@ var local_content_dir: String = OS.get_user_data_dir() + "/content":
 			local_content_dir = value
 			param_changed.emit(ConfigParams.CONTENT_DIRECTORY)
 
+# 0=512mb 1=1gb 2=2gb
+var max_cache_size: int = 1:
+	set(value):
+		max_cache_size = value
+
 var gravity: float = 55.0:
 	set(value):
 		gravity = value
 		param_changed.emit(ConfigParams.GRAVITY)
 
-var windowed: bool = true:
+# 0: Windowed, 1: Borderless, 2: Full Screen
+var window_mode: int = 0:
 	set(value):
-		windowed = value
-		param_changed.emit(ConfigParams.WINDOWED)
+		window_mode = value
+		param_changed.emit(ConfigParams.WINDOW_MODE)
 
 var ui_zoom: float = -1.0:
 	set(value):
@@ -86,11 +93,29 @@ var limit_fps: int = 0:
 		limit_fps = value
 		param_changed.emit(ConfigParams.GRAVITY)
 
-# 0- without, 1 - pretty, skybox -default env
-var skybox: int = 1:
+# 0- performance, 1- balanced, 2- high quality
+var skybox: int = 0:
 	set(value):
 		skybox = value
 		param_changed.emit(ConfigParams.SKY_BOX)
+
+# 0- no shadow, 1- low res shadow, 2- high res shadow
+var shadow_quality: int = 0:
+	set(value):
+		shadow_quality = value
+		param_changed.emit(ConfigParams.SHADOW_QUALITY)
+
+# 0: Performance, 1: Balanced, 2: Quality, 3: Custom
+var graphic_profile: int = 0:
+	set(value):
+		graphic_profile = value
+		param_changed.emit(ConfigParams.GRAPHIC_PROFILE)
+
+# 0: Off, 1: x2, 2: x4, 3: x8
+var anti_aliasing: int = 0:
+	set(value):
+		anti_aliasing = value
+		param_changed.emit(ConfigParams.ANTI_ALIASING)
 
 var last_realm_joined: String = "":
 	set(value):
@@ -131,9 +156,17 @@ var audio_ui_volume: float = 100.0:
 	set(value):
 		audio_ui_volume = value
 
+var audio_music_volume: float = 100.0:
+	set(value):
+		audio_music_volume = value
+
 var audio_mic_amplification: float = 100.0:
 	set(value):
 		audio_mic_amplification = value
+
+var analytics_user_id: String = "":
+	set(value):
+		analytics_user_id = value
 
 
 func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
@@ -177,30 +210,31 @@ func load_from_default():
 	self.scene_radius = 2
 	self.limit_fps = 0
 
-	if Global.is_mobile():
-		self.skybox = 0
-	else:
-		self.skybox = 1
+	self.skybox = 0  # basic
+
+	self.shadow_quality = 0  # disabled
+	self.anti_aliasing = 0  # off
+	self.graphic_profile = 0
 
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
+	self.max_cache_size = 1
 
 	self.show_fps = true
 
-	self.windowed = true
+	self.window_mode = 0
 
 	self.session_account = {}
 	self.guest_profile = {}
 
-	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-test-psquad-demo-latest"
+	self.last_realm_joined = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
 	self.last_parcel_position = Vector2i(72, -10)
+
+	self.analytics_user_id = DclConfig.generate_uuid_v4()
 
 
 func load_from_settings_file():
 	var data_default := ConfigData.new()
 	data_default.load_from_default()
-
-	var settings_file: ConfigFile = ConfigFile.new()
-	settings_file.load(SETTINGS_FILE)
 
 	self.gravity = settings_file.get_value("config", "gravity", data_default.gravity)
 	self.jump_velocity = settings_file.get_value(
@@ -220,11 +254,24 @@ func load_from_settings_file():
 		self.scene_radius = settings_file.get_value("config", "scene_radius", data_default.scene_radius)
 	self.limit_fps = settings_file.get_value("config", "limit_fps", data_default.limit_fps)
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
+	self.shadow_quality = settings_file.get_value(
+		"config", "shadow_quality", data_default.shadow_quality
+	)
+	self.anti_aliasing = settings_file.get_value(
+		"config", "anti_aliasing", data_default.anti_aliasing
+	)
+	self.graphic_profile = settings_file.get_value(
+		"config", "graphic_profile", data_default.graphic_profile
+	)
 	self.local_content_dir = settings_file.get_value(
 		"config", "local_content_dir", data_default.local_content_dir
 	)
+
+	self.max_cache_size = settings_file.get_value(
+		"config", "max_cache_size", data_default.max_cache_size
+	)
 	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
-	self.windowed = settings_file.get_value("config", "windowed", data_default.windowed)
+	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
 	self.resolution_3d_scale = settings_file.get_value(
 		"config", "resolution_3d_scale", data_default.resolution_3d_scale
@@ -244,6 +291,10 @@ func load_from_settings_file():
 
 	self.audio_ui_volume = settings_file.get_value(
 		"config", "audio_ui_volume", data_default.audio_ui_volume
+	)
+
+	self.audio_music_volume = settings_file.get_value(
+		"config", "audio_music_volume", data_default.audio_music_volume
 	)
 
 	self.audio_mic_amplification = settings_file.get_value(
@@ -266,6 +317,10 @@ func load_from_settings_file():
 		"user", "last_realm_joined", data_default.last_realm_joined
 	)
 
+	self.analytics_user_id = settings_file.get_value(
+		"analytics", "user_id", DclConfig.generate_uuid_v4()
+	)
+
 	self.last_places = settings_file.get_value("user", "last_places", data_default.last_places)
 
 
@@ -282,19 +337,26 @@ func save_to_settings_file():
 	settings_file.set_value("config", "scene_radius", self.scene_radius)
 	settings_file.set_value("config", "limit_fps", self.limit_fps)
 	settings_file.set_value("config", "skybox", self.skybox)
+	settings_file.set_value("config", "shadow_quality", self.shadow_quality)
+	settings_file.set_value("config", "anti_aliasing", self.anti_aliasing)
+	settings_file.set_value("config", "graphic_profile", self.graphic_profile)
 	settings_file.set_value("config", "local_content_dir", self.local_content_dir)
+	settings_file.set_value("config", "max_cache_size", self.max_cache_size)
 	settings_file.set_value("config", "show_fps", self.show_fps)
-	settings_file.set_value("config", "windowed", self.windowed)
+	settings_file.set_value("config", "window_mode", self.window_mode)
 	settings_file.set_value("config", "ui_zoom", self.ui_zoom)
 	settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
 	settings_file.set_value("config", "audio_general_volume", self.audio_general_volume)
 	settings_file.set_value("config", "audio_scene_volume", self.audio_scene_volume)
-	settings_file.set_value("config", "audio_voice_chat_volume", self.audio_voice_chat_volume)
 	settings_file.set_value("config", "audio_ui_volume", self.audio_ui_volume)
+	settings_file.set_value("config", "audio_music_volume", self.audio_music_volume)
+	settings_file.set_value("config", "audio_voice_chat_volume", self.audio_voice_chat_volume)
 	settings_file.set_value("config", "audio_mic_amplification", self.audio_mic_amplification)
+	settings_file.set_value("config", "texture_quality", self.get_texture_quality())
 	settings_file.set_value("session", "account", self.session_account)
 	settings_file.set_value("session", "guest_profile", self.guest_profile)
 	settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	settings_file.set_value("user", "last_places", self.last_places)
-	settings_file.save(SETTINGS_FILE)
+	settings_file.set_value("analytics", "user_id", self.analytics_user_id)
+	settings_file.save(DclConfig.get_settings_file_path())

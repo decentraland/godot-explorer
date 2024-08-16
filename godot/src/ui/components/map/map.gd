@@ -62,3 +62,4 @@ func _on_control_map_shader_parcel_click(_parcel_position):
 	control_jump_to.position = get_global_mouse_position()
 	label_parcel_position.text = str(mouse_tile)
 	control_jump_to.show()
+	UiSounds.play_sound("mainmenu_tile_highlight")

@@ -1,9 +1,8 @@
 class_name WearableItem
 extends CustomTouchButton
 
-signal equip(wearable_id: String)
-signal unequip(wearable_id: String)
-signal info(wearable_id: String)
+signal equip
+signal unequip
 
 const WEARABLE_PANEL = preload("res://src/ui/components/wearable_panel/wearable_panel.tscn")
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
@@ -30,6 +29,7 @@ var was_pressed = false
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	panel_container_external_orig_rect = panel_container_external.get_rect()
 	panel_container_external.hide()
 

@@ -19,6 +19,9 @@ const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
+const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
+const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
+
 
 class SceneItem:
 	extends RefCounted
@@ -31,9 +34,6 @@ class SceneItem:
 	var parcels: Array[Vector2i] = []
 	var is_global: bool = false
 
-
-var adaptation_layer_js_request: int = -1
-var adaptation_layer_js_local_path: String = "user://sdk-adaptation-layer.js"
 
 var current_position: Vector2i = Vector2i(-1000, -1000)
 var loaded_empty_scenes: Dictionary = {}
@@ -53,11 +53,8 @@ var _scene_changed_counter: int = 0
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
 
-	scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
-	Global.config.param_changed.connect(self._on_config_changed)
-
-	if FileAccess.file_exists(adaptation_layer_js_local_path):
-		DirAccess.remove_absolute(adaptation_layer_js_local_path)
+	scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
+	Global.get_config().param_changed.connect(self._on_config_changed)
 
 	Global.scene_runner.scene_killed.connect(self.on_scene_killed)
 	Global.loading_finished.connect(self.on_loading_finished)
@@ -87,7 +84,7 @@ func on_scene_killed(killed_scene_id, _entity_id):
 
 func _on_config_changed(param: ConfigData.ConfigParams):
 	if param == ConfigData.ConfigParams.SCENE_RADIUS:
-		scene_entity_coordinator.set_scene_radius(Global.config.scene_radius)
+		scene_entity_coordinator.set_scene_radius(Global.get_config().scene_radius)
 
 
 func get_current_scene_data() -> SceneItem:
@@ -166,7 +163,7 @@ func _async_on_desired_scene_changed():
 
 	report_scene_load.emit(false, new_loading, loadable_scenes.size())
 
-	var results = await PromiseUtils.async_all(loading_promises)
+	await PromiseUtils.async_all(loading_promises)
 
 	# If there is other calls processing the scene, early return
 	# 	the next block of code will be executed by the last request
@@ -208,8 +205,8 @@ func _on_realm_changed():
 	var should_load_city_pointers = true
 	var content_base_url = Global.realm.content_base_url
 
-	Global.config.last_realm_joined = Global.realm.realm_url
-	Global.config.save_to_settings_file()
+	Global.get_config().last_realm_joined = Global.realm.realm_url
+	Global.get_config().save_to_settings_file()
 
 	if not Global.realm.realm_city_loader_content_base_url.is_empty():
 		content_base_url = Global.realm.realm_city_loader_content_base_url
@@ -234,7 +231,9 @@ func _on_realm_changed():
 			Global.scene_runner.kill_scene(scene.scene_number_id)
 
 	for parcel in loaded_empty_scenes:
-		remove_child(loaded_empty_scenes[parcel])
+		var empty_parcel = loaded_empty_scenes[parcel]
+		remove_child(empty_parcel)
+		empty_parcel.queue_free()
 
 	loaded_empty_scenes.clear()
 
@@ -281,59 +280,43 @@ func async_load_scene(
 
 	loaded_scenes[scene_entity_id] = scene_item
 
+	var content_mapping := scene_entity_definition.get_content_mapping()
+
 	var local_main_js_path: String = ""
-
+	var script_promise: Promise = null
 	if scene_entity_definition.is_sdk7():
-		var main_js_file_hash := scene_entity_definition.get_main_js_hash()
-		if not main_js_file_hash.is_empty():
-			local_main_js_path = "user://content/" + main_js_file_hash
-			if (
-				not FileAccess.file_exists(local_main_js_path)
-				or main_js_file_hash.begins_with("b64")
-			):
-				var main_js_file_url: String = (
-					scene_entity_definition.get_base_url() + main_js_file_hash
-				)
-				var promise: Promise = Global.http_requester.request_file(
-					main_js_file_url, local_main_js_path.replace("user:/", OS.get_user_data_dir())
-				)
-
-				var res = await PromiseUtils.async_awaiter(promise)
-				if res is PromiseError:
-					printerr(
-						"Scene ",
-						scene_entity_id,
-						" fail getting the script code content, error message: ",
-						res.get_error()
-					)
-					return PromiseUtils.resolved(false)
+		var script_path := scene_entity_definition.get_main_js_path()
+		script_promise = Global.content_provider.fetch_file(script_path, content_mapping)
+		local_main_js_path = "user://content/" + scene_entity_definition.get_main_js_hash()
 	else:
-		local_main_js_path = String(adaptation_layer_js_local_path)
-		if not FileAccess.file_exists(local_main_js_path):
-			var promise: Promise = Global.http_requester.request_file(
-				"https://renderer-artifacts.decentraland.org/sdk7-adaption-layer/dev/index.min.js",
-				local_main_js_path.replace("user:/", OS.get_user_data_dir())
+		if (
+			not FIXED_LOCAL_ADAPTATION_LAYER.is_empty()
+			and FileAccess.file_exists(FIXED_LOCAL_ADAPTATION_LAYER)
+		):
+			local_main_js_path = String(FIXED_LOCAL_ADAPTATION_LAYER)
+		else:
+			var script_hash = "sdk-adaptation-layer.js"
+			script_promise = Global.content_provider.fetch_file_by_url(
+				script_hash, ADAPTATION_LAYER_URL
 			)
-			var res = await PromiseUtils.async_awaiter(promise)
-			if res is PromiseError:
-				printerr(
-					"Scene ",
-					scene_entity_id,
-					" fail getting the adaptation layer content, error message: ",
-					res.get_error()
-				)
-				return PromiseUtils.resolved(false)
+			local_main_js_path = "user://content/" + script_hash
+
+	if script_promise != null:
+		var script_res = await PromiseUtils.async_awaiter(script_promise)
+		if script_res is PromiseError:
+			printerr(
+				"Scene ",
+				scene_entity_id,
+				" fail getting the script code content, error message: ",
+				script_res.get_error()
+			)
+			return PromiseUtils.resolved(false)
 
 	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
 	var local_main_crdt_path: String = String()
 	if not main_crdt_file_hash.is_empty():
 		local_main_crdt_path = "user://content/" + main_crdt_file_hash
-		var main_crdt_file_url: String = (
-			scene_entity_definition.get_base_url() + main_crdt_file_hash
-		)
-		var promise: Promise = Global.http_requester.request_file(
-			main_crdt_file_url, local_main_crdt_path.replace("user:/", OS.get_user_data_dir())
-		)
+		var promise: Promise = Global.content_provider.fetch_file("main.crdt", content_mapping)
 
 		var res = await PromiseUtils.async_awaiter(promise)
 		if res is PromiseError:
@@ -383,6 +366,13 @@ func reload_scene(scene_id: String) -> void:
 		var scene_number_id: int = scene.scene_number_id
 		if scene_number_id != -1:
 			Global.scene_runner.kill_scene(scene_number_id)
+
+		var scene_entity_definition: DclSceneEntityDefinition = scene.scene_entity_definition
+		var local_main_js_path: String = (
+			"user://content/" + scene_entity_definition.get_main_js_hash()
+		)
+		if not local_main_js_path.is_empty() and FileAccess.file_exists(local_main_js_path):
+			DirAccess.remove_absolute(local_main_js_path)
 
 		loaded_scenes.erase(scene_id)
 		scene_entity_coordinator.reload_scene_data(scene_id)

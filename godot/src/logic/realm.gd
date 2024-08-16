@@ -194,8 +194,10 @@ func async_set_realm(new_realm_string: String) -> void:
 			realm_about.get("content", {}).get("publicUrl")
 		)
 
-		Global.config.last_realm_joined = realm_url
-		Global.config.save_to_settings_file()
+		Global.get_config().last_realm_joined = realm_url
+		Global.get_config().save_to_settings_file()
+
+		Global.metrics.update_realm(realm_url)
 
 		_has_realm = true
 		emit_signal("realm_changed")

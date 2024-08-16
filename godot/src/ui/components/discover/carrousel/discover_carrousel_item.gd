@@ -37,6 +37,7 @@ var _data = null
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	if metadata.is_empty():
 		set_image(texture)
 		set_views(views)

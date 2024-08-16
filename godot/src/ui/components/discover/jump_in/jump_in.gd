@@ -62,3 +62,4 @@ func _on_gui_input(event):
 	if event is InputEventScreenTouch:
 		if !event.pressed:
 			self.hide()
+			UiSounds.play_sound("mainmenu_widget_close")
