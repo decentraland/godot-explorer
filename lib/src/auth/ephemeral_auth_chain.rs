@@ -53,6 +53,10 @@ impl EphemeralAuthChain {
     pub fn auth_chain(&self) -> &SimpleAuthChain {
         &self.auth_chain
     }
+
+    pub fn expired(&self) -> bool {
+        &self.expiration < &std::time::SystemTime::now()
+    }
 }
 
 impl Clone for EphemeralAuthChain {

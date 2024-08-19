@@ -434,6 +434,7 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="Button_OpenBrowser" type="Button" parent="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 56)
 layout_mode = 2
 focus_mode = 0

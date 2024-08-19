@@ -35,6 +35,8 @@ var _skip_lobby: bool = false
 
 @onready var backpack = %Backpack
 
+@onready var button_open_browser = %Button_OpenBrowser
+
 # TODO: Change screen orientation for Mobile
 #func set_portrait():
 ##DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
@@ -68,8 +70,10 @@ func async_close_sign_in(generate_snapshots: bool = true):
 # gdlint:ignore = async-function-name
 func _ready():
 	var magic_login = %MagicLogin
-	if is_instance_valid(magic_login):
+	if is_instance_valid(magic_login) and magic_login.is_platform_supported():
 		magic_login.set_lobby(self)
+	else:
+		button_open_browser.text = "OPEN BROWSER"
 
 	show_panel(control_loading)
 
