@@ -176,6 +176,14 @@ func explorer_grab_focus() -> void:
 	explorer.ui_root.grab_focus.call_deferred()
 
 
+func explorer_release_focus() -> void:
+	var explorer = get_explorer()
+	if explorer == null:
+		return
+
+	explorer.ui_root.release_focus.call_deferred()
+
+
 func capture_mouse():
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):

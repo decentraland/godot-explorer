@@ -236,7 +236,7 @@ func _unhandled_input(event):
 					release_mouse()
 
 			if event.pressed and event.keycode == KEY_ENTER:
-				panel_chat.show()
+				panel_chat.toggle_open_chat()
 
 
 func _on_control_minimap_request_open_map():
@@ -432,7 +432,7 @@ func _on_button_jump_gui_input(event):
 
 
 func _on_button_open_chat_pressed():
-	panel_chat.visible = not panel_chat.visible
+	panel_chat.toggle_open_chat()
 
 
 func set_cursor_position(position: Vector2):

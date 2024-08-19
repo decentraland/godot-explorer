@@ -6,9 +6,13 @@ const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
 const ACK: String = "␆"
 
-@onready var rich_text_label_chat = $MarginContainer/VBoxContainer/RichTextLabel_Chat
-@onready
-var line_edit_command = $MarginContainer/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command
+var hide_tween = null
+
+@onready var rich_text_label_chat = %RichTextLabel_Chat
+@onready var h_box_container_line_edit = %HBoxContainer_LineEdit
+@onready var line_edit_command = %LineEdit_Command
+
+@onready var timer_hide = %Timer_Hide
 
 
 func _ready():
@@ -20,14 +24,25 @@ func _ready():
 
 	submit_message.connect(self._on_submit_message)
 
+	h_box_container_line_edit.hide()
 
-func _on_submit_message():
+
+func _on_submit_message(_message: String):
 	UiSounds.play_sound("widget_chat_message_private_send")
+	if Global.is_mobile():
+		line_edit_command.grab_focus()
+	else:
+		_set_open_chat(false)
 
 
 func add_chat_message(bb_text: String) -> void:
 	rich_text_label_chat.append_text(bb_text)
 	rich_text_label_chat.newline()
+
+	if hide_tween != null:
+		hide_tween.stop()
+	modulate = Color.WHITE
+	timer_hide.start()
 
 
 func on_chats_arrived(chats: Array):
@@ -68,7 +83,6 @@ func on_chats_arrived(chats: Array):
 func _on_button_send_pressed():
 	submit_message.emit(line_edit_command.text)
 	line_edit_command.text = ""
-	line_edit_command.grab_focus()
 
 
 func _on_line_edit_command_text_submitted(new_text):
@@ -82,16 +96,36 @@ func finish():
 		line_edit_command.text = ""
 
 
-func _on_visibility_changed():
-	if is_instance_valid(line_edit_command):
-		line_edit_command.text = ""
-		if visible:
-			line_edit_command.grab_focus()
-			UiSounds.play_sound("widget_chat_open")
-		else:
-			Global.explorer_grab_focus()
-			UiSounds.play_sound("widget_chat_close")
-
-
 func _on_line_edit_command_focus_exited():
-	self.hide()
+	_set_open_chat(false)
+
+
+func toggle_open_chat():
+	_set_open_chat(not h_box_container_line_edit.visible)
+
+
+func _set_open_chat(value: bool):
+	h_box_container_line_edit.visible = value
+
+	if hide_tween != null:
+		hide_tween.stop()
+
+	if value:
+		line_edit_command.grab_focus()
+		UiSounds.play_sound("widget_chat_open")
+		timer_hide.stop()
+		modulate = Color.WHITE
+	else:
+		Global.explorer_grab_focus()
+		UiSounds.play_sound("widget_chat_close")
+		timer_hide.start()
+		modulate = Color.WHITE
+
+
+func _on_timer_hide_timeout():
+	if hide_tween != null:
+		hide_tween.stop()
+
+	hide_tween = get_tree().create_tween()
+	modulate = Color.WHITE
+	hide_tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.5)
