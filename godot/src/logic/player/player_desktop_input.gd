@@ -30,7 +30,7 @@ func _input(event):
 
 	# Toggle first or third person camera
 	if event is InputEventMouseButton:
-		if !_player.camera_mode_change_blocked:
+		if !_player.camera_mode_change_blocked and Global.explorer_has_focus():
 			if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				if _player.camera.get_camera_mode() == Global.CameraMode.FIRST_PERSON:
 					_player.set_camera_mode(Global.CameraMode.THIRD_PERSON)

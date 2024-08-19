@@ -115,8 +115,6 @@ func _ready():
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
 
-	label_ram.visible = OS.has_feature("ios")
-
 	if Global.is_mobile():
 		mobile_ui.show()
 		label_crosshair.show()
@@ -251,7 +249,7 @@ func _unhandled_input(event):
 					release_mouse()
 
 			if event.pressed and event.keycode == KEY_ENTER:
-				panel_chat.show()
+				panel_chat.toggle_open_chat()
 
 
 func _on_control_minimap_request_open_map():
@@ -405,9 +403,6 @@ func _on_control_menu_request_debug_panel(enabled):
 
 
 func _on_timer_fps_label_timeout():
-	var usage_memory_mb: int = int(roundf(OS.get_static_memory_usage() / 1024.0 / 1024.0))
-	var usage_peak_memory_mb: int = int(roundf(OS.get_static_memory_peak_usage() / 1024.0 / 1024.0))
-	label_ram.set_text("RAM Usage: %d MB (%d MB peak)" % [usage_memory_mb, usage_peak_memory_mb])
 	label_fps.set_text("ALPHA - " + str(Engine.get_frames_per_second()) + " FPS")
 	if dirty_save_position:
 		dirty_save_position = false
@@ -433,7 +428,7 @@ func _on_button_jump_gui_input(event):
 
 
 func _on_button_open_chat_pressed():
-	panel_chat.visible = not panel_chat.visible
+	panel_chat.toggle_open_chat()
 
 
 func set_cursor_position(position: Vector2):

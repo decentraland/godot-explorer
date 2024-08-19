@@ -26,7 +26,7 @@ func _input(event):
 	# Receives touchscreen motion
 	if Global.is_mobile() and (event is InputEventScreenTouch or event is InputEventScreenDrag):
 		var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
-		if input_dir == Vector2.ZERO and event.index < 2:  # Not walking
+		if input_dir == Vector2.ZERO and event.index < 2 and Global.explorer_has_focus():  # Not walking
 			if event is InputEventScreenTouch:
 				_positions[event.index] = event.position
 				if event.index == 1:

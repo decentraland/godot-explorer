@@ -3,8 +3,12 @@ extends Control
 var lobby: Lobby = null
 
 
+func is_platform_supported():
+	return OS.get_name() == "Android"
+
+
 func _ready():
-	if OS.get_name() != "Android":
+	if !is_platform_supported():
 		queue_free()
 		return
 
