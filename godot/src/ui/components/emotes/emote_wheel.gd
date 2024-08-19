@@ -60,7 +60,7 @@ func _gui_input(event):
 
 
 func _physics_process(_delta):
-	if Input.is_action_just_pressed("ia_open_emote_wheel"):
+	if Input.is_action_just_pressed("ia_open_emote_wheel") and Global.explorer_has_focus():
 		if not is_visible_in_tree():
 			UiSounds.play_sound("widget_emotes_open")
 		show()

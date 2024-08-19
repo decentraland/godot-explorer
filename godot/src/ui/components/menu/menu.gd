@@ -206,6 +206,7 @@ func _on_visibility_changed():
 	if is_visible_in_tree():
 		UiSounds.play_sound("mainmenu_widget_open")
 		grab_focus()
+		Global.explorer_release_focus()
 	else:
 		UiSounds.play_sound("mainmenu_widget_close")
 

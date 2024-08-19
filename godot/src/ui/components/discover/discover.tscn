@@ -41,14 +41,14 @@ loop_mode = 1
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath(".:position")
+tracks/0/path = NodePath(".:position:y")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
 "times": PackedFloat32Array(0, 14, 15, 29),
 "transitions": PackedFloat32Array(1, 1, 1, 1),
 "update": 0,
-"values": [Vector2(0, 0), Vector2(0, 0), Vector2(0, -121), Vector2(0, -121)]
+"values": [0.0, 0.0, -121.0, -121.0]
 }
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_5pduq"]
@@ -123,44 +123,61 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 0
 
-[node name="Control" type="Control" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer"]
+[node name="ViewportContainer" type="SubViewportContainer" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer"]
 clip_contents = true
 custom_minimum_size = Vector2(0, 121)
 layout_mode = 2
+stretch = true
 
-[node name="Content" type="Control" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/Control"]
-layout_mode = 1
-anchors_preset = 10
+[node name="SubViewport" type="SubViewport" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/ViewportContainer"]
+disable_3d = true
+transparent_bg = true
+handle_input_locally = false
+gui_disable_input = true
+size = Vector2i(1220, 121)
+size_2d_override = Vector2i(1220, 121)
+size_2d_override_stretch = true
+
+[node name="Content" type="Control" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/ViewportContainer/SubViewport"]
+clip_children = 2
+layout_mode = 3
+anchors_preset = 15
 anchor_right = 1.0
-offset_right = 4874.0
+anchor_bottom = 1.0
 grow_horizontal = 2
+grow_vertical = 2
 
-[node name="TextureRect_GenesisCity" type="TextureRect" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/Control/Content"]
+[node name="TextureRect_GenesisCity" type="TextureRect" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/ViewportContainer/SubViewport/Content"]
 custom_minimum_size = Vector2(0, 121)
-layout_mode = 2
-offset_right = 1214.0
-offset_bottom = 121.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
+grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 texture = ExtResource("4_2pq8h")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="TextureRect_Worlds" type="TextureRect" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/Control/Content"]
+[node name="TextureRect_Worlds" type="TextureRect" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/ViewportContainer/SubViewport/Content"]
 custom_minimum_size = Vector2(0, 121)
-layout_mode = 2
-offset_top = 121.0
-offset_right = 1214.0
-offset_bottom = 242.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 125.0
+offset_bottom = 125.0
 grow_horizontal = 2
+grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 texture = ExtResource("5_1hjun")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/Control/Content"]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/ViewportContainer/SubViewport/Content"]
 libraries = {
 "": SubResource("AnimationLibrary_5pduq")
 }
