@@ -303,6 +303,10 @@ impl DclPlayerIdentity {
             return false;
         };
 
+        if ephemeral_auth_chain.expired() {
+            return false;
+        }
+
         if !local_wallet_bytes.is_empty() {
             self._update_local_wallet(local_wallet_bytes.as_slice(), ephemeral_auth_chain);
             true
