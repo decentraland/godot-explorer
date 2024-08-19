@@ -135,7 +135,8 @@ transparent_bg = true
 handle_input_locally = false
 gui_disable_input = true
 size = Vector2i(1220, 121)
-render_target_update_mode = 4
+size_2d_override = Vector2i(1220, 121)
+size_2d_override_stretch = true
 
 [node name="Content" type="Control" parent="TextureRect/ScrollContainer/VBoxContainer/MarginContainer/ViewportContainer/SubViewport"]
 clip_children = 2

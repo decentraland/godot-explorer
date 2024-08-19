@@ -29,10 +29,7 @@ func _ready():
 
 func _on_submit_message(_message: String):
 	UiSounds.play_sound("widget_chat_message_private_send")
-	if Global.is_mobile():
-		line_edit_command.grab_focus()
-	else:
-		_set_open_chat(false)
+	_set_open_chat(false)
 
 
 func add_chat_message(bb_text: String) -> void:
