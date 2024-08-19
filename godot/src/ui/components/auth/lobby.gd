@@ -59,12 +59,15 @@ func show_panel(child_node: Control):
 	child_node.show()
 
 
-func close_sign_in():
+func async_close_sign_in(generate_snapshots: bool = true):
+	if generate_snapshots:
+		var avatar := current_profile.get_avatar()
+		await backpack.async_prepare_snapshots(avatar)
+
 	if Global.is_xr():
 		change_scene.emit("res://src/ui/components/discover/discover.tscn")
 	else:
 		get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
-
 
 # gdlint:ignore = async-function-name
 func _ready():

@@ -16,23 +16,23 @@ var last_index_scene_ui_root: int = -1
 var _last_parcel_position: Vector2i = Vector2i.MAX
 
 
-@onready var ui_root: Control = $ui
+@onready var ui_root: Control = $UI
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
 @onready var control_pointer_tooltip = %Control_PointerTooltip
 
-@onready var panel_chat = $ui/SafeMarginContainer/InteractableHUD/Panel_Chat
+@onready var panel_chat = $UI/SafeMarginContainer/InteractableHUD/Panel_Chat
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
-@onready var control_menu = $ui/Control_Menu
-@onready var control_minimap = $ui/Control_Minimap
-@onready var mobile_ui = $ui/SafeMarginContainer/InteractableHUD/MobileUI
+@onready var control_menu = $UI/Control_Menu
+@onready var control_minimap = $UI/Control_Minimap
+@onready var mobile_ui = $UI/SafeMarginContainer/InteractableHUD/MobileUI
 @onready
-var virtual_joystick: Control = $ui/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left
+var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left
 
-@onready var loading_ui = $ui/Loading
+@onready var loading_ui = $UI/Loading
 
 @onready var button_mic = %Button_Mic
 

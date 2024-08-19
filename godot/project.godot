@@ -42,8 +42,8 @@ window/size/viewport_height=720
 run/main_run_args="--clear-cache-startup"
 
 [editor_plugins]
-enabled=PackedStringArray("res://addons/godot-xr-tools/plugin.cfg")
-enabled=PackedStringArray("res://addons/GodotAndroidPluginMagicLink/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
+
+enabled=PackedStringArray("res://addons/GodotAndroidPluginMagicLink/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
 
 [filesystem]
 
@@ -202,6 +202,5 @@ lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
 [xr]
 
-openxr/enabled=true
 openxr/enabled.xr=true
 shaders/enabled.xr=true
