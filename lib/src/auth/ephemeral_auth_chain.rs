@@ -55,7 +55,7 @@ impl EphemeralAuthChain {
     }
 
     pub fn expired(&self) -> bool {
-        &self.expiration < &std::time::SystemTime::now()
+        self.expiration < std::time::SystemTime::now()
     }
 }
 
