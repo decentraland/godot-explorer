@@ -5,6 +5,7 @@ extends EditorPlugin
 const GODOT_XR_TOOLS_PLUGIN_NAME = "Godot XR Tools"
 
 static func set_xr_mode(enabled: bool):
+	return
 	if EditorInterface.is_plugin_enabled(GODOT_XR_TOOLS_PLUGIN_NAME) != enabled:
 		EditorInterface.set_plugin_enabled(GODOT_XR_TOOLS_PLUGIN_NAME, enabled)
 	ProjectSettings.set_setting("xr/openxr/enabled", enabled)
@@ -21,7 +22,7 @@ class DclBuildPlugin extends EditorExportPlugin:
 		if is_xr_export:
 			DclBuildEditorPlugin.set_xr_mode(true)
 			
-		prints("Start export XR=", is_xr_export)
+		prints("Start export, using XR is ", is_xr_export)
 		
 	func _export_end():
 		if is_xr_export:
@@ -40,7 +41,6 @@ class DclBuildPlugin extends EditorExportPlugin:
 var BUILD_PLUGIN = DclBuildPlugin.new()
 
 func _enter_tree():
-	DclBuildEditorPlugin.set_xr_mode(false)
 	add_export_plugin(BUILD_PLUGIN)
 
 func _exit_tree():

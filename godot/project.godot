@@ -27,6 +27,7 @@ driver/enable_input.ios=false
 UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
 XRToolsUserSettings="*res://addons/godot-xr-tools/user_settings/user_settings.gd"
+XRToolsRumbleManager="*res://addons/godot-xr-tools/rumble/rumble_manager.gd"
 
 [debug]
 
@@ -43,7 +44,7 @@ run/main_run_args="--clear-cache-startup"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/GodotAndroidPluginMagicLink/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotAndroidPluginMagicLink/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/godot-xr-tools/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
 
 [filesystem]
 
@@ -202,5 +203,7 @@ lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
 [xr]
 
+openxr/enabled=true
+shaders/enabled=true
 openxr/enabled.xr=true
 shaders/enabled.xr=true
