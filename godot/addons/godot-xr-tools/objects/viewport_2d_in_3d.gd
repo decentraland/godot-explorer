@@ -71,6 +71,9 @@ const DEFAULT_LAYER := 0b0000_0000_0101_0000_0000_0000_0000_0001
 ## Scene property
 @export var scene : PackedScene: set = set_scene
 
+## Scene property
+@export var instantiate_scene : Control: set = set_instantiate_scene
+
 ## Viewport size property
 @export var viewport_size : Vector2 = Vector2(300.0, 200.0): set = set_viewport_size
 
@@ -362,6 +365,12 @@ func set_scene(new_scene: PackedScene) -> void:
 	if is_ready:
 		_update_render()
 
+## Set scene property
+func set_instantiate_scene(new_scene: Control) -> void:
+	instantiate_scene = new_scene
+	_dirty |= _DIRTY_SCENE
+	if is_ready:
+		_update_render()
 
 ## Set viewport size property
 func set_viewport_size(new_size: Vector2) -> void:
@@ -501,6 +510,9 @@ func _update_render() -> void:
 
 			# Finally add it to the scene, so values are available in _ready
 			$Viewport.add_child(scene_node)
+		elif instantiate_scene:
+			if not Engine.is_editor_hint():
+				instantiate_scene.reparent($Viewport)
 		elif $Viewport.get_child_count() == 1:
 			# Use already-provided scene
 			scene_node = $Viewport.get_child(0)

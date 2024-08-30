@@ -14,4 +14,6 @@ func _ready():
 
 func _process(_dt):
 	position.y = max(position.y, 0)
-	avatar.hide() # Temp for tests
+
+func set_ui_root(ui_root):
+	pass

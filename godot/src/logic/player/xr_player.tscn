@@ -1,7 +1,7 @@
 [gd_scene load_steps=12 format=3 uid="uid://j86kd5vcss3h"]
 
 [ext_resource type="Script" path="res://src/logic/player/xr_player.gd" id="1_ukhx2"]
-[ext_resource type="PackedScene" uid="uid://do4ipyhg0decm" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="1_wg7s4"]
+[ext_resource type="PackedScene" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="1_wg7s4"]
 [ext_resource type="PackedScene" uid="uid://bx1xdisoqo1f6" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/left_tac_glove_low.tscn" id="2_larcu"]
 [ext_resource type="PackedScene" uid="uid://fiul51tsyoop" path="res://addons/godot-xr-tools/functions/function_teleport.tscn" id="4_wrsbf"]
 [ext_resource type="PackedScene" uid="uid://chumpejwiub7f" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/right_tac_glove_low.tscn" id="4_y0cfq"]

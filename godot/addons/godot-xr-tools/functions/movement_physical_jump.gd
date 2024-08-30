@@ -192,6 +192,7 @@ func _detect_arms_jump(delta: float, player_body: XRToolsPlayerBody) -> void:
 	controller_left_vel = _controller_left_velocity.update(controller_left_vel)
 	controller_right_vel = _controller_right_velocity.update(controller_right_vel)
 
+
 	# Detect a jump
 	if controller_left_vel >= arms_jump_threshold and controller_right_vel >= arms_jump_threshold:
 		player_body.request_jump()

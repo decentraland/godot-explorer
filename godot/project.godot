@@ -204,6 +204,7 @@ lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 [xr]
 
 openxr/enabled=true
+openxr/environment_blend_mode=2
 shaders/enabled=true
 openxr/enabled.xr=true
 shaders/enabled.xr=true
