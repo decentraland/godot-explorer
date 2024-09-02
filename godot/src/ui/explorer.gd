@@ -36,7 +36,6 @@ var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI
 
 @onready var button_mic = %Button_Mic
 
-
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
 	control_minimap.set_center_position(parcel_position_real)
@@ -115,7 +114,10 @@ func _ready():
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
 
-	if Global.is_mobile():
+	if Global.is_xr():
+		mobile_ui.hide()
+		label_crosshair.hide()
+	elif Global.is_mobile():
 		mobile_ui.show()
 		label_crosshair.show()
 		reset_cursor_position()

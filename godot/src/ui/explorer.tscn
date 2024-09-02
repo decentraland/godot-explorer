@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=31 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
@@ -27,6 +27,9 @@
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_bi432"]
 [ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_cjop4"]
+size = Vector3(4800, 0.1, 4800)
+
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_x854j"]
@@ -43,9 +46,19 @@ script = ExtResource("1_5n8xk")
 
 [node name="world" type="Node3D" parent="."]
 
-[node name="Floor" type="MeshInstance3D" parent="world"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+[node name="StaticBody3D" type="StaticBody3D" parent="world"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+collision_layer = 2147483649
+collision_mask = 2147483649
+input_ray_pickable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="world/StaticBody3D"]
+shape = SubResource("BoxShape3D_cjop4")
+
+[node name="Floor" type="MeshInstance3D" parent="world/StaticBody3D/CollisionShape3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 mesh = SubResource("PlaneMesh_x854j")
+skeleton = NodePath("../../..")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
 
 [node name="Timer_BroadcastPosition" parent="world" instance=ExtResource("4_2dkhu")]

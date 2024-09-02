@@ -40,7 +40,7 @@ window/size/viewport_height=720
 
 [editor]
 
-run/main_run_args="--clear-cache-startup"
+run/main_run_args="--skip-lobby"
 
 [editor_plugins]
 
@@ -203,8 +203,6 @@ lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
 [xr]
 
-openxr/enabled=true
-openxr/environment_blend_mode=2
-shaders/enabled=true
+openxr/foveation_level=3
 openxr/enabled.xr=true
 shaders/enabled.xr=true

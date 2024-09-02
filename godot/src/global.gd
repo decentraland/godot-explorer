@@ -1,6 +1,7 @@
 extends DclGlobal
 
 signal config_changed
+signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 

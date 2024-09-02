@@ -1,10 +1,8 @@
-[gd_scene load_steps=17 format=3 uid="uid://cuic8diqbxs83"]
+[gd_scene load_steps=15 format=3 uid="uid://cuic8diqbxs83"]
 
 [ext_resource type="Script" path="res://src/vr/vr_lobby.gd" id="1_my51n"]
-[ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="2_c7uq4"]
 [ext_resource type="PackedScene" uid="uid://b228p8k6sonve" path="res://addons/godot-xr-tools/player/fade/fade_collision.tscn" id="2_inngf"]
 [ext_resource type="PackedScene" uid="uid://hpr0v012ghsb" path="res://addons/godot-xr-tools/hands/scenes/highpoly/left_tac_glove.tscn" id="3_570d0"]
-[ext_resource type="PackedScene" uid="uid://ckt118vcpmr6q" path="res://addons/godot-xr-tools/functions/movement_physical_jump.tscn" id="3_et2ao"]
 [ext_resource type="PackedScene" uid="uid://cqhw276realc" path="res://addons/godot-xr-tools/functions/function_pointer.tscn" id="4_ejpxq"]
 [ext_resource type="PackedScene" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="5_3u4lg"]
 [ext_resource type="PackedScene" uid="uid://dup2vp8v5rpi5" path="res://addons/godot-xr-tools/hands/scenes/highpoly/right_tac_glove.tscn" id="5_fl6n2"]
@@ -23,7 +21,6 @@ sky_material = SubResource("ProceduralSkyMaterial_fnm28")
 
 [sub_resource type="Environment" id="Environment_o37lb"]
 background_mode = 1
-background_color = Color(0, 0, 0, 0.45098)
 sky = SubResource("Sky_411pe")
 tonemap_mode = 2
 glow_enabled = true
@@ -40,13 +37,6 @@ sky_mode = 1
 
 [node name="XROrigin3D" type="XROrigin3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.728815, 0)
-world_scale = 2.0
-
-[node name="PlayerBody" parent="XROrigin3D" instance=ExtResource("2_c7uq4")]
-
-[node name="MovementPhysicalJump" parent="XROrigin3D" instance=ExtResource("3_et2ao")]
-body_jump_threshold = 1.0
-arms_jump_threshold = 1.0
 
 [node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D"]
 unique_name_in_owner = true
@@ -86,7 +76,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -4)
 screen_size = Vector2(7, 4)
 scene = ExtResource("7_kbcta")
 viewport_size = Vector2(1280, 720)
-transparent = 2
+transparent = 0
 alpha_scissor_threshold = 1.0
 unshaded = true
 scene_properties_keys = PackedStringArray("lobby.gd")

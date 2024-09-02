@@ -343,7 +343,6 @@ func teleport(target : Transform3D) -> void:
 
 ## Request a jump
 func request_jump(skip_jump_velocity := false):
-	prints("Request jump!")
 	# Skip if not on ground
 	if !on_ground:
 		return

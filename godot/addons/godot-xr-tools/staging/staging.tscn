@@ -13,10 +13,10 @@ script = ExtResource("1")
 [node name="Fade" parent="." instance=ExtResource("2_htugy")]
 
 [node name="XROrigin3D" type="XROrigin3D" parent="."]
-world_scale = 2.0
 
 [node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D"]
 environment = ExtResource("3_40x3a")
+current = true
 
 [node name="VRCommonShaderCache" parent="XROrigin3D/XRCamera3D" instance=ExtResource("5")]
 
