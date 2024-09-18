@@ -3,6 +3,13 @@
 set +e
 set +o pipefail
 
+if [ -z "$1" ]; then
+    echo "Error: The first argument (EXPORT PRESET) is mandatory."
+    echo "Usage: $0 <EXPORT PRESET>"
+    echo "Example: $0 Android"
+    exit 1
+fi
+
 EXPLORER_PATH=$(pwd)
 if [ ! -d ${EXPLORER_PATH}/godot/android/ ]
 then
