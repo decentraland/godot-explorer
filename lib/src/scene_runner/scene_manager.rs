@@ -87,8 +87,6 @@ pub struct SceneManager {
     input_state: InputState,
     last_raycast_result: Option<GodotDclRaycastResult>,
 
-    override_raycast_result: Option<GodotDclRaycastResult>,
-
     #[export]
     pointer_tooltips: VariantArray,
 }
@@ -646,43 +644,6 @@ impl SceneManager {
         self.pause
     }
 
-    #[func]
-    fn set_override_raycast_result(
-        &mut self,
-        dcl_scene_id: i32,
-        dcl_entity_id: i32,
-        scene_position: Vector3,
-        raycast_from: Vector3,
-        position: Vector3,
-        normal: Vector3,
-        mesh_name: GString,
-    ) {
-        let hit = RaycastHit::from_data(
-            scene_position,
-            raycast_from,
-            position,
-            normal,
-            Some(mesh_name.into()),
-            Some(dcl_entity_id as u32),
-        );
-
-        if hit.is_none() {
-            return;
-        }
-        let hit = hit.unwrap();
-
-        self.override_raycast_result = Some(GodotDclRaycastResult {
-            scene_id: SceneId(dcl_scene_id),
-            entity_id: SceneEntityId::from_i32(dcl_entity_id),
-            hit,
-        });
-    }
-
-    #[func]
-    fn clear_override_raycast_result(&mut self) {
-        self.override_raycast_result = None;
-    }
-
     fn get_current_mouse_entity(&mut self) -> Option<GodotDclRaycastResult> {
         const RAY_LENGTH: f32 = 100.0;
 
@@ -987,7 +948,6 @@ impl INode for SceneManager {
             console: Callable::invalid(),
             input_state: InputState::default(),
             last_raycast_result: None,
-            override_raycast_result: None,
             pointer_tooltips: VariantArray::new(),
             interactable_area: Rect2i::from_components(
                 0,

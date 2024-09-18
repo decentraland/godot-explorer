@@ -15,7 +15,6 @@ var virtual_joystick_orig_position: Vector2i
 var last_index_scene_ui_root: int = -1
 var _last_parcel_position: Vector2i = Vector2i.MAX
 
-
 @onready var ui_root: Control = $UI
 
 @onready var warning_messages = %WarningMessages
@@ -35,6 +34,7 @@ var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI
 @onready var loading_ui = $UI/Loading
 
 @onready var button_mic = %Button_Mic
+
 
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
@@ -86,10 +86,10 @@ func _ready():
 		player = preload("res://src/logic/player/xr_player.tscn").instantiate()
 	else:
 		player = preload("res://src/logic/player/player.tscn").instantiate()
-		
+
 	player.set_name("Player")
 	$world.add_child(player)
-	
+
 	if Global.is_xr():
 		%Timer_BroadcastPosition.follow_node = player
 		player.vr_screen.set_instantiate_scene(ui_root)
@@ -460,5 +460,5 @@ func _on_adapter_changed(voice_chat_enabled, _adapter_str):
 	button_mic.visible = voice_chat_enabled
 
 
-func _on_control_menu_preview_hot_reload(scene_type, scene_id):
-	pass # Replace with function body.
+func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
+	pass  # Replace with function body.

@@ -91,55 +91,6 @@ impl crate::dcl::components::proto_components::sdk::components::common::RaycastH
             entity_id,
         })
     }
-
-
-    pub fn from_data(
-        scene_position: godot::prelude::Vector3,
-        raycast_from: godot::prelude::Vector3,
-        position: godot::prelude::Vector3,
-        normal: godot::prelude::Vector3,
-        mesh_name: Option<String>,
-        entity_id: Option<u32>,
-    ) -> Option<Self> {
-        let global_origin = raycast_from - scene_position;
-        let position = position - scene_position;
-        let direction = global_origin - position;
-
-        let distance = global_origin.distance_to(position);
-
-        Some(Self {
-            // the intersection point in global coordinates
-            position: Some(crate::dcl::components::proto_components::common::Vector3 {
-                x: position.x,
-                y: position.y,
-                z: -position.z,
-            }),
-            // the starting point of the ray in global coordinates
-            global_origin: Some(crate::dcl::components::proto_components::common::Vector3 {
-                x: global_origin.x,
-                y: global_origin.y,
-                z: -global_origin.z,
-            }),
-            // the direction vector of the ray in global coordinates
-            direction: Some(crate::dcl::components::proto_components::common::Vector3 {
-                x: direction.x,
-                y: direction.y,
-                z: -direction.z,
-            }),
-            // normal of the hit surface in global coordinates
-            normal_hit: Some(crate::dcl::components::proto_components::common::Vector3 {
-                x: normal.x,
-                y: normal.y,
-                z: -normal.z,
-            }),
-            // the distance between the ray origin and the hit position
-            length: distance,
-            // mesh name, if collision happened inside a GltfContainer
-            mesh_name,
-            // the ID of the Entity that has the impacted mesh attached
-            entity_id,
-        })
-    }
 }
 
 pub fn update_scene_pointer_events(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {

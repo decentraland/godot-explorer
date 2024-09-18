@@ -71,6 +71,7 @@ func async_close_sign_in(generate_snapshots: bool = true):
 	else:
 		get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
 
+
 # gdlint:ignore = async-function-name
 func _ready():
 	var magic_login = %MagicLogin

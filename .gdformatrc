@@ -1,0 +1,5 @@
+excluded_directories: !!set
+  .git: null
+  .godot: null
+  android: null
+  addons: null

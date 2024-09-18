@@ -98,6 +98,7 @@ func set_hidded(value):
 	else:
 		try_show()
 
+
 func _unset_avatar_modifier_area():
 	if not hidded:
 		show()

@@ -247,11 +247,13 @@ func load_from_settings_file():
 	self.process_tick_quota_ms = settings_file.get_value(
 		"config", "process_tick_quota_ms", data_default.process_tick_quota_ms
 	)
-	
+
 	if Global.is_xr():
 		self.scene_radius = 1
 	else:
-		self.scene_radius = settings_file.get_value("config", "scene_radius", data_default.scene_radius)
+		self.scene_radius = settings_file.get_value(
+			"config", "scene_radius", data_default.scene_radius
+		)
 	self.limit_fps = settings_file.get_value("config", "limit_fps", data_default.limit_fps)
 	self.skybox = settings_file.get_value("config", "skybox", data_default.skybox)
 	self.shadow_quality = settings_file.get_value(

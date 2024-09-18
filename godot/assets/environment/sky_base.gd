@@ -6,17 +6,17 @@ extends Node
 
 
 func _ready():
-	#if Global.is_xr():
 	Global.loading_started.connect(self._on_loading_started)
 	Global.loading_finished.connect(self._on_loading_finished)
-		
+
+
 func _on_loading_started():
 	world_environment.environment.background_energy_multiplier = 0.0
 	world_environment.environment.ambient_light_energy = 0.0
 	sun_light.light_energy = 0.0
 
+
 func _on_loading_finished():
-	await get_tree().create_timer(1.0).timeout
 	var tween = get_tree().create_tween().set_parallel(true)
 	world_environment.environment.background_energy_multiplier = 0.0
 	world_environment.environment.ambient_light_energy = 0.0
@@ -24,4 +24,3 @@ func _on_loading_finished():
 	tween.tween_property(world_environment, "environment:background_energy_multiplier", 1.0, 1.0)
 	tween.tween_property(world_environment, "environment:ambient_light_energy", 1.0, 1.0)
 	tween.tween_property(sun_light, "light_energy", 1.0, 1.0)
-	

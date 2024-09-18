@@ -31,8 +31,10 @@ var music_player: MusicPlayer
 var standalone = false
 var dcl_android_plugin
 
+
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
+
 
 func _ready():
 	var args := OS.get_cmdline_args()

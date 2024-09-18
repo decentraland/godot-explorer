@@ -5,6 +5,7 @@ extends Timer
 var last_position_sent: Vector3 = Vector3.ZERO
 var counter: int = 0
 
+
 func _on_timeout():
 	var transform: Transform3D = follow_node.global_transform
 	var position = transform.origin
