@@ -128,6 +128,7 @@ impl From<&TextureUnion> for Option<DclTexture> {
                 .wrap_mode
                 .as_ref()
                 .unwrap_or(&TextureWrapMode::TwmClamp.into()),
+            Tex::UiTexture(_) => todo!("UI Texture not implemented"),
         };
         let filter_mode = match texture {
             Tex::Texture(texture) => *texture
@@ -142,6 +143,7 @@ impl From<&TextureUnion> for Option<DclTexture> {
                 .wrap_mode
                 .as_ref()
                 .unwrap_or(&TextureFilterMode::TfmBilinear.into()),
+            Tex::UiTexture(_) => todo!("UI Texture not implemented"),
         };
 
         let wrap_mode = TextureWrapMode::from_i32(wrap_mode).unwrap_or(TextureWrapMode::TwmClamp);
@@ -169,6 +171,7 @@ impl From<&TextureUnion> for Option<DclTexture> {
                     video_texture.video_player_entity as i32,
                 )),
             }),
+            Tex::UiTexture(_) => todo!("UI Texture not implemented"),
         }
     }
 }
