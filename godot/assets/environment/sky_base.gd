@@ -6,8 +6,9 @@ extends Node
 
 
 func _ready():
-	Global.loading_started.connect(self._on_loading_started)
-	Global.loading_finished.connect(self._on_loading_finished)
+	if Global.is_xr():
+		Global.loading_started.connect(self._on_loading_started)
+		Global.loading_finished.connect(self._on_loading_finished)
 
 
 func _on_loading_started():
