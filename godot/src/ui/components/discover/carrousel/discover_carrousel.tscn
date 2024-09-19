@@ -37,6 +37,7 @@ unique_name_in_owner = true
 layout_mode = 2
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
+scroll_deadzone = 100
 script = ExtResource("3_dtbt6")
 
 [node name="HBoxContainer_Items" type="HBoxContainer" parent="ScrollContainer"]

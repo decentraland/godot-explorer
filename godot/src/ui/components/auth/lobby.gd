@@ -1,6 +1,8 @@
 class_name Lobby
 extends Control
 
+signal change_scene(new_scene_path: String)
+
 var current_profile: DclUserProfile
 var guest_account_created: bool = false
 
@@ -64,7 +66,10 @@ func async_close_sign_in(generate_snapshots: bool = true):
 		var avatar := current_profile.get_avatar()
 		await backpack.async_prepare_snapshots(avatar)
 
-	get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
+	if Global.is_xr():
+		change_scene.emit("res://src/ui/components/discover/discover.tscn")
+	else:
+		get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
 
 
 # gdlint:ignore = async-function-name

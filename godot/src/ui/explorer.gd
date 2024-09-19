@@ -1,12 +1,12 @@
+class_name Explorer
 extends Node
+
+var player: Node3D = null
 
 var parcel_position: Vector2i
 var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
-
-var last_position_sent: Vector3 = Vector3.ZERO
-var counter: int = 0
 
 var debug_panel = null
 
@@ -27,7 +27,6 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 @onready var label_ram = %Label_RAM
 @onready var control_menu = $UI/Control_Menu
 @onready var control_minimap = $UI/Control_Minimap
-@onready var player := $world/Player
 @onready var mobile_ui = $UI/SafeMarginContainer/InteractableHUD/MobileUI
 @onready
 var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left
@@ -82,6 +81,21 @@ func get_params_from_cmd():
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
+
+	if Global.is_xr():
+		player = preload("res://src/logic/player/xr_player.tscn").instantiate()
+	else:
+		player = preload("res://src/logic/player/player.tscn").instantiate()
+
+	player.set_name("Player")
+	$world.add_child(player)
+
+	if Global.is_xr():
+		%Timer_BroadcastPosition.follow_node = player
+		player.vr_screen.set_instantiate_scene(ui_root)
+	else:
+		%Timer_BroadcastPosition.follow_node = player.avatar
+
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
@@ -100,7 +114,10 @@ func _ready():
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
 
-	if Global.is_mobile():
+	if Global.is_xr():
+		mobile_ui.hide()
+		label_crosshair.hide()
+	elif Global.is_mobile():
 		mobile_ui.show()
 		label_crosshair.show()
 		reset_cursor_position()
@@ -266,21 +283,6 @@ func _on_panel_bottom_left_preview_hot_reload(_scene_type, scene_id):
 	Global.scene_fetcher.reload_scene(scene_id)
 
 
-func _on_timer_broadcast_position_timeout():
-	var transform: Transform3D = player.avatar.global_transform
-	var position = transform.origin
-	var rotation = transform.basis.get_rotation_quaternion()
-
-	if last_position_sent.is_equal_approx(position):
-		counter += 1
-		if counter < 10:
-			return
-
-	Global.comms.broadcast_position_and_rotation(position, rotation)
-	last_position_sent = position
-	counter = 0
-
-
 func _on_virtual_joystick_right_stick_position(stick_position: Vector2):
 	player.stick_position = stick_position
 
@@ -357,7 +359,8 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 
 
 func player_look_at(look_at_position: Vector3):
-	player.avatar_look_at(look_at_position)
+	if not Global.is_xr():
+		player.avatar_look_at(look_at_position)
 
 
 func capture_mouse():
@@ -455,3 +458,7 @@ func _on_panel_profile_open_profile():
 
 func _on_adapter_changed(voice_chat_enabled, _adapter_str):
 	button_mic.visible = voice_chat_enabled
+
+
+func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
+	pass  # Replace with function body.

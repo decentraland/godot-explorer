@@ -4,7 +4,7 @@ var lobby: Lobby = null
 
 
 func is_platform_supported():
-	return OS.get_name() == "Android"
+	return OS.get_name() == "Android" and not Global.is_xr()
 
 
 func _ready():

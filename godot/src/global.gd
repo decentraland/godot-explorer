@@ -1,6 +1,7 @@
 extends DclGlobal
 
 signal config_changed
+signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 
@@ -29,6 +30,10 @@ var music_player: MusicPlayer
 
 var standalone = false
 var dcl_android_plugin
+
+
+func is_xr() -> bool:
+	return OS.has_feature("xr") or get_viewport().use_xr
 
 
 func _ready():

@@ -1,8 +1,8 @@
-[gd_scene load_steps=30 format=3 uid="uid://deq5v42fmh0y7"]
+[gd_scene load_steps=31 format=3 uid="uid://deq5v42fmh0y7"]
 
 [ext_resource type="Script" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_7jksa"]
-[ext_resource type="PackedScene" uid="uid://blv7r5folt1d5" path="res://src/logic/player/player.tscn" id="3_fr1df"]
+[ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
 [ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
@@ -27,6 +27,9 @@
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="23_bi432"]
 [ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_cjop4"]
+size = Vector3(4800, 0.1, 4800)
+
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_x854j"]
@@ -43,16 +46,23 @@ script = ExtResource("1_5n8xk")
 
 [node name="world" type="Node3D" parent="."]
 
-[node name="Floor" type="MeshInstance3D" parent="world"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+[node name="StaticBody3D" type="StaticBody3D" parent="world"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+collision_layer = 2147483649
+collision_mask = 2147483649
+input_ray_pickable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="world/StaticBody3D"]
+shape = SubResource("BoxShape3D_cjop4")
+
+[node name="Floor" type="MeshInstance3D" parent="world/StaticBody3D/CollisionShape3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 mesh = SubResource("PlaneMesh_x854j")
+skeleton = NodePath("../../..")
 surface_material_override/0 = SubResource("StandardMaterial3D_fstik")
 
-[node name="Player" parent="world" instance=ExtResource("3_fr1df")]
-
-[node name="Timer_BroadcastPosition" type="Timer" parent="world"]
-wait_time = 0.1
-autostart = true
+[node name="Timer_BroadcastPosition" parent="world" instance=ExtResource("4_2dkhu")]
+unique_name_in_owner = true
 
 [node name="EnvironmentSelector" parent="world" instance=ExtResource("4_f5cdi")]
 unique_name_in_owner = true
@@ -352,10 +362,9 @@ offset_bottom = -72.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="EmoteWheel" parent="UI" node_paths=PackedStringArray("avatar_node") instance=ExtResource("21_pows0")]
+[node name="EmoteWheel" parent="UI" instance=ExtResource("21_pows0")]
 visible = false
 layout_mode = 1
-avatar_node = NodePath("../../world/Player/Avatar")
 
 [node name="WarningMessages" parent="UI" instance=ExtResource("23_bi432")]
 unique_name_in_owner = true
@@ -367,7 +376,6 @@ script = ExtResource("20_064cw")
 
 [node name="SceneMusicChanger" parent="." instance=ExtResource("26_5hhk2")]
 
-[connection signal="timeout" from="world/Timer_BroadcastPosition" to="." method="_on_timer_broadcast_position_timeout"]
 [connection signal="gui_input" from="UI/SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump" to="." method="_on_button_jump_gui_input"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/MiniMap" to="." method="_on_mini_map_pressed"]
 [connection signal="pressed" from="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_OpenChat" to="." method="_on_button_open_chat_pressed"]
@@ -382,5 +390,3 @@ script = ExtResource("20_064cw")
 [connection signal="request_pause_scenes" from="UI/Control_Menu" to="." method="_on_control_menu_request_pause_scenes"]
 [connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
 [connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
-
-[editable path="world/Player"]

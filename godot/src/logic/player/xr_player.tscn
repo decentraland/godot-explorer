@@ -1,0 +1,106 @@
+[gd_scene load_steps=17 format=3 uid="uid://j86kd5vcss3h"]
+
+[ext_resource type="Script" path="res://src/logic/player/xr_player.gd" id="1_ukhx2"]
+[ext_resource type="PackedScene" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="1_wg7s4"]
+[ext_resource type="PackedScene" uid="uid://bx1xdisoqo1f6" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/left_tac_glove_low.tscn" id="2_larcu"]
+[ext_resource type="PackedScene" uid="uid://fiul51tsyoop" path="res://addons/godot-xr-tools/functions/function_teleport.tscn" id="4_wrsbf"]
+[ext_resource type="PackedScene" uid="uid://chumpejwiub7f" path="res://addons/godot-xr-tools/hands/scenes/lowpoly/right_tac_glove_low.tscn" id="4_y0cfq"]
+[ext_resource type="PackedScene" uid="uid://clujaf3u776a3" path="res://addons/godot-xr-tools/objects/viewport_2d_in_3d.tscn" id="5_4o7md"]
+[ext_resource type="PackedScene" uid="uid://ddfhgeq8klqtj" path="res://src/vr/content/microphone.glb" id="5_lohwq"]
+[ext_resource type="PackedScene" uid="uid://b6bk2pj8vbj28" path="res://addons/godot-xr-tools/functions/movement_turn.tscn" id="6_1eggb"]
+[ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="6_24dki"]
+[ext_resource type="PackedScene" uid="uid://bl2nuu3qhlb5k" path="res://addons/godot-xr-tools/functions/movement_direct.tscn" id="7_ergla"]
+[ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="8_4m0vb"]
+[ext_resource type="PackedScene" uid="uid://cqhw276realc" path="res://addons/godot-xr-tools/functions/function_pointer.tscn" id="8_qhqyf"]
+[ext_resource type="Script" path="res://addons/godot-xr-tools/overrides/ground_physics_settings.gd" id="11_ys4e8"]
+[ext_resource type="PackedScene" uid="uid://ckt118vcpmr6q" path="res://addons/godot-xr-tools/functions/movement_physical_jump.tscn" id="12_3jilu"]
+
+[sub_resource type="Curve" id="Curve_k6mxl"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_3ty7k"]
+script = ExtResource("11_ys4e8")
+flags = 24
+move_drag = 5.0
+move_traction = 30.0
+stop_on_slope = true
+move_max_slope = 45.0
+jump_max_slope = 40.0
+jump_velocity = 4.0
+bounciness = 0.0
+bounce_threshold = 1.0
+
+[node name="XRPlayer" type="XROrigin3D"]
+current = true
+script = ExtResource("1_ukhx2")
+follow_curve = SubResource("Curve_k6mxl")
+follow_speed = 5.0
+
+[node name="XRCamera3D" type="XRCamera3D" parent="."]
+unique_name_in_owner = true
+current = true
+
+[node name="VRCommonShaderCache" parent="XRCamera3D" instance=ExtResource("1_wg7s4")]
+
+[node name="LeftHand" type="XRController3D" parent="."]
+tracker = &"left_hand"
+
+[node name="LeftHand" parent="LeftHand" instance=ExtResource("2_larcu")]
+unique_name_in_owner = true
+
+[node name="FunctionTeleport" parent="LeftHand" instance=ExtResource("4_wrsbf")]
+collision_mask = 2148007939
+valid_teleport_mask = 2148007939
+
+[node name="RightHand" type="XRController3D" parent="."]
+tracker = &"right_hand"
+
+[node name="MicrophoneGltf" parent="RightHand" instance=ExtResource("5_lohwq")]
+unique_name_in_owner = true
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0.0134784, -0.0923617, 0.0974144)
+
+[node name="RightHand" parent="RightHand" instance=ExtResource("4_y0cfq")]
+unique_name_in_owner = true
+
+[node name="MovementTurn" parent="RightHand" instance=ExtResource("6_1eggb")]
+
+[node name="MovementDirect" parent="RightHand" instance=ExtResource("7_ergla")]
+
+[node name="FunctionPointer" parent="RightHand" instance=ExtResource("8_qhqyf")]
+
+[node name="PlayerBody" parent="." instance=ExtResource("8_4m0vb")]
+collision_layer = 2148007939
+collision_mask = 2148007939
+slide_on_ceiling = false
+wall_min_slide_angle = 0.785398
+floor_snap_length = 0.4
+platform_on_leave = 2
+platform_floor_layers = 2148007939
+platform_wall_layers = 2148007939
+push_rigid_bodies = false
+physics = SubResource("Resource_3ty7k")
+ground_control = 1
+
+[node name="Avatar" parent="." instance=ExtResource("6_24dki")]
+visible = false
+
+[node name="MovementPhysicalJump" parent="." instance=ExtResource("12_3jilu")]
+body_jump_threshold = 1.5
+arms_jump_threshold = 3.0
+
+[node name="UIOrigin3D" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="VrScreen" parent="UIOrigin3D" instance=ExtResource("5_4o7md")]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -1.2)
+screen_size = Vector2(1.5, 1)
+collision_layer = 1048576
+viewport_size = Vector2(1280, 720)
+unshaded = true
+
+[connection signal="button_pressed" from="LeftHand" to="." method="_on_left_hand_button_pressed"]
+[connection signal="button_released" from="LeftHand" to="." method="_on_left_hand_button_released"]
+[connection signal="button_pressed" from="RightHand" to="." method="_on_right_hand_button_pressed"]
+[connection signal="button_released" from="RightHand" to="." method="_on_right_hand_button_released"]

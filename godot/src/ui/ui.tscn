@@ -1,0 +1,320 @@
+[gd_scene load_steps=22 format=3 uid="uid://bitcxwef48476"]
+
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_mareq"]
+[ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="2_q3hly"]
+[ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/button_touch_action/button_touch_action.tscn" id="3_b0mrq"]
+[ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="4_jxeax"]
+[ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="5_otyuu"]
+[ext_resource type="Texture2D" uid="uid://v1avum5r3l4s" path="res://assets/themes/dark_dcl_theme/icons/JumpButton.svg" id="6_7k0vh"]
+[ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="7_ttv1c"]
+[ext_resource type="PackedScene" uid="uid://55g2dvfiog7r" path="res://src/ui/components/mini_map_button/mini_map_button.tscn" id="8_o55tr"]
+[ext_resource type="Texture2D" uid="uid://c5h83d44qsbhr" path="res://assets/themes/dark_dcl_theme/icons/Chat.svg" id="9_udy0g"]
+[ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/profile_icon_button/profile_icon_button.tscn" id="10_dxi8v"]
+[ext_resource type="PackedScene" uid="uid://bl6h58asl377" path="res://src/ui/components/chat/chat.tscn" id="11_iftyd"]
+[ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.tscn" id="12_p2tlx"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="13_8d42r"]
+[ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="14_hsf8p"]
+[ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="15_q2qub"]
+[ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/dialogs/dialog_stack.tscn" id="16_y218i"]
+[ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/components/loading_screen/loading_screen.tscn" id="17_qu57d"]
+[ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/recording_notification/recording_notification.tscn" id="18_xraa8"]
+[ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/emotes/emote_wheel.tscn" id="19_o1epa"]
+[ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/warning_messages/warning_messages.tscn" id="20_v2bd6"]
+
+[node name="ui" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 1
+mouse_filter = 1
+theme = ExtResource("1_mareq")
+
+[node name="SafeMarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_q3hly")
+
+[node name="InteractableHUD" type="Control" parent="SafeMarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="MobileUI" type="Control" parent="SafeMarginContainer/InteractableHUD"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Button_PrimaryAction" parent="SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("3_b0mrq")]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -216.0
+offset_top = -277.0
+offset_right = -136.0
+offset_bottom = -197.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="Button_Mic" parent="SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("3_b0mrq")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -129.0
+offset_top = -325.0
+offset_right = -49.0
+offset_bottom = -245.0
+grow_horizontal = 0
+grow_vertical = 0
+text_letter = "T"
+icon = ExtResource("4_jxeax")
+trigger_action = "ia_record_mic"
+
+[node name="Button_SecondaryAction" parent="SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("3_b0mrq")]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -274.0
+offset_top = -201.0
+offset_right = -194.0
+offset_bottom = -121.0
+grow_horizontal = 0
+grow_vertical = 0
+text_letter = "F"
+trigger_action = "ia_secondary"
+
+[node name="Button_EmoteAction" parent="SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("3_b0mrq")]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -307.0
+offset_top = -111.0
+offset_right = -227.0
+offset_bottom = -31.0
+grow_horizontal = 0
+grow_vertical = 0
+text_letter = "F"
+icon = ExtResource("5_otyuu")
+trigger_action = "ia_open_emote_wheel"
+
+[node name="Button_Jump" type="TextureButton" parent="SafeMarginContainer/InteractableHUD/MobileUI"]
+modulate = Color(1, 1, 1, 0.501961)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -164.0
+offset_top = -174.0
+offset_right = -44.0
+offset_bottom = -54.0
+grow_horizontal = 0
+grow_vertical = 0
+focus_mode = 0
+theme = ExtResource("1_mareq")
+texture_normal = ExtResource("6_7k0vh")
+ignore_texture_size = true
+stretch_mode = 4
+
+[node name="ShadowOutter" type="TextureRect" parent="SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
+modulate = Color(0, 0, 0, 1)
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -2.0
+offset_top = -2.0
+offset_right = 2.0
+offset_bottom = 2.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("6_7k0vh")
+expand_mode = 2
+
+[node name="ShadowInner" type="TextureRect" parent="SafeMarginContainer/InteractableHUD/MobileUI/Button_Jump"]
+modulate = Color(0, 0, 0, 1)
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("6_7k0vh")
+expand_mode = 2
+
+[node name="VirtualJoystick_Left" parent="SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("7_ttv1c")]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 0.352
+offset_top = -327.0
+offset_right = -0.560028
+deadzone_size = 0.0
+
+[node name="HBoxContainer_TopLeftMenu" type="HBoxContainer" parent="SafeMarginContainer/InteractableHUD"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 327.0
+offset_bottom = 80.0
+theme = ExtResource("1_mareq")
+theme_override_constants/separation = 10
+
+[node name="MiniMap" parent="SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu" instance=ExtResource("8_o55tr")]
+layout_mode = 2
+
+[node name="Button_OpenChat" type="Button" parent="SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 48
+icon = ExtResource("9_udy0g")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Panel_Profile" parent="SafeMarginContainer/InteractableHUD" instance=ExtResource("10_dxi8v")]
+layout_mode = 1
+
+[node name="Panel_Chat" parent="SafeMarginContainer/InteractableHUD" instance=ExtResource("11_iftyd")]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 90.0
+offset_right = 320.0
+offset_bottom = 390.0
+
+[node name="Label_FPS" type="Label" parent="SafeMarginContainer/InteractableHUD"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -15.0
+offset_right = 153.0
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
+theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "ALPHA - FPS"
+
+[node name="Label_RAM" type="Label" parent="SafeMarginContainer/InteractableHUD"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -319.0
+offset_right = -170.0
+offset_bottom = 26.0
+grow_horizontal = 0
+text = "RAM"
+horizontal_alignment = 2
+
+[node name="Timer_FPSLabel" type="Timer" parent="."]
+autostart = true
+
+[node name="Control_PointerTooltip" parent="." instance=ExtResource("12_p2tlx")]
+unique_name_in_owner = true
+layout_mode = 1
+
+[node name="Label_Crosshair" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -13.0
+offset_top = -14.0
+offset_right = 13.0
+offset_bottom = 12.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("13_8d42r")
+theme_override_font_sizes/font_size = 20
+text = "+"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Control_Minimap" parent="." instance=ExtResource("14_hsf8p")]
+visible = false
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 15.0
+offset_bottom = 15.0
+
+[node name="Control_Menu" parent="." instance=ExtResource("15_q2qub")]
+visible = false
+layout_mode = 1
+
+[node name="DialogStack" parent="." instance=ExtResource("16_y218i")]
+visible = false
+layout_mode = 1
+offset_left = -180.0
+offset_top = -140.0
+offset_right = 180.0
+offset_bottom = 140.0
+
+[node name="Loading" parent="." instance=ExtResource("17_qu57d")]
+visible = false
+layout_mode = 1
+
+[node name="RecordingNotification" parent="." instance=ExtResource("18_xraa8")]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -24.0
+offset_top = -120.0
+offset_right = 24.0
+offset_bottom = -72.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="EmoteWheel" parent="." instance=ExtResource("19_o1epa")]
+visible = false
+layout_mode = 1
+
+[node name="WarningMessages" parent="." instance=ExtResource("20_v2bd6")]
+unique_name_in_owner = true
+layout_mode = 1
+mouse_filter = 2

@@ -151,7 +151,7 @@ jobs:
 
       - name: Upload artifacts
         if: success() || failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: snapshots
           path: tests/snapshots/comparison/**/*
@@ -287,7 +287,7 @@ jobs:
       - name: Export
         run: cargo run -- export
 
-      - uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@v4
         with:
           name: decentraland-godot-${{ matrix.os }}
           path: |
