@@ -19,10 +19,6 @@ jobs:
       image: docker://kuruk/dcl-godot-android-builder:latest
       volumes:
       - /home/user/.cache/devgodot:/github/home/.cache/devgodot
-    strategy:
-      fail-fast: false
-      matrix:
-        export-preset: [Android, Quests]
     steps:
     - uses: actions/checkout@v4
       with:
@@ -43,10 +39,10 @@ jobs:
         rustup target add x86_64-linux-android
     - name: Build
       run: |
-        bash build-android-apk.sh ${{ matrix.export-preset }}
+        bash build-android-apk.sh
 
     # if libdclgodot.so does not exist, the build failed, nothing to upload
-    - name: Copy artifacts
+    - name: Copy Android Artifacts
       if: success() || failure()
       run: |
         mkdir -p android-artifacts
@@ -54,8 +50,22 @@ jobs:
         mv android.apk android-artifacts/ || true
         mv android-unsigned.aab android-artifacts/ || true
 
+    - name: Copy Meta Quest Artifacts
+      if: success() || failure()
+      run: |
+        mkdir -p meta-quest-artifacts
+        mv godot/lib/android/arm64/libdclgodot.so meta-quest-artifacts/
+        mv meta-quest.apk meta-quest-artifacts/ || true
+        mv meta-quest-unsigned.aab meta-quest-artifacts/ || true
+
     - uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: Android APK
         path: android-artifacts/
+
+    - uses: actions/upload-artifact@v4
+      if: success() || failure()
+      with:
+        name: Meta Quest APK
+        path: meta-quest-artifacts/

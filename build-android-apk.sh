@@ -3,13 +3,6 @@
 set +e
 set +o pipefail
 
-if [ -z "$1" ]; then
-    echo "Error: The first argument (EXPORT PRESET) is mandatory."
-    echo "Usage: $0 <EXPORT PRESET>"
-    echo "Example: $0 Android"
-    exit 1
-fi
-
 EXPLORER_PATH=$(pwd)
 if [ ! -d ${EXPLORER_PATH}/godot/android/ ]
 then
@@ -54,6 +47,7 @@ cd ${EXPLORER_PATH}/godot/
 # Build the .aab without x86_64 architecture
 echo "Export Godot android.apk"
 ${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk || true
+${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Quest ${EXPLORER_PATH}/meta-quest.apk || true
 
 
 # Build the .aab without x86_64 architecture
@@ -68,5 +62,6 @@ sed -i 's/package\/signed=true/package\/signed=false/' ${EXPLORER_PATH}/godot/ex
 # Build the .aab without x86_64 architecture
 echo "Export Godot AAB"
 ${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-release Android ${EXPLORER_PATH}/android-unsigned.aab || true
+${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-release Quest ${EXPLORER_PATH}/meta-quest-unsigned.aab || true
 
 echo "Finished"
