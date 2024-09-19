@@ -15,7 +15,7 @@ const WEARABLE_NAME_PREFIX = "__"
 
 # Public
 var avatar_id: String = ""
-var hidded: bool = false
+var hidden: bool = false
 
 var finish_loading = false
 var wearables_by_category: Dictionary = {}
@@ -91,16 +91,16 @@ func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
 			pass  # TODO: Passport (disable functionality)
 
 
-func set_hidded(value):
-	hidded = value
-	if hidded:
+func set_hidden(value):
+	hidden = value
+	if hidden:
 		hide()
 	else:
 		try_show()
 
 
 func _unset_avatar_modifier_area():
-	if not hidded:
+	if not hidden:
 		show()
 	# TODO: Passport (enable functionality)
 

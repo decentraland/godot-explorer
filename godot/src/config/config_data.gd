@@ -248,6 +248,7 @@ func load_from_settings_file():
 		"config", "process_tick_quota_ms", data_default.process_tick_quota_ms
 	)
 
+	# TODO: Change the way of loading the scenes in XR (https://github.com/decentraland/godot-explorer/issues/274)
 	if Global.is_xr():
 		self.scene_radius = 1
 	else:
