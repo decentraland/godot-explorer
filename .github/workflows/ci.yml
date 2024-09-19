@@ -1,11 +1,11 @@
 on:
   push:
     branches:
-    - main
+      - main
   pull_request:
   release:
     types:
-    - created
+      - created
 
 name: CI
 
@@ -20,45 +20,45 @@ jobs:
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: 1.78
-        override: true
-        components: clippy, rustfmt
-    - run: rustup component add rustfmt
-    - name: Set up Python
-      uses: actions/setup-python@v4
-    - name: Install gdtoolkit 4
-      run: pip3 install git+https://github.com/kuruk-mm/godot-gdscript-toolkit.git
-    - name: Check format GDScript
-      run: gdformat -d godot/
-    - name: GDScript Linter
-      run: gdlint godot/
-    # Dependencies section
-    # => Linux
-    - name: Install alsa and udev
-      if: runner.os == 'linux'
-      run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
-    - name: install ffmpeg deps (linux)
-      run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
-      if: runner.os == 'linux'
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.78
+          override: true
+          components: clippy, rustfmt
+      - run: rustup component add rustfmt
+      - name: Set up Python
+        uses: actions/setup-python@v4
+      - name: Install gdtoolkit 4
+        run: pip3 install git+https://github.com/kuruk-mm/godot-gdscript-toolkit.git
+      - name: Check format GDScript
+        run: gdformat -d godot/
+      - name: GDScript Linter
+        run: gdlint godot/
+      # Dependencies section
+      # => Linux
+      - name: Install alsa and udev
+        if: runner.os == 'linux'
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+      - name: install ffmpeg deps (linux)
+        run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
+        if: runner.os == 'linux'
 
-    - name: cargo xtask install
-      run: cargo run -- install --no-templates
+      - name: cargo xtask install
+        run: cargo run -- install --no-templates
 
-    - name: cargo check
-      working-directory: lib
-      run: cargo check
+      - name: cargo check
+        working-directory: lib
+        run: cargo check
 
-    - name: cargo fmt
-      working-directory: lib
-      run: cargo fmt --all -- --check
+      - name: cargo fmt
+        working-directory: lib
+        run: cargo fmt --all -- --check
 
-    - name: cargo clippy
-      working-directory: lib
-      run: cargo clippy -- -D warnings
+      - name: cargo clippy
+        working-directory: lib
+        run: cargo clippy -- -D warnings
 
 
   coverage:
@@ -67,94 +67,94 @@ jobs:
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
+      - name: Checkout sources
+        uses: actions/checkout@v2
 
-    # To host test-realm local server
-    - name: Use Node.js 16.x
-      uses: actions/setup-node@v1
-      with:
-        node-version: 16.x
+      # To host test-realm local server
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
 
-    - name: Prepare and run local test-realm
-      run: |
-        mkdir -p tests/server
-        cd tests/server
-        npm init -y
-        npm install @dcl/scene-explorer-tests@1.0.0-20240430222335.commit-2b82e41
-        sed -i 's|https://decentraland.github.io/scene-explorer-tests/|http://localhost:7666/|g' node_modules/@dcl/scene-explorer-tests/static/scene-explorer-tests/about
-        npm i -g http-server
-        http-server node_modules/@dcl/scene-explorer-tests/static -p 7666 &
-      # /changerealm http://localhost:7666/scene-explorer-tests/
+      - name: Prepare and run local test-realm
+        run: |
+          mkdir -p tests/server
+          cd tests/server
+          npm init -y
+          npm install @dcl/scene-explorer-tests@1.0.0-20240430222335.commit-2b82e41
+          sed -i 's|https://decentraland.github.io/scene-explorer-tests/|http://localhost:7666/|g' node_modules/@dcl/scene-explorer-tests/static/scene-explorer-tests/about
+          npm i -g http-server
+          http-server node_modules/@dcl/scene-explorer-tests/static -p 7666 &
+        # /changerealm http://localhost:7666/scene-explorer-tests/
 
-    - name: Install stable toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: 1.76
-        override: true
-        components: llvm-tools-preview
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.76
+          override: true
+          components: llvm-tools-preview
 
-    - name: Cache
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          lib/target/
-          lib/Cargo.lock
-          target/
-          Cargo.lock
-        key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: coverage-cargo-
+      - name: Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            lib/target/
+            lib/Cargo.lock
+            target/
+            Cargo.lock
+          key: coverage-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: coverage-cargo-
 
-    - name: Prepare graphics renderering
-      run: |
-        sudo apt-get -y install xvfb
-        sudo /usr/bin/Xvfb :0 -screen 0 1280x1024x24 &
+      - name: Prepare graphics renderering
+        run: |
+            sudo apt-get -y install xvfb
+            sudo /usr/bin/Xvfb :0 -screen 0 1280x1024x24 &
 
-    # Dependencies section
-    # => Linux
-    - name: Install alsa and udev
-      if: runner.os == 'linux'
-      run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
-    - name: install ffmpeg deps (linux)
-      run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
-      if: runner.os == 'linux'
-    - name: install livekit deps (linux)
-      run: sudo apt update -y; sudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev
-      if: runner.os == 'linux'
+      # Dependencies section
+      # => Linux
+      - name: Install alsa and udev
+        if: runner.os == 'linux'
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+      - name: install ffmpeg deps (linux)
+        run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
+        if: runner.os == 'linux'
+      - name: install livekit deps (linux)
+        run: sudo apt update -y; sudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev
+        if: runner.os == 'linux'
 
-    - name: cargo xtask install
-      run: cargo run -- install --no-templates
+      - name: cargo xtask install
+        run: cargo run -- install --no-templates
 
-    # Build section
+      # Build section
 
-    - name: Download grcov
-      run: |
-        mkdir -p "${HOME}/.local/bin"
-        curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.10/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf - -C "${HOME}/.local/bin"
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Download grcov
+        run: |
+          mkdir -p "${HOME}/.local/bin"
+          curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.10/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf - -C "${HOME}/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-    - name: Run xtask coverage
-      run: |
-        export DISPLAY=:99
-        sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
-        cargo run -- coverage
+      - name: Run xtask coverage
+        run: |
+          export DISPLAY=:99
+          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+          cargo run -- coverage
 
-    - name: Upload to codecov.io
-      if: success() || failure()
-      uses: codecov/codecov-action@v3
-      with:
-        files: rust/coverage/*.lcov
+      - name: Upload to codecov.io
+        if: success() || failure()
+        uses: codecov/codecov-action@v3
+        with:
+          files: rust/coverage/*.lcov
 
-    - name: Upload artifacts
-      if: success() || failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: snapshots
-        path: tests/snapshots/comparison/**/*
+      - name: Upload artifacts
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshots
+          path: tests/snapshots/comparison/**/*
 
   build:
     name: Build and test
@@ -166,147 +166,156 @@ jobs:
         os: [self-hosted-windows, ubuntu-22.04, macos-14-xlarge]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: 1.76
-        override: true
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.76
+          override: true
 
-    - name: Set up cargo cache
-      if: runner.os != 'macos'
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          lib/target/
-          lib/Cargo.lock
-          target/
-          Cargo.lock
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: ${{ runner.os }}-cargo-
+      - name: Set up cargo cache
+        if: runner.os != 'macos'
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            lib/target/
+            lib/Cargo.lock
+            target/
+            Cargo.lock
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
-    # Dependencies section
-    # => Linux
-    - name: Install alsa and udev
-      if: runner.os == 'linux'
-      run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
-    - name: install ffmpeg deps (linux)
-      run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
-      if: runner.os == 'linux'
-    - name: install livekit deps (linux)
-      run: sudo apt update -y; sudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev
-      if: runner.os == 'linux'
+      # Dependencies section
+      # => Linux
+      - name: Install alsa and udev
+        if: runner.os == 'linux'
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+      - name: install ffmpeg deps (linux)
+        run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
+        if: runner.os == 'linux'
+      - name: install livekit deps (linux)
+        run: sudo apt update -y; sudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev
+        if: runner.os == 'linux'
 
-    # => MacOS
-    - name: install ffmpeg deps (macOs)
-      if: runner.os == 'macos'
-      run: |
-        brew install ffmpeg@6 pkg-config
-        echo "PKG_CONFIG_PATH=/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig" >> $GITHUB_ENV
-        echo "CPPFLAGS=-I/opt/homebrew/opt/ffmpeg@6/include" >> $GITHUB_ENV
-        echo "LDFLAGS=-L/opt/homebrew/opt/ffmpeg@6/lib" >> $GITHUB_ENV
+      # => MacOS
+      - name: install ffmpeg deps (macOs)
+        if: runner.os == 'macos'
+        run: |
+          brew install ffmpeg@6 pkg-config
+          echo "PKG_CONFIG_PATH=/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I/opt/homebrew/opt/ffmpeg@6/include" >> $GITHUB_ENV
+          echo "LDFLAGS=-L/opt/homebrew/opt/ffmpeg@6/lib" >> $GITHUB_ENV
 
-    # TODO: cross-build deprecated with the ffmpeg integration
-    # - name: Set up target platform
-    #   if: ${{ matrix.os == 'macos-latest' }}
-    #   run: |
-    #     rustup target add x86_64-apple-darwin
-    #     rustup target add aarch64-apple-darwin
+      # TODO: cross-build deprecated with the ffmpeg integration
+      # - name: Set up target platform
+      #   if: ${{ matrix.os == 'macos-latest' }}
+      #   run: |
+      #     rustup target add x86_64-apple-darwin
+      #     rustup target add aarch64-apple-darwin
 
 
-    # => Windows
-    - name: set CLANG path for ffmpeg deps (windows)
-      if: runner.os == 'windows' && matrix.os != 'self-hosted-windows'
-      run: "$VCINSTALLDIR = $(& \"${env:ProgramFiles(x86)}\\Microsoft Visual Studio\\Installer\\vswhere.exe\" -latest -property installationPath)\nAdd-Content $env:GITHUB_ENV \"LIBCLANG_PATH=${VCINSTALLDIR}\\VC\\Tools\\LLVM\\x64\\bin`n\"\nInvoke-WebRequest \"https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z\" -OutFile ffmpeg-release-full-shared.7z\n7z x ffmpeg-release-full-shared.7z\nmkdir ffmpeg\nmv ffmpeg-*/* ffmpeg/\nAdd-Content $env:GITHUB_ENV \"FFMPEG_DIR=${pwd}\\ffmpeg`n\"\nAdd-Content $env:GITHUB_PATH \"${pwd}\\ffmpeg\\bin`n\"  \n  #magic___^_^___line\n"
-    # => All platforms
-    - name: cargo xtask install
-      run: cargo run -- install
+      # => Windows
+      - name: set CLANG path for ffmpeg deps (windows)
+        if: runner.os == 'windows' && matrix.os != 'self-hosted-windows'
+        run: |
+          $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
+          Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
+          Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile ffmpeg-release-full-shared.7z
+          7z x ffmpeg-release-full-shared.7z
+          mkdir ffmpeg
+          mv ffmpeg-*/* ffmpeg/
+          Add-Content $env:GITHUB_ENV "FFMPEG_DIR=${pwd}\ffmpeg`n"
+          Add-Content $env:GITHUB_PATH "${pwd}\ffmpeg\bin`n"  
 
-    # Build section
-    - name: cargo build
-      working-directory: lib
-      run: cargo build --release
+      # => All platforms
+      - name: cargo xtask install
+        run: cargo run -- install
 
-    # TODO: cross-build deprecated with the ffmpeg integration
+      # Build section
+      - name: cargo build
+        working-directory: lib
+        run: cargo build --release
 
-    # - uses: actions-rs/cargo@v1
-    #   name: build for x86_64 (macos)
-    #   if: ${{ matrix.os == 'macos-latest' }}
-    #   with:
-    #     command: build
-    #     args: --manifest-path lib/Cargo.toml --release --target=x86_64-apple-darwin
+      # TODO: cross-build deprecated with the ffmpeg integration
 
-    # - uses: actions-rs/cargo@v1
-    #   name: build for arm64 (macos)
-    #   if: ${{ matrix.os == 'macos-latest' }}
-    #   with:
-    #     command: build
-    #     args: --manifest-path lib/Cargo.toml --release --target=aarch64-apple-darwin
+      # - uses: actions-rs/cargo@v1
+      #   name: build for x86_64 (macos)
+      #   if: ${{ matrix.os == 'macos-latest' }}
+      #   with:
+      #     command: build
+      #     args: --manifest-path lib/Cargo.toml --release --target=x86_64-apple-darwin
 
-    - name: cargo build
-      working-directory: lib
-      run: cargo test --release -- --skip auth
+      # - uses: actions-rs/cargo@v1
+      #   name: build for arm64 (macos)
+      #   if: ${{ matrix.os == 'macos-latest' }}
+      #   with:
+      #     command: build
+      #     args: --manifest-path lib/Cargo.toml --release --target=aarch64-apple-darwin
 
-    # TODO: cross-build deprecated with the ffmpeg integration
-    # Package section
-    # # => MacOS
-    # - name: Make universal library
-    #   if: ${{ matrix.os == 'macos-latest' }}
-    #   run: |
-    #     mkdir lib/target/release || true
-    #     lipo -create lib/target/x86_64-apple-darwin/release/libdclgodot.dylib lib/target/aarch64-apple-darwin/release/libdclgodot.dylib -output lib/target/release/libdclgodot.dylib
+      - name: cargo build
+        working-directory: lib
+        run: cargo test --release -- --skip auth
 
-    # => Linux/MacOS (unix)
-    - name: Copy library (linux/macos)
-      if: runner.os != 'windows'
-      run: |
-        cp lib/target/release/libdclgodot.so godot/lib/ || true
-        cp lib/target/release/libdclgodot.dylib godot/lib/ || true
+      # TODO: cross-build deprecated with the ffmpeg integration
+      # Package section
+      # # => MacOS
+      # - name: Make universal library
+      #   if: ${{ matrix.os == 'macos-latest' }}
+      #   run: |
+      #     mkdir lib/target/release || true
+      #     lipo -create lib/target/x86_64-apple-darwin/release/libdclgodot.dylib lib/target/aarch64-apple-darwin/release/libdclgodot.dylib -output lib/target/release/libdclgodot.dylib
 
-    # => Windows
-    - name: Copy library (windows)
-      if: runner.os == 'windows'
-      run: |
-        cp lib/target/release/dclgodot.dll godot/lib/
-        cp .bin/ffmpeg/ffmpeg-6.0-full_build-shared/bin/*.dll godot/lib/
+      # => Linux/MacOS (unix)
+      - name: Copy library (linux/macos)
+        if: runner.os != 'windows'
+        run: |
+            cp lib/target/release/libdclgodot.so godot/lib/ || true
+            cp lib/target/release/libdclgodot.dylib godot/lib/ || true
 
-    # Export section (multi platform)
-    - name: Export
-      run: cargo run -- export
+      # => Windows
+      - name: Copy library (windows)
+        if: runner.os == 'windows'
+        run: |
+            cp lib/target/release/dclgodot.dll godot/lib/
+            cp .bin/ffmpeg/ffmpeg-6.0-full_build-shared/bin/*.dll godot/lib/
 
-    - uses: actions/upload-artifact@v4
-      with:
-        name: decentraland-godot-${{ matrix.os }}
-        path: |
-          exports/**/*
+      # Export section (multi platform)
+      - name: Export
+        run: cargo run -- export
 
-    - name: Build Docker Image
-      if: matrix.os == 'ubuntu-22.04'
-      id: build-image
-      uses: redhat-actions/buildah-build@v2
-      with:
-        image: godot-explorer
-        tags: ${{ github.sha }} ${{ inputs.docker-tag }}
-        dockerfiles: |
-          ./Dockerfile
-        build-args: |
-          ${{ inputs.build-args }}
-          COMMIT_HASH=${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decentraland-godot-${{ matrix.os }}
+          path: |
+            exports/**/*
 
-    - name: Push To quay.io
-      if: matrix.os == 'ubuntu-22.04'
-      id: push-to-quay
-      uses: redhat-actions/push-to-registry@v2
-      with:
-        image: ${{ steps.build-image.outputs.image }}
-        tags: ${{ steps.build-image.outputs.tags }}
-        registry: quay.io/decentraland
-        username: ${{ secrets.QUAY_USERNAME }}
-        password: ${{ secrets.QUAY_TOKEN }}
+      - name: Build Docker Image
+        if: matrix.os == 'ubuntu-22.04'
+        id: build-image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: godot-explorer
+          tags: ${{ github.sha }} ${{ inputs.docker-tag }}
+          dockerfiles: |
+            ./Dockerfile
+          build-args: |
+            ${{ inputs.build-args }}
+            COMMIT_HASH=${{ github.sha }}
 
-    - name: Print image url
-      run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
+      - name: Push To quay.io
+        if: matrix.os == 'ubuntu-22.04'
+        id: push-to-quay
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build-image.outputs.image }}
+          tags: ${{ steps.build-image.outputs.tags }}
+          registry: quay.io/decentraland
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_TOKEN }}
+
+      - name: Print image url
+        run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
