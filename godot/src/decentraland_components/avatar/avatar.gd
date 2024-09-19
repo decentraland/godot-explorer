@@ -50,7 +50,11 @@ var wearable_promises = null
 
 
 func _ready():
-	var billboard_mode = BaseMaterial3D.BillboardMode.BILLBOARD_FIXED_Y if Global.is_xr() else BaseMaterial3D.BillboardMode.BILLBOARD_ENABLED	
+	var billboard_mode = (
+		BaseMaterial3D.BillboardMode.BILLBOARD_FIXED_Y
+		if Global.is_xr()
+		else BaseMaterial3D.BillboardMode.BILLBOARD_ENABLED
+	)
 	sprite_3d_mic_enabled.billboard = billboard_mode
 	label_3d_name.billboard = billboard_mode
 
