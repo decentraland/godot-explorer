@@ -20,8 +20,8 @@ func _ready():
 	Global.dcl_tokio_rpc.magic_sign.connect(self._on_request_magic_sign)
 
 
-func set_lobby(lobby: Lobby):
-	self.lobby = lobby
+func set_lobby(new_lobby: Lobby):
+	lobby = new_lobby
 
 
 func _on_magic_message_signed(signature: String):

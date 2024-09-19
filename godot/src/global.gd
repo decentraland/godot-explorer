@@ -222,11 +222,11 @@ func async_create_popup_warning(
 
 
 func async_get_texture_size(content_mapping, src, sender) -> void:
-	var hash: String = content_mapping.get_hash(src)
-	if hash.is_empty():
-		hash = src
+	var texture_hash: String = content_mapping.get_hash(src)
+	if texture_hash.is_empty():
+		texture_hash = src
 
-	var promise = Global.content_provider.fetch_texture_by_hash(hash, content_mapping)
+	var promise = Global.content_provider.fetch_texture_by_hash(texture_hash, content_mapping)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		printerr(src, "couldn't get the size", result.get_error())
