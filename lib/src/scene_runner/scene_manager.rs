@@ -647,9 +647,8 @@ impl SceneManager {
     fn get_current_mouse_entity(&mut self) -> Option<GodotDclRaycastResult> {
         const RAY_LENGTH: f32 = 100.0;
 
-        if self.camera_node.is_none() {
-            return None;
-        }
+        self.camera_node.as_ref()?;
+
         let camera_node = self.camera_node.clone().unwrap();
 
         let raycast_from = camera_node.project_ray_origin(self.cursor_position);
