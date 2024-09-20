@@ -102,6 +102,7 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 	else:
 		emotes_animation_library = animation_player.get_animation_library("emotes")
 
+
 func stop_emote():
 	playing_single = false
 	playing_mixed = false

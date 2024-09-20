@@ -3,6 +3,7 @@ extends CarrouselRequester
 var current_offset = 0
 var threshold_limit = 10
 
+
 func start():
 	var node = self
 	if not node is ScrollContainer:
@@ -12,12 +13,15 @@ func start():
 	self.scroll_ended.connect(self._on_scroll_container_scroll_ended)
 	emit_request()
 
+
 func restart():
 	current_offset = 0
 	emit_request()
 
+
 func emit_request():
 	request.emit(current_offset, threshold_limit)
+
 
 func _on_scroll_container_scroll_ended():
 	var child_number = 0

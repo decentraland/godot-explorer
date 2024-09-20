@@ -115,18 +115,21 @@ vertical_scroll_mode = 0
 scroll_deadzone = 100
 script = ExtResource("3_dtbt6")
 
-[node name="HBoxContainer_Items" type="HBoxContainer" parent="VBoxContainer/ScrollContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ScrollContainer"]
+layout_mode = 2
+
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/ScrollContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 22
+theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
+
+[node name="HBoxContainer_Items" type="HBoxContainer" parent="VBoxContainer/ScrollContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 185)
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
 theme_override_constants/separation = 10
-
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/ScrollContainer/HBoxContainer_Items"]
-layout_mode = 2
-theme_override_constants/separation = 22
-theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
 
 [connection signal="pressed" from="MarginContainer/HBoxContainer/Button_SearchHide" to="." method="_on_button_search_hide_pressed"]
 [connection signal="text_changed" from="MarginContainer/HBoxContainer/LineEdit_Search" to="." method="_on_line_edit_search_text_changed"]
