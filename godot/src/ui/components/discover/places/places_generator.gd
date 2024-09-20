@@ -139,7 +139,7 @@ func on_request(offset: int, limit: int) -> void:
 		loaded_elements = 0
 		new_search = false
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.LOADING)
-		
+
 		if is_instance_valid(item_container):
 			for child in item_container.get_children():
 				child.queue_free()
