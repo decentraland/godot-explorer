@@ -96,8 +96,11 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 	animation_player.add_animation_library("idle", idle_animation_library)
 
 	# Emote library
-	emotes_animation_library = AnimationLibrary.new()
-	animation_player.add_animation_library("emotes", emotes_animation_library)
+	if not animation_player.has_animation_library("emotes"):
+		emotes_animation_library = AnimationLibrary.new()
+		animation_player.add_animation_library("emotes", emotes_animation_library)
+	else:
+		emotes_animation_library = animation_player.get_animation_library("emotes")
 
 
 func stop_emote():

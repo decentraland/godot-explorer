@@ -231,6 +231,7 @@ discover = NodePath("../../../../../..")
 [node name="PlacesWorlds" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
+with_search = true
 title = "Worlds"
 
 [node name="PlacesGenerator" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer/PlacesWorlds" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]

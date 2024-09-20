@@ -82,7 +82,7 @@ impl DclUiInput {
             .entry(self.dcl_entity_id)
             .or_insert(PbUiInputResult::default());
         value.value = new_text.to_string();
-        // value.is_submitted = false; // TODO
+        value.is_submit = Some(false);
     }
 
     #[func]
@@ -97,7 +97,7 @@ impl DclUiInput {
             .entry(self.dcl_entity_id)
             .or_insert(PbUiInputResult::default());
         value.value = new_text.to_string();
-        // value.is_submitted = true;// TODO
+        value.is_submit = Some(true);
     }
 
     pub fn change_value(&mut self, new_value: &PbUiInput) {
