@@ -205,9 +205,12 @@ impl ResourceProvider {
             }
         }
 
-        fs::rename(&tmp_dest, dest)
-            .await
-            .map_err(|e| format!("Failed to rename file: {:?}", e))?;
+        fs::rename(&tmp_dest, dest).await.map_err(|e| {
+            format!(
+                "Failed to rename file: {:?} from: {:?} to: {:?}",
+                e, tmp_dest, dest
+            )
+        })?;
 
         #[cfg(feature = "use_resource_tracking")]
         self.download_tracking.end(file_hash).await;
@@ -276,9 +279,12 @@ impl ResourceProvider {
             }
         }
 
-        fs::rename(&tmp_dest, dest)
-            .await
-            .map_err(|e| format!("Failed to rename file: {:?}", e))?;
+        fs::rename(&tmp_dest, dest).await.map_err(|e| {
+            format!(
+                "Failed to rename file: {:?} from: {:?} to: {:?}",
+                e, tmp_dest, dest
+            )
+        })?;
 
         #[cfg(feature = "use_resource_tracking")]
         self.download_tracking.end(file_hash).await;
@@ -350,7 +356,12 @@ impl ResourceProvider {
             .map_err(|e| format!("File write error: {:?}", e))?;
         fs::rename(&tmp_dest, &absolute_file_path)
             .await
-            .map_err(|e| format!("Failed to rename file: {:?}", e))?;
+            .map_err(|e| {
+                format!(
+                    "Failed to rename file: {:?} from: {:?} to: {:?}",
+                    e, tmp_dest, absolute_file_path
+                )
+            })?;
 
         // Update the cache map
         let file_size = bytes.len() as i64;

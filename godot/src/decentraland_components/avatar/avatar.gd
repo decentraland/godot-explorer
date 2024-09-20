@@ -50,6 +50,14 @@ var wearable_promises = null
 
 
 func _ready():
+	var billboard_mode = (
+		BaseMaterial3D.BillboardMode.BILLBOARD_FIXED_Y
+		if Global.is_xr()
+		else BaseMaterial3D.BillboardMode.BILLBOARD_ENABLED
+	)
+	sprite_3d_mic_enabled.billboard = billboard_mode
+	label_3d_name.billboard = billboard_mode
+
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
 	body_shape_skeleton_3d.bone_pose_changed.connect(self._attach_point_bone_pose_changed)
 

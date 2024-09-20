@@ -119,8 +119,7 @@ func async_get_viewport_image(face: bool, dest_size: Vector2i, fov: Variant = nu
 	if fov is float:
 		camera_3d.fov = fov
 
-	self.size = dest_size
-	subviewport.size = dest_size
+	set_deferred("size", dest_size)
 
 	await get_tree().process_frame
 	await get_tree().process_frame
