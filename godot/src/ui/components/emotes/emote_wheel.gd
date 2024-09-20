@@ -71,10 +71,12 @@ func _physics_process(_delta):
 func _on_play_emote(emote_urn: String):
 	self.hide()
 	Global.explorer_grab_focus()
-	if avatar_node:
+	if avatar_node != null:
 		var emote_controller = avatar_node.emote_controller
 		emote_controller.play_emote(emote_urn)
 		emote_controller.broadcast_avatar_animation(emote_urn)
+	else:
+		printerr("No avatar node in EmoteWheel!")
 
 
 func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):

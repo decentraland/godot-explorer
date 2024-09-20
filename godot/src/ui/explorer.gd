@@ -34,6 +34,7 @@ var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI
 @onready var loading_ui = $UI/Loading
 
 @onready var button_mic = %Button_Mic
+@onready var emote_wheel = %EmoteWheel
 
 
 func _process(_dt):
@@ -95,6 +96,8 @@ func _ready():
 		player.vr_screen.set_instantiate_scene(ui_root)
 	else:
 		%Timer_BroadcastPosition.follow_node = player.avatar
+
+	emote_wheel.avatar_node = player.avatar
 
 	loading_ui.enable_loading_screen()
 	var cmd_params = get_params_from_cmd()
