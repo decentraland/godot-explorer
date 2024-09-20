@@ -46,7 +46,7 @@ jobs:
       if: success() || failure()
       run: |
         mkdir -p android-artifacts
-        mv godot/lib/android/arm64/libdclgodot.so android-artifacts/
+        cp godot/lib/android/arm64/libdclgodot.so android-artifacts/
         mv android.apk android-artifacts/ || true
         mv android-unsigned.aab android-artifacts/ || true
 
@@ -54,7 +54,7 @@ jobs:
       if: success() || failure()
       run: |
         mkdir -p meta-quest-artifacts
-        mv godot/lib/android/arm64/libdclgodot.so meta-quest-artifacts/
+        cp godot/lib/android/arm64/libdclgodot.so meta-quest-artifacts/
         mv meta-quest.apk meta-quest-artifacts/ || true
         mv meta-quest-unsigned.aab meta-quest-artifacts/ || true
 
