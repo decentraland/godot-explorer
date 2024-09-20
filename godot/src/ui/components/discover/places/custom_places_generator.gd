@@ -68,4 +68,7 @@ func on_request(_offset: int, _limit: int) -> void:
 	for custom_place in CUSTOM_PLACES:
 		add_item(custom_place)
 
-	set_consumer_visible.emit(true)
+	if CUSTOM_PLACES.is_empty():
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OkWithoutResults)
+	else:
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OkWithResults)

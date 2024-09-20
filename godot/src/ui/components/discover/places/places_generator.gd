@@ -10,6 +10,8 @@ const DISCOVER_CARROUSEL_ITEM = preload(
 	"res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn"
 )
 
+var discover_carrousel_item_loading: Control = null
+
 @export var order_by: OrderBy = OrderBy.NONE
 @export var categories: String = "all"
 @export var only_favorites: bool = false
@@ -121,7 +123,7 @@ func request_last_places() -> void:
 
 
 func on_request(offset: int, limit: int) -> void:
-	if no_more_elements:
+	if no_more_elements and not new_search:
 		return  # we reach the capacity...
 
 	if last_places_logic:
@@ -133,6 +135,23 @@ func on_request(offset: int, limit: int) -> void:
 	url += "worlds" if only_worlds else "places"
 
 	url += "?offset=%d&limit=%d" % [offset, limit]
+
+	if new_search:
+		loaded_elements = 0
+		new_search = false
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.Loading)
+	else:
+		if is_instance_valid(discover_carrousel_item_loading):
+			discover_carrousel_item_loading.show()
+		else:
+			discover_carrousel_item_loading = load("res://src/ui/components/discover/carrousel/discover_carrousel_item_loading.tscn").instantiate()
+			item_container.add_child(discover_carrousel_item_loading)
+			
+		item_container.move_child(discover_carrousel_item_loading, -1)
+		discover_carrousel_item_loading
+			
+	if search_param.length() > 0:
+		url += "&search=" + search_param.replace(" ", "%20")
 
 	if only_favorites:
 		url += "&only_favorites=true"
@@ -158,8 +177,11 @@ func _async_fetch_places(url: String, limit: int = 100):
 	)
 	var result = await PromiseUtils.async_awaiter(promise)
 
+	if is_instance_valid(discover_carrousel_item_loading):
+		discover_carrousel_item_loading.hide()
+			
 	if result is PromiseError:
-		set_consumer_visible.emit(false)
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.Error)
 		printerr("Error request places", result.get_error())
 		return
 
@@ -167,7 +189,7 @@ func _async_fetch_places(url: String, limit: int = 100):
 
 	if json.data.is_empty():
 		if loaded_elements == 0:
-			set_consumer_visible.emit(false)
+			report_loading_status.emit(CarrouselGenerator.LoadingStatus.OkWithoutResults)
 		return
 
 	loaded_elements += json.data.size()
@@ -182,4 +204,4 @@ func _async_fetch_places(url: String, limit: int = 100):
 		item.set_data(item_data)
 		item.item_pressed.connect(discover.on_item_pressed)
 
-	set_consumer_visible.emit(true)
+	report_loading_status.emit(CarrouselGenerator.LoadingStatus.OkWithResults)

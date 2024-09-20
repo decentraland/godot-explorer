@@ -3,7 +3,6 @@ extends CarrouselRequester
 var current_offset = 0
 var threshold_limit = 10
 
-
 func start():
 	var node = self
 	if not node is ScrollContainer:
@@ -11,8 +10,14 @@ func start():
 		return
 
 	self.scroll_ended.connect(self._on_scroll_container_scroll_ended)
-	request.emit(current_offset, current_offset + threshold_limit)
+	emit_request()
 
+func restart():
+	current_offset = 0
+	emit_request()
+
+func emit_request():
+	request.emit(current_offset, threshold_limit)
 
 func _on_scroll_container_scroll_ended():
 	var child_number = 0
@@ -32,4 +37,4 @@ func _on_scroll_container_scroll_ended():
 
 	if max_child_number >= threshold_limit:
 		current_offset = (max_child_number / threshold_limit) * threshold_limit
-		request.emit(current_offset, threshold_limit)
+		emit_request()
