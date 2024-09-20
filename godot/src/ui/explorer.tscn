@@ -363,6 +363,7 @@ grow_horizontal = 2
 grow_vertical = 0
 
 [node name="EmoteWheel" parent="UI" instance=ExtResource("21_pows0")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
