@@ -84,7 +84,7 @@ pub fn run(
     if itest {
         args.push("--headless");
         args.push("--verbose");
-        args.push("--test");
+        args.push("--test-runner");
     }
 
     if !extras.is_empty() {
