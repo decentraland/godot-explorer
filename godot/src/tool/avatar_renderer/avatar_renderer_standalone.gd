@@ -10,6 +10,7 @@ var current_avatar: DclAvatarWireFormat
 
 @onready var avatar_preview = %AvatarPreview
 
+
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
 	if USE_TEST_INPUT:
@@ -59,7 +60,9 @@ func start():
 	var viewport: Viewport = avatar_preview.subviewport.get_viewport()
 	viewport.use_debanding = true
 	viewport.scaling_3d_scale = 2.0
-	RenderingServer.viewport_set_msaa_3d(viewport.get_viewport_rid(), RenderingServer.VIEWPORT_MSAA_8X)
+	RenderingServer.viewport_set_msaa_3d(
+		viewport.get_viewport_rid(), RenderingServer.VIEWPORT_MSAA_8X
+	)
 	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
 
 
