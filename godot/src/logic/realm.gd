@@ -128,10 +128,11 @@ func async_clear_realm():
 	Global.scene_runner.kill_all_scenes()
 
 
-func async_set_realm(new_realm_string: String) -> void:
+func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> void:
 	realm_string = new_realm_string
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)
+
 	var promise: Promise = Global.http_requester.request_json(
 		realm_url + "about", HTTPClient.METHOD_GET, "", []
 	)
@@ -194,6 +195,9 @@ func async_set_realm(new_realm_string: String) -> void:
 			realm_about.get("content", {}).get("publicUrl")
 		)
 
+		if not realm_scene_urns.is_empty() and search_new_pos:
+			await async_request_set_position(realm_scene_urns.back())
+
 		Global.get_config().last_realm_joined = realm_url
 		Global.get_config().save_to_settings_file()
 
@@ -201,3 +205,33 @@ func async_set_realm(new_realm_string: String) -> void:
 
 		_has_realm = true
 		emit_signal("realm_changed")
+
+
+func async_request_set_position(scene_urn):
+	prints(scene_urn)
+	var url = scene_urn.baseUrl + scene_urn.entityId
+
+	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", [])
+
+	var res = await PromiseUtils.async_awaiter(promise)
+	if res is PromiseError:
+		printerr(
+			"Rejected request async_request_set_position: ",
+			scene_urn,
+			" error message: ",
+			res.get_error()
+		)
+	elif res is RequestResponse:
+		var response: RequestResponse = res
+		var json: Dictionary = response.get_string_response_as_json()
+		if json == null:
+			printerr("do_request_json failed because json_string is not a valid json")
+			return
+
+		var base_pos = json.get("metadata", {}).get("scene", {}).get("base", "0,0")
+		var coord = base_pos.split(",")
+		var x = int(coord[0])
+		var y = int(coord[1])
+		var explorer = Global.get_explorer()
+		if is_instance_valid(explorer):
+			explorer.teleport_to(Vector2i(x, y))

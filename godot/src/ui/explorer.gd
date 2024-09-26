@@ -325,7 +325,7 @@ func _on_panel_chat_submit_message(message: String):
 			panel_chat.add_chat_message(
 				"[color=#ccc]> Trying to change to realm " + params[1] + "[/color]"
 			)
-			Global.realm.async_set_realm(params[1])
+			Global.realm.async_set_realm(params[1], true)
 			loading_ui.enable_loading_screen()
 		elif command_str == "/clear":
 			Global.realm.async_clear_realm()
@@ -353,8 +353,9 @@ func move_to(position: Vector3, skip_loading: bool):
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
-	if realm != Global.realm.get_realm_string():
+	if not realm.is_empty() && realm != Global.realm.get_realm_string():
 		Global.realm.async_set_realm(realm)
+
 	move_to(Vector3i(parcel.x * 16, 3, -parcel.y * 16), false)
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
