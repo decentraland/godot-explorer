@@ -132,7 +132,7 @@ fn main() -> Result<(), anyhow::Error> {
         ("run", sm) => {
             let mut build_args: Vec<&str> = sm
                 .values_of("build-args")
-                .map(|v| v.map(|it| it.into()).collect())
+                .map(|v| v.collect())
                 .unwrap_or_default();
 
             if sm.is_present("resource-tracking") {

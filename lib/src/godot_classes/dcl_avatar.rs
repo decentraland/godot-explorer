@@ -107,7 +107,7 @@ impl DclAvatar {
         self.lerp_state.factor = 0.0;
         self.lerp_state.initial_velocity_y = y_velocity;
 
-        let initial_position = self.lerp_state.initial_position.clone();
+        let initial_position = self.lerp_state.initial_position;
 
         // TODO: check euler order
         self.base_mut()

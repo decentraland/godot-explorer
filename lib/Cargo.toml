@@ -86,7 +86,3 @@ enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 webrtc-sys-build = { git = "https://github.com/livekit/rust-sdks", optional = true, rev="8b276f9d4b98437a139e1cbe41cfda1332ce1120" }
 prost-build = "0.11.8"
 chrono = "0.4.31"
-
-[patch."https://github.com/godot-rust/godot4-prebuilt".godot4-prebuilt]
-git = "https://github.com//godot-rust/godot4-prebuilt"
-rev = "bc1e77856d181c14c59d2a5cb6a7e138ea5a2b39"

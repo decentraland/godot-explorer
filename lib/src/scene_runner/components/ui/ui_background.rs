@@ -1,7 +1,4 @@
-use godot::{
-    obj::{NewAlloc, UserClass},
-    prelude::Gd,
-};
+use godot::{obj::NewAlloc, prelude::Gd};
 
 use crate::{
     dcl::{

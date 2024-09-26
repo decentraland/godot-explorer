@@ -285,7 +285,7 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn _on_profile_changed(&mut self) {
+    fn _on_profile_changed(&mut self, _: Variant) {
         self.base_mut()
             .call_deferred("_on_update_profile".into(), &[]);
     }

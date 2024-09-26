@@ -22,11 +22,7 @@ pub fn run(
     extras: Vec<String>,
     with_build_envs: Option<HashMap<String, String>>,
 ) -> Result<(), anyhow::Error> {
-    let with_build_envs = match with_build_envs {
-        Some(vars) => vars,
-        None => HashMap::new(),
-    };
-
+    let with_build_envs = with_build_envs.unwrap_or_default();
     let program = adjust_canonicalization(
         std::fs::canonicalize(format!(
             "{}godot/{}",

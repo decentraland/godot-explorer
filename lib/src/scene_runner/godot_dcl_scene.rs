@@ -9,7 +9,7 @@ use crate::{
     },
     realm::scene_definition::SceneEntityDefinition,
 };
-use godot::{engine::Script, prelude::*};
+use godot::prelude::*;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -185,11 +185,11 @@ impl GodotDclScene {
 
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_3d.is_none() {
-            let mut new_node_3d = DclNodeEntity3d::new_alloc(*entity);
+            let new_node_3d = DclNodeEntity3d::new_alloc(*entity);
             self.root_node_3d.add_child(new_node_3d.clone().upcast());
 
             if entity == &SceneEntityId::PLAYER || entity == &SceneEntityId::CAMERA {
-                // TODO
+                // TODO FIXME loading script and instantiate to cast to Node
 
                 // let mut player_collider_filter = godot::engine::load::<Script>(
                 //     "res://src/decentraland_components/player_collider_filter.gd",

@@ -134,7 +134,6 @@ impl RequestResponse {
                     Variant::nil()
                 }
             }
-            _ => Variant::nil(),
         }
     }
 }

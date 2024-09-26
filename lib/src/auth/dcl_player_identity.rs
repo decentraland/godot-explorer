@@ -327,17 +327,17 @@ impl DclPlayerIdentity {
         };
 
         if let Some(CurrentWallet::Local { wallet: _, keys }) = &self.wallet {
-            dict.insert(
+            let _ = dict.insert(
                 "local_wallet",
                 PackedByteArray::from_iter(keys.iter().cloned()).to_variant(),
             );
         }
 
-        dict.insert("magic_auth", self.magic_auth.to_variant());
+        let _ = dict.insert("magic_auth", self.magic_auth.to_variant());
 
-        dict.insert("account_address", self.get_address_str().to_variant());
-        dict.insert("chain_id", chain_id.to_variant());
-        dict.insert(
+        let _ = dict.insert("account_address", self.get_address_str().to_variant());
+        let _ = dict.insert("chain_id", chain_id.to_variant());
+        let _ = dict.insert(
             "ephemeral_auth_chain",
             serde_json::to_string(&self.ephemeral_auth_chain.as_ref().unwrap())
                 .expect("serialize ephemeral auth chain")

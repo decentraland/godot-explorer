@@ -4,10 +4,7 @@ use std::{
     time::Instant,
 };
 
-use godot::{
-    obj::{NewAlloc, UserClass},
-    prelude::Gd,
-};
+use godot::{obj::NewAlloc, prelude::Gd};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},

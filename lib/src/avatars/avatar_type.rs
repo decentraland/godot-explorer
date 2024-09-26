@@ -90,9 +90,9 @@ impl DclAvatarWireFormat {
 
         for (i, emote) in DEFAULT_EMOTES.iter().enumerate() {
             if let Some(emote) = used_emotes.iter().find(|e| e.slot == i as u32) {
-                emotes.set(i, GString::from(emote.urn.as_str()));
+                emotes[i] = GString::from(emote.urn.as_str());
             } else {
-                emotes.set(i, GString::from(*emote));
+                emotes[i] = GString::from(*emote);
             }
         }
         emotes

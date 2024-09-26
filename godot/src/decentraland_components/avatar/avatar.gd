@@ -59,7 +59,7 @@ func _ready():
 	label_3d_name.billboard = billboard_mode
 
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
-	# TODO
+	# TODO: uncomment this line before finishing bump to 4.3, FIX
 	# body_shape_skeleton_3d.bone_pose_changed.connect(self._attach_point_bone_pose_changed)
 
 	avatar_modifier_area_detector.set_avatar_modifier_area.connect(
@@ -248,7 +248,8 @@ func try_to_set_body_shape(body_shape_hash):
 		var new_child = child.duplicate()
 		new_child.name = "bodyshape_" + child.name.to_lower()
 
-		new_child.add_child(body_shape.get_node("ResourceLocker").duplicate())
+		var resource_locker = body_shape.get_node("ResourceLocker")
+		new_child.add_child(resource_locker.duplicate())
 		body_shape_skeleton_3d.add_child(new_child)
 
 	_add_attach_points()
