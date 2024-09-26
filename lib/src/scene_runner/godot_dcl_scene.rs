@@ -185,20 +185,20 @@ impl GodotDclScene {
 
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_3d.is_none() {
-            let new_node_3d = DclNodeEntity3d::new_alloc(*entity);
+            let mut new_node_3d = DclNodeEntity3d::new_alloc(*entity);
             self.root_node_3d.add_child(new_node_3d.clone().upcast());
 
             if entity == &SceneEntityId::PLAYER || entity == &SceneEntityId::CAMERA {
-                // TODO FIXME loading script and instantiate to cast to Node
+                let mut player_collider_filter = godot::engine::load::<PackedScene>(
+                    "res://src/decentraland_components/player_collider_filter.tscn",
+                )
+                .instantiate()
+                .expect("player_collider_filter scene is valid")
+                .cast::<Node>();
+                player_collider_filter.set_name("PlayerColliderFilter".into());
 
-                // let mut player_collider_filter = godot::engine::load::<Script>(
-                //     "res://src/decentraland_components/player_collider_filter.gd",
-                // )
-                // .cast::<Node>();
-                // player_collider_filter.set_name("PlayerColliderFilter".into());
-
-                // new_node_3d.add_child(player_collider_filter.clone());
-                // player_collider_filter.call("init_player_collider_filter".into(), &[]);
+                new_node_3d.add_child(player_collider_filter.clone());
+                player_collider_filter.call("init_player_collider_filter".into(), &[]);
             }
             godot_entity_node.base_3d = Some(new_node_3d.upcast());
         }

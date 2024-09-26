@@ -59,8 +59,7 @@ func _ready():
 	label_3d_name.billboard = billboard_mode
 
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
-	# TODO: uncomment this line before finishing bump to 4.3, FIX
-	# body_shape_skeleton_3d.bone_pose_changed.connect(self._attach_point_bone_pose_changed)
+	body_shape_skeleton_3d.skeleton_updated.connect(self._attach_point_skeleton_updated)
 
 	avatar_modifier_area_detector.set_avatar_modifier_area.connect(
 		self._on_set_avatar_modifier_area
@@ -528,15 +527,13 @@ func _add_attach_points():
 	left_hand_idx = body_shape_skeleton_3d.find_bone("Avatar_LeftHand")
 
 
-func _attach_point_bone_pose_changed(bone_idx: int):
-	match bone_idx:
-		left_hand_idx:
-			left_hand_position = body_shape_skeleton_3d.get_bone_global_pose(bone_idx)
-			left_hand_position.basis = left_hand_position.basis.scaled(100.0 * Vector3.ONE)
-
-		right_hand_idx:
-			right_hand_position = body_shape_skeleton_3d.get_bone_global_pose(bone_idx)
-			right_hand_position.basis = right_hand_position.basis.scaled(100.0 * Vector3.ONE)
+func _attach_point_skeleton_updated():
+	if left_hand_idx != -1:
+		left_hand_position = body_shape_skeleton_3d.get_bone_global_pose(left_hand_idx)
+		left_hand_position.basis = left_hand_position.basis.scaled(100.0 * Vector3.ONE)
+	if right_hand_idx != -1:
+		right_hand_position = body_shape_skeleton_3d.get_bone_global_pose(right_hand_idx)
+		right_hand_position.basis = right_hand_position.basis.scaled(100.0 * Vector3.ONE)
 
 
 func _on_timer_hide_mic_timeout():

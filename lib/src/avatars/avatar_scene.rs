@@ -200,7 +200,7 @@ impl AvatarScene {
     }
 
     #[func]
-    pub fn on_scene_spawned(&mut self) {
+    pub fn on_scene_spawned(&mut self, _scene_id: i32, _entity_id: GString) {
         for (_, avatar) in self.avatar_godot_scene.iter_mut() {
             avatar.bind_mut().on_parcel_scenes_changed();
         }
