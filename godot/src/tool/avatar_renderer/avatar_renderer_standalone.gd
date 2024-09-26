@@ -46,7 +46,6 @@ func _ready():
 		return
 
 	# Disable some functions
-	#Global.realm.async_set_realm("null")
 	Global.scene_runner.set_pause(true)
 
 	Global.realm.content_base_url = profiles_to_process.base_url

@@ -26,7 +26,7 @@
 
 1. Ensure you are in the root folder first
 2. You can run `cargo run -- run` to build the Rust library and execute the client. 
-- With adding `-r` it builds the library in release mode. Note: the Godot executable is an editor, so it's a `release_debug` build, see the Target section [here](https://docs.godotengine.org/en/stable/contributing/development/compiling/introduction_to_the_buildsystem.html) for more infromation.
+- With adding `-r` it builds the library in release mode. Note: the Godot executable is an editor, so it's a `release_debug` build, see the Target section [here](https://docs.godotengine.org/en/stable/contributing/development/compiling/introduction_to_the_buildsystem.html) for more information.
 - With adding `-e` it also builds the library, but the project edition is executed instead of the client.
 
 ## Docker Set up project with Docker (for Android and Linux)
