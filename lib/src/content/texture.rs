@@ -5,13 +5,13 @@ use super::{
     thread_safety::GodotSingleThreadSafety,
 };
 use godot::{
-    bind::GodotClass,
     builtin::{meta::ToGodot, GString, PackedByteArray, Variant, Vector2i},
     engine::{
         global::Error, image::CompressMode, portable_compressed_texture_2d::CompressionMode,
         DirAccess, Image, ImageTexture, PortableCompressedTexture2D, Texture2D,
     },
     obj::Gd,
+    prelude::*,
 };
 
 #[derive(GodotClass)]
@@ -43,7 +43,7 @@ pub async fn load_image_texture(
 
     let bytes = PackedByteArray::from_vec(&bytes_vec);
 
-    let mut image = Image::new();
+    let mut image = Image::new_gd();
     let err = if infer_mime::is_png(&bytes_vec) {
         image.load_png_from_buffer(bytes)
     } else if infer_mime::is_jpeg(&bytes_vec) || infer_mime::is_jpeg2000(&bytes_vec) {
@@ -100,11 +100,11 @@ pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Tex
     resize_image(image, max_size);
 
     if !image.is_compressed() {
-        image.compress(CompressMode::COMPRESS_ETC2);
+        image.compress(CompressMode::ETC2);
     }
 
-    let mut texture = PortableCompressedTexture2D::new();
-    texture.create_from_image(image.clone(), CompressionMode::COMPRESSION_MODE_ETC2);
+    let mut texture = PortableCompressedTexture2D::new_gd();
+    texture.create_from_image(image.clone(), CompressionMode::ETC2);
     texture.upcast()
 }
 

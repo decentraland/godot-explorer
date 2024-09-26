@@ -15,9 +15,9 @@
     - **MacOS**: `brew install ffmpeg@6 pkg-config`
     - **Windows**: 
       - download and unzip `https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z`
-      - set `LIBCLANG_PATH` = `path to LLVM\x64\bin` (this is packaged with visual studio, or can be downloaded separately)
       - set `FFMPEG_DIR` = `root folder where ffmpeg has been unzipped`
       - add `ffmpeg\bin` to your `PATH`
+      - set `LIBCLANG_PATH` = `path to LLVM\x64\bin` (this is packaged with visual studio, or can be downloaded separately)
     - the `.github/workflows/ci.yml` file can be useful to guide you
 
 4. Run `cargo run -- install` in the repo root folder.

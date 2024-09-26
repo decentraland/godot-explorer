@@ -1,4 +1,7 @@
-use godot::{obj::UserClass, prelude::Gd};
+use godot::{
+    obj::{NewAlloc, UserClass},
+    prelude::Gd,
+};
 
 use crate::{
     dcl::{
@@ -34,7 +37,7 @@ pub fn update_ui_dropdown(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             if value.is_none() {
                 if let Some(mut node) = existing_ui_dropdown
                     .base_control
-                    .get_node("dropdown".into())
+                    .get_node_or_null("dropdown".into())
                 {
                     node.queue_free();
                     existing_ui_dropdown.base_control.remove_child(node);
@@ -52,9 +55,9 @@ pub fn update_ui_dropdown(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 existing_ui_dropdown_control.bind_mut().change_value(value);
                 existing_ui_dropdown.text_size = Some(existing_ui_dropdown_control.get_size());
             } else {
-                let mut node: Gd<DclUiDropdown> = DclUiDropdown::alloc_gd();
+                let mut node: Gd<DclUiDropdown> = DclUiDropdown::new_alloc();
                 node.set_name("dropdown".into());
-                node.set_anchors_preset(godot::engine::control::LayoutPreset::PRESET_FULL_RECT);
+                node.set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
                 node.bind_mut().set_dcl_entity_id(entity.as_i32());
 
                 existing_ui_dropdown

@@ -6,20 +6,20 @@ pub struct ResourceLocker {
     #[export]
     reference: Gd<Resource>,
 
-    #[base]
     base: Base<Node>,
 }
 
 #[godot_api]
 impl INode for ResourceLocker {
     fn init(mut base: Base<Node>) -> Self {
-        let reference = Resource::new();
-        base.set_name("ResourceLocker".to_godot());
+        let reference = Resource::new_gd();
 
-        base.set_meta(
-            StringName::from("instance_id"),
-            reference.instance_id().to_variant(),
-        );
+        // TODO: set meta
+        // base.set_name("ResourceLocker".to_godot());
+        // base.set_meta(
+        //     StringName::from("instance_id"),
+        //     reference.instance_id().to_variant(),
+        // );
         Self { base, reference }
     }
 }
@@ -33,10 +33,10 @@ impl ResourceLocker {
             return;
         }
 
-        let resource_locker = ResourceLocker::alloc_gd();
+        let resource_locker = ResourceLocker::new_alloc();
 
         node.add_child_ex(resource_locker.upcast())
-            .internal(InternalMode::INTERNAL_MODE_FRONT)
+            .internal(InternalMode::FRONT)
             .done();
     }
 

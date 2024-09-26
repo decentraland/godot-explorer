@@ -59,7 +59,8 @@ func _ready():
 	label_3d_name.billboard = billboard_mode
 
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
-	body_shape_skeleton_3d.bone_pose_changed.connect(self._attach_point_bone_pose_changed)
+	# TODO
+	# body_shape_skeleton_3d.bone_pose_changed.connect(self._attach_point_bone_pose_changed)
 
 	avatar_modifier_area_detector.set_avatar_modifier_area.connect(
 		self._on_set_avatar_modifier_area

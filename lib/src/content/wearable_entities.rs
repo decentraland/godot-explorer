@@ -4,15 +4,15 @@ use crate::{
     http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
 };
 use godot::{
-    bind::GodotClass,
     builtin::{meta::ToGodot, Variant},
     obj::Gd,
+    prelude::*,
 };
 use serde::Serialize;
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(GodotClass)]
-#[class(base=RefCounted)]
+#[class(init, base=RefCounted)]
 pub struct WearableManyResolved {
     pub wearable_map: HashMap<String, Arc<ItemEntityDefinition>>,
 }

@@ -1,7 +1,4 @@
-use godot::{
-    bind::{godot_api, GodotClass},
-    prelude::*,
-};
+use godot::prelude::*;
 
 use crate::comms::profile::{AvatarColor, AvatarEmote, AvatarSnapshots, AvatarWireFormat};
 
@@ -20,7 +17,7 @@ const DEFAULT_EMOTES: [&str; AVATAR_EMOTE_SLOTS_COUNT] = [
 ];
 
 #[derive(GodotClass)]
-#[class(base=RefCounted)]
+#[class(init, base=RefCounted)]
 pub struct DclAvatarWireFormat {
     pub inner: AvatarWireFormat,
 }
@@ -159,7 +156,7 @@ impl DclAvatarWireFormat {
     fn set_wearables(&mut self, wearables: PackedStringArray) {
         let mut wearables_vec = Vec::new();
         for i in 0..wearables.len() {
-            wearables_vec.push(wearables.get(i).to_string());
+            wearables_vec.push(wearables.get(i).as_ref().unwrap().to_string());
         }
         self.inner.wearables = wearables_vec;
     }
@@ -175,7 +172,7 @@ impl DclAvatarWireFormat {
         for i in 0..10 {
             emotes_vec.push(AvatarEmote {
                 slot: i as u32,
-                urn: emotes.get(i).to_string(),
+                urn: emotes.get(i).as_ref().unwrap().to_string(),
             });
         }
         self.inner.emotes = Some(emotes_vec);

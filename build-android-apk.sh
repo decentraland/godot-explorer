@@ -18,7 +18,7 @@ cargo run -- run --only-build
 echo "Link export templates"
 mkdir -p ${HOME}/.local/share/godot/export_templates/
 cd ${HOME}/.local/share/godot/export_templates/
-ln -sf ${EXPLORER_PATH}/.bin/godot/templates/templates/ 4.2.1.stable
+ln -sf ${EXPLORER_PATH}/.bin/godot/templates/templates/ 4.3.stable
 
 set -e 
 

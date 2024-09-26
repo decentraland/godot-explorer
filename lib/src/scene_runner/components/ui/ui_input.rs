@@ -1,4 +1,7 @@
-use godot::{obj::UserClass, prelude::Gd};
+use godot::{
+    obj::{NewAlloc, UserClass},
+    prelude::Gd,
+};
 
 use crate::{
     dcl::{
@@ -32,7 +35,10 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 .unwrap();
 
             if value.is_none() {
-                if let Some(mut node) = existing_ui_input.base_control.get_node("input".into()) {
+                if let Some(mut node) = existing_ui_input
+                    .base_control
+                    .get_node_or_null("input".into())
+                {
                     node.queue_free();
                     existing_ui_input.base_control.remove_child(node);
                 }
@@ -49,9 +55,9 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 existing_ui_input_control.bind_mut().change_value(value);
                 existing_ui_input.text_size = Some(existing_ui_input_control.get_size());
             } else {
-                let mut node: Gd<DclUiInput> = DclUiInput::alloc_gd();
+                let mut node: Gd<DclUiInput> = DclUiInput::new_alloc();
                 node.set_name("input".into());
-                node.set_anchors_preset(godot::engine::control::LayoutPreset::PRESET_FULL_RECT);
+                node.set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
 
                 node.bind_mut().set_dcl_entity_id(entity.as_i32());
 

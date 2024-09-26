@@ -1,4 +1,7 @@
-use godot::{obj::UserClass, prelude::Gd};
+use godot::{
+    obj::{NewAlloc, UserClass},
+    prelude::Gd,
+};
 
 use crate::{
     dcl::{
@@ -32,7 +35,10 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                 .unwrap();
 
             if value.is_none() {
-                if let Some(mut node) = existing_ui_background.base_control.get_node("bkg".into()) {
+                if let Some(mut node) = existing_ui_background
+                    .base_control
+                    .get_node_or_null("bkg".into())
+                {
                     node.queue_free();
                     existing_ui_background.base_control.remove_child(node);
                 }
@@ -50,9 +56,9 @@ pub fn update_ui_background(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             {
                 node.cast::<DclUiBackground>()
             } else {
-                let mut node: Gd<DclUiBackground> = DclUiBackground::alloc_gd();
+                let mut node: Gd<DclUiBackground> = DclUiBackground::new_alloc();
                 node.set_name("bkg".into());
-                node.set_anchors_preset(godot::engine::control::LayoutPreset::PRESET_FULL_RECT);
+                node.set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
 
                 existing_ui_background
                     .base_control

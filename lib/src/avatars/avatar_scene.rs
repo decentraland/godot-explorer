@@ -31,7 +31,6 @@ type AvatarAlias = u32;
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct AvatarScene {
-    #[base]
     base: Base<Node>,
 
     // map alias to the entity_id
@@ -60,7 +59,7 @@ impl INode for AvatarScene {
     fn ready(&mut self) {
         DclGlobal::singleton().bind_mut().scene_runner.connect(
             "scene_spawned".into(),
-            self.base.callable("on_scene_spawned"),
+            self.base().callable("on_scene_spawned"),
         );
     }
 }
@@ -133,7 +132,7 @@ impl AvatarScene {
             .bind_mut()
             .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
 
-        let instance_id = self.base.instance_id();
+        let instance_id = self.base().instance_id();
         let avatar_entity_id = entity_id;
         let avatar_changed_scene_callable =
             Callable::from_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
@@ -184,7 +183,7 @@ impl AvatarScene {
         new_avatar.connect("change_scene_id".into(), avatar_changed_scene_callable);
         new_avatar.connect("emote_triggered".into(), emote_triggered_callable);
 
-        self.base.add_child(new_avatar.clone().upcast());
+        self.base_mut().add_child(new_avatar.clone().upcast());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
     }
 
@@ -323,7 +322,7 @@ impl AvatarScene {
 
         let avatars = std::mem::take(&mut self.avatar_godot_scene);
         for (_, mut avatar) in avatars {
-            self.base.remove_child(avatar.clone().upcast());
+            self.base_mut().remove_child(avatar.clone().upcast());
             avatar.queue_free()
         }
     }
@@ -338,7 +337,7 @@ impl AvatarScene {
             self.last_updated_profile.remove(&entity_id);
 
             avatar.queue_free();
-            self.base.remove_child(avatar.upcast());
+            self.base_mut().remove_child(avatar.upcast());
 
             // Push dirty state in all the scenes
             let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
