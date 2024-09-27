@@ -163,7 +163,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [self-hosted-windows, ubuntu-22.04, macos-14-xlarge]
+        os: [bigwin, ubuntu-22.04, macos-14-xlarge]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -224,7 +224,7 @@ jobs:
         run: |
           $VCINSTALLDIR = $(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath)
           Add-Content $env:GITHUB_ENV "LIBCLANG_PATH=${VCINSTALLDIR}\VC\Tools\LLVM\x64\bin`n"
-          Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile ffmpeg-release-full-shared.7z
+          Invoke-WebRequest "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-full_build-shared.7z" -OutFile ffmpeg-release-full-shared.7z
           7z x ffmpeg-release-full-shared.7z
           mkdir ffmpeg
           mv ffmpeg-*/* ffmpeg/
