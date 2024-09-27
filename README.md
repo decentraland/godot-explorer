@@ -34,7 +34,7 @@
 Execute the following commands for building Godot:
 ```bash
 # Run Docker
-docker run -v {godot-explorer-repo-path}:/app/ -it kuruk/dcl-godot-android-builder:latest
+docker run -v {godot-explorer-repo-path}:/app/ -it quay.io/decentraland/dcl-godot-android-builder:99091016236094cb776bd9cb1298602e56b8cdab
 
 # Compile for Android
 cd lib

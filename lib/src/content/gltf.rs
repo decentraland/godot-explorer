@@ -377,13 +377,14 @@ fn create_colliders(node_to_inspect: Gd<Node>) {
                     parent.add_child(new_animatable.clone().upcast());
                     parent.remove_child(static_body_3d.clone().upcast());
 
-                    for body_child in static_body_3d
+                    for mut body_child in static_body_3d
                         .get_children_ex()
                         .include_internal(true)
                         .done()
                         .iter_shared()
                     {
                         static_body_3d.remove_child(body_child.clone());
+                        body_child.call("set_owner".into(), &[Variant::nil()]);
                         new_animatable.add_child(body_child.clone());
                         if let Ok(collision_shape_3d) = body_child.try_cast::<CollisionShape3D>() {
                             if let Some(shape) = collision_shape_3d.get_shape() {

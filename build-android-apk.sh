@@ -10,6 +10,11 @@ then
     git clone -b bump-4.3 https://github.com/decentraland/godot-explorer-android-template ${EXPLORER_PATH}/godot/android
 fi
 
+# temp workaround: check if JAVA_HOME is not set
+if [ -z "$JAVA_HOME" ]; then
+  export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+fi
+
 echo "Build for Linux x86_64"
 cd ${EXPLORER_PATH}
 cargo run -- install
