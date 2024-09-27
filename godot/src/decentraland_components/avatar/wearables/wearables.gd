@@ -456,11 +456,11 @@ static func can_equip(wearable: DclItemEntityDefinition, body_shape_id: String) 
 static func compose_hidden_categories(
 	body_shape_id: String, force_render: PackedStringArray, wearables_by_category: Dictionary
 ) -> Array:
-	var result: Array = []
-	var previously_hidden: Dictionary = {}
+	var hidden: Array = []
 
 	for priority_category in Categories.HIDING_PRIORITY:
-		previously_hidden[priority_category] = []
+		if hidden.has(priority_category):
+			continue
 
 		var wearable: DclItemEntityDefinition = wearables_by_category.get(priority_category)
 		if wearable == null:
@@ -471,19 +471,13 @@ static func compose_hidden_categories(
 			continue
 
 		for category_to_hide in current_hides_list:
-			var hidden_categories = previously_hidden.get(category_to_hide)
-			if hidden_categories != null and hidden_categories.has(priority_category):
-				continue
+			if not hidden.has(category_to_hide):
+				hidden.push_back(category_to_hide)
 
-			previously_hidden[priority_category].push_back(category_to_hide)
+	for category in force_render:
+		hidden.erase(category)
 
-			if force_render.has(category_to_hide):
-				continue
-
-			if not result.has(category_to_hide):
-				result.push_back(category_to_hide)
-
-	return result
+	return hidden
 
 
 static func get_wearable_facial_hashes(
@@ -562,12 +556,17 @@ static func get_curated_wearable_list(
 		else:
 			printerr("invalid wearable ", wearable_id)
 
+	var unused_wearables = compose_hidden_categories(
+		body_shape_id, force_render, ret.wearables_by_category
+	)
+	for hide_category in unused_wearables:
+		if ret.wearables_by_category.has(hide_category):
+			ret.wearables_by_category.erase(hide_category)
+
 	ret.hidden_categories = compose_hidden_categories(
 		body_shape_id, force_render, ret.wearables_by_category
 	)
-	for hide_category in ret.hidden_categories:
-		if ret.wearables_by_category.has(hide_category):
-			ret.wearables_by_category.erase(hide_category)
+
 	ret.need_to_fetch = set_fallback_for_missing_needed_categories(
 		body_shape_id, ret.wearables_by_category, ret.hidden_categories
 	)

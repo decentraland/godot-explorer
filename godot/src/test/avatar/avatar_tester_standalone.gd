@@ -18,6 +18,15 @@ func _ready():
 	option_button_avatar_list.selected = -1
 	option_button_avatar_list.text = "Select an avatar"
 
+	# Visual enhance
+	var viewport: Viewport = sub_viewport_container.subviewport.get_viewport()
+	viewport.use_debanding = true
+	viewport.scaling_3d_scale = 2.0
+	RenderingServer.viewport_set_msaa_3d(
+		viewport.get_viewport_rid(), RenderingServer.VIEWPORT_MSAA_8X
+	)
+	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
+
 
 func load_avatar_list():
 	var file = FileAccess.open("res://src/test/avatar/avatar_list.json", FileAccess.READ)
