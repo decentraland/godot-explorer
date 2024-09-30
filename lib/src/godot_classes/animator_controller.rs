@@ -207,8 +207,9 @@ impl MultipleAnimationController {
                 self.current_time.remove(&anim.clip);
             } else {
                 let time = self.base().get(anim_state.time_param_ref_str.clone());
-                self.current_time
-                    .insert(anim.clip.clone(), time.to::<f32>());
+                if let Ok(time) = time.try_to::<f32>() {
+                    self.current_time.insert(anim.clip.clone(), time);
+                }
             }
 
             self.playing_anims.remove(&anim.clip);
