@@ -2,7 +2,7 @@
 class_name DclBuildEditorPlugin
 extends EditorPlugin
 
-const GODOT_XR_TOOLS_PLUGIN_NAME = "Godot XR Tools"
+const GODOT_XR_TOOLS_PLUGIN_NAME = "godot-xr-tools"
 
 static func set_xr_mode(enabled: bool):
 	if EditorInterface.is_plugin_enabled(GODOT_XR_TOOLS_PLUGIN_NAME) != enabled:
