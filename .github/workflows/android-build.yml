@@ -16,7 +16,7 @@ jobs:
   build:
     runs-on: bigrunner
     container:
-      image: docker://kuruk/dcl-godot-android-builder:latest
+      image: docker://kuruk/dcl-godot-android-builder:4.2
       volumes:
       - /home/user/.cache/devgodot:/github/home/.cache/devgodot
     steps:
