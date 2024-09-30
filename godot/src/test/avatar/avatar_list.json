@@ -545,6 +545,122 @@
 					"a": 1
 				}
 			}
+		},
+		{
+			"ref": "0x51a514d3f28ea19775e811fc09396e808394bd12",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+			"wearables": [
+				"urn:decentraland:matic:collections-v2:0xee77b0a104cd6db1bbbcfa2f13076f234647c017:0:15",
+				"urn:decentraland:matic:collections-v2:0xee77b0a104cd6db1bbbcfa2f13076f234647c017:2:210624583337114373395836055367340864637790190801098222508621955075",
+				"urn:decentraland:matic:collections-v2:0xee77b0a104cd6db1bbbcfa2f13076f234647c017:1:105312291668557186697918027683670432318895095400549111254310977553",
+				"urn:decentraland:off-chain:base-avatars:eyebrows_03",
+				"urn:decentraland:off-chain:base-avatars:eyes_02",
+				"urn:decentraland:off-chain:base-avatars:f_mouth_03"
+			],
+			"forceRender": [
+				"mask",
+				"tiara",
+				"earring",
+				"feet",
+				"hat",
+				"hair"
+			],
+			"eyes": {
+				"color": {
+					"r": 0.125490203499794,
+					"g": 0.7019608020782471,
+					"b": 0.9647058844566345
+				}
+			},
+			"hair": {
+				"color": {
+					"r": 1,
+					"g": 0.7450980544090271,
+					"b": 0.1568627506494522
+				}
+			},
+			"skin": {
+				"color": {
+					"r": 1,
+					"g": 0.8497498035430908,
+					"b": 0
+				}
+			}
+		},
+		{
+			"ref": "0xa9272ec23574eb5846a1bc752bc19770beadfae5",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+			"wearables": [
+				"urn:decentraland:off-chain:base-avatars:black_jacket",
+				"urn:decentraland:off-chain:base-avatars:f_african_leggins",
+				"urn:decentraland:off-chain:base-avatars:curly_hair",
+				"urn:decentraland:off-chain:base-avatars:eyebrows_00",
+				"urn:decentraland:off-chain:base-avatars:eyes_00",
+				"urn:decentraland:off-chain:base-avatars:f_mouth_00"
+			],
+			"forceRender": [],
+			"eyes": {
+				"color": {
+					"r": 0,
+					"g": 0,
+					"b": 0
+				}
+			},
+			"hair": {
+				"color": {
+					"r": 0.6000000238418579,
+					"g": 0.23999999463558197,
+					"b": 0.23999999463558197
+				}
+			},
+			"skin": {
+				"color": {
+					"r": 0,
+					"g": 1,
+					"b": 0.26315808296203613
+				}
+			}
+		},
+		{
+			"ref": "with emissive",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+			"wearables": [
+				"urn:decentraland:matic:collections-v2:0xe91f0faf04bcb2c1c25ac9459fb90228be8735e7:0:17",
+				"urn:decentraland:matic:collections-v2:0xa780096910ce7fc4663ad3a954b34e2d842f0374:0:7",
+				"urn:decentraland:matic:collections-v2:0x08dc1667db12675e8cfb6e58ba30fe865d8c4bb6:0:8",
+				"urn:decentraland:matic:collections-v2:0x300c8583c5f18fd3f2bcc251ce913394a8c5d8f9:0:80",
+				"urn:decentraland:matic:collections-v2:0x768c1027b1f1a452ecb8dab017a1e630a75f0d30:9:947810625017014680281262249153033890870055858604942001288798799313",
+				"urn:decentraland:off-chain:base-avatars:eyebrows_00",
+				"urn:decentraland:off-chain:base-avatars:eyes_00",
+				"urn:decentraland:off-chain:base-avatars:f_mouth_04"
+			],
+			"forceRender": [
+				"helmet"
+			],
+			"eyes": {
+				"color": {
+					"r": 0.052996814250946045,
+					"g": 0.5021452307701111,
+					"b": 0.025209957733750343,
+					"a": 1
+				}
+			},
+			"hair": {
+				"color": {
+					"r": 0.009899990633130074,
+					"g": 0.9900000095367432,
+					"b": 0.23136761784553528,
+					"a": 1
+				}
+			},
+			"skin": {
+				"color": {
+					"r": 0.8666666746139526,
+					"g": 0.6941176652908325,
+					"b": 0.5607843399047852,
+					"a": 1
+				}
+			}
 		}
 	],
 	"emotes": [

@@ -454,13 +454,17 @@ static func can_equip(wearable: DclItemEntityDefinition, body_shape_id: String) 
 
 
 static func compose_hidden_categories(
-	body_shape_id: String, force_render: PackedStringArray, wearables_by_category: Dictionary
+	body_shape_id: String,
+	force_render: PackedStringArray,
+	wearables_by_category: Dictionary,
+	skip_compute_hidden: bool = false
 ) -> Array:
 	var hidden: Array = []
 
 	for priority_category in Categories.HIDING_PRIORITY:
-		if hidden.has(priority_category):
-			continue
+		if not skip_compute_hidden:
+			if hidden.has(priority_category):
+				continue
 
 		var wearable: DclItemEntityDefinition = wearables_by_category.get(priority_category)
 		if wearable == null:
@@ -564,7 +568,7 @@ static func get_curated_wearable_list(
 			ret.wearables_by_category.erase(hide_category)
 
 	ret.hidden_categories = compose_hidden_categories(
-		body_shape_id, force_render, ret.wearables_by_category
+		body_shape_id, force_render, ret.wearables_by_category, true
 	)
 
 	ret.need_to_fetch = set_fallback_for_missing_needed_categories(
