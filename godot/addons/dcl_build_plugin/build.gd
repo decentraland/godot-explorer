@@ -2,7 +2,7 @@
 class_name DclBuildEditorPlugin
 extends EditorPlugin
 
-const GODOT_XR_TOOLS_PLUGIN_NAME = "Godot XR Tools"
+const GODOT_XR_TOOLS_PLUGIN_NAME = "godot-xr-tools"
 
 static func set_xr_mode(enabled: bool):
 	if EditorInterface.is_plugin_enabled(GODOT_XR_TOOLS_PLUGIN_NAME) != enabled:
@@ -18,13 +18,14 @@ class DclBuildPlugin extends EditorExportPlugin:
 	const include_only_android: PackedStringArray = ["res://addons/GodotAndroidPluginMagicLink/"]
 	
 	func _export_begin(features, is_debug, path, flags):
+		prints("Start export, using XR is ", is_xr_export)
+
 		is_xr_export = features.has("xr")
 		is_android_export = features.has("android") and !is_xr_export
 
 		if is_xr_export:
 			DclBuildEditorPlugin.set_xr_mode(true)
 			
-		prints("Start export, using XR is ", is_xr_export)
 		
 	func _export_end():
 		if is_xr_export:
