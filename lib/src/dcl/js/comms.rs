@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use deno_core::{op, JsBuffer, Op, OpDecl, OpState};
+use deno_core::{op2, JsBuffer, OpDecl, OpState};
 use ethers_core::types::H160;
 
 use crate::dcl::scene_apis::RpcCall;
@@ -12,16 +12,16 @@ pub(crate) struct InternalPendingBinaryMessages {
 
 // list of op declarations
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_comms_send_string::DECL, op_comms_send_binary::DECL]
+    vec![op_comms_send_string(), op_comms_send_binary()]
 }
 
 pub(crate) const COMMS_MSG_TYPE_STRING: u8 = 1;
 pub(crate) const COMMS_MSG_TYPE_BINARY: u8 = 2;
 
-#[op]
+#[op2(async)]
 async fn op_comms_send_string(
     state: Rc<RefCell<OpState>>,
-    message: String,
+    #[string] message: String,
 ) -> Result<(), anyhow::Error> {
     let mut message = message.into_bytes();
     message.insert(0, COMMS_MSG_TYPE_STRING);
@@ -29,10 +29,11 @@ async fn op_comms_send_string(
     Ok(())
 }
 
-#[op]
+#[op2(async)]
+#[serde] 
 async fn op_comms_send_binary(
     state: Rc<RefCell<OpState>>,
-    messages: Vec<JsBuffer>,
+    #[serde] messages: Vec<JsBuffer>,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     let messages = messages
         .iter()
