@@ -30,7 +30,7 @@ async fn op_comms_send_string(
 }
 
 #[op2(async)]
-#[serde] 
+#[serde]
 async fn op_comms_send_binary(
     state: Rc<RefCell<OpState>>,
     #[serde] messages: Vec<JsBuffer>,

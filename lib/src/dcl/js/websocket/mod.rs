@@ -7,12 +7,7 @@ use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::{client::IntoClientRequest, protocol::CloseFrame};
 
 pub fn ops() -> Vec<OpDecl> {
-    vec![
-        op_ws_create(),
-        op_ws_cleanup(),
-        op_ws_send(),
-        op_ws_poll(),
-    ]
+    vec![op_ws_create(), op_ws_cleanup(), op_ws_send(), op_ws_poll()]
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -197,7 +192,11 @@ async fn ws_poll(
 }
 
 #[op2]
-fn op_ws_create(op_state: Rc<RefCell<OpState>>, #[string] url: String, #[serde] protocols: Vec<String>) -> u32 {
+fn op_ws_create(
+    op_state: Rc<RefCell<OpState>>,
+    #[string] url: String,
+    #[serde] protocols: Vec<String>,
+) -> u32 {
     let has_ws_state = op_state.borrow().has::<WsState>();
     if !has_ws_state {
         op_state.borrow_mut().put::<WsState>(WsState {

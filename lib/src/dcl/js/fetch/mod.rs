@@ -208,7 +208,7 @@ async fn op_fetch_consume_text(
     Err(anyhow::Error::msg("couldn't get response"))
 }
 #[op2(async)]
-#[serde] 
+#[serde]
 async fn op_fetch_consume_bytes(
     op_state: Rc<RefCell<OpState>>,
     req_id: u32,

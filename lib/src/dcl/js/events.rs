@@ -18,11 +18,7 @@ use std::{
 };
 
 pub fn ops() -> Vec<OpDecl> {
-    vec![
-        op_subscribe(),
-        op_unsubscribe(),
-        op_send_batch(),
-    ]
+    vec![op_subscribe(), op_unsubscribe(), op_send_batch()]
 }
 
 #[derive(Serialize)]

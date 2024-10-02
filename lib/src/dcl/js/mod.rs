@@ -84,7 +84,9 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
             GodotExplorer
             dir "src/dcl/js/js_modules",
             "main.js",
-        ).to_vec().into(),
+        )
+        .to_vec()
+        .into(),
         esm_entry_point: Some("ext:GodotExplorer/main.js"),
         middleware_fn: Some(Box::new(move |op: OpDecl| -> OpDecl {
             if let Some(custom_op) = op_map.get(&op.name) {

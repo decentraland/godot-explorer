@@ -5,11 +5,7 @@ use crate::dcl::scene_apis::{PortableLocation, RpcCall, SpawnResponse};
 
 // list of op declarations
 pub fn ops() -> Vec<OpDecl> {
-    vec![
-        op_portable_spawn(),
-        op_portable_list(),
-        op_portable_kill(),
-    ]
+    vec![op_portable_spawn(), op_portable_list(), op_portable_kill()]
 }
 
 #[op2(async)]
@@ -41,7 +37,10 @@ async fn op_portable_spawn(
 }
 
 #[op2(async)]
-async fn op_portable_kill(state: Rc<RefCell<OpState>>, #[string] pid: String) -> Result<bool, AnyError> {
+async fn op_portable_kill(
+    state: Rc<RefCell<OpState>>,
+    #[string] pid: String,
+) -> Result<bool, AnyError> {
     let (sx, rx) = tokio::sync::oneshot::channel::<bool>();
 
     // might not be a urn, who even knows

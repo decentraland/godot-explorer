@@ -40,7 +40,10 @@ async fn op_change_realm(
 }
 
 #[op2(async)]
-async fn op_open_nft_dialog(op_state: Rc<RefCell<OpState>>, #[string] urn: String) -> Result<(), AnyError> {
+async fn op_open_nft_dialog(
+    op_state: Rc<RefCell<OpState>>,
+    #[string] urn: String,
+) -> Result<(), AnyError> {
     let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
 
     op_state
@@ -57,7 +60,10 @@ async fn op_open_nft_dialog(op_state: Rc<RefCell<OpState>>, #[string] urn: Strin
 }
 
 #[op2(async)]
-async fn op_open_external_url(op_state: Rc<RefCell<OpState>>, #[string] url: String) -> Result<(), AnyError> {
+async fn op_open_external_url(
+    op_state: Rc<RefCell<OpState>>,
+    #[string] url: String,
+) -> Result<(), AnyError> {
     let parsed_url = match url.parse::<Uri>() {
         Ok(parsed_url) if parsed_url.scheme_str() == Some("https") => parsed_url,
         Ok(_) => return Err(anyhow!("URL does not use HTTPS")),
