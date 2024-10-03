@@ -59,6 +59,7 @@ impl FetchRequestsState {
 
 #[op2(async)]
 #[serde]
+#[allow(clippy::too_many_arguments)]
 async fn op_fetch_custom(
     op_state: Rc<RefCell<OpState>>,
     #[string] method: String,
