@@ -661,6 +661,79 @@
 					"a": 1
 				}
 			}
+		},
+		{
+			"ref": "without emissive",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
+			"wearables": [
+				"urn:decentraland:off-chain:base-avatars:f_simple_yellow_tshirt",
+				"urn:decentraland:off-chain:base-avatars:f_short_blue_jeans",
+				"urn:decentraland:off-chain:base-avatars:pink_sleepers",
+				"urn:decentraland:off-chain:base-avatars:cornrows",
+				"urn:decentraland:off-chain:base-avatars:green_stone_tiara",
+				"urn:decentraland:off-chain:base-avatars:f_mouth_04"
+			],
+			"forceRender": [],
+			"eyes": {
+				"color": {
+					"r": 0.052996814250946045,
+					"g": 0.5021452307701111,
+					"b": 0.025209957733750343,
+					"a": 1
+				}
+			},
+			"hair": {
+				"color": {
+					"r": 0.009899990633130074,
+					"g": 0.9900000095367432,
+					"b": 0.23136761784553528,
+					"a": 1
+				}
+			},
+			"skin": {
+				"color": {
+					"r": 0.8666666746139526,
+					"g": 0.6941176652908325,
+					"b": 0.5607843399047852,
+					"a": 1
+				}
+			}
+		},
+		{
+			"ref": "without emissive v2",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
+			"skin": {
+				"color": {
+					"r": 0.800000011920929,
+					"g": 0.6078431606292725,
+					"b": 0.46666666865348816,
+					"a": 1
+				}
+			},
+			"hair": {
+				"color": {
+					"r": 0.48235294222831726,
+					"g": 0.2823529541492462,
+					"b": 0.0941176488995552,
+					"a": 1
+				}
+			},
+			"eyes": {
+				"color": {
+					"r": 0.125490203499794,
+					"g": 0.7019608020782471,
+					"b": 0.9647058844566345,
+					"a": 1
+				}
+			},
+			"wearables": [
+				"urn:decentraland:off-chain:base-avatars:f_blue_jacket",
+				"urn:decentraland:off-chain:base-avatars:f_capris",
+				"urn:decentraland:off-chain:base-avatars:ruby_blue_loafer",
+				"urn:decentraland:off-chain:base-avatars:pony_tail",
+				"urn:decentraland:off-chain:base-avatars:pearls_earring",
+				"urn:decentraland:off-chain:base-avatars:f_mouth_05"
+			]
 		}
 	],
 	"emotes": [

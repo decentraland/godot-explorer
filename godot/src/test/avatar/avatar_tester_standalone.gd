@@ -118,7 +118,7 @@ func _on_option_button_avatar_list_item_selected(index):
 	var avatar_wf: DclAvatarWireFormat = profile.get_avatar()
 
 	avatar_wf.set_wearables(PackedStringArray(avatar_list[avatar_i].wearables))
-	avatar_wf.set_force_render(avatar_list[avatar_i].forceRender)
+	avatar_wf.set_force_render(avatar_list[avatar_i].get("forceRender", []))
 	avatar_wf.set_body_shape(avatar_list[avatar_i].bodyShape)
 
 	var skin_color = avatar_list[avatar_i].get("skin", {}).get("color", {})
