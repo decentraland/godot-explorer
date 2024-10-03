@@ -30,11 +30,11 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use deno_core::error::JsError;
-use deno_core::OpDecl;
 use deno_core::{
     error::{generic_error, AnyError},
     include_js_files, op2, Extension, OpState, RuntimeOptions,
 };
+use deno_core::{JsRuntime, OpDecl, PollEventLoopOptions};
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use v8::IsolateHandle;
@@ -290,6 +290,7 @@ pub(crate) fn scene_thread(
 
     let start_time = std::time::SystemTime::now();
     let mut elapsed = Duration::default();
+    let mut reported_error_filter = 0;
 
     loop {
         let dt = std::time::SystemTime::now()
@@ -311,22 +312,26 @@ pub(crate) fn scene_thread(
         });
 
         if let Err(e) = result {
-            let err_str = format!("{:?}", e);
-            if let Ok(err) = e.downcast::<JsError>() {
-                tracing::error!(
-                    "[scene thread {scene_id:?}] script error onUpdate: {} msg {:?} @ {:?}",
-                    err_str,
-                    err.message,
-                    err
-                );
-            } else {
-                tracing::error!(
-                    "[scene thread {scene_id:?}] script error onUpdate: {}",
-                    err_str
-                );
-            }
+            reported_error_filter += 1;
 
-            break;
+            if reported_error_filter <= 10 {
+                let err_str = format!("{:?}", e);
+                if let Ok(err) = e.downcast::<JsError>() {
+                    tracing::error!(
+                        "[scene thread {scene_id:?}] script error onUpdate: {} msg {:?} @ {:?}",
+                        err_str,
+                        err.message,
+                        err
+                    );
+                } else {
+                    tracing::error!(
+                        "[scene thread {scene_id:?}] script error onUpdate: {}",
+                        err_str
+                    );
+                }
+            }
+        } else {
+            reported_error_filter -= 1;
         }
 
         let value = state.borrow().borrow::<SceneDying>().0;
@@ -349,15 +354,12 @@ pub(crate) fn scene_thread(
 
 // helper to setup, acquire, run and return results from a script function
 async fn run_script(
-    runtime: &mut deno_core::JsRuntime,
+    runtime: &mut JsRuntime,
     script: &v8::Global<v8::Value>,
     fn_name: &str,
     arg_fn: impl for<'a> Fn(&mut v8::HandleScope<'a>) -> Vec<v8::Local<'a, v8::Value>>,
 ) -> Result<(), AnyError> {
     // set up scene i/o
-    let op_state = runtime.op_state();
-    op_state.borrow_mut().put(());
-
     let promise = {
         let scope = &mut runtime.handle_scope();
         let script_this = v8::Local::new(scope, script.clone());
@@ -393,7 +395,10 @@ async fn run_script(
     };
 
     let f = runtime.resolve(promise);
-    f.await.map(|_| ())
+    runtime
+        .with_event_loop_promise(f, PollEventLoopOptions::default())
+        .await
+        .map(|_| ())
 }
 
 // synchronously returns a string containing JS code from the file system

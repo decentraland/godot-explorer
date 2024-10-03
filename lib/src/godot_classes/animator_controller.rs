@@ -4,7 +4,8 @@ use godot::{
     builtin::{meta::ToGodot, StringName},
     engine::{
         AnimationNodeAdd2, AnimationNodeAnimation, AnimationNodeBlend2, AnimationNodeBlendTree,
-        AnimationNodeTimeScale, AnimationPlayer, AnimationTree, IAnimationTree, Node3D,
+        AnimationNodeTimeScale, AnimationNodeTimeSeek, AnimationPlayer, AnimationTree,
+        IAnimationTree, Node3D,
     },
     obj::{Base, Gd, NewGd, WithBaseField},
     prelude::{godot_api, GodotClass},
@@ -40,10 +41,9 @@ pub struct MultipleAnimationController {
 impl IAnimationTree for MultipleAnimationController {
     fn ready(&mut self) {
         // connect animation_finished
-
-        // let callable = self.base().callable("_animation_finished");
-        // self.base_mut()
-        //     .connect("animation_finished".into(), callable);
+        let callable = self.base().callable("_animation_finished");
+        self.base_mut()
+            .connect("animation_finished".into(), callable);
     }
 }
 
@@ -245,7 +245,7 @@ impl MultipleAnimationController {
                 anim_name_node: format!("anim_{}", index).into(),
                 blend_param_ref_str: format!("parameters/blend_{}/blend_amount", index).into(),
                 speed_param_ref_str: format!("parameters/sanim_{}/scale", index).into(),
-                time_param_ref_str: format!("parameters/anim_{}/time", index).into(),
+                time_param_ref_str: format!("parameters/tanim_{}/seek_request", index).into(),
             };
 
             self.base_mut().set(
@@ -322,20 +322,27 @@ impl MultipleAnimationController {
             let mut anim_node = AnimationNodeAnimation::new_gd();
             let mut dummy_anim_node = AnimationNodeAnimation::new_gd();
             let blend_anim_node = AnimationNodeBlend2::new_gd();
+            let time_anim_node = AnimationNodeTimeSeek::new_gd();
             let speed_anim_node = AnimationNodeTimeScale::new_gd();
 
             anim_node.set_animation(DUMMY_ANIMATION_NAME.into());
             dummy_anim_node.set_animation(DUMMY_ANIMATION_NAME.into());
 
             tree.add_node(format!("danim_{}", i).into(), dummy_anim_node.upcast());
+            tree.add_node(format!("tanim_{}", i).into(), time_anim_node.upcast());
             tree.add_node(format!("sanim_{}", i).into(), speed_anim_node.upcast());
             tree.add_node(format!("blend_{}", i).into(), blend_anim_node.upcast());
             tree.add_node(format!("anim_{}", i).into(), anim_node.upcast());
 
             tree.connect_node(
-                format!("sanim_{}", i).into(),
+                format!("tanim_{}", i).into(),
                 0,
                 format!("anim_{}", i).into(),
+            );
+            tree.connect_node(
+                format!("sanim_{}", i).into(),
+                0,
+                format!("tanim_{}", i).into(),
             );
             tree.connect_node(
                 format!("blend_{}", i).into(),
