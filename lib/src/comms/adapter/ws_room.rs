@@ -214,6 +214,11 @@ impl WebSocketRoom {
 
                                 let challenge_to_sign = challenge_msg.challenge_to_sign.clone();
 
+                                if !challenge_to_sign.starts_with("dcl-") {
+                                    tracing::error!("invalid challenge to sign");
+                                    return;
+                                }
+
                                 // TODO: should this block_on be async? the ephemeral wallet is sync
                                 let signature = futures_lite::future::block_on(
                                     self.ephemeral_auth_chain
