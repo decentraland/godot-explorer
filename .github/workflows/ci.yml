@@ -163,7 +163,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04]
+        os: [bigwin, ubuntu-22.04, macos-14-xlarge]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
