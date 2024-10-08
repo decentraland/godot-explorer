@@ -392,7 +392,7 @@ class Categories:
 	]
 
 	const UPPER_BODY_DEFAULT_HIDES: PackedStringArray = [HANDS]
-	const REQUIRED_CATEGORIES: PackedStringArray = [EYES, MOUTH]
+	const REQUIRED_CATEGORIES: PackedStringArray = [EYES, MOUTH, EYEBROWS]
 
 	const MAIN_CATEGORIES: Dictionary = {
 		BODY_SHAPE: [BODY_SHAPE],
