@@ -20,7 +20,6 @@ pub struct DclTokioRpc {
 
     waiting_signature_response: Option<RpcResultSender<(String, String)>>,
 
-    #[base]
     base: Base<Node>,
 }
 
@@ -41,7 +40,7 @@ impl INode for DclTokioRpc {
         while let Ok(state) = self.receiver.try_recv() {
             match state {
                 GodotTokioCall::OpenUrl { url, description } => {
-                    self.base.call_deferred(
+                    self.base_mut().call_deferred(
                         "emit_signal".into(),
                         &[
                             "need_open_url".to_variant(),
@@ -53,7 +52,7 @@ impl INode for DclTokioRpc {
                 GodotTokioCall::MagicSignMessage { message, response } => {
                     self.waiting_signature_response = Some(response);
 
-                    self.base.call_deferred(
+                    self.base_mut().call_deferred(
                         "emit_signal".into(),
                         &["magic_sign".to_variant(), message.to_variant()],
                     );

@@ -6,7 +6,6 @@ use crate::dcl::components::SceneEntityId;
 #[class(init, base=Node3D)]
 pub struct DclNodeEntity3d {
     entity_id: i32,
-    #[base]
     _base: Base<Node3D>,
 }
 

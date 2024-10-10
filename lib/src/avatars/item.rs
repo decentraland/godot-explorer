@@ -12,12 +12,13 @@ use crate::{
     godot_classes::dcl_global::DclGlobal,
 };
 use godot::{
-    bind::{godot_api, GodotClass},
     builtin::{GString, PackedStringArray},
     obj::Gd,
+    prelude::*,
 };
 use std::sync::Arc;
 
+#[derive(Default)]
 pub struct ItemEntityDefinition {
     pub id: String,
     pub entity_definition_json: EntityDefinitionJson,
@@ -57,7 +58,7 @@ impl ItemEntityDefinition {
 }
 
 #[derive(GodotClass)]
-#[class(base=RefCounted)]
+#[class(init, base=RefCounted)]
 pub struct DclItemEntityDefinition {
     pub inner: Arc<ItemEntityDefinition>,
 }

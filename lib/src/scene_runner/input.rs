@@ -46,7 +46,7 @@ impl InputState {
         // Desktop: Skip the actions when you´re without the pointer locked,
         // it means that you are interacting with the UI.
         // Mobile: Ignore that rule
-        let is_pointer_locked = input.get_mouse_mode() == MouseMode::MOUSE_MODE_CAPTURED;
+        let is_pointer_locked = input.get_mouse_mode() == MouseMode::CAPTURED;
         if is_pointer_locked || DclGlobal::singleton().bind().is_mobile {
             for (input_action, action_string) in self.dcl_to_action.iter() {
                 let current_state = input.is_action_pressed(action_string.clone());

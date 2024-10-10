@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://b4tld1cqcvql5"]
+
+[ext_resource type="Script" path="res://src/decentraland_components/player_collider_filter.gd" id="1_pn4dy"]
+
+[node name="PlayerColliderFilter" type="Node"]
+script = ExtResource("1_pn4dy")

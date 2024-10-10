@@ -1,0 +1,3 @@
+# Ignore copies of the binaries Godot makes at startup
+bin/windows/*/*/~*.dll
+!bin/android

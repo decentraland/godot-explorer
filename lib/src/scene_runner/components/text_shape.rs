@@ -80,14 +80,14 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 label_3d.set_font_size(font_size as i32);
                 label_3d.set_outline_size(outline_size as i32);
                 label_3d.set_outline_modulate(outline_color);
-                label_3d.set_alpha_cut_mode(AlphaCutMode::ALPHA_CUT_OPAQUE_PREPASS);
+                label_3d.set_alpha_cut_mode(AlphaCutMode::OPAQUE_PREPASS);
 
                 let text_wrapping = new_value.text_wrapping.unwrap_or_default();
                 if text_wrapping {
-                    label_3d.set_autowrap_mode(AutowrapMode::AUTOWRAP_WORD_SMART);
+                    label_3d.set_autowrap_mode(AutowrapMode::WORD_SMART);
                     label_3d.set_width(200.0 * new_value.width.unwrap_or(16.0));
                 } else {
-                    label_3d.set_autowrap_mode(AutowrapMode::AUTOWRAP_OFF);
+                    label_3d.set_autowrap_mode(AutowrapMode::OFF);
                     label_3d.set_width(200.0 * new_value.width.unwrap_or(16.0));
                 }
 
@@ -101,37 +101,25 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let (v_align, y_pos) = match text_align {
                     TextAlignMode::TamMiddleLeft
                     | TextAlignMode::TamMiddleRight
-                    | TextAlignMode::TamMiddleCenter => {
-                        (VerticalAlignment::VERTICAL_ALIGNMENT_CENTER, 0.0)
-                    }
+                    | TextAlignMode::TamMiddleCenter => (VerticalAlignment::CENTER, 0.0),
                     TextAlignMode::TamTopLeft
                     | TextAlignMode::TamTopRight
-                    | TextAlignMode::TamTopCenter => {
-                        (VerticalAlignment::VERTICAL_ALIGNMENT_TOP, 0.5)
-                    }
+                    | TextAlignMode::TamTopCenter => (VerticalAlignment::TOP, 0.5),
                     TextAlignMode::TamBottomLeft
                     | TextAlignMode::TamBottomRight
-                    | TextAlignMode::TamBottomCenter => {
-                        (VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM, -0.5)
-                    }
+                    | TextAlignMode::TamBottomCenter => (VerticalAlignment::BOTTOM, -0.5),
                 };
 
                 let (h_align, x_pos) = match text_align {
                     TextAlignMode::TamMiddleLeft
                     | TextAlignMode::TamTopLeft
-                    | TextAlignMode::TamBottomLeft => {
-                        (HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT, -0.5)
-                    }
+                    | TextAlignMode::TamBottomLeft => (HorizontalAlignment::LEFT, -0.5),
                     TextAlignMode::TamMiddleRight
                     | TextAlignMode::TamTopRight
-                    | TextAlignMode::TamBottomRight => {
-                        (HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT, 0.5)
-                    }
+                    | TextAlignMode::TamBottomRight => (HorizontalAlignment::RIGHT, 0.5),
                     TextAlignMode::TamMiddleCenter
                     | TextAlignMode::TamTopCenter
-                    | TextAlignMode::TamBottomCenter => {
-                        (HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER, 0.0)
-                    }
+                    | TextAlignMode::TamBottomCenter => (HorizontalAlignment::CENTER, 0.0),
                 };
 
                 let width_meter = new_value.width.unwrap_or(0.0);
