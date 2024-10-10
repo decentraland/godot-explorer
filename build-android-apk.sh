@@ -51,7 +51,25 @@ cd ${EXPLORER_PATH}/godot/
 
 # Build the .aab without x86_64 architecture
 echo "Export Godot android.apk"
-${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk || true
+
+# Define the command to be executed
+COMMAND="${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk"
+
+# Try executing the command
+if ! $COMMAND; then
+    echo "First attempt failed, retrying in 5 seconds..."
+    sleep 5 # Wait for 5 seconds before retrying
+
+    # Retry executing the command
+    if ! $COMMAND; then
+        echo "Second attempt failed."
+    else
+        echo "Second attempt succeeded."
+    fi
+else
+    echo "First attempt succeeded."
+fi
+
 ${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Quest ${EXPLORER_PATH}/meta-quest.apk || true
 
 
