@@ -99,14 +99,23 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         ..Default::default()
     };
 
+    let flags = "--no-experimental --no-wasm";
+    v8::V8::set_flags_from_string(flags);
+
+    // Configure V8 isolate parameters.
+    let create_params =
+        v8::Isolate::create_params().heap_limits(128 * 1024 * 1024, 512 * 1024 * 1024); // Min 128MB, Max 512MB
+
     // create runtime
     #[allow(unused_mut)]
     let mut runtime = deno_core::JsRuntime::new(RuntimeOptions {
-        v8_platform: deno_core::v8::Platform::new(1, false).make_shared().into(),
+        v8_platform: deno_core::v8::Platform::new_single_threaded(false).make_shared().into(),
         extensions: vec![ext],
         inspector: inspect,
+        create_params: Some(create_params),
         ..Default::default()
     });
+    runtime.v8_isolate().low_memory_notification();
 
     #[cfg(feature = "enable_inspector")]
     if inspect {
