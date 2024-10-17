@@ -152,7 +152,7 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
             if emotes.is_empty() {
                 continue;
             }
-            let Some(node_3d) = godot_dcl_scene.get_node_3d(entity) else {
+            let Some(node_3d) = godot_dcl_scene.get_node_or_null_3d(entity) else {
                 continue;
             };
 

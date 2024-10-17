@@ -199,7 +199,7 @@ fn build_cylinder_arrays(radius_top: f32, radius_bottom: f32) -> VariantArray {
     }
 
     let mut ret = VariantArray::new();
-    ret.resize(13);
+    ret.resize(13, &VariantArray::new().to_variant());
     ret.set(0, vertices_array.to_variant());
     ret.set(1, normals_array.to_variant());
     ret.set(4, uvs_array.to_variant());
@@ -234,8 +234,8 @@ pub fn create_or_update_mesh(
                 let box_shape = match current_shape {
                     Some(current_shape) => current_shape
                         .try_cast::<BoxShape3D>()
-                        .unwrap_or(BoxShape3D::new()),
-                    None => BoxShape3D::new(),
+                        .unwrap_or(BoxShape3D::new_gd()),
+                    None => BoxShape3D::new_gd(),
                 };
                 box_shape.upcast()
             }
@@ -243,26 +243,26 @@ pub fn create_or_update_mesh(
                 let sphere_mesh = match current_shape {
                     Some(current_shape) => current_shape
                         .try_cast::<SphereShape3D>()
-                        .unwrap_or(SphereShape3D::new()),
-                    None => SphereShape3D::new(),
+                        .unwrap_or(SphereShape3D::new_gd()),
+                    None => SphereShape3D::new_gd(),
                 };
                 sphere_mesh.upcast()
             }
             pb_mesh_collider::Mesh::Cylinder(cylinder_mesh_value) => {
-                let mut array_mesh = ArrayMesh::new();
+                let mut array_mesh = ArrayMesh::new_gd();
                 let arrays = build_cylinder_arrays(
                     cylinder_mesh_value.radius_top.unwrap_or(0.5),
                     cylinder_mesh_value.radius_bottom.unwrap_or(0.5),
                 );
-                array_mesh.add_surface_from_arrays(PrimitiveType::PRIMITIVE_TRIANGLES, arrays);
+                array_mesh.add_surface_from_arrays(PrimitiveType::TRIANGLES, arrays);
                 if let Some(new_shape) = array_mesh.create_trimesh_shape() {
                     new_shape.upcast()
                 } else {
                     let mut cylinder_shape = match current_shape {
                         Some(current_shape) => current_shape
                             .try_cast::<CylinderShape3D>()
-                            .unwrap_or(CylinderShape3D::new()),
-                        None => CylinderShape3D::new(),
+                            .unwrap_or(CylinderShape3D::new_gd()),
+                        None => CylinderShape3D::new_gd(),
                     };
                     // TODO: top and bottom radius
                     let radius = (cylinder_mesh_value.radius_top.unwrap_or(0.5)
@@ -277,8 +277,8 @@ pub fn create_or_update_mesh(
                 let mut box_shape = match current_shape {
                     Some(current_shape) => current_shape
                         .try_cast::<BoxShape3D>()
-                        .unwrap_or(BoxShape3D::new()),
-                    None => BoxShape3D::new(),
+                        .unwrap_or(BoxShape3D::new_gd()),
+                    None => BoxShape3D::new_gd(),
                 };
                 box_shape.set_size(godot::prelude::Vector3::new(1.0, 1.0, 0.0));
                 box_shape.upcast()
@@ -292,8 +292,8 @@ pub fn create_or_update_mesh(
             let box_shape = match current_shape {
                 Some(current_shape) => current_shape
                     .try_cast::<BoxShape3D>()
-                    .unwrap_or(BoxShape3D::new()),
-                None => BoxShape3D::new(),
+                    .unwrap_or(BoxShape3D::new_gd()),
+                None => BoxShape3D::new_gd(),
             };
             box_shape.upcast()
         }

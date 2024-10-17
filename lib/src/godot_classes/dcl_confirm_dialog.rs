@@ -4,7 +4,6 @@ use godot::prelude::*;
 #[derive(GodotClass)]
 #[class(base=Control)]
 pub struct DclConfirmDialog {
-    #[base]
     base: Base<Control>,
 
     title_label: Option<Gd<Label>>,
@@ -28,10 +27,10 @@ impl DclConfirmDialog {
     {
         self.confirm_callback = Some(Box::new(confirm_callback));
 
-        if let Some(title_label) = &mut self.title_label {
+        if let Some(title_label) = self.title_label.as_mut() {
             let title = GString::from(title);
-            self.base.set_name(title.clone());
-            title_label.set_text(title);
+            title_label.set_text(title.clone());
+            self.base_mut().set_name(title);
         }
 
         if let Some(description_label) = &mut self.description_label {
@@ -46,7 +45,7 @@ impl DclConfirmDialog {
             reject_button.set_text(GString::from(reject_button_text));
         }
 
-        self.base.show();
+        self.base_mut().show();
     }
 }
 
@@ -57,7 +56,7 @@ impl DclConfirmDialog {
         if let Some(confirm_callback) = self.confirm_callback.take() {
             confirm_callback(true);
         }
-        self.base.queue_free();
+        self.base_mut().queue_free();
     }
 
     #[func]
@@ -65,7 +64,7 @@ impl DclConfirmDialog {
         if let Some(confirm_callback) = self.confirm_callback.take() {
             confirm_callback(false);
         }
-        self.base.queue_free();
+        self.base_mut().queue_free();
     }
 }
 
@@ -84,28 +83,28 @@ impl IControl for DclConfirmDialog {
 
     fn ready(&mut self) {
         let mut ok_button = self
-            .base
-            .get_node("%OkButton".into())
+            .base()
+            .get_node_or_null("%OkButton".into())
             .expect("Missing %OkButton")
             .cast::<Button>();
         let mut reject_button = self
-            .base
-            .get_node("%RejectButton".into())
+            .base()
+            .get_node_or_null("%RejectButton".into())
             .expect("Missing %RejectButton")
             .cast::<Button>();
 
-        ok_button.connect("pressed".into(), self.base.callable("_on_ok_pressed"));
-        reject_button.connect("pressed".into(), self.base.callable("_on_reject_pressed"));
+        ok_button.connect("pressed".into(), self.base().callable("_on_ok_pressed"));
+        reject_button.connect("pressed".into(), self.base().callable("_on_reject_pressed"));
 
         self.title_label = Some(
-            self.base
-                .get_node("%Title".into())
+            self.base()
+                .get_node_or_null("%Title".into())
                 .expect("Missing %Title")
                 .cast::<Label>(),
         );
         self.description_label = Some(
-            self.base
-                .get_node("%Description".into())
+            self.base()
+                .get_node_or_null("%Description".into())
                 .expect("Missing %Description")
                 .cast::<Label>(),
         );

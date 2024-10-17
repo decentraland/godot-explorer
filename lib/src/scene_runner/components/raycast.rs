@@ -128,7 +128,7 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
             pb_raycast::Direction::TargetEntity(target_entity) => {
                 let target_entity: SceneEntityId = SceneEntityId::from_i32(*target_entity as i32);
                 if let Some(target_entity_node_3d) =
-                    scene.godot_dcl_scene.get_node_3d(&target_entity)
+                    scene.godot_dcl_scene.get_node_or_null_3d(&target_entity)
                 {
                     target_entity_node_3d.get_global_position() - raycast_from
                 } else {
@@ -148,7 +148,7 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
         .unwrap()
         .get_direct_space_state()
         .unwrap();
-    let mut raycast_query = PhysicsRayQueryParameters3D::new();
+    let mut raycast_query = PhysicsRayQueryParameters3D::new_gd();
     let collision_mask = raycast.collision_mask.unwrap_or(3);
 
     raycast_query.set_from(raycast_from);

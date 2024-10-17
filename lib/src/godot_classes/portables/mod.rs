@@ -35,7 +35,6 @@ pub struct PortableExperience {
 pub struct DclPortableExperienceController {
     portable_experiences: HashMap<String, PortableExperience>,
 
-    #[base]
     _base: Base<Node>,
 }
 
