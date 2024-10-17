@@ -5,7 +5,7 @@
 .godot/exported
 .godot/uid_cache.bin
 
-android/
+/android/
 
 # Godot-specific ignores
 .import/
