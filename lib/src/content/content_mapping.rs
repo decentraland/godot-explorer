@@ -41,7 +41,6 @@ impl ContentMappingAndUrl {
 }
 
 pub type ContentMappingAndUrlRef = Arc<ContentMappingAndUrl>;
-
 #[derive(GodotClass)]
 #[class(base=RefCounted)]
 pub struct DclContentMappingAndUrl {

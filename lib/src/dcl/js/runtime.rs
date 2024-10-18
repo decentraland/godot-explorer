@@ -1,4 +1,4 @@
-use deno_core::{anyhow::anyhow, error::AnyError, op, Op, OpDecl, OpState};
+use deno_core::{anyhow::anyhow, error::AnyError, op2, OpDecl, OpState};
 use serde::Serialize;
 
 use std::{cell::RefCell, rc::Rc, sync::Arc};
@@ -14,9 +14,9 @@ use crate::{
 
 pub fn ops() -> Vec<OpDecl> {
     vec![
-        op_get_file_url::DECL,
-        op_get_realm::DECL,
-        op_get_scene_information::DECL,
+        op_get_file_url(),
+        op_get_realm(),
+        op_get_scene_information(),
     ]
 }
 
@@ -27,10 +27,11 @@ struct GetFileUrlResponse {
     hash: String,
 }
 
-#[op(v8)]
+#[op2]
+#[serde]
 fn op_get_file_url(
     op_state: Rc<RefCell<OpState>>,
-    filename: String,
+    #[string] filename: String,
 ) -> Result<GetFileUrlResponse, AnyError> {
     let state = op_state.borrow();
     let content_mapping = state.borrow::<ContentMappingAndUrlRef>();
@@ -49,12 +50,14 @@ fn op_get_file_url(
     Err(anyhow!("not found"))
 }
 
-#[op]
+#[op2]
+#[serde]
 fn op_get_realm(op_state: &mut OpState) -> DclSceneRealmData {
     op_state.borrow::<DclSceneRealmData>().clone()
 }
 
-#[op]
+#[op2]
+#[serde]
 fn op_get_scene_information(op_state: &mut OpState) -> GetSceneInformationResponse {
     let scene_entity_definition = op_state.borrow::<Arc<SceneEntityDefinition>>().clone();
 
