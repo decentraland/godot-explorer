@@ -67,9 +67,9 @@ func start():
 		snapshot_folder = args[snapshot_folder_index + 1]
 	else:
 		if OS.has_feature("editor"):
-			snapshot_folder = ProjectSettings.globalize_path("res://../tests/snapshots")
+			snapshot_folder = ProjectSettings.globalize_path("res://../tests/snapshots/scenes")
 		else:
-			snapshot_folder = OS.get_user_data_dir() + "/snapshot"
+			snapshot_folder = OS.get_user_data_dir() + "/snapshot/scenes"
 
 	if not snapshot_folder.ends_with("/"):
 		snapshot_folder += "/"

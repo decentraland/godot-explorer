@@ -2,6 +2,7 @@ use std::{collections::HashMap, fs::create_dir_all, path::Path};
 
 use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
+use tests::test_godot_tools;
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
 use crate::consts::RUST_LIB_PROJECT_FOLDER;
@@ -13,6 +14,8 @@ mod export;
 mod install_dependency;
 mod path;
 mod run;
+mod tests;
+mod image_comparison;
 
 fn main() -> Result<(), anyhow::Error> {
     let cli = Command::new("xtask")
@@ -26,6 +29,7 @@ fn main() -> Result<(), anyhow::Error> {
                     .takes_value(false),
             ),
         )
+        .subcommand(Command::new("test-tools"))
         .subcommand(Command::new("vars"))
         .subcommand(Command::new("ci"))
         .subcommand(Command::new("powerset"))
@@ -80,7 +84,6 @@ fn main() -> Result<(), anyhow::Error> {
                     Arg::new("itest")
                         .long("itest")
                         .help("run integration-tests")
-                        .takes_value(false),
                 )
                 .arg(
                     Arg::new("stest")
@@ -155,6 +158,7 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("export", _m) => export::export(),
         ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),
+        ("test-tools", _) => test_godot_tools(None),
         ("vars", _) => {
             println!("root: {root:?}");
             Ok(())
@@ -181,8 +185,8 @@ fn main() -> Result<(), anyhow::Error> {
 }
 
 pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
-    let snapshot_folder = Path::new("./tests/snapshots");
-    let snapshot_folder = snapshot_folder.canonicalize()?;
+    let scene_snapshot_folder = Path::new("./tests/snapshots/scenes");
+    let scene_snapshot_folder = scene_snapshot_folder.canonicalize()?;
 
     remove_dir("./coverage")?;
     create_dir_all("./coverage")?;
@@ -245,7 +249,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         "--realm",
         scene_test_realm,
         "--snapshot-folder",
-        snapshot_folder.to_str().unwrap(),
+        scene_snapshot_folder.to_str().unwrap(),
     ]
     .iter()
     .map(|it| it.to_string())
@@ -262,6 +266,8 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         extra_args,
         Some(build_envs.clone()),
     )?;
+
+    test_godot_tools(Some(build_envs))?;
 
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())
