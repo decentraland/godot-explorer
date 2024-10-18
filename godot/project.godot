@@ -14,7 +14,7 @@ config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
 run/main_scene="res://src/main.tscn"
 config/features=PackedStringArray("4.3")
-config/icon="res://decentraland_logo.png"
+config/icon="res://decentraland_logo_squared.png"
 
 [audio]
 
