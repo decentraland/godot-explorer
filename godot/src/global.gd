@@ -64,7 +64,7 @@ func _ready():
 		Global.content_provider.clear_cache_folder()
 
 	# #[itest] only needs a godot context, not the all explorer one
-	if args.has("--test"):
+	if args.has("--test-runner"):
 		print("Running godot-tests...")
 		var test_runner = load("res://src/test/test_runner.gd").new()
 		add_child(test_runner)

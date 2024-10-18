@@ -9,7 +9,7 @@ use crate::{
     },
     realm::scene_definition::SceneEntityDefinition,
 };
-use godot::{engine::GdScript, prelude::*};
+use godot::prelude::*;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -105,7 +105,7 @@ impl GodotDclScene {
 
         root_node_3d.set_position(scene_entity_definition.get_godot_3d_position());
 
-        let mut root_node_ui_control = DclUiControl::alloc_gd();
+        let mut root_node_ui_control = DclUiControl::new_alloc();
         root_node_ui_control.set_name(GString::from(format!("ui_scene_id_{:?}", scene_id.0)));
 
         let root_node_ui = UiNode {
@@ -161,19 +161,19 @@ impl GodotDclScene {
         self.entities.get_mut(entity).unwrap()
     }
 
-    pub fn get_node_ui(&self, entity: &SceneEntityId) -> Option<&UiNode> {
+    pub fn get_node_or_null_ui(&self, entity: &SceneEntityId) -> Option<&UiNode> {
         self.entities.get(entity)?.base_ui.as_ref()
     }
 
-    pub fn get_node_ui_mut(&mut self, entity: &SceneEntityId) -> Option<&mut UiNode> {
+    pub fn get_node_or_null_ui_mut(&mut self, entity: &SceneEntityId) -> Option<&mut UiNode> {
         self.entities.get_mut(entity)?.base_ui.as_mut()
     }
 
-    pub fn get_node_3d(&self, entity: &SceneEntityId) -> Option<&Gd<Node3D>> {
+    pub fn get_node_or_null_3d(&self, entity: &SceneEntityId) -> Option<&Gd<Node3D>> {
         self.entities.get(entity)?.base_3d.as_ref()
     }
 
-    pub fn get_node_3d_mut(&mut self, entity: &SceneEntityId) -> Option<&mut Gd<Node3D>> {
+    pub fn get_node_or_null_3d_mut(&mut self, entity: &SceneEntityId) -> Option<&mut Gd<Node3D>> {
         self.entities.get_mut(entity)?.base_3d.as_mut()
     }
 
@@ -189,11 +189,12 @@ impl GodotDclScene {
             self.root_node_3d.add_child(new_node_3d.clone().upcast());
 
             if entity == &SceneEntityId::PLAYER || entity == &SceneEntityId::CAMERA {
-                let mut player_collider_filter = godot::engine::load::<GdScript>(
-                    "res://src/decentraland_components/player_collider_filter.gd",
+                let mut player_collider_filter = godot::engine::load::<PackedScene>(
+                    "res://src/decentraland_components/player_collider_filter.tscn",
                 )
-                .instantiate(&[])
-                .to::<Gd<Node>>();
+                .instantiate()
+                .expect("player_collider_filter scene is valid")
+                .cast::<Node>();
                 player_collider_filter.set_name("PlayerColliderFilter".into());
 
                 new_node_3d.add_child(player_collider_filter.clone());
@@ -215,7 +216,7 @@ impl GodotDclScene {
 
         let godot_entity_node = self.entities.get_mut(entity).unwrap();
         if godot_entity_node.base_ui.is_none() {
-            let mut new_node_ui = DclUiControl::alloc_gd();
+            let mut new_node_ui = DclUiControl::new_alloc();
             new_node_ui.set_name(GString::from(format!(
                 "e{:?}_{:?}",
                 entity.number, entity.version

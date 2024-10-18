@@ -3,7 +3,7 @@ use godot::{
         control::LayoutPreset,
         global::{HorizontalAlignment, VerticalAlignment},
         text_server::JustificationFlag,
-        Label,
+        ILabel, Label,
     },
     prelude::*,
 };
@@ -16,14 +16,13 @@ use crate::dcl::components::proto_components::sdk::components::{
 #[derive(GodotClass)]
 #[class(base=Label)]
 pub struct DclUiText {
-    #[base]
     base: Base<Label>,
 
     current_font: Font,
 }
 
 #[godot_api]
-impl INode for DclUiText {
+impl ILabel for DclUiText {
     fn init(base: Base<Label>) -> Self {
         Self {
             base,
@@ -32,15 +31,16 @@ impl INode for DclUiText {
     }
 
     fn ready(&mut self) {
-        self.base
-            .add_theme_font_override("font".into(), self.current_font.get_font_resource());
+        let new_font_resource = self.current_font.get_font_resource();
+        self.base_mut()
+            .add_theme_font_override("font".into(), new_font_resource);
     }
 }
 
 #[godot_api]
 impl DclUiText {
     pub fn change_value(&mut self, new_value: &PbUiText) {
-        self.base
+        self.base_mut()
             .add_theme_font_size_override("font_size".into(), new_value.font_size.unwrap_or(10));
         let font_color = new_value
             .color
@@ -64,13 +64,13 @@ impl DclUiText {
             .unwrap_or(godot::prelude::Color::BLACK);
         let outline_width = new_value.outline_width.unwrap_or(0.0) as i32;
 
-        self.base
+        self.base_mut()
             .add_theme_color_override("font_color".into(), font_color);
-        self.base
+        self.base_mut()
             .add_theme_color_override("font_outline_color".into(), outline_font_color);
-        self.base
+        self.base_mut()
             .add_theme_constant_override("outline_size".into(), outline_width);
-        self.base
+        self.base_mut()
             .add_theme_constant_override("line_spacing".into(), 0);
 
         let text_align = new_value
@@ -81,70 +81,71 @@ impl DclUiText {
 
         let (hor_align, vert_align, _) = match text_align {
             TextAlignMode::TamTopLeft => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
-                LayoutPreset::PRESET_TOP_LEFT,
+                HorizontalAlignment::LEFT,
+                VerticalAlignment::TOP,
+                LayoutPreset::TOP_LEFT,
             ),
             TextAlignMode::TamTopCenter => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
-                VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
-                LayoutPreset::PRESET_CENTER_TOP,
+                HorizontalAlignment::CENTER,
+                VerticalAlignment::TOP,
+                LayoutPreset::CENTER_TOP,
             ),
             TextAlignMode::TamTopRight => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
-                LayoutPreset::PRESET_TOP_RIGHT,
+                HorizontalAlignment::RIGHT,
+                VerticalAlignment::TOP,
+                LayoutPreset::TOP_RIGHT,
             ),
             TextAlignMode::TamMiddleLeft => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
-                LayoutPreset::PRESET_CENTER_LEFT,
+                HorizontalAlignment::LEFT,
+                VerticalAlignment::CENTER,
+                LayoutPreset::CENTER_LEFT,
             ),
             TextAlignMode::TamMiddleCenter => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
-                VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
-                LayoutPreset::PRESET_CENTER,
+                HorizontalAlignment::CENTER,
+                VerticalAlignment::CENTER,
+                LayoutPreset::CENTER,
             ),
             TextAlignMode::TamMiddleRight => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
-                LayoutPreset::PRESET_CENTER_RIGHT,
+                HorizontalAlignment::RIGHT,
+                VerticalAlignment::CENTER,
+                LayoutPreset::CENTER_RIGHT,
             ),
             TextAlignMode::TamBottomLeft => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
-                LayoutPreset::PRESET_BOTTOM_LEFT,
+                HorizontalAlignment::LEFT,
+                VerticalAlignment::BOTTOM,
+                LayoutPreset::BOTTOM_LEFT,
             ),
             TextAlignMode::TamBottomCenter => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
-                VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
-                LayoutPreset::PRESET_CENTER_BOTTOM,
+                HorizontalAlignment::CENTER,
+                VerticalAlignment::BOTTOM,
+                LayoutPreset::CENTER_BOTTOM,
             ),
             TextAlignMode::TamBottomRight => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
-                LayoutPreset::PRESET_BOTTOM_RIGHT,
+                HorizontalAlignment::RIGHT,
+                VerticalAlignment::BOTTOM,
+                LayoutPreset::BOTTOM_RIGHT,
             ),
         };
 
-        self.base.set_vertical_alignment(vert_align);
-        self.base.set_horizontal_alignment(hor_align);
-        self.base.set_text(new_value.value.clone().into());
-        self.base
-            .set_justification_flags(JustificationFlag::JUSTIFICATION_NONE);
+        self.base_mut().set_vertical_alignment(vert_align);
+        self.base_mut().set_horizontal_alignment(hor_align);
+        self.base_mut().set_text(new_value.value.clone().into());
+        self.base_mut()
+            .set_justification_flags(JustificationFlag::NONE);
 
         if new_value.font() != self.current_font {
             self.current_font = new_value.font();
-            self.base
-                .add_theme_font_override("font".into(), self.current_font.get_font_resource());
+            let new_font_resource = self.current_font.get_font_resource();
+            self.base_mut()
+                .add_theme_font_override("font".into(), new_font_resource);
         }
 
         if new_value.text_wrap_compat() == TextWrap::TwWrap {
-            self.base
-                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::AUTOWRAP_WORD_SMART);
+            self.base_mut()
+                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::WORD_SMART);
         } else {
-            self.base
-                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::AUTOWRAP_OFF);
+            self.base_mut()
+                .set_autowrap_mode(godot::engine::text_server::AutowrapMode::OFF);
         }
     }
 }

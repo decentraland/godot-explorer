@@ -73,12 +73,10 @@ pub fn copy_library(debug_mode: bool, link_libs: bool) -> Result<(), anyhow::Err
     copy_if_modified(source_file, destination_file, link_libs)?;
 
     if debug_mode && os == "windows" {
-        let source_file = adjust_canonicalization(
-            fs::canonicalize(source_folder)?.join("dclgodot.pdb".to_string()),
-        );
-        let destination_file = adjust_canonicalization(
-            fs::canonicalize(lib_folder.as_str())?.join("dclgodot.pdb".to_string()),
-        );
+        let source_file =
+            adjust_canonicalization(fs::canonicalize(source_folder)?.join("dclgodot.pdb"));
+        let destination_file =
+            adjust_canonicalization(fs::canonicalize(lib_folder.as_str())?.join("dclgodot.pdb"));
         copy_if_modified(source_file, destination_file, link_libs)?;
     }
 
@@ -107,5 +105,32 @@ pub fn copy_ffmpeg_libraries(dest_folder: String, link_libs: bool) -> Result<(),
             }
         }
     }
+    Ok(())
+}
+
+// Function to move the directory and its contents recursively
+pub fn move_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
+    // Check if destination exists, create it if it doesn't
+    if !dest.exists() {
+        fs::create_dir_all(dest)?; // Create the destination directory
+    }
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let path = entry.path();
+        let dest_path = dest.join(entry.file_name());
+
+        if path.is_dir() {
+            // Recursively move subdirectory
+            move_dir_recursive(&path, &dest_path)?;
+        } else {
+            // Move file
+            fs::rename(&path, &dest_path)?; // Move the file
+        }
+    }
+
+    // Remove the source directory after moving all contents
+    fs::remove_dir_all(src)?;
+
     Ok(())
 }

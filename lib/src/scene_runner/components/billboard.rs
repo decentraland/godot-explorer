@@ -121,7 +121,7 @@ mod test {
 
         update_billboard(&mut scene, &mut crdt_state, &camera_global_transform);
 
-        let node = scene.godot_dcl_scene.get_node_3d(&entity).unwrap();
+        let node = scene.godot_dcl_scene.get_node_or_null_3d(&entity).unwrap();
         assert_eq!(
             node.get_global_rotation(),
             Vector3 {

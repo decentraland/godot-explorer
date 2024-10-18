@@ -5,7 +5,7 @@
 .godot/exported
 .godot/uid_cache.bin
 
-android/
+/android/
 
 # Godot-specific ignores
 .import/
@@ -25,3 +25,6 @@ mono_crash.*.json
 .directory
 .DS_Store
 *~
+
+# Decentraland ignores
+/output/
