@@ -1,0 +1,52 @@
+name: 🍎 macOS
+on:
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-macos
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build macOS
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14-xlarge]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.79
+          override: true
+
+      # Dependencies section
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      # Build section
+      - name: Install
+        run: cargo run -- install
+
+      - name: Build
+        working-directory: lib
+        run: cargo build --release
+
+      - name: Test
+        working-directory: lib
+        run: cargo test --release -- --skip auth
+
+      # Export section (multi platform)
+      - name: Copy library
+        run: cp lib/target/release/libdclgodot.dylib godot/lib/
+
+      - name: Export
+        run: cargo run -- export
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decentraland-godot-macos
+          path: |
+            exports/**/*

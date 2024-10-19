@@ -2,6 +2,7 @@ use std::{collections::HashMap, fs::create_dir_all, path::Path};
 
 use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
+use image_comparison::compare_images_folders;
 use tests::test_godot_tools;
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 
@@ -11,11 +12,11 @@ mod consts;
 mod copy_files;
 mod download_file;
 mod export;
+mod image_comparison;
 mod install_dependency;
 mod path;
 mod run;
 mod tests;
-mod image_comparison;
 
 fn main() -> Result<(), anyhow::Error> {
     let cli = Command::new("xtask")
@@ -63,6 +64,25 @@ fn main() -> Result<(), anyhow::Error> {
             ),
         )
         .subcommand(Command::new("update-protocol"))
+        .subcommand(
+            Command::new("compare-image-folders")
+                .arg(
+                    Arg::new("snapshots")
+                        .short('s')
+                        .long("snapshots")
+                        .help("snapshots")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("result")
+                        .short('r')
+                        .long("result")
+                        .help("results image folder for comparison")
+                        .takes_value(true)
+                        .required(true),
+                ),
+        )
         .subcommand(Command::new("export"))
         .subcommand(
             Command::new("run")
@@ -83,7 +103,7 @@ fn main() -> Result<(), anyhow::Error> {
                 .arg(
                     Arg::new("itest")
                         .long("itest")
-                        .help("run integration-tests")
+                        .help("run integration-tests"),
                 )
                 .arg(
                     Arg::new("stest")
@@ -132,6 +152,12 @@ fn main() -> Result<(), anyhow::Error> {
     let res = match subcommand {
         ("install", sm) => install_dependency::install(sm.is_present("no-templates")),
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
+        ("compare-image-folders", sm) => {
+            let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
+            let result_folder = Path::new(sm.value_of("result").unwrap());
+            compare_images_folders(snapshot_folder, result_folder, 0.995)
+                .map_err(|e| anyhow::anyhow!(e))
+        }
         ("run", sm) => {
             let mut build_args: Vec<&str> = sm
                 .values_of("build-args")

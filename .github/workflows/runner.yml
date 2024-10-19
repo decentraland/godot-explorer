@@ -1,0 +1,52 @@
+name: 🔗 GHA
+on: [push, pull_request, merge_group]
+
+concurrency:
+  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-runner
+  cancel-in-progress: true
+
+jobs:
+  # First stage: Only static checks, fast and prevent expensive builds from running.
+  static-checks:
+    name: 📊 Static checks
+    uses: ./.github/workflows/static_checks.yml
+
+  # Second stage: Run all the builds and some of the tests.
+  test-coverage:
+    name: 🔎 Test & Coverage
+    needs: static-checks
+    uses: ./.github/workflows/coverage.yml
+
+  android-build:
+    name: 🤖 Android (VR and Mobile)
+    needs: static-checks
+    uses: ./.github/workflows/android_builds.yml
+
+  linux-build:
+    name: 🐧 Linux
+    needs: static-checks
+    uses: ./.github/workflows/linux_builds.yml
+
+  macos-build:
+    name: 🍎 macOS
+    needs: static-checks
+    uses: ./.github/workflows/macos_builds.yml
+
+  windows-build:
+    name: 🏁 Windows
+    needs: static-checks
+    uses: ./.github/workflows/windows_builds.yml
+
+  # Third stage: Extra ci
+  docker-build:
+    name: 🐳 Docker builds
+    needs: linux-build
+    uses: ./.github/workflows/docker_builds.yml
+    secrets:
+      QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+
+  docker-tests:
+    name: 🧪 Docker tests
+    needs: docker-build
+    uses: ./.github/workflows/docker_tests.yml

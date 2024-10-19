@@ -1,0 +1,31 @@
+name: 🧪 Docker tests
+on:
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-docker-tests
+  cancel-in-progress: true
+
+jobs:
+  test-image:
+    name: Test Docker image
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Set up Docker environment
+        run: |
+          mkdir -p output
+          docker run --rm \
+            -v $(pwd)/tests/avatars-test-input.json:/app/avatars.json \
+            -v $(pwd)/output:/app/output \
+            quay.io/decentraland/godot-explorer:${{ github.sha }}
+
+      - name: Compare images with snapshots
+        run: |
+          ls -la output/
+          cargo run -- compare-image-folders \
+            --snapshots tests/snapshots/avatar-image-generation/ \
+            --result ${{ github.workspace }}/output/

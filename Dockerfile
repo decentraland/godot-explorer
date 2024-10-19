@@ -9,12 +9,13 @@ RUN apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY exports/decentraland.godot.client.x86_64 \
-    exports/decentraland.godot.client.pck \
-    exports/libdclgodot.so  \
+COPY decentraland.godot.client.x86_64 \
+    decentraland.godot.client.pck \
+    libdclgodot.so  \
     entry-point.sh \
     /app/
 
 RUN chmod +x entry-point.sh
+RUN chmod +x decentraland.godot.client.x86_64
 
 ENTRYPOINT ["./entry-point.sh"]

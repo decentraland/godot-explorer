@@ -1,0 +1,15 @@
+{
+  "overrides": [
+    {
+      "files": "*.yml",
+      "options": {
+        "proseWrap": "preserve",
+        "printWidth": 100,
+        "singleQuote": true,
+        "tabWidth": 2,
+        "useTabs": false,
+        "semi": false
+      }
+    }
+  ]
+}
