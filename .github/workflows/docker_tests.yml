@@ -15,7 +15,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Set up Docker environment
+      - name: Run avatar test
         run: |
           mkdir -p output
           docker run --rm \
