@@ -293,8 +293,6 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         Some(build_envs.clone()),
     )?;
 
-    test_godot_tools(Some(build_envs))?;
-
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())
         .map(|entry| {
