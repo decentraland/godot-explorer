@@ -33,15 +33,15 @@ point_count = 3
 [sub_resource type="Gradient" id="Gradient_w2th8"]
 colors = PackedColorArray(0.914015, 0.145083, 0.329259, 1, 0.917647, 0.145098, 0.329412, 0.509804)
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_js3n0"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_b6og1"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hhrtg"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_pvrec"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_6svxf"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hhrtg"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_b6og1"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_js3n0"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_g0uym"]
 bg_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -195,17 +195,17 @@ custom_minimum_size = Vector2(25, 0)
 layout_mode = 2
 theme = ExtResource("5_k0ege")
 theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
 theme_override_constants/icon_max_width = 20
-theme_override_styles/normal = SubResource("StyleBoxEmpty_js3n0")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_b6og1")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_hhrtg")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_pvrec")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_6svxf")
-theme_override_styles/disabled = SubResource("StyleBoxEmpty_hhrtg")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_b6og1")
+theme_override_styles/normal = SubResource("StyleBoxEmpty_js3n0")
 toggle_mode = true
 icon = ExtResource("6_8ss23")
 flat = true

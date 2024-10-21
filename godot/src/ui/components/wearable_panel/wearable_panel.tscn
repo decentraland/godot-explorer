@@ -7,23 +7,23 @@
 [ext_resource type="PackedScene" uid="uid://cnabnesv3iw5v" path="res://src/ui/components/wearable_category/wearable_category.tscn" id="3_f2n7s"]
 [ext_resource type="Texture2D" uid="uid://bgjf4umjbsjvm" path="res://assets/ui/BaseThumbnail.png" id="3_ylvgo"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xeo5g"]
-content_margin_left = 10.0
-content_margin_top = 5.0
-content_margin_right = 10.0
-content_margin_bottom = 5.0
-bg_color = Color(0.996094, 0.179688, 0.332031, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_daucq"]
 content_margin_left = 10.0
 content_margin_top = 5.0
 content_margin_right = 10.0
 content_margin_bottom = 5.0
 bg_color = Color(0.0859375, 0.0859375, 0.0859375, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xeo5g"]
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+bg_color = Color(0.996094, 0.179688, 0.332031, 1)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
@@ -135,8 +135,8 @@ layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
 focus_mode = 0
-theme_override_styles/normal = SubResource("StyleBoxFlat_xeo5g")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_daucq")
+theme_override_styles/normal = SubResource("StyleBoxFlat_xeo5g")
 toggle_mode = true
 text = "EQUIP"
 

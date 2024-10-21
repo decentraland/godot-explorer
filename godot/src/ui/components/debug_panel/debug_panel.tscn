@@ -35,10 +35,12 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_c8oen")
+current_tab = 0
 tab_focus_mode = 0
 
 [node name="Console" type="VBoxContainer" parent="TabContainer_DebugPanel"]
 layout_mode = 2
+metadata/_tab_index = 0
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TabContainer_DebugPanel/Console"]
 layout_mode = 2
@@ -71,10 +73,10 @@ layout_mode = 2
 size_flags_vertical = 3
 focus_mode = 1
 theme_override_constants/scroll_speed = 100
-theme_override_constants/scrollbar_margin_left = 5
 theme_override_constants/scrollbar_margin_top = 5
 theme_override_constants/scrollbar_margin_right = 5
 theme_override_constants/scrollbar_margin_bottom = 5
+theme_override_constants/scrollbar_margin_left = 5
 theme_override_constants/scrollbar_h_separation = 5
 theme_override_constants/scrollbar_v_separation = 5
 theme_override_font_sizes/font_size = 12
@@ -87,6 +89,7 @@ select_mode = 1
 [node name="Expression" type="VBoxContainer" parent="TabContainer_DebugPanel"]
 visible = false
 layout_mode = 2
+metadata/_tab_index = 1
 
 [node name="TextEdit" type="TextEdit" parent="TabContainer_DebugPanel/Expression"]
 custom_minimum_size = Vector2(0, 100)

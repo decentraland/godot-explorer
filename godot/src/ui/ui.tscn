@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://bitcxwef48476"]
+[gd_scene load_steps=21 format=3 uid="uid://bitcxwef48476"]
 
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_mareq"]
 [ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="2_q3hly"]
