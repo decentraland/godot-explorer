@@ -1,0 +1,360 @@
+{
+    "baseUrl": "https://peer.decentraland.org/content",
+    "payload": [
+        {
+            "entity": "bafkreid7hnqaw5qpb2ohwj2in344f5gx5ehxyc7wvlgbii5fbcbqh2am6q",
+            "destPath": "output/bafkreid7hnqaw5qpb2ohwj2in344f5gx5ehxyc7wvlgbii5fbcbqh2am6q.png",
+            "width": 256,
+            "height": 512,
+            "faceDestPath": "output/bafkreid7hnqaw5qpb2ohwj2in344f5gx5ehxyc7wvlgbii5fbcbqh2am6q_face.png",
+            "faceWidth": 256,
+            "faceHeight": 256,
+            "avatar": {
+                "bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+                "snapshots": {
+                    "body": "bafkreieo72ffen4llkh27q4hcgyfw4t6b6zjiofehnhms4vnynzcbf4fr4",
+                    "face256": "bafkreiezotehjhyscnr7kxjmg4oj54igqtz23fcxwzg42qmgke4hhpmyvu"
+                },
+                "eyes": {
+                    "color": {
+                        "r": 0.207,
+                        "g": 0.207,
+                        "b": 0.149
+                    }
+                },
+                "hair": {
+                    "color": {
+                        "r": 0.109,
+                        "g": 0.109,
+                        "b": 0.109
+                    }
+                },
+                "skin": {
+                    "color": {
+                        "r": 0.866,
+                        "g": 0.694,
+                        "b": 0.56
+                    }
+                },
+                "emotes": [
+                    {
+                        "slot": 0,
+                        "urn": "handsair"
+                    },
+                    {
+                        "slot": 1,
+                        "urn": "wave"
+                    },
+                    {
+                        "slot": 2,
+                        "urn": "urn:decentraland:matic:collections-v2:0x0b472c2c04325a545a43370b54e93c87f3d5badf:0"
+                    },
+                    {
+                        "slot": 3,
+                        "urn": "urn:decentraland:matic:collections-v2:0x54bf16bed39a02d5f8bda33664c72c59d367caf7:0"
+                    },
+                    {
+                        "slot": 4,
+                        "urn": "urn:decentraland:matic:collections-v2:0x70eb032d4621a51945b913c3f9488d50fc1fca38:0"
+                    },
+                    {
+                        "slot": 5,
+                        "urn": "urn:decentraland:matic:collections-v2:0x875146d1d26e91c80f25f5966a84b098d3db1fc8:1"
+                    },
+                    {
+                        "slot": 6,
+                        "urn": "urn:decentraland:matic:collections-v2:0xa25c20f58ac447621a5f854067b857709cbd60eb:7"
+                    },
+                    {
+                        "slot": 7,
+                        "urn": "urn:decentraland:matic:collections-v2:0xbada8a315e84e4d78e3b6914003647226d9b4001:10"
+                    },
+                    {
+                        "slot": 8,
+                        "urn": "urn:decentraland:matic:collections-v2:0xbada8a315e84e4d78e3b6914003647226d9b4001:11"
+                    },
+                    {
+                        "slot": 9,
+                        "urn": "urn:decentraland:matic:collections-v2:0x0c956c74518ed34afb7b137d9ddfdaea7ca13751:0"
+                    }
+                ],
+                "wearables": [
+                    "urn:decentraland:off-chain:base-avatars:eyebrows_06",
+                    "urn:decentraland:off-chain:base-avatars:eyes_00",
+                    "urn:decentraland:off-chain:base-avatars:rounded_sun_glasses",
+                    "urn:decentraland:off-chain:base-avatars:ruby_red_loafer",
+                    "urn:decentraland:off-chain:base-avatars:tall_front_01",
+                    "urn:decentraland:off-chain:base-avatars:comfortablepants",
+                    "urn:decentraland:off-chain:base-avatars:mouth_01",
+                    "urn:decentraland:off-chain:base-avatars:green_stone_tiara",
+                    "urn:decentraland:off-chain:base-avatars:red_tshirt"
+                ]
+            }
+        },
+        {
+            "entity": "bafkreidw3wn32cugqfi4jlqgzldakfbhjcyn377mm3qrjkquo5v4ud5k2u",
+            "destPath": "output/bafkreidw3wn32cugqfi4jlqgzldakfbhjcyn377mm3qrjkquo5v4ud5k2u.png",
+            "width": 256,
+            "height": 512,
+            "faceDestPath": "output/bafkreidw3wn32cugqfi4jlqgzldakfbhjcyn377mm3qrjkquo5v4ud5k2u_face.png",
+            "faceWidth": 256,
+            "faceHeight": 256,
+            "avatar": {
+                "bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+                "wearables": [
+                    "urn:decentraland:off-chain:base-avatars:eyes_00",
+                    "urn:decentraland:off-chain:base-avatars:mouth_00",
+                    "urn:decentraland:off-chain:base-avatars:beard",
+                    "urn:decentraland:off-chain:base-avatars:cool_hair",
+                    "urn:decentraland:off-chain:base-avatars:f_eyebrows_06",
+                    "urn:decentraland:off-chain:base-avatars:hip_hop_joggers",
+                    "urn:decentraland:off-chain:base-avatars:sport_blue_shoes",
+                    "urn:decentraland:off-chain:base-avatars:cyclope",
+                    "urn:decentraland:off-chain:base-avatars:Thunder_earring",
+                    "urn:decentraland:matic:collections-v2:0xbf83965191065487db0644812649d5238435c723:2:210624583337114373395836055367340864637790190801098222508621956528",
+                    "urn:decentraland:matic:collections-v2:0xb854bf4d15be8e1f9b38e8b6af7d3283b81edfd8:1:105312291668557186697918027683670432318895095400549111254310982525"
+                ],
+                "forceRender": [],
+                "emotes": [
+                    {
+                        "slot": 0,
+                        "urn": "handsair"
+                    },
+                    {
+                        "slot": 1,
+                        "urn": "wave"
+                    },
+                    {
+                        "slot": 2,
+                        "urn": "fistpump"
+                    },
+                    {
+                        "slot": 3,
+                        "urn": "dance"
+                    },
+                    {
+                        "slot": 4,
+                        "urn": "raiseHand"
+                    },
+                    {
+                        "slot": 5,
+                        "urn": "clap"
+                    },
+                    {
+                        "slot": 6,
+                        "urn": "money"
+                    },
+                    {
+                        "slot": 7,
+                        "urn": "kiss"
+                    },
+                    {
+                        "slot": 8,
+                        "urn": "headexplode"
+                    },
+                    {
+                        "slot": 9,
+                        "urn": "shrug"
+                    }
+                ],
+                "snapshots": {
+                    "body": "bafkreiepqf6n4j3iypqgtnkqykeopqx6cqzvbvqdvrbeyzlhgpsaqpxygy",
+                    "face256": "bafkreifc54aqlg2r2qppcsyqzx6skixhjlkuq3djqwm5sgvqwvv2cyeo7i"
+                },
+                "eyes": {
+                    "color": {
+                        "r": 0.37109375,
+                        "g": 0.22265625,
+                        "b": 0.1953125,
+                        "a": 1
+                    }
+                },
+                "hair": {
+                    "color": {
+                        "r": 0.98046875,
+                        "g": 0.82421875,
+                        "b": 0.5078125,
+                        "a": 1
+                    }
+                },
+                "skin": {
+                    "color": {
+                        "r": 0.60546875,
+                        "g": 0.4609375,
+                        "b": 0.35546875,
+                        "a": 1
+                    }
+                }
+            }
+        },
+        {
+            "entity": "bafkreia6x2mlr2mmdry66czgpze6khwcdmcpqbkjeu7bmrydzaxf3v4x6q",
+            "destPath": "output/bafkreia6x2mlr2mmdry66czgpze6khwcdmcpqbkjeu7bmrydzaxf3v4x6q.png",
+            "width": 256,
+            "height": 512,
+            "faceDestPath": "output/bafkreia6x2mlr2mmdry66czgpze6khwcdmcpqbkjeu7bmrydzaxf3v4x6q_face.png",
+            "faceWidth": 256,
+            "faceHeight": 256,
+            "avatar": {
+                "bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
+                "wearables": [
+                    "urn:decentraland:off-chain:base-avatars:baggy_pullover",
+                    "urn:decentraland:off-chain:base-avatars:f_brown_skirt",
+                    "urn:decentraland:off-chain:base-avatars:Espadrilles",
+                    "urn:decentraland:off-chain:base-avatars:hair_f_oldie_02",
+                    "urn:decentraland:off-chain:base-avatars:f_mouth_05",
+                    "urn:decentraland:off-chain:base-avatars:eyebrows_01",
+                    "urn:decentraland:off-chain:base-avatars:eyes_02",
+                    "urn:decentraland:off-chain:base-avatars:f_glasses_fashion",
+                    "urn:decentraland:off-chain:base-avatars:blue_star_earring",
+                    "urn:decentraland:off-chain:base-avatars:blue_bandana"
+                ],
+                "forceRender": [],
+                "emotes": [
+                    {
+                        "slot": 0,
+                        "urn": "handsair"
+                    },
+                    {
+                        "slot": 1,
+                        "urn": "wave"
+                    },
+                    {
+                        "slot": 2,
+                        "urn": "fistpump"
+                    },
+                    {
+                        "slot": 3,
+                        "urn": "dance"
+                    },
+                    {
+                        "slot": 4,
+                        "urn": "raiseHand"
+                    },
+                    {
+                        "slot": 5,
+                        "urn": "clap"
+                    },
+                    {
+                        "slot": 6,
+                        "urn": "money"
+                    },
+                    {
+                        "slot": 7,
+                        "urn": "kiss"
+                    },
+                    {
+                        "slot": 8,
+                        "urn": "headexplode"
+                    },
+                    {
+                        "slot": 9,
+                        "urn": "shrug"
+                    }
+                ],
+                "snapshots": {
+                    "body": "bafkreigpuh2ccixcv6szsq2oqxngal6oupjqd52hx6w6xaddmrvsjndmw4",
+                    "face256": "bafkreihjpp3hrtsgmx6tcmffnt2mbfakyt6s3muxejyddbyafiaf2ljqny"
+                },
+                "eyes": {
+                    "color": {
+                        "r": 0.125490203499794,
+                        "g": 0.7019608020782471,
+                        "b": 0.9647058844566345,
+                        "a": 1
+                    }
+                },
+                "hair": {
+                    "color": {
+                        "r": 0.5960784554481506,
+                        "g": 0.37254902720451355,
+                        "b": 0.21568627655506134,
+                        "a": 1
+                    }
+                },
+                "skin": {
+                    "color": {
+                        "r": 0.800000011920929,
+                        "g": 0.6078431606292725,
+                        "b": 0.46666666865348816,
+                        "a": 1
+                    }
+                }
+            }
+        },
+        {
+            "entity": "mati_avatar_test",
+            "destPath": "output/mati_avatar_test.png",
+            "width": 256,
+            "height": 512,
+            "faceDestPath": "output/mati_avatar_test_face.png",
+            "faceWidth": 256,
+            "faceHeight": 256,
+            "avatar": {
+                "bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+                "wearables": [
+                    "urn:decentraland:off-chain:base-avatars:eyebrows_00",
+                    "urn:decentraland:off-chain:base-avatars:eyes_06",
+                    "urn:decentraland:off-chain:base-avatars:mouth_03",
+                    "urn:decentraland:off-chain:base-avatars:beard",
+                    "urn:decentraland:off-chain:base-avatars:short_hair",
+                    "urn:decentraland:matic:collections-v2:0xf1483f042614105cb943d3dd67157256cd003028:6:631873750011343120187508166102022593913370572403294667525865865225",
+                    "urn:decentraland:matic:collections-v2:0xd50191baed16bc532feb9d499fdaa805fe01d3ff:8:842498333348457493583344221469363458551160763204392890034487820292",
+                    "urn:decentraland:matic:collections-v2:0xf1483f042614105cb943d3dd67157256cd003028:16:1684996666696914987166688442938726917102321526408785780068975640582",
+                    "urn:decentraland:matic:collections-v2:0xd05723401566e9d9b7a728bd4dbe07584cf8ac76:5:526561458342785933489590138418352161594475477002745556271554887855"
+                ],
+                "forceRender": [],
+                "emotes": [
+                    {
+                        "slot": 0,
+                        "urn": "handsair"
+                    },
+                    {
+                        "slot": 6,
+                        "urn": "money"
+                    },
+                    {
+                        "slot": 7,
+                        "urn": "kiss"
+                    },
+                    {
+                        "slot": 8,
+                        "urn": "tik"
+                    },
+                    {
+                        "slot": 9,
+                        "urn": "shrug"
+                    }
+                ],
+                "snapshots": {
+                    "body": "https://peer-ec1.decentraland.org/content/contents/bafkreidhmzu5wwcssv3f65wfs7swnncalwarfqavsfifxvclgv32ku3zdu",
+                    "face256": "https://peer-ec1.decentraland.org/content/contents/bafkreigea3qbj56h6erxvt524hah2mlxnvqkpazjelcotktxldecvraohq"
+                },
+                "eyes": {
+                    "color": {
+                        "r": 0.22265625,
+                        "g": 0.484375,
+                        "b": 0.69140625,
+                        "a": 1
+                    }
+                },
+                "hair": {
+                    "color": {
+                        "r": 0.98046875,
+                        "g": 0.82421875,
+                        "b": 0.5078125,
+                        "a": 1
+                    }
+                },
+                "skin": {
+                    "color": {
+                        "r": 0.94921875,
+                        "g": 0.76171875,
+                        "b": 0.6484375,
+                        "a": 1
+                    }
+                }
+            }
+        }
+    ]
+}

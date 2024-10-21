@@ -1,0 +1,93 @@
+name: 🔎 Test & Coverage
+on:
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-coverage
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: Test & Coverage
+    runs-on: ubuntu-22.04
+    env:
+      GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      # To host test-realm local server
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+
+      - name: Prepare and run local test-realm
+        run: |
+          mkdir -p tests/server
+          cd tests/server
+          npm init -y
+          npm install @dcl/scene-explorer-tests@1.0.0-20240430222335.commit-2b82e41
+          sed -i 's|https://decentraland.github.io/scene-explorer-tests/|http://localhost:7666/|g' node_modules/@dcl/scene-explorer-tests/static/scene-explorer-tests/about
+          npm i -g http-server
+          http-server node_modules/@dcl/scene-explorer-tests/static -p 7666 &
+        # /changerealm http://localhost:7666/scene-explorer-tests/
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.79
+          override: true
+          components: llvm-tools-preview
+
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
+
+      - name: Prepare graphics renderering
+        run: |
+          sudo apt-get -y install xvfb
+          sudo /usr/bin/Xvfb :0 -screen 0 1280x1024x24 &
+
+      # Dependencies section
+      # => Linux
+      - name: Install alsa and udev
+        if: runner.os == 'linux'
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+      - name: install ffmpeg deps (linux)
+        run: sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev
+        if: runner.os == 'linux'
+      - name: install livekit deps (linux)
+        run: sudo apt update -y; sudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev
+        if: runner.os == 'linux'
+
+      - name: cargo xtask install
+        run: cargo run -- install --no-templates
+
+      # Build section
+
+      - name: Download grcov
+        run: |
+          mkdir -p "${HOME}/.local/bin"
+          curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.10/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf - -C "${HOME}/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run xtask coverage
+        run: |
+          export DISPLAY=:99
+          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+          cargo run -- coverage
+
+      - name: Upload to codecov.io
+        if: success() || failure()
+        uses: codecov/codecov-action@v3
+        with:
+          files: rust/coverage/*.lcov
+
+      - name: Upload artifacts
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshots
+          path: |
+            tests/snapshots/scenes/comparison/**/*
+            tests/snapshots/avatar-image-generation/comparison/**/*

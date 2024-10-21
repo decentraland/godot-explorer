@@ -1,0 +1,49 @@
+name: 🐳 Docker builds
+on:
+  workflow_call:
+    secrets:
+      QUAY_USERNAME:
+        required: true
+      QUAY_TOKEN:
+        required: true
+
+concurrency:
+  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-docker
+  cancel-in-progress: true
+
+jobs:
+  build-images:
+    name: Build images
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Download Godot Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: decentraland-godot-linux
+      - name: Build Docker Image
+        id: build-image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: godot-explorer
+          tags: ${{ github.sha }}
+          dockerfiles: |
+            ./Dockerfile
+          build-args: |
+            ${{ inputs.build-args }}
+            COMMIT_HASH=${{ github.sha }}
+
+      - name: Push To quay.io
+        id: push-to-quay
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build-image.outputs.image }}
+          tags: ${{ steps.build-image.outputs.tags }}
+          registry: quay.io/decentraland
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_TOKEN }}
+
+      - name: Print image url
+        run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
