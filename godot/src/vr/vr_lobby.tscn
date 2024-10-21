@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://cuic8diqbxs83"]
+[gd_scene load_steps=17 format=3 uid="uid://cuic8diqbxs83"]
 
 [ext_resource type="Script" path="res://src/vr/vr_lobby.gd" id="1_my51n"]
 [ext_resource type="PackedScene" uid="uid://b228p8k6sonve" path="res://addons/godot-xr-tools/player/fade/fade_collision.tscn" id="2_inngf"]
@@ -11,6 +11,8 @@
 [ext_resource type="PackedScene" uid="uid://bl2nuu3qhlb5k" path="res://addons/godot-xr-tools/functions/movement_direct.tscn" id="7_a6w3g"]
 [ext_resource type="PackedScene" uid="uid://brh1yknqh4ux6" path="res://src/ui/components/auth/lobby.tscn" id="7_kbcta"]
 [ext_resource type="PackedScene" uid="uid://b6bk2pj8vbj28" path="res://addons/godot-xr-tools/functions/movement_turn.tscn" id="9_wqiq7"]
+[ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="11_m7j0y"]
+[ext_resource type="Script" path="res://addons/godot-xr-tools/player/player_body.gd" id="12_mgt5b"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_fnm28"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
@@ -80,6 +82,14 @@ transparent = 0
 alpha_scissor_threshold = 1.0
 unshaded = true
 scene_properties_keys = PackedStringArray("lobby.gd")
+
+[node name="PlayerBody" type="CharacterBody3D" parent="XROrigin3D" groups=["player_body"] instance=ExtResource("11_m7j0y")]
+process_priority = -100
+process_physics_priority = -100
+top_level = true
+collision_layer = 524288
+collision_mask = 1023
+script = ExtResource("12_mgt5b")
 
 [node name="StartXR" parent="." instance=ExtResource("6_u581l")]
 
