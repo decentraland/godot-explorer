@@ -39,8 +39,8 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-deps
 
-      - name: Install Godot
-        uses: ./.github/actions/install-godot
+      - name: cargo install
+        run: cargo run -- install --no-templates
 
       - name: cargo check
         working-directory: lib

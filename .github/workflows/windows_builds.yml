@@ -29,8 +29,8 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-deps
 
-      - name: Install Godot
-        uses: ./.github/actions/install-godot
+      - name: Install
+        run: cargo run -- install
   
       - name: Import Assets
         uses: ./.github/actions/import-assets
