@@ -28,9 +28,6 @@ jobs:
 
       - name: Install
         run: cargo run -- install
-  
-      - name: Import Assets
-        uses: ./.github/actions/import-assets
 
       # Build section
       - name: Build
@@ -44,6 +41,9 @@ jobs:
       # Export section (multi platform)
       - name: Copy library
         run: cp lib/target/release/libdclgodot.dylib godot/lib/
+
+      - name: Import Assets
+        uses: ./.github/actions/import-assets
 
       - name: Export
         run: cargo run -- export

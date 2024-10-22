@@ -30,9 +30,7 @@ jobs:
 
       - name: Install
         run: cargo run -- install
-  
-      - name: Import Assets
-        uses: ./.github/actions/import-assets
+
 
       # Build section
       - name: Build
@@ -46,6 +44,9 @@ jobs:
       # Export section
       - name: Copy library
         run: cp lib/target/release/libdclgodot.so godot/lib/
+
+      - name: Import Assets
+        uses: ./.github/actions/import-assets
 
       - name: Export
         run: cargo run -- export
