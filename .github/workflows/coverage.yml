@@ -75,7 +75,8 @@ jobs:
         working-directory: lib
         run: cargo build
       - name: Copy library
-        run: cp lib/target/release/libdclgodot.so godot/lib/
+        run: cp lib/target/debug/libdclgodot.so godot/lib/
+
       - name: Import Assets
         uses: ./.github/actions/import-assets
 

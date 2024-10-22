@@ -31,12 +31,14 @@ pub fn import_assets() -> ExitStatus
 
     // Do imports and one project open
     let args = vec![
-        "-e",
+        "--editor",
+        "--import",
         "--headless",
         "--rendering-driver",
         "opengl3",
-        "--import",
     ];
+
+    println!("execute ${program} {:?}", args);
     std::process::Command::new(program.as_str())
         .args(&args)
         .current_dir(adjust_canonicalization(
