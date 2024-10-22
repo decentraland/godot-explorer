@@ -1,4 +1,4 @@
-use std::{fs, io, path::Path};
+use std::{fs, io, path::Path, process::ExitStatus};
 
 use crate::{
     consts::{
@@ -6,8 +6,8 @@ use crate::{
         GODOT_PROJECT_FOLDER,
     },
     copy_files::copy_ffmpeg_libraries,
-    install_dependency::{self, download_and_extract_zip, set_executable_permission},
-    path::adjust_canonicalization,
+    install_dependency::{download_and_extract_zip, set_executable_permission},
+    path::{adjust_canonicalization, get_godot_path},
 };
 
 #[allow(dead_code)]
@@ -25,23 +25,9 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
     Ok(())
 }
 
-pub fn export() -> Result<(), anyhow::Error> {
-    let program = adjust_canonicalization(
-        std::fs::canonicalize(format!(
-            "{}godot/{}",
-            BIN_FOLDER,
-            install_dependency::get_godot_executable_path().unwrap()
-        ))
-        .unwrap(),
-    );
-
-    // Make exports directory
-    if std::path::Path::new(EXPORTS_FOLDER).exists() {
-        fs::remove_dir_all(EXPORTS_FOLDER)?;
-    }
-    std::thread::sleep(std::time::Duration::from_secs(1));
-    fs::create_dir(EXPORTS_FOLDER)?;
-    std::thread::sleep(std::time::Duration::from_secs(1));
+pub fn import_assets() -> ExitStatus
+{
+    let program = get_godot_path();
 
     // Do imports and one project open
     let args = vec![
@@ -52,13 +38,28 @@ pub fn export() -> Result<(), anyhow::Error> {
         "--quit-after",
         "1000",
     ];
-    let status1 = std::process::Command::new(program.as_str())
+    std::process::Command::new(program.as_str())
         .args(&args)
         .current_dir(adjust_canonicalization(
             std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap(),
         ))
         .status()
-        .expect("Failed to run Godot");
+        .expect("Failed to run Godot")
+}
+
+pub fn export() -> Result<(), anyhow::Error> {
+    let program = get_godot_path();
+
+    // Make exports directory
+    if std::path::Path::new(EXPORTS_FOLDER).exists() {
+        fs::remove_dir_all(EXPORTS_FOLDER)?;
+    }
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    fs::create_dir(EXPORTS_FOLDER)?;
+    std::thread::sleep(std::time::Duration::from_secs(1));
+
+    // Do imports and one project open
+    let import_assets_status = import_assets();
 
     let output_file_name = match std::env::consts::OS {
         "linux" => "decentraland.godot.client.x86_64",
@@ -103,7 +104,7 @@ pub fn export() -> Result<(), anyhow::Error> {
 
     println!("Running the export build with command: {:?}", args);
 
-    let status2 = std::process::Command::new(program.as_str())
+    let export_status = std::process::Command::new(program.as_str())
         .args(&args)
         .current_dir(adjust_canonicalization(
             std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap(),
@@ -114,8 +115,8 @@ pub fn export() -> Result<(), anyhow::Error> {
     if !std::path::Path::new(output_rel_path.as_str()).exists() {
         return Err(anyhow::anyhow!(
             "Output file was not generated. pre-import godot status: {:?}, project-export godot status: {:?}",
-            status1,
-            status2
+            import_assets_status,
+            export_status
         ));
     }
 

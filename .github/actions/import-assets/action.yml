@@ -1,0 +1,14 @@
+name: Import assets
+description: Import assets
+
+runs:
+  using: composite
+  steps:
+    - name: Import assets
+      run: cargo run -- import-assets
+
+    - name: Cache Godot assets
+      uses: actions/cache@v3
+      with:
+        path: godot/.godot
+        key: ${{ runner.os }}-godot-assets-cache

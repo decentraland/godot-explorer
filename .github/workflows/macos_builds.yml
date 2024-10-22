@@ -26,10 +26,13 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-deps
 
-      # Build section
-      - name: Install
-        run: cargo run -- install
+      - name: Install Godot
+        uses: ./.github/actions/install-godot
+  
+      - name: Import Assets
+        uses: ./.github/actions/import-assets
 
+      # Build section
       - name: Build
         working-directory: lib
         run: cargo build --release

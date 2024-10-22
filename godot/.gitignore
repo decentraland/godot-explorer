@@ -1,9 +1,5 @@
 # Godot 4+ specific ignores
-.godot/editor
-.godot/export_credentials.cfg
-.godot/shader_cache
-.godot/exported
-.godot/uid_cache.bin
+/.godot/
 
 /android/
 

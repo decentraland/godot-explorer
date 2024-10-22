@@ -1,0 +1,27 @@
+name: Install Godot
+description: Install Godot
+
+runs:
+  using: composite
+  steps:
+    - name: Restore .bin cache
+      uses: actions/cache@v3
+      with:
+        path: .bin
+        key: ${{ runner.os }}-bin-cache-${{ hashFiles('src/consts.rs') }}
+        restore-keys: |
+          ${{ runner.os }}-bin-cache-
+
+    - name: Install if .bin does not exist
+      run: |
+        if [ ! -d ".bin" ]; then
+          cargo run -- install
+        else
+          echo ".bin folder already exists, skipping install."
+        fi
+
+    - name: Cache .bin folder
+      uses: actions/cache@v3
+      with:
+        path: .bin
+        key: ${{ runner.os }}-bin-cache-${{ hashFiles('src/consts.rs') }}

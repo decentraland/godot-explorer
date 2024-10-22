@@ -4,10 +4,9 @@ use std::{
 };
 
 use crate::{
-    consts::{BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    consts::{GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
     copy_files::copy_library,
-    install_dependency,
-    path::adjust_canonicalization,
+    path::{adjust_canonicalization, get_godot_path},
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -23,14 +22,7 @@ pub fn run(
     with_build_envs: Option<HashMap<String, String>>,
 ) -> Result<(), anyhow::Error> {
     let with_build_envs = with_build_envs.unwrap_or_default();
-    let program = adjust_canonicalization(
-        std::fs::canonicalize(format!(
-            "{}godot/{}",
-            BIN_FOLDER,
-            install_dependency::get_godot_executable_path().unwrap()
-        ))
-        .expect("Did you executed `cargo run -- install`?"),
-    );
+    let program = get_godot_path();
 
     println!("extras: {:?}", extras);
 
