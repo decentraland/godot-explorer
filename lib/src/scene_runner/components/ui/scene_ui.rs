@@ -169,7 +169,7 @@ fn update_layout(
         .compute_layout_with_measure(
             root_node,
             size,
-            |size, available, node_id, node_context, _style| match node_context {
+            |size, available, _node_id, node_context, _style| match node_context {
                 Some(ContextNode::UiText(wrapping, text_node)) => {
                     let Some(font) = text_node.get_theme_font("font".into()) else {
                         return taffy::Size::ZERO;
@@ -220,15 +220,6 @@ fn update_layout(
                         },
                     };
 
-                    tracing::debug!(
-                        "text node {:?}, wrapping {:?}, size: {:?}, font_rect {:?}, available {:?}",
-                        node_id,
-                        *wrapping,
-                        size,
-                        font_rect,
-                        available
-                    );
-
                     taffy::Size { width, height }
                 }
                 None => taffy::Size::ZERO,
@@ -265,14 +256,6 @@ fn update_layout(
         });
         let is_hidden = taffy.style(*key_node).unwrap().display == taffy::style::Display::None;
         control.set_visible(!is_hidden);
-
-        tracing::debug!(
-            "node {:?}, entity: {:?}, location: {:?}, size: {:?}",
-            key_node,
-            entity,
-            layout.location,
-            layout.size
-        );
     }
 }
 
