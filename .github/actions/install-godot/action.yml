@@ -13,6 +13,7 @@ runs:
           ${{ runner.os }}-bin-cache-
 
     - name: Install if .bin does not exist
+      shell: bash
       run: |
         if [ ! -d ".bin" ]; then
           cargo run -- install

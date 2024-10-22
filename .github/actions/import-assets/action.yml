@@ -5,6 +5,7 @@ runs:
   using: composite
   steps:
     - name: Import assets
+      shell: bash
       run: cargo run -- import-assets
 
     - name: Cache Godot assets
