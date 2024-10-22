@@ -78,15 +78,12 @@ pub fn update_audio_stream(
                             .set_muted(muted_by_current_scene);
 
                         if next_value.playing.unwrap_or(true) {
-                            let _ = audio_stream_data
-                                .1
-                                .command_sender
-                                .blocking_send(AVCommand::Play);
+                            let _ = audio_stream_data.1.command_sender.try_send(AVCommand::Play);
                         } else {
                             let _ = audio_stream_data
                                 .1
                                 .command_sender
-                                .blocking_send(AVCommand::Pause);
+                                .try_send(AVCommand::Pause);
                         }
                     }
                     AudioUpdateMode::ChangeAudio => {
@@ -94,7 +91,7 @@ pub fn update_audio_stream(
                             let _ = audio_stream_data
                                 .1
                                 .command_sender
-                                .blocking_send(AVCommand::Dispose);
+                                .try_send(AVCommand::Dispose);
                         }
 
                         let mut audio_stream_node = node_3d.get_node_or_null("AudioStream".into()).expect(
@@ -163,7 +160,7 @@ pub fn update_audio_stream(
                     let _ = audio_stream_data
                         .1
                         .command_sender
-                        .blocking_send(AVCommand::Dispose);
+                        .try_send(AVCommand::Dispose);
                 }
 
                 node.audio_stream = None;

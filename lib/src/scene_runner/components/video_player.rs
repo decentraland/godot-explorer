@@ -111,18 +111,18 @@ pub fn update_video_player(
                             let _ = video_player_data
                                 .video_sink
                                 .command_sender
-                                .blocking_send(AVCommand::Play);
+                                .try_send(AVCommand::Play);
                         } else {
                             let _ = video_player_data
                                 .video_sink
                                 .command_sender
-                                .blocking_send(AVCommand::Pause);
+                                .try_send(AVCommand::Pause);
                         }
 
                         let _ = video_player_data
                             .video_sink
                             .command_sender
-                            .blocking_send(AVCommand::Repeat(next_value.r#loop.unwrap_or(false)));
+                            .try_send(AVCommand::Repeat(next_value.r#loop.unwrap_or(false)));
                     }
                     VideoUpdateMode::ChangeVideo => {
                         if let Some(video_player_data) =
@@ -131,7 +131,7 @@ pub fn update_video_player(
                             let _ = video_player_data
                                 .video_sink
                                 .command_sender
-                                .blocking_send(AVCommand::Dispose);
+                                .try_send(AVCommand::Dispose);
                         }
 
                         let mut video_player_node = node_3d.get_node_or_null("VideoPlayer".into()).expect(
@@ -282,7 +282,7 @@ pub fn update_video_player(
                     let _ = video_player_data
                         .video_sink
                         .command_sender
-                        .blocking_send(AVCommand::Dispose);
+                        .try_send(AVCommand::Dispose);
                 }
 
                 node.video_player_data = None;

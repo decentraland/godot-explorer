@@ -220,14 +220,14 @@ fn update_layout(
                         },
                     };
 
-                    tracing::debug!(
-                        "text node {:?}, wrapping {:?}, size: {:?}, font_rect {:?}, available {:?}",
-                        node_id,
-                        *wrapping,
-                        size,
-                        font_rect,
-                        available
-                    );
+                    // tracing::debug!(
+                    //     "text node {:?}, wrapping {:?}, size: {:?}, font_rect {:?}, available {:?}",
+                    //     node_id,
+                    //     *wrapping,
+                    //     size,
+                    //     font_rect,
+                    //     available
+                    // );
 
                     taffy::Size { width, height }
                 }
@@ -266,13 +266,13 @@ fn update_layout(
         let is_hidden = taffy.style(*key_node).unwrap().display == taffy::style::Display::None;
         control.set_visible(!is_hidden);
 
-        tracing::debug!(
-            "node {:?}, entity: {:?}, location: {:?}, size: {:?}",
-            key_node,
-            entity,
-            layout.location,
-            layout.size
-        );
+        // tracing::debug!(
+        //     "node {:?}, entity: {:?}, location: {:?}, size: {:?}",
+        //     key_node,
+        //     entity,
+        //     layout.location,
+        //     layout.size
+        // );
     }
 }
 
