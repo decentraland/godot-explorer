@@ -14,6 +14,7 @@ pub struct DclVideoPlayer {
     #[export]
     dcl_texture: Option<Gd<ImageTexture>>,
 
+    #[base]
     base: Base<AudioStreamPlayer>,
 
     #[var]
@@ -34,10 +35,10 @@ impl DclVideoPlayer {
 
     pub fn set_muted(&mut self, value: bool) {
         if value {
-            self.base_mut().set_volume_db(-80.0);
+            self.base.set_volume_db(-80.0);
         } else {
             let db_volume = 20.0 * f32::log10(self.get_dcl_volume());
-            self.base_mut().set_volume_db(db_volume);
+            self.base.set_volume_db(db_volume);
         }
     }
 }

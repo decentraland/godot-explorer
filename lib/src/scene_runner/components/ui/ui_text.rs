@@ -1,4 +1,4 @@
-use godot::{obj::NewAlloc, prelude::Gd};
+use godot::{obj::UserClass, prelude::Gd};
 
 use crate::{
     dcl::{
@@ -32,10 +32,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 .unwrap();
 
             if value.is_none() {
-                if let Some(mut node) = existing_ui_text
-                    .base_control
-                    .get_node_or_null("text".into())
-                {
+                if let Some(mut node) = existing_ui_text.base_control.get_node("text".into()) {
                     node.queue_free();
                     existing_ui_text.base_control.remove_child(node);
                 }
@@ -50,9 +47,9 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             {
                 node.cast::<DclUiText>()
             } else {
-                let mut node: Gd<DclUiText> = DclUiText::new_alloc();
+                let mut node: Gd<DclUiText> = DclUiText::alloc_gd();
                 node.set_name("text".into());
-                node.set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
+                node.set_anchors_preset(godot::engine::control::LayoutPreset::PRESET_FULL_RECT);
 
                 existing_ui_text
                     .base_control

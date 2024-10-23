@@ -1,7 +1,7 @@
 mod handle_restricted_actions;
 mod portables;
 
-use godot::{builtin::meta::ToGodot, obj::NewGd};
+use godot::{builtin::meta::ToGodot, obj::UserClass};
 
 use crate::{
     content::content_mapping::DclContentMappingAndUrl,

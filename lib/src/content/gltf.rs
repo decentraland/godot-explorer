@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use godot::{
+    bind::GodotClass,
     builtin::{meta::ToGodot, Dictionary, GString, Variant, VariantArray},
     engine::{
         animation::TrackType,
@@ -9,10 +10,9 @@ use godot::{
         node::ProcessMode,
         AnimatableBody3D, Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D,
         CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture,
-        MeshInstance3D, Node, Node3D, StaticBody3D,
+        MeshInstance3D, Node, Node3D, NodeExt, StaticBody3D,
     },
     obj::{EngineEnum, Gd, InstanceId},
-    prelude::*,
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
@@ -111,8 +111,8 @@ pub async fn internal_load_gltf(
         .await
         .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
 
-    let mut new_gltf = GltfDocument::new_gd();
-    let mut new_gltf_state = GltfState::new_gd();
+    let mut new_gltf = GltfDocument::new();
+    let mut new_gltf_state = GltfState::new();
 
     let mappings = Dictionary::from_iter(
         dependencies_hash
@@ -169,7 +169,7 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                     if let Some(material) = mesh.surface_get_material(surface_index) {
                         if let Ok(mut base_material) = material.try_cast::<BaseMaterial3D>() {
                             // Resize images
-                            for ord in 0..TextureParam::MAX.ord() {
+                            for ord in 0..TextureParam::TEXTURE_MAX.ord() {
                                 let texture_param = TextureParam::from_ord(ord);
                                 if let Some(texture) = base_material.get_texture(texture_param) {
                                     if let Ok(mut texture_image) =
@@ -189,8 +189,8 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                             }
 
                             // Set Toon
-                            base_material.set_specular_mode(SpecularMode::TOON);
-                            base_material.set_diffuse_mode(DiffuseMode::TOON);
+                            base_material.set_specular_mode(SpecularMode::SPECULAR_TOON);
+                            base_material.set_diffuse_mode(DiffuseMode::DIFFUSE_TOON);
                         }
                     }
                 }
@@ -364,7 +364,7 @@ fn create_colliders(node_to_inspect: Gd<Node>) {
                 if let Some(mut parent) = static_body_3d.get_parent() {
                     let mut new_animatable = AnimatableBody3D::new_alloc();
                     new_animatable.set_sync_to_physics(false);
-                    new_animatable.set_process_mode(ProcessMode::DISABLED);
+                    new_animatable.set_process_mode(ProcessMode::PROCESS_MODE_DISABLED);
                     new_animatable.set_meta("dcl_col".into(), 0.to_variant());
                     new_animatable.set_meta("invisible_mesh".into(), invisible_mesh.to_variant());
                     new_animatable.set_collision_layer(0);
@@ -377,14 +377,13 @@ fn create_colliders(node_to_inspect: Gd<Node>) {
                     parent.add_child(new_animatable.clone().upcast());
                     parent.remove_child(static_body_3d.clone().upcast());
 
-                    for mut body_child in static_body_3d
+                    for body_child in static_body_3d
                         .get_children_ex()
                         .include_internal(true)
                         .done()
                         .iter_shared()
                     {
                         static_body_3d.remove_child(body_child.clone());
-                        body_child.call("set_owner".into(), &[Variant::nil()]);
                         new_animatable.add_child(body_child.clone());
                         if let Ok(collision_shape_3d) = body_child.try_cast::<CollisionShape3D>() {
                             if let Some(shape) = collision_shape_3d.get_shape() {
@@ -445,9 +444,9 @@ fn update_set_mask_colliders(
             node.set_collision_layer(mask as u32);
             node.set_collision_mask(0);
             if mask == 0 {
-                node.set_process_mode(ProcessMode::DISABLED);
+                node.set_process_mode(ProcessMode::PROCESS_MODE_DISABLED);
             } else {
-                node.set_process_mode(ProcessMode::INHERIT);
+                node.set_process_mode(ProcessMode::PROCESS_MODE_INHERIT);
             }
         }
 
@@ -494,7 +493,7 @@ fn _duplicate_animation_resources(gltf_node: Gd<Node>) {
             let _ = new_animations.insert(animation_name, dup_animation);
         }
 
-        let mut new_animation_library = AnimationLibrary::new_gd();
+        let mut new_animation_library = AnimationLibrary::new();
         for new_animation in new_animations {
             new_animation_library.add_animation(new_animation.0, new_animation.1.cast());
         }
@@ -613,7 +612,7 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
         }
 
         if armature_prop.is_some() {
-            let new_track_prop = anim.add_track(TrackType::VALUE);
+            let new_track_prop = anim.add_track(TrackType::TYPE_VALUE);
             anim.track_set_path(
                 new_track_prop,
                 format!("Armature_Prop_{}:visible", anim_sufix_from_hash).into(),
@@ -623,7 +622,7 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
 
         if !audio_added {
             audio_added = true;
-            let new_track_audio = anim.add_track(TrackType::METHOD);
+            let new_track_audio = anim.add_track(TrackType::TYPE_METHOD);
             anim.track_set_path(new_track_audio, ".".into());
             anim.track_insert_key(
                 new_track_audio,
@@ -641,7 +640,7 @@ fn add_animation_from_obj(file_hash: &String, gltf_node: Gd<Node3D>) -> Option<G
 }
 
 #[derive(GodotClass)]
-#[class(init, base=RefCounted)]
+#[class(base=RefCounted)]
 pub struct DclEmoteGltf {
     #[var]
     armature_prop: Option<Gd<Node3D>>,

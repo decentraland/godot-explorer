@@ -84,9 +84,9 @@ func _ready():
 	Global.music_player.stop()
 
 	if Global.is_xr():
-		player = load("res://src/logic/player/xr_player.tscn").instantiate()
+		player = preload("res://src/logic/player/xr_player.tscn").instantiate()
 	else:
-		player = load("res://src/logic/player/player.tscn").instantiate()
+		player = preload("res://src/logic/player/player.tscn").instantiate()
 
 	player.set_name("Player")
 	$world.add_child(player)

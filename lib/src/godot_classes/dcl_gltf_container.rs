@@ -8,8 +8,8 @@ use crate::dcl::SceneId;
 use super::animator_controller::{apply_anims, DUMMY_ANIMATION_NAME};
 use super::dcl_global::DclGlobal;
 
-#[derive(Clone, Var, GodotConvert, Export, PartialEq, Debug)]
-#[godot(via=i32)]
+#[repr(i32)]
+#[derive(Clone, Property, Export, PartialEq, Debug)]
 pub enum GltfContainerLoadingState {
     Unknown = 0,
     #[allow(dead_code)]
@@ -90,6 +90,7 @@ pub struct DclGltfContainer {
     #[export]
     dcl_pending_node: Option<Gd<Node>>,
 
+    #[base]
     base: Base<Node3D>,
 }
 
@@ -98,13 +99,13 @@ impl DclGltfContainer {
     // This function
     #[func]
     pub fn get_gltf_resource(&self) -> Option<Gd<Node3D>> {
-        let child_count = self.base().get_child_count();
+        let child_count = self.base.get_child_count();
         if child_count == 0 {
             return None;
         }
 
         for i in 0..child_count {
-            if let Some(child) = self.base().get_child(i) {
+            if let Some(child) = self.base.get_child(i) {
                 if let Ok(node) = child.try_cast::<Node3D>() {
                     return Some(node);
                 }
@@ -141,14 +142,14 @@ impl DclGltfContainer {
             } else {
                 let animation_list = animation_player.get_animation_list();
                 let animation_name = if animation_list.len() > 1 {
-                    let value = animation_list.get(0).as_ref().unwrap().to_string();
+                    let value = animation_list.get(0).to_string();
                     if value == DUMMY_ANIMATION_NAME {
-                        animation_list.get(1).as_ref().unwrap().to_string()
+                        animation_list.get(1).to_string()
                     } else {
                         value
                     }
                 } else if !animation_list.is_empty() {
-                    animation_list.get(0).as_ref().unwrap().to_string()
+                    animation_list.get(0).to_string()
                 } else {
                     return;
                 };
@@ -174,7 +175,7 @@ impl DclGltfContainer {
 }
 
 #[godot_api]
-impl INode3D for DclGltfContainer {
+impl INode for DclGltfContainer {
     fn init(base: Base<Node3D>) -> Self {
         Self {
             dcl_gltf_src: "".into(),

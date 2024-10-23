@@ -33,12 +33,10 @@ offset_left = 33.0
 offset_top = 24.0
 offset_right = 633.0
 offset_bottom = 688.0
-current_tab = 0
 
 [node name="Avatars" type="Panel" parent="TabContainer"]
 custom_minimum_size = Vector2(600, 600)
 layout_mode = 2
-metadata/_tab_index = 0
 
 [node name="OptionButton_AvatarList" type="OptionButton" parent="TabContainer/Avatars"]
 layout_mode = 0
@@ -75,7 +73,6 @@ icon = ExtResource("4_wetld")
 visible = false
 custom_minimum_size = Vector2(600, 600)
 layout_mode = 2
-metadata/_tab_index = 1
 
 [node name="EmoteWheel" parent="TabContainer/Emotes" node_paths=PackedStringArray("avatar_node") instance=ExtResource("3_ubmva")]
 layout_mode = 1
@@ -140,7 +137,6 @@ grow_vertical = 2
 [node name="Expression" type="PanelContainer" parent="TabContainer"]
 visible = false
 layout_mode = 2
-metadata/_tab_index = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="TabContainer/Expression"]
 layout_mode = 2

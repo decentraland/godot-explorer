@@ -170,7 +170,7 @@ impl INode for ContentProvider {
                     let data = entry.promise.bind().get_data();
                     if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
                         if let Some(resource_locker) =
-                            node_3d.get_node_or_null(NodePath::from("ResourceLocker"))
+                            node_3d.get_node(NodePath::from("ResourceLocker"))
                         {
                             if let Ok(resource_locker) =
                                 resource_locker.try_cast::<ResourceLocker>()

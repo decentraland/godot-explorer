@@ -116,7 +116,7 @@ impl RustHttpRequester {
         tracing::info!("Requesting json: {:?}", url.to_string());
 
         let method = match method {
-            godot::engine::http_client::Method::POST => http::Method::POST,
+            godot::engine::http_client::Method::METHOD_POST => http::Method::POST,
             _ => http::Method::GET,
         };
 
@@ -125,7 +125,7 @@ impl RustHttpRequester {
             _ => {
                 let mut headers_vec = Vec::new();
                 for i in 0..headers.len() {
-                    let header = headers.get(i).as_ref().unwrap().to_string();
+                    let header = headers.get(i).to_string();
                     headers_vec.push(header);
                 }
                 Some(headers_vec)

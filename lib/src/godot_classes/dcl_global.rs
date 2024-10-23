@@ -42,6 +42,7 @@ mod android {
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclGlobal {
+    #[base]
     _base: Base<Node>,
 
     #[var]
@@ -102,23 +103,23 @@ impl INode for DclGlobal {
 
         log_panics::init();
 
-        let mut avatars: Gd<AvatarScene> = AvatarScene::new_alloc();
-        let mut comms: Gd<CommunicationManager> = CommunicationManager::new_alloc();
-        let mut scene_runner: Gd<SceneManager> = SceneManager::new_alloc();
-        let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::new_alloc();
+        let mut avatars: Gd<AvatarScene> = AvatarScene::alloc_gd();
+        let mut comms: Gd<CommunicationManager> = CommunicationManager::alloc_gd();
+        let mut scene_runner: Gd<SceneManager> = SceneManager::alloc_gd();
+        let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::alloc_gd();
 
         tokio_runtime.set_name("tokio_runtime".into());
         scene_runner.set_name("scene_runner".into());
-        scene_runner.set_process_mode(ProcessMode::DISABLED);
+        scene_runner.set_process_mode(ProcessMode::PROCESS_MODE_DISABLED);
 
         comms.set_name("comms".into());
         avatars.set_name("avatars".into());
 
         let args = godot::engine::Os::singleton().get_cmdline_args();
 
-        let testing_scene_mode = args.find(&"--scene-test".into(), None).is_some();
-        let preview_mode = args.find(&"--preview".into(), None).is_some();
-        let developer_mode = args.find(&"--dev".into(), None).is_some();
+        let testing_scene_mode = args.find("--scene-test".into(), None).is_some();
+        let preview_mode = args.find("--preview".into(), None).is_some();
+        let developer_mode = args.find("--dev".into(), None).is_some();
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
@@ -129,19 +130,19 @@ impl INode for DclGlobal {
             comms,
             avatars,
             tokio_runtime,
-            testing_tools: DclTestingTools::new_alloc(),
-            realm: DclRealm::new_alloc(),
-            portable_experience_controller: DclPortableExperienceController::new_alloc(),
+            testing_tools: DclTestingTools::alloc_gd(),
+            realm: DclRealm::alloc_gd(),
+            portable_experience_controller: DclPortableExperienceController::alloc_gd(),
             preview_mode,
             testing_scene_mode,
-            dcl_tokio_rpc: DclTokioRpc::new_alloc(),
-            magic_link: MagicLink::new_alloc(),
-            player_identity: DclPlayerIdentity::new_alloc(),
-            content_provider: ContentProvider::new_alloc(),
+            dcl_tokio_rpc: DclTokioRpc::alloc_gd(),
+            magic_link: MagicLink::alloc_gd(),
+            player_identity: DclPlayerIdentity::alloc_gd(),
+            content_provider: ContentProvider::alloc_gd(),
             http_requester: RustHttpQueueRequester::new_gd(),
             config: DclConfig::new_gd(),
             ethereum_provider: Arc::new(EthereumProvider::new()),
-            metrics: Metrics::new_alloc(),
+            metrics: Metrics::alloc_gd(),
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
         }
     }
@@ -179,7 +180,7 @@ impl DclGlobal {
             .get_main_loop()?
             .cast::<SceneTree>()
             .get_root()?
-            .get_node_or_null("Global".into())?
+            .get_node("Global".into())?
             .try_cast::<Self>();
         if let Ok(res) = res {
             Some(res)

@@ -36,6 +36,7 @@ pub struct DclAudioSource {
     #[var]
     dcl_scene_id: i32,
 
+    #[base]
     _base: Base<AudioStreamPlayer3D>,
 }
 

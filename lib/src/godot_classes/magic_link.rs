@@ -18,6 +18,7 @@ pub struct MagicLink {
     #[var]
     public_address: GString,
 
+    #[base]
     base: Base<Node>,
 }
 
@@ -63,7 +64,7 @@ impl MagicLink {
 
         self.set_wallet_connected(true);
 
-        self.base_mut().call_deferred(
+        self.base.call_deferred(
             "emit_signal".into(),
             &["connected".to_variant(), address.clone().to_variant()],
         );
@@ -74,7 +75,7 @@ impl MagicLink {
         self.set_public_address("".into());
         self.set_wallet_connected(false);
 
-        self.base_mut()
+        self.base
             .call_deferred("emit_signal".into(), &["logout".to_variant()]);
     }
 
@@ -82,7 +83,7 @@ impl MagicLink {
     fn _on_connection_state(&mut self, state: GString) {
         let success = state == "true".into();
 
-        self.base_mut().call_deferred(
+        self.base.call_deferred(
             "emit_signal".into(),
             &["connection_state".to_variant(), success.to_variant()],
         );
@@ -90,7 +91,7 @@ impl MagicLink {
 
     #[func]
     fn _on_signed_message(&mut self, signature: GString) {
-        self.base_mut().call_deferred(
+        self.base.call_deferred(
             "emit_signal".into(),
             &["message_signed".to_variant(), signature.to_variant()],
         );
@@ -107,17 +108,17 @@ impl MagicLink {
                     network.to_variant(),
                 ],
             );
-            singleton.connect("connected".into(), self.base().callable("_on_connected"));
+            singleton.connect("connected".into(), self.base.callable("_on_connected"));
             singleton.connect(
                 "connection_state".into(),
-                self.base().callable("_on_connection_state"),
+                self.base.callable("_on_connection_state"),
             );
             singleton.connect(
                 "signed_message".into(),
-                self.base().callable("_on_signed_message"),
+                self.base.callable("_on_signed_message"),
             );
 
-            singleton.connect("on_logout".into(), self.base().callable("_on_logout"));
+            singleton.connect("on_logout".into(), self.base.callable("_on_logout"));
         } else {
             godot_print!("Initialization error");
         }

@@ -4,7 +4,7 @@ use godot::{
     engine::{
         control::{FocusMode, MouseFilter},
         global::MouseButton,
-        Control, IControl, InputEvent, InputEventMouseButton,
+        Control, InputEvent, InputEventMouseButton,
     },
     prelude::*,
 };
@@ -26,6 +26,7 @@ use crate::{
 #[derive(GodotClass)]
 #[class(base=Control)]
 pub struct DclUiControl {
+    #[base]
     base: Base<Control>,
 
     #[export]
@@ -41,7 +42,7 @@ pub struct DclUiControl {
 }
 
 #[godot_api]
-impl IControl for DclUiControl {
+impl INode for DclUiControl {
     fn init(base: Base<Control>) -> Self {
         Self {
             base,
@@ -55,7 +56,7 @@ impl IControl for DclUiControl {
     }
 
     fn ready(&mut self) {
-        self.base_mut().set_focus_mode(FocusMode::NONE);
+        self.base.set_focus_mode(FocusMode::FOCUS_NONE);
     }
 }
 
@@ -65,7 +66,7 @@ impl DclUiControl {
     pub fn _on_gui_input(&mut self, input: Gd<InputEvent>) {
         if let Ok(event) = input.try_cast::<InputEventMouseButton>() {
             let global_tick_number = GLOBAL_TICK_NUMBER.load(Ordering::Relaxed);
-            let is_left_button = event.get_button_index() == MouseButton::LEFT;
+            let is_left_button = event.get_button_index() == MouseButton::MOUSE_BUTTON_LEFT;
             let down_event = event.is_pressed();
 
             if self.listening_mouse_down && is_left_button && down_event {
@@ -108,13 +109,13 @@ impl DclUiControl {
         match self.force_pointer_filter_mode {
             PointerFilterMode::PfmNone => {
                 if self.is_gui_input_signal_connected {
-                    self.base_mut().set_mouse_filter(MouseFilter::STOP);
+                    self.base.set_mouse_filter(MouseFilter::MOUSE_FILTER_STOP);
                 } else {
-                    self.base_mut().set_mouse_filter(MouseFilter::IGNORE);
+                    self.base.set_mouse_filter(MouseFilter::MOUSE_FILTER_IGNORE);
                 }
             }
             PointerFilterMode::PfmBlock => {
-                self.base_mut().set_mouse_filter(MouseFilter::STOP);
+                self.base.set_mouse_filter(MouseFilter::MOUSE_FILTER_STOP);
             }
         }
     }
@@ -123,13 +124,14 @@ impl DclUiControl {
         if connect != self.is_gui_input_signal_connected {
             self.is_gui_input_signal_connected = connect;
 
-            let callable_on_gui_input = self.base().callable("_on_gui_input").clone();
             if connect {
-                self.base_mut()
-                    .connect("gui_input".into(), callable_on_gui_input);
+                self.base
+                    .clone()
+                    .connect("gui_input".into(), self.base.callable("_on_gui_input"));
             } else {
-                self.base_mut()
-                    .disconnect("gui_input".into(), callable_on_gui_input);
+                self.base
+                    .clone()
+                    .disconnect("gui_input".into(), self.base.callable("_on_gui_input"));
             }
             self.update_mouse_filter();
         }

@@ -14,7 +14,7 @@ impl Font {
     }
 
     pub fn try_get_font_resource(&self) -> Option<Gd<godot::engine::Font>> {
-        godot::engine::try_load(self.get_font_path()).ok()
+        godot::engine::try_load(self.get_font_path())
     }
 
     // TODO: Maybe the load can be cached and then return a duplicated one

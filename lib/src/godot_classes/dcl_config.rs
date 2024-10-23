@@ -1,7 +1,7 @@
 use godot::{engine::ConfigFile, prelude::*};
 
-#[derive(Clone, Var, GodotConvert, Export, PartialEq, Debug)]
-#[godot(via=i32)]
+#[repr(i32)]
+#[derive(Clone, Property, Export, PartialEq, Debug)]
 pub enum TextureQuality {
     Low = 0,
     Medium = 1,
@@ -42,6 +42,7 @@ impl TextureQuality {
 #[derive(GodotClass)]
 #[class(base=RefCounted)]
 pub struct DclConfig {
+    #[base]
     _base: Base<RefCounted>,
 
     #[var]
@@ -54,7 +55,7 @@ pub struct DclConfig {
 #[godot_api]
 impl IRefCounted for DclConfig {
     fn init(base: Base<RefCounted>) -> Self {
-        let mut settings_file: Gd<ConfigFile> = ConfigFile::new_gd();
+        let mut settings_file: Gd<ConfigFile> = ConfigFile::new();
         settings_file.load(DclConfig::get_settings_file_path());
 
         let texture_quality =
@@ -79,7 +80,7 @@ impl DclConfig {
     }
 
     pub fn static_get_texture_quality() -> TextureQuality {
-        let mut settings_file: Gd<ConfigFile> = ConfigFile::new_gd();
+        let mut settings_file: Gd<ConfigFile> = ConfigFile::new();
         settings_file.load(DclConfig::get_settings_file_path());
         let texture_quality = settings_file
             .get_value_ex("config".to_godot(), "texture_quality".to_godot())
