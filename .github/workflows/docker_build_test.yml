@@ -50,7 +50,7 @@ jobs:
         run: |
           /usr/bin/buildah images
           mkdir -p output
-          /usr/bin/buildah run ${{ steps.build-image.outputs.image }}:latest \
+          /usr/bin/buildah run localhost/${{ steps.build-image.outputs.image }}:latest \
             -v $(pwd)/tests/avatars-test-input.json:/app/avatars.json \
             -v $(pwd)/output:/app/output
 
