@@ -188,10 +188,10 @@ fn main() -> Result<(), anyhow::Error> {
         ("import-assets", _m) => {
             let status = import_assets();
             if !status.success() {
-                return Err(anyhow::anyhow!(
-                    "cargo build exited with non-zero status: {}",
+                println!(
+                    "WARN: cargo build exited with non-zero status: {}",
                     status
-                ));
+                );
             }
             Ok(())
         },
