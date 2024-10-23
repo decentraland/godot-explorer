@@ -129,7 +129,7 @@ impl DclUiText {
 
         self.base.set_vertical_alignment(vert_align);
         self.base.set_horizontal_alignment(hor_align);
-        self.base.set_text(new_value.value.clone().into());
+        self.base.set_text(clone_removing_tags(new_value.value.as_str()).into());
         self.base
             .set_justification_flags(JustificationFlag::JUSTIFICATION_NONE);
 
@@ -147,4 +147,38 @@ impl DclUiText {
                 .set_autowrap_mode(godot::engine::text_server::AutowrapMode::AUTOWRAP_OFF);
         }
     }
+}
+
+// temporary fix for removing <b>, </b>, <i>, </i> tags until is supportid
+// this is a clone() with avoiding .replace
+fn clone_removing_tags(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut skip = false;
+
+    let mut chars = input.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '<' {
+            if let Some(&next_char) = chars.peek() {
+                if next_char == 'b'
+                    || next_char == 'i'
+                    || (next_char == '/' && chars.nth(1) == Some('b'))
+                    || (next_char == '/' && chars.nth(1) == Some('i'))
+                {
+                    // Skip until closing '>'
+                    skip = true;
+                }
+            }
+        }
+
+        if c == '>' && skip {
+            skip = false;
+            continue;
+        }
+
+        if !skip {
+            result.push(c);
+        }
+    }
+
+    result
 }
