@@ -1,4 +1,4 @@
-use deno_core::{anyhow::anyhow, error::AnyError, op2, OpDecl, OpState};
+use deno_core::{anyhow::anyhow, error::AnyError, op, Op, OpDecl, OpState};
 use godot::builtin::{Vector2, Vector3};
 
 use crate::dcl::{
@@ -14,21 +14,20 @@ use super::SceneEnv;
 
 pub fn ops() -> Vec<OpDecl> {
     vec![
-        op_take_and_compare_snapshot(),
-        op_log_test_result(),
-        op_log_test_plan(),
+        op_take_and_compare_snapshot::DECL,
+        op_log_test_result::DECL,
+        op_log_test_plan::DECL,
     ]
 }
 
-#[op2]
-#[serde]
+#[op]
 fn op_take_and_compare_snapshot(
     state: &mut OpState,
-    #[string] src_stored_snapshot: String,
-    #[serde] camera_position: (f32, f32, f32),
-    #[serde] camera_target: (f32, f32, f32),
-    #[serde] screeshot_size: (f32, f32),
-    #[serde] method: TestingScreenshotComparisonMethodRequest,
+    src_stored_snapshot: String,
+    camera_position: [f32; 3],
+    camera_target: [f32; 3],
+    screeshot_size: [f32; 2],
+    method: TestingScreenshotComparisonMethodRequest,
 ) -> Result<TakeAndCompareSnapshotResponse, AnyError> {
     let scene_env = state.borrow::<SceneEnv>();
     if !scene_env.testing_enable {
@@ -45,18 +44,18 @@ fn op_take_and_compare_snapshot(
             scene_id,
             src_stored_snapshot,
             camera_position: Vector3 {
-                x: camera_position.0,
-                y: camera_position.1,
-                z: -camera_position.2,
+                x: camera_position[0],
+                y: camera_position[1],
+                z: -camera_position[2],
             },
             camera_target: Vector3 {
-                x: camera_target.0,
-                y: camera_target.1,
-                z: -camera_target.2,
+                x: camera_target[0],
+                y: camera_target[1],
+                z: -camera_target[2],
             },
             screeshot_size: Vector2 {
-                x: screeshot_size.0,
-                y: screeshot_size.1,
+                x: screeshot_size[0],
+                y: screeshot_size[1],
             },
             method,
             response: sx.into(),
@@ -91,15 +90,15 @@ fn op_take_and_compare_snapshot(
         .map_err(|e| anyhow!(e))
 }
 
-#[op2]
-fn op_log_test_result(state: &mut OpState, #[serde] body: SceneTestResult) {
+#[op]
+fn op_log_test_result(state: &mut OpState, body: SceneTestResult) {
     state
         .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::SceneTestResult { body });
 }
 
-#[op2]
-fn op_log_test_plan(state: &mut OpState, #[serde] body: SceneTestPlan) {
+#[op]
+fn op_log_test_plan(state: &mut OpState, body: SceneTestPlan) {
     state
         .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::SceneTestPlan { body });

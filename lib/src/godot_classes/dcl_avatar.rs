@@ -5,8 +5,8 @@ use crate::dcl::SceneId;
 
 use super::dcl_global::DclGlobal;
 
-#[derive(Var, GodotConvert, Export)]
-#[godot(via = i32)]
+#[derive(Property, Export)]
+#[repr(i32)]
 pub enum AvatarMovementType {
     ExternalController = 0,
     LerpTwoPoints = 1,
@@ -52,6 +52,7 @@ pub struct DclAvatar {
     land: bool,
 
     lerp_state: LerpState,
+    #[base]
     base: Base<Node3D>,
 }
 
@@ -107,12 +108,11 @@ impl DclAvatar {
         self.lerp_state.factor = 0.0;
         self.lerp_state.initial_velocity_y = y_velocity;
 
-        let initial_position = self.lerp_state.initial_position;
-
         // TODO: check euler order
-        self.base_mut()
+        self.base
             .set_global_rotation(new_target.basis.to_euler(EulerOrder::YXZ));
-        self.base_mut().set_global_position(initial_position);
+        self.base
+            .set_global_position(self.lerp_state.initial_position);
 
         self.update_parcel_position(self.lerp_state.target_position);
     }
@@ -121,7 +121,7 @@ impl DclAvatar {
     //  it handles the corner case where the avatar is already in the parcel
     //  that is being created
     pub fn on_parcel_scenes_changed(&mut self) {
-        let godot_parcel_position = self.base().get_global_position() / 16.0;
+        let godot_parcel_position = self.base.get_global_position() / 16.0;
         let parcel_position = Vector2i::new(
             f32::floor(godot_parcel_position.x) as i32,
             f32::floor(-godot_parcel_position.z) as i32,
@@ -135,7 +135,7 @@ impl DclAvatar {
 
         if prev_scene_id != scene_id {
             self.current_parcel_scene_id = scene_id;
-            self.base_mut().call_deferred(
+            self.base.call_deferred(
                 "emit_signal".into(),
                 &[
                     "change_scene_id".to_variant(),
@@ -156,7 +156,7 @@ impl DclAvatar {
 
         if self.current_parcel_position != parcel_position {
             self.current_parcel_position = parcel_position;
-            self.base_mut().call_deferred(
+            self.base.call_deferred(
                 "emit_signal".into(),
                 &[
                     "change_parcel_position".to_variant(),
@@ -172,7 +172,7 @@ impl DclAvatar {
             if self.current_parcel_scene_id != scene_id {
                 let prev_scene_id = self.current_parcel_scene_id;
                 self.current_parcel_scene_id = scene_id;
-                self.base_mut().call_deferred(
+                self.base.call_deferred(
                     "emit_signal".into(),
                     &[
                         "change_scene_id".to_variant(),
@@ -191,7 +191,7 @@ impl DclAvatar {
             if scene_id != SceneId::INVALID.0 {
                 let prev_scene_id = self.current_parcel_scene_id;
                 self.current_parcel_scene_id = scene_id;
-                self.base_mut().call_deferred(
+                self.base.call_deferred(
                     "emit_signal".into(),
                     &[
                         "change_scene_id".to_variant(),
@@ -211,7 +211,7 @@ impl DclAvatar {
             AvatarMovementType::ExternalController => {
                 self.lerp_state.factor += dt as f32;
                 if self.lerp_state.factor > 0.1 {
-                    self.update_parcel_position(self.base().get_global_position());
+                    self.update_parcel_position(self.base.get_global_position());
                 }
             }
             AvatarMovementType::LerpTwoPoints => {
@@ -221,12 +221,11 @@ impl DclAvatar {
                         self.lerp_state.factor = 1.0;
                     }
 
-                    let new_position = self
-                        .lerp_state
-                        .initial_position
-                        .lerp(self.lerp_state.target_position, self.lerp_state.factor);
-
-                    self.base_mut().set_global_position(new_position);
+                    self.base.set_global_position(
+                        self.lerp_state
+                            .initial_position
+                            .lerp(self.lerp_state.target_position, self.lerp_state.factor),
+                    );
                 }
             }
         }

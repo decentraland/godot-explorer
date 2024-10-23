@@ -39,6 +39,7 @@ pub struct DclPlayerIdentity {
     #[var]
     is_guest: bool,
 
+    #[base]
     base: Base<Node>,
 }
 
@@ -88,7 +89,7 @@ impl DclPlayerIdentity {
                     "error {e} invalid data ephemeral_auth_chain {:?}",
                     ephemeral_auth_chain
                 );
-                self.base_mut().call_deferred(
+                self.base.call_deferred(
                     "_error_getting_wallet".into(),
                     &["Error parsing ephemeral_auth_chain".to_variant()],
                 );
@@ -113,7 +114,7 @@ impl DclPlayerIdentity {
         self.ephemeral_auth_chain = Some(ephemeral_auth_chain);
 
         let address = self.get_address();
-        self.base_mut().call_deferred(
+        self.base.call_deferred(
             "emit_signal".into(),
             &[
                 "wallet_connected".to_variant(),
@@ -143,7 +144,7 @@ impl DclPlayerIdentity {
 
         let address = format!("{:#x}", self.get_address());
 
-        self.base_mut().call_deferred(
+        self.base.call_deferred(
             "emit_signal".into(),
             &[
                 "wallet_connected".to_variant(),
@@ -177,7 +178,7 @@ impl DclPlayerIdentity {
 
         self.magic_auth = false;
 
-        let instance_id = self.base().instance_id();
+        let instance_id = self.base.instance_id();
         let sender = DclGlobal::singleton()
             .bind()
             .get_dcl_tokio_rpc()
@@ -225,7 +226,7 @@ impl DclPlayerIdentity {
 
         self.magic_auth = true;
 
-        let instance_id = self.base().instance_id();
+        let instance_id = self.base.instance_id();
         let sender = DclGlobal::singleton()
             .bind()
             .get_dcl_tokio_rpc()
@@ -327,17 +328,17 @@ impl DclPlayerIdentity {
         };
 
         if let Some(CurrentWallet::Local { wallet: _, keys }) = &self.wallet {
-            let _ = dict.insert(
+            dict.insert(
                 "local_wallet",
                 PackedByteArray::from_iter(keys.iter().cloned()).to_variant(),
             );
         }
 
-        let _ = dict.insert("magic_auth", self.magic_auth.to_variant());
+        dict.insert("magic_auth", self.magic_auth.to_variant());
 
-        let _ = dict.insert("account_address", self.get_address_str().to_variant());
-        let _ = dict.insert("chain_id", chain_id.to_variant());
-        let _ = dict.insert(
+        dict.insert("account_address", self.get_address_str().to_variant());
+        dict.insert("chain_id", chain_id.to_variant());
+        dict.insert(
             "ephemeral_auth_chain",
             serde_json::to_string(&self.ephemeral_auth_chain.as_ref().unwrap())
                 .expect("serialize ephemeral auth chain")
@@ -360,7 +361,7 @@ impl DclPlayerIdentity {
         let profile = DclUserProfile::from_gd(profile);
         self.profile = Some(profile.clone());
 
-        self.base_mut().call_deferred(
+        self.base.call_deferred(
             "emit_signal".into(),
             &["profile_changed".to_variant(), profile.to_variant()],
         );
@@ -370,7 +371,7 @@ impl DclPlayerIdentity {
     pub fn set_profile(&mut self, profile: Gd<DclUserProfile>) {
         self.profile = Some(profile.clone());
 
-        self.base_mut().call_deferred(
+        self.base.call_deferred(
             "emit_signal".into(),
             &["profile_changed".to_variant(), profile.to_variant()],
         );
@@ -391,7 +392,7 @@ impl DclPlayerIdentity {
         metadata: GString,
         method: GString,
     ) -> Gd<Promise> {
-        let promise = Promise::new_alloc();
+        let promise = Promise::alloc_gd();
         let promise_instance_id = promise.instance_id();
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
@@ -438,7 +439,7 @@ impl DclPlayerIdentity {
         new_profile: Gd<DclUserProfile>,
         has_new_snapshots: bool,
     ) -> Gd<Promise> {
-        let promise = Promise::new_alloc();
+        let promise = Promise::alloc_gd();
         let promise_instance_id = promise.instance_id();
 
         let current_profile = if let Some(profile) = self.profile.clone() {
@@ -516,7 +517,7 @@ impl DclPlayerIdentity {
                 let new_profile = DclUserProfile::from_gd(profile);
                 self.profile = Some(new_profile.clone());
 
-                self.base_mut().call_deferred(
+                self.base.call_deferred(
                     "emit_signal".into(),
                     &["profile_changed".to_variant(), new_profile.to_variant()],
                 );
@@ -560,7 +561,7 @@ impl DclPlayerIdentity {
         self.wallet = None;
         self.ephemeral_auth_chain = None;
         self.profile = None;
-        self.base_mut()
+        self.base
             .call_deferred("emit_signal".into(), &["logout".to_variant()]);
     }
 

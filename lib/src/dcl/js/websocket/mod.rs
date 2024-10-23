@@ -1,13 +1,18 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use deno_core::{error::AnyError, op2, OpDecl, OpState};
+use deno_core::{error::AnyError, op, Op, OpDecl, OpState};
 use futures_util::{SinkExt, StreamExt};
 use http::{HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 use tokio_tungstenite::tungstenite::{client::IntoClientRequest, protocol::CloseFrame};
 
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_ws_create(), op_ws_cleanup(), op_ws_send(), op_ws_poll()]
+    vec![
+        op_ws_create::DECL,
+        op_ws_cleanup::DECL,
+        op_ws_send::DECL,
+        op_ws_poll::DECL,
+    ]
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -191,12 +196,8 @@ async fn ws_poll(
     Ok(())
 }
 
-#[op2]
-fn op_ws_create(
-    op_state: Rc<RefCell<OpState>>,
-    #[string] url: String,
-    #[serde] protocols: Vec<String>,
-) -> u32 {
+#[op]
+fn op_ws_create(op_state: Rc<RefCell<OpState>>, url: String, protocols: Vec<String>) -> u32 {
     let has_ws_state = op_state.borrow().has::<WsState>();
     if !has_ws_state {
         op_state.borrow_mut().put::<WsState>(WsState {
@@ -230,8 +231,7 @@ fn op_ws_create(
     ws_resource_id
 }
 
-#[op2(async)]
-#[serde]
+#[op]
 async fn op_ws_poll(op_state: Rc<RefCell<OpState>>, res_id: u32) -> Result<WsPoll, AnyError> {
     let mut receiver = {
         let mut state = op_state.borrow_mut();
@@ -267,11 +267,11 @@ async fn op_ws_poll(op_state: Rc<RefCell<OpState>>, res_id: u32) -> Result<WsPol
     data
 }
 
-#[op2(async)]
+#[op]
 async fn op_ws_send(
     op_state: Rc<RefCell<OpState>>,
     res_id: u32,
-    #[serde] event: WsSendData,
+    event: WsSendData,
 ) -> Result<(), AnyError> {
     let sender = {
         let state = op_state.borrow_mut();
@@ -285,7 +285,7 @@ async fn op_ws_send(
     sender.send(event).await.map_err(anyhow::Error::from)
 }
 
-#[op2(fast)]
+#[op]
 fn op_ws_cleanup(state: &mut OpState, res_id: u32) -> Result<(), AnyError> {
     tracing::debug!("cleanup {:?}", res_id);
 

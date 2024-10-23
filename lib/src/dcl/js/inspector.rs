@@ -15,7 +15,7 @@ use deno_core::futures::task::Poll;
 use deno_core::serde_json;
 use deno_core::serde_json::json;
 use deno_core::serde_json::Value;
-use deno_core::unsync::spawn;
+use deno_core::task::spawn;
 use deno_core::InspectorMsg;
 use deno_core::InspectorSessionProxy;
 use deno_core::JsRuntime;
@@ -118,7 +118,7 @@ where
     Fut::Output: 'static,
 {
     fn execute(&self, fut: Fut) {
-        deno_core::unsync::spawn(fut);
+        deno_core::task::spawn(fut);
     }
 }
 
@@ -255,7 +255,7 @@ async fn server(
     let json_version_response = json!({
       "Browser": name,
       "Protocol-Version": "1.3",
-      "V8-Version": deno_core::v8::VERSION_STRING,
+      "V8-Version": deno_core::v8_version(),
     });
 
     let make_svc = hyper1::service::make_service_fn(|_| {

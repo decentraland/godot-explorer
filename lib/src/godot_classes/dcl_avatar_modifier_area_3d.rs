@@ -1,8 +1,8 @@
 use godot::engine::Area3D;
 use godot::prelude::*;
 
-#[derive(Var, GodotConvert, Export, PartialEq, Debug)]
-#[godot(via = i32)]
+#[repr(i32)]
+#[derive(Property, Export, PartialEq, Debug)]
 pub enum AvatarModifierType {
     HideAvatar = 0,
     DisablePassports = 1,
@@ -20,6 +20,7 @@ pub struct DclAvatarModifierArea3D {
     #[export]
     area: Vector3,
 
+    #[base]
     _base: Base<Area3D>,
 }
 

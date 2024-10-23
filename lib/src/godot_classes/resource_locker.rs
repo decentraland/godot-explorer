@@ -1,12 +1,27 @@
 use godot::{engine::node::InternalMode, prelude::*};
 
 #[derive(GodotClass)]
-#[class(init, base=Node)]
+#[class(base=Node)]
 pub struct ResourceLocker {
     #[export]
     reference: Gd<Resource>,
 
+    #[base]
     base: Base<Node>,
+}
+
+#[godot_api]
+impl INode for ResourceLocker {
+    fn init(mut base: Base<Node>) -> Self {
+        let reference = Resource::new();
+        base.set_name("ResourceLocker".to_godot());
+
+        base.set_meta(
+            StringName::from("instance_id"),
+            reference.instance_id().to_variant(),
+        );
+        Self { base, reference }
+    }
 }
 
 #[godot_api]
@@ -18,17 +33,10 @@ impl ResourceLocker {
             return;
         }
 
-        let mut resource_locker = Gd::from_init_fn(|base| {
-            let reference = Resource::new_gd();
-            ResourceLocker { reference, base }
-        });
-
-        let instance_id = resource_locker.bind().reference.instance_id().to_variant();
-        resource_locker.set_name("ResourceLocker".to_godot());
-        resource_locker.set_meta(StringName::from("instance_id"), instance_id);
+        let resource_locker = ResourceLocker::alloc_gd();
 
         node.add_child_ex(resource_locker.upcast())
-            .internal(InternalMode::FRONT)
+            .internal(InternalMode::INTERNAL_MODE_FRONT)
             .done();
     }
 

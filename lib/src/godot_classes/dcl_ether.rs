@@ -4,6 +4,7 @@ use godot::prelude::*;
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
 pub struct DclEther {
+    #[base]
     _base: Base<RefCounted>,
 }
 

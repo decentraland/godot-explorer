@@ -18,4 +18,3 @@ serde_json = { version = "1.0.92", features = ["raw_value"] }
 glob = "*"
 tokio = { version = "1.26.0", features = ["sync", "rt-multi-thread", "net"] }
 directories = "5.0.1"
-image = "0.25.4"

@@ -10,31 +10,7 @@
 				"urn:decentraland:off-chain:base-avatars:keanu_hair",
 				"urn:decentraland:off-chain:base-avatars:granpa_beard"
 			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
+			"forceRender": []
 		},
 		{
 			"ref": "ForceRender and Skin",
@@ -79,31 +55,7 @@
 				"urn:decentraland:matic:collections-v2:0x0dc28547b88100eb6b3f3890f0501607aa5dd6be:0:3202",
 				"urn:decentraland:matic:collections-v2:0xbf83965191065487db0644812649d5238435c723:1:105312291668557186697918027683670432318895095400549111254310978934"
 			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
+			"forceRender": []
 		},
 		{
 			"ref": "Test A",
@@ -119,31 +71,7 @@
 				"urn:decentraland:ethereum:collections-v1:cybermike_cybersoldier_set:cybersoldier_leggings_lower_body:34",
 				"urn:decentraland:ethereum:collections-v1:cybermike_cybersoldier_set:cybersoldier_torso_upper_body:35"
 			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
+			"forceRender": []
 		},
 		{
 			"ref": "Test B",
@@ -162,31 +90,7 @@
 				"urn:decentraland:ethereum:collections-v1:halloween_2020:hwn_2020_ghostblaster_tiara:3855",
 				"urn:decentraland:matic:collections-v2:0xded1e53d7a43ac1844b66c0ca0f02627eb42e16d:3:315936875005671560093754083051011296956685286201647333762932932647"
 			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
+			"forceRender": []
 		},
 		{
 			"ref": "Female",
@@ -199,31 +103,7 @@
 				"urn:decentraland:off-chain:base-avatars:black_sun_glasses",
 				"urn:decentraland:off-chain:base-avatars:f_mouth_05"
 			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
+			"forceRender": []
 		},
 		{
 			"ref": "MarianoPlayground - pants not present",
@@ -269,31 +149,7 @@
 				"urn:decentraland:matic:collections-v2:0x2113853d20f7b6d08fa756c294fb6f36e9108b22:0:26",
 				"urn:decentraland:matic:collections-v2:0x2929bbb4f18b40ac52a7f0b91629c695e3f96504:2:210624583337114373395836055367340864637790190801098222508621955096"
 			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
+			"forceRender": []
 		},
 		{
 			"ref": "MarianoPlayground - pants not present v3",
@@ -308,31 +164,7 @@
 				"urn:decentraland:matic:collections-v2:0xbf83965191065487db0644812649d5238435c723:4:421249166674228746791672110734681729275580381602196445017243911444",
 				"urn:decentraland:matic:collections-v2:0xbf83965191065487db0644812649d5238435c723:7:737186041679900306885426193785693026232265667803843778780176844143"
 			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
+			"forceRender": []
 		},
 		{
 			"ref": "MarianoPlayground - feet not present",
@@ -345,31 +177,7 @@
 				"urn:decentraland:off-chain:base-avatars:f_eyes_08",
 				"urn:decentraland:off-chain:base-avatars:blue_star_earring"
 			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
+			"forceRender": []
 		},
 		{
 			"ref": "MarianoPlayground - green shadow not present",
@@ -392,31 +200,7 @@
 				"urn:decentraland:matic:collections-v2:0x07d03ca2c27f29ec3c4cf3afad857c5af13f61cd:7:737186041679900306885426193785693026232265667803843778780176842874",
 				"urn:decentraland:matic:collections-v2:0xc65c3e0dd85d993678e02a1407be7d804fae4667:2:210624583337114373395836055367340864637790190801098222508621955084"
 			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
+			"forceRender": []
 		},
 		{
 			"ref": "With lower body not hidden",
@@ -433,307 +217,7 @@
 				"urn:decentraland:matic:collections-v2:0x3ec01a62bbbad1b49a8a51b86d4d7eeffa0775c0:1:105312291668557186697918027683670432318895095400549111254310977684",
 				"urn:decentraland:matic:collections-v2:0x3338d5294e0312dd39f77a725a65e1ab8f009fd0:0:328"
 			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
-		},
-		{
-			"ref": "mati test A 2024-09-26",
-			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
-			"wearables": [
-				"urn:decentraland:off-chain:base-avatars:mouth_03",
-				"urn:decentraland:off-chain:base-avatars:f_eyebrows_01",
-				"urn:decentraland:off-chain:base-avatars:eyes_00",
-				"urn:decentraland:matic:collections-v2:0xb854bf4d15be8e1f9b38e8b6af7d3283b81edfd8:1:105312291668557186697918027683670432318895095400549111254310977575",
-				"urn:decentraland:matic:collections-v2:0x021159005cda2bbaf591c061a69d890725804855:0:81",
-				"urn:decentraland:matic:collections-v2:0xd99c0320d8d4d36a77740b13439059dbc7446835:4:421249166674228746791672110734681729275580381602196445017243910162",
-				"urn:decentraland:matic:collections-v2:0x26ea2f6a7273a2f28b410406d1c13ff7d4c9a162:5:526561458342785933489590138418352161594475477002745556271554889477",
-				"urn:decentraland:matic:collections-v2:0x378cd34662fcd2311743fad74b5a196ad0cb2544:0:226",
-				"urn:decentraland:matic:collections-v2:0xded1e53d7a43ac1844b66c0ca0f02627eb42e16d:6:631873750011343120187508166102022593913370572403294667525865865533",
-				"urn:decentraland:matic:collections-v2:0xded1e53d7a43ac1844b66c0ca0f02627eb42e16d:0:439",
-				"urn:decentraland:matic:collections-v2:0xf16ff41128b298304b761b49c1c56580972ada32:0:10",
-				"urn:decentraland:off-chain:base-avatars:black_glove",
-				"urn:decentraland:matic:collections-v2:0x26ea2f6a7273a2f28b410406d1c13ff7d4c9a162:0:1603",
-				"urn:decentraland:off-chain:base-avatars:full_beard"
-			],
-			"forceRender": [
-				"facial_hair"
-			],
-			"eyes": {
-				"color": {
-					"r": 0.22265625,
-					"g": 0.484375,
-					"b": 0.69140625,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.12156863510608673,
-					"g": 0.08627451211214066,
-					"b": 0.07058823853731155,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.32156863808631897,
-					"g": 0.17254900932312012,
-					"b": 0.10980391502380371,
-					"a": 1
-				}
-			}
-		},
-		{
-			"ref": "mati test B 2024-09-26",
-			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
-			"wearables": [
-				"urn:decentraland:off-chain:base-avatars:sport_jacket",
-				"urn:decentraland:off-chain:base-avatars:corduroygreenpants",
-				"urn:decentraland:off-chain:base-avatars:citycomfortableshoes",
-				"urn:decentraland:off-chain:base-avatars:modern_hair",
-				"urn:decentraland:off-chain:base-avatars:mouth_04",
-				"urn:decentraland:off-chain:base-avatars:eyebrows_01",
-				"urn:decentraland:off-chain:base-avatars:eyes_01",
-				"urn:decentraland:off-chain:base-avatars:piratepatch",
-				"urn:decentraland:off-chain:base-avatars:red_bandana"
-			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.37254902720451355,
-					"g": 0.2235294133424759,
-					"b": 0.19607843458652496,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.3977261781692505,
-					"g": 0.30723604559898376,
-					"b": 0.09609238803386688,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.9490196108818054,
-					"g": 0.7607843279838562,
-					"b": 0.6470588445663452,
-					"a": 1
-				}
-			}
-		},
-		{
-			"ref": "0x51a514d3f28ea19775e811fc09396e808394bd12",
-			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
-			"wearables": [
-				"urn:decentraland:matic:collections-v2:0xee77b0a104cd6db1bbbcfa2f13076f234647c017:0:15",
-				"urn:decentraland:matic:collections-v2:0xee77b0a104cd6db1bbbcfa2f13076f234647c017:2:210624583337114373395836055367340864637790190801098222508621955075",
-				"urn:decentraland:matic:collections-v2:0xee77b0a104cd6db1bbbcfa2f13076f234647c017:1:105312291668557186697918027683670432318895095400549111254310977553",
-				"urn:decentraland:off-chain:base-avatars:eyebrows_03",
-				"urn:decentraland:off-chain:base-avatars:eyes_02",
-				"urn:decentraland:off-chain:base-avatars:f_mouth_03"
-			],
-			"forceRender": [
-				"mask",
-				"tiara",
-				"earring",
-				"feet",
-				"hat",
-				"hair"
-			],
-			"eyes": {
-				"color": {
-					"r": 0.125490203499794,
-					"g": 0.7019608020782471,
-					"b": 0.9647058844566345
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 1,
-					"g": 0.7450980544090271,
-					"b": 0.1568627506494522
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 1,
-					"g": 0.8497498035430908,
-					"b": 0
-				}
-			}
-		},
-		{
-			"ref": "0xa9272ec23574eb5846a1bc752bc19770beadfae5",
-			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
-			"wearables": [
-				"urn:decentraland:off-chain:base-avatars:black_jacket",
-				"urn:decentraland:off-chain:base-avatars:f_african_leggins",
-				"urn:decentraland:off-chain:base-avatars:curly_hair",
-				"urn:decentraland:off-chain:base-avatars:eyebrows_00",
-				"urn:decentraland:off-chain:base-avatars:eyes_00",
-				"urn:decentraland:off-chain:base-avatars:f_mouth_00"
-			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0,
-					"g": 0,
-					"b": 0
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.6000000238418579,
-					"g": 0.23999999463558197,
-					"b": 0.23999999463558197
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0,
-					"g": 1,
-					"b": 0.26315808296203613
-				}
-			}
-		},
-		{
-			"ref": "with emissive",
-			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
-			"wearables": [
-				"urn:decentraland:matic:collections-v2:0xe91f0faf04bcb2c1c25ac9459fb90228be8735e7:0:17",
-				"urn:decentraland:matic:collections-v2:0xa780096910ce7fc4663ad3a954b34e2d842f0374:0:7",
-				"urn:decentraland:matic:collections-v2:0x08dc1667db12675e8cfb6e58ba30fe865d8c4bb6:0:8",
-				"urn:decentraland:matic:collections-v2:0x300c8583c5f18fd3f2bcc251ce913394a8c5d8f9:0:80",
-				"urn:decentraland:matic:collections-v2:0x768c1027b1f1a452ecb8dab017a1e630a75f0d30:9:947810625017014680281262249153033890870055858604942001288798799313",
-				"urn:decentraland:off-chain:base-avatars:eyebrows_00",
-				"urn:decentraland:off-chain:base-avatars:eyes_00",
-				"urn:decentraland:off-chain:base-avatars:f_mouth_04"
-			],
-			"forceRender": [
-				"helmet"
-			],
-			"eyes": {
-				"color": {
-					"r": 0.052996814250946045,
-					"g": 0.5021452307701111,
-					"b": 0.025209957733750343,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.009899990633130074,
-					"g": 0.9900000095367432,
-					"b": 0.23136761784553528,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.8666666746139526,
-					"g": 0.6941176652908325,
-					"b": 0.5607843399047852,
-					"a": 1
-				}
-			}
-		},
-		{
-			"ref": "without emissive",
-			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
-			"wearables": [
-				"urn:decentraland:off-chain:base-avatars:f_simple_yellow_tshirt",
-				"urn:decentraland:off-chain:base-avatars:f_short_blue_jeans",
-				"urn:decentraland:off-chain:base-avatars:pink_sleepers",
-				"urn:decentraland:off-chain:base-avatars:cornrows",
-				"urn:decentraland:off-chain:base-avatars:green_stone_tiara",
-				"urn:decentraland:off-chain:base-avatars:f_mouth_04"
-			],
-			"forceRender": [],
-			"eyes": {
-				"color": {
-					"r": 0.052996814250946045,
-					"g": 0.5021452307701111,
-					"b": 0.025209957733750343,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.009899990633130074,
-					"g": 0.9900000095367432,
-					"b": 0.23136761784553528,
-					"a": 1
-				}
-			},
-			"skin": {
-				"color": {
-					"r": 0.8666666746139526,
-					"g": 0.6941176652908325,
-					"b": 0.5607843399047852,
-					"a": 1
-				}
-			}
-		},
-		{
-			"ref": "without emissive v2",
-			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
-			"skin": {
-				"color": {
-					"r": 0.800000011920929,
-					"g": 0.6078431606292725,
-					"b": 0.46666666865348816,
-					"a": 1
-				}
-			},
-			"hair": {
-				"color": {
-					"r": 0.48235294222831726,
-					"g": 0.2823529541492462,
-					"b": 0.0941176488995552,
-					"a": 1
-				}
-			},
-			"eyes": {
-				"color": {
-					"r": 0.125490203499794,
-					"g": 0.7019608020782471,
-					"b": 0.9647058844566345,
-					"a": 1
-				}
-			},
-			"wearables": [
-				"urn:decentraland:off-chain:base-avatars:f_blue_jacket",
-				"urn:decentraland:off-chain:base-avatars:f_capris",
-				"urn:decentraland:off-chain:base-avatars:ruby_blue_loafer",
-				"urn:decentraland:off-chain:base-avatars:pony_tail",
-				"urn:decentraland:off-chain:base-avatars:pearls_earring",
-				"urn:decentraland:off-chain:base-avatars:f_mouth_05"
-			]
+			"forceRender": []
 		}
 	],
 	"emotes": [
