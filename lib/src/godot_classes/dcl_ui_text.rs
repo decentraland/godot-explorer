@@ -129,7 +129,8 @@ impl DclUiText {
 
         self.base.set_vertical_alignment(vert_align);
         self.base.set_horizontal_alignment(hor_align);
-        self.base.set_text(clone_removing_tags(new_value.value.as_str()).into());
+        self.base
+            .set_text(clone_removing_tags(new_value.value.as_str()).into());
         self.base
             .set_justification_flags(JustificationFlag::JUSTIFICATION_NONE);
 
