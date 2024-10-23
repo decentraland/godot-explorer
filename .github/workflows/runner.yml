@@ -41,17 +41,11 @@ jobs:
     needs: static-checks
     uses: ./.github/workflows/windows_builds.yml
 
-  # Third stage: Extra ci
-  docker-build:
-    name: 🐳 Docker builds
+  # Third stage: Extras
+  docker-build-test:
+    name: 🐳 Docker builds and test
     needs: linux-build
-    uses: ./.github/workflows/docker_builds.yml
-    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/docker_build_test.yml
     secrets:
       QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
       QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
-
-  docker-tests:
-    name: 🧪 Docker tests
-    needs: docker-build
-    uses: ./.github/workflows/docker_tests.yml

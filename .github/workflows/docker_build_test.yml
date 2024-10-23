@@ -1,4 +1,4 @@
-name: 🐳 Docker builds
+name: 🐳 Docker builds and test
 on:
   workflow_call:
     secrets:
@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   build-images:
-    name: Build images
+    name: Build images and test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout sources
@@ -36,6 +36,7 @@ jobs:
             COMMIT_HASH=${{ github.sha }}
 
       - name: Push To quay.io
+        if: github.ref == 'refs/heads/main' # TODO: Push only on tags / releases?
         id: push-to-quay
         uses: redhat-actions/push-to-registry@v2
         with:
@@ -45,5 +46,24 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_TOKEN }}
 
-      - name: Print image url
-        run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
+      - name: Run avatar test
+        run: |
+          mkdir -p output
+          docker run --rm \
+            -v $(pwd)/tests/avatars-test-input.json:/app/avatars.json \
+            -v $(pwd)/output:/app/output \
+            ${{ steps.build-image.outputs.image }}:${{ steps.build-image.outputs.tags }}
+
+      - name: Compare images with snapshots
+        run: |
+          cargo run -- compare-image-folders \
+            --snapshots tests/snapshots/avatar-image-generation/ \
+            --result ${{ github.workspace }}/output/
+
+      - name: Upload artifacts
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: avatar-snapshots
+          path: |
+            ${{ github.workspace }}/output/**/*
