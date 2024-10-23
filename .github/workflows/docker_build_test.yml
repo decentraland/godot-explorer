@@ -28,7 +28,7 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           image: godot-explorer
-          tags: ${{ github.sha }}
+          tags: latest ${{ github.sha }}
           dockerfiles: |
             ./Dockerfile
           build-args: |
@@ -48,9 +48,9 @@ jobs:
 
       - name: Run avatar test
         run: |
-          docker images
+          /usr/bin/buildah images
           mkdir -p output
-          /usr/bin/buildah run ${{ steps.build-image.outputs.image-with-tag }} \
+          /usr/bin/buildah run ${{ steps.build-image.outputs.image }}:latest \
             -v $(pwd)/tests/avatars-test-input.json:/app/avatars.json \
             -v $(pwd)/output:/app/output
 
