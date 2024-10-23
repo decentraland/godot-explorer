@@ -4,10 +4,19 @@ description: Import assets
 runs:
   using: composite
   steps:
+    # Step 1: Restore cache
+    - name: Restore Godot assets cache
+      uses: actions/cache@v3
+      with:
+        path: godot/.godot
+        key: ${{ runner.os }}-godot-assets-cache
+
+    # Step 2: Run the command that generates/uses the assets
     - name: Import assets
       shell: bash
       run: cargo run -- import-assets
 
+    # Step 3: Save cache
     - name: Cache Godot assets
       uses: actions/cache@v3
       with:
