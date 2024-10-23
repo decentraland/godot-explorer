@@ -36,6 +36,8 @@ pub fn import_assets() -> ExitStatus
         "--headless",
         "--rendering-driver",
         "opengl3",
+        "--quit-after",
+        "1000",
     ];
 
     println!("execute ${program} {:?}", args);
