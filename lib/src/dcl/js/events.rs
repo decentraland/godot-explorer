@@ -9,7 +9,7 @@ use crate::dcl::{
         SceneCrdtStateProtoComponents,
     },
 };
-use deno_core::{op2, OpDecl, OpState};
+use deno_core::{op, Op, OpDecl, OpState};
 use ethers_core::types::H160;
 use serde::Serialize;
 use std::{
@@ -18,7 +18,11 @@ use std::{
 };
 
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_subscribe(), op_unsubscribe(), op_send_batch()]
+    vec![
+        op_subscribe::DECL,
+        op_unsubscribe::DECL,
+        op_send_batch::DECL,
+    ]
 }
 
 #[derive(Serialize)]
@@ -151,8 +155,8 @@ struct EventSender<T: EventType> {
     _p: PhantomData<fn() -> T>,
 }
 
-#[op2(fast)]
-fn op_subscribe(state: &mut OpState, #[string] id: &str) {
+#[op]
+fn op_subscribe(state: &mut OpState, id: &str) {
     macro_rules! register {
         ($id: expr, $state: expr, $marker: ty) => {{
             if id == <$marker as EventType>::label() {
@@ -190,8 +194,8 @@ fn op_subscribe(state: &mut OpState, #[string] id: &str) {
     tracing::warn!("subscribe to unrecognised event {id}");
 }
 
-#[op2(fast)]
-fn op_unsubscribe(state: &mut OpState, #[string] id: &str) {
+#[op]
+fn op_unsubscribe(state: &mut OpState, id: &str) {
     macro_rules! unregister {
         ($id: expr, $state: expr, $marker: ty) => {{
             if id == <$marker as EventType>::label() {
@@ -229,8 +233,7 @@ struct EventGeneric {
     event_data: String,
 }
 
-#[op2]
-#[serde]
+#[op]
 fn op_send_batch(state: &mut OpState) -> Vec<Event> {
     let mut results = Vec::default();
 

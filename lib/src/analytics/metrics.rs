@@ -62,10 +62,10 @@ impl INode for Metrics {
         timer.set_one_shot(false);
         timer.set_autostart(true);
 
-        let callable = self.base().callable("timer_timeout");
+        let callable = self.base.callable("timer_timeout");
         timer.connect("timeout".into(), callable);
 
-        self.base_mut().add_child(timer.upcast());
+        self.base.add_child(timer.upcast());
     }
 
     fn process(&mut self, delta: f64) {

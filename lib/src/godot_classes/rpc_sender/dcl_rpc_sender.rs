@@ -1,12 +1,13 @@
 #[macro_export]
 macro_rules! generate_dcl_rpc_sender {
     ($struct_name:ident, $response_type:ty) => {
-        #[derive(godot::prelude::GodotClass)]
+        #[derive(godot::bind::GodotClass)]
         #[class(init, base=RefCounted)]
         pub struct $struct_name {
             sender:
                 Option<$crate::dcl::scene_apis::RpcResultSender<Result<$response_type, String>>>,
 
+            #[base]
             _base: godot::obj::Base<godot::engine::RefCounted>,
         }
 
@@ -19,7 +20,7 @@ macro_rules! generate_dcl_rpc_sender {
             }
         }
 
-        #[godot::prelude::godot_api]
+        #[godot::bind::godot_api]
         impl $struct_name {
             #[func]
             fn send(&mut self, response: godot::prelude::Variant) {

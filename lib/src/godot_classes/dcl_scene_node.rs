@@ -13,6 +13,7 @@ pub struct DclSceneNode {
     pub max_gltf_loaded_count: i32,
     pub gltf_loading_count: i32,
 
+    #[base]
     _base: Base<Node3D>,
 }
 

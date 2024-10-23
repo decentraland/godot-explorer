@@ -73,10 +73,12 @@ pub fn copy_library(debug_mode: bool, link_libs: bool) -> Result<(), anyhow::Err
     copy_if_modified(source_file, destination_file, link_libs)?;
 
     if debug_mode && os == "windows" {
-        let source_file =
-            adjust_canonicalization(fs::canonicalize(source_folder)?.join("dclgodot.pdb"));
-        let destination_file =
-            adjust_canonicalization(fs::canonicalize(lib_folder.as_str())?.join("dclgodot.pdb"));
+        let source_file = adjust_canonicalization(
+            fs::canonicalize(source_folder)?.join("dclgodot.pdb".to_string()),
+        );
+        let destination_file = adjust_canonicalization(
+            fs::canonicalize(lib_folder.as_str())?.join("dclgodot.pdb".to_string()),
+        );
         copy_if_modified(source_file, destination_file, link_libs)?;
     }
 

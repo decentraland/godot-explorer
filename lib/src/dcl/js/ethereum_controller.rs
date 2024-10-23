@@ -1,4 +1,4 @@
-use deno_core::{anyhow::anyhow, error::AnyError, op2, OpDecl, OpState};
+use deno_core::{anyhow::anyhow, error::AnyError, op, Op, OpDecl, OpState};
 
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
@@ -9,15 +9,14 @@ use crate::{
 
 // list of op declarations
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_send_async()]
+    vec![op_send_async::DECL]
 }
 
-#[op2(async)]
-#[serde]
+#[op]
 async fn op_send_async(
     state: Rc<RefCell<OpState>>,
-    #[string] method: String,
-    #[string] params: String,
+    method: String,
+    params: String,
 ) -> Result<serde_json::Value, AnyError> {
     let params: Vec<serde_json::Value> = serde_json::from_str(&params)?;
 

@@ -5,7 +5,11 @@ pub mod transform_and_parent;
 
 use std::hash::Hash;
 
-use godot::{engine::global::PropertyHint, prelude::*, register::property::PropertyHintInfo};
+use godot::{
+    bind::property::PropertyHintInfo,
+    engine::global::PropertyHint,
+    prelude::{Export, Property},
+};
 
 #[derive(PartialEq, Eq, Hash, PartialOrd, Ord, Debug, Clone, Copy, Default)]
 pub struct SceneEntityId {
@@ -13,16 +17,14 @@ pub struct SceneEntityId {
     pub version: u16,
 }
 
-impl GodotConvert for SceneEntityId {
-    type Via = i32;
-}
+impl Property for SceneEntityId {
+    type Intermediate = i32;
 
-impl Var for SceneEntityId {
-    fn get_property(&self) -> Self::Via {
+    fn get_property(&self) -> Self::Intermediate {
         self.as_i32()
     }
 
-    fn set_property(&mut self, value: Self::Via) {
+    fn set_property(&mut self, value: Self::Intermediate) {
         *self = Self::from_i32(value);
     }
 }
@@ -30,7 +32,7 @@ impl Var for SceneEntityId {
 impl Export for SceneEntityId {
     fn default_export_info() -> PropertyHintInfo {
         PropertyHintInfo {
-            hint: PropertyHint::NONE,
+            hint: PropertyHint::PROPERTY_HINT_NONE,
             hint_string: "Entity ID in the owner scene".into(),
         }
     }

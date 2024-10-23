@@ -49,6 +49,7 @@ use super::{
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct SceneManager {
+    #[base]
     base: Base<Node>,
 
     #[var]
@@ -177,7 +178,7 @@ impl SceneManager {
             self.base_ui.clone(),
         );
 
-        self.base_mut()
+        self.base
             .add_child(new_scene.godot_dcl_scene.root_node_3d.clone().upcast());
 
         if let SceneType::Global(_) = scene_type {
@@ -189,7 +190,7 @@ impl SceneManager {
         self.sorted_scene_ids.push(new_scene_id);
         self.compute_scene_distance();
 
-        self.base_mut().call_deferred(
+        self.base.call_deferred(
             "emit_signal".into(),
             &[
                 "scene_spawned".to_variant(),
@@ -486,7 +487,7 @@ impl SceneManager {
             scene.godot_dcl_scene.root_node_ui.queue_free();
             scene.godot_dcl_scene.root_node_3d.queue_free();
 
-            self.base_mut()
+            self.base
                 .remove_child(scene.godot_dcl_scene.root_node_3d.upcast());
 
             let node_ui = scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>();
@@ -512,7 +513,7 @@ impl SceneManager {
                 }
             }
 
-            self.base_mut().emit_signal(
+            self.base.emit_signal(
                 "scene_killed".into(),
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
@@ -654,7 +655,7 @@ impl SceneManager {
         let raycast_to =
             raycast_from + camera_node.project_ray_normal(self.cursor_position) * RAY_LENGTH;
         let mut space = camera_node.get_world_3d()?.get_direct_space_state()?;
-        let mut raycast_query = PhysicsRayQueryParameters3D::new_gd();
+        let mut raycast_query = PhysicsRayQueryParameters3D::new();
         raycast_query.set_from(raycast_from);
         raycast_query.set_to(raycast_to);
         raycast_query.set_collision_mask(1); // CL_POINTER
@@ -728,7 +729,7 @@ impl SceneManager {
     fn _on_ui_resize(&mut self) {
         self.ui_canvas_information = self.create_ui_canvas_information();
 
-        let viewport = self.base().get_viewport();
+        let viewport = self.base.get_viewport();
         if let Some(viewport) = viewport {
             let viewport_size = viewport.get_visible_rect();
             self.cursor_position =
@@ -794,9 +795,10 @@ impl SceneManager {
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
-        let scene_id = Variant::from(self.current_parcel_scene_id.0);
-        self.base_mut()
-            .emit_signal("on_change_scene_id".into(), &[scene_id]);
+        self.base.emit_signal(
+            "on_change_scene_id".into(),
+            &[Variant::from(self.current_parcel_scene_id.0)],
+        );
     }
 
     #[signal]
@@ -914,9 +916,9 @@ impl INode for SceneManager {
         let (thread_sender_to_main, main_receiver_from_thread) =
             std::sync::mpsc::sync_channel(1000);
 
-        let mut base_ui = DclUiControl::new_alloc();
-        base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);
-        base_ui.set_mouse_filter(MouseFilter::IGNORE);
+        let mut base_ui = DclUiControl::alloc_gd();
+        base_ui.set_anchors_preset(LayoutPreset::PRESET_FULL_RECT);
+        base_ui.set_mouse_filter(MouseFilter::MOUSE_FILTER_IGNORE);
 
         let canvas_size = base_ui.get_size();
 
@@ -957,13 +959,11 @@ impl INode for SceneManager {
     }
 
     fn ready(&mut self) {
-        let callable_on_ui_resize = self.base().callable("_on_ui_resize");
-
         self.base_ui
-            .connect("resized".into(), callable_on_ui_resize);
+            .connect("resized".into(), self.base.callable("_on_ui_resize"));
         self.base_ui.set_name("scenes_ui".into());
         self.ui_canvas_information = self.create_ui_canvas_information();
-        let viewport = self.base().get_viewport();
+        let viewport = self.base.get_viewport();
         if let Some(viewport) = viewport {
             let viewport_size = viewport.get_visible_rect();
             self.cursor_position =
@@ -1045,8 +1045,7 @@ impl INode for SceneManager {
         }
 
         self.set_pointer_tooltips(tooltips);
-        self.base_mut()
-            .emit_signal("pointer_tooltip_changed".into(), &[]);
+        self.base.emit_signal("pointer_tooltip_changed".into(), &[]);
 
         if self.camera_node.is_none() {
             return;
@@ -1059,14 +1058,14 @@ impl INode for SceneManager {
         for (_, scene) in self.scenes.iter_mut() {
             if let Some(player_node) = scene
                 .godot_dcl_scene
-                .get_node_or_null_3d_mut(&SceneEntityId::PLAYER)
+                .get_node_3d_mut(&SceneEntityId::PLAYER)
             {
                 player_node.set_global_transform(self.player_node.get_global_transform());
             }
 
             if let Some(camera_node) = scene
                 .godot_dcl_scene
-                .get_node_or_null_3d_mut(&SceneEntityId::CAMERA)
+                .get_node_3d_mut(&SceneEntityId::CAMERA)
             {
                 camera_node.set_global_transform(player_camera_node.get_global_transform());
             }

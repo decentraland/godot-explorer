@@ -1,7 +1,7 @@
 # Godot 4+ specific ignores
 /.godot/
 
-/android/
+android/
 
 # Godot-specific ignores
 .import/
@@ -21,6 +21,3 @@ mono_crash.*.json
 .directory
 .DS_Store
 *~
-
-# Decentraland ignores
-/output/

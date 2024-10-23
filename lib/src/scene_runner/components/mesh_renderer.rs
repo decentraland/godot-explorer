@@ -59,10 +59,8 @@ pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMe
         },
         _ => {
             let box_mesh = match current_mesh {
-                Some(current_mesh) => current_mesh
-                    .try_cast::<BoxMesh>()
-                    .unwrap_or(BoxMesh::new_gd()),
-                None => BoxMesh::new_gd(),
+                Some(current_mesh) => current_mesh.try_cast::<BoxMesh>().unwrap_or(BoxMesh::new()),
+                None => BoxMesh::new(),
             };
             mesh_instance.set_mesh(box_mesh.upcast());
             // update the material (and with uvs)

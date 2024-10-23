@@ -76,7 +76,7 @@ pub fn run(
     if itest {
         args.push("--headless");
         args.push("--verbose");
-        args.push("--test-runner");
+        args.push("--test");
     }
 
     if !extras.is_empty() {

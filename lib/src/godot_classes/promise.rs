@@ -4,6 +4,7 @@ use godot::prelude::*;
 #[class(init, base=Object)]
 pub struct PromiseError {
     pub error_description: GString,
+    #[base]
     base: Base<Object>,
 }
 
@@ -17,7 +18,7 @@ impl PromiseError {
 
 impl PromiseError {
     fn new(error_description: GString) -> Gd<Self> {
-        let mut promise_error = Self::new_alloc();
+        let mut promise_error = Self::alloc_gd();
         promise_error.bind_mut().error_description = error_description;
         promise_error
     }
@@ -29,6 +30,7 @@ pub struct Promise {
     resolved: bool,
     data: Variant,
 
+    #[base]
     base: Base<Object>,
 }
 
@@ -43,7 +45,7 @@ impl Promise {
             return;
         }
         self.resolved = true;
-        self.base_mut()
+        self.base
             .call_deferred("emit_signal".into(), &["on_resolved".to_variant()]);
     }
 
@@ -85,7 +87,7 @@ impl Promise {
     }
 
     pub fn make_to_async() -> (Gd<Promise>, impl Fn() -> Option<Gd<Promise>>) {
-        let this_promise = Promise::new_alloc();
+        let this_promise = Promise::alloc_gd();
         let promise_instance_id = this_promise.instance_id();
         let get_promise = move || Gd::<Promise>::try_from_instance_id(promise_instance_id).ok();
         (this_promise, get_promise)
@@ -100,7 +102,7 @@ impl Promise {
     }
 
     pub fn from_rejected(reason: String) -> Gd<Self> {
-        let mut data = PromiseError::new_alloc();
+        let mut data = PromiseError::alloc_gd();
         data.bind_mut().error_description = GString::from(reason);
 
         Gd::from_init_fn(|base| Self {
