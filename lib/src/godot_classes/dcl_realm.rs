@@ -30,7 +30,6 @@ pub struct DclRealm {
     #[var]
     content_base_url: GString,
 
-    #[base]
     _base: Base<Node>,
 }
 

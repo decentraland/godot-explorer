@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use deno_core::{op, Op, OpDecl, OpState};
+use deno_core::{op2, OpDecl, OpState};
 
 use crate::dcl::{
     common::{SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent},
@@ -27,15 +27,12 @@ use super::{
 
 // list of op declarations
 pub fn ops() -> Vec<OpDecl> {
-    vec![
-        op_crdt_send_to_renderer::DECL,
-        op_crdt_recv_from_renderer::DECL,
-    ]
+    vec![op_crdt_send_to_renderer(), op_crdt_recv_from_renderer()]
 }
 
 // receive and process a buffer of crdt messages
-#[op(v8)]
-fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
+#[op2(fast)]
+fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messages: &[u8]) {
     let dying = op_state.borrow().borrow::<SceneDying>().0;
     if dying {
         return;
@@ -79,16 +76,20 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, messages: &[u8]) {
         .expect("error sending scene response!!")
 }
 
-#[op(v8)]
-async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u8>> {
+#[op2(async)]
+#[serde]
+async fn op_crdt_recv_from_renderer(
+    op_state: Rc<RefCell<OpState>>,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     let dying = op_state.borrow().borrow::<SceneDying>().0;
     if dying {
-        return vec![];
+        return Ok(vec![]);
     }
 
     let mut receiver = op_state
         .borrow_mut()
-        .take::<tokio::sync::mpsc::Receiver<RendererResponse>>();
+        .try_take::<tokio::sync::mpsc::Receiver<RendererResponse>>()
+        .ok_or(anyhow::Error::msg("already borrowed"))?;
     let response = receiver.recv().await;
 
     let mut op_state = op_state.borrow_mut();
@@ -182,7 +183,7 @@ async fn op_crdt_recv_from_renderer(op_state: Rc<RefCell<OpState>>) -> Vec<Vec<u
         ret.push(main_crdt.0);
     }
     ret.push(data);
-    ret
+    Ok(ret)
 }
 
 fn process_local_api_calls(local_api_calls: Vec<LocalCall>, crdt_state: &SceneCrdtState) {
