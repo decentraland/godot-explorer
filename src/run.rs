@@ -22,7 +22,11 @@ pub fn run(
     extras: Vec<String>,
     with_build_envs: Option<HashMap<String, String>>,
 ) -> Result<(), anyhow::Error> {
-    let with_build_envs = with_build_envs.unwrap_or_default();
+    let with_build_envs = match with_build_envs {
+        Some(vars) => vars,
+        None => HashMap::new(),
+    };
+
     let program = adjust_canonicalization(
         std::fs::canonicalize(format!(
             "{}godot/{}",
@@ -84,7 +88,7 @@ pub fn run(
     if itest {
         args.push("--headless");
         args.push("--verbose");
-        args.push("--test-runner");
+        args.push("--test");
     }
 
     if !extras.is_empty() {

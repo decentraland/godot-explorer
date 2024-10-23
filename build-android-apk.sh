@@ -7,12 +7,7 @@ EXPLORER_PATH=$(pwd)
 if [ ! -d ${EXPLORER_PATH}/godot/android/ ]
 then
     echo "Checkout godot android template"
-    git clone -b bump-4.3 https://github.com/decentraland/godot-explorer-android-template ${EXPLORER_PATH}/godot/android
-fi
-
-# temp workaround: check if JAVA_HOME is not set
-if [ -z "$JAVA_HOME" ]; then
-  export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+    git clone https://github.com/decentraland/godot-explorer-android-template ${EXPLORER_PATH}/godot/android
 fi
 
 echo "Build for Linux x86_64"
@@ -23,7 +18,7 @@ cargo run -- run --only-build
 echo "Link export templates"
 mkdir -p ${HOME}/.local/share/godot/export_templates/
 cd ${HOME}/.local/share/godot/export_templates/
-ln -sf ${EXPLORER_PATH}/.bin/godot/templates/templates/ 4.3.stable
+ln -sf ${EXPLORER_PATH}/.bin/godot/templates/templates/ 4.2.1.stable
 
 set -e 
 
@@ -51,25 +46,7 @@ cd ${EXPLORER_PATH}/godot/
 
 # Build the .aab without x86_64 architecture
 echo "Export Godot android.apk"
-
-# Define the command to be executed
-COMMAND="${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk"
-
-# Try executing the command
-if ! $COMMAND; then
-    echo "First attempt failed, retrying in 5 seconds..."
-    sleep 5 # Wait for 5 seconds before retrying
-
-    # Retry executing the command
-    if ! $COMMAND; then
-        echo "Second attempt failed."
-    else
-        echo "Second attempt succeeded."
-    fi
-else
-    echo "First attempt succeeded."
-fi
-
+${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk || true
 ${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Quest ${EXPLORER_PATH}/meta-quest.apk || true
 
 

@@ -18,15 +18,6 @@ func _ready():
 	option_button_avatar_list.selected = -1
 	option_button_avatar_list.text = "Select an avatar"
 
-	# Visual enhance
-	var viewport: Viewport = sub_viewport_container.subviewport.get_viewport()
-	viewport.use_debanding = true
-	viewport.scaling_3d_scale = 2.0
-	RenderingServer.viewport_set_msaa_3d(
-		viewport.get_viewport_rid(), RenderingServer.VIEWPORT_MSAA_8X
-	)
-	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
-
 
 func load_avatar_list():
 	var file = FileAccess.open("res://src/test/avatar/avatar_list.json", FileAccess.READ)
@@ -118,20 +109,8 @@ func _on_option_button_avatar_list_item_selected(index):
 	var avatar_wf: DclAvatarWireFormat = profile.get_avatar()
 
 	avatar_wf.set_wearables(PackedStringArray(avatar_list[avatar_i].wearables))
-	avatar_wf.set_force_render(avatar_list[avatar_i].get("forceRender", []))
+	avatar_wf.set_force_render(avatar_list[avatar_i].forceRender)
 	avatar_wf.set_body_shape(avatar_list[avatar_i].bodyShape)
-
-	var skin_color = avatar_list[avatar_i].get("skin", {}).get("color", {})
-	var eyes_color = avatar_list[avatar_i].get("eye", {}).get("color", {})
-	var hair_color = avatar_list[avatar_i].get("hair", {}).get("color", {})
-
-	skin_color = Color(skin_color.get("r", 0.8), skin_color.get("g", 0.8), skin_color.get("b", 0.8))
-	eyes_color = Color(eyes_color.get("r", 0.8), eyes_color.get("g", 0.8), eyes_color.get("b", 0.8))
-	hair_color = Color(hair_color.get("r", 0.8), hair_color.get("g", 0.8), hair_color.get("b", 0.8))
-
-	avatar_wf.set_eyes_color(eyes_color)
-	avatar_wf.set_hair_color(hair_color)
-	avatar_wf.set_skin_color(skin_color)
 
 	await avatar.async_update_avatar(avatar_wf, "")
 

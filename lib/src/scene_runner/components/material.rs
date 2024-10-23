@@ -17,8 +17,7 @@ use crate::{
 };
 use godot::{
     engine::{base_material_3d::Transparency, MeshInstance3D, StandardMaterial3D},
-    global::weakref,
-    prelude::*,
+    prelude::{utilities::weakref, *},
 };
 
 pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -87,7 +86,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mut godot_material = if let Some(material) = existing_material {
                     material.to::<Gd<StandardMaterial3D>>()
                 } else {
-                    let godot_material = StandardMaterial3D::new_gd();
+                    let godot_material = StandardMaterial3D::new();
 
                     let waiting_textures = {
                         match &dcl_material {
@@ -112,7 +111,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     godot_material
                 };
 
-                godot_material.set_transparency(Transparency::ALPHA_DEPTH_PRE_PASS);
+                godot_material.set_transparency(Transparency::TRANSPARENCY_ALPHA_DEPTH_PRE_PASS);
 
                 match &dcl_material {
                     DclMaterial::Unlit(unlit) => {
@@ -180,7 +179,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 match dcl_material {
                     DclMaterial::Unlit(unlit_material) => {
                         ready &= check_texture(
-                            godot::engine::base_material_3d::TextureParam::ALBEDO,
+                            godot::engine::base_material_3d::TextureParam::TEXTURE_ALBEDO,
                             &unlit_material.texture,
                             &mut material,
                             content_provider.bind_mut(),
@@ -189,7 +188,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     }
                     DclMaterial::Pbr(pbr) => {
                         ready &= check_texture(
-                            godot::engine::base_material_3d::TextureParam::ALBEDO,
+                            godot::engine::base_material_3d::TextureParam::TEXTURE_ALBEDO,
                             &pbr.texture,
                             &mut material,
                             content_provider.bind_mut(),
@@ -202,14 +201,14 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         //     &mut content_provider,
                         // );
                         ready &= check_texture(
-                            godot::engine::base_material_3d::TextureParam::NORMAL,
+                            godot::engine::base_material_3d::TextureParam::TEXTURE_NORMAL,
                             &pbr.bump_texture,
                             &mut material,
                             content_provider.bind_mut(),
                             scene,
                         );
                         ready &= check_texture(
-                            godot::engine::base_material_3d::TextureParam::EMISSION,
+                            godot::engine::base_material_3d::TextureParam::TEXTURE_EMISSION,
                             &pbr.emissive_texture,
                             &mut material,
                             content_provider.bind_mut(),

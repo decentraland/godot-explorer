@@ -175,7 +175,7 @@ impl FfmpegContext for VideoContext {
                 self.video_info.width as i32,
                 self.video_info.height as i32,
                 false,
-                Format::RGBA8,
+                Format::FORMAT_RGBA8,
                 data_arr,
             )
             .unwrap();
@@ -187,7 +187,7 @@ impl FfmpegContext for VideoContext {
                 self.video_info.width as i32,
                 self.video_info.height as i32,
                 false,
-                Format::RGBA8,
+                Format::FORMAT_RGBA8,
                 data_arr,
             );
             self.texture.update(image);

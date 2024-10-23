@@ -1,7 +1,7 @@
 use godot::{
+    bind::{godot_api, GodotClass},
     builtin::{meta::ToGodot, Dictionary, GString},
     obj::Gd,
-    prelude::*,
 };
 
 use crate::comms::profile::UserProfile;

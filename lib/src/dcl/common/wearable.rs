@@ -8,7 +8,7 @@ pub struct I18N {
     pub text: String,
 }
 
-#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BaseItemEntityMetadata {
     pub id: String,
     pub description: String,

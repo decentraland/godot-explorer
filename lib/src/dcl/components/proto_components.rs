@@ -145,40 +145,40 @@ impl sdk::components::common::TextAlignMode {
     ) {
         match self {
             sdk::components::common::TextAlignMode::TamTopLeft => (
-                godot::engine::global::HorizontalAlignment::LEFT,
-                godot::engine::global::VerticalAlignment::TOP,
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
             ),
             sdk::components::common::TextAlignMode::TamTopCenter => (
-                godot::engine::global::HorizontalAlignment::CENTER,
-                godot::engine::global::VerticalAlignment::TOP,
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
             ),
             sdk::components::common::TextAlignMode::TamTopRight => (
-                godot::engine::global::HorizontalAlignment::RIGHT,
-                godot::engine::global::VerticalAlignment::TOP,
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
             ),
             sdk::components::common::TextAlignMode::TamMiddleLeft => (
-                godot::engine::global::HorizontalAlignment::LEFT,
-                godot::engine::global::VerticalAlignment::CENTER,
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
             ),
             sdk::components::common::TextAlignMode::TamMiddleCenter => (
-                godot::engine::global::HorizontalAlignment::CENTER,
-                godot::engine::global::VerticalAlignment::CENTER,
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
             ),
             sdk::components::common::TextAlignMode::TamMiddleRight => (
-                godot::engine::global::HorizontalAlignment::RIGHT,
-                godot::engine::global::VerticalAlignment::CENTER,
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
             ),
             sdk::components::common::TextAlignMode::TamBottomLeft => (
-                godot::engine::global::HorizontalAlignment::LEFT,
-                godot::engine::global::VerticalAlignment::BOTTOM,
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
             ),
             sdk::components::common::TextAlignMode::TamBottomCenter => (
-                godot::engine::global::HorizontalAlignment::CENTER,
-                godot::engine::global::VerticalAlignment::BOTTOM,
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
             ),
             sdk::components::common::TextAlignMode::TamBottomRight => (
-                godot::engine::global::HorizontalAlignment::RIGHT,
-                godot::engine::global::VerticalAlignment::BOTTOM,
+                godot::engine::global::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
+                godot::engine::global::VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
             ),
         }
     }

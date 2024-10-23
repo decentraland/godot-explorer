@@ -34,6 +34,7 @@ pub struct CommunicationManager {
     last_position_broadcast_index: u64,
     voice_chat_enabled: bool,
 
+    #[base]
     base: Base<Node>,
 }
 
@@ -50,7 +51,7 @@ impl INode for CommunicationManager {
     }
 
     fn ready(&mut self) {
-        self.base_mut().call_deferred("init_rs".into(), &[]);
+        self.base.call_deferred("init_rs".into(), &[]);
     }
 
     fn process(&mut self, _dt: f64) {
@@ -60,9 +61,8 @@ impl INode for CommunicationManager {
                 let player_identity = DclGlobal::singleton().bind().get_player_identity();
 
                 if player_identity.bind().try_get_address().is_some() {
-                    let var = adapter_url.to_variant();
-                    self.base_mut()
-                        .call_deferred("change_adapter".into(), &[var]);
+                    self.base
+                        .call_deferred("change_adapter".into(), &[adapter_url.to_variant()]);
                 }
             }
             CommsConnection::SignedLogin(signed_login) => match signed_login.poll() {
@@ -85,7 +85,7 @@ impl INode for CommunicationManager {
 
                     if !chats.is_empty() {
                         let chats_variant_array = get_chat_array(chats);
-                        self.base_mut().emit_signal(
+                        self.base.emit_signal(
                             "chat_message".into(),
                             &[chats_variant_array.to_variant()],
                         );
@@ -103,7 +103,7 @@ impl INode for CommunicationManager {
 
                 if !chats.is_empty() {
                     let chats_variant_array = get_chat_array(chats);
-                    self.base_mut()
+                    self.base
                         .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
                 }
 
@@ -274,25 +274,24 @@ impl CommunicationManager {
     fn init_rs(&mut self) {
         DclGlobal::singleton().bind().get_realm().connect(
             "realm_changed".into(),
-            self.base().callable("_on_realm_changed"),
+            self.base.callable("_on_realm_changed"),
         );
 
         let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
         player_identity.connect(
             "profile_changed".into(),
-            self.base().callable("_on_profile_changed"),
+            self.base.callable("_on_profile_changed"),
         );
     }
 
     #[func]
-    fn _on_profile_changed(&mut self, _: Variant) {
-        self.base_mut()
-            .call_deferred("_on_update_profile".into(), &[]);
+    fn _on_profile_changed(&mut self) {
+        self.base.call_deferred("_on_update_profile".into(), &[]);
     }
 
     #[func]
     fn _on_realm_changed(&mut self) {
-        self.base_mut()
+        self.base
             .call_deferred("_on_realm_changed_deferred".into(), &[]);
     }
 
@@ -462,10 +461,12 @@ impl CommunicationManager {
             _ => false,
         };
 
-        let voice_chat_enabled = self.voice_chat_enabled.to_variant();
-        self.base_mut().emit_signal(
+        self.base.emit_signal(
             "on_adapter_changed".into(),
-            &[voice_chat_enabled, comms_fixed_adapter_gstr.to_variant()],
+            &[
+                self.voice_chat_enabled.to_variant(),
+                comms_fixed_adapter_gstr.to_variant(),
+            ],
         );
     }
 
