@@ -52,7 +52,7 @@ jobs:
           docker run --rm \
             -v $(pwd)/tests/avatars-test-input.json:/app/avatars.json \
             -v $(pwd)/output:/app/output \
-            ${{ steps.build-image.outputs.image }}:${{ steps.build-image.outputs.tags }}
+            localhost/${{ steps.build-image.outputs.image-with-tag }}
 
       - name: Compare images with snapshots
         run: |
