@@ -1,7 +1,7 @@
 # Godot 4+ specific ignores
 /.godot/
 
-android/
+/android/
 
 # Godot-specific ignores
 .import/
