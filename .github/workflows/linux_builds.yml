@@ -29,7 +29,7 @@ jobs:
         uses: ./.github/actions/install-deps
 
       # Build section
-      - name: Install
+      - name: Cargo install
         run: cargo run -- install
 
       - name: Build
