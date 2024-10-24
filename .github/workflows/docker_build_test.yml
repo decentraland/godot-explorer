@@ -32,7 +32,6 @@ jobs:
           dockerfiles: |
             ./Dockerfile
           build-args: |
-            ${{ inputs.build-args }}
             COMMIT_HASH=${{ github.sha }}
 
       - name: Push To quay.io
@@ -48,13 +47,10 @@ jobs:
 
       - name: Run avatar test
         run: |
-          podman images
-          docker images
-          /usr/bin/buildah images
           mkdir -p output
-          /usr/bin/buildah run localhost/${{ steps.build-image.outputs.image }}:latest \
-            -v $(pwd)/tests/avatars-test-input.json:/app/avatars.json \
-            -v $(pwd)/output:/app/output
+          podman run --rm -v \
+            $(pwd)/tests/avatars-test-input.json:/app/avatars.json \
+            -v $(pwd)/output:/app/output localhost/godot-explorer:latest
 
       - name: Compare images with snapshots
         run: |
