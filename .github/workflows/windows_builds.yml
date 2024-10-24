@@ -29,11 +29,10 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-deps
 
-      - name: Install
+      # Build section
+      - name: Cargo install
         run: cargo run -- install
 
-
-      # Build section
       - name: Build
         working-directory: lib
         run: cargo build --release
