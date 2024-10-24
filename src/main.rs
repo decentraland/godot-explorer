@@ -2,6 +2,7 @@ use std::{collections::HashMap, fs::create_dir_all, path::Path};
 
 use anyhow::Context;
 use clap::{AppSettings, Arg, Command};
+use export::import_assets;
 use image_comparison::compare_images_folders;
 use tests::test_godot_tools;
 use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
@@ -84,6 +85,7 @@ fn main() -> Result<(), anyhow::Error> {
                 ),
         )
         .subcommand(Command::new("export"))
+        .subcommand(Command::new("import-assets"))
         .subcommand(
             Command::new("run")
                 .arg(
@@ -183,6 +185,16 @@ fn main() -> Result<(), anyhow::Error> {
             )
         }
         ("export", _m) => export::export(),
+        ("import-assets", _m) => {
+            let status = import_assets();
+            if !status.success() {
+                println!(
+                    "WARN: cargo build exited with non-zero status: {}",
+                    status
+                );
+            }
+            Ok(())
+        },
         ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),
         ("test-tools", _) => test_godot_tools(None),
         ("vars", _) => {

@@ -23,17 +23,23 @@ jobs:
       - run: rustup component add rustfmt
       - name: Set up Python
         uses: actions/setup-python@v4
+
       - name: Install gdtoolkit 4
         run: pip3 install git+https://github.com/kuruk-mm/godot-gdscript-toolkit.git
+
       - name: Check format GDScript
         run: gdformat -d godot/
+
       - name: GDScript Linter
         run: gdlint godot/
+
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps
 
-      - name: cargo xtask install
+      - name: cargo install
         run: cargo run -- install --no-templates
 
       - name: cargo check
