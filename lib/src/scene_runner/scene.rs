@@ -4,7 +4,7 @@ use std::{
     time::Instant,
 };
 
-use godot::{obj::UserClass, prelude::Gd};
+use godot::{obj::NewAlloc, prelude::Gd};
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
@@ -317,7 +317,7 @@ impl Scene {
         let godot_dcl_scene = GodotDclScene::new(
             scene_entity_definition.clone(),
             &scene_id,
-            DclUiControl::alloc_gd(),
+            DclUiControl::new_alloc(),
         );
 
         Self {

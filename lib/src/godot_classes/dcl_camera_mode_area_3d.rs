@@ -10,7 +10,6 @@ pub struct DclCameraModeArea3D {
     #[export]
     area: Vector3,
 
-    #[base]
     _base: Base<Area3D>,
 }
 

@@ -1,11 +1,11 @@
 use crate::dcl::scene_apis::RpcCall;
-use deno_core::{anyhow::anyhow, op, Op, OpDecl, OpState};
+use deno_core::{anyhow::anyhow, op2, OpDecl, OpState};
 use serde::Serialize;
 use std::{cell::RefCell, rc::Rc};
 
 // list of op declarations
 pub fn ops() -> Vec<OpDecl> {
-    vec![op_get_texture_size::DECL]
+    vec![op_get_texture_size()]
 }
 
 #[derive(Serialize)]
@@ -14,8 +14,9 @@ struct TextureSize {
     height: f32,
 }
 
-#[op(v8)]
-async fn op_get_texture_size(state: Rc<RefCell<OpState>>, src: String) -> TextureSize {
+#[op2(async)]
+#[serde]
+async fn op_get_texture_size(state: Rc<RefCell<OpState>>, #[string] src: String) -> TextureSize {
     let (sx, rx) = tokio::sync::oneshot::channel::<Result<godot::builtin::Vector2, String>>();
 
     state

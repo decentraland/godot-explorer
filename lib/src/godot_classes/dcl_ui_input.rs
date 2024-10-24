@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use godot::{
     engine::{
         global::{HorizontalAlignment, VerticalAlignment},
-        LineEdit, StyleBoxEmpty,
+        ILineEdit, LineEdit, StyleBoxEmpty,
     },
     prelude::*,
 };
@@ -25,7 +25,6 @@ use crate::{
 #[derive(GodotClass)]
 #[class(base=LineEdit)]
 pub struct DclUiInput {
-    #[base]
     base: Base<LineEdit>,
 
     current_font: Font,
@@ -37,7 +36,7 @@ pub struct DclUiInput {
 }
 
 #[godot_api]
-impl INode for DclUiInput {
+impl ILineEdit for DclUiInput {
     fn init(base: Base<LineEdit>) -> Self {
         Self {
             base,
@@ -48,23 +47,23 @@ impl INode for DclUiInput {
     }
 
     fn ready(&mut self) {
-        let style_box_empty: Gd<godot::engine::StyleBox> = StyleBoxEmpty::new().upcast();
-        self.base
-            .add_theme_font_override("font".into(), self.current_font.get_font_resource());
-        self.base
+        let style_box_empty: Gd<godot::engine::StyleBox> = StyleBoxEmpty::new_gd().upcast();
+        let new_font_resource = self.current_font.get_font_resource();
+        self.base_mut()
+            .add_theme_font_override("font".into(), new_font_resource);
+        self.base_mut()
             .add_theme_stylebox_override("normal".into(), style_box_empty.clone());
-        self.base
+        self.base_mut()
             .add_theme_stylebox_override("focus".into(), style_box_empty.clone());
-        self.base
+        self.base_mut()
             .add_theme_stylebox_override("read_only".into(), style_box_empty.clone());
 
-        self.base
-            .clone()
-            .connect("text_changed".into(), self.base.callable("on_text_changed"));
-        self.base.clone().connect(
-            "text_submitted".into(),
-            self.base.callable("on_text_submitted"),
-        );
+        let callable_on_text_changed = self.base().callable("on_text_changed");
+        let callable_on_text_submitted = self.base().callable("on_text_submitted");
+        self.base_mut()
+            .connect("text_changed".into(), callable_on_text_changed);
+        self.base_mut()
+            .connect("text_submitted".into(), callable_on_text_submitted);
     }
 }
 
@@ -101,30 +100,30 @@ impl DclUiInput {
     }
 
     pub fn change_value(&mut self, new_value: &PbUiInput) {
-        self.base
+        self.base_mut()
             .set_placeholder(new_value.placeholder.clone().into());
 
         let font_placeholder_color = new_value
             .placeholder_color
             .to_godot_or_else(godot::prelude::Color::from_rgba(0.3, 0.3, 0.3, 1.0));
 
-        self.base
+        self.base_mut()
             .add_theme_color_override("font_placeholder_color".into(), font_placeholder_color);
 
         let font_color = new_value
             .color
             .to_godot_or_else(godot::prelude::Color::WHITE);
 
-        self.base
+        self.base_mut()
             .add_theme_color_override("font_color".into(), font_color);
 
-        self.base
+        self.base_mut()
             .add_theme_font_size_override("font_size".into(), new_value.font_size.unwrap_or(10));
 
-        self.base.set_editable(!new_value.disabled);
+        self.base_mut().set_editable(!new_value.disabled);
 
         if let Some(text_value) = new_value.value.as_ref() {
-            self.base.set_text(text_value.clone().into());
+            self.base_mut().set_text(text_value.clone().into());
         }
 
         let text_align = new_value
@@ -134,50 +133,32 @@ impl DclUiInput {
             .unwrap();
 
         let (hor_align, _vert_align) = match text_align {
-            TextAlignMode::TamTopLeft => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
-            ),
-            TextAlignMode::TamTopCenter => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
-                VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
-            ),
-            TextAlignMode::TamTopRight => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_TOP,
-            ),
-            TextAlignMode::TamMiddleLeft => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
-            ),
-            TextAlignMode::TamMiddleCenter => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
-                VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
-            ),
-            TextAlignMode::TamMiddleRight => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_CENTER,
-            ),
-            TextAlignMode::TamBottomLeft => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
-            ),
-            TextAlignMode::TamBottomCenter => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_CENTER,
-                VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
-            ),
-            TextAlignMode::TamBottomRight => (
-                HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT,
-                VerticalAlignment::VERTICAL_ALIGNMENT_BOTTOM,
-            ),
+            TextAlignMode::TamTopLeft => (HorizontalAlignment::LEFT, VerticalAlignment::TOP),
+            TextAlignMode::TamTopCenter => (HorizontalAlignment::CENTER, VerticalAlignment::TOP),
+            TextAlignMode::TamTopRight => (HorizontalAlignment::RIGHT, VerticalAlignment::TOP),
+            TextAlignMode::TamMiddleLeft => (HorizontalAlignment::LEFT, VerticalAlignment::CENTER),
+            TextAlignMode::TamMiddleCenter => {
+                (HorizontalAlignment::CENTER, VerticalAlignment::CENTER)
+            }
+            TextAlignMode::TamMiddleRight => {
+                (HorizontalAlignment::RIGHT, VerticalAlignment::CENTER)
+            }
+            TextAlignMode::TamBottomLeft => (HorizontalAlignment::LEFT, VerticalAlignment::BOTTOM),
+            TextAlignMode::TamBottomCenter => {
+                (HorizontalAlignment::CENTER, VerticalAlignment::BOTTOM)
+            }
+            TextAlignMode::TamBottomRight => {
+                (HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
+            }
         };
 
-        self.base.set_horizontal_alignment(hor_align);
+        self.base_mut().set_horizontal_alignment(hor_align);
 
         if new_value.font() != self.current_font {
             self.current_font = new_value.font();
-            self.base
-                .add_theme_font_override("font".into(), self.current_font.get_font_resource());
+            let new_font_resource = self.current_font.get_font_resource();
+            self.base_mut()
+                .add_theme_font_override("font".into(), new_font_resource);
         }
     }
 

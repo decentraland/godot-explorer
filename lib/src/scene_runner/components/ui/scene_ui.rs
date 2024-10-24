@@ -5,10 +5,7 @@ use std::{
 };
 
 use godot::{
-    engine::{
-        text_server::{JustificationFlag, LineBreakFlag},
-        NodeExt,
-    },
+    engine::text_server::{JustificationFlag, LineBreakFlag},
     obj::Gd,
 };
 
@@ -114,7 +111,8 @@ fn update_layout(
             };
 
             if ui_node.computed_parent != ui_node.ui_transform.parent {
-                if let Some(new_parent) = godot_dcl_scene.get_node_ui(&ui_node.ui_transform.parent)
+                if let Some(new_parent) =
+                    godot_dcl_scene.get_node_or_null_ui(&ui_node.ui_transform.parent)
                 {
                     ui_node
                         .base_control
@@ -157,7 +155,7 @@ fn update_layout(
     }
 
     for unprocessed_entity in unprocessed_uis.iter() {
-        if let Some(ui_node) = godot_dcl_scene.get_node_ui_mut(unprocessed_entity) {
+        if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(unprocessed_entity) {
             ui_node.base_control.hide();
         }
     }
@@ -192,16 +190,14 @@ fn update_layout(
                             .width(line_width)
                             .font_size(font_size)
                             .alignment(text_node.get_horizontal_alignment())
-                            .justification_flags(JustificationFlag::JUSTIFICATION_NONE)
-                            .brk_flags(
-                                LineBreakFlag::BREAK_WORD_BOUND | LineBreakFlag::BREAK_MANDATORY,
-                            )
+                            .justification_flags(JustificationFlag::NONE)
+                            .brk_flags(LineBreakFlag::WORD_BOUND | LineBreakFlag::MANDATORY)
                             .done()
                     } else {
                         font.get_string_size_ex(text_node.get_text())
                             .width(line_width)
                             .alignment(text_node.get_horizontal_alignment())
-                            .justification_flags(JustificationFlag::JUSTIFICATION_NONE)
+                            .justification_flags(JustificationFlag::NONE)
                             .font_size(font_size)
                             .done()
                     };
@@ -232,12 +228,12 @@ fn update_layout(
         .expect("failed to compute layout");
 
     for (entity, key_node) in processed_nodes_sorted.iter() {
-        let ui_node = godot_dcl_scene.get_node_ui(entity).unwrap();
+        let ui_node = godot_dcl_scene.get_node_or_null_ui(entity).unwrap();
         let parent_node = processed_nodes
             .get_mut(&ui_node.ui_transform.parent)
             .expect("parent not found, it was processed before");
 
-        if let Some(parent) = godot_dcl_scene.get_node_ui(&ui_node.ui_transform.parent) {
+        if let Some(parent) = godot_dcl_scene.get_node_or_null_ui(&ui_node.ui_transform.parent) {
             parent.base_control.clone().move_child(
                 ui_node.base_control.clone().upcast(),
                 parent_node.1 + parent.control_offset(),
@@ -245,7 +241,7 @@ fn update_layout(
             parent_node.1 += 1;
         }
 
-        let ui_node = godot_dcl_scene.get_node_ui_mut(entity).unwrap();
+        let ui_node = godot_dcl_scene.get_node_or_null_ui_mut(entity).unwrap();
         ui_node.computed_parent = ui_node.ui_transform.parent;
 
         let mut control = ui_node.base_control.clone();

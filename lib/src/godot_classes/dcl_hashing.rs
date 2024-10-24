@@ -9,7 +9,6 @@ pub fn hash_v1(content: &[u8]) -> String {
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
 pub struct DclHashing {
-    #[base]
     _base: Base<RefCounted>,
 }
 

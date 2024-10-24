@@ -15,9 +15,9 @@
     - **MacOS**: `brew install ffmpeg@6 pkg-config`
     - **Windows**: 
       - download and unzip `https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z`
-      - set `LIBCLANG_PATH` = `path to LLVM\x64\bin` (this is packaged with visual studio, or can be downloaded separately)
       - set `FFMPEG_DIR` = `root folder where ffmpeg has been unzipped`
       - add `ffmpeg\bin` to your `PATH`
+      - set `LIBCLANG_PATH` = `path to LLVM\x64\bin` (this is packaged with visual studio, or can be downloaded separately)
     - the `.github/workflows/ci.yml` file can be useful to guide you
 
 4. Run `cargo run -- install` in the repo root folder.
@@ -34,7 +34,7 @@
 Execute the following commands for building Godot:
 ```bash
 # Run Docker
-docker run -v {godot-explorer-repo-path}:/app/ -it kuruk/dcl-godot-android-builder:latest
+docker run -v {godot-explorer-repo-path}:/app/ -it quay.io/decentraland/dcl-godot-android-builder:99091016236094cb776bd9cb1298602e56b8cdab
 
 # Compile for Android
 cd lib

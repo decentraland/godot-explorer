@@ -15,6 +15,7 @@ dest_files=["res://.godot/imported/inter_400.ttf-9f4cd2ececbe3dce4671f34069bccbb
 Rendering=null
 antialiasing=1
 generate_mipmaps=false
+disable_embedded_bitmaps=true
 multichannel_signed_distance_field=false
 msdf_pixel_range=8
 msdf_size=48

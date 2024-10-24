@@ -7,7 +7,7 @@ func _ready():
 
 func start():
 	var args = OS.get_cmdline_args()
-	if args.has("--test"):
+	if args.has("--test-runner"):
 		return
 
 	if not OS.has_feature("Server"):

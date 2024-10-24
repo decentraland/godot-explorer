@@ -97,7 +97,7 @@ pub fn update_video_player(
                             .expect("video_player_data not found in node");
 
                         let mut video_player_node: Gd<DclVideoPlayer> = node_3d
-                            .get_node("VideoPlayer".into())
+                            .get_node_or_null("VideoPlayer".into())
                             .expect("enters on change video branch but a VideoPlayer wasn't found there")
                             .try_cast::<DclVideoPlayer>()
                             .expect("the expected VideoPlayer wasn't a DclVideoPlayer");
@@ -134,7 +134,7 @@ pub fn update_video_player(
                                 .try_send(AVCommand::Dispose);
                         }
 
-                        let mut video_player_node = node_3d.get_node("VideoPlayer".into()).expect(
+                        let mut video_player_node = node_3d.get_node_or_null("VideoPlayer".into()).expect(
                             "enters on change video branch but a VideoPlayer wasn't found there",
                         ).try_cast::<DclVideoPlayer>().expect("the expected VideoPlayer wasn't a DclVideoPlayer");
 
@@ -193,7 +193,7 @@ pub fn update_video_player(
                         }
                     }
                     VideoUpdateMode::FirstSpawnVideo => {
-                        let image = Image::create(8, 8, false, Format::FORMAT_RGBA8)
+                        let image = Image::create(8, 8, false, Format::RGBA8)
                             .expect("couldn't create an video image");
                         let texture = ImageTexture::create_from_image(image)
                             .expect("couldn't create an video image texture");
@@ -230,7 +230,7 @@ pub fn update_video_player(
                             .bind_mut()
                             .set_dcl_texture(Some(texture.clone()));
 
-                        let audio_stream_generator = AudioStreamGenerator::new();
+                        let audio_stream_generator = AudioStreamGenerator::new_gd();
                         video_player_node.set_stream(audio_stream_generator.upcast());
 
                         node_3d.add_child(video_player_node.clone().upcast());
