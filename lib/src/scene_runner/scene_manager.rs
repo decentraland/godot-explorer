@@ -274,6 +274,22 @@ impl SceneManager {
     }
 
     #[func]
+    fn get_scene_is_paused(&self, scene_id: i32) -> bool {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
+            scene.paused
+        } else {
+            false
+        }
+    }
+
+    #[func]
+    fn set_scene_is_paused(&mut self, scene_id: i32, value: bool) {
+        if let Some(scene) = self.scenes.get_mut(&SceneId(scene_id)) {
+            scene.paused = value;
+        }
+    }
+
+    #[func]
     pub fn get_scene_id_by_parcel_position(&self, parcel_position: Vector2i) -> i32 {
         for scene in self.scenes.values() {
             if let SceneType::Global(_) = scene.scene_type {
@@ -367,7 +383,7 @@ impl SceneManager {
         // TODO: review to define a better behavior
         self.sorted_scene_ids.sort_by_key(|&scene_id| {
             let scene = self.scenes.get_mut(&scene_id).unwrap();
-            if !scene.current_dirty.waiting_process {
+            if !scene.current_dirty.waiting_process || scene.paused {
                 scene.next_tick_us = start_time_us + 120000;
                 // Set at the end of the queue: scenes without processing from scene-runtime, wait until something comes
             } else if scene_id == self.current_parcel_scene_id {
@@ -447,7 +463,6 @@ impl SceneManager {
             let scene = self.scenes.get_mut(scene_id).unwrap();
             match scene.state {
                 SceneState::ToKill => {
-                    scene.state = SceneState::KillSignal(current_time_us);
                     if let Err(_e) = scene
                         .dcl_scene
                         .main_sender_to_thread
@@ -465,6 +480,7 @@ impl SceneManager {
                         let elapsed_from_kill_us = current_time_us - kill_time_us;
                         if elapsed_from_kill_us > 10 * 1e6 as i64 {
                             // 10 seconds from the kill signal
+                            tracing::error!("timeout killing scene");
                         }
                     }
                 }

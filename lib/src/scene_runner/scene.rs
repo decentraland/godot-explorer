@@ -207,6 +207,8 @@ pub struct Scene {
     pub tweens: HashMap<SceneEntityId, Tween>,
     // Duplicated value to async-access the animator
     pub dup_animator: HashMap<SceneEntityId, PbAnimator>,
+
+    pub paused: bool,
 }
 
 #[derive(Debug)]
@@ -297,6 +299,7 @@ impl Scene {
             scene_test_plan_received: false,
             tweens: HashMap::new(),
             dup_animator: HashMap::new(),
+            paused: false,
         }
     }
 
@@ -357,6 +360,7 @@ impl Scene {
             scene_test_plan_received: false,
             tweens: HashMap::new(),
             dup_animator: HashMap::new(),
+            paused: false,
         }
     }
 }

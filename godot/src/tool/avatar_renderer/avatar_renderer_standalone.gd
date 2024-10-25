@@ -16,7 +16,7 @@ func get_params_from_cmd():
 	if USE_TEST_INPUT:
 		return [
 			AvatarRendererHelper.AvatarFile.from_file_path(
-				"res://src/tool/avatar_renderer/test-input.json"
+				"res://src/tool/avatar_renderer/avatar-test-input.json"
 			)
 		]
 

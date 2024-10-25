@@ -1,0 +1,144 @@
+[gd_scene load_steps=2 format=3 uid="uid://dx7885dtt4yyn"]
+
+[ext_resource type="Script" path="res://src/tool/scene_renderer/scene_camera_tune.gd" id="1_1rcic"]
+
+[node name="SceneCameraTune" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_1rcic")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 977.0
+offset_top = 361.0
+offset_right = 1250.0
+offset_bottom = 693.0
+
+[node name="Label" type="Label" parent="Panel"]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 8.0
+offset_bottom = 28.0
+grow_horizontal = 2
+text = "Camera control"
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="Panel"]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 40.0
+offset_bottom = 60.0
+grow_horizontal = 2
+text = "Type"
+horizontal_alignment = 1
+
+[node name="Label3" type="Label" parent="Panel"]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 104.0
+offset_bottom = 124.0
+grow_horizontal = 2
+text = "FOV/OrthoSize"
+horizontal_alignment = 1
+
+[node name="Label4" type="Label" parent="Panel"]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 176.0
+offset_bottom = 196.0
+grow_horizontal = 2
+text = "Position"
+horizontal_alignment = 1
+
+[node name="Label5" type="Label" parent="Panel"]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 256.0
+offset_bottom = 276.0
+grow_horizontal = 2
+text = "Target"
+horizontal_alignment = 1
+
+[node name="OptionButton_Projection" type="OptionButton" parent="Panel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 64.0
+offset_bottom = 94.0
+grow_horizontal = 2
+item_count = 2
+selected = 0
+popup/item_0/text = "Perspective"
+popup/item_0/id = 0
+popup/item_1/text = "Orthogonal"
+popup/item_1/id = 1
+
+[node name="LineEdit_FOV_Size" type="LineEdit" parent="Panel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 128.0
+offset_bottom = 167.0
+grow_horizontal = 2
+text = "75"
+
+[node name="HBoxContainer_Position" type="HBoxContainer" parent="Panel"]
+layout_mode = 0
+offset_top = 200.0
+offset_right = 260.0
+offset_bottom = 240.0
+alignment = 1
+
+[node name="LineEdit_X" type="LineEdit" parent="Panel/HBoxContainer_Position"]
+layout_mode = 2
+text = "0.0"
+
+[node name="LineEdit_Y" type="LineEdit" parent="Panel/HBoxContainer_Position"]
+layout_mode = 2
+text = "8.0"
+
+[node name="LineEdit_Z" type="LineEdit" parent="Panel/HBoxContainer_Position"]
+layout_mode = 2
+text = "0.0"
+
+[node name="HBoxContainer_Target" type="HBoxContainer" parent="Panel"]
+layout_mode = 0
+offset_top = 280.0
+offset_right = 260.0
+offset_bottom = 320.0
+alignment = 1
+
+[node name="LineEdit_X" type="LineEdit" parent="Panel/HBoxContainer_Target"]
+layout_mode = 2
+text = "0.0"
+
+[node name="LineEdit_Y" type="LineEdit" parent="Panel/HBoxContainer_Target"]
+layout_mode = 2
+text = "0.0"
+
+[node name="LineEdit_Z" type="LineEdit" parent="Panel/HBoxContainer_Target"]
+layout_mode = 2
+text = "0.0"
+
+[connection signal="item_selected" from="Panel/OptionButton_Projection" to="." method="_on_option_button_projection_item_selected"]
+[connection signal="text_changed" from="Panel/LineEdit_FOV_Size" to="." method="_on_line_edit_fov_size_text_changed"]
+[connection signal="text_changed" from="Panel/HBoxContainer_Position/LineEdit_X" to="." method="_on_line_edit_text_changed"]
+[connection signal="text_changed" from="Panel/HBoxContainer_Position/LineEdit_Y" to="." method="_on_line_edit_text_changed"]
+[connection signal="text_changed" from="Panel/HBoxContainer_Position/LineEdit_Z" to="." method="_on_line_edit_text_changed"]
+[connection signal="text_changed" from="Panel/HBoxContainer_Target/LineEdit_X" to="." method="_on_line_edit_text_changed"]
+[connection signal="text_changed" from="Panel/HBoxContainer_Target/LineEdit_Y" to="." method="_on_line_edit_text_changed"]
+[connection signal="text_changed" from="Panel/HBoxContainer_Target/LineEdit_Z" to="." method="_on_line_edit_text_changed"]
