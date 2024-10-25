@@ -30,6 +30,7 @@ var music_player: MusicPlayer
 
 var standalone = false
 var dcl_android_plugin
+var webkit_android_plugin
 
 
 func is_xr() -> bool:
@@ -76,6 +77,9 @@ func _ready():
 
 	if Engine.has_singleton("DclAndroidPlugin"):
 		dcl_android_plugin = Engine.get_singleton("DclAndroidPlugin")
+	
+	if Engine.has_singleton("webkit-godot-android"):
+		webkit_android_plugin = Engine.get_singleton("webkit-godot-android")
 
 	self.metrics = Metrics.create_metrics(
 		self.config.analytics_user_id, DclConfig.generate_uuid_v4()
@@ -206,7 +210,11 @@ func release_mouse():
 
 
 func open_url(url: String):
-	if Global.dcl_android_plugin != null:
+	if webkit_android_plugin != null:
+		webkit_android_plugin.openCustomTabUrl(url) # FOR SOCIAL
+		#webkit_android_plugin.openWebView(url, "") # FOR WALLET CONNECT
+
+	elif Global.dcl_android_plugin != null:
 		Global.dcl_android_plugin.showDecentralandMobileToast()
 		Global.dcl_android_plugin.openUrl(url)
 	else:

@@ -9,6 +9,7 @@ pub enum GodotTokioCall {
     OpenUrl {
         url: String,
         description: String,
+        use_webview: bool, // use webview
     },
 }
 
@@ -40,13 +41,14 @@ impl INode for DclTokioRpc {
     fn process(&mut self, _dt: f64) {
         while let Ok(state) = self.receiver.try_recv() {
             match state {
-                GodotTokioCall::OpenUrl { url, description } => {
+                GodotTokioCall::OpenUrl { url, description, use_webview } => {
                     self.base.call_deferred(
                         "emit_signal".into(),
                         &[
                             "need_open_url".to_variant(),
                             url.to_variant(),
                             description.to_variant(),
+                            use_webview.to_variant(),
                         ],
                     );
                 }
@@ -66,7 +68,7 @@ impl INode for DclTokioRpc {
 #[godot_api]
 impl DclTokioRpc {
     #[signal]
-    fn need_open_url(&self, url: GString, description: GString);
+    fn need_open_url(&self, url: GString, description: GString, use_webview: bool);
 
     #[signal]
     fn magic_sign(&self, message: GString);

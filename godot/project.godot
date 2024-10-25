@@ -40,7 +40,7 @@ window/size/viewport_height=720
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/GodotAndroidPluginMagicLink/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/godot-xr-tools/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotAndroidPluginMagicLink/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/godot-xr-tools/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/webkit-godot-android/plugin.cfg")
 
 [filesystem]
 

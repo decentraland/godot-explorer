@@ -6,8 +6,8 @@ use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 
 use super::wallet::SimpleAuthChain;
 
-const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
-const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
+const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
+const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
 // const AUTH_FRONT_URL: &str = "http://localhost:5173/auth/requests";
 // const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
 
@@ -32,7 +32,7 @@ pub struct CreateRequest {
 struct CreateRequestResponse {
     request_id: String,
     // expiration: serde_json::Value,
-    // code: i32,
+    code: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -154,11 +154,14 @@ pub async fn do_request(
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     let request = create_new_request(message).await?;
     let req_id = request.request_id;
+    let code = request.code;
+    println!("code is: {}", code);
     let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId=alternative");
     url_reporter
         .send(GodotTokioCall::OpenUrl {
             url,
             description: "".into(),
+            use_webview: true,
         })
         .await?;
 
@@ -205,8 +208,8 @@ mod test {
         tokio::spawn(async move {
             loop {
                 match rx.recv().await {
-                    Some(GodotTokioCall::OpenUrl { url, description }) => {
-                        tracing::info!("url {:?} description {:?}", url, description);
+                    Some(GodotTokioCall::OpenUrl { url, description, use_webview }) => {
+                        tracing::info!("url {:?} description {:?} use_webview {:?}", url, description, use_webview);
                     }
                     _ => {
                         break;

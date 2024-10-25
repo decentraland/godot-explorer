@@ -153,7 +153,7 @@ func show_connect():
 	show_panel(control_signin)
 
 
-func _on_need_open_url(url: String, _description: String) -> void:
+func _on_need_open_url(url: String, _description: String, use_webview: bool) -> void:
 	Global.open_url(url)
 
 

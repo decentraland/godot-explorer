@@ -186,7 +186,7 @@ func _ready():
 	ui_root.grab_focus.call_deferred()
 
 
-func _on_need_open_url(url: String, _description: String) -> void:
+func _on_need_open_url(url: String, _description: String, use_webkit: bool) -> void:
 	if not Global.player_identity.get_address_str().is_empty():
 		Global.open_url(url)
 
