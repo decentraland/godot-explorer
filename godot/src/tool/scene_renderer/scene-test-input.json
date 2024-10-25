@@ -1,0 +1,98 @@
+{
+    "realmUrl": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest",
+    "defaultPayload": {
+        "coords": "9,-9",
+        "width": 1024,
+        "height": 1024,
+        "destPath": "output/test-scene-rendering-$index-$coords.png",
+        "sceneDistance": 6,
+        "camera": {
+            "position": {
+                "x": 0,
+                "y": 150,
+                "z": 0
+            },
+            "target": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+            },
+            "orthoSize": 150,
+            "projection": "ortho"
+        }
+    },
+    "payload": [
+        {
+            "coords": "72,-10"
+        },
+        {
+            "coords": "72,-5"
+        },
+        {
+            "coords": "72,0"
+        },
+        {
+            "coords": "72,5"
+        },
+        {
+            "coords": "72,10"
+        },
+        {
+            "coords": "72,15"
+        },
+        {
+            "coords": "77,-10"
+        },
+        {
+            "coords": "77,-5"
+        },
+        {
+            "coords": "77,0"
+        },
+        {
+            "coords": "77,5"
+        },
+        {
+            "coords": "77,10"
+        },
+        {
+            "coords": "77,15"
+        },
+        {
+            "coords": "82,-10"
+        },
+        {
+            "coords": "82,-5"
+        },
+        {
+            "coords": "82,0"
+        },
+        {
+            "coords": "82,5"
+        },
+        {
+            "coords": "82,10"
+        },
+        {
+            "coords": "82,15"
+        },
+        {
+            "coords": "87,-10"
+        },
+        {
+            "coords": "87,-5"
+        },
+        {
+            "coords": "87,0"
+        },
+        {
+            "coords": "87,5"
+        },
+        {
+            "coords": "87,10"
+        },
+        {
+            "coords": "87,15"
+        }
+    ]
+}
