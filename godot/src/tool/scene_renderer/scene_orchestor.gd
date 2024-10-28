@@ -31,6 +31,7 @@ var are_all_scene_loaded: bool = false
 func get_params_from_cmd():
 	var scene_data = null
 	if USE_TEST_INPUT:
+		print("scene-renderer: using test input")
 		scene_data = SceneRendererInputHelper.SceneInputFile.from_file_path(
 			"res://src/tool/scene_renderer/scene-test-input.json"
 		)
@@ -41,13 +42,14 @@ func get_params_from_cmd():
 
 	if scene_in_place != -1 and args.size() > scene_in_place + 1 and scene_data == null:
 		var file_path: String = args[scene_in_place + 1]
+		print("scene-renderer: using input file from command line", file_path)
 		scene_data = SceneRendererInputHelper.SceneInputFile.from_file_path(file_path)
 
 	return [scene_data, camera_tune]
 
 
 func _ready():
-	print("spawning scene renderer scene")
+	print("scene-renderer: running")
 	var from_params = get_params_from_cmd()
 	if from_params[0] == null:
 		printerr("param is missing or wrong, try with --scene-file [file]")
@@ -66,6 +68,12 @@ func _ready():
 	Global.realm.realm_changed.connect(self.on_realm_changed)
 
 	Global.realm.async_set_realm(scenes_to_process.realm_url)
+	print(
+		"scene-renderer: realm",
+		scenes_to_process.realm_url,
+		" - scenes number: ",
+		scenes_to_process.scenes.size()
+	)
 
 	get_tree().create_timer(DEFAULT_TIMEOUT_REALM_SECONDS).timeout.connect(
 		self.on_realm_change_timeout

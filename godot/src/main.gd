@@ -37,12 +37,15 @@ func _start():
 	var args = OS.get_cmdline_args()
 
 	if Global.is_xr():
+		print("Running in XR mode")
 		get_tree().change_scene_to_file("res://src/vr/vr_lobby.tscn")
 	elif args.has("--avatar-renderer"):
+		print("Running in Avatar-Renderer mode")
 		get_tree().change_scene_to_file(
 			"res://src/tool/avatar_renderer/avatar_renderer_standalone.tscn"
 		)
 	elif args.has("--scene-test") or args.has("--scene-renderer"):
+		print("Running in Scene Test mode")
 		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()
 		Global.player_identity.set_default_profile()
@@ -53,5 +56,6 @@ func _start():
 			Global.get_config().session_account = new_stored_account
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 	else:
+		print("Running in regular mode")
 		Global.music_player.play("music_authentication")
 		get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
