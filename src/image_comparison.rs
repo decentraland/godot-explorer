@@ -4,8 +4,10 @@ use std::path::{Path, PathBuf};
 
 // Function to compare two images and calculate similarity
 pub fn compare_images_similarity(image_path_1: &Path, image_path_2: &Path) -> Result<f64, String> {
-    let img1 = image::open(image_path_1).map_err(|_| format!("Failed to open image: {:?}", image_path_1))?;
-    let img2 = image::open(image_path_2).map_err(|_| format!("Failed to open image: {:?}", image_path_2))?;
+    let img1 = image::open(image_path_1)
+        .map_err(|_| format!("Failed to open image: {:?}", image_path_1))?;
+    let img2 = image::open(image_path_2)
+        .map_err(|_| format!("Failed to open image: {:?}", image_path_2))?;
 
     if img1.dimensions() != img2.dimensions() {
         return Err("Images have different dimensions".to_string());
@@ -20,7 +22,9 @@ pub fn compare_images_similarity(image_path_1: &Path, image_path_2: &Path) -> Re
             let pixel1 = img1.get_pixel(x, y);
             let pixel2 = img2.get_pixel(x, y);
 
-            let diff = pixel1.channels().iter()
+            let diff = pixel1
+                .channels()
+                .iter()
                 .zip(pixel2.channels().iter())
                 .map(|(p1, p2)| (*p1 as f64 - *p2 as f64).powi(2))
                 .sum::<f64>();
@@ -41,7 +45,9 @@ pub fn compare_images_similarity(image_path_1: &Path, image_path_2: &Path) -> Re
 fn list_png_files(directory: &Path) -> Result<Vec<PathBuf>, String> {
     let mut files = vec![];
 
-    for entry in fs::read_dir(directory).map_err(|_| format!("Failed to read directory: {:?}", directory))? {
+    for entry in
+        fs::read_dir(directory).map_err(|_| format!("Failed to read directory: {:?}", directory))?
+    {
         let entry = entry.map_err(|_| "Failed to access entry in directory".to_string())?;
         let path = entry.path();
         if path.extension().and_then(|ext| ext.to_str()) == Some("png") {
@@ -54,7 +60,11 @@ fn list_png_files(directory: &Path) -> Result<Vec<PathBuf>, String> {
 }
 
 // Function to compare all PNG files in two folders
-pub fn compare_images_folders(snapshot_folder: &Path, result_folder: &Path, similarity_threshold: f64) -> Result<(), String> {
+pub fn compare_images_folders(
+    snapshot_folder: &Path,
+    result_folder: &Path,
+    similarity_threshold: f64,
+) -> Result<(), String> {
     let snapshot_files = list_png_files(snapshot_folder)?;
     let result_files = list_png_files(result_folder)?;
 

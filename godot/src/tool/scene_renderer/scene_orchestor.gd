@@ -231,11 +231,14 @@ func _on_timer_timeout():
 			current_payload_index += 1
 			current_payload_state = PayloadState.NONE
 
-func async_take_scene_file(input: SceneRendererInputHelper.SceneRendererInputSpecs, child: DclSceneNode):
+
+func async_take_scene_file(
+	input: SceneRendererInputHelper.SceneRendererInputSpecs, child: DclSceneNode
+):
 	var pending_promises := Global.content_provider.get_pending_promises()
 	if not pending_promises.is_empty():
 		await PromiseUtils.async_all(Global.content_provider.get_pending_promises())
-		
+
 	var dest_path = input.dest_path.replacen("$index", str(input.index)).replacen(
 		"$coords", str(input.coords.x) + "_" + str(input.coords.y)
 	)
@@ -243,6 +246,7 @@ func async_take_scene_file(input: SceneRendererInputHelper.SceneRendererInputSpe
 	var gltf_state_save := GLTFState.new()
 	gltf_document_save.append_from_scene(child, gltf_state_save)
 	gltf_document_save.write_to_filesystem(gltf_state_save, dest_path)
+
 
 func async_take_camera_photo(input: SceneRendererInputHelper.SceneRendererInputSpecs):
 	prints("async_take_camera_photo", input)
