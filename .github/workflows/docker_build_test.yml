@@ -58,9 +58,6 @@ jobs:
             --snapshots tests/snapshots/avatar-image-generation/ \
             --result ${{ github.workspace }}/output/
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        
       - name: Run scene-rendering test
         run: |
           rm -rf output || true
