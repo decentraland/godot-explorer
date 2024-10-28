@@ -37,6 +37,10 @@ pub async fn load_image_texture(
         .await
         .map_err(anyhow::Error::msg)?;
 
+    if bytes_vec.len() == 0 {
+        return Err(anyhow::Error::msg("Empty texture data"));
+    }
+
     let _thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
         .await
         .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
