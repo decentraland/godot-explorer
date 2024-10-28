@@ -73,6 +73,10 @@ pub fn update_transform_and_parent(
                 }
             }
 
+            if !transform.rotation.is_finite() {
+                transform.rotation = godot::prelude::Quaternion::default();
+            }
+
             node_3d.set_transform(transform.to_godot_transform_3d_without_scaled());
             if transform.scale.x.is_zero_approx() {
                 transform.scale.x = 0.00001;
