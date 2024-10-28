@@ -58,6 +58,21 @@ jobs:
             --snapshots tests/snapshots/avatar-image-generation/ \
             --result ${{ github.workspace }}/output/
 
+      - name: Run scene-rendering test
+        run: |
+          rm -rf output || true
+          mkdir -p output
+          podman run --rm -v \
+            $(pwd)/tests/scene-renderer-test-input.json:/app/scenes.json \
+            -env PRESET_ARGS="--scene-renderer --scene-input-file scenes.json" \
+            -v $(pwd)/output:/app/output localhost/godot-explorer:latest
+
+      - name: Compare images with snapshots
+        run: |
+          cargo run -- compare-image-folders \
+            --snapshots tests/snapshots/scene-image-generation/ \
+            --result ${{ github.workspace }}/output/
+
       - name: Upload artifacts
         if: success() || failure()
         uses: actions/upload-artifact@v4

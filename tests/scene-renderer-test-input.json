@@ -1,0 +1,29 @@
+{
+    "realmUrl": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest",
+    "defaultPayload": {
+        "coords": "9,-9",
+        "width": 1024,
+        "height": 1024,
+        "destPath": "output/test-scene-rendering-$index-$coords.png",
+        "sceneDistance": 0,
+        "camera": {
+            "position": {
+                "x": 0,
+                "y": 150,
+                "z": 0
+            },
+            "target": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+            },
+            "orthoSize": 150,
+            "projection": "ortho"
+        }
+    },
+    "payload": [
+        {
+            "coords": "72,-10"
+        }
+    ]
+}
