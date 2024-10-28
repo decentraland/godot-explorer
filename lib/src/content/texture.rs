@@ -37,7 +37,7 @@ pub async fn load_image_texture(
         .await
         .map_err(anyhow::Error::msg)?;
 
-    if bytes_vec.len() == 0 {
+    if bytes_vec.is_empty() {
         return Err(anyhow::Error::msg("Empty texture data"));
     }
 
