@@ -1,13 +1,29 @@
 {
-    "realmUrl": "https://peer.decentraland.org",
+    "realmUrl": "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest",
     "defaultPayload": {
         "coords": "9,-9",
-        "destPath": "output/test-scene-rendering-$index-$coords.glb",
-        "sceneDistance": 0
+        "width": 512,
+        "height": 512,
+        "destPath": "output/test-scene-rendering-$index-$coords.png",
+        "sceneDistance": 0,
+        "camera": {
+            "position": {
+                "x": 8,
+                "y": 20,
+                "z": -8
+            },
+            "target": {
+                "x": 8,
+                "y": 0,
+                "z": -8
+            },
+            "orthoSize": 20,
+            "projection": "ortho"
+        }
     },
     "payload": [
         {
-            "coords": "0,0"
+            "coords": "72,-10"
         }
     ]
 }

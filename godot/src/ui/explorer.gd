@@ -187,6 +187,7 @@ func _ready():
 	ui_root.grab_focus.call_deferred()
 
 	if OS.get_cmdline_args().has("--scene-renderer"):
+		prints("load scene_orchestor")
 		var scene_renderer_orchestor = (
 			load("res://src/tool/scene_renderer/scene_orchestor.tscn").instantiate()
 		)

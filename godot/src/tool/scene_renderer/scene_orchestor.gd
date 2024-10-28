@@ -24,26 +24,25 @@ var test_camera_tune_base_position: Vector3
 
 var are_all_scene_loaded: bool = false
 
-@onready var scene_preview = %AvatarPreview
-
 
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
+	var args := OS.get_cmdline_args()
 	var scene_data = null
-	if USE_TEST_INPUT:
+	var camera_tune := args.find("--test-camera-tune") != -1
+
+	if USE_TEST_INPUT or args.has("--use-test-input"):
 		print("scene-renderer: using test input")
 		scene_data = SceneRendererInputHelper.SceneInputFile.from_file_path(
 			"res://src/tool/scene_renderer/scene-test-input.json"
 		)
+	else:
+		var scene_in_place := args.find("--scene-input-file")
 
-	var args := OS.get_cmdline_args()
-	var scene_in_place := args.find("--scene-input-file")
-	var camera_tune := args.find("--test-camera-tune") != -1
-
-	if scene_in_place != -1 and args.size() > scene_in_place + 1 and scene_data == null:
-		var file_path: String = args[scene_in_place + 1]
-		print("scene-renderer: using input file from command line", file_path)
-		scene_data = SceneRendererInputHelper.SceneInputFile.from_file_path(file_path)
+		if scene_in_place != -1 and args.size() > scene_in_place + 1 and scene_data == null:
+			var file_path: String = args[scene_in_place + 1]
+			prints("scene-renderer: using input file from command line", file_path)
+			scene_data = SceneRendererInputHelper.SceneInputFile.from_file_path(file_path)
 
 	return [scene_data, camera_tune]
 
@@ -52,7 +51,7 @@ func _ready():
 	print("scene-renderer: running")
 	var from_params = get_params_from_cmd()
 	if from_params[0] == null:
-		printerr("param is missing or wrong, try with --scene-file [file]")
+		printerr("param is missing or wrong, try with --scene-input-file [file]")
 		get_tree().quit(1)
 		return
 
@@ -68,10 +67,10 @@ func _ready():
 	Global.realm.realm_changed.connect(self.on_realm_changed)
 
 	Global.realm.async_set_realm(scenes_to_process.realm_url)
-	print(
+	prints(
 		"scene-renderer: realm",
 		scenes_to_process.realm_url,
-		" - scenes number: ",
+		"- scenes number:",
 		scenes_to_process.scenes.size()
 	)
 
