@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use godot::{
     bind::{godot_api, GodotClass},
@@ -35,6 +35,8 @@ pub struct MultipleAnimationController {
 
     current_time: HashMap<String, f32>,
     playing_anims: HashMap<String, AnimationItem>,
+
+    finished_animations: HashSet<String>,
 }
 
 #[godot_api]
@@ -77,6 +79,7 @@ impl MultipleAnimationController {
             if !looping {
                 self.base
                     .set(anim_item.speed_param_ref_str.clone(), 0_f32.to_variant());
+                self.finished_animations.insert(anim_name.clone());
             }
         } else {
             tracing::error!("finished animation {} not found!", anim_name);
@@ -92,6 +95,7 @@ impl MultipleAnimationController {
             current_time: HashMap::new(),
             playing_anims: HashMap::new(),
             existing_anims_duration,
+            finished_animations: HashSet::new(),
         })
     }
 
@@ -140,6 +144,22 @@ impl MultipleAnimationController {
 
             let should_reset = new_state.should_reset.unwrap_or_default();
             if should_reset {
+                let playing_time = if !anim_state.value.playing_backward() {
+                    0.0
+                } else {
+                    *self
+                        .existing_anims_duration
+                        .get(&anim_state.value.clip)
+                        .unwrap_or(&0.0)
+                };
+
+                self.base.set(
+                    anim_state.time_param_ref_str.clone(),
+                    playing_time.to_variant(),
+                );
+            } else if self.finished_animations.contains(&new_state.clip) {
+                self.finished_animations.remove(&new_state.clip);
+
                 let playing_time = if !anim_state.value.playing_backward() {
                     0.0
                 } else {
@@ -237,7 +257,12 @@ impl MultipleAnimationController {
             );
 
             let playing_time = if let Some(playing_time) = self.current_time.remove(&anim.clip) {
-                playing_time
+                if self.finished_animations.contains(&anim.clip) {
+                    self.finished_animations.remove(&anim.clip);
+                    0.0
+                } else {
+                    playing_time
+                }
             } else if !anim_item.value.playing_backward() {
                 0.0
             } else {
