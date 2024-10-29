@@ -31,10 +31,11 @@ func get_params_from_cmd():
 	var scene_data = null
 	var camera_tune := args.find("--test-camera-tune") != -1
 
+	# Only use from the editor
 	if USE_TEST_INPUT or args.has("--use-test-input"):
 		print("scene-renderer: using test input")
 		scene_data = SceneRendererInputHelper.SceneInputFile.from_file_path(
-			"res://src/tool/scene_renderer/scene-test-input.json"
+			"res://../tests/scene-renderer-test-input.json"
 		)
 	else:
 		var scene_in_place := args.find("--scene-input-file")

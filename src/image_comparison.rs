@@ -95,6 +95,9 @@ pub fn compare_images_folders(
         );
     }
 
-    println!("All files match with {:.2}% similarity or higher!", similarity_threshold * 100.0);
+    println!(
+        "All files match with {:.2}% similarity or higher!",
+        similarity_threshold * 100.0
+    );
     Ok(())
 }

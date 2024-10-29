@@ -18,13 +18,15 @@ fn test_avatar_generation(
         std::fs::create_dir_all(&avatar_output)?;
     }
 
+    let avatar_test_input = Path::new("./../tests/avatars-test-input.json");
     let extra_args = [
         "--rendering-driver",
         "opengl3",
         "--rendering-method",
         "gl_compatibility",
         "--avatar-renderer",
-        "--use-test-input",
+        "--avatars",
+        avatar_test_input.to_str().unwrap(),
     ]
     .iter()
     .map(|it| it.to_string())
@@ -60,14 +62,15 @@ fn test_scene_generation(
     if !scene_output.exists() {
         std::fs::create_dir_all(&scene_output)?;
     }
-
+    let scene_test_input = Path::new("./../tests/scene-renderer-test-input.json");
     let extra_args = [
         "--rendering-driver",
         "opengl3",
         "--rendering-method",
         "gl_compatibility",
         "--scene-renderer",
-        "--use-test-input",
+        "--scene-input-file",
+        scene_test_input.to_str().unwrap(),
     ]
     .iter()
     .map(|it| it.to_string())
@@ -101,10 +104,11 @@ fn test_scene_generation(
 pub fn test_godot_tools(
     with_build_envs: Option<HashMap<String, String>>,
 ) -> Result<(), anyhow::Error> {
+    let avatar_result = test_avatar_generation(with_build_envs.clone());
+    let scene_result = test_scene_generation(with_build_envs.clone());
 
-    test_avatar_generation(with_build_envs.clone())?;
-
-    test_scene_generation(with_build_envs.clone())?;
+    scene_result?;
+    avatar_result?;
 
     Ok(())
 }
