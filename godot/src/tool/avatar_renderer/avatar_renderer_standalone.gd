@@ -13,14 +13,14 @@ var current_avatar: DclAvatarWireFormat
 
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
-	if USE_TEST_INPUT:
+	var args := OS.get_cmdline_args()
+
+	# Only use from the editor
+	if USE_TEST_INPUT or args.has("--use-test-input"):
 		return [
-			AvatarRendererHelper.AvatarFile.from_file_path(
-				"res://src/tool/avatar_renderer/test-input.json"
-			)
+			AvatarRendererHelper.AvatarFile.from_file_path("res://../tests/avatars-test-input.json")
 		]
 
-	var args := OS.get_cmdline_args()
 	var avatar_data = null
 	var avatar_in_place := args.find("--avatars")
 

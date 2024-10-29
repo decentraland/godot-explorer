@@ -25,8 +25,7 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
     Ok(())
 }
 
-pub fn import_assets() -> ExitStatus
-{
+pub fn import_assets() -> ExitStatus {
     let program = get_godot_path();
 
     // Do imports and one project open

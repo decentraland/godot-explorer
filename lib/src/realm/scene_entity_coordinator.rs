@@ -546,6 +546,11 @@ impl SceneEntityCoordinator {
         self.cache_scene_data.remove(&scene_id);
         self.update_position(self.current_position.0, self.current_position.1);
     }
+
+    #[func]
+    pub fn is_busy(&self) -> bool {
+        !(self.requested_city_pointers.is_empty() && self.requested_entity.is_empty())
+    }
 }
 
 #[godot_api]

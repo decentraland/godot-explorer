@@ -16,14 +16,13 @@ pub fn adjust_canonicalization<P: AsRef<std::path::Path>>(p: P) -> String {
     }
 }
 
-pub fn get_godot_path() -> String
-{
+pub fn get_godot_path() -> String {
     adjust_canonicalization(
         std::fs::canonicalize(format!(
             "{}godot/{}",
             BIN_FOLDER,
             install_dependency::get_godot_executable_path().unwrap()
         ))
-        .expect("Did you executed `cargo run -- install`?")
+        .expect("Did you executed `cargo run -- install`?"),
     )
 }

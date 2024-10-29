@@ -188,13 +188,10 @@ fn main() -> Result<(), anyhow::Error> {
         ("import-assets", _m) => {
             let status = import_assets();
             if !status.success() {
-                println!(
-                    "WARN: cargo build exited with non-zero status: {}",
-                    status
-                );
+                println!("WARN: cargo build exited with non-zero status: {}", status);
             }
             Ok(())
-        },
+        }
         ("coverage", sm) => coverage_with_itest(sm.is_present("dev")),
         ("test-tools", _) => test_godot_tools(None),
         ("vars", _) => {
