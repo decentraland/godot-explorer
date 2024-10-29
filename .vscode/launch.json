@@ -8,20 +8,24 @@
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
       "args": [
         "--path",
-        "${workspaceFolder}/godot"
+        "${workspaceFolder}/godot",
+        "--skip-lobby",
+        "--realm",
+        "http://localhost:8000",
+        "--preview"
       ],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [
         {
           "name": "RUST_LOG",
-          "value": "debug"
+          "value": "dclgodot=debug"
         }
       ],
       "externalConsole": true,
       "preLaunchTask": "Build GDExtension Lib",
       "sourceFileMap": {
-        "/rustc/cc66ad468955717ab92600c770da8c1601a4ff33": "${env:HOME}${env:USERPROFILE}\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust"
+        "/rustc/129f3b9964af4d4a709d1383930ade12dfe7c081": "${env:HOME}${env:USERPROFILE}\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\lib\\rustlib\\src\\rust"
       }
     },
     {
@@ -29,11 +33,7 @@
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": [
-        "--path",
-        "${workspaceFolder}/godot",
-        "--test"
-      ],
+      "args": ["--path", "${workspaceFolder}/godot", "--test"],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [
@@ -50,11 +50,7 @@
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": [
-        "--path",
-        "${workspaceFolder}/godot",
-        "-e"
-      ],
+      "args": ["--path", "${workspaceFolder}/godot", "-e"],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
@@ -66,11 +62,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": [
-        "--path",
-        "${workspaceFolder}/godot",
-        "-e"
-      ],
+      "args": ["--path", "${workspaceFolder}/godot", "-e"],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
@@ -82,10 +74,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": [
-        "--path",
-        "${workspaceFolder}/godot"
-      ],
+      "args": ["--path", "${workspaceFolder}/godot"],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [
@@ -111,11 +100,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": [
-        "--path",
-        "${workspaceFolder}/godot",
-        "--test"
-      ],
+      "args": ["--path", "${workspaceFolder}/godot", "--test"],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
@@ -136,11 +121,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": [
-        "--path",
-        "${workspaceFolder}/godot",
-        "-e"
-      ],
+      "args": ["--path", "${workspaceFolder}/godot", "-e"],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
@@ -153,10 +134,7 @@
       "request": "launch",
       "targetArchitecture": "arm64",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": [
-        "--path",
-        "${workspaceFolder}/godot"
-      ],
+      "args": ["--path", "${workspaceFolder}/godot"],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
