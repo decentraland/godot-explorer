@@ -179,6 +179,10 @@ func _process(_delta):
 
 
 func _on_timer_timeout():
+	# Continue only when every pointer around was fetched
+	if Global.scene_fetcher.scene_entity_coordinator.is_busy():
+		return
+
 	if current_payload_index >= scenes_to_process.scenes.size():
 		Global.testing_tools.exit_gracefully(0)
 		return

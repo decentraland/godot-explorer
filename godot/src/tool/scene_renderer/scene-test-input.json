@@ -9,7 +9,7 @@
         "camera": {
             "position": {
                 "x": 8,
-                "y": 20,
+                "y": 25,
                 "z": -8
             },
             "target": {
@@ -17,13 +17,13 @@
                 "y": 0,
                 "z": -8
             },
-            "orthoSize": 20,
+            "orthoSize": 25,
             "projection": "ortho"
         }
     },
     "payload": [
         {
-            "coords": "72,-10"
+            "coords": "73,-6"
         }
     ]
 }

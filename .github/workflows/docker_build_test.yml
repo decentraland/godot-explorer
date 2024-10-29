@@ -78,7 +78,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: snapshots
+          name: docker-snapshots
           path: |
             ${{ github.workspace }}/avatar-output/**/*
             ${{ github.workspace }}/scenes-output/**/*
