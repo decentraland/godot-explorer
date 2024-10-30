@@ -10,6 +10,14 @@
         "useTabs": false,
         "semi": false
       }
+    },
+    {
+      "files": "*.json",
+      "options": {
+        "tabWidth": 2,
+        "printWidth": 80,
+        "useTabs": false
+      }
     }
   ]
 }
