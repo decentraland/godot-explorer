@@ -147,7 +147,6 @@ impl NetworkInspector {
     pub fn get_request(&self, id: u32) -> Dictionary {
         let mut dict = Dictionary::new();
         if let Some(request) = self.requests.get(&NetworkInspectorId(id)) {
-            // dict.insert("id", request.id);
             dict.insert("requested_at", request.requested_at);
             dict.insert(
                 "response_received_at",
