@@ -19,7 +19,7 @@ func _on_realm_changed():
 # TODO: replace with Global.content_provider.fetch_profile when it supports multiple lambda server
 func async_fetch_profile(address: String, requested_lambda_server_base_url: String) -> void:
 	var url = requested_lambda_server_base_url + "profiles/" + address
-	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", [])
+	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var response = await PromiseUtils.async_awaiter(promise)
 
 	# Are we still needing to fetch this profile?
@@ -78,7 +78,7 @@ func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) 
 		return
 
 	var body_payload = (ret as Dictionary).get("body_payload")
-	var headers := ["Content-Type: " + (ret as Dictionary).get("content_type")]
+	var headers := {"Content-Type": (ret as Dictionary).get("content_type")}
 	var url := Global.realm.get_profile_content_url() + "entities/"
 	var promise_req := Global.http_requester.request_json_bin(
 		url, HTTPClient.METHOD_POST, body_payload, headers

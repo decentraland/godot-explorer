@@ -1,9 +1,12 @@
 // https://github.com/decentraland/hammurabi/pull/33/files#diff-18afcd5f94e3688aad1ba36fa1db3e09b472b271d1e0cf5aeb59ebd32f43a328
 
+use std::collections::HashMap;
+
 use http::{Method, Uri};
 
 use crate::{
     auth::ephemeral_auth_chain::EphemeralAuthChain,
+    godot_classes::dcl_global::DclGlobal,
     http_request::{
         http_queue_requester::HttpQueueRequester,
         request_response::{RequestOption, ResponseEnum, ResponseType},
@@ -74,16 +77,12 @@ impl SignedLogin {
             let mut chain = ephemeral_auth_chain.auth_chain().clone();
             chain.add_signed_entity(payload, signature);
 
-            let mut headers = Vec::from_iter(
-                chain
-                    .headers()
-                    .map(|(key, value)| format!("{}: {}", key, value)),
-            );
+            let mut headers = HashMap::from_iter(chain.headers());
+            headers.insert("x-identity-timestamp".into(), format!("{unix_time}"));
+            headers.insert("x-identity-metadata".into(), meta.to_string());
 
-            headers.push(format!("x-identity-timestamp: {unix_time}"));
-            headers.push(format!("x-identity-metadata: {meta}"));
-
-            let http_requester = HttpQueueRequester::new(1);
+            let http_requester =
+                HttpQueueRequester::new(1, DclGlobal::get_network_inspector_sender());
             let response = http_requester
                 .request(
                     RequestOption::new(

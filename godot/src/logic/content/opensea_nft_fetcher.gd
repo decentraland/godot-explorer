@@ -92,10 +92,10 @@ func fetch_nft(urn: DclUrn) -> Promise:
 
 func _async_request_nft(completed_promise: Promise, urn: DclUrn):
 	var url = RETRIEVE_ASSETS_ENDPOINT % [urn.chain, urn.contract_address, urn.token_id]
-	var headers = [
-		"Content-Type: application/json",
-		"X-API-KEY: " + API_KEY,
-	]
+	var headers = {
+		"Content-Type": "application/json",
+		"X-API-KEY": API_KEY,
+	}
 	var asset_promise: Promise = Global.http_requester.request_json(
 		url, HTTPClient.METHOD_GET, "", headers
 	)

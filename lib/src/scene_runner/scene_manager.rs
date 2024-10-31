@@ -21,6 +21,7 @@ use crate::{
         JsonGodotClass,
     },
     realm::dcl_scene_entity_definition::DclSceneEntityDefinition,
+    tools::network_inspector::NETWORK_INSPECTOR_ENABLE,
 };
 use godot::{
     engine::{
@@ -124,30 +125,40 @@ impl SceneManager {
             SceneType::Parcel
         };
 
+        let dcl_global = DclGlobal::singleton();
+
         let new_scene_id = Scene::new_id();
         let signal_data = (new_scene_id, scene_entity_definition.id.clone());
-        let testing_mode_active = DclGlobal::singleton().bind().testing_scene_mode;
-        let ethereum_provider = DclGlobal::singleton().bind().ethereum_provider.clone();
+        let testing_mode_active = dcl_global.bind().testing_scene_mode;
+        let ethereum_provider = dcl_global.bind().ethereum_provider.clone();
         let ephemeral_wallet = DclGlobal::singleton()
             .bind()
             .player_identity
             .bind()
             .try_get_ephemeral_auth_chain();
 
-        let realm = DclGlobal::singleton().bind().realm.clone();
+        let realm = dcl_global.bind().realm.clone();
         let realm = realm.bind();
         let realm_name = realm.get_realm_name().to_string();
         let base_url = realm.get_realm_url().to_string();
         let network_id = realm.get_network_id();
 
-        let is_preview = DclGlobal::singleton().bind().get_preview_mode();
+        let is_preview = dcl_global.bind().get_preview_mode();
 
-        let comms_adapter = DclGlobal::singleton()
+        let comms_adapter = dcl_global
             .bind()
             .comms
             .bind()
             .get_current_adapter_conn_str()
             .to_string();
+
+        let network_inspector = dcl_global.bind().get_network_inspector();
+        let network_inspector_sender =
+            if NETWORK_INSPECTOR_ENABLE.load(std::sync::atomic::Ordering::Relaxed) {
+                Some(network_inspector.bind().get_sender())
+            } else {
+                None
+            };
 
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(SpawnDclSceneData {
             scene_id: new_scene_id,
@@ -167,6 +178,7 @@ impl SceneManager {
                 is_preview,
             },
             inspect,
+            network_inspector_sender,
         });
 
         let new_scene = Scene::new(
