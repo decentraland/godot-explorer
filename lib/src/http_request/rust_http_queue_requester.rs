@@ -89,17 +89,6 @@ impl RustHttpQueueRequester {
     ) -> Gd<Promise> {
         self._request_json(url, method, Some(body.to_vec()), headers)
     }
-
-    // #[func]
-    // fn try_set_global_network_inspector(&mut self) {
-    //     let Some(sender) = DclGlobal::try_singleton()
-    //         .and_then(|v| Some(v.bind().get_network_inspector().bind().get_sender()))
-    //     else {
-    //         return;
-    //     };
-
-    //     self.http_queue_requester = set_inspector_sender(sender);
-    // }
 }
 
 impl RustHttpQueueRequester {
