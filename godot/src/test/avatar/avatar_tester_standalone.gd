@@ -14,6 +14,7 @@ var avatar_list: Array = []
 @onready var spinner = $Spinner
 @onready var line_edit_profile_entity = $TabContainer/Avatars/LineEdit_ProfileEntity
 
+
 func _ready():
 	spinner.hide()
 	load_avatar_list()
@@ -116,13 +117,14 @@ func _on_button_clear_pressed():
 # gdlint:ignore = async-function-name
 func _on_option_button_avatar_list_item_selected(index):
 	var avatar_i = option_button_avatar_list.get_item_id(index)
-	
-	render_avatar(avatar_list[avatar_i])
-	
-func render_avatar(avatar_dict: Dictionary) -> void:
+
+	_async_render_avatar(avatar_list[avatar_i])
+
+
+func _async_render_avatar(avatar_dict: Dictionary) -> void:
 	var profile: DclUserProfile = DclUserProfile.new()
 	var avatar_wf: DclAvatarWireFormat = profile.get_avatar()
-	
+
 	avatar_wf.set_wearables(PackedStringArray(avatar_dict.wearables))
 	avatar_wf.set_force_render(avatar_dict.get("forceRender", []))
 	avatar_wf.set_body_shape(avatar_dict.bodyShape)
@@ -156,33 +158,38 @@ func _on_button_refresh_pressed():
 	_on_option_button_avatar_list_item_selected(option_button_avatar_list.selected)
 
 
+# gdlint:ignore = async-function-name
 func _on_button_fetch_pressed():
 	var avatars_fetched = null
 	spinner.show()
-	
+
 	if line_edit_profile_entity.text.begins_with("0x"):
 		var address = line_edit_profile_entity.text
 		var url = "https://peer.decentraland.org/lambdas/profiles/" + address
-		var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
+		var promise: Promise = Global.http_requester.request_json(
+			url, HTTPClient.METHOD_GET, "", {}
+		)
 		var response = await PromiseUtils.async_awaiter(promise)
-		
+
 		if response is PromiseError:
 			printerr("Error while fetching profile " + url, " reason: ", response.get_error())
 			spinner.hide()
 			return
-			
+
 		var json: Dictionary = response.get_string_response_as_json()
 		avatars_fetched = json.get("avatars", [])
 	elif line_edit_profile_entity.text.begins_with("bafk"):
 		var url = "https://peer.decentraland.org/content/contents/" + line_edit_profile_entity.text
-		var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
+		var promise: Promise = Global.http_requester.request_json(
+			url, HTTPClient.METHOD_GET, "", {}
+		)
 		var response = await PromiseUtils.async_awaiter(promise)
-		
+
 		if response is PromiseError:
 			printerr("Error while fetching entity " + url, " reason: ", response.get_error())
 			spinner.hide()
 			return
-			
+
 		var json: Dictionary = response.get_string_response_as_json()
 		avatars_fetched = json.get("metadata", {}).get("avatars", [])
 
@@ -190,6 +197,6 @@ func _on_button_fetch_pressed():
 		printerr("no avatars found")
 		spinner.hide()
 		return
-		
+
 	spinner.hide()
-	render_avatar(avatars_fetched[0].get("avatar", {}))
+	_async_render_avatar(avatars_fetched[0].get("avatar", {}))
