@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use godot::{engine::Timer, prelude::*};
 
@@ -184,7 +184,10 @@ impl Metrics {
             http::Method::POST,
             ResponseType::AsString,
             Some(json_body.as_bytes().to_vec()),
-            Some(vec!["Content-Type: application/json".to_string()]),
+            Some(HashMap::from([(
+                "Content-Type".to_string(),
+                "application/json".to_string(),
+            )])),
             None,
         );
         if let Err(err) = http_requester.request(request, 0).await {
