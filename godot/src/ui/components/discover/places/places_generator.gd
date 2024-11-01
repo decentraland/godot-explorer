@@ -179,7 +179,7 @@ func on_request(offset: int, limit: int) -> void:
 
 
 func _async_fetch_places(url: String, limit: int = 100):
-	var headers = ["Content-Type: application/json"]
+	var headers = {"Content-Type": "application/json"}
 	var promise: Promise = Global.http_requester.request_json(
 		url, HTTPClient.METHOD_GET, "", headers
 	)

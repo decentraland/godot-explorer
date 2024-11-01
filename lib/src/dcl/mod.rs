@@ -14,6 +14,7 @@ use crate::{
     auth::{ephemeral_auth_chain::EphemeralAuthChain, ethereum_provider::EthereumProvider},
     content::content_mapping::ContentMappingAndUrlRef,
     realm::scene_definition::SceneEntityDefinition,
+    tools::network_inspector::NetworkInspectorSender,
 };
 
 use self::{
@@ -113,6 +114,8 @@ pub struct SpawnDclSceneData {
     pub realm_info: DclSceneRealmData,
     // Inspect
     pub inspect: bool,
+    // Inspect Network sender
+    pub network_inspector_sender: Option<NetworkInspectorSender>,
 }
 
 impl DclScene {

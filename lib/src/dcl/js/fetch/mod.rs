@@ -5,12 +5,16 @@ use http::HeaderValue;
 use reqwest::Response;
 use serde::Serialize;
 
+use crate::tools::network_inspector::{
+    NetworkInspectEvent, NetworkInspectRequestPayload, NetworkInspectResponsePayload,
+    NetworkInspectorId, NetworkInspectorSender,
+};
+
 mod signed_fetch;
 
 pub fn ops() -> Vec<OpDecl> {
     vec![
         op_fetch_custom::DECL,
-        op_fetch_consume_json::DECL,
         op_fetch_consume_text::DECL,
         op_fetch_consume_bytes::DECL,
         signed_fetch::op_signed_fetch_headers::DECL,
@@ -39,6 +43,8 @@ struct FetchResponse {
     #[serde(rename = "type")]
     _type: String,
     url: String,
+
+    network_inspector_id: u32,
 }
 
 impl FetchRequestsState {
@@ -68,6 +74,10 @@ async fn op_fetch_custom(
     _redirect: String, // TODO: unimplemented
     timeout: u32,
 ) -> Result<FetchResponse, AnyError> {
+    let maybe_network_inspector_sender = op_state
+        .borrow()
+        .try_borrow::<NetworkInspectorSender>()
+        .cloned();
     let has_fetch_state = op_state.borrow().has::<FetchRequestsState>();
     if !has_fetch_state {
         op_state
@@ -112,17 +122,44 @@ async fn op_fetch_custom(
         HeaderValue::from_static("https://decentraland.org"),
     );
 
-    let mut request = client
-        .request(method, url.clone())
-        .headers(headers)
-        .timeout(Duration::from_secs(timeout as u64));
-
     // match redirect.as_str() {
     //     "follow" => {}
     //     "error" => {}
     //     "manual" => {}
     //     _ => {}
     // };
+
+    // Inspect Network
+    let mut network_inspector_id = NetworkInspectorId::INVALID;
+    if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
+        let (inspect_event_id, inspect_event) =
+            NetworkInspectEvent::new_request(NetworkInspectRequestPayload {
+                url: url.clone(),
+                method: method.clone(),
+                body: if has_body {
+                    Some(body_data.clone().as_bytes().to_vec())
+                } else {
+                    None
+                },
+                headers: Some(
+                    headers
+                        .iter()
+                        .map(|(key, value)| {
+                            (key.to_string(), value.to_str().unwrap_or("").to_string())
+                        })
+                        .collect(),
+                ),
+            });
+        network_inspector_id = inspect_event_id;
+        if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+            tracing::error!("Error sending inspect event: {}", err);
+        }
+    }
+
+    let mut request = client
+        .request(method.clone(), url.clone())
+        .headers(headers)
+        .timeout(Duration::from_secs(timeout as u64));
 
     if has_body {
         request = request.body(body_data);
@@ -142,6 +179,24 @@ async fn op_fetch_custom(
                 }));
 
             current_request.response = Some(response);
+            drop(state);
+
+            // Inspect Network
+            if network_inspector_id.is_valid() {
+                if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
+                    let inspect_event = NetworkInspectEvent::new_partial_response(
+                        network_inspector_id,
+                        Ok(NetworkInspectResponsePayload {
+                            status_code: status,
+                            headers: Some(headers.clone()),
+                        }),
+                    );
+                    if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+                        tracing::error!("Error sending inspect event: {}", err);
+                    }
+                }
+            }
+
             let js_response = FetchResponse {
                 ok: true,
                 _internal_req_id: req_id,
@@ -151,46 +206,58 @@ async fn op_fetch_custom(
                 status_text: status.to_string(),
                 _type: "basic".into(), // TODO
                 url: url.clone(),
+                network_inspector_id: network_inspector_id.to_u32(),
             };
+
             Ok(js_response)
         }
-        Err(err) => Ok(FetchResponse {
-            _internal_req_id: req_id,
-            headers: HashMap::new(),
-            ok: false,
-            redirected: false,
-            status: 0,
-            status_text: err.to_string(),
-            _type: "error".into(),
-            url: url.clone(),
-        }),
+        Err(err) => {
+            drop(state);
+
+            // Inspect Network
+            if network_inspector_id.is_valid() {
+                if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
+                    let inspect_event = NetworkInspectEvent::new_partial_response(
+                        network_inspector_id,
+                        Err(err.to_string()),
+                    );
+                    if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+                        tracing::error!("Error sending inspect event: {}", err);
+                    }
+                }
+            }
+
+            Ok(FetchResponse {
+                _internal_req_id: req_id,
+                headers: HashMap::new(),
+                ok: false,
+                redirected: false,
+                status: 0,
+                status_text: err.to_string(),
+                _type: "error".into(),
+                url: url.clone(),
+                network_inspector_id: network_inspector_id.to_u32(),
+            })
+        }
     }
-}
-
-#[op]
-async fn op_fetch_consume_json(
-    op_state: Rc<RefCell<OpState>>,
-    req_id: u32,
-) -> Result<serde_json::Value, AnyError> {
-    let response = {
-        let mut state = op_state.borrow_mut();
-        let fetch_request = state.borrow_mut::<FetchRequestsState>();
-        let current_request = fetch_request.requests.get_mut(&req_id).unwrap();
-        current_request.response.take()
-    };
-
-    if let Some(response) = response {
-        return Ok(response.json::<serde_json::Value>().await?);
-    }
-
-    Err(anyhow::Error::msg("couldn't get response"))
 }
 
 #[op]
 async fn op_fetch_consume_text(
     op_state: Rc<RefCell<OpState>>,
     req_id: u32,
+    inspector_network_req_id: u32,
 ) -> Result<String, AnyError> {
+    let inspector_network_req_id = NetworkInspectorId::from_u32(inspector_network_req_id);
+    let maybe_network_inspector_sender = if inspector_network_req_id.is_valid() {
+        op_state
+            .borrow()
+            .try_borrow::<NetworkInspectorSender>()
+            .cloned()
+    } else {
+        None
+    };
+
     let response = {
         let mut state = op_state.borrow_mut();
         let fetch_request = state.borrow_mut::<FetchRequestsState>();
@@ -199,26 +266,104 @@ async fn op_fetch_consume_text(
     };
 
     if let Some(response) = response {
-        return Ok(response.text().await?);
+        match response.text().await {
+            Ok(response) => {
+                if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
+                    let inspect_event = NetworkInspectEvent::new_body_response(
+                        inspector_network_req_id,
+                        Ok(Some(response.clone())),
+                    );
+                    if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+                        tracing::error!("Error sending inspect event: {}", err);
+                    }
+                }
+
+                return Ok(response);
+            }
+            Err(err) => {
+                if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
+                    let inspect_event = NetworkInspectEvent::new_body_response(
+                        inspector_network_req_id,
+                        Err(err.to_string()),
+                    );
+                    if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+                        tracing::error!("Error sending inspect event: {}", err);
+                    }
+                }
+            }
+        }
     }
 
+    if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
+        let inspect_event = NetworkInspectEvent::new_body_response(
+            inspector_network_req_id,
+            Err("couldn't get response".into()),
+        );
+        if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+            tracing::error!("Error sending inspect event: {}", err);
+        }
+    }
     Err(anyhow::Error::msg("couldn't get response"))
 }
 #[op]
 async fn op_fetch_consume_bytes(
     op_state: Rc<RefCell<OpState>>,
     req_id: u32,
+    inspector_network_req_id: u32,
 ) -> Result<bytes::Bytes, AnyError> {
+    let inspector_network_req_id = NetworkInspectorId::from_u32(inspector_network_req_id);
+    let maybe_network_inspector_sender = if inspector_network_req_id.is_valid() {
+        op_state
+            .borrow()
+            .try_borrow::<NetworkInspectorSender>()
+            .cloned()
+    } else {
+        None
+    };
+
     let response = {
         let mut state = op_state.borrow_mut();
         let fetch_request = state.borrow_mut::<FetchRequestsState>();
         let current_request = fetch_request.requests.get_mut(&req_id).unwrap();
+
         current_request.response.take()
     };
 
     if let Some(response) = response {
-        return Ok(response.bytes().await?);
+        match response.bytes().await {
+            Ok(response) => {
+                if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
+                    let inspect_event =
+                        NetworkInspectEvent::new_body_response(inspector_network_req_id, Ok(None));
+                    if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+                        tracing::error!("Error sending inspect event: {}", err);
+                    }
+                }
+
+                return Ok(response);
+            }
+            Err(err) => {
+                if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
+                    let inspect_event = NetworkInspectEvent::new_body_response(
+                        inspector_network_req_id,
+                        Err(err.to_string()),
+                    );
+                    if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+                        tracing::error!("Error sending inspect event: {}", err);
+                    }
+                }
+            }
+        }
     }
 
+    if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
+        let inspect_event = NetworkInspectEvent::new_body_response(
+            inspector_network_req_id,
+            Err("couldn't get response".into()),
+        );
+        if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+            tracing::error!("Error sending inspect event: {}", err);
+        }
+    }
     Err(anyhow::Error::msg("couldn't get response"))
 }

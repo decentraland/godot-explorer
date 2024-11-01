@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use godot::{
     obj::Gd,
     prelude::{GString, Variant},
@@ -32,7 +34,7 @@ pub struct RequestOption {
     pub url: String,
     pub method: http::Method,
     pub body: Option<Vec<u8>>,
-    pub headers: Option<Vec<String>>,
+    pub headers: Option<HashMap<String, String>>,
     pub response_type: ResponseType,
     pub timeout: Option<std::time::Duration>,
 }
@@ -44,7 +46,7 @@ impl RequestOption {
         method: http::Method,
         response_type: ResponseType,
         body: Option<Vec<u8>>,
-        headers: Option<Vec<String>>,
+        headers: Option<HashMap<String, String>>,
         timeout: Option<std::time::Duration>,
     ) -> Self {
         Self {
