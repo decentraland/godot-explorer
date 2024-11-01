@@ -11,8 +11,12 @@ var avatar_list: Array = []
 @onready var line_edit_custom = $TabContainer/Emotes/LineEdit_Custom
 @onready var option_button_avatar_list = $TabContainer/Avatars/OptionButton_AvatarList
 
+@onready var spinner = $Spinner
+@onready var line_edit_profile_entity = $TabContainer/Avatars/LineEdit_ProfileEntity
+
 
 func _ready():
+	spinner.hide()
 	load_avatar_list()
 	avatar.avatar_loaded.connect(self._on_avatar_loaded)
 	option_button_avatar_list.selected = -1
@@ -41,7 +45,7 @@ func load_avatar_list():
 
 	avatar_list = json_value.get("avatars", [])
 	for avatar_i in avatar_list.size():
-		option_button_avatar_list.add_item(avatar_list[avatar_i].ref, avatar_i)
+		option_button_avatar_list.add_item(avatar_list[avatar_i].get("ref", "no_ref"), avatar_i)
 
 
 func download_wearable(id: String):
@@ -114,16 +118,20 @@ func _on_button_clear_pressed():
 func _on_option_button_avatar_list_item_selected(index):
 	var avatar_i = option_button_avatar_list.get_item_id(index)
 
+	_async_render_avatar(avatar_list[avatar_i])
+
+
+func _async_render_avatar(avatar_dict: Dictionary) -> void:
 	var profile: DclUserProfile = DclUserProfile.new()
 	var avatar_wf: DclAvatarWireFormat = profile.get_avatar()
 
-	avatar_wf.set_wearables(PackedStringArray(avatar_list[avatar_i].wearables))
-	avatar_wf.set_force_render(avatar_list[avatar_i].get("forceRender", []))
-	avatar_wf.set_body_shape(avatar_list[avatar_i].bodyShape)
+	avatar_wf.set_wearables(PackedStringArray(avatar_dict.wearables))
+	avatar_wf.set_force_render(avatar_dict.get("forceRender", []))
+	avatar_wf.set_body_shape(avatar_dict.bodyShape)
 
-	var skin_color = avatar_list[avatar_i].get("skin", {}).get("color", {})
-	var eyes_color = avatar_list[avatar_i].get("eye", {}).get("color", {})
-	var hair_color = avatar_list[avatar_i].get("hair", {}).get("color", {})
+	var skin_color = avatar_dict.get("skin", {}).get("color", {})
+	var eyes_color = avatar_dict.get("eye", {}).get("color", {})
+	var hair_color = avatar_dict.get("hair", {}).get("color", {})
 
 	skin_color = Color(skin_color.get("r", 0.8), skin_color.get("g", 0.8), skin_color.get("b", 0.8))
 	eyes_color = Color(eyes_color.get("r", 0.8), eyes_color.get("g", 0.8), eyes_color.get("b", 0.8))
@@ -133,7 +141,9 @@ func _on_option_button_avatar_list_item_selected(index):
 	avatar_wf.set_hair_color(hair_color)
 	avatar_wf.set_skin_color(skin_color)
 
+	spinner.show()
 	await avatar.async_update_avatar(avatar_wf, "")
+	spinner.hide()
 
 
 func _on_button_download_wearables_pressed():
@@ -146,3 +156,47 @@ func _on_button_copy_wearable_data_pressed():
 
 func _on_button_refresh_pressed():
 	_on_option_button_avatar_list_item_selected(option_button_avatar_list.selected)
+
+
+# gdlint:ignore = async-function-name
+func _on_button_fetch_pressed():
+	var avatars_fetched = null
+	spinner.show()
+
+	if line_edit_profile_entity.text.begins_with("0x"):
+		var address = line_edit_profile_entity.text
+		var url = "https://peer.decentraland.org/lambdas/profiles/" + address
+		var promise: Promise = Global.http_requester.request_json(
+			url, HTTPClient.METHOD_GET, "", {}
+		)
+		var response = await PromiseUtils.async_awaiter(promise)
+
+		if response is PromiseError:
+			printerr("Error while fetching profile " + url, " reason: ", response.get_error())
+			spinner.hide()
+			return
+
+		var json: Dictionary = response.get_string_response_as_json()
+		avatars_fetched = json.get("avatars", [])
+	elif line_edit_profile_entity.text.begins_with("bafk"):
+		var url = "https://peer.decentraland.org/content/contents/" + line_edit_profile_entity.text
+		var promise: Promise = Global.http_requester.request_json(
+			url, HTTPClient.METHOD_GET, "", {}
+		)
+		var response = await PromiseUtils.async_awaiter(promise)
+
+		if response is PromiseError:
+			printerr("Error while fetching entity " + url, " reason: ", response.get_error())
+			spinner.hide()
+			return
+
+		var json: Dictionary = response.get_string_response_as_json()
+		avatars_fetched = json.get("metadata", {}).get("avatars", [])
+
+	if avatars_fetched.is_empty():
+		printerr("no avatars found")
+		spinner.hide()
+		return
+
+	spinner.hide()
+	_async_render_avatar(avatars_fetched[0].get("avatar", {}))
