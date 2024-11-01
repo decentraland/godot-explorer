@@ -57,12 +57,20 @@ fn main() -> Result<(), anyhow::Error> {
         )
         .subcommand(Command::new("docs"))
         .subcommand(
-            Command::new("install").arg(
-                Arg::new("no-templates")
-                    .long("no-templates")
-                    .help("skip download templates")
-                    .takes_value(false),
-            ),
+            Command::new("install")
+                .arg(
+                    Arg::new("no-templates")
+                        .long("no-templates")
+                        .help("skip download templates")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("platforms")
+                        .long("platforms")
+                        .help("download platform, can use multiple platforms, use like `--platforms linux android`")
+                        .takes_value(true)
+                        .multiple_values(true),
+                ),
         )
         .subcommand(Command::new("update-protocol"))
         .subcommand(
@@ -152,7 +160,16 @@ fn main() -> Result<(), anyhow::Error> {
     let root = xtaskops::ops::root_dir();
 
     let res = match subcommand {
-        ("install", sm) => install_dependency::install(sm.is_present("no-templates")),
+        ("install", sm) => {
+            let no_templates = sm.is_present("no-templates");
+            let platforms: Vec<String> = sm
+                .values_of("platforms")
+                .map(|vals| vals.map(String::from).collect())
+                .unwrap_or_default();
+        
+            // Call your install function and pass the templates
+            install_dependency::install(no_templates, &platforms)
+        },
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
