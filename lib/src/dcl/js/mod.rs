@@ -291,6 +291,7 @@ pub(crate) fn scene_thread(
 
     let start_time = std::time::SystemTime::now();
     let mut elapsed = Duration::default();
+    let mut reported_error_filter = 0;
 
     loop {
         let dt = std::time::SystemTime::now()
@@ -312,22 +313,26 @@ pub(crate) fn scene_thread(
         });
 
         if let Err(e) = result {
-            let err_str = format!("{:?}", e);
-            if let Ok(err) = e.downcast::<JsError>() {
-                tracing::error!(
-                    "[scene thread {scene_id:?}] script error onUpdate: {} msg {:?} @ {:?}",
-                    err_str,
-                    err.message,
-                    err
-                );
-            } else {
-                tracing::error!(
-                    "[scene thread {scene_id:?}] script error onUpdate: {}",
-                    err_str
-                );
-            }
+            reported_error_filter += 1;
 
-            break;
+            if reported_error_filter <= 10 {
+                let err_str = format!("{:?}", e);
+                if let Ok(err) = e.downcast::<JsError>() {
+                    tracing::error!(
+                        "[scene thread {scene_id:?}] script error onUpdate: {} msg {:?} @ {:?}",
+                        err_str,
+                        err.message,
+                        err
+                    );
+                } else {
+                    tracing::error!(
+                        "[scene thread {scene_id:?}] script error onUpdate: {}",
+                        err_str
+                    );
+                }
+            }
+        } else {
+            reported_error_filter -= 1;
         }
 
         let value = state.borrow().borrow::<SceneDying>().0;
