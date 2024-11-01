@@ -734,6 +734,78 @@
 				"urn:decentraland:off-chain:base-avatars:pearls_earring",
 				"urn:decentraland:off-chain:base-avatars:f_mouth_05"
 			]
+		},
+		{
+			"ref": "bafkreidyaysvsyof3f2s2k7ufmhkksm6lsawebg7bcdqlnzimwumu5qz7e",
+			"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+			"wearables": [
+				"urn:decentraland:matic:collections-v2:0x4ea1cfe9e8ca641fbe362469f79029a0eaa6a996:0:1",
+				"urn:decentraland:matic:collections-v2:0xded1e53d7a43ac1844b66c0ca0f02627eb42e16d:7:737186041679900306885426193785693026232265667803843778780176842775",
+				"urn:decentraland:matic:collections-v2:0x80ec22f149a3f4727ba1ab91ddcefe9860ed4808:0:409",
+				"urn:decentraland:matic:collections-v2:0x3f0ba00d6a98db91f92e5e04accc9735a6fc562d:3:315936875005671560093754083051011296956685286201647333762932932618",
+				"urn:decentraland:matic:collections-v2:0x8cc5f22eec7b03c6a183499d7bb50679097ddfb6:0:10",
+				"urn:decentraland:matic:collections-v2:0x083230402677cad61d7a0cc040dc8a08cfeb809e:6:631873750011343120187508166102022593913370572403294667525865865251",
+				"urn:decentraland:matic:collections-v2:0xd1b84ae24b95f290211a6da61cde8d1b2647c711:0:5",
+				"urn:decentraland:matic:collections-v2:0xbad1c910568230c92c223b55564cf689928ec1b6:0:4",
+				"urn:decentraland:matic:collections-v2:0x5b7bd3e12f7d1461fc0ad370cd12402049b4b0d9:0:25",
+				"urn:decentraland:matic:collections-v2:0x324cb2c654be51c6ad6c76a3e022cabe49cc4e46:4:421249166674228746791672110734681729275580381602196445017243910158",
+				"urn:decentraland:off-chain:base-avatars:eyebrows_06",
+				"urn:decentraland:ethereum:collections-v1:halloween_2020:hwn_2020_cat_eyes:409",
+				"urn:decentraland:ethereum:collections-v1:halloween_2020:hwn_2020_pumpkin_mouth:394",
+				"urn:decentraland:matic:collections-v2:0xcbd17d94f5be12fff27566c23888d6936b8e70b8:6:631873750011343120187508166102022593913370572403294667525865865262"
+			],
+			"forceRender": [
+				"eyewear",
+				"hands_wear",
+				"facial_hair"
+			]
+		},
+		{
+			"description": "",
+			"avatar": {
+				"bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+				"snapshots": {
+					"body": "https://peer-ec2.decentraland.org/content/contents/bafkreiegje2flk3yiyu5qelqiyx3uchkvvlegurmec36nbp5gz2pzwklny",
+					"face256": "https://peer-ec2.decentraland.org/content/contents/bafkreicbzfziozcirg5b4cxvhul67kzgl6grmhsa4zdrrpa2ttrierimgy"
+				},
+				"eyes": {
+					"color": {
+						"r": 0.37109375,
+						"g": 0.22265625,
+						"b": 0.1953125
+					}
+				},
+				"hair": {
+					"color": {
+						"r": 0.234375,
+						"g": 0.12890625,
+						"b": 0.04296875
+					}
+				},
+				"skin": {
+					"color": {
+						"r": 0.94921875,
+						"g": 0.76171875,
+						"b": 0.6484375
+					}
+				},
+				"emotes": [],
+				"wearables": [
+					"urn:decentraland:off-chain:base-avatars:eyes_00",
+					"urn:decentraland:off-chain:base-avatars:eyebrows_00",
+					"urn:decentraland:off-chain:base-avatars:mouth_00",
+					"urn:decentraland:off-chain:base-avatars:casual_hair_01",
+					"urn:decentraland:off-chain:base-avatars:beard",
+					"urn:decentraland:off-chain:base-avatars:sneakers",
+					"urn:decentraland:matic:collections-v2:0xd98aeb263b7709a8954ac8cc3c488494016cf785:0:12329"
+				]
+			},
+			"hasClaimedName": false,
+			"name": "Guest#ce46",
+			"tutorialStep": 0,
+			"version": 974,
+			"userId": "0xdb85ed07980d17a0e890af48f15e92199879ce46",
+			"ethAddress": "0xdb85ed07980d17a0e890af48f15e92199879ce46"
 		}
 	],
 	"emotes": [
