@@ -56,6 +56,15 @@ func _ready():
 func start():
 	async_update_avatar(0)
 
+	# Visual enhance
+	var viewport: Viewport = avatar_preview.subviewport.get_viewport()
+	viewport.use_debanding = true
+	viewport.scaling_3d_scale = 2.0
+	RenderingServer.viewport_set_msaa_3d(
+		viewport.get_viewport_rid(), RenderingServer.VIEWPORT_MSAA_8X
+	)
+	RenderingServer.screen_space_roughness_limiter_set_active(true, 4.0, 1.0)
+
 
 func flush_logs():
 	for log_item in logs:
