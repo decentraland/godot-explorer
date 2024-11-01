@@ -30,7 +30,7 @@ jobs:
 
       # Build section
       - name: Cargo install
-        run: cargo run -- install
+        run: cargo run -- install --platforms linux
 
       - name: Build
         working-directory: lib

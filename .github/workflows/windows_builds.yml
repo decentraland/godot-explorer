@@ -31,7 +31,7 @@ jobs:
 
       # Build section
       - name: Cargo install
-        run: cargo run -- install
+        run: cargo run -- install --platforms windows
 
       - name: Build
         working-directory: lib

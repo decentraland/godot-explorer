@@ -20,7 +20,7 @@
       - add `ffmpeg\bin` to your `PATH`
     - the `.github/workflows/ci.yml` file can be useful to guide you
 
-4. Run `cargo run -- install` in the repo root folder.
+4. Run `cargo run -- install --platforms linux` in the repo root folder (change linux to your target platform).
 
 ## Running and editing the project
 
@@ -43,7 +43,7 @@ cd lib
 cd ../../ # return
 
 # Compile for Linux
-cargo run -- install
+cargo run -- install --platforms android
 cargo run -- run --only-build
 cd ../../ # return
 
