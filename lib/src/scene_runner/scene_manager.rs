@@ -21,6 +21,7 @@ use crate::{
         JsonGodotClass,
     },
     realm::dcl_scene_entity_definition::DclSceneEntityDefinition,
+    tools::network_inspector::NETWORK_INSPECTOR_ENABLE,
 };
 use godot::{
     engine::{
@@ -123,30 +124,40 @@ impl SceneManager {
             SceneType::Parcel
         };
 
+        let dcl_global = DclGlobal::singleton();
+
         let new_scene_id = Scene::new_id();
         let signal_data = (new_scene_id, scene_entity_definition.id.clone());
-        let testing_mode_active = DclGlobal::singleton().bind().testing_scene_mode;
-        let ethereum_provider = DclGlobal::singleton().bind().ethereum_provider.clone();
+        let testing_mode_active = dcl_global.bind().testing_scene_mode;
+        let ethereum_provider = dcl_global.bind().ethereum_provider.clone();
         let ephemeral_wallet = DclGlobal::singleton()
             .bind()
             .player_identity
             .bind()
             .try_get_ephemeral_auth_chain();
 
-        let realm = DclGlobal::singleton().bind().realm.clone();
+        let realm = dcl_global.bind().realm.clone();
         let realm = realm.bind();
         let realm_name = realm.get_realm_name().to_string();
         let base_url = realm.get_realm_url().to_string();
         let network_id = realm.get_network_id();
 
-        let is_preview = DclGlobal::singleton().bind().get_preview_mode();
+        let is_preview = dcl_global.bind().get_preview_mode();
 
-        let comms_adapter = DclGlobal::singleton()
+        let comms_adapter = dcl_global
             .bind()
             .comms
             .bind()
             .get_current_adapter_conn_str()
             .to_string();
+
+        let network_inspector = dcl_global.bind().get_network_inspector();
+        let network_inspector_sender =
+            if NETWORK_INSPECTOR_ENABLE.load(std::sync::atomic::Ordering::Relaxed) {
+                Some(network_inspector.bind().get_sender())
+            } else {
+                None
+            };
 
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(SpawnDclSceneData {
             scene_id: new_scene_id,
@@ -166,6 +177,7 @@ impl SceneManager {
                 is_preview,
             },
             inspect,
+            network_inspector_sender,
         });
 
         let new_scene = Scene::new(
@@ -273,6 +285,22 @@ impl SceneManager {
     }
 
     #[func]
+    fn get_scene_is_paused(&self, scene_id: i32) -> bool {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
+            scene.paused
+        } else {
+            false
+        }
+    }
+
+    #[func]
+    fn set_scene_is_paused(&mut self, scene_id: i32, value: bool) {
+        if let Some(scene) = self.scenes.get_mut(&SceneId(scene_id)) {
+            scene.paused = value;
+        }
+    }
+
+    #[func]
     pub fn get_scene_id_by_parcel_position(&self, parcel_position: Vector2i) -> i32 {
         for scene in self.scenes.values() {
             if let SceneType::Global(_) = scene.scene_type {
@@ -366,7 +394,7 @@ impl SceneManager {
         // TODO: review to define a better behavior
         self.sorted_scene_ids.sort_by_key(|&scene_id| {
             let scene = self.scenes.get_mut(&scene_id).unwrap();
-            if !scene.current_dirty.waiting_process {
+            if !scene.current_dirty.waiting_process || scene.paused {
                 scene.next_tick_us = start_time_us + 120000;
                 // Set at the end of the queue: scenes without processing from scene-runtime, wait until something comes
             } else if scene_id == self.current_parcel_scene_id {
@@ -446,7 +474,6 @@ impl SceneManager {
             let scene = self.scenes.get_mut(scene_id).unwrap();
             match scene.state {
                 SceneState::ToKill => {
-                    scene.state = SceneState::KillSignal(current_time_us);
                     if let Err(_e) = scene
                         .dcl_scene
                         .main_sender_to_thread
@@ -464,6 +491,7 @@ impl SceneManager {
                         let elapsed_from_kill_us = current_time_us - kill_time_us;
                         if elapsed_from_kill_us > 10 * 1e6 as i64 {
                             // 10 seconds from the kill signal
+                            tracing::error!("timeout killing scene");
                         }
                     }
                 }

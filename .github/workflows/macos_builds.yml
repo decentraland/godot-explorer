@@ -28,7 +28,7 @@ jobs:
 
       # Build section
       - name: Cargo install
-        run: cargo run -- install
+        run: cargo run -- install --platforms macos
 
       - name: Build
         working-directory: lib

@@ -15,6 +15,7 @@ use crate::{
     http_request::rust_http_queue_requester::RustHttpQueueRequester,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
     test_runner::testing_tools::DclTestingTools,
+    tools::network_inspector::{NetworkInspector, NetworkInspectorSender},
 };
 
 use super::{
@@ -84,6 +85,9 @@ pub struct DclGlobal {
     pub renderer_version: GString,
 
     pub is_mobile: bool,
+
+    #[var]
+    pub network_inspector: Gd<NetworkInspector>,
 }
 
 #[godot_api]
@@ -143,6 +147,7 @@ impl INode for DclGlobal {
             ethereum_provider: Arc::new(EthereumProvider::new()),
             metrics: Metrics::new_alloc(),
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
+            network_inspector: NetworkInspector::new_alloc(),
         }
     }
 }
@@ -190,5 +195,15 @@ impl DclGlobal {
 
     pub fn singleton() -> Gd<Self> {
         Self::try_singleton().expect("Failed to get global singleton!")
+    }
+
+    pub fn get_network_inspector_sender() -> Option<NetworkInspectorSender> {
+        Some(
+            Self::try_singleton()?
+                .bind()
+                .network_inspector
+                .bind()
+                .get_sender(),
+        )
     }
 }

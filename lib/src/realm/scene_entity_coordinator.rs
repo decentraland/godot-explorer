@@ -5,9 +5,15 @@ use std::{
 
 use godot::{prelude::*, test::itest};
 
-use crate::http_request::{
-    http_requester::HttpRequester,
-    request_response::{RequestOption, RequestResponse, ResponseEnum, ResponseType},
+use crate::{
+    godot_classes::dcl_global::DclGlobal,
+    http_request::{
+        http_queue_requester::HttpQueueRequester,
+        request_response::{
+            RequestOption, RequestResponse, RequestResponseError, ResponseEnum, ResponseType,
+        },
+    },
+    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 use super::{
@@ -16,7 +22,7 @@ use super::{
     scene_definition::{EntityBase, SceneEntityDefinition},
 };
 
-#[derive(Debug, Default, GodotClass)]
+#[derive(Debug, GodotClass)]
 #[class(base=Node)]
 struct SceneEntityCoordinator {
     parcel_radius_calculator: ParcelRadiusCalculator,
@@ -30,7 +36,6 @@ struct SceneEntityCoordinator {
     requested_entity: HashMap<u32, EntityBase>,
     cache_scene_data: HashMap<String, Arc<SceneEntityDefinition>>, // entity_id to SceneData
 
-    http_requester: HttpRequester,
     entities_active_url: String,
     content_url: String,
 
@@ -39,6 +44,12 @@ struct SceneEntityCoordinator {
     loadable_scenes: HashSet<String>,
     keep_alive_scenes: HashSet<String>,
     empty_parcels: HashSet<String>,
+
+    receiver: tokio::sync::mpsc::Receiver<Result<RequestResponse, RequestResponseError>>,
+    sender: tokio::sync::mpsc::Sender<Result<RequestResponse, RequestResponseError>>,
+
+    http_requester: Option<Arc<HttpQueueRequester>>,
+    runtime: Option<tokio::runtime::Handle>,
 }
 
 impl SceneEntityCoordinator {
@@ -49,10 +60,35 @@ impl SceneEntityCoordinator {
         entities_active_url: String,
         content_url: String,
         should_load_city_scenes: bool,
+        runtime: Option<tokio::runtime::Handle>,
+        http_requester: Option<Arc<HttpQueueRequester>>,
     ) -> Self {
+        let (sender, receiver) = tokio::sync::mpsc::channel(100);
         let mut _self = SceneEntityCoordinator {
             parcel_radius_calculator: ParcelRadiusCalculator::new(3),
-            ..Default::default()
+
+            current_position: Coord(-1000, -1000),
+            should_load_city_scenes,
+            requested_city_pointers: Default::default(),
+            cache_city_pointers: Default::default(),
+
+            global_desired_entities: Default::default(),
+            requested_entity: Default::default(),
+            cache_scene_data: Default::default(),
+            entities_active_url: Default::default(),
+            content_url: Default::default(),
+
+            version: Default::default(),
+            dirty_loadable_scenes: Default::default(),
+            loadable_scenes: Default::default(),
+            keep_alive_scenes: Default::default(),
+            empty_parcels: Default::default(),
+
+            receiver,
+            sender,
+
+            http_requester,
+            runtime,
         };
 
         _self._config(entities_active_url, content_url, should_load_city_scenes);
@@ -77,6 +113,37 @@ impl SceneEntityCoordinator {
         self.dirty_loadable_scenes = true;
     }
 
+    fn do_request(&mut self, request_option: RequestOption) {
+        if self.http_requester.is_none() {
+            self.http_requester = Some(Arc::new(HttpQueueRequester::new(10, None)));
+        }
+
+        let sender = self.sender.clone();
+        let http_requester = self.http_requester.clone().unwrap();
+
+        if let Some(rt) = self.runtime.as_ref() {
+            rt.spawn(async move {
+                let result = http_requester.request(request_option, 0).await;
+                if let Err(error) = sender.send(result).await {
+                    tracing::error!("Error sending the result: {:?}", error);
+                }
+            });
+        } else {
+            std::thread::spawn(move || {
+                let runtime = tokio::runtime::Runtime::new();
+                if runtime.is_err() {
+                    panic!("Failed to create runtime {:?}", runtime.err());
+                }
+                let runtime = runtime.unwrap();
+
+                runtime.block_on(async move {
+                    let result = http_requester.request(request_option, 0).await;
+                    let _ = sender.try_send(result);
+                });
+            });
+        }
+    }
+
     fn request_pointers(&mut self, set_request_pointers: HashSet<Coord>) {
         // Request the new pointers
         if !set_request_pointers.is_empty() {
@@ -87,6 +154,7 @@ impl SceneEntityCoordinator {
                 .join(",");
 
             let request_body: String = format!("{{\"pointers\":[{request_pointers_body}]}}");
+            let headers = HashMap::from([("Content-Type".into(), "application/json".into())]);
 
             let request = RequestOption::new(
                 Self::REQUEST_TYPE_SCENE_POINTERS,
@@ -94,12 +162,12 @@ impl SceneEntityCoordinator {
                 http::Method::POST,
                 ResponseType::AsJson,
                 Some(request_body.as_bytes().to_vec()),
-                Some(vec!["Content-Type: application/json".to_string()]),
+                Some(headers),
                 None,
             );
             self.requested_city_pointers
                 .insert(request.id, set_request_pointers);
-            self.http_requester.send_request(request);
+            self.do_request(request);
         }
     }
 
@@ -313,7 +381,7 @@ impl SceneEntityCoordinator {
             );
 
             self.requested_entity.insert(request.id, entity_base);
-            self.http_requester.send_request(request);
+            self.do_request(request);
         }
     }
 
@@ -347,7 +415,7 @@ impl SceneEntityCoordinator {
 
             self.global_desired_entities.push(entity_base.clone());
             self.requested_entity.insert(request.id, entity_base);
-            self.http_requester.send_request(request);
+            self.do_request(request);
         }
     }
 
@@ -380,7 +448,7 @@ impl SceneEntityCoordinator {
     }
 
     pub fn _update(&mut self) {
-        while let Some(response) = self.http_requester.poll() {
+        while let Ok(response) = self.receiver.try_recv() {
             match response {
                 Ok(response) => {
                     if response.status_code.as_u16() >= 200 && response.status_code.as_u16() < 300 {
@@ -546,12 +614,24 @@ impl SceneEntityCoordinator {
         self.cache_scene_data.remove(&scene_id);
         self.update_position(self.current_position.0, self.current_position.1);
     }
+
+    #[func]
+    pub fn is_busy(&self) -> bool {
+        !(self.requested_city_pointers.is_empty() && self.requested_entity.is_empty())
+    }
 }
 
 #[godot_api]
 impl INode for SceneEntityCoordinator {
     fn init(_base: Base<Node>) -> Self {
-        SceneEntityCoordinator::new("".into(), "".into(), false)
+        let runtime = TokioRuntime::static_clone_handle();
+        if let Some(global) = DclGlobal::try_singleton() {
+            let http_requester_gd = global.bind().get_http_requester();
+            let http_requester = http_requester_gd.bind().get_http_queue_requester();
+            SceneEntityCoordinator::new("".into(), "".into(), false, runtime, Some(http_requester))
+        } else {
+            SceneEntityCoordinator::new("".into(), "".into(), false, None, None)
+        }
     }
 }
 
@@ -590,8 +670,13 @@ mod tests {
             "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest/contents"
                 .to_string();
 
-        let mut scene_entity_coordinator =
-            SceneEntityCoordinator::new(entities_active_url.clone(), content_url.clone(), false);
+        let mut scene_entity_coordinator = SceneEntityCoordinator::new(
+            entities_active_url.clone(),
+            content_url.clone(),
+            false,
+            None,
+            None,
+        );
 
         // Test scenes
         scene_entity_coordinator.set_scene_radius(0);
@@ -612,7 +697,7 @@ mod tests {
         // Test parcels
 
         let mut scene_entity_coordinator =
-            SceneEntityCoordinator::new(entities_active_url, content_url, true);
+            SceneEntityCoordinator::new(entities_active_url, content_url, true, None, None);
         scene_entity_coordinator.update_position(0, 0);
 
         assert!(wait_update_or_timeout(&mut scene_entity_coordinator, 10000));

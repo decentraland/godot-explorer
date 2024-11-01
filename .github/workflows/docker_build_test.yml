@@ -28,7 +28,9 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           image: godot-explorer
-          tags: latest ${{ github.sha }}
+          tags: |
+            ${{ github.sha }}
+            ${{ github.ref == 'refs/heads/main' && 'latest' || 'next' }}
           dockerfiles: |
             ./Dockerfile
           build-args: |
@@ -47,21 +49,36 @@ jobs:
 
       - name: Run avatar test
         run: |
-          mkdir -p output
+          mkdir -p avatars-output
           podman run --rm -v \
             $(pwd)/tests/avatars-test-input.json:/app/avatars.json \
-            -v $(pwd)/output:/app/output localhost/godot-explorer:latest
+            -v $(pwd)/avatars-output:/app/output localhost/godot-explorer:${{ github.sha }}
 
       - name: Compare images with snapshots
         run: |
           cargo run -- compare-image-folders \
             --snapshots tests/snapshots/avatar-image-generation/ \
-            --result ${{ github.workspace }}/output/
+            --result ${{ github.workspace }}/avatars-output/
+
+      - name: Run scene-rendering test
+        run: |
+          mkdir -p scenes-output
+          podman run --rm -v \
+            $(pwd)/tests/scene-renderer-test-input.json:/app/scenes.json \
+            --env PRESET_ARGS="--scene-renderer --scene-input-file scenes.json" \
+            -v $(pwd)/scenes-output:/app/output localhost/godot-explorer:${{ github.sha }}
+
+      - name: Compare images with snapshots
+        run: |
+          cargo run -- compare-image-folders \
+            --snapshots tests/snapshots/scene-image-generation/ \
+            --result ${{ github.workspace }}/scenes-output/
 
       - name: Upload artifacts
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: avatar-snapshots
+          name: docker-snapshots
           path: |
-            ${{ github.workspace }}/output/**/*
+            ${{ github.workspace }}/avatar-output/**/*
+            ${{ github.workspace }}/scenes-output/**/*

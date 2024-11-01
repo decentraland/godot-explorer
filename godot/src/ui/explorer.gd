@@ -9,6 +9,7 @@ var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
 
 var debug_panel = null
+var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
@@ -185,6 +186,13 @@ func _ready():
 	# last
 	ui_root.grab_focus.call_deferred()
 
+	if OS.get_cmdline_args().has("--scene-renderer"):
+		prints("load scene_orchestor")
+		var scene_renderer_orchestor = (
+			load("res://src/tool/scene_renderer/scene_orchestor.tscn").instantiate()
+		)
+		add_child(scene_renderer_orchestor)
+
 
 func _on_need_open_url(url: String, _description: String) -> void:
 	if not Global.player_identity.get_address_str().is_empty():
@@ -345,6 +353,8 @@ func _on_control_menu_request_pause_scenes(enabled):
 
 
 func move_to(position: Vector3, skip_loading: bool):
+	if disable_move_to:
+		return
 	player.set_position(position)
 	var cur_parcel_position = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
 	if not skip_loading:

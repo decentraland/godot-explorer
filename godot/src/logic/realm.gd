@@ -134,7 +134,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 	realm_url = Realm.ensure_starts_with_https(realm_url)
 
 	var promise: Promise = Global.http_requester.request_json(
-		realm_url + "about", HTTPClient.METHOD_GET, "", []
+		realm_url + "about", HTTPClient.METHOD_GET, "", {}
 	)
 
 	var res = await PromiseUtils.async_awaiter(promise)
@@ -211,7 +211,7 @@ func async_request_set_position(scene_urn):
 	prints(scene_urn)
 	var url = scene_urn.baseUrl + scene_urn.entityId
 
-	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", [])
+	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 
 	var res = await PromiseUtils.async_awaiter(promise)
 	if res is PromiseError:

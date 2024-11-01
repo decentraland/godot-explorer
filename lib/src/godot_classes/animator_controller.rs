@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use godot::{
     builtin::{meta::ToGodot, StringName},
@@ -35,6 +35,8 @@ pub struct MultipleAnimationController {
 
     current_time: HashMap<String, f32>,
     playing_anims: HashMap<String, AnimationItem>,
+
+    finished_animations: HashSet<String>,
 }
 
 #[godot_api]
@@ -103,6 +105,7 @@ impl MultipleAnimationController {
             current_time: HashMap::new(),
             playing_anims: HashMap::new(),
             existing_anims_duration,
+            finished_animations: HashSet::new(),
         })
     }
 
@@ -258,7 +261,12 @@ impl MultipleAnimationController {
             );
 
             let playing_time = if let Some(playing_time) = self.current_time.remove(&anim.clip) {
-                playing_time
+                if self.finished_animations.contains(&anim.clip) {
+                    self.finished_animations.remove(&anim.clip);
+                    0.0
+                } else {
+                    playing_time
+                }
             } else if !anim_item.value.playing_backward() {
                 0.0
             } else {

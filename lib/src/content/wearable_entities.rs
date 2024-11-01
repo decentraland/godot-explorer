@@ -35,7 +35,7 @@ pub async fn request_wearables(
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
     let url = format!("{content_server_base_url}entities/active");
-    let headers = vec![("Content-Type: application/json".to_string())];
+    let headers = HashMap::from([("Content-Type".into(), "application/json".into())]);
     let payload = serde_json::to_string(&EntitiesRequest {
         pointers: pointers.clone(),
     })

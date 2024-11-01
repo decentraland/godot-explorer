@@ -151,6 +151,7 @@ pub(crate) fn scene_thread(
     let ethereum_provider = spawn_dcl_scene_data.ethereum_provider;
     let ephemeral_wallet = spawn_dcl_scene_data.ephemeral_wallet;
     let realm_info = spawn_dcl_scene_data.realm_info;
+    let maybe_network_inspector_sender = spawn_dcl_scene_data.network_inspector_sender;
 
     // on main.crdt detected
     if !local_main_crdt_file_path.is_empty() {
@@ -215,6 +216,10 @@ pub(crate) fn scene_thread(
     state.borrow_mut().put(thread_sender_to_main);
     state.borrow_mut().put(thread_receive_from_main);
     state.borrow_mut().put(ethereum_provider);
+
+    if let Some(network_inspector_sender) = maybe_network_inspector_sender {
+        state.borrow_mut().put(network_inspector_sender);
+    }
 
     state.borrow_mut().put(scene_id);
     state.borrow_mut().put(scene_crdt);

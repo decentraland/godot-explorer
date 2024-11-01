@@ -1,9 +1,8 @@
-use std::{fs, io, path::Path, process::ExitStatus};
+use std::{collections::HashMap, fs, io, path::Path, process::ExitStatus};
 
 use crate::{
     consts::{
-        BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
-        GODOT_PROJECT_FOLDER,
+        BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION, GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER
     },
     copy_files::copy_ffmpeg_libraries,
     install_dependency::{download_and_extract_zip, set_executable_permission},
@@ -25,8 +24,7 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
     Ok(())
 }
 
-pub fn import_assets() -> ExitStatus
-{
+pub fn import_assets() -> ExitStatus {
     let program = get_godot_path();
 
     // Do imports and one project open
@@ -132,13 +130,41 @@ pub fn export() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-pub fn prepare_templates() -> Result<(), anyhow::Error> {
+pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
+    // Convert GODOT_PLATFORM_FILES into a HashMap
+    let file_map: HashMap<&str, Vec<&str>> = GODOT_PLATFORM_FILES
+        .iter()
+        .map(|(platform, files)| (*platform, files.to_vec()))
+        .collect();
+
+    // If no specific templates are provided, default to all templates
+    let templates = if platforms.is_empty() {
+        println!("No specific templates provided, downloading all templates.");
+        println!("For downloading for a specific platform use: `cargo run -- install --platform linux`");
+        file_map.keys().map(|&k| k.to_string()).collect::<Vec<String>>()
+    } else {
+        platforms.to_vec()
+    };
+
+    // Process each template and download the associated files
     let dest_path = format!("{BIN_FOLDER}godot/templates");
-    download_and_extract_zip(
-        GODOT4_EXPORT_TEMPLATES_BASE_URL,
-        dest_path.as_str(),
-        Some(format!("{GODOT_CURRENT_VERSION}.export-templates.zip")),
-    )?;
+
+    for template in templates {
+        if let Some(files) = file_map.get(template.as_str()) {
+            for file in files {
+                println!("Downloading file for {}: {}", template, file);
+
+                let url = format!("{}{}.zip", GODOT4_EXPORT_TEMPLATES_BASE_URL.to_string(), file);
+                download_and_extract_zip(
+                    url.as_str(),
+                    dest_path.as_str(),
+                    Some(format!("{GODOT_CURRENT_VERSION}.{file}.export-templates.zip")),
+                )?;
+            }
+        } else {
+            println!("No files mapped for template: {}", template);
+        }
+    }
 
     Ok(())
 }

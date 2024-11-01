@@ -20,6 +20,7 @@ use crate::{
     dcl::common::string::FindNthChar,
     godot_classes::{
         dcl_config::{DclConfig, TextureQuality},
+        dcl_global::DclGlobal,
         promise::Promise,
         resource_locker::ResourceLocker,
     },
@@ -108,7 +109,10 @@ impl INode for ContentProvider {
             )),
             #[cfg(feature = "use_resource_tracking")]
             resource_download_tracking,
-            http_queue_requester: Arc::new(HttpQueueRequester::new(6)),
+            http_queue_requester: Arc::new(HttpQueueRequester::new(
+                6,
+                DclGlobal::get_network_inspector_sender(),
+            )),
             content_folder,
             cached: HashMap::new(),
             godot_single_thread: Arc::new(Semaphore::new(1)),

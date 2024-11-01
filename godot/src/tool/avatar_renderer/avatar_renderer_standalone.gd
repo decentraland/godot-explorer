@@ -15,11 +15,10 @@ var current_avatar: DclAvatarWireFormat
 func get_params_from_cmd():
 	var args := OS.get_cmdline_args()
 
+	# Only use from the editor
 	if USE_TEST_INPUT or args.has("--use-test-input"):
 		return [
-			AvatarRendererHelper.AvatarFile.from_file_path(
-				"res://src/tool/avatar_renderer/test-input.json"
-			)
+			AvatarRendererHelper.AvatarFile.from_file_path("res://../tests/avatars-test-input.json")
 		]
 
 	var avatar_data = null

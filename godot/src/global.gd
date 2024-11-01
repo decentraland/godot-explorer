@@ -122,12 +122,18 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
 	get_tree().root.add_child.call_deferred(self.testing_tools)
 	get_tree().root.add_child.call_deferred(self.metrics)
+	get_tree().root.add_child.call_deferred(self.network_inspector)
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
 
 	if args.has("--raycast-debugger"):
 		set_raycast_debugger_enable(true)
+
+	if args.has("--network-debugger"):
+		self.network_inspector.set_is_active(true)
+	else:
+		self.network_inspector.set_is_active(false)
 
 	DclMeshRenderer.init_primitive_shapes()
 
