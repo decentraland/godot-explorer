@@ -55,7 +55,7 @@ static func _async_request(
 	url += "?pageNum=%d" % page_number
 	url += "&pageSize=%d" % page_size
 
-	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", [])
+	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 
 	var result = await PromiseUtils.async_awaiter(promise)
 

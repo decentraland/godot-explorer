@@ -1,8 +1,11 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use godot::prelude::*;
 
-use crate::{godot_classes::promise::Promise, scene_runner::tokio_runtime::TokioRuntime};
+use crate::{
+    godot_classes::{dcl_global::DclGlobal, promise::Promise},
+    scene_runner::tokio_runtime::TokioRuntime,
+};
 
 use super::request_response::send_result_to_promise;
 
@@ -19,6 +22,7 @@ impl IRefCounted for RustHttpQueueRequester {
         Self {
             http_queue_requester: Arc::new(super::http_queue_requester::HttpQueueRequester::new(
                 10,
+                DclGlobal::get_network_inspector_sender(),
             )),
         }
     }
@@ -29,6 +33,7 @@ impl Default for RustHttpQueueRequester {
         Self {
             http_queue_requester: Arc::new(super::http_queue_requester::HttpQueueRequester::new(
                 10,
+                DclGlobal::get_network_inspector_sender(),
             )),
         }
     }
@@ -65,7 +70,7 @@ impl RustHttpQueueRequester {
         url: GString,
         method: godot::engine::http_client::Method,
         body: GString,
-        headers: VariantArray,
+        headers: Dictionary,
     ) -> Gd<Promise> {
         let body = match body.to_string().as_str() {
             "" => None,
@@ -80,7 +85,7 @@ impl RustHttpQueueRequester {
         url: GString,
         method: godot::engine::http_client::Method,
         body: PackedByteArray,
-        headers: VariantArray,
+        headers: Dictionary,
     ) -> Gd<Promise> {
         self._request_json(url, method, Some(body.to_vec()), headers)
     }
@@ -92,7 +97,7 @@ impl RustHttpQueueRequester {
         url: GString,
         method: godot::engine::http_client::Method,
         body: Option<Vec<u8>>,
-        headers: VariantArray,
+        headers: Dictionary,
     ) -> Gd<Promise> {
         // tracing::info!("Requesting json: {:?}", url.to_string());
 
@@ -101,16 +106,16 @@ impl RustHttpQueueRequester {
             _ => http::Method::GET,
         };
 
-        let headers = match headers.len() {
-            0 => None,
-            _ => {
-                let mut headers_vec = Vec::new();
-                for i in 0..headers.len() {
-                    let header = headers.get(i).to_string();
-                    headers_vec.push(header);
-                }
-                Some(headers_vec)
+        let headers = if headers.is_empty() {
+            None
+        } else {
+            let mut headers_map = HashMap::new();
+            let keys = headers.keys_array();
+            let values = headers.values_array();
+            for i in 0..headers.len() {
+                headers_map.insert(keys.get(i).to_string(), values.get(i).to_string());
             }
+            Some(headers_map)
         };
 
         let request_option = crate::http_request::request_response::RequestOption::new(

@@ -147,6 +147,7 @@ pub(crate) fn scene_thread(
     let ethereum_provider = spawn_dcl_scene_data.ethereum_provider;
     let ephemeral_wallet = spawn_dcl_scene_data.ephemeral_wallet;
     let realm_info = spawn_dcl_scene_data.realm_info;
+    let maybe_network_inspector_sender = spawn_dcl_scene_data.network_inspector_sender;
 
     // on main.crdt detected
     if !local_main_crdt_file_path.is_empty() {
@@ -211,6 +212,10 @@ pub(crate) fn scene_thread(
     state.borrow_mut().put(thread_sender_to_main);
     state.borrow_mut().put(thread_receive_from_main);
     state.borrow_mut().put(ethereum_provider);
+
+    if let Some(network_inspector_sender) = maybe_network_inspector_sender {
+        state.borrow_mut().put(network_inspector_sender);
+    }
 
     state.borrow_mut().put(scene_id);
     state.borrow_mut().put(scene_crdt);
@@ -286,6 +291,7 @@ pub(crate) fn scene_thread(
 
     let start_time = std::time::SystemTime::now();
     let mut elapsed = Duration::default();
+    let mut reported_error_filter = 0;
 
     loop {
         let dt = std::time::SystemTime::now()
@@ -307,22 +313,26 @@ pub(crate) fn scene_thread(
         });
 
         if let Err(e) = result {
-            let err_str = format!("{:?}", e);
-            if let Ok(err) = e.downcast::<JsError>() {
-                tracing::error!(
-                    "[scene thread {scene_id:?}] script error onUpdate: {} msg {:?} @ {:?}",
-                    err_str,
-                    err.message,
-                    err
-                );
-            } else {
-                tracing::error!(
-                    "[scene thread {scene_id:?}] script error onUpdate: {}",
-                    err_str
-                );
-            }
+            reported_error_filter += 1;
 
-            break;
+            if reported_error_filter <= 10 {
+                let err_str = format!("{:?}", e);
+                if let Ok(err) = e.downcast::<JsError>() {
+                    tracing::error!(
+                        "[scene thread {scene_id:?}] script error onUpdate: {} msg {:?} @ {:?}",
+                        err_str,
+                        err.message,
+                        err
+                    );
+                } else {
+                    tracing::error!(
+                        "[scene thread {scene_id:?}] script error onUpdate: {}",
+                        err_str
+                    );
+                }
+            }
+        } else {
+            reported_error_filter -= 1;
         }
 
         let value = state.borrow().borrow::<SceneDying>().0;
