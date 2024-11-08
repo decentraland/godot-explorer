@@ -29,9 +29,21 @@ var icon_visible: Texture2D = preload(
 @onready var tab_container_debug_panel: TabContainer = %TabContainer_DebugPanel
 @onready var button_show_hide: Button = %Button_ShowHide
 @onready var popup_menu: PopupMenu = %PopupMenu
+@onready var button_debug_js = %Button_DebugJS
+@onready var label_debug_info = $"TabContainer_DebugPanel/Misc&Debugger/Label_DebugInfo"
 
 
 func _ready():
+	button_debug_js.disabled = not Global.has_javascript_debugger
+	if Global.has_javascript_debugger:
+		button_debug_js.text = "Debug JS"
+
+	clear_console()
+	if tab_container_debug_panel.visible:
+		_on_button_show_hide_pressed()
+
+
+func clear_console():
 	tree_console.set_column_expand(0, false)
 	tree_console.set_column_custom_minimum_width(0, ICON_COLUMN_WIDTH)
 
@@ -39,9 +51,6 @@ func _ready():
 	tree_console.set_column_clip_content(1, true)
 
 	tree_console.create_item()  # root
-
-	if tab_container_debug_panel.visible:
-		_on_button_show_hide_pressed()
 
 
 func on_console_add(scene_title: String, level: int, _timestamp: float, text: String) -> void:
@@ -124,7 +133,7 @@ func word_wrap(message: String) -> Array[String]:
 
 func _on_button_clear_pressed():
 	tree_console.clear()
-	_ready()
+	clear_console()
 
 
 func _on_line_edit_filter_text_changed(new_text):
@@ -136,10 +145,6 @@ func _on_line_edit_filter_text_changed(new_text):
 
 func _on_button_show_hide_pressed():
 	tab_container_debug_panel.visible = not tab_container_debug_panel.visible
-	if tab_container_debug_panel.visible:
-		button_show_hide.icon = icon_visible
-	else:
-		button_show_hide.icon = icon_hidden
 
 
 func _on_tree_console_item_mouse_selected(tree_position, mouse_button_index):
@@ -185,3 +190,28 @@ func _on_text_edit_text_changed():
 		return
 
 	expression_label.text = "Ok: " + str(result)
+
+
+func _on_tab_container_debug_panel_visibility_changed():
+	if is_instance_valid(tab_container_debug_panel):
+		if tab_container_debug_panel.visible:
+			button_show_hide.icon = icon_visible
+		else:
+			button_show_hide.icon = icon_hidden
+
+
+func _on_button_show_network_pressed():
+	Global.open_network_inspector_ui()
+
+
+func _on_button_debug_js_pressed():
+	var current_scene = Global.scene_fetcher.get_current_scene_data()
+	if current_scene == null:
+		printerr("there is no current scene")
+		return
+
+	Global.scene_fetcher.set_debugging_js_scene_id(current_scene.id)
+	Global.scene_fetcher.reload_scene(current_scene.id)
+	label_debug_info.show()
+
+	print("debugging js file ", current_scene.scene_entity_definition.get_main_js_hash())

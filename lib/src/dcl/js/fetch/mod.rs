@@ -1,13 +1,17 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc, time::Duration};
 
 use deno_core::{error::AnyError, op2, OpDecl, OpState};
 use http::HeaderValue;
 use reqwest::Response;
 use serde::Serialize;
+use tokio::sync::Semaphore;
 
-use crate::tools::network_inspector::{
-    NetworkInspectEvent, NetworkInspectRequestPayload, NetworkInspectResponsePayload,
-    NetworkInspectorId, NetworkInspectorSender,
+use crate::{
+    realm::scene_definition::SceneEntityDefinition,
+    tools::network_inspector::{
+        NetworkInspectEvent, NetworkInspectRequestPayload, NetworkInspectResponsePayload,
+        NetworkInspectorId, NetworkInspectorSender,
+    },
 };
 
 mod signed_fetch;
@@ -29,6 +33,10 @@ struct FetchRequestsState {
     counter: u32,
     client: reqwest::Client,
     requests: HashMap<u32, FetchRequest>,
+}
+
+struct FetchRequestLimiter {
+    sem: Arc<Semaphore>,
 }
 
 #[derive(Serialize)]
@@ -87,8 +95,18 @@ async fn op_fetch_custom(
             .put::<FetchRequestsState>(FetchRequestsState::new());
     }
 
-    let (req_id, client) = {
+    let (req_id, client, semaphore) = {
         let mut state = op_state.borrow_mut();
+
+        let semaphore = if let Some(value) = state.try_borrow::<FetchRequestLimiter>() {
+            value.sem.clone()
+        } else {
+            state.put(FetchRequestLimiter {
+                sem: Arc::new(Semaphore::new(2)),
+            });
+            state.borrow::<FetchRequestLimiter>().sem.clone()
+        };
+
         let fetch_request = state.borrow_mut::<FetchRequestsState>();
         let client = fetch_request.client.clone();
         fetch_request.counter += 1;
@@ -97,7 +115,7 @@ async fn op_fetch_custom(
         fetch_request
             .requests
             .insert(req_id, FetchRequest { response: None });
-        (req_id, client)
+        (req_id, client, semaphore)
     };
 
     let method = match method.as_str() {
@@ -134,8 +152,22 @@ async fn op_fetch_custom(
     // Inspect Network
     let mut network_inspector_id = NetworkInspectorId::INVALID;
     if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
+        let requester = {
+            let state = op_state.borrow();
+            let scene_entity_definition = state.borrow::<Arc<SceneEntityDefinition>>();
+            format!(
+                "{} @ {},{}",
+                scene_entity_definition.get_title(),
+                scene_entity_definition.get_base_parcel().x,
+                scene_entity_definition.get_base_parcel().y
+            )
+        };
+
+        tracing::debug!("fetch request: {} by {}", url, requester);
+
         let (inspect_event_id, inspect_event) =
             NetworkInspectEvent::new_request(NetworkInspectRequestPayload {
+                requester,
                 url: url.clone(),
                 method: method.clone(),
                 body: if has_body {
@@ -166,6 +198,14 @@ async fn op_fetch_custom(
     if has_body {
         request = request.body(body_data);
     }
+
+    let _permit = match semaphore.acquire_owned().await {
+        Ok(permit) => permit,
+        Err(err) => {
+            tracing::error!("Error acquiring semaphore: {}", err);
+            return Err(anyhow::Error::msg("Error acquiring semaphore"));
+        }
+    };
 
     let result = request.send().await;
     let mut state = op_state.borrow_mut();
@@ -253,6 +293,31 @@ async fn op_fetch_consume_text(
 ) -> Result<String, AnyError> {
     let inspector_network_req_id = NetworkInspectorId::from_u32(inspector_network_req_id);
     let maybe_network_inspector_sender = if inspector_network_req_id.is_valid() {
+        let url = {
+            let state = op_state.borrow();
+            let fetch_request = state.borrow::<FetchRequestsState>();
+            fetch_request
+                .requests
+                .get(&req_id)
+                .unwrap()
+                .response
+                .as_ref()
+                .unwrap()
+                .url()
+                .to_string()
+        };
+        let requester = {
+            let state = op_state.borrow();
+            let scene_entity_definition = state.borrow::<Arc<SceneEntityDefinition>>();
+            format!(
+                "{} @ {},{}",
+                scene_entity_definition.get_title(),
+                scene_entity_definition.get_base_parcel().x,
+                scene_entity_definition.get_base_parcel().y
+            )
+        };
+        tracing::debug!("op_fetch_consume_text request: {} by {}", url, requester);
+
         op_state
             .borrow()
             .try_borrow::<NetworkInspectorSender>()
@@ -281,6 +346,7 @@ async fn op_fetch_consume_text(
                     }
                 }
 
+                tracing::debug!("op_fetch_consume_text response: {}", response);
                 return Ok(response);
             }
             Err(err) => {
@@ -317,6 +383,30 @@ async fn op_fetch_consume_bytes(
 ) -> Result<bytes::Bytes, AnyError> {
     let inspector_network_req_id = NetworkInspectorId::from_u32(inspector_network_req_id);
     let maybe_network_inspector_sender = if inspector_network_req_id.is_valid() {
+        let url = {
+            let state = op_state.borrow();
+            let fetch_request = state.borrow::<FetchRequestsState>();
+            fetch_request
+                .requests
+                .get(&req_id)
+                .unwrap()
+                .response
+                .as_ref()
+                .unwrap()
+                .url()
+                .to_string()
+        };
+        let requester = {
+            let state = op_state.borrow();
+            let scene_entity_definition = state.borrow::<Arc<SceneEntityDefinition>>();
+            format!(
+                "{} @ {},{}",
+                scene_entity_definition.get_title(),
+                scene_entity_definition.get_base_parcel().x,
+                scene_entity_definition.get_base_parcel().y
+            )
+        };
+        tracing::debug!("op_fetch_consume_bytes request: {} by {}", url, requester);
         op_state
             .borrow()
             .try_borrow::<NetworkInspectorSender>()
@@ -337,8 +427,11 @@ async fn op_fetch_consume_bytes(
         match response.bytes().await {
             Ok(response) => {
                 if let Some(network_inspector_sender) = maybe_network_inspector_sender.as_ref() {
-                    let inspect_event =
-                        NetworkInspectEvent::new_body_response(inspector_network_req_id, Ok(None));
+                    let body = String::from_utf8_lossy(response.as_ref()).to_string();
+                    let inspect_event = NetworkInspectEvent::new_body_response(
+                        inspector_network_req_id,
+                        Ok(Some(body)),
+                    );
                     if let Err(err) = network_inspector_sender.try_send(inspect_event) {
                         tracing::error!("Error sending inspect event: {}", err);
                     }

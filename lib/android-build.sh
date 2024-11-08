@@ -68,7 +68,7 @@ else
     # - godot local godot/android project
     # export GODOT_DIR=/mnt/c/explorer/godot
 
-    GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --release --target aarch64-linux-android 
+    GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --release --target aarch64-linux-android --no-default-features -F use_deno -F use_livekit -F use_ffmpeg
 
     # Dependencies 
     # - from web-rtc: libwebrtc.jar 

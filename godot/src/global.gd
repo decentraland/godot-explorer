@@ -31,6 +31,8 @@ var music_player: MusicPlayer
 var standalone = false
 var dcl_android_plugin
 
+var network_inspector_window: Window = null
+
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
@@ -132,6 +134,7 @@ func _ready():
 
 	if args.has("--network-debugger"):
 		self.network_inspector.set_is_active(true)
+		open_network_inspector_ui()
 	else:
 		self.network_inspector.set_is_active(false)
 
@@ -240,3 +243,24 @@ func async_get_texture_size(content_mapping, src, sender) -> void:
 		return
 
 	sender.send(Vector2(result.original_size))
+
+
+func open_network_inspector_ui():
+	if is_instance_valid(network_inspector_window):
+		network_inspector_window.show()
+		return
+
+	get_viewport().set_embedding_subwindows(false)
+	network_inspector_window = Window.new()
+	network_inspector_window.size = Vector2i(1280, 720)
+	network_inspector_window.initial_position = (
+		Window.WINDOW_INITIAL_POSITION_CENTER_MAIN_WINDOW_SCREEN
+	)
+
+	const NETWORK_INSPECTOR_UI = preload(
+		"res://src/ui/components/debug_panel/network_inspector/network_inspector_ui.tscn"
+	)
+	network_inspector_window.add_child(NETWORK_INSPECTOR_UI.instantiate())
+
+	add_child(network_inspector_window)
+	network_inspector_window.show()

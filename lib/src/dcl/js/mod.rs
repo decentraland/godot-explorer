@@ -116,7 +116,7 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         );
         let server = InspectorServer::new(
             SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 9222),
-            "bevy-explorer",
+            "godot-explorer",
         );
         server.register_inspector("decentraland".to_owned(), &mut runtime, true);
         (runtime, Some(server))
