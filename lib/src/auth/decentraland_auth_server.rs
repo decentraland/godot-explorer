@@ -6,10 +6,10 @@ use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 
 use super::wallet::SimpleAuthChain;
 
-const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
-const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
-// const AUTH_FRONT_URL: &str = "http://localhost:5173/auth/requests";
-// const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
+//const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
+//const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
+const AUTH_FRONT_URL: &str = "http://172.20.10.3:5173/auth/requests";
+const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
