@@ -88,6 +88,9 @@ pub struct DclGlobal {
     pub is_mobile: bool,
 
     #[var]
+    pub has_javascript_debugger: bool,
+
+    #[var]
     pub network_inspector: Gd<NetworkInspector>,
 }
 
@@ -149,6 +152,11 @@ impl INode for DclGlobal {
             metrics: Metrics::alloc_gd(),
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
             network_inspector: NetworkInspector::alloc_gd(),
+
+            #[cfg(feature = "enable_inspector")]
+            has_javascript_debugger: true,
+            #[cfg(not(feature = "enable_inspector"))]
+            has_javascript_debugger: false,
         }
     }
 }

@@ -42,7 +42,7 @@ else
     export CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE=1
     export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
 
-    GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --release --target aarch64-linux-android
+    GN_ARGS=use_custom_libcxx=false RUST_BACKTRACE=full cargo build --release --target aarch64-linux-android --no-default-features -F use_deno -F use_livekit -F use_ffmpeg
 
     # Dependencies 
     # - from web-rtc: libwebrtc.jar 

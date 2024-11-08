@@ -193,7 +193,7 @@ func _on_button_fetch_pressed():
 		var json: Dictionary = response.get_string_response_as_json()
 		avatars_fetched = json.get("metadata", {}).get("avatars", [])
 
-	if avatars_fetched.is_empty():
+	if avatars_fetched == null or avatars_fetched.is_empty():
 		printerr("no avatars found")
 		spinner.hide()
 		return
