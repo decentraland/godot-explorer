@@ -1,0 +1,96 @@
+[gd_scene load_steps=2 format=3 uid="uid://dvntl234e4lne"]
+
+[ext_resource type="Script" path="res://src/ui/components/debug_panel/network_inspector/request_entry.gd" id="1_w2skl"]
+
+[node name="RequestEntry" type="Control"]
+custom_minimum_size = Vector2(1280, 26)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 26.0
+mouse_default_cursor_shape = 2
+script = ExtResource("1_w2skl")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.180392, 0.180392, 0.196078, 1)
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 566.0
+offset_bottom = 26.0
+theme_override_constants/separation = 0
+
+[node name="Status" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "Status"
+
+[node name="VSeparator4" type="VSeparator" parent="HBoxContainer"]
+custom_minimum_size = Vector2(12, 24)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Method" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "Method"
+
+[node name="VSeparator6" type="VSeparator" parent="HBoxContainer"]
+custom_minimum_size = Vector2(12, 24)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Domain" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Domain"
+
+[node name="VSeparator7" type="VSeparator" parent="HBoxContainer"]
+custom_minimum_size = Vector2(12, 24)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Initiator" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Initiator"
+
+[node name="VSeparator8" type="VSeparator" parent="HBoxContainer"]
+custom_minimum_size = Vector2(12, 24)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Size" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Size"
+
+[node name="VSeparator9" type="VSeparator" parent="HBoxContainer"]
+custom_minimum_size = Vector2(12, 24)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="StartTime" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Start at"
+
+[node name="VSeparator10" type="VSeparator" parent="HBoxContainer"]
+custom_minimum_size = Vector2(12, 24)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Duration" type="Label" parent="HBoxContainer"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Duration"
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="mouse_entered" from="." to="." method="_on_mouse_entered"]
+[connection signal="mouse_exited" from="." to="." method="_on_mouse_exited"]

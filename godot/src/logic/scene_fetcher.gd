@@ -49,6 +49,8 @@ var _is_reloading: bool = false
 # This counter is to control the async-flow
 var _scene_changed_counter: int = 0
 
+var _debugging_js_scene_id: String = ""
+
 
 func _ready():
 	Global.realm.realm_changed.connect(self._on_realm_changed)
@@ -352,8 +354,15 @@ func _on_try_spawn_scene(
 		printerr("Couldn't spawn the scene ", scene_item.id)
 		return false
 
+	var enable_js_inspector: bool = false
+	if Global.has_javascript_debugger and _debugging_js_scene_id == scene_item.id:
+		enable_js_inspector = true
+
 	var scene_number_id: int = Global.scene_runner.start_scene(
-		local_main_js_path, local_main_crdt_path, scene_item.scene_entity_definition, false
+		local_main_js_path,
+		local_main_crdt_path,
+		scene_item.scene_entity_definition,
+		enable_js_inspector
 	)
 	scene_item.scene_number_id = scene_number_id
 
@@ -384,3 +393,7 @@ func reload_scene(scene_id: String) -> void:
 	# 	var content_dict: Dictionary = dict.get("content", {})
 	# 	for file_hash in content_dict.values():
 	# 		print("todo clean file hash ", file_hash)
+
+
+func set_debugging_js_scene_id(id: String) -> void:
+	_debugging_js_scene_id = id

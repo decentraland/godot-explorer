@@ -66,6 +66,7 @@ impl RequestOption {
 pub struct RequestResponse {
     pub request_option: RequestOption,
     pub status_code: http::StatusCode,
+    pub headers: Option<HashMap<String, String>>,
     pub response_data: Result<ResponseEnum, String>,
 }
 
