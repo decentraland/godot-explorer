@@ -43,6 +43,7 @@ else
     export TARGET_CC=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang
     export TARGET_CXX=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++
     export TARGET_AR=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+    export RUSTY_V8_MIRROR=https://github.com/leanmendoza/rusty_v8/releases/download
     export CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE=1
     export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang"
     export CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true
