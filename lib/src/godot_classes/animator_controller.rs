@@ -338,7 +338,6 @@ impl MultipleAnimationController {
 
             tree.add_node(format!("tanim_{}", i).into(), time_anim_node.upcast());
             tree.add_node(format!("danim_{}", i).into(), dummy_anim_node.upcast());
-            tree.add_node(format!("tanim_{}", i).into(), time_anim_node.upcast());
             tree.add_node(format!("sanim_{}", i).into(), speed_anim_node.upcast());
             tree.add_node(format!("blend_{}", i).into(), blend_anim_node.upcast());
             tree.add_node(format!("anim_{}", i).into(), anim_node.upcast());
