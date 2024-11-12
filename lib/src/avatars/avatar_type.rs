@@ -1,7 +1,4 @@
-use godot::{
-    bind::{godot_api, GodotClass},
-    prelude::*,
-};
+use godot::prelude::*;
 
 use crate::comms::profile::{AvatarColor, AvatarEmote, AvatarSnapshots, AvatarWireFormat};
 
@@ -20,7 +17,7 @@ const DEFAULT_EMOTES: [&str; AVATAR_EMOTE_SLOTS_COUNT] = [
 ];
 
 #[derive(GodotClass)]
-#[class(base=RefCounted)]
+#[class(init, base=RefCounted)]
 pub struct DclAvatarWireFormat {
     pub inner: AvatarWireFormat,
 }

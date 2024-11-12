@@ -9,7 +9,7 @@ runs:
       uses: actions/cache@v3
       with:
         path: godot/.godot
-        key: ${{ runner.os }}-godot-assets-cache-4.3-bump
+        key: ${{ runner.os }}-godot-assets-cache-4.3
 
     # Step 2: Run the command that generates/uses the assets
     - name: Import assets
@@ -21,4 +21,4 @@ runs:
       uses: actions/cache@v3
       with:
         path: godot/.godot
-        key: ${{ runner.os }}-godot-assets-cache-4.3-bump
+        key: ${{ runner.os }}-godot-assets-cache-4.3

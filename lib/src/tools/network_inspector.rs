@@ -40,7 +40,7 @@ impl NetworkInspectorId {
 }
 
 #[derive(GodotClass)]
-#[class(base=RefCounted)]
+#[class(init, base=RefCounted)]
 struct NetworkInspectedRequest {
     #[var]
     requested_by: GString,
@@ -186,7 +186,6 @@ pub struct NetworkInspector {
     requests: HashMap<NetworkInspectorId, Gd<NetworkInspectedRequest>>,
     receiver: tokio::sync::mpsc::Receiver<NetworkInspectEvent>,
     sender: tokio::sync::mpsc::Sender<NetworkInspectEvent>,
-    #[base]
     _base: Base<Node>,
 }
 
@@ -253,7 +252,7 @@ impl INode for NetworkInspector {
 
                     if let Some(headers) = request.headers {
                         for (key, value) in headers {
-                            inspected_request
+                            let _ = inspected_request
                                 .request_headers
                                 .insert(key.to_variant(), value.to_variant());
                         }
@@ -275,7 +274,7 @@ impl INode for NetworkInspector {
                                 request.response_status_code = response.status_code.as_u16() as i32;
                                 if let Some(headers) = response.headers {
                                     for (key, value) in headers {
-                                        request
+                                        let _ = request
                                             .response_headers
                                             .insert(key.to_variant(), value.to_variant());
                                     }
@@ -323,7 +322,7 @@ impl INode for NetworkInspector {
                                 request.response_status_code = response.status_code.as_u16() as i32;
                                 if let Some(headers) = response.headers {
                                     for (key, value) in headers {
-                                        request
+                                        let _ = request
                                             .response_headers
                                             .insert(key.to_variant(), value.to_variant());
                                     }
@@ -341,7 +340,7 @@ impl INode for NetworkInspector {
         }
 
         for id in request_changed {
-            self._base.call_deferred(
+            self.base_mut().call_deferred(
                 "emit_signal".into(),
                 &["request_changed".to_variant(), id.to_variant()],
             );
