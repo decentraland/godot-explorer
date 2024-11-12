@@ -123,9 +123,9 @@ impl INode for DclGlobal {
 
         let args = godot::engine::Os::singleton().get_cmdline_args();
 
-        let testing_scene_mode = args.find(&"--scene-test".into(), None).is_some();
-        let preview_mode = args.find(&"--preview".into(), None).is_some();
-        let developer_mode = args.find(&"--dev".into(), None).is_some();
+        let testing_scene_mode = args.find("--scene-test".into(), None).is_some();
+        let preview_mode = args.find("--preview".into(), None).is_some();
+        let developer_mode = args.find("--dev".into(), None).is_some();
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 

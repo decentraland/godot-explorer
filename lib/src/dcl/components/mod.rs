@@ -13,7 +13,7 @@ pub struct SceneEntityId {
     pub version: u16,
 }
 
-impl GodotConvert for SceneEntityId {
+impl godot::builtin::meta::GodotConvert for SceneEntityId {
     type Via = i32;
 }
 
