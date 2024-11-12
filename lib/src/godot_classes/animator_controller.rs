@@ -5,7 +5,8 @@ use godot::{
     builtin::{meta::ToGodot, StringName},
     engine::{
         AnimationNodeAdd2, AnimationNodeAnimation, AnimationNodeBlend2, AnimationNodeBlendTree,
-        AnimationNodeTimeScale, AnimationPlayer, AnimationTree, IAnimationTree, Node3D, NodeExt,
+        AnimationNodeTimeScale, AnimationNodeTimeSeek, AnimationPlayer, AnimationTree,
+        IAnimationTree, Node3D, NodeExt,
     },
     obj::{Base, Gd},
 };
@@ -244,7 +245,7 @@ impl MultipleAnimationController {
                 anim_name_node: format!("anim_{}", index).into(),
                 blend_param_ref_str: format!("parameters/blend_{}/blend_amount", index).into(),
                 speed_param_ref_str: format!("parameters/sanim_{}/scale", index).into(),
-                time_param_ref_str: format!("parameters/anim_{}/time", index).into(),
+                time_param_ref_str: format!("parameters/tanim_{}/seek_request", index).into(),
             };
 
             self.base.set(
@@ -327,19 +328,26 @@ impl MultipleAnimationController {
             let mut dummy_anim_node = AnimationNodeAnimation::new();
             let blend_anim_node = AnimationNodeBlend2::new();
             let speed_anim_node = AnimationNodeTimeScale::new();
+            let time_anim_node = AnimationNodeTimeSeek::new();
 
             anim_node.set_animation(DUMMY_ANIMATION_NAME.into());
             dummy_anim_node.set_animation(DUMMY_ANIMATION_NAME.into());
 
+            tree.add_node(format!("tanim_{}", i).into(), time_anim_node.upcast());
             tree.add_node(format!("danim_{}", i).into(), dummy_anim_node.upcast());
             tree.add_node(format!("sanim_{}", i).into(), speed_anim_node.upcast());
             tree.add_node(format!("blend_{}", i).into(), blend_anim_node.upcast());
             tree.add_node(format!("anim_{}", i).into(), anim_node.upcast());
 
             tree.connect_node(
-                format!("sanim_{}", i).into(),
+                format!("tanim_{}", i).into(),
                 0,
                 format!("anim_{}", i).into(),
+            );
+            tree.connect_node(
+                format!("sanim_{}", i).into(),
+                0,
+                format!("tanim_{}", i).into(),
             );
             tree.connect_node(
                 format!("blend_{}", i).into(),
