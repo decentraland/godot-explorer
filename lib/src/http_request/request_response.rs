@@ -63,6 +63,7 @@ impl RequestOption {
 }
 
 #[derive(Debug, godot::prelude::GodotClass)]
+#[class(no_init)]
 pub struct RequestResponse {
     pub request_option: RequestOption,
     pub status_code: http::StatusCode,
@@ -140,7 +141,8 @@ impl RequestResponse {
     }
 }
 
-#[derive(Debug, godot::prelude::GodotClass)]
+#[derive(Debug, Default, godot::prelude::GodotClass)]
+#[class(init)]
 pub struct RequestResponseError {
     pub id: u32,
     pub error_message: String,

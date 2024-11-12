@@ -1,14 +1,14 @@
 use std::collections::{HashMap, HashSet};
 
 use godot::{
-    bind::{godot_api, GodotClass},
     builtin::{meta::ToGodot, StringName},
     engine::{
         AnimationNodeAdd2, AnimationNodeAnimation, AnimationNodeBlend2, AnimationNodeBlendTree,
         AnimationNodeTimeScale, AnimationNodeTimeSeek, AnimationPlayer, AnimationTree,
-        IAnimationTree, Node3D, NodeExt,
+        IAnimationTree, Node3D,
     },
-    obj::{Base, Gd},
+    obj::{Base, Gd, NewGd, WithBaseField},
+    prelude::{godot_api, GodotClass},
 };
 
 use crate::dcl::components::proto_components::sdk::components::{PbAnimationState, PbAnimator};
@@ -26,9 +26,8 @@ struct AnimationItem {
 }
 
 #[derive(GodotClass)]
-#[class(base=AnimationTree)]
+#[class(init, base=AnimationTree)]
 pub struct MultipleAnimationController {
-    #[base]
     base: Base<AnimationTree>,
 
     current_capacity: usize,
@@ -43,8 +42,10 @@ pub struct MultipleAnimationController {
 #[godot_api]
 impl IAnimationTree for MultipleAnimationController {
     fn ready(&mut self) {
-        let callable = self.base.callable("_animation_finished");
-        self.base.connect("animation_finished".into(), callable);
+        // connect animation_finished
+        let callable = self.base().callable("_animation_finished");
+        self.base_mut()
+            .connect("animation_finished".into(), callable);
     }
 }
 
@@ -57,6 +58,12 @@ impl MultipleAnimationController {
             return;
         }
 
+        // Lean comment
+        //  agree with base_mut() is much safer than directly accessing the base field (you might call a method that changes the state of the object)
+        //  but these cases when you only use base_mut to access godot fields which doesn't trigger any rust code :S
+        //  you have to workaround it with these cloned variables
+
+        let mut a = (None, None);
         if let Some(anim_item) = self.playing_anims.get(&anim_name.to_string()) {
             let looping = anim_item.value.r#loop.unwrap_or(true);
             // TODO: reset_on_finished is not implemented
@@ -71,16 +78,18 @@ impl MultipleAnimationController {
                         .unwrap_or(&0.0)
                 };
 
-                self.base.set(
+                a.0 = Some((
                     anim_item.time_param_ref_str.clone(),
                     playing_time.to_variant(),
-                );
+                ));
             }
 
             if !looping {
-                self.base
-                    .set(anim_item.speed_param_ref_str.clone(), 0_f32.to_variant());
-                self.finished_animations.insert(anim_name.clone());
+                a.1 = Some((anim_item.speed_param_ref_str.clone(), 0_f32.to_variant()));
+            }
+
+            for (param, value) in [a.0, a.1].iter().flatten() {
+                self.base_mut().set(param.clone(), value.clone());
             }
         } else {
             tracing::error!("finished animation {} not found!", anim_name);
@@ -122,6 +131,7 @@ impl MultipleAnimationController {
             self.remap_animation(&playing_animations, &stopped_animations);
         }
 
+        let mut changes = Vec::new();
         for new_state in value.states.iter() {
             let Some(anim_state) = self.playing_anims.get_mut(&new_state.clip) else {
                 continue;
@@ -129,10 +139,10 @@ impl MultipleAnimationController {
 
             if anim_state.value.weight != new_state.weight {
                 anim_state.value.weight = new_state.weight;
-                self.base.set(
+                changes.push((
                     anim_state.blend_param_ref_str.clone(),
                     new_state.weight.unwrap_or(1.0).to_variant(),
-                );
+                ));
             }
 
             let speed = if new_state.playing.unwrap_or_default() {
@@ -140,8 +150,7 @@ impl MultipleAnimationController {
             } else {
                 0.0
             };
-            self.base
-                .set(anim_state.speed_param_ref_str.clone(), speed.to_variant());
+            changes.push((anim_state.speed_param_ref_str.clone(), speed.to_variant()));
 
             let should_reset = new_state.should_reset.unwrap_or_default();
             if should_reset {
@@ -154,32 +163,20 @@ impl MultipleAnimationController {
                         .unwrap_or(&0.0)
                 };
 
-                self.base.set(
+                changes.push((
                     anim_state.time_param_ref_str.clone(),
                     playing_time.to_variant(),
-                );
-            } else if self.finished_animations.contains(&new_state.clip) {
-                self.finished_animations.remove(&new_state.clip);
-
-                let playing_time = if !anim_state.value.playing_backward() {
-                    0.0
-                } else {
-                    *self
-                        .existing_anims_duration
-                        .get(&anim_state.value.clip)
-                        .unwrap_or(&0.0)
-                };
-
-                self.base.set(
-                    anim_state.time_param_ref_str.clone(),
-                    playing_time.to_variant(),
-                );
+                ));
             }
 
             anim_state.value.playing = new_state.playing;
             anim_state.value.speed = new_state.speed;
             anim_state.value.r#loop = new_state.r#loop;
             anim_state.value.should_reset = new_state.should_reset;
+        }
+
+        for (param, value) in changes {
+            self.base_mut().set(param, value);
         }
     }
 
@@ -188,12 +185,13 @@ impl MultipleAnimationController {
         playing_animation: &Vec<&PbAnimationState>,
         stopped_animation: &Vec<&PbAnimationState>,
     ) {
+        let mut changes = Vec::new();
         // First remove the animations that are not playing
         // Animation that are not playing anymore has two behavior:
         //  - if shouldReset is enabled, the animation will be reseted before removing it
         //  - otherwise, the current time is stored (to be used later)
         for anim in stopped_animation {
-            let Some(anim_state) = self.playing_anims.get_mut(&anim.clip) else {
+            let Some(anim_state) = self.playing_anims.get(&anim.clip) else {
                 continue;
             };
 
@@ -205,18 +203,23 @@ impl MultipleAnimationController {
                 } else {
                     *self.existing_anims_duration.get(&anim.clip).unwrap_or(&0.0)
                 };
-                self.base.set(
+                changes.push((
                     anim_state.time_param_ref_str.clone(),
                     playing_time.to_variant(),
-                );
+                ));
                 self.current_time.remove(&anim.clip);
             } else {
-                let time = self.base.get(anim_state.time_param_ref_str.clone());
-                self.current_time
-                    .insert(anim.clip.clone(), time.to::<f32>());
+                let time = self.base().get(anim_state.time_param_ref_str.clone());
+                if let Ok(time) = time.try_to::<f32>() {
+                    self.current_time.insert(anim.clip.clone(), time);
+                }
             }
 
             self.playing_anims.remove(&anim.clip);
+        }
+
+        for (param, value) in changes {
+            self.base_mut().set(param, value);
         }
 
         let playing_index_values = self
@@ -248,11 +251,11 @@ impl MultipleAnimationController {
                 time_param_ref_str: format!("parameters/tanim_{}/seek_request", index).into(),
             };
 
-            self.base.set(
+            self.base_mut().set(
                 anim_item.speed_param_ref_str.clone(),
                 anim.speed.unwrap_or(1.0).to_variant(),
             );
-            self.base.set(
+            self.base_mut().set(
                 anim_item.blend_param_ref_str.clone(),
                 anim.weight.unwrap_or(1.0).to_variant(),
             );
@@ -270,13 +273,13 @@ impl MultipleAnimationController {
                 *self.existing_anims_duration.get(&anim.clip).unwrap_or(&0.0)
             };
 
-            self.base.set(
+            self.base_mut().set(
                 anim_item.time_param_ref_str.clone(),
                 playing_time.to_variant(),
             );
 
             let mut anim_node = self
-                .base
+                .base()
                 .get_tree_root()
                 .expect("Failed to get tree root")
                 .cast::<AnimationNodeBlendTree>()
@@ -293,7 +296,7 @@ impl MultipleAnimationController {
         for anim in available_index {
             let anim_name_node = format!("anim_{}", anim).into();
             let mut anim_node = self
-                .base
+                .base()
                 .get_tree_root()
                 .expect("Failed to get tree root")
                 .cast::<AnimationNodeBlendTree>()
@@ -312,23 +315,23 @@ impl MultipleAnimationController {
         let first_new_index = self.current_capacity;
 
         // Ensure the tree root is set
-        if self.base.get_tree_root().is_none() {
-            self.base
-                .set_tree_root(AnimationNodeBlendTree::new().upcast());
+        if self.base().get_tree_root().is_none() {
+            self.base_mut()
+                .set_tree_root(AnimationNodeBlendTree::new_gd().upcast());
         }
 
         let mut tree = self
-            .base
+            .base_mut()
             .get_tree_root()
             .unwrap()
             .cast::<AnimationNodeBlendTree>();
 
         for i in first_new_index..n {
-            let mut anim_node = AnimationNodeAnimation::new();
-            let mut dummy_anim_node = AnimationNodeAnimation::new();
-            let blend_anim_node = AnimationNodeBlend2::new();
-            let speed_anim_node = AnimationNodeTimeScale::new();
-            let time_anim_node = AnimationNodeTimeSeek::new();
+            let mut anim_node = AnimationNodeAnimation::new_gd();
+            let mut dummy_anim_node = AnimationNodeAnimation::new_gd();
+            let blend_anim_node = AnimationNodeBlend2::new_gd();
+            let time_anim_node = AnimationNodeTimeSeek::new_gd();
+            let speed_anim_node = AnimationNodeTimeScale::new_gd();
 
             anim_node.set_animation(DUMMY_ANIMATION_NAME.into());
             dummy_anim_node.set_animation(DUMMY_ANIMATION_NAME.into());
@@ -360,13 +363,13 @@ impl MultipleAnimationController {
                 format!("sanim_{}", i).into(),
             );
 
-            self.base.set(
+            self.base_mut().set(
                 format!("parameters/blend_{}/blend_amount", i).into(),
                 1_f32.to_variant(),
             );
 
             if i < n - 1 {
-                let add_node = AnimationNodeAdd2::new();
+                let add_node = AnimationNodeAdd2::new_gd();
                 tree.add_node(format!("add_{}", i).into(), add_node.upcast());
             }
         }
@@ -388,7 +391,7 @@ impl MultipleAnimationController {
                 );
             }
 
-            self.base.set(
+            self.base_mut().set(
                 format!("parameters/add_{}/add_amount", i).into(),
                 1_f32.to_variant(),
             );

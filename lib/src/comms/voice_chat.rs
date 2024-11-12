@@ -9,7 +9,6 @@ struct VoiceChatRecorder {
     recording_enabled: bool,
     effect_capture: Option<Gd<AudioEffectCapture>>,
 
-    #[base]
     base: Base<AudioStreamPlayer>,
 }
 
@@ -24,7 +23,7 @@ impl IAudioStreamPlayer for VoiceChatRecorder {
             let frames_available = effect_capture.get_frames_available();
             let stereo_data = effect_capture.get_buffer(frames_available);
 
-            self.base
+            self.base_mut()
                 .emit_signal("audio".into(), &[stereo_data.to_variant()]);
         }
     }
@@ -57,8 +56,9 @@ impl VoiceChatRecorder {
             };
 
             self.effect_capture = bus_effect;
-            self.base.set_stream(AudioStreamMicrophone::new().upcast());
-            self.base.set_bus("Capture".into());
+            self.base_mut()
+                .set_stream(AudioStreamMicrophone::new_gd().upcast());
+            self.base_mut().set_bus("Capture".into());
         }
     }
 
@@ -78,10 +78,11 @@ impl VoiceChatRecorder {
 
         if !enabled {
             effect_capture.clear_buffer();
-            self.base.stop();
+            self.base_mut().stop();
         } else {
-            self.base.play();
+            // TODO: check if the order here matters
             effect_capture.clear_buffer();
+            self.base_mut().play();
         }
     }
 }
