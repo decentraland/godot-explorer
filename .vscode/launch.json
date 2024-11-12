@@ -33,7 +33,7 @@
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot", "--test"],
+      "args": ["--path", "${workspaceFolder}/godot", "--test-runner"],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [
@@ -100,7 +100,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/.bin/godot/godot4_bin",
-      "args": ["--path", "${workspaceFolder}/godot", "--test"],
+      "args": ["--path", "${workspaceFolder}/godot", "--test-runner"],
       "stopAtEntry": false,
       "cwd": "${workspaceRoot}/godot",
       "environment": [],
