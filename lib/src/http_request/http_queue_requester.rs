@@ -80,6 +80,7 @@ impl HttpQueueRequester {
             && self.inspector_sender.is_some()
         {
             let (req_id, event) = NetworkInspectEvent::new_request(NetworkInspectRequestPayload {
+                requester: "global".into(),
                 url: request_option.url.clone(),
                 method: request_option.method.clone(),
                 body: request_option.body.clone(),
@@ -125,7 +126,7 @@ impl HttpQueueRequester {
 
             if let Some(mut queue_request) = request {
                 let request_option = queue_request.request_option.take().unwrap();
-                let response_result = Self::process_request(
+                let mut response_result = Self::process_request(
                     client,
                     request_option,
                     queue_request.network_inspector_id,
@@ -140,14 +141,27 @@ impl HttpQueueRequester {
                         let network_inspect_response: Result<
                             (NetworkInspectResponsePayload, Option<String>),
                             String,
-                        > = match &response_result {
-                            Ok(response) => Ok((
-                                NetworkInspectResponsePayload {
-                                    status_code: response.status_code,
-                                    headers: None,
-                                },
-                                None,
-                            )),
+                        > = match &mut response_result {
+                            Ok(response) => {
+                                let response_data = match &response.response_data {
+                                    Ok(ResponseEnum::String(data)) => {
+                                        Some(data.chars().take(10240).collect())
+                                    }
+                                    Ok(ResponseEnum::Json(Ok(data))) => {
+                                        Some(data.to_string().chars().take(10240).collect())
+                                    }
+                                    Ok(ResponseEnum::ToFile(Ok(path))) => Some(path.clone()),
+                                    _ => None,
+                                };
+
+                                Ok((
+                                    NetworkInspectResponsePayload {
+                                        status_code: response.status_code,
+                                        headers: response.headers.take(),
+                                    },
+                                    response_data,
+                                ))
+                            }
                             Err(err) => Err(err.error_message.clone()),
                         };
 
@@ -170,7 +184,7 @@ impl HttpQueueRequester {
         client: Arc<Client>,
         mut request_option: RequestOption,
         // TODO: for a granular inspection, we need to pass the sender here
-        _network_inspector_id: NetworkInspectorId,
+        network_inspector_id: NetworkInspectorId,
         _maybe_network_inspector_sender: Option<NetworkInspectorSender>,
     ) -> Result<RequestResponse, RequestResponseError> {
         let timeout = request_option
@@ -198,6 +212,17 @@ impl HttpQueueRequester {
         let response = request.send().await.map_err(map_err_func)?;
         let status_code = response.status();
 
+        let headers = if network_inspector_id.is_valid() {
+            let headers = response
+                .headers()
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
+                .collect();
+            Some(headers)
+        } else {
+            None
+        };
+
         let response_data = match request_option.response_type.clone() {
             ResponseType::AsString => {
                 ResponseEnum::String(response.text().await.map_err(map_err_func)?)
@@ -224,6 +249,7 @@ impl HttpQueueRequester {
         };
 
         Ok(RequestResponse {
+            headers,
             request_option,
             status_code,
             response_data: Ok(response_data),

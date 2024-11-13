@@ -43,7 +43,6 @@ mod android {
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclGlobal {
-    #[base]
     _base: Base<Node>,
 
     #[var]
@@ -88,6 +87,9 @@ pub struct DclGlobal {
     pub is_mobile: bool,
 
     #[var]
+    pub has_javascript_debugger: bool,
+
+    #[var]
     pub network_inspector: Gd<NetworkInspector>,
 }
 
@@ -107,14 +109,14 @@ impl INode for DclGlobal {
 
         log_panics::init();
 
-        let mut avatars: Gd<AvatarScene> = AvatarScene::alloc_gd();
-        let mut comms: Gd<CommunicationManager> = CommunicationManager::alloc_gd();
-        let mut scene_runner: Gd<SceneManager> = SceneManager::alloc_gd();
-        let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::alloc_gd();
+        let mut avatars: Gd<AvatarScene> = AvatarScene::new_alloc();
+        let mut comms: Gd<CommunicationManager> = CommunicationManager::new_alloc();
+        let mut scene_runner: Gd<SceneManager> = SceneManager::new_alloc();
+        let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::new_alloc();
 
         tokio_runtime.set_name("tokio_runtime".into());
         scene_runner.set_name("scene_runner".into());
-        scene_runner.set_process_mode(ProcessMode::PROCESS_MODE_DISABLED);
+        scene_runner.set_process_mode(ProcessMode::DISABLED);
 
         comms.set_name("comms".into());
         avatars.set_name("avatars".into());
@@ -134,21 +136,26 @@ impl INode for DclGlobal {
             comms,
             avatars,
             tokio_runtime,
-            testing_tools: DclTestingTools::alloc_gd(),
-            realm: DclRealm::alloc_gd(),
-            portable_experience_controller: DclPortableExperienceController::alloc_gd(),
+            testing_tools: DclTestingTools::new_alloc(),
+            realm: DclRealm::new_alloc(),
+            portable_experience_controller: DclPortableExperienceController::new_alloc(),
             preview_mode,
             testing_scene_mode,
-            dcl_tokio_rpc: DclTokioRpc::alloc_gd(),
-            magic_link: MagicLink::alloc_gd(),
-            player_identity: DclPlayerIdentity::alloc_gd(),
-            content_provider: ContentProvider::alloc_gd(),
+            dcl_tokio_rpc: DclTokioRpc::new_alloc(),
+            magic_link: MagicLink::new_alloc(),
+            player_identity: DclPlayerIdentity::new_alloc(),
+            content_provider: ContentProvider::new_alloc(),
             http_requester: RustHttpQueueRequester::new_gd(),
             config: DclConfig::new_gd(),
             ethereum_provider: Arc::new(EthereumProvider::new()),
-            metrics: Metrics::alloc_gd(),
+            metrics: Metrics::new_alloc(),
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
-            network_inspector: NetworkInspector::alloc_gd(),
+            network_inspector: NetworkInspector::new_alloc(),
+
+            #[cfg(feature = "enable_inspector")]
+            has_javascript_debugger: true,
+            #[cfg(not(feature = "enable_inspector"))]
+            has_javascript_debugger: false,
         }
     }
 }
@@ -185,7 +192,7 @@ impl DclGlobal {
             .get_main_loop()?
             .cast::<SceneTree>()
             .get_root()?
-            .get_node("Global".into())?
+            .get_node_or_null("Global".into())?
             .try_cast::<Self>();
         if let Ok(res) = res {
             Some(res)

@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { git = "https://github.com/dclexplorer/gdext", branch = "master", features=["experimental-threads", "serde"] }
+godot = { git = "https://github.com/godot-rust/gdext", rev ="cb41673a0ab802145543a8f371abfcb1f0be10f9", features=["experimental-threads", "serde"] }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
@@ -65,7 +65,7 @@ chrono = "0.4.31"
 
 simple-easing = "1.0.1"
 
-multihash-codetable = { version = "0.1.1", features = ["digest", "sha2"] }
+multihash-codetable = { version = "0.1.1", features = ["digest", "sha2"] } 
 cid = "0.11.0"
 multipart = { version = "0.18.0", default-features = false, features = ["client", "lazy_static"] }
 
@@ -75,7 +75,7 @@ jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
 
 [features]
-default = ["use_ffmpeg", "use_livekit", "use_deno"]
+default = ["use_ffmpeg", "use_livekit", "use_deno", "enable_inspector"]
 use_ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
 use_deno = ["dep:deno_core", "dep:v8"]

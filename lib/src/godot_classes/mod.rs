@@ -1,3 +1,5 @@
+use godot::obj::NewGd;
+
 pub mod animator_controller;
 pub mod dcl_audio_source;
 pub mod dcl_audio_stream;
@@ -36,7 +38,7 @@ where
 {
     fn to_godot_from_json(&self) -> Result<godot::prelude::Variant, String> {
         let json_str = serde_json::to_string(&self).map_err(|e| e.to_string())?;
-        let mut json_parser = godot::engine::Json::new();
+        let mut json_parser = godot::engine::Json::new_gd();
         if json_parser.parse(json_str.into()) == godot::engine::global::Error::OK {
             Ok(json_parser.get_data())
         } else {

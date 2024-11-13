@@ -67,7 +67,7 @@ pub fn update_audio_stream(
                             .expect("audio_stream_data not found in node");
 
                         let mut audio_stream_node = node_3d
-                            .get_node("AudioStream".into())
+                            .get_node_or_null("AudioStream".into())
                             .expect("enters on change audio branch but a AudioStream wasn't found there")
                             .try_cast::<DclAudioStream>()
                             .expect("the expected AudioStream wasn't a DclAudioStream");
@@ -94,7 +94,7 @@ pub fn update_audio_stream(
                                 .try_send(AVCommand::Dispose);
                         }
 
-                        let mut audio_stream_node = node_3d.get_node("AudioStream".into()).expect(
+                        let mut audio_stream_node = node_3d.get_node_or_null("AudioStream".into()).expect(
                             "enters on change audio branch but a AudioStream wasn't found there",
                         ).try_cast::<DclAudioStream>().expect("the expected AudioStream wasn't a DclAudioStream");
 
@@ -124,7 +124,7 @@ pub fn update_audio_stream(
 
                         audio_stream_node.set_name("AudioStream".into());
 
-                        let audio_stream_generator = AudioStreamGenerator::new();
+                        let audio_stream_generator = AudioStreamGenerator::new_gd();
                         audio_stream_node.set_stream(audio_stream_generator.upcast());
 
                         node_3d.add_child(audio_stream_node.clone().upcast());

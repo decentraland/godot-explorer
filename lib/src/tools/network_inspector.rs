@@ -39,15 +39,71 @@ impl NetworkInspectorId {
     }
 }
 
+#[derive(GodotClass)]
+#[class(init, base=RefCounted)]
 struct NetworkInspectedRequest {
-    requested_at: f64,
-    request: NetworkInspectRequestPayload,
+    #[var]
+    requested_by: GString,
 
-    response_received_at: Option<f64>,
-    response: Result<NetworkInspectResponsePayload, String>,
+    // REQUEST
+    #[var]
+    requested_at: u32,
 
-    response_payload_received_at: Option<f64>,
-    response_payload: Result<Option<String>, String>,
+    #[var]
+    url: GString,
+    #[var]
+    method: GString,
+
+    #[var]
+    request_headers: Dictionary,
+
+    // RESPONSE
+    #[var]
+    response_received_at: u32,
+    #[var]
+    response_received: bool,
+    #[var]
+    response_ok: bool,
+    #[var]
+    response_error: GString,
+
+    #[var]
+    response_status_code: i32,
+    #[var]
+    response_headers: Dictionary,
+
+    // PAYLOAD RESPONSE
+    #[var]
+    response_payload_received: bool,
+    #[var]
+    response_payload_ok: bool,
+    #[var]
+    response_payload_received_at: u32,
+    #[var]
+    response_payload_error: GString,
+
+    // not exposed
+    request_body: Option<Vec<u8>>,
+    response_body: Option<Vec<u8>>,
+}
+
+#[godot_api]
+impl NetworkInspectedRequest {
+    #[func]
+    fn get_request_body(&self) -> String {
+        self.request_body
+            .as_ref()
+            .map(|b| String::from_utf8_lossy(b).into_owned())
+            .unwrap_or_default()
+    }
+
+    #[func]
+    fn get_response_body(&self) -> String {
+        self.request_body
+            .as_ref()
+            .map(|b| String::from_utf8_lossy(b).into_owned())
+            .unwrap_or_default()
+    }
 }
 
 static NETWORK_INSPECTED_REQUEST_ID_MONOTONIC_COUNTER: once_cell::sync::Lazy<
@@ -60,6 +116,7 @@ pub struct NetworkInspectEvent {
 }
 
 pub struct NetworkInspectRequestPayload {
+    pub requester: String,
     pub url: String,
     pub method: http::Method,
     pub body: Option<Vec<u8>>,
@@ -126,58 +183,39 @@ impl NetworkInspectEvent {
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct NetworkInspector {
-    requests: HashMap<NetworkInspectorId, NetworkInspectedRequest>,
+    requests: HashMap<NetworkInspectorId, Gd<NetworkInspectedRequest>>,
     receiver: tokio::sync::mpsc::Receiver<NetworkInspectEvent>,
     sender: tokio::sync::mpsc::Sender<NetworkInspectEvent>,
-    #[base]
     _base: Base<Node>,
 }
 
 #[godot_api]
 impl NetworkInspector {
     #[func]
-    pub fn set_is_active(&mut self, value: bool) {
+    fn set_is_active(&mut self, value: bool) {
         NETWORK_INSPECTOR_ENABLE.store(value, std::sync::atomic::Ordering::Relaxed);
     }
 
     #[signal]
-    pub fn request_changed(&self, id: u32) {}
+    fn request_changed(&self, id: u32) {}
 
     #[func]
-    pub fn get_request(&self, id: u32) -> Dictionary {
-        let mut dict = Dictionary::new();
-        if let Some(request) = self.requests.get(&NetworkInspectorId(id)) {
-            dict.insert("requested_at", request.requested_at);
-            dict.insert(
-                "response_received_at",
-                request.response_received_at.unwrap_or(0.0),
-            );
-            dict.insert(
-                "response_payload_received_at",
-                request.response_payload_received_at.unwrap_or(0.0),
-            );
-            dict.insert("url", request.request.url.as_str());
-            dict.insert("method", request.request.method.as_str());
+    fn get_request_count(&self) -> u32 {
+        self.requests.len() as u32
+    }
 
-            let headers = {
-                let mut dict = Dictionary::new();
-                if let Some(headers) = &request.request.headers {
-                    for (key, value) in headers.iter() {
-                        dict.insert(key.as_str().to_string(), value.as_str().to_string());
-                    }
-                }
-                dict
-            };
-            dict.insert("headers", headers);
-        }
-        dict
+    #[func]
+    fn get_request(&self, id: u32) -> Option<Gd<NetworkInspectedRequest>> {
+        self.requests
+            .get(&NetworkInspectorId::from_u32(id))
+            .cloned()
     }
 }
 
 #[godot_api]
 impl INode for NetworkInspector {
     fn init(_base: Base<Node>) -> Self {
-        let (sender, receiver) = tokio::sync::mpsc::channel(10);
+        let (sender, receiver) = tokio::sync::mpsc::channel(1000);
         NetworkInspector {
             requests: HashMap::new(),
             receiver,
@@ -192,43 +230,108 @@ impl INode for NetworkInspector {
             request_changed.insert(event.id.0);
             match event.payload {
                 NetworkInspectPayload::Request(request) => {
-                    self.requests.insert(
-                        event.id,
-                        NetworkInspectedRequest {
-                            requested_at: 0.0,
-                            request,
-                            response_received_at: None,
-                            response: Err("No response received".to_string()),
-                            response_payload_received_at: None,
-                            response_payload: Err("No response payload received".to_string()),
-                        },
-                    );
+                    let mut inspected_request = NetworkInspectedRequest {
+                        requested_by: request.requester.into(),
+                        requested_at: godot::engine::Time::singleton().get_ticks_msec() as u32,
+                        url: request.url.into(),
+                        method: request.method.as_str().into(),
+                        request_headers: Dictionary::new(),
+                        response_received_at: 0,
+                        response_received: false,
+                        response_ok: false,
+                        response_error: "".into(),
+                        response_status_code: 0,
+                        response_headers: Dictionary::new(),
+                        response_payload_received: false,
+                        response_payload_ok: false,
+                        response_payload_received_at: 0,
+                        response_payload_error: "".into(),
+                        request_body: request.body,
+                        response_body: None,
+                    };
+
+                    if let Some(headers) = request.headers {
+                        for (key, value) in headers {
+                            let _ = inspected_request
+                                .request_headers
+                                .insert(key.to_variant(), value.to_variant());
+                        }
+                    }
+
+                    self.requests
+                        .insert(event.id, Gd::from_init_fn(|_base| inspected_request));
                 }
                 NetworkInspectPayload::PartialResponse(response) => {
-                    if let Some(request) = self.requests.get_mut(&event.id) {
-                        request.response_received_at = Some(0.0);
-                        request.response = response;
+                    if let Some(request_gd) = self.requests.get_mut(&event.id) {
+                        let mut request = request_gd.bind_mut();
+                        request.response_received_at =
+                            godot::engine::Time::singleton().get_ticks_msec() as u32;
+                        request.response_received = true;
+
+                        match response {
+                            Ok(response) => {
+                                request.response_ok = true;
+                                request.response_status_code = response.status_code.as_u16() as i32;
+                                if let Some(headers) = response.headers {
+                                    for (key, value) in headers {
+                                        let _ = request
+                                            .response_headers
+                                            .insert(key.to_variant(), value.to_variant());
+                                    }
+                                }
+                            }
+                            Err(error) => {
+                                request.response_ok = false;
+                                request.response_error = error.into();
+                            }
+                        }
                     }
                 }
                 NetworkInspectPayload::BodyResponse(response) => {
-                    if let Some(request) = self.requests.get_mut(&event.id) {
-                        request.response_payload_received_at = Some(0.0);
-                        request.response_payload = response;
+                    if let Some(request_gd) = self.requests.get_mut(&event.id) {
+                        let mut request = request_gd.bind_mut();
+                        request.response_payload_received_at =
+                            godot::engine::Time::singleton().get_ticks_msec() as u32;
+                        request.response_payload_received = true;
+                        match response {
+                            Ok(body) => {
+                                request.response_payload_ok = true;
+                                request.response_body = body.map(|s| s.into_bytes());
+                            }
+                            Err(error) => {
+                                request.response_payload_ok = false;
+                                request.response_payload_error = error.into();
+                            }
+                        }
                     }
                 }
                 NetworkInspectPayload::FullResponse(response) => {
-                    if let Some(request) = self.requests.get_mut(&event.id) {
-                        request.response_received_at = Some(0.0);
-                        request.response_payload_received_at = Some(0.0);
+                    if let Some(request_gd) = self.requests.get_mut(&event.id) {
+                        let mut request = request_gd.bind_mut();
+                        request.response_payload_received_at =
+                            godot::engine::Time::singleton().get_ticks_msec() as u32;
+                        request.response_payload_received = true;
+
+                        request.response_received_at =
+                            godot::engine::Time::singleton().get_ticks_msec() as u32;
+                        request.response_received = true;
 
                         match response {
                             Ok((response, body)) => {
-                                request.response = Ok(response);
-                                request.response_payload = Ok(body);
+                                request.response_payload_ok = true;
+                                request.response_status_code = response.status_code.as_u16() as i32;
+                                if let Some(headers) = response.headers {
+                                    for (key, value) in headers {
+                                        let _ = request
+                                            .response_headers
+                                            .insert(key.to_variant(), value.to_variant());
+                                    }
+                                }
+                                request.response_body = body.map(|s| s.into_bytes());
                             }
-                            Err(err) => {
-                                request.response = Err(err.clone());
-                                request.response_payload = Err(err);
+                            Err(error) => {
+                                request.response_payload_ok = false;
+                                request.response_payload_error = error.into();
                             }
                         }
                     }
@@ -237,7 +340,7 @@ impl INode for NetworkInspector {
         }
 
         for id in request_changed {
-            self._base.call_deferred(
+            self.base_mut().call_deferred(
                 "emit_signal".into(),
                 &["request_changed".to_variant(), id.to_variant()],
             );

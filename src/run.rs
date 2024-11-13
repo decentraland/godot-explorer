@@ -41,7 +41,13 @@ pub fn run(
 
     #[cfg(target_os = "macos")]
     {
-        build_args.extend(&["--no-default-features", "-F", "use_deno"]);
+        build_args.extend(&[
+            "--no-default-features",
+            "-F",
+            "use_deno",
+            "-F",
+            "enable_inspector",
+        ]);
     }
     build_args.extend(extra_build_args);
 
@@ -76,7 +82,7 @@ pub fn run(
     if itest {
         args.push("--headless");
         args.push("--verbose");
-        args.push("--test");
+        args.push("--test-runner");
     }
 
     if !extras.is_empty() {

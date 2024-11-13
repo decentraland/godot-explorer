@@ -80,5 +80,5 @@ jobs:
         with:
           name: docker-snapshots
           path: |
-            ${{ github.workspace }}/avatar-output/**/*
+            ${{ github.workspace }}/avatars-output/**/*
             ${{ github.workspace }}/scenes-output/**/*
