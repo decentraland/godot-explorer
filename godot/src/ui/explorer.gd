@@ -138,12 +138,10 @@ func _ready():
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
 	Global.scene_runner.camera_node = player.camera
-	Global.scene_runner.player_node = player
+	Global.scene_runner.player_node = player.avatar
 	Global.scene_runner.console = self._on_scene_console_message
 	Global.scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
-	Global.scene_runner.player_node.avatar.emote_triggered.connect(
-		Global.scene_runner.on_primary_player_trigger_emote
-	)
+	player.avatar.emote_triggered.connect(Global.scene_runner.on_primary_player_trigger_emote)
 	ui_root.add_child(Global.scene_runner.base_ui)
 	ui_root.move_child(Global.scene_runner.base_ui, 0)
 
