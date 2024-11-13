@@ -7,7 +7,6 @@ resource_name = "Amplify"
 resource_name = "Capture"
 
 [resource]
-bus/0/volume_db = 0.0
 bus/1/name = &"Scene"
 bus/1/solo = false
 bus/1/mute = false

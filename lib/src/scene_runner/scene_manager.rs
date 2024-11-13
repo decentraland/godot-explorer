@@ -723,7 +723,7 @@ impl SceneManager {
         let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
         let raycast_data = RaycastHit::from_godot_raycast(
             scene_position,
-            self.player_avatar_node.get_position(),
+            self.player_avatar_node.get_global_position(),
             &raycast_result,
             Some(dcl_entity_id as u32),
         )?;
