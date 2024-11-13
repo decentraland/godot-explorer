@@ -82,6 +82,7 @@ impl MultipleAnimationController {
                     anim_item.time_param_ref_str.clone(),
                     playing_time.to_variant(),
                 ));
+                self.finished_animations.insert(anim_name.clone());
             }
 
             if !looping {
@@ -167,6 +168,22 @@ impl MultipleAnimationController {
                     anim_state.time_param_ref_str.clone(),
                     playing_time.to_variant(),
                 ));
+            } else if self.finished_animations.contains(&new_state.clip) {
+                self.finished_animations.remove(&new_state.clip);
+
+                let playing_time = if !anim_state.value.playing_backward() {
+                    0.0
+                } else {
+                    *self
+                        .existing_anims_duration
+                        .get(&anim_state.value.clip)
+                        .unwrap_or(&0.0)
+                };
+
+                changes.push((
+                    anim_state.time_param_ref_str.clone(),
+                    playing_time.to_variant(),
+                ));
             }
 
             anim_state.value.playing = new_state.playing;
@@ -211,7 +228,9 @@ impl MultipleAnimationController {
             } else {
                 let time = self.base().get(anim_state.time_param_ref_str.clone());
                 if let Ok(time) = time.try_to::<f32>() {
-                    self.current_time.insert(anim.clip.clone(), time);
+                    if time > 0.0 {
+                        self.current_time.insert(anim.clip.clone(), time);
+                    }
                 }
             }
 

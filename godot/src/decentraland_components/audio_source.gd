@@ -17,11 +17,13 @@ func apply_audio_props(action_on_playing: bool):
 		attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
 
 	if not dcl_enable:
-		self.volume_db = -80
+		self.max_db = -100
 	else:
-		# TODO: Check if it should be 10 instead 20 to talk in terms of power
-		self.volume_db = 20 * log(dcl_volume)
-		# -80 = 20 log 0.00001, so muted is when (volume <= 0.00001)
+		self.max_db = 0
+
+	# TODO: Check if it should be 10 instead 20 to talk in terms of power
+	self.volume_db = 20 * log(dcl_volume)
+	# -80 = 20 log 0.00001, so muted is when (volume <= 0.00001)
 
 	if action_on_playing:
 		if self.playing and not dcl_playing:
