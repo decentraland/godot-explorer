@@ -40,7 +40,11 @@ impl INode for DclTokioRpc {
     fn process(&mut self, _dt: f64) {
         while let Ok(state) = self.receiver.try_recv() {
             match state {
-                GodotTokioCall::OpenUrl { url, description, use_webview } => {
+                GodotTokioCall::OpenUrl {
+                    url,
+                    description,
+                    use_webview,
+                } => {
                     self.base_mut().call_deferred(
                         "emit_signal".into(),
                         &[

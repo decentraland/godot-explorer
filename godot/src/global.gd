@@ -80,7 +80,7 @@ func _ready():
 
 	if Engine.has_singleton("DclAndroidPlugin"):
 		dcl_android_plugin = Engine.get_singleton("DclAndroidPlugin")
-	
+
 	if Engine.has_singleton("webkit-godot-android"):
 		webkit_android_plugin = Engine.get_singleton("webkit-godot-android")
 
@@ -227,7 +227,7 @@ func open_url(url: String):
 		webkit_ios_plugin.open_auth_url(url)
 
 	elif webkit_android_plugin != null:
-		webkit_android_plugin.openCustomTabUrl(url) # FOR SOCIAL
+		webkit_android_plugin.openCustomTabUrl(url)  # FOR SOCIAL
 		#webkit_android_plugin.openWebView(url, "") # FOR WALLET CONNECT
 
 	elif Global.dcl_android_plugin != null:

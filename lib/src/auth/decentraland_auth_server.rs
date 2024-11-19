@@ -208,8 +208,17 @@ mod test {
         tokio::spawn(async move {
             loop {
                 match rx.recv().await {
-                    Some(GodotTokioCall::OpenUrl { url, description, use_webview }) => {
-                        tracing::info!("url {:?} description {:?} use_webview {:?}", url, description, use_webview);
+                    Some(GodotTokioCall::OpenUrl {
+                        url,
+                        description,
+                        use_webview,
+                    }) => {
+                        tracing::info!(
+                            "url {:?} description {:?} use_webview {:?}",
+                            url,
+                            description,
+                            use_webview
+                        );
                     }
                     _ => {
                         break;
