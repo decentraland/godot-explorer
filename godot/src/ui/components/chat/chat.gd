@@ -51,7 +51,7 @@ func on_chats_arrived(chats: Array):
 		var avatar = Global.avatars.get_avatar_by_address(address)
 		if avatar == null:
 			if address == Global.player_identity.get_address_str():
-				avatar = Global.scene_runner.player_node.avatar
+				avatar = Global.scene_runner.player_avatar_node
 
 		var avatar_name: String = ""
 		if avatar != null:

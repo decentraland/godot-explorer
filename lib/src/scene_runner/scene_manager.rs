@@ -63,7 +63,10 @@ pub struct SceneManager {
     camera_node: Option<Gd<Camera3D>>,
 
     #[export]
-    player_node: Gd<Node3D>,
+    player_avatar_node: Gd<Node3D>,
+
+    #[export]
+    player_body_node: Gd<Node3D>,
 
     #[var]
     console: Callable,
@@ -259,11 +262,13 @@ impl SceneManager {
     fn set_camera_and_player_node(
         &mut self,
         camera_node: Gd<Camera3D>,
-        player_node: Gd<Node3D>,
+        player_avatar_node: Gd<Node3D>,
+        player_body_node: Gd<Node3D>,
         console: Callable,
     ) {
         self.camera_node = Some(camera_node.clone());
-        self.player_node = player_node.clone();
+        self.player_avatar_node = player_avatar_node.clone();
+        self.player_body_node = player_body_node.clone();
         self.console = console;
     }
 
@@ -332,7 +337,7 @@ impl SceneManager {
     fn compute_scene_distance(&mut self) {
         self.current_parcel_scene_id = SceneId::INVALID;
 
-        let mut player_global_position = self.player_node.get_global_transform().origin;
+        let mut player_global_position = self.player_avatar_node.get_global_transform().origin;
         player_global_position.x *= 0.0625;
         player_global_position.y *= 0.0625;
         player_global_position.z *= -0.0625;
@@ -369,7 +374,7 @@ impl SceneManager {
         }
         let camera_node = self.camera_node.clone().unwrap();
 
-        let player_global_transform = self.player_node.get_global_transform();
+        let player_global_transform = self.player_avatar_node.get_global_transform();
         let camera_global_transform = camera_node.get_global_transform();
 
         let camera_node = camera_node.try_cast::<DclCamera3D>();
@@ -718,7 +723,7 @@ impl SceneManager {
         let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
         let raycast_data = RaycastHit::from_godot_raycast(
             scene_position,
-            self.player_node.get_position(),
+            self.player_avatar_node.get_global_position(),
             &raycast_result,
             Some(dcl_entity_id as u32),
         )?;
@@ -964,7 +969,8 @@ impl INode for SceneManager {
             thread_sender_to_main,
 
             camera_node: None,
-            player_node: Node3D::new_alloc(),
+            player_avatar_node: Node3D::new_alloc(),
+            player_body_node: Node3D::new_alloc(),
 
             player_position: Vector2i::new(-1000, -1000),
 
@@ -1089,7 +1095,7 @@ impl INode for SceneManager {
                 .godot_dcl_scene
                 .get_node_or_null_3d_mut(&SceneEntityId::PLAYER)
             {
-                player_node.set_global_transform(self.player_node.get_global_transform());
+                player_node.set_global_transform(self.player_avatar_node.get_global_transform());
             }
 
             if let Some(camera_node) = scene
