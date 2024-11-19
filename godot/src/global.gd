@@ -222,19 +222,21 @@ func release_mouse():
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
-func open_url(url: String):
-	if webkit_ios_plugin != null:
-		webkit_ios_plugin.open_auth_url(url)
-
-	elif webkit_android_plugin != null:
-		webkit_android_plugin.openCustomTabUrl(url)  # FOR SOCIAL
-		#webkit_android_plugin.openWebView(url, "") # FOR WALLET CONNECT
-
-	elif Global.dcl_android_plugin != null:
-		Global.dcl_android_plugin.showDecentralandMobileToast()
-		Global.dcl_android_plugin.openUrl(url)
+func open_url(url: String, use_webkit: bool):
+	if use_webkit:
+		if webkit_ios_plugin != null:
+			webkit_ios_plugin.open_auth_url(url)
+		elif webkit_android_plugin != null:
+			webkit_android_plugin.openCustomTabUrl(url) # FOR SOCIAL
+			#webkit_android_plugin.openWebView(url, "") # FOR WALLET CONNECT
+		else:
+			printerr("No webkit plugin found")
 	else:
-		OS.shell_open(url)
+		if Global.dcl_android_plugin != null:
+			Global.dcl_android_plugin.showDecentralandMobileToast()
+			Global.dcl_android_plugin.openUrl(url)
+		else:
+			OS.shell_open(url)
 
 
 func async_create_popup_warning(
