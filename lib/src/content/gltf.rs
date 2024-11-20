@@ -189,7 +189,8 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                             }
 
                             // Set Toon
-                            base_material.set_specular_mode(SpecularMode::TOON);
+                            base_material.set_roughness(0.0);
+                            base_material.set_specular_mode(SpecularMode::DISABLED);
                             base_material.set_diffuse_mode(DiffuseMode::TOON);
                         }
                     }

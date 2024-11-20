@@ -13,7 +13,7 @@ void fragment() {
 	float color_amt = mask.r * mask.a * mask_color.r;
 	vec4 mixed_color = mix(material_color, vec4(1.0), color_amt);
 	vec4 final_color = mixed_color * base;
-	
+
 	ALBEDO = final_color.rgb;
 	ALPHA = final_color.a;
 	ALPHA_SCISSOR_THRESHOLD = 0.5;

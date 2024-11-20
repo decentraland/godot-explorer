@@ -16,7 +16,13 @@ use crate::{
     scene_runner::scene::{MaterialItem, Scene},
 };
 use godot::{
-    engine::{base_material_3d::Transparency, MeshInstance3D, StandardMaterial3D},
+    engine::{
+        base_material_3d::DiffuseMode, 
+        base_material_3d::SpecularMode,
+        base_material_3d::Transparency, 
+        MeshInstance3D, 
+        StandardMaterial3D, 
+    },
     prelude::*,
 };
 use utilities::weakref;
@@ -121,6 +127,9 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material.set_specular(0.0);
 
                         godot_material.set_albedo(unlit.diffuse_color.0.to_godot());
+
+                        godot_material.set_diffuse_mode(DiffuseMode::TOON);
+                        godot_material.set_specular_mode(SpecularMode::DISABLED);
                     }
                     DclMaterial::Pbr(pbr) => {
                         godot_material.set_metallic(pbr.metallic.0);
@@ -134,6 +143,9 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             .multiply(pbr.emissive_intensity.0);
                         godot_material.set_emission(emission.to_godot());
                         godot_material.set_albedo(pbr.albedo_color.0.to_godot());
+
+                        godot_material.set_diffuse_mode(DiffuseMode::TOON);
+                        godot_material.set_specular_mode(SpecularMode::DISABLED);
                     }
                 }
 
