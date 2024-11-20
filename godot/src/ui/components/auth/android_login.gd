@@ -16,6 +16,7 @@ func _ready():
 func set_lobby(new_lobby: Lobby):
 	lobby = new_lobby
 
+
 func async_login(social: bool):
 	Global.player_identity.try_connect_account("androidSocial" if social else "androidWeb3")
 	lobby.container_sign_in_step1.hide()

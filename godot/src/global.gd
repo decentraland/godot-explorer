@@ -224,9 +224,9 @@ func open_url(url: String, use_webkit: bool = false):
 			webkit_ios_plugin.open_auth_url(url)
 		elif webkit_android_plugin != null:
 			if player_identity.target_config_id == "androidSocial":
-				webkit_android_plugin.openCustomTabUrl(url) # FOR SOCIAL
+				webkit_android_plugin.openCustomTabUrl(url)  # FOR SOCIAL
 			else:
-				webkit_android_plugin.openWebView(url, "") # FOR WALLET CONNECT
+				webkit_android_plugin.openWebView(url, "")  # FOR WALLET CONNECT
 		else:
 			#printerr("No webkit plugin found")
 			OS.shell_open(url)

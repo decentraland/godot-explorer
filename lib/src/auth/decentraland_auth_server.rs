@@ -8,7 +8,8 @@ use super::wallet::SimpleAuthChain;
 
 //const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
 //const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
-const AUTH_FRONT_URL: &str = "https://auth-git-feat-add-configs-per-platform-decentraland1.vercel.app/auth/requests";
+const AUTH_FRONT_URL: &str =
+    "https://auth-git-feat-add-configs-per-platform-decentraland1.vercel.app/auth/requests";
 const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
@@ -159,14 +160,11 @@ pub async fn do_request(
     println!("code is: {}", code);
 
     // Determine target_config_id based on OS or use the provided one
-    let target_config_id = target_config_id.unwrap_or_else(|| {
-        match std::env::consts::OS {
-            "ios" => "ios".to_string(),
-            "android" => "android".to_string(),
-            _ => "alternative".to_string(),
-        }
+    let target_config_id = target_config_id.unwrap_or_else(|| match std::env::consts::OS {
+        "ios" => "ios".to_string(),
+        "android" => "android".to_string(),
+        _ => "alternative".to_string(),
     });
-    
 
     let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}");
     url_reporter
