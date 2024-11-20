@@ -17,7 +17,7 @@ func _exit_tree():
 
 
 class AndroidExportPlugin extends EditorExportPlugin:
-	var _plugin_name = "webkit-godot-android"
+	var _plugin_name = "webview-godot-android"
 
 	func _supports_platform(platform):
 		if platform is EditorExportPlatformAndroid:

@@ -22,6 +22,7 @@ pub fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::Sys
 
 pub async fn try_create_remote_ephemeral(
     url_reporter_sender: tokio::sync::mpsc::Sender<GodotTokioCall>,
+    target_config_id: Option<String>,
 ) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
     let local_wallet = LocalWallet::new(&mut thread_rng());
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
@@ -31,7 +32,7 @@ pub async fn try_create_remote_ephemeral(
     let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
 
     let request = CreateRequest::from_new_ephemeral(ephemeral_message.as_str());
-    let (owner_address, result) = do_request(request, url_reporter_sender).await?;
+    let (owner_address, result) = do_request(request, url_reporter_sender, target_config_id).await?;
 
     let result = result
         .as_str()

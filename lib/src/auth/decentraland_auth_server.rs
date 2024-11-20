@@ -151,19 +151,22 @@ async fn create_new_request(
 pub async fn do_request(
     message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
+    target_config_id: Option<String>,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     let request = create_new_request(message).await?;
     let req_id = request.request_id;
     let code = request.code;
     println!("code is: {}", code);
 
-    let target_config_id =  if std::env::consts::OS == "ios" {
-        "ios"
-    } else if std::env::consts::OS == "android" {
-        "android"
-    } else {
-        "alternative"
-    };
+    // Determine target_config_id based on OS or use the provided one
+    let target_config_id = target_config_id.unwrap_or_else(|| {
+        match std::env::consts::OS {
+            "ios" => "ios".to_string(),
+            "android" => "android".to_string(),
+            _ => "alternative".to_string(),
+        }
+    });
+    
 
     let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}");
     url_reporter
