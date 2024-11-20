@@ -222,7 +222,7 @@ func release_mouse():
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
-func open_url(url: String, use_webkit: bool):
+func open_url(url: String, use_webkit: bool = false):
 	if use_webkit:
 		if webkit_ios_plugin != null:
 			webkit_ios_plugin.open_auth_url(url)
@@ -230,7 +230,8 @@ func open_url(url: String, use_webkit: bool):
 			webkit_android_plugin.openCustomTabUrl(url) # FOR SOCIAL
 			#webkit_android_plugin.openWebView(url, "") # FOR WALLET CONNECT
 		else:
-			printerr("No webkit plugin found")
+			#printerr("No webkit plugin found")
+			OS.shell_open(url)
 	else:
 		if Global.dcl_android_plugin != null:
 			Global.dcl_android_plugin.showDecentralandMobileToast()

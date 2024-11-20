@@ -153,8 +153,8 @@ func show_connect():
 	show_panel(control_signin)
 
 
-func _on_need_open_url(url: String, _description: String, _use_webview: bool) -> void:
-	Global.open_url(url)
+func _on_need_open_url(url: String, _description: String, use_webview: bool) -> void:
+	Global.open_url(url, use_webview)
 
 
 func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:

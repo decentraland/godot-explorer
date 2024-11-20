@@ -8,7 +8,7 @@ use super::wallet::SimpleAuthChain;
 
 //const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
 //const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
-const AUTH_FRONT_URL: &str = "http://172.20.10.3:5173/auth/requests";
+const AUTH_FRONT_URL: &str = "https://auth-git-feat-add-configs-per-platform-decentraland1.vercel.app/auth/requests";
 const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
@@ -156,7 +156,16 @@ pub async fn do_request(
     let req_id = request.request_id;
     let code = request.code;
     println!("code is: {}", code);
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId=alternative");
+
+    let target_config_id =  if std::env::consts::OS == "ios" {
+        "ios"
+    } else if std::env::consts::OS == "android" {
+        "android"
+    } else {
+        "alternative"
+    };
+
+    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}");
     url_reporter
         .send(GodotTokioCall::OpenUrl {
             url,
