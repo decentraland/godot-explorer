@@ -69,16 +69,15 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-text = "A Little Longer Than Expected..."
+text = "Load the scenes arround you"
 clip_text = true
 
-[node name="Label_Description" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Label_Description" type="RichTextLabel" parent="MarginContainer/HBoxContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_font_sizes/font_size = 12
-text = "You can try to reload the experience or run it as it is."
-clip_text = true
+bbcode_enabled = true
+text = "[center]You have scenes pending to be loaded. To maintain a smooth experience, loading will occur only when you change scenes. If you prefer to load them immediately, please press the [b]Refresh[/b] button at the Top Left of the screen with icon [img]res://assets/ui/Reset.png[/img]"
+fit_content = true
 
 [node name="Control" type="Control" parent="."]
 layout_mode = 2
