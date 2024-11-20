@@ -23,6 +23,7 @@ enum ConfigParams {
 	SHADOW_QUALITY,
 	ANTI_ALIASING,
 	GRAPHIC_PROFILE,
+	LOADING_SCENES_ARROUND,
 }
 
 var local_content_dir: String = OS.get_user_data_dir() + "/content":
@@ -86,6 +87,11 @@ var show_fps: bool = true:
 	set(value):
 		show_fps = value
 		param_changed.emit(ConfigParams.SHOW_FPS)
+
+var loading_scene_arround_only_when_you_pass: bool = true:
+	set(value):
+		loading_scene_arround_only_when_you_pass = value
+		param_changed.emit(ConfigParams.LOADING_SCENES_ARROUND)
 
 # 0 - Vsync, 1 - No limit, Other-> Limit limit_fps that amount
 var limit_fps: int = 0:
@@ -220,6 +226,7 @@ func load_from_default():
 	self.max_cache_size = 1
 
 	self.show_fps = true
+	self.loading_scene_arround_only_when_you_pass = true
 
 	self.window_mode = 0
 
@@ -274,6 +281,11 @@ func load_from_settings_file():
 		"config", "max_cache_size", data_default.max_cache_size
 	)
 	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
+	self.loading_scene_arround_only_when_you_pass = settings_file.get_value(
+		"config",
+		"loading_scene_arround_only_when_you_pass",
+		data_default.loading_scene_arround_only_when_you_pass
+	)
 	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
 	self.resolution_3d_scale = settings_file.get_value(
@@ -346,6 +358,11 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	new_settings_file.set_value("config", "max_cache_size", self.max_cache_size)
 	new_settings_file.set_value("config", "show_fps", self.show_fps)
+	new_settings_file.set_value(
+		"config",
+		"loading_scene_arround_only_when_you_pass",
+		self.loading_scene_arround_only_when_you_pass
+	)
 	new_settings_file.set_value("config", "window_mode", self.window_mode)
 	new_settings_file.set_value("config", "ui_zoom", self.ui_zoom)
 	new_settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)

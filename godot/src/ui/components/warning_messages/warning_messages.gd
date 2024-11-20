@@ -11,9 +11,11 @@ func async_create_popup_warning(
 	get_tree().create_tween().tween_property(popup_warning, "modulate", Color.WHITE, 0.25)
 
 	add_child(popup_warning)
-	popup_warning.set_warning(warning_type, title, description)
+	var description_length = popup_warning.set_warning(warning_type, title, description)
 
-	await get_tree().create_timer(5.0).timeout
+	var timeout = max(0, float(description_length) / 20.0) # 30 characters per second to read
+
+	await get_tree().create_timer(timeout).timeout
 
 	var fade_out_tween = get_tree().create_tween()
 	fade_out_tween.tween_property(popup_warning, "modulate", Color.TRANSPARENT, 0.5)
