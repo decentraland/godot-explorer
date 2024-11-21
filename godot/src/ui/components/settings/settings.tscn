@@ -206,6 +206,10 @@ layout_mode = 2
 text = "1"
 horizontal_alignment = 1
 
+[node name="CheckBox_LoadingScenes" type="CheckBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+layout_mode = 2
+text = "Loading scenes arround you only when you pass from one scene to another"
+
 [node name="HSeparator" type="HSeparator" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
 layout_mode = 2
 
@@ -598,7 +602,6 @@ tooltip_text = "Select scene to load"
 focus_mode = 1
 item_count = 11
 popup/item_0/text = "mannakia.dcl.eth"
-popup/item_0/id = 0
 popup/item_1/text = "http://127.0.0.1:8000"
 popup/item_1/id = 1
 popup/item_2/text = "https://sdk-test-scenes.decentraland.zone"
@@ -795,6 +798,7 @@ focus_mode = 1
 [connection signal="toggled" from="ColorRect_Navbar/MarginContainer/HBoxContainer/HBoxContainer2/Button_ResetAll" to="." method="_on_monitoring_button_toggled"]
 [connection signal="visibility_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General" to="." method="_on_container_general_visibility_changed"]
 [connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_value_changed"]
+[connection signal="toggled" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/CheckBox_LoadingScenes" to="." method="_on_check_box_loading_scenes_toggled"]
 [connection signal="pressed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize/RadioSelector_MaxCacheSize" to="." method="_on_radio_selector_max_cache_size_select_item"]
 [connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GraphicProfile/RadioSelector_GraphicProfile" to="." method="_on_radio_selector_graphic_profile_select_item"]

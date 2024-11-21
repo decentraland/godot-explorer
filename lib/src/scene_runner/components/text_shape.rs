@@ -80,9 +80,19 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 label_3d.set_font_size(font_size as i32);
                 label_3d.set_outline_size(outline_size as i32);
                 label_3d.set_outline_modulate(outline_color);
-                label_3d.set_alpha_cut_mode(AlphaCutMode::OPAQUE_PREPASS);
+                label_3d.set_alpha_cut_mode(AlphaCutMode::DISCARD);
 
                 let text_wrapping = new_value.text_wrapping.unwrap_or_default();
+
+                let (width_meter, height_meter) = if text_wrapping {
+                    (
+                        new_value.width.unwrap_or(0.0),
+                        new_value.height.unwrap_or(0.0),
+                    )
+                } else {
+                    (0.0, 0.0)
+                };
+
                 if text_wrapping {
                     label_3d.set_autowrap_mode(AutowrapMode::WORD_SMART);
                     label_3d.set_width(200.0 * new_value.width.unwrap_or(16.0));
@@ -122,8 +132,6 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     | TextAlignMode::TamBottomCenter => (HorizontalAlignment::CENTER, 0.0),
                 };
 
-                let width_meter = new_value.width.unwrap_or(0.0);
-                let height_meter = new_value.width.unwrap_or(0.0);
                 label_3d.set_position(Vector3::new(width_meter * x_pos, height_meter * y_pos, 0.0));
                 label_3d.set_vertical_alignment(v_align);
                 label_3d.set_horizontal_alignment(h_align);
