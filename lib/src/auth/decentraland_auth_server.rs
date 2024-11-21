@@ -8,7 +8,7 @@ use super::wallet::SimpleAuthChain;
 
 const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
 const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
-// const AUTH_FRONT_URL: &str = "http://localhost:5173/auth/requests";
+// const AUTH_FRONT_URL: &str = "https://localhost:5173/auth/requests";
 // const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
@@ -32,7 +32,7 @@ pub struct CreateRequest {
 struct CreateRequestResponse {
     request_id: String,
     // expiration: serde_json::Value,
-    // code: i32,
+    code: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -151,14 +151,26 @@ async fn create_new_request(
 pub async fn do_request(
     message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
+    target_config_id: Option<String>,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     let request = create_new_request(message).await?;
     let req_id = request.request_id;
-    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId=alternative");
+    let code = request.code;
+    println!("code is: {}", code);
+
+    // Determine target_config_id based on OS or use the provided one
+    let target_config_id = target_config_id.unwrap_or_else(|| match std::env::consts::OS {
+        "ios" => "ios".to_string(),
+        "android" => "android".to_string(),
+        _ => "alternative".to_string(),
+    });
+
+    let url = format!("{AUTH_FRONT_URL}/{req_id}?targetConfigId={target_config_id}");
     url_reporter
         .send(GodotTokioCall::OpenUrl {
             url,
             description: "".into(),
+            use_webview: true,
         })
         .await?;
 
@@ -205,8 +217,17 @@ mod test {
         tokio::spawn(async move {
             loop {
                 match rx.recv().await {
-                    Some(GodotTokioCall::OpenUrl { url, description }) => {
-                        tracing::info!("url {:?} description {:?}", url, description);
+                    Some(GodotTokioCall::OpenUrl {
+                        url,
+                        description,
+                        use_webview,
+                    }) => {
+                        tracing::info!(
+                            "url {:?} description {:?} use_webview {:?}",
+                            url,
+                            description,
+                            use_webview
+                        );
                     }
                     _ => {
                         break;
@@ -229,6 +250,7 @@ mod test {
                 auth_chain: None,
             },
             sx,
+            None,
         )
         .await;
 

@@ -26,7 +26,6 @@ pub mod dcl_ui_input;
 pub mod dcl_ui_text;
 pub mod dcl_video_player;
 pub mod font;
-pub mod magic_link;
 pub mod portables;
 pub mod promise;
 pub mod resource_locker;

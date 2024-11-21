@@ -74,11 +74,14 @@ func async_close_sign_in(generate_snapshots: bool = true):
 
 # gdlint:ignore = async-function-name
 func _ready():
-	var magic_login = %MagicLogin
-	if is_instance_valid(magic_login) and magic_login.is_platform_supported():
-		magic_login.set_lobby(self)
+	var android_login = %AndroidLogin
+	if is_instance_valid(android_login) and android_login.is_platform_supported():
+		android_login.set_lobby(self)
+		android_login.show()
+		button_open_browser.hide()
 	else:
 		button_open_browser.text = "OPEN BROWSER"
+		android_login.hide()
 
 	show_panel(control_loading)
 
@@ -94,11 +97,6 @@ func _ready():
 		_skip_lobby = true
 
 	var session_account: Dictionary = Global.get_config().session_account
-	if session_account.get("magic_auth", false):
-		# Check if Magic session is still alive
-		Global.magic_link.check_connection()
-		if !await Global.magic_link.connection_state:
-			session_account = {}
 
 	if Global.player_identity.try_recover_account(session_account):
 		loading_first_profile = true
@@ -153,8 +151,8 @@ func show_connect():
 	show_panel(control_signin)
 
 
-func _on_need_open_url(url: String, _description: String) -> void:
-	Global.open_url(url)
+func _on_need_open_url(url: String, _description: String, use_webview: bool) -> void:
+	Global.open_url(url, use_webview)
 
 
 func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> void:
@@ -218,7 +216,7 @@ func _on_button_random_name_pressed():
 
 
 func _on_button_open_browser_pressed():
-	Global.player_identity.try_connect_account()
+	Global.player_identity.try_connect_account("")
 	container_sign_in_step1.hide()
 	container_sign_in_step2.show()
 	waiting_for_new_wallet = true

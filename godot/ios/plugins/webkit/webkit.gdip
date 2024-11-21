@@ -1,0 +1,17 @@
+[config]
+name="WebKit"
+binary="webkit.xcframework"
+
+initialization="register_webkit_types"
+deinitialization="unregister_webkit_types"
+
+[dependencies]
+linked=[]
+embedded=[]
+system=["SafariServices", "AuthenticationServices"]
+
+capabilities=[]
+
+files=[]
+
+[plist]

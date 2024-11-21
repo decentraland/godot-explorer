@@ -16,7 +16,6 @@ use crate::scene_runner::tokio_runtime::TokioRuntime;
 use super::auth_identity::create_local_ephemeral;
 use super::decentraland_auth_server::{do_request, CreateRequest};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
-use super::magic_wallet::MagicWallet;
 use super::remote_wallet::RemoteWallet;
 use super::wallet::{AsH160, Wallet};
 
@@ -30,7 +29,9 @@ enum CurrentWallet {
 pub struct DclPlayerIdentity {
     wallet: Option<CurrentWallet>,
     ephemeral_auth_chain: Option<EphemeralAuthChain>,
-    magic_auth: bool,
+
+    #[var]
+    target_config_id: GString,
 
     profile: Option<Gd<DclUserProfile>>,
 
@@ -51,8 +52,8 @@ impl INode for DclPlayerIdentity {
             profile: None,
             base,
             is_guest: false,
-            magic_auth: false,
             try_connect_account_handle: None,
+            target_config_id: GString::default(),
         }
     }
 }
@@ -170,12 +171,10 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn try_connect_account(&mut self) {
+    fn try_connect_account(&mut self, target_config_id: GString) {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
-
-        self.magic_auth = false;
 
         let instance_id = self.base().instance_id();
         let sender = DclGlobal::singleton()
@@ -183,56 +182,11 @@ impl DclPlayerIdentity {
             .get_dcl_tokio_rpc()
             .bind()
             .get_sender();
+
+        self.target_config_id = target_config_id.clone();
+        let target_config_id = target_config_id.to_string();
         let try_connect_account_handle = handle.spawn(async move {
-            let wallet = RemoteWallet::with_auth_identity(sender).await;
-            let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
-                return;
-            };
-
-            match wallet {
-                Ok((wallet, ephemeral_auth_chain)) => {
-                    let ephemeral_auth_chain_json_str =
-                        serde_json::to_string(&ephemeral_auth_chain)
-                            .expect("serialize ephemeral auth chain");
-
-                    this.call_deferred(
-                        "try_set_remote_wallet".into(),
-                        &[
-                            format!("{:#x}", wallet.address()).to_variant(),
-                            wallet.chain_id().to_variant(),
-                            ephemeral_auth_chain_json_str.to_variant(),
-                        ],
-                    );
-                }
-                Err(err) => {
-                    tracing::error!("error getting wallet {:?}", err);
-                    this.call_deferred(
-                        "_error_getting_wallet".into(),
-                        &["Unknown error".to_variant()],
-                    );
-                }
-            }
-        });
-
-        self.try_connect_account_handle = Some(try_connect_account_handle);
-    }
-
-    #[func]
-    fn try_connect_account_with_magic(&mut self) {
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
-            panic!("tokio runtime not initialized")
-        };
-
-        self.magic_auth = true;
-
-        let instance_id = self.base().instance_id();
-        let sender = DclGlobal::singleton()
-            .bind()
-            .get_dcl_tokio_rpc()
-            .bind()
-            .get_sender();
-        let try_connect_account_handle = handle.spawn(async move {
-            let wallet = MagicWallet::with_auth_identity(sender).await;
+            let wallet = RemoteWallet::with_auth_identity(sender, Some(target_config_id)).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -332,8 +286,6 @@ impl DclPlayerIdentity {
                 PackedByteArray::from_iter(keys.iter().cloned()).to_variant(),
             );
         }
-
-        let _ = dict.insert("magic_auth", self.magic_auth.to_variant());
 
         let _ = dict.insert("account_address", self.get_address_str().to_variant());
         let _ = dict.insert("chain_id", chain_id.to_variant());
@@ -580,8 +532,11 @@ impl DclPlayerIdentity {
         body.auth_chain = Some(auth_chain.auth_chain().clone());
 
         if let Some(handle) = TokioRuntime::static_clone_handle() {
+            let target_config_id = self.target_config_id.to_string();
             handle.spawn(async move {
-                let result = do_request(body, url_sender).await.map(|(_, result)| result);
+                let result = do_request(body, url_sender, Some(target_config_id))
+                    .await
+                    .map(|(_, result)| result);
                 response.send(result.map_err(|err| err.to_string()));
             });
         }

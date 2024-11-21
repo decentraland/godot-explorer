@@ -199,7 +199,7 @@ func _ready():
 		add_child(scene_renderer_orchestor)
 
 
-func _on_need_open_url(url: String, _description: String) -> void:
+func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> void:
 	if not Global.player_identity.get_address_str().is_empty():
 		Global.open_url(url)
 

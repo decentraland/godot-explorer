@@ -2,7 +2,8 @@ use std::{collections::HashMap, fs, io, path::Path, process::ExitStatus};
 
 use crate::{
     consts::{
-        BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION, GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER
+        BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
+        GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
     },
     copy_files::copy_ffmpeg_libraries,
     install_dependency::{download_and_extract_zip, set_executable_permission},
@@ -140,8 +141,13 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
     // If no specific templates are provided, default to all templates
     let templates = if platforms.is_empty() {
         println!("No specific templates provided, downloading all templates.");
-        println!("For downloading for a specific platform use: `cargo run -- install --platform linux`");
-        file_map.keys().map(|&k| k.to_string()).collect::<Vec<String>>()
+        println!(
+            "For downloading for a specific platform use: `cargo run -- install --platform linux`"
+        );
+        file_map
+            .keys()
+            .map(|&k| k.to_string())
+            .collect::<Vec<String>>()
     } else {
         platforms.to_vec()
     };
@@ -154,11 +160,17 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
             for file in files {
                 println!("Downloading file for {}: {}", template, file);
 
-                let url = format!("{}{}.zip", GODOT4_EXPORT_TEMPLATES_BASE_URL.to_string(), file);
+                let url = format!(
+                    "{}{}.zip",
+                    GODOT4_EXPORT_TEMPLATES_BASE_URL.to_string(),
+                    file
+                );
                 download_and_extract_zip(
                     url.as_str(),
                     dest_path.as_str(),
-                    Some(format!("{GODOT_CURRENT_VERSION}.{file}.export-templates.zip")),
+                    Some(format!(
+                        "{GODOT_CURRENT_VERSION}.{file}.export-templates.zip"
+                    )),
                 )?;
             }
         } else {

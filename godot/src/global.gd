@@ -30,6 +30,8 @@ var music_player: MusicPlayer
 
 var standalone = false
 var dcl_android_plugin
+var webkit_android_plugin
+var webkit_ios_plugin
 
 var network_inspector_window: Window = null
 
@@ -79,6 +81,12 @@ func _ready():
 	if Engine.has_singleton("DclAndroidPlugin"):
 		dcl_android_plugin = Engine.get_singleton("DclAndroidPlugin")
 
+	if Engine.has_singleton("webview-godot-android"):
+		webkit_android_plugin = Engine.get_singleton("webview-godot-android")
+
+	if Engine.has_singleton("WebKit"):
+		webkit_ios_plugin = Engine.get_singleton("WebKit")
+
 	self.metrics = Metrics.create_metrics(
 		self.config.analytics_user_id, DclConfig.generate_uuid_v4()
 	)
@@ -89,9 +97,6 @@ func _ready():
 
 	self.dcl_tokio_rpc = DclTokioRpc.new()
 	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
-
-	self.magic_link = MagicLink.new()
-	self.magic_link.set_name("magic_link")
 
 	self.player_identity = PlayerIdentity.new()
 	self.player_identity.set_name("player_identity")
@@ -117,7 +122,6 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
 	get_tree().root.add_child.call_deferred(self.dcl_tokio_rpc)
-	get_tree().root.add_child.call_deferred(self.magic_link)
 	get_tree().root.add_child.call_deferred(self.player_identity)
 	get_tree().root.add_child.call_deferred(self.comms)
 	get_tree().root.add_child.call_deferred(self.avatars)
@@ -214,12 +218,24 @@ func release_mouse():
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
-func open_url(url: String):
-	if Global.dcl_android_plugin != null:
-		Global.dcl_android_plugin.showDecentralandMobileToast()
-		Global.dcl_android_plugin.openUrl(url)
+func open_url(url: String, use_webkit: bool = false):
+	if use_webkit:
+		if webkit_ios_plugin != null:
+			webkit_ios_plugin.open_auth_url(url)
+		elif webkit_android_plugin != null:
+			if player_identity.target_config_id == "androidSocial":
+				webkit_android_plugin.openCustomTabUrl(url)  # FOR SOCIAL
+			else:
+				webkit_android_plugin.openWebView(url, "")  # FOR WALLET CONNECT
+		else:
+			#printerr("No webkit plugin found")
+			OS.shell_open(url)
 	else:
-		OS.shell_open(url)
+		if Global.dcl_android_plugin != null:
+			Global.dcl_android_plugin.showDecentralandMobileToast()
+			Global.dcl_android_plugin.openUrl(url)
+		else:
+			OS.shell_open(url)
 
 
 func async_create_popup_warning(

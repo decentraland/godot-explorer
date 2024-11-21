@@ -1,14 +1,10 @@
-use crate::dcl::scene_apis::RpcResultSender;
 use godot::prelude::*;
 
 pub enum GodotTokioCall {
-    MagicSignMessage {
-        message: String,
-        response: RpcResultSender<(String, String)>,
-    },
     OpenUrl {
         url: String,
         description: String,
+        use_webview: bool, // use webview
     },
 }
 
@@ -17,8 +13,6 @@ pub enum GodotTokioCall {
 pub struct DclTokioRpc {
     sender: tokio::sync::mpsc::Sender<GodotTokioCall>,
     receiver: tokio::sync::mpsc::Receiver<GodotTokioCall>,
-
-    waiting_signature_response: Option<RpcResultSender<(String, String)>>,
 
     base: Base<Node>,
 }
@@ -31,7 +25,6 @@ impl INode for DclTokioRpc {
         Self {
             sender,
             receiver,
-            waiting_signature_response: None,
             base,
         }
     }
@@ -39,22 +32,19 @@ impl INode for DclTokioRpc {
     fn process(&mut self, _dt: f64) {
         while let Ok(state) = self.receiver.try_recv() {
             match state {
-                GodotTokioCall::OpenUrl { url, description } => {
+                GodotTokioCall::OpenUrl {
+                    url,
+                    description,
+                    use_webview,
+                } => {
                     self.base_mut().call_deferred(
                         "emit_signal".into(),
                         &[
                             "need_open_url".to_variant(),
                             url.to_variant(),
                             description.to_variant(),
+                            use_webview.to_variant(),
                         ],
-                    );
-                }
-                GodotTokioCall::MagicSignMessage { message, response } => {
-                    self.waiting_signature_response = Some(response);
-
-                    self.base_mut().call_deferred(
-                        "emit_signal".into(),
-                        &["magic_sign".to_variant(), message.to_variant()],
                     );
                 }
             }
@@ -65,18 +55,7 @@ impl INode for DclTokioRpc {
 #[godot_api]
 impl DclTokioRpc {
     #[signal]
-    fn need_open_url(&self, url: GString, description: GString);
-
-    #[signal]
-    fn magic_sign(&self, message: GString);
-
-    #[func]
-    fn magic_signed_message(&mut self, signer: GString, signature: GString) {
-        if let Some(response) = &self.waiting_signature_response {
-            response.send((signer.into(), signature.into()));
-            self.waiting_signature_response = None;
-        }
-    }
+    fn need_open_url(&self, url: GString, description: GString, use_webview: bool);
 
     pub fn get_sender(&self) -> tokio::sync::mpsc::Sender<GodotTokioCall> {
         self.sender.clone()
