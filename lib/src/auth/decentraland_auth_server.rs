@@ -8,7 +8,7 @@ use super::wallet::SimpleAuthChain;
 
 const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
 const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
-// const AUTH_FRONT_URL: &str = "https://127.0.0.1:8080/auth/requests";
+// const AUTH_FRONT_URL: &str = "https://localhost:5173/auth/requests";
 // const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
