@@ -12,7 +12,8 @@ enum WarningType {
 @onready var label_description = %Label_Description
 
 
-func set_warning(warning_type: PopupWarning.WarningType, title: String, description: String):
+# @returns the computed length of the description
+func set_warning(warning_type: PopupWarning.WarningType, title: String, description: String) -> int:
 	match warning_type:
 		WarningType.TIMEOUT:
 			texture_icon.texture = load("res://assets/themes/dark_dcl_theme/icons/Delay.svg")
@@ -23,6 +24,7 @@ func set_warning(warning_type: PopupWarning.WarningType, title: String, descript
 
 	label_title.text = title
 	label_description.text = description
+	return label_description.get_parsed_text().length()
 
 
 func _on_texture_button_exit_pressed():

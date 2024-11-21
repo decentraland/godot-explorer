@@ -263,8 +263,7 @@ impl SceneEntityCoordinator {
         }
 
         for pointer in remaining_pointers.into_iter() {
-            self.cache_city_pointers
-                .insert(pointer, "empty".to_string());
+            self.cache_city_pointers.insert(pointer, "".to_string());
         }
     }
 
@@ -323,7 +322,7 @@ impl SceneEntityCoordinator {
             let coord = coord.plus(&self.current_position);
 
             if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
-                if entity_id == "empty" {
+                if entity_id.is_empty() {
                     self.empty_parcels.insert(coord.to_string());
                 } else {
                     self.loadable_scenes.insert(entity_id.clone());
@@ -337,7 +336,7 @@ impl SceneEntityCoordinator {
             let coord = coord.plus(&self.current_position);
 
             if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
-                if entity_id == "empty" {
+                if entity_id.is_empty() {
                     continue;
                 }
                 if self.loadable_scenes.contains(entity_id) {
@@ -593,7 +592,7 @@ impl SceneEntityCoordinator {
         if let Some(entity_id) = self.cache_city_pointers.get(&coord) {
             GString::from(entity_id)
         } else {
-            GString::from("empty")
+            GString::from("")
         }
     }
 

@@ -13,7 +13,8 @@ var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
-var last_index_scene_ui_root: int = -1
+var _first_time_refresh_warning = true
+
 var _last_parcel_position: Vector2i = Vector2i.MAX
 
 @onready var ui_root: Control = $UI
@@ -23,6 +24,8 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 @onready var control_pointer_tooltip = %Control_PointerTooltip
 
 @onready var panel_chat = $UI/SafeMarginContainer/InteractableHUD/Panel_Chat
+@onready
+var button_load_scenes: Button = $UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_LoadScenes
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
@@ -147,6 +150,9 @@ func _ready():
 	ui_root.move_child(Global.scene_runner.base_ui, 0)
 
 	Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
+	Global.scene_fetcher.notify_pending_loading_scenes.connect(
+		self._on_notify_pending_loading_scenes
+	)
 
 	Global.comms.on_adapter_changed.connect(self._on_adapter_changed)
 
@@ -475,3 +481,27 @@ func _on_adapter_changed(voice_chat_enabled, _adapter_str):
 
 func _on_control_menu_preview_hot_reload(_scene_type, _scene_id):
 	pass  # Replace with function body.
+
+
+func _on_button_load_scenes_pressed() -> void:
+	Global.scene_fetcher._bypass_loading_check = true
+	button_load_scenes.hide()
+
+
+func _on_notify_pending_loading_scenes(pending: bool) -> void:
+	if pending:
+		button_load_scenes.show()
+		if _first_time_refresh_warning:
+			if loading_ui.visible:
+				return
+			(
+				warning_messages
+				. async_create_popup_warning(
+					PopupWarning.WarningType.MESSAGE,
+					"Load the scenes arround you",
+					"[center]You have scenes pending to be loaded. To maintain a smooth experience, loading will occur only when you change scenes. If you prefer to load them immediately, please press the [b]Refresh[/b] button at the Top Left of the screen with icon [img]res://assets/ui/Reset.png[/img][/center]"
+				)
+			)
+			_first_time_refresh_warning = false
+	else:
+		button_load_scenes.hide()

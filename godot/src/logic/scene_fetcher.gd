@@ -3,6 +3,7 @@ extends Node
 
 signal parcels_processed(parcel_filled, empty)
 signal report_scene_load(done: bool, is_new_loading: bool, pending: int)
+signal notify_pending_loading_scenes(is_pending: bool)
 
 const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_0.tscn"),
@@ -36,10 +37,13 @@ class SceneItem:
 
 
 var current_position: Vector2i = Vector2i(-1000, -1000)
+var current_scene_entity_id: String = ""
+
 var loaded_empty_scenes: Dictionary = {}
 var loaded_scenes: Dictionary = {}
 var scene_entity_coordinator: SceneEntityCoordinator = SceneEntityCoordinator.new()
 var last_version_updated: int = -1
+var last_version_checked: int = -1
 
 var desired_portable_experiences_urns: Array[String] = []
 
@@ -50,6 +54,8 @@ var _is_reloading: bool = false
 var _scene_changed_counter: int = 0
 
 var _debugging_js_scene_id: String = ""
+
+var _bypass_loading_check: bool = false
 
 
 func _ready():
@@ -94,8 +100,8 @@ func get_current_scene_data() -> SceneItem:
 
 
 func get_scene_data(coord: Vector2i) -> SceneItem:
-	var scene_entity_id = scene_entity_coordinator.get_scene_entity_id(coord)
-	if scene_entity_id == "empty":
+	var scene_entity_id := scene_entity_coordinator.get_scene_entity_id(coord)
+	if scene_entity_id.is_empty():
 		return null
 
 	return loaded_scenes.get(scene_entity_id)
@@ -116,9 +122,35 @@ func set_scene_radius(value: int):
 # gdlint:ignore = async-function-name
 func _process(_dt):
 	scene_entity_coordinator.update()
-	if scene_entity_coordinator.get_version() != last_version_updated:
-		last_version_updated = scene_entity_coordinator.get_version()
-		await _async_on_desired_scene_changed()
+
+	var version := scene_entity_coordinator.get_version()
+
+	# When the loading-check is disable, early process this and return
+	if not Global.get_config().loading_scene_arround_only_when_you_pass:
+		if version != last_version_updated:
+			last_version_updated = scene_entity_coordinator.get_version()
+			await _async_on_desired_scene_changed()
+		return
+
+	# Once we're here, we need the logic of selected time to process the desired change
+	var scene_entity_id := scene_entity_coordinator.get_scene_entity_id(current_position)
+
+	if (
+		_bypass_loading_check
+		or scene_entity_id != current_scene_entity_id
+		or scene_entity_id.is_empty()
+	):
+		current_scene_entity_id = scene_entity_id
+		_bypass_loading_check = false
+
+		if version != last_version_updated:
+			last_version_updated = scene_entity_coordinator.get_version()
+			notify_pending_loading_scenes.emit(false)
+			await _async_on_desired_scene_changed()
+	elif version != last_version_checked:
+		last_version_checked = version
+		if _is_there_any_new_scene_to_load():
+			notify_pending_loading_scenes.emit(true)
 
 
 func is_scene_loaded(x: int, z: int) -> bool:
@@ -134,6 +166,21 @@ func get_parcel_scene_id(x: int, z: int) -> int:
 				if pos.x == x and pos.y == z:
 					return scene.scene_number_id
 	return -1
+
+
+func _is_there_any_new_scene_to_load() -> bool:
+	var d = scene_entity_coordinator.get_desired_scenes()
+	var loadable_scenes = d.get("loadable_scenes", [])
+	var keep_alive_scenes = d.get("keep_alive_scenes", [])
+	var empty_parcels = d.get("empty_parcels", [])
+
+	var loading_promises: Array = []
+	for scene_id in loadable_scenes:
+		if not loaded_scenes.has(scene_id):
+			var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
+			if scene_definition != null:
+				return true
+	return false
 
 
 func _async_on_desired_scene_changed():

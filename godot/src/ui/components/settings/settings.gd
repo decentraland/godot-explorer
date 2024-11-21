@@ -27,6 +27,8 @@ var audio = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxC
 @onready var text_edit_cache_path = %TextEdit_CachePath
 @onready var label_current_cache_size = %Label_CurrentCacheSize
 @onready var radio_selector_max_cache_size = %RadioSelector_MaxCacheSize
+@onready
+var check_box_loading_scenes: CheckBox = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/CheckBox_LoadingScenes
 
 #Audio items
 @onready var h_slider_general_volume = %HSlider_GeneralVolume
@@ -88,6 +90,9 @@ func _ready():
 	# general
 	text_edit_cache_path.text = Global.get_config().local_content_dir
 	radio_selector_max_cache_size.selected = Global.get_config().max_cache_size
+	check_box_loading_scenes.button_pressed = (
+		Global.get_config().loading_scene_arround_only_when_you_pass
+	)
 
 	# graphic
 	refresh_graphic_settings()
@@ -441,3 +446,9 @@ func _update_current_cache_size():
 
 func _on_container_general_visibility_changed():
 	_update_current_cache_size()
+
+
+func _on_check_box_loading_scenes_toggled(toggled_on: bool) -> void:
+	if Global.get_config().loading_scene_arround_only_when_you_pass != toggled_on:
+		Global.get_config().loading_scene_arround_only_when_you_pass = toggled_on
+		Global.get_config().save_to_settings_file()
