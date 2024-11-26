@@ -62,7 +62,8 @@ func _ready():
 	control_profile_settings.hide()
 	control_map.jump_to.connect(_jump_to)
 
-	button_magic_wallet.visible = Global.magic_link.is_using_magic()
+	# Leave it, because we can open a browser with the Magic Wallet
+	button_magic_wallet.visible = false
 
 
 func _unhandled_input(event):
@@ -246,4 +247,5 @@ func _on_button_settings_toggled(toggled_on):
 
 
 func _on_button_magic_wallet_pressed():
-	Global.magic_link.open_wallet()
+	pass
+	# On future we can open the magic wallet in a WebKit / WebView

@@ -166,10 +166,10 @@ fn main() -> Result<(), anyhow::Error> {
                 .values_of("platforms")
                 .map(|vals| vals.map(String::from).collect())
                 .unwrap_or_default();
-        
+
             // Call your install function and pass the templates
             install_dependency::install(no_templates, &platforms)
-        },
+        }
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
