@@ -56,8 +56,8 @@ async fn fetch_polling_server(
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     let url = format!("{AUTH_SERVER_ENDPOINT_URL}/{req_id}");
     let mut attempt = 0;
-    let mut next_requested = 0;
-    
+    let mut requested_time = std::time::Instant::now();
+
     loop {
         tracing::debug!("trying req_id {:?} attempt ${attempt}", req_id);
         if attempt >= AUTH_SERVER_RETRIES {
@@ -65,13 +65,13 @@ async fn fetch_polling_server(
         }
         attempt += 1;
 
-
-        let remaining_delay = (next_requested - std::time::Instant::now()).as_millis() as i64;
+        let diff = (std::time::Instant::now() - requested_time).as_millis() as i64;
+        let remaining_delay = (AUTH_SERVER_RETRY_INTERVAL.as_millis() as i64) - diff;
         if remaining_delay > 0 {
-            tokio::time::sleep(remaining_delay).await;
+            tokio::time::sleep(Duration::from_millis(remaining_delay as u64)).await;
         }
 
-        next_requested = std::time::Instant::now() + AUTH_SERVER_RETRY_INTERVAL;
+        requested_time = std::time::Instant::now();
         let response = reqwest::Client::builder()
             .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
             .build()
