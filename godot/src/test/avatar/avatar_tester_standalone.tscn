@@ -27,6 +27,9 @@ offset_right = 1062.0
 offset_bottom = 609.0
 custom_environment = ExtResource("3_2n2br")
 
+[node name="SubViewport" parent="SubViewportContainer" index="0"]
+transparent_bg = false
+
 [node name="TabContainer" type="TabContainer" parent="."]
 layout_mode = 0
 offset_left = 33.0
@@ -225,3 +228,5 @@ offset_bottom = 385.0
 [connection signal="pressed" from="TabContainer/Emotes/Button_PlayCustom" to="." method="_on_button_play_custom_pressed"]
 [connection signal="pressed" from="TabContainer/Emotes/Button_Clear" to="." method="_on_button_clear_pressed"]
 [connection signal="text_changed" from="TabContainer/Expression/VBoxContainer/TextEdit_Expr" to="." method="_on_text_edit_expr_text_changed"]
+
+[editable path="SubViewportContainer"]

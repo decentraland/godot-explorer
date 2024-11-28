@@ -6,9 +6,9 @@ extends Node
 
 
 func _ready():
-	# if Global.is_xr():
-	Global.loading_started.connect(self._on_loading_started)
-	Global.loading_finished.connect(self._on_loading_finished)
+	if Global.is_xr():
+		Global.loading_started.connect(self._on_loading_started)
+		Global.loading_finished.connect(self._on_loading_finished)
 
 
 func _on_loading_started():
@@ -25,5 +25,5 @@ func _on_loading_finished():
 	world_environment.environment.ambient_light_energy = 0.0
 	sun_light.light_energy = 0.0
 	tween.tween_property(world_environment, "environment:background_energy_multiplier", 1.0, 1.0)
-	tween.tween_property(world_environment, "environment:ambient_light_energy", .4, 1.0)
-	tween.tween_property(sun_light, "light_energy", .2, 1.0)
+	tween.tween_property(world_environment, "environment:ambient_light_energy", 1.0, 1.0)
+	tween.tween_property(sun_light, "light_energy", 1.0, 1.0)
