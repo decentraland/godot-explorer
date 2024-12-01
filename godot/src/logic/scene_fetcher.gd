@@ -21,6 +21,7 @@ const EMPTY_SCENES = [
 ]
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
+const CRDT_DATABASE_BASE_URL: String = "https://psquad.kuruk.net/localstack/crdts/"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 
 
@@ -56,6 +57,9 @@ var _scene_changed_counter: int = 0
 var _debugging_js_scene_id: String = ""
 
 var _bypass_loading_check: bool = false
+
+# try optimized main crdt
+var _force_try_crdt = OS.get_cmdline_args().has("--force-try-crdt")
 
 
 func _ready():
@@ -376,6 +380,20 @@ func async_load_scene(
 				res.get_error()
 			)
 			return PromiseUtils.resolved(false)
+
+	# try optimized main crdt
+	if _force_try_crdt:
+		var main_crdt_hash = scene_entity_id + ".crdt"
+		var url = CRDT_DATABASE_BASE_URL + main_crdt_hash
+		var promise: Promise = Global.content_provider.fetch_file_by_url(main_crdt_hash, url)
+
+		var res = await PromiseUtils.async_awaiter(promise)
+		if res is PromiseError:
+			prints("No CRDT found in the optimized database url =", url)
+		else:
+			prints("CRDT found in the optimized database! url =", url)
+			main_crdt_file_hash = main_crdt_hash
+			local_main_crdt_path = "user://content/" + main_crdt_file_hash
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):
