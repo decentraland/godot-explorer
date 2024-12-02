@@ -280,3 +280,25 @@ func open_network_inspector_ui():
 
 	add_child(network_inspector_window)
 	network_inspector_window.show()
+
+
+func async_load_threaded(resource_path: String, promise: Promise) -> void:
+	prints("loading async", resource_path)
+
+	var main_tree = get_tree()
+	var err = ResourceLoader.load_threaded_request(resource_path)
+	if err != OK:
+		promise.reject("async_load_threaded error load_threaded_request not ok")
+		return
+
+	var status = ResourceLoader.load_threaded_get_status(resource_path)
+	while status == 1:
+		await main_tree.process_frame
+		status = ResourceLoader.load_threaded_get_status(resource_path)
+
+	var resource = ResourceLoader.load_threaded_get(resource_path)
+	if resource == null:
+		promise.reject("async_load_threaded error load_threaded_request result null")
+		return
+
+	promise.resolve_with_data(resource)
