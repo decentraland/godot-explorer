@@ -590,7 +590,10 @@ impl ContentProvider {
             let resource_optimized_path = format!("res://content/{}.remap", file_hash);
             DclGlobal::singleton().call(
                 "async_load_threaded".into(),
-                &[resource_optimized_path.to_variant(), promise.clone().to_variant()],
+                &[
+                    resource_optimized_path.to_variant(),
+                    promise.clone().to_variant(),
+                ],
             );
         } else {
             let url = format!(
