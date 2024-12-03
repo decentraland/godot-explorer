@@ -20,7 +20,7 @@ const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
-const ASSET_OPTIMIZED_BASE_URL: String = "https://psquad.kuruk.net/localstack/optimized-assets"
+const ASSET_OPTIMIZED_BASE_URL: String = "https://storage.kuruk.net"
 #const ASSET_OPTIMIZED_BASE_URL: String = "http://localhost:3232"
 
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
