@@ -15,11 +15,49 @@ func _ready():
 	self.async_load_gltf.call_deferred()
 
 
+func async_try_load_gltf_from_local_file(scene_file: String) -> void:
+	var main_tree = get_tree()
+	if not is_instance_valid(main_tree):
+		return
+
+	var err = ResourceLoader.load_threaded_request(scene_file)
+	if err != OK:
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
+		return
+
+	var status = ResourceLoader.load_threaded_get_status(scene_file)
+	while status == 1:
+		await main_tree.process_frame
+		status = ResourceLoader.load_threaded_get_status(scene_file)
+
+	var resource = ResourceLoader.load_threaded_get(scene_file)
+	if resource == null:
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
+		return
+
+	var gltf_node = resource.instantiate()
+	var instance_promise: Promise = Global.content_provider.instance_gltf_colliders(
+		gltf_node, dcl_visible_cmask, dcl_invisible_cmask, dcl_scene_id, dcl_entity_id
+	)
+	var res_instance = await PromiseUtils.async_awaiter(instance_promise)
+	if res_instance is PromiseError:
+		printerr("Error on fetch gltf: ", res_instance.get_error())
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
+		return
+
+	dcl_pending_node = res_instance
+	timer.stop()
+
+
 func async_load_gltf():
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
-	if content_mapping.get_hash(dcl_gltf_src).is_empty():
+	var file_hash = content_mapping.get_hash(dcl_gltf_src)
+	if file_hash.is_empty():
 		dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND
 		timer.stop()
 		return
@@ -27,6 +65,11 @@ func async_load_gltf():
 	# TODO: should we set a timeout?
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 	timer.start()
+
+	var scene_file = "res://glbs/" + file_hash + ".tscn"
+	if FileAccess.file_exists(scene_file + ".remap"):
+		await async_try_load_gltf_from_local_file(scene_file)
+		return
 
 	var promise = Global.content_provider.fetch_scene_gltf(dcl_gltf_src, content_mapping)
 	if promise == null:
