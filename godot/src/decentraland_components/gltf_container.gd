@@ -102,7 +102,18 @@ func async_load_gltf():
 		timer.stop()
 		return
 
+	remove_emission_texture(res_instance)
+
 	dcl_pending_node = res_instance
+
+
+func remove_emission_texture(gltf_instance: Node3D):
+	# HACK: Workaround to fix an import error that sets the emisison texture as the albedo texture.
+	for child in gltf_instance.get_children():
+		if !(child is MeshInstance3D):
+			continue
+		var material = child.mesh.surface_get_material(0)
+		material.emission_texture = null
 
 
 func async_deferred_add_child():

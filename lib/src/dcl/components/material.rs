@@ -309,10 +309,11 @@ impl DclMaterial {
                         &pbr.bump_texture,
                         content_mapping_files,
                     ),
-                    emissive_texture: DclTexture::from_proto_with_hash(
-                        &pbr.emissive_texture,
-                        content_mapping_files,
-                    ),
+                    // emissive_texture: None,
+                    // emissive_texture: DclTexture::from_proto_with_hash(
+                    //     &pbr.emissive_texture,
+                    //     content_mapping_files,
+                    // ),
                     ..Default::default()
                 };
 
