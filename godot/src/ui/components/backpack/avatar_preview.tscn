@@ -15,6 +15,10 @@ sky_material = SubResource("ProceduralSkyMaterial_6yihh")
 [sub_resource type="Environment" id="Environment_lhy6q"]
 background_mode = 2
 sky = SubResource("Sky_0qr0h")
+ambient_light_color = Color(0.501961, 0.501961, 0.501961, 1)
+ambient_light_sky_contribution = 0.6
+adjustment_enabled = true
+adjustment_brightness = 1.4
 
 [node name="AvatarPreview" type="SubViewportContainer"]
 offset_right = 256.0
@@ -41,7 +45,9 @@ fov = 40.0
 size = 3.0
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="SubViewport"]
-transform = Transform3D(-0.401657, 0.0690475, -0.913184, 0.91233, -0.0564336, -0.405548, -0.0795363, -0.996016, -0.0403272, 2.56907, 1.93138, 0.840671)
+transform = Transform3D(0.0960608, 0.992181, 0.0796824, 0.912549, -0.0558139, -0.405142, -0.397526, 0.111632, -0.910775, 2.56907, 1.93138, 0.840671)
+light_color = Color(1, 0.988235, 0.768627, 1)
+light_energy = 0.05
 shadow_reverse_cull_face = true
 shadow_transmittance_bias = 2.455
 shadow_blur = 6.834

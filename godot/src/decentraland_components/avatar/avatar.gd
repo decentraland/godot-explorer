@@ -261,7 +261,7 @@ func apply_unshaded_mode(node_to_apply: Node):
 			var mat = node_to_apply.mesh.surface_get_material(surface_idx)
 			if mat != null and mat is BaseMaterial3D:
 				mat.disable_receive_shadows = true
-
+				mat.roughness = .1
 
 func async_load_wearables():
 	var curated_wearables := Wearables.get_curated_wearable_list(
