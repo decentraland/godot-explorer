@@ -20,6 +20,9 @@ const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
+const ASSET_OPTIMIZED_BASE_URL: String = "https://storage.kuruk.net"
+#const ASSET_OPTIMIZED_BASE_URL: String = "http://localhost:3232"
+
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const CRDT_DATABASE_BASE_URL: String = "https://psquad.kuruk.net/localstack/crdts/"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
@@ -394,6 +397,21 @@ func async_load_scene(
 			prints("CRDT found in the optimized database! url =", url)
 			main_crdt_file_hash = main_crdt_hash
 			local_main_crdt_path = "user://content/" + main_crdt_file_hash
+
+	var scene_hash_zip: String = "%s.zip" % scene_entity_id
+	var asset_url: String = "%s/%s.zip" % [ASSET_OPTIMIZED_BASE_URL, scene_entity_id]
+	var download_promise: Promise = Global.content_provider.fetch_file_by_url(
+		scene_hash_zip, asset_url
+	)
+	var download_res = await PromiseUtils.async_awaiter(download_promise)
+	if download_res is PromiseError:
+		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip.")
+	else:
+		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)
+		if not ok:
+			printerr("Scene ", scene_entity_id, " failed to load optimized scene")
+		else:
+			print("Scene ", scene_entity_id, " zip loaded successfully.")
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):

@@ -165,6 +165,10 @@ impl ResourceProvider {
         #[cfg(feature = "use_resource_tracking")]
         let mut current_size = 0;
 
+        if !response.status().is_success() {
+            return Err(format!("Failed to download file: {:?}", response.status()));
+        }
+
         let mut file = fs::File::create(&tmp_dest)
             .await
             .map_err(|e| format!("File creation error: {:?}", e))?;
