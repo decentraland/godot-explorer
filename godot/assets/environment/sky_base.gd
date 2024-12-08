@@ -12,12 +12,14 @@ func _ready():
 
 
 func _on_loading_started():
+	print("loading started")
 	world_environment.environment.background_energy_multiplier = 0.0
 	world_environment.environment.ambient_light_energy = 0.0
 	sun_light.light_energy = 0.0
 
 
 func _on_loading_finished():
+	print("loading finished")
 	var tween = get_tree().create_tween().set_parallel(true)
 	world_environment.environment.background_energy_multiplier = 0.0
 	world_environment.environment.ambient_light_energy = 0.0
