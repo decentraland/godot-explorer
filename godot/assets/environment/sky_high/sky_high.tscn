@@ -11,9 +11,10 @@ sky_material = SubResource("PanoramaSkyMaterial_kg6cs")
 
 [sub_resource type="Environment" id="Environment_8xuge"]
 background_mode = 2
+background_energy_multiplier = 0.5
 sky = SubResource("Sky_2yrrx")
-ambient_light_color = Color(0.501961, 0.501961, 0.501961, 1)
-ambient_light_sky_contribution = 0.2
+ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
+ambient_light_sky_contribution = 0.4
 tonemap_mode = 3
 glow_levels/1 = 16.0
 glow_levels/2 = 16.0
@@ -34,6 +35,6 @@ environment = SubResource("Environment_8xuge")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -0.5, 0.866025, 0, -0.866025, -0.5, 0, 0, 0)
 light_color = Color(1, 0.988235, 0.768627, 1)
-light_energy = 0.05
+light_energy = 0.1
 shadow_enabled = true
 shadow_opacity = 0.7

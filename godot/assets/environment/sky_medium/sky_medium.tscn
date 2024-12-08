@@ -13,8 +13,8 @@ sky_material = SubResource("PanoramaSkyMaterial_klpcs")
 background_mode = 2
 background_energy_multiplier = 0.5
 sky = SubResource("Sky_5ff4i")
-ambient_light_color = Color(0.501961, 0.501961, 0.501961, 1)
-ambient_light_sky_contribution = 0.2
+ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
+ambient_light_sky_contribution = 0.4
 tonemap_mode = 3
 glow_levels/1 = 16.0
 glow_levels/2 = 16.0
@@ -25,6 +25,8 @@ glow_levels/6 = 16.0
 glow_levels/7 = 2.95
 glow_blend_mode = 0
 fog_sky_affect = 0.0
+adjustment_brightness = 1.2
+adjustment_saturation = 1.2
 
 [node name="SkyMedium" type="Node"]
 script = ExtResource("2_5v3h1")
@@ -35,7 +37,7 @@ environment = SubResource("Environment_mvu0t")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -0.5, 0.866025, 0, -0.866025, -0.5, 0, 0, 0)
 light_color = Color(1, 0.988235, 0.768627, 1)
-light_energy = 0.05
+light_energy = 0.1
 light_bake_mode = 0
 shadow_enabled = true
 shadow_opacity = 0.7

@@ -1,22 +1,20 @@
-[gd_scene load_steps=5 format=3 uid="uid://dsqq58ubnjwen"]
+[gd_scene load_steps=6 format=3 uid="uid://dsqq58ubnjwen"]
 
 [ext_resource type="Script" path="res://assets/environment/sky_base.gd" id="1_u1jk8"]
+[ext_resource type="Texture2D" uid="uid://cbqxx4vdb574k" path="res://assets/environment/sky_medium/AllSkyFree_Sky_ClearBlueSky_Equirect.png" id="2_6d7t7"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_bfvnp"]
-sky_top_color = Color(0.0117647, 0.258824, 0.545098, 1)
-sky_horizon_color = Color(0.721569, 0.85098, 0.964706, 1)
-ground_bottom_color = Color(0.278431, 0.611765, 0.901961, 1)
-ground_horizon_color = Color(0.721569, 0.85098, 0.964706, 1)
-sun_curve = 1e-05
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_klpcs"]
+panorama = ExtResource("2_6d7t7")
 
-[sub_resource type="Sky" id="Sky_0guyp"]
-sky_material = SubResource("ProceduralSkyMaterial_bfvnp")
+[sub_resource type="Sky" id="Sky_iop4b"]
+sky_material = SubResource("PanoramaSkyMaterial_klpcs")
 
 [sub_resource type="Environment" id="Environment_mvu0t"]
 background_mode = 2
-sky = SubResource("Sky_0guyp")
-ambient_light_color = Color(0.501961, 0.501961, 0.501961, 1)
-ambient_light_sky_contribution = 0.2
+background_energy_multiplier = 0.5
+sky = SubResource("Sky_iop4b")
+ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
+ambient_light_sky_contribution = 0.4
 tonemap_mode = 3
 glow_levels/1 = 16.0
 glow_levels/2 = 16.0
@@ -27,7 +25,6 @@ glow_levels/6 = 16.0
 glow_levels/7 = 2.95
 glow_blend_mode = 0
 fog_density = 0.001
-adjustment_enabled = true
 adjustment_brightness = 1.2
 adjustment_saturation = 1.2
 
@@ -40,4 +37,4 @@ environment = SubResource("Environment_mvu0t")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -0.177909, 0.984047, 0, -0.984047, -0.177909, 0, 0, 0)
 light_color = Color(1, 0.988235, 0.768627, 1)
-light_energy = 0.05
+light_energy = 0.1
