@@ -28,6 +28,9 @@ jobs:
         uses: ./.github/actions/install-deps
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
+        env:
+          P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
       # Set up code signing certificate
       - name: Set up code signing certificate
         env:
