@@ -7,20 +7,12 @@ use crate::{
     path::{adjust_canonicalization, get_godot_path},
 };
 
-#[allow(clippy::too_many_arguments)]
 pub fn run(
     editor: bool,
-    release_mode: bool,
     itest: bool,
-    only_build: bool,
-    link_libs: bool,
-    scene_tests: bool,
-    extra_build_args: Vec<&str>,
     extras: Vec<String>,
-    with_build_envs: Option<HashMap<String, String>>,
-    target: Option<&str>,
+    scene_tests: bool,
 ) -> anyhow::Result<()> {
-    let target = get_target_os(target)?;
     let program = get_godot_path();
     println!("extras: {:?}", extras);
 
@@ -29,22 +21,6 @@ pub fn run(
     let mut args = vec!["--path", GODOT_PROJECT_FOLDER];
     if editor {
         args.push("-e");
-    }
-
-    let (build_args, with_build_envs) = prepare_build_args_envs(
-        release_mode,
-        extra_build_args,
-        with_build_envs.unwrap_or_default(),
-        &target,
-    )?;
-
-    let build_cwd = adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?);
-    run_cargo_build(&PathBuf::from(build_cwd), &build_args, &with_build_envs)?;
-
-    copy_library(&target, !release_mode, link_libs)?;
-
-    if only_build {
-        return Ok(());
     }
 
     if itest {
@@ -62,6 +38,30 @@ pub fn run(
     } else {
         run_godot(&program, &args)
     }
+}
+
+pub fn build(
+    release_mode: bool,
+    link_libs: bool,
+    extra_build_args: Vec<&str>,
+    with_build_envs: Option<HashMap<String, String>>,
+    target: Option<&str>,
+) -> anyhow::Result<()> {
+    let target = get_target_os(target)?;
+
+    let (build_args, with_build_envs) = prepare_build_args_envs(
+        release_mode,
+        extra_build_args,
+        with_build_envs.unwrap_or_default(),
+        &target,
+    )?;
+
+    let build_cwd = adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?);
+    run_cargo_build(&PathBuf::from(build_cwd), &build_args, &with_build_envs)?;
+
+    copy_library(&target, !release_mode, link_libs)?;
+
+    Ok(())
 }
 
 /// Prepares the build arguments and environment variables based on the target and mode.

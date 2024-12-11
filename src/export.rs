@@ -195,11 +195,7 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
             for file in files {
                 println!("Downloading file for {}: {}", template, file);
 
-                let url = format!(
-                    "{}{}.zip",
-                    GODOT4_EXPORT_TEMPLATES_BASE_URL,
-                    file
-                );
+                let url = format!("{}{}.zip", GODOT4_EXPORT_TEMPLATES_BASE_URL, file);
                 download_and_extract_zip(
                     url.as_str(),
                     dest_path.as_str(),

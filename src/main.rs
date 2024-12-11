@@ -198,20 +198,25 @@ fn main() -> Result<(), anyhow::Error> {
                 build_args.extend(&["-F", "use_resource_tracking"]);
             }
 
-            run::run(
-                sm.is_present("editor"),
+            run::build(
                 sm.is_present("release"),
-                sm.is_present("itest"),
-                sm.is_present("only-build"),
                 sm.is_present("link-libs"),
-                sm.is_present("stest"),
                 build_args,
-                sm.values_of("extras")
-                    .map(|v| v.map(|it| it.into()).collect())
-                    .unwrap_or_default(),
                 None,
                 sm.value_of("target"),
-            )
+            )?;
+
+            if !sm.is_present("only-build") {
+                run::run(
+                    sm.is_present("editor"),
+                    sm.is_present("itest"),
+                    sm.values_of("extras")
+                        .map(|v| v.map(|it| it.into()).collect())
+                        .unwrap_or_default(),
+                    sm.is_present("stest"),
+                )?;
+            }
+            Ok(())
         }
         ("export", sm) => export::export(sm.value_of("target")),
         ("import-assets", _m) => {
@@ -272,18 +277,9 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|(k, v)| (k.to_string(), v.to_string()))
     .collect();
 
-    run::run(
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        vec![],
-        vec![],
-        Some(build_envs.clone()),
-        None,
-    )?;
+    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
+
+    run::run(false, true, vec![], false)?;
 
     let scene_test_realm: &str = "http://localhost:7666/scene-explorer-tests";
     let scene_test_coords: Vec<[i32; 2]> = vec![
@@ -320,18 +316,9 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|it| it.to_string())
     .collect();
 
-    run::run(
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        vec![],
-        extra_args,
-        Some(build_envs.clone()),
-        None,
-    )?;
+    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
+
+    run::run(false, false, extra_args, true)?;
 
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())
