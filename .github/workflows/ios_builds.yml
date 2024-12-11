@@ -26,7 +26,8 @@ jobs:
       # Dependencies section
       - name: Install dependencies
         uses: ./.github/actions/install-deps
-
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       # Set up code signing certificate
       - name: Set up code signing certificate
         env:
