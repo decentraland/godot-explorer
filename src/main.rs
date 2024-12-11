@@ -92,7 +92,13 @@ fn main() -> Result<(), anyhow::Error> {
                         .required(true),
                 ),
         )
-        .subcommand(Command::new("export"))
+        .subcommand(Command::new("export").arg(
+            Arg::new("target")
+                .short('t')
+                .long("target")
+                .help("target OS")
+                .takes_value(true),
+        ))
         .subcommand(Command::new("import-assets"))
         .subcommand(
             Command::new("run")
@@ -135,7 +141,6 @@ fn main() -> Result<(), anyhow::Error> {
                 )
                 .arg(
                     Arg::new("resource-tracking")
-                        .short('t')
                         .help("enables resource tracking feature")
                         .takes_value(false),
                 )
@@ -145,6 +150,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .last(true)
                         .allow_hyphen_values(true)
                         .multiple(true),
+                ).arg(
+                    Arg::new("target")
+                        .short('t')
+                        .long("target")
+                        .help("target OS")
+                        .takes_value(true),
                 ),
         );
     let matches = cli.get_matches();
@@ -199,9 +210,10 @@ fn main() -> Result<(), anyhow::Error> {
                     .map(|v| v.map(|it| it.into()).collect())
                     .unwrap_or_default(),
                 None,
+                sm.value_of("target"),
             )
         }
-        ("export", _m) => export::export(),
+        ("export", sm) => export::export(sm.value_of("target")),
         ("import-assets", _m) => {
             let status = import_assets();
             if !status.success() {
@@ -270,6 +282,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         vec![],
         vec![],
         Some(build_envs.clone()),
+        None,
     )?;
 
     let scene_test_realm: &str = "http://localhost:7666/scene-explorer-tests";
@@ -317,6 +330,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         vec![],
         extra_args,
         Some(build_envs.clone()),
+        None,
     )?;
 
     let err = glob::glob("./godot/*.profraw")?

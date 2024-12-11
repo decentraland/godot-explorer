@@ -1,0 +1,47 @@
+name: 🍏 iOS
+on:
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-ios
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build iOS
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14-xlarge]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.77.2
+          override: true
+
+      # Dependencies section
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      # Build section
+      - name: Cargo install
+        run: cargo run -- install --platforms ios
+
+      - name: Build
+        working-directory: lib
+        run: cargo run -- run --only-build --release --target ios
+
+      - name: Import Assets
+        uses: ./.github/actions/import-assets
+
+      - name: Export
+        run: cargo run -- export --target ios
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decentraland-godot-ios
+          path: |
+            exports/**/*

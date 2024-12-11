@@ -15,7 +15,7 @@ fn test_avatar_generation(
 
     let avatar_output = Path::new("./godot/output/");
     if !avatar_output.exists() {
-        std::fs::create_dir_all(&avatar_output)?;
+        std::fs::create_dir_all(avatar_output)?;
     }
 
     let avatar_test_input = Path::new("./../tests/avatars-test-input.json");
@@ -42,6 +42,7 @@ fn test_avatar_generation(
         vec![],
         extra_args,
         with_build_envs.clone(),
+        None,
     )?;
 
     // Move files
@@ -60,7 +61,7 @@ fn test_scene_generation(
     println!("=== running scene generation ===");
     let scene_output = Path::new("./godot/output/");
     if !scene_output.exists() {
-        std::fs::create_dir_all(&scene_output)?;
+        std::fs::create_dir_all(scene_output)?;
     }
     let scene_test_input = Path::new("./../tests/scene-renderer-test-input.json");
     let extra_args = [
@@ -86,6 +87,7 @@ fn test_scene_generation(
         vec![],
         extra_args,
         with_build_envs,
+        None,
     )?;
 
     let scene_renderer_snapshot_folder =

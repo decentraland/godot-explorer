@@ -45,51 +45,173 @@ pub fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(
     Ok(())
 }
 
-pub fn copy_library(debug_mode: bool, link_libs: bool) -> Result<(), anyhow::Error> {
-    let os = env::consts::OS;
-    let arch = env::consts::ARCH;
-    let file_name = match (os, arch) {
-        ("linux", _) => Some("libdclgodot.so".to_string()),
-        ("windows", _) => Some("dclgodot.dll".to_string()),
-        ("macos", _) => Some("libdclgodot.dylib".to_string()),
-        _ => None,
+pub fn copy_library(
+    target: &String,
+    debug_mode: bool,
+    link_libs: bool,
+) -> Result<(), anyhow::Error> {
+    let mode = if debug_mode { "debug" } else { "release" };
+
+    match target.as_str() {
+        "ios" => {
+            let source_file = format!(
+                "{RUST_LIB_PROJECT_FOLDER}target/aarch64-apple-ios/{mode}/libdclgodot.dylib"
+            );
+            let dest = format!("{}lib/ios/libdclgodot.dylib", GODOT_PROJECT_FOLDER);
+
+            copy_with_error_context(&source_file, &dest, link_libs)?;
+
+            // If you need ffmpeg for iOS specifically:
+            // copy_ffmpeg_libraries(target, format!("{}ios/", GODOT_PROJECT_FOLDER), link_libs)?;
+        }
+
+        "android" => {
+            let source_file = format!(
+                "{RUST_LIB_PROJECT_FOLDER}target/aarch64-linux-android/{mode}/libdclgodot.so"
+            );
+
+            let dest1 = format!("{}lib/android/arm64/libdclgodot.so", GODOT_PROJECT_FOLDER);
+            copy_with_error_context(&source_file, &dest1, link_libs)?;
+
+            let dest2 = format!(
+                "{}android/build/libs/release/arm64-v8a/libdclgodot.so",
+                GODOT_PROJECT_FOLDER
+            );
+            copy_with_error_context(&source_file, &dest2, link_libs)?;
+
+            // If you need ffmpeg for Android specifically:
+            // copy_ffmpeg_libraries(target, format!("{}android/arm64/", GODOT_PROJECT_FOLDER), link_libs)?;
+        }
+
+        "win64" | "linux" | "mac" => {
+            // For Windows, Linux, Mac we revert to the old logic:
+            let (triple, file_name) = match target.as_str() {
+                "win64" => ("x86_64-pc-windows-msvc", "dclgodot.dll"),
+                "linux" => ("x86_64-unknown-linux-gnu", "libdclgodot.so"),
+                "mac" => ("x86_64-apple-darwin", "libdclgodot.dylib"),
+                _ => unreachable!(), // already covered by the match above
+            };
+
+            let source_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/{}/", triple, mode);
+            let source_path = adjust_canonicalization(
+                std::fs::canonicalize(&source_folder)
+                    .map_err(|e| {
+                        anyhow::anyhow!(
+                            "Failed to canonicalize source folder {}: {}",
+                            source_folder,
+                            e
+                        )
+                    })?
+                    .join(file_name),
+            );
+
+            let lib_folder = format!("{}", GODOT_PROJECT_FOLDER);
+            let destination_path = adjust_canonicalization(
+                std::fs::canonicalize(&lib_folder)
+                    .map_err(|e| {
+                        anyhow::anyhow!(
+                            "Failed to canonicalize destination folder {}: {}",
+                            lib_folder.to_string(),
+                            e
+                        )
+                    })?
+                    .join(file_name),
+            );
+
+            copy_if_modified(source_path.clone(), destination_path.clone(), link_libs).map_err(
+                |e| {
+                    anyhow::anyhow!(
+                        "Failed to copy from {:?} to {:?}: {}",
+                        source_path,
+                        destination_path,
+                        e
+                    )
+                },
+            )?;
+
+            // If on Windows and debug mode, also copy PDB
+            if debug_mode && target == "win64" {
+                let pdb_name = "dclgodot.pdb";
+                let pdb_source = adjust_canonicalization(
+                    std::fs::canonicalize(&source_folder)
+                        .map_err(|e| {
+                            anyhow::anyhow!(
+                                "Failed to canonicalize source folder {}: {}",
+                                source_folder,
+                                e
+                            )
+                        })?
+                        .join(pdb_name),
+                );
+                let pdb_dest = adjust_canonicalization(
+                    std::fs::canonicalize(&lib_folder)
+                        .map_err(|e| {
+                            anyhow::anyhow!(
+                                "Failed to canonicalize destination folder {}: {}",
+                                lib_folder,
+                                e
+                            )
+                        })?
+                        .join(pdb_name),
+                );
+
+                copy_if_modified(pdb_source.clone(), pdb_dest.clone(), link_libs).map_err(|e| {
+                    anyhow::anyhow!(
+                        "Failed to copy PDB from {:?} to {:?}: {}",
+                        pdb_source,
+                        pdb_dest,
+                        e
+                    )
+                })?;
+            }
+
+            copy_ffmpeg_libraries(target, lib_folder.clone(), link_libs).map_err(|e| {
+                anyhow::anyhow!("Failed to copy FFmpeg libraries to {}: {}", lib_folder, e)
+            })?;
+        }
+
+        other => return Err(anyhow::anyhow!("Unknown target: {}", other)),
     }
-    .expect("Couldn't find a library for this platform");
-
-    let source_folder: &str = if debug_mode {
-        "target/debug/"
-    } else {
-        "target/release/"
-    };
-
-    let source_folder = format!("{RUST_LIB_PROJECT_FOLDER}{source_folder}");
-
-    let source_file =
-        adjust_canonicalization(fs::canonicalize(source_folder.clone())?.join(file_name.clone()));
-
-    let lib_folder = format!("{GODOT_PROJECT_FOLDER}lib/");
-    let destination_file =
-        adjust_canonicalization(fs::canonicalize(lib_folder.as_str())?.join(file_name.clone()));
-    copy_if_modified(source_file, destination_file, link_libs)?;
-
-    if debug_mode && os == "windows" {
-        let source_file = adjust_canonicalization(
-            fs::canonicalize(source_folder)?.join("dclgodot.pdb".to_string()),
-        );
-        let destination_file = adjust_canonicalization(
-            fs::canonicalize(lib_folder.as_str())?.join("dclgodot.pdb".to_string()),
-        );
-        copy_if_modified(source_file, destination_file, link_libs)?;
-    }
-
-    copy_ffmpeg_libraries(lib_folder, link_libs)?;
 
     Ok(())
 }
 
-pub fn copy_ffmpeg_libraries(dest_folder: String, link_libs: bool) -> Result<(), anyhow::Error> {
-    let os = env::consts::OS;
-    if os == "windows" {
+/// A small helper to copy a file and provide better error messages.
+fn copy_with_error_context(
+    source: &str,
+    destination: &str,
+    link_libs: bool,
+) -> Result<(), anyhow::Error> {
+    // Ensure destination directory exists
+    if let Some(parent) = std::path::Path::new(destination).parent() {
+        std::fs::create_dir_all(parent).map_err(|e| {
+            anyhow::anyhow!("Failed to create directory {}: {}", parent.display(), e)
+        })?;
+    }
+
+    let source_path = std::fs::canonicalize(source)
+        .map_err(|e| anyhow::anyhow!("Failed to canonicalize {}: {}", source, e))?;
+
+    let dest_path = std::path::PathBuf::from(destination);
+
+    copy_if_modified(source_path.clone(), dest_path.clone(), link_libs).map_err(|e| {
+        anyhow::anyhow!(
+            "Failed to copy from {:?} to {:?}: {}",
+            source_path,
+            dest_path,
+            e
+        )
+    })?;
+
+    Ok(())
+}
+
+pub fn copy_ffmpeg_libraries(
+    target: &String,
+    dest_folder: String,
+    link_libs: bool,
+) -> Result<(), anyhow::Error> {
+    if target == "windows" {
         // copy ffmpeg .dll
         let ffmpeg_dll_folder = format!("{BIN_FOLDER}ffmpeg/ffmpeg-6.0-full_build-shared/bin");
 
