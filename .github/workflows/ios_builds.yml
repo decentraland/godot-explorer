@@ -16,15 +16,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Save secrets to a file
-        run: |
-          echo $P12_BASE64 > ios_p12_base64.txt
-          echo $P12_PASSWORD > ios_p12_password.txt
-        env:
-          P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
-          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -36,14 +27,7 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-deps
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
       - name: Set up code signing certificate
-        env:
-          P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
-          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
-          TEST: ${{ secrets.TEST }}
         run: |
           # Create a temporary keychain
           security create-keychain -p "" build.keychain
@@ -52,8 +36,8 @@ jobs:
           security list-keychains -s build.keychain
 
           # Decode and import the .p12 certificate
-          echo "$P12_BASE64" | base64 --decode > certificate.p12
-          security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          echo "${{ secrets.IOS_P12_BASE64 }}" | base64 --decode > certificate.p12
+          security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_P12_PASSWORD }}" -T /usr/bin/codesign
 
           # Set the keychain as default
           security default-keychain -s build.keychain
