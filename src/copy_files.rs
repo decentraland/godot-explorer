@@ -85,14 +85,14 @@ pub fn copy_library(
 
         "win64" | "linux" | "macos" => {
             // For Windows, Linux, Mac we revert to the old logic:
-            let (triple, file_name) = match target.as_str() {
-                "win64" => ("./", "dclgodot.dll"),
-                "linux" => ("./", "libdclgodot.so"),
-                "macos" => ("./", "libdclgodot.dylib"),
+            let file_name = match target.as_str() {
+                "win64" => "dclgodot.dll",
+                "linux" => "libdclgodot.so",
+                "macos" => "libdclgodot.dylib",
                 _ => unreachable!(), // already covered by the match above
             };
 
-            let source_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/{}/", triple, mode);
+            let source_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/", mode);
             let source_path = adjust_canonicalization(
                 std::fs::canonicalize(&source_folder)
                     .map_err(|e| {
@@ -105,7 +105,7 @@ pub fn copy_library(
                     .join(file_name),
             );
 
-            let lib_folder = format!("{}", GODOT_PROJECT_FOLDER);
+            let lib_folder = format!("{}lib/", GODOT_PROJECT_FOLDER);
             let destination_path = adjust_canonicalization(
                 std::fs::canonicalize(&lib_folder)
                     .map_err(|e| {
