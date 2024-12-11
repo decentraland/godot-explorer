@@ -1,6 +1,11 @@
 name: 🍏 iOS
 on:
   workflow_call:
+    secrets:
+      IOS_P12_BASE64:
+        required: true
+      IOS_P12_PASSWORD:
+        required: true
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-ios
@@ -16,14 +21,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Save secrets to a file
-        run: |
-          echo -n ${{ secrets.IOS_P12_BASE64 }} > ios_p12_base64.txt
-          echo -n ${{ secrets.IOS_P12_PASSWORD }} > ios_p12_password.txt
-
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
 
       - uses: actions-rs/toolchain@v1
         with:
