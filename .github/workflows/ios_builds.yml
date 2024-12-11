@@ -51,11 +51,9 @@ jobs:
 
       # Set up provisioning profile
       - name: Set up provisioning profile
-        env:
-          PROFILE_BASE64: ${{ secrets.PROFILE_BASE64 }}
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$PROFILE_BASE64" | base64 --decode > profile.mobileprovision
+          echo "${{ secrets.IOS_PROFILE_BASE64 }}" | base64 --decode > profile.mobileprovision
           mv profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       # Build section

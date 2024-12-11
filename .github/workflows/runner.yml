@@ -16,6 +16,7 @@ jobs:
     secrets:
       IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
       IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+      IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
 
 
   # # First stage: Only static checks, fast and prevent expensive builds from running.
