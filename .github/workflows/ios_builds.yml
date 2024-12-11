@@ -1,13 +1,6 @@
 name: 🍏 iOS
 on:
   workflow_call:
-    secrets:
-      IOS_P12_BASE64:
-        required: true
-      IOS_P12_PASSWORD:
-        required: true
-      IOS_PROFILE_BASE64:
-        required: true
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-ios
@@ -34,29 +27,6 @@ jobs:
       # Dependencies section
       - name: Install dependencies
         uses: ./.github/actions/install-deps
-
-      - name: Set up code signing certificate
-        run: |
-          # Create a temporary keychain
-          security create-keychain -p "" build.keychain
-          security set-keychain-settings -lut 21600 build.keychain
-          security unlock-keychain -p "" build.keychain
-          security list-keychains -s build.keychain
-
-          # Decode and import the .p12 certificate
-          echo "${{ secrets.IOS_P12_BASE64 }}" | base64 --decode > certificate.p12
-          security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_P12_PASSWORD }}" -T /usr/bin/codesign
-
-          # Set the keychain as default
-          security default-keychain -s build.keychain
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-
-      # Set up provisioning profile
-      - name: Set up provisioning profile
-        run: |
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "${{ secrets.IOS_PROFILE_BASE64 }}" | base64 --decode > profile.mobileprovision
-          mv profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       # Build section
       - name: Cargo install

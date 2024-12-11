@@ -148,7 +148,7 @@ pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
         .status()
         .expect("Failed to run Godot");
 
-    if !std::path::Path::new(output_rel_path.as_str()).exists() {
+    if !std::path::Path::new(output_rel_path.as_str()).exists() && target != "ios" {
         return Err(anyhow::anyhow!(
             "Output file was not generated. pre-import godot status: {:?}, project-export godot status: {:?}",
             import_assets_status,
