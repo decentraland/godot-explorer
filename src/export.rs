@@ -114,7 +114,7 @@ pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
         "linux" => "decentraland.godot.client.x86_64",
         "win64" => "decentraland.godot.client.exe",
         "macos" => "decentraland.godot.client.dmg",
-        "ios" => "decentraland.godot.client.ipa",
+        "ios" => "decentraland-godot-client.ipa",
         "android" => "decentraland.godot.client.apk",
         _ => return Err(anyhow::anyhow!("Unexpected final target: {}", target)),
     };
