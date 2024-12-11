@@ -133,7 +133,7 @@ pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
         "--rendering-driver",
         "opengl3",
         "--headless",
-        "--export-release",
+        "--export-debug",
         target.as_str(),
         output_path_godot_param.as_str(),
     ];
