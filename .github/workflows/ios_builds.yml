@@ -31,7 +31,7 @@ jobs:
         run: cargo run -- install --platforms ios
 
       - name: Build
-        run: cargo run -- run --only-build --release --target ios
+        run: cargo run -- build --release --target ios
 
       - name: Import Assets
         uses: ./.github/actions/import-assets

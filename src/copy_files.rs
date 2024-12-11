@@ -83,12 +83,12 @@ pub fn copy_library(
             // copy_ffmpeg_libraries(target, format!("{}android/arm64/", GODOT_PROJECT_FOLDER), link_libs)?;
         }
 
-        "win64" | "linux" | "mac" => {
+        "win64" | "linux" | "macos" => {
             // For Windows, Linux, Mac we revert to the old logic:
             let (triple, file_name) = match target.as_str() {
-                "win64" => ("x86_64-pc-windows-msvc", "dclgodot.dll"),
-                "linux" => ("x86_64-unknown-linux-gnu", "libdclgodot.so"),
-                "mac" => ("x86_64-apple-darwin", "libdclgodot.dylib"),
+                "win64" => ("./", "dclgodot.dll"),
+                "linux" => ("./", "libdclgodot.so"),
+                "macos" => ("./", "libdclgodot.dylib"),
                 _ => unreachable!(), // already covered by the match above
             };
 

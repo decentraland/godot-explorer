@@ -128,12 +128,6 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
-                    Arg::new("only-build")
-                        .long("only-build")
-                        .help("skip the run")
-                        .takes_value(false),
-                )
-                .arg(
                     Arg::new("link-libs")
                         .short('l')
                         .help("link libs instead of copying (only linux)")
@@ -151,6 +145,34 @@ fn main() -> Result<(), anyhow::Error> {
                         .allow_hyphen_values(true)
                         .multiple(true),
                 ).arg(
+                    Arg::new("target")
+                        .short('t')
+                        .long("target")
+                        .help("target OS")
+                        .takes_value(true),
+                ),
+        ).subcommand(
+            Command::new("build")
+                .arg(
+                    Arg::new("release")
+                        .short('r')
+                        .long("release")
+                        .help("build release mode (but it doesn't use godot release build")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("link-libs")
+                        .short('l')
+                        .help("link libs instead of copying (only linux)")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("resource-tracking")
+                        .help("enables resource tracking feature")
+                        .takes_value(false),
+                )
+                .arg(Arg::new("build-args").help("extra build args for rust"))
+                .arg(
                     Arg::new("target")
                         .short('t')
                         .long("target")
@@ -206,16 +228,33 @@ fn main() -> Result<(), anyhow::Error> {
                 sm.value_of("target"),
             )?;
 
-            if !sm.is_present("only-build") {
-                run::run(
-                    sm.is_present("editor"),
-                    sm.is_present("itest"),
-                    sm.values_of("extras")
-                        .map(|v| v.map(|it| it.into()).collect())
-                        .unwrap_or_default(),
-                    sm.is_present("stest"),
-                )?;
+            run::run(
+                sm.is_present("editor"),
+                sm.is_present("itest"),
+                sm.values_of("extras")
+                    .map(|v| v.map(|it| it.into()).collect())
+                    .unwrap_or_default(),
+                sm.is_present("stest"),
+            )?;
+            Ok(())
+        },
+        ("build", sm) => {
+            let mut build_args: Vec<&str> = sm
+                .values_of("build-args")
+                .map(|v| v.collect())
+                .unwrap_or_default();
+
+            if sm.is_present("resource-tracking") {
+                build_args.extend(&["-F", "use_resource_tracking"]);
             }
+
+            run::build(
+                sm.is_present("release"),
+                sm.is_present("link-libs"),
+                build_args,
+                None,
+                sm.value_of("target"),
+            )?;
             Ok(())
         }
         ("export", sm) => export::export(sm.value_of("target")),
