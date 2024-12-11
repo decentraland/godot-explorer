@@ -16,6 +16,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Save secrets to a file
+        run: |
+          echo -n ${{ secrets.IOS_P12_BASE64 }} > ios_p12_base64.txt
+          echo -n ${{ secrets.IOS_P12_PASSWORD }} > ios_p12_password.txt
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
