@@ -237,7 +237,7 @@ fn main() -> Result<(), anyhow::Error> {
                 sm.is_present("stest"),
             )?;
             Ok(())
-        },
+        }
         ("build", sm) => {
             let mut build_args: Vec<&str> = sm
                 .values_of("build-args")
