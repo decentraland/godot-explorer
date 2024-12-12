@@ -101,6 +101,6 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 
 func _on_toggled(_button_pressed):
 	if _button_pressed:
-		emit_signal("filter_type", type_to_category(filter_category))
+		filter_type.emit(type_to_category(filter_category))
 	else:
-		emit_signal("clear_filter")
+		clear_filter.emit()

@@ -174,10 +174,7 @@ func get_parcel_scene_id(x: int, z: int) -> int:
 func _is_there_any_new_scene_to_load() -> bool:
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
-	var keep_alive_scenes = d.get("keep_alive_scenes", [])
-	var empty_parcels = d.get("empty_parcels", [])
 
-	var loading_promises: Array = []
 	for scene_id in loadable_scenes:
 		if not loaded_scenes.has(scene_id):
 			var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
