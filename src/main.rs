@@ -92,7 +92,13 @@ fn main() -> Result<(), anyhow::Error> {
                         .required(true),
                 ),
         )
-        .subcommand(Command::new("export"))
+        .subcommand(Command::new("export").arg(
+            Arg::new("target")
+                .short('t')
+                .long("target")
+                .help("target OS")
+                .takes_value(true),
+        ))
         .subcommand(Command::new("import-assets"))
         .subcommand(
             Command::new("run")
@@ -122,9 +128,36 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
-                    Arg::new("only-build")
-                        .long("only-build")
-                        .help("skip the run")
+                    Arg::new("link-libs")
+                        .short('l')
+                        .help("link libs instead of copying (only linux)")
+                        .takes_value(false),
+                )
+                .arg(
+                    Arg::new("resource-tracking")
+                        .help("enables resource tracking feature")
+                        .takes_value(false),
+                )
+                .arg(Arg::new("build-args").help("extra build args for rust"))
+                .arg(
+                    Arg::new("extras")
+                        .last(true)
+                        .allow_hyphen_values(true)
+                        .multiple(true),
+                ).arg(
+                    Arg::new("target")
+                        .short('t')
+                        .long("target")
+                        .help("target OS")
+                        .takes_value(true),
+                ),
+        ).subcommand(
+            Command::new("build")
+                .arg(
+                    Arg::new("release")
+                        .short('r')
+                        .long("release")
+                        .help("build release mode (but it doesn't use godot release build")
                         .takes_value(false),
                 )
                 .arg(
@@ -135,16 +168,16 @@ fn main() -> Result<(), anyhow::Error> {
                 )
                 .arg(
                     Arg::new("resource-tracking")
-                        .short('t')
                         .help("enables resource tracking feature")
                         .takes_value(false),
                 )
                 .arg(Arg::new("build-args").help("extra build args for rust"))
                 .arg(
-                    Arg::new("extras")
-                        .last(true)
-                        .allow_hyphen_values(true)
-                        .multiple(true),
+                    Arg::new("target")
+                        .short('t')
+                        .long("target")
+                        .help("target OS")
+                        .takes_value(true),
                 ),
         );
     let matches = cli.get_matches();
@@ -187,21 +220,44 @@ fn main() -> Result<(), anyhow::Error> {
                 build_args.extend(&["-F", "use_resource_tracking"]);
             }
 
+            run::build(
+                sm.is_present("release"),
+                sm.is_present("link-libs"),
+                build_args,
+                None,
+                sm.value_of("target"),
+            )?;
+
             run::run(
                 sm.is_present("editor"),
-                sm.is_present("release"),
                 sm.is_present("itest"),
-                sm.is_present("only-build"),
-                sm.is_present("link-libs"),
-                sm.is_present("stest"),
-                build_args,
                 sm.values_of("extras")
                     .map(|v| v.map(|it| it.into()).collect())
                     .unwrap_or_default(),
-                None,
-            )
+                sm.is_present("stest"),
+            )?;
+            Ok(())
         }
-        ("export", _m) => export::export(),
+        ("build", sm) => {
+            let mut build_args: Vec<&str> = sm
+                .values_of("build-args")
+                .map(|v| v.collect())
+                .unwrap_or_default();
+
+            if sm.is_present("resource-tracking") {
+                build_args.extend(&["-F", "use_resource_tracking"]);
+            }
+
+            run::build(
+                sm.is_present("release"),
+                sm.is_present("link-libs"),
+                build_args,
+                None,
+                sm.value_of("target"),
+            )?;
+            Ok(())
+        }
+        ("export", sm) => export::export(sm.value_of("target")),
         ("import-assets", _m) => {
             let status = import_assets();
             if !status.success() {
@@ -260,17 +316,9 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|(k, v)| (k.to_string(), v.to_string()))
     .collect();
 
-    run::run(
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        vec![],
-        vec![],
-        Some(build_envs.clone()),
-    )?;
+    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
+
+    run::run(false, true, vec![], false)?;
 
     let scene_test_realm: &str = "http://localhost:7666/scene-explorer-tests";
     let scene_test_coords: Vec<[i32; 2]> = vec![
@@ -307,17 +355,9 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|it| it.to_string())
     .collect();
 
-    run::run(
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        vec![],
-        extra_args,
-        Some(build_envs.clone()),
-    )?;
+    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
+
+    run::run(false, false, extra_args, true)?;
 
     let err = glob::glob("./godot/*.profraw")?
         .filter_map(|entry| entry.ok())
