@@ -53,7 +53,7 @@ cd ${EXPLORER_PATH}/godot/
 echo "Export Godot android.apk"
 
 # Define the command to be executed
-COMMAND="${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Android ${EXPLORER_PATH}/android.apk"
+COMMAND="${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug android ${EXPLORER_PATH}/android.apk"
 
 # Try executing the command
 if ! $COMMAND; then
@@ -70,7 +70,7 @@ else
     echo "First attempt succeeded."
 fi
 
-${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug Quest ${EXPLORER_PATH}/meta-quest.apk || true
+${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-debug quest ${EXPLORER_PATH}/meta-quest.apk || true
 
 
 # Build the .aab without x86_64 architecture
@@ -84,7 +84,7 @@ sed -i 's/package\/signed=true/package\/signed=false/' ${EXPLORER_PATH}/godot/ex
 
 # Build the .aab without x86_64 architecture
 echo "Export Godot AAB"
-${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-release Android ${EXPLORER_PATH}/android-unsigned.aab || true
-${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-release Quest ${EXPLORER_PATH}/meta-quest-unsigned.aab || true
+${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-release android ${EXPLORER_PATH}/android-unsigned.aab || true
+${EXPLORER_PATH}/.bin/godot/godot4_bin -e --headless --export-release quest ${EXPLORER_PATH}/meta-quest-unsigned.aab || true
 
 echo "Finished"
