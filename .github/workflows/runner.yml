@@ -36,6 +36,11 @@ jobs:
     needs: static-checks
     uses: ./.github/workflows/macos_builds.yml
 
+  ios-build:
+    name: 🍏 iOS
+    needs: static-checks
+    uses: ./.github/workflows/ios_builds.yml
+
   windows-build:
     name: 🏁 Windows
     needs: static-checks

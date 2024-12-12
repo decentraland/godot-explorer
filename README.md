@@ -44,7 +44,7 @@ cd ../../ # return
 
 # Compile for Linux
 cargo run -- install --platforms android
-cargo run -- run --only-build
+cargo run -- build
 cd ../../ # return
 
 # Generate .APK
