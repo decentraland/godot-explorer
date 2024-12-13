@@ -25,6 +25,49 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
     Ok(())
 }
 
+pub fn get_target_os(target: Option<&str>) -> anyhow::Result<String> {
+    let target = if let Some(t) = target {
+        let t = t.to_lowercase();
+        match t.as_str() {
+            "ios" => {
+                // iOS can only be compiled from macOS
+                if std::env::consts::OS != "macos" {
+                    return Err(anyhow::anyhow!(
+                        "iOS builds are only supported on macOS hosts"
+                    ));
+                }
+                "ios".to_string()
+            }
+            "android" => {
+                // Android can usually be built from multiple platforms assuming you have the correct export templates
+                "android".to_string()
+            }
+            "linux" | "win64" | "macos" => t.to_string(),
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "Unsupported provided target: {}. Supported targets: ios, android, linux, win64, macos.",
+                    t
+                ));
+            }
+        }
+    } else {
+        // Fallback to host OS
+        match std::env::consts::OS {
+            "linux" => "linux".to_string(),
+            "windows" => "win64".to_string(),
+            "macos" => "macos".to_string(),
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "Unsupported platform for exporting: {}",
+                    std::env::consts::OS
+                ));
+            }
+        }
+    };
+
+    Ok(target)
+}
+
 pub fn import_assets() -> ExitStatus {
     let program = get_godot_path();
 
@@ -49,7 +92,7 @@ pub fn import_assets() -> ExitStatus {
         .expect("Failed to run Godot")
 }
 
-pub fn export() -> Result<(), anyhow::Error> {
+pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
     let program = get_godot_path();
 
     // Make exports directory
@@ -63,28 +106,17 @@ pub fn export() -> Result<(), anyhow::Error> {
     // Do imports and one project open
     let import_assets_status = import_assets();
 
-    let output_file_name = match std::env::consts::OS {
-        "linux" => "decentraland.godot.client.x86_64",
-        "windows" => "decentraland.godot.client.exe",
-        "macos" => "decentraland.godot.client.dmg",
-        _ => {
-            return Err(anyhow::anyhow!(
-                "Unsupported platform: {}",
-                std::env::consts::OS
-            ));
-        }
-    };
+    // Determine final target if not specified
+    let target = get_target_os(target)?;
 
-    let target = match std::env::consts::OS {
-        "linux" => "linux",
-        "windows" => "win64",
-        "macos" => "macos",
-        _ => {
-            return Err(anyhow::anyhow!(
-                "Unsupported platform: {}",
-                std::env::consts::OS
-            ));
-        }
+    // Determine output file name
+    let output_file_name = match target.as_str() {
+        "linux" => "decentraland.godot.client.x86_64",
+        "win64" => "decentraland.godot.client.exe",
+        "macos" => "decentraland.godot.client.dmg",
+        "ios" => "decentraland-godot-client.ipa",
+        "android" => "decentraland.godot.client.apk",
+        _ => return Err(anyhow::anyhow!("Unexpected final target: {}", target)),
     };
 
     let output_rel_path = format!("{EXPORTS_FOLDER}{output_file_name}");
@@ -92,15 +124,17 @@ pub fn export() -> Result<(), anyhow::Error> {
         fs::remove_file(output_rel_path.as_str())?;
     }
 
-    // See this exports path differ from EXPORT_FOLDER because it's relative to godot project dir
+    // Adjust the output path parameter for Godot command line
+    // This should reflect the correct relative path from the Godot project directory
     let output_path_godot_param = format!("./../exports/{output_file_name}");
+
     let args = vec![
         "-e",
         "--rendering-driver",
         "opengl3",
         "--headless",
-        "--export-release",
-        target,
+        "--export-debug",
+        target.as_str(),
         output_path_godot_param.as_str(),
     ];
 
@@ -114,7 +148,7 @@ pub fn export() -> Result<(), anyhow::Error> {
         .status()
         .expect("Failed to run Godot");
 
-    if !std::path::Path::new(output_rel_path.as_str()).exists() {
+    if !std::path::Path::new(output_rel_path.as_str()).exists() && target != "ios" {
         return Err(anyhow::anyhow!(
             "Output file was not generated. pre-import godot status: {:?}, project-export godot status: {:?}",
             import_assets_status,
@@ -122,11 +156,12 @@ pub fn export() -> Result<(), anyhow::Error> {
         ));
     }
 
-    if std::env::consts::OS == "linux" {
+    // Set executable permission on Linux
+    if target == "linux" {
         set_executable_permission(Path::new(output_rel_path.as_str()))?;
     }
 
-    copy_ffmpeg_libraries(EXPORTS_FOLDER.to_string(), false)?;
+    copy_ffmpeg_libraries(&target, EXPORTS_FOLDER.to_string(), false)?;
 
     Ok(())
 }
@@ -160,11 +195,7 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
             for file in files {
                 println!("Downloading file for {}: {}", template, file);
 
-                let url = format!(
-                    "{}{}.zip",
-                    GODOT4_EXPORT_TEMPLATES_BASE_URL.to_string(),
-                    file
-                );
+                let url = format!("{}{}.zip", GODOT4_EXPORT_TEMPLATES_BASE_URL, file);
                 download_and_extract_zip(
                     url.as_str(),
                     dest_path.as_str(),

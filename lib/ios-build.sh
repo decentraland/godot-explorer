@@ -1,5 +1,9 @@
 #!/bin/bash
 
+echo "Please use 'cargo run -- build --release --target ios'"
+echo "Waiting 5 seconds to execute the legacy script..."
+sleep 5
+
 export FFMPEG_DIR=~/github/ffmpeg-kit/prebuilt/apple-ios-arm64/ffmpeg
 export RUSTY_V8_MIRROR=https://github.com/leanmendoza/rusty_v8/releases/download
 
