@@ -397,7 +397,7 @@ func async_load_wearables():
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
 	emote_controller.clean_unused_emotes()
-	emit_signal("avatar_loaded")
+	avatar_loaded.emit()
 
 
 func apply_color_and_facial():

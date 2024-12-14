@@ -64,7 +64,7 @@ func show_panel(child_node: Control):
 func async_close_sign_in(generate_snapshots: bool = true):
 	if generate_snapshots:
 		var avatar := current_profile.get_avatar()
-		await backpack.async_prepare_snapshots(avatar)
+		await backpack.async_prepare_snapshots(avatar, current_profile)
 
 	if Global.is_xr():
 		change_scene.emit("res://src/ui/components/discover/discover.tscn")
@@ -201,7 +201,7 @@ func _on_button_next_pressed():
 	current_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 	var avatar := current_profile.get_avatar()
 
-	await backpack.async_prepare_snapshots(avatar)
+	await backpack.async_prepare_snapshots(avatar, current_profile)
 
 	current_profile.set_avatar(avatar)
 

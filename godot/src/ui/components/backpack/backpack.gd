@@ -35,6 +35,7 @@ var avatar_loading_counter: int = 0
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
 
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
+@onready var snapshot_avatar_preview: AvatarPreview = %ClonedAvatarPreview
 @onready var avatar_loading = %TextureProgressBar_AvatarLoading
 
 @onready var container_main_categories = %HBoxContainer_MainCategories
@@ -55,6 +56,8 @@ var avatar_loading_counter: int = 0
 
 # gdlint:ignore = async-function-name
 func _ready():
+	snapshot_avatar_preview.hide()
+
 	for category in Wearables.Categories.ALL_CATEGORIES:
 		var button_group = ButtonGroup.new()
 		button_group.allow_unpress = _can_unequip(category)
@@ -269,15 +272,16 @@ func _on_wearable_filter_button_filter_type(type):
 		skin_color_picker.show()
 
 
-func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat):
-	var cloned_avatar_preview: AvatarPreview = avatar_preview.duplicate()
+func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat, profile: DclUserProfile):
+	snapshot_avatar_preview.reparent(get_tree().root)
+	snapshot_avatar_preview.set_position(get_tree().root.get_visible_rect().size)
+	snapshot_avatar_preview.show()
+
+	var cloned_avatar_preview: AvatarPreview = snapshot_avatar_preview
+	await cloned_avatar_preview.avatar.async_update_avatar_from_profile(profile)
 	cloned_avatar_preview.show_platform = false
 	cloned_avatar_preview.hide_name = true
 	cloned_avatar_preview.can_move = false
-
-	get_tree().root.add_child(cloned_avatar_preview)
-
-	cloned_avatar_preview.set_position(get_tree().root.get_visible_rect().size)
 	var face = await cloned_avatar_preview.async_get_viewport_image(true, Vector2i(256, 256))
 	var body = await cloned_avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
 
@@ -290,14 +294,17 @@ func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat):
 	await PromiseUtils.async_awaiter(Global.content_provider.store_file(face_hash, face_data))
 
 	new_mutable_avatar.set_snapshots(face_hash, body_hash)
-	cloned_avatar_preview.queue_free()
+	prints("Profile saved", face_hash, body_hash)
+
+	snapshot_avatar_preview.reparent(self)
+	snapshot_avatar_preview.hide()
 
 
 func async_save_profile():
 	avatar_preview.avatar.emote_controller.stop_emote()
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 
-	await async_prepare_snapshots(mutable_avatar)
+	await async_prepare_snapshots(mutable_avatar, mutable_profile)
 
 	mutable_profile.set_avatar(mutable_avatar)
 

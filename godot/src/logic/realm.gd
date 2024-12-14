@@ -204,7 +204,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 		Global.metrics.update_realm(realm_url)
 
 		_has_realm = true
-		emit_signal("realm_changed")
+		realm_changed.emit()
 
 
 func async_request_set_position(scene_urn):
