@@ -1,18 +1,22 @@
-[gd_scene load_steps=6 format=3 uid="uid://dsqq58ubnjwen"]
+[gd_scene load_steps=5 format=3 uid="uid://dsqq58ubnjwen"]
 
 [ext_resource type="Script" path="res://assets/environment/sky_base.gd" id="1_u1jk8"]
-[ext_resource type="Texture2D" uid="uid://cbqxx4vdb574k" path="res://assets/environment/sky_medium/AllSkyFree_Sky_ClearBlueSky_Equirect.png" id="2_6d7t7"]
 
-[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_klpcs"]
-panorama = ExtResource("2_6d7t7")
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_n746o"]
+sky_top_color = Color(5.15962e-05, 0.299711, 0.858716, 1)
+sky_horizon_color = Color(0.262745, 0.603922, 0.819608, 1)
+sky_curve = 0.212132
+ground_bottom_color = Color(0.176471, 0.556863, 0.807843, 1)
+ground_horizon_color = Color(0.698039, 0.788235, 0.854902, 1)
+ground_curve = 0.278576
 
-[sub_resource type="Sky" id="Sky_iop4b"]
-sky_material = SubResource("PanoramaSkyMaterial_klpcs")
+[sub_resource type="Sky" id="Sky_75amy"]
+sky_material = SubResource("ProceduralSkyMaterial_n746o")
 
 [sub_resource type="Environment" id="Environment_mvu0t"]
 background_mode = 2
 background_energy_multiplier = 0.5
-sky = SubResource("Sky_iop4b")
+sky = SubResource("Sky_75amy")
 ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
 ambient_light_sky_contribution = 0.4
 tonemap_mode = 3
@@ -38,3 +42,4 @@ environment = SubResource("Environment_mvu0t")
 transform = Transform3D(1, 0, 0, 0, -0.177909, 0.984047, 0, -0.984047, -0.177909, 0, 0, 0)
 light_color = Color(1, 0.988235, 0.768627, 1)
 light_energy = 0.1
+sky_mode = 1
