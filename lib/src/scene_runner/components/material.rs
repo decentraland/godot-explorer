@@ -17,11 +17,8 @@ use crate::{
 };
 use godot::{
     engine::{
-        base_material_3d::DiffuseMode, 
-        base_material_3d::SpecularMode,
-        base_material_3d::Transparency, 
-        MeshInstance3D, 
-        StandardMaterial3D, 
+        base_material_3d::DiffuseMode, base_material_3d::SpecularMode,
+        base_material_3d::Transparency, MeshInstance3D, StandardMaterial3D,
     },
     prelude::*,
 };
