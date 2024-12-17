@@ -38,7 +38,7 @@ jobs:
 
   ios-build:
     name: 🍏 iOS
-    needs: static-checks
+    # needs: static-checks
     uses: ./.github/workflows/ios_builds.yml
 
   windows-build:
