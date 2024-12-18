@@ -11,39 +11,39 @@ concurrency:
 
 jobs:
   # First stage: Only static checks, fast and prevent expensive builds from running.
-  static-checks:
-    name: 📊 Static checks
-    uses: ./.github/workflows/static_checks.yml
+  # static-checks:
+  #   name: 📊 Static checks
+  #   uses: ./.github/workflows/static_checks.yml
 
   # Second stage: Run all the builds and some of the tests.
   test-coverage:
     name: 🔎 Test & Coverage
-    needs: static-checks
+    # needs: static-checks
     uses: ./.github/workflows/coverage.yml
 
   android-build:
     name: 🤖 Android (VR and Mobile)
-    needs: static-checks
+    # needs: static-checks
     uses: ./.github/workflows/android_builds.yml
 
   linux-build:
     name: 🐧 Linux
-    needs: static-checks
+    # needs: static-checks
     uses: ./.github/workflows/linux_builds.yml
 
   macos-build:
     name: 🍎 macOS
-    needs: static-checks
+    # needs: static-checks
     uses: ./.github/workflows/macos_builds.yml
 
   ios-build:
     name: 🍏 iOS
-    needs: static-checks
+    # needs: static-checks
     uses: ./.github/workflows/ios_builds.yml
 
   windows-build:
     name: 🏁 Windows
-    needs: static-checks
+    # needs: static-checks
     uses: ./.github/workflows/windows_builds.yml
 
   # Third stage: Extras

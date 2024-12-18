@@ -271,7 +271,7 @@ impl Default for DclPbrMaterial {
             reflectivity_color: RoundedColor3(Color3::white()),
             transparency_mode: MaterialTransparencyMode::MtmAuto,
             metallic: RoundedFloat(0.5),
-            roughness: RoundedFloat(0.5),
+            roughness: RoundedFloat(0.0),
             specular_intensity: RoundedFloat(1.0),
             emissive_intensity: RoundedFloat(2.0),
             direct_intensity: RoundedFloat(1.0),
@@ -309,10 +309,11 @@ impl DclMaterial {
                         &pbr.bump_texture,
                         content_mapping_files,
                     ),
-                    emissive_texture: DclTexture::from_proto_with_hash(
-                        &pbr.emissive_texture,
-                        content_mapping_files,
-                    ),
+                    // emissive_texture: None,
+                    // emissive_texture: DclTexture::from_proto_with_hash(
+                    //     &pbr.emissive_texture,
+                    //     content_mapping_files,
+                    // ),
                     ..Default::default()
                 };
 
