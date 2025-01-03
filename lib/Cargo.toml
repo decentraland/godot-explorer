@@ -8,17 +8,17 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-godot = { git = "https://github.com/dclexplorer/gdext", rev ="4204285cdd32799690de28ee3a98ef624e95369e", features=["experimental-threads", "serde"] }
+godot = { git = "https://github.com/dclexplorer/gdext", rev ="4204285cdd32799690de28ee3a98ef624e95369e", features=["experimental-threads", "serde", "experimental-wasm"] }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
-tokio = { version = "1.37.0", features = ["full"] }
+tokio = { version = "1.37.0", features = ["sync", "macros", "io-util", "rt", "time"] }
 protobuf = "3.2.0"
 prost = "0.11.8"
 once_cell = "1.16.0"
 futures-lite = "1.12.0"
 
-hyper = { version = "1.0.0-rc.3", features = ["full"] }
+hyper = { version = "1.0.0-rc.3", features = ["http1"] }
 http-body-util = "0.1.0-rc.2"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "blocking", "stream"] }
 regex = "*"
@@ -26,7 +26,7 @@ urn = "0.7.0"
 
 ethers-core = { version = "2.0" }
 ethers-signers = { version = "2.0" }
-ethers-providers = { version = "2.0", features = ["ws","rustls"] }
+# ethers-providers = { version = "2.0", features = ["ws","rustls"] } # disable-wasm: ethers-providers uses jsonwebtoken, that is not compatible with wasm
 
 async-trait = "0.1.68"
 
@@ -52,7 +52,7 @@ num = "0.4"
 http = "0.2.9"
 bytes = "1.4.0"
 
-tokio-tungstenite = "0.20.1"
+# tokio-tungstenite = "0.20.1" # disable-wasm: this is adding the `mio` library to tokio, because it requires `net` from tokio
 futures-util = "0.3.30"
 
 livekit = { git = "https://github.com/livekit/rust-sdks", features=["rustls-tls-webpki-roots"], optional = true, rev="8b276f9d4b98437a139e1cbe41cfda1332ce1120" }
@@ -77,13 +77,13 @@ paranoid-android = "0.2.1"
 [features]
 default = ["use_ffmpeg", "use_livekit", "use_deno", "enable_inspector"]
 use_ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
-use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
+use_livekit = ["dep:livekit"]
 use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []
 enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 
 [build-dependencies]
-webrtc-sys-build = { git = "https://github.com/livekit/rust-sdks", optional = true, rev="8b276f9d4b98437a139e1cbe41cfda1332ce1120" }
+# webrtc-sys-build = { git = "https://github.com/livekit/rust-sdks", optional = true, rev="8b276f9d4b98437a139e1cbe41cfda1332ce1120" } # disable-wasm: this requires mio, even when it is disabled is being compiled
 prost-build = "0.11.8"
 chrono = "0.4.31"
 

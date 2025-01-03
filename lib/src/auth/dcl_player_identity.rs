@@ -17,7 +17,7 @@ use super::auth_identity::create_local_ephemeral;
 use super::decentraland_auth_server::{do_request, CreateRequest};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
-use super::wallet::{AsH160, Wallet};
+use super::wallet::{AsH160, Wallet, WalletType};
 
 enum CurrentWallet {
     Remote(RemoteWallet),
@@ -131,7 +131,7 @@ impl DclPlayerIdentity {
         local_wallet_bytes: &[u8],
         ephemeral_auth_chain: EphemeralAuthChain,
     ) {
-        let local_wallet = Wallet::new_from_inner(Box::new(
+        let local_wallet = Wallet::new_from_inner(WalletType::Local(
             LocalWallet::from_bytes(local_wallet_bytes).unwrap(),
         ));
 
@@ -172,6 +172,8 @@ impl DclPlayerIdentity {
 
     #[func]
     fn try_connect_account(&mut self, target_config_id: GString) {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -222,6 +224,7 @@ impl DclPlayerIdentity {
         });
 
         self.try_connect_account_handle = Some(try_connect_account_handle);
+    }
     }
 
     #[func]
@@ -350,42 +353,44 @@ impl DclPlayerIdentity {
     ) -> Gd<Promise> {
         let promise = Promise::new_alloc();
         let promise_instance_id = promise.instance_id();
+        
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(handle) = TokioRuntime::static_clone_handle() {
+                let ephemeral_auth_chain = self
+                    .ephemeral_auth_chain
+                    .as_ref()
+                    .expect("ephemeral auth chain not initialized")
+                    .clone();
 
-        if let Some(handle) = TokioRuntime::static_clone_handle() {
-            let ephemeral_auth_chain = self
-                .ephemeral_auth_chain
-                .as_ref()
-                .expect("ephemeral auth chain not initialized")
-                .clone();
+                let uri = http::Uri::try_from(uri.to_string().as_str()).expect("Invalid url");
+                let method = method.to_string();
+                let metadata = metadata.to_string();
 
-            let uri = http::Uri::try_from(uri.to_string().as_str()).expect("Invalid url");
-            let method = method.to_string();
-            let metadata = metadata.to_string();
+                handle.spawn(async move {
+                    let headers = super::wallet::sign_request(
+                        method.as_str(),
+                        &uri,
+                        &ephemeral_auth_chain,
+                        metadata,
+                    )
+                    .await;
 
-            handle.spawn(async move {
-                let headers = super::wallet::sign_request(
-                    method.as_str(),
-                    &uri,
-                    &ephemeral_auth_chain,
-                    metadata,
-                )
-                .await;
+                    let mut dict = Dictionary::default();
+                    for (key, value) in headers {
+                        dict.set(key.to_godot(), value.to_godot());
+                    }
 
-                let mut dict = Dictionary::default();
-                for (key, value) in headers {
-                    dict.set(key.to_godot(), value.to_godot());
-                }
+                    let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
+                    else {
+                        tracing::error!("error getting promise");
+                        return;
+                    };
 
-                let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
-                else {
-                    tracing::error!("error getting promise");
-                    return;
-                };
-
-                promise.bind_mut().resolve_with_data(dict.to_variant());
-            });
+                    promise.bind_mut().resolve_with_data(dict.to_variant());
+                });
+            }
         }
-
         promise
     }
 
@@ -415,45 +420,47 @@ impl DclPlayerIdentity {
         new_user_profile.content.user_id = Some(eth_address.clone());
         new_user_profile.content.eth_address = eth_address;
 
-        if let Some(handle) = TokioRuntime::static_clone_handle() {
-            let ephemeral_auth_chain = self
-                .ephemeral_auth_chain
-                .as_ref()
-                .expect("ephemeral auth chain not initialized")
-                .clone();
-            handle.spawn(async move {
-                let deploy_data = super::deploy_profile::prepare_deploy_profile(
-                    ephemeral_auth_chain.clone(),
-                    new_user_profile,
-                    has_new_snapshots,
-                )
-                .await;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(handle) = TokioRuntime::static_clone_handle() {
+                let ephemeral_auth_chain = self
+                    .ephemeral_auth_chain
+                    .as_ref()
+                    .expect("ephemeral auth chain not initialized")
+                    .clone();
+                handle.spawn(async move {
+                    let deploy_data = super::deploy_profile::prepare_deploy_profile(
+                        ephemeral_auth_chain.clone(),
+                        new_user_profile,
+                        has_new_snapshots,
+                    )
+                    .await;
 
-                let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
-                else {
-                    tracing::error!("error getting promise");
-                    return;
-                };
+                    let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
+                    else {
+                        tracing::error!("error getting promise");
+                        return;
+                    };
 
-                if let Err(e) = deploy_data {
-                    println!("Deployment error: {:?}", e);
-                    promise
-                        .bind_mut()
-                        .reject(format!("error preparing deploy profile: {}", e).into());
-                    return;
-                }
+                    if let Err(e) = deploy_data {
+                        println!("Deployment error: {:?}", e);
+                        promise
+                            .bind_mut()
+                            .reject(format!("error preparing deploy profile: {}", e).into());
+                        return;
+                    }
 
-                let (content_type, body_payload) = deploy_data.unwrap(); // checked before
+                    let (content_type, body_payload) = deploy_data.unwrap(); // checked before
 
-                let body_payload = PackedByteArray::from_vec(&body_payload);
-                let mut dict = Dictionary::default();
-                dict.set("content_type", content_type.to_variant());
-                dict.set("body_payload", body_payload.to_variant());
+                    let body_payload = PackedByteArray::from_vec(&body_payload);
+                    let mut dict = Dictionary::default();
+                    dict.set("content_type", content_type.to_variant());
+                    dict.set("body_payload", body_payload.to_variant());
 
-                promise.bind_mut().resolve_with_data(dict.to_variant());
-            });
+                    promise.bind_mut().resolve_with_data(dict.to_variant());
+                });
+            }
         }
-
         promise
     }
 
@@ -536,14 +543,18 @@ impl DclPlayerIdentity {
         };
         body.auth_chain = Some(auth_chain.auth_chain().clone());
 
-        if let Some(handle) = TokioRuntime::static_clone_handle() {
-            let target_config_id = self.target_config_id.to_string();
-            handle.spawn(async move {
-                let result = do_request(body, url_sender, Some(target_config_id))
-                    .await
-                    .map(|(_, result)| result);
-                response.send(result.map_err(|err| err.to_string()));
-            });
+        
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(handle) = TokioRuntime::static_clone_handle() {
+                let target_config_id = self.target_config_id.to_string();
+                handle.spawn(async move {
+                    let result = do_request(body, url_sender, Some(target_config_id))
+                        .await
+                        .map(|(_, result)| result);
+                    response.send(result.map_err(|err| err.to_string()));
+                });
+            }
         }
     }
 }

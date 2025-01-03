@@ -15,3 +15,15 @@ rustflags = ["-C", "link-args=-mios-version-min=12.0 -ObjC"]
 
 [target.aarch64-apple-ios-sim]
 rustflags = ["-C", "link-args=-mios-version-min=12.0 -ObjC"]
+
+[target.wasm32-unknown-emscripten]
+rustflags = [
+    "-Zlink-native-libraries=no",
+    "-Ctarget-feature=+atomics,+bulk-memory,+mutable-globals",
+    "-Clink-arg=-sSIDE_MODULE=2",
+    "-Clink-args=-pthread",
+    "-Cllvm-args=-enable-emscripten-cxx-exceptions=0",
+]
+
+[build]
+target = "wasm32-unknown-unknown"

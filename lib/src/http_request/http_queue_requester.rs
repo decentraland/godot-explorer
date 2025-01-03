@@ -117,67 +117,70 @@ impl HttpQueueRequester {
         let semaphore = Arc::clone(&self.semaphore);
         let client = self.client.clone();
 
-        tokio::spawn(async move {
-            let _permit = semaphore.acquire_owned().await;
-            let request = {
-                let mut queue = queue.lock().unwrap();
-                queue.pop()
-            };
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            tokio::spawn(async move {
+                let _permit = semaphore.acquire_owned().await;
+                let request = {
+                    let mut queue = queue.lock().unwrap();
+                    queue.pop()
+                };
 
-            if let Some(mut queue_request) = request {
-                let request_option = queue_request.request_option.take().unwrap();
-                let mut response_result = Self::process_request(
-                    client,
-                    request_option,
-                    queue_request.network_inspector_id,
-                    queue_request.network_inspector_sender.clone(),
-                )
-                .await;
+                if let Some(mut queue_request) = request {
+                    let request_option = queue_request.request_option.take().unwrap();
+                    let mut response_result = Self::process_request(
+                        client,
+                        request_option,
+                        queue_request.network_inspector_id,
+                        queue_request.network_inspector_sender.clone(),
+                    )
+                    .await;
 
-                if queue_request.network_inspector_id.is_valid() {
-                    if let Some(network_inspector_sender) =
-                        queue_request.network_inspector_sender.as_ref()
-                    {
-                        let network_inspect_response: Result<
-                            (NetworkInspectResponsePayload, Option<String>),
-                            String,
-                        > = match &mut response_result {
-                            Ok(response) => {
-                                let response_data = match &response.response_data {
-                                    Ok(ResponseEnum::String(data)) => {
-                                        Some(data.chars().take(10240).collect())
-                                    }
-                                    Ok(ResponseEnum::Json(Ok(data))) => {
-                                        Some(data.to_string().chars().take(10240).collect())
-                                    }
-                                    Ok(ResponseEnum::ToFile(Ok(path))) => Some(path.clone()),
-                                    _ => None,
-                                };
+                    if queue_request.network_inspector_id.is_valid() {
+                        if let Some(network_inspector_sender) =
+                            queue_request.network_inspector_sender.as_ref()
+                        {
+                            let network_inspect_response: Result<
+                                (NetworkInspectResponsePayload, Option<String>),
+                                String,
+                            > = match &mut response_result {
+                                Ok(response) => {
+                                    let response_data = match &response.response_data {
+                                        Ok(ResponseEnum::String(data)) => {
+                                            Some(data.chars().take(10240).collect())
+                                        }
+                                        Ok(ResponseEnum::Json(Ok(data))) => {
+                                            Some(data.to_string().chars().take(10240).collect())
+                                        }
+                                        Ok(ResponseEnum::ToFile(Ok(path))) => Some(path.clone()),
+                                        _ => None,
+                                    };
 
-                                Ok((
-                                    NetworkInspectResponsePayload {
-                                        status_code: response.status_code,
-                                        headers: response.headers.take(),
-                                    },
-                                    response_data,
-                                ))
+                                    Ok((
+                                        NetworkInspectResponsePayload {
+                                            status_code: response.status_code,
+                                            headers: response.headers.take(),
+                                        },
+                                        response_data,
+                                    ))
+                                }
+                                Err(err) => Err(err.error_message.clone()),
+                            };
+
+                            let inspect_event = NetworkInspectEvent::new_full_response(
+                                queue_request.network_inspector_id,
+                                network_inspect_response,
+                            );
+                            if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+                                tracing::error!("Error sending inspect event: {}", err);
                             }
-                            Err(err) => Err(err.error_message.clone()),
-                        };
-
-                        let inspect_event = NetworkInspectEvent::new_full_response(
-                            queue_request.network_inspector_id,
-                            network_inspect_response,
-                        );
-                        if let Err(err) = network_inspector_sender.try_send(inspect_event) {
-                            tracing::error!("Error sending inspect event: {}", err);
                         }
                     }
-                }
 
-                let _ = queue_request.response_sender.send(response_result);
-            }
-        });
+                    let _ = queue_request.response_sender.send(response_result);
+                }
+            });
+        }
     }
 
     async fn process_request(
@@ -191,8 +194,10 @@ impl HttpQueueRequester {
             .timeout
             .unwrap_or(std::time::Duration::from_secs(60));
         let mut request = client
-            .request(request_option.method.clone(), request_option.url.clone())
-            .timeout(timeout);
+            .request(request_option.method.clone(), request_option.url.clone());
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let mut request = request.timeout(timeout);
 
         if let Some(body) = request_option.body.take() {
             request = request.body(body);
@@ -231,16 +236,24 @@ impl HttpQueueRequester {
                 ResponseEnum::Bytes(response.bytes().await.map_err(map_err_func)?.to_vec())
             }
             ResponseType::ToFile(file_path) => {
-                let content = response.bytes().await.map_err(map_err_func)?.to_vec();
-                let mut file = tokio::fs::File::create(file_path.clone())
-                    .await
-                    .map_err(|e| RequestResponseError {
-                        id: request_option.id,
-                        error_message: e.to_string(),
-                    })?;
-                let result = file.write_all(&content).await;
-                let result = result.map(|_| file_path);
-                ResponseEnum::ToFile(result)
+                
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                        let content = response.bytes().await.map_err(map_err_func)?.to_vec();
+                        let mut file = tokio::fs::File::create(file_path.clone())
+                            .await
+                            .map_err(|e| RequestResponseError {
+                                id: request_option.id,
+                                error_message: e.to_string(),
+                            })?;
+                        let result = file.write_all(&content).await;
+                        let result = result.map(|_| file_path);
+                        ResponseEnum::ToFile(result)
+                }
+                return Err(RequestResponseError {
+                    id: request_option.id,
+                    error_message: "ToFile not supported on wasm yet".to_string(),
+                });
             }
             ResponseType::AsJson => {
                 let json_string = &response.text().await.map_err(map_err_func)?;

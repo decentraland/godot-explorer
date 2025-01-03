@@ -129,6 +129,7 @@ impl SceneEntityCoordinator {
                 }
             });
         } else {
+            #[cfg(not(target_arch = "wasm32"))]
             std::thread::spawn(move || {
                 let runtime = tokio::runtime::Runtime::new();
                 if runtime.is_err() {
@@ -141,6 +142,7 @@ impl SceneEntityCoordinator {
                     let _ = sender.try_send(result);
                 });
             });
+            panic!("not implemented");
         }
     }
 

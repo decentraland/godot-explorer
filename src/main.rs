@@ -100,6 +100,7 @@ fn main() -> Result<(), anyhow::Error> {
                 .takes_value(true),
         ))
         .subcommand(Command::new("import-assets"))
+        .subcommand(Command::new("build-web"))
         .subcommand(
             Command::new("run")
                 .arg(
@@ -258,6 +259,7 @@ fn main() -> Result<(), anyhow::Error> {
             Ok(())
         }
         ("export", sm) => export::export(sm.value_of("target")),
+        ("build-web", _) => run::build_web(),
         ("import-assets", _m) => {
             let status = import_assets();
             if !status.success() {

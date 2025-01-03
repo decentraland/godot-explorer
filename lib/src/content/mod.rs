@@ -8,6 +8,7 @@ pub mod packed_array;
 mod profile;
 #[cfg(feature = "use_resource_tracking")]
 mod resource_download_tracking;
+#[cfg(not(target_arch = "wasm32"))]
 mod resource_provider;
 pub mod semaphore_ext;
 mod texture;

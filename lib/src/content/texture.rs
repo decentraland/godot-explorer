@@ -30,74 +30,80 @@ pub async fn load_image_texture(
     file_hash: String,
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
-    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-    let bytes_vec = ctx
-        .resource_provider
-        .fetch_resource_with_data(&url, &file_hash, &absolute_file_path)
-        .await
-        .map_err(anyhow::Error::msg)?;
+    
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
+        let bytes_vec = ctx
+            .resource_provider
+            .fetch_resource_with_data(&url, &file_hash, &absolute_file_path)
+            .await
+            .map_err(anyhow::Error::msg)?;
 
-    if bytes_vec.is_empty() {
-        return Err(anyhow::Error::msg("Empty texture data"));
+        if bytes_vec.is_empty() {
+            return Err(anyhow::Error::msg("Empty texture data"));
+        }
+
+        let _thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
+            .await
+            .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
+
+        let bytes = PackedByteArray::from_vec(&bytes_vec);
+
+        let mut image = Image::new_gd();
+        let err = if infer_mime::is_png(&bytes_vec) {
+            image.load_png_from_buffer(bytes)
+        } else if infer_mime::is_jpeg(&bytes_vec) || infer_mime::is_jpeg2000(&bytes_vec) {
+            image.load_jpg_from_buffer(bytes)
+        } else if infer_mime::is_webp(&bytes_vec) {
+            image.load_webp_from_buffer(bytes)
+        } else if infer_mime::is_tga(&bytes_vec) {
+            image.load_tga_from_buffer(bytes)
+        } else if infer_mime::is_ktx(&bytes_vec) {
+            image.load_ktx_from_buffer(bytes)
+        } else if infer_mime::is_bmp(&bytes_vec) {
+            image.load_bmp_from_buffer(bytes)
+        } else if infer_mime::is_svg(&bytes_vec) {
+            image.load_svg_from_buffer(bytes)
+        } else {
+            // if we don't know the format... we try to load as png
+            image.load_png_from_buffer(bytes)
+        };
+
+        if err != Error::OK {
+            DirAccess::remove_absolute(GString::from(&absolute_file_path));
+            let err = err.to_variant().to::<i32>();
+            return Err(anyhow::Error::msg(format!(
+                "Error loading texture {absolute_file_path}: {}",
+                err
+            )));
+        }
+
+        let original_size = image.get_size();
+
+        let max_size = ctx.texture_quality.to_max_size();
+        let mut texture: Gd<Texture2D> = if std::env::consts::OS == "ios" {
+            create_compressed_texture(&mut image, max_size)
+        } else {
+            resize_image(&mut image, max_size);
+            let texture = ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
+                format!("Error creating texture from image {}", absolute_file_path),
+            ))?;
+            texture.upcast()
+        };
+
+        texture.set_name(GString::from(&url));
+
+        let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
+            image,
+            texture,
+            original_size,
+        });
+
+        Ok(Some(texture_entry.to_variant()))
     }
 
-    let _thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
-        .await
-        .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
-
-    let bytes = PackedByteArray::from_vec(&bytes_vec);
-
-    let mut image = Image::new_gd();
-    let err = if infer_mime::is_png(&bytes_vec) {
-        image.load_png_from_buffer(bytes)
-    } else if infer_mime::is_jpeg(&bytes_vec) || infer_mime::is_jpeg2000(&bytes_vec) {
-        image.load_jpg_from_buffer(bytes)
-    } else if infer_mime::is_webp(&bytes_vec) {
-        image.load_webp_from_buffer(bytes)
-    } else if infer_mime::is_tga(&bytes_vec) {
-        image.load_tga_from_buffer(bytes)
-    } else if infer_mime::is_ktx(&bytes_vec) {
-        image.load_ktx_from_buffer(bytes)
-    } else if infer_mime::is_bmp(&bytes_vec) {
-        image.load_bmp_from_buffer(bytes)
-    } else if infer_mime::is_svg(&bytes_vec) {
-        image.load_svg_from_buffer(bytes)
-    } else {
-        // if we don't know the format... we try to load as png
-        image.load_png_from_buffer(bytes)
-    };
-
-    if err != Error::OK {
-        DirAccess::remove_absolute(GString::from(&absolute_file_path));
-        let err = err.to_variant().to::<i32>();
-        return Err(anyhow::Error::msg(format!(
-            "Error loading texture {absolute_file_path}: {}",
-            err
-        )));
-    }
-
-    let original_size = image.get_size();
-
-    let max_size = ctx.texture_quality.to_max_size();
-    let mut texture: Gd<Texture2D> = if std::env::consts::OS == "ios" {
-        create_compressed_texture(&mut image, max_size)
-    } else {
-        resize_image(&mut image, max_size);
-        let texture = ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
-            format!("Error creating texture from image {}", absolute_file_path),
-        ))?;
-        texture.upcast()
-    };
-
-    texture.set_name(GString::from(&url));
-
-    let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
-        image,
-        texture,
-        original_size,
-    });
-
-    Ok(Some(texture_entry.to_variant()))
+    Err(anyhow::Error::msg("Texture not supported on wasm yet"))
 }
 
 pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
