@@ -52,6 +52,7 @@ impl RustHttpQueueRequester {
             None,
             None,
         );
+        godot_print!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
         let http_requester = self.http_queue_requester.clone();
         let (ret_promise, get_promise) = Promise::make_to_async();
         TokioRuntime::spawn(async move {
@@ -72,6 +73,7 @@ impl RustHttpQueueRequester {
         body: GString,
         headers: Dictionary,
     ) -> Gd<Promise> {
+        tracing::info!("BBBBBBBBBBBBBBBBBBBBBBBB");
         let body = match body.to_string().as_str() {
             "" => None,
             _ => Some(body.to_string().into_bytes()),
@@ -87,6 +89,7 @@ impl RustHttpQueueRequester {
         body: PackedByteArray,
         headers: Dictionary,
     ) -> Gd<Promise> {
+        godot_print!("CCCCCCCCCCCCCCCCCCCCCCCCCCCC");
         self._request_json(url, method, Some(body.to_vec()), headers)
     }
 }
@@ -130,6 +133,7 @@ impl RustHttpQueueRequester {
         let http_requester = self.http_queue_requester.clone();
         let (ret_promise, get_promise) = Promise::make_to_async();
         TokioRuntime::spawn(async move {
+            tracing::info!("Spawn is called");
             let result = http_requester.request(request_option, 0).await;
             let Some(promise) = get_promise() else {
                 return;

@@ -10,8 +10,11 @@ mod profile;
 mod resource_download_tracking;
 #[cfg(not(target_arch = "wasm32"))]
 mod resource_provider;
+#[cfg(target_arch = "wasm32")]
+mod web_resource_provider;
 pub mod semaphore_ext;
 mod texture;
 mod thread_safety;
 mod video;
 mod wearable_entities;
+

@@ -35,6 +35,11 @@ use crate::godot_classes::dcl_resource_tracker::{
     report_resource_start,
 };
 
+#[cfg(not(target_arch = "wasm32"))]
+use super::resource_provider::ResourceProvider;
+#[cfg(target_arch = "wasm32")]
+use super::web_resource_provider::ResourceProvider;
+
 use super::{
     audio::load_audio,
     gltf::{
@@ -47,8 +52,6 @@ use super::{
     video::download_video,
     wearable_entities::{request_wearables, WearableManyResolved},
 };
-#[cfg(not(target_arch = "wasm32"))]
-use super::resource_provider::ResourceProvider;
 
 #[cfg(feature = "use_resource_tracking")]
 use super::resource_download_tracking::ResourceDownloadTracking;
@@ -63,7 +66,6 @@ pub struct ContentEntry {
 #[class(base=Node)]
 pub struct ContentProvider {
     content_folder: Arc<String>,
-    #[cfg(not(target_arch = "wasm32"))]
     resource_provider: Arc<ResourceProvider>,
     #[cfg(feature = "use_resource_tracking")]
     resource_download_tracking: Arc<ResourceDownloadTracking>,
@@ -82,7 +84,6 @@ pub struct ContentProvider {
 #[derive(Clone)]
 pub struct ContentProviderContext {
     pub content_folder: Arc<String>,
-    #[cfg(not(target_arch = "wasm32"))]
     pub resource_provider: Arc<ResourceProvider>,
     pub http_queue_requester: Arc<HttpQueueRequester>,
     pub godot_single_thread: Arc<Semaphore>,
@@ -103,7 +104,6 @@ impl INode for ContentProvider {
         let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
 
         Self {
-            #[cfg(not(target_arch = "wasm32"))]
             resource_provider: Arc::new(ResourceProvider::new(
                 content_folder.clone().as_str(),
                 2048 * 1000 * 1000,
@@ -424,7 +424,6 @@ impl ContentProvider {
 
     #[func]
     pub fn fetch_file_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
-        
         let file_hash = file_hash.to_string();
 
         let url = url.to_string();
@@ -435,7 +434,6 @@ impl ContentProvider {
         let loaded_resources = self.loaded_resources.clone();
         let hash_id = file_hash.clone();
 
-        
         #[cfg(not(target_arch = "wasm32"))]
         {
             TokioRuntime::spawn(async move {
@@ -479,7 +477,6 @@ impl ContentProvider {
 
         let bytes = bytes.to_vec();
 
-        
         #[cfg(not(target_arch = "wasm32"))]
         {
             TokioRuntime::spawn(async move {
@@ -970,7 +967,6 @@ impl ContentProvider {
 
     #[func]
     pub fn set_cache_folder_max_size(&mut self, size: i64) {
-        
         #[cfg(not(target_arch = "wasm32"))]
         self.resource_provider.set_max_cache_size(size)
     }
@@ -1059,7 +1055,6 @@ impl ContentProvider {
         ContentProviderContext {
             content_folder: self.content_folder.clone(),
             http_queue_requester: self.http_queue_requester.clone(),
-            #[cfg(not(target_arch = "wasm32"))]
             resource_provider: self.resource_provider.clone(),
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),

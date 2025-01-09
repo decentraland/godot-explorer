@@ -1,10 +1,17 @@
 use std::sync::Arc;
+use std::collections::VecDeque;
+use std::collections::HashMap;
 
 use godot::{
     engine::{node::ProcessMode, Engine},
     prelude::*,
 };
+use utilities::print;
 
+use crate::http_request::request_response::RequestOption;
+use crate::http_request::request_response::RequestResponse;
+use crate::http_request::request_response::RequestResponseError;
+use crate::http_request::web_http_requester::DclWebHttpRequester;
 use crate::{
     analytics::metrics::Metrics,
     auth::{dcl_player_identity::DclPlayerIdentity, ethereum_provider::EthereumProvider},
@@ -12,7 +19,7 @@ use crate::{
     comms::communication_manager::CommunicationManager,
     content::content_provider::ContentProvider,
     dcl::common::set_scene_log_enabled,
-    http_request::rust_http_queue_requester::RustHttpQueueRequester,
+    http_request::{http_queue_requester::QueueRequest, rust_http_queue_requester::RustHttpQueueRequester},
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
     test_runner::testing_tools::DclTestingTools,
     tools::network_inspector::{NetworkInspector, NetworkInspectorSender},
@@ -22,6 +29,9 @@ use super::{
     dcl_config::DclConfig, dcl_realm::DclRealm, dcl_tokio_rpc::DclTokioRpc,
     portables::DclPortableExperienceController,
 };
+
+use godot::engine::HttpClient;
+use godot::obj::bounds::*;
 
 #[cfg(target_os = "android")]
 mod android {
@@ -39,6 +49,25 @@ mod android {
         registry().with(android_layer).init();
     }
 }
+
+#[cfg(target_arch = "wasm32")]
+mod wasm {
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::{self, registry};
+    
+    pub fn init_logger() {
+        let wasm_layer =
+            tracing_subscriber::fmt::Layer::new()
+            .event_format(
+                tracing_subscriber::fmt::format::Format::default()
+                .with_level(false).without_time()
+            )
+            .with_writer(crate::utils::log_writer::GodotWasmLogMakeWriter::new("wasm".to_string()));
+
+        registry().with(wasm_layer).init();
+    }
+}
+
 
 #[derive(GodotClass)]
 #[class(base=Node)]
@@ -83,12 +112,16 @@ pub struct DclGlobal {
     pub renderer_version: GString,
 
     pub is_mobile: bool,
+    pub is_wasm: bool,
 
     #[var]
     pub has_javascript_debugger: bool,
 
     #[var]
     pub network_inspector: Gd<NetworkInspector>,
+
+    #[var]
+    pub web_http_requester: Gd<DclWebHttpRequester>,
 }
 
 #[godot_api]
@@ -96,6 +129,9 @@ impl INode for DclGlobal {
     fn init(base: Base<Node>) -> Self {
         #[cfg(target_os = "android")]
         android::init_logger();
+
+        #[cfg(target_arch = "wasm32")]
+        wasm::init_logger();
 
         #[cfg(not(target_os = "android"))]
         let _ = tracing_subscriber::fmt::try_init();
@@ -130,6 +166,7 @@ impl INode for DclGlobal {
         Self {
             _base: base,
             is_mobile: godot::engine::Os::singleton().has_feature("mobile".into()),
+            is_wasm: godot::engine::Os::singleton().has_feature("wasm".into()),
             scene_runner,
             comms,
             avatars,
@@ -153,6 +190,8 @@ impl INode for DclGlobal {
             has_javascript_debugger: true,
             #[cfg(not(feature = "enable_inspector"))]
             has_javascript_debugger: false,
+
+            web_http_requester: DclWebHttpRequester::new_alloc(),
         }
     }
 }

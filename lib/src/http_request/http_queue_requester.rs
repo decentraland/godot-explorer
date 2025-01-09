@@ -1,3 +1,4 @@
+use godot::log::godot_print;
 use reqwest::Client;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -15,11 +16,11 @@ use super::request_response::{
 };
 
 #[derive(Debug)]
-struct QueueRequest {
-    id: u32,
-    priority: usize,
-    request_option: Option<RequestOption>,
-    response_sender: oneshot::Sender<Result<RequestResponse, RequestResponseError>>,
+pub struct QueueRequest {
+    pub id: u32,
+    pub priority: usize,
+    pub request_option: Option<RequestOption>,
+    pub response_sender: oneshot::Sender<Result<RequestResponse, RequestResponseError>>,
 
     network_inspector_id: NetworkInspectorId,
     network_inspector_sender: Option<NetworkInspectorSender>,
@@ -97,8 +98,9 @@ impl HttpQueueRequester {
             (NetworkInspectorId::INVALID, None)
         };
 
+        let id = request_option.id;
         let http_request = QueueRequest {
-            id: request_option.id,
+            id,
             priority,
             request_option: Some(request_option),
             response_sender,
@@ -107,80 +109,108 @@ impl HttpQueueRequester {
             network_inspector_sender,
         };
 
-        self.queue.lock().unwrap().push(http_request);
-        self.process_queue().await;
-        response_receiver.await.unwrap()
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.queue.lock().unwrap().push(http_request);
+            self.process_queue();
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let dcl_global = crate::godot_classes::dcl_global::DclGlobal::singleton();
+            let dcl_global_binded = dcl_global.bind();
+            let mut web_http_requester = dcl_global_binded.web_http_requester.clone();
+            let mut web_http_requester_binded = web_http_requester.bind_mut();
+            web_http_requester_binded.add_requests(http_request);
+        }
+
+        godot_print!("Request sent");
+        if let Ok(result) = response_receiver.await {
+            match result {
+                Ok(response) => {
+                    tracing::info!("Request finished - successuflly" );
+                    Ok(response)
+                }
+                Err(err) => {
+                    tracing::error!("Request failed - error: {}", err.error_message);
+                    Err(err)
+                }
+            }
+        } else {
+            Err(RequestResponseError {
+                id,
+                error_message: "Request cancelled".to_string(),
+            })
+        }
     }
 
-    async fn process_queue(&self) {
+    #[cfg(not(target_arch = "wasm32"))]
+    fn process_queue(&self) {
         let queue = Arc::clone(&self.queue);
         let semaphore = Arc::clone(&self.semaphore);
         let client = self.client.clone();
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            tokio::spawn(async move {
-                let _permit = semaphore.acquire_owned().await;
-                let request = {
-                    let mut queue = queue.lock().unwrap();
-                    queue.pop()
-                };
+        tokio::spawn(async move {
+            let _permit = semaphore.acquire_owned().await;
+            let request = {
+                let mut queue = queue.lock().unwrap();
+                queue.pop()
+            };
 
-                if let Some(mut queue_request) = request {
-                    let request_option = queue_request.request_option.take().unwrap();
-                    let mut response_result = Self::process_request(
-                        client,
-                        request_option,
-                        queue_request.network_inspector_id,
-                        queue_request.network_inspector_sender.clone(),
-                    )
-                    .await;
+            if let Some(mut queue_request) = request {
+                let request_option = queue_request.request_option.take().unwrap();
+                let mut response_result = Self::process_request(
+                    client,
+                    request_option,
+                    queue_request.network_inspector_id,
+                    queue_request.network_inspector_sender.clone(),
+                )
+                .await;
 
-                    if queue_request.network_inspector_id.is_valid() {
-                        if let Some(network_inspector_sender) =
-                            queue_request.network_inspector_sender.as_ref()
-                        {
-                            let network_inspect_response: Result<
-                                (NetworkInspectResponsePayload, Option<String>),
-                                String,
-                            > = match &mut response_result {
-                                Ok(response) => {
-                                    let response_data = match &response.response_data {
-                                        Ok(ResponseEnum::String(data)) => {
-                                            Some(data.chars().take(10240).collect())
-                                        }
-                                        Ok(ResponseEnum::Json(Ok(data))) => {
-                                            Some(data.to_string().chars().take(10240).collect())
-                                        }
-                                        Ok(ResponseEnum::ToFile(Ok(path))) => Some(path.clone()),
-                                        _ => None,
-                                    };
+                if queue_request.network_inspector_id.is_valid() {
+                    if let Some(network_inspector_sender) =
+                        queue_request.network_inspector_sender.as_ref()
+                    {
+                        let network_inspect_response: Result<
+                            (NetworkInspectResponsePayload, Option<String>),
+                            String,
+                        > = match &mut response_result {
+                            Ok(response) => {
+                                let response_data = match &response.response_data {
+                                    Ok(ResponseEnum::String(data)) => {
+                                        Some(data.chars().take(10240).collect())
+                                    }
+                                    Ok(ResponseEnum::Json(Ok(data))) => {
+                                        Some(data.to_string().chars().take(10240).collect())
+                                    }
+                                    Ok(ResponseEnum::ToFile(Ok(path))) => Some(path.clone()),
+                                    _ => None,
+                                };
 
-                                    Ok((
-                                        NetworkInspectResponsePayload {
-                                            status_code: response.status_code,
-                                            headers: response.headers.take(),
-                                        },
-                                        response_data,
-                                    ))
-                                }
-                                Err(err) => Err(err.error_message.clone()),
-                            };
-
-                            let inspect_event = NetworkInspectEvent::new_full_response(
-                                queue_request.network_inspector_id,
-                                network_inspect_response,
-                            );
-                            if let Err(err) = network_inspector_sender.try_send(inspect_event) {
-                                tracing::error!("Error sending inspect event: {}", err);
+                                Ok((
+                                    NetworkInspectResponsePayload {
+                                        status_code: response.status_code,
+                                        headers: response.headers.take(),
+                                    },
+                                    response_data,
+                                ))
                             }
+                            Err(err) => Err(err.error_message.clone()),
+                        };
+
+                        let inspect_event = NetworkInspectEvent::new_full_response(
+                            queue_request.network_inspector_id,
+                            network_inspect_response,
+                        );
+                        if let Err(err) = network_inspector_sender.try_send(inspect_event) {
+                            tracing::error!("Error sending inspect event: {}", err);
                         }
                     }
-
-                    let _ = queue_request.response_sender.send(response_result);
                 }
-            });
-        }
+
+                let _ = queue_request.response_sender.send(response_result);
+            }
+        });
     }
 
     async fn process_request(
