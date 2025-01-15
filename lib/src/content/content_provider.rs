@@ -1,5 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
+    future::Future,
+    pin::Pin,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -422,6 +424,42 @@ impl ContentProvider {
         self.fetch_file_by_url(file_hash, url.into_godot())
     }
 
+    async fn _future_fetch_file_by_url(
+        loading_resources: Arc<AtomicU64>,
+        loaded_resources: Arc<AtomicU64>,
+        ctx: ContentProviderContext,
+        url: String,
+        hash_id: String,
+        get_promise: impl Fn() -> Option<Gd<Promise>>,
+    ) {
+        #[cfg(feature = "use_resource_tracking")]
+        report_resource_start(&hash_id);
+
+        loading_resources.fetch_add(1, Ordering::Relaxed);
+
+        let absolute_file_path = format!("{}{}", ctx.content_folder, hash_id);
+
+        if ctx
+            .resource_provider
+            .fetch_resource(&url, &hash_id, &absolute_file_path)
+            .await
+            .is_ok()
+        {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_loaded(&hash_id);
+
+            then_promise(get_promise, Ok(None));
+        } else {
+            let error = anyhow::anyhow!("Failed to download file");
+
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_error(&hash_id, &error.to_string());
+
+            then_promise(get_promise, Err(error));
+        }
+        loaded_resources.fetch_add(1, Ordering::Relaxed);
+    }
+
     #[func]
     pub fn fetch_file_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
@@ -434,37 +472,15 @@ impl ContentProvider {
         let loaded_resources = self.loaded_resources.clone();
         let hash_id = file_hash.clone();
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            TokioRuntime::spawn(async move {
-                #[cfg(feature = "use_resource_tracking")]
-                report_resource_start(&hash_id);
-
-                loading_resources.fetch_add(1, Ordering::Relaxed);
-
-                let absolute_file_path = format!("{}{}", ctx.content_folder, hash_id);
-
-                if ctx
-                    .resource_provider
-                    .fetch_resource(&url, &hash_id, &absolute_file_path)
-                    .await
-                    .is_ok()
-                {
-                    #[cfg(feature = "use_resource_tracking")]
-                    report_resource_loaded(&hash_id);
-
-                    then_promise(get_promise, Ok(None));
-                } else {
-                    let error = anyhow::anyhow!("Failed to download file");
-
-                    #[cfg(feature = "use_resource_tracking")]
-                    report_resource_error(&hash_id, &error.to_string());
-
-                    then_promise(get_promise, Err(error));
-                }
-                loaded_resources.fetch_add(1, Ordering::Relaxed);
-            });
-        }
+        let future = Self::_future_fetch_file_by_url(
+            loading_resources,
+            loaded_resources,
+            ctx,
+            url,
+            hash_id,
+            get_promise,
+        );
+        TokioRuntime::spawn(future);
         promise
     }
 

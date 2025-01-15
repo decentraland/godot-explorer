@@ -32,139 +32,135 @@ pub async fn internal_load_gltf(
     content_mapping: ContentMappingAndUrlRef,
     ctx: ContentProviderContext,
 ) -> Result<(Gd<Node3D>, GodotSingleThreadSafety), anyhow::Error> {
-    
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let base_path = Arc::new(get_base_dir(&file_path));
+    let base_path = Arc::new(get_base_dir(&file_path));
 
-        let file_hash = content_mapping
-            .get_hash(file_path.as_str())
-            .ok_or(anyhow::Error::msg("File not found in the content mappings"))?;
+    let file_hash = content_mapping
+        .get_hash(file_path.as_str())
+        .ok_or(anyhow::Error::msg("File not found in the content mappings"))?;
 
-        let url = format!("{}{}", content_mapping.base_url, file_hash);
-        let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
-        ctx.resource_provider
-            .fetch_resource(&url, file_hash, &absolute_file_path)
-            .await
-            .map_err(anyhow::Error::msg)?;
+    let url = format!("{}{}", content_mapping.base_url, file_hash);
+    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
+    ctx.resource_provider
+        .fetch_resource(&url, file_hash, &absolute_file_path)
+        .await
+        .map_err(anyhow::Error::msg)?;
 
-        #[cfg(feature = "use_resource_tracking")]
-        report_resource_loading(file_hash, &"0%".to_string(), &"gltf started".to_string());
+    #[cfg(feature = "use_resource_tracking")]
+    report_resource_loading(file_hash, &"0%".to_string(), &"gltf started".to_string());
 
-        let dependencies = get_dependencies(&absolute_file_path)
-            .await?
-            .into_iter()
-            .map(|dep| {
-                let full_path = if base_path.is_empty() {
-                    dep.clone()
-                } else {
-                    format!("{}/{}", base_path, dep)
-                };
+    let dependencies = get_dependencies(&absolute_file_path)
+        .await?
+        .into_iter()
+        .map(|dep| {
+            let full_path = if base_path.is_empty() {
+                dep.clone()
+            } else {
+                format!("{}/{}", base_path, dep)
+            };
 
-                let item = content_mapping.get_hash(full_path.as_str()).cloned();
-                (dep, item)
-            })
-            .collect::<Vec<(String, Option<String>)>>();
+            let item = content_mapping.get_hash(full_path.as_str()).cloned();
+            (dep, item)
+        })
+        .collect::<Vec<(String, Option<String>)>>();
 
-        if dependencies.iter().any(|(_, hash)| hash.is_none()) {
-            return Err(anyhow::Error::msg(
-                "There are some missing dependencies in the gltf".to_string(),
-            ));
-        }
-
-        let dependencies_hash = dependencies
-            .into_iter()
-            .map(|(file_path, hash)| (file_path, hash.unwrap()))
-            .collect::<Vec<(String, String)>>();
-
-        let futures = dependencies_hash.iter().map(|(_, dependency_file_hash)| {
-            let ctx = ctx.clone();
-            let content_mapping = content_mapping.clone();
-            async move {
-                let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
-                let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
-                ctx.resource_provider
-                    .fetch_resource(&url, dependency_file_hash, &absolute_file_path)
-                    .await
-                    .map_err(|e| {
-                        format!(
-                            "Dependency {} failed to fetch: {:?}",
-                            dependency_file_hash, e
-                        )
-                    })
-            }
-        });
-
-        let result = futures_util::future::join_all(futures).await;
-        if result.iter().any(|res| res.is_err()) {
-            // collect errors
-            let errors = result
-                .into_iter()
-                .filter_map(|res| res.err())
-                .map(|err| err.to_string())
-                .collect::<Vec<String>>()
-                .join("\n");
-
-            return Err(anyhow::Error::msg(format!(
-                "Error downloading gltf dependencies: {errors}"
-            )));
-        }
-
-        let thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
-            .await
-            .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
-
-        let mut new_gltf = GltfDocument::new_gd();
-        let mut new_gltf_state = GltfState::new_gd();
-
-        let mappings = Dictionary::from_iter(
-            dependencies_hash
-                .iter()
-                .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
-        );
-
-        new_gltf_state.set_additional_data("base_path".into(), "some".to_variant());
-        new_gltf_state.set_additional_data("mappings".into(), mappings.to_variant());
-
-        let err = new_gltf
-            .append_from_file_ex(
-                GString::from(absolute_file_path.as_str()),
-                new_gltf_state.clone(),
-            )
-            .base_path(GString::from(ctx.content_folder.as_str()))
-            .flags(0)
-            .done();
-
-        if err != Error::OK {
-            let err = err.to_variant().to::<i32>();
-            return Err(anyhow::Error::msg(format!(
-                "Error loading gltf after appending from file {}",
-                err
-            )));
-        }
-
-        let node = new_gltf
-            .generate_scene(new_gltf_state)
-            .ok_or(anyhow::Error::msg(
-                "Error loading gltf when generating scene".to_string(),
-            ))?;
-
-        // Attach a ResourceLocker to the Node to control the lifecycle
-        ResourceLocker::attach_to(node.clone());
-
-        let max_size = ctx.texture_quality.to_max_size();
-        post_import_process(node.clone(), max_size);
-
-        let mut node = node.try_cast::<Node3D>().map_err(|err| {
-            anyhow::Error::msg(format!("Error loading gltf when casting to Node3D: {err}"))
-        })?;
-
-        node.rotate_y(std::f32::consts::PI);
-
-        Ok((node, thread_safe_check))
+    if dependencies.iter().any(|(_, hash)| hash.is_none()) {
+        return Err(anyhow::Error::msg(
+            "There are some missing dependencies in the gltf".to_string(),
+        ));
     }
 
-    Err(anyhow::Error::msg("Gltf not supported on wasm yet"))
+    let dependencies_hash = dependencies
+        .into_iter()
+        .map(|(file_path, hash)| (file_path, hash.unwrap()))
+        .collect::<Vec<(String, String)>>();
+
+    let futures = dependencies_hash.iter().map(|(_, dependency_file_hash)| {
+        let ctx = ctx.clone();
+        let content_mapping = content_mapping.clone();
+        async move {
+            let url = format!("{}{}", content_mapping.base_url, dependency_file_hash);
+            let absolute_file_path = format!("{}{}", ctx.content_folder, dependency_file_hash);
+            ctx.resource_provider
+                .fetch_resource(&url, dependency_file_hash, &absolute_file_path)
+                .await
+                .map_err(|e| {
+                    format!(
+                        "Dependency {} failed to fetch: {:?}",
+                        dependency_file_hash, e
+                    )
+                })
+        }
+    });
+
+    let result = futures_util::future::join_all(futures).await;
+    if result.iter().any(|res| res.is_err()) {
+        // collect errors
+        let errors = result
+            .into_iter()
+            .filter_map(|res| res.err())
+            .map(|err| err.to_string())
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        return Err(anyhow::Error::msg(format!(
+            "Error downloading gltf dependencies: {errors}"
+        )));
+    }
+
+    let thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
+        .await
+        .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
+
+    let mut new_gltf = GltfDocument::new_gd();
+    let mut new_gltf_state = GltfState::new_gd();
+
+    let mappings = Dictionary::from_iter(
+        dependencies_hash
+            .iter()
+            .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
+    );
+
+    new_gltf_state.set_additional_data("base_path".into(), "some".to_variant());
+    new_gltf_state.set_additional_data("mappings".into(), mappings.to_variant());
+
+    let err = new_gltf
+        .append_from_file_ex(
+            GString::from(absolute_file_path.as_str()),
+            new_gltf_state.clone(),
+        )
+        .base_path(GString::from(ctx.content_folder.as_str()))
+        .flags(0)
+        .done();
+
+    if err != Error::OK {
+        let err = err.to_variant().to::<i32>();
+        return Err(anyhow::Error::msg(format!(
+            "Error loading gltf after appending from file {}",
+            err
+        )));
+    }
+
+    let node = new_gltf
+        .generate_scene(new_gltf_state)
+        .ok_or(anyhow::Error::msg(
+            "Error loading gltf when generating scene".to_string(),
+        ))?;
+
+    // Attach a ResourceLocker to the Node to control the lifecycle
+    ResourceLocker::attach_to(node.clone());
+
+    let max_size = ctx.texture_quality.to_max_size();
+    post_import_process(node.clone(), max_size);
+
+    let mut node = node.try_cast::<Node3D>().map_err(|err| {
+        anyhow::Error::msg(format!("Error loading gltf when casting to Node3D: {err}"))
+    })?;
+
+    node.rotate_y(std::f32::consts::PI);
+
+    Ok((node, thread_safe_check))
+
+    // Err(anyhow::Error::msg("Gltf not supported on wasm yet"))
 }
 
 pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
@@ -286,6 +282,59 @@ pub async fn apply_update_set_mask_colliders(
     Ok(Some(gltf_node.to_variant()))
 }
 
+#[cfg(target_arch = "wasm32")]
+fn web_get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
+    use godot::engine::FileAccess;
+
+    let mut dependencies = Vec::new();
+    let file = FileAccess::open(file_path.into(), godot::engine::file_access::ModeFlags::READ)
+        .ok_or(anyhow::Error::msg("Failed to open file"))?;
+
+    let magic = file.get_32();
+    let json: serde_json::Value = if magic == 0x46546C67 {
+        let _version = file.get_32();
+        let _length = file.get_32();
+        let chunk_length = file.get_32();
+        let _chunk_type = file.get_32();
+
+        let json_data = file.get_buffer(chunk_length as i64);
+        serde_json::de::from_slice(json_data.as_slice())
+    } else {
+        let json_data = file.get_buffer(file.get_length() as i64);
+        serde_json::de::from_slice(json_data.as_slice())
+    }?;
+
+    if let Some(images) = json.get("images") {
+        if let Some(images) = images.as_array() {
+            for image in images {
+                if let Some(uri) = image.get("uri") {
+                    if let Some(uri) = uri.as_str() {
+                        if !uri.is_empty() && !uri.starts_with("data:") {
+                            dependencies.push(uri.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(images) = json.get("buffers") {
+        if let Some(images) = images.as_array() {
+            for image in images {
+                if let Some(uri) = image.get("uri") {
+                    if let Some(uri) = uri.as_str() {
+                        if !uri.is_empty() && !uri.starts_with("data:") {
+                            dependencies.push(uri.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(dependencies)
+}
+
 async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -339,7 +388,9 @@ async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Err
 
         Ok(dependencies)
     }
-    Err(anyhow::Error::msg("Gltf not supported on wasm yet"))
+
+    #[cfg(target_arch = "wasm32")]
+    web_get_dependencies(file_path)
 }
 
 fn get_collider(mesh_instance: &Gd<MeshInstance3D>) -> Option<Gd<StaticBody3D>> {

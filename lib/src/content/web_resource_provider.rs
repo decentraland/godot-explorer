@@ -57,7 +57,7 @@ impl ResourceProvider {
     // Private asynchronous function to initialize the cache
     async fn initialize(&self) -> Result<(), io::Error> {
         let cache_folder: GString = self.cache_folder.clone().into();
-        let mut existing_files = self.existing_files.write().await;
+        let mut existing_files = self.existing_files.blocking_write();
 
         // Use GodotFileSystem to check if directory exists and create if needed
         if !DirAccess::dir_exists_absolute(cache_folder.clone()) {
@@ -102,11 +102,13 @@ impl ResourceProvider {
             }
         }
 
-        self.ensure_space_for(&mut existing_files, 0).await;
+        drop(dir);
+
+        self.ensure_space_for(&mut existing_files, 0);
         Ok(())
     }
 
-    async fn ensure_space_for(
+    fn ensure_space_for(
         &self,
         existing_files: &mut HashMap<String, FileMetadata>,
         file_size: i64,
@@ -114,7 +116,7 @@ impl ResourceProvider {
         // If adding the new file exceeds the cache size, remove less used files
         let max_cache_size = self.max_cache_size.load(Ordering::SeqCst);
         while self.total_size(existing_files) + file_size > max_cache_size {
-            if !self.remove_less_used(existing_files).await {
+            if !self.remove_less_used(existing_files) {
                 break;
             }
         }
@@ -153,13 +155,13 @@ impl ResourceProvider {
             .sum()
     }
 
-    async fn remove_less_used(&self, existing_files: &mut HashMap<String, FileMetadata>) -> bool {
+    fn remove_less_used(&self, existing_files: &mut HashMap<String, FileMetadata>) -> bool {
         if let Some((file_path, _)) = existing_files
             .iter()
             .min_by_key(|(_, metadata)| metadata.last_accessed)
             .map(|(path, metadata)| (path.clone(), metadata))
         {
-            self.remove_file(existing_files, &file_path).await;
+            self.remove_file(existing_files, &file_path);
             true
         } else {
             false
@@ -202,8 +204,9 @@ impl ResourceProvider {
         let request_response = self.http_queue_requester.request(request, 0).await;
         match request_response {
             Ok(request_response) => {
-                let file_path = FileAccess::open(dest.to_string_lossy().as_ref().into(), ModeFlags::READ)
-                    .ok_or(format!("Failed open file: {}", dest.display()))?;
+                let file_path =
+                    FileAccess::open(dest.to_string_lossy().as_ref().into(), ModeFlags::READ)
+                        .ok_or(format!("Failed open file: {}", dest.display()))?;
                 let data = file_path.get_buffer(file_path.get_length() as i64);
                 Ok(data.to_vec())
             }
@@ -260,36 +263,52 @@ impl ResourceProvider {
         Ok(())
     }
 
+    fn _get_file_size(&self, absolute_file_path: &String) -> Result<i64, String> {
+        let file_handle = FileAccess::open(absolute_file_path.into(), ModeFlags::READ);
+        if let Some(file) = file_handle {
+            Ok(file.get_length() as i64)
+        } else {
+            Err(format!("Failed to open file: {}", absolute_file_path))
+        }
+    }
+
     pub async fn fetch_resource(
         &self,
         url: &str,
         file_hash: &String,
         absolute_file_path: &String,
     ) -> Result<(), String> {
+        tracing::info!("Fetching resource: {}", absolute_file_path);
         self.ensure_initialized().await?;
 
+        tracing::info!("Handling pending download");
         self.handle_pending_download(file_hash, absolute_file_path)
             .await?;
 
+        tracing::info!("Acquiring semaphore");
         let permit = self.semaphore.acquire().await.unwrap();
 
+        tracing::info!("Checking if file exists");
         if !DirAccess::dir_exists_absolute(absolute_file_path.into()) {
+            tracing::info!("Downloading file");
             self.download_file(url, Path::new(absolute_file_path))
                 .await?;
 
-            let metadata = FileAccess::open(absolute_file_path.into(), ModeFlags::READ)
-                .ok_or(format!("Failed open file: {}", absolute_file_path))?;
-            let file_size = metadata.get_length() as i64;
+            tracing::info!("Getting file size");
+            let file_size = self._get_file_size(absolute_file_path)?;
 
+            tracing::info!("Ensuring space for file");
             let mut existing_files = self.existing_files.write().await;
-            self.ensure_space_for(&mut existing_files, file_size).await;
+            self.ensure_space_for(&mut existing_files, file_size);
             self.add_file(&mut existing_files, absolute_file_path.clone(), file_size);
         } else {
+            tracing::info!("File exists, handling existing file");
             self.handle_existing_file(absolute_file_path).await?;
         }
 
         let mut pending_downloads = self.pending_downloads.write().await;
         if let Some(notify) = pending_downloads.remove(file_hash) {
+            tracing::info!("Notifying waiters");
             notify.notify_waiters();
         }
 
@@ -319,8 +338,8 @@ impl ResourceProvider {
             let metadata = FileAccess::open(absolute_file_path.into(), ModeFlags::READ)
                 .ok_or(format!("Failed open file: {}", absolute_file_path))?;
             let file_size = metadata.get_length() as i64;
-            let mut existing_files = self.existing_files.write().await;
-            self.ensure_space_for(&mut existing_files, file_size).await;
+            let mut existing_files = self.existing_files.blocking_write();
+            self.ensure_space_for(&mut existing_files, file_size);
             self.add_file(&mut existing_files, absolute_file_path.clone(), file_size);
             data
         } else {
