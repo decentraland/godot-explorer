@@ -5,11 +5,11 @@ use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 use super::{
     decentraland_auth_server::{do_request, CreateRequest},
     ephemeral_auth_chain::EphemeralAuthChain,
-    wallet::{AsH160, ObjSafeWalletSigner, SimpleAuthChain, Wallet},
+    wallet::{AsH160, SimpleAuthChain, Wallet, WalletType},
 };
 use chrono::{DateTime, Utc};
 use ethers_core::types::Signature;
-use ethers_signers::LocalWallet;
+use ethers_signers::{LocalWallet, Signer};
 use rand::thread_rng;
 
 pub fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
@@ -26,7 +26,7 @@ pub async fn try_create_remote_ephemeral(
 ) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
     let local_wallet = LocalWallet::new(&mut thread_rng());
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
-    let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
+    let ephemeral_wallet = Wallet::new_from_inner(WalletType::Local(local_wallet));
     let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
     let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
     let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
@@ -58,7 +58,7 @@ pub async fn try_create_remote_ephemeral(
 pub fn create_local_ephemeral(signer_wallet: &LocalWallet) -> EphemeralAuthChain {
     let local_wallet = LocalWallet::new(&mut thread_rng());
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
-    let ephemeral_wallet = Wallet::new_from_inner(Box::new(local_wallet));
+    let ephemeral_wallet = Wallet::new_from_inner(WalletType::Local(local_wallet));
     let ephemeral_address = format!("{:#x}", ephemeral_wallet.address());
     let expiration = std::time::SystemTime::now() + std::time::Duration::from_secs(30 * 24 * 3600);
     let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);

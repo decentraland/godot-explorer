@@ -159,6 +159,8 @@ pub async fn internal_load_gltf(
     node.rotate_y(std::f32::consts::PI);
 
     Ok((node, thread_safe_check))
+
+    // Err(anyhow::Error::msg("Gltf not supported on wasm yet"))
 }
 
 pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
@@ -280,24 +282,25 @@ pub async fn apply_update_set_mask_colliders(
     Ok(Some(gltf_node.to_variant()))
 }
 
-async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
+#[cfg(target_arch = "wasm32")]
+fn web_get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
+    use godot::engine::FileAccess;
+
     let mut dependencies = Vec::new();
-    let mut file = tokio::fs::File::open(file_path).await?;
+    let file = FileAccess::open(file_path.into(), godot::engine::file_access::ModeFlags::READ)
+        .ok_or(anyhow::Error::msg("Failed to open file"))?;
 
-    let magic = file.read_i32_le().await?;
+    let magic = file.get_32();
     let json: serde_json::Value = if magic == 0x46546C67 {
-        let _version = file.read_i32_le().await?;
-        let _length = file.read_i32_le().await?;
-        let chunk_length = file.read_i32_le().await?;
-        let _chunk_type = file.read_i32_le().await?;
+        let _version = file.get_32();
+        let _length = file.get_32();
+        let chunk_length = file.get_32();
+        let _chunk_type = file.get_32();
 
-        let mut json_data = vec![0u8; chunk_length as usize];
-        let _ = file.read_exact(&mut json_data).await?;
+        let json_data = file.get_buffer(chunk_length as i64);
         serde_json::de::from_slice(json_data.as_slice())
     } else {
-        let mut json_data = Vec::new();
-        let _ = file.seek(std::io::SeekFrom::Start(0)).await?;
-        let _ = file.read_to_end(&mut json_data).await?;
+        let json_data = file.get_buffer(file.get_length() as i64);
         serde_json::de::from_slice(json_data.as_slice())
     }?;
 
@@ -330,6 +333,64 @@ async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Err
     }
 
     Ok(dependencies)
+}
+
+async fn get_dependencies(file_path: &String) -> Result<Vec<String>, anyhow::Error> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let mut dependencies = Vec::new();
+        let mut file = tokio::fs::File::open(file_path).await?;
+
+        let magic = file.read_i32_le().await?;
+        let json: serde_json::Value = if magic == 0x46546C67 {
+            let _version = file.read_i32_le().await?;
+            let _length = file.read_i32_le().await?;
+            let chunk_length = file.read_i32_le().await?;
+            let _chunk_type = file.read_i32_le().await?;
+
+            let mut json_data = vec![0u8; chunk_length as usize];
+            let _ = file.read_exact(&mut json_data).await?;
+            serde_json::de::from_slice(json_data.as_slice())
+        } else {
+            let mut json_data = Vec::new();
+            let _ = file.seek(std::io::SeekFrom::Start(0)).await?;
+            let _ = file.read_to_end(&mut json_data).await?;
+            serde_json::de::from_slice(json_data.as_slice())
+        }?;
+
+        if let Some(images) = json.get("images") {
+            if let Some(images) = images.as_array() {
+                for image in images {
+                    if let Some(uri) = image.get("uri") {
+                        if let Some(uri) = uri.as_str() {
+                            if !uri.is_empty() && !uri.starts_with("data:") {
+                                dependencies.push(uri.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(images) = json.get("buffers") {
+            if let Some(images) = images.as_array() {
+                for image in images {
+                    if let Some(uri) = image.get("uri") {
+                        if let Some(uri) = uri.as_str() {
+                            if !uri.is_empty() && !uri.starts_with("data:") {
+                                dependencies.push(uri.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(dependencies)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    web_get_dependencies(file_path)
 }
 
 fn get_collider(mesh_instance: &Gd<MeshInstance3D>) -> Option<Gd<StaticBody3D>> {

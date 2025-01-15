@@ -114,7 +114,12 @@ func _ready():
 
 	self.avatars = AvatarScene.new()
 	self.avatars.set_name("avatar_scene")
+	
+	self.web_http_requester.set_tls_options(TLSOptions.client())
+	
 
+	get_tree().root.add_child.call_deferred(self.tokio_runtime)
+	get_tree().root.add_child.call_deferred(self.web_http_requester)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.content_provider)

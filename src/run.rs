@@ -1,8 +1,8 @@
-use std::{collections::HashMap, io::BufRead, path::PathBuf};
+use std::{collections::HashMap, fs, io::BufRead, path::PathBuf};
 
 use crate::{
     consts::{GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
-    copy_files::copy_library,
+    copy_files::{copy_if_modified, copy_library},
     export::get_target_os,
     path::{adjust_canonicalization, get_godot_path},
 };
@@ -272,4 +272,35 @@ fn run_tests(program: &str, args: &[&str], scene_tests: bool) -> anyhow::Result<
     } else {
         Err(anyhow::anyhow!("test not run"))
     }
+}
+
+
+pub fn build_web() -> Result<(), anyhow::Error> { 
+    let build_cwd =
+        adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER).unwrap());
+    let build_status = std::process::Command::new("cargo")
+        .current_dir(build_cwd)
+        .args(vec!["build", "-Zbuild-std"])
+        .status()
+        .expect("Failed to build lib");
+
+    if !build_status.success() {
+        return Err(anyhow::anyhow!(
+            "cargo build exited with non-zero status: {}",
+            build_status
+        ));
+    }
+
+    let file_name = "decentraland_godot_lib.wasm";
+    let source_folder: &str = "target/wasm32-unknown-emscripten/debug/";
+    let source_folder = format!("{RUST_LIB_PROJECT_FOLDER}{source_folder}");
+    let source_file =
+        adjust_canonicalization(fs::canonicalize(source_folder)?.join(file_name.clone()));
+
+    let lib_folder = format!("{GODOT_PROJECT_FOLDER}lib/");
+    let destination_file =
+        adjust_canonicalization(fs::canonicalize(lib_folder.as_str())?.join(file_name));
+    copy_if_modified(source_file, destination_file, false)?;
+
+    Ok(())
 }
