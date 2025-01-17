@@ -38,6 +38,10 @@ gdscript/warnings/redundant_await=false
 window/size/viewport_width=1280
 window/size/viewport_height=720
 
+[editor]
+
+run/main_run_args="--avatar-renderer --avatars ../tests/avatars-test-input.json"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/dcl_build_plugin/plugin.cfg", "res://addons/godot-xr-tools/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/webview-godot-android/plugin.cfg")
