@@ -282,7 +282,7 @@ func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat, profile: D
 	cloned_avatar_preview.show_platform = false
 	cloned_avatar_preview.hide_name = true
 	cloned_avatar_preview.can_move = false
-	var face = await cloned_avatar_preview.async_get_viewport_image(true, Vector2i(256, 256))
+	var face = await cloned_avatar_preview.async_get_viewport_image(true, Vector2i(256, 256), 25)
 	var body = await cloned_avatar_preview.async_get_viewport_image(false, Vector2i(256, 512))
 
 	var body_data: PackedByteArray = body.save_png_to_buffer()

@@ -11,7 +11,7 @@ class AvatarRendererSpecs:
 	var face_dest_path := ""
 	var face_width := 256
 	var face_height := 256
-	var face_zoom := 25
+	var face_zoom := 25.0
 
 	var avatar: DclAvatarWireFormat
 
