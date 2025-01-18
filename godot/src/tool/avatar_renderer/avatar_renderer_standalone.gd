@@ -125,7 +125,7 @@ func _async_on_avatar_avatar_loaded():
 		ensure_base_dir_exists(face_dest_path)
 
 		var face_image = await avatar_preview.async_get_viewport_image(
-			true, Vector2i(profile.face_width, profile.face_height)
+			true, Vector2i(profile.face_width, profile.face_height), profile.face_zoom
 		)
 		face_image.save_png(face_dest_path)
 		logs.push_back("🟢 " + face_dest_path)
