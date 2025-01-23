@@ -31,6 +31,7 @@ XRToolsRumbleManager="*res://addons/godot-xr-tools/rumble/rumble_manager.gd"
 
 [debug]
 
+settings/stdout/print_fps=true
 gdscript/warnings/redundant_await=false
 
 [display]
