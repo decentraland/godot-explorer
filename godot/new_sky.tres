@@ -4,7 +4,7 @@
 
 [sub_resource type="Gradient" id="Gradient_ebu3r"]
 offsets = PackedFloat32Array(0.140436, 0.837772)
-colors = PackedColorArray(0.365604, 0.549718, 1, 1, 1, 1, 1, 1)
+colors = PackedColorArray(0.517251, 0.665659, 1, 1, 1, 1, 1, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_lhqux"]
 gradient = SubResource("Gradient_ebu3r")
@@ -20,7 +20,7 @@ width = 2
 [sub_resource type="Gradient" id="Gradient_odg0d"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_6tpnp"]
-frequency = 0.005
+noise_type = 5
 fractal_octaves = 7
 fractal_weighted_strength = 0.25
 
@@ -71,7 +71,7 @@ shader_parameter/gamma = 1.0
 shader_parameter/scale = Vector3(1, 0.14, 1)
 shader_parameter/dither_range = 0.0
 shader_parameter/dither_amount = 256.0
-shader_parameter/day_night_cycle = 0.0
+shader_parameter/day_night_cycle = 0.611
 shader_parameter/floor_color = Color(9.14484e-07, 0.301144, 0.386001, 1)
 shader_parameter/clouds_tex = SubResource("NoiseTexture2D_re5no")
 shader_parameter/clouds_gradient_day = SubResource("GradientTexture1D_lhqux")

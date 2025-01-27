@@ -106,7 +106,8 @@ void sky() {
 	float horizon = 1.0-smoothstep(0.0,0.1,eye_dot);
 	horizon *= horizon * horizon;
 	float horizon_distortion = -smoothstep(1.0,.1,eye_dot);
-	float sun_shape = smoothstep(.98+horizon_distortion*.05, 1.0, abs(dot_val+.0025*gold_noise(FRAGCOORD.xy, 1.0))+horizon*.02);
+
+	float sun_shape = smoothstep(.99+horizon_distortion*.05, 1.0, abs(dot_val+.0025*gold_noise(FRAGCOORD.xy, 1.0))+horizon*.02);
 	float moon_shape = smoothstep(.995+horizon_distortion*.001, .996+horizon_distortion*.001, abs(dot_val));
 
 	vec3 rd = EYEDIR;
@@ -165,12 +166,12 @@ void sky() {
 		vec3 sun_color = textureLod(sun_color_cycle, vec2(day_night_cycle),0.0).rgb * 3.0;
 		vec3 moon_color =textureLod(moon_color_cycle, vec2(day_night_blend),0.0).rgb;
 		COLOR = mix(
-			COLOR, 
+			COLOR,
 			mix(
 				moon_color,
 				sun_color,
 				is_sun
-			), 
+			),
 			sun * (1.0-clouds)
 		);
 		COLOR = mix(COLOR, floor_color, floor);

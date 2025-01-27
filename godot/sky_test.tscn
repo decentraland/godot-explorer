@@ -71,7 +71,6 @@ shader_parameter/gamma = 1.0
 shader_parameter/scale = Vector3(1, 0.14, 1)
 shader_parameter/dither_range = 0.0
 shader_parameter/dither_amount = 256.0
-shader_parameter/day_night_cycle = 0.0
 shader_parameter/floor_color = Color(9.14484e-07, 0.301144, 0.386001, 1)
 shader_parameter/clouds_tex = SubResource("NoiseTexture2D_re5no")
 shader_parameter/clouds_gradient_day = SubResource("GradientTexture1D_lhqux")
