@@ -23,7 +23,7 @@ uniform float dither_range = .1;
 
 uniform float dither_amount = 128.0;
 
-uniform float day_night_cycle : hint_range(0.0,1.0);
+global uniform float day_night_cycle : hint_range(0.0,1.0);
 
 uniform vec3 floor_color : source_color;
 
