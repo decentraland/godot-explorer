@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    ptr::null,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -7,11 +8,12 @@ use std::{
     time::{Duration, Instant},
 };
 
+use futures_util::future::try_join_all;
 use godot::{
     engine::{AudioStream, Material, Mesh, Texture2D},
     prelude::*,
 };
-use tokio::sync::Semaphore;
+use tokio::sync::{RwLock, Semaphore};
 
 use crate::{
     auth::wallet::AsH160,
@@ -58,6 +60,15 @@ pub struct ContentEntry {
     last_access: Instant,
 }
 
+pub struct OptimizedData {
+    // Set of optimized hashes that we know that exists...
+    assets: RwLock<HashSet<String>>,
+    // HashMap with all optimized hashes and its dependencies...
+    dependencies: RwLock<HashMap<String, HashSet<String>>>,
+    // List of optimized assets that were loaded (already added to ProjectSettings.load_resource_pack)
+    loaded_assets: RwLock<HashSet<String>>,
+}
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct ContentProvider {
@@ -75,6 +86,9 @@ pub struct ContentProvider {
     loaded_resources: Arc<AtomicU64>,
     #[cfg(feature = "use_resource_tracking")]
     tracking_tick: f64,
+    optimized_data: Arc<OptimizedData>,
+    // Set of optimized hashes that we know that exists...
+    optimized_assets: HashSet<String>,
 }
 
 #[derive(Clone)]
@@ -87,6 +101,8 @@ pub struct ContentProviderContext {
 }
 
 unsafe impl Send for ContentProviderContext {}
+
+const ASSET_OPTIMIZED_BASE_URL: &str = "https://storage.kuruk.net/optimized/v2";
 
 #[godot_api]
 impl INode for ContentProvider {
@@ -123,6 +139,12 @@ impl INode for ContentProvider {
             download_speed_mbs: 0.0,
             #[cfg(feature = "use_resource_tracking")]
             tracking_tick: 0.0,
+            optimized_data: Arc::new(OptimizedData {
+                assets: RwLock::new(HashSet::default()),
+                dependencies: RwLock::new(HashMap::default()),
+                loaded_assets: RwLock::new(HashSet::default()),
+            }),
+            optimized_assets: HashSet::default(),
         }
     }
     fn ready(&mut self) {}
@@ -203,6 +225,187 @@ impl INode for ContentProvider {
 
 #[godot_api]
 impl ContentProvider {
+    #[func]
+    pub fn fetch_optimized_asset_with_dependencies(&mut self, file_hash: GString) -> Gd<Promise> {
+        let hash_zip: String = format!("{}-mobile.zip", file_hash);
+        let asset_url: String = format!("{}/{}", ASSET_OPTIMIZED_BASE_URL, hash_zip);
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+        let optimized_data = self.optimized_data.clone();
+
+        let file_hash = file_hash.to_string();
+        TokioRuntime::spawn(async move {
+            // 1. We search which dependencies we need to download
+            let mut futures_to_wait: Vec<_> = Vec::default();
+            let mut hashes_to_load: Vec<String> = Vec::default();
+
+            let dependencies = optimized_data.dependencies.read().await;
+            let dependencies = dependencies.get(&file_hash).cloned().unwrap_or_default();
+
+            let loaded_dependencies = optimized_data.loaded_assets.read().await;
+
+            for hash_dependency in &dependencies {
+                let hash_dependency_zip = format!("{}-mobile.zip", hash_dependency);
+                let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
+
+                if !loaded_dependencies.contains(hash_dependency) {
+                    hashes_to_load.push(hash_dependency.clone());
+                } else if ctx
+                    .resource_provider
+                    .file_exists(&hash_dependency_zip)
+                    .await
+                {
+                    continue; // Skip fetching if the dependency exists in cache
+                }
+
+                // Fetch the resource if it's either a new dependency or missing in cache
+                let future = ctx.resource_provider.fetch_resource(
+                    asset_url.clone(),
+                    hash_dependency_zip.clone(),
+                    absolute_file_path,
+                );
+                futures_to_wait.push(future);
+            }
+
+            // 2. We add what we are going to load into the loaded_dependencies
+            drop(loaded_dependencies); // drop read, before writing
+            let mut loaded_dependencies = optimized_data.loaded_assets.write().await;
+            for hash_to_load in &hashes_to_load {
+                loaded_dependencies.insert(hash_to_load.clone());
+            }
+            drop(loaded_dependencies); // drop write
+
+            // 3. Wait all downloads
+            let _ = try_join_all(futures_to_wait).await;
+
+            // 4. Load what was listed
+            for hash_to_load in &hashes_to_load {
+                let hash_zip = format!("{}-mobile.zip", hash_to_load);
+                let zip_path = format!("user://content/{}", hash_zip).to_godot();
+                godot::engine::ProjectSettings::singleton()
+                    .load_resource_pack_ex(zip_path)
+                    .replace_files(false)
+                    .done();
+            }
+
+            then_promise(get_promise, Ok(None));
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_optimized_asset(&mut self, file_hash: GString) -> Gd<Promise> {
+        if self.optimized_asset_exists(file_hash.clone()) {
+            return Promise::from_rejected(format!("Optimized asset hash={} doesn't exists", file_hash));
+        }
+        let hash_zip: String = format!("{}-mobile.zip", file_hash);
+        let asset_url: String = format!("{}/{}", ASSET_OPTIMIZED_BASE_URL, hash_zip);
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+        let optimized_data = self.optimized_data.clone();
+
+        let file_hash = file_hash.to_string();
+        TokioRuntime::spawn(async move {
+            // 1. We search which dependencies we need to download
+            let mut load_hash: bool = false;
+
+            let hash_dependency_zip = format!("{}-mobile.zip", file_hash);
+            let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
+
+            let loaded_dependencies = optimized_data.loaded_assets.read().await;
+            if !loaded_dependencies.contains(&file_hash) {
+                load_hash = true;
+            } else if ctx
+                .resource_provider
+                .file_exists(&hash_dependency_zip)
+                .await
+            {
+                then_promise(get_promise, Ok(None));
+                return;
+            }
+
+            // Fetch the resource if it's either a new dependency or missing in cache
+            let future = ctx.resource_provider.fetch_resource(
+                asset_url,
+                hash_dependency_zip.clone(),
+                absolute_file_path,
+            );
+
+            // 2. We add what we are going to load into the loaded_dependencies
+            drop(loaded_dependencies); // drop read, before writing
+            optimized_data.loaded_assets.write().await.insert(file_hash.clone());
+
+            // 3. Wait download
+            let _ = future.await;
+
+            // 4. Load what was listed
+            if load_hash {
+                let zip_path = format!("user://content/{}", hash_dependency_zip).to_godot();
+                godot::engine::ProjectSettings::singleton()
+                    .load_resource_pack_ex(zip_path)
+                    .replace_files(false)
+                    .done();
+            }
+
+            then_promise(get_promise, Ok(None));
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn optimized_asset_exists(&self, file_hash: GString) -> bool {
+        self.optimized_assets.contains(&file_hash.to_string())
+    }
+
+    #[func]
+    pub fn add_optimized_assets(
+        &mut self,
+        optimized_assets: PackedStringArray,
+        optimized_assets_dependencies: Dictionary,
+    ) -> Gd<Promise> {
+        let optimized_assets_dependencies: HashMap<String, HashSet<String>> =
+            optimized_assets_dependencies
+                .iter_shared()
+                .map(|(k, v)| {
+                    let key = k.to_string();
+                    let value = v
+                        .try_to::<PackedStringArray>()
+                        .map(|arr| arr.to_vec().iter().map(|s| s.to_string()).collect())
+                        .unwrap_or_default();
+
+                    (key, value)
+                })
+                .collect();
+
+        let optimized_assets: HashSet<String> = optimized_assets
+            .to_vec()
+            .iter()
+            .map(|v| v.to_string())
+            .collect();
+
+        self.optimized_assets.extend(optimized_assets.clone());
+
+        let (promise, get_promise) = Promise::make_to_async();
+
+        let optimized_data = self.optimized_data.clone();
+
+        TokioRuntime::spawn(async move {
+            optimized_data
+                .dependencies
+                .write()
+                .await
+                .extend(optimized_assets_dependencies);
+            optimized_data.assets.write().await.extend(optimized_assets);
+            then_promise(get_promise, Ok(None));
+        });
+
+        promise
+    }
+
     #[func]
     pub fn fetch_wearable_gltf(
         &mut self,
@@ -436,7 +639,7 @@ impl ContentProvider {
 
             if ctx
                 .resource_provider
-                .fetch_resource(&url, &hash_id, &absolute_file_path)
+                .fetch_resource(url, hash_id, absolute_file_path)
                 .await
                 .is_ok()
             {

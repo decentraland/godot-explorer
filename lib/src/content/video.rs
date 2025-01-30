@@ -9,7 +9,7 @@ pub async fn download_video(
     let url = format!("{}{}", content_mapping.base_url, file_hash);
     let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
     ctx.resource_provider
-        .fetch_resource(&url, &file_hash, &absolute_file_path)
+        .fetch_resource(url, file_hash, absolute_file_path)
         .await
         .map_err(anyhow::Error::msg)?;
 

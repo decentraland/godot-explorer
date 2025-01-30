@@ -17,6 +17,9 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 #const FORCE_TEST_ARG = "[[52,-56]]"
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
+const ASSET_OPTIMIZED_BASE_URL: String = "https://storage.kuruk.net/optimized/v2"
+#const ASSET_OPTIMIZED_BASE_URL: String = "http://localhost:3232"
+
 ## Global classes (singleton pattern)
 var raycast_debugger: RaycastDebugger
 
@@ -33,6 +36,8 @@ var webkit_android_plugin
 var webkit_ios_plugin
 
 var network_inspector_window: Window = null
+
+var optimized_loaded_assets: Dictionary = {}
 
 
 func is_xr() -> bool:

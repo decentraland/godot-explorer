@@ -20,9 +20,6 @@ const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
-const ASSET_OPTIMIZED_BASE_URL: String = "https://storage.kuruk.net"
-#const ASSET_OPTIMIZED_BASE_URL: String = "http://localhost:3232"
-
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 
@@ -37,6 +34,8 @@ class SceneItem:
 	var scene_number_id: int = -1
 	var parcels: Array[Vector2i] = []
 	var is_global: bool = false
+	var optimized_content: Array = []
+	var dependency_map: Dictionary = {}
 
 
 var current_position: Vector2i = Vector2i(-1000, -1000)
@@ -377,8 +376,9 @@ func async_load_scene(
 			)
 			return PromiseUtils.resolved(false)
 
-	var scene_hash_zip: String = "%s.zip" % scene_entity_id
-	var asset_url: String = "%s/%s.zip" % [ASSET_OPTIMIZED_BASE_URL, scene_entity_id]
+	var scene_hash_zip: String = "%s-mobile.zip" % scene_entity_id
+	var asset_url: String = "%s/%s-mobile.zip" % [Global.ASSET_OPTIMIZED_BASE_URL, scene_entity_id]
+	prints("asset_url", asset_url, scene_hash_zip)
 	var download_promise: Promise = Global.content_provider.fetch_file_by_url(
 		scene_hash_zip, asset_url
 	)
@@ -391,6 +391,13 @@ func async_load_scene(
 			printerr("Scene ", scene_entity_id, " failed to load optimized scene")
 		else:
 			print("Scene ", scene_entity_id, " zip loaded successfully.")
+			var optimized_metadata_path = "res://" + scene_entity_id + "-optimized.json"
+			var optimized_metadata = load_json_file(optimized_metadata_path)
+			var optimized_content: Array = optimized_metadata.get("optimizedContent", [])
+			var external_scene_dependencies = optimized_metadata.get("externalSceneDependencies", {})
+			scene_item.optimized_content = optimized_content
+			scene_item.dependency_map = external_scene_dependencies
+			prints("optimized_content:", optimized_content)
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):
@@ -400,6 +407,26 @@ func async_load_scene(
 	_on_try_spawn_scene(loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path)
 	return PromiseUtils.resolved(true)
 
+
+func load_json_file(file_path: String) -> Dictionary:
+	var file = FileAccess.open(file_path, FileAccess.READ)
+	if file:
+		# Read the file's content as a string
+		var json_string = file.get_as_text()
+		file.close()
+		
+		# Parse the JSON string into a dictionary
+		var json_result = JSON.parse_string(json_string)
+		if json_result != null:
+			return json_result  # This will be the parsed dictionary
+		else:
+			# Handle JSON parsing error
+			push_error("Error parsing JSON file: " + json_string)
+	else:
+		# Handle file opening error
+		push_error("Failed to open file: " + file_path)
+	
+	return {}  # Return an empty dictionary in case of failure
 
 func _on_try_spawn_scene(
 	scene_item: SceneItem, local_main_js_path: String, local_main_crdt_path: String
