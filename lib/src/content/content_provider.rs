@@ -1,6 +1,5 @@
 use std::{
     collections::{HashMap, HashSet},
-    ptr::null,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -10,7 +9,7 @@ use std::{
 
 use futures_util::future::try_join_all;
 use godot::{
-    engine::{AudioStream, Material, Mesh, Texture2D},
+    engine::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
     prelude::*,
 };
 use tokio::sync::{RwLock, Semaphore};
@@ -227,67 +226,13 @@ impl INode for ContentProvider {
 impl ContentProvider {
     #[func]
     pub fn fetch_optimized_asset_with_dependencies(&mut self, file_hash: GString) -> Gd<Promise> {
-        let hash_zip: String = format!("{}-mobile.zip", file_hash);
-        let asset_url: String = format!("{}/{}", ASSET_OPTIMIZED_BASE_URL, hash_zip);
-
         let (promise, get_promise) = Promise::make_to_async();
         let ctx = self.get_context();
         let optimized_data = self.optimized_data.clone();
 
         let file_hash = file_hash.to_string();
         TokioRuntime::spawn(async move {
-            // 1. We search which dependencies we need to download
-            let mut futures_to_wait: Vec<_> = Vec::default();
-            let mut hashes_to_load: Vec<String> = Vec::default();
-
-            let dependencies = optimized_data.dependencies.read().await;
-            let dependencies = dependencies.get(&file_hash).cloned().unwrap_or_default();
-
-            let loaded_dependencies = optimized_data.loaded_assets.read().await;
-
-            for hash_dependency in &dependencies {
-                let hash_dependency_zip = format!("{}-mobile.zip", hash_dependency);
-                let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
-
-                if !loaded_dependencies.contains(hash_dependency) {
-                    hashes_to_load.push(hash_dependency.clone());
-                } else if ctx
-                    .resource_provider
-                    .file_exists(&hash_dependency_zip)
-                    .await
-                {
-                    continue; // Skip fetching if the dependency exists in cache
-                }
-
-                // Fetch the resource if it's either a new dependency or missing in cache
-                let future = ctx.resource_provider.fetch_resource(
-                    asset_url.clone(),
-                    hash_dependency_zip.clone(),
-                    absolute_file_path,
-                );
-                futures_to_wait.push(future);
-            }
-
-            // 2. We add what we are going to load into the loaded_dependencies
-            drop(loaded_dependencies); // drop read, before writing
-            let mut loaded_dependencies = optimized_data.loaded_assets.write().await;
-            for hash_to_load in &hashes_to_load {
-                loaded_dependencies.insert(hash_to_load.clone());
-            }
-            drop(loaded_dependencies); // drop write
-
-            // 3. Wait all downloads
-            let _ = try_join_all(futures_to_wait).await;
-
-            // 4. Load what was listed
-            for hash_to_load in &hashes_to_load {
-                let hash_zip = format!("{}-mobile.zip", hash_to_load);
-                let zip_path = format!("user://content/{}", hash_zip).to_godot();
-                godot::engine::ProjectSettings::singleton()
-                    .load_resource_pack_ex(zip_path)
-                    .replace_files(false)
-                    .done();
-            }
+            let _ = ContentProvider::async_fetch_optimized_asset(file_hash, ctx, optimized_data, true).await;
 
             then_promise(get_promise, Ok(None));
         });
@@ -298,10 +243,11 @@ impl ContentProvider {
     #[func]
     pub fn fetch_optimized_asset(&mut self, file_hash: GString) -> Gd<Promise> {
         if self.optimized_asset_exists(file_hash.clone()) {
-            return Promise::from_rejected(format!("Optimized asset hash={} doesn't exists", file_hash));
+            return Promise::from_rejected(format!(
+                "Optimized asset hash={} doesn't exists",
+                file_hash
+            ));
         }
-        let hash_zip: String = format!("{}-mobile.zip", file_hash);
-        let asset_url: String = format!("{}/{}", ASSET_OPTIMIZED_BASE_URL, hash_zip);
 
         let (promise, get_promise) = Promise::make_to_async();
         let ctx = self.get_context();
@@ -309,47 +255,7 @@ impl ContentProvider {
 
         let file_hash = file_hash.to_string();
         TokioRuntime::spawn(async move {
-            // 1. We search which dependencies we need to download
-            let mut load_hash: bool = false;
-
-            let hash_dependency_zip = format!("{}-mobile.zip", file_hash);
-            let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
-
-            let loaded_dependencies = optimized_data.loaded_assets.read().await;
-            if !loaded_dependencies.contains(&file_hash) {
-                load_hash = true;
-            } else if ctx
-                .resource_provider
-                .file_exists(&hash_dependency_zip)
-                .await
-            {
-                then_promise(get_promise, Ok(None));
-                return;
-            }
-
-            // Fetch the resource if it's either a new dependency or missing in cache
-            let future = ctx.resource_provider.fetch_resource(
-                asset_url,
-                hash_dependency_zip.clone(),
-                absolute_file_path,
-            );
-
-            // 2. We add what we are going to load into the loaded_dependencies
-            drop(loaded_dependencies); // drop read, before writing
-            optimized_data.loaded_assets.write().await.insert(file_hash.clone());
-
-            // 3. Wait download
-            let _ = future.await;
-
-            // 4. Load what was listed
-            if load_hash {
-                let zip_path = format!("user://content/{}", hash_dependency_zip).to_godot();
-                godot::engine::ProjectSettings::singleton()
-                    .load_resource_pack_ex(zip_path)
-                    .replace_files(false)
-                    .done();
-            }
-
+            let _ = ContentProvider::async_fetch_optimized_asset(file_hash, ctx, optimized_data, false).await;
             then_promise(get_promise, Ok(None));
         });
 
@@ -786,25 +692,46 @@ impl ContentProvider {
         }
 
         let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
 
-        if godot::engine::FileAccess::file_exists(
-            format!("res://content/{}.remap", file_hash).into(),
-        ) {
-            let resource_optimized_path = format!("res://content/{}.remap", file_hash);
-            DclGlobal::singleton().call(
-                "async_load_threaded".into(),
-                &[
-                    resource_optimized_path.to_variant(),
-                    promise.clone().to_variant(),
-                ],
-            );
+        if self.optimized_asset_exists(file_hash_godot.clone()) {
+            println!("Loading optimized texture {}", file_hash_godot);
+            let hash_id = file_hash.clone();
+            let optimized_data = self.optimized_data.clone();
+            
+            TokioRuntime::spawn(async move {
+                let _ = ContentProvider::async_fetch_optimized_asset(hash_id.clone(), ctx, optimized_data, false).await;
+
+                //let resource_optimized_path = format!("res://content/{}.remap", hash_id);
+                let godot_path = format!("res://content/{}", hash_id).to_godot();
+                let resource = ResourceLoader::singleton().load(godot_path.clone()).unwrap();
+                let image = resource.cast::<godot::engine::Image>();
+                println!("Loading resource godot_path={} size={:?}", godot_path.clone(), image.get_size());
+                let texture = godot::engine::ImageTexture::create_from_image(image.clone()).ok_or(anyhow::Error::msg(
+                    format!("Error creating texture from image {}", godot_path),
+                )).unwrap();
+
+                let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
+                    original_size: image.get_size(),
+                    image,
+                    texture: texture.upcast(),
+                });
+
+                then_promise(get_promise, Ok(Some(texture_entry.to_variant())));
+                /*DclGlobal::singleton().call(
+                    "async_load_threaded".into(),
+                    &[
+                        resource_optimized_path.to_variant(),
+                        promise.to_variant(),
+                    ],
+                );*/
+            });
         } else {
             let url = format!(
                 "{}{}",
                 content_mapping.bind().get_base_url(),
                 file_hash.clone()
             );
-            let content_provider_context = self.get_context();
 
             let loading_resources = self.loading_resources.clone();
             let loaded_resources = self.loaded_resources.clone();
@@ -816,7 +743,7 @@ impl ContentProvider {
                 loading_resources.fetch_add(1, Ordering::Relaxed);
 
                 let result =
-                    load_image_texture(url, hash_id.clone(), content_provider_context).await;
+                    load_image_texture(url, hash_id.clone(), ctx).await;
 
                 #[cfg(feature = "use_resource_tracking")]
                 if let Err(error) = &result {
@@ -1241,5 +1168,73 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
         }
+    }
+
+    pub async fn async_fetch_optimized_asset(file_hash: String, ctx: ContentProviderContext, optimized_data: Arc<OptimizedData>, with_dependencies: bool) -> Result<(), String> {
+            let asset_url: String = format!("{}/{}-mobile.zip", ASSET_OPTIMIZED_BASE_URL, file_hash);
+            // 1. We search which dependencies we need to download
+            let mut futures_to_wait: Vec<_> = Vec::default();
+            let mut hashes_to_load: Vec<String> = Vec::default();
+
+            let dependencies = {
+                if with_dependencies {
+                    let dependencies_guard = optimized_data.dependencies.read().await;
+                    let mut deps = dependencies_guard.get(&file_hash).cloned().unwrap_or_default();
+                    deps.insert(file_hash.clone());
+                    deps // Return the modified set
+                } else {
+                    HashSet::from([file_hash.clone()])
+                }
+            };            
+
+            let loaded_dependencies = optimized_data.loaded_assets.read().await;
+
+            for hash_dependency in &dependencies {
+                let hash_dependency_zip = format!("{}-mobile.zip", hash_dependency);
+                let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
+
+                if !loaded_dependencies.contains(hash_dependency) {
+                    hashes_to_load.push(hash_dependency.clone());
+                } else if ctx
+                    .resource_provider
+                    .file_exists(&hash_dependency_zip)
+                    .await
+                {
+                    continue; // Skip fetching if the dependency exists in cache
+                }
+
+                // Fetch the resource if it's either a new dependency or missing in cache
+                println!("Downloading file_hash={} dependency_hash={}", file_hash, hash_dependency);
+                let future = ctx.resource_provider.fetch_resource(
+                    asset_url.clone(),
+                    hash_dependency_zip.clone(),
+                    absolute_file_path,
+                );
+                futures_to_wait.push(future);
+            }
+
+            // 2. We add what we are going to load into the loaded_dependencies
+            drop(loaded_dependencies); // drop read, before writing
+            let mut loaded_dependencies = optimized_data.loaded_assets.write().await;
+            for hash_to_load in &hashes_to_load {
+                loaded_dependencies.insert(hash_to_load.clone());
+            }
+            drop(loaded_dependencies); // drop write
+
+            // 3. Wait all downloads
+            let _ = try_join_all(futures_to_wait).await;
+
+            // 4. Load what was listed
+            for hash_to_load in &hashes_to_load {
+                let hash_zip = format!("{}-mobile.zip", hash_to_load);
+                let zip_path = format!("user://content/{}", hash_zip).to_godot();
+                println!("Loading file_hash={} hash_to_load={}", file_hash, hash_to_load);
+                godot::engine::ProjectSettings::singleton()
+                    .load_resource_pack_ex(zip_path)
+                    .replace_files(false)
+                    .done();
+            }
+
+        Ok(())
     }
 }

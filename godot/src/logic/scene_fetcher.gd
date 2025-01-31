@@ -34,8 +34,6 @@ class SceneItem:
 	var scene_number_id: int = -1
 	var parcels: Array[Vector2i] = []
 	var is_global: bool = false
-	var optimized_content: Array = []
-	var dependency_map: Dictionary = {}
 
 
 var current_position: Vector2i = Vector2i(-1000, -1000)
@@ -393,11 +391,10 @@ func async_load_scene(
 			print("Scene ", scene_entity_id, " zip loaded successfully.")
 			var optimized_metadata_path = "res://" + scene_entity_id + "-optimized.json"
 			var optimized_metadata = load_json_file(optimized_metadata_path)
-			var optimized_content: Array = optimized_metadata.get("optimizedContent", [])
-			var external_scene_dependencies = optimized_metadata.get("externalSceneDependencies", {})
-			scene_item.optimized_content = optimized_content
-			scene_item.dependency_map = external_scene_dependencies
-			prints("optimized_content:", optimized_content)
+			var optimized_content: PackedStringArray = optimized_metadata.get("optimizedContent", [])
+			var external_scene_dependencies: Dictionary = optimized_metadata.get("externalSceneDependencies", {})
+			var add_promise = Global.content_provider.add_optimized_assets(optimized_content, external_scene_dependencies)
+			await PromiseUtils.async_awaiter(add_promise)
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):
