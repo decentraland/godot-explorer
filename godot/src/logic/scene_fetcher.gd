@@ -386,15 +386,21 @@ func async_load_scene(
 	else:
 		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)
 		if not ok:
-			printerr("Scene ", scene_entity_id, " failed to load optimized scene")
+			printerr("Scene ", scene_entity_id, " failed to load optimized scene, error #1")
 		else:
-			print("Scene ", scene_entity_id, " zip loaded successfully.")
 			var optimized_metadata_path = "res://" + scene_entity_id + "-optimized.json"
-			var optimized_metadata = load_json_file(optimized_metadata_path)
-			var optimized_content: PackedStringArray = optimized_metadata.get("optimizedContent", [])
-			var external_scene_dependencies: Dictionary = optimized_metadata.get("externalSceneDependencies", {})
-			var add_promise = Global.content_provider.add_optimized_assets(optimized_content, external_scene_dependencies)
-			await PromiseUtils.async_awaiter(add_promise)
+			var file = FileAccess.open(optimized_metadata_path, FileAccess.READ)
+			if file:
+				# Read the file's content as a string
+				var json_string = file.get_as_text()
+				var add_promise = Global.content_provider.load_optimized_assets_metadata(
+					json_string
+				)
+				file.close()
+				await PromiseUtils.async_awaiter(add_promise)
+				print("Scene ", scene_entity_id, " optimized assets metadata loaded successfully.")
+			else:
+				printerr("Scene ", scene_entity_id, " failed to load optimized scene, error #2")
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):
@@ -404,26 +410,6 @@ func async_load_scene(
 	_on_try_spawn_scene(loaded_scenes[scene_entity_id], local_main_js_path, local_main_crdt_path)
 	return PromiseUtils.resolved(true)
 
-
-func load_json_file(file_path: String) -> Dictionary:
-	var file = FileAccess.open(file_path, FileAccess.READ)
-	if file:
-		# Read the file's content as a string
-		var json_string = file.get_as_text()
-		file.close()
-		
-		# Parse the JSON string into a dictionary
-		var json_result = JSON.parse_string(json_string)
-		if json_result != null:
-			return json_result  # This will be the parsed dictionary
-		else:
-			# Handle JSON parsing error
-			push_error("Error parsing JSON file: " + json_string)
-	else:
-		# Handle file opening error
-		push_error("Failed to open file: " + file_path)
-	
-	return {}  # Return an empty dictionary in case of failure
 
 func _on_try_spawn_scene(
 	scene_item: SceneItem, local_main_js_path: String, local_main_crdt_path: String

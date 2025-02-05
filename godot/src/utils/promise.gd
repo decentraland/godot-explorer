@@ -9,10 +9,12 @@ static func resolved(data = null) -> Promise:
 	promise.resolve_with_data(data)
 	return promise
 
+
 static func rejected(reason: String) -> Promise:
 	var promise := Promise.new()
 	promise.reject(reason)
 	return promise
+
 
 static func async_awaiter(promise: Promise) -> Variant:
 	if promise == null:

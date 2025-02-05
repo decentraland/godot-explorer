@@ -14,51 +14,17 @@ enum GltfContainerLoadingState {
 func _ready():
 	self.async_load_gltf.call_deferred()
 
-#func _async_download_and_load_dependency(gltf_hash: String, dependency_hash: String) -> Promise:
-	#var hash_zip: String = "%s-mobile.zip" % dependency_hash
-	#var asset_url: String = "%s/%s-mobile.zip" % [Global.ASSET_OPTIMIZED_BASE_URL, dependency_hash]
-	#var promise: Promise = Global.content_provider.fetch_file_by_url(
-		#hash_zip, asset_url
-	#)
-	#prints("Downloading: ", dependency_hash)
-	#var result = await PromiseUtils.async_awaiter(promise)
-#
-	#if result is PromiseError:
-		#printerr("Failed to download optimized asset (sceneId=%s gltf_hash=%s asset_hash=%s)" % [dcl_scene_id, gltf_hash, dependency_hash])
-#
-	#var ok = ProjectSettings.load_resource_pack("user://content/" + hash_zip, false)
-	#
-	#if not ok:
-		#printerr("Failed to load optimized asset (sceneId=%s gltf_hash=%s asset_hash=%s)" % [dcl_scene_id, gltf_hash, dependency_hash])
-		#Global.optimized_loaded_assets[dependency_hash].reject()
-		#return PromiseUtils.rejected("Failed to load optimized asset (sceneId=%s gltf_hash=%s asset_hash=%s)" % [dcl_scene_id, gltf_hash, dependency_hash])
-	#else:
-		#print("Optimized asset loaded successfully (sceneId=%s gltf_hash=%s asset_hash=%s)" % [dcl_scene_id, gltf_hash, dependency_hash])
-	#Global.optimized_loaded_assets[dependency_hash].resolve()
-	#return PromiseUtils.resolved()
 
 func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
-	#var promises_to_wait: Array = []
-	#dependencies.push_front(gltf_hash)
-	#var index = dependencies.size() - 1
-	#while index >= 0 and dependencies.size() > 0:
-		#var dependency_hash = dependencies[index]
-		#if Global.optimized_loaded_assets.has(dependency_hash):
-			#dependencies.remove_at(index)
-			#promises_to_wait.push_back(Global.optimized_loaded_assets[dependency_hash])
-		#else:
-			#Global.optimized_loaded_assets[dependency_hash] = Promise.new()
-		#index -= 1
-	#
-	#for dependency_hash in dependencies:
-		#promises_to_wait.push_back(_async_download_and_load_dependency.bind(gltf_hash, dependency_hash))
-	#
-	#await PromiseUtils.async_all(promises_to_wait)
-	
 	var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
-		printerr("Failed to download optimized asset (sceneId=%s gltf_hash=%s)" % [dcl_scene_id, gltf_hash])
+		printerr(
+			(
+				"Failed to download optimized asset (sceneId=%s gltf_hash=%s)"
+				% [dcl_scene_id, gltf_hash]
+			)
+		)
 		return
 
 	var main_tree = get_tree()
@@ -121,7 +87,7 @@ func async_load_gltf():
 	if Global.content_provider.optimized_asset_exists(file_hash):
 		await async_try_load_gltf_from_local_file(file_hash)
 		return
-	
+
 	prints("Trying to load a non-optimized asset", file_hash, scene_item.id)
 	return
 
