@@ -6,8 +6,8 @@ use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 
 use super::wallet::SimpleAuthChain;
 
-const AUTH_FRONT_URL: &str = "https://decentraland.zone/auth/requests";
-const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
+const AUTH_FRONT_URL: &str = "https://decentraland.org/auth/requests";
+const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.org/requests";
 // const AUTH_FRONT_URL: &str = "https://localhost:5173/auth/requests";
 // const AUTH_SERVER_ENDPOINT_URL: &str = "https://auth-api.decentraland.zone/requests";
 
@@ -56,6 +56,8 @@ async fn fetch_polling_server(
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     let url = format!("{AUTH_SERVER_ENDPOINT_URL}/{req_id}");
     let mut attempt = 0;
+    let mut requested_time = std::time::Instant::now();
+
     loop {
         tracing::debug!("trying req_id {:?} attempt ${attempt}", req_id);
         if attempt >= AUTH_SERVER_RETRIES {
@@ -63,6 +65,13 @@ async fn fetch_polling_server(
         }
         attempt += 1;
 
+        let diff = (std::time::Instant::now() - requested_time).as_millis() as i64;
+        let remaining_delay = (AUTH_SERVER_RETRY_INTERVAL.as_millis() as i64) - diff;
+        if remaining_delay > 0 {
+            tokio::time::sleep(Duration::from_millis(remaining_delay as u64)).await;
+        }
+
+        requested_time = std::time::Instant::now();
         let response = reqwest::Client::builder()
             .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
             .build()
@@ -74,7 +83,6 @@ async fn fetch_polling_server(
         let response = match response {
             Ok(response) => {
                 if response.status().as_u16() == 204 {
-                    tokio::time::sleep(AUTH_SERVER_RETRY_INTERVAL).await;
                     continue;
                 } else if response.status().is_success() {
                     match response.json::<RequestResult>().await {

@@ -20,6 +20,9 @@ const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
+const ASSET_OPTIMIZED_BASE_URL: String = "https://storage.kuruk.net"
+#const ASSET_OPTIMIZED_BASE_URL: String = "http://localhost:3232"
+
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 
@@ -171,10 +174,7 @@ func get_parcel_scene_id(x: int, z: int) -> int:
 func _is_there_any_new_scene_to_load() -> bool:
 	var d = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = d.get("loadable_scenes", [])
-	var keep_alive_scenes = d.get("keep_alive_scenes", [])
-	var empty_parcels = d.get("empty_parcels", [])
 
-	var loading_promises: Array = []
 	for scene_id in loadable_scenes:
 		if not loaded_scenes.has(scene_id):
 			var scene_definition = scene_entity_coordinator.get_scene_definition(scene_id)
@@ -376,6 +376,21 @@ func async_load_scene(
 				res.get_error()
 			)
 			return PromiseUtils.resolved(false)
+
+	var scene_hash_zip: String = "%s.zip" % scene_entity_id
+	var asset_url: String = "%s/%s.zip" % [ASSET_OPTIMIZED_BASE_URL, scene_entity_id]
+	var download_promise: Promise = Global.content_provider.fetch_file_by_url(
+		scene_hash_zip, asset_url
+	)
+	var download_res = await PromiseUtils.async_awaiter(download_promise)
+	if download_res is PromiseError:
+		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip.")
+	else:
+		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)
+		if not ok:
+			printerr("Scene ", scene_entity_id, " failed to load optimized scene")
+		else:
+			print("Scene ", scene_entity_id, " zip loaded successfully.")
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):

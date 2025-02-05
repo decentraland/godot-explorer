@@ -7,8 +7,7 @@
             "command": "run",
             "args": [
                 "--",
-                "run",
-                "--only-build"
+                "build",
             ],
             "problemMatcher": [
                 "$rustc"

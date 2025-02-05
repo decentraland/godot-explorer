@@ -47,7 +47,7 @@ fn op_get_file_url(
         });
     }
 
-    Err(anyhow!("not found"))
+    Err(anyhow!("not found {filename}"))
 }
 
 #[op2]

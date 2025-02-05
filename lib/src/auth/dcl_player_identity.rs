@@ -184,9 +184,14 @@ impl DclPlayerIdentity {
             .get_sender();
 
         self.target_config_id = target_config_id.clone();
-        let target_config_id = target_config_id.to_string();
+        let target_config_id = if target_config_id.is_empty() {
+            None
+        } else {
+            Some(target_config_id.to_string())
+        };
+
         let try_connect_account_handle = handle.spawn(async move {
-            let wallet = RemoteWallet::with_auth_identity(sender, Some(target_config_id)).await;
+            let wallet = RemoteWallet::with_auth_identity(sender, target_config_id).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };

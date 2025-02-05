@@ -20,7 +20,7 @@ func _ready():
 
 func _on_toggled(is_button_pressed):
 	if is_button_pressed:
-		emit_signal("select_color", background_color)
+		select_color.emit(background_color)
 		panel_container_border.show()
 	else:
 		panel_container_border.hide()

@@ -582,36 +582,51 @@ impl ContentProvider {
             return promise;
         }
 
-        let url = format!(
-            "{}{}",
-            content_mapping.bind().get_base_url(),
-            file_hash.clone()
-        );
         let (promise, get_promise) = Promise::make_to_async();
-        let content_provider_context = self.get_context();
 
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-        let hash_id = file_hash.clone();
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+        if godot::engine::FileAccess::file_exists(
+            format!("res://content/{}.remap", file_hash).into(),
+        ) {
+            let resource_optimized_path = format!("res://content/{}.remap", file_hash);
+            DclGlobal::singleton().call(
+                "async_load_threaded".into(),
+                &[
+                    resource_optimized_path.to_variant(),
+                    promise.clone().to_variant(),
+                ],
+            );
+        } else {
+            let url = format!(
+                "{}{}",
+                content_mapping.bind().get_base_url(),
+                file_hash.clone()
+            );
+            let content_provider_context = self.get_context();
 
-            loading_resources.fetch_add(1, Ordering::Relaxed);
+            let loading_resources = self.loading_resources.clone();
+            let loaded_resources = self.loaded_resources.clone();
+            let hash_id = file_hash.clone();
+            TokioRuntime::spawn(async move {
+                #[cfg(feature = "use_resource_tracking")]
+                report_resource_start(&hash_id);
 
-            let result = load_image_texture(url, hash_id.clone(), content_provider_context).await;
+                loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            #[cfg(feature = "use_resource_tracking")]
-            if let Err(error) = &result {
-                report_resource_error(&hash_id, &error.to_string());
-            } else {
-                report_resource_loaded(&hash_id);
-            }
+                let result =
+                    load_image_texture(url, hash_id.clone(), content_provider_context).await;
 
-            then_promise(get_promise, result);
+                #[cfg(feature = "use_resource_tracking")]
+                if let Err(error) = &result {
+                    report_resource_error(&hash_id, &error.to_string());
+                } else {
+                    report_resource_loaded(&hash_id);
+                }
 
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
+                then_promise(get_promise, result);
+
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+            });
+        }
 
         self.cached.insert(
             file_hash,

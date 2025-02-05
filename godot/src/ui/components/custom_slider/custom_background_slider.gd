@@ -68,7 +68,7 @@ func _process(_delta):
 
 func follow_mouse(mouse_position: Vector2i):
 	refresh_grabber_position(mouse_position.x)
-	emit_signal("value_change")
+	value_change.emit()
 
 
 func refresh_grabber_position(new_x: int):
