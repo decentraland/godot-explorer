@@ -88,9 +88,6 @@ func async_load_gltf():
 		await async_try_load_gltf_from_local_file(file_hash)
 		return
 
-	prints("Trying to load a non-optimized asset", file_hash, scene_item.id)
-	return
-
 	var promise = Global.content_provider.fetch_scene_gltf(dcl_gltf_src, content_mapping)
 	if promise == null:
 		printerr("Fatal error on fetch gltf: promise == null")
