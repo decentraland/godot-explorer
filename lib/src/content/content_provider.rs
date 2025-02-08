@@ -119,7 +119,7 @@ pub struct ContentProviderContext {
 
 unsafe impl Send for ContentProviderContext {}
 
-const ASSET_OPTIMIZED_BASE_URL: &str = "https://storage.kuruk.net/optimized/v3";
+const ASSET_OPTIMIZED_BASE_URL: &str = "https://storage.kuruk.net/optimized/v4";
 
 #[godot_api]
 impl INode for ContentProvider {
@@ -250,12 +250,22 @@ impl ContentProvider {
         let optimized_data = self.optimized_data.clone();
 
         let file_hash = file_hash.to_string();
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
         TokioRuntime::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
             let _ =
                 ContentProvider::async_fetch_optimized_asset(file_hash, ctx, optimized_data, true)
                     .await;
 
             then_promise(get_promise, Ok(None));
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
         promise
@@ -275,11 +285,22 @@ impl ContentProvider {
         let optimized_data = self.optimized_data.clone();
 
         let file_hash = file_hash.to_string();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
         TokioRuntime::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
             let _ =
                 ContentProvider::async_fetch_optimized_asset(file_hash, ctx, optimized_data, false)
                     .await;
             then_promise(get_promise, Ok(None));
+
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
         promise
@@ -731,6 +752,7 @@ impl ContentProvider {
                 .await;
 
                 let godot_path = format!("res://content/{}", hash_id).to_godot();
+
                 let resource = ResourceLoader::singleton()
                     .load(godot_path.clone())
                     .unwrap();
@@ -1136,6 +1158,11 @@ impl ContentProvider {
     }
 
     #[func]
+    pub fn get_optimized_base_url(&self) -> GString {
+        ASSET_OPTIMIZED_BASE_URL.to_godot()
+    }
+
+    #[func]
     pub fn fetch_profile(&mut self, user_id: GString) -> Gd<Promise> {
         let Some(user_id) = user_id.to_string().as_str().as_h160() else {
             return Promise::from_rejected("Invalid user id".to_string());
@@ -1219,6 +1246,7 @@ impl ContentProvider {
                 HashSet::from([file_hash.clone()])
             }
         };
+
         let loaded_dependencies = optimized_data.loaded_assets.read().await;
 
         for hash_dependency in &dependencies {
@@ -1230,7 +1258,9 @@ impl ContentProvider {
             let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
 
             if !loaded_dependencies.contains(hash_dependency) {
-                hashes_to_load.push(hash_dependency.clone());
+                if hash_dependency != &file_hash { // we don't add the own file
+                    hashes_to_load.push(hash_dependency.clone());
+                }
             } else if ctx
                 .resource_provider
                 .file_exists(&hash_dependency_zip)
@@ -1249,6 +1279,9 @@ impl ContentProvider {
             futures_to_wait.push(future);
         }
 
+        // 1.1 We ensure that the file_hash (the scene who is requesting) is the last dependency to load
+        hashes_to_load.push(file_hash);
+
         // 2. We add what we are going to load into the loaded_dependencies
         drop(loaded_dependencies); // drop read, before writing
         let mut loaded_dependencies = optimized_data.loaded_assets.write().await;
@@ -1265,9 +1298,13 @@ impl ContentProvider {
             let hash_zip = format!("{}-mobile.zip", hash_to_load);
             let zip_path = format!("user://content/{}", hash_zip).to_godot();
             let result = godot::engine::ProjectSettings::singleton()
-                .load_resource_pack_ex(zip_path)
+                .load_resource_pack_ex(zip_path.clone())
                 .replace_files(false)
                 .done();
+
+            if !result {
+                godot_error!("load_resource_pack failed on {zip_path}");
+            }
         }
 
         Ok(())

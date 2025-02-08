@@ -375,7 +375,7 @@ func async_load_scene(
 			return PromiseUtils.resolved(false)
 
 	var scene_hash_zip: String = "%s-mobile.zip" % scene_entity_id
-	var asset_url: String = "%s/%s-mobile.zip" % [Global.ASSET_OPTIMIZED_BASE_URL, scene_entity_id]
+	var asset_url: String = "%s/%s-mobile.zip" % [Global.content_provider.get_optimized_base_url(), scene_entity_id]
 	prints("asset_url", asset_url, scene_hash_zip)
 	var download_promise: Promise = Global.content_provider.fetch_file_by_url(
 		scene_hash_zip, asset_url
