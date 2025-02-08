@@ -299,7 +299,6 @@ impl ContentProvider {
                     .await;
             then_promise(get_promise, Ok(None));
 
-
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
 
@@ -1258,7 +1257,8 @@ impl ContentProvider {
             let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
 
             if !loaded_dependencies.contains(hash_dependency) {
-                if hash_dependency != &file_hash { // we don't add the own file
+                if hash_dependency != &file_hash {
+                    // we don't add the own file
                     hashes_to_load.push(hash_dependency.clone());
                 }
             } else if ctx
