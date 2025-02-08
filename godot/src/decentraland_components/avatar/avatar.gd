@@ -264,6 +264,7 @@ func apply_unshaded_mode(node_to_apply: Node):
 				mat.roughness = .1
 				mat.metallic = 0.0
 
+
 func async_load_wearables():
 	var curated_wearables := Wearables.get_curated_wearable_list(
 		avatar_data.get_body_shape(), avatar_data.get_wearables(), avatar_data.get_force_render()
