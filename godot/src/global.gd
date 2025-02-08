@@ -34,8 +34,6 @@ var webkit_ios_plugin
 
 var network_inspector_window: Window = null
 
-#var optimized_loaded_assets: Dictionary = {}
-
 
 func is_xr() -> bool:
 	return OS.has_feature("xr") or get_viewport().use_xr
