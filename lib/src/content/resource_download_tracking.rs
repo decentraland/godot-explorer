@@ -70,17 +70,17 @@ impl ResourceDownloadTracking {
         downloads.insert(file_hash, state);
     }
 
-    pub async fn report_progress(&self, file_hash: &str, current_size: u64) {
+    pub async fn report_progress(&self, file_hash: String, current_size: u64) {
         let downloads = self.downloads.read().await;
-        if let Some(state) = downloads.get(file_hash) {
+        if let Some(state) = downloads.get(&file_hash) {
             let state = state.read().await;
             state.update_progress(current_size);
         }
     }
 
-    pub async fn end(&self, file_hash: &str) {
+    pub async fn end(&self, file_hash: String) {
         let downloads = self.downloads.read().await;
-        if let Some(state) = downloads.get(file_hash) {
+        if let Some(state) = downloads.get(&file_hash) {
             let mut state = state.write().await;
             state.mark_done();
         }

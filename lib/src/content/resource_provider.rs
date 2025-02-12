@@ -149,7 +149,7 @@ impl ResourceProvider {
         &self,
         url: &str,
         dest: &Path,
-        #[cfg(feature = "use_resource_tracking")] file_hash: &str,
+        #[cfg(feature = "use_resource_tracking")] file_hash: String,
     ) -> Result<(), String> {
         let tmp_dest = dest.with_extension("tmp");
         let response = self
@@ -160,7 +160,7 @@ impl ResourceProvider {
             .map_err(|e| format!("Request error: {:?}", e))?;
 
         #[cfg(feature = "use_resource_tracking")]
-        self.download_tracking.start(file_hash.to_string()).await;
+        self.download_tracking.start(file_hash.clone()).await;
 
         #[cfg(feature = "use_resource_tracking")]
         let mut current_size = 0;
@@ -190,7 +190,7 @@ impl ResourceProvider {
                 {
                     current_size += accumulated_size;
                     self.download_tracking
-                        .report_progress(file_hash, current_size)
+                        .report_progress(file_hash.clone(), current_size)
                         .await;
                 }
                 accumulated_size = 0;
@@ -204,7 +204,7 @@ impl ResourceProvider {
             {
                 current_size += accumulated_size;
                 self.download_tracking
-                    .report_progress(file_hash, current_size)
+                    .report_progress(file_hash.clone(), current_size)
                     .await;
             }
         }
@@ -226,7 +226,7 @@ impl ResourceProvider {
         &self,
         url: &str,
         dest: &Path,
-        #[cfg(feature = "use_resource_tracking")] file_hash: &str,
+        #[cfg(feature = "use_resource_tracking")] file_hash: String,
     ) -> Result<Vec<u8>, String> {
         let tmp_dest = dest.with_extension("tmp");
         let response = self
@@ -237,7 +237,7 @@ impl ResourceProvider {
             .map_err(|e| format!("Request error: {:?}", e))?;
 
         #[cfg(feature = "use_resource_tracking")]
-        self.download_tracking.start(file_hash.to_string()).await;
+        self.download_tracking.start(file_hash.clone()).await;
         #[cfg(feature = "use_resource_tracking")]
         let mut current_size = 0;
 
@@ -264,7 +264,7 @@ impl ResourceProvider {
                 {
                     current_size += accumulated_size;
                     self.download_tracking
-                        .report_progress(file_hash, current_size)
+                        .report_progress(file_hash.clone(), current_size)
                         .await;
                 }
                 accumulated_size = 0;
@@ -278,7 +278,7 @@ impl ResourceProvider {
             {
                 current_size += accumulated_size;
                 self.download_tracking
-                    .report_progress(file_hash, current_size)
+                    .report_progress(file_hash.clone(), current_size)
                     .await;
             }
         }
@@ -291,7 +291,7 @@ impl ResourceProvider {
         })?;
 
         #[cfg(feature = "use_resource_tracking")]
-        self.download_tracking.end(file_hash).await;
+        self.download_tracking.end(file_hash.clone()).await;
 
         Ok(buffer)
     }
@@ -406,7 +406,7 @@ impl ResourceProvider {
                 &url,
                 Path::new(&absolute_file_path),
                 #[cfg(feature = "use_resource_tracking")]
-                file_hash,
+                file_hash.clone(),
             )
             .await?;
 
@@ -452,7 +452,7 @@ impl ResourceProvider {
                     url,
                     Path::new(absolute_file_path),
                     #[cfg(feature = "use_resource_tracking")]
-                    file_hash,
+                    file_hash.clone(),
                 )
                 .await?;
             let metadata = tokio::fs::metadata(absolute_file_path)

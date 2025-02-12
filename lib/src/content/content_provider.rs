@@ -255,7 +255,7 @@ impl ContentProvider {
 
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&file_hash);
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -290,7 +290,7 @@ impl ContentProvider {
         let loaded_resources = self.loaded_resources.clone();
         TokioRuntime::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
+            report_resource_start(&file_hash);
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
@@ -586,19 +586,19 @@ impl ContentProvider {
 
             if ctx
                 .resource_provider
-                .fetch_resource(url, hash_id, absolute_file_path)
+                .fetch_resource(url, hash_id.clone(), absolute_file_path)
                 .await
                 .is_ok()
             {
                 #[cfg(feature = "use_resource_tracking")]
-                report_resource_loaded(&hash_id);
+                report_resource_loaded(&hash_id.clone());
 
                 then_promise(get_promise, Ok(None));
             } else {
                 let error = anyhow::anyhow!("Failed to download file");
 
                 #[cfg(feature = "use_resource_tracking")]
-                report_resource_error(&hash_id, &error.to_string());
+                report_resource_error(&hash_id.clone(), &error.to_string());
 
                 then_promise(get_promise, Err(error));
             }
