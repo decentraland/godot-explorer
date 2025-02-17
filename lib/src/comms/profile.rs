@@ -221,7 +221,7 @@ impl SerializedProfile {
             snapshots.face256 = SerializedProfile::extract_identifier(&snapshots.face256);
         }
     }
-    
+
     /// Extracts the identifier from a URL. If the URL is in the new format
     /// (i.e. contains "/entities/"), it will return the segment immediately after it.
     /// Otherwise, it returns the text after the last '/' to maintain compatibility.
@@ -238,7 +238,6 @@ impl SerializedProfile {
         }
         url.to_owned()
     }
-    
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

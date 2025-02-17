@@ -100,11 +100,11 @@ impl DclAvatarWireFormat {
 
     #[func]
     fn get_snapshots_face_hash(&self) -> GString {
-        self.inner
-            .snapshots
-            .as_ref()
-            .map_or_else(|| GString::from(""), |snapshots| GString::from(snapshots.face256.clone()))
-    }    
+        self.inner.snapshots.as_ref().map_or_else(
+            || GString::from(""),
+            |snapshots| GString::from(snapshots.face256.clone()),
+        )
+    }
 
     #[func]
     fn get_snapshots_face_url(&self) -> GString {
@@ -112,8 +112,11 @@ impl DclAvatarWireFormat {
             .snapshots
             .as_ref()
             .and_then(|snapshots| snapshots.face_url.as_ref())
-            .map_or_else(|| GString::from(""), |face_url| GString::from(face_url.clone()))
-    }    
+            .map_or_else(
+                || GString::from(""),
+                |face_url| GString::from(face_url.clone()),
+            )
+    }
 
     #[func]
     fn get_force_render(&self) -> Array<GString> {
@@ -130,9 +133,11 @@ impl DclAvatarWireFormat {
             .snapshots
             .as_ref()
             .and_then(|snapshots| snapshots.body_url.as_ref())
-            .map_or_else(|| GString::from(""), |body_url| GString::from(body_url.clone()))
+            .map_or_else(
+                || GString::from(""),
+                |body_url| GString::from(body_url.clone()),
+            )
     }
-        
 
     #[func]
     fn set_force_render(&mut self, force_render: Array<Variant>) {
