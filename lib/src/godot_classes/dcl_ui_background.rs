@@ -114,7 +114,9 @@ impl DclUiBackground {
         let Some(snapshots) = binded_profile.inner.content.avatar.snapshots.as_ref() else {
             return;
         };
-        let face256_url = format!("{}{}", binded_profile.inner.base_url, snapshots.face256);
+        let face256_url = snapshots.face_url.clone().unwrap_or(format!("{}{}", binded_profile.inner.base_url, snapshots.face256));
+
+        println!("face256_url: {}", face256_url);
 
         let mut promise = content_provider.bind_mut().fetch_texture_by_url(
             GString::from(snapshots.face256.as_str()),
