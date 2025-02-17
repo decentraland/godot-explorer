@@ -7,7 +7,7 @@ EXPLORER_PATH=$(pwd)
 if [ ! -d ${EXPLORER_PATH}/godot/android/ ]
 then
     echo "Checkout godot android template"
-    git clone -b bump-4.3 https://github.com/decentraland/godot-explorer-android-template ${EXPLORER_PATH}/godot/android
+    git clone https://github.com/decentraland/godot-explorer-android-template ${EXPLORER_PATH}/godot/android
 fi
 
 # temp workaround: check if JAVA_HOME is not set
