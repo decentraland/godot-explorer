@@ -99,12 +99,23 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_snapshots_face256(&self) -> GString {
-        if let Some(snapshots) = &self.inner.snapshots {
-            GString::from(snapshots.face256.clone())
-        } else {
-            GString::from("")
-        }
+    fn get_snapshots_face_hash(&self) -> GString {
+        self.inner.snapshots.as_ref().map_or_else(
+            || GString::from(""),
+            |snapshots| GString::from(snapshots.face256.clone()),
+        )
+    }
+
+    #[func]
+    fn get_snapshots_face_url(&self) -> GString {
+        self.inner
+            .snapshots
+            .as_ref()
+            .and_then(|snapshots| snapshots.face_url.as_ref())
+            .map_or_else(
+                || GString::from(""),
+                |face_url| GString::from(face_url.clone()),
+            )
     }
 
     #[func]
@@ -117,12 +128,15 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_snapshots_body(&self) -> GString {
-        if let Some(snapshots) = &self.inner.snapshots {
-            GString::from(snapshots.body.clone())
-        } else {
-            GString::from("")
-        }
+    fn get_snapshots_body_url(&self) -> GString {
+        self.inner
+            .snapshots
+            .as_ref()
+            .and_then(|snapshots| snapshots.body_url.as_ref())
+            .map_or_else(
+                || GString::from(""),
+                |body_url| GString::from(body_url.clone()),
+            )
     }
 
     #[func]
@@ -183,6 +197,8 @@ impl DclAvatarWireFormat {
         self.inner.snapshots = Some(AvatarSnapshots {
             face256: face256.to_string(),
             body: body.to_string(),
+            body_url: None,
+            face_url: None,
         });
     }
 
