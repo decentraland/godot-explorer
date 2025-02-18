@@ -11,68 +11,49 @@ use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
 use super::ephemeral_auth_chain::EphemeralAuthChain;
+use super::remote_wallet::RemoteWallet;
+
+pub enum WalletType {
+    Local(LocalWallet),
+    Remote(RemoteWallet),
+}
+
 #[derive(Clone)]
 pub struct Wallet {
-    inner: Arc<Box<dyn ObjSafeWalletSigner + 'static + Send + Sync>>,
+    inner: Arc<WalletType>,
 }
 
 impl Wallet {
     pub async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
         &self,
         message: S,
-    ) -> Result<Signature, WalletError> {
-        self.inner.sign_message(message.as_ref()).await
+    ) -> Result<Signature, WalletError> {        
+        match &*self.inner {
+            WalletType::Local(wallet) => Signer::sign_message(wallet, message).await,
+            WalletType::Remote(_) => Err(WalletError::Eip712Error("Not implemented".to_owned())),
+        }
     }
 
     pub fn address(&self) -> Address {
-        self.inner.address()
+        match &*self.inner {
+            WalletType::Local(wallet) => wallet.address(),
+            WalletType::Remote(wallet) => wallet.address(),
+        }
     }
 
     pub fn new_local_wallet() -> Self {
         Self {
-            inner: Arc::new(Box::new(LocalWallet::new(&mut thread_rng()))),
+            inner: Arc::new(WalletType::Local(LocalWallet::new(&mut thread_rng()))),
         }
     }
 
-    pub fn new_from_inner(inner: Box<dyn ObjSafeWalletSigner + 'static + Send + Sync>) -> Self {
+    pub fn new_from_inner(inner: WalletType) -> Self {
         Self {
             inner: Arc::new(inner),
         }
     }
 }
 
-#[async_trait]
-pub trait ObjSafeWalletSigner {
-    async fn sign_message(&self, message: &[u8]) -> Result<Signature, WalletError>;
-
-    /// Signs the transaction
-    async fn sign_transaction(&self, message: &TypedTransaction) -> Result<Signature, WalletError>;
-
-    /// Returns the signer's Ethereum Address
-    fn address(&self) -> Address;
-
-    /// Returns the signer's chain id
-    fn chain_id(&self) -> u64;
-}
-
-#[async_trait]
-impl ObjSafeWalletSigner for LocalWallet {
-    async fn sign_message(&self, message: &[u8]) -> Result<Signature, WalletError> {
-        Signer::sign_message(self, message).await
-    }
-
-    async fn sign_transaction(&self, message: &TypedTransaction) -> Result<Signature, WalletError> {
-        Signer::sign_transaction(self, message).await
-    }
-
-    fn address(&self) -> Address {
-        Signer::address(self)
-    }
-
-    fn chain_id(&self) -> u64 {
-        Signer::chain_id(self)
-    }
-}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct SimpleAuthChain(Vec<ChainLink>);

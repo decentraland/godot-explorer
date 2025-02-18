@@ -74,6 +74,7 @@ func async_close_sign_in(generate_snapshots: bool = true):
 
 # gdlint:ignore = async-function-name
 func _ready():
+	print("testing logggg")
 	var android_login = %AndroidLogin
 	if is_instance_valid(android_login) and android_login.is_platform_supported():
 		android_login.set_lobby(self)
@@ -93,17 +94,17 @@ func _ready():
 	Global.scene_runner.set_pause(true)
 
 	var args = OS.get_cmdline_args()
-	if args.has("--skip-lobby"):
-		_skip_lobby = true
+	#if args.has("--skip-lobby"):
+	_skip_lobby = true
 
+	print("Before trying to recover")
 	var session_account: Dictionary = Global.get_config().session_account
 
-	if Global.player_identity.try_recover_account(session_account):
-		loading_first_profile = true
-		show_panel(control_loading)
-	elif _skip_lobby:
+	if _skip_lobby:
+		print("Miowemfwioemfiweofm")
 		show_panel(control_loading)
 		create_guest_account_if_needed()
+		print("calling the call deferred")
 		go_to_explorer.call_deferred()
 	else:
 		show_panel(control_start)
@@ -111,8 +112,10 @@ func _ready():
 
 func go_to_explorer():
 	if is_inside_tree():
+		print("changing to explorer")
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
-
+	else:
+		print("not inside the treee!!!")
 
 func _async_on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile
@@ -235,10 +238,15 @@ func _on_button_cancel_pressed():
 
 func create_guest_account_if_needed():
 	if not guest_account_created:
+		print("AAAAA")
 		Global.get_config().guest_profile = {}
+		print("BBBBBB")
 		Global.get_config().save_to_settings_file()
+		print("CCCCCC")
 		Global.player_identity.create_guest_account()
+		print("DDDDDD")
 		Global.player_identity.set_default_profile()
+		print("EEEEEE")
 		guest_account_created = true
 
 

@@ -1,5 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
+    future::Future,
+    pin::Pin,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -35,6 +37,11 @@ use crate::godot_classes::dcl_resource_tracker::{
     report_resource_start,
 };
 
+#[cfg(not(target_arch = "wasm32"))]
+use super::resource_provider::ResourceProvider;
+#[cfg(target_arch = "wasm32")]
+use super::web_resource_provider::ResourceProvider;
+
 use super::{
     audio::load_audio,
     gltf::{
@@ -42,7 +49,6 @@ use super::{
         load_gltf_wearable, DclEmoteGltf,
     },
     profile::{prepare_request_requirements, request_lambda_profile},
-    resource_provider::ResourceProvider,
     texture::{load_image_texture, TextureEntry},
     thread_safety::{set_thread_safety_checks_enabled, then_promise, GodotSingleThreadSafety},
     video::download_video,
@@ -160,7 +166,10 @@ impl INode for ContentProvider {
         if self.every_second_tick >= 1.0 {
             self.every_second_tick = 0.0;
 
+            #[cfg(not(target_arch = "wasm32"))]
             let downloaded_size = self.resource_provider.consume_download_size();
+            #[cfg(target_arch = "wasm32")]
+            let downloaded_size = 0;
             self.download_speed_mbs = (downloaded_size as f64) / 1024.0 / 1024.0;
 
             // Clean cache
@@ -415,6 +424,42 @@ impl ContentProvider {
         self.fetch_file_by_url(file_hash, url.into_godot())
     }
 
+    async fn _future_fetch_file_by_url(
+        loading_resources: Arc<AtomicU64>,
+        loaded_resources: Arc<AtomicU64>,
+        ctx: ContentProviderContext,
+        url: String,
+        hash_id: String,
+        get_promise: impl Fn() -> Option<Gd<Promise>>,
+    ) {
+        #[cfg(feature = "use_resource_tracking")]
+        report_resource_start(&hash_id);
+
+        loading_resources.fetch_add(1, Ordering::Relaxed);
+
+        let absolute_file_path = format!("{}{}", ctx.content_folder, hash_id);
+
+        if ctx
+            .resource_provider
+            .fetch_resource(&url, &hash_id, &absolute_file_path)
+            .await
+            .is_ok()
+        {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_loaded(&hash_id);
+
+            then_promise(get_promise, Ok(None));
+        } else {
+            let error = anyhow::anyhow!("Failed to download file");
+
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_error(&hash_id, &error.to_string());
+
+            then_promise(get_promise, Err(error));
+        }
+        loaded_resources.fetch_add(1, Ordering::Relaxed);
+    }
+
     #[func]
     pub fn fetch_file_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
@@ -426,35 +471,16 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
         let hash_id = file_hash.clone();
-        TokioRuntime::spawn(async move {
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_id);
 
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-
-            let absolute_file_path = format!("{}{}", ctx.content_folder, hash_id);
-
-            if ctx
-                .resource_provider
-                .fetch_resource(&url, &hash_id, &absolute_file_path)
-                .await
-                .is_ok()
-            {
-                #[cfg(feature = "use_resource_tracking")]
-                report_resource_loaded(&hash_id);
-
-                then_promise(get_promise, Ok(None));
-            } else {
-                let error = anyhow::anyhow!("Failed to download file");
-
-                #[cfg(feature = "use_resource_tracking")]
-                report_resource_error(&hash_id, &error.to_string());
-
-                then_promise(get_promise, Err(error));
-            }
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
+        let future = Self::_future_fetch_file_by_url(
+            loading_resources,
+            loaded_resources,
+            ctx,
+            url,
+            hash_id,
+            get_promise,
+        );
+        TokioRuntime::spawn(future);
         promise
     }
 
@@ -467,18 +493,21 @@ impl ContentProvider {
 
         let bytes = bytes.to_vec();
 
-        TokioRuntime::spawn(async move {
-            if ctx
-                .resource_provider
-                .store_file(file_hash.as_str(), bytes.as_slice())
-                .await
-                .is_ok()
-            {
-                then_promise(get_promise, Ok(None));
-            } else {
-                then_promise(get_promise, Err(anyhow::anyhow!("Failed to store file")));
-            }
-        });
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            TokioRuntime::spawn(async move {
+                if ctx
+                    .resource_provider
+                    .store_file(file_hash.as_str(), bytes.as_slice())
+                    .await
+                    .is_ok()
+                {
+                    then_promise(get_promise, Ok(None));
+                } else {
+                    then_promise(get_promise, Err(anyhow::anyhow!("Failed to store file")));
+                }
+            });
+        }
 
         promise
     }
@@ -943,20 +972,27 @@ impl ContentProvider {
 
     #[func]
     pub fn clear_cache_folder(&self) {
-        let resource_provider = self.resource_provider.clone();
-        TokioRuntime::spawn(async move {
-            resource_provider.clear().await;
-        });
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let resource_provider = self.resource_provider.clone();
+            TokioRuntime::spawn(async move {
+                resource_provider.clear().await;
+            });
+        }
     }
 
     #[func]
     pub fn set_cache_folder_max_size(&mut self, size: i64) {
+        #[cfg(not(target_arch = "wasm32"))]
         self.resource_provider.set_max_cache_size(size)
     }
 
     #[func]
     pub fn get_cache_folder_total_size(&mut self) -> i64 {
-        self.resource_provider.get_cache_total_size()
+        #[cfg(not(target_arch = "wasm32"))]
+        return self.resource_provider.get_cache_total_size();
+        #[cfg(target_arch = "wasm32")]
+        return 0;
     }
 
     #[func]
@@ -976,6 +1012,7 @@ impl ContentProvider {
 
     #[func]
     pub fn set_max_concurrent_downloads(&mut self, number: i32) {
+        #[cfg(not(target_arch = "wasm32"))]
         self.resource_provider
             .set_max_concurrent_downloads(number as usize)
     }

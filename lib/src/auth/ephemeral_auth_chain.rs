@@ -8,7 +8,7 @@ use serde::{
     Serialize,
 };
 
-use super::wallet::{SimpleAuthChain, Wallet};
+use super::wallet::{SimpleAuthChain, Wallet, WalletType};
 
 pub struct EphemeralAuthChain {
     signer: H160,
@@ -20,6 +20,8 @@ pub struct EphemeralAuthChain {
     auth_chain: SimpleAuthChain,
 }
 
+unsafe impl Send for EphemeralAuthChain {}
+
 impl EphemeralAuthChain {
     pub fn new(
         signer: H160,
@@ -29,7 +31,7 @@ impl EphemeralAuthChain {
     ) -> Self {
         Self {
             signer,
-            ephemeral_wallet: Wallet::new_from_inner(Box::new(
+            ephemeral_wallet: Wallet::new_from_inner(WalletType::Local(
                 LocalWallet::from_bytes(&ephemeral_keys).unwrap(),
             )),
             ephemeral_keys,

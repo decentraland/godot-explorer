@@ -132,6 +132,8 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 	realm_string = new_realm_string
 	realm_url = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(realm_string))
 	realm_url = Realm.ensure_starts_with_https(realm_url)
+	
+	print("async_set_realm")
 
 	var promise: Promise = Global.http_requester.request_json(
 		realm_url + "about", HTTPClient.METHOD_GET, "", {}

@@ -1,3 +1,4 @@
+use godot::log::godot_print;
 use reqwest::Client;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -15,11 +16,11 @@ use super::request_response::{
 };
 
 #[derive(Debug)]
-struct QueueRequest {
-    id: u32,
-    priority: usize,
-    request_option: Option<RequestOption>,
-    response_sender: oneshot::Sender<Result<RequestResponse, RequestResponseError>>,
+pub struct QueueRequest {
+    pub id: u32,
+    pub priority: usize,
+    pub request_option: Option<RequestOption>,
+    pub response_sender: oneshot::Sender<Result<RequestResponse, RequestResponseError>>,
 
     network_inspector_id: NetworkInspectorId,
     network_inspector_sender: Option<NetworkInspectorSender>,
@@ -97,8 +98,9 @@ impl HttpQueueRequester {
             (NetworkInspectorId::INVALID, None)
         };
 
+        let id = request_option.id;
         let http_request = QueueRequest {
-            id: request_option.id,
+            id,
             priority,
             request_option: Some(request_option),
             response_sender,
@@ -107,12 +109,43 @@ impl HttpQueueRequester {
             network_inspector_sender,
         };
 
-        self.queue.lock().unwrap().push(http_request);
-        self.process_queue().await;
-        response_receiver.await.unwrap()
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.queue.lock().unwrap().push(http_request);
+            self.process_queue();
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let dcl_global = crate::godot_classes::dcl_global::DclGlobal::singleton();
+            let dcl_global_binded = dcl_global.bind();
+            let mut web_http_requester = dcl_global_binded.web_http_requester.clone();
+            let mut web_http_requester_binded = web_http_requester.bind_mut();
+            web_http_requester_binded.add_requests(http_request);
+        }
+
+        godot_print!("Request sent");
+        if let Ok(result) = response_receiver.await {
+            match result {
+                Ok(response) => {
+                    tracing::info!("Request finished - successuflly" );
+                    Ok(response)
+                }
+                Err(err) => {
+                    tracing::error!("Request failed - error: {}", err.error_message);
+                    Err(err)
+                }
+            }
+        } else {
+            Err(RequestResponseError {
+                id,
+                error_message: "Request cancelled".to_string(),
+            })
+        }
     }
 
-    async fn process_queue(&self) {
+    #[cfg(not(target_arch = "wasm32"))]
+    fn process_queue(&self) {
         let queue = Arc::clone(&self.queue);
         let semaphore = Arc::clone(&self.semaphore);
         let client = self.client.clone();
@@ -191,8 +224,10 @@ impl HttpQueueRequester {
             .timeout
             .unwrap_or(std::time::Duration::from_secs(60));
         let mut request = client
-            .request(request_option.method.clone(), request_option.url.clone())
-            .timeout(timeout);
+            .request(request_option.method.clone(), request_option.url.clone());
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let mut request = request.timeout(timeout);
 
         if let Some(body) = request_option.body.take() {
             request = request.body(body);
@@ -231,16 +266,24 @@ impl HttpQueueRequester {
                 ResponseEnum::Bytes(response.bytes().await.map_err(map_err_func)?.to_vec())
             }
             ResponseType::ToFile(file_path) => {
-                let content = response.bytes().await.map_err(map_err_func)?.to_vec();
-                let mut file = tokio::fs::File::create(file_path.clone())
-                    .await
-                    .map_err(|e| RequestResponseError {
-                        id: request_option.id,
-                        error_message: e.to_string(),
-                    })?;
-                let result = file.write_all(&content).await;
-                let result = result.map(|_| file_path);
-                ResponseEnum::ToFile(result)
+                
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                        let content = response.bytes().await.map_err(map_err_func)?.to_vec();
+                        let mut file = tokio::fs::File::create(file_path.clone())
+                            .await
+                            .map_err(|e| RequestResponseError {
+                                id: request_option.id,
+                                error_message: e.to_string(),
+                            })?;
+                        let result = file.write_all(&content).await;
+                        let result = result.map(|_| file_path);
+                        ResponseEnum::ToFile(result)
+                }
+                return Err(RequestResponseError {
+                    id: request_option.id,
+                    error_message: "ToFile not supported on wasm yet".to_string(),
+                });
             }
             ResponseType::AsJson => {
                 let json_string = &response.text().await.map_err(map_err_func)?;
