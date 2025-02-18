@@ -32,8 +32,9 @@ use std::time::Duration;
 use deno_core::error::JsError;
 use deno_core::{
     error::{generic_error, AnyError},
-    include_js_files, op, Extension, Op, OpState, RuntimeOptions,
+    include_js_files, op2, Extension, OpState, RuntimeOptions,
 };
+use deno_core::{JsRuntime, OpDecl, PollEventLoopOptions};
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use v8::IsolateHandle;
@@ -49,10 +50,7 @@ pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHand
     Lazy::new(Default::default);
 
 pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorServer>) {
-    let mut ext = &mut Extension::builder_with_deps("decentraland", &[]);
-
-    // add core ops
-    ext = ext.ops(vec![op_require::DECL, op_log::DECL, op_error::DECL]);
+    let mut ops = vec![op_require(), op_log(), op_error()];
 
     let op_sets: [Vec<deno_core::OpDecl>; 12] = [
         engine::ops(),
@@ -69,36 +67,42 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         comms::ops(),
     ];
 
+    // add plugin registrations
     let mut op_map = HashMap::new();
     for set in op_sets {
         for op in &set {
+            // explicitly record the ones we added so we can remove deno_fetch imposters
             op_map.insert(op.name, *op);
         }
-        ext = ext.ops(set)
+        ops.extend(set);
     }
 
-    let ext = ext
-        // set startup JS script
-        .esm(include_js_files!(
+    let ext = Extension {
+        name: "decentraland",
+        ops: ops.into(),
+        esm_files: include_js_files!(
             GodotExplorer
             dir "src/dcl/js/js_modules",
             "main.js",
-        ))
-        .esm_entry_point("ext:GodotExplorer/main.js")
-        .middleware(move |op| {
+        )
+        .to_vec()
+        .into(),
+        esm_entry_point: Some("ext:GodotExplorer/main.js"),
+        middleware_fn: Some(Box::new(move |op: OpDecl| -> OpDecl {
             if let Some(custom_op) = op_map.get(&op.name) {
                 tracing::debug!("replace: {}", op.name);
                 op.with_implementation_from(custom_op)
             } else {
                 op
             }
-        })
-        .build();
+        })),
+        ..Default::default()
+    };
 
     // create runtime
     #[allow(unused_mut)]
     let mut runtime = deno_core::JsRuntime::new(RuntimeOptions {
-        v8_platform: v8::Platform::new(1, false).make_shared().into(),
+        v8_platform: deno_core::v8::Platform::new(1, false).make_shared().into(),
         extensions: vec![ext],
         inspector: inspect,
         ..Default::default()
@@ -263,7 +267,7 @@ pub(crate) fn scene_thread(
         .build()
         .unwrap();
 
-    let script = rt.block_on(async { runtime.execute_script("<loader>", scene_code.into()) });
+    let script = rt.block_on(async { runtime.execute_script("<loader>", scene_code) });
 
     let script = match script {
         Err(e) => {
@@ -355,15 +359,12 @@ pub(crate) fn scene_thread(
 
 // helper to setup, acquire, run and return results from a script function
 async fn run_script(
-    runtime: &mut deno_core::JsRuntime,
+    runtime: &mut JsRuntime,
     script: &v8::Global<v8::Value>,
     fn_name: &str,
     arg_fn: impl for<'a> Fn(&mut v8::HandleScope<'a>) -> Vec<v8::Local<'a, v8::Value>>,
 ) -> Result<(), AnyError> {
     // set up scene i/o
-    let op_state = runtime.op_state();
-    op_state.borrow_mut().put(());
-
     let promise = {
         let scope = &mut runtime.handle_scope();
         let script_this = v8::Local::new(scope, script.clone());
@@ -398,15 +399,19 @@ async fn run_script(
         v8::Global::new(scope, res)
     };
 
-    let f = runtime.resolve_value(promise);
-    f.await.map(|_| ())
+    let f = runtime.resolve(promise);
+    runtime
+        .with_event_loop_promise(f, PollEventLoopOptions::default())
+        .await
+        .map(|_| ())
 }
 
 // synchronously returns a string containing JS code from the file system
-#[op(v8)]
+#[op2]
+#[string]
 fn op_require(
     state: &mut OpState,
-    module_spec: String,
+    #[string] module_spec: String,
 ) -> Result<String, deno_core::error::AnyError> {
     match module_spec.as_str() {
         // core module load
@@ -444,8 +449,8 @@ fn op_require(
     }
 }
 
-#[op(v8)]
-fn op_log(state: Rc<RefCell<OpState>>, mut message: String, immediate: bool) {
+#[op2(fast)]
+fn op_log(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediate: bool) {
     if !is_scene_log_enabled() {
         return;
     }
@@ -472,8 +477,8 @@ fn op_log(state: Rc<RefCell<OpState>>, mut message: String, immediate: bool) {
         })
 }
 
-#[op(v8)]
-fn op_error(state: Rc<RefCell<OpState>>, mut message: String, immediate: bool) {
+#[op2(fast)]
+fn op_error(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediate: bool) {
     if !is_scene_log_enabled() {
         return;
     }

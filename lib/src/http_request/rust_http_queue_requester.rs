@@ -113,7 +113,10 @@ impl RustHttpQueueRequester {
             let keys = headers.keys_array();
             let values = headers.values_array();
             for i in 0..headers.len() {
-                headers_map.insert(keys.get(i).to_string(), values.get(i).to_string());
+                headers_map.insert(
+                    keys.get(i).as_ref().unwrap().to_string(),
+                    values.get(i).as_ref().unwrap().to_string(),
+                );
             }
             Some(headers_map)
         };
