@@ -1,21 +1,14 @@
-[gd_scene load_steps=5 format=3 uid="uid://dsqq58ubnjwen"]
+[gd_scene load_steps=4 format=3 uid="uid://dsqq58ubnjwen"]
 
 [ext_resource type="Script" path="res://assets/environment/sky_base.gd" id="1_u1jk8"]
-
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_bfvnp"]
-sky_top_color = Color(0.0117647, 0.258824, 0.545098, 1)
-sky_horizon_color = Color(0.721569, 0.85098, 0.964706, 1)
-ground_bottom_color = Color(0.278431, 0.611765, 0.901961, 1)
-ground_horizon_color = Color(0.721569, 0.85098, 0.964706, 1)
-
-[sub_resource type="Sky" id="Sky_0guyp"]
-sky_material = SubResource("ProceduralSkyMaterial_bfvnp")
+[ext_resource type="Sky" uid="uid://l82r2nfrgcbx" path="res://assets/sky.tres" id="2_xkl7w"]
 
 [sub_resource type="Environment" id="Environment_mvu0t"]
 background_mode = 2
-sky = SubResource("Sky_0guyp")
-ambient_light_color = Color(0.501961, 0.501961, 0.501961, 1)
-ambient_light_sky_contribution = 0.2
+background_energy_multiplier = 0.5
+sky = ExtResource("2_xkl7w")
+ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
+ambient_light_sky_contribution = 0.4
 tonemap_mode = 3
 glow_levels/1 = 16.0
 glow_levels/2 = 16.0
@@ -26,6 +19,8 @@ glow_levels/6 = 16.0
 glow_levels/7 = 2.95
 glow_blend_mode = 0
 fog_density = 0.001
+adjustment_brightness = 1.2
+adjustment_saturation = 1.2
 
 [node name="SkyLow" type="Node"]
 script = ExtResource("1_u1jk8")
@@ -34,4 +29,7 @@ script = ExtResource("1_u1jk8")
 environment = SubResource("Environment_mvu0t")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -0.5, 0.866025, 0, -0.866025, -0.5, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, -0.177909, 0.984047, 0, -0.984047, -0.177909, 0, 0, 0)
+light_color = Color(1, 0.988235, 0.768627, 1)
+light_energy = 0.1
+sky_mode = 1
