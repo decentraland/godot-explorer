@@ -73,18 +73,15 @@ pub fn compare_images_folders(
         return Err("Snapshot and result folders contain different numbers of files".to_string());
     }
 
+    let mut failed_files = vec![];
+
     // Compare each corresponding file
     for (snapshot_file, result_file) in snapshot_files.iter().zip(result_files.iter()) {
         let similarity = compare_images_similarity(snapshot_file, result_file)?;
 
         // If similarity is less than the `similarity_threshold`, the test fails
         if similarity < similarity_threshold {
-            return Err(format!(
-                "Files {:?} and {:?} are too different! Similarity: {:.5}%",
-                snapshot_file,
-                result_file,
-                similarity * 100.0
-            ));
+            failed_files.push((snapshot_file, result_file));
         }
 
         println!(
@@ -93,6 +90,10 @@ pub fn compare_images_folders(
             result_file,
             similarity * 100.0
         );
+    }
+
+    if !failed_files.is_empty() {
+        return Err(format!("{} files are too different!", failed_files.len()));
     }
 
     println!(
