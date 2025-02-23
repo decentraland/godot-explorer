@@ -6,10 +6,8 @@ const TIME_OFFSET = .43
 
 
 func _process(_delta: float) -> void:
-	var time = (
-		int(floor(Time.get_unix_time_from_system()) + Time.get_time_zone_from_system().bias * 60)
-		% 86400
-	)
+	var time = DclGlobalTime.get_world_time()
+	prints("time", time)
 	var normalized_time = float(time) / 86400
 	normalized_time += TIME_OFFSET
 	normalized_time -= floor(normalized_time)
