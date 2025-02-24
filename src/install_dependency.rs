@@ -164,9 +164,9 @@ fn get_godot_url() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("linux.x86_64.zip".to_string()),
-        ("windows", "x86_64") => Some("win64.exe.zip".to_string()),
-        ("macos", _) => Some("macos.universal.zip".to_string()),
+        ("linux", "x86_64") => Some("linux_editor.x86_64.zip".to_string()),
+        ("windows", "x86_64") => Some("windows_editor.exe.zip".to_string()),
+        ("macos", _) => Some("godot.macos.editor.universal.zip".to_string()),
         _ => None,
     }?;
 
@@ -193,9 +193,9 @@ pub fn get_godot_executable_path() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("Godot_v4.3-stable_linux.x86_64".to_string()),
-        ("windows", "x86_64") => Some("Godot_v4.3-stable_win64.exe".to_string()),
-        ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
+        ("linux", "x86_64") => Some("linux_editor.x86_64".to_string()),
+        ("windows", "x86_64") => Some("windows_editor_x86_64.exe".to_string()),
+        ("macos", _) => Some("godot.macos.editor.universal".to_string()),
         _ => None,
     }?;
 
