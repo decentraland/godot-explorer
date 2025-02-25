@@ -165,7 +165,7 @@ fn get_godot_url() -> Option<String> {
 
     let os_url = match (os, arch) {
         ("linux", "x86_64") => Some("linux_editor.x86_64.zip".to_string()),
-        ("windows", "x86_64") => Some("windows_editor.exe.zip".to_string()),
+        ("windows", "x86_64") => Some("windows_editor_x86_64.exe.zip".to_string()),
         ("macos", _) => Some("godot.macos.editor.universal.zip".to_string()),
         _ => None,
     }?;
