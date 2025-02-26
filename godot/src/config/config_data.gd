@@ -24,6 +24,8 @@ enum ConfigParams {
 	ANTI_ALIASING,
 	GRAPHIC_PROFILE,
 	LOADING_SCENES_ARROUND,
+	DYNAMIC_SKYBOX,
+	SKYBOX_TIME,
 }
 
 var local_content_dir: String = OS.get_user_data_dir() + "/content":
@@ -92,6 +94,16 @@ var loading_scene_arround_only_when_you_pass: bool = true:
 	set(value):
 		loading_scene_arround_only_when_you_pass = value
 		param_changed.emit(ConfigParams.LOADING_SCENES_ARROUND)
+
+var dynamic_skybox: bool = true:
+	set(value):
+		dynamic_skybox = value
+		param_changed.emit(ConfigParams.DYNAMIC_SKYBOX)
+
+var skybox_time: int = 43200:
+	set(value):
+		skybox_time = value
+		param_changed.emit(ConfigParams.SKYBOX_TIME)
 
 # 0 - Vsync, 1 - No limit, Other-> Limit limit_fps that amount
 var limit_fps: int = 0:
@@ -228,6 +240,9 @@ func load_from_default():
 	self.show_fps = true
 	self.loading_scene_arround_only_when_you_pass = true
 
+	self.dynamic_skybox = true
+	self.skybox_time = 43200
+
 	self.window_mode = 0
 
 	self.session_account = {}
@@ -286,6 +301,12 @@ func load_from_settings_file():
 		"loading_scene_arround_only_when_you_pass",
 		data_default.loading_scene_arround_only_when_you_pass
 	)
+
+	self.dynamic_skybox = settings_file.get_value(
+		"config", "dynamic_skybox", data_default.dynamic_skybox
+	)
+	self.skybox_time = settings_file.get_value("config", "skybox_time", data_default.skybox_time)
+
 	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
 	self.resolution_3d_scale = settings_file.get_value(
@@ -363,6 +384,8 @@ func save_to_settings_file():
 		"loading_scene_arround_only_when_you_pass",
 		self.loading_scene_arround_only_when_you_pass
 	)
+	new_settings_file.set_value("config", "dynamic_skybox", self.dynamic_skybox)
+	new_settings_file.set_value("config", "skybox_time", self.skybox_time)
 	new_settings_file.set_value("config", "window_mode", self.window_mode)
 	new_settings_file.set_value("config", "ui_zoom", self.ui_zoom)
 	new_settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
