@@ -149,7 +149,7 @@ impl ResourceProvider {
         &self,
         url: &str,
         dest: &Path,
-        #[cfg(feature = "use_resource_tracking")] file_hash: &str,
+        #[cfg(feature = "use_resource_tracking")] file_hash: String,
     ) -> Result<(), String> {
         let tmp_dest = dest.with_extension("tmp");
         let response = self
@@ -160,7 +160,7 @@ impl ResourceProvider {
             .map_err(|e| format!("Request error: {:?}", e))?;
 
         #[cfg(feature = "use_resource_tracking")]
-        self.download_tracking.start(file_hash.to_string()).await;
+        self.download_tracking.start(file_hash.clone()).await;
 
         #[cfg(feature = "use_resource_tracking")]
         let mut current_size = 0;
@@ -190,7 +190,7 @@ impl ResourceProvider {
                 {
                     current_size += accumulated_size;
                     self.download_tracking
-                        .report_progress(file_hash, current_size)
+                        .report_progress(file_hash.clone(), current_size)
                         .await;
                 }
                 accumulated_size = 0;
@@ -204,7 +204,7 @@ impl ResourceProvider {
             {
                 current_size += accumulated_size;
                 self.download_tracking
-                    .report_progress(file_hash, current_size)
+                    .report_progress(file_hash.clone(), current_size)
                     .await;
             }
         }
@@ -226,7 +226,7 @@ impl ResourceProvider {
         &self,
         url: &str,
         dest: &Path,
-        #[cfg(feature = "use_resource_tracking")] file_hash: &str,
+        #[cfg(feature = "use_resource_tracking")] file_hash: String,
     ) -> Result<Vec<u8>, String> {
         let tmp_dest = dest.with_extension("tmp");
         let response = self
@@ -237,7 +237,7 @@ impl ResourceProvider {
             .map_err(|e| format!("Request error: {:?}", e))?;
 
         #[cfg(feature = "use_resource_tracking")]
-        self.download_tracking.start(file_hash.to_string()).await;
+        self.download_tracking.start(file_hash.clone()).await;
         #[cfg(feature = "use_resource_tracking")]
         let mut current_size = 0;
 
@@ -264,7 +264,7 @@ impl ResourceProvider {
                 {
                     current_size += accumulated_size;
                     self.download_tracking
-                        .report_progress(file_hash, current_size)
+                        .report_progress(file_hash.clone(), current_size)
                         .await;
                 }
                 accumulated_size = 0;
@@ -278,7 +278,7 @@ impl ResourceProvider {
             {
                 current_size += accumulated_size;
                 self.download_tracking
-                    .report_progress(file_hash, current_size)
+                    .report_progress(file_hash.clone(), current_size)
                     .await;
             }
         }
@@ -291,7 +291,7 @@ impl ResourceProvider {
         })?;
 
         #[cfg(feature = "use_resource_tracking")]
-        self.download_tracking.end(file_hash).await;
+        self.download_tracking.end(file_hash.clone()).await;
 
         Ok(buffer)
     }
@@ -346,6 +346,13 @@ impl ResourceProvider {
         Ok(())
     }
 
+    pub async fn file_exists(&self, file_hash: &str) -> bool {
+        let existing_files = self.existing_files.read().await;
+        let absolute_file_path = self.cache_folder.join(file_hash);
+        let absolute_file_path = absolute_file_path.to_str().unwrap().to_string();
+        existing_files.contains_key(&absolute_file_path)
+    }
+
     pub async fn store_file(&self, file_hash: &str, bytes: &[u8]) -> Result<(), String> {
         self.ensure_initialized().await?;
         let absolute_file_path = self.cache_folder.join(file_hash);
@@ -383,27 +390,27 @@ impl ResourceProvider {
 
     pub async fn fetch_resource(
         &self,
-        url: &str,
-        file_hash: &String,
-        absolute_file_path: &String,
+        url: String,
+        file_hash: String,
+        absolute_file_path: String,
     ) -> Result<(), String> {
         self.ensure_initialized().await?;
 
-        self.handle_pending_download(file_hash, absolute_file_path)
+        self.handle_pending_download(&file_hash, &absolute_file_path)
             .await?;
 
         let permit = self.semaphore.acquire().await.unwrap();
 
         if tokio::fs::metadata(&absolute_file_path).await.is_err() {
             self.download_file(
-                url,
-                Path::new(absolute_file_path),
+                &url,
+                Path::new(&absolute_file_path),
                 #[cfg(feature = "use_resource_tracking")]
-                file_hash,
+                file_hash.clone(),
             )
             .await?;
 
-            let metadata = tokio::fs::metadata(absolute_file_path)
+            let metadata = tokio::fs::metadata(&absolute_file_path)
                 .await
                 .map_err(|e| format!("Failed to get metadata: {:?}", e))?;
             let file_size = metadata.len() as i64;
@@ -413,11 +420,11 @@ impl ResourceProvider {
             self.add_file(&mut existing_files, absolute_file_path.clone(), file_size)
                 .await;
         } else {
-            self.handle_existing_file(absolute_file_path).await?;
+            self.handle_existing_file(&absolute_file_path).await?;
         }
 
         let mut pending_downloads = self.pending_downloads.write().await;
-        if let Some(notify) = pending_downloads.remove(file_hash) {
+        if let Some(notify) = pending_downloads.remove(&file_hash) {
             notify.notify_waiters();
         }
 
@@ -445,7 +452,7 @@ impl ResourceProvider {
                     url,
                     Path::new(absolute_file_path),
                     #[cfg(feature = "use_resource_tracking")]
-                    file_hash,
+                    file_hash.clone(),
                 )
                 .await?;
             let metadata = tokio::fs::metadata(absolute_file_path)
@@ -566,7 +573,7 @@ mod tests {
                 let provider_clone = provider.clone();
                 tokio::spawn(async move {
                     provider_clone
-                        .fetch_resource(&url, &file_hash, &absolute_file_path)
+                        .fetch_resource(url, file_hash, absolute_file_path)
                         .await
                         .expect("Failed to fetch resource");
                 })

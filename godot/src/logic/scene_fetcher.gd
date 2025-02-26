@@ -20,9 +20,6 @@ const EMPTY_SCENES = [
 	preload("res://assets/empty-scenes/EP_11.tscn")
 ]
 
-const ASSET_OPTIMIZED_BASE_URL: String = "https://storage.kuruk.net"
-#const ASSET_OPTIMIZED_BASE_URL: String = "http://localhost:3232"
-
 const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.org/sdk6-adaption-layer/main/index.min.js"
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 
@@ -377,8 +374,11 @@ func async_load_scene(
 			)
 			return PromiseUtils.resolved(false)
 
-	var scene_hash_zip: String = "%s.zip" % scene_entity_id
-	var asset_url: String = "%s/%s.zip" % [ASSET_OPTIMIZED_BASE_URL, scene_entity_id]
+	var scene_hash_zip: String = "%s-mobile.zip" % scene_entity_id
+	var asset_url: String = (
+		"%s/%s-mobile.zip" % [Global.content_provider.get_optimized_base_url(), scene_entity_id]
+	)
+	prints("asset_url", asset_url, scene_hash_zip)
 	var download_promise: Promise = Global.content_provider.fetch_file_by_url(
 		scene_hash_zip, asset_url
 	)
@@ -388,9 +388,21 @@ func async_load_scene(
 	else:
 		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)
 		if not ok:
-			printerr("Scene ", scene_entity_id, " failed to load optimized scene")
+			printerr("Scene ", scene_entity_id, " failed to load optimized scene, error #1")
 		else:
-			print("Scene ", scene_entity_id, " zip loaded successfully.")
+			var optimized_metadata_path = "res://" + scene_entity_id + "-optimized.json"
+			var file = FileAccess.open(optimized_metadata_path, FileAccess.READ)
+			if file:
+				# Read the file's content as a string
+				var json_string = file.get_as_text()
+				var add_promise = Global.content_provider.load_optimized_assets_metadata(
+					json_string
+				)
+				file.close()
+				await PromiseUtils.async_awaiter(add_promise)
+				print("Scene ", scene_entity_id, " optimized assets metadata loaded successfully.")
+			else:
+				printerr("Scene ", scene_entity_id, " failed to load optimized scene, error #2")
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):

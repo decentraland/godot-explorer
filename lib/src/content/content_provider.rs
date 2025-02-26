@@ -7,11 +7,13 @@ use std::{
     time::{Duration, Instant},
 };
 
+use futures_util::future::try_join_all;
 use godot::{
-    engine::{AudioStream, Material, Mesh, Texture2D},
+    engine::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
     prelude::*,
 };
-use tokio::sync::Semaphore;
+use serde::{Deserialize, Serialize};
+use tokio::sync::{RwLock, Semaphore};
 
 use crate::{
     auth::wallet::AsH160,
@@ -58,6 +60,31 @@ pub struct ContentEntry {
     last_access: Instant,
 }
 
+pub struct OptimizedData {
+    // Set of optimized hashes that we know that exists...
+    assets: RwLock<HashSet<String>>,
+    // HashMap with all optimized hashes and its dependencies...
+    dependencies: RwLock<HashMap<String, HashSet<String>>>,
+    // List of optimized assets that were loaded (already added to ProjectSettings.load_resource_pack)
+    loaded_assets: RwLock<HashSet<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ContentData {
+    optimized_content: Vec<String>,
+    external_scene_dependencies: HashMap<String, HashSet<String>>,
+    original_sizes: HashMap<String, ImageSize>,
+    hash_size_map: HashMap<String, u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+struct ImageSize {
+    height: i32,
+    width: i32,
+}
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct ContentProvider {
@@ -75,6 +102,10 @@ pub struct ContentProvider {
     loaded_resources: Arc<AtomicU64>,
     #[cfg(feature = "use_resource_tracking")]
     tracking_tick: f64,
+    optimized_data: Arc<OptimizedData>,
+    // Set of optimized hashes that we know that exists...
+    optimized_assets: HashSet<String>,
+    optimized_original_size: HashMap<String, ImageSize>,
 }
 
 #[derive(Clone)]
@@ -87,6 +118,8 @@ pub struct ContentProviderContext {
 }
 
 unsafe impl Send for ContentProviderContext {}
+
+const ASSET_OPTIMIZED_BASE_URL: &str = "https://storage.kuruk.net/optimized/v4";
 
 #[godot_api]
 impl INode for ContentProvider {
@@ -123,6 +156,13 @@ impl INode for ContentProvider {
             download_speed_mbs: 0.0,
             #[cfg(feature = "use_resource_tracking")]
             tracking_tick: 0.0,
+            optimized_data: Arc::new(OptimizedData {
+                assets: RwLock::new(HashSet::default()),
+                dependencies: RwLock::new(HashMap::default()),
+                loaded_assets: RwLock::new(HashSet::default()),
+            }),
+            optimized_assets: HashSet::default(),
+            optimized_original_size: HashMap::default(),
         }
     }
     fn ready(&mut self) {}
@@ -203,6 +243,116 @@ impl INode for ContentProvider {
 
 #[godot_api]
 impl ContentProvider {
+    #[func]
+    pub fn fetch_optimized_asset_with_dependencies(&mut self, file_hash: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+        let optimized_data = self.optimized_data.clone();
+
+        let file_hash = file_hash.to_string();
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        TokioRuntime::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&file_hash);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let _ =
+                ContentProvider::async_fetch_optimized_asset(file_hash, ctx, optimized_data, true)
+                    .await;
+
+            then_promise(get_promise, Ok(None));
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_optimized_asset(&mut self, file_hash: GString) -> Gd<Promise> {
+        if self.optimized_asset_exists(file_hash.clone()) {
+            return Promise::from_rejected(format!(
+                "Optimized asset hash={} doesn't exists",
+                file_hash
+            ));
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+        let optimized_data = self.optimized_data.clone();
+
+        let file_hash = file_hash.to_string();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+        TokioRuntime::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&file_hash);
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let _ =
+                ContentProvider::async_fetch_optimized_asset(file_hash, ctx, optimized_data, false)
+                    .await;
+            then_promise(get_promise, Ok(None));
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn optimized_asset_exists(&self, file_hash: GString) -> bool {
+        self.optimized_assets.contains(&file_hash.to_string())
+    }
+
+    #[func]
+    pub fn load_optimized_assets_metadata(&mut self, file_content: GString) -> Gd<Promise> {
+        let content_data: Result<ContentData, serde_json::Error> =
+            serde_json::from_str(&file_content.to_string());
+
+        let (promise, get_promise) = Promise::make_to_async();
+
+        if let Ok(content_data) = content_data {
+            self.optimized_original_size
+                .extend(content_data.original_sizes);
+
+            self.optimized_assets
+                .extend(content_data.optimized_content.clone());
+
+            let optimized_data = self.optimized_data.clone();
+
+            TokioRuntime::spawn(async move {
+                optimized_data
+                    .dependencies
+                    .write()
+                    .await
+                    .extend(content_data.external_scene_dependencies);
+                optimized_data
+                    .assets
+                    .write()
+                    .await
+                    .extend(content_data.optimized_content);
+                then_promise(get_promise, Ok(None));
+            });
+        } else if let Err(error) = content_data {
+            //promise.bind_mut().reject();
+            then_promise(
+                get_promise,
+                Err(anyhow::anyhow!(format!(
+                    "Failed to parse content data of the scene {:?}",
+                    error
+                ))),
+            );
+        }
+
+        promise
+    }
+
     #[func]
     pub fn fetch_wearable_gltf(
         &mut self,
@@ -436,19 +586,19 @@ impl ContentProvider {
 
             if ctx
                 .resource_provider
-                .fetch_resource(&url, &hash_id, &absolute_file_path)
+                .fetch_resource(url, hash_id.clone(), absolute_file_path)
                 .await
                 .is_ok()
             {
                 #[cfg(feature = "use_resource_tracking")]
-                report_resource_loaded(&hash_id);
+                report_resource_loaded(&hash_id.clone());
 
                 then_promise(get_promise, Ok(None));
             } else {
                 let error = anyhow::anyhow!("Failed to download file");
 
                 #[cfg(feature = "use_resource_tracking")]
-                report_resource_error(&hash_id, &error.to_string());
+                report_resource_error(&hash_id.clone(), &error.to_string());
 
                 then_promise(get_promise, Err(error));
             }
@@ -583,25 +733,52 @@ impl ContentProvider {
         }
 
         let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
 
-        if godot::engine::FileAccess::file_exists(
-            format!("res://content/{}.remap", file_hash).into(),
-        ) {
-            let resource_optimized_path = format!("res://content/{}.remap", file_hash);
-            DclGlobal::singleton().call(
-                "async_load_threaded".into(),
-                &[
-                    resource_optimized_path.to_variant(),
-                    promise.clone().to_variant(),
-                ],
-            );
+        if self.optimized_asset_exists(file_hash_godot.clone()) {
+            let hash_id = file_hash.clone();
+            let optimized_data = self.optimized_data.clone();
+
+            let original_size = self.optimized_original_size.get(&hash_id).copied();
+
+            TokioRuntime::spawn(async move {
+                let _ = ContentProvider::async_fetch_optimized_asset(
+                    hash_id.clone(),
+                    ctx,
+                    optimized_data,
+                    false,
+                )
+                .await;
+
+                let godot_path = format!("res://content/{}", hash_id).to_godot();
+
+                let resource = ResourceLoader::singleton()
+                    .load(godot_path.clone())
+                    .unwrap();
+
+                let texture = resource.cast::<godot::engine::Texture2D>();
+                let image = texture.get_image().unwrap();
+
+                let original_size = if let Some(original_size) = original_size {
+                    Vector2i::new(original_size.width, original_size.height)
+                } else {
+                    image.get_size()
+                };
+
+                let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
+                    original_size,
+                    image,
+                    texture,
+                });
+
+                then_promise(get_promise, Ok(Some(texture_entry.to_variant())));
+            });
         } else {
             let url = format!(
                 "{}{}",
                 content_mapping.bind().get_base_url(),
                 file_hash.clone()
             );
-            let content_provider_context = self.get_context();
 
             let loading_resources = self.loading_resources.clone();
             let loaded_resources = self.loaded_resources.clone();
@@ -612,8 +789,7 @@ impl ContentProvider {
 
                 loading_resources.fetch_add(1, Ordering::Relaxed);
 
-                let result =
-                    load_image_texture(url, hash_id.clone(), content_provider_context).await;
+                let result = load_image_texture(url, hash_id.clone(), ctx).await;
 
                 #[cfg(feature = "use_resource_tracking")]
                 if let Err(error) = &result {
@@ -981,6 +1157,11 @@ impl ContentProvider {
     }
 
     #[func]
+    pub fn get_optimized_base_url(&self) -> GString {
+        ASSET_OPTIMIZED_BASE_URL.to_godot()
+    }
+
+    #[func]
     pub fn fetch_profile(&mut self, user_id: GString) -> Gd<Promise> {
         let Some(user_id) = user_id.to_string().as_str().as_h160() else {
             return Promise::from_rejected("Invalid user id".to_string());
@@ -1038,5 +1219,94 @@ impl ContentProvider {
             godot_single_thread: self.godot_single_thread.clone(),
             texture_quality: self.texture_quality.clone(),
         }
+    }
+
+    pub async fn async_fetch_optimized_asset(
+        file_hash: String,
+        ctx: ContentProviderContext,
+        optimized_data: Arc<OptimizedData>,
+        with_dependencies: bool,
+    ) -> Result<(), String> {
+        // 1. We search which dependencies we need to download
+        let mut futures_to_wait: Vec<_> = Vec::default();
+        let mut hashes_to_load: Vec<String> = Vec::default();
+
+        let dependencies = {
+            if with_dependencies {
+                let dependencies_guard = optimized_data.dependencies.read().await;
+                let mut deps = dependencies_guard
+                    .get(&file_hash)
+                    .cloned()
+                    .unwrap_or_default();
+
+                deps.insert(file_hash.clone());
+                deps // Return the modified set
+            } else {
+                HashSet::from([file_hash.clone()])
+            }
+        };
+
+        let loaded_dependencies = optimized_data.loaded_assets.read().await;
+
+        for hash_dependency in &dependencies {
+            let asset_url: String = format!(
+                "{}/{}-mobile.zip",
+                ASSET_OPTIMIZED_BASE_URL, hash_dependency
+            );
+            let hash_dependency_zip = format!("{}-mobile.zip", hash_dependency);
+            let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
+
+            if !loaded_dependencies.contains(hash_dependency) {
+                if hash_dependency != &file_hash {
+                    // we don't add the own file
+                    hashes_to_load.push(hash_dependency.clone());
+                }
+            } else if ctx
+                .resource_provider
+                .file_exists(&hash_dependency_zip)
+                .await
+            {
+                continue; // Skip fetching if the dependency exists in cache
+            }
+
+            // Fetch the resource if it's either a new dependency or missing in cache
+
+            let future = ctx.resource_provider.fetch_resource(
+                asset_url.clone(),
+                hash_dependency_zip.clone(),
+                absolute_file_path,
+            );
+            futures_to_wait.push(future);
+        }
+
+        // 1.1 We ensure that the file_hash (the scene who is requesting) is the last dependency to load
+        hashes_to_load.push(file_hash);
+
+        // 2. We add what we are going to load into the loaded_dependencies
+        drop(loaded_dependencies); // drop read, before writing
+        let mut loaded_dependencies = optimized_data.loaded_assets.write().await;
+        for hash_to_load in &hashes_to_load {
+            loaded_dependencies.insert(hash_to_load.clone());
+        }
+        drop(loaded_dependencies); // drop write
+
+        // 3. Wait all downloads
+        let _ = try_join_all(futures_to_wait).await;
+
+        // 4. Load what was listed
+        for hash_to_load in &hashes_to_load {
+            let hash_zip = format!("{}-mobile.zip", hash_to_load);
+            let zip_path = format!("user://content/{}", hash_zip).to_godot();
+            let result = godot::engine::ProjectSettings::singleton()
+                .load_resource_pack_ex(zip_path.clone())
+                .replace_files(false)
+                .done();
+
+            if !result {
+                godot_error!("load_resource_pack failed on {zip_path}");
+            }
+        }
+
+        Ok(())
     }
 }

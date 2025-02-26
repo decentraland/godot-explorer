@@ -10,6 +10,12 @@ static func resolved(data = null) -> Promise:
 	return promise
 
 
+static func rejected(reason: String) -> Promise:
+	var promise := Promise.new()
+	promise.reject(reason)
+	return promise
+
+
 static func async_awaiter(promise: Promise) -> Variant:
 	if promise == null:
 		printerr("try to await a null promise")
