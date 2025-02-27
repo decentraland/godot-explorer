@@ -11,8 +11,12 @@ var normalized_time := 0.0
 func _ready():
 	config = Global.get_config()
 
+
 func _process(_delta: float) -> void:
-	normalized_time = float(DclGlobalTime.get_world_time() if config.dynamic_skybox else config.skybox_time) / 86400
+	normalized_time = (
+		float(DclGlobalTime.get_world_time() if config.dynamic_skybox else config.skybox_time)
+		/ 86400
+	)
 	if last_value != normalized_time:
 		RenderingServer.global_shader_parameter_set("day_night_cycle", normalized_time)
 		last_value = normalized_time
