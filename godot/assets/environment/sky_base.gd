@@ -56,8 +56,10 @@ func setup_light(
 	normalized_time: float,
 	origin: float,
 	light: DirectionalLight3D,
+	initial_energy: float,
 	horizon_color: Color,
-	initial_color: Color
+	initial_color: Color,
+	initial_transform: Transform
 ):
 	var time = 1.0 + normalized_time
 	var angle = clamp(((time - origin) - floor(time - origin)) * 2.0, 0.0, 1.0)
@@ -77,8 +79,20 @@ func _process(_delta: float):
 		return
 	last_time = GlobalTime.normalized_time
 	setup_light(
-		GlobalTime.normalized_time, SUN_ORIGIN, sun_light, sun_horizon_color, initial_sun_color
+		GlobalTime.normalized_time,
+		SUN_ORIGIN,
+		sun_light,
+		initial_sun_energy,
+		sun_horizon_color,
+		initial_sun_color,
+		initial_sun_transform
 	)
 	setup_light(
-		GlobalTime.normalized_time, MOON_ORIGIN, moon_light, moon_horizon_color, initial_moon_color
+		GlobalTime.normalized_time,
+		MOON_ORIGIN,
+		moon_light,
+		initial_moon_energy,
+		moon_horizon_color,
+		initial_moon_color,
+		initial_moon_transform
 	)
