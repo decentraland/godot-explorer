@@ -7,6 +7,8 @@ const MOON_ORIGIN = 0.82
 @export var moon_horizon_color := Color("#ff7534")
 @export var sun_horizon_color := Color("#8f0025")
 
+var last_time := 0.0
+
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
 @onready var sun_light: DirectionalLight3D = $SunLight
 @onready var moon_light: DirectionalLight3D = $MoonLight
@@ -50,33 +52,33 @@ func _on_loading_finished():
 
 
 # Sun and moon light animation
+func setup_light(
+	normalized_time: float,
+	origin: float,
+	light: DirectionalLight3D,
+	horizon_color: Color,
+	initial_color: Color
+):
+	var time = 1.0 + normalized_time
+	var angle = clamp(((time - origin) - floor(time - origin)) * 2.0, 0.0, 1.0)
+	var t = smoothstep(0.0, .2, angle) * smoothstep(1.0, .8, angle)
+	light.visible = !(angle >= .999 || angle <= .001)
+	light.light_energy = lerp(0.0, initial_energy, t)
+	light.global_transform = (
+		initial_transform
+		. rotated(Vector3(1.0, 0.0, 0.0), PI * .49)
+		. interpolate_with(initial_transform.rotated(Vector3(1.0, 0.0, 0.0), -PI * .49), angle)
+	)
+	light.light_color = lerp(horizon_color, initial_color, t)
+
+
 func _process(_delta: float):
-	var time = 1.0 + GlobalTime.normalized_time
-	var sun_angle = clamp(((time - SUN_ORIGIN) - floor(time - SUN_ORIGIN)) * 2.0, 0.0, 1.0)
-	var moon_angle = clamp(((time - MOON_ORIGIN) - floor(time - MOON_ORIGIN)) * 2.0, 0.0, 1.0)
-
-	var sun_t = smoothstep(0.0, .2, sun_angle) * smoothstep(1.0, .8, sun_angle)
-	sun_light.visible = !(sun_angle >= .999 || sun_angle <= .001)
-	sun_light.light_energy = lerp(0.0, initial_sun_energy, sun_t)
-	sun_light.global_transform = (
-		initial_sun_transform
-		. rotated(Vector3(1.0, 0.0, 0.0), PI * .49)
-		. interpolate_with(
-			initial_sun_transform.rotated(Vector3(1.0, 0.0, 0.0), -PI * .49), sun_angle
-		)
+	if last_time == GlobalTime.normalized_time:
+		return
+	last_time = GlobalTime.normalized_time
+	setup_light(
+		GlobalTime.normalized_time, SUN_ORIGIN, sun_light, sun_horizon_color, initial_sun_color
 	)
-	sun_light.light_color = lerp(sun_horizon_color, initial_sun_color, sun_t)
-
-	var moon_t = smoothstep(0.0, .2, moon_angle) * smoothstep(1.0, .8, moon_angle)
-	moon_light.visible = !(moon_angle >= 1.0 || moon_angle <= 0.0)
-	moon_light.light_energy = lerp(
-		0.0, initial_moon_energy, smoothstep(0.0, .1, moon_angle) * smoothstep(1.0, .9, moon_angle)
+	setup_light(
+		GlobalTime.normalized_time, MOON_ORIGIN, moon_light, moon_horizon_color, initial_moon_color
 	)
-	moon_light.global_transform = (
-		initial_moon_transform
-		. rotated(Vector3(1.0, 0.0, 0.0), PI * .49)
-		. interpolate_with(
-			initial_moon_transform.rotated(Vector3(1.0, 0.0, 0.0), -PI * .49), moon_angle
-		)
-	)
-	moon_light.light_color = lerp(moon_horizon_color, initial_moon_color, moon_t)
