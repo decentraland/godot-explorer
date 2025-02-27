@@ -1,6 +1,12 @@
 class_name SkyBase
 extends Node
 
+const SUN_ORIGIN = 0.32
+const MOON_ORIGIN = 0.82
+
+@export var moon_horizon_color := Color("#ff7534")
+@export var sun_horizon_color := Color("#8f0025")
+
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
 @onready var sun_light: DirectionalLight3D = $SunLight
 @onready var moon_light: DirectionalLight3D = $MoonLight
@@ -13,12 +19,6 @@ extends Node
 
 @onready var initial_sun_color = sun_light.light_color
 @onready var initial_moon_color = moon_light.light_color
-
-@export var moon_horizon_color := Color("#ff7534")
-@export var sun_horizon_color := Color("#8f0025")
-
-const SUN_ORIGIN = 0.32
-const MOON_ORIGIN = 0.82
 
 
 func _ready():
