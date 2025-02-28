@@ -59,7 +59,7 @@ func setup_light(
 	initial_energy: float,
 	horizon_color: Color,
 	initial_color: Color,
-	initial_transform: Transform
+	initial_transform: Transform3D
 ):
 	var time = 1.0 + normalized_time
 	var angle = clamp(((time - origin) - floor(time - origin)) * 2.0, 0.0, 1.0)
