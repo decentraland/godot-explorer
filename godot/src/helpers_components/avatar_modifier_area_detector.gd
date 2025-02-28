@@ -22,7 +22,8 @@ func _ready():
 
 
 func _on_tree_exiting():
-	avatar.change_scene_id.disconnect(self._on_avatar_change_scene_id)
+	if avatar.change_scene_id.is_connected(self._on_avatar_change_scene_id):
+		avatar.change_scene_id.disconnect(self._on_avatar_change_scene_id)
 
 
 func _on_avatar_change_scene_id(_new_scene_id: int, _prev_scene_id: int):

@@ -83,7 +83,7 @@ func _on_color_rect_map_gui_input(event):
 		if drag_enabled and dirty_is_dragging:
 			var new_pos = get_global_mouse_position() - drag_position
 			color_rect_map.position = new_pos
-			emit_signal("on_move")
+			on_move.emit()
 
 
 func reflect_dragging():

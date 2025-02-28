@@ -453,9 +453,9 @@ func _on_radio_selector_max_cache_size_select_item(index, _item):
 
 func _update_current_cache_size():
 	var current_size_mb = roundf(
-		Global.content_provider.get_cache_folder_total_size() / 1000 / 1000
+		float(Global.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
 	)
-	label_current_cache_size.text = "(current size: %dmb)" % current_size_mb
+	label_current_cache_size.text = "(current size: %dmb)" % int(current_size_mb)
 
 
 func _on_container_general_visibility_changed():

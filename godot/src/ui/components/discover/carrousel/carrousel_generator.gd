@@ -1,7 +1,9 @@
 class_name CarrouselGenerator
 extends Node
 
+@warning_ignore("unused_signal")
 signal report_loading_status(status: LoadingStatus)
+@warning_ignore("unused_signal")
 signal item_pressed(data)
 
 enum LoadingStatus { LOADING, OK_WITH_RESULTS, OK_WITHOUT_RESULTS, ERROR }

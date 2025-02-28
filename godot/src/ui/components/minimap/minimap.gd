@@ -33,9 +33,9 @@ func _on_control_map_shader_gui_input(event):
 		and event.pressed
 		and event.button_index == MOUSE_BUTTON_LEFT
 	):
-		emit_signal("request_open_map")
+		request_open_map.emit()
 
 
 func _on_button_menu_pressed():
 	if Global.is_mobile():
-		emit_signal("request_open_map")
+		request_open_map.emit()

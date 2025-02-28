@@ -32,6 +32,9 @@ GlobalTime="*res://src/time.gd"
 
 [debug]
 
+gdscript/warnings/unused_variable=2
+gdscript/warnings/unused_signal=0
+gdscript/warnings/shadowed_variable=2
 gdscript/warnings/redundant_await=false
 
 [display]
