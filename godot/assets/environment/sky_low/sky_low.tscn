@@ -28,8 +28,18 @@ script = ExtResource("1_u1jk8")
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_mvu0t")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -0.177909, 0.984047, 0, -0.984047, -0.177909, 0, 0, 0)
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.00710599, -0.978071, 0.20815, 0.00639971, 0.208107, 0.978085, -0.999954, 0.00828236, 0.00478057, 0, 0, 0)
 light_color = Color(1, 0.988235, 0.768627, 1)
 light_energy = 0.1
-sky_mode = 1
+light_bake_mode = 0
+shadow_enabled = true
+shadow_opacity = 0.7
+
+[node name="MoonLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.97446, 0.00413862, -0.224522, 0.22456, -0.0179592, 0.974295, 0, -0.99983, -0.0184299, 0, 0, 0)
+light_color = Color(0.77, 0.992333, 1, 1)
+light_energy = 0.1
+light_bake_mode = 0
+shadow_enabled = true
+shadow_opacity = 0.7

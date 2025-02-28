@@ -7,6 +7,8 @@ render_mode use_half_res_pass;
 #include "./modules/cartesian2polar.gdshaderinc"
 #include "./modules/polar2cartesian.gdshaderinc"
 
+const float TIME_OFFSET = .43;
+
 uniform sampler2D clouds_tex : source_color;
 uniform sampler2D clouds_gradient_day : source_color, repeat_disable, hint_default_white;
 uniform sampler2D clouds_gradient_night : source_color, repeat_disable, hint_default_white;
@@ -18,9 +20,7 @@ uniform sampler2D tint_color_cycle_bottom : source_color, repeat_disable, hint_d
 uniform sampler2D sun_color_cycle : source_color, repeat_disable, hint_default_white;
 uniform sampler2D moon_color_cycle : source_color, repeat_disable, hint_default_white;
 
-uniform vec3 scale = vec3(1);
 uniform float dither_range = .1;
-
 uniform float dither_amount = 128.0;
 
 global uniform float day_night_cycle : hint_range(0.0,1.0);
@@ -96,10 +96,14 @@ vec3 dither_interleaved(vec3 rgb, float levels, vec2 frag_coord) {
     return rgb + noise / (levels - 1.0);
 }
 
+
 void sky() {
 	/* float day_night_cycle = fract(TIME*.1); */
+	float cycle = day_night_cycle + TIME_OFFSET;
+	cycle -= floor(cycle);
+
 	vec3 sun_dir = normalize(vec3(0.2, 1.0, 0.0));
-	sun_dir.yz = rotate2D(sun_dir.yz, PI*2.0*day_night_cycle);
+	sun_dir.yz = rotate2D(sun_dir.yz, PI*2.0*cycle);
 	float dot_val= dot(sun_dir, EYEDIR);
 	float is_sun = max(sign(dot_val),0.0);
 	float eye_dot =abs(dot(EYEDIR, vec3(.0,1.0,.0)));
@@ -144,7 +148,7 @@ void sky() {
 		float stars = HALF_RES_COLOR.r;
 		float sun = HALF_RES_COLOR.b;
 
-		float day_night_blend = sin(day_night_cycle * 3.14159);
+		float day_night_blend = sin(cycle * 3.14159);
 
 		COLOR = mix(
 			textureLod(clouds_gradient_day, vec2(clouds, 0.0), 0.0).rgb,
@@ -155,15 +159,15 @@ void sky() {
 		COLOR = energy * pow(COLOR, vec3(gamma));
 
 		COLOR *= mix(
-			textureLod(tint_color_cycle_bottom, vec2(day_night_cycle),0.0).rgb,
-			textureLod(tint_color_cycle_top, vec2(day_night_cycle),0.0).rgb,
+			textureLod(tint_color_cycle_bottom, vec2(cycle),0.0).rgb,
+			textureLod(tint_color_cycle_top, vec2(cycle),0.0).rgb,
 			smoothstep(.75,.25, SKY_COORDS.y)
 		);
 
 		COLOR += mix(stars * day_night_blend * day_night_blend * day_night_blend * day_night_blend * .5, 0.0, max(clouds,sun));
 
 		COLOR = dither_interleaved(COLOR,dither_amount,FRAGCOORD.xy);
-		vec3 sun_color = textureLod(sun_color_cycle, vec2(day_night_cycle),0.0).rgb * 3.0;
+		vec3 sun_color = textureLod(sun_color_cycle, vec2(cycle),0.0).rgb * 3.0;
 		vec3 moon_color =textureLod(moon_color_cycle, vec2(day_night_blend),0.0).rgb;
 		COLOR = mix(
 			COLOR,
