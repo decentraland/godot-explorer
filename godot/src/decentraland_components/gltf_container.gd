@@ -71,7 +71,6 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 
 func async_load_gltf():
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
-	var scene_item = Global.scene_fetcher.get_scene_data_by_scene_id(dcl_scene_id)
 
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
 	var file_hash = content_mapping.get_hash(dcl_gltf_src)
