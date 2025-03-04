@@ -132,6 +132,7 @@ impl SceneManager {
         let new_scene_id = Scene::new_id();
         let signal_data = (new_scene_id, scene_entity_definition.id.clone());
         let testing_mode_active = dcl_global.bind().testing_scene_mode;
+        let fixed_skybox_time = dcl_global.bind().fixed_skybox_time;
         let ethereum_provider = dcl_global.bind().ethereum_provider.clone();
         let ephemeral_wallet = DclGlobal::singleton()
             .bind()
@@ -170,6 +171,7 @@ impl SceneManager {
             content_mapping: content_mapping.clone(),
             thread_sender_to_main: self.thread_sender_to_main.clone(),
             testing_mode: testing_mode_active,
+            fixed_skybox_time,
             ethereum_provider,
             ephemeral_wallet,
             realm_info: DclSceneRealmData {

@@ -61,7 +61,7 @@ fn op_get_realm(op_state: &mut OpState) -> DclSceneRealmData {
 #[op]
 fn op_get_world_time(op_state: &mut OpState) -> f64 {
     let scene_env = op_state.borrow::<SceneEnv>();
-    if scene_env.testing_enable {
+    if scene_env.fixed_skybox_time {
         54000.0 // 3pm
     } else {
         DclGlobalTime::get_world_time()
