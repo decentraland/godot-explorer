@@ -75,11 +75,12 @@ func setup_light(
 
 
 func _process(_delta: float):
-	if last_time == GlobalTime.normalized_time:
+	var skybox_time = Global.skybox_time.get_normalized_time()
+	if last_time == skybox_time:
 		return
-	last_time = GlobalTime.normalized_time
+	last_time = skybox_time
 	setup_light(
-		GlobalTime.normalized_time,
+		skybox_time,
 		SUN_ORIGIN,
 		sun_light,
 		initial_sun_energy,
@@ -88,7 +89,7 @@ func _process(_delta: float):
 		initial_sun_transform
 	)
 	setup_light(
-		GlobalTime.normalized_time,
+		skybox_time,
 		MOON_ORIGIN,
 		moon_light,
 		initial_moon_energy,
