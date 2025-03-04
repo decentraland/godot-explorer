@@ -58,12 +58,13 @@ fn op_get_realm(op_state: &mut OpState) -> DclSceneRealmData {
     op_state.borrow::<DclSceneRealmData>().clone()
 }
 
-#[op2]
+#[op2(fast)]
 fn op_get_world_time(_op_state: &mut OpState) -> f64 {
     DclGlobalTime::get_world_time()
 }
 
 #[op2]
+#[serde]
 fn op_get_scene_information(op_state: &mut OpState) -> GetSceneInformationResponse {
     let scene_entity_definition = op_state.borrow::<Arc<SceneEntityDefinition>>().clone();
 
