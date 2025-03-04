@@ -162,6 +162,12 @@ impl SceneManager {
                 None
             };
 
+        // The SDK expects the base_url to don´t end with /
+        let base_url = base_url
+            .clone()
+            .strip_suffix('/')
+            .map_or(base_url, |trimmed| trimmed.to_string());
+
         let dcl_scene = DclScene::spawn_new_js_dcl_scene(SpawnDclSceneData {
             scene_id: new_scene_id,
             scene_entity_definition: scene_entity_definition.clone(),
