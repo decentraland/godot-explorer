@@ -30,6 +30,12 @@ var audio = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxC
 @onready
 var check_box_loading_scenes: CheckBox = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/CheckBox_LoadingScenes
 
+@onready var check_box_dynamic_skybox: CheckBox = %CheckBox_DynamicSkybox
+@onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
+@onready var label_skybox_time: Label = %Label_SkyboxTime
+@onready var preview_camera_3d: Camera3D = %PreviewCamera3D
+@onready var preview_viewport_container: SubViewportContainer = %PreviewViewportContainer
+
 #Audio items
 @onready var h_slider_general_volume = %HSlider_GeneralVolume
 @onready var h_slider_scene_volume = %HSlider_SceneVolume
@@ -93,6 +99,14 @@ func _ready():
 	check_box_loading_scenes.button_pressed = (
 		Global.get_config().loading_scene_arround_only_when_you_pass
 	)
+
+	preview_viewport_container.hide()
+	check_box_dynamic_skybox.button_pressed = Global.get_config().dynamic_skybox
+
+	var step_value = 86400 / h_slider_skybox_time.max_value
+	h_slider_skybox_time.value = Global.get_config().skybox_time / step_value
+	h_slider_skybox_time.visible = !Global.get_config().dynamic_skybox
+	label_skybox_time.visible = !Global.get_config().dynamic_skybox
 
 	# graphic
 	refresh_graphic_settings()
@@ -439,9 +453,9 @@ func _on_radio_selector_max_cache_size_select_item(index, _item):
 
 func _update_current_cache_size():
 	var current_size_mb = roundf(
-		Global.content_provider.get_cache_folder_total_size() / 1000 / 1000
+		float(Global.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
 	)
-	label_current_cache_size.text = "(current size: %dmb)" % current_size_mb
+	label_current_cache_size.text = "(current size: %dmb)" % int(current_size_mb)
 
 
 func _on_container_general_visibility_changed():
@@ -452,3 +466,37 @@ func _on_check_box_loading_scenes_toggled(toggled_on: bool) -> void:
 	if Global.get_config().loading_scene_arround_only_when_you_pass != toggled_on:
 		Global.get_config().loading_scene_arround_only_when_you_pass = toggled_on
 		Global.get_config().save_to_settings_file()
+
+
+func _on_check_box_dynamic_skybox_toggled(toggled_on: bool) -> void:
+	h_slider_skybox_time.visible = !toggled_on
+	label_skybox_time.visible = !toggled_on
+	if Global.get_config().dynamic_skybox != toggled_on:
+		Global.get_config().dynamic_skybox = toggled_on
+		Global.get_config().save_to_settings_file()
+
+
+func _on_h_slider_skybox_time_value_changed(value: float) -> void:
+	var step_value = 86400 / h_slider_skybox_time.max_value
+	var time: int = value * step_value
+
+	var hours: int = int(time / 3600) % 24
+	var minutes: int = int(time % 3600) / 60
+	label_skybox_time.text = "%02d:%02dh" % [hours, minutes]
+
+	if Global.get_config().skybox_time != time:
+		Global.get_config().skybox_time = time
+
+
+func _on_h_slider_scene_radius_drag_ended(_value_changed: bool) -> void:
+	Global.get_config().save_to_settings_file()
+
+
+func _on_h_slider_skybox_time_drag_started() -> void:
+	var main_camera = get_viewport().get_camera_3d()
+	preview_camera_3d.global_transform = main_camera.global_transform
+	preview_viewport_container.show()
+
+
+func _on_h_slider_skybox_time_drag_ended(_value_changed: bool) -> void:
+	preview_viewport_container.hide()

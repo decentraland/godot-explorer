@@ -15,11 +15,28 @@ func _ready():
 	self.async_load_gltf.call_deferred()
 
 
-func async_try_load_gltf_from_local_file(scene_file: String) -> void:
+func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
+	var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
+	var result = await PromiseUtils.async_awaiter(promise)
+	if result is PromiseError:
+		printerr(
+			(
+				"Failed to download optimized asset (sceneId=%s gltf_hash=%s)"
+				% [dcl_scene_id, gltf_hash]
+			)
+		)
+		return
+
 	var main_tree = get_tree()
 	if not is_instance_valid(main_tree):
 		return
 
+	var scene_file = "res://glbs/" + gltf_hash + ".tscn"
+	if not FileAccess.file_exists(scene_file + ".remap"):
+		printerr("File %s doesn't exists" % scene_file)
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
+		return
 	var err = ResourceLoader.load_threaded_request(scene_file)
 	if err != OK:
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
@@ -66,9 +83,8 @@ func async_load_gltf():
 	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 	timer.start()
 
-	var scene_file = "res://glbs/" + file_hash + ".tscn"
-	if FileAccess.file_exists(scene_file + ".remap"):
-		await async_try_load_gltf_from_local_file(scene_file)
+	if Global.content_provider.optimized_asset_exists(file_hash):
+		await async_try_load_gltf_from_local_file(file_hash)
 		return
 
 	var promise = Global.content_provider.fetch_scene_gltf(dcl_gltf_src, content_mapping)
@@ -102,7 +118,18 @@ func async_load_gltf():
 		timer.stop()
 		return
 
+	remove_emission_texture(res_instance)
+
 	dcl_pending_node = res_instance
+
+
+func remove_emission_texture(gltf_instance: Node3D):
+	# HACK: Workaround to fix an import error that sets the emisison texture as the albedo texture.
+	for child in gltf_instance.get_children():
+		if !(child is MeshInstance3D):
+			continue
+		var material = child.mesh.surface_get_material(0)
+		material.emission_texture = null
 
 
 func async_deferred_add_child():

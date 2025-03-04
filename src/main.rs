@@ -135,6 +135,7 @@ fn main() -> Result<(), anyhow::Error> {
                 )
                 .arg(
                     Arg::new("resource-tracking")
+                        .short('x')
                         .help("enables resource tracking feature")
                         .takes_value(false),
                 )

@@ -7,7 +7,10 @@ use std::{
 use deno_core::{op2, OpDecl, OpState};
 
 use crate::dcl::{
-    common::{SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent},
+    common::{
+        SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent,
+        SceneProcessMainThreadMessages,
+    },
     crdt::{
         message::{
             append_gos_component, delete_entity, process_many_messages, put_or_delete_lww_component,
@@ -175,6 +178,8 @@ async fn op_crdt_recv_from_renderer(
             Default::default()
         }
     };
+
+    op_state.put(SceneProcessMainThreadMessages(true));
 
     op_state.put(Vec::<LocalCall>::new());
     op_state.put(mutex_scene_crdt_state);

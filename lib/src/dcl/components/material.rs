@@ -271,7 +271,7 @@ impl Default for DclPbrMaterial {
             reflectivity_color: RoundedColor3(Color3::white()),
             transparency_mode: MaterialTransparencyMode::MtmAuto,
             metallic: RoundedFloat(0.5),
-            roughness: RoundedFloat(0.5),
+            roughness: RoundedFloat(0.0),
             specular_intensity: RoundedFloat(1.0),
             emissive_intensity: RoundedFloat(2.0),
             direct_intensity: RoundedFloat(1.0),

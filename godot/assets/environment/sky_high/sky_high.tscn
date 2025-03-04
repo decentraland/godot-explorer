@@ -1,19 +1,14 @@
-[gd_scene load_steps=6 format=3 uid="uid://bgi7p762xl08l"]
+[gd_scene load_steps=4 format=3 uid="uid://bgi7p762xl08l"]
 
 [ext_resource type="Script" path="res://assets/environment/sky_base.gd" id="1_0y4pc"]
-[ext_resource type="Texture2D" uid="uid://bdg7jrtachy6f" path="res://assets/environment/sky_high/AllSkyFree_Sky_EpicBlueSunset_Equirect.png" id="2_yrgpo"]
-
-[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_kg6cs"]
-panorama = ExtResource("2_yrgpo")
-
-[sub_resource type="Sky" id="Sky_2yrrx"]
-sky_material = SubResource("PanoramaSkyMaterial_kg6cs")
+[ext_resource type="Sky" uid="uid://l82r2nfrgcbx" path="res://assets/sky.tres" id="2_13tc8"]
 
 [sub_resource type="Environment" id="Environment_8xuge"]
 background_mode = 2
-sky = SubResource("Sky_2yrrx")
-ambient_light_color = Color(0.501961, 0.501961, 0.501961, 1)
-ambient_light_sky_contribution = 0.2
+background_energy_multiplier = 0.5
+sky = ExtResource("2_13tc8")
+ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
+ambient_light_sky_contribution = 0.4
 tonemap_mode = 3
 glow_levels/1 = 16.0
 glow_levels/2 = 16.0
@@ -34,5 +29,6 @@ environment = SubResource("Environment_8xuge")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -0.5, 0.866025, 0, -0.866025, -0.5, 0, 0, 0)
 light_color = Color(1, 0.988235, 0.768627, 1)
+light_energy = 0.1
 shadow_enabled = true
 shadow_opacity = 0.7

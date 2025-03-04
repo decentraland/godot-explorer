@@ -19,6 +19,11 @@ pub struct AvatarColor3 {
 pub struct AvatarSnapshots {
     pub face256: String,
     pub body: String,
+
+    #[serde(skip)]
+    pub body_url: Option<String>,
+    #[serde(skip)]
+    pub face_url: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -117,6 +122,8 @@ impl Default for AvatarWireFormat {
             snapshots: Some(AvatarSnapshots {
                 body: "bafkreigxesh5owgy4vreca65nh33zqw7br6haokkltmzg3mn22g5whcfbq".into(),
                 face256: "bafkreibykc3l7ai5z5zik7ypxlqetgtmiepr42al6jcn4yovdgezycwa2y".into(),
+                body_url: None,
+                face_url: None,
             }),
             eyes: Some(AvatarColor {
                 color: AvatarColor3 {
@@ -207,23 +214,29 @@ impl SerializedProfile {
     }
 
     pub fn convert_snapshots(&mut self) {
-        // clean up the lambda result
         if let Some(snapshots) = self.avatar.snapshots.as_mut() {
-            if let Some(hash) = snapshots
-                .body
-                .rsplit_once('/')
-                .map(|(_, hash)| hash.to_owned())
-            {
-                snapshots.body = hash;
-            }
-            if let Some(hash) = snapshots
-                .face256
-                .rsplit_once('/')
-                .map(|(_, hash)| hash.to_owned())
-            {
-                snapshots.face256 = hash;
-            }
+            snapshots.body_url = Some(snapshots.body.clone());
+            snapshots.face_url = Some(snapshots.face256.clone());
+            snapshots.body = SerializedProfile::extract_identifier(&snapshots.body);
+            snapshots.face256 = SerializedProfile::extract_identifier(&snapshots.face256);
         }
+    }
+
+    /// Extracts the identifier from a URL. If the URL is in the new format
+    /// (i.e. contains "/entities/"), it will return the segment immediately after it.
+    /// Otherwise, it returns the text after the last '/' to maintain compatibility.
+    fn extract_identifier(url: &str) -> String {
+        if let Some((_, rest)) = url.split_once("/entities/") {
+            // `rest` looks like "bafkreicv4n2v6hippxdth32boyv2th4zafesj67352jtffbp3daznath5i/face.png"
+            if let Some((id, _)) = rest.split_once('/') {
+                return id.to_owned();
+            } else {
+                return rest.to_owned();
+            }
+        } else if let Some((_, tail)) = url.rsplit_once('/') {
+            return tail.to_owned();
+        }
+        url.to_owned()
     }
 }
 

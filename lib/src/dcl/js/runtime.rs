@@ -9,6 +9,7 @@ use crate::{
         scene_apis::{ContentMapping, GetSceneInformationResponse},
         DclSceneRealmData,
     },
+    godot_classes::dcl_global_time::DclGlobalTime,
     realm::scene_definition::SceneEntityDefinition,
 };
 
@@ -17,6 +18,7 @@ pub fn ops() -> Vec<OpDecl> {
         op_get_file_url(),
         op_get_realm(),
         op_get_scene_information(),
+        op_get_world_time(),
     ]
 }
 
@@ -57,7 +59,11 @@ fn op_get_realm(op_state: &mut OpState) -> DclSceneRealmData {
 }
 
 #[op2]
-#[serde]
+fn op_get_world_time(_op_state: &mut OpState) -> f64 {
+    DclGlobalTime::get_world_time()
+}
+
+#[op2]
 fn op_get_scene_information(op_state: &mut OpState) -> GetSceneInformationResponse {
     let scene_entity_definition = op_state.borrow::<Arc<SceneEntityDefinition>>().clone();
 

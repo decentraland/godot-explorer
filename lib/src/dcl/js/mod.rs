@@ -15,7 +15,7 @@ mod websocket;
 
 use crate::dcl::common::{
     is_scene_log_enabled, SceneDying, SceneElapsedTime, SceneLogLevel, SceneLogMessage, SceneLogs,
-    SceneMainCrdtFileContent, SceneStartTime,
+    SceneMainCrdtFileContent, SceneProcessMainThreadMessages, SceneStartTime,
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
@@ -254,6 +254,7 @@ pub(crate) fn scene_thread(
 
     if inspector.is_some() {
         // TODO: maybe send a message to announce the inspector is being waited
+        tracing::info!("Inspector is waiting...");
 
         runtime
             .inspector()
@@ -298,6 +299,10 @@ pub(crate) fn scene_thread(
     let mut reported_error_filter = 0;
 
     loop {
+        state
+            .borrow_mut()
+            .put(SceneProcessMainThreadMessages(false));
+
         let dt = std::time::SystemTime::now()
             .duration_since(start_time)
             .unwrap_or(elapsed)
@@ -337,6 +342,22 @@ pub(crate) fn scene_thread(
             }
         } else {
             reported_error_filter -= 1;
+        }
+
+        // if the crdtSendToRenderer is not called, we didn't process the RendererResponse, so the SceneKill will be never be processed...
+        let main_thread_processed = state.borrow().borrow::<SceneProcessMainThreadMessages>().0;
+        if !main_thread_processed {
+            let mut receiver = state
+                .borrow_mut()
+                .take::<tokio::sync::mpsc::Receiver<RendererResponse>>();
+            let response = receiver.blocking_recv();
+            if let Some(RendererResponse::Kill) = response {
+                tracing::info!("scene_id {:?} doesn't process the main thread messages, killing scene from scene thread", scene_id);
+                break;
+            } else {
+                state.borrow_mut().put(receiver); // put it again...
+            }
+            break;
         }
 
         let value = state.borrow().borrow::<SceneDying>().0;
@@ -462,8 +483,9 @@ fn op_log(state: Rc<RefCell<OpState>>, #[string] mut message: String, immediate:
 
     if immediate {
         tracing::info!("{}", message);
+    } else {
+        tracing::debug!("{}", message);
     }
-    tracing::debug!("{}", message);
 
     let time = state.borrow().borrow::<SceneElapsedTime>().0;
     state
