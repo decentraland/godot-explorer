@@ -160,7 +160,6 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 func get_scene_child(scene_id: int) -> DclSceneNode:
 	var scene_child: DclSceneNode = null
 	for child in Global.scene_runner.get_children():
-		var this_scene_progress: float = 0.0
 		if child is DclSceneNode:
 			if child.get_scene_id() == scene_id:
 				scene_child = child
