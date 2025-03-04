@@ -128,7 +128,7 @@ impl INode for DclGlobal {
         let developer_mode = args.find("--dev".into(), None).is_some();
 
         let fixed_skybox_time =
-            testing_scene_mode || args.find("--scene-rendering".into(), None).is_some();
+            testing_scene_mode || args.find("--scene-renderer".into(), None).is_some();
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
