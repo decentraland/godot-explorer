@@ -144,6 +144,7 @@ pub(crate) fn scene_thread(
     let content_mapping = spawn_dcl_scene_data.content_mapping;
     let thread_sender_to_main = spawn_dcl_scene_data.thread_sender_to_main;
     let testing_mode = spawn_dcl_scene_data.testing_mode;
+    let fixed_skybox_time = spawn_dcl_scene_data.fixed_skybox_time;
     let ethereum_provider = spawn_dcl_scene_data.ethereum_provider;
     let ephemeral_wallet = spawn_dcl_scene_data.ephemeral_wallet;
     let realm_info = spawn_dcl_scene_data.realm_info;
@@ -231,6 +232,7 @@ pub(crate) fn scene_thread(
     state.borrow_mut().put(SceneEnv {
         enable_know_env: testing_mode,
         testing_enable: testing_mode,
+        fixed_skybox_time,
     });
 
     if let Some(scene_main_crdt) = scene_main_crdt {
@@ -526,6 +528,7 @@ fn op_error(state: Rc<RefCell<OpState>>, mut message: String, immediate: bool) {
 pub struct SceneEnv {
     pub enable_know_env: bool,
     pub testing_enable: bool,
+    pub fixed_skybox_time: bool,
 }
 
 fn get_env_for_scene(state: &mut OpState) -> String {
