@@ -7,12 +7,12 @@ pub const PROTOC_BASE_URL: &str =
     "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";
 
 pub const GODOT4_BIN_BASE_URL: &str =
-    "https://github.com/decentraland/godotengine/releases/download/4.3-stable/";
+    "https://github.com/decentraland/godotengine/releases/download/4.4-stable/";
 
-pub const GODOT_CURRENT_VERSION: &str = "4.3";
+pub const GODOT_CURRENT_VERSION: &str = "4.4";
 
 pub const GODOT4_EXPORT_TEMPLATES_BASE_URL: &str =
-    "https://github.com/decentraland/godotengine/releases/download/4.3-stable/";
+    "https://github.com/decentraland/godotengine/releases/download/4.4-stable/";
 
 pub const GODOT_PLATFORM_FILES: &[(&str, &[&str])] = &[
     ("ios", &["ios.zip"]),

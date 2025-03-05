@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://dx7885dtt4yyn"]
 
-[ext_resource type="Script" path="res://src/tool/scene_renderer/scene_camera_tune.gd" id="1_1rcic"]
+[ext_resource type="Script" uid="uid://w4ntewg41i4t" path="res://src/tool/scene_renderer/scene_camera_tune.gd" id="1_1rcic"]
 
 [node name="SceneCameraTune" type="Control"]
 layout_mode = 3

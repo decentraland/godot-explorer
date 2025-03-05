@@ -1,6 +1,6 @@
 [gd_scene load_steps=10 format=3 uid="uid://bahsrsgo0jx48"]
 
-[ext_resource type="Script" path="res://src/ui/components/wearable_item/wearable_item.gd" id="1_vccc4"]
+[ext_resource type="Script" uid="uid://diff1e0rtmlew" path="res://src/ui/components/wearable_item/wearable_item.gd" id="1_vccc4"]
 [ext_resource type="Texture2D" uid="uid://c0qx68m7rge52" path="res://assets/ui/MythicThumbnail.png" id="2_bnu38"]
 [ext_resource type="Texture2D" uid="uid://bheg7fuh5a4p0" path="res://assets/ui/checked.svg" id="4_cqflp"]
 [ext_resource type="Texture2D" uid="uid://vnikogxsqjwe" path="res://assets/ui/Subtract.svg" id="5_dtfap"]

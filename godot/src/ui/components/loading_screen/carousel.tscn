@@ -1,6 +1,6 @@
 [gd_scene load_steps=17 format=3 uid="uid://bykgikku3dda2"]
 
-[ext_resource type="Script" path="res://src/ui/components/loading_screen/carousel.gd" id="1_ioipx"]
+[ext_resource type="Script" uid="uid://dxp3n8cbqyp6d" path="res://src/ui/components/loading_screen/carousel.gd" id="1_ioipx"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_p56uk"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="3_hl04s"]
 [ext_resource type="Texture2D" uid="uid://cq3fego5ooe38" path="res://assets/ui/loading/slider1.png" id="4_4k1g3"]
@@ -45,8 +45,8 @@ tracks/0/keys = {
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_in2xg"]
 _data = {
-"RESET": SubResource("Animation_koy0s"),
-"default": SubResource("Animation_xthki")
+&"RESET": SubResource("Animation_koy0s"),
+&"default": SubResource("Animation_xthki")
 }
 
 [sub_resource type="Animation" id="Animation_d5qpx"]
@@ -83,8 +83,8 @@ tracks/0/keys = {
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_8leup"]
 _data = {
-"RESET": SubResource("Animation_d5qpx"),
-"default": SubResource("Animation_524wq")
+&"RESET": SubResource("Animation_d5qpx"),
+&"default": SubResource("Animation_524wq")
 }
 
 [node name="Carousel" type="Control"]

@@ -1,16 +1,16 @@
 [gd_scene load_steps=5 format=3 uid="uid://dkqc3of5bdx2i"]
 
-[ext_resource type="Script" path="res://src/ui/components/map_shader/map_shader.gd" id="1_yemwb"]
-[ext_resource type="Shader" path="res://src/ui/components/map_shader/map.gdshader" id="2_fftek"]
+[ext_resource type="Script" uid="uid://mk5r5efc2aif" path="res://src/ui/components/map_shader/map_shader.gd" id="1_yemwb"]
+[ext_resource type="Shader" uid="uid://ckhd3oemixo7h" path="res://src/ui/components/map_shader/map.gdshader" id="2_fftek"]
 [ext_resource type="Texture2D" uid="uid://cfarfg4y15d1e" path="res://src/ui/components/map_shader/minimap.png" id="3_kpyeh"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fnml8"]
 shader = ExtResource("2_fftek")
-shader_parameter/global_transform = null
+shader_parameter/global_transform = Projection(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+shader_parameter/map_data = ExtResource("3_kpyeh")
 shader_parameter/size = 16.0
 shader_parameter/line_width_px = 1.0
 shader_parameter/selected_tile = Vector2(20, 20)
-shader_parameter/map_data = ExtResource("3_kpyeh")
 
 [node name="Control_Map" type="Control"]
 clip_contents = true

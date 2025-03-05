@@ -1,6 +1,6 @@
 [gd_scene load_steps=76 format=3 uid="uid://dvu5i0n51gph3"]
 
-[ext_resource type="Script" path="res://src/decentraland_components/avatar/avatar.gd" id="1_stmqn"]
+[ext_resource type="Script" uid="uid://du2j4yjo5etlb" path="res://src/decentraland_components/avatar/avatar.gd" id="1_stmqn"]
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="2_uh4pv"]
 [ext_resource type="AnimationLibrary" uid="uid://bfbk8s54f1krh" path="res://assets/animations/locomotion.res" id="3_piipk"]
 [ext_resource type="AnimationLibrary" uid="uid://by2djy1ah7psb" path="res://assets/animations/default_emotes.tres" id="4_mgm58"]
