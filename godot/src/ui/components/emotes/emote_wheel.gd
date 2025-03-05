@@ -1,6 +1,18 @@
 extends Control
 
-@export var avatar_node: Avatar = null
+@export var avatar_node: Avatar = null:
+	set(value):
+		if value != avatar_node:  # Prevent redundant assignments
+			if (
+				avatar_node != null
+				and avatar_node.avatar_loaded.is_connected(self._on_avatar_loaded)
+			):
+				avatar_node.avatar_loaded.disconnect(self._on_avatar_loaded)
+
+			avatar_node = value
+			avatar_node.avatar_loaded.connect(self._on_avatar_loaded)
+	get():
+		return avatar_node
 
 var emote_items: Array[EmoteItemUi] = []
 
