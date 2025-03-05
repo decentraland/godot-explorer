@@ -1,13 +1,13 @@
 [gd_scene load_steps=30 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
-[ext_resource type="Script" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
+[ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
 [ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="3_1stdy"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="3_66uy4"]
 [ext_resource type="PackedScene" uid="uid://bp6yn0qw2s6ua" path="res://src/ui/components/discover/discover.tscn" id="4_5qyiw"]
 [ext_resource type="PackedScene" uid="uid://dkqc3of3acx2i" path="res://src/ui/components/map/map.tscn" id="4_jtsir"]
 [ext_resource type="ButtonGroup" uid="uid://bxbiah4vi02n2" path="res://src/ui/components/menu/button_group_menu.tres" id="5_ili3w"]
-[ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
+[ext_resource type="Shader" uid="uid://ctbwfwlyggrm0" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
 [ext_resource type="Texture2D" uid="uid://ck0o5otm5qv8k" path="res://assets/ui/nav-bar-icons/explorer-off.svg" id="6_hwdsi"]
 [ext_resource type="Texture2D" uid="uid://dpbvomx45a2bu" path="res://assets/ui/nav-bar-icons/map-off.svg" id="7_n821n"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="8_d38wp"]
@@ -172,10 +172,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("5_ili3w")
@@ -195,10 +195,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("5_ili3w")
@@ -218,10 +218,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("5_ili3w")
@@ -241,10 +241,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"ButtonFlat_Tab"
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_constants/icon_max_width = 44
 toggle_mode = true
 button_group = ExtResource("5_ili3w")
@@ -270,8 +270,8 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dymeh")
-theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 60
 theme_override_font_sizes/font_size = 12
 theme_override_styles/normal = SubResource("StyleBoxFlat_60djt")
@@ -290,8 +290,8 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dymeh")
-theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 20
 theme_override_styles/normal = SubResource("StyleBoxFlat_60djt")
 icon = ExtResource("12_rk6dl")

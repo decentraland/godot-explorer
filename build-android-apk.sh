@@ -23,7 +23,7 @@ cargo run -- build
 echo "Link export templates"
 mkdir -p "${HOME}/.local/share/godot/export_templates/"
 cd "${HOME}/.local/share/godot/export_templates/"
-ln -sf "${EXPLORER_PATH}/.bin/godot/templates/templates/" "4.3.stable"
+ln -sf "${EXPLORER_PATH}/.bin/godot/templates/templates/" "4.4.stable"
 
 echo "Build for Android (arm64)"
 cd "${EXPLORER_PATH}/lib"

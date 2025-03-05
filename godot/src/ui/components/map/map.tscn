@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://dkqc3of3acx2i"]
 
-[ext_resource type="Script" path="res://src/ui/components/map/map.gd" id="1_1j46y"]
+[ext_resource type="Script" uid="uid://d4j6yrsj1sbb8" path="res://src/ui/components/map/map.gd" id="1_1j46y"]
 [ext_resource type="PackedScene" uid="uid://dkqc3of5bdx2i" path="res://src/ui/components/map_shader/map_shader.tscn" id="2_el671"]
 
 [node name="Control_Map" type="Control"]

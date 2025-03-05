@@ -1,7 +1,7 @@
 [gd_scene load_steps=17 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
-[ext_resource type="Script" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
+[ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_17slp"]
 [ext_resource type="PackedScene" uid="uid://3de823q04ptd" path="res://src/ui/components/discover/carrousel/discover_carrousel.tscn" id="3_s5vyg"]
 [ext_resource type="Texture2D" uid="uid://b5p8bwrk06ov8" path="res://assets/ui/discover/discover_banner.png" id="4_2pq8h"]
@@ -53,8 +53,8 @@ tracks/0/keys = {
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_5pduq"]
 _data = {
-"RESET": SubResource("Animation_okrup"),
-"default": SubResource("Animation_sc3jq")
+&"RESET": SubResource("Animation_okrup"),
+&"default": SubResource("Animation_sc3jq")
 }
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w46h5"]

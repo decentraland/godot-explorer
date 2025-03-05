@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://cm7kmfoxdq31o"]
 
-[ext_resource type="Script" path="res://src/tool/scene_renderer/scene_orchestor.gd" id="1_nee4c"]
+[ext_resource type="Script" uid="uid://c5oaug7nlmr44" path="res://src/tool/scene_renderer/scene_orchestor.gd" id="1_nee4c"]
 
 [node name="SceneOrchestor" type="Node"]
 script = ExtResource("1_nee4c")

@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://1llql2trpa5s"]
 
-[ext_resource type="Script" path="res://src/decentraland_components/avatar/avatar_sfxs.gd" id="1_q3p8f"]
+[ext_resource type="Script" uid="uid://dxroh81x8phbn" path="res://src/decentraland_components/avatar/avatar_sfxs.gd" id="1_q3p8f"]
 
 [node name="Avatar_SFXs" type="Node3D"]
 script = ExtResource("1_q3p8f")

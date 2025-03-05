@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://de7563ke1agyk"]
 
-[ext_resource type="Script" path="res://src/decentraland_components/video_player.gd" id="1_oqq6w"]
+[ext_resource type="Script" uid="uid://rubmndtf5ttg" path="res://src/decentraland_components/video_player.gd" id="1_oqq6w"]
 
 [node name="video_player" type="DclVideoPlayer"]
 bus = &"Scene"

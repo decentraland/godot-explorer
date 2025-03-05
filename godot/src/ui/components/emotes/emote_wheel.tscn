@@ -1,6 +1,6 @@
 [gd_scene load_steps=8 format=3 uid="uid://ec0egfeyv5fm"]
 
-[ext_resource type="Script" path="res://src/ui/components/emotes/emote_wheel.gd" id="1_jcqth"]
+[ext_resource type="Script" uid="uid://bly6o82m2sh7x" path="res://src/ui/components/emotes/emote_wheel.gd" id="1_jcqth"]
 [ext_resource type="PackedScene" uid="uid://c7bnh6p6qygxu" path="res://src/ui/components/emotes/emote_wheel_item.tscn" id="2_h3qru"]
 [ext_resource type="Texture2D" uid="uid://bgx284betq718" path="res://src/ui/components/emotes/dance_figure.png" id="3_poid4"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_ntwf1"]

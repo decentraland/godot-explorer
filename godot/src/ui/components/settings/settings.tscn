@@ -1,7 +1,7 @@
 [gd_scene load_steps=14 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
-[ext_resource type="Script" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
+[ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
 [ext_resource type="Texture2D" uid="uid://djwf5d8a0rw6y" path="res://assets/ui/graphics.svg" id="5_lso3q"]
 [ext_resource type="Texture2D" uid="uid://fx5fj4f8uf7k" path="res://assets/ui/Filter.svg" id="6_br0rl"]
 [ext_resource type="Texture2D" uid="uid://bqypc3fidla5s" path="res://assets/ui/SettingsOff.png" id="6_gugrl"]
@@ -644,6 +644,7 @@ tooltip_text = "Select scene to load"
 focus_mode = 1
 item_count = 11
 popup/item_0/text = "mannakia.dcl.eth"
+popup/item_0/id = 0
 popup/item_1/text = "http://127.0.0.1:8000"
 popup/item_1/id = 1
 popup/item_2/text = "https://sdk-test-scenes.decentraland.zone"
