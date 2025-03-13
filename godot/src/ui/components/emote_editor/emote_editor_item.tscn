@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://c6t7jqpx38nxd"]
 
 [ext_resource type="Texture2D" uid="uid://cv6fjk334oiu4" path="res://assets/ui/EmoteWheelDeck.svg" id="1_d7r2t"]
-[ext_resource type="Script" path="res://src/ui/components/emote_editor/emote_editor_item.gd" id="1_myf8i"]
+[ext_resource type="Script" uid="uid://dpygh4hywfy2" path="res://src/ui/components/emote_editor/emote_editor_item.gd" id="1_myf8i"]
 [ext_resource type="PackedScene" uid="uid://blc0mna12dsxo" path="res://src/ui/components/emotes/emote_square_item.tscn" id="2_w1a3f"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_es0gm"]

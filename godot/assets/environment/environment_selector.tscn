@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://pg3ssuep5dm7"]
 
-[ext_resource type="Script" path="res://assets/environment/environment_selector.gd" id="1_s6m2b"]
+[ext_resource type="Script" uid="uid://cbygiuumfukjn" path="res://assets/environment/environment_selector.gd" id="1_s6m2b"]
 
 [node name="EnvironmentSelector" type="Node"]
 script = ExtResource("1_s6m2b")

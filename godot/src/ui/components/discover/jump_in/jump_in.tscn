@@ -1,6 +1,6 @@
 [gd_scene load_steps=24 format=3 uid="uid://vc72j0sq70jq"]
 
-[ext_resource type="Script" path="res://src/ui/components/discover/jump_in/jump_in.gd" id="1_6j21g"]
+[ext_resource type="Script" uid="uid://0ncqo78wbgqv" path="res://src/ui/components/discover/jump_in/jump_in.gd" id="1_6j21g"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_r8b5e"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="3_eguxx"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="4_lo8h1"]
@@ -26,7 +26,7 @@ shadow_size = 5
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ak0ex"]
 
 [sub_resource type="Curve" id="Curve_6fe12"]
-max_value = 2.0
+_limits = [0.0, 2.0, 0.0, 1.0]
 _data = [Vector2(0.09, 1.28552), 0.0, 0.0, 0, 0, Vector2(0.34, 1.87802), 0.0, 0.0, 0, 0, Vector2(0.966667, 0.146113), 0.0, 0.0, 0, 0]
 point_count = 3
 

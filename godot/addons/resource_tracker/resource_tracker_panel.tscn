@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://brb47xgf4juex"]
 
-[ext_resource type="Script" path="res://addons/resource_tracker/resource_tracker_panel.gd" id="1_recoy"]
+[ext_resource type="Script" uid="uid://cw5stjt3o6pty" path="res://addons/resource_tracker/resource_tracker_panel.gd" id="1_recoy"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_u0lyc"]
 
