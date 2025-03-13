@@ -79,7 +79,7 @@ pub async fn load_image_texture(
     let original_size = image.get_size();
 
     let max_size = ctx.texture_quality.to_max_size();
-    let mut texture: Gd<Texture2D> = if std::env::consts::OS == "ios" {
+    let mut texture: Gd<Texture2D> = if std::env::consts::OS == "ios" || std::env::consts::OS == "android" {
         create_compressed_texture(&mut image, max_size)
     } else {
         resize_image(&mut image, max_size);
