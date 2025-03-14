@@ -1,10 +1,12 @@
-[gd_scene load_steps=17 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=20 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_17slp"]
 [ext_resource type="PackedScene" uid="uid://3de823q04ptd" path="res://src/ui/components/discover/carrousel/discover_carrousel.tscn" id="3_s5vyg"]
 [ext_resource type="Texture2D" uid="uid://b5p8bwrk06ov8" path="res://assets/ui/discover/discover_banner.png" id="4_2pq8h"]
+[ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="4_64qur"]
+[ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/debug_panel/icons/Clear.svg" id="4_ck13e"]
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/components/discover/places/places_generator.tscn" id="4_q55yj"]
 [ext_resource type="Texture2D" uid="uid://b4bstp7qn7avb" path="res://assets/ui/discover/world_banner.png" id="5_1hjun"]
 [ext_resource type="PackedScene" uid="uid://kfsjxah2khkg" path="res://src/ui/components/discover/places/custom_places_generator.tscn" id="7_ehm1e"]
@@ -18,6 +20,8 @@ gradient = SubResource("Gradient_m47k4")
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_746xu"]
 bg_color = Color(0, 0, 0, 0.2)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_753ow"]
 
 [sub_resource type="Animation" id="Animation_okrup"]
 length = 0.001
@@ -66,6 +70,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+focus_mode = 1
 theme = ExtResource("1_tkk7t")
 script = ExtResource("2_f08es")
 
@@ -98,12 +103,14 @@ theme_override_constants/separation = 0
 [node name="PanelContainer_Navbar" type="PanelContainer" parent="TextureRect/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_746xu")
 
 [node name="MarginContainer" type="MarginContainer" parent="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar"]
 layout_mode = 2
-theme_override_constants/margin_left = 30
+theme_override_constants/margin_left = 50
 theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 50
 theme_override_constants/margin_bottom = 8
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer"]
@@ -115,6 +122,43 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("3_17slp")
 theme_override_font_sizes/font_size = 28
 text = "Discover"
+
+[node name="HSeparator" type="HSeparator" parent="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+theme_override_styles/separator = SubResource("StyleBoxEmpty_753ow")
+
+[node name="LineEdit_SearchBar" type="LineEdit" parent="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 2
+placeholder_text = "Search Genesis City and Worlds"
+clear_button_enabled = true
+right_icon = ExtResource("4_64qur")
+
+[node name="Button_SearchBar" type="Button" parent="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 39)
+layout_mode = 2
+theme_type_variation = &"WhiteButton"
+theme_override_font_sizes/font_size = 16
+text = "Search"
+icon = ExtResource("4_64qur")
+
+[node name="Button_ClearFilter" type="Button" parent="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"WhiteButton"
+theme_override_font_sizes/font_size = 16
+text = "Clear filter"
+icon = ExtResource("4_ck13e")
+
+[node name="Timer_SearchDebounce" type="Timer" parent="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+wait_time = 0.5
+one_shot = true
 
 [node name="MarginContainer" type="MarginContainer" parent="TextureRect/ScrollContainer/VBoxContainer"]
 layout_mode = 2
@@ -201,6 +245,7 @@ last_places_logic = true
 discover = NodePath("../../../../../..")
 
 [node name="PlacesFavorites" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
@@ -212,6 +257,7 @@ only_favorites = true
 discover = NodePath("../../../../../..")
 
 [node name="PlacesFeatured" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("CustomPlacesGenerator")
 title = "Featured"
@@ -220,6 +266,7 @@ title = "Featured"
 discover = NodePath("../../../../../..")
 
 [node name="PlacesMostActive" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Most Actives"
@@ -229,6 +276,7 @@ order_by = 1
 discover = NodePath("../../../../../..")
 
 [node name="PlacesWorlds" parent="TextureRect/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 with_search = true
@@ -254,4 +302,9 @@ unique_name_in_owner = true
 visible = false
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
+[connection signal="focus_exited" from="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_focus_exited"]
+[connection signal="text_changed" from="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_text_changed"]
+[connection signal="pressed" from="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_SearchBar" to="." method="_on_button_search_bar_pressed"]
+[connection signal="pressed" from="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Button_ClearFilter" to="." method="_on_button_clear_filter_pressed"]
+[connection signal="timeout" from="TextureRect/ScrollContainer/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/Timer_SearchDebounce" to="." method="_on_timer_search_debounce_timeout"]
 [connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]
