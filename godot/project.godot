@@ -28,7 +28,6 @@ UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
 XRToolsUserSettings="*res://addons/godot-xr-tools/user_settings/user_settings.gd"
 XRToolsRumbleManager="*res://addons/godot-xr-tools/rumble/rumble_manager.gd"
-GlobalTime="*res://src/time.gd"
 
 [debug]
 

@@ -13,6 +13,8 @@ use crate::{
     realm::scene_definition::SceneEntityDefinition,
 };
 
+use super::SceneEnv;
+
 pub fn ops() -> Vec<OpDecl> {
     vec![
         op_get_file_url(),
@@ -60,7 +62,12 @@ fn op_get_realm(op_state: &mut OpState) -> DclSceneRealmData {
 
 #[op2(fast)]
 fn op_get_world_time(_op_state: &mut OpState) -> f64 {
-    DclGlobalTime::get_world_time()
+    let scene_env = op_state.borrow::<SceneEnv>();
+    if scene_env.fixed_skybox_time {
+        54000.0 // 3pm
+    } else {
+        DclGlobalTime::get_world_time()
+    }
 }
 
 #[op2]

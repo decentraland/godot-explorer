@@ -21,6 +21,7 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 var raycast_debugger: RaycastDebugger
 
 var scene_fetcher: SceneFetcher
+var skybox_time: SkyboxTime = null
 
 var nft_fetcher: OpenSeaFetcher
 var nft_frame_loader: NftFrameStyleLoader
@@ -109,6 +110,9 @@ func _ready():
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
 
+	self.skybox_time = SkyboxTime.new()
+	self.skybox_time.set_name("skybox_time")
+
 	self.portable_experience_controller = PortableExperienceController.new()
 	self.portable_experience_controller.set_name("portable_experience_controller")
 
@@ -117,6 +121,7 @@ func _ready():
 
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
+	get_tree().root.add_child.call_deferred(self.skybox_time)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
