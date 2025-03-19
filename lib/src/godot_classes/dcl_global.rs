@@ -11,7 +11,7 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     content::content_provider::ContentProvider,
-    dcl::{common::set_scene_log_enabled, js::init_runtime},
+    dcl::common::set_scene_log_enabled,
     http_request::rust_http_queue_requester::RustHttpQueueRequester,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
     test_runner::testing_tools::DclTestingTools,
@@ -97,7 +97,7 @@ pub struct DclGlobal {
 impl INode for DclGlobal {
     fn init(base: Base<Node>) -> Self {
         #[cfg(feature = "use_deno")]
-        init_runtime();
+        crate::dcl::js::init_runtime();
 
         #[cfg(target_os = "android")]
         android::init_logger();
