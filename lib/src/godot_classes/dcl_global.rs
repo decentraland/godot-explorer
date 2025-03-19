@@ -11,7 +11,7 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     content::content_provider::ContentProvider,
-    dcl::common::set_scene_log_enabled,
+    dcl::{common::set_scene_log_enabled, js::init_runtime},
     http_request::rust_http_queue_requester::RustHttpQueueRequester,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
     test_runner::testing_tools::DclTestingTools,
@@ -96,6 +96,9 @@ pub struct DclGlobal {
 #[godot_api]
 impl INode for DclGlobal {
     fn init(base: Base<Node>) -> Self {
+        #[cfg(feature = "use_deno")]
+        init_runtime();
+
         #[cfg(target_os = "android")]
         android::init_logger();
 
@@ -128,7 +131,7 @@ impl INode for DclGlobal {
         let developer_mode = args.find(&"--dev".into(), None).is_some();
 
         let fixed_skybox_time =
-            testing_scene_mode || args.find("--scene-renderer".into(), None).is_some();
+            testing_scene_mode || args.find(&"--scene-renderer".into(), None).is_some();
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 

@@ -49,6 +49,11 @@ pub struct InspectorServer;
 pub(crate) static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
     Lazy::new(Default::default);
 
+/// must be called from main thread on linux before any isolates are created
+pub fn init_runtime() {
+    let _ = deno_core::v8::Platform::new(1, false);
+}
+
 pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorServer>) {
     let mut ops = vec![op_require(), op_log(), op_error()];
 
@@ -102,7 +107,6 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
     // create runtime
     #[allow(unused_mut)]
     let mut runtime = deno_core::JsRuntime::new(RuntimeOptions {
-        v8_platform: deno_core::v8::Platform::new(1, false).make_shared().into(),
         extensions: vec![ext],
         inspector: inspect,
         ..Default::default()
