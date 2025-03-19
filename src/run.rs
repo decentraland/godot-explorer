@@ -1,5 +1,7 @@
 use std::{collections::HashMap, io::BufRead, path::PathBuf};
 
+use cargo_metadata::MetadataCommand;
+
 use crate::{
     consts::{GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
     copy_files::copy_library,
@@ -89,11 +91,7 @@ fn prepare_build_args_envs(
     build_args.extend(extra_build_args);
 
     if target == "ios" || target == "android" {
-        // Set RUSTY_V8_MIRROR for iOS and Android
-        with_build_envs.insert(
-            "RUSTY_V8_MIRROR".to_string(),
-            "https://github.com/leanmendoza/rusty_v8/releases/download".to_string(),
-        );
+        setup_v8_bindings(&mut with_build_envs, target)?;
 
         match target.as_str() {
             "ios" => {
@@ -128,6 +126,92 @@ fn prepare_build_args_envs(
     let build_args: Vec<String> = build_args.iter().map(|&s| s.to_string()).collect();
 
     Ok((build_args, with_build_envs))
+}
+
+fn get_v8_version_using_metadata() -> anyhow::Result<String> {
+    // Use the Cargo.toml in the "lib" folder.
+    let mut cmd = MetadataCommand::new();
+    cmd.manifest_path("lib/Cargo.toml");
+    let metadata = cmd.exec()?;
+
+    // Find the package corresponding to "lib/Cargo.toml"
+    let lib_package = metadata.packages
+        .iter()
+        .find(|pkg| pkg.manifest_path.ends_with("lib/Cargo.toml"))
+        .ok_or_else(|| anyhow::anyhow!("lib package not found in cargo metadata"))?;
+    
+    // Iterate through its dependencies to locate "v8"
+    for dependency in &lib_package.dependencies {
+        if dependency.name == "v8" {
+            // Convert the VersionReq to a String and remove a leading '^', if present.
+            let version_req = dependency.req.to_string();
+            let version = version_req.strip_prefix('^').unwrap_or(&version_req);
+            return Ok(version.to_string());
+        }
+    }
+    Err(anyhow::anyhow!("v8 dependency not found in cargo metadata"))
+}
+
+
+/// Sets up V8 bindings by configuring environment variables and downloading the binding file if needed.
+/// This function is used for both iOS and Android targets.
+fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &String) -> anyhow::Result<()> {
+    // Set the RUSTY_V8_MIRROR environment variable.
+    with_build_envs.insert(
+        "RUSTY_V8_MIRROR".to_string(),
+        "https://github.com/leanmendoza/rusty_v8/releases/download".to_string(),
+    );
+
+    // Choose the binding file name based on the target.
+    let v8_binding_file_name = if target == "android" {
+        "src_binding_debug_aarch64-linux-android.rs"
+    } else {
+        // Adjust the file name for iOS as needed.
+        "src_binding_debug_aarch64-apple-ios.rs"
+    };
+    let version = get_v8_version_using_metadata()?;
+
+    let rusty_v8_mirror = with_build_envs
+        .get("RUSTY_V8_MIRROR")
+        .expect("RUSTY_V8_MIRROR should be set");
+    let v8_binding_url = format!("{}/v{}/{}", rusty_v8_mirror, version, v8_binding_file_name);
+
+    println!("v8 binding url: {}", v8_binding_url);
+
+    // Determine the absolute path for the binding file inside the target directory.
+    let current_dir = std::env::current_dir()?;
+    let target_dir = current_dir.join("target");
+    let binding_file_path = target_dir.join(v8_binding_file_name);
+
+    // Set the RUSTY_V8_SRC_BINDING_PATH environment variable.
+    with_build_envs.insert(
+        "RUSTY_V8_SRC_BINDING_PATH".to_string(),
+        binding_file_path.to_string_lossy().to_string(),
+    );
+
+    // Ensure the target directory exists.
+    if !target_dir.exists() {
+        std::fs::create_dir_all(&target_dir)?;
+    }
+
+    // Download the binding file if it does not already exist.
+    if !binding_file_path.exists() {
+        let status = std::process::Command::new("curl")
+            .args(&[
+                "-L",
+                "-o",
+                binding_file_path.to_str().unwrap(),
+                &v8_binding_url,
+            ])
+            .status()?;
+        if !status.success() {
+            return Err(anyhow::anyhow!(
+                "Failed to download V8 binding file from {}",
+                v8_binding_url
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Sets up environment variables needed for building on Android.
