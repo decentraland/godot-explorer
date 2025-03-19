@@ -125,7 +125,6 @@ impl DclScene {
         #[cfg_attr(not(feature = "use_deno"), allow(unused_variables))]
         let (main_sender_to_thread, thread_receive_from_renderer) =
             tokio::sync::mpsc::channel::<RendererResponse>(1);
-        
 
         let scene_id = spawn_dcl_scene_data.scene_id;
         let scene_crdt = Arc::new(Mutex::new(SceneCrdtState::from_proto()));
