@@ -83,6 +83,6 @@ use_resource_tracking = []
 enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 
 [build-dependencies]
-webrtc-sys-build = { version = "0.3.5", optional = true }
+webrtc-sys-build = { git = "https://github.com/robtfm/client-sdk-rust", branch="0.6-h264-false-2", optional = true }
 prost-build = "0.11.8"
 chrono = "0.4.31"

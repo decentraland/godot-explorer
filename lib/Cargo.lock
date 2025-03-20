@@ -861,7 +861,7 @@ dependencies = [
  "urn",
  "uuid 1.11.0",
  "v8",
- "webrtc-sys-build 0.3.6",
+ "webrtc-sys-build",
 ]
 
 [[package]]
@@ -4872,27 +4872,13 @@ dependencies = [
  "cxx-build",
  "glob",
  "log",
- "webrtc-sys-build 0.3.4",
+ "webrtc-sys-build",
 ]
 
 [[package]]
 name = "webrtc-sys-build"
 version = "0.3.4"
 source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
-dependencies = [
- "fs2",
- "regex",
- "reqwest",
- "scratch",
- "semver 1.0.23",
- "zip",
-]
-
-[[package]]
-name = "webrtc-sys-build"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3457df230a567f12bb337d197d70abce9409485552dfe7b732c0f23207f24ebc"
 dependencies = [
  "fs2",
  "regex",
