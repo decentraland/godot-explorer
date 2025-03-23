@@ -258,10 +258,13 @@ func _show_avatar_preview():
 	avatar_preview.show()
 	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
 
-
+var landscape := true
 # gdlint:ignore = async-function-name
 func _on_button_jump_in_pressed():
-	await async_close_sign_in()
+	landscape = !landscape
+	
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE if landscape else DisplayServer.SCREEN_PORTRAIT)
+	#await async_close_sign_in()
 
 
 func toggle_terms_and_privacy_checkbox():
