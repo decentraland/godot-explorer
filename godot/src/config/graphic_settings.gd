@@ -6,17 +6,23 @@ static func connect_global_signal(root: Window):
 
 
 static func get_max_ui_zoom(root: Window) -> float:
-	var screen_size = root.size
+	var screen_size: Vector2 = root.size
 
-	# Should it matter if it's on Landscape or portrait?
-	# TODO: for now, there is no portrait support
-	# var orientation = DisplayServer.screen_get_orientation(root.current_screen)
+	var base_resolution: Vector2
+	if screen_size.x >= screen_size.y:
+		# Landscape orientation base (minimum recommended)
+		base_resolution = Vector2(1280, 720)
+	else:
+		# Portrait orientation base (minimum recommended)
+		base_resolution = Vector2(720, 1280)
 
-	var x_factor: float = screen_size.x / 1280.0
-	var y_factor: float = screen_size.y / 720.0
+	var x_factor: float = screen_size.x / base_resolution.x
+	var y_factor: float = screen_size.y / base_resolution.y
+
 	var factor_limit: float = max(min(x_factor, y_factor), 1.0)
-
 	return factor_limit
+
+
 
 
 static func get_ui_zoom_available(root: Window) -> Dictionary:
@@ -34,23 +40,33 @@ static func get_ui_zoom_available(root: Window) -> Dictionary:
 	return ret
 
 
+# Simple DPI-based scaling without aggressive resolution clamp
 static func apply_ui_zoom(root: Window):
-	var factor = max(0.75, min(get_max_ui_zoom(root), Global.get_config().ui_zoom))
+	pass
+	#var dpi := DisplayServer.screen_get_dpi()
+	#prints("Detected DPI:", dpi)
+#
+	#var factor: float
+	##if Global.get_config().ui_zoom < 0.0:
+	#if dpi >= 400:
+		#factor = 3.0
+	#elif dpi >= 300:
+		#factor = 2.5
+	#elif dpi >= 240:
+		#factor = 2.0
+	#elif dpi >= 120:
+		#factor = 1.5
+	#else:
+		#factor = 1.0
+	#Global.get_config().ui_zoom = factor
+	##else:
+	##	factor = Global.get_config().ui_zoom
+	#
+	## Optional minimum clamp only
+	#factor = max(factor, 0.75)
+	#root.content_scale_factor = factor
+	#prints("Applied factor:", factor)
 
-	if Global.get_config().ui_zoom < 0.0:
-		var dpi := DisplayServer.screen_get_dpi()
-
-		if dpi < 120:
-			factor = 1.0
-		elif dpi < 240:
-			factor = 1.5
-		else:
-			factor = 2.0
-
-		factor = max(0.75, min(get_max_ui_zoom(root), factor))
-		Global.get_config().ui_zoom = factor
-
-	root.content_scale_factor = factor
 
 
 static func apply_window_config() -> void:

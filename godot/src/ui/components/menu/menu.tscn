@@ -360,6 +360,7 @@ stretch_mode = 6
 
 [node name="Control_ProfileSettings" parent="VBoxContainer/ColorRect_Background" node_paths=PackedStringArray("backpack") instance=ExtResource("18_x0kg3")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 backpack = NodePath("../Control_Backpack")
 

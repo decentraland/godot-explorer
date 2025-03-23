@@ -7,11 +7,11 @@
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_3t0sv"]
 [ext_resource type="Texture2D" uid="uid://bioxsnq7x5u5w" path="res://assets/ui/ClaimNameBanner.png" id="5_s8r2t"]
 
-[sub_resource type="Gradient" id="Gradient_6v8vt"]
+[sub_resource type="Gradient" id="Gradient_u4667"]
 colors = PackedColorArray(0.705882, 0.733333, 0.776471, 1, 0.945098, 0.945098, 0.945098, 1)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_ce3ey"]
-gradient = SubResource("Gradient_6v8vt")
+gradient = SubResource("Gradient_u4667")
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_tfrrd"]
 
@@ -95,6 +95,7 @@ size_flags_vertical = 4
 text = "LOGOUT & EXIT"
 
 [node name="PanelContainer" type="ColorRect" parent="VBoxContainer"]
+visible = false
 custom_minimum_size = Vector2(641, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -185,10 +186,9 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 39)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-item_count = 3
 selected = 0
+item_count = 3
 popup/item_0/text = "Test1"
-popup/item_0/id = 0
 popup/item_1/text = "Test2"
 popup/item_1/id = 1
 popup/item_2/text = "Test3"

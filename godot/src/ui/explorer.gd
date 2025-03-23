@@ -84,6 +84,7 @@ func get_params_from_cmd():
 
 
 func _ready():
+	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
 

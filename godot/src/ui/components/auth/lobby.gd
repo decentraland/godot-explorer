@@ -11,26 +11,27 @@ var waiting_for_new_wallet: bool = false
 var loading_first_profile: bool = false
 
 var _skip_lobby: bool = false
+var _last_panel: Control = null
 
 @onready var control_main = %Main
 
 @onready var control_loading = %Loading
-@onready var control_restore = %Restore
 @onready var control_signin = %SignIn
 @onready var control_start = %Start
 @onready var control_backpack = %BackpackContainer
-@onready var control_choose_name = %ChooseName
+@onready var control_restore_and_choose_name: Control = %RestoreAndChooseName
 
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
 
-@onready var label_avatar_name = %LabelAvatarName
+@onready var label_avatar_name = %Label_Name
 
 @onready var avatar_preview = %AvatarPreview
 
 @onready var lineedit_choose_name = %LineEdit_ChooseName
 
-@onready var restore_panel = %VBoxContainer_RestorePanel
+@onready var restore_panel: VBoxContainer = %VBoxContainer_RestorePanel
+@onready var choose_name: VBoxContainer = %VBoxContainer_ChooseName
 
 @onready var checkbox_terms_and_privacy = %CheckBox_TermsAndPrivacy
 @onready var button_next = %Button_Next
@@ -54,11 +55,19 @@ var _skip_lobby: bool = false
 ##get_tree().root.get_viewport().set_size(Vector2i(1280, 720))
 
 
-func show_panel(child_node: Control):
+func show_panel(child_node: Control, subpanel: Control = null):
 	for child in control_main.get_children():
 		child.hide()
 
 	child_node.show()
+	
+	if _last_panel != null:
+		_last_panel.hide()
+		_last_panel = null
+	
+	if subpanel != null:
+		subpanel.show()
+		_last_panel = subpanel
 
 
 func async_close_sign_in(generate_snapshots: bool = true):
@@ -74,6 +83,10 @@ func async_close_sign_in(generate_snapshots: bool = true):
 
 # gdlint:ignore = async-function-name
 func _ready():
+	Global.set_orientation_portrait()
+	restore_panel.hide()
+	choose_name.hide()
+
 	var android_login = %AndroidLogin
 	if is_instance_valid(android_login) and android_login.is_platform_supported():
 		android_login.set_lobby(self)
@@ -101,6 +114,7 @@ func _ready():
 	if Global.player_identity.try_recover_account(session_account):
 		loading_first_profile = true
 		show_panel(control_loading)
+
 	elif _skip_lobby:
 		show_panel(control_loading)
 		create_guest_account_if_needed()
@@ -125,10 +139,10 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if loading_first_profile:
 		loading_first_profile = false
 		if profile_has_name():
-			label_avatar_name.load_from_profile(new_profile)
+			label_avatar_name.set_text("Welcome back " + new_profile.get_name())
 
 			restore_panel.show()
-			show_panel(control_restore)
+			show_panel(control_restore_and_choose_name, restore_panel)
 			_show_avatar_preview()
 			if _skip_lobby:
 				go_to_explorer.call_deferred()
@@ -143,7 +157,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		if profile_has_name():
 			await async_close_sign_in()
 		else:
-			show_panel(control_choose_name)
+			show_panel(control_restore_and_choose_name, choose_name)
 			_show_avatar_preview()
 
 
@@ -250,7 +264,7 @@ func profile_has_name():
 func _on_button_enter_as_guest_pressed():
 	create_guest_account_if_needed()
 
-	show_panel(control_choose_name)
+	show_panel(control_restore_and_choose_name, choose_name)
 	_show_avatar_preview()
 
 
