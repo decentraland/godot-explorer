@@ -306,3 +306,15 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 		return
 
 	promise.resolve_with_data(resource)
+
+
+func set_orientation_landscape():
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+
+	
+func set_orientation_portrait():
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
+
+
+func set_orientation_sensor():
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)

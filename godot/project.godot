@@ -40,8 +40,7 @@ gdscript/warnings/redundant_await=false
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
-window/stretch/mode="viewport"
-window/stretch/aspect="expand"
+window/handheld/orientation=6
 
 [editor_plugins]
 

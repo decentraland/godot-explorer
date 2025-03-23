@@ -40,7 +40,6 @@ var avatar_loading_counter: int = 0
 
 @onready var container_main_categories = %HBoxContainer_MainCategories
 @onready var container_sub_categories = %HBoxContainer_SubCategories
-@onready var scroll_container_sub_categories = %ScrollContainer_SubCategories
 
 @onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
 
@@ -134,7 +133,7 @@ func _update_visible_categories():
 			if first_wearable_filter_button == null:
 				first_wearable_filter_button = wearable_filter_button
 
-	scroll_container_sub_categories.set_visible(showed_subcategories >= 2)
+	container_sub_categories.set_visible(showed_subcategories >= 2)
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
 

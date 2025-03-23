@@ -3,6 +3,10 @@ extends MarginContainer
 
 
 func _ready() -> void:
+	get_window().size_changed.connect(self._on_size_changed)
+	_on_size_changed()
+
+func _on_size_changed():
 	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
 	var window_size: Vector2i = DisplayServer.window_get_size()
 
@@ -25,6 +29,3 @@ func _ready() -> void:
 	add_theme_constant_override("margin_left", left)
 	add_theme_constant_override("margin_right", right)
 	add_theme_constant_override("margin_bottom", bottom)
-
-	var real_safe_area: Rect2i = Rect2i(top, left, int(size.x) - right, int(size.y) - bottom)
-	Global.scene_runner.set_interactable_area(real_safe_area)
