@@ -54,7 +54,7 @@ var output := Vector2.ZERO
 
 var _touch_index: int = -1
 
-@onready var _sprint_timer := Timer.new()
+@onready var _sprint_timer := %SprintTimer
 
 @onready var _base := $Base
 @onready var _tip := $Base/Tip
@@ -69,8 +69,6 @@ var _touch_index: int = -1
 
 
 func _ready() -> void:
-	add_child(_sprint_timer)
-	_sprint_timer.wait_time = 1.0
 	_sprint_timer.timeout.connect(func(): Input.action_press(action_sprint))
 
 	if (
