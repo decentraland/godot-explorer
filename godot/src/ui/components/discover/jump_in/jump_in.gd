@@ -16,6 +16,7 @@ signal jump_in(position: Vector2i, realm: String)
 
 @onready var container_creator := %HBoxContainer_Creator
 
+@onready var panel_jump_in: PanelContainer = %PanelJumpIn
 
 func _ready():
 	super()
@@ -63,3 +64,12 @@ func _on_gui_input(event):
 		if !event.pressed:
 			self.hide()
 			UiSounds.play_sound("mainmenu_widget_close")
+
+
+func _on_visibility_changed() -> void:
+	if visible and panel_jump_in != null:
+		var _animation_target_y = panel_jump_in.position.y
+		# Place the menu off-screen above (its height above the target position)
+		panel_jump_in.position.y = panel_jump_in.position.y + panel_jump_in.size.y
+		
+		create_tween().tween_property(panel_jump_in, "position:y", _animation_target_y, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)

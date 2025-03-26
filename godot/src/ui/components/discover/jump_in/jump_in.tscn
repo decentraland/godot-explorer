@@ -19,9 +19,6 @@ bg_color = Color(0.92549, 0.921569, 0.929412, 1)
 border_color = Color(0.988235, 0.988235, 0.988235, 1)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-shadow_size = 5
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ak0ex"]
 
@@ -60,25 +57,22 @@ grow_vertical = 2
 color = Color(0, 0, 0, 0.501961)
 script = ExtResource("1_6j21g")
 
-[node name="JumpIn" type="PanelContainer" parent="."]
+[node name="PanelJumpIn" type="PanelContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -310.0
-offset_top = -250.0
-offset_right = 310.0
-offset_bottom = 250.0
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -266.0
 grow_horizontal = 2
-grow_vertical = 2
+grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_dsiqj")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="JumpIn"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelJumpIn"]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="JumpIn/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelJumpIn/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -87,13 +81,13 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="VBoxContainer" type="VBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="TextureRect_Image" type="TextureRect" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="TextureRect_Image" type="TextureRect" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(292, 190)
 layout_mode = 2
@@ -103,9 +97,9 @@ texture = ExtResource("3_eguxx")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="PointLight2D" type="PointLight2D" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TextureRect_Image"]
+[node name="PointLight2D" type="PointLight2D" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/TextureRect_Image"]
 
-[node name="MarginContainer" type="MarginContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/margin_left = 8
@@ -113,11 +107,11 @@ theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Label_Title" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -127,19 +121,19 @@ text = "Scene Title
 "
 autowrap_mode = 2
 
-[node name="HBoxContainer_Creator" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer_Creator" type="HBoxContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="Label" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Creator"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_font_sizes/font_size = 12
 text = "created by"
 
-[node name="Label_Creator" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Creator"]
+[node name="Label_Creator" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer_Creator"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -147,12 +141,12 @@ theme_override_fonts/font = ExtResource("6_txpei")
 theme_override_font_sizes/font_size = 12
 text = "Kuruk"
 
-[node name="HSeparator" type="HSeparator" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ak0ex")
 
-[node name="Label_LocationTitle2" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="Label_LocationTitle2" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_fonts/font = ExtResource("10_eek1u")
@@ -160,17 +154,17 @@ theme_override_font_sizes/font_size = 12
 text = "STATS "
 clip_text = true
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer3" type="HBoxContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="HBoxContainer_Likes" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="HBoxContainer_Likes" type="HBoxContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
 
-[node name="CPUParticles2D" type="CPUParticles2D" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Likes"]
+[node name="CPUParticles2D" type="CPUParticles2D" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Likes"]
 position = Vector2(11, 21)
 emitting = false
 amount = 20
@@ -189,7 +183,7 @@ scale_amount_curve = SubResource("Curve_6fe12")
 color = Color(0.960784, 0.152941, 0.345098, 1)
 color_ramp = SubResource("Gradient_w2th8")
 
-[node name="Button_Like" type="Button" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Likes"]
+[node name="Button_Like" type="Button" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Likes"]
 modulate = Color(0.0862745, 0.0823529, 0.0941176, 1)
 custom_minimum_size = Vector2(25, 0)
 layout_mode = 2
@@ -212,7 +206,7 @@ flat = true
 icon_alignment = 1
 expand_icon = true
 
-[node name="Label_Likes" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Likes"]
+[node name="Label_Likes" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Likes"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -224,13 +218,13 @@ text = "78%"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="HBoxContainer_Views" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="HBoxContainer_Views" type="HBoxContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
 
-[node name="TextureRect" type="TextureRect" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Views"]
+[node name="TextureRect" type="TextureRect" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Views"]
 modulate = Color(0.0862745, 0.0823529, 0.0941176, 1)
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
@@ -238,7 +232,7 @@ texture = ExtResource("7_y3f3m")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Views" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Views"]
+[node name="Label_Views" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/HBoxContainer_Views"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -250,13 +244,13 @@ text = "546"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="Container_Online" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
+[node name="Container_Online" type="HBoxContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
 
-[node name="TextureRect" type="TextureRect" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Container_Online"]
+[node name="TextureRect" type="TextureRect" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Container_Online"]
 modulate = Color(0.0862745, 0.0823529, 0.0941176, 1)
 custom_minimum_size = Vector2(20, 0)
 layout_mode = 2
@@ -264,7 +258,7 @@ texture = ExtResource("4_lo8h1")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Online" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Container_Online"]
+[node name="Label_Online" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer3/Container_Online"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -276,7 +270,7 @@ text = "0"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="Label_LocationTitle" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="Label_LocationTitle" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_fonts/font = ExtResource("10_eek1u")
@@ -284,11 +278,11 @@ theme_override_font_sizes/font_size = 12
 text = "LOCATION"
 clip_text = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="TextureRect" type="TextureRect" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 modulate = Color(0, 0, 0, 1)
 custom_minimum_size = Vector2(12, 12)
 layout_mode = 2
@@ -296,7 +290,7 @@ texture = ExtResource("12_hn1sb")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Location" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Label_Location" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -304,7 +298,7 @@ theme_override_fonts/font = ExtResource("9_eqwlp")
 theme_override_font_sizes/font_size = 13
 text = "0, 0"
 
-[node name="TextureRect2" type="TextureRect" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="TextureRect2" type="TextureRect" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 modulate = Color(0, 0, 0, 1)
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
@@ -312,7 +306,7 @@ texture = ExtResource("13_245c6")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Realm" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Label_Realm" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
@@ -322,7 +316,7 @@ theme_override_font_sizes/font_size = 13
 text = "Genesis City "
 clip_text = true
 
-[node name="Button_JumpIn" type="Button" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
+[node name="Button_JumpIn" type="Button" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 text = "JUMP IN"
@@ -330,13 +324,14 @@ icon = ExtResource("10_pklim")
 icon_alignment = 2
 expand_icon = true
 
-[node name="PanelContainer" type="PanelContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_g0uym")
 
-[node name="MarginContainer" type="MarginContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer"]
+custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -345,17 +340,17 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="ScrollContainer" type="ScrollContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer/MarginContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer/MarginContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer/MarginContainer/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer/MarginContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Label_DescriptionTitle" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer/MarginContainer/ScrollContainer/VBoxContainer"]
+[node name="Label_DescriptionTitle" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_fonts/font = ExtResource("10_eek1u")
@@ -363,7 +358,7 @@ theme_override_font_sizes/font_size = 12
 text = "DESCRIPTION"
 clip_text = true
 
-[node name="Label_Description" type="Label" parent="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer/MarginContainer/ScrollContainer/VBoxContainer"]
+[node name="Label_Description" type="Label" parent="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -373,4 +368,5 @@ theme_override_font_sizes/font_size = 13
 autowrap_mode = 2
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
-[connection signal="pressed" from="JumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
+[connection signal="pressed" from="PanelJumpIn/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]

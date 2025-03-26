@@ -443,7 +443,6 @@ layout_mode = 2
 
 [node name="JumpIn" parent="CanvasLayer" instance=ExtResource("9_gh6mh")]
 unique_name_in_owner = true
-visible = false
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="focus_exited" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_focus_exited"]

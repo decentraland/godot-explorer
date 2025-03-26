@@ -1,6 +1,6 @@
 extends Control
 
-@export var vertical: bool = false
+@export var hide_on_portrait: bool = false
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -9,7 +9,7 @@ func _ready() -> void:
 
 func _on_size_changed():
 	var window_size: Vector2i = DisplayServer.window_get_size()
-	if vertical:
-		visible = window_size.x < window_size.y
-	else:
+	if hide_on_portrait:
 		visible = window_size.x > window_size.y
+	else:
+		visible = window_size.x < window_size.y

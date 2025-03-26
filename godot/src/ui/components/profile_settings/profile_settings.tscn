@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cuduuu2b4u4bn"]
+[gd_scene load_steps=11 format=3 uid="uid://cuduuu2b4u4bn"]
 
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="1_0j6l3"]
 [ext_resource type="Script" path="res://src/ui/components/profile_settings/profile_settings.gd" id="1_t2la2"]
@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://7fya3pcmhbsp" path="res://assets/ui/Account.png" id="3_8spyp"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_3t0sv"]
 [ext_resource type="Texture2D" uid="uid://bioxsnq7x5u5w" path="res://assets/ui/ClaimNameBanner.png" id="5_s8r2t"]
+[ext_resource type="PackedScene" uid="uid://b5lfwgmd7h8cj" path="res://src/ui/components/radio_selector/radio_selector.tscn" id="6_3d7up"]
 
 [sub_resource type="Gradient" id="Gradient_u4667"]
 colors = PackedColorArray(0.705882, 0.733333, 0.776471, 1, 0.945098, 0.945098, 0.945098, 1)
@@ -95,7 +96,6 @@ size_flags_vertical = 4
 text = "LOGOUT & EXIT"
 
 [node name="PanelContainer" type="ColorRect" parent="VBoxContainer"]
-visible = false
 custom_minimum_size = Vector2(641, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -181,18 +181,9 @@ max_length = 18
 clear_button_enabled = true
 select_all_on_focus = true
 
-[node name="ItemList_ClaimedNames" type="OptionButton" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
+[node name="RadioSelector_ClaimedNames" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer" instance=ExtResource("6_3d7up")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 39)
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-selected = 0
-item_count = 3
-popup/item_0/text = "Test1"
-popup/item_1/text = "Test2"
-popup/item_1/id = 1
-popup/item_2/text = "Test3"
-popup/item_2/id = 2
 
 [node name="Control_ClaimImage" type="TextureButton" parent="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 160)
@@ -234,6 +225,6 @@ layout_mode = 2
 [connection signal="pressed" from="VBoxContainer/Header/MarginContainer/HBoxContainer/Button_Logout" to="." method="_on_button_logout_pressed"]
 [connection signal="toggled" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/CheckButton_UseClaimedName" to="." method="_on_check_button_toggled"]
 [connection signal="text_changed" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/LineEdit_Name" to="." method="_on_line_edit_name_text_changed"]
-[connection signal="item_selected" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/ItemList_ClaimedNames" to="." method="_on_item_list_claimed_names_item_selected"]
+[connection signal="select_item" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/RadioSelector_ClaimedNames" to="." method="_on_radio_selector_claimed_names_select_item"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/Control_ClaimImage" to="." method="_on_control_claim_image_pressed"]
 [connection signal="text_changed" from="VBoxContainer/PanelContainer/ScrollContainer/MarginContainer/VBoxContainer/TextEdit_About" to="." method="_on_text_edit_about_text_changed"]

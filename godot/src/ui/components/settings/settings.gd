@@ -324,7 +324,7 @@ func refresh_zooms():
 	radio_selector_ui_zoom.clear()
 
 	for ui_zoom_option in options.keys():
-		radio_selector_ui_zoom.add_item(ui_zoom_option)
+		radio_selector_ui_zoom.items.push_back(ui_zoom_option)
 		if options[ui_zoom_option] == get_window().content_scale_factor:
 			selected_index = i
 		i += 1
