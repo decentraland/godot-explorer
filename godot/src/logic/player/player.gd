@@ -116,7 +116,9 @@ func _physics_process(dt: float) -> void:
 		time_falling = 0.0
 
 	if not on_floor:
-		var in_grace_time = time_falling < .2 and !Input.is_action_pressed("ia_jump")
+		var in_grace_time = (
+			time_falling < .2 and !Input.is_action_pressed("ia_jump") and jump_time < 0
+		)
 		avatar.land = in_grace_time
 		avatar.rise = velocity.y > .3
 		avatar.fall = velocity.y < -.3 && !in_grace_time
