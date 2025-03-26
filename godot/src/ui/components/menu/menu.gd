@@ -52,7 +52,7 @@ func _ready():
 		func(scene_type, scene_id): preview_hot_reload.emit(scene_type, scene_id)
 	)
 
-	self.modulate = Color(1, 1, 1, 0)
+	self.modulate = Color(1, 1, 1, 1)
 	button_settings.set_pressed(true)
 	selected_node = control_settings
 	control_map.hide()

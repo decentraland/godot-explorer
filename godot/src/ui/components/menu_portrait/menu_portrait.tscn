@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://ba0vsw2qdmp0a"]
+[gd_scene load_steps=16 format=3 uid="uid://ba0vsw2qdmp0a"]
 
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="1_6w0r5"]
 [ext_resource type="Script" path="res://src/ui/components/menu_portrait/menu_portrait.gd" id="1_b83cq"]
@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://dkqc3of3acx2i" path="res://src/ui/components/map/map.tscn" id="4_a3kcs"]
 [ext_resource type="Texture2D" uid="uid://3w81orc6dom3" path="res://assets/ui/nav-bar-icons/backpack-off.svg" id="4_bfyh5"]
 [ext_resource type="Texture2D" uid="uid://3hwotq2y3fji" path="res://assets/ui/nav-bar-icons/settings-off.svg" id="5_04tqe"]
+[ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="6_67mds"]
 
 [sub_resource type="Gradient" id="Gradient_6v8vt"]
 colors = PackedColorArray(0.705882, 0.733333, 0.776471, 1, 0.945098, 0.945098, 0.945098, 1)
@@ -64,24 +65,43 @@ text = "DISCOVER"
 horizontal_alignment = 1
 clip_text = true
 
-[node name="Menus" type="Control" parent="Background"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Background"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="MobileSeparator" type="ColorRect" parent="Background/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+color = Color(0, 0, 0, 0.2)
+
+[node name="Menus" type="Control" parent="Background/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Discover" parent="Background/Menus" instance=ExtResource("1_nsju2")]
+[node name="Discover" parent="Background/VBoxContainer/Menus" instance=ExtResource("1_nsju2")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="Backpack" parent="Background/Menus" instance=ExtResource("3_y8pig")]
+[node name="Map" parent="Background/VBoxContainer/Menus" instance=ExtResource("4_a3kcs")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+anchors_preset = 0
+
+[node name="Backpack" parent="Background/VBoxContainer/Menus" instance=ExtResource("3_y8pig")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="Map" parent="Background/Menus" instance=ExtResource("4_a3kcs")]
+[node name="SettingsPanel" parent="Background/VBoxContainer/Menus" instance=ExtResource("6_67mds")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 1
 

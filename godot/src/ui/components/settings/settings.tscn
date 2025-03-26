@@ -1,12 +1,14 @@
-[gd_scene load_steps=14 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=16 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_1ym31"]
 [ext_resource type="Texture2D" uid="uid://djwf5d8a0rw6y" path="res://assets/ui/graphics.svg" id="5_lso3q"]
 [ext_resource type="Texture2D" uid="uid://fx5fj4f8uf7k" path="res://assets/ui/Filter.svg" id="6_br0rl"]
 [ext_resource type="Texture2D" uid="uid://bqypc3fidla5s" path="res://assets/ui/SettingsOff.png" id="6_gugrl"]
 [ext_resource type="Texture2D" uid="uid://g38eqwq311ph" path="res://assets/ui/speaker-on.svg" id="6_q1ods"]
 [ext_resource type="PackedScene" uid="uid://b5lfwgmd7h8cj" path="res://src/ui/components/radio_selector/radio_selector.tscn" id="7_u8bs2"]
+[ext_resource type="Script" path="res://src/ui/components/utils/orientation_container.gd" id="8_aj150"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_jdndg"]
 
@@ -33,9 +35,9 @@ theme_override_constants/separation = -1
 script = ExtResource("2_gps4e")
 
 [node name="ColorRect_Navbar" type="ColorRect" parent="."]
-custom_minimum_size = Vector2(0, 80)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
-color = Color(0.85098, 0.843137, 0.866667, 1)
+color = Color(0, 0, 0, 0.2)
 
 [node name="MarginContainer" type="MarginContainer" parent="ColorRect_Navbar"]
 layout_mode = 1
@@ -44,22 +46,28 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 80
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 80
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 8
 
 [node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Navbar/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 19
 
+[node name="Label" type="Label" parent="ColorRect_Navbar/MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_1ym31")
+theme_override_font_sizes/font_size = 28
+text = "Settings"
+
 [node name="Button_General" type="Button" parent="ColorRect_Navbar/MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"WhiteButton"
-theme_override_constants/h_separation = 0
+theme_override_constants/h_separation = 5
 toggle_mode = true
 button_pressed = true
 button_group = SubResource("ButtonGroup_jdndg")
@@ -70,10 +78,10 @@ alignment = 0
 [node name="Button_Graphics" type="Button" parent="ColorRect_Navbar/MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"WhiteButton"
-theme_override_constants/h_separation = 0
+theme_override_constants/h_separation = 5
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
 text = "Graphics"
@@ -83,10 +91,10 @@ alignment = 0
 [node name="Button_Audio" type="Button" parent="ColorRect_Navbar/MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"WhiteButton"
-theme_override_constants/h_separation = 0
+theme_override_constants/h_separation = 5
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
 text = "Audio"
@@ -96,10 +104,10 @@ alignment = 0
 [node name="Button_Developer" type="Button" parent="ColorRect_Navbar/MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"WhiteButton"
-theme_override_constants/h_separation = 0
+theme_override_constants/h_separation = 6
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
 text = "Dev Tools"
@@ -128,7 +136,7 @@ alignment = 0
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-color = Color(0.92549, 0.921569, 0.929412, 1)
+color = Color(1, 1, 1, 0)
 
 [node name="HBoxContainer" type="MarginContainer" parent="ColorRect_Content"]
 layout_mode = 1
@@ -137,9 +145,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 80
+theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 80
+theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 0
 
 [node name="ScrollContainer" type="ScrollContainer" parent="ColorRect_Content/HBoxContainer"]
@@ -151,10 +159,9 @@ size_flags_horizontal = 3
 
 [node name="Container_General" type="MarginContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
-theme_override_constants/margin_left = 150
-theme_override_constants/margin_right = 150
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
 
 [node name="VBoxContainer_General" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General"]
 layout_mode = 2
@@ -221,6 +228,7 @@ alignment = 1
 
 [node name="VBoxContainer_CachePath" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer"]
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_constants/separation = 10
 
@@ -239,7 +247,7 @@ theme_override_font_sizes/font_size = 20
 
 [node name="TextEdit_CachePath" type="LineEdit" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(500, 30)
+custom_minimum_size = Vector2(300, 30)
 layout_mode = 2
 focus_mode = 1
 editable = false
@@ -299,12 +307,13 @@ stretch = true
 handle_input_locally = false
 size = Vector2i(500, 150)
 render_target_clear_mode = 2
-render_target_update_mode = 0
+render_target_update_mode = 4
 
 [node name="PreviewCamera3D" type="Camera3D" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/PreviewViewportContainer/SubViewport"]
 unique_name_in_owner = true
 
 [node name="VBoxContainer_Graphics" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
+visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -322,11 +331,13 @@ text = "Graphic Profile"
 [node name="RadioSelector_GraphicProfile" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GraphicProfile" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
-items = Array[String](["LOW QUALITY", "MEDIUM QUALITY", "HIGH QUALITY", "CUSTOM"])
+items = Array[String](["LOW", "MEDIUM", "HIGH", "CUSTOM"])
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
+[node name="HBoxContainer" type="BoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
 layout_mode = 2
 theme_override_constants/separation = 20
+vertical = true
+script = ExtResource("8_aj150")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer"]
 layout_mode = 2
@@ -642,6 +653,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 tooltip_text = "Select scene to load"
 focus_mode = 1
+text_overrun_behavior = 1
+clip_text = true
 item_count = 11
 popup/item_0/text = "mannakia.dcl.eth"
 popup/item_1/text = "http://127.0.0.1:8000"

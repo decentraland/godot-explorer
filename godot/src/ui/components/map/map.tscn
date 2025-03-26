@@ -1,7 +1,11 @@
-[gd_scene load_steps=3 format=3 uid="uid://dkqc3of3acx2i"]
+[gd_scene load_steps=5 format=3 uid="uid://dkqc3of3acx2i"]
 
 [ext_resource type="Script" path="res://src/ui/components/map/map.gd" id="1_1j46y"]
 [ext_resource type="PackedScene" uid="uid://dkqc3of5bdx2i" path="res://src/ui/components/map_shader/map_shader.tscn" id="2_el671"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_k36bc"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kgqjj"]
+bg_color = Color(0, 0, 0, 0.188235)
 
 [node name="Control_Map" type="Control"]
 layout_mode = 3
@@ -13,15 +17,36 @@ grow_vertical = 2
 size_flags_horizontal = 4
 script = ExtResource("1_1j46y")
 
-[node name="Control_MapShader" parent="." instance=ExtResource("2_el671")]
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = 0.0
-offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_kgqjj")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 8
+
+[node name="Label" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_k36bc")
+theme_override_font_sizes/font_size = 28
+text = "Map"
+
+[node name="Control_MapShader" parent="VBoxContainer" instance=ExtResource("2_el671")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
 mouse_filter = 1
 
 [node name="Control_Tooltip" type="Control" parent="."]
@@ -120,6 +145,6 @@ theme_override_constants/outline_size = 0
 text = "Created by: Decentraland"
 horizontal_alignment = 1
 
-[connection signal="on_move" from="Control_MapShader" to="." method="_on_control_map_shader_on_move"]
-[connection signal="parcel_click" from="Control_MapShader" to="." method="_on_control_map_shader_parcel_click"]
+[connection signal="on_move" from="VBoxContainer/Control_MapShader" to="." method="_on_control_map_shader_on_move"]
+[connection signal="parcel_click" from="VBoxContainer/Control_MapShader" to="." method="_on_control_map_shader_parcel_click"]
 [connection signal="pressed" from="Control_JumpTo/Panel_JumpTo/Button_JumpTo" to="." method="_on_button_pressed"]

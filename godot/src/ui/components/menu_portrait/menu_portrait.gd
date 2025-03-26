@@ -14,6 +14,12 @@ const SETTINGS_ON = preload("res://assets/ui/nav-bar-icons/settings-on.svg")
 @onready var button_backpack: Button = %Button_Backpack
 @onready var button_settings: Button = %Button_Settings
 
+@onready var menus: Control = %Menus
+@onready var discover: Discover = %Discover
+@onready var backpack: Backpack = %Backpack
+@onready var map: Control = %Map
+@onready var settings_panel: VBoxContainer = %SettingsPanel
+
 @onready var label_menu: Label = %LabelMenu
 
 # Called when the node enters the scene tree for the first time.
@@ -21,6 +27,8 @@ func _ready() -> void:
 	# default DISCOVER
 	button_discover.button_pressed = true
 	_on_button_discover_pressed()
+	prints(DisplayServer.get_display_safe_area().position.y)
+	%MobileSeparator.custom_minimum_size.y = DisplayServer.get_display_safe_area().position.y
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -28,17 +36,27 @@ func _process(delta: float) -> void:
 	pass
 
 
+func show_control(control: Control):
+	for child in menus.get_children():
+		child.hide()
+	control.show()
+	UiSounds.play_sound("generic_button_press")
+
 func _on_button_discover_pressed() -> void:
 	label_menu.text = "DISCOVER"
+	show_control(discover)
 
 func _on_button_map_pressed() -> void:
 	label_menu.text = "MAP"
+	show_control(map)
 
 func _on_button_backpack_pressed() -> void:
 	label_menu.text = "BACKPACK"
+	show_control(backpack)
 
 func _on_button_settings_pressed() -> void:
 	label_menu.text = "SETTINGS"
+	show_control(settings_panel)
 
 
 func _on_button_discover_toggled(toggled_on):

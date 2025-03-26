@@ -18,7 +18,7 @@
 [ext_resource type="PackedScene" uid="uid://cf78je1y8dpu3" path="res://src/ui/components/auth/android_login.tscn" id="14_a8lfo"]
 [ext_resource type="Texture2D" uid="uid://h30g74davjyw" path="res://assets/ui/sign-in/dices.svg" id="14_ku160"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="15_n5dun"]
-[ext_resource type="PackedScene" uid="uid://bhl7c24uruj0a" path="res://src/ui/components/utils/orientation_container.tscn" id="17_ig25d"]
+[ext_resource type="Script" path="res://src/ui/components/utils/orientation_container.gd" id="17_ca7yb"]
 [ext_resource type="Script" path="res://src/ui/components/utils/hide_orientation.gd" id="18_10jcs"]
 
 [sub_resource type="Gradient" id="Gradient_yeovc"]
@@ -409,20 +409,25 @@ expand_mode = 3
 
 [node name="Background_Dots" type="TextureRect" parent="Main/RestoreAndChooseName"]
 layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -720.0
+grow_horizontal = 0
+texture = ExtResource("7_ug3ga")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="OrientationContainer" type="BoxContainer" parent="Main/RestoreAndChooseName"]
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("7_ug3ga")
-expand_mode = 2
-stretch_mode = 4
-
-[node name="OrientationContainer" parent="Main/RestoreAndChooseName" instance=ExtResource("17_ig25d")]
-layout_mode = 1
 alignment = 1
 vertical = true
-script = null
+script = ExtResource("17_ca7yb")
 
 [node name="HSeparator" type="HSeparator" parent="Main/RestoreAndChooseName/OrientationContainer"]
 layout_mode = 2

@@ -12,7 +12,7 @@ var last_mouse_tile: Vector2i
 @onready var label_mouse_position = $Control_Tooltip/Label_MousePosition
 @onready var label_parcel_position = $Control_JumpTo/Panel_JumpTo/VBoxContainer/Label_ParcelPosition
 @onready var control_tooltip = $Control_Tooltip
-@onready var control_map_shader = $Control_MapShader
+@onready var control_map_shader = %Control_MapShader
 
 
 func _gui_input(event):

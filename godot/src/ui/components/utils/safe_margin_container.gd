@@ -1,6 +1,7 @@
 class_name SafeMarginContainer
 extends MarginContainer
 
+@export var default_margin: int = 8
 
 func _ready() -> void:
 	get_window().size_changed.connect(self._on_size_changed)
@@ -11,10 +12,10 @@ func _on_size_changed():
 	var window_size: Vector2i = DisplayServer.window_get_size()
 
 	# BASE MARGINS
-	var top: int = 8 if Global.is_mobile() else 0
-	var left: int = 8 if Global.is_mobile() else 0
-	var bottom: int = 8 if Global.is_mobile() else 0
-	var right: int = 8 if Global.is_mobile() else 0
+	var top: int = default_margin if Global.is_mobile() else 0
+	var left: int = default_margin if Global.is_mobile() else 0
+	var bottom: int = default_margin if Global.is_mobile() else 0
+	var right: int = default_margin if Global.is_mobile() else 0
 
 	if window_size.x >= safe_area.size.x and window_size.y >= safe_area.size.y:
 		var x_factor: float = size.x / window_size.x

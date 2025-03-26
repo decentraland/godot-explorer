@@ -40,21 +40,6 @@ var _last_panel: Control = null
 
 @onready var button_open_browser = %Button_OpenBrowser
 
-# TODO: Change screen orientation for Mobile
-#func set_portrait():
-##DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
-#DisplayServer.window_set_size(Vector2i(720, 1280))
-##get_tree().root.get_viewport().set_size(Vector2i(720, 1280))
-##ProjectSettings.set_setting("display/window/size/viewport_width", 720)
-##ProjectSettings.set_setting("display/window/size/viewport_height", 1280)
-#
-#
-#func set_landscape():
-##DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
-#DisplayServer.window_set_size(Vector2i(1280, 720))
-##get_tree().root.get_viewport().set_size(Vector2i(1280, 720))
-
-
 func show_panel(child_node: Control, subpanel: Control = null):
 	for child in control_main.get_children():
 		child.hide()
@@ -76,9 +61,9 @@ func async_close_sign_in(generate_snapshots: bool = true):
 		await backpack.async_prepare_snapshots(avatar, current_profile)
 
 	if Global.is_xr():
-		change_scene.emit("res://src/ui/components/discover/discover.tscn")
+		change_scene.emit("res://src/ui/components/menu/menu.tscn")
 	else:
-		get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
+		get_tree().change_scene_to_file("res://src/ui/components/menu/menu.tscn")
 
 
 # gdlint:ignore = async-function-name

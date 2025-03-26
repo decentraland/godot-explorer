@@ -1,5 +1,5 @@
 @tool
-extends HBoxContainer
+extends Control
 
 signal select_item(index: int, item: String)
 
