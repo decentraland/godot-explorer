@@ -40,6 +40,7 @@ enum VisibilityMode { ALWAYS, TOUCHSCREEN_ONLY }
 @export var action_up := "ia_forward"
 @export var action_down := "ia_backward"
 @export var action_walk := "ia_walk"
+@export var action_sprint := "ia_sprint"
 
 # PUBLIC VARIABLES
 
@@ -52,6 +53,8 @@ var output := Vector2.ZERO
 # PRIVATE VARIABLES
 
 var _touch_index: int = -1
+
+@onready var _sprint_timer := Timer.new()
 
 @onready var _base := $Base
 @onready var _tip := $Base/Tip
@@ -66,6 +69,10 @@ var _touch_index: int = -1
 
 
 func _ready() -> void:
+	add_child(_sprint_timer)
+	_sprint_timer.wait_time = 1.0
+	_sprint_timer.timeout.connect(func(): Input.action_press(action_sprint))
+
 	if (
 		not DisplayServer.is_touchscreen_available()
 		and visibility_mode == VisibilityMode.TOUCHSCREEN_ONLY
@@ -179,8 +186,13 @@ func _update_input_actions():
 		Input.action_release(action_down)
 	if output.length() < 0.75:
 		Input.action_press(action_walk)
+		_sprint_timer.stop()
 	elif Input.is_action_pressed(action_walk):
 		Input.action_release(action_walk)
+	if output.length() < 0.95:
+		Input.action_release(action_sprint)
+	elif _sprint_timer.is_stopped() and !Input.is_action_pressed(action_sprint):
+		_sprint_timer.start()
 
 
 func _reset():
