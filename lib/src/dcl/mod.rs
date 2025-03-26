@@ -106,6 +106,8 @@ pub struct SpawnDclSceneData {
     pub thread_sender_to_main: std::sync::mpsc::SyncSender<SceneResponse>,
     // Whether the scene is in testing mode
     pub testing_mode: bool,
+    // When the scene requires fixed skybox time
+    pub fixed_skybox_time: bool,
     // Ethereum provider
     pub ethereum_provider: Arc<EthereumProvider>,
     // Ephemeral wallet

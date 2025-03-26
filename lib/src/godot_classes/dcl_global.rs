@@ -66,6 +66,8 @@ pub struct DclGlobal {
     #[var]
     pub testing_scene_mode: bool,
     #[var]
+    pub fixed_skybox_time: bool,
+    #[var]
     pub player_identity: Gd<DclPlayerIdentity>,
     #[var]
     pub content_provider: Gd<ContentProvider>,
@@ -125,6 +127,9 @@ impl INode for DclGlobal {
         let preview_mode = args.find("--preview".into(), None).is_some();
         let developer_mode = args.find("--dev".into(), None).is_some();
 
+        let fixed_skybox_time =
+            testing_scene_mode || args.find("--scene-renderer".into(), None).is_some();
+
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
         Self {
@@ -139,6 +144,7 @@ impl INode for DclGlobal {
             portable_experience_controller: DclPortableExperienceController::new_alloc(),
             preview_mode,
             testing_scene_mode,
+            fixed_skybox_time,
             dcl_tokio_rpc: DclTokioRpc::new_alloc(),
             player_identity: DclPlayerIdentity::new_alloc(),
             content_provider: ContentProvider::new_alloc(),
