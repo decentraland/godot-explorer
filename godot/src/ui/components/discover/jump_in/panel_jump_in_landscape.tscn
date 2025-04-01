@@ -335,3 +335,5 @@ theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("10_yuhpx")
 theme_override_font_sizes/font_size = 13
 autowrap_mode = 2
+
+[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]

@@ -1,24 +1,58 @@
 extends Control
+class_name JumpInWrapper
 
 signal jump_in(position: Vector2i, realm: String)
 
 @onready var panel_jump_in_portrait: JumpIn = %PanelJumpInPortrait
 @onready var panel_jump_in_landscape: JumpIn = %PanelJumpInLandscape
+@onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
 
 func _ready():
 	panel_jump_in_portrait.jump_in.connect(self._emit_jump_in)
 	panel_jump_in_landscape.jump_in.connect(self._emit_jump_in)
+	texture_progress_bar.hide()
 
 func _emit_jump_in(position: Vector2i, realm: String):
 	jump_in.emit(position, realm)
+
+func async_load_place_position(position: Vector2i):
+	panel_jump_in_portrait.hide()
+	panel_jump_in_landscape.hide()
+	show()
+	texture_progress_bar.show()
+	var url: String = "https://places.decentraland.org/api/places?limit=1"
+	url += "&positions=%d,%d" % [position.x, position.y]
+	
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_GET, "", headers
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		printerr("Error request places", result.get_error())
+		return
+
+	var json: Dictionary = result.get_string_response_as_json()
+	
+	if json.data.is_empty():
+		var unknown_place: Dictionary = {
+			"base_position": "%d,%d" % [position.x, position.y],
+			"title": "Unknown place"
+		}
+		set_data(unknown_place)
+	else:
+		set_data(json.data[0])
+	texture_progress_bar.hide()
+	show_animation()
 
 func set_data(item_data):
 	panel_jump_in_landscape.set_data(item_data)
 	panel_jump_in_portrait.set_data(item_data)
 
-
-func _on_visibility_changed() -> void:
-	if visible and panel_jump_in_portrait != null and panel_jump_in_landscape != null:
+func show_animation() -> void:
+	self.show()
+	if panel_jump_in_portrait != null and panel_jump_in_landscape != null:
 		if Global.is_orientation_portrait():
 			panel_jump_in_portrait.show()
 			panel_jump_in_landscape.hide()
