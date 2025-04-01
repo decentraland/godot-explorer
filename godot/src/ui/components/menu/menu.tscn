@@ -192,6 +192,7 @@ focus_mode = 2
 alignment = 1
 
 [node name="Button_Discover" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
 size_flags_horizontal = 4

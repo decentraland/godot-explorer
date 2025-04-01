@@ -25,3 +25,9 @@ func _on_button_accept_pressed() -> void:
 
 func _on_button_reject_pressed() -> void:
 	get_tree().quit()
+
+
+func _on_control_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			%CheckBox_TermsAndPrivacy.button_pressed = !%CheckBox_TermsAndPrivacy.button_pressed

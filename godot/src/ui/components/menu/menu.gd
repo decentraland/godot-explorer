@@ -50,11 +50,12 @@ func _ready():
 	)
 
 	self.modulate = Color(1, 1, 1, 1)
-	button_settings.set_pressed(true)
-	selected_node = control_settings
+	button_discover.set_pressed(true)
+	portrait_button_discover.set_pressed(true)
+	selected_node = control_discover
 	control_map.hide()
-	control_settings.show()
-	control_discover.hide()
+	control_settings.hide()
+	control_discover.show()
 	control_backpack.hide()
 	control_profile_settings.hide()
 	control_map.jump_to.connect(_jump_to)

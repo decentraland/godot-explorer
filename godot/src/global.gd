@@ -322,7 +322,12 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 func set_orientation_landscape():
 	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 
-	
+
+func is_orientation_portrait():
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	return window_size.x < window_size.y
+
+
 func set_orientation_portrait():
 	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_PORTRAIT)
 

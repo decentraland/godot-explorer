@@ -2,6 +2,7 @@ extends Node
 
 
 func _ready():
+	Global.set_orientation_portrait()
 	start.call_deferred()
 
 

@@ -68,7 +68,6 @@ func async_close_sign_in(generate_snapshots: bool = true):
 
 # gdlint:ignore = async-function-name
 func _ready():
-	Global.set_orientation_portrait()
 	restore_panel.hide()
 	choose_name.hide()
 
