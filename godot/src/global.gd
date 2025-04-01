@@ -17,6 +17,9 @@ const FORCE_TEST_REALM = "https://decentraland.github.io/scene-explorer-tests/sc
 #const FORCE_TEST_ARG = "[[52,-56]]"
 # const FORCE_TEST_REALM = "http://localhost:8000"
 
+# Increase this value for new terms and conditions
+const TERMS_AND_CONDITIONS_VERSION: int = 1
+
 ## Global classes (singleton pattern)
 var raycast_debugger: RaycastDebugger
 
@@ -221,6 +224,14 @@ func release_mouse():
 	else:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
+
+func open_webview_url(url):
+	if webkit_ios_plugin != null:
+		webkit_ios_plugin.open_webview_url(url)
+	elif webkit_android_plugin != null:
+		webkit_android_plugin.openCustomTabUrl(url)  # FOR SOCIAL
+	else:
+		OS.shell_open(url)
 
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit:

@@ -21,12 +21,12 @@
 [ext_resource type="Script" path="res://src/ui/components/utils/orientation_container.gd" id="17_ca7yb"]
 [ext_resource type="Script" path="res://src/ui/components/utils/hide_orientation.gd" id="18_10jcs"]
 
-[sub_resource type="Gradient" id="Gradient_yeovc"]
+[sub_resource type="Gradient" id="Gradient_rgwma"]
 offsets = PackedFloat32Array(0.373134, 1)
 colors = PackedColorArray(0.862745, 0.176471, 0.827451, 1, 0.286275, 0.0980392, 0.458824, 1)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_vjyug"]
-gradient = SubResource("Gradient_yeovc")
+gradient = SubResource("Gradient_rgwma")
 fill = 1
 fill_from = Vector2(0.5, 0.5)
 metadata/_snap_enabled = true
@@ -434,14 +434,12 @@ layout_mode = 2
 theme_override_constants/separation = 40
 theme_override_styles/separator = SubResource("StyleBoxEmpty_a723l")
 script = ExtResource("18_10jcs")
-vertical = true
 
 [node name="HBoxContainer" type="CenterContainer" parent="Main/RestoreAndChooseName/OrientationContainer"]
 layout_mode = 2
 
 [node name="VBoxContainer_ChooseName" type="VBoxContainer" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 alignment = 1
 
@@ -542,6 +540,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="VBoxContainer_RestorePanel" type="VBoxContainer" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 alignment = 1
 
