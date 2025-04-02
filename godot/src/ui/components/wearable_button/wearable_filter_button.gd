@@ -110,48 +110,48 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 
 
 func type_to_text(category_enum: WearableCategoryEnum) -> String:
+	var text := "Unknown"
 	match category_enum:
 		WearableCategoryEnum.ALL:
-			return "All Wearables"
+			text = "All Wearables"
 		WearableCategoryEnum.BODY:
-			return "Body Shape"
+			text = "Body Shape"
 		WearableCategoryEnum.HAIR:
-			return "Hair"
+			text = "Hair"
 		WearableCategoryEnum.EYEBROWS:
-			return "Eyebrows"
+			text = "Eyebrows"
 		WearableCategoryEnum.EYES:
-			return "Eyes"
+			text = "Eyes"
 		WearableCategoryEnum.MOUTH:
-			return "Mouth"
+			text = "Mouth"
 		WearableCategoryEnum.FACIAL_HAIR:
-			return "Facial Hair"
+			text = "Facial Hair"
 		WearableCategoryEnum.UPPER_BODY:
-			return "Upper Body"
+			text = "Upper Body"
 		WearableCategoryEnum.HANDWEAR:
-			return "Gloves"
+			text = "Gloves"
 		WearableCategoryEnum.LOWER_BODY:
-			return "Lower Body"
+			text = "Lower Body"
 		WearableCategoryEnum.FEET:
-			return "Footwear"
+			text = "Footwear"
 		WearableCategoryEnum.HAT:
-			return "Hats"
+			text = "Hats"
 		WearableCategoryEnum.EYEWEAR:
-			return "Glasses"
+			text = "Glasses"
 		WearableCategoryEnum.EARRING:
-			return "Earrings"
+			text = "Earrings"
 		WearableCategoryEnum.MASK:
-			return "Masks"
+			text = "Masks"
 		WearableCategoryEnum.TIARA:
-			return "Tiaras"
+			text = "Tiaras"
 		WearableCategoryEnum.TOP_HEAD:
-			return "Accessories"
+			text = "Accessories"
 		WearableCategoryEnum.HELMET:
-			return "Helmets"
+			text = "Helmets"
 		WearableCategoryEnum.SKIN:
-			return "Skin"
-		_:
-			return "Unknown"
-	
+			text = "Skin"
+	return text
+
 
 func _on_toggled(_button_pressed):
 	if _button_pressed:

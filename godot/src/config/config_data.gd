@@ -360,8 +360,10 @@ func load_from_settings_file():
 	)
 
 	self.last_places = settings_file.get_value("user", "last_places", data_default.last_places)
-	
-	self.terms_and_conditions_version = settings_file.get_value("user", "terms_and_conditions_version", data_default.terms_and_conditions_version)
+
+	self.terms_and_conditions_version = settings_file.get_value(
+		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
+	)
 
 
 func save_to_settings_file():
@@ -405,6 +407,8 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	new_settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	new_settings_file.set_value("user", "last_places", self.last_places)
-	new_settings_file.set_value("user", "terms_and_conditions_version", self.terms_and_conditions_version)
+	new_settings_file.set_value(
+		"user", "terms_and_conditions_version", self.terms_and_conditions_version
+	)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

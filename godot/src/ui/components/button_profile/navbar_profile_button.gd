@@ -1,7 +1,7 @@
 extends Button
 
 
-# Called when the node enters the scene tree for the first time.
+# gdlint:ignore = async-function-name
 func _ready() -> void:
 	var profile := Global.player_identity.get_profile_or_null()
 	if profile != null:

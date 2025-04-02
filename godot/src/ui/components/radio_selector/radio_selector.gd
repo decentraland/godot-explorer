@@ -1,6 +1,6 @@
 @tool
-extends Control
 class_name RadioSelector
+extends Control
 
 signal select_item(index: int, item: String)
 
@@ -21,12 +21,15 @@ signal select_item(index: int, item: String)
 
 var button_group = ButtonGroup.new()
 
+
 func add_item(item: String):
 	items.push_back(item)
+
 
 func clear():
 	items = []
 	_refresh_list()
+
 
 func select_by_item(p_item: String):
 	var i: int = 0
@@ -36,6 +39,7 @@ func select_by_item(p_item: String):
 			break
 		i += 1
 
+
 func _add_item(item: String):
 	var index = get_children().size()
 	var radio_button = CheckBox.new()
@@ -43,6 +47,7 @@ func _add_item(item: String):
 	radio_button.text = item
 	radio_button.pressed.connect(_on_select_item.bind(index, item))
 	add_child(radio_button)
+
 
 func _refresh_list():
 	for child in self.get_children():
@@ -53,6 +58,7 @@ func _refresh_list():
 		_add_item(item)
 
 	selected = selected
+
 
 func _on_select_item(index: int, item: String):
 	selected = index

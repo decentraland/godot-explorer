@@ -40,16 +40,17 @@ var _last_panel: Control = null
 
 @onready var button_open_browser = %Button_OpenBrowser
 
+
 func show_panel(child_node: Control, subpanel: Control = null):
 	for child in control_main.get_children():
 		child.hide()
 
 	child_node.show()
-	
+
 	if _last_panel != null:
 		_last_panel.hide()
 		_last_panel = null
-	
+
 	if subpanel != null:
 		subpanel.show()
 		_last_panel = subpanel
@@ -255,6 +256,7 @@ func _on_button_enter_as_guest_pressed():
 func _show_avatar_preview():
 	avatar_preview.show()
 	avatar_preview.avatar.emote_controller.play_emote("raiseHand")
+
 
 # gdlint:ignore = async-function-name
 func _on_button_jump_in_pressed():

@@ -17,6 +17,8 @@ var profile_panel_stylebox: StyleBoxFlat = null
 
 @onready var profile_button = %ProfileButton
 
+
+# gdlint:ignore = async-function-name
 func _ready():
 	profile_button.set_button_group(button_group)
 

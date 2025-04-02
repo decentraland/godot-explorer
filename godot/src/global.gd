@@ -233,6 +233,7 @@ func open_webview_url(url):
 	else:
 		OS.shell_open(url)
 
+
 func open_url(url: String, use_webkit: bool = false):
 	if use_webkit:
 		if webkit_ios_plugin != null:

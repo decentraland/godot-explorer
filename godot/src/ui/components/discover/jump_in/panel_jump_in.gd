@@ -1,5 +1,5 @@
-extends PlaceItem
 class_name JumpIn
+extends PlaceItem
 
 signal jump_in(position: Vector2i, realm: String)
 
@@ -16,6 +16,7 @@ signal jump_in(position: Vector2i, realm: String)
 @onready var label_creator := %Label_Creator
 
 @onready var container_creator := %HBoxContainer_Creator
+
 
 func _ready():
 	super()

@@ -3,9 +3,11 @@ extends MarginContainer
 
 @export var default_margin: int = 8
 
+
 func _ready() -> void:
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
+
 
 func _on_size_changed():
 	var safe_area: Rect2i = DisplayServer.get_display_safe_area()

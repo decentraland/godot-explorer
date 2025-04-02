@@ -2,6 +2,7 @@ extends BoxContainer
 
 @export var invert: bool = false
 
+
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	get_window().size_changed.connect(self._on_size_changed)

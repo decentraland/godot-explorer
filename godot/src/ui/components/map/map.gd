@@ -14,8 +14,10 @@ var last_mouse_tile: Vector2i
 @onready var control_tooltip = $Control_Tooltip
 @onready var control_map_shader = %Control_MapShader
 
+
 func _ready() -> void:
 	jump_in.hide()
+
 
 func _on_gui_input(event):
 	if event is InputEventMouseButton:
@@ -42,7 +44,6 @@ func _on_gui_input(event):
 			control_map_shader.set_selected_parcel(mouse_tile)
 
 
-
 func _on_control_map_shader_on_move():
 	jump_in.hide()
 
@@ -53,14 +54,14 @@ func clear():
 	jump_in.hide()
 
 
+# gdlint:ignore = async-function-name
 func _on_control_map_shader_parcel_click(_parcel_position):
 	mouse_tile = control_map_shader.get_parcel_from_mouse()
 	mouse_tile = Vector2i(floor(mouse_tile.x), floor(mouse_tile.y))
+	control_map_shader.set_selected_parcel(mouse_tile)
 	parcel_to_jump = mouse_tile
 	UiSounds.play_sound("mainmenu_tile_highlight")
 	await jump_in.async_load_place_position(mouse_tile)
-	
-	
 
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String) -> void:

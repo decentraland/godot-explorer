@@ -169,9 +169,7 @@ icon_alignment = 2
 
 [connection signal="gui_input" from="VBoxContainer/HBoxContainer/Control" to="." method="_on_control_gui_input"]
 [connection signal="toggled" from="VBoxContainer/HBoxContainer/Control/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
-[connection signal="gui_input" from="VBoxContainer/HBoxContainer/RichTextLabel" to="." method="_on_rich_text_label_gui_input"]
 [connection signal="meta_clicked" from="VBoxContainer/HBoxContainer/RichTextLabel" to="." method="_on_rich_text_label_meta_clicked"]
-[connection signal="gui_input" from="VBoxContainer/HBoxContainer/RichTextLabel/RichTextLabel" to="." method="_on_rich_text_label_gui_input"]
 [connection signal="meta_clicked" from="VBoxContainer/HBoxContainer/RichTextLabel/RichTextLabel" to="." method="_on_rich_text_label_meta_clicked"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer2/Button_Reject" to="." method="_on_button_reject_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer2/Button_Accept" to="." method="_on_button_accept_pressed"]

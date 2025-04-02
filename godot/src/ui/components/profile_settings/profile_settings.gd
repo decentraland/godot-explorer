@@ -11,7 +11,7 @@ extends Control
 @onready var radio_claimed_names: RadioSelector = %RadioSelector_ClaimedNames
 
 
-# Called when the node enters the scene tree for the first time.
+# gdlint:ignore = async-function-name
 func _ready():
 	var profile := Global.player_identity.get_profile_or_null()
 	if profile != null:
@@ -75,7 +75,7 @@ func _on_check_button_toggled(toggled_on):
 		_on_line_edit_name_text_changed(line_edit_name.text)
 
 
-func _on_radio_selector_claimed_names_select_item(index: int, item: String) -> void:
+func _on_radio_selector_claimed_names_select_item(_index: int, item: String) -> void:
 	var new_name = item
 	if (
 		backpack.mutable_profile.get_name() != new_name

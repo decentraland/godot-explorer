@@ -237,4 +237,4 @@ func _on_button_magic_wallet_pressed():
 
 
 func _on_portrait_button_discover_pressed() -> void:
-	pass # Replace with function body.
+	pass  # Replace with function body.

@@ -3,7 +3,6 @@ extends Control
 
 var search_text: String = ""
 
-
 @onready var jump_in = %JumpIn
 
 @onready var button_search_bar: Button = %Button_SearchBar

@@ -23,8 +23,6 @@ static func get_max_ui_zoom(root: Window) -> float:
 	return factor_limit
 
 
-
-
 static func get_ui_zoom_available(root: Window) -> Dictionary:
 	var max_zoom := get_max_ui_zoom(root)
 	var ret: Dictionary = {}
@@ -41,32 +39,8 @@ static func get_ui_zoom_available(root: Window) -> Dictionary:
 
 
 # Simple DPI-based scaling without aggressive resolution clamp
-static func apply_ui_zoom(root: Window):
+static func apply_ui_zoom(_root: Window):
 	pass
-	#var dpi := DisplayServer.screen_get_dpi()
-	#prints("Detected DPI:", dpi)
-#
-	#var factor: float
-	##if Global.get_config().ui_zoom < 0.0:
-	#if dpi >= 400:
-		#factor = 3.0
-	#elif dpi >= 300:
-		#factor = 2.5
-	#elif dpi >= 240:
-		#factor = 2.0
-	#elif dpi >= 120:
-		#factor = 1.5
-	#else:
-		#factor = 1.0
-	#Global.get_config().ui_zoom = factor
-	##else:
-	##	factor = Global.get_config().ui_zoom
-	#
-	## Optional minimum clamp only
-	#factor = max(factor, 0.75)
-	#root.content_scale_factor = factor
-	#prints("Applied factor:", factor)
-
 
 
 static func apply_window_config() -> void:

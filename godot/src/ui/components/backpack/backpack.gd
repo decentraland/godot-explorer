@@ -116,7 +116,7 @@ func _ready():
 
 	container_backpack.show()
 	backpack_loading.hide()
-	
+
 	var profile := Global.player_identity.get_profile_or_null()
 	if profile != null:
 		_on_profile_changed(profile)
@@ -140,6 +140,7 @@ func _on_size_changed():
 		right_editor_container.add_theme_constant_override("margin_left", 20)
 		right_editor_container.add_theme_constant_override("margin_right", 20)
 		right_editor_container.add_theme_constant_override("margin_bottom", 10)
+
 
 func _update_visible_categories():
 	var showed_subcategories: int = 0
