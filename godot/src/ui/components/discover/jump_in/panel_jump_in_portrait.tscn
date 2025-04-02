@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://bc5irf8ns8k10"]
+[gd_scene load_steps=26 format=3 uid="uid://bc5irf8ns8k10"]
 
 [ext_resource type="Script" path="res://src/ui/components/discover/jump_in/panel_jump_in.gd" id="1_31vvk"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_fg6xg"]
@@ -13,6 +13,7 @@
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_cpvjm"]
 [ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="11_627ff"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="12_whm4w"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="14_qecj2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dsiqj"]
 bg_color = Color(0.92549, 0.921569, 0.929412, 1)
@@ -48,7 +49,17 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4ehdd"]
+content_margin_left = 10.0
+content_margin_right = 10.0
+bg_color = Color(0.168627, 0.160784, 0.188235, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
 [node name="PanelJumpInPortrait" type="PanelContainer"]
+visible = false
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
@@ -357,4 +368,32 @@ theme_override_fonts/font = ExtResource("10_cpvjm")
 theme_override_font_sizes/font_size = 13
 autowrap_mode = 2
 
+[node name="Control" type="Control" parent="."]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Button_Close" type="Button" parent="Control"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -50.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 50.0
+grow_horizontal = 0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("5_jnv06")
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_styles/normal = SubResource("StyleBoxFlat_4ehdd")
+icon = ExtResource("14_qecj2")
+icon_alignment = 1
+expand_icon = true
+
 [connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[connection signal="pressed" from="Control/Button_Close" to="." method="_on_button_close_pressed"]

@@ -19,9 +19,9 @@ script = ExtResource("1_somjb")
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
 size_flags_vertical = 0
-theme_override_constants/margin_left = 32
+theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 32
+theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 0
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]

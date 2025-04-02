@@ -210,9 +210,9 @@ theme_override_constants/separation = 0
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/margin_left = 10
+theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
+theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 0
 
 [node name="Control" type="Control" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners"]
@@ -443,6 +443,7 @@ layout_mode = 2
 
 [node name="JumpIn" parent="CanvasLayer" instance=ExtResource("9_gh6mh")]
 unique_name_in_owner = true
+visible = false
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="focus_exited" from="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer/HBoxContainer/LineEdit_SearchBar" to="." method="_on_line_edit_search_bar_focus_exited"]

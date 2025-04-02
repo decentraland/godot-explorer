@@ -2,6 +2,7 @@ class_name JumpIn
 extends PlaceItem
 
 signal jump_in(position: Vector2i, realm: String)
+signal close
 
 @export var location: Vector2i = Vector2i(0, 0)
 
@@ -59,8 +60,5 @@ func _on_button_jump_in_pressed():
 	jump_in.emit(location, realm)
 
 
-func _on_gui_input(event):
-	if event is InputEventScreenTouch:
-		if !event.pressed:
-			self.hide()
-			UiSounds.play_sound("mainmenu_widget_close")
+func _on_button_close_pressed() -> void:
+	close.emit()

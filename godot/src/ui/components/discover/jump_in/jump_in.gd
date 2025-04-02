@@ -11,11 +11,18 @@ signal jump_in(position: Vector2i, realm: String)
 func _ready():
 	panel_jump_in_portrait.jump_in.connect(self._emit_jump_in)
 	panel_jump_in_landscape.jump_in.connect(self._emit_jump_in)
+	panel_jump_in_portrait.close.connect(self._close)
+	panel_jump_in_landscape.close.connect(self._close)
 	texture_progress_bar.hide()
 
 
 func _emit_jump_in(position: Vector2i, realm: String):
 	jump_in.emit(position, realm)
+
+
+func _close():
+	self.hide()
+	UiSounds.play_sound("mainmenu_widget_close")
 
 
 func async_load_place_position(position: Vector2i):
@@ -92,5 +99,4 @@ func show_animation() -> void:
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if !event.pressed:
-			self.hide()
-			UiSounds.play_sound("mainmenu_widget_close")
+			_close()
