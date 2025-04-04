@@ -80,6 +80,7 @@ var _dirty_connected: bool = false
 @onready var button_audio: Button = %Button_Audio
 @onready var button_developer: Button = %Button_Developer
 
+
 func _ready():
 	button_general.set_pressed_no_signal(true)
 	_on_button_general_pressed()
@@ -133,12 +134,13 @@ func refresh_graphic_settings():
 	h_slider_rendering_scale.value = Global.get_config().resolution_3d_scale
 	refresh_zooms()
 
+
 func show_control(control: Control):
 	container_general.hide()
 	container_graphics.hide()
 	container_audio.hide()
 	container_advanced.hide()
-	
+
 	control.show()
 
 

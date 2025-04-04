@@ -7,6 +7,7 @@ extends MarginContainer
 @export var use_top: bool = true
 @export var use_bottom: bool = true
 
+
 func _ready() -> void:
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()

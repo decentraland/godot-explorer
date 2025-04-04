@@ -4,6 +4,7 @@ signal accepted
 
 @onready var v_box_container_terms: VBoxContainer = %VBoxContainer_Terms
 
+
 func _on_check_box_terms_and_privacy_toggled(toggled_on: bool) -> void:
 	%Button_Accept.disabled = !toggled_on
 

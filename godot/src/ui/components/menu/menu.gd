@@ -44,6 +44,7 @@ var fade_out_tween: Tween = null
 @onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
 @onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
 
+
 func _ready():
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
@@ -258,7 +259,7 @@ func _on_size_changed() -> void:
 
 		top = max(top, safe_area.position.y * y_factor)
 		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)
-	
+
 	if Global.is_orientation_portrait():
 		color_rect_landscape_top_safe_area.custom_minimum_size.y = 0
 		color_rect_portrait_top_safe_area.custom_minimum_size.y = top
