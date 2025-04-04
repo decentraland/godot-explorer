@@ -10,15 +10,6 @@ signal request_debug_panel(enabled: bool)
 signal preview_hot_reload(scene_type: String, scene_id: String)
 #signals from advanced settings
 
-const BACKPACK_OFF = preload("res://assets/ui/nav-bar-icons/backpack-off.svg")
-const BACKPACK_ON = preload("res://assets/ui/nav-bar-icons/backpack-on.svg")
-const EXPLORER_OFF = preload("res://assets/ui/nav-bar-icons/explorer-off.svg")
-const EXPLORER_ON = preload("res://assets/ui/nav-bar-icons/explorer-on.svg")
-const MAP_OFF = preload("res://assets/ui/nav-bar-icons/map-off.svg")
-const MAP_ON = preload("res://assets/ui/nav-bar-icons/map-on.svg")
-const SETTINGS_OFF = preload("res://assets/ui/nav-bar-icons/settings-off.svg")
-const SETTINGS_ON = preload("res://assets/ui/nav-bar-icons/settings-on.svg")
-
 var buttons_quantity: int = 0
 var pressed_index: int = 0
 
@@ -41,10 +32,23 @@ var fade_out_tween: Tween = null
 @onready var button_settings = %Button_Settings
 @onready var control_deploying_profile = %Control_DeployingProfile
 
+@onready var portrait_button_discover: Button = %Portrait_Button_Discover
+@onready var portrait_button_map: Button = %Portrait_Button_Map
+@onready var portrait_button_backpack: Button = %Portrait_Button_Backpack
+@onready var portrait_button_settings: Button = %Portrait_Button_Settings
+@onready var portrait_button_profile: Button = %Portrait_Button_Profile
+
 @onready var button_magic_wallet = %Button_MagicWallet
+
+@onready var color_rect_landscape_top_safe_area: ColorRect = %ColorRect_Landscape_Top_SafeArea
+@onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
+@onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
 
 
 func _ready():
+	get_window().size_changed.connect(self._on_size_changed)
+	_on_size_changed()
+
 	control_deploying_profile.hide()
 	control_settings.request_pause_scenes.connect(func(enabled): request_pause_scenes.emit(enabled))
 	control_settings.request_debug_panel.connect(func(enabled): request_debug_panel.emit(enabled))
@@ -52,12 +56,13 @@ func _ready():
 		func(scene_type, scene_id): preview_hot_reload.emit(scene_type, scene_id)
 	)
 
-	self.modulate = Color(1, 1, 1, 0)
-	button_settings.set_pressed(true)
-	selected_node = control_settings
+	self.modulate = Color(1, 1, 1, 1)
+	button_discover.set_pressed(true)
+	portrait_button_discover.set_pressed(true)
+	selected_node = control_discover
 	control_map.hide()
-	control_settings.show()
-	control_discover.hide()
+	control_settings.hide()
+	control_discover.show()
 	control_backpack.hide()
 	control_profile_settings.hide()
 	control_map.jump_to.connect(_jump_to)
@@ -162,7 +167,7 @@ func select_node(node: Node, play_sfx: bool = true):
 		fade_in(node)
 
 		if play_sfx:
-			UiSounds.play_sound("mainmenu_tab_switch")
+			UiSounds.play_sound("generic_button_press")
 
 
 func _on_button_settings_pressed():
@@ -228,24 +233,38 @@ func _async_request_hide_menu():
 	hide_menu.emit()
 
 
-func _on_button_discover_toggled(toggled_on):
-	button_discover.icon = EXPLORER_ON if toggled_on else EXPLORER_OFF
-
-
-func _on_button_map_toggled(toggled_on):
-	button_map.icon = MAP_ON if toggled_on else MAP_OFF
-
-
 func _on_button_backpack_toggled(toggled_on):
-	button_backpack.icon = BACKPACK_ON if toggled_on else BACKPACK_OFF
 	if !toggled_on:
 		_async_deploy_if_has_changes()
-
-
-func _on_button_settings_toggled(toggled_on):
-	button_settings.icon = SETTINGS_ON if toggled_on else SETTINGS_OFF
 
 
 func _on_button_magic_wallet_pressed():
 	pass
 	# On future we can open the magic wallet in a WebKit / WebView
+
+
+func _on_portrait_button_discover_pressed() -> void:
+	pass  # Replace with function body.
+
+
+func _on_size_changed() -> void:
+	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+	var window_size: Vector2i = DisplayServer.window_get_size()
+
+	var top: int = 0
+	var bottom: int = 0
+
+	if window_size.x >= safe_area.size.x and window_size.y >= safe_area.size.y:
+		var y_factor: float = size.y / window_size.y
+
+		top = max(top, safe_area.position.y * y_factor)
+		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)
+
+	if Global.is_orientation_portrait():
+		color_rect_landscape_top_safe_area.custom_minimum_size.y = 0
+		color_rect_portrait_top_safe_area.custom_minimum_size.y = top
+		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = bottom
+	else:
+		color_rect_landscape_top_safe_area.custom_minimum_size.y = top
+		color_rect_portrait_top_safe_area.custom_minimum_size.y = 0
+		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = 0

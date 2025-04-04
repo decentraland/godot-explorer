@@ -1,7 +1,7 @@
 [gd_scene load_steps=22 format=3 uid="uid://bitcxwef48476"]
 
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_mareq"]
-[ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="2_q3hly"]
+[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="2_q3hly"]
 [ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/button_touch_action/button_touch_action.tscn" id="3_b0mrq"]
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="4_jxeax"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="5_otyuu"]

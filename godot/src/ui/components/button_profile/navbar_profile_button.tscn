@@ -1,0 +1,46 @@
+[gd_scene load_steps=5 format=3 uid="uid://bpx10vkib1ix"]
+
+[ext_resource type="ButtonGroup" uid="uid://bxbiah4vi02n2" path="res://src/ui/components/menu/button_group_menu.tres" id="1_hxpg5"]
+[ext_resource type="Texture2D" uid="uid://c3y600q1cirt5" path="res://assets/ui/ProfileExample.png" id="2_kbtey"]
+[ext_resource type="Script" path="res://src/ui/components/button_profile/navbar_profile_button.gd" id="3_wyh6g"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_60l1n"]
+bg_color = Color(0.262745, 0.25098, 0.290196, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[node name="Navbar_Profile_Button" type="Button"]
+custom_minimum_size = Vector2(120, 100)
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/icon_max_width = 80
+toggle_mode = true
+button_group = ExtResource("1_hxpg5")
+text = "PROFILE"
+icon = ExtResource("2_kbtey")
+flat = true
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+script = ExtResource("3_wyh6g")
+metadata/disable_ui_sounds = true
+
+[node name="Highlight" type="Panel" parent="."]
+visible = false
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_60l1n")
+
+[connection signal="toggled" from="." to="." method="_on_toggled"]

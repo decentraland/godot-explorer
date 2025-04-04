@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://cuic8diqbxs83"]
+[gd_scene load_steps=16 format=3 uid="uid://cuic8diqbxs83"]
 
 [ext_resource type="Script" path="res://src/vr/vr_lobby.gd" id="1_my51n"]
 [ext_resource type="PackedScene" uid="uid://b228p8k6sonve" path="res://addons/godot-xr-tools/player/fade/fade_collision.tscn" id="2_inngf"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://bl2nuu3qhlb5k" path="res://addons/godot-xr-tools/functions/movement_direct.tscn" id="7_a6w3g"]
 [ext_resource type="PackedScene" uid="uid://brh1yknqh4ux6" path="res://src/ui/components/auth/lobby.tscn" id="7_kbcta"]
 [ext_resource type="PackedScene" uid="uid://b6bk2pj8vbj28" path="res://addons/godot-xr-tools/functions/movement_turn.tscn" id="9_wqiq7"]
+[ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="11_wgpw8"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_fnm28"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
@@ -70,7 +71,7 @@ pose = &"aim"
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.000184953, 0)
 
-[node name="LobbyUI" parent="XROrigin3D/UIOrigin3D" instance=ExtResource("6_dmvnc")]
+[node name="GameUI" parent="XROrigin3D/UIOrigin3D" instance=ExtResource("6_dmvnc")]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -4)
 screen_size = Vector2(7, 4)
@@ -80,6 +81,8 @@ transparent = 0
 alpha_scissor_threshold = 1.0
 unshaded = true
 scene_properties_keys = PackedStringArray("lobby.gd")
+
+[node name="PlayerBody" parent="XROrigin3D" instance=ExtResource("11_wgpw8")]
 
 [node name="StartXR" parent="." instance=ExtResource("6_u581l")]
 

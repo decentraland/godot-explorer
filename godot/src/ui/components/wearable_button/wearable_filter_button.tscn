@@ -4,18 +4,17 @@
 [ext_resource type="Script" path="res://src/ui/components/wearable_button/wearable_filter_button.gd" id="2_5x3mr"]
 
 [node name="Wearable_Button" type="Button"]
-custom_minimum_size = Vector2(70, 70)
-offset_right = 52.0
-offset_bottom = 52.0
+custom_minimum_size = Vector2(130, 40)
+offset_right = 105.0
+offset_bottom = 40.0
 focus_mode = 0
+mouse_filter = 1
 mouse_default_cursor_shape = 2
 theme_type_variation = &"WhiteButton"
-theme_override_constants/h_separation = 5
-theme_override_constants/icon_max_width = 50
 toggle_mode = true
 action_mode = 0
+text = "Body"
 icon = ExtResource("1_rx2nd")
-icon_alignment = 1
 expand_icon = true
 script = ExtResource("2_5x3mr")
 filter_category = 1

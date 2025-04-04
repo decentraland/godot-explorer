@@ -25,8 +25,8 @@ func _ready():
 
 
 func on_item_pressed(data):
-	jump_in.show()
 	jump_in.set_data(data)
+	jump_in.show_animation()
 
 
 func _on_jump_in_jump_in(parcel_position, realm):

@@ -1,12 +1,15 @@
-[gd_scene load_steps=14 format=3 uid="uid://cfuskyu58uo2v"]
+[gd_scene load_steps=17 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_1ym31"]
 [ext_resource type="Texture2D" uid="uid://djwf5d8a0rw6y" path="res://assets/ui/graphics.svg" id="5_lso3q"]
 [ext_resource type="Texture2D" uid="uid://fx5fj4f8uf7k" path="res://assets/ui/Filter.svg" id="6_br0rl"]
 [ext_resource type="Texture2D" uid="uid://bqypc3fidla5s" path="res://assets/ui/SettingsOff.png" id="6_gugrl"]
 [ext_resource type="Texture2D" uid="uid://g38eqwq311ph" path="res://assets/ui/speaker-on.svg" id="6_q1ods"]
 [ext_resource type="PackedScene" uid="uid://b5lfwgmd7h8cj" path="res://src/ui/components/radio_selector/radio_selector.tscn" id="7_u8bs2"]
+[ext_resource type="Script" path="res://src/ui/components/utils/orientation_container.gd" id="8_aj150"]
+[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="8_wyn32"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_jdndg"]
 
@@ -33,9 +36,9 @@ theme_override_constants/separation = -1
 script = ExtResource("2_gps4e")
 
 [node name="ColorRect_Navbar" type="ColorRect" parent="."]
-custom_minimum_size = Vector2(0, 80)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
-color = Color(0.85098, 0.843137, 0.866667, 1)
+color = Color(0, 0, 0, 0.2)
 
 [node name="MarginContainer" type="MarginContainer" parent="ColorRect_Navbar"]
 layout_mode = 1
@@ -44,22 +47,33 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 80
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 80
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 8
+script = ExtResource("8_wyn32")
+default_margin = 30
+use_top = false
+use_bottom = false
 
 [node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Navbar/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 19
 
+[node name="Label" type="Label" parent="ColorRect_Navbar/MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_1ym31")
+theme_override_font_sizes/font_size = 28
+text = "Settings"
+
 [node name="Button_General" type="Button" parent="ColorRect_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"WhiteButton"
-theme_override_constants/h_separation = 0
+theme_override_constants/h_separation = 5
 toggle_mode = true
 button_pressed = true
 button_group = SubResource("ButtonGroup_jdndg")
@@ -68,12 +82,13 @@ icon = ExtResource("6_gugrl")
 alignment = 0
 
 [node name="Button_Graphics" type="Button" parent="ColorRect_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"WhiteButton"
-theme_override_constants/h_separation = 0
+theme_override_constants/h_separation = 5
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
 text = "Graphics"
@@ -81,12 +96,13 @@ icon = ExtResource("5_lso3q")
 alignment = 0
 
 [node name="Button_Audio" type="Button" parent="ColorRect_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"WhiteButton"
-theme_override_constants/h_separation = 0
+theme_override_constants/h_separation = 5
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
 text = "Audio"
@@ -94,12 +110,13 @@ icon = ExtResource("6_q1ods")
 alignment = 0
 
 [node name="Button_Developer" type="Button" parent="ColorRect_Navbar/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
-size_flags_vertical = 5
+size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"WhiteButton"
-theme_override_constants/h_separation = 0
+theme_override_constants/h_separation = 6
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
 text = "Dev Tools"
@@ -128,40 +145,45 @@ alignment = 0
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-color = Color(0.92549, 0.921569, 0.929412, 1)
+color = Color(1, 1, 1, 0)
 
-[node name="HBoxContainer" type="MarginContainer" parent="ColorRect_Content"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="ColorRect_Content"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 80
+theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 80
+theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 0
+script = ExtResource("8_wyn32")
+default_margin = 30
+use_top = false
+use_bottom = false
 
-[node name="ScrollContainer" type="ScrollContainer" parent="ColorRect_Content/HBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="ColorRect_Content/SafeMarginContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Container_General" type="MarginContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
+[node name="Container_General" type="MarginContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
-theme_override_constants/margin_left = 150
-theme_override_constants/margin_right = 150
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
 
-[node name="VBoxContainer_General" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General"]
+[node name="VBoxContainer_General" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General"]
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
 
-[node name="VBoxContainer_SceneRadius" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+[node name="VBoxContainer_SceneRadius" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 4
@@ -169,15 +191,15 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius"]
 layout_mode = 2
 
-[node name="Label_SceneRadius" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer2"]
+[node name="Label_SceneRadius" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer2"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Scene loading radius"
 
-[node name="Label_SceneRadius2" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer2"]
+[node name="Label_SceneRadius2" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer2"]
 self_modulate = Color(1, 1, 1, 0.784314)
 layout_mode = 2
 theme = SubResource("Theme_eontw")
@@ -185,11 +207,11 @@ theme_override_font_sizes/font_size = 12
 text = "(lower value might improve performance)"
 vertical_alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius"]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="HSlider_SceneRadius" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
+[node name="HSlider_SceneRadius" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
@@ -199,78 +221,80 @@ mouse_filter = 1
 max_value = 4.0
 value = 1.0
 
-[node name="Label_SceneRadiusValue" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
+[node name="Label_SceneRadiusValue" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 text = "1"
 horizontal_alignment = 1
 
-[node name="CheckBox_LoadingScenes" type="CheckBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+[node name="CheckBox_LoadingScenes" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Loading scenes arround you only when you pass from one scene to another"
 
-[node name="HSeparator" type="HSeparator" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+[node name="HSeparator" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="VBoxContainer_CachePath" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer"]
+[node name="VBoxContainer_CachePath" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer"]
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_constants/separation = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/HBoxContainer"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/HBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Cache path"
 
-[node name="Label_CurrentCacheSize" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/HBoxContainer"]
+[node name="Label_CurrentCacheSize" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 
-[node name="TextEdit_CachePath" type="LineEdit" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath"]
+[node name="TextEdit_CachePath" type="LineEdit" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(500, 30)
+custom_minimum_size = Vector2(300, 30)
 layout_mode = 2
 focus_mode = 1
 editable = false
 
-[node name="Button_ClearCache" type="Button" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath"]
+[node name="Button_ClearCache" type="Button" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath"]
 layout_mode = 2
 focus_mode = 0
 text = "Clear Cache"
 
-[node name="MaxCacheSize" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer"]
+[node name="MaxCacheSize" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Max cache size"
 
-[node name="RadioSelector_MaxCacheSize" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize" instance=ExtResource("7_u8bs2")]
+[node name="RadioSelector_MaxCacheSize" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
 items = Array[String](["512mb", "1gb", "2gb"])
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
 layout_mode = 2
 
-[node name="CheckBox_DynamicSkybox" type="CheckBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2"]
+[node name="CheckBox_DynamicSkybox" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
 button_pressed = true
 text = "Dynamic skybox"
 
-[node name="HSlider_SkyboxTime" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2"]
+[node name="HSlider_SkyboxTime" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 30)
 layout_mode = 2
@@ -280,13 +304,13 @@ mouse_filter = 1
 max_value = 144.0
 value = 72.0
 
-[node name="Label_SkyboxTime" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2"]
+[node name="Label_SkyboxTime" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "00:00h"
 
-[node name="PreviewViewportContainer" type="SubViewportContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
+[node name="PreviewViewportContainer" type="SubViewportContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(500, 150)
 layout_mode = 2
@@ -294,103 +318,101 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 stretch = true
 
-[node name="SubViewport" type="SubViewport" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/PreviewViewportContainer"]
+[node name="SubViewport" type="SubViewport" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/PreviewViewportContainer"]
 handle_input_locally = false
 size = Vector2i(500, 150)
 render_target_clear_mode = 2
-render_target_update_mode = 4
+render_target_update_mode = 0
 
-[node name="PreviewCamera3D" type="Camera3D" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/PreviewViewportContainer/SubViewport"]
+[node name="PreviewCamera3D" type="Camera3D" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/PreviewViewportContainer/SubViewport"]
 unique_name_in_owner = true
 
-[node name="VBoxContainer_Graphics" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
-visible = false
+[node name="VBoxContainer_Graphics" type="BoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
-theme = SubResource("Theme_5xlkc")
-theme_type_variation = &"2"
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+vertical = true
+script = ExtResource("8_aj150")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 30
 
-[node name="GraphicProfile" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
+[node name="GraphicProfile" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 layout_mode = 2
 alignment = 1
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GraphicProfile"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/GraphicProfile"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Graphic Profile"
 
-[node name="RadioSelector_GraphicProfile" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GraphicProfile" instance=ExtResource("7_u8bs2")]
+[node name="RadioSelector_GraphicProfile" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/GraphicProfile" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
-items = Array[String](["LOW QUALITY", "MEDIUM QUALITY", "HIGH QUALITY", "CUSTOM"])
+items = Array[String](["LOW", "MEDIUM", "HIGH", "CUSTOM"])
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
-layout_mode = 2
-theme_override_constants/separation = 20
-
-[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 30
-
-[node name="VBoxContainer_Windowed" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer"]
+[node name="VBoxContainer_Windowed" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 
-[node name="Label_Windowed" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/VBoxContainer_Windowed"]
+[node name="Label_Windowed" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/VBoxContainer_Windowed"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Window mode"
 
-[node name="RadioSelector_Windowed" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/VBoxContainer_Windowed" instance=ExtResource("7_u8bs2")]
+[node name="RadioSelector_Windowed" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/VBoxContainer_Windowed" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
 items = Array[String](["Windowed", "Borderless", "Full Screen"])
 
-[node name="UiZoom" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer"]
+[node name="UiZoom" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="Label_UiZoom" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/UiZoom"]
+[node name="Label_UiZoom" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/UiZoom"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "2D UI Zoom"
 
-[node name="RadioSelector_UiZoom" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/UiZoom" instance=ExtResource("7_u8bs2")]
+[node name="RadioSelector_UiZoom" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/UiZoom" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
 items = Array[String](["Max"])
 
-[node name="LimitFps" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer"]
+[node name="LimitFps" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
 
-[node name="Label_LimitFps" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/LimitFps"]
+[node name="Label_LimitFps" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/LimitFps"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Limit FPS"
 
-[node name="RadioSelector_LimitFps" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/LimitFps" instance=ExtResource("7_u8bs2")]
+[node name="RadioSelector_LimitFps" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/LimitFps" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
 items = Array[String](["VSync", "No limit", "30 FPS", "60 FPS"])
 
-[node name="Resolution3DScale" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer"]
+[node name="Resolution3DScale" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/Resolution3DScale"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/Resolution3DScale"]
 layout_mode = 2
 
-[node name="Label_Resolution3DScale" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/Resolution3DScale/HBoxContainer"]
+[node name="Label_Resolution3DScale" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/Resolution3DScale/HBoxContainer"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "3D Resolution scale"
 
-[node name="Label_Resolution3DScale2" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/Resolution3DScale/HBoxContainer"]
+[node name="Label_Resolution3DScale2" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/Resolution3DScale/HBoxContainer"]
 self_modulate = Color(1, 1, 1, 0.784314)
 layout_mode = 2
 theme = SubResource("Theme_eontw")
@@ -398,7 +420,7 @@ theme_override_font_sizes/font_size = 12
 text = "(lower value might improve performance)"
 vertical_alignment = 1
 
-[node name="HSlider_Resolution3DScale" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/Resolution3DScale"]
+[node name="HSlider_Resolution3DScale" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/Resolution3DScale"]
 unique_name_in_owner = true
 layout_mode = 2
 min_value = 0.5
@@ -406,84 +428,90 @@ max_value = 1.0
 step = 0.1
 value = 1.0
 
-[node name="VSeparator" type="VSeparator" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
 layout_mode = 2
 theme_override_constants/separation = 70
 theme_override_styles/separator = SubResource("StyleBoxEmpty_nra8i")
 
-[node name="VBoxContainer_Custom" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer"]
+[node name="CustomSettings" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="VBoxContainer_Custom" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 30
 
-[node name="Skybox" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom"]
+[node name="Skybox" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom"]
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Skybox"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Skybox"]
 layout_mode = 2
 
-[node name="Label_Skybox" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Skybox/HBoxContainer"]
+[node name="Label_Skybox" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Skybox/HBoxContainer"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Skybox"
 
-[node name="RadioSelector_Skybox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Skybox" instance=ExtResource("7_u8bs2")]
+[node name="RadioSelector_Skybox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Skybox" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
 items = Array[String](["BASIC", "NORMAL", "REALISTIC"])
 
-[node name="Shadows" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom"]
+[node name="Shadows" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom"]
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Shadows"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Shadows"]
 layout_mode = 2
 
-[node name="Label_Skybox" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Shadows/HBoxContainer"]
+[node name="Label_Skybox" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Shadows/HBoxContainer"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Shadows"
 
-[node name="RadioSelector_Shadow" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Shadows" instance=ExtResource("7_u8bs2")]
+[node name="RadioSelector_Shadow" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Shadows" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
 items = Array[String](["DISABLED", "NORMAL", "HIGH QUALITY"])
 
-[node name="Antialiasing" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom"]
+[node name="Antialiasing" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom"]
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Antialiasing"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Antialiasing"]
 layout_mode = 2
 
-[node name="Label_Antialiasing" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Antialiasing/HBoxContainer"]
+[node name="Label_Antialiasing" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Antialiasing/HBoxContainer"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Anti-aliasing"
 
-[node name="RadioSelector_AA" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Antialiasing" instance=ExtResource("7_u8bs2")]
+[node name="RadioSelector_AA" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Antialiasing" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
 items = Array[String](["OFF", "X2", "X4", "X8"])
 
-[node name="TextureQuality" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom"]
+[node name="TextureQuality" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom"]
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/TextureQuality"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality"]
 layout_mode = 2
 
-[node name="Label_Antialiasing" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/TextureQuality/HBoxContainer"]
+[node name="Label_Antialiasing" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality/HBoxContainer"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Texture Quality"
 
-[node name="Label_Resolution3DScale2" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/TextureQuality/HBoxContainer"]
+[node name="Label_Resolution3DScale2" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality/HBoxContainer"]
 self_modulate = Color(1, 1, 1, 0.784314)
 layout_mode = 2
 theme = SubResource("Theme_eontw")
@@ -491,110 +519,112 @@ theme_override_font_sizes/font_size = 12
 text = "(requires restart of the client to take effect)"
 vertical_alignment = 1
 
-[node name="RadioSelector_TextureQuality" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/TextureQuality" instance=ExtResource("7_u8bs2")]
+[node name="RadioSelector_TextureQuality" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality" instance=ExtResource("7_u8bs2")]
 unique_name_in_owner = true
 layout_mode = 2
 items = Array[String](["LOW", "MEDIUM", "HIGH", "SOURCE"])
 
-[node name="VBoxContainer_Audio" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
+[node name="VBoxContainer_Audio" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
 
-[node name="MasterVolume" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
+[node name="MasterVolume" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "General volume"
 
-[node name="HSlider_GeneralVolume" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume"]
+[node name="HSlider_GeneralVolume" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume"]
 unique_name_in_owner = true
 layout_mode = 2
 value = 100.0
 
-[node name="SceneVolume" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
+[node name="SceneVolume" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/SceneVolume"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/SceneVolume"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Scene Volume"
 
-[node name="HSlider_SceneVolume" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/SceneVolume"]
+[node name="HSlider_SceneVolume" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/SceneVolume"]
 unique_name_in_owner = true
 layout_mode = 2
 value = 100.0
 
-[node name="UIVolume" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
+[node name="UIVolume" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "UI Volume"
 
-[node name="HSlider_UIVolume" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume"]
+[node name="HSlider_UIVolume" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume"]
 unique_name_in_owner = true
 layout_mode = 2
 value = 100.0
 
-[node name="MusicVolume" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
+[node name="MusicVolume" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MusicVolume"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MusicVolume"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Ambient / Music"
 
-[node name="HSlider_MusicVolume" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MusicVolume"]
+[node name="HSlider_MusicVolume" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MusicVolume"]
 unique_name_in_owner = true
 layout_mode = 2
 value = 100.0
 
-[node name="VoiceChatVolume" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
+[node name="VoiceChatVolume" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VoiceChatVolume"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VoiceChatVolume"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "VoiceChat
 "
 
-[node name="HSlider_VoiceChatVolume" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VoiceChatVolume"]
+[node name="HSlider_VoiceChatVolume" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VoiceChatVolume"]
 unique_name_in_owner = true
 layout_mode = 2
 value = 100.0
 
-[node name="MicAmplification" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
+[node name="MicAmplification" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio"]
 layout_mode = 2
 size_flags_vertical = 4
 alignment = 1
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MicAmplification"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MicAmplification"]
 layout_mode = 2
 theme = SubResource("Theme_eontw")
 text = "Mic Amplification"
 
-[node name="HSlider_MicAmplification" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MicAmplification"]
+[node name="HSlider_MicAmplification" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MicAmplification"]
 unique_name_in_owner = true
 layout_mode = 2
 value = 100.0
 
-[node name="VBoxContainer_Advanced" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer"]
+[node name="VBoxContainer_Advanced" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
 visible = false
 layout_mode = 2
 mouse_filter = 2
@@ -602,25 +632,26 @@ theme = SubResource("Theme_3h20j")
 theme_type_variation = &"2"
 theme_override_constants/separation = 15
 
-[node name="HBoxContainer5" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+[node name="HBoxContainer5" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="CheckBox_SceneLog" type="CheckBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5"]
+[node name="CheckBox_SceneLog" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5"]
 layout_mode = 2
 text = "Scene logs enabled"
 
-[node name="CheckBox_RaycastDebugger" type="CheckBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5"]
+[node name="CheckBox_RaycastDebugger" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 10
 text = "Raycast debugger"
 
-[node name="CheckBox_ScenePause" type="CheckBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5"]
+[node name="CheckBox_ScenePause" type="CheckBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5"]
 layout_mode = 2
 size_flags_horizontal = 10
 text = "Scene processing paused"
 
-[node name="VBoxContainer_Realm" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+[node name="VBoxContainer_Realm" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 4
@@ -628,20 +659,23 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 15
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2"]
 layout_mode = 2
 text = "Realm"
 
-[node name="OptionButton_Realm" type="OptionButton" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2"]
+[node name="OptionButton_Realm" type="OptionButton" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 tooltip_text = "Select scene to load"
 focus_mode = 1
+text_overrun_behavior = 1
+clip_text = true
 item_count = 11
 popup/item_0/text = "mannakia.dcl.eth"
 popup/item_1/text = "http://127.0.0.1:8000"
@@ -665,11 +699,11 @@ popup/item_9/id = 9
 popup/item_10/text = "https://realm-provider.decentraland.org/main"
 popup/item_10/id = 10
 
-[node name="HSeparator4" type="HSeparator" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+[node name="HSeparator4" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="VBoxContainer_Connection" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+[node name="VBoxContainer_Connection" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 4
@@ -677,40 +711,42 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection"]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 15
 
-[node name="LineEdit_PreviewUrl" type="LineEdit" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer"]
+[node name="LineEdit_PreviewUrl" type="LineEdit" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 1
 text = "http://127.0.0.1:8000/"
 
-[node name="Button_ConnectPreview" type="Button" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer"]
+[node name="Button_ConnectPreview" type="Button" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer"]
 layout_mode = 2
 focus_mode = 0
 text = "Connect!"
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection"]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Label" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer2"]
+[node name="Label" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer2"]
 layout_mode = 2
 text = "WebSocket state:"
 
-[node name="Label_WsState" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer2"]
+[node name="Label_WsState" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer2"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Disconnected"
 
-[node name="HSeparator3" type="HSeparator" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+[node name="HSeparator3" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="VBoxContainer_ProcessTickQuota" type="VBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+[node name="VBoxContainer_ProcessTickQuota" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 4
@@ -718,17 +754,18 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label_ProcessTickQuota" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota"]
+[node name="Label_ProcessTickQuota" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota"]
 layout_mode = 2
 theme = SubResource("Theme_nuccv")
 text = "Process Tick Quota"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota"]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="HSlider_ProcessTickQuota" type="HSlider" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer"]
+[node name="HSlider_ProcessTickQuota" type="HSlider" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(500, 30)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -738,137 +775,142 @@ max_value = 16.0
 value = 1.0
 editable = false
 
-[node name="Label_ProcessTickQuotaValue" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer"]
+[node name="Label_ProcessTickQuotaValue" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 text = "1"
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+[node name="HSeparator" type="HSeparator" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 0.0
 mouse_filter = 2
 
-[node name="HBoxContainer_Gravity" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer"]
+[node name="HBoxContainer_Gravity" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="Label_Gravity" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity"]
+[node name="Label_Gravity" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme = SubResource("Theme_nuccv")
 text = "Gravity
 "
 
-[node name="SpinBox_Gravity" type="SpinBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity"]
+[node name="SpinBox_Gravity" type="SpinBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity"]
+unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 1
 value = 100.0
 
-[node name="HBoxContainer_JumpVelocity" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer"]
+[node name="HBoxContainer_JumpVelocity" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="Label_JumpVelocity" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity"]
+[node name="Label_JumpVelocity" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme = SubResource("Theme_nuccv")
 text = "Jump Velocity
 "
 
-[node name="SpinBox_JumpVelocity" type="SpinBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity"]
+[node name="SpinBox_JumpVelocity" type="SpinBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity"]
+unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 1
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 size_flags_stretch_ratio = 0.0
 mouse_filter = 2
 
-[node name="HBoxContainer_RunSpeed" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2"]
+[node name="HBoxContainer_RunSpeed" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="Label_RunSpeed" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed"]
+[node name="Label_RunSpeed" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme = SubResource("Theme_nuccv")
 text = "Run Speed
 "
 
-[node name="SpinBox_RunSpeed" type="SpinBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed"]
+[node name="SpinBox_RunSpeed" type="SpinBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed"]
+unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 1
 
-[node name="HBoxContainer_WalkSpeed" type="HBoxContainer" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2"]
+[node name="HBoxContainer_WalkSpeed" type="HBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 10
 
-[node name="Label_WalkSpeed" type="Label" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed"]
+[node name="Label_WalkSpeed" type="Label" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed"]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme = SubResource("Theme_nuccv")
 text = "Walk Speed"
 
-[node name="SpinBox_WalkSpeed" type="SpinBox" parent="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed"]
+[node name="SpinBox_WalkSpeed" type="SpinBox" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed"]
+unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 1
 
-[connection signal="toggled" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_General" to="." method="_on_general_button_toggled"]
-[connection signal="toggled" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_Graphics" to="." method="_on_graphic_button_toggled"]
+[connection signal="pressed" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_General" to="." method="_on_button_general_pressed"]
+[connection signal="pressed" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_Graphics" to="." method="_on_button_graphics_pressed"]
 [connection signal="pressed" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_Audio" to="." method="_on_button_audio_pressed"]
-[connection signal="toggled" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_Developer" to="." method="_on_devloper_button_toggled"]
+[connection signal="pressed" from="ColorRect_Navbar/MarginContainer/HBoxContainer/Button_Developer" to="." method="_on_button_developer_pressed"]
 [connection signal="toggled" from="ColorRect_Navbar/MarginContainer/HBoxContainer/HBoxContainer2/Button_ResetAll" to="." method="_on_monitoring_button_toggled"]
-[connection signal="visibility_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General" to="." method="_on_container_general_visibility_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_value_changed"]
-[connection signal="toggled" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/CheckBox_LoadingScenes" to="." method="_on_check_box_loading_scenes_toggled"]
-[connection signal="pressed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
-[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize/RadioSelector_MaxCacheSize" to="." method="_on_radio_selector_max_cache_size_select_item"]
-[connection signal="toggled" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/CheckBox_DynamicSkybox" to="." method="_on_check_box_dynamic_skybox_toggled"]
-[connection signal="drag_ended" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_ended"]
-[connection signal="drag_started" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_started"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_value_changed"]
-[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/GraphicProfile/RadioSelector_GraphicProfile" to="." method="_on_radio_selector_graphic_profile_select_item"]
-[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/VBoxContainer_Windowed/RadioSelector_Windowed" to="." method="_on_radio_selector_windowed_select_item"]
-[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/UiZoom/RadioSelector_UiZoom" to="." method="_on_radio_selector_ui_zoom_select_item"]
-[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/LimitFps/RadioSelector_LimitFps" to="." method="_on_radio_selector_select_item"]
-[connection signal="drag_ended" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer/Resolution3DScale/HSlider_Resolution3DScale" to="." method="_on_h_slider_rendering_scale_drag_ended"]
-[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Skybox/RadioSelector_Skybox" to="." method="_on_radio_selector_skybox_select_item"]
-[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Shadows/RadioSelector_Shadow" to="." method="_on_radio_selector_shadow_select_item"]
-[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/Antialiasing/RadioSelector_AA" to="." method="_on_radio_selector_aa_select_item"]
-[connection signal="select_item" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/HBoxContainer/VBoxContainer_Custom/TextureQuality/RadioSelector_TextureQuality" to="." method="_on_radio_selector_texture_quality_select_item"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume/HSlider_GeneralVolume" to="." method="_on_h_slider_general_volume_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/SceneVolume/HSlider_SceneVolume" to="." method="_on_h_slider_scene_volume_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume/HSlider_UIVolume" to="." method="_on_h_slider_ui_volume_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MusicVolume/HSlider_MusicVolume" to="." method="_on_h_slider_music_volume_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VoiceChatVolume/HSlider_VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MicAmplification/HSlider_MicAmplification" to="." method="_on_h_slider_mic_amplification_value_changed"]
-[connection signal="toggled" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_SceneLog" to="." method="_on_check_box_scene_log_toggled"]
-[connection signal="toggled" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger" to="." method="_on_check_box_raycast_debugger_toggled"]
-[connection signal="toggled" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_ScenePause" to="." method="_on_check_box_scene_pause_toggled"]
-[connection signal="item_selected" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
-[connection signal="pressed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity" to="." method="_on_spin_box_gravity_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity" to="." method="_on_spin_box_jump_velocity_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed" to="." method="_on_spin_box_run_speed_value_changed"]
-[connection signal="value_changed" from="ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed" to="." method="_on_spin_box_walk_speed_value_changed"]
+[connection signal="visibility_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General" to="." method="_on_container_general_visibility_changed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/VBoxContainer_SceneRadius/HBoxContainer/HSlider_SceneRadius" to="." method="_on_h_slider_scene_radius_value_changed"]
+[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/CheckBox_LoadingScenes" to="." method="_on_check_box_loading_scenes_toggled"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/VBoxContainer_CachePath/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
+[connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer/MaxCacheSize/RadioSelector_MaxCacheSize" to="." method="_on_radio_selector_max_cache_size_select_item"]
+[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/CheckBox_DynamicSkybox" to="." method="_on_check_box_dynamic_skybox_toggled"]
+[connection signal="drag_ended" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_ended"]
+[connection signal="drag_started" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_drag_started"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/HBoxContainer2/HSlider_SkyboxTime" to="." method="_on_h_slider_skybox_time_value_changed"]
+[connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/GraphicProfile/RadioSelector_GraphicProfile" to="." method="_on_radio_selector_graphic_profile_select_item"]
+[connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/VBoxContainer_Windowed/RadioSelector_Windowed" to="." method="_on_radio_selector_windowed_select_item"]
+[connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/UiZoom/RadioSelector_UiZoom" to="." method="_on_radio_selector_ui_zoom_select_item"]
+[connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/LimitFps/RadioSelector_LimitFps" to="." method="_on_radio_selector_select_item"]
+[connection signal="drag_ended" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/VBoxContainer/Resolution3DScale/HSlider_Resolution3DScale" to="." method="_on_h_slider_rendering_scale_drag_ended"]
+[connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Skybox/RadioSelector_Skybox" to="." method="_on_radio_selector_skybox_select_item"]
+[connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Shadows/RadioSelector_Shadow" to="." method="_on_radio_selector_shadow_select_item"]
+[connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/Antialiasing/RadioSelector_AA" to="." method="_on_radio_selector_aa_select_item"]
+[connection signal="select_item" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom/TextureQuality/RadioSelector_TextureQuality" to="." method="_on_radio_selector_texture_quality_select_item"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MasterVolume/HSlider_GeneralVolume" to="." method="_on_h_slider_general_volume_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/SceneVolume/HSlider_SceneVolume" to="." method="_on_h_slider_scene_volume_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/UIVolume/HSlider_UIVolume" to="." method="_on_h_slider_ui_volume_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MusicVolume/HSlider_MusicVolume" to="." method="_on_h_slider_music_volume_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/VoiceChatVolume/HSlider_VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio/MicAmplification/HSlider_MicAmplification" to="." method="_on_h_slider_mic_amplification_value_changed"]
+[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_SceneLog" to="." method="_on_check_box_scene_log_toggled"]
+[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger" to="." method="_on_check_box_raycast_debugger_toggled"]
+[connection signal="toggled" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_ScenePause" to="." method="_on_check_box_scene_pause_toggled"]
+[connection signal="item_selected" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm" to="." method="_on_option_button_realm_item_selected"]
+[connection signal="pressed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/Button_ConnectPreview" to="." method="_on_button_connect_preview_pressed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota" to="." method="_on_h_slider_process_tick_quota_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity" to="." method="_on_spin_box_gravity_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity" to="." method="_on_spin_box_jump_velocity_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed" to="." method="_on_spin_box_run_speed_value_changed"]
+[connection signal="value_changed" from="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed" to="." method="_on_spin_box_walk_speed_value_changed"]

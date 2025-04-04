@@ -1,0 +1,19 @@
+[gd_scene load_steps=2 format=3 uid="uid://jghhunhm5355"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_60l1n"]
+bg_color = Color(0.262745, 0.25098, 0.290196, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[node name="Highlight" type="Panel"]
+visible = false
+show_behind_parent = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_60l1n")

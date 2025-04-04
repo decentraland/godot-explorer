@@ -2,7 +2,8 @@
 
 [ext_resource type="Script" path="res://src/ui/components/radio_selector/radio_selector.gd" id="1_4st25"]
 
-[node name="RadioSelector" type="HBoxContainer"]
-theme_override_constants/separation = 12
+[node name="RadioSelector" type="HFlowContainer"]
+offset_right = 632.0
+offset_bottom = 38.0
 script = ExtResource("1_4st25")
 items = Array[String](["Item 1", "Item 2", "Item 3"])

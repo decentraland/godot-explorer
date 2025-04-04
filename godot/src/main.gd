@@ -2,6 +2,7 @@ extends Node
 
 
 func _ready():
+	Global.set_orientation_portrait()
 	start.call_deferred()
 
 
@@ -57,5 +58,12 @@ func _start():
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 	else:
 		print("Running in regular mode")
-		Global.music_player.play("music_authentication")
-		get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
+		var current_terms_and_conditions_version: int = (
+			Global.get_config().terms_and_conditions_version
+		)
+		if current_terms_and_conditions_version != Global.TERMS_AND_CONDITIONS_VERSION:
+			get_tree().change_scene_to_file(
+				"res://src/ui/components/terms_and_conditions/terms_and_conditions.tscn"
+			)
+		else:
+			get_tree().change_scene_to_file("res://src/ui/components/auth/lobby.tscn")
