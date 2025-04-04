@@ -39,7 +39,7 @@ static func apply_ui_zoom(root: Window):
 	var base_resolution: Vector2 = Vector2(720, 720)
 	var scale_x = screen_size.x / base_resolution.x
 	var scale_y = screen_size.y / base_resolution.y
-	
+
 	# Choose the smaller scale to ensure content always fits on screen
 	var scale = min(scale_x, scale_y)
 	root.content_scale_factor = scale
