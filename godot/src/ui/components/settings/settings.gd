@@ -15,20 +15,16 @@ var _preview_connect_to_url: String = ""
 var _dirty_closed: bool = false
 var _dirty_connected: bool = false
 
-@onready var general = %Container_General
-@onready
-var graphics = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics
-@onready
-var advanced = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced
-@onready
-var audio = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Audio
+@onready var container_general: Control = %Container_General
+@onready var container_graphics: Control = %VBoxContainer_Graphics
+@onready var container_advanced: Control = %VBoxContainer_Advanced
+@onready var container_audio: Control = %VBoxContainer_Audio
 
 #General items:
 @onready var text_edit_cache_path = %TextEdit_CachePath
 @onready var label_current_cache_size = %Label_CurrentCacheSize
 @onready var radio_selector_max_cache_size = %RadioSelector_MaxCacheSize
-@onready
-var check_box_loading_scenes: CheckBox = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/Container_General/VBoxContainer_General/CheckBox_LoadingScenes
+@onready var check_box_loading_scenes: CheckBox = %CheckBox_LoadingScenes
 
 @onready var check_box_dynamic_skybox: CheckBox = %CheckBox_DynamicSkybox
 @onready var h_slider_skybox_time: HSlider = %HSlider_SkyboxTime
@@ -63,35 +59,30 @@ var check_box_loading_scenes: CheckBox = $ColorRect_Content/HBoxContainer/Scroll
 @onready var radio_selector_limit_fps = %RadioSelector_LimitFps
 
 #Advanced items:
-@onready
-var option_button_realm = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Realm/HBoxContainer2/OptionButton_Realm
-@onready
-var line_edit_preview_url = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer/LineEdit_PreviewUrl
-@onready
-var label_ws_state = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_Connection/HBoxContainer2/Label_WsState
+@onready var option_button_realm = %OptionButton_Realm
+@onready var line_edit_preview_url = %LineEdit_PreviewUrl
+@onready var label_ws_state = %Label_WsState
 
-@onready
-var h_slider_process_tick_quota = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/HSlider_ProcessTickQuota
-@onready
-var label_process_tick_quota_value = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/VBoxContainer_ProcessTickQuota/HBoxContainer/Label_ProcessTickQuotaValue
+@onready var h_slider_process_tick_quota = %HSlider_ProcessTickQuota
+@onready var label_process_tick_quota_value = %Label_ProcessTickQuotaValue
 
 @onready var label_scene_radius_value = %Label_SceneRadiusValue
 @onready var h_slider_scene_radius = %HSlider_SceneRadius
 
-@onready
-var spin_box_gravity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_Gravity/SpinBox_Gravity
-@onready
-var spin_box_jump_velocity = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer/HBoxContainer_JumpVelocity/SpinBox_JumpVelocity
-@onready
-var spin_box_run_speed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_RunSpeed/SpinBox_RunSpeed
-@onready
-var spin_box_walk_speed = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer2/HBoxContainer_WalkSpeed/SpinBox_WalkSpeed
-@onready
-var check_box_raycast_debugger = $ColorRect_Content/HBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer_Advanced/HBoxContainer5/CheckBox_RaycastDebugger
+@onready var spin_box_gravity = %SpinBox_Gravity
+@onready var spin_box_jump_velocity = %SpinBox_JumpVelocity
+@onready var spin_box_run_speed = %SpinBox_RunSpeed
+@onready var spin_box_walk_speed = %SpinBox_WalkSpeed
+@onready var check_box_raycast_debugger = %CheckBox_RaycastDebugger
 
+@onready var button_general: Button = %Button_General
+@onready var button_graphics: Button = %Button_Graphics
+@onready var button_audio: Button = %Button_Audio
+@onready var button_developer: Button = %Button_Developer
 
 func _ready():
-	_on_general_button_toggled(true)
+	button_general.set_pressed_no_signal(true)
+	_on_button_general_pressed()
 
 	# general
 	text_edit_cache_path.text = Global.get_config().local_content_dir
@@ -142,37 +133,17 @@ func refresh_graphic_settings():
 	h_slider_rendering_scale.value = Global.get_config().resolution_3d_scale
 	refresh_zooms()
 
+func show_control(control: Control):
+	container_general.hide()
+	container_graphics.hide()
+	container_audio.hide()
+	container_advanced.hide()
+	
+	control.show()
+
 
 func _on_button_pressed():
 	self.hide()
-
-
-func _on_general_button_toggled(_button_pressed):
-	general.show()
-	graphics.hide()
-	audio.hide()
-	advanced.hide()
-
-
-func _on_graphic_button_toggled(_button_pressed):
-	general.hide()
-	graphics.show()
-	audio.hide()
-	advanced.hide()
-
-
-func _on_devloper_button_toggled(_button_pressed):
-	general.hide()
-	graphics.hide()
-	audio.hide()
-	advanced.show()
-
-
-func _on_button_audio_pressed():
-	general.hide()
-	graphics.hide()
-	audio.show()
-	advanced.hide()
 
 
 # gdlint:ignore = async-function-name
@@ -500,3 +471,19 @@ func _on_h_slider_skybox_time_drag_started() -> void:
 
 func _on_h_slider_skybox_time_drag_ended(_value_changed: bool) -> void:
 	preview_viewport_container.hide()
+
+
+func _on_button_developer_pressed() -> void:
+	show_control(container_advanced)
+
+
+func _on_button_graphics_pressed() -> void:
+	show_control(container_graphics)
+
+
+func _on_button_general_pressed() -> void:
+	show_control(container_general)
+
+
+func _on_button_audio_pressed():
+	show_control(container_audio)

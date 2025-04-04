@@ -43,10 +43,11 @@ var fade_out_tween: Tween = null
 @onready var color_rect_landscape_top_safe_area: ColorRect = %ColorRect_Landscape_Top_SafeArea
 @onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
 @onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
-@onready var texture_rect_safe_area_logotipo: TextureRect = %TextureRect_SafeArea_Logotipo
 
 func _ready():
-	_on_resized()
+	get_window().size_changed.connect(self._on_size_changed)
+	_on_size_changed()
+
 	control_deploying_profile.hide()
 	control_settings.request_pause_scenes.connect(func(enabled): request_pause_scenes.emit(enabled))
 	control_settings.request_debug_panel.connect(func(enabled): request_debug_panel.emit(enabled))
@@ -245,7 +246,7 @@ func _on_portrait_button_discover_pressed() -> void:
 	pass  # Replace with function body.
 
 
-func _on_resized() -> void:
+func _on_size_changed() -> void:
 	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
 	var window_size: Vector2i = DisplayServer.window_get_size()
 
@@ -262,9 +263,7 @@ func _on_resized() -> void:
 		color_rect_landscape_top_safe_area.custom_minimum_size.y = 0
 		color_rect_portrait_top_safe_area.custom_minimum_size.y = top
 		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = bottom
-		texture_rect_safe_area_logotipo.visible = top >= 30
 	else:
 		color_rect_landscape_top_safe_area.custom_minimum_size.y = top
 		color_rect_portrait_top_safe_area.custom_minimum_size.y = 0
 		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = 0
-		texture_rect_safe_area_logotipo.hide()

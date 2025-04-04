@@ -1,18 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://3tdl1oo7a282"]
+[gd_scene load_steps=5 format=3 uid="uid://3tdl1oo7a282"]
 
 [ext_resource type="Script" path="res://src/ui/components/terms_and_conditions/terms_and_conditions.gd" id="1_v76mk"]
 [ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="1_yiehh"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_x1g4l"]
-
-[sub_resource type="Gradient" id="Gradient_yeovc"]
-offsets = PackedFloat32Array(0.373134, 1)
-colors = PackedColorArray(0.862745, 0.176471, 0.827451, 1, 0.286275, 0.0980392, 0.458824, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_ewgjb"]
-gradient = SubResource("Gradient_yeovc")
-fill = 1
-fill_from = Vector2(0.5, 0.5)
-metadata/_snap_enabled = true
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_o0won"]
 
@@ -25,16 +15,17 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_v76mk")
 
-[node name="TextureRect" type="TextureRect" parent="."]
+[node name="TextureRect" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = SubResource("GradientTexture2D_ewgjb")
+color = Color(0.141176, 0.141176, 0.141176, 1)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer_Terms" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -48,38 +39,41 @@ offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer_Terms"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 texture = ExtResource("1_yiehh")
 expand_mode = 3
 stretch_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer_Terms"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="Label_Name" type="Label" parent="VBoxContainer"]
+[node name="Label_Name" type="Label" parent="VBoxContainer_Terms"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("2_x1g4l")
 theme_override_font_sizes/font_size = 36
 text = "Before you get started..."
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer_Terms"]
+layout_mode = 2
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer_Terms"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_Terms"]
 layout_mode = 2
 
-[node name="Control" type="Control" parent="VBoxContainer/HBoxContainer"]
+[node name="Control" type="Control" parent="VBoxContainer_Terms/HBoxContainer"]
 custom_minimum_size = Vector2(60, 0)
 layout_mode = 2
 
-[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="VBoxContainer/HBoxContainer/Control"]
+[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="VBoxContainer_Terms/HBoxContainer/Control"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -94,54 +88,31 @@ offset_bottom = 19.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/HBoxContainer"]
+[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer_Terms/HBoxContainer"]
 clip_contents = false
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/line_separation = 10
 theme_override_font_sizes/bold_italics_font_size = 22
 theme_override_font_sizes/italics_font_size = 22
 theme_override_font_sizes/mono_font_size = 22
 theme_override_font_sizes/normal_font_size = 22
 theme_override_font_sizes/bold_font_size = 22
 bbcode_enabled = true
-text = "To use this app, you must agree to our [b][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/b] and [b][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/b]"
+text = "To use this app, you must agree to our
+[b][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/b], [b][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/b] and [b][url=\"https://decentraland.org/content/\"]Content Policy[/url][/b]"
 fit_content = true
 scroll_active = false
 
-[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/HBoxContainer/RichTextLabel"]
-show_behind_parent = true
-clip_contents = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 1.0
-offset_top = 1.0
-offset_right = 1.0
-offset_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_horizontal = 3
-theme_override_colors/default_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/bold_italics_font_size = 22
-theme_override_font_sizes/italics_font_size = 22
-theme_override_font_sizes/mono_font_size = 22
-theme_override_font_sizes/normal_font_size = 22
-theme_override_font_sizes/bold_font_size = 22
-bbcode_enabled = true
-text = "To use this app, you must agree to our [b][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/b] and [b][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/b]"
-fit_content = true
-scroll_active = false
-
-[node name="HSeparator3" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator3" type="HSeparator" parent="VBoxContainer_Terms"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_o0won")
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer_Terms"]
 layout_mode = 2
 
-[node name="Button_Reject" type="Button" parent="VBoxContainer/HBoxContainer2"]
+[node name="Button_Reject" type="Button" parent="VBoxContainer_Terms/HBoxContainer2"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(250, 50)
 layout_mode = 2
@@ -154,7 +125,7 @@ theme_override_font_sizes/font_size = 24
 text = "REJECT"
 icon_alignment = 2
 
-[node name="Button_Accept" type="Button" parent="VBoxContainer/HBoxContainer2"]
+[node name="Button_Accept" type="Button" parent="VBoxContainer_Terms/HBoxContainer2"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
@@ -167,9 +138,8 @@ disabled = true
 text = "CONTINUE"
 icon_alignment = 2
 
-[connection signal="gui_input" from="VBoxContainer/HBoxContainer/Control" to="." method="_on_control_gui_input"]
-[connection signal="toggled" from="VBoxContainer/HBoxContainer/Control/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
-[connection signal="meta_clicked" from="VBoxContainer/HBoxContainer/RichTextLabel" to="." method="_on_rich_text_label_meta_clicked"]
-[connection signal="meta_clicked" from="VBoxContainer/HBoxContainer/RichTextLabel/RichTextLabel" to="." method="_on_rich_text_label_meta_clicked"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer2/Button_Reject" to="." method="_on_button_reject_pressed"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer2/Button_Accept" to="." method="_on_button_accept_pressed"]
+[connection signal="gui_input" from="VBoxContainer_Terms/HBoxContainer/Control" to="." method="_on_control_gui_input"]
+[connection signal="toggled" from="VBoxContainer_Terms/HBoxContainer/Control/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
+[connection signal="meta_clicked" from="VBoxContainer_Terms/HBoxContainer/RichTextLabel" to="." method="_on_rich_text_label_meta_clicked"]
+[connection signal="pressed" from="VBoxContainer_Terms/HBoxContainer2/Button_Reject" to="." method="_on_button_reject_pressed"]
+[connection signal="pressed" from="VBoxContainer_Terms/HBoxContainer2/Button_Accept" to="." method="_on_button_accept_pressed"]

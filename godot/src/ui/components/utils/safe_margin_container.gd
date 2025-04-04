@@ -1,7 +1,7 @@
 class_name SafeMarginContainer
 extends MarginContainer
 
-@export var default_margin: int = 8
+@export var default_margin: int = 0
 @export var use_left: bool = true
 @export var use_right: bool = true
 @export var use_top: bool = true
@@ -18,10 +18,10 @@ func _on_size_changed():
 	var viewport_size = get_viewport().get_visible_rect().size
 
 	# BASE MARGINS
-	var top: int = default_margin if Global.is_mobile() else 0
-	var left: int = default_margin if Global.is_mobile() else 0
-	var bottom: int = default_margin if Global.is_mobile() else 0
-	var right: int = default_margin if Global.is_mobile() else 0
+	var top: int = default_margin
+	var left: int = default_margin
+	var bottom: int = default_margin
+	var right: int = default_margin
 
 	var x_factor: float = viewport_size.x / window_size.x
 	var y_factor: float = viewport_size.y / window_size.y

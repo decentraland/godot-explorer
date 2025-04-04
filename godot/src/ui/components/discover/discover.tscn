@@ -202,7 +202,6 @@ one_shot = true
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("6_b1byu")
-default_margin = 0
 use_top = false
 use_bottom = false
 

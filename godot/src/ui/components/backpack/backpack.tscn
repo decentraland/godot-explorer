@@ -164,7 +164,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_yj6kw")
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("3_0ypv2")
-default_margin = 0
 use_top = false
 use_bottom = false
 

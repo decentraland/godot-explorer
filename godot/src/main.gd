@@ -58,7 +58,6 @@ func _start():
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 	else:
 		print("Running in regular mode")
-		Global.music_player.play("music_authentication")
 		var current_terms_and_conditions_version: int = (
 			Global.get_config().terms_and_conditions_version
 		)

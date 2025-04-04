@@ -133,7 +133,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("4_lblvr")
-default_margin = 0
 use_top = false
 use_bottom = false
 
@@ -623,7 +622,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_odvpn")
 layout_mode = 2
 size_flags_horizontal = 4
 
-[connection signal="resized" from="." to="." method="_on_resized"]
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="." method="_on_button_discover_pressed"]
 [connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
