@@ -40,8 +40,13 @@ var fade_out_tween: Tween = null
 
 @onready var button_magic_wallet = %Button_MagicWallet
 
+@onready var color_rect_landscape_top_safe_area: ColorRect = %ColorRect_Landscape_Top_SafeArea
+@onready var color_rect_portrait_top_safe_area: ColorRect = %ColorRect_Portrait_Top_SafeArea
+@onready var color_rect_portrait_bottom_safe_area: ColorRect = %ColorRect_Portrait_Bottom_SafeArea
+@onready var texture_rect_safe_area_logotipo: TextureRect = %TextureRect_SafeArea_Logotipo
 
 func _ready():
+	_on_resized()
 	control_deploying_profile.hide()
 	control_settings.request_pause_scenes.connect(func(enabled): request_pause_scenes.emit(enabled))
 	control_settings.request_debug_panel.connect(func(enabled): request_debug_panel.emit(enabled))
@@ -238,3 +243,28 @@ func _on_button_magic_wallet_pressed():
 
 func _on_portrait_button_discover_pressed() -> void:
 	pass  # Replace with function body.
+
+
+func _on_resized() -> void:
+	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+	var window_size: Vector2i = DisplayServer.window_get_size()
+
+	var top: int = 0
+	var bottom: int = 0
+
+	if window_size.x >= safe_area.size.x and window_size.y >= safe_area.size.y:
+		var y_factor: float = size.y / window_size.y
+
+		top = max(top, safe_area.position.y * y_factor)
+		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)
+	
+	if Global.is_orientation_portrait():
+		color_rect_landscape_top_safe_area.custom_minimum_size.y = 0
+		color_rect_portrait_top_safe_area.custom_minimum_size.y = top
+		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = bottom
+		texture_rect_safe_area_logotipo.visible = top >= 30
+	else:
+		color_rect_landscape_top_safe_area.custom_minimum_size.y = top
+		color_rect_portrait_top_safe_area.custom_minimum_size.y = 0
+		color_rect_portrait_bottom_safe_area.custom_minimum_size.y = 0
+		texture_rect_safe_area_logotipo.hide()

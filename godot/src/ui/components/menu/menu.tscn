@@ -1,4 +1,4 @@
-[gd_scene load_steps=42 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=43 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="3_66uy4"]
 [ext_resource type="PackedScene" uid="uid://bp6yn0qw2s6ua" path="res://src/ui/components/discover/discover.tscn" id="4_5qyiw"]
 [ext_resource type="PackedScene" uid="uid://dkqc3of3acx2i" path="res://src/ui/components/map/map.tscn" id="4_jtsir"]
+[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="4_lblvr"]
 [ext_resource type="ButtonGroup" uid="uid://bxbiah4vi02n2" path="res://src/ui/components/menu/button_group_menu.tres" id="5_ili3w"]
 [ext_resource type="Shader" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
 [ext_resource type="Texture2D" uid="uid://ck0o5otm5qv8k" path="res://assets/ui/nav-bar-icons/explorer-off.svg" id="6_hwdsi"]
@@ -113,54 +114,63 @@ theme_override_constants/separation = 0
 script = ExtResource("22_1kuym")
 hide_on_portrait = true
 
+[node name="ColorRect_Landscape_Top_SafeArea" type="ColorRect" parent="VBoxContainer/TopNavbar_Landscape"]
+unique_name_in_owner = true
+layout_mode = 2
+color = Color(0.0862745, 0.0784314, 0.105882, 1)
+
 [node name="ColorRect_Header" type="ColorRect" parent="VBoxContainer/TopNavbar_Landscape"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 color = Color(0.0862745, 0.0784314, 0.105882, 1)
 
-[node name="HBoxContainer_Header" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header"]
 layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
+anchors_preset = 15
 anchor_right = 1.0
-anchor_bottom = 0.5
-offset_top = -40.0
-offset_bottom = 40.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("4_lblvr")
+default_margin = 0
+use_top = false
+use_bottom = false
+
+[node name="HBoxContainer_Header" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer"]
+layout_mode = 2
 theme_override_constants/separation = 0
 alignment = 1
 
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header"]
+[node name="VSeparator" type="VSeparator" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header"]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_5emsx")
 
-[node name="HBoxContainer_LeftSide" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header"]
+[node name="HBoxContainer_LeftSide" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header"]
 custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_LeftSide"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide"]
 layout_mode = 2
 alignment = 1
 
-[node name="HBoxContainer_Logo" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer"]
+[node name="HBoxContainer_Logo" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 2
 alignment = 1
 
-[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/HBoxContainer_Logo"]
+[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/HBoxContainer_Logo"]
 custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 texture = ExtResource("3_66uy4")
 expand_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/HBoxContainer_Logo"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/HBoxContainer_Logo"]
 layout_mode = 2
 theme_override_styles/separator = SubResource("StyleBoxEmpty_dm3ec")
 
-[node name="Label" type="Label" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/HBoxContainer_Logo"]
+[node name="Label" type="Label" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/HBoxContainer_Logo"]
 layout_mode = 2
 size_flags_vertical = 1
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -169,13 +179,13 @@ theme_override_font_sizes/font_size = 18
 text = "Decentraland"
 vertical_alignment = 1
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_oex5x")
 
-[node name="Label2" type="Label" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/PanelContainer"]
+[node name="Label2" type="Label" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_LeftSide/VBoxContainer/PanelContainer"]
 layout_mode = 2
 size_flags_vertical = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -185,13 +195,13 @@ text = "MOBILE ALPHA"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header"]
+[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header"]
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 2
 alignment = 1
 
-[node name="Button_Discover" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+[node name="Button_Discover" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
@@ -216,7 +226,7 @@ script = ExtResource("8_xlada")
 button_pressed_icon = ExtResource("9_vk6hq")
 metadata/disable_ui_sounds = true
 
-[node name="Button_Map" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+[node name="Button_Map" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
@@ -241,7 +251,7 @@ script = ExtResource("8_xlada")
 button_pressed_icon = ExtResource("11_3grpy")
 metadata/disable_ui_sounds = true
 
-[node name="Button_Backpack" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+[node name="Button_Backpack" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
@@ -266,7 +276,7 @@ script = ExtResource("8_xlada")
 button_pressed_icon = ExtResource("13_42arv")
 metadata/disable_ui_sounds = true
 
-[node name="Button_Settings" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
+[node name="Button_Settings" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 80)
 layout_mode = 2
@@ -291,13 +301,13 @@ script = ExtResource("8_xlada")
 button_pressed_icon = ExtResource("15_rnulk")
 metadata/disable_ui_sounds = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header"]
 custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 2
 
-[node name="Button_MagicWallet" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer"]
+[node name="Button_MagicWallet" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(52, 52)
 layout_mode = 2
@@ -313,12 +323,12 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_60djt")
 text = "Wallet"
 icon = ExtResource("11_hi4c1")
 
-[node name="MenuProfileButton" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer" instance=ExtResource("9_kexs4")]
+[node name="MenuProfileButton" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer" instance=ExtResource("9_kexs4")]
 layout_mode = 2
 button_group = ExtResource("5_ili3w")
 metadata/disable_ui_sounds = true
 
-[node name="Button_Close" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer"]
+[node name="Button_Close" type="Button" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer"]
 custom_minimum_size = Vector2(52, 52)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -333,7 +343,7 @@ icon = ExtResource("12_rk6dl")
 icon_alignment = 1
 expand_icon = true
 
-[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header"]
+[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header"]
 layout_mode = 2
 theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_wmgho")
@@ -342,6 +352,11 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_wmgho")
 material = SubResource("ShaderMaterial_t4bn8")
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
+
+[node name="ColorRect_Portrait_Top_SafeArea" type="ColorRect" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+color = Color(0.0862745, 0.0784314, 0.105882, 1)
 
 [node name="ColorRect_Background" type="TextureRect" parent="VBoxContainer"]
 show_behind_parent = true
@@ -431,24 +446,22 @@ visible = false
 layout_mode = 1
 backpack = NodePath("../Control_Backpack")
 
-[node name="BottomBar_Portrait" type="Panel" parent="VBoxContainer"]
+[node name="BottomBar_Portrait" type="PanelContainer" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_080im")
 script = ExtResource("22_1kuym")
 
-[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBoxContainer/BottomBar_Portrait"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/BottomBar_Portrait"]
+layout_mode = 2
+
+[node name="HBoxContainer_ButtonsPanel" type="HBoxContainer" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer"]
+layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 2
 alignment = 1
 
-[node name="Portrait_Button_Discover" type="Button" parent="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel"]
+[node name="Portrait_Button_Discover" type="Button" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 100)
 layout_mode = 2
@@ -473,7 +486,7 @@ script = ExtResource("8_xlada")
 button_pressed_icon = ExtResource("9_vk6hq")
 metadata/disable_ui_sounds = true
 
-[node name="Portrait_Button_Map" type="Button" parent="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel"]
+[node name="Portrait_Button_Map" type="Button" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 100)
 layout_mode = 2
@@ -498,7 +511,7 @@ script = ExtResource("8_xlada")
 button_pressed_icon = ExtResource("11_3grpy")
 metadata/disable_ui_sounds = true
 
-[node name="Portrait_Button_Backpack" type="Button" parent="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel"]
+[node name="Portrait_Button_Backpack" type="Button" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 100)
 layout_mode = 2
@@ -523,7 +536,7 @@ script = ExtResource("8_xlada")
 button_pressed_icon = ExtResource("13_42arv")
 metadata/disable_ui_sounds = true
 
-[node name="Portrait_Button_Settings" type="Button" parent="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel"]
+[node name="Portrait_Button_Settings" type="Button" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 100)
 layout_mode = 2
@@ -548,10 +561,15 @@ script = ExtResource("8_xlada")
 button_pressed_icon = ExtResource("15_rnulk")
 metadata/disable_ui_sounds = true
 
-[node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel" instance=ExtResource("22_n1jkd")]
+[node name="Portrait_Button_Profile" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel" instance=ExtResource("22_n1jkd")]
 unique_name_in_owner = true
 layout_mode = 2
 button_group = SubResource("ButtonGroup_udswp")
+
+[node name="ColorRect_Portrait_Bottom_SafeArea" type="ColorRect" parent="VBoxContainer/BottomBar_Portrait/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+color = Color(0.0862745, 0.0784314, 0.105882, 1)
 
 [node name="Control_DeployingProfile" type="ColorRect" parent="."]
 unique_name_in_owner = true
@@ -605,18 +623,19 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_odvpn")
 layout_mode = 2
 size_flags_horizontal = 4
 
+[connection signal="resized" from="." to="." method="_on_resized"]
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="." method="_on_button_discover_pressed"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_pressed"]
-[connection signal="toggled" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_toggled"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings" to="." method="_on_button_settings_pressed"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer/Button_MagicWallet" to="." method="_on_button_magic_wallet_pressed"]
-[connection signal="open_menu_profile" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer/MenuProfileButton" to="." method="_on_menu_profile_button_open_menu_profile"]
-[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/HBoxContainer_Header/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel/Portrait_Button_Discover" to="." method="_on_button_discover_pressed"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel/Portrait_Button_Map" to="." method="_on_button_map_pressed"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel/Portrait_Button_Backpack" to="." method="_on_button_backpack_pressed"]
-[connection signal="toggled" from="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel/Portrait_Button_Backpack" to="." method="_on_button_backpack_toggled"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel/Portrait_Button_Settings" to="." method="_on_button_settings_pressed"]
-[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/HBoxContainer_ButtonsPanel/Portrait_Button_Profile" to="." method="_on_menu_profile_button_open_menu_profile"]
+[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Discover" to="." method="_on_button_discover_pressed"]
+[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Map" to="." method="_on_button_map_pressed"]
+[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_pressed"]
+[connection signal="toggled" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Backpack" to="." method="_on_button_backpack_toggled"]
+[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer_ButtonsPanel/Button_Settings" to="." method="_on_button_settings_pressed"]
+[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer/Button_MagicWallet" to="." method="_on_button_magic_wallet_pressed"]
+[connection signal="open_menu_profile" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer/MenuProfileButton" to="." method="_on_menu_profile_button_open_menu_profile"]
+[connection signal="pressed" from="VBoxContainer/TopNavbar_Landscape/ColorRect_Header/SafeMarginContainer/HBoxContainer_Header/HBoxContainer/Button_Close" to="." method="_on_button_close_pressed"]
+[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Discover" to="." method="_on_button_discover_pressed"]
+[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Map" to="." method="_on_button_map_pressed"]
+[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Backpack" to="." method="_on_button_backpack_pressed"]
+[connection signal="toggled" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Backpack" to="." method="_on_button_backpack_toggled"]
+[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Settings" to="." method="_on_button_settings_pressed"]
+[connection signal="pressed" from="VBoxContainer/BottomBar_Portrait/VBoxContainer/HBoxContainer_ButtonsPanel/Portrait_Button_Profile" to="." method="_on_menu_profile_button_open_menu_profile"]

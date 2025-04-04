@@ -45,16 +45,7 @@ grow_vertical = 2
 theme = ExtResource("1_t2lj5")
 script = ExtResource("2_fu4v6")
 
-[node name="Main" type="Control" parent="."]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Loading" type="Control" parent="Main"]
+[node name="Background1" type="Control" parent="."]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -64,7 +55,40 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="TextureRect" type="TextureRect" parent="Main/Loading"]
+[node name="Background_Restore" type="TextureRect" parent="Background1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -280.195
+offset_right = 280.195
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("6_v8mot")
+expand_mode = 3
+
+[node name="Background_Dots" type="TextureRect" parent="Background1"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -720.0
+offset_bottom = 720.0
+grow_horizontal = 0
+texture = ExtResource("7_ug3ga")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="Background2" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureRect" type="TextureRect" parent="Background2"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -72,6 +96,20 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture2D_vjyug")
+
+[node name="Main" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("3_wk266")
+
+[node name="Loading" type="Control" parent="Main"]
+unique_name_in_owner = true
+layout_mode = 2
 
 [node name="TextureProgressBar" parent="Main/Loading" instance=ExtResource("11_7iulh")]
 layout_mode = 1
@@ -108,21 +146,7 @@ stretch_mode = 4
 [node name="Start" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="TextureRect" type="TextureRect" parent="Main/Start"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = SubResource("GradientTexture2D_vjyug")
+layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/Start"]
 layout_mode = 1
@@ -196,21 +220,7 @@ text = "I ALREADY HAVE AN ACCOUNT"
 [node name="BackpackContainer" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="TextureRect" type="TextureRect" parent="Main/BackpackContainer"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = SubResource("GradientTexture2D_vjyug")
+layout_mode = 2
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="Main/BackpackContainer"]
 layout_mode = 1
@@ -252,21 +262,7 @@ icon_alignment = 2
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="TextureRect" type="TextureRect" parent="Main/SignIn"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = SubResource("GradientTexture2D_vjyug")
+layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn"]
 layout_mode = 1
@@ -390,33 +386,8 @@ icon = ExtResource("13_43yag")
 
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Background_Restore" type="TextureRect" parent="Main/RestoreAndChooseName"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("6_v8mot")
-expand_mode = 3
-
-[node name="Background_Dots" type="TextureRect" parent="Main/RestoreAndChooseName"]
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -720.0
-grow_horizontal = 0
-texture = ExtResource("7_ug3ga")
-expand_mode = 4
-stretch_mode = 4
+visible = false
+layout_mode = 2
 
 [node name="OrientationContainer" type="BoxContainer" parent="Main/RestoreAndChooseName"]
 layout_mode = 1

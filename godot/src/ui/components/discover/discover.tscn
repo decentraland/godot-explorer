@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3 uid="uid://bp6yn0qw2s6ua"]
+[gd_scene load_steps=27 format=3 uid="uid://bp6yn0qw2s6ua"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" path="res://src/ui/components/discover/discover.gd" id="2_f08es"]
@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="4_64qur"]
 [ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/debug_panel/icons/Clear.svg" id="4_ck13e"]
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/components/discover/places/places_generator.tscn" id="4_q55yj"]
+[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_b1byu"]
 [ext_resource type="PackedScene" uid="uid://kfsjxah2khkg" path="res://src/ui/components/discover/places/custom_places_generator.tscn" id="7_ehm1e"]
 [ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="8_t3lcc"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="9_2ra1o"]
@@ -145,6 +146,10 @@ theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 8
+script = ExtResource("6_b1byu")
+default_margin = 30
+use_top = false
+use_bottom = false
 
 [node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/PanelContainer_Navbar/MarginContainer"]
 layout_mode = 2
@@ -193,20 +198,28 @@ unique_name_in_owner = true
 wait_time = 0.5
 one_shot = true
 
-[node name="ScrollContainer" type="ScrollContainer" parent="TextureRect/VBoxContainer"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("6_b1byu")
+default_margin = 0
+use_top = false
+use_bottom = false
+
+[node name="ScrollContainer" type="ScrollContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 scroll_deadzone = 100
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 0
 
-[node name="Banners" type="MarginContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer"]
+[node name="Banners" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -215,13 +228,13 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 0
 
-[node name="Control" type="Control" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners"]
+[node name="Control" type="Control" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
 clip_children = 2
 clip_contents = true
 custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 
-[node name="GenesisBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control"]
+[node name="GenesisBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control"]
 clip_children = 2
 clip_contents = true
 custom_minimum_size = Vector2(0, 64)
@@ -233,11 +246,11 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0tgth")
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner"]
 layout_mode = 2
 texture = SubResource("GradientTexture2D_cci5n")
 
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -249,28 +262,28 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 texture = ExtResource("8_t3lcc")
 expand_mode = 2
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_pwm2g")
 theme_override_font_sizes/font_size = 16
 text = "Genesis City"
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_2ra1o")
@@ -278,7 +291,7 @@ theme_override_font_sizes/font_size = 10
 text = "Map Made up of thousands of parcels owned and populated with dynamic content by its diverse community."
 autowrap_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/GenesisBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 11
 anchor_left = 1.0
@@ -293,7 +306,7 @@ texture = ExtResource("11_t2lm2")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="WorldsBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control"]
+[node name="WorldsBanner" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control"]
 clip_children = 2
 clip_contents = true
 custom_minimum_size = Vector2(0, 64)
@@ -307,11 +320,11 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_0tgth")
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner"]
 layout_mode = 2
 texture = SubResource("GradientTexture2D_3q3ud")
 
-[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
+[node name="MarginContainer" type="MarginContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -323,28 +336,28 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 texture = ExtResource("8_t3lcc")
 expand_mode = 2
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_pwm2g")
 theme_override_font_sizes/font_size = 16
 text = "Decentraland Worlds"
 
-[node name="Label" type="Label" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect/MarginContainer/HBoxContainer/VBoxContainer"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_2ra1o")
@@ -352,7 +365,7 @@ theme_override_font_sizes/font_size = 10
 text = "Personal 3D space separate from Genesis City, where you can unleash your creativity, host events, and more!"
 autowrap_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
+[node name="TextureRect" type="TextureRect" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners/Control/WorldsBanner/TextureRect"]
 layout_mode = 1
 anchors_preset = 11
 anchor_left = 1.0
@@ -367,76 +380,76 @@ texture = ExtResource("12_74ecw")
 expand_mode = 2
 stretch_mode = 5
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/Banners"]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
 libraries = {
 "": SubResource("AnimationLibrary_xfp2p")
 }
 autoplay = "default"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="LastVisited" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="LastVisited" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("LastVisitGenerator")
 title = "Last Visited"
 
-[node name="LastVisitGenerator" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="LastVisitGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/LastVisited" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 unique_name_in_owner = true
 last_places_logic = true
-discover = NodePath("../../../../../../..")
+discover = NodePath("../../../../../../../..")
 
-[node name="PlacesFavorites" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesFavorites" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Favorites"
 
-[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFavorites" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
 only_favorites = true
-discover = NodePath("../../../../../../..")
+discover = NodePath("../../../../../../../..")
 
-[node name="PlacesFeatured" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesFeatured" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("CustomPlacesGenerator")
 title = "Featured"
 
-[node name="CustomPlacesGenerator" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("7_ehm1e")]
-discover = NodePath("../../../../../../..")
+[node name="CustomPlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesFeatured" node_paths=PackedStringArray("discover") instance=ExtResource("7_ehm1e")]
+discover = NodePath("../../../../../../../..")
 
-[node name="PlacesMostActive" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesMostActive" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 title = "Most Actives"
 
-[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesMostActive" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
-discover = NodePath("../../../../../../..")
+discover = NodePath("../../../../../../../..")
 
-[node name="PlacesWorlds" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
+[node name="PlacesWorlds" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer" node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
 with_search = true
 title = "Worlds"
 
-[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesWorlds" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
+[node name="PlacesGenerator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer/PlacesWorlds" node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 2
 only_worlds = true
-discover = NodePath("../../../../../../..")
+discover = NodePath("../../../../../../../..")
 
-[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 128
 theme_override_styles/separator = SubResource("StyleBoxEmpty_w46h5")
 
-[node name="PanelContainer" type="PanelContainer" parent="TextureRect/VBoxContainer/ScrollContainer/VBoxContainer"]
+[node name="PanelContainer" type="PanelContainer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]

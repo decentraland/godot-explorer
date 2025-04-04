@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3 uid="uid://b8837sg55qd8m"]
+[gd_scene load_steps=27 format=3 uid="uid://b8837sg55qd8m"]
 
 [ext_resource type="Script" path="res://src/ui/components/discover/jump_in/panel_jump_in.gd" id="1_6fwth"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gki2s"]
@@ -7,6 +7,7 @@
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_oea3m"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_38j5r"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="5_x7ql2"]
+[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_cpxdn"]
 [ext_resource type="Texture2D" uid="uid://mkgmqaf7qdvg" path="res://assets/ui/Like solid.svg" id="6_h2ki8"]
 [ext_resource type="Texture2D" uid="uid://beo554etknddh" path="res://assets/ui/PreviewIcon.svg" id="7_ytgcx"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="8_whopg"]
@@ -105,6 +106,11 @@ theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
+script = ExtResource("6_cpxdn")
+default_margin = 10
+use_left = false
+use_top = false
+use_bottom = false
 
 [node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer"]
 layout_mode = 2
