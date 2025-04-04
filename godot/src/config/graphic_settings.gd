@@ -9,12 +9,7 @@ static func get_max_ui_zoom(root: Window) -> float:
 	var screen_size: Vector2 = root.size
 
 	var base_resolution: Vector2
-	if screen_size.x >= screen_size.y:
-		# Landscape orientation base (minimum recommended)
-		base_resolution = Vector2(1280, 720)
-	else:
-		# Portrait orientation base (minimum recommended)
-		base_resolution = Vector2(720, 1280)
+	base_resolution = Vector2(720, 720)
 
 	var x_factor: float = screen_size.x / base_resolution.x
 	var y_factor: float = screen_size.y / base_resolution.y
@@ -39,8 +34,15 @@ static func get_ui_zoom_available(root: Window) -> Dictionary:
 
 
 # Simple DPI-based scaling without aggressive resolution clamp
-static func apply_ui_zoom(_root: Window):
-	pass
+static func apply_ui_zoom(root: Window):
+	var screen_size: Vector2 = root.size
+	var base_resolution: Vector2 = Vector2(720, 720)
+	var scale_x = screen_size.x / base_resolution.x
+	var scale_y = screen_size.y / base_resolution.y
+	
+	# Choose the smaller scale to ensure content always fits on screen
+	var scale = min(scale_x, scale_y)
+	root.content_scale_factor = scale
 
 
 static func apply_window_config() -> void:
