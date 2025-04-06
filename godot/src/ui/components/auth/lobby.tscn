@@ -1,17 +1,16 @@
-[gd_scene load_steps=23 format=3 uid="uid://brh1yknqh4ux6"]
+[gd_scene load_steps=25 format=3 uid="uid://brh1yknqh4ux6"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_t2lj5"]
 [ext_resource type="Script" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="3_mwmw7"]
 [ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="3_p5qhj"]
-[ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="3_wk266"]
+[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_wk266"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_ghcwt"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="5_g62s5"]
 [ext_resource type="Texture2D" uid="uid://da50va4kkvhcp" path="res://assets/ui/sign-in/logged-bg.png" id="6_v8mot"]
 [ext_resource type="Texture2D" uid="uid://hp7yhxpf5mat" path="res://assets/ui/sign-in/dots.png" id="7_ug3ga"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="8_qtndn"]
 [ext_resource type="PackedScene" uid="uid://c8dlajk0at8no" path="res://src/ui/components/backpack/backpack.tscn" id="9_qv8xq"]
-[ext_resource type="PackedScene" uid="uid://di2rgjpkv0c11" path="res://src/ui/components/label_avatar_name/label_avatar_name.tscn" id="10_lq0cw"]
 [ext_resource type="FontFile" uid="uid://cvtogigxks73f" path="res://assets/themes/fonts/inter/Inter-Light.ttf" id="10_wurju"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="11_7iulh"]
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="12_s6a2k"]
@@ -19,18 +18,22 @@
 [ext_resource type="PackedScene" uid="uid://cf78je1y8dpu3" path="res://src/ui/components/auth/android_login.tscn" id="14_a8lfo"]
 [ext_resource type="Texture2D" uid="uid://h30g74davjyw" path="res://assets/ui/sign-in/dices.svg" id="14_ku160"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="15_n5dun"]
+[ext_resource type="Script" path="res://src/ui/components/utils/orientation_container.gd" id="17_ca7yb"]
+[ext_resource type="Script" path="res://src/ui/components/utils/hide_orientation.gd" id="18_10jcs"]
 
-[sub_resource type="Gradient" id="Gradient_yeovc"]
+[sub_resource type="Gradient" id="Gradient_rgwma"]
 offsets = PackedFloat32Array(0.373134, 1)
 colors = PackedColorArray(0.862745, 0.176471, 0.827451, 1, 0.286275, 0.0980392, 0.458824, 1)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_vjyug"]
-gradient = SubResource("Gradient_yeovc")
+gradient = SubResource("Gradient_rgwma")
 fill = 1
 fill_from = Vector2(0.5, 0.5)
 metadata/_snap_enabled = true
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8mib7"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_a723l"]
 
 [node name="Lobby" type="Control"]
 layout_mode = 3
@@ -42,16 +45,7 @@ grow_vertical = 2
 theme = ExtResource("1_t2lj5")
 script = ExtResource("2_fu4v6")
 
-[node name="Main" type="Control" parent="."]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Loading" type="Control" parent="Main"]
+[node name="Background1" type="Control" parent="."]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -61,7 +55,40 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="TextureRect" type="TextureRect" parent="Main/Loading"]
+[node name="Background_Restore" type="TextureRect" parent="Background1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -280.195
+offset_right = 280.195
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("6_v8mot")
+expand_mode = 3
+
+[node name="Background_Dots" type="TextureRect" parent="Background1"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -720.0
+offset_bottom = 720.0
+grow_horizontal = 0
+texture = ExtResource("7_ug3ga")
+expand_mode = 4
+stretch_mode = 4
+
+[node name="Background2" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureRect" type="TextureRect" parent="Background2"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -69,6 +96,21 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture2D_vjyug")
+
+[node name="Main" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("3_wk266")
+
+[node name="Loading" type="Control" parent="Main"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
 
 [node name="TextureProgressBar" parent="Main/Loading" instance=ExtResource("11_7iulh")]
 layout_mode = 1
@@ -105,21 +147,7 @@ stretch_mode = 4
 [node name="Start" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="TextureRect" type="TextureRect" parent="Main/Start"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = SubResource("GradientTexture2D_vjyug")
+layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/Start"]
 layout_mode = 1
@@ -190,141 +218,10 @@ theme_type_variation = &"DarkButton"
 theme_override_font_sizes/font_size = 18
 text = "I ALREADY HAVE AN ACCOUNT"
 
-[node name="Restore" type="Control" parent="Main"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Background_Restore" type="TextureRect" parent="Main/Restore"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("6_v8mot")
-expand_mode = 3
-
-[node name="Background_Dots" type="TextureRect" parent="Main/Restore"]
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -597.0
-offset_right = -0.000244141
-offset_bottom = 525.0
-grow_horizontal = 0
-texture = ExtResource("7_ug3ga")
-expand_mode = 2
-stretch_mode = 4
-
-[node name="VBoxContainer_RestorePanel" type="VBoxContainer" parent="Main/Restore"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 4
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_left = 128.0
-offset_top = -152.0
-offset_right = 762.0
-offset_bottom = 152.0
-grow_vertical = 2
-
-[node name="TextureRect" type="TextureRect" parent="Main/Restore/VBoxContainer_RestorePanel"]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-texture = ExtResource("3_p5qhj")
-expand_mode = 3
-stretch_mode = 4
-
-[node name="HSeparator" type="HSeparator" parent="Main/Restore/VBoxContainer_RestorePanel"]
-layout_mode = 2
-theme_override_constants/separation = 10
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
-
-[node name="HBoxContainer" type="HBoxContainer" parent="Main/Restore/VBoxContainer_RestorePanel"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="Label_Name" type="Label" parent="Main/Restore/VBoxContainer_RestorePanel/HBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_fonts/font = ExtResource("4_ghcwt")
-theme_override_font_sizes/font_size = 36
-text = "Welcome back"
-
-[node name="LabelAvatarName" parent="Main/Restore/VBoxContainer_RestorePanel/HBoxContainer" instance=ExtResource("10_lq0cw")]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(500, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-hide_subaddress = true
-max_font_size = 36
-font = ExtResource("4_ghcwt")
-hbox_alignament = 0
-
-[node name="Label" type="Label" parent="Main/Restore/VBoxContainer_RestorePanel"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_fonts/font = ExtResource("5_g62s5")
-theme_override_font_sizes/font_size = 36
-text = "Ready to Explore?"
-
-[node name="HSeparator2" type="HSeparator" parent="Main/Restore/VBoxContainer_RestorePanel"]
-layout_mode = 2
-theme_override_constants/separation = 12
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
-
-[node name="Button_JumpIn" type="Button" parent="Main/Restore/VBoxContainer_RestorePanel"]
-custom_minimum_size = Vector2(320, 56)
-layout_mode = 2
-size_flags_horizontal = 0
-focus_mode = 0
-theme_override_constants/icon_max_width = 24
-theme_override_fonts/font = ExtResource("4_ghcwt")
-theme_override_font_sizes/font_size = 18
-text = "JUMP INTO DECENTRALAND"
-icon = ExtResource("8_qtndn")
-icon_alignment = 2
-
-[node name="HSeparator3" type="HSeparator" parent="Main/Restore/VBoxContainer_RestorePanel"]
-layout_mode = 2
-theme_override_constants/separation = 12
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
-
-[node name="Button_DifferentAccount" type="Button" parent="Main/Restore/VBoxContainer_RestorePanel"]
-custom_minimum_size = Vector2(320, 56)
-layout_mode = 2
-size_flags_horizontal = 0
-focus_mode = 0
-theme_type_variation = &"DarkButton"
-theme_override_font_sizes/font_size = 18
-text = "USE DIFFERENT ACCOUNT"
-
 [node name="BackpackContainer" type="Control" parent="Main"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="TextureRect" type="TextureRect" parent="Main/BackpackContainer"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = SubResource("GradientTexture2D_vjyug")
+layout_mode = 2
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="Main/BackpackContainer"]
 layout_mode = 1
@@ -344,15 +241,16 @@ hide_navbar = true
 [node name="Button_Continue" type="Button" parent="Main/BackpackContainer/SafeMarginContainer/Backpack"]
 custom_minimum_size = Vector2(250, 56)
 layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
+anchors_preset = 3
+anchor_left = 1.0
 anchor_top = 1.0
-anchor_right = 0.5
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 370.0
-offset_right = 620.0
-offset_bottom = 56.0
-grow_horizontal = 2
+offset_left = -270.0
+offset_top = 4.0
+offset_right = -20.0
+offset_bottom = 60.0
+grow_horizontal = 0
 grow_vertical = 0
 focus_mode = 0
 theme_override_constants/icon_max_width = 30
@@ -364,21 +262,8 @@ icon_alignment = 2
 
 [node name="SignIn" type="Control" parent="Main"]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="TextureRect" type="TextureRect" parent="Main/SignIn"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = SubResource("GradientTexture2D_vjyug")
+visible = false
+layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Main/SignIn"]
 layout_mode = 1
@@ -500,70 +385,55 @@ theme_override_font_sizes/font_size = 18
 text = "CANCEL"
 icon = ExtResource("13_43yag")
 
-[node name="ChooseName" type="Control" parent="Main"]
+[node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
+layout_mode = 2
+
+[node name="OrientationContainer" type="BoxContainer" parent="Main/RestoreAndChooseName"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+alignment = 1
+vertical = true
+script = ExtResource("17_ca7yb")
 
-[node name="Background_Restore" type="TextureRect" parent="Main/ChooseName"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("6_v8mot")
-expand_mode = 3
+[node name="HSeparator" type="HSeparator" parent="Main/RestoreAndChooseName/OrientationContainer"]
+layout_mode = 2
+theme_override_constants/separation = 40
+theme_override_styles/separator = SubResource("StyleBoxEmpty_a723l")
+script = ExtResource("18_10jcs")
 
-[node name="Background_Dots" type="TextureRect" parent="Main/ChooseName"]
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -597.0
-offset_right = -0.000244141
-offset_bottom = 525.0
-grow_horizontal = 0
-texture = ExtResource("7_ug3ga")
-expand_mode = 2
-stretch_mode = 4
+[node name="HBoxContainer" type="CenterContainer" parent="Main/RestoreAndChooseName/OrientationContainer"]
+layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Main/ChooseName"]
-layout_mode = 1
-anchors_preset = 4
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_left = 128.0
-offset_top = -158.5
-offset_right = 488.0
-offset_bottom = 158.5
-grow_vertical = 2
+[node name="VBoxContainer_ChooseName" type="VBoxContainer" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="Main/ChooseName/VBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 texture = ExtResource("3_p5qhj")
 expand_mode = 3
 stretch_mode = 4
 
-[node name="HSeparator" type="HSeparator" parent="Main/ChooseName/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName"]
 layout_mode = 2
 theme_override_constants/separation = 10
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="Label_Name" type="Label" parent="Main/ChooseName/VBoxContainer"]
+[node name="Label_Name" type="Label" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 36
 text = "Select your name:"
 
-[node name="Label" type="Label" parent="Main/ChooseName/VBoxContainer"]
+[node name="Label" type="Label" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("5_g62s5")
@@ -571,15 +441,15 @@ theme_override_font_sizes/font_size = 20
 text = "Avoid using your actual name. Choose
 something distinctive and enjoyable!"
 
-[node name="HSeparator2" type="HSeparator" parent="Main/ChooseName/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName"]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Main/ChooseName/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName"]
 layout_mode = 2
 
-[node name="LineEdit_ChooseName" type="LineEdit" parent="Main/ChooseName/VBoxContainer/HBoxContainer"]
+[node name="LineEdit_ChooseName" type="LineEdit" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -588,7 +458,7 @@ theme_override_font_sizes/font_size = 24
 placeholder_text = "Username"
 clear_button_enabled = true
 
-[node name="Button_RandomName" type="Button" parent="Main/ChooseName/VBoxContainer/HBoxContainer"]
+[node name="Button_RandomName" type="Button" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName/HBoxContainer"]
 texture_filter = 4
 custom_minimum_size = Vector2(50, 50)
 layout_mode = 2
@@ -596,35 +466,14 @@ icon = ExtResource("14_ku160")
 icon_alignment = 1
 expand_icon = true
 
-[node name="HSeparator3" type="HSeparator" parent="Main/ChooseName/VBoxContainer"]
+[node name="HSeparator3" type="HSeparator" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName"]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="HBoxContainer_Terms" type="HBoxContainer" parent="Main/ChooseName/VBoxContainer"]
-layout_mode = 2
-
-[node name="CheckBox_TermsAndPrivacy" type="CheckBox" parent="Main/ChooseName/VBoxContainer/HBoxContainer_Terms"]
+[node name="Button_Next" type="Button" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName"]
 unique_name_in_owner = true
-layout_mode = 2
-
-[node name="RichTextLabel" type="RichTextLabel" parent="Main/ChooseName/VBoxContainer/HBoxContainer_Terms"]
-clip_contents = false
-layout_mode = 2
-size_flags_horizontal = 3
-bbcode_enabled = true
-text = "I agree with Decentraland [b][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/b] and [b][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/b]"
-fit_content = true
-scroll_active = false
-
-[node name="HSeparator5" type="HSeparator" parent="Main/ChooseName/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 12
-theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
-
-[node name="Button_Next" type="Button" parent="Main/ChooseName/VBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(250, 0)
+custom_minimum_size = Vector2(250, 60)
 layout_mode = 2
 focus_mode = 0
 theme_override_constants/icon_max_width = 24
@@ -634,26 +483,87 @@ disabled = true
 text = "NEXT"
 icon_alignment = 2
 
-[node name="HSeparator4" type="HSeparator" parent="Main/ChooseName/VBoxContainer"]
+[node name="HSeparator4" type="HSeparator" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName"]
 layout_mode = 2
 theme_override_constants/separation = 12
 theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
-[node name="AvatarPreview" parent="." instance=ExtResource("15_n5dun")]
+[node name="VBoxContainer_RestorePanel" type="VBoxContainer" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -660.0
-offset_top = -360.0
-offset_right = -206.0
-offset_bottom = 340.0
-grow_horizontal = 0
-grow_vertical = 2
+layout_mode = 2
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 0
+texture = ExtResource("3_p5qhj")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="HSeparator" type="HSeparator" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label_Name" type="Label" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 36
+text = "Welcome back Kuruk#1234"
+autowrap_mode = 2
+
+[node name="Label" type="Label" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("5_g62s5")
+theme_override_font_sizes/font_size = 36
+text = "Ready to Explore?"
+
+[node name="HSeparator2" type="HSeparator" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Button_JumpIn" type="Button" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel"]
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 24
+theme_override_fonts/font = ExtResource("4_ghcwt")
+theme_override_font_sizes/font_size = 18
+text = "JUMP INTO DECENTRALAND"
+icon = ExtResource("8_qtndn")
+icon_alignment = 2
+
+[node name="HSeparator3" type="HSeparator" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
+
+[node name="Button_DifferentAccount" type="Button" parent="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel"]
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"DarkButton"
+theme_override_font_sizes/font_size = 18
+text = "USE DIFFERENT ACCOUNT"
+
+[node name="AvatarPreview" parent="Main/RestoreAndChooseName/OrientationContainer" instance=ExtResource("15_n5dun")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(450, 300)
+layout_mode = 2
+size_flags_horizontal = 1
+size_flags_vertical = 3
 stretch = true
 hide_name = true
 show_platform = true
@@ -661,16 +571,13 @@ can_move = false
 
 [connection signal="pressed" from="Main/Start/VBoxContainer/Button_Start" to="." method="_on_button_start_pressed"]
 [connection signal="pressed" from="Main/Start/VBoxContainer/Button_GoToSignIn" to="." method="_on_button_go_to_sign_in_pressed"]
-[connection signal="pressed" from="Main/Restore/VBoxContainer_RestorePanel/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
-[connection signal="pressed" from="Main/Restore/VBoxContainer_RestorePanel/Button_DifferentAccount" to="." method="_on_button_different_account_pressed"]
 [connection signal="pressed" from="Main/BackpackContainer/SafeMarginContainer/Backpack/Button_Continue" to="." method="_on_button_continue_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1/Button_OpenBrowser" to="." method="_on_button_open_browser_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep1/Button_EnterAsGuest" to="." method="_on_button_enter_as_guest_pressed"]
 [connection signal="pressed" from="Main/SignIn/VBoxContainer/VBoxContainer_SignInStep2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
-[connection signal="text_changed" from="Main/ChooseName/VBoxContainer/HBoxContainer/LineEdit_ChooseName" to="." method="_on_line_edit_choose_name_text_changed"]
-[connection signal="pressed" from="Main/ChooseName/VBoxContainer/HBoxContainer/Button_RandomName" to="." method="_on_button_random_name_pressed"]
-[connection signal="toggled" from="Main/ChooseName/VBoxContainer/HBoxContainer_Terms/CheckBox_TermsAndPrivacy" to="." method="_on_check_box_terms_and_privacy_toggled"]
-[connection signal="gui_input" from="Main/ChooseName/VBoxContainer/HBoxContainer_Terms/RichTextLabel" to="." method="_on_rich_text_label_gui_input"]
-[connection signal="meta_clicked" from="Main/ChooseName/VBoxContainer/HBoxContainer_Terms/RichTextLabel" to="." method="_on_rich_text_label_meta_clicked"]
-[connection signal="pressed" from="Main/ChooseName/VBoxContainer/Button_Next" to="." method="_on_button_next_pressed"]
-[connection signal="gui_input" from="AvatarPreview" to="." method="_on_avatar_preview_gui_input"]
+[connection signal="text_changed" from="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName/HBoxContainer/LineEdit_ChooseName" to="." method="_on_line_edit_choose_name_text_changed"]
+[connection signal="pressed" from="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName/HBoxContainer/Button_RandomName" to="." method="_on_button_random_name_pressed"]
+[connection signal="pressed" from="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_ChooseName/Button_Next" to="." method="_on_button_next_pressed"]
+[connection signal="pressed" from="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[connection signal="pressed" from="Main/RestoreAndChooseName/OrientationContainer/HBoxContainer/VBoxContainer_RestorePanel/Button_DifferentAccount" to="." method="_on_button_different_account_pressed"]
+[connection signal="gui_input" from="Main/RestoreAndChooseName/OrientationContainer/AvatarPreview" to="." method="_on_avatar_preview_gui_input"]

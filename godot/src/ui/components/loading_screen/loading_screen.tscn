@@ -1,7 +1,8 @@
-[gd_scene load_steps=20 format=3 uid="uid://bmjwqm6jgri7c"]
+[gd_scene load_steps=22 format=3 uid="uid://bmjwqm6jgri7c"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_uio8w"]
 [ext_resource type="Script" path="res://src/ui/components/loading_screen/loading_screen.gd" id="2_7hdbk"]
+[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_6uwlu"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_fygee"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_uxxaw"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_w6anr"]
@@ -26,6 +27,8 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_4qnpv"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_t4bn8"]
 shader = ExtResource("8_32igy")
@@ -87,22 +90,77 @@ custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 color = Color(0.0862745, 0.0862745, 0.0862745, 1)
 
-[node name="BoxContainer" type="VBoxContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header"]
+[node name="SafeMarginContainer" type="MarginContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header"]
 layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
+anchors_preset = 15
 anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -413.0
-offset_top = -23.0
-offset_right = -20.0
-offset_bottom = 24.0
-grow_horizontal = 0
+anchor_bottom = 1.0
+grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_right = 30
+script = ExtResource("3_6uwlu")
+default_margin = 30
+use_top = false
+use_bottom = false
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer"]
+layout_mode = 2
 alignment = 1
 
-[node name="Label_LoadingProgress" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/BoxContainer"]
+[node name="HBoxContainer_Logo" type="HBoxContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="TextureRect_Logo" type="TextureRect" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Logo"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_w6anr")
+expand_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Logo"]
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxEmpty_bl8r0")
+
+[node name="Label" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer/VBoxContainer/HBoxContainer_Logo"]
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("4_uxxaw")
+theme_override_font_sizes/font_size = 18
+text = "Decentraland"
+vertical_alignment = 1
+
+[node name="PanelContainer" type="PanelContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_6sxfq")
+
+[node name="Label2" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer/VBoxContainer/PanelContainer"]
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("4_uxxaw")
+theme_override_font_sizes/font_size = 12
+text = "MOBILE ALPHA"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxEmpty_4qnpv")
+
+[node name="BoxContainer" type="VBoxContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label_LoadingProgress" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer/BoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -113,7 +171,7 @@ text = "LOADING 0%"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="Label_LoadingState" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/BoxContainer"]
+[node name="Label_LoadingState" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/SafeMarginContainer/HBoxContainer/BoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -121,58 +179,6 @@ theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_fygee")
 theme_override_font_sizes/font_size = 16
 horizontal_alignment = 2
-vertical_alignment = 1
-
-[node name="VBoxContainer" type="VBoxContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header"]
-layout_mode = 1
-anchors_preset = 4
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_left = 20.0
-offset_top = -27.5
-offset_right = 174.0
-offset_bottom = 27.5
-grow_vertical = 2
-alignment = 1
-
-[node name="HBoxContainer_Logo" type="HBoxContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 2
-alignment = 1
-
-[node name="TextureRect_Logo" type="TextureRect" parent="VBox_Loading/VBox_Header/ColorRect_Header/VBoxContainer/HBoxContainer_Logo"]
-custom_minimum_size = Vector2(28, 28)
-layout_mode = 2
-texture = ExtResource("4_w6anr")
-expand_mode = 2
-
-[node name="HSeparator" type="HSeparator" parent="VBox_Loading/VBox_Header/ColorRect_Header/VBoxContainer/HBoxContainer_Logo"]
-layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_bl8r0")
-
-[node name="Label" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/VBoxContainer/HBoxContainer_Logo"]
-layout_mode = 2
-size_flags_vertical = 1
-theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_fonts/font = ExtResource("4_uxxaw")
-theme_override_font_sizes/font_size = 18
-text = "Decentraland"
-vertical_alignment = 1
-
-[node name="PanelContainer" type="PanelContainer" parent="VBox_Loading/VBox_Header/ColorRect_Header/VBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxFlat_6sxfq")
-
-[node name="Label2" type="Label" parent="VBox_Loading/VBox_Header/ColorRect_Header/VBoxContainer/PanelContainer"]
-layout_mode = 2
-size_flags_vertical = 1
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_fonts/font = ExtResource("4_uxxaw")
-theme_override_font_sizes/font_size = 12
-text = "MOBILE ALPHA"
-horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="LoadingBar" type="Control" parent="VBox_Loading/VBox_Header"]
