@@ -33,7 +33,6 @@ var _last_panel: Control = null
 @onready var restore_panel: VBoxContainer = %VBoxContainer_RestorePanel
 @onready var choose_name: VBoxContainer = %VBoxContainer_ChooseName
 
-@onready var checkbox_terms_and_privacy = %CheckBox_TermsAndPrivacy
 @onready var button_next = %Button_Next
 
 @onready var backpack = %Backpack
@@ -201,7 +200,7 @@ func _on_button_start_pressed():
 
 # gdlint:ignore = async-function-name
 func _on_button_next_pressed():
-	if lineedit_choose_name.text.is_empty() or checkbox_terms_and_privacy.button_pressed == false:
+	if lineedit_choose_name.text.is_empty():
 		return
 
 	avatar_preview.hide()
@@ -273,24 +272,6 @@ func _on_button_jump_in_pressed():
 	await async_close_sign_in()
 
 
-func toggle_terms_and_privacy_checkbox():
-	checkbox_terms_and_privacy.set_pressed(not checkbox_terms_and_privacy.button_pressed)
-
-
-func _on_rich_text_label_gui_input(event):
-	if event is InputEventScreenTouch:
-		if !event.pressed:
-			toggle_terms_and_privacy_checkbox()
-
-
-func _on_rich_text_label_meta_clicked(meta):
-	Global.open_url(meta)
-	# we're going to toggle in the rich text box gui input
-	# so here we toggle it again compensate, to let as it is
-	# not the best solution.
-	toggle_terms_and_privacy_checkbox()
-
-
 func _on_check_box_terms_and_privacy_toggled(_toggled_on):
 	_check_button_finish()
 
@@ -300,9 +281,7 @@ func _on_line_edit_choose_name_text_changed(_new_text):
 
 
 func _check_button_finish():
-	var disabled = (
-		lineedit_choose_name.text.is_empty() or not checkbox_terms_and_privacy.button_pressed
-	)
+	var disabled = lineedit_choose_name.text.is_empty()
 	if button_next.disabled != disabled:
 		avatar_preview.avatar.emote_controller.play_emote("shrug" if disabled else "clap")
 	button_next.disabled = disabled
