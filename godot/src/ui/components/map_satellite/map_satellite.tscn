@@ -1,6 +1,46 @@
-[gd_scene load_steps=2 format=3 uid="uid://duuasgi2pnb8k"]
+[gd_scene load_steps=16 format=3 uid="uid://duuasgi2pnb8k"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
+[ext_resource type="PackedScene" uid="uid://cpu3esu834u5e" path="res://src/ui/components/map_satellite/place_category_filter_button.tscn" id="2_xft4y"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_bufl2"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_cpsxg"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_3m6vw"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_4ike5"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_l5qtn"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_bwaol"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_oddau"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_0hiuk"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_o1b8m"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_gono3"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_ljhg1"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_caf4v"]
+allow_unpress = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_5r0pf"]
+allow_unpress = true
 
 [node name="MapSatellite" type="Control"]
 layout_mode = 3
@@ -39,6 +79,96 @@ mouse_filter = 1
 [node name="Camera2D" type="Camera2D" parent="SubViewportContainer/MapViewport/Map"]
 unique_name_in_owner = true
 position_smoothing_enabled = true
+
+[node name="HTTPRequest" type="HTTPRequest" parent="."]
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -40.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer"]
+layout_mode = 2
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/ScrollContainer"]
+layout_mode = 2
+theme_override_constants/separation = 11
+
+[node name="PlaceCategoryButton" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_bufl2")
+filter_category = 0
+
+[node name="PlaceCategoryButton2" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_cpsxg")
+filter_category = 1
+
+[node name="PlaceCategoryButton3" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_3m6vw")
+
+[node name="PlaceCategoryButton4" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_4ike5")
+filter_category = 3
+
+[node name="PlaceCategoryButton5" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_l5qtn")
+filter_category = 4
+
+[node name="PlaceCategoryButton6" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_bwaol")
+filter_category = 5
+
+[node name="PlaceCategoryButton7" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_oddau")
+filter_category = 6
+
+[node name="PlaceCategoryButton8" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_0hiuk")
+filter_category = 7
+
+[node name="PlaceCategoryButton9" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_o1b8m")
+filter_category = 8
+
+[node name="PlaceCategoryButton10" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_gono3")
+filter_category = 9
+
+[node name="PlaceCategoryButton11" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_ljhg1")
+filter_category = 10
+
+[node name="PlaceCategoryButton12" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_caf4v")
+filter_category = 11
+
+[node name="PlaceCategoryButton13" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
+layout_mode = 2
+button_group = SubResource("ButtonGroup_5r0pf")
+filter_category = 12
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="." method="_on_map_gui_input"]

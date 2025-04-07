@@ -14,7 +14,7 @@ var dragging := false
 var drag_start_mouse := Vector2()
 var drag_start_cam_pos := Vector2()
 const CLICK_THRESHOLD := 5.0
-const MIN_ZOOM := Vector2(0.05, 0.05)
+const MIN_ZOOM := Vector2(0.25, 0.25)
 const MAX_ZOOM := Vector2(1.5, 1.5)
 var distance
 
@@ -112,3 +112,16 @@ func clamp_camera_position() -> void:
 func center_camera_on_genesis_plaza() -> void:
 	camera.position = (TILE_SIZE * GRID_SIZE / 2) - Vector2(180, 190)
 	camera.zoom = Vector2(1, 1)
+
+func async_load_pois():
+	var url: String = "https://dcl-lists.decentraland.org/pois"
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_POST, "", headers
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+	if result is PromiseError:
+		printerr("Error request places", result.get_error())
+		return
+	var json: Dictionary = result.get_string_response_as_json()
+	return json	
