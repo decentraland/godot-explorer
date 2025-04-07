@@ -1,5 +1,8 @@
 extends Control
 
+signal clicked_parcel(parcel: Vector2i)
+
+
 const TILE_SIZE = Vector2(512, 512)
 const GRID_SIZE = Vector2(16, 16)
 const MAP_SIZE = TILE_SIZE * GRID_SIZE
@@ -8,19 +11,25 @@ const PARCEL_SIZE = TILE_SIZE / PARCELS_PER_TILE
 const MAP_CENTER = MAP_SIZE / 2
 
 var dragging := false
-var drag_origin := Vector2()
-var map_initial_pos := Vector2()
+var drag_start_mouse := Vector2()
+var drag_start_cam_pos := Vector2()
+const CLICK_THRESHOLD := 5.0
+const MIN_ZOOM := Vector2(0.05, 0.05)
+const MAX_ZOOM := Vector2(1.5, 1.5)
+var distance
 
-
-var zoom := 1.0
-var min_zoom := 0.25
-var max_zoom := 1.5
-
-@onready var map = $Map
+@onready var map_viewport: SubViewport = %MapViewport
+@onready var map: Control = %Map
+@onready var camera: Camera2D = %Camera2D
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 
 func _ready():
+	get_viewport().connect("size_changed", self._on_screen_resized)
+	update_viewport_size()
+	center_camera_on_genesis_plaza()
+	# CENTER TO 0,0 (is not in exact position
+	
 	for y in range(GRID_SIZE.y):
 		for x in range(GRID_SIZE.x):
 			var image_path = IMAGE_FOLDER + "%d,%d.jpg" % [x, y]
@@ -35,52 +44,43 @@ func _ready():
 			else:
 				push_error("Error loading map image: " + image_path)
 			
-func _on_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			dragging = true
-			drag_origin = event.position
-			map_initial_pos = map.position
-		elif event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-			dragging = false
+func _on_screen_resized() -> void:
+	update_viewport_size()
+	clamp_camera_position()
 
-		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zoom = clamp(zoom + 0.1, min_zoom, max_zoom)
-			apply_zoom(event.position)
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zoom = clamp(zoom - 0.1, min_zoom, max_zoom)
-			apply_zoom(event.position)
-
-	elif event is InputEventMouseMotion and dragging:
-		var delta = event.position - drag_origin
-		var new_pos = map_initial_pos + delta
-		map.position = clamp_map_position(new_pos)
-		#map.position = new_pos
-
-func clamp_map_position(pos: Vector2) -> Vector2:
-	var visible_rect = get_viewport_rect().size
-	var scaled_map_size = MAP_SIZE * map.scale
-
-	var min_x = visible_rect.x - scaled_map_size.x
-	var min_y = visible_rect.y - scaled_map_size.y
-	var max_x = 0.0
-	var max_y = 0.0
-
-	return Vector2(
-		clamp(pos.x, min_x, max_x),
-		clamp(pos.y, min_y, max_y)
-	)
-	
-func apply_zoom(_focus_point: Vector2):
-	map.scale = Vector2(zoom, zoom)
-	map.position = clamp_map_position(map.size/2)
-
+func update_viewport_size() -> void:
+	map_viewport.size = size
 
 func _on_map_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed and not dragging:
-			var parcel = get_parcel_from_click(event.position)
-			print("Clicked parcel: ", parcel)
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				dragging = true
+				drag_start_mouse = event.position
+				drag_start_cam_pos = camera.position
+			else:
+				distance = drag_start_mouse.distance_to(event.position)
+				if distance < CLICK_THRESHOLD:
+					var parcel:Vector2i = get_parcel_from_click(event.position)
+					print("Clicked parcel: ", parcel)
+					emit_signal('clicked_parcel', parcel)
+				dragging = false
+
+		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			var new_zoom = camera.zoom * 1.1
+			camera.zoom = clamp(new_zoom, MIN_ZOOM, MAX_ZOOM)
+			
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			var new_zoom = camera.zoom * 0.9
+			if MAP_SIZE.x * new_zoom.x >= size.x and MAP_SIZE.y * new_zoom.y >= size.y:
+				camera.zoom = clamp(new_zoom, MIN_ZOOM, MAX_ZOOM)
+			
+	elif event is InputEventMouseMotion:
+		if dragging:
+			var delta = event.position - drag_start_mouse
+			camera.position = drag_start_cam_pos - delta * camera.zoom
+		
+	clamp_camera_position()
 
 func get_parcel_from_click(global_click_pos: Vector2) -> Vector2i:
 	var relative_pos = global_click_pos - MAP_CENTER
@@ -88,8 +88,27 @@ func get_parcel_from_click(global_click_pos: Vector2) -> Vector2i:
 	# TODO: Why I need to plus 7 to get correct coordinates??
 	return Vector2i(round_coord(parcel_coord.x)+7, round_coord(parcel_coord.y)+7)
 
-func round_coord(a:float):
+func round_coord(a:float) -> int:
 	if a < 0:
 		return ceil(a)
 	else:
 		return floor(a)
+
+func clamp_camera_position() -> void:
+	var min_pos := size / 2 / camera.zoom
+	var max_pos := MAP_SIZE - min_pos
+
+	# Si el mapa es más chico que la pantalla con el zoom actual, centrar
+	if MAP_SIZE.x * camera.zoom.x < size.x:
+		camera.position.x = ( size.x  + MAP_SIZE.x ) / 2
+	else:
+		camera.position.x = clamp(camera.position.x, min_pos.x, max_pos.x)
+
+	if MAP_SIZE.y * camera.zoom.y < size.y:
+		camera.position.y = ( size.y  + MAP_SIZE.y ) / 2
+	else:
+		camera.position.y = clamp(camera.position.y, min_pos.y, max_pos.y)
+
+func center_camera_on_genesis_plaza() -> void:
+	camera.position = (TILE_SIZE * GRID_SIZE / 2) - Vector2(180, 190)
+	camera.zoom = Vector2(1, 1)
