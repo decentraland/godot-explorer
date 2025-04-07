@@ -80,6 +80,7 @@ mouse_filter = 1
 theme = ExtResource("4_2vs87")
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="UI"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

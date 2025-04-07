@@ -18,6 +18,7 @@ var _first_time_refresh_warning = true
 var _last_parcel_position: Vector2i = Vector2i.MAX
 
 @onready var ui_root: Control = $UI
+@onready var ui_safe_area: SafeMarginContainer = %SafeMarginContainer
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
@@ -147,8 +148,8 @@ func _ready():
 	Global.scene_runner.console = self._on_scene_console_message
 	Global.scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
 	player.avatar.emote_triggered.connect(Global.scene_runner.on_primary_player_trigger_emote)
-	ui_root.add_child(Global.scene_runner.base_ui)
-	ui_root.move_child(Global.scene_runner.base_ui, 0)
+	ui_safe_area.add_child(Global.scene_runner.base_ui)
+	ui_safe_area.move_child(Global.scene_runner.base_ui, 0)
 
 	Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
 	Global.scene_fetcher.notify_pending_loading_scenes.connect(
@@ -401,12 +402,12 @@ func set_visible_ui(value: bool):
 
 	if value:
 		ui_root.show()
-		var ui_node = ui_root.get_parent().get_node("scenes_ui")
-		ui_node.reparent(ui_root)
+		var ui_node = ui_safe_area.get_parent().get_node("scenes_ui")
+		ui_node.reparent(ui_safe_area)
 	else:
 		ui_root.hide()
-		var ui_node = ui_root.get_node("scenes_ui")
-		ui_node.reparent(ui_root.get_parent())
+		var ui_node = ui_safe_area.get_node("scenes_ui")
+		ui_node.reparent(ui_safe_area.get_parent())
 
 
 func _on_control_menu_request_debug_panel(enabled):
