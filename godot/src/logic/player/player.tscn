@@ -30,10 +30,11 @@ collision_layer = 2147483904
 collision_mask = 2147483904
 
 [node name="Mount" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, -0.21)
 
 [node name="Camera3D" type="DclCamera3D" parent="Mount"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.85493e-08, 0, -0.212179)
+smoothing_speed = 5.0
+target_fov = 75.0
 current = true
 
 [node name="Avatar" parent="." instance=ExtResource("2_n22nx")]
