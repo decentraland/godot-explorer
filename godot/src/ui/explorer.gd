@@ -18,7 +18,7 @@ var _first_time_refresh_warning = true
 var _last_parcel_position: Vector2i = Vector2i.MAX
 
 @onready var ui_root: Control = $UI
-@onready var ui_safe_area: SafeMarginContainer = %SafeMarginContainer
+@onready var ui_safe_area: Control = %SafeMarginContainer
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
