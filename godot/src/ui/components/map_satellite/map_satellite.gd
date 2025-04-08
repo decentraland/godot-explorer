@@ -18,6 +18,10 @@ const MIN_ZOOM := Vector2(0.25, 0.25)
 const MAX_ZOOM := Vector2(1.5, 1.5)
 var distance
 
+var popup_scene := preload("res://src/ui/components/map_satellite/map_popup.tscn")
+var popup_instance: Control
+
+@onready var sub_viewport_container: SubViewportContainer = $SubViewportContainer
 @onready var map_viewport: SubViewport = %MapViewport
 @onready var map: Control = %Map
 @onready var camera: Camera2D = %Camera2D
@@ -28,7 +32,13 @@ func _ready():
 	get_viewport().connect("size_changed", self._on_screen_resized)
 	update_viewport_size()
 	center_camera_on_genesis_plaza()
-	# CENTER TO 0,0 (is not in exact position
+	
+	
+	
+	print(popup_scene.get_class())
+	popup_instance = popup_scene.instantiate()
+	popup_instance.hide()
+	sub_viewport_container.add_child(popup_instance)
 	
 	for y in range(GRID_SIZE.y):
 		for x in range(GRID_SIZE.x):
@@ -58,12 +68,11 @@ func _on_map_gui_input(event: InputEvent) -> void:
 				dragging = true
 				drag_start_mouse = event.position
 				drag_start_cam_pos = camera.position
+				popup_instance.hide()
 			else:
 				distance = drag_start_mouse.distance_to(event.position)
 				if distance < CLICK_THRESHOLD:
-					var parcel:Vector2i = get_parcel_from_click(event.position)
-					print("Clicked parcel: ", parcel)
-					emit_signal('clicked_parcel', parcel)
+					handle_click(event.position)
 				dragging = false
 
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -112,6 +121,14 @@ func clamp_camera_position() -> void:
 func center_camera_on_genesis_plaza() -> void:
 	camera.position = (TILE_SIZE * GRID_SIZE / 2) - Vector2(180, 190)
 	camera.zoom = Vector2(1, 1)
+
+func handle_click(screen_pos:Vector2)-> void:
+	var parcel: Vector2i = get_parcel_from_click(screen_pos)
+	emit_signal("clicked_parcel", parcel)
+
+	var msg = str(parcel.x) + ',' + str(parcel.y)
+	popup_instance.set_text(msg)
+	popup_instance.show_at(map_viewport.size)
 
 func async_load_pois():
 	var url: String = "https://dcl-lists.decentraland.org/pois"

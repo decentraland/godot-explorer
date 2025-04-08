@@ -10,7 +10,7 @@ enum PlaceCategoryEnum {
 	ART,
 	CRYPTO,
 	SOCIAL,
-	GAME,
+	GAMES,
 	SHOP,
 	EDUCATION,
 	MUSIC,
@@ -71,8 +71,8 @@ func type_to_category(category_enum: PlaceCategoryEnum) -> String:
 			result = Places.Categories.CRYPTO
 		PlaceCategoryEnum.SOCIAL:
 			result = Places.Categories.SOCIAL
-		PlaceCategoryEnum.GAME:
-			result = Places.Categories.GAME
+		PlaceCategoryEnum.GAMES:
+			result = Places.Categories.GAMES
 		PlaceCategoryEnum.SHOP:
 			result = Places.Categories.SHOP
 		PlaceCategoryEnum.EDUCATION:
@@ -104,8 +104,8 @@ func type_to_text(category_enum: PlaceCategoryEnum) -> String:
 			text = "CRYPTO"
 		PlaceCategoryEnum.SOCIAL:
 			text = "SOCIAL"
-		PlaceCategoryEnum.GAME:
-			text = "GAME"
+		PlaceCategoryEnum.GAMES:
+			text = "GAMES"
 		PlaceCategoryEnum.SHOP:
 			text = "SHOP"
 		PlaceCategoryEnum.EDUCATION:

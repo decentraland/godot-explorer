@@ -7,11 +7,11 @@ class Categories:
 	const ART: String = "art"
 	const CRYPTO: String = "crypto"
 	const SOCIAL: String = "social"
-	const GAME: String = "game"
+	const GAMES: String = "games"
 	const SHOP: String = "shop"
 	const EDUCATION: String = "education"
 	const MUSIC: String = "music"
-	const FASHION: String = "fashin"
+	const FASHION: String = "fashion"
 	const CASINO: String = "casino"
 	const SPORTS: String = "sports"
 	const BUSINESS: String = "business"
@@ -22,7 +22,7 @@ class Categories:
 		ART,
 		CRYPTO,
 		SOCIAL,
-		GAME,
+		GAMES,
 		SHOP,
 		EDUCATION,
 		MUSIC,
