@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://cpu3esu834u5e"]
+[gd_scene load_steps=6 format=3 uid="uid://cpu3esu834u5e"]
 
 [ext_resource type="StyleBox" uid="uid://lc8bxtgqy8cj" path="res://assets/themes/filter_pill_normal.tres" id="1_qeu7p"]
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/place_category_filter_button.gd" id="2_c5mnh"]
 [ext_resource type="StyleBox" uid="uid://yml1ex7ffgiy" path="res://assets/themes/filter_pill_pressed.tres" id="2_vygvd"]
 [ext_resource type="Texture2D" uid="uid://betsqqfmys7ge" path="res://assets/ui/place_categories/business-icon.svg" id="3_7q1yk"]
+[ext_resource type="ButtonGroup" uid="uid://dla7kklv8bq6x" path="res://src/ui/components/map_satellite/places_button_group.tres" id="3_ayrlq"]
 
 [node name="PlaceCategoryButton" type="Button"]
 custom_minimum_size = Vector2(50, 40)
@@ -33,10 +34,9 @@ theme_override_styles/normal_mirrored = ExtResource("1_qeu7p")
 theme_override_styles/normal = ExtResource("1_qeu7p")
 toggle_mode = true
 action_mode = 0
+button_group = ExtResource("3_ayrlq")
 text = "Body"
 icon = ExtResource("3_7q1yk")
 alignment = 0
 script = ExtResource("2_c5mnh")
 filter_category = 2
-
-[connection signal="toggled" from="." to="." method="_on_toggled"]

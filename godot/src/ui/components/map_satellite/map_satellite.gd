@@ -124,8 +124,7 @@ func center_camera_on_genesis_plaza() -> void:
 
 func handle_click(screen_pos:Vector2)-> void:
 	var parcel: Vector2i = get_parcel_from_click(screen_pos)
-	emit_signal("clicked_parcel", parcel)
-
+	clicked_parcel.emit(parcel)
 	var msg = str(parcel.x) + ',' + str(parcel.y)
 	popup_instance.set_text(msg)
 	popup_instance.show_at(map_viewport.size)

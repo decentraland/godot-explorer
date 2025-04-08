@@ -7,6 +7,7 @@ extends PanelContainer
 # Called when the node enters the scene tree for the first time.
 func set_text(msg: String):
 	size = Vector2(0,0)
+	label.size = Vector2(0,0)
 	label.text = msg
 
 func show_at(screen_size: Vector2):
