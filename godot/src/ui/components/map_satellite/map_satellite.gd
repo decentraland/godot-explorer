@@ -15,7 +15,7 @@ var dragging := false
 var drag_start_mouse := Vector2()
 var drag_start_cam_pos := Vector2()
 const CLICK_THRESHOLD := 5.0
-const MIN_ZOOM := Vector2(0.25, 0.25)
+const MIN_ZOOM := Vector2(0.5, 0.5)
 const MAX_ZOOM := Vector2(1.5, 1.5)
 var distance
 
@@ -85,15 +85,14 @@ func _on_map_gui_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			var new_zoom = camera.zoom * 1.1
 			camera.zoom = clamp(new_zoom, MIN_ZOOM, MAX_ZOOM)
-			coordinates_label.scale = Vector2(2.5,2.5) / camera.zoom
-			
+
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			var new_zoom = camera.zoom * 0.9
 			if MAP_SIZE.x * new_zoom.x >= size.x and MAP_SIZE.y * new_zoom.y >= size.y:
 				camera.zoom = clamp(new_zoom, MIN_ZOOM, MAX_ZOOM)
-				coordinates_label.scale = Vector2(2.5,2.5) / camera.zoom
-				
-			
+
+		update_label_settings()
+		
 	elif event is InputEventMouseMotion:
 		if dragging:
 			var delta = event.position - drag_start_mouse
@@ -162,5 +161,10 @@ func show_cursor_at_parcel(parcel: Vector2i):
 	
 	coordinates_label.text = '%s, %s' % [parcel.x, parcel.y]
 	coordinates_label.show()
-	coordinates_label.scale = Vector2(2.5,2.5) / camera.zoom
-	#coordinates_label.position = pos * camera.zoom
+	update_label_settings()
+
+func update_label_settings() -> void:
+	const FONT_SIZE = 18
+	const OUTLINE_SIZE = 6
+	coordinates_label.label_settings.font_size = FONT_SIZE / camera.zoom.x
+	coordinates_label.label_settings.outline_size = OUTLINE_SIZE / camera.zoom.x

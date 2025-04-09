@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
 [ext_resource type="Texture2D" uid="uid://dmfk50m8cogvs" path="res://src/ui/components/map_satellite/assets/cursor.svg" id="2_h4gq0"]
 [ext_resource type="PackedScene" uid="uid://cpu3esu834u5e" path="res://src/ui/components/map_satellite/place_category_filter_button.tscn" id="2_xft4y"]
-[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_cak8m"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_r45jv"]
 
 [sub_resource type="Image" id="Image_cdd5d"]
 data = {
@@ -370,8 +370,8 @@ cache/0/16/3/glyphs/134219024/uv_rect = Rect2(79, 9, 13, 16)
 cache/0/16/3/glyphs/134219024/texture_idx = 0
 
 [sub_resource type="LabelSettings" id="LabelSettings_g80l0"]
-font = ExtResource("3_cak8m")
-outline_size = 8
+font = ExtResource("3_r45jv")
+outline_size = 6
 outline_color = Color(0, 0, 0, 1)
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_v53w3"]
@@ -413,6 +413,33 @@ allow_unpress = true
 [sub_resource type="ButtonGroup" id="ButtonGroup_oj1om"]
 allow_unpress = true
 
+[sub_resource type="Animation" id="Animation_lrm6h"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MarginContainer:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("MarginContainer:visible")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [true]
+}
+
 [sub_resource type="Animation" id="Animation_5tr2o"]
 resource_name = "hide_filters"
 length = 0.3
@@ -439,33 +466,6 @@ tracks/1/keys = {
 "transitions": PackedFloat32Array(1),
 "update": 1,
 "values": [false]
-}
-
-[sub_resource type="Animation" id="Animation_lrm6h"]
-length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("MarginContainer:modulate")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Color(1, 1, 1, 1)]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("MarginContainer:visible")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [true]
 }
 
 [sub_resource type="Animation" id="Animation_gfhgp"]
@@ -545,25 +545,26 @@ texture = ExtResource("2_h4gq0")
 
 [node name="CoordinatesLabel" type="Label" parent="SubViewportContainer/MapViewport/Map/CursorMarker"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 0)
-anchors_preset = 12
+z_index = 5
+custom_minimum_size = Vector2(200, 20)
+anchors_preset = 7
+anchor_left = 0.5
 anchor_top = 1.0
-anchor_right = 1.0
+anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -32.0
-offset_top = -52.0
-offset_right = -32.0
-offset_bottom = -32.0
+offset_left = -113.0
+offset_top = -1.0
+offset_right = 87.0
+offset_bottom = 49.0
 grow_horizontal = 2
 grow_vertical = 0
-size_flags_horizontal = 4
+size_flags_horizontal = 6
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_fonts/font = SubResource("FontFile_ei4fi")
-text = "-152, -152"
+text = "asd"
 label_settings = SubResource("LabelSettings_g80l0")
 horizontal_alignment = 1
-vertical_alignment = 1
 
 [node name="Camera2D" type="Camera2D" parent="SubViewportContainer/MapViewport/Map"]
 unique_name_in_owner = true
