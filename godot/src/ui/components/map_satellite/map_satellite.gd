@@ -8,6 +8,7 @@ const GRID_SIZE = Vector2(16, 16)
 const MAP_SIZE = TILE_SIZE * GRID_SIZE
 const PARCELS_PER_TILE = Vector2(20, 20)
 const PARCEL_SIZE = TILE_SIZE / PARCELS_PER_TILE
+const PARCEL_OFFSET = Vector2i(152,152)
 const MAP_CENTER = MAP_SIZE / 2
 
 var dragging := false
@@ -21,25 +22,33 @@ var distance
 var popup_scene := preload("res://src/ui/components/map_satellite/map_popup.tscn")
 var popup_instance: Control
 
+@onready var margin_container: MarginContainer = $MarginContainer
+
+@onready var cursor_marker: Sprite2D = %CursorMarker
 @onready var sub_viewport_container: SubViewportContainer = $SubViewportContainer
 @onready var map_viewport: SubViewport = %MapViewport
 @onready var map: Control = %Map
 @onready var camera: Camera2D = %Camera2D
+@onready var coordinates_label: Label = %CoordinatesLabel
+@onready var animation_player: AnimationPlayer = $AnimationPlayer
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
+var map_is_on_top: bool = false
 
 func _ready():
+	map_viewport.size = size
+	
+	# Maybe we can remove this line
 	get_viewport().connect("size_changed", self._on_screen_resized)
-	update_viewport_size()
+
 	center_camera_on_genesis_plaza()
-	
-	
-	
-	print(popup_scene.get_class())
 	popup_instance = popup_scene.instantiate()
 	popup_instance.hide()
+	#sub_viewport_container.add_child(popup_instance)
 	sub_viewport_container.add_child(popup_instance)
 	
+	
+	# Drawing the entire map using tiles
 	for y in range(GRID_SIZE.y):
 		for x in range(GRID_SIZE.x):
 			var image_path = IMAGE_FOLDER + "%d,%d.jpg" % [x, y]
@@ -53,13 +62,11 @@ func _ready():
 				map.add_child(tex_rect)
 			else:
 				push_error("Error loading map image: " + image_path)
-			
-func _on_screen_resized() -> void:
-	update_viewport_size()
-	clamp_camera_position()
 
-func update_viewport_size() -> void:
+# Maybe we can remove this function (the viewport isn't resizable) 
+func _on_screen_resized() -> void:
 	map_viewport.size = size
+	clamp_camera_position()
 
 func _on_map_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
@@ -78,11 +85,14 @@ func _on_map_gui_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			var new_zoom = camera.zoom * 1.1
 			camera.zoom = clamp(new_zoom, MIN_ZOOM, MAX_ZOOM)
+			coordinates_label.scale = Vector2(2.5,2.5) / camera.zoom
 			
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			var new_zoom = camera.zoom * 0.9
 			if MAP_SIZE.x * new_zoom.x >= size.x and MAP_SIZE.y * new_zoom.y >= size.y:
 				camera.zoom = clamp(new_zoom, MIN_ZOOM, MAX_ZOOM)
+				coordinates_label.scale = Vector2(2.5,2.5) / camera.zoom
+				
 			
 	elif event is InputEventMouseMotion:
 		if dragging:
@@ -91,23 +101,11 @@ func _on_map_gui_input(event: InputEvent) -> void:
 		
 	clamp_camera_position()
 
-func get_parcel_from_click(global_click_pos: Vector2) -> Vector2i:
-	var relative_pos = global_click_pos - MAP_CENTER
-	var parcel_coord = relative_pos / PARCEL_SIZE
-	# TODO: Why I need to plus 7 to get correct coordinates??
-	return Vector2i(round_coord(parcel_coord.x)+7, round_coord(parcel_coord.y)+7)
-
-func round_coord(a:float) -> int:
-	if a < 0:
-		return ceil(a)
-	else:
-		return floor(a)
-
 func clamp_camera_position() -> void:
+	const MAP_TOP_MARGIN = 50
 	var min_pos := size / 2 / camera.zoom
 	var max_pos := MAP_SIZE - min_pos
 
-	# Si el mapa es más chico que la pantalla con el zoom actual, centrar
 	if MAP_SIZE.x * camera.zoom.x < size.x:
 		camera.position.x = ( size.x  + MAP_SIZE.x ) / 2
 	else:
@@ -117,18 +115,28 @@ func clamp_camera_position() -> void:
 		camera.position.y = ( size.y  + MAP_SIZE.y ) / 2
 	else:
 		camera.position.y = clamp(camera.position.y, min_pos.y, max_pos.y)
+		
+	map_is_on_top = camera.position.y <= min_pos.y + MAP_TOP_MARGIN
+
+func _process(_delta):
+	if map_is_on_top and margin_container.visible:
+		animation_player.play('hide_filters')
+	elif not map_is_on_top and not margin_container.visible:
+		animation_player.play('show_filters')
 
 func center_camera_on_genesis_plaza() -> void:
 	camera.position = (TILE_SIZE * GRID_SIZE / 2) - Vector2(180, 190)
 	camera.zoom = Vector2(1, 1)
 
-func handle_click(screen_pos:Vector2)-> void:
-	var parcel: Vector2i = get_parcel_from_click(screen_pos)
-	clicked_parcel.emit(parcel)
-	var msg = str(parcel.x) + ',' + str(parcel.y)
-	popup_instance.set_text(msg)
-	popup_instance.show_at(map_viewport.size)
-
+func handle_click(event_position:Vector2)-> void:
+	var coords = event_position / PARCEL_SIZE
+	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
+	clicked_parcel.emit(parcel_coords)
+	#var msg = str(parcel_coords.x) + ',' + str(parcel_coords.y)
+	#popup_instance.set_text(msg)
+	#popup_instance.show_at(map_viewport.size)
+	show_cursor_at_parcel(parcel_coords)
+	
 func async_load_pois():
 	var url: String = "https://dcl-lists.decentraland.org/pois"
 	var headers = {"Content-Type": "application/json"}
@@ -141,3 +149,18 @@ func async_load_pois():
 		return
 	var json: Dictionary = result.get_string_response_as_json()
 	return json	
+	
+
+func get_parcel_position(parcel: Vector2i) -> Vector2:
+	var parcel_position = Vector2(parcel + PARCEL_OFFSET) * PARCEL_SIZE + PARCEL_SIZE / 2
+	return parcel_position
+
+func show_cursor_at_parcel(parcel: Vector2i):
+	var pos = get_parcel_position(parcel)
+	cursor_marker.position = pos
+	cursor_marker.visible = true
+	
+	coordinates_label.text = '%s, %s' % [parcel.x, parcel.y]
+	coordinates_label.show()
+	coordinates_label.scale = Vector2(2.5,2.5) / camera.zoom
+	#coordinates_label.position = pos * camera.zoom

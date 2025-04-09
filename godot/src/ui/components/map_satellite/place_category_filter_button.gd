@@ -92,35 +92,35 @@ func type_to_category(category_enum: PlaceCategoryEnum) -> String:
 
 
 func type_to_text(category_enum: PlaceCategoryEnum) -> String:
-	var text := "Unknown"
+	var text_value := "Unknown"
 	match category_enum:
 		PlaceCategoryEnum.ALL:
-			text = "ALL"
+			text_value = "ALL"
 		PlaceCategoryEnum.FAVORITES:
-			text = "FAVORITES"
+			text_value = "FAVORITES"
 		PlaceCategoryEnum.ART:
-			text = "ART"
+			text_value = "ART"
 		PlaceCategoryEnum.CRYPTO:
-			text = "CRYPTO"
+			text_value = "CRYPTO"
 		PlaceCategoryEnum.SOCIAL:
-			text = "SOCIAL"
+			text_value = "SOCIAL"
 		PlaceCategoryEnum.GAMES:
-			text = "GAMES"
+			text_value = "GAMES"
 		PlaceCategoryEnum.SHOP:
-			text = "SHOP"
+			text_value = "SHOP"
 		PlaceCategoryEnum.EDUCATION:
-			text = "EDUCATION"
+			text_value = "EDUCATION"
 		PlaceCategoryEnum.MUSIC:
-			text = "MUSIC"
+			text_value = "MUSIC"
 		PlaceCategoryEnum.FASHION:
-			text = "FASHION"
+			text_value = "FASHION"
 		PlaceCategoryEnum.CASINO:
-			text = "CASINO"
+			text_value = "CASINO"
 		PlaceCategoryEnum.SPORTS:
-			text = "SPORTS"
+			text_value = "SPORTS"
 		PlaceCategoryEnum.BUSINESS:
-			text = "BUSINESS"
-	return text
+			text_value = "BUSINESS"
+	return text_value
 
 
 func _on_toggled(_button_pressed):
