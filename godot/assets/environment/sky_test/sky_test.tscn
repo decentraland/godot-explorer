@@ -1,4 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://drmwih6numdke"]
+[gd_scene load_steps=5 format=3 uid="uid://drmwih6numdke"]
+
+[ext_resource type="Script" path="res://assets/environment/sky_base.gd" id="1_sxikl"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ahgj8"]
 sky_top_color = Color(0.85098, 0.913725, 1, 1)
@@ -22,6 +24,7 @@ glow_blend_mode = 0
 fog_density = 0.001
 
 [node name="SkyTest" type="Node"]
+script = ExtResource("1_sxikl")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_ncxa3")
