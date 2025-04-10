@@ -43,6 +43,7 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
 
+
 func _process(_dt):
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
 	control_minimap.set_center_position(parcel_position_real)
