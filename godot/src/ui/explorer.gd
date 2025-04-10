@@ -404,12 +404,8 @@ func set_visible_ui(value: bool):
 
 	if value:
 		ui_root.show()
-		var ui_node = ui_safe_area.get_parent().get_node("scenes_ui")
-		ui_node.reparent(ui_root)
 	else:
 		ui_root.hide()
-		var ui_node = ui_safe_area.get_node("scenes_ui")
-		ui_node.reparent(ui_root.get_parent())
 
 
 func _on_control_menu_request_debug_panel(enabled):
