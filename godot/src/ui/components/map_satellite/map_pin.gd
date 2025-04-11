@@ -65,8 +65,8 @@ func _on_control_mouse_exited() -> void:
 	hovered = false
 
 func _process(_delta: float) -> void:
-	const FONT_SIZE = 16
-	const FONT_OUTLINE_SIZE = 6
+	#const FONT_SIZE = 16
+	#const FONT_OUTLINE_SIZE = 6
 	var camera_zoom = get_sibling_camera_zoom()
 	sprite_2d.scale = Vector2.ONE / camera_zoom
 

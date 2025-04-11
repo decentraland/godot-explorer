@@ -3,7 +3,7 @@ extends Button
 
 signal filter_toggled(is_on: bool, type: int)
 
-@export var filter_type:Place.Categories = 5
+@export var filter_type:Place.Categories = Place.Categories.ALL
  #
 
 
@@ -29,5 +29,5 @@ func _ready():
 	_update_category_button()
 
 
-func _on_toggled(pressed: bool) -> void:
-	emit_signal("filter_toggled", pressed, filter_type)
+func _on_toggled(is_pressed: bool) -> void:
+	emit_signal("filter_toggled", is_pressed, filter_type)

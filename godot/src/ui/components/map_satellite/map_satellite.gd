@@ -18,11 +18,17 @@ const CLICK_THRESHOLD := 5.0
 const MIN_ZOOM := Vector2(0.5, 0.5)
 const MAX_ZOOM := Vector2(1.5, 1.5)
 var distance
+var tween: Tween
 
 const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
+const PLACE_CARD := preload("res://src/ui/components/map_satellite/place_card.tscn")
+
 const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
 
 @onready var margin_container: MarginContainer = $MarginContainer
+@onready var panel_button_back: Panel = %PanelButtonBack
+@onready var h_box_container_back: HBoxContainer = %HBoxContainerBack
+@onready var cards_v_box_container: VBoxContainer = %CardsVBoxContainer
 
 @onready var cursor_marker: Sprite2D = %CursorMarker
 @onready var sub_viewport_container: SubViewportContainer = $SubViewportContainer
@@ -31,13 +37,22 @@ const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satell
 @onready var camera: Camera2D = %Camera2D
 @onready var coordinates_label: Label = %CoordinatesLabel
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
-@onready var h_box_container: HBoxContainer = $MarginContainer/ScrollContainer/HBoxContainer
+@onready var filter_container: HBoxContainer = %FilterContainer
+@onready var sidebar: Control = %Sidebar
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 var map_is_on_top: bool = false
 var filtered_places: Array = []
+var is_sidebar_open: bool = false
 
 func _ready():
+	if not is_sidebar_open:
+		sidebar.position = Vector2(size.x-5, 0)
+		h_box_container_back.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	else:
+		sidebar.position = Vector2(-sidebar.size.x,0 )
+		h_box_container_back.layout_direction = Control.LAYOUT_DIRECTION_RTL
+		
 	var group := ButtonGroup.new()
 	group.allow_unpress = true
 	for i in range(13):
@@ -46,7 +61,7 @@ func _ready():
 		btn.toggle_mode = true
 		btn.filter_type = i
 		btn.connect("filter_toggled", Callable(self, "_on_filter_button_toggled"))
-		h_box_container.add_child(btn)
+		filter_container.add_child(btn)
 		
 	map_viewport.size = size
 	
@@ -183,6 +198,15 @@ func spawn_pin(category:int, coords:Array, title:String):
 	pin.position = pos
 	map.add_child(pin)
 
+func spawn_card(title:String, contact:Variant, img_source:String):
+	var card = PLACE_CARD.instantiate()
+	if typeof(contact) == TYPE_STRING:
+		card.contact_name = contact
+	card.title_place = title
+	card.img_url = img_source
+	
+	cards_v_box_container.add_child(card)
+
 func get_center_from_rect_coords(coords: Array) -> Vector2i:
 	var min_x = INF
 	var max_x = -INF
@@ -234,7 +258,32 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 		for child in map.get_children():
 			if child is MapPin and child.pin_category == type:
 				child.queue_free()
+		for child in cards_v_box_container.get_children():
+			child.queue_free()
+			toggle_sidebar_visibility(false)
 	else:
 		var poi_places = await async_load_category(Place.Categories.keys()[type].to_lower())
 		for i in range(poi_places.size()):
-			spawn_pin(type, poi_places[i].positions, poi_places[i].title)
+			var place = poi_places[i]
+			spawn_pin(type, place.positions, place.title)
+			spawn_card(place.title, place.contact_name, place.image)
+			toggle_sidebar_visibility(true)
+
+
+func _on_panel_button_back_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+				toggle_sidebar_visibility(!is_sidebar_open)
+
+
+func toggle_sidebar_visibility(arg:bool)->void:
+	var duration = 0.3
+	tween = get_tree().create_tween()	
+	if not arg:
+		is_sidebar_open = false
+		tween.tween_property(sidebar, "position", Vector2(size.x-5, 0), duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		h_box_container_back.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	else:
+		is_sidebar_open = true
+		tween.tween_property(sidebar, "position", Vector2(size.x-sidebar.size.x, 0), duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		h_box_container_back.layout_direction = Control.LAYOUT_DIRECTION_RTL

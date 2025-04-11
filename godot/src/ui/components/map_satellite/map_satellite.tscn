@@ -1,8 +1,11 @@
-[gd_scene load_steps=16 format=4 uid="uid://duuasgi2pnb8k"]
+[gd_scene load_steps=22 format=4 uid="uid://duuasgi2pnb8k"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
 [ext_resource type="Texture2D" uid="uid://dmfk50m8cogvs" path="res://src/ui/components/map_satellite/assets/cursor.svg" id="2_h4gq0"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_r45jv"]
+[ext_resource type="Texture2D" uid="uid://bxom57mhcmhv4" path="res://assets/ui/LeftArrow.png" id="4_sptoq"]
+[ext_resource type="Texture2D" uid="uid://bkogft5vqdpas" path="res://assets/ui/RightArrow.png" id="5_0ldus"]
+[ext_resource type="PackedScene" uid="uid://cvjqx7t78ubg1" path="res://src/ui/components/map_satellite/place_card.tscn" id="6_gydf5"]
 
 [sub_resource type="Image" id="Image_cdd5d"]
 data = {
@@ -463,6 +466,22 @@ _data = {
 "show_filters": SubResource("Animation_gfhgp")
 }
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ljgyb"]
+bg_color = Color(0.968627, 0.968627, 0.968627, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_awiul"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_piofg"]
+bg_color = Color(0.968627, 0.968627, 0.968627, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
 [node name="MapSatellite" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -543,16 +562,25 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 0
 theme_override_constants/margin_bottom = 20
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 11
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/HBoxContainer"]
 custom_minimum_size = Vector2(0, 45)
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 4
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/ScrollContainer"]
+[node name="FilterContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer/ScrollContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
+size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 11
 
@@ -563,5 +591,132 @@ libraries = {
 "": SubResource("AnimationLibrary_q556g")
 }
 
+[node name="Sidebar" type="Control" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="PanelButtonBack" type="Panel" parent="Sidebar"]
+unique_name_in_owner = true
+z_index = 9
+custom_minimum_size = Vector2(40, 50)
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -25.0
+offset_right = 20.0
+offset_bottom = 25.0
+grow_vertical = 2
+pivot_offset = Vector2(0, 25)
+mouse_default_cursor_shape = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ljgyb")
+
+[node name="HBoxContainerBack" type="HBoxContainer" parent="Sidebar/PanelButtonBack"]
+unique_name_in_owner = true
+layout_direction = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = -10
+alignment = 1
+
+[node name="Sprite2D" type="TextureRect" parent="Sidebar/PanelButtonBack/HBoxContainerBack"]
+custom_minimum_size = Vector2(5, 15)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("4_sptoq")
+expand_mode = 3
+
+[node name="Sprite2D2" type="TextureRect" parent="Sidebar/PanelButtonBack/HBoxContainerBack"]
+custom_minimum_size = Vector2(5, 15)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("4_sptoq")
+expand_mode = 3
+
+[node name="Control" type="VSeparator" parent="Sidebar/PanelButtonBack/HBoxContainerBack"]
+layout_mode = 2
+theme_override_constants/separation = 17
+theme_override_styles/separator = SubResource("StyleBoxEmpty_awiul")
+
+[node name="Sprite2D3" type="TextureRect" parent="Sidebar/PanelButtonBack/HBoxContainerBack"]
+custom_minimum_size = Vector2(5, 15)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("5_0ldus")
+expand_mode = 3
+
+[node name="Sprite2D4" type="TextureRect" parent="Sidebar/PanelButtonBack/HBoxContainerBack"]
+custom_minimum_size = Vector2(5, 15)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("5_0ldus")
+expand_mode = 3
+
+[node name="ColorRectSidebar" type="ColorRect" parent="Sidebar"]
+unique_name_in_owner = true
+z_index = 10
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.894118, 0.894118, 0.894118, 1)
+
+[node name="MarginContainer2" type="MarginContainer" parent="Sidebar/ColorRectSidebar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Sidebar/ColorRectSidebar/MarginContainer2"]
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Sidebar/ColorRectSidebar/MarginContainer2/VBoxContainer"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="CardsVBoxContainer" type="VBoxContainer" parent="Sidebar/ColorRectSidebar/MarginContainer2/VBoxContainer/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+
+[node name="Panel" type="Panel" parent="Sidebar/ColorRectSidebar/MarginContainer2/VBoxContainer/ScrollContainer/CardsVBoxContainer"]
+custom_minimum_size = Vector2(180, 50)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_piofg")
+
+[node name="PlaceCard" parent="Sidebar/ColorRectSidebar/MarginContainer2/VBoxContainer/ScrollContainer/CardsVBoxContainer" instance=ExtResource("6_gydf5")]
+layout_mode = 2
+
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="." method="_on_map_gui_input"]
+[connection signal="gui_input" from="Sidebar/PanelButtonBack" to="." method="_on_panel_button_back_gui_input"]
