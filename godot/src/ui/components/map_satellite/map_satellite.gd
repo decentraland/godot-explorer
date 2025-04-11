@@ -40,7 +40,7 @@ var filtered_places: Array = []
 func _ready():
 	var group := ButtonGroup.new()
 	group.allow_unpress = true
-	for i in range(13):  # o la cantidad que necesites
+	for i in range(13):
 		var btn: PlaceFilterButton = PLACE_CATEGORY_FILTER_BUTTON.instantiate()
 		btn.button_group = group
 		btn.toggle_mode = true
