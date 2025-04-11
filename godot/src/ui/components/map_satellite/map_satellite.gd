@@ -19,8 +19,7 @@ const MIN_ZOOM := Vector2(0.5, 0.5)
 const MAX_ZOOM := Vector2(1.5, 1.5)
 var distance
 
-var popup_scene := preload("res://src/ui/components/map_satellite/map_popup.tscn")
-var popup_instance: Control
+const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
 
 @onready var margin_container: MarginContainer = $MarginContainer
 
@@ -36,16 +35,15 @@ const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 var map_is_on_top: bool = false
 
 func _ready():
+	
+		
 	map_viewport.size = size
 	
 	# Maybe we can remove this line
 	get_viewport().connect("size_changed", self._on_screen_resized)
 
 	center_camera_on_genesis_plaza()
-	popup_instance = popup_scene.instantiate()
-	popup_instance.hide()
 	#sub_viewport_container.add_child(popup_instance)
-	sub_viewport_container.add_child(popup_instance)
 	
 	
 	# Drawing the entire map using tiles
@@ -62,7 +60,11 @@ func _ready():
 				map.add_child(tex_rect)
 			else:
 				push_error("Error loading map image: " + image_path)
-
+	
+	var poi_places = await async_load_category('poi')
+	for i in range(poi_places.size()):
+		spawn_pin(12, poi_places[i].positions, poi_places[i].title)
+		
 # Maybe we can remove this function (the viewport isn't resizable) 
 func _on_screen_resized() -> void:
 	map_viewport.size = size
@@ -75,7 +77,6 @@ func _on_map_gui_input(event: InputEvent) -> void:
 				dragging = true
 				drag_start_mouse = event.position
 				drag_start_cam_pos = camera.position
-				popup_instance.hide()
 			else:
 				distance = drag_start_mouse.distance_to(event.position)
 				if distance < CLICK_THRESHOLD:
@@ -131,24 +132,7 @@ func handle_click(event_position:Vector2)-> void:
 	var coords = event_position / PARCEL_SIZE
 	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
 	clicked_parcel.emit(parcel_coords)
-	#var msg = str(parcel_coords.x) + ',' + str(parcel_coords.y)
-	#popup_instance.set_text(msg)
-	#popup_instance.show_at(map_viewport.size)
 	show_cursor_at_parcel(parcel_coords)
-	
-func async_load_pois():
-	var url: String = "https://dcl-lists.decentraland.org/pois"
-	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
-		url, HTTPClient.METHOD_POST, "", headers
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
-	if result is PromiseError:
-		printerr("Error request places", result.get_error())
-		return
-	var json: Dictionary = result.get_string_response_as_json()
-	return json	
-	
 
 func get_parcel_position(parcel: Vector2i) -> Vector2:
 	var parcel_position = Vector2(parcel + PARCEL_OFFSET) * PARCEL_SIZE + PARCEL_SIZE / 2
@@ -159,7 +143,7 @@ func show_cursor_at_parcel(parcel: Vector2i):
 	cursor_marker.position = pos
 	cursor_marker.visible = true
 	
-	coordinates_label.text = '%s, %s' % [parcel.x, parcel.y]
+	coordinates_label.text = '%s, %s' % [parcel.x, -parcel.y]
 	coordinates_label.show()
 	update_label_settings()
 
@@ -168,3 +152,69 @@ func update_label_settings() -> void:
 	const OUTLINE_SIZE = 6
 	coordinates_label.label_settings.font_size = FONT_SIZE / camera.zoom.x
 	coordinates_label.label_settings.outline_size = OUTLINE_SIZE / camera.zoom.x
+
+func spawn_pin(category:int, coords:Array, title:String):
+	var pin = MAP_PIN.instantiate()
+	var center_coord:Vector2i
+	if coords.size() != 1:
+		center_coord = get_center_from_rect_coords(coords)
+	else:
+		var parts = coords[0].split(",")
+		var x = parts[0].to_int()
+		var y = -parts[1].to_int()
+		center_coord = Vector2i(x,y)
+		
+	print(title, '- position: ', center_coord)
+	var pos = get_parcel_position(center_coord) - pin.size / 2
+	pin.pin_category = category
+	pin.scene_title = title
+	pin.z_index = cursor_marker.z_index+1
+	
+	pin.position = pos
+	map.add_child(pin)
+
+func get_center_from_rect_coords(coords: Array) -> Vector2i:
+	var min_x = INF
+	var max_x = -INF
+	var min_y = INF
+	var max_y = -INF
+
+	for coord_str in coords:
+		var parts = coord_str.split(",")
+		if parts.size() != 2:
+			continue
+
+		var x = parts[0].to_int()+1
+		var y = -parts[1].to_int()
+
+		min_x = min(min_x, x)
+		max_x = max(max_x, x)
+		min_y = min(min_y, y)
+		max_y = max(max_y, y)
+
+	var center_x = floor((min_x + max_x) / 2.0)
+	var center_y = floor((min_y + max_y) / -2.0)
+
+	return Vector2i(center_x, -center_y)
+
+func async_load_category(category:String) -> Array:
+	var url: String
+	if category == 'all':
+		url = "https://places.decentraland.org/api/places/?categories=art&categories=crypto&categories=social&categories=game&categories=shop&categories=education&categories=music&categories=fashion&categories=casino&categories=sports&categories=business&categories=poi"
+	elif category == 'games':
+		url = "https://places.decentraland.org/api/places/?categories=game"
+	else:
+		url = "https://places.decentraland.org/api/places/?categories=%s" % category
+
+	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		printerr("Error request POIs: ", result.get_error())
+		return []
+
+	var json: Dictionary = result.get_string_response_as_json()
+	if json.has("data"):
+		return json.data
+	else:
+		return []

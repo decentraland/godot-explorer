@@ -1,6 +1,24 @@
 class_name Places
 extends Node
 
+const PinCategories = {
+	"FAVORITES": "favorites",
+	"ART": "art",
+	"CRYPTO": "crypto",
+	"SOCIAL": "social",
+	"GAMES": "games",
+	"SHOP": "shop",
+	"EDUCATION": "education",
+	"MUSIC": "music",
+	"FASHION": "fashion",
+	"CASINO": "casino",
+	"SPORTS": "sports",
+	"BUSINESS": "business",
+	"POI": "poi"
+}
+
+
+
 class Categories:
 	const ALL: String = "all"
 	const FAVORITES: String = "favorites"
@@ -15,6 +33,8 @@ class Categories:
 	const CASINO: String = "casino"
 	const SPORTS: String = "sports"
 	const BUSINESS: String = "business"
+	const POI: String = "poi"
+
 	
 	const ALL_CATEGORIES: PackedStringArray = [
 		ALL,
@@ -29,5 +49,6 @@ class Categories:
 		FASHION,
 		CASINO,
 		SPORTS,
-		BUSINESS
+		BUSINESS,
+		POI
 	]

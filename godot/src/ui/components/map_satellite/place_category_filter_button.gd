@@ -17,7 +17,8 @@ enum PlaceCategoryEnum {
 	FASHION,
 	CASINO,
 	SPORTS,
-	BUSINESS
+	BUSINESS,
+	POI
 }
 
 @export var filter_category: PlaceCategoryEnum:

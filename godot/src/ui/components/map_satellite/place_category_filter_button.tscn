@@ -8,9 +8,9 @@
 [ext_resource type="ButtonGroup" uid="uid://dla7kklv8bq6x" path="res://src/ui/components/map_satellite/places_button_group.tres" id="3_ayrlq"]
 
 [node name="PlaceCategoryButton" type="Button"]
-custom_minimum_size = Vector2(50, 40)
-offset_right = 105.0
-offset_bottom = 40.0
+custom_minimum_size = Vector2(30, 30)
+offset_right = 87.0
+offset_bottom = 30.0
 focus_mode = 0
 mouse_filter = 1
 mouse_default_cursor_shape = 2
@@ -25,6 +25,7 @@ theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("1_vf6so")
+theme_override_font_sizes/font_size = 16
 theme_override_styles/focus = ExtResource("1_qeu7p")
 theme_override_styles/disabled_mirrored = ExtResource("1_qeu7p")
 theme_override_styles/disabled = ExtResource("1_qeu7p")
