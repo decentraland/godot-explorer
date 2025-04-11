@@ -44,4 +44,3 @@ text = "Body"
 icon = ExtResource("3_7q1yk")
 alignment = 0
 script = ExtResource("2_c5mnh")
-filter_category = 2

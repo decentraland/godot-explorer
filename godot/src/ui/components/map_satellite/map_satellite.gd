@@ -20,6 +20,7 @@ const MAX_ZOOM := Vector2(1.5, 1.5)
 var distance
 
 const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
+const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
 
 @onready var margin_container: MarginContainer = $MarginContainer
 
@@ -30,12 +31,22 @@ const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
 @onready var camera: Camera2D = %Camera2D
 @onready var coordinates_label: Label = %CoordinatesLabel
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
+@onready var h_box_container: HBoxContainer = $MarginContainer/ScrollContainer/HBoxContainer
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 var map_is_on_top: bool = false
+var filtered_places: Array = []
 
 func _ready():
-	
+	var group := ButtonGroup.new()
+	group.allow_unpress = true
+	for i in range(13):  # o la cantidad que necesites
+		var btn: PlaceFilterButton = PLACE_CATEGORY_FILTER_BUTTON.instantiate()
+		btn.button_group = group
+		btn.toggle_mode = true
+		btn.filter_type = i
+		btn.connect("filter_toggled", Callable(self, "_on_filter_button_toggled"))
+		h_box_container.add_child(btn)
 		
 	map_viewport.size = size
 	
@@ -43,7 +54,6 @@ func _ready():
 	get_viewport().connect("size_changed", self._on_screen_resized)
 
 	center_camera_on_genesis_plaza()
-	#sub_viewport_container.add_child(popup_instance)
 	
 	
 	# Drawing the entire map using tiles
@@ -63,7 +73,7 @@ func _ready():
 	
 	var poi_places = await async_load_category('poi')
 	for i in range(poi_places.size()):
-		spawn_pin(12, poi_places[i].positions, poi_places[i].title)
+		spawn_pin(13, poi_places[i].positions, poi_places[i].title)
 		
 # Maybe we can remove this function (the viewport isn't resizable) 
 func _on_screen_resized() -> void:
@@ -201,8 +211,6 @@ func async_load_category(category:String) -> Array:
 	var url: String
 	if category == 'all':
 		url = "https://places.decentraland.org/api/places/?categories=art&categories=crypto&categories=social&categories=game&categories=shop&categories=education&categories=music&categories=fashion&categories=casino&categories=sports&categories=business&categories=poi"
-	elif category == 'games':
-		url = "https://places.decentraland.org/api/places/?categories=game"
 	else:
 		url = "https://places.decentraland.org/api/places/?categories=%s" % category
 
@@ -218,3 +226,15 @@ func async_load_category(category:String) -> Array:
 		return json.data
 	else:
 		return []
+
+
+func _on_filter_button_toggled(pressed: bool, type: int):
+	if not pressed:
+		filtered_places = []
+		for child in map.get_children():
+			if child is MapPin and child.pin_category == type:
+				child.queue_free()
+	else:
+		var poi_places = await async_load_category(Place.Categories.keys()[type].to_lower())
+		for i in range(poi_places.size()):
+			spawn_pin(type, poi_places[i].positions, poi_places[i].title)

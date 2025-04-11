@@ -1,6 +1,9 @@
+class_name MapPin
+
 extends Control
 
 enum PinCategoryEnum {
+	ALL,
 	FAVORITES,
 	ART,
 	CRYPTO,
@@ -34,9 +37,8 @@ func _ready():
 	set_category(pin_category)
 	
 func set_category(category: PinCategoryEnum) -> void:
-	var category_name = PinCategoryEnum.keys()[category] # e.g., "ART"
-	var category_string = category_name.to_lower() # e.g., "art"
-	if category_name == null:
+	var category_string = PinCategoryEnum.keys()[category].to_lower()
+	if category_string == null:
 		push_error("Category not found: %s" % category_string)
 		return
 	

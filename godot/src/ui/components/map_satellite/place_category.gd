@@ -1,0 +1,18 @@
+class_name Place
+
+enum Categories {
+	ALL,
+	FAVORITES,
+	ART,
+	CRYPTO,
+	SOCIAL,
+	GAME,
+	SHOP,
+	EDUCATION,
+	MUSIC,
+	FASHION,
+	CASINO,
+	SPORTS,
+	BUSINESS,
+	POI
+}

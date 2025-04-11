@@ -1,8 +1,7 @@
-[gd_scene load_steps=30 format=4 uid="uid://duuasgi2pnb8k"]
+[gd_scene load_steps=16 format=4 uid="uid://duuasgi2pnb8k"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
 [ext_resource type="Texture2D" uid="uid://dmfk50m8cogvs" path="res://src/ui/components/map_satellite/assets/cursor.svg" id="2_h4gq0"]
-[ext_resource type="PackedScene" uid="uid://cpu3esu834u5e" path="res://src/ui/components/map_satellite/place_category_filter_button.tscn" id="2_xft4y"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_r45jv"]
 
 [sub_resource type="Image" id="Image_cdd5d"]
@@ -374,45 +373,6 @@ font = ExtResource("3_r45jv")
 outline_size = 6
 outline_color = Color(0, 0, 0, 1)
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_v53w3"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_kpflg"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_2jwlk"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_od870"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_d7wjn"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_8i1pg"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_qm75n"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_gvfwa"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_bw2hx"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_l80gy"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_3mka3"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_oyrn6"]
-allow_unpress = true
-
-[sub_resource type="ButtonGroup" id="ButtonGroup_oj1om"]
-allow_unpress = true
-
 [sub_resource type="Animation" id="Animation_lrm6h"]
 length = 0.001
 tracks/0/type = "value"
@@ -595,83 +555,6 @@ custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 11
-
-[node name="PlaceCategoryButton" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_v53w3")
-filter_category = 0
-
-[node name="PlaceCategoryButton2" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_kpflg")
-filter_category = 1
-
-[node name="PlaceCategoryButton3" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_2jwlk")
-
-[node name="PlaceCategoryButton4" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_od870")
-filter_category = 3
-
-[node name="PlaceCategoryButton5" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_d7wjn")
-filter_category = 4
-
-[node name="PlaceCategoryButton6" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_8i1pg")
-filter_category = 5
-
-[node name="PlaceCategoryButton7" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_qm75n")
-filter_category = 6
-
-[node name="PlaceCategoryButton8" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_gvfwa")
-filter_category = 7
-
-[node name="PlaceCategoryButton9" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_bw2hx")
-filter_category = 8
-
-[node name="PlaceCategoryButton10" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_l80gy")
-filter_category = 9
-
-[node name="PlaceCategoryButton11" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_3mka3")
-filter_category = 10
-
-[node name="PlaceCategoryButton12" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_oyrn6")
-filter_category = 11
-
-[node name="PlaceCategoryButton13" parent="MarginContainer/ScrollContainer/HBoxContainer" instance=ExtResource("2_xft4y")]
-layout_mode = 2
-action_mode = 1
-button_group = SubResource("ButtonGroup_oj1om")
-filter_category = 12
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
