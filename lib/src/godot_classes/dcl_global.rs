@@ -86,6 +86,8 @@ pub struct DclGlobal {
 
     pub is_mobile: bool,
 
+    pub is_virtual_mobile: bool,
+
     #[var]
     pub has_javascript_debugger: bool,
 
@@ -132,9 +134,11 @@ impl INode for DclGlobal {
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
+        let is_mobile = godot::engine::Os::singleton().has_feature("mobile".into());
         Self {
             _base: base,
-            is_mobile: godot::engine::Os::singleton().has_feature("mobile".into()),
+            is_mobile,
+            is_virtual_mobile: false,
             scene_runner,
             comms,
             avatars,
@@ -176,8 +180,14 @@ impl DclGlobal {
     }
 
     #[func]
+    fn is_virtual_mobile(&self) -> bool {
+        self.is_virtual_mobile
+    }
+
+    #[func]
     fn _set_is_mobile(&mut self, is_mobile: bool) {
         self.is_mobile = is_mobile;
+        self.is_virtual_mobile = is_mobile;
     }
 
     pub fn has_singleton() -> bool {
