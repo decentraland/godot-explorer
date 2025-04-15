@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bs25la41y4wiw"
-path="res://.godot/imported/game-pin.svg-b5a9f62b1d3ccc948a45cb1415dc7d61.ctex"
+path="res://.godot/imported/games-pin.svg-79a6d3c27bdd0c871bfa80c9513d59f7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/place_categories/game-pin.svg"
-dest_files=["res://.godot/imported/game-pin.svg-b5a9f62b1d3ccc948a45cb1415dc7d61.ctex"]
+source_file="res://assets/ui/place_categories/games-pin.svg"
+dest_files=["res://.godot/imported/games-pin.svg-79a6d3c27bdd0c871bfa80c9513d59f7.ctex"]
 
 [params]
 

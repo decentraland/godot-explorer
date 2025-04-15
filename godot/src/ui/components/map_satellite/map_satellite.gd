@@ -20,9 +20,10 @@ const MAX_ZOOM := Vector2(1.5, 1.5)
 var distance
 var tween: Tween
 
-const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
-const PLACE_CARD := preload("res://src/ui/components/map_satellite/place_card.tscn")
 
+const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
+#const PLACE_CARD := preload("res://src/ui/components/map_satellite/place_card.tscn")
+const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn")
 const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
 
 @onready var margin_container: MarginContainer = $MarginContainer
@@ -39,20 +40,17 @@ const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satell
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var filter_container: HBoxContainer = %FilterContainer
 @onready var sidebar: Control = %Sidebar
+@onready var color_rect_close_sidebar: ColorRect = %ColorRectCloseSidebar
+@onready var cards_scroll_container: ScrollContainer = %CardsScrollContainer
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
+const SIDE_BAR_WIDTH = 300
 var map_is_on_top: bool = false
 var filtered_places: Array = []
-var is_sidebar_open: bool = false
 
 func _ready():
-	if not is_sidebar_open:
-		sidebar.position = Vector2(size.x-5, 0)
-		h_box_container_back.layout_direction = Control.LAYOUT_DIRECTION_LTR
-	else:
-		sidebar.position = Vector2(-sidebar.size.x,0 )
-		h_box_container_back.layout_direction = Control.LAYOUT_DIRECTION_RTL
-		
+	color_rect_close_sidebar.hide()
+	sidebar.position = Vector2(color_rect_close_sidebar.size.x, 0)	
 	var group := ButtonGroup.new()
 	group.allow_unpress = true
 	for i in range(13):
@@ -198,15 +196,6 @@ func spawn_pin(category:int, coords:Array, title:String):
 	pin.position = pos
 	map.add_child(pin)
 
-func spawn_card(title:String, contact:Variant, img_source:String):
-	var card = PLACE_CARD.instantiate()
-	if typeof(contact) == TYPE_STRING:
-		card.contact_name = contact
-	card.title_place = title
-	card.img_url = img_source
-	
-	cards_v_box_container.add_child(card)
-
 func get_center_from_rect_coords(coords: Array) -> Vector2i:
 	var min_x = INF
 	var max_x = -INF
@@ -260,30 +249,35 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 				child.queue_free()
 		for child in cards_v_box_container.get_children():
 			child.queue_free()
-			toggle_sidebar_visibility(false)
 	else:
 		var poi_places = await async_load_category(Place.Categories.keys()[type].to_lower())
 		for i in range(poi_places.size()):
 			var place = poi_places[i]
+			if place.title == "Empty":
+				continue
 			spawn_pin(type, place.positions, place.title)
-			spawn_card(place.title, place.contact_name, place.image)
-			toggle_sidebar_visibility(true)
+			var item = DISCOVER_CARROUSEL_ITEM.instantiate()
+			cards_v_box_container.add_child(item)
+			item.set_data(place)
+			#item.item_pressed.connect()
+			_open_sidebar()
 
 
-func _on_panel_button_back_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-				toggle_sidebar_visibility(!is_sidebar_open)
-
-
-func toggle_sidebar_visibility(arg:bool)->void:
+func _on_color_rect_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if !event.pressed:
+			_close_sidebar()
+			
+func _open_sidebar()->void:
 	var duration = 0.3
 	tween = get_tree().create_tween()	
-	if not arg:
-		is_sidebar_open = false
+	tween.tween_property(sidebar, "position", Vector2(size.x-sidebar.size.x, 0), duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)	
+	animation_player.play("show_sidebar")
+
+func _close_sidebar()->void:
+	if color_rect_close_sidebar.visible:
+		var duration = 0.3
+		tween = get_tree().create_tween()
 		tween.tween_property(sidebar, "position", Vector2(size.x-5, 0), duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		h_box_container_back.layout_direction = Control.LAYOUT_DIRECTION_LTR
-	else:
-		is_sidebar_open = true
-		tween.tween_property(sidebar, "position", Vector2(size.x-sidebar.size.x, 0), duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		h_box_container_back.layout_direction = Control.LAYOUT_DIRECTION_RTL
+		animation_player.play("hide_sidebar")
+		cards_scroll_container.scroll_vertical = 0

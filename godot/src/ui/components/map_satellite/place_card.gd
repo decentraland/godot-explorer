@@ -10,9 +10,15 @@ extends Control
 @onready var creator_h_box_container: HBoxContainer = %CreatorHBoxContainer
 
 func _ready() -> void:
+	if title_place == 'Empty':
+		hide()
+		return
+	
+	# IDK why it doesnt work to round image
 	panel_to_round.clip_contents = true
-	label_title.text = title_place
-	label_creator.text = contact_name
+	
+	set_title(title_place)
+	set_creator(contact_name)
 	_async_download_image(img_url)
 	
 	if contact_name.length() <= 0:
@@ -48,3 +54,13 @@ func get_hash_from_url(url: String) -> String:
 func set_image(_texture: Texture2D):
 	if is_instance_valid(texture_rect):
 		texture_rect.texture = _texture
+
+func set_title(_title: String) -> void:
+	label_title.text = title_place.substr(0, 25)
+	if title_place.length() > 25:
+		label_title.text = label_title.text + '...'
+		
+func set_creator(_creator: String) -> void:
+	label_creator.text = contact_name.substr(0, 25)
+	if contact_name.length() > 25:
+		label_creator.text = label_creator.text + '...'

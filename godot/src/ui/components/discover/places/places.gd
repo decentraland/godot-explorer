@@ -6,7 +6,7 @@ const PinCategories = {
 	"ART": "art",
 	"CRYPTO": "crypto",
 	"SOCIAL": "social",
-	"GAMES": "games",
+	"GAME": "games",
 	"SHOP": "shop",
 	"EDUCATION": "education",
 	"MUSIC": "music",
@@ -16,8 +16,6 @@ const PinCategories = {
 	"BUSINESS": "business",
 	"POI": "poi"
 }
-
-
 
 class Categories:
 	const ALL: String = "all"
