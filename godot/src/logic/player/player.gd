@@ -45,7 +45,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 
 	if mode == Global.CameraMode.THIRD_PERSON:
 		var tween_out = create_tween()
-		tween_out.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25).set_ease(
+		tween_out.tween_property(mount_camera, "spring_length", THIRD_PERSON_CAMERA.length(), 0.25).set_ease(
 			Tween.EASE_IN_OUT
 		)
 		avatar.set_hidden(false)
@@ -54,7 +54,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 			UiSounds.play_sound("ui_fade_out")
 	elif mode == Global.CameraMode.FIRST_PERSON:
 		var tween_in = create_tween()
-		tween_in.tween_property(camera, "position", Vector3(0, 0, -0.2), 0.25).set_ease(
+		tween_in.tween_property(mount_camera, "spring_length", -.2, 0.25).set_ease(
 			Tween.EASE_IN_OUT
 		)
 		avatar.set_hidden(true)
