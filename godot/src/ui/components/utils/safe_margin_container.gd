@@ -27,7 +27,7 @@ func _on_size_changed():
 	var x_factor: float = viewport_size.x / window_size.x
 	var y_factor: float = viewport_size.y / window_size.y
 
-	if Global.is_mobile():
+	if Global.is_mobile() and !Global.is_virtual_mobile():
 		top = max(top, safe_area.position.y * y_factor)
 		left = max(left, safe_area.position.x * x_factor)
 		bottom = max(bottom, abs(safe_area.end.y - window_size.y) * y_factor)
