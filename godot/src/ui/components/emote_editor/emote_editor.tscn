@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3 uid="uid://cse8fx0ei572e"]
+[gd_scene load_steps=5 format=3 uid="uid://cse8fx0ei572e"]
 
 [ext_resource type="Script" uid="uid://qv75d4qodnwj" path="res://src/ui/components/emote_editor/emote_editor.gd" id="1_xxj75"]
 [ext_resource type="PackedScene" uid="uid://c6t7jqpx38nxd" path="res://src/ui/components/emote_editor/emote_editor_item.tscn" id="2_3uk1s"]
+[ext_resource type="Script" path="res://src/ui/components/utils/orientation_container.gd" id="2_7jnql"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5ejwy"]
 bg_color = Color(0, 0, 0, 0.2)
@@ -11,8 +12,11 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [node name="EmoteEditor" type="PanelContainer"]
-offset_right = 828.0
-offset_bottom = 552.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_5ejwy")
 script = ExtResource("1_xxj75")
 
@@ -23,75 +27,89 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 8
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+[node name="HBoxContainer" type="BoxContainer" parent="MarginContainer"]
 layout_mode = 2
+script = ExtResource("2_7jnql")
 
-[node name="VBoxContainer_AvatarEmotes" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(250, 60)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.5
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 3
+
+[node name="VBoxContainer_AvatarEmotes" type="BoxContainer" parent="MarginContainer/HBoxContainer/ScrollContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 4
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 0
+vertical = true
+script = ExtResource("2_7jnql")
+invert = true
 
-[node name="EmoteEditorItem1" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem1" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator1" type="HSeparator" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator1" type="HSeparator" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes"]
 layout_mode = 2
 
-[node name="EmoteEditorItem2" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem2" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes"]
 layout_mode = 2
 
-[node name="EmoteEditorItem3" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem3" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator3" type="HSeparator" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator3" type="HSeparator" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes"]
 layout_mode = 2
 
-[node name="EmoteEditorItem4" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem4" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator4" type="HSeparator" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator4" type="HSeparator" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes"]
 layout_mode = 2
 
-[node name="EmoteEditorItem5" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem5" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator5" type="HSeparator" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator5" type="HSeparator" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes"]
 layout_mode = 2
 
-[node name="EmoteEditorItem6" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem6" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator6" type="HSeparator" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator6" type="HSeparator" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes"]
 layout_mode = 2
 
-[node name="EmoteEditorItem7" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem7" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator7" type="HSeparator" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator7" type="HSeparator" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes"]
 layout_mode = 2
 
-[node name="EmoteEditorItem8" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem8" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator8" type="HSeparator" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator8" type="HSeparator" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes"]
 layout_mode = 2
 
-[node name="EmoteEditorItem9" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem9" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
-[node name="HSeparator9" type="HSeparator" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes"]
+[node name="HSeparator9" type="HSeparator" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes"]
 layout_mode = 2
 
-[node name="EmoteEditorItem0" parent="MarginContainer/HBoxContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
+[node name="EmoteEditorItem0" parent="MarginContainer/HBoxContainer/ScrollContainer/VBoxContainer_AvatarEmotes" instance=ExtResource("2_3uk1s")]
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 8

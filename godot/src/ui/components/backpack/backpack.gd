@@ -40,7 +40,6 @@ var avatar_loading_counter: int = 0
 
 @onready var container_main_categories = %HBoxContainer_MainCategories
 @onready var container_sub_categories = %HBoxContainer_SubCategories
-@onready var scroll_container_sub_categories = %ScrollContainer_SubCategories
 
 @onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
 
@@ -118,6 +117,30 @@ func _ready():
 	container_backpack.show()
 	backpack_loading.hide()
 
+	var profile := Global.player_identity.get_profile_or_null()
+	if profile != null:
+		_on_profile_changed(profile)
+
+	# responsive
+	get_window().size_changed.connect(self._on_size_changed)
+	_on_size_changed.call_deferred()
+
+
+func _on_size_changed():
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var portrait = window_size.x < window_size.y
+	var right_editor_container: MarginContainer = %RightEditorContainer
+	if portrait:
+		right_editor_container.add_theme_constant_override("margin_top", 0)
+		right_editor_container.add_theme_constant_override("margin_left", 0)
+		right_editor_container.add_theme_constant_override("margin_right", 0)
+		right_editor_container.add_theme_constant_override("margin_bottom", 0)
+	else:
+		right_editor_container.add_theme_constant_override("margin_top", 10)
+		right_editor_container.add_theme_constant_override("margin_left", 20)
+		right_editor_container.add_theme_constant_override("margin_right", 20)
+		right_editor_container.add_theme_constant_override("margin_bottom", 10)
+
 
 func _update_visible_categories():
 	var showed_subcategories: int = 0
@@ -134,7 +157,7 @@ func _update_visible_categories():
 			if first_wearable_filter_button == null:
 				first_wearable_filter_button = wearable_filter_button
 
-	scroll_container_sub_categories.set_visible(showed_subcategories >= 2)
+	container_sub_categories.set_visible(showed_subcategories >= 2)
 	if first_wearable_filter_button:
 		first_wearable_filter_button.set_pressed(true)
 

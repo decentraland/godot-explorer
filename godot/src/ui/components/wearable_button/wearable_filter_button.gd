@@ -29,6 +29,7 @@ enum WearableCategoryEnum {
 @export var filter_category: WearableCategoryEnum:
 	set(new_value):
 		_update_category_icon()
+		_update_category_text()
 		filter_category = new_value
 
 
@@ -46,8 +47,17 @@ func _update_category_icon():
 		printerr("_update_category_icon texture_path not found ", texture_path)
 
 
+func _update_category_text():
+	var category_text = type_to_text(filter_category)
+	if category_text != "":
+		self.text = category_text
+	else:
+		self.text = "Unknown"
+
+
 func _ready():
 	_update_category_icon()
+	_update_category_text()
 
 
 func get_category_name():
@@ -97,6 +107,50 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 			result = Wearables.Categories.SKIN
 
 	return result
+
+
+func type_to_text(category_enum: WearableCategoryEnum) -> String:
+	var text := "Unknown"
+	match category_enum:
+		WearableCategoryEnum.ALL:
+			text = "All Wearables"
+		WearableCategoryEnum.BODY:
+			text = "Body Shape"
+		WearableCategoryEnum.HAIR:
+			text = "Hair"
+		WearableCategoryEnum.EYEBROWS:
+			text = "Eyebrows"
+		WearableCategoryEnum.EYES:
+			text = "Eyes"
+		WearableCategoryEnum.MOUTH:
+			text = "Mouth"
+		WearableCategoryEnum.FACIAL_HAIR:
+			text = "Facial Hair"
+		WearableCategoryEnum.UPPER_BODY:
+			text = "Upper Body"
+		WearableCategoryEnum.HANDWEAR:
+			text = "Gloves"
+		WearableCategoryEnum.LOWER_BODY:
+			text = "Lower Body"
+		WearableCategoryEnum.FEET:
+			text = "Footwear"
+		WearableCategoryEnum.HAT:
+			text = "Hats"
+		WearableCategoryEnum.EYEWEAR:
+			text = "Glasses"
+		WearableCategoryEnum.EARRING:
+			text = "Earrings"
+		WearableCategoryEnum.MASK:
+			text = "Masks"
+		WearableCategoryEnum.TIARA:
+			text = "Tiaras"
+		WearableCategoryEnum.TOP_HEAD:
+			text = "Accessories"
+		WearableCategoryEnum.HELMET:
+			text = "Helmets"
+		WearableCategoryEnum.SKIN:
+			text = "Skin"
+	return text
 
 
 func _on_toggled(_button_pressed):

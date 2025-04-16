@@ -15,9 +15,12 @@ shader_parameter/selected_tile = Vector2(20, 20)
 [node name="Control_Map" type="Control"]
 clip_contents = true
 layout_mode = 3
-anchors_preset = 0
-offset_right = 50.0
-offset_bottom = 50.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
 script = ExtResource("1_yemwb")
 
 [node name="ColorRect_Map" type="ColorRect" parent="."]
@@ -26,8 +29,11 @@ texture_filter = 1
 texture_repeat = 3
 material = SubResource("ShaderMaterial_fnml8")
 layout_mode = 1
-offset_right = 200.0
-offset_bottom = 200.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 1
 
 [connection signal="gui_input" from="ColorRect_Map" to="." method="_on_color_rect_map_gui_input"]

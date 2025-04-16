@@ -11,54 +11,57 @@ var waiting_for_new_wallet: bool = false
 var loading_first_profile: bool = false
 
 var _skip_lobby: bool = false
+var _last_panel: Control = null
 
 @onready var control_main = %Main
 
 @onready var control_loading = %Loading
-@onready var control_restore = %Restore
 @onready var control_signin = %SignIn
 @onready var control_start = %Start
 @onready var control_backpack = %BackpackContainer
-@onready var control_choose_name = %ChooseName
+@onready var control_restore_and_choose_name: Control = %RestoreAndChooseName
 
 @onready var container_sign_in_step1 = %VBoxContainer_SignInStep1
 @onready var container_sign_in_step2 = %VBoxContainer_SignInStep2
 
-@onready var label_avatar_name = %LabelAvatarName
+@onready var label_avatar_name = %Label_Name
 
 @onready var avatar_preview = %AvatarPreview
 
 @onready var lineedit_choose_name = %LineEdit_ChooseName
 
-@onready var restore_panel = %VBoxContainer_RestorePanel
+@onready var restore_panel: VBoxContainer = %VBoxContainer_RestorePanel
+@onready var choose_name: VBoxContainer = %VBoxContainer_ChooseName
 
-@onready var checkbox_terms_and_privacy = %CheckBox_TermsAndPrivacy
 @onready var button_next = %Button_Next
 
 @onready var backpack = %Backpack
 
 @onready var button_open_browser = %Button_OpenBrowser
 
-# TODO: Change screen orientation for Mobile
-#func set_portrait():
-##DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
-#DisplayServer.window_set_size(Vector2i(720, 1280))
-##get_tree().root.get_viewport().set_size(Vector2i(720, 1280))
-##ProjectSettings.set_setting("display/window/size/viewport_width", 720)
-##ProjectSettings.set_setting("display/window/size/viewport_height", 1280)
-#
-#
-#func set_landscape():
-##DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
-#DisplayServer.window_set_size(Vector2i(1280, 720))
-##get_tree().root.get_viewport().set_size(Vector2i(1280, 720))
+@onready var background_1: Control = %Background1
+@onready var background_2: Control = %Background2
 
 
-func show_panel(child_node: Control):
+func show_panel(child_node: Control, subpanel: Control = null):
 	for child in control_main.get_children():
 		child.hide()
 
 	child_node.show()
+
+	match child_node:
+		control_loading, control_backpack:
+			_show_background1()
+		control_start:
+			_show_background2()
+
+	if _last_panel != null:
+		_last_panel.hide()
+		_last_panel = null
+
+	if subpanel != null:
+		subpanel.show()
+		_last_panel = subpanel
 
 
 func async_close_sign_in(generate_snapshots: bool = true):
@@ -67,13 +70,17 @@ func async_close_sign_in(generate_snapshots: bool = true):
 		await backpack.async_prepare_snapshots(avatar, current_profile)
 
 	if Global.is_xr():
-		change_scene.emit("res://src/ui/components/discover/discover.tscn")
+		change_scene.emit("res://src/ui/components/menu/menu.tscn")
 	else:
-		get_tree().change_scene_to_file("res://src/ui/components/discover/discover.tscn")
+		get_tree().change_scene_to_file("res://src/ui/components/menu/menu.tscn")
 
 
 # gdlint:ignore = async-function-name
 func _ready():
+	Global.music_player.play("music_builder")
+	restore_panel.hide()
+	choose_name.hide()
+
 	var android_login = %AndroidLogin
 	if is_instance_valid(android_login) and android_login.is_platform_supported():
 		android_login.set_lobby(self)
@@ -101,6 +108,7 @@ func _ready():
 	if Global.player_identity.try_recover_account(session_account):
 		loading_first_profile = true
 		show_panel(control_loading)
+
 	elif _skip_lobby:
 		show_panel(control_loading)
 		create_guest_account_if_needed()
@@ -125,10 +133,10 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 	if loading_first_profile:
 		loading_first_profile = false
 		if profile_has_name():
-			label_avatar_name.load_from_profile(new_profile)
+			label_avatar_name.set_text("Welcome back " + new_profile.get_name())
 
 			restore_panel.show()
-			show_panel(control_restore)
+			show_panel(control_restore_and_choose_name, restore_panel)
 			_show_avatar_preview()
 			if _skip_lobby:
 				go_to_explorer.call_deferred()
@@ -143,7 +151,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		if profile_has_name():
 			await async_close_sign_in()
 		else:
-			show_panel(control_choose_name)
+			show_panel(control_restore_and_choose_name, choose_name)
 			_show_avatar_preview()
 
 
@@ -192,7 +200,7 @@ func _on_button_start_pressed():
 
 # gdlint:ignore = async-function-name
 func _on_button_next_pressed():
-	if lineedit_choose_name.text.is_empty() or checkbox_terms_and_privacy.button_pressed == false:
+	if lineedit_choose_name.text.is_empty():
 		return
 
 	avatar_preview.hide()
@@ -250,7 +258,7 @@ func profile_has_name():
 func _on_button_enter_as_guest_pressed():
 	create_guest_account_if_needed()
 
-	show_panel(control_choose_name)
+	show_panel(control_restore_and_choose_name, choose_name)
 	_show_avatar_preview()
 
 
@@ -264,24 +272,6 @@ func _on_button_jump_in_pressed():
 	await async_close_sign_in()
 
 
-func toggle_terms_and_privacy_checkbox():
-	checkbox_terms_and_privacy.set_pressed(not checkbox_terms_and_privacy.button_pressed)
-
-
-func _on_rich_text_label_gui_input(event):
-	if event is InputEventScreenTouch:
-		if !event.pressed:
-			toggle_terms_and_privacy_checkbox()
-
-
-func _on_rich_text_label_meta_clicked(meta):
-	Global.open_url(meta)
-	# we're going to toggle in the rich text box gui input
-	# so here we toggle it again compensate, to let as it is
-	# not the best solution.
-	toggle_terms_and_privacy_checkbox()
-
-
 func _on_check_box_terms_and_privacy_toggled(_toggled_on):
 	_check_button_finish()
 
@@ -291,9 +281,17 @@ func _on_line_edit_choose_name_text_changed(_new_text):
 
 
 func _check_button_finish():
-	var disabled = (
-		lineedit_choose_name.text.is_empty() or not checkbox_terms_and_privacy.button_pressed
-	)
+	var disabled = lineedit_choose_name.text.is_empty()
 	if button_next.disabled != disabled:
 		avatar_preview.avatar.emote_controller.play_emote("shrug" if disabled else "clap")
 	button_next.disabled = disabled
+
+
+func _show_background1():
+	background_1.show()
+	background_2.hide()
+
+
+func _show_background2():
+	background_1.hide()
+	background_2.show()

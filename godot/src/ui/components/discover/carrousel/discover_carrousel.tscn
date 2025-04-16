@@ -1,10 +1,8 @@
-[gd_scene load_steps=8 format=3 uid="uid://3de823q04ptd"]
+[gd_scene load_steps=6 format=3 uid="uid://3de823q04ptd"]
 
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="1_qm5fw"]
-[ext_resource type="Script" uid="uid://crybq4wivxc3l" path="res://src/ui/components/discover/carrousel/discover_carrousel.gd" id="1_somjb"]
-[ext_resource type="Texture2D" uid="uid://dcf4eyqe2vq8w" path="res://src/ui/components/wearable_panel/VisibleIcon.png" id="3_2dfcn"]
-[ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="3_5bk3e"]
-[ext_resource type="Script" uid="uid://bufowrcf714pf" path="res://src/ui/components/discover/scrollbar_requester.gd" id="3_dtbt6"]
+[ext_resource type="Script" path="res://src/ui/components/discover/carrousel/discover_carrousel.gd" id="1_somjb"]
+[ext_resource type="Script" path="res://src/ui/components/discover/scrollbar_requester.gd" id="3_dtbt6"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_ix28e"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_amqeq"]
@@ -21,9 +19,9 @@ script = ExtResource("1_somjb")
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
 size_flags_vertical = 0
-theme_override_constants/margin_left = 32
+theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 32
+theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 0
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
@@ -36,29 +34,6 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_fonts/font = ExtResource("1_qm5fw")
 theme_override_font_sizes/font_size = 18
 text = "Section Tittle"
-
-[node name="Button_SearchHide" type="Button" parent="MarginContainer/HBoxContainer"]
-visible = false
-layout_mode = 2
-text = "       "
-icon = ExtResource("3_2dfcn")
-icon_alignment = 1
-expand_icon = true
-
-[node name="LineEdit_Search" type="LineEdit" parent="MarginContainer/HBoxContainer"]
-visible = false
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Button_Search" type="Button" parent="MarginContainer/HBoxContainer"]
-custom_minimum_size = Vector2(0, 39)
-layout_mode = 2
-text = "       "
-icon = ExtResource("3_5bk3e")
-icon_alignment = 1
-expand_icon = true
-
-[node name="TimerSearchBounce" type="Timer" parent="MarginContainer/HBoxContainer"]
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
@@ -130,9 +105,3 @@ layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
 theme_override_constants/separation = 10
-
-[connection signal="pressed" from="MarginContainer/HBoxContainer/Button_SearchHide" to="." method="_on_button_search_hide_pressed"]
-[connection signal="text_changed" from="MarginContainer/HBoxContainer/LineEdit_Search" to="." method="_on_line_edit_search_text_changed"]
-[connection signal="pressed" from="MarginContainer/HBoxContainer/Button_Search" to="." method="_on_button_search_pressed"]
-[connection signal="timeout" from="MarginContainer/HBoxContainer/TimerSearchBounce" to="." method="_on_timer_search_bounce_timeout"]
-[connection signal="scroll_ended" from="VBoxContainer/ScrollContainer" to="." method="_on_scroll_container_scroll_ended"]

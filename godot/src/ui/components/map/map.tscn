@@ -1,7 +1,13 @@
-[gd_scene load_steps=3 format=3 uid="uid://dkqc3of3acx2i"]
+[gd_scene load_steps=7 format=3 uid="uid://dkqc3of3acx2i"]
 
 [ext_resource type="Script" uid="uid://d4j6yrsj1sbb8" path="res://src/ui/components/map/map.gd" id="1_1j46y"]
 [ext_resource type="PackedScene" uid="uid://dkqc3of5bdx2i" path="res://src/ui/components/map_shader/map_shader.tscn" id="2_el671"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_k36bc"]
+[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_wje51"]
+[ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="4_v4ox8"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kgqjj"]
+bg_color = Color(0, 0, 0, 0.188235)
 
 [node name="Control_Map" type="Control"]
 layout_mode = 3
@@ -13,16 +19,47 @@ grow_vertical = 2
 size_flags_horizontal = 4
 script = ExtResource("1_1j46y")
 
-[node name="Control_MapShader" parent="." instance=ExtResource("2_el671")]
+[node name="VBoxContainer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = 0.0
-offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 1
+mouse_filter = 2
+
+[node name="Control_MapShader" parent="VBoxContainer" instance=ExtResource("2_el671")]
+unique_name_in_owner = true
+layout_mode = 1
+size_flags_vertical = 3
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 51.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_kgqjj")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 8
+script = ExtResource("3_wje51")
+default_margin = 30
+use_top = false
+use_bottom = false
+
+[node name="Label" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_k36bc")
+theme_override_font_sizes/font_size = 28
+text = "Map"
 
 [node name="Control_Tooltip" type="Control" parent="."]
 anchors_preset = 0
@@ -47,79 +84,13 @@ theme_override_constants/outline_size = 2
 text = "x, y"
 horizontal_alignment = 1
 
-[node name="Control_JumpTo" type="Control" parent="."]
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="JumpIn" parent="CanvasLayer" instance=ExtResource("4_v4ox8")]
+unique_name_in_owner = true
 visible = false
-anchors_preset = 0
 
-[node name="Panel_JumpTo" type="Panel" parent="Control_JumpTo"]
-custom_minimum_size = Vector2(50, 50)
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -85.0
-offset_top = -230.0
-offset_right = 129.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-
-[node name="Button_JumpTo" type="Button" parent="Control_JumpTo/Panel_JumpTo"]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -31.5
-offset_top = -47.0
-offset_right = 31.5
-offset_bottom = -24.0
-grow_horizontal = 2
-grow_vertical = 0
-focus_mode = 0
-text = "JUMP IN"
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Control_JumpTo/Panel_JumpTo"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -90.0
-offset_top = -34.5
-offset_right = 90.0
-offset_bottom = 42.5
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Label_ParcelName" type="Label" parent="Control_JumpTo/Panel_JumpTo/VBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 0
-text = "Parcel Name"
-horizontal_alignment = 1
-
-[node name="Label_ParcelPosition" type="Label" parent="Control_JumpTo/Panel_JumpTo/VBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 0
-text = "x, y"
-horizontal_alignment = 1
-
-[node name="Label_ParcelCreator" type="Label" parent="Control_JumpTo/Panel_JumpTo/VBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 0
-text = "Created by: Decentraland"
-horizontal_alignment = 1
-
-[connection signal="on_move" from="Control_MapShader" to="." method="_on_control_map_shader_on_move"]
-[connection signal="parcel_click" from="Control_MapShader" to="." method="_on_control_map_shader_parcel_click"]
-[connection signal="pressed" from="Control_JumpTo/Panel_JumpTo/Button_JumpTo" to="." method="_on_button_pressed"]
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="on_move" from="VBoxContainer/Control_MapShader" to="." method="_on_control_map_shader_on_move"]
+[connection signal="parcel_click" from="VBoxContainer/Control_MapShader" to="." method="_on_control_map_shader_parcel_click"]
+[connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]

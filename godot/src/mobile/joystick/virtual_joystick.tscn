@@ -104,3 +104,6 @@ mouse_force_pass_scroll_events = false
 texture = ExtResource("2_vn7es")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="SprintTimer" type="Timer" parent="."]
+unique_name_in_owner = true
