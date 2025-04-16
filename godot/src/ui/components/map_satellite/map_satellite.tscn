@@ -1,8 +1,9 @@
-[gd_scene load_steps=22 format=4 uid="uid://duuasgi2pnb8k"]
+[gd_scene load_steps=21 format=4 uid="uid://duuasgi2pnb8k"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
 [ext_resource type="Texture2D" uid="uid://dmfk50m8cogvs" path="res://src/ui/components/map_satellite/assets/cursor.svg" id="2_h4gq0"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_r45jv"]
+[ext_resource type="PackedScene" uid="uid://diojwgryptiuw" path="res://src/ui/components/map_satellite/map_searchbar.tscn" id="4_ju8cx"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_w1xks"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="5_qwbvm"]
 
@@ -497,69 +498,11 @@ tracks/1/keys = {
 "values": [true]
 }
 
-[sub_resource type="Animation" id="Animation_luerb"]
-resource_name = "show_sidebar"
-length = 0.3
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("CanvasLayer/ColorRectCloseSidebar:modulate")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.3),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("CanvasLayer/ColorRectCloseSidebar:visible")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [true]
-}
-
-[sub_resource type="Animation" id="Animation_d6xqw"]
-resource_name = "hide_sidebar"
-length = 0.3
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("CanvasLayer/ColorRectCloseSidebar:modulate")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.3),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("CanvasLayer/ColorRectCloseSidebar:visible")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0.3),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [false]
-}
-
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_q556g"]
 _data = {
 "RESET": SubResource("Animation_lrm6h"),
 "hide_filters": SubResource("Animation_5tr2o"),
-"hide_sidebar": SubResource("Animation_d6xqw"),
-"show_filters": SubResource("Animation_gfhgp"),
-"show_sidebar": SubResource("Animation_luerb")
+"show_filters": SubResource("Animation_gfhgp")
 }
 
 [node name="MapSatellite" type="Control"]
@@ -630,54 +573,7 @@ unique_name_in_owner = true
 position_smoothing_enabled = true
 position_smoothing_speed = 40.0
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_bottom = 80.0
-grow_horizontal = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 0
-theme_override_constants/margin_bottom = 20
-
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 11
-
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/HBoxContainer"]
-custom_minimum_size = Vector2(0, 45)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-horizontal_scroll_mode = 3
-vertical_scroll_mode = 0
-
-[node name="FilterContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer/ScrollContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-size_flags_horizontal = 3
-mouse_filter = 2
-theme_override_constants/separation = 11
-
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
-
-[node name="ColorRectCloseSidebar" type="ColorRect" parent="CanvasLayer"]
-unique_name_in_owner = true
-modulate = Color(1, 1, 1, 0)
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 1
-color = Color(0, 0, 0, 0.501961)
-
-[node name="Sidebar" type="PanelContainer" parent="CanvasLayer/ColorRectCloseSidebar"]
+[node name="Sidebar" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 1
@@ -685,17 +581,18 @@ anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -40.0
+offset_left = -300.0
 grow_horizontal = 0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2yfa7")
 
-[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/ColorRectCloseSidebar/Sidebar"]
+[node name="MarginContainer" type="MarginContainer" parent="Sidebar"]
 layout_mode = 2
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 
-[node name="Button_Close" type="Button" parent="CanvasLayer/ColorRectCloseSidebar/Sidebar/MarginContainer"]
+[node name="Button_Close" type="Button" parent="Sidebar/MarginContainer"]
+visible = false
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 size_flags_horizontal = 8
@@ -710,18 +607,19 @@ icon = ExtResource("5_qwbvm")
 icon_alignment = 1
 expand_icon = true
 
-[node name="MarginContainer2" type="MarginContainer" parent="CanvasLayer/ColorRectCloseSidebar/Sidebar"]
+[node name="MarginContainer2" type="MarginContainer" parent="Sidebar"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 100
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/ColorRectCloseSidebar/Sidebar/MarginContainer2"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Sidebar/MarginContainer2"]
 layout_mode = 2
 alignment = 1
 
-[node name="CardsScrollContainer" type="ScrollContainer" parent="CanvasLayer/ColorRectCloseSidebar/Sidebar/MarginContainer2/VBoxContainer"]
+[node name="CardsScrollContainer" type="ScrollContainer" parent="Sidebar/MarginContainer2/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -729,12 +627,68 @@ size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="CardsVBoxContainer" type="VBoxContainer" parent="CanvasLayer/ColorRectCloseSidebar/Sidebar/MarginContainer2/VBoxContainer/CardsScrollContainer"]
+[node name="CardsVBoxContainer" type="VBoxContainer" parent="Sidebar/MarginContainer2/VBoxContainer/CardsScrollContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 5
 alignment = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 54.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 11
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="FilterContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer/ScrollContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 11
+
+[node name="MapSearchbar" parent="MarginContainer/HBoxContainer" instance=ExtResource("4_ju8cx")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 0
+filter_type = 0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="ColorRectCloseSidebar" type="ColorRect" parent="CanvasLayer"]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+color = Color(0, 0, 0, 0.501961)
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
@@ -743,4 +697,3 @@ libraries = {
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="." method="_on_map_gui_input"]
-[connection signal="gui_input" from="CanvasLayer/ColorRectCloseSidebar" to="." method="_on_color_rect_gui_input"]

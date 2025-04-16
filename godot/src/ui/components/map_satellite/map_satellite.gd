@@ -18,17 +18,12 @@ const CLICK_THRESHOLD := 5.0
 const MIN_ZOOM := Vector2(0.5, 0.5)
 const MAX_ZOOM := Vector2(1.5, 1.5)
 var distance
-var tween: Tween
-
 
 const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
-#const PLACE_CARD := preload("res://src/ui/components/map_satellite/place_card.tscn")
 const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn")
 const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
 
 @onready var margin_container: MarginContainer = $MarginContainer
-@onready var panel_button_back: Panel = %PanelButtonBack
-@onready var h_box_container_back: HBoxContainer = %HBoxContainerBack
 @onready var cards_v_box_container: VBoxContainer = %CardsVBoxContainer
 
 @onready var cursor_marker: Sprite2D = %CursorMarker
@@ -42,6 +37,7 @@ const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satell
 @onready var sidebar: Control = %Sidebar
 @onready var color_rect_close_sidebar: ColorRect = %ColorRectCloseSidebar
 @onready var cards_scroll_container: ScrollContainer = %CardsScrollContainer
+@onready var map_searchbar: PanelContainer = %MapSearchbar
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 const SIDE_BAR_WIDTH = 300
@@ -49,8 +45,10 @@ var map_is_on_top: bool = false
 var filtered_places: Array = []
 
 func _ready():
+	map_searchbar.clean_searchbar.connect(_close_from_searchbar)
+	map_searchbar.submited_text.connect(_submitted_text_from_searchbar)
 	color_rect_close_sidebar.hide()
-	sidebar.position = Vector2(color_rect_close_sidebar.size.x, 0)	
+	sidebar.position = Vector2(color_rect_close_sidebar.size.x-5, 0)	
 	var group := ButtonGroup.new()
 	group.allow_unpress = true
 	for i in range(13):
@@ -86,7 +84,7 @@ func _ready():
 	
 	var poi_places = await async_load_category('poi')
 	for i in range(poi_places.size()):
-		spawn_pin(13, poi_places[i].positions, poi_places[i].title)
+		spawn_pin(13, poi_places[i])
 		
 # Maybe we can remove this function (the viewport isn't resizable) 
 func _on_screen_resized() -> void:
@@ -173,28 +171,34 @@ func show_cursor_at_parcel(parcel: Vector2i):
 func update_label_settings() -> void:
 	const FONT_SIZE = 18
 	const OUTLINE_SIZE = 6
-	coordinates_label.label_settings.font_size = FONT_SIZE / camera.zoom.x
-	coordinates_label.label_settings.outline_size = OUTLINE_SIZE / camera.zoom.x
+	coordinates_label.label_settings.font_size = int(FONT_SIZE / camera.zoom.x)
+	coordinates_label.label_settings.outline_size = int(OUTLINE_SIZE / camera.zoom.x)
 
-func spawn_pin(category:int, coords:Array, title:String):
+func spawn_pin(category:int, place):
+	if category == 0: #if category is ALL doesn't draw any pin
+		return
 	var pin = MAP_PIN.instantiate()
 	var center_coord:Vector2i
-	if coords.size() != 1:
-		center_coord = get_center_from_rect_coords(coords)
+	if place.positions.size() != 1:
+		center_coord = get_center_from_rect_coords(place.positions)
 	else:
-		var parts = coords[0].split(",")
+		var parts = place.positions[0].split(",")
 		var x = parts[0].to_int()
 		var y = -parts[1].to_int()
 		center_coord = Vector2i(x,y)
 		
-	print(title, '- position: ', center_coord)
 	var pos = get_parcel_position(center_coord) - pin.size / 2
 	pin.pin_category = category
-	pin.scene_title = title
+	pin.scene_title = place.title
 	pin.z_index = cursor_marker.z_index+1
 	
 	pin.position = pos
 	map.add_child(pin)
+
+func create_place_card(place)->void:
+	var item = DISCOVER_CARROUSEL_ITEM.instantiate()
+	cards_v_box_container.add_child(item)
+	item.set_data(place)
 
 func get_center_from_rect_coords(coords: Array) -> Vector2i:
 	var min_x = INF
@@ -223,7 +227,7 @@ func get_center_from_rect_coords(coords: Array) -> Vector2i:
 func async_load_category(category:String) -> Array:
 	var url: String
 	if category == 'all':
-		url = "https://places.decentraland.org/api/places/?categories=art&categories=crypto&categories=social&categories=game&categories=shop&categories=education&categories=music&categories=fashion&categories=casino&categories=sports&categories=business&categories=poi"
+		url = "https://places.decentraland.org/api/places/"
 	else:
 		url = "https://places.decentraland.org/api/places/?categories=%s" % category
 
@@ -249,18 +253,23 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 				child.queue_free()
 		for child in cards_v_box_container.get_children():
 			child.queue_free()
+			map_searchbar.reset()
+		_close_sidebar()
 	else:
 		var poi_places = await async_load_category(Place.Categories.keys()[type].to_lower())
 		for i in range(poi_places.size()):
 			var place = poi_places[i]
 			if place.title == "Empty":
 				continue
-			spawn_pin(type, place.positions, place.title)
-			var item = DISCOVER_CARROUSEL_ITEM.instantiate()
-			cards_v_box_container.add_child(item)
-			item.set_data(place)
-			#item.item_pressed.connect()
-			_open_sidebar()
+			spawn_pin(type, place)
+			create_place_card(place)
+		_open_sidebar()
+	
+		if Place.Categories.keys()[type].to_lower() != 'all':
+			map_searchbar.filter_type = type
+			map_searchbar.update_filtered_category()
+		else:
+			map_searchbar.reset()
 
 
 func _on_color_rect_gui_input(event: InputEvent) -> void:
@@ -269,15 +278,19 @@ func _on_color_rect_gui_input(event: InputEvent) -> void:
 			_close_sidebar()
 			
 func _open_sidebar()->void:
-	var duration = 0.3
-	tween = get_tree().create_tween()	
-	tween.tween_property(sidebar, "position", Vector2(size.x-sidebar.size.x, 0), duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)	
-	animation_player.play("show_sidebar")
+		var duration = .4
+		create_tween().tween_property(sidebar, "position", Vector2(size.x-sidebar.size.x, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 
 func _close_sidebar()->void:
-	if color_rect_close_sidebar.visible:
-		var duration = 0.3
-		tween = get_tree().create_tween()
-		tween.tween_property(sidebar, "position", Vector2(size.x-5, 0), duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		animation_player.play("hide_sidebar")
+		var duration = .4
+		create_tween().tween_property(sidebar, "position", Vector2(size.x-5, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 		cards_scroll_container.scroll_vertical = 0
+
+func _close_from_searchbar():
+	for child in filter_container.get_children():
+		if child is Button and child.toggle_mode:
+			child.button_pressed = false
+	_close_sidebar()
+	
+func _submitted_text_from_searchbar(text:String):
+	_open_sidebar()

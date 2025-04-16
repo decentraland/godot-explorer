@@ -29,5 +29,5 @@ func _ready():
 	_update_category_button()
 
 
-func _on_toggled(is_pressed: bool) -> void:
-	emit_signal("filter_toggled", is_pressed, filter_type)
+func _on_toggled(toggled_on: bool) -> void:
+	emit_signal("filter_toggled", toggled_on, filter_type)
