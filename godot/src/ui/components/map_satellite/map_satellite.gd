@@ -227,9 +227,9 @@ func get_center_from_rect_coords(coords: Array) -> Vector2i:
 func async_load_category(category:String) -> Array:
 	var url: String
 	if category == 'all':
-		url = "https://places.decentraland.org/api/places/"
+		url = "https://places.decentraland.org/api/places?offset=0&limit=50&order_by=most_active&order=desc&with_realms_detail=true"
 	else:
-		url = "https://places.decentraland.org/api/places/?categories=%s" % category
+		url = "https://places.decentraland.org/api/places?offset=0&limit=50&order_by=most_active&order=desc&categories=%s&with_realms_detail=true" % category
 
 	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
