@@ -37,24 +37,20 @@ func reset() -> void:
 	
 func update_filtered_category():
 	label.editable = false
-	if filter_type == Place.Categories.ALL:
-		reset()
-		return
+	texture_path = (
+		"res://assets/ui/place_categories/"
+		+ Place.Categories.keys()[filter_type].to_lower()
+		+ "-icon.svg"
+	)
+	if ResourceLoader.exists(texture_path):
+		var texture = load(texture_path)
+		if texture != null:
+			icon.texture = texture
+			icon.self_modulate = '#ffffff'
 	else:
-		texture_path = (
-			"res://assets/ui/place_categories/"
-			+ Place.Categories.keys()[filter_type].to_lower()
-			+ "-icon.svg"
-		)
-		if ResourceLoader.exists(texture_path):
-			var texture = load(texture_path)
-			if texture != null:
-				icon.texture = texture
-				icon.self_modulate = '#ffffff'
-		else:
-			printerr("_update_place_category_icon texture_path not found ", texture_path)
-			
-		label.text = Place.Categories.keys()[filter_type].capitalize()
+		printerr("_update_place_category_icon texture_path not found ", texture_path)
+		
+	label.text = Place.Categories.keys()[filter_type].capitalize()
 
 
 func _on_label_text_submitted(new_text: String) -> void:

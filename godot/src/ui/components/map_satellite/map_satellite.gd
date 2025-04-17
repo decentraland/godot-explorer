@@ -43,6 +43,8 @@ const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 const SIDE_BAR_WIDTH = 300
 var map_is_on_top: bool = false
 var filtered_places: Array = []
+var active_filter: int = -1
+var poi_places = []
 
 func _ready():
 	map_searchbar.clean_searchbar.connect(_close_from_searchbar)
@@ -82,7 +84,7 @@ func _ready():
 			else:
 				push_error("Error loading map image: " + image_path)
 	
-	var poi_places = await async_load_category('poi')
+	poi_places = await async_load_category('poi')
 	for i in range(poi_places.size()):
 		spawn_pin(13, poi_places[i])
 		
@@ -175,8 +177,6 @@ func update_label_settings() -> void:
 	coordinates_label.label_settings.outline_size = int(OUTLINE_SIZE / camera.zoom.x)
 
 func spawn_pin(category:int, place):
-	if category == 0: #if category is ALL doesn't draw any pin
-		return
 	var pin = MAP_PIN.instantiate()
 	var center_coord:Vector2i
 	if place.positions.size() != 1:
@@ -246,6 +246,7 @@ func async_load_category(category:String) -> Array:
 
 
 func _on_filter_button_toggled(pressed: bool, type: int):
+	print('type: ', Place.Categories.keys()[type].to_lower())
 	if not pressed:
 		filtered_places = []
 		for child in map.get_children():
@@ -256,20 +257,22 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 			map_searchbar.reset()
 		_close_sidebar()
 	else:
-		var poi_places = await async_load_category(Place.Categories.keys()[type].to_lower())
-		for i in range(poi_places.size()):
-			var place = poi_places[i]
+		active_filter = type
+		filtered_places = await async_load_category(Place.Categories.keys()[type].to_lower())
+		for i in range(filtered_places.size()):
+			var place = filtered_places[i]
 			if place.title == "Empty":
 				continue
+			#if place in poi_places:
+				#continue
 			spawn_pin(type, place)
 			create_place_card(place)
 		_open_sidebar()
 	
-		if Place.Categories.keys()[type].to_lower() != 'all':
-			map_searchbar.filter_type = type
-			map_searchbar.update_filtered_category()
-		else:
-			map_searchbar.reset()
+		
+		map_searchbar.filter_type = type
+		map_searchbar.update_filtered_category()
+		
 
 
 func _on_color_rect_gui_input(event: InputEvent) -> void:
@@ -288,7 +291,7 @@ func _close_sidebar()->void:
 
 func _close_from_searchbar():
 	for child in filter_container.get_children():
-		if child is Button and child.toggle_mode:
+		if child is Button and child.toggle_mode and child.filter_type == active_filter:
 			child.button_pressed = false
 	_close_sidebar()
 	
