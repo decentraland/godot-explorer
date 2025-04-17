@@ -22,6 +22,7 @@ var distance
 const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
 const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn")
 const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
+const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archipelago_circle.tscn")
 
 @onready var margin_container: MarginContainer = $MarginContainer
 @onready var cards_v_box_container: VBoxContainer = %CardsVBoxContainer
@@ -98,6 +99,8 @@ func _ready():
 	for i in range(live_places.size()):
 		spawn_pin(14, live_places[i])	
 		
+	_async_draw_archipelagos()
+	#var circle = ARCHIPELAGO_CIRCLE.instantiate()
 	
 		
 # Maybe we can remove this function (the viewport isn't resizable) 
@@ -202,7 +205,6 @@ func spawn_pin(category:int, place):
 			center_coord = Vector2i(x,y)
 	else:
 		center_coord = Vector2i(place.x, -place.y)
-		print(center_coord)
 		pin.scene_title = place.name
 		
 	var pos = get_parcel_position(center_coord) - pin.size / 2
@@ -360,3 +362,49 @@ func _clean_list_and_pins()->void:
 		if child is MapPin:
 			if child.pin_category != 13 and child.pin_category != 14 :
 					child.queue_free() 
+
+func _async_draw_archipelagos() -> void:
+	const URL = "https://archipelago-ea-stats.decentraland.org/hot-scenes"
+	var promise: Promise = Global.http_requester.request_json(URL, HTTPClient.METHOD_GET, "", {})
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	var archipelagos_array = []
+	if result is PromiseError:
+		printerr("Error requesting archipelagos: ", result.get_error())
+	else:
+		archipelagos_array = result.get_string_response_as_json()
+		for archipelago in archipelagos_array:
+			var circle = ARCHIPELAGO_CIRCLE.instantiate()
+			var center_coord
+			if archipelago.parcels.size() != 1:
+				center_coord = get_center_from_rect_coords_array(archipelago.parcels)
+			else:
+				var x = archipelago.parcels[0][0]
+				var y = -archipelago.parcels[0][1]
+				center_coord = Vector2i(x,-y)
+			print(archipelago.name, "at ", center_coord)
+			var radius = archipelago.usersTotalCount * 100
+			var pos = get_parcel_position(center_coord)
+			map.add_child(circle)
+			circle.set_circle(pos, radius)
+			
+			
+func get_center_from_rect_coords_array(coords: Array) -> Vector2i:
+	var min_x = INF
+	var max_x = -INF
+	var min_y = INF
+	var max_y = -INF
+
+	for coord_array in coords:
+		var x = coord_array[0]
+		var y = -coord_array[1]
+
+		min_x = min(min_x, x)
+		max_x = max(max_x, x)
+		min_y = min(min_y, y)
+		max_y = max(max_y, y)
+
+	var center_x = floor((min_x + max_x) / 2.0)
+	var center_y = floor((min_y + max_y) / -2.0)
+
+	return Vector2i(center_x, -center_y)
