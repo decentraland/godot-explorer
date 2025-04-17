@@ -15,7 +15,7 @@ var dragging := false
 var drag_start_mouse := Vector2()
 var drag_start_cam_pos := Vector2()
 const CLICK_THRESHOLD := 5.0
-const MIN_ZOOM := Vector2(0.5, 0.5)
+const MIN_ZOOM := Vector2(0.2, 0.2)
 const MAX_ZOOM := Vector2(1.5, 1.5)
 var distance
 
@@ -25,6 +25,8 @@ const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satell
 
 @onready var margin_container: MarginContainer = $MarginContainer
 @onready var cards_v_box_container: VBoxContainer = %CardsVBoxContainer
+@onready var cards_scroll_container: ScrollContainer = %CardsScrollContainer
+@onready var no_results: VBoxContainer = %NoResults
 
 @onready var cursor_marker: Sprite2D = %CursorMarker
 @onready var sub_viewport_container: SubViewportContainer = $SubViewportContainer
@@ -36,7 +38,6 @@ const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satell
 @onready var filter_container: HBoxContainer = %FilterContainer
 @onready var sidebar: Control = %Sidebar
 @onready var color_rect_close_sidebar: ColorRect = %ColorRectCloseSidebar
-@onready var cards_scroll_container: ScrollContainer = %CardsScrollContainer
 @onready var map_searchbar: PanelContainer = %MapSearchbar
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
@@ -44,11 +45,13 @@ const SIDE_BAR_WIDTH = 300
 var map_is_on_top: bool = false
 var filtered_places: Array = []
 var active_filter: int = -1
-var poi_places = []
+var poi_places_ids = []
+var live_places_ids = []
 
 func _ready():
 	map_searchbar.clean_searchbar.connect(_close_from_searchbar)
 	map_searchbar.submited_text.connect(_submitted_text_from_searchbar)
+	map_searchbar.reset()
 	color_rect_close_sidebar.hide()
 	sidebar.position = Vector2(color_rect_close_sidebar.size.x-5, 0)	
 	var group := ButtonGroup.new()
@@ -60,7 +63,7 @@ func _ready():
 		btn.filter_type = i
 		btn.connect("filter_toggled", Callable(self, "_on_filter_button_toggled"))
 		filter_container.add_child(btn)
-		
+			
 	map_viewport.size = size
 	
 	# Maybe we can remove this line
@@ -84,9 +87,18 @@ func _ready():
 			else:
 				push_error("Error loading map image: " + image_path)
 	
-	poi_places = await async_load_category('poi')
+		
+	var poi_places = await async_load_category('poi')
+	poi_places_ids = poi_places.map(func(poi_place): return poi_place.id )
 	for i in range(poi_places.size()):
 		spawn_pin(13, poi_places[i])
+		
+	var live_places = await async_load_category('live')
+	live_places_ids = live_places.map(func(live_place): return live_place.id )
+	for i in range(live_places.size()):
+		spawn_pin(14, live_places[i])	
+		
+	
 		
 # Maybe we can remove this function (the viewport isn't resizable) 
 func _on_screen_resized() -> void:
@@ -179,17 +191,22 @@ func update_label_settings() -> void:
 func spawn_pin(category:int, place):
 	var pin = MAP_PIN.instantiate()
 	var center_coord:Vector2i
-	if place.positions.size() != 1:
-		center_coord = get_center_from_rect_coords(place.positions)
+	if category != 14:
+		pin.scene_title = place.title
+		if place.positions.size() != 1:
+			center_coord = get_center_from_rect_coords(place.positions)
+		else:
+			var parts = place.positions[0].split(",")
+			var x = parts[0].to_int()
+			var y = -parts[1].to_int()
+			center_coord = Vector2i(x,y)
 	else:
-		var parts = place.positions[0].split(",")
-		var x = parts[0].to_int()
-		var y = -parts[1].to_int()
-		center_coord = Vector2i(x,y)
+		center_coord = Vector2i(place.x, -place.y)
+		print(center_coord)
+		pin.scene_title = place.name
 		
 	var pos = get_parcel_position(center_coord) - pin.size / 2
 	pin.pin_category = category
-	pin.scene_title = place.title
 	pin.z_index = cursor_marker.z_index+1
 	
 	pin.position = pos
@@ -224,10 +241,26 @@ func get_center_from_rect_coords(coords: Array) -> Vector2i:
 
 	return Vector2i(center_x, -center_y)
 
+func async_load_text_search(value: String) -> Array:
+	var url = "https://places.decentraland.org/api/places?search=%s&offset=0&limit=50&order_by=most_active&order=desc&with_realms_detail=true" % value
+	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
+	var result = await PromiseUtils.async_awaiter(promise)
+	if result is PromiseError:
+		printerr("Error searching places: ", result.get_error())
+		return []
+
+	var json: Dictionary = result.get_string_response_as_json()
+	if json.has("data"):
+		return json.data
+	else:
+		return []
+
 func async_load_category(category:String) -> Array:
 	var url: String
 	if category == 'all':
 		url = "https://places.decentraland.org/api/places?offset=0&limit=50&order_by=most_active&order=desc&with_realms_detail=true"
+	elif category == 'live':
+		url = "https://events.decentraland.org/api/events/?list=live"
 	else:
 		url = "https://places.decentraland.org/api/places?offset=0&limit=50&order_by=most_active&order=desc&categories=%s&with_realms_detail=true" % category
 
@@ -244,36 +277,39 @@ func async_load_category(category:String) -> Array:
 	else:
 		return []
 
-
 func _on_filter_button_toggled(pressed: bool, type: int):
-	print('type: ', Place.Categories.keys()[type].to_lower())
+	var places_to_show = 0
 	if not pressed:
 		filtered_places = []
-		for child in map.get_children():
-			if child is MapPin and child.pin_category == type:
-				child.queue_free()
-		for child in cards_v_box_container.get_children():
-			child.queue_free()
-			map_searchbar.reset()
+		_clean_list_and_pins()
+		map_searchbar.reset()
 		_close_sidebar()
 	else:
 		active_filter = type
 		filtered_places = await async_load_category(Place.Categories.keys()[type].to_lower())
+		
+			
 		for i in range(filtered_places.size()):
 			var place = filtered_places[i]
 			if place.title == "Empty":
 				continue
-			#if place in poi_places:
-				#continue
-			spawn_pin(type, place)
 			create_place_card(place)
+			places_to_show = places_to_show + 1
+			if place.id in poi_places_ids:
+				continue
+			spawn_pin(type, place)
+			
+		if places_to_show == 0:
+			no_results.show()
+			cards_scroll_container.hide()
+		else:
+			no_results.hide()
+			cards_scroll_container.show()
 		_open_sidebar()
 	
 		
 		map_searchbar.filter_type = type
 		map_searchbar.update_filtered_category()
-		
-
 
 func _on_color_rect_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
@@ -281,19 +317,46 @@ func _on_color_rect_gui_input(event: InputEvent) -> void:
 			_close_sidebar()
 			
 func _open_sidebar()->void:
-		var duration = .4
-		create_tween().tween_property(sidebar, "position", Vector2(size.x-sidebar.size.x, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	var duration = .4
+	create_tween().tween_property(sidebar, "position", Vector2(size.x-sidebar.size.x, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 
 func _close_sidebar()->void:
-		var duration = .4
-		create_tween().tween_property(sidebar, "position", Vector2(size.x-5, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
-		cards_scroll_container.scroll_vertical = 0
+	var duration = .4
+	create_tween().tween_property(sidebar, "position", Vector2(size.x-5, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	cards_scroll_container.scroll_vertical = 0
+	filtered_places = []
 
 func _close_from_searchbar():
 	for child in filter_container.get_children():
 		if child is Button and child.toggle_mode and child.filter_type == active_filter:
 			child.button_pressed = false
+	_clean_list_and_pins()
 	_close_sidebar()
 	
 func _submitted_text_from_searchbar(text:String):
+	var places_to_show = 0
+	_clean_list_and_pins()
+	filtered_places = await async_load_text_search(text)
+	for i in range(filtered_places.size()):
+			var place = filtered_places[i]
+			if place.title != "Empty":
+				create_place_card(place)
+				places_to_show = places_to_show + 1
+			if place.id in poi_places_ids:
+				continue
+			spawn_pin(0, place)
+	if places_to_show == 0:
+		no_results.show()
+		cards_scroll_container.hide()
+	else:
+		no_results.hide()
+		cards_scroll_container.show()
 	_open_sidebar()
+
+func _clean_list_and_pins()->void:
+	for child in cards_v_box_container.get_children():
+		child.queue_free()
+	for child in map.get_children():
+		if child is MapPin:
+			if child.pin_category != 13 and child.pin_category != 14 :
+					child.queue_free() 

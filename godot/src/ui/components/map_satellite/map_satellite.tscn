@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=4 uid="uid://duuasgi2pnb8k"]
+[gd_scene load_steps=26 format=4 uid="uid://duuasgi2pnb8k"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
 [ext_resource type="Texture2D" uid="uid://dmfk50m8cogvs" path="res://src/ui/components/map_satellite/assets/cursor.svg" id="2_h4gq0"]
@@ -6,6 +6,9 @@
 [ext_resource type="PackedScene" uid="uid://diojwgryptiuw" path="res://src/ui/components/map_satellite/map_searchbar.tscn" id="4_ju8cx"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_w1xks"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="5_qwbvm"]
+[ext_resource type="Texture2D" uid="uid://tf0rlaicf452" path="res://assets/ui/map/empty-search.svg" id="6_m7gk0"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="7_unheb"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_0jug1"]
 
 [sub_resource type="Image" id="Image_cdd5d"]
 data = {
@@ -391,6 +394,15 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
+[sub_resource type="LabelSettings" id="LabelSettings_iemrq"]
+font = ExtResource("7_unheb")
+font_size = 24
+font_color = Color(0.513233, 0.513233, 0.513233, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_77036"]
+font = ExtResource("8_0jug1")
+font_color = Color(0.513726, 0.513726, 0.513726, 1)
+
 [sub_resource type="Animation" id="Animation_lrm6h"]
 length = 0.001
 tracks/0/type = "value"
@@ -621,6 +633,7 @@ alignment = 1
 
 [node name="CardsScrollContainer" type="ScrollContainer" parent="Sidebar/MarginContainer2/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 3
@@ -632,7 +645,33 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 5
-alignment = 1
+
+[node name="NoResults" type="VBoxContainer" parent="Sidebar/MarginContainer2/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="TextureRect" type="TextureRect" parent="Sidebar/MarginContainer2/VBoxContainer/NoResults"]
+modulate = Color(1, 1, 1, 0.419608)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("6_m7gk0")
+stretch_mode = 3
+
+[node name="Label" type="Label" parent="Sidebar/MarginContainer2/VBoxContainer/NoResults"]
+layout_mode = 2
+text = "No results found"
+label_settings = SubResource("LabelSettings_iemrq")
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="Sidebar/MarginContainer2/VBoxContainer/NoResults"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+text = "Make sure your search is spelled correctly."
+label_settings = SubResource("LabelSettings_77036")
+horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -674,7 +713,6 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 0
-filter_type = 0
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 visible = false

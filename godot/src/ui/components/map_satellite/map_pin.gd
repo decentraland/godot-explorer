@@ -16,7 +16,8 @@ enum PinCategoryEnum {
 	CASINO,
 	SPORTS,
 	BUSINESS,
-	POI
+	POI,
+	LIVE
 }
 @export var pin_category: PinCategoryEnum
 @export var coord_x: int

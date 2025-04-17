@@ -33,7 +33,6 @@ size_flags_horizontal = 6
 size_flags_vertical = 3
 theme_override_styles/panel = ExtResource("1_7usvv")
 script = ExtResource("1_0aw6h")
-filter_type = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
