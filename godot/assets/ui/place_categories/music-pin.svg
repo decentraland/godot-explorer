@@ -1,0 +1,28 @@
+<svg width="34" height="38" viewBox="0 0 34 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_4312_25187)">
+<g filter="url(#filter0_d_4312_25187)">
+<path d="M15.6302 33.7315C16.391 34.488 17.609 34.488 18.3698 33.7315C19.5065 32.6013 21.8862 30.1139 23.9887 27.1201C26.0613 24.1687 28 20.5389 28 17.1587C28 11.0108 23.0899 6 17 6C10.9101 6 6 11.0108 6 17.1587C6 20.5389 7.93866 24.1687 10.0113 27.1201C12.1138 30.1139 14.4935 32.6013 15.6302 33.7315Z" fill="#FCFCFC" stroke="#FCFCFC" stroke-width="2"/>
+<path d="M3 11C3 6.58172 6.58172 3 11 3H23C27.4183 3 31 6.58172 31 11V23C31 27.4183 27.4183 31 23 31H11C6.58172 31 3 27.4183 3 23V11Z" fill="#691FA9"/>
+<path d="M3 11C3 6.58172 6.58172 3 11 3H23C27.4183 3 31 6.58172 31 11V23C31 27.4183 27.4183 31 23 31H11C6.58172 31 3 27.4183 3 23V11Z" stroke="#FCFCFC" stroke-width="2"/>
+<path d="M13.1602 23.5944V15.71L22.8545 12.918V21.139" stroke="#FCFCFC" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M13.1602 12.4092L22.8545 9.61719" stroke="#FCFCFC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="11.3453" cy="23.4742" r="2.32968" fill="#FCFCFC"/>
+<circle cx="21.0289" cy="21.1441" r="2.32968" fill="#FCFCFC"/>
+</g>
+</g>
+<defs>
+<filter id="filter0_d_4312_25187" x="0" y="2" width="34" height="37.2988" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="2"/>
+<feGaussianBlur stdDeviation="1"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.8 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_4312_25187"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_4312_25187" result="shape"/>
+</filter>
+<clipPath id="clip0_4312_25187">
+<rect width="34" height="38" fill="white"/>
+</clipPath>
+</defs>
+</svg>
