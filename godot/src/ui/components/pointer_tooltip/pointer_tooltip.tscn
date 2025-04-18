@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://mc4jrvowdpxp"]
 
-[ext_resource type="Script" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.gd" id="1_qf3d8"]
+[ext_resource type="Script" uid="uid://didpiev30ccjh" path="res://src/ui/components/pointer_tooltip/pointer_tooltip.gd" id="1_qf3d8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_puane"]
 bg_color = Color(0.6, 0.6, 0.6, 0.168627)

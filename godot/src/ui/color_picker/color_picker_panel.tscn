@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://djuo7hndjhpas"]
 
-[ext_resource type="Script" path="res://src/ui/color_picker/color_picker_panel.gd" id="1_vgcr1"]
+[ext_resource type="Script" uid="uid://bwjejb33e52wo" path="res://src/ui/color_picker/color_picker_panel.gd" id="1_vgcr1"]
 [ext_resource type="PackedScene" uid="uid://c0wiiuanid2fw" path="res://src/ui/components/custom_slider/custom_background_slider.tscn" id="2_h35qg"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xl22q"]

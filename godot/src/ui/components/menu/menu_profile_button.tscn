@@ -1,6 +1,6 @@
 [gd_scene load_steps=8 format=3 uid="uid://ijchr0b1hj8w"]
 
-[ext_resource type="Script" path="res://src/ui/components/menu/menu_profile_button.gd" id="1_8lo53"]
+[ext_resource type="Script" uid="uid://bcv68bucyd0ey" path="res://src/ui/components/menu/menu_profile_button.gd" id="1_8lo53"]
 [ext_resource type="Texture2D" uid="uid://c3y600q1cirt5" path="res://assets/ui/ProfileExample.png" id="3_1yd2v"]
 [ext_resource type="PackedScene" uid="uid://di2rgjpkv0c11" path="res://src/ui/components/label_avatar_name/label_avatar_name.tscn" id="3_31d1k"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_vryu4"]

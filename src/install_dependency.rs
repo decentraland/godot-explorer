@@ -164,9 +164,9 @@ fn get_godot_url() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("linux_editor.x86_64.zip".to_string()),
-        ("windows", "x86_64") => Some("windows_editor_x86_64.exe.zip".to_string()),
-        ("macos", _) => Some("godot.macos.editor.universal.zip".to_string()),
+        ("linux", "x86_64") => Some("godot.linux.editor.x86_64.zip".to_string()),
+        ("windows", "x86_64") => Some("godot.windows.editor.x86_64.exe.zip".to_string()),
+        ("macos", _) => Some("godot.macos.editor.arm64.zip".to_string()),
         _ => None,
     }?;
 
@@ -193,9 +193,9 @@ pub fn get_godot_executable_path() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("linux_editor.x86_64".to_string()),
-        ("windows", "x86_64") => Some("windows_editor_x86_64.exe".to_string()),
-        ("macos", _) => Some("godot.macos.editor.universal".to_string()),
+        ("linux", "x86_64") => Some("godot.linux.editor.x86_64".to_string()),
+        ("windows", "x86_64") => Some("godot.windows.editor.x86_64.exe".to_string()),
+        ("macos", _) => Some("godot.macos.editor.arm64".to_string()),
         _ => None,
     }?;
 
@@ -226,7 +226,7 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
         format!("{BIN_FOLDER}godot").as_str(),
         Some(format!("{GODOT_CURRENT_VERSION}.executable.zip")),
     )?;
-
+    
     let program_path = format!("{BIN_FOLDER}godot/{}", get_godot_executable_path().unwrap());
     let dest_program_path = format!("{BIN_FOLDER}godot/godot4_bin");
 
@@ -239,12 +239,11 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
         }
         _ => (),
     };
-
     fs::copy(program_path, dest_program_path.as_str())?;
 
-    if !skip_download_templates {
+    /*if !skip_download_templates {
         prepare_templates(platforms)?;
-    }
+    }*/
 
     Ok(())
 }

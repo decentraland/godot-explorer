@@ -1,6 +1,6 @@
 [gd_resource type="Sky" load_steps=18 format=3 uid="uid://l82r2nfrgcbx"]
 
-[ext_resource type="Shader" path="res://shaders/sky.gdshader" id="1_bggni"]
+[ext_resource type="Shader" uid="uid://cpu82bv2y58bl" path="res://shaders/sky.gdshader" id="1_bggni"]
 
 [sub_resource type="Gradient" id="Gradient_o4o57"]
 offsets = PackedFloat32Array(0.140436, 0.837772)
@@ -66,18 +66,18 @@ width = 6
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fx4kt"]
 shader = ExtResource("1_bggni")
-shader_parameter/energy = 1.0
-shader_parameter/gamma = 1.0
-shader_parameter/dither_range = 0.1
-shader_parameter/dither_amount = 256.0
-shader_parameter/floor_color = Color(9.14484e-07, 0.301144, 0.386001, 1)
 shader_parameter/clouds_tex = SubResource("NoiseTexture2D_x8sx6")
 shader_parameter/clouds_gradient_day = SubResource("GradientTexture1D_7vh77")
 shader_parameter/clouds_gradient_night = SubResource("GradientTexture1D_33c0e")
+shader_parameter/energy = 1.0
+shader_parameter/gamma = 1.0
 shader_parameter/tint_color_cycle_top = SubResource("GradientTexture1D_xttk3")
 shader_parameter/tint_color_cycle_bottom = SubResource("GradientTexture1D_g2lqa")
 shader_parameter/sun_color_cycle = SubResource("GradientTexture1D_c4tp5")
 shader_parameter/moon_color_cycle = SubResource("GradientTexture1D_nrrql")
+shader_parameter/dither_range = 0.1
+shader_parameter/dither_amount = 256.0
+shader_parameter/floor_color = Color(9.14484e-07, 0.301144, 0.386001, 1)
 
 [resource]
 sky_material = SubResource("ShaderMaterial_fx4kt")

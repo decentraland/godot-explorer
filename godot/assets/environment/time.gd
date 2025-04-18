@@ -18,7 +18,7 @@ func get_normalized_time():
 
 
 func _process(_delta: float) -> void:
-	if Global.fixed_skybox_time:
+	if Global.get_fixed_skybox_time():
 		normalized_time = 0.625  # 3pm
 	else:
 		normalized_time = (
