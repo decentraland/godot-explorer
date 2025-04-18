@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://d4j6yrsj1sbb8" path="res://src/ui/components/map/map.gd" id="1_1j46y"]
 [ext_resource type="PackedScene" uid="uid://dkqc3of5bdx2i" path="res://src/ui/components/map_shader/map_shader.tscn" id="2_el671"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_k36bc"]
-[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_wje51"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_wje51"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/components/discover/jump_in/jump_in.tscn" id="4_v4ox8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kgqjj"]

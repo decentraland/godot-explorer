@@ -14,8 +14,8 @@ config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
 run/main_scene="res://src/main.tscn"
 config/features=PackedStringArray("4.4")
-boot_splash/image="res://assets/ui/isologotipo.png"
 boot_splash/fullsize=false
+boot_splash/image="res://assets/ui/isologotipo.png"
 config/icon="res://decentraland_logo_squared.png"
 
 [audio]

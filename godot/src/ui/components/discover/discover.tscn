@@ -7,7 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="4_64qur"]
 [ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/debug_panel/icons/Clear.svg" id="4_ck13e"]
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/components/discover/places/places_generator.tscn" id="4_q55yj"]
-[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_b1byu"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_b1byu"]
 [ext_resource type="PackedScene" uid="uid://kfsjxah2khkg" path="res://src/ui/components/discover/places/custom_places_generator.tscn" id="7_ehm1e"]
 [ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="8_t3lcc"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="9_2ra1o"]
@@ -100,8 +100,8 @@ tracks/1/keys = {
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_xfp2p"]
 _data = {
-"RESET": SubResource("Animation_b4fwa"),
-"default": SubResource("Animation_mh318")
+&"RESET": SubResource("Animation_b4fwa"),
+&"default": SubResource("Animation_mh318")
 }
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w46h5"]
@@ -381,7 +381,7 @@ stretch_mode = 5
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="TextureRect/VBoxContainer/SafeMarginContainer/ScrollContainer/VBoxContainer/Banners"]
 libraries = {
-"": SubResource("AnimationLibrary_xfp2p")
+&"": SubResource("AnimationLibrary_xfp2p")
 }
 autoplay = "default"
 

@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://do4lb6hapbydx" path="res://src/ui/components/auth/lobby.gd" id="2_fu4v6"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="3_mwmw7"]
 [ext_resource type="Texture2D" uid="uid://caocucxv324yx" path="res://assets/ui/isologotipo.svg" id="3_p5qhj"]
-[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_wk266"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_wk266"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_ghcwt"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="5_g62s5"]
 [ext_resource type="Texture2D" uid="uid://da50va4kkvhcp" path="res://assets/ui/sign-in/logged-bg.png" id="6_v8mot"]
@@ -18,8 +18,8 @@
 [ext_resource type="PackedScene" uid="uid://cf78je1y8dpu3" path="res://src/ui/components/auth/android_login.tscn" id="14_a8lfo"]
 [ext_resource type="Texture2D" uid="uid://h30g74davjyw" path="res://assets/ui/sign-in/dices.svg" id="14_ku160"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="15_n5dun"]
-[ext_resource type="Script" path="res://src/ui/components/utils/orientation_container.gd" id="17_ca7yb"]
-[ext_resource type="Script" path="res://src/ui/components/utils/hide_orientation.gd" id="18_10jcs"]
+[ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/components/utils/orientation_container.gd" id="17_ca7yb"]
+[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="18_10jcs"]
 
 [sub_resource type="Gradient" id="Gradient_rgwma"]
 offsets = PackedFloat32Array(0.373134, 1)
