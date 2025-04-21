@@ -17,6 +17,8 @@ var stored_camera_mode_before_block: Global.CameraMode
 
 var current_direction: Vector3 = Vector3()
 
+var time_falling := 0.0
+
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
 @onready var direction: Vector3 = Vector3(0, 0, 0)
@@ -107,10 +109,19 @@ func _physics_process(dt: float) -> void:
 
 	var on_floor = is_on_floor() or position.y <= 0.0
 	jump_time -= dt
+
+	if !on_floor:
+		time_falling += dt
+	else:
+		time_falling = 0.0
+
 	if not on_floor:
-		avatar.land = false
+		var in_grace_time = (
+			time_falling < .2 and !Input.is_action_pressed("ia_jump") and jump_time < 0
+		)
+		avatar.land = in_grace_time
 		avatar.rise = velocity.y > .3
-		avatar.fall = velocity.y < -.3
+		avatar.fall = velocity.y < -.3 && !in_grace_time
 		velocity.y -= gravity * dt
 	elif Input.is_action_pressed("ia_jump") and jump_time < 0:
 		velocity.y = jump_velocity_0

@@ -210,6 +210,7 @@ impl SerializedProfile {
                 .iter()
                 .map(|emote| emote.urn.clone())
                 .collect(),
+            ..Default::default()
         }
     }
 

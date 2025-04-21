@@ -6,16 +6,15 @@ static func connect_global_signal(root: Window):
 
 
 static func get_max_ui_zoom(root: Window) -> float:
-	var screen_size = root.size
+	var screen_size: Vector2 = root.size
 
-	# Should it matter if it's on Landscape or portrait?
-	# TODO: for now, there is no portrait support
-	# var orientation = DisplayServer.screen_get_orientation(root.current_screen)
+	var base_resolution: Vector2
+	base_resolution = Vector2(720, 720)
 
-	var x_factor: float = screen_size.x / 1280.0
-	var y_factor: float = screen_size.y / 720.0
+	var x_factor: float = screen_size.x / base_resolution.x
+	var y_factor: float = screen_size.y / base_resolution.y
+
 	var factor_limit: float = max(min(x_factor, y_factor), 1.0)
-
 	return factor_limit
 
 
@@ -34,23 +33,16 @@ static func get_ui_zoom_available(root: Window) -> Dictionary:
 	return ret
 
 
+# Simple DPI-based scaling without aggressive resolution clamp
 static func apply_ui_zoom(root: Window):
-	var factor = max(0.75, min(get_max_ui_zoom(root), Global.get_config().ui_zoom))
+	var screen_size: Vector2 = root.size
+	var base_resolution: Vector2 = Vector2(720, 720)
+	var scale_x = screen_size.x / base_resolution.x
+	var scale_y = screen_size.y / base_resolution.y
 
-	if Global.get_config().ui_zoom < 0.0:
-		var dpi := DisplayServer.screen_get_dpi()
-
-		if dpi < 120:
-			factor = 1.0
-		elif dpi < 240:
-			factor = 1.5
-		else:
-			factor = 2.0
-
-		factor = max(0.75, min(get_max_ui_zoom(root), factor))
-		Global.get_config().ui_zoom = factor
-
-	root.content_scale_factor = factor
+	# Choose the smaller scale to ensure content always fits on screen
+	var scale = min(scale_x, scale_y)
+	root.content_scale_factor = scale
 
 
 static func apply_window_config() -> void:

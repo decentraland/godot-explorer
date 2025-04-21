@@ -1,65 +1,102 @@
-extends PlaceItem
+class_name JumpInWrapper
+extends Control
 
 signal jump_in(position: Vector2i, realm: String)
 
-@export var location: Vector2i = Vector2i(0, 0)
-
-@export var realm: String = Realm.MAIN_REALM
-
-@export var realm_title: String = "Genesis City"
-
-@onready var label_location := %Label_Location
-
-@onready var label_realm := %Label_Realm
-
-@onready var label_creator := %Label_Creator
-
-@onready var container_creator := %HBoxContainer_Creator
+@onready var panel_jump_in_portrait: JumpIn = %PanelJumpInPortrait
+@onready var panel_jump_in_landscape: JumpIn = %PanelJumpInLandscape
+@onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
 
 
 func _ready():
-	super()
-	set_location(location)
+	panel_jump_in_portrait.jump_in.connect(self._emit_jump_in)
+	panel_jump_in_landscape.jump_in.connect(self._emit_jump_in)
+	panel_jump_in_portrait.close.connect(self._close)
+	panel_jump_in_landscape.close.connect(self._close)
+	texture_progress_bar.hide()
 
 
-func set_location(_location: Vector2i):
-	location = _location
-	label_location.text = "%s, %s" % [_location.x, _location.y]
+func _emit_jump_in(position: Vector2i, realm: String):
+	jump_in.emit(position, realm)
 
 
-func set_realm(_realm: String, _realm_title: String):
-	label_realm.text = _realm_title
-	realm = _realm
+func _close():
+	self.hide()
+	UiSounds.play_sound("mainmenu_widget_close")
 
 
-func set_creator(_creator: String):
-	container_creator.visible = not _creator.is_empty()
-	label_creator.text = _creator
+func async_load_place_position(position: Vector2i):
+	panel_jump_in_portrait.hide()
+	panel_jump_in_landscape.hide()
+	show()
+	texture_progress_bar.show()
+	var url: String = "https://places.decentraland.org/api/places?limit=1"
+	url += "&positions=%d,%d" % [position.x, position.y]
+
+	var headers = {"Content-Type": "application/json"}
+	var promise: Promise = Global.http_requester.request_json(
+		url, HTTPClient.METHOD_GET, "", headers
+	)
+	var result = await PromiseUtils.async_awaiter(promise)
+
+	if result is PromiseError:
+		printerr("Error request places", result.get_error())
+		return
+
+	var json: Dictionary = result.get_string_response_as_json()
+
+	if json.data.is_empty():
+		var unknown_place: Dictionary = {
+			"base_position": "%d,%d" % [position.x, position.y], "title": "Unknown place"
+		}
+		set_data(unknown_place)
+	else:
+		set_data(json.data[0])
+	texture_progress_bar.hide()
+	show_animation()
 
 
 func set_data(item_data):
-	super(item_data)
-
-	var location_vector = item_data.get("base_position", "0,0").split(",")
-	if location_vector.size() == 2:
-		set_location(Vector2i(int(location_vector[0]), int(location_vector[1])))
-
-	set_creator(_get_or_empty_string(item_data, "contact_name"))
-
-	var world = item_data.get("world", false)
-	if world:
-		var world_name = item_data.get("world_name")
-		set_realm(world_name, world_name)
-	else:
-		set_realm(Realm.MAIN_REALM, "Genesis City")
+	panel_jump_in_landscape.set_data(item_data)
+	panel_jump_in_portrait.set_data(item_data)
 
 
-func _on_button_jump_in_pressed():
-	jump_in.emit(location, realm)
+func show_animation() -> void:
+	self.show()
+	if panel_jump_in_portrait != null and panel_jump_in_landscape != null:
+		if Global.is_orientation_portrait():
+			panel_jump_in_portrait.show()
+			panel_jump_in_landscape.hide()
+			var animation_target_y = panel_jump_in_portrait.position.y
+			# Place the menu off-screen above (its height above the target position)
+			panel_jump_in_portrait.position.y = (
+				panel_jump_in_portrait.position.y + panel_jump_in_portrait.size.y
+			)
+
+			(
+				create_tween()
+				. tween_property(panel_jump_in_portrait, "position:y", animation_target_y, 0.5)
+				. set_trans(Tween.TRANS_SINE)
+				. set_ease(Tween.EASE_OUT)
+			)
+		else:
+			panel_jump_in_portrait.hide()
+			panel_jump_in_landscape.show()
+			var animation_target_x = panel_jump_in_landscape.position.x
+			# Place the menu off-screen above (its height above the target position)
+			panel_jump_in_landscape.position.x = (
+				panel_jump_in_landscape.position.x + panel_jump_in_landscape.size.x
+			)
+
+			(
+				create_tween()
+				. tween_property(panel_jump_in_landscape, "position:x", animation_target_x, 0.5)
+				. set_trans(Tween.TRANS_SINE)
+				. set_ease(Tween.EASE_OUT)
+			)
 
 
-func _on_gui_input(event):
+func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if !event.pressed:
-			self.hide()
-			UiSounds.play_sound("mainmenu_widget_close")
+			_close()

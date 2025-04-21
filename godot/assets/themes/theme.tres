@@ -630,6 +630,7 @@ Label/constants/shadow_outline_size = 1
 Label/font_sizes/font_size = 16
 Label/fonts/font = ExtResource("15_d4gyn")
 Label/styles/normal = SubResource("StyleBoxEmpty_uacby")
+LineEdit/colors/caret_color = Color(0, 0, 0, 1)
 LineEdit/colors/clear_button_color = Color(0.241125, 0.233138, 0.257121, 1)
 LineEdit/colors/clear_button_color_pressed = Color(0.0862745, 0.0823529, 0.0941176, 1)
 LineEdit/colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
