@@ -15,6 +15,7 @@ corner_radius_bottom_left = 8
 custom_minimum_size = Vector2(240, 50)
 offset_right = 240.0
 offset_bottom = 50.0
+mouse_filter = 1
 toggle_mode = true
 script = ExtResource("1_myf8i")
 

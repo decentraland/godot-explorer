@@ -124,6 +124,7 @@ func set_data(item_data):
 
 	var image_url = item_data.get("image", "")
 	if not image_url.is_empty():
+		set_image(texture_placeholder)
 		_async_download_image(image_url)
 	else:
 		set_image(texture_placeholder)

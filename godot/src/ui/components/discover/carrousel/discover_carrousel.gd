@@ -16,11 +16,6 @@ var _last_search_text: String = ""
 @onready var label_not_found = $VBoxContainer/Label_NotFound
 @onready var h_box_container_loading = $VBoxContainer/HBoxContainer_Loading
 
-@onready var timer_search_bounce = $MarginContainer/HBoxContainer/TimerSearchBounce
-@onready var line_edit_search = $MarginContainer/HBoxContainer/LineEdit_Search
-@onready var button_search_hide = $MarginContainer/HBoxContainer/Button_SearchHide
-@onready var button_search = $MarginContainer/HBoxContainer/Button_Search
-
 
 func _ready():
 	if is_instance_valid(generator):
@@ -30,8 +25,6 @@ func _ready():
 		scroll_container.item_container = item_container
 		scroll_container.request.connect(generator.on_request)
 		scroll_container.start()
-
-	button_search.visible = with_search
 
 
 func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void:
@@ -62,31 +55,6 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void
 		label_error.show()
 
 
-func _on_scroll_container_scroll_ended():
-	pass  # Replace with function body.
-
-
-func _on_timer_search_bounce_timeout():
-	if line_edit_search.text != _last_search_text:
-		_last_search_text = line_edit_search.text
-		generator.search_param = line_edit_search.text
-		scroll_container.restart()
-		return
-
-
-func _on_line_edit_search_text_changed(_new_text):
-	timer_search_bounce.start()
-
-
-func _on_button_search_pressed():
-	if not button_search_hide.visible:
-		button_search_hide.show()
-		line_edit_search.show()
-		line_edit_search.text = ""
-		line_edit_search.call_deferred("grab_focus")
-
-
-func _on_button_search_hide_pressed():
-	button_search_hide.hide()
-	line_edit_search.hide()
-	line_edit_search.text = ""
+func set_search_param(new_search_param: String):
+	generator.search_param = new_search_param
+	scroll_container.restart()

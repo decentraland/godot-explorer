@@ -211,7 +211,7 @@ pub fn copy_ffmpeg_libraries(
     dest_folder: String,
     link_libs: bool,
 ) -> Result<(), anyhow::Error> {
-    if target == "windows" {
+    if target == "win64" {
         // copy ffmpeg .dll
         let ffmpeg_dll_folder = format!("{BIN_FOLDER}ffmpeg/ffmpeg-6.0-full_build-shared/bin");
 

@@ -6,7 +6,7 @@
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://cul43nr1eb422" path="res://src/ui/components/minimap/minimap.tscn" id="4_6aqla"]
 [ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
-[ext_resource type="Script" path="res://src/ui/components/safe_margin_container/safe_margin_container.gd" id="5_c8ksg"]
+[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="5_c8ksg"]
 [ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/menu/menu.tscn" id="5_mso44"]
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="7_1fkrq"]
 [ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/button_touch_action/button_touch_action.tscn" id="7_oofwd"]
@@ -46,6 +46,7 @@ texture_filter = 0
 script = ExtResource("1_5n8xk")
 
 [node name="world" type="Node3D" parent="."]
+unique_name_in_owner = true
 
 [node name="StaticBody3D" type="StaticBody3D" parent="world"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
@@ -68,7 +69,17 @@ unique_name_in_owner = true
 [node name="EnvironmentSelector" parent="world" instance=ExtResource("4_f5cdi")]
 unique_name_in_owner = true
 
+[node name="SceneUIContainer" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_c8ksg")
+
 [node name="UI" type="Control" parent="."]
+unique_name_in_owner = true
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -80,6 +91,7 @@ mouse_filter = 1
 theme = ExtResource("4_2vs87")
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="UI"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -94,6 +106,7 @@ layout_mode = 2
 mouse_filter = 2
 
 [node name="MobileUI" type="Control" parent="UI/SafeMarginContainer/InteractableHUD"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -220,6 +233,7 @@ texture = ExtResource("8_ttlm2")
 expand_mode = 2
 
 [node name="VirtualJoystick_Left" parent="UI/SafeMarginContainer/InteractableHUD/MobileUI" instance=ExtResource("9_lxw33")]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = -1
 anchor_right = 0.352
@@ -249,6 +263,7 @@ icon_alignment = 1
 expand_icon = true
 
 [node name="Button_LoadScenes" type="Button" parent="UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 focus_mode = 0
@@ -261,6 +276,7 @@ expand_icon = true
 layout_mode = 1
 
 [node name="Panel_Chat" parent="UI/SafeMarginContainer/InteractableHUD" instance=ExtResource("9_4ktln")]
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 20.0
 offset_top = 90.0
@@ -333,6 +349,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Control_Minimap" parent="UI" instance=ExtResource("4_6aqla")]
+unique_name_in_owner = true
 visible = false
 anchors_preset = 0
 anchor_right = 0.0
@@ -343,6 +360,7 @@ offset_right = 15.0
 offset_bottom = 15.0
 
 [node name="Control_Menu" parent="UI" instance=ExtResource("5_mso44")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
@@ -355,6 +373,7 @@ offset_right = 180.0
 offset_bottom = 140.0
 
 [node name="Loading" parent="UI" instance=ExtResource("17_0blod")]
+unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
