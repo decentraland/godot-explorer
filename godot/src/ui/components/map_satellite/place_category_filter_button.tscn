@@ -40,7 +40,6 @@ theme_override_styles/pressed = ExtResource("2_vygvd")
 theme_override_styles/normal_mirrored = ExtResource("1_qeu7p")
 theme_override_styles/normal = ExtResource("1_qeu7p")
 toggle_mode = true
-action_mode = 0
 button_group = ExtResource("3_ayrlq")
 text = "Body"
 icon = ExtResource("3_7q1yk")

@@ -5,11 +5,13 @@ signal clicked_parcel(parcel: Vector2i)
 
 const TILE_SIZE = Vector2(512, 512)
 const GRID_SIZE = Vector2(16, 16)
-const MAP_SIZE = TILE_SIZE * GRID_SIZE
 const PARCELS_PER_TILE = Vector2(20, 20)
 const PARCEL_SIZE = TILE_SIZE / PARCELS_PER_TILE
-const PARCEL_OFFSET = Vector2i(152,152)
+# to generate a map with boundaries in -170,-170 and 170, 170
+const MAP_SIZE = PARCEL_SIZE * Vector2(340,340)
+const PARCEL_OFFSET = Vector2i(170,170)
 const MAP_CENTER = MAP_SIZE / 2
+const TILE_DISPLACEMENT = Vector2(18,18) * PARCEL_SIZE
 
 var dragging := false
 var drag_start_mouse := Vector2()
@@ -29,6 +31,8 @@ const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archip
 @onready var cards_scroll_container: ScrollContainer = %CardsScrollContainer
 @onready var no_results: VBoxContainer = %NoResults
 
+@onready var archipelagos_control: Control = %ArchipelagosControl
+
 @onready var cursor_marker: Sprite2D = %CursorMarker
 @onready var sub_viewport_container: SubViewportContainer = $SubViewportContainer
 @onready var map_viewport: SubViewport = %MapViewport
@@ -40,6 +44,7 @@ const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archip
 @onready var sidebar: Control = %Sidebar
 @onready var color_rect_close_sidebar: ColorRect = %ColorRectCloseSidebar
 @onready var map_searchbar: PanelContainer = %MapSearchbar
+@onready var check_box: CheckBox = $MarginContainer2/CheckBox
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 const SIDE_BAR_WIDTH = 300
@@ -50,6 +55,7 @@ var poi_places_ids = []
 var live_places_ids = []
 
 func _ready():
+	archipelagos_control.visible = check_box.button_pressed
 	map_searchbar.clean_searchbar.connect(_close_from_searchbar)
 	map_searchbar.submited_text.connect(_submitted_text_from_searchbar)
 	map_searchbar.reset()
@@ -65,12 +71,12 @@ func _ready():
 		btn.connect("filter_toggled", Callable(self, "_on_filter_button_toggled"))
 		filter_container.add_child(btn)
 			
-	map_viewport.size = size
-	
+	map_viewport.size = MAP_SIZE
+	map.size = MAP_SIZE
 	# Maybe we can remove this line
 	get_viewport().connect("size_changed", self._on_screen_resized)
 
-	center_camera_on_genesis_plaza()
+	center_camera_on_parcel(Vector2i(0,1))
 	
 	
 	# Drawing the entire map using tiles
@@ -83,7 +89,7 @@ func _ready():
 				tex_rect.texture = tex
 				tex_rect.stretch_mode = TextureRect.STRETCH_SCALE
 				tex_rect.size = TILE_SIZE
-				tex_rect.position = Vector2(x * TILE_SIZE.x, y * TILE_SIZE.y)
+				tex_rect.position = Vector2(x * TILE_SIZE.x, y * TILE_SIZE.y) + TILE_DISPLACEMENT
 				map.add_child(tex_rect)
 			else:
 				push_error("Error loading map image: " + image_path)
@@ -130,12 +136,12 @@ func _on_map_gui_input(event: InputEvent) -> void:
 			if MAP_SIZE.x * new_zoom.x >= size.x and MAP_SIZE.y * new_zoom.y >= size.y:
 				camera.zoom = clamp(new_zoom, MIN_ZOOM, MAX_ZOOM)
 
-		update_label_settings()
+		update_label_settings(camera.zoom)
 		
 	elif event is InputEventMouseMotion:
 		if dragging:
 			var delta = event.position - drag_start_mouse
-			camera.position = drag_start_cam_pos - delta * camera.zoom
+			camera.position = drag_start_cam_pos - delta 
 		
 	clamp_camera_position()
 
@@ -162,10 +168,16 @@ func _process(_delta):
 	elif not map_is_on_top and not margin_container.visible:
 		animation_player.play('show_filters')
 
-func center_camera_on_genesis_plaza() -> void:
-	camera.position = (TILE_SIZE * GRID_SIZE / 2) - Vector2(180, 190)
-	camera.zoom = Vector2(1, 1)
-
+func center_camera_on_parcel(parcel:Vector2i) -> void:
+	var zoom_on_parcel = Vector2.ONE
+	var target_position = get_parcel_position(parcel)
+	var tween = create_tween()
+	tween.tween_property(camera, "position", target_position, 0.3).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	tween.tween_property(camera, "zoom", zoom_on_parcel, 0.3).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	
+	await tween.finished
+	update_label_settings(zoom_on_parcel)
+	
 func handle_click(event_position:Vector2)-> void:
 	var coords = event_position / PARCEL_SIZE
 	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
@@ -177,19 +189,20 @@ func get_parcel_position(parcel: Vector2i) -> Vector2:
 	return parcel_position
 
 func show_cursor_at_parcel(parcel: Vector2i):
+	center_camera_on_parcel(parcel)
 	var pos = get_parcel_position(parcel)
 	cursor_marker.position = pos
 	cursor_marker.visible = true
 	
 	coordinates_label.text = '%s, %s' % [parcel.x, -parcel.y]
 	coordinates_label.show()
-	update_label_settings()
+	update_label_settings(camera.zoom)
 
-func update_label_settings() -> void:
+func update_label_settings(target_zoom) -> void:
 	const FONT_SIZE = 18
 	const OUTLINE_SIZE = 6
-	coordinates_label.label_settings.font_size = int(FONT_SIZE / camera.zoom.x)
-	coordinates_label.label_settings.outline_size = int(OUTLINE_SIZE / camera.zoom.x)
+	coordinates_label.label_settings.font_size = int(FONT_SIZE / target_zoom.x)
+	coordinates_label.label_settings.outline_size = int(OUTLINE_SIZE / target_zoom.x)
 
 func spawn_pin(category:int, place):
 	var pin = MAP_PIN.instantiate()
@@ -216,8 +229,12 @@ func spawn_pin(category:int, place):
 
 func create_place_card(place)->void:
 	var item = DISCOVER_CARROUSEL_ITEM.instantiate()
+	item.item_pressed.connect(_item_pressed)
 	cards_v_box_container.add_child(item)
 	item.set_data(place)
+
+func _item_pressed(place)->void:
+	show_cursor_at_parcel(get_center_from_rect_coords(place.positions))
 
 func get_center_from_rect_coords(coords: Array) -> Vector2i:
 	var min_x = INF
@@ -382,10 +399,9 @@ func _async_draw_archipelagos() -> void:
 				var x = archipelago.parcels[0][0]
 				var y = -archipelago.parcels[0][1]
 				center_coord = Vector2i(x,-y)
-			print(archipelago.name, "at ", center_coord)
-			var radius = archipelago.usersTotalCount * 100
+			var radius = 50 + archipelago.usersTotalCount * 10
 			var pos = get_parcel_position(center_coord)
-			map.add_child(circle)
+			archipelagos_control.add_child(circle)
 			circle.set_circle(pos, radius)
 			
 			
@@ -408,3 +424,7 @@ func get_center_from_rect_coords_array(coords: Array) -> Vector2i:
 	var center_y = floor((min_y + max_y) / -2.0)
 
 	return Vector2i(center_x, -center_y)
+
+
+func _on_check_box_toggled(toggled_on: bool) -> void:
+	archipelagos_control.visible = toggled_on

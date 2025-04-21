@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=4 uid="uid://duuasgi2pnb8k"]
+[gd_scene load_steps=26 format=4 uid="uid://duuasgi2pnb8k"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
 [ext_resource type="Texture2D" uid="uid://dmfk50m8cogvs" path="res://src/ui/components/map_satellite/assets/cursor.svg" id="2_h4gq0"]
@@ -379,8 +379,6 @@ font = ExtResource("3_r45jv")
 outline_size = 6
 outline_color = Color(0, 0, 0, 1)
 
-[sub_resource type="CurveTexture" id="CurveTexture_ckpnh"]
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2yfa7"]
 bg_color = Color(0.92549, 0.921569, 0.929412, 1)
 border_color = Color(0.988235, 0.988235, 0.988235, 1)
@@ -556,7 +554,7 @@ mouse_filter = 1
 [node name="CursorMarker" type="Sprite2D" parent="SubViewportContainer/MapViewport/Map"]
 unique_name_in_owner = true
 z_index = 5
-position = Vector2(100, 100)
+position = Vector2(-100, 100)
 texture = ExtResource("2_h4gq0")
 
 [node name="CoordinatesLabel" type="Label" parent="SubViewportContainer/MapViewport/Map/CursorMarker"]
@@ -587,11 +585,17 @@ unique_name_in_owner = true
 position_smoothing_enabled = true
 position_smoothing_speed = 40.0
 
-[node name="TextureRect" type="TextureRect" parent="SubViewportContainer/MapViewport/Map"]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-texture = SubResource("CurveTexture_ckpnh")
+[node name="ArchipelagosControl" type="Control" parent="SubViewportContainer/MapViewport/Map"]
+unique_name_in_owner = true
+visible = false
+z_index = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="Sidebar" type="PanelContainer" parent="."]
 unique_name_in_owner = true
@@ -722,6 +726,40 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 0
 
+[node name="MarginContainer2" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="CheckBox" type="CheckBox" parent="MarginContainer2"]
+layout_mode = 2
+theme_override_colors/font_disabled_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("7_unheb")
+text = "Active areas"
+
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 visible = false
 
@@ -743,3 +781,4 @@ libraries = {
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="." method="_on_map_gui_input"]
+[connection signal="toggled" from="MarginContainer2/CheckBox" to="." method="_on_check_box_toggled"]
