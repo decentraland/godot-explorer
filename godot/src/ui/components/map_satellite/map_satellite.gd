@@ -237,6 +237,12 @@ func _item_pressed(place)->void:
 	show_cursor_at_parcel(get_center_from_rect_coords(place.positions))
 
 func get_center_from_rect_coords(coords: Array) -> Vector2i:
+	if coords.size() == 1:
+		var parts = coords[0].split(",")
+		var x = parts[0].to_int()
+		var y = -parts[1].to_int()
+		return Vector2i(x, y)
+		
 	var min_x = INF
 	var max_x = -INF
 	var min_y = INF
