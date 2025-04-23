@@ -195,7 +195,7 @@ pub fn get_godot_executable_path() -> Option<String> {
     let os_url = match (os, arch) {
         ("linux", "x86_64") => Some("godot.linux.editor.x86_64".to_string()),
         ("windows", "x86_64") => Some("godot.windows.editor.x86_64.exe".to_string()),
-        ("macos", _) => Some("godot.macos.editor.arm64".to_string()),
+        ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
         _ => None,
     }?;
 

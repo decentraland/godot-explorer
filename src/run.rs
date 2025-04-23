@@ -59,7 +59,7 @@ pub fn build(
     let build_cwd = adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?);
     run_cargo_build(&PathBuf::from(build_cwd), &build_args, &with_build_envs)?;
 
-    copy_library(&target, !release_mode, link_libs)?;
+    //copy_library(&target, !release_mode, link_libs)?;
 
     Ok(())
 }
