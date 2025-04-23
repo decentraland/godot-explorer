@@ -81,10 +81,6 @@ size_flags_vertical = 4
 fit_text_to_label = true
 font = ExtResource("4_vryu4")
 
-[node name="Container_Label" parent="HBoxContainer/LabelAvatarName" index="0"]
-offset_right = 100.0
-offset_bottom = 20.0
-
 [node name="Label_Name" parent="HBoxContainer/LabelAvatarName/Container_Label" index="0"]
 theme_override_fonts/font = ExtResource("4_vryu4")
 

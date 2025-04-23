@@ -18,6 +18,7 @@ var profile_panel_stylebox: StyleBoxFlat = null
 @onready var profile_button = %ProfileButton
 
 
+# gdlint:ignore = async-function-name
 func _ready():
 	profile_button.set_button_group(button_group)
 
@@ -30,6 +31,9 @@ func _ready():
 	profile_panel_stylebox.border_color = NORMAL_COLOR
 	profile_stylebox.bg_color = NORMAL_COLOR
 
+	var profile := Global.player_identity.get_profile_or_null()
+	if profile != null:
+		await _async_on_profile_changed(profile)
 	Global.player_identity.profile_changed.connect(self._async_on_profile_changed)
 
 

@@ -17,28 +17,31 @@ var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
 
-@onready var ui_root: Control = $UI
+@onready var ui_root: Control = %UI
+@onready var ui_safe_area: Control = %SceneUIContainer
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
 @onready var control_pointer_tooltip = %Control_PointerTooltip
 
-@onready var panel_chat = $UI/SafeMarginContainer/InteractableHUD/Panel_Chat
-@onready
-var button_load_scenes: Button = $UI/SafeMarginContainer/InteractableHUD/HBoxContainer_TopLeftMenu/Button_LoadScenes
+@onready var panel_chat = %Panel_Chat
+@onready var button_load_scenes: Button = %Button_LoadScenes
 
 @onready var label_fps = %Label_FPS
 @onready var label_ram = %Label_RAM
-@onready var control_menu = $UI/Control_Menu
-@onready var control_minimap = $UI/Control_Minimap
-@onready var mobile_ui = $UI/SafeMarginContainer/InteractableHUD/MobileUI
-@onready
-var virtual_joystick: Control = $UI/SafeMarginContainer/InteractableHUD/MobileUI/VirtualJoystick_Left
+@onready var control_menu = %Control_Menu
+@onready var control_minimap = %Control_Minimap
+@onready var mobile_ui = %MobileUI
+@onready var virtual_joystick: Control = %VirtualJoystick_Left
 
-@onready var loading_ui = $UI/Loading
+@onready var loading_ui = %Loading
 
 @onready var button_mic = %Button_Mic
 @onready var emote_wheel = %EmoteWheel
+
+@onready var world: Node3D = %world
+
+@onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
 
 
 func _process(_dt):
@@ -84,6 +87,7 @@ func get_params_from_cmd():
 
 
 func _ready():
+	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
 
@@ -93,13 +97,13 @@ func _ready():
 		player = load("res://src/logic/player/player.tscn").instantiate()
 
 	player.set_name("Player")
-	$world.add_child(player)
+	world.add_child(player)
 
 	if Global.is_xr():
-		%Timer_BroadcastPosition.follow_node = player
+		timer_broadcast_position.follow_node = player
 		player.vr_screen.set_instantiate_scene(ui_root)
 	else:
-		%Timer_BroadcastPosition.follow_node = player.avatar
+		timer_broadcast_position.follow_node = player.avatar
 
 	emote_wheel.avatar_node = player.avatar
 
@@ -146,8 +150,8 @@ func _ready():
 	Global.scene_runner.console = self._on_scene_console_message
 	Global.scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
 	player.avatar.emote_triggered.connect(Global.scene_runner.on_primary_player_trigger_emote)
-	ui_root.add_child(Global.scene_runner.base_ui)
-	ui_root.move_child(Global.scene_runner.base_ui, 0)
+	ui_safe_area.add_child(Global.scene_runner.base_ui)
+	ui_safe_area.move_child(Global.scene_runner.base_ui, 0)
 
 	Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
 	Global.scene_fetcher.notify_pending_loading_scenes.connect(
@@ -400,12 +404,8 @@ func set_visible_ui(value: bool):
 
 	if value:
 		ui_root.show()
-		var ui_node = ui_root.get_parent().get_node("scenes_ui")
-		ui_node.reparent(ui_root)
 	else:
 		ui_root.hide()
-		var ui_node = ui_root.get_node("scenes_ui")
-		ui_node.reparent(ui_root.get_parent())
 
 
 func _on_control_menu_request_debug_panel(enabled):
