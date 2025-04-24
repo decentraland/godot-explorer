@@ -1,0 +1,108 @@
+# .github/workflows/publish-artifacts-to-s3.yml
+name: 📚 Publish Libs Artifacts
+on:
+    workflow_call:
+
+env:
+  S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+  S3_BUCKET: ${{ secrets.S3_BUCKET }}
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute folder hash
+        id: compute-hash
+        run: |
+          set -euo pipefail
+          echo "🔍 Computing SHA-256 over all .rs & .toml files..."
+          HASH=$(find . \
+            -type f \( -name '*.rs' -o -name '*.toml' \) \
+            -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            | sha256sum \
+            | awk '{print $1}')
+          echo "• Folder-hash = $HASH"
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+
+      - name: Check if hash folder exists in S3
+        id: check-s3
+        run: |
+          set -euo pipefail
+          HASH=${{ steps.compute-hash.outputs.hash }}
+          echo "🔎 Checking s3://$S3_BUCKET/$HASH/ ..."
+          if aws --endpoint-url "$S3_ENDPOINT" s3 ls "s3://$S3_BUCKET/$HASH/" | grep -q .; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Exit early if already uploaded
+        if: steps.check-s3.outputs.exists == 'true'
+        run: |
+          echo "✅ Artifacts for hash ${{ steps.compute-hash.outputs.hash }} already exist; skipping upload."
+          exit 0
+
+      # Only runs if !exists
+      - name: Download iOS artifact
+        if: steps.check-s3.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot_ios
+          path: artifacts/libdclgodot_ios
+
+      - name: Download Windows artifact
+        if: steps.check-s3.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot_windows
+          path: artifacts/libdclgodot_windows
+
+      - name: Download Android artifact
+        if: steps.check-s3.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot_android
+          path: artifacts/libdclgodot_android
+
+      - name: Download Linux artifact
+        if: steps.check-s3.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot_linux
+          path: artifacts/libdclgodot_linux
+
+      - name: Download macOS artifact
+        if: steps.check-s3.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot_macos
+          path: artifacts/libdclgodot_macos
+
+      - name: Upload artifacts to S3
+        if: steps.check-s3.outputs.exists == 'false'
+        run: |
+          set -euo pipefail
+          HASH=${{ steps.compute-hash.outputs.hash }}
+          echo "📤 Uploading artifacts to s3://$S3_BUCKET/$HASH/ …"
+
+          for dir in artifacts/libdclgodot_ios \
+                     artifacts/libdclgodot_windows \
+                     artifacts/libdclgodot_android \
+                     artifacts/libdclgodot_linux \
+                     artifacts/libdclgodot_macos; do
+
+            name=$(basename "$dir")
+            echo " • $name → s3://$S3_BUCKET/$HASH/$name/"
+            aws --endpoint-url "$S3_ENDPOINT" s3 cp \
+              "$dir" "s3://$S3_BUCKET/$HASH/$name/" \
+              --recursive
+          done
+
+          echo "✅ All artifacts uploaded under hash $HASH."
