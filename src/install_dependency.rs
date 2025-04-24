@@ -122,13 +122,13 @@ pub fn godot_export_templates_path() -> Option<String> {
     match os {
         "windows" => env::var("APPDATA")
             .ok()
-            .map(|appdata| format!("{}\\Godot\\export_templates\\{}\\", appdata, GODOT_CURRENT_VERSION)),
+            .map(|appdata| format!("{}\\Godot\\export_templates\\{}.stable\\", appdata, GODOT_CURRENT_VERSION)),
         "linux" => env::var("HOME")
             .ok()
-            .map(|home| format!("{}/.local/share/godot/export_templates/{}/", home, GODOT_CURRENT_VERSION)),
+            .map(|home| format!("{}/.local/share/godot/export_templates/{}.stable", home, GODOT_CURRENT_VERSION)),
         "macos" => env::var("HOME")
             .ok()
-            .map(|home| format!("{}/Library/Application Support/Godot/export_templates/{}/", home, GODOT_CURRENT_VERSION)),
+            .map(|home| format!("{}/Library/Application Support/Godot/export_templates/{}.stable/", home, GODOT_CURRENT_VERSION)),
         _ => None, // Unsupported OS
     }
 }
