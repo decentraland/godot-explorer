@@ -34,8 +34,7 @@ jobs:
         run: cargo run -- install --platforms windows
 
       - name: Build
-        working-directory: lib
-        run: cargo build --release
+        run: cargo run -- build --release
 
       - name: Test
         working-directory: lib
@@ -44,7 +43,6 @@ jobs:
       # Export section
       - name: Copy library (windows)
         run: |
-          cp lib/target/release/dclgodot.dll godot/lib/
           cp .bin/ffmpeg/ffmpeg-6.0-full_build-shared/bin/*.dll godot/lib/
 
       - name: Import Assets
