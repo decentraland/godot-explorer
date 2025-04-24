@@ -51,10 +51,11 @@ jobs:
           name: decentraland-godot-linux
           path: |
             exports/**/*
+          if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
           name: libdclgodot_linux
           path: |
             lib/target/release/libdclgodot.so
-    
+          if-no-files-found: error

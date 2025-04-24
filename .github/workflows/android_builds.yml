@@ -55,15 +55,18 @@ jobs:
         with:
           name: Android APK
           path: android-artifacts/
+          if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
           name: Meta Quest APK
           path: meta-quest-artifacts/
+          if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
           name: libdclgodot_android
           path: |
             lib/target/aarch64-linux-android/release/libdclgodot.so
+          if-no-files-found: error
