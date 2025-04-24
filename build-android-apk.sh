@@ -4,12 +4,6 @@ set -euo pipefail
 # Set the explorer path to the current working directory.
 EXPLORER_PATH="$(pwd)"
 
-# Clone the Godot Android template if it does not exist.
-if [ ! -d "${EXPLORER_PATH}/godot/android/" ]; then
-    echo "Checking out Godot Android template..."
-    git clone https://github.com/decentraland/godot-explorer-android-template "${EXPLORER_PATH}/godot/android"
-fi
-
 # Set JAVA_HOME if not already set.
 if [ -z "${JAVA_HOME:-}" ]; then
     export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"

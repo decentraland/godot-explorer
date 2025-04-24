@@ -116,13 +116,19 @@ fn get_persistent_path(persistent_cache: Option<String>) -> Option<String> {
     Some(cache_file_path.to_str().unwrap().to_string())
 }
 
-pub fn get_template_path() -> Option<String> {
+pub fn godot_export_templates_path() -> Option<String> {
     let os = env::consts::OS;
 
     match os {
-        "windows" => env::var("APPDATA").ok().map(|appdata| format!("{}\\Godot\\export_templates\\", appdata)),
-        "linux" => env::var("HOME").ok().map(|home| format!("{}/.config/godot/export_templates/", home)),
-        "macos" => env::var("HOME").ok().map(|home| format!("{}/Library/Application Support/Godot/export_templates/", home)),
+        "windows" => env::var("APPDATA")
+            .ok()
+            .map(|appdata| format!("{}\\Godot\\export_templates\\{}\\", appdata, GODOT_CURRENT_VERSION)),
+        "linux" => env::var("HOME")
+            .ok()
+            .map(|home| format!("{}/.local/share/godot/export_templates/{}/", home, GODOT_CURRENT_VERSION)),
+        "macos" => env::var("HOME")
+            .ok()
+            .map(|home| format!("{}/Library/Application Support/Godot/export_templates/{}/", home, GODOT_CURRENT_VERSION)),
         _ => None, // Unsupported OS
     }
 }

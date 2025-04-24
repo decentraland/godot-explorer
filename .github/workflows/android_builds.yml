@@ -61,3 +61,9 @@ jobs:
         with:
           name: Meta Quest APK
           path: meta-quest-artifacts/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libdclgodot_android
+          path: |
+            lib/target/aarch64-linux-android/release/libdclgodot.so
