@@ -12,7 +12,6 @@ func _draw():
 	draw_circle(size / 2, radius, circle_color)
 
 func set_circle(pos: Vector2, new_radius: float, color: Color = circle_color):
-	print("Draw circle at: ", pos, " radius: ", new_radius)
 	radius = new_radius
 	circle_color = color
 	position = pos - Vector2(radius, radius) # Centra el círculo

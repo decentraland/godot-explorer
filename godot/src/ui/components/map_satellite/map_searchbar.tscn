@@ -12,10 +12,10 @@ content_margin_top = 7.0
 content_margin_right = 7.0
 content_margin_bottom = 7.0
 bg_color = Color(0.847474, 0.847474, 0.847474, 1)
-corner_radius_top_left = 20
-corner_radius_top_right = 20
-corner_radius_bottom_right = 20
-corner_radius_bottom_left = 20
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o1v5x"]
 bg_color = Color(0.847474, 0.847474, 0.847474, 1)
@@ -26,7 +26,7 @@ corner_radius_bottom_left = 20
 
 [node name="MapSearchbar" type="PanelContainer"]
 z_index = 20
-custom_minimum_size = Vector2(280, 30)
+custom_minimum_size = Vector2(600, 60)
 offset_right = 280.0
 offset_bottom = 34.0
 size_flags_horizontal = 6
@@ -47,7 +47,7 @@ layout_mode = 2
 [node name="Icon" type="TextureRect" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 self_modulate = Color(0, 0, 0, 1)
-custom_minimum_size = Vector2(22, 22)
+custom_minimum_size = Vector2(30, 30)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -60,11 +60,13 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("4_auoo4")
+theme_override_font_sizes/font_size = 28
 placeholder_text = "Search"
 flat = true
 
 [node name="TextureButton" type="Button" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -74,7 +76,7 @@ theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
 theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
 theme_override_colors/icon_hover_pressed_color = Color(0, 0, 0, 1)
 theme_override_colors/icon_disabled_color = Color(0, 0, 0, 1)
-theme_override_constants/icon_max_width = 10
+theme_override_constants/icon_max_width = 20
 theme_override_styles/focus = SubResource("StyleBoxFlat_js5t6")
 theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_js5t6")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_js5t6")
@@ -87,6 +89,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_js5t6")
 theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_js5t6")
 theme_override_styles/normal = SubResource("StyleBoxFlat_js5t6")
 icon = ExtResource("4_cauxe")
+icon_alignment = 1
 
 [connection signal="text_submitted" from="MarginContainer/HBoxContainer/Label" to="." method="_on_label_text_submitted"]
 [connection signal="pressed" from="MarginContainer/HBoxContainer/TextureButton" to="." method="_on_texture_button_pressed"]

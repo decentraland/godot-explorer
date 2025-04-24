@@ -13,13 +13,15 @@ const PARCEL_OFFSET = Vector2i(170,170)
 const MAP_CENTER = MAP_SIZE / 2
 const TILE_DISPLACEMENT = Vector2(18,18) * PARCEL_SIZE
 
-var dragging := false
-var drag_start_mouse := Vector2()
-var drag_start_cam_pos := Vector2()
-const CLICK_THRESHOLD := 5.0
+
 const MIN_ZOOM := Vector2(0.2, 0.2)
 const MAX_ZOOM := Vector2(1.5, 1.5)
-var distance
+var active_touches := {}
+var last_pinch_distance := 0.0
+var last_pan_position := Vector2.ZERO
+var PAN_THRESHOLD := 5.0
+var pan_started := false
+var just_zoomed := false 
 
 const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
 const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn")
@@ -40,11 +42,15 @@ const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archip
 @onready var camera: Camera2D = %Camera2D
 @onready var coordinates_label: Label = %CoordinatesLabel
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
-@onready var filter_container: HBoxContainer = %FilterContainer
-@onready var sidebar: Control = %Sidebar
+@onready var sidebar: Control = %SidebarLandscape
 @onready var color_rect_close_sidebar: ColorRect = %ColorRectCloseSidebar
-@onready var map_searchbar: PanelContainer = %MapSearchbar
-@onready var check_box: CheckBox = $MarginContainer2/CheckBox
+@onready var portrait: VBoxContainer = %Portrait
+@onready var landscape: VBoxContainer = %Landscape
+@onready var portrait_filters: HBoxContainer = %PortraitFilters
+@onready var landscape_filters: HBoxContainer = %LandscapeFilters
+@onready var portrait_map_searchbar: PanelContainer = %PortraitMapSearchbar
+@onready var landscape_map_searchbar: PanelContainer = %LandscapeMapSearchbar
+@onready var archipelago_button: Button = %ArchipelagoButton
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 const SIDE_BAR_WIDTH = 300
@@ -54,28 +60,38 @@ var active_filter: int = -1
 var poi_places_ids = []
 var live_places_ids = []
 
+
+
 func _ready():
-	archipelagos_control.visible = check_box.button_pressed
-	map_searchbar.clean_searchbar.connect(_close_from_searchbar)
-	map_searchbar.submited_text.connect(_submitted_text_from_searchbar)
-	map_searchbar.reset()
+	get_viewport().connect("size_changed", self._on_viewport_resized)
+
+	archipelagos_control.visible = archipelago_button.button_pressed
+	portrait_map_searchbar.clean_searchbar.connect(_close_from_searchbar)
+	portrait_map_searchbar.submited_text.connect(_submitted_text_from_searchbar)
+	portrait_map_searchbar.reset()
+	landscape_map_searchbar.clean_searchbar.connect(_close_from_searchbar)
+	landscape_map_searchbar.submited_text.connect(_submitted_text_from_searchbar)
+	landscape_map_searchbar.reset()
 	color_rect_close_sidebar.hide()
 	sidebar.position = Vector2(color_rect_close_sidebar.size.x-5, 0)	
 	var group := ButtonGroup.new()
 	group.allow_unpress = true
 	for i in range(13):
-		var btn: PlaceFilterButton = PLACE_CATEGORY_FILTER_BUTTON.instantiate()
-		btn.button_group = group
-		btn.toggle_mode = true
-		btn.filter_type = i
-		btn.connect("filter_toggled", Callable(self, "_on_filter_button_toggled"))
-		filter_container.add_child(btn)
+		var btnp: PlaceFilterButton = PLACE_CATEGORY_FILTER_BUTTON.instantiate()
+		btnp.button_group = group
+		btnp.toggle_mode = true
+		btnp.filter_type = i
+		btnp.connect("filter_toggled", Callable(self, "_on_filter_button_toggled"))
+		portrait_filters.add_child(btnp)
+		var btnl: PlaceFilterButton = PLACE_CATEGORY_FILTER_BUTTON.instantiate()
+		btnl.button_group = group
+		btnl.toggle_mode = true
+		btnl.filter_type = i
+		btnl.connect("filter_toggled", Callable(self, "_on_filter_button_toggled"))
+		landscape_filters.add_child(btnl)
 			
 	map_viewport.size = MAP_SIZE
 	map.size = MAP_SIZE
-	# Maybe we can remove this line
-	get_viewport().connect("size_changed", self._on_screen_resized)
-
 	center_camera_on_parcel(Vector2i(0,1))
 	
 	
@@ -108,42 +124,77 @@ func _ready():
 	_async_draw_archipelagos()
 	#var circle = ARCHIPELAGO_CIRCLE.instantiate()
 	
-		
-# Maybe we can remove this function (the viewport isn't resizable) 
-func _on_screen_resized() -> void:
+func _on_viewport_resized()->void:
+	update_layout()
 	map_viewport.size = size
 	clamp_camera_position()
 
-func _on_map_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			if event.pressed:
-				dragging = true
-				drag_start_mouse = event.position
-				drag_start_cam_pos = camera.position
-			else:
-				distance = drag_start_mouse.distance_to(event.position)
-				if distance < CLICK_THRESHOLD:
-					handle_click(event.position)
-				dragging = false
+func _input(event):
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			active_touches[event.index] = event.position
+			if active_touches.size() == 1:
+				last_pan_position = event.position
+				pan_started = false
+				just_zoomed = false
+		else:
+			if active_touches.has(event.index):
+				# Evaluar si fue un tap (click)
+				var released_position = event.position
+				var distance = released_position.distance_to(last_pan_position)
+				if distance < PAN_THRESHOLD and not pan_started and not just_zoomed:
+					handle_tap(released_position)
 
-		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			var new_zoom = camera.zoom * 1.1
-			camera.zoom = clamp(new_zoom, MIN_ZOOM, MAX_ZOOM)
+			active_touches.erase(event.index)
+			if active_touches.size() < 2:
+				last_pinch_distance = 0.0
 
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			var new_zoom = camera.zoom * 0.9
-			if MAP_SIZE.x * new_zoom.x >= size.x and MAP_SIZE.y * new_zoom.y >= size.y:
-				camera.zoom = clamp(new_zoom, MIN_ZOOM, MAX_ZOOM)
+	elif event is InputEventScreenDrag:
+		if active_touches.has(event.index):
+			active_touches[event.index] = event.position
 
-		update_label_settings(camera.zoom)
-		
-	elif event is InputEventMouseMotion:
-		if dragging:
-			var delta = event.position - drag_start_mouse
-			camera.position = drag_start_cam_pos - delta 
-		
-	clamp_camera_position()
+			if active_touches.size() == 1:
+				var distance = event.position.distance_to(last_pan_position)
+				if distance >= PAN_THRESHOLD and not just_zoomed:
+					pan_started = true
+					handle_pan(event)
+
+			elif active_touches.size() == 2:
+				handle_zoom()
+
+func handle_pan(event: InputEventScreenDrag):
+	var delta = event.position - last_pan_position
+	camera.position -= delta / camera.zoom
+	last_pan_position = event.position
+
+func handle_zoom():
+	var touch_positions = active_touches.values()
+	var p1 = touch_positions[0]
+	var p2 = touch_positions[1]
+	var current_distance = p1.distance_to(p2)
+
+	if last_pinch_distance != 0.0:
+		var delta = current_distance - last_pinch_distance
+		if abs(delta) > 2.0:
+			apply_zoom(delta)
+			just_zoomed = true
+
+	last_pinch_distance = current_distance
+
+func apply_zoom(delta: float):
+	var zoom_strength = 0.005
+	var zoom_factor = 1.0 + delta * zoom_strength
+
+	camera.zoom *= Vector2(zoom_factor, zoom_factor)
+	camera.zoom = camera.zoom.clamp(Vector2(0.5, 0.5), Vector2(4, 4))
+
+func handle_tap(pos: Vector2):
+	print(pos)
+	var coords = pos / PARCEL_SIZE
+	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
+	clicked_parcel.emit(parcel_coords)
+	show_cursor_at_parcel(parcel_coords)
+	
 
 func clamp_camera_position() -> void:
 	const MAP_TOP_MARGIN = 50
@@ -307,7 +358,8 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 	if not pressed:
 		filtered_places = []
 		_clean_list_and_pins()
-		map_searchbar.reset()
+		portrait_map_searchbar.reset()
+		landscape_map_searchbar.reset()
 		_close_sidebar()
 	else:
 		active_filter = type
@@ -333,9 +385,11 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 		_open_sidebar()
 	
 		
-		map_searchbar.filter_type = type
-		map_searchbar.update_filtered_category()
-
+		portrait_map_searchbar.filter_type = type
+		portrait_map_searchbar.update_filtered_category()
+		landscape_map_searchbar.filter_type = type
+		landscape_map_searchbar.update_filtered_category()
+		
 func _on_color_rect_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if !event.pressed:
@@ -352,7 +406,10 @@ func _close_sidebar()->void:
 	filtered_places = []
 
 func _close_from_searchbar():
-	for child in filter_container.get_children():
+	for child in landscape_filters.get_children():
+		if child is Button and child.toggle_mode and child.filter_type == active_filter:
+			child.button_pressed = false
+	for child in portrait_filters.get_children():
 		if child is Button and child.toggle_mode and child.filter_type == active_filter:
 			child.button_pressed = false
 	_clean_list_and_pins()
@@ -434,3 +491,13 @@ func get_center_from_rect_coords_array(coords: Array) -> Vector2i:
 
 func _on_check_box_toggled(toggled_on: bool) -> void:
 	archipelagos_control.visible = toggled_on
+	update_layout()
+
+
+func update_layout()->void:
+	if Global.is_orientation_portrait():
+		portrait.show()
+		landscape.hide()
+	else:
+		portrait.hide()
+		landscape.show()

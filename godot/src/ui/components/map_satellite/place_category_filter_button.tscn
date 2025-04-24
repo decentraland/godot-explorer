@@ -9,9 +9,11 @@
 [ext_resource type="StyleBox" uid="uid://sqmq1cul01m5" path="res://assets/themes/filter_pill_hover.tres" id="4_y2i35"]
 
 [node name="PlaceCategoryButton" type="Button"]
-custom_minimum_size = Vector2(30, 30)
-offset_right = 87.0
-offset_bottom = 30.0
+custom_minimum_size = Vector2(100, 40)
+offset_right = 153.0
+offset_bottom = 40.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
 focus_mode = 0
 mouse_filter = 1
 mouse_default_cursor_shape = 2
@@ -26,8 +28,9 @@ theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
+theme_override_constants/icon_max_width = 0
 theme_override_fonts/font = ExtResource("1_vf6so")
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 20
 theme_override_styles/focus = ExtResource("2_vygvd")
 theme_override_styles/disabled_mirrored = ExtResource("1_qeu7p")
 theme_override_styles/disabled = ExtResource("1_qeu7p")

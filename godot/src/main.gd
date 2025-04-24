@@ -2,7 +2,9 @@ extends Node
 
 
 func _ready():
-	Global.set_orientation_portrait()
+	#Global.set_orientation_portrait()
+	get_tree().change_scene_to_file("res://src/ui/components/map_satellite/map_satellite.tscn")
+	return
 	start.call_deferred()
 
 
@@ -35,6 +37,7 @@ func start():
 
 
 func _start():
+	
 	var args = OS.get_cmdline_args()
 
 	if Global.is_xr():
