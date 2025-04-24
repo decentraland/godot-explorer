@@ -1,7 +1,7 @@
 use std::{env, fs, io, path::Path};
 
 use crate::{
-    consts::{BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    consts::{BIN_FOLDER, RUST_LIB_PROJECT_FOLDER},
     path::adjust_canonicalization,
 };
 

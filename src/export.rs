@@ -188,7 +188,7 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
     };
 
     // Process each template and download the associated files
-    let dest_path = get_template_path().expect("Failed to get template path");//format!("{BIN_FOLDER}godot/templates");
+    let dest_path = get_template_path().expect("Failed to get template path");
 
     for template in templates {
         if let Some(files) = file_map.get(template.as_str()) {

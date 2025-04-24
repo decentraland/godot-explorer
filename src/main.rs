@@ -188,7 +188,7 @@ fn main() -> Result<(), anyhow::Error> {
             .map(|vals| vals.map(String::from).collect())
             .unwrap_or_default();
         
-            let no_templates = sm.is_present("no-templates") || platforms.iter().count() == 0;
+            let no_templates = sm.is_present("no-templates") || platforms.is_empty();
             // Call your install function and pass the templates
             install_dependency::install(no_templates, &platforms)
         }

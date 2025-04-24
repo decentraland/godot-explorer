@@ -117,11 +117,14 @@ fn get_persistent_path(persistent_cache: Option<String>) -> Option<String> {
 }
 
 pub fn get_template_path() -> Option<String> {
-    let dirs = ProjectDirs::from("org", "decentraland", "godot")?;
-    fs::create_dir_all(dirs.data_dir()).ok()?;
-    let template_path = dirs.data_dir().join("export_templates").join(format!("{}.stable", GODOT_CURRENT_VERSION));
-    println!("template_path: {}", template_path.to_str().unwrap().to_string());
-    Some(template_path.to_str().unwrap().to_string())
+    let os = env::consts::OS;
+
+    match os {
+        "windows" => env::var("APPDATA").ok().map(|appdata| format!("{}\\Godot\\export_templates\\", appdata)),
+        "linux" => env::var("HOME").ok().map(|home| format!("{}/.config/godot/export_templates/", home)),
+        "macos" => env::var("HOME").ok().map(|home| format!("{}/Library/Application Support/Godot/export_templates/", home)),
+        _ => None, // Unsupported OS
+    }
 }
 
 pub fn download_and_extract_zip(
