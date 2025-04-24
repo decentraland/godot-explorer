@@ -116,6 +116,14 @@ fn get_persistent_path(persistent_cache: Option<String>) -> Option<String> {
     Some(cache_file_path.to_str().unwrap().to_string())
 }
 
+pub fn get_template_path() -> Option<String> {
+    let dirs = ProjectDirs::from("org", "decentraland", "godot")?;
+    fs::create_dir_all(dirs.data_dir()).ok()?;
+    let template_path = dirs.data_dir().join("export_templates").join(format!("{}.stable", GODOT_CURRENT_VERSION));
+    println!("template_path: {}", template_path.to_str().unwrap().to_string());
+    Some(template_path.to_str().unwrap().to_string())
+}
+
 pub fn download_and_extract_zip(
     url: &str,
     destination_path: &str,
@@ -164,9 +172,9 @@ fn get_godot_url() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("godot.linux.editor.x86_64.zip".to_string()),
-        ("windows", "x86_64") => Some("godot.windows.editor.x86_64.exe.zip".to_string()),
-        ("macos", _) => Some("godot.macos.editor.arm64.zip".to_string()),
+        ("linux", "x86_64") => Some(format!("godot.{}.stable.linux.editor.x86_64.zip", GODOT_CURRENT_VERSION).to_string()),
+        ("windows", "x86_64") => Some(format!("godot.{}.stable.windows.editor.x86_64.exe.zip", GODOT_CURRENT_VERSION).to_string()),
+        ("macos", _) => Some(format!("godot.{}.stable.macos.editor.arm64.zip", GODOT_CURRENT_VERSION).to_string()),
         _ => None,
     }?;
 
@@ -193,8 +201,8 @@ pub fn get_godot_executable_path() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some("godot.linux.editor.x86_64".to_string()),
-        ("windows", "x86_64") => Some("godot.windows.editor.x86_64.exe".to_string()),
+        ("linux", "x86_64") => Some(format!("godot.{}.stable.linux.editor.x86_64", GODOT_CURRENT_VERSION).to_string()),
+        ("windows", "x86_64") => Some(format!("godot.{}.stable.windows.editor.x86_64.exe", GODOT_CURRENT_VERSION).to_string()),
         ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
         _ => None,
     }?;
@@ -241,9 +249,9 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
     };
     fs::copy(program_path, dest_program_path.as_str())?;
 
-    /*if !skip_download_templates {
+    if !skip_download_templates {
         prepare_templates(platforms)?;
-    }*/
+    }
 
     Ok(())
 }

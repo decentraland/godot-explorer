@@ -2,7 +2,6 @@ use std::{collections::HashMap, io::BufRead, path::PathBuf};
 
 use crate::{
     consts::{GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
-    copy_files::copy_library,
     export::get_target_os,
     path::{adjust_canonicalization, get_godot_path},
 };
@@ -42,7 +41,6 @@ pub fn run(
 
 pub fn build(
     release_mode: bool,
-    link_libs: bool,
     extra_build_args: Vec<&str>,
     with_build_envs: Option<HashMap<String, String>>,
     target: Option<&str>,
@@ -58,8 +56,6 @@ pub fn build(
 
     let build_cwd = adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?);
     run_cargo_build(&PathBuf::from(build_cwd), &build_args, &with_build_envs)?;
-
-    //copy_library(&target, !release_mode, link_libs)?;
 
     Ok(())
 }
