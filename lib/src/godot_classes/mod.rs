@@ -48,6 +48,6 @@ where
 
     fn from_godot_to_json(value: godot::prelude::Variant) -> Result<Self, String> {
         let json_str = godot::engine::Json::stringify(value).to_string();
-        serde_json::from_str(json_str.as_str()).map_err(|e| e.to_string())
+        json5::from_str(json_str.as_str()).map_err(|e| e.to_string())
     }
 }

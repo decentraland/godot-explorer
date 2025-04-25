@@ -97,7 +97,7 @@ impl DclUserProfile {
     pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclUserProfile> {
         let value = godot::engine::Json::stringify(dictionary.to_variant());
         DclUserProfile::from_gd(
-            serde_json::from_str(value.to_string().as_str()).unwrap_or_default(),
+            json5::from_str(value.to_string().as_str()).unwrap_or_default(),
         )
     }
 
