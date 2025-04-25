@@ -1,7 +1,10 @@
 use std::{collections::HashMap, io::BufRead, path::PathBuf};
 
 use crate::{
-    consts::{GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER}, copy_files::copy_library, export::get_target_os, path::{adjust_canonicalization, get_godot_path}
+    consts::{GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    copy_files::copy_library,
+    export::get_target_os,
+    path::{adjust_canonicalization, get_godot_path},
 };
 
 pub fn run(

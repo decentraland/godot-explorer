@@ -45,10 +45,7 @@ pub fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(
     Ok(())
 }
 
-pub fn copy_library(
-    target: &String,
-    debug_mode: bool,
-) -> Result<(), anyhow::Error> {
+pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Error> {
     let mode = if debug_mode { "debug" } else { "release" };
 
     match target.as_str() {
@@ -56,9 +53,8 @@ pub fn copy_library(
             let source_file = format!(
                 "{RUST_LIB_PROJECT_FOLDER}target/aarch64-apple-ios/{mode}/libdclgodot.dylib"
             );
-            let dest = format!(
-                "{RUST_LIB_PROJECT_FOLDER}target/aarch64-apple-ios/libdclgodot.dylib"
-            );
+            let dest =
+                format!("{RUST_LIB_PROJECT_FOLDER}target/aarch64-apple-ios/libdclgodot.dylib");
 
             copy_with_error_context(&source_file, &dest, false)?;
 
@@ -71,9 +67,8 @@ pub fn copy_library(
                 "{RUST_LIB_PROJECT_FOLDER}target/aarch64-linux-android/{mode}/libdclgodot.so"
             );
 
-            let dest = format!(
-                "{RUST_LIB_PROJECT_FOLDER}target/aarch64-linux-android/libdclgodot.so"
-            );
+            let dest =
+                format!("{RUST_LIB_PROJECT_FOLDER}target/aarch64-linux-android/libdclgodot.so");
 
             copy_with_error_context(&source_file, &dest, false)?;
 

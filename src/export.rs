@@ -6,7 +6,9 @@ use crate::{
         GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
     },
     copy_files::copy_ffmpeg_libraries,
-    install_dependency::{download_and_extract_zip, godot_export_templates_path, set_executable_permission},
+    install_dependency::{
+        download_and_extract_zip, godot_export_templates_path, set_executable_permission,
+    },
     path::{adjust_canonicalization, get_godot_path},
 };
 

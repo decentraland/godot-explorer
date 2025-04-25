@@ -120,15 +120,24 @@ pub fn godot_export_templates_path() -> Option<String> {
     let os = env::consts::OS;
 
     match os {
-        "windows" => env::var("APPDATA")
-            .ok()
-            .map(|appdata| format!("{}\\Godot\\export_templates\\{}.stable\\", appdata, GODOT_CURRENT_VERSION)),
-        "linux" => env::var("HOME")
-            .ok()
-            .map(|home| format!("{}/.local/share/godot/export_templates/{}.stable", home, GODOT_CURRENT_VERSION)),
-        "macos" => env::var("HOME")
-            .ok()
-            .map(|home| format!("{}/Library/Application Support/Godot/export_templates/{}.stable/", home, GODOT_CURRENT_VERSION)),
+        "windows" => env::var("APPDATA").ok().map(|appdata| {
+            format!(
+                "{}\\Godot\\export_templates\\{}.stable\\",
+                appdata, GODOT_CURRENT_VERSION
+            )
+        }),
+        "linux" => env::var("HOME").ok().map(|home| {
+            format!(
+                "{}/.local/share/godot/export_templates/{}.stable",
+                home, GODOT_CURRENT_VERSION
+            )
+        }),
+        "macos" => env::var("HOME").ok().map(|home| {
+            format!(
+                "{}/Library/Application Support/Godot/export_templates/{}.stable/",
+                home, GODOT_CURRENT_VERSION
+            )
+        }),
         _ => None, // Unsupported OS
     }
 }
@@ -181,9 +190,27 @@ fn get_godot_url() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some(format!("godot.{}.stable.linux.editor.x86_64.zip", GODOT_CURRENT_VERSION).to_string()),
-        ("windows", "x86_64") => Some(format!("godot.{}.stable.windows.editor.x86_64.exe.zip", GODOT_CURRENT_VERSION).to_string()),
-        ("macos", _) => Some(format!("godot.{}.stable.macos.editor.arm64.zip", GODOT_CURRENT_VERSION).to_string()),
+        ("linux", "x86_64") => Some(
+            format!(
+                "godot.{}.stable.linux.editor.x86_64.zip",
+                GODOT_CURRENT_VERSION
+            )
+            .to_string(),
+        ),
+        ("windows", "x86_64") => Some(
+            format!(
+                "godot.{}.stable.windows.editor.x86_64.exe.zip",
+                GODOT_CURRENT_VERSION
+            )
+            .to_string(),
+        ),
+        ("macos", _) => Some(
+            format!(
+                "godot.{}.stable.macos.editor.arm64.zip",
+                GODOT_CURRENT_VERSION
+            )
+            .to_string(),
+        ),
         _ => None,
     }?;
 
@@ -210,8 +237,16 @@ pub fn get_godot_executable_path() -> Option<String> {
     let arch = env::consts::ARCH;
 
     let os_url = match (os, arch) {
-        ("linux", "x86_64") => Some(format!("godot.{}.stable.linux.editor.x86_64", GODOT_CURRENT_VERSION).to_string()),
-        ("windows", "x86_64") => Some(format!("godot.{}.stable.windows.editor.x86_64.exe", GODOT_CURRENT_VERSION).to_string()),
+        ("linux", "x86_64") => {
+            Some(format!("godot.{}.stable.linux.editor.x86_64", GODOT_CURRENT_VERSION).to_string())
+        }
+        ("windows", "x86_64") => Some(
+            format!(
+                "godot.{}.stable.windows.editor.x86_64.exe",
+                GODOT_CURRENT_VERSION
+            )
+            .to_string(),
+        ),
         ("macos", _) => Some("Godot.app/Contents/MacOS/Godot".to_string()),
         _ => None,
     }?;
@@ -243,7 +278,7 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
         format!("{BIN_FOLDER}godot").as_str(),
         Some(format!("{GODOT_CURRENT_VERSION}.executable.zip")),
     )?;
-    
+
     let program_path = format!("{BIN_FOLDER}godot/{}", get_godot_executable_path().unwrap());
     let dest_program_path = format!("{BIN_FOLDER}godot/godot4_bin");
 

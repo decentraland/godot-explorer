@@ -184,10 +184,10 @@ fn main() -> Result<(), anyhow::Error> {
     let res = match subcommand {
         ("install", sm) => {
             let platforms: Vec<String> = sm
-            .values_of("platforms")
-            .map(|vals| vals.map(String::from).collect())
-            .unwrap_or_default();
-        
+                .values_of("platforms")
+                .map(|vals| vals.map(String::from).collect())
+                .unwrap_or_default();
+
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
             // Call your install function and pass the templates
             install_dependency::install(no_templates, &platforms)
