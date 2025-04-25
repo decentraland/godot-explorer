@@ -36,10 +36,10 @@ jobs:
     needs: static-checks
     uses: ./.github/workflows/macos_builds.yml
 
-  ios-build:
-    name: 🍏 iOS
-    needs: static-checks
-    uses: ./.github/workflows/ios_builds.yml
+  # ios-build:
+  #   name: 🍏 iOS
+  #   needs: static-checks
+  #   uses: ./.github/workflows/ios_builds.yml
 
   windows-build:
     name: 🏁 Windows
@@ -61,6 +61,6 @@ jobs:
       - windows-build
       - linux-build
       - android-build
-      - ios-build
+      #- ios-build
       - macos-build
     uses: ./.github/workflows/prepare_lib.yml
