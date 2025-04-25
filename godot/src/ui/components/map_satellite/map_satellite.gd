@@ -15,7 +15,7 @@ const TILE_DISPLACEMENT = Vector2(18,18) * PARCEL_SIZE
 
 
 const MIN_ZOOM := Vector2(0.2, 0.2)
-const MAX_ZOOM := Vector2(1.5, 1.5)
+const MAX_ZOOM := Vector2(2, 2)
 var active_touches := {}
 var last_pinch_distance := 0.0
 var last_pan_position := Vector2.ZERO
@@ -129,71 +129,7 @@ func _on_viewport_resized()->void:
 	map_viewport.size = size
 	clamp_camera_position()
 
-func _input(event):
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			active_touches[event.index] = event.position
-			if active_touches.size() == 1:
-				last_pan_position = event.position
-				pan_started = false
-				just_zoomed = false
-		else:
-			if active_touches.has(event.index):
-				# Evaluar si fue un tap (click)
-				var released_position = event.position
-				var distance = released_position.distance_to(last_pan_position)
-				if distance < PAN_THRESHOLD and not pan_started and not just_zoomed:
-					handle_tap(released_position)
 
-			active_touches.erase(event.index)
-			if active_touches.size() < 2:
-				last_pinch_distance = 0.0
-
-	elif event is InputEventScreenDrag:
-		if active_touches.has(event.index):
-			active_touches[event.index] = event.position
-
-			if active_touches.size() == 1:
-				var distance = event.position.distance_to(last_pan_position)
-				if distance >= PAN_THRESHOLD and not just_zoomed:
-					pan_started = true
-					handle_pan(event)
-
-			elif active_touches.size() == 2:
-				handle_zoom()
-
-func handle_pan(event: InputEventScreenDrag):
-	var delta = event.position - last_pan_position
-	camera.position -= delta / camera.zoom
-	last_pan_position = event.position
-
-func handle_zoom():
-	var touch_positions = active_touches.values()
-	var p1 = touch_positions[0]
-	var p2 = touch_positions[1]
-	var current_distance = p1.distance_to(p2)
-
-	if last_pinch_distance != 0.0:
-		var delta = current_distance - last_pinch_distance
-		if abs(delta) > 2.0:
-			apply_zoom(delta)
-			just_zoomed = true
-
-	last_pinch_distance = current_distance
-
-func apply_zoom(delta: float):
-	var zoom_strength = 0.005
-	var zoom_factor = 1.0 + delta * zoom_strength
-
-	camera.zoom *= Vector2(zoom_factor, zoom_factor)
-	camera.zoom = camera.zoom.clamp(Vector2(0.5, 0.5), Vector2(4, 4))
-
-func handle_tap(pos: Vector2):
-	print(pos)
-	var coords = pos / PARCEL_SIZE
-	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
-	clicked_parcel.emit(parcel_coords)
-	show_cursor_at_parcel(parcel_coords)
 	
 
 func clamp_camera_position() -> void:
@@ -220,7 +156,7 @@ func _process(_delta):
 		animation_player.play('show_filters')
 
 func center_camera_on_parcel(parcel:Vector2i) -> void:
-	var zoom_on_parcel = Vector2.ONE
+	var zoom_on_parcel = MAX_ZOOM
 	var target_position = get_parcel_position(parcel)
 	var tween = create_tween()
 	tween.tween_property(camera, "position", target_position, 0.3).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
@@ -501,3 +437,81 @@ func update_layout()->void:
 	else:
 		portrait.hide()
 		landscape.show()
+
+
+func _on_map_gui_input(event):
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			active_touches[event.index] = event.position
+
+			if active_touches.size() == 1:
+				last_pan_position = event.position
+				pan_started = false
+				just_zoomed = false
+
+			elif active_touches.size() == 2:
+				# El segundo dedo acaba de tocar: inicializamos la distancia de zoom
+				var positions = active_touches.values()
+				last_pinch_distance = positions[0].distance_to(positions[1])
+
+		else:
+			if active_touches.has(event.index):
+				var released_position = event.position
+				var distance = released_position.distance_to(last_pan_position)
+				if distance < PAN_THRESHOLD and not pan_started and not just_zoomed:
+					handle_tap(released_position)
+
+				active_touches.erase(event.index)
+
+			# Si queda menos de 2 dedos, desactivamos el modo zoom
+			if active_touches.size() < 2:
+				last_pinch_distance = 0.0
+
+	elif event is InputEventScreenDrag:
+		if active_touches.has(event.index):
+			active_touches[event.index] = event.position
+
+			if active_touches.size() == 1:
+				var distance = event.position.distance_to(last_pan_position)
+				if distance >= PAN_THRESHOLD and not just_zoomed:
+					pan_started = true
+					handle_pan(event)
+
+			elif active_touches.size() == 2:
+				handle_zoom()
+
+func handle_pan(event: InputEventScreenDrag):
+	var delta = event.position - last_pan_position
+	camera.position -= delta / camera.zoom
+	last_pan_position = event.position
+
+func handle_zoom():
+	var touch_positions = active_touches.values()
+	var p1 = touch_positions[0]
+	var p2 = touch_positions[1]
+	var current_distance = p1.distance_to(p2)
+
+	if last_pinch_distance > 0.0 and current_distance > 0.0:
+		var delta_ratio = (current_distance - last_pinch_distance) / last_pinch_distance
+
+		# Filtramos valores extremos (esto cubre vibraciones)
+		if abs(delta_ratio) > 0.01 and abs(delta_ratio) < 0.5:
+			apply_zoom(delta_ratio)
+			just_zoomed = true
+
+	# Actualizamos la distancia suavemente
+	last_pinch_distance = lerp(last_pinch_distance, current_distance, 0.5)
+
+func apply_zoom(delta_ratio: float):
+	var zoom_strength = 1.0  # delta_ratio ya es proporcional
+	var zoom_factor = 1.0 + delta_ratio * zoom_strength
+
+	var new_zoom = camera.zoom * Vector2(zoom_factor, zoom_factor)
+	camera.zoom = new_zoom.clamp(Vector2(0.5, 0.5), Vector2(4, 4))
+
+func handle_tap(pos: Vector2):
+	print(pos)
+	var coords = pos / PARCEL_SIZE
+	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
+	clicked_parcel.emit(parcel_coords)
+	show_cursor_at_parcel(parcel_coords)

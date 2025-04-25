@@ -4,6 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://bs3gvy2pgaqr" path="res://assets/ui/place_categories/music-pin.svg" id="2_hpfdi"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_y1xt0"]
+font_size = 20
 outline_size = 6
 outline_color = Color(0, 0, 0, 1)
 
@@ -115,7 +116,6 @@ pin_category = 10
 [node name="Sprite2D" type="Sprite2D" parent="."]
 unique_name_in_owner = true
 position = Vector2(13, 17)
-scale = Vector2(1.1, 1.1)
 texture = ExtResource("2_hpfdi")
 offset = Vector2(0.25, -23)
 
@@ -124,12 +124,13 @@ custom_minimum_size = Vector2(200, 0)
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -132.0
-offset_top = -121.0
-offset_right = 91.5
-offset_bottom = -51.0
+offset_left = -145.5
+offset_top = -133.0
+offset_right = 78.0
+offset_bottom = -63.0
 grow_horizontal = 2
 pivot_offset = Vector2(111.75, 70)
+size_flags_horizontal = 4
 text = "asd asd asdav"
 label_settings = SubResource("LabelSettings_y1xt0")
 horizontal_alignment = 1

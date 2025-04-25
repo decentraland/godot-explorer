@@ -551,6 +551,16 @@ offset_right = 40.0
 offset_bottom = 40.0
 mouse_filter = 1
 
+[node name="ColorRect" type="ColorRect" parent="SubViewportContainer/MapViewport/Map"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.887392, 0.550205, 0.700621, 1)
+
 [node name="CursorMarker" type="Sprite2D" parent="SubViewportContainer/MapViewport/Map"]
 unique_name_in_owner = true
 z_index = 5
