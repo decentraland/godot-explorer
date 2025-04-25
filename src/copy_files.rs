@@ -113,18 +113,8 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                     .join(file_name),
             );
 
-            let lib_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/", output_folder_name);
-            let destination_path = adjust_canonicalization(
-                std::fs::canonicalize(&lib_folder)
-                    .map_err(|e| {
-                        anyhow::anyhow!(
-                            "Failed to canonicalize destination folder {}: {}",
-                            lib_folder.to_string(),
-                            e
-                        )
-                    })?
-                    .join(file_name),
-            );
+            let lib_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}", output_folder_name);
+            let destination_path = format!("{lib_folder}/{file_name}");
 
             copy_with_error_context(&source_path, &destination_path, false).map_err(
                 |e| {
