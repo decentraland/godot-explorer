@@ -37,21 +37,18 @@ Execute the following commands for building Godot:
 docker run -v $(pwd):/app/ -it kuruk/dcl-godot-android-builder-rust
 
 # Compile for Android
+cargo run -- install --platforms android
 cd lib
 ./android-build.sh # arm64
 ./android-build.sh x86_64 # android x86_64 if needed
 cd ../../ # return
 
 # Compile for Linux
-cargo run -- install --platforms android
+cargo run -- install --platforms linux
 cargo run -- build
 cd ../../ # return
 
 # Generate .APK
-## Download Android Template, only one time needed
-cd godot/
-git clone https://github.com/decentraland/godot-explorer-android-template.git android # Only one time
-cd ../
 
 ## Build Android and Export APK for arm64
 ./build-android-apk.sh

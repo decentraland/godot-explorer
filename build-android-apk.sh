@@ -18,7 +18,7 @@ fi
 
 echo "Build for Linux x86_64"
 cd "${EXPLORER_PATH}"
-cargo run -- install --platforms android
+
 cargo run -- build
 
 echo "Build for Android (arm64)"
