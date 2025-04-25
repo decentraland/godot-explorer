@@ -55,5 +55,5 @@ jobs:
         with:
           name: libdclgodot_ios
           path: |
-            lib/target/release/libdclgodot.so
+            lib/target/aarch64-apple-ios/release/libdclgodot.so
           if-no-files-found: error

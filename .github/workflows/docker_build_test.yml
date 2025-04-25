@@ -17,12 +17,18 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Download Godot Artifact
+      - name: Download Godot Lib Artifact
         uses: actions/download-artifact@v4
         with:
           name: libdclgodot_linux
+
+      - name: Download Godot Executables Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: decentraland-godot-linux
+
       - name: Build Docker Image
         id: build-image
         uses: redhat-actions/buildah-build@v2

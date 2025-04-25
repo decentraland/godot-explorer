@@ -4,6 +4,13 @@ set -euo pipefail
 # Set the explorer path to the current working directory.
 EXPLORER_PATH="$(pwd)"
 
+# Unzip Godot Android template if it does not exist.
+if [ ! -d "${EXPLORER_PATH}/godot/android/" ]; then
+    echo "Unzip out Godot Android template..."
+    unzip "${HOME}/.local/share/godot/export_templates/4.4.1.stable/android_source.zip" \
+        -d "${EXPLORER_PATH}/godot/android"
+fi
+
 # Set JAVA_HOME if not already set.
 if [ -z "${JAVA_HOME:-}" ]; then
     export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
@@ -13,11 +20,6 @@ echo "Build for Linux x86_64"
 cd "${EXPLORER_PATH}"
 cargo run -- install --platforms android
 cargo run -- build
-
-echo "Link export templates"
-mkdir -p "${HOME}/.local/share/godot/export_templates/"
-cd "${HOME}/.local/share/godot/export_templates/"
-ln -sf "${EXPLORER_PATH}/.bin/godot/templates/templates/" "4.4.stable"
 
 echo "Build for Android (arm64)"
 cd "${EXPLORER_PATH}/lib"
