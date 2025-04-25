@@ -54,7 +54,7 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                 "{RUST_LIB_PROJECT_FOLDER}target/aarch64-apple-ios/{mode}/libdclgodot.dylib"
             );
             let dest =
-                format!("{RUST_LIB_PROJECT_FOLDER}target/aarch64-apple-ios/libdclgodot.dylib");
+                format!("{RUST_LIB_PROJECT_FOLDER}target/libdclgodot_ios/libdclgodot.dylib");
 
             copy_with_error_context(&source_file, &dest, false)?;
 
@@ -63,12 +63,20 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
         }
 
         "android" => {
+            let arch = env::consts::ARCH;
+
             let source_file = format!(
-                "{RUST_LIB_PROJECT_FOLDER}target/aarch64-linux-android/{mode}/libdclgodot.so"
+                "{RUST_LIB_PROJECT_FOLDER}target/{arch}-linux-android/{mode}/libdclgodot.so"
             );
 
+            let android_folder = if arch == "x86_64" {
+                "libdclgodot_android_x86"
+            } else {
+                "libdclgodot_android"
+            };
+
             let dest =
-                format!("{RUST_LIB_PROJECT_FOLDER}target/aarch64-linux-android/libdclgodot.so");
+                format!("{RUST_LIB_PROJECT_FOLDER}target/${android_folder}/libdclgodot.so");
 
             copy_with_error_context(&source_file, &dest, false)?;
 
@@ -85,6 +93,13 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                 _ => unreachable!(), // already covered by the match above
             };
 
+            let output_folder_name = match target.as_str() {
+                "win64" => "libdclgodot_windows",
+                "linux" => "libdclgodot_linux",
+                "macos" => "libdclgodot_macos",
+                _ => unreachable!(), // already covered by the match above
+            };
+
             let source_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/", mode);
             let source_path = adjust_canonicalization(
                 std::fs::canonicalize(&source_folder)
@@ -98,7 +113,7 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                     .join(file_name),
             );
 
-            let lib_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/");
+            let lib_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/", output_folder_name);
             let destination_path = adjust_canonicalization(
                 std::fs::canonicalize(&lib_folder)
                     .map_err(|e| {
