@@ -262,9 +262,9 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
 
     if env::consts::OS == "windows" {
         download_and_extract_zip(
-            "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-full_build-shared.zip",
+            "https://github.com/dclexplorer/ffmpeg-build/releases/download/0.1/ffmpeg-windows-x86_64.zip",
             format!("{BIN_FOLDER}ffmpeg").as_str(),
-            Some("ffmpeg-6.0-full_build-shared.zip".to_string()),
+            Some("ffmpeg.zip".to_string()),
         )?;
     }
 

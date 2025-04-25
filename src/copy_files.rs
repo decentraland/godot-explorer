@@ -126,7 +126,7 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                     .join(file_name),
             );
 
-            copy_if_modified(source_path.clone(), destination_path.clone(), false).map_err(
+            copy_with_error_context(&source_path, &destination_path, false).map_err(
                 |e| {
                     anyhow::anyhow!(
                         "Failed to copy from {:?} to {:?}: {}",
@@ -163,7 +163,7 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                         .join(pdb_name),
                 );
 
-                copy_if_modified(pdb_source.clone(), pdb_dest.clone(), false).map_err(|e| {
+                copy_with_error_context(&pdb_source, &pdb_dest, false).map_err(|e| {
                     anyhow::anyhow!(
                         "Failed to copy PDB from {:?} to {:?}: {}",
                         pdb_source,
