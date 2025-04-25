@@ -7,8 +7,12 @@ EXPLORER_PATH="$(pwd)"
 # Unzip Godot Android template if it does not exist.
 if [ ! -d "${EXPLORER_PATH}/godot/android/" ]; then
     echo "Unzip out Godot Android template..."
+    mkdir -p "${EXPLORER_PATH}/godot/android/"
+    mkdir -p "${EXPLORER_PATH}/godot/android/build"
     unzip "${HOME}/.local/share/godot/export_templates/4.4.1.stable/android_source.zip" \
-        -d "${EXPLORER_PATH}/godot/android"
+        -d "${EXPLORER_PATH}/godot/android/build"
+    echo "4.4.1.stable" > "${EXPLORER_PATH}/godot/android/.build_version"
+    touch "${EXPLORER_PATH}/godot/android/build/.gdignore"
 fi
 
 # Set JAVA_HOME if not already set.
