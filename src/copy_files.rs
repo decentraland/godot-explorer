@@ -163,9 +163,9 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                 })?;
             }
 
-            copy_ffmpeg_libraries(target, lib_folder.clone(), false).map_err(|e| {
+            /*copy_ffmpeg_libraries(target, lib_folder.clone(), false).map_err(|e| {
                 anyhow::anyhow!("Failed to copy FFmpeg libraries to {}: {}", lib_folder, e)
-            })?;
+            })?;*/
         }
 
         other => return Err(anyhow::anyhow!("Unknown target: {}", other)),
@@ -222,7 +222,8 @@ pub fn copy_ffmpeg_libraries(
 
                 if file_name.ends_with(".dll") {
                     let dest_path = format!("{dest_folder}{file_name}");
-                    copy_if_modified(entry.path(), dest_path, link_libs)?;
+                    let source_path = entry.path().to_str().unwrap().to_string();
+                    copy_with_error_context(&source_path, &dest_path, link_libs)?;
                 }
             }
         }
