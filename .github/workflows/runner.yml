@@ -64,3 +64,8 @@ jobs:
       - ios-build
       - macos-build
     uses: ./.github/workflows/prepare_lib.yml
+    secrets:
+      S3_ENDPOINT:       ${{ secrets.S3_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
