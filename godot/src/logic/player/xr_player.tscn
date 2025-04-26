@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://j86kd5vcss3h"]
+[gd_scene load_steps=18 format=3 uid="uid://j86kd5vcss3h"]
 
 [ext_resource type="Script" uid="uid://c000gnh80i2qh" path="res://src/logic/player/xr_player.gd" id="1_ukhx2"]
 [ext_resource type="PackedScene" uid="uid://38ff1blglbdy" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="1_wg7s4"]
@@ -14,6 +14,7 @@
 [ext_resource type="PackedScene" uid="uid://cqhw276realc" path="res://addons/godot-xr-tools/functions/function_pointer.tscn" id="8_qhqyf"]
 [ext_resource type="Script" uid="uid://18k2t5ctk6lf" path="res://addons/godot-xr-tools/overrides/ground_physics_settings.gd" id="11_ys4e8"]
 [ext_resource type="PackedScene" uid="uid://ckt118vcpmr6q" path="res://addons/godot-xr-tools/functions/movement_physical_jump.tscn" id="12_3jilu"]
+[ext_resource type="AudioStream" uid="uid://pql0fpfxn3c2" path="res://src/vr/content/jetpack.ogg" id="15_f2rpf"]
 
 [sub_resource type="Curve" id="Curve_k6mxl"]
 _data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
@@ -99,6 +100,10 @@ screen_size = Vector2(1.5, 1)
 collision_layer = 1048576
 viewport_size = Vector2(1280, 720)
 unshaded = true
+
+[node name="JetPackAudioPlayer" type="AudioStreamPlayer" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("15_f2rpf")
 
 [connection signal="button_pressed" from="LeftHand" to="." method="_on_left_hand_button_pressed"]
 [connection signal="button_released" from="LeftHand" to="." method="_on_left_hand_button_released"]

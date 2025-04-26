@@ -35,10 +35,16 @@ var left_control_map_actions = {
 @onready var xr_camera: XRCamera3D = %XRCamera3D
 
 @onready var microphone_gltf = %MicrophoneGltf
+@onready var jet_pack_audio_player: AudioStreamPlayer = %JetPackAudioPlayer
 
+var jetpack_force = 15.0  # Adjust this to tune the power
+var horizontal_scale = 0.5  # Scale for X and Z axes
+
+var jetpack_on := false
 
 # gdlint:ignore = async-function-name
 func _ready():
+	microphone_gltf.hide()
 	prints("Starts XRPlayer")
 
 	var xr_interface = XRServer.find_interface("OpenXR")
@@ -58,7 +64,7 @@ func _process(delta):
 	if !xr_camera:
 		return
 
-		# Get the target Y rotation (camera's Y rotation)
+	# Get the target Y rotation (camera's Y rotation)
 	var target_rotation_y = xr_camera.rotation.y
 
 	# Get the current Y rotation of the object
@@ -78,6 +84,23 @@ func _process(delta):
 
 	# Update the object's Y rotation
 	ui_origin_3d.rotation.y = current_rotation_y + difference * interpolated_t
+	
+	if jetpack_on:
+		var thrust_direction = -left_hand.global_transform.basis.z
+		
+		# Scale X and Z to be softer
+		var scaled_thrust = Vector3(
+			thrust_direction.x * horizontal_scale,
+			thrust_direction.y,  # Full power on Y
+			thrust_direction.z * horizontal_scale
+		)
+		
+		# Normalize AFTER scaling so we keep the direction shape correct
+		var final_thrust = scaled_thrust.normalized()
+		
+		player_body.velocity += final_thrust * jetpack_force * delta
+		
+		prints("Applying force...", player_body.velocity)
 
 
 func _on_right_hand_button_pressed(xr_action_name):
@@ -106,12 +129,20 @@ func _on_right_hand_button_released(xr_action_name):
 
 
 func _on_left_hand_button_pressed(xr_action_name):
-	var action = left_control_map_actions.get(xr_action_name)
-	if action != null:
-		Input.action_press(action)
+	if xr_action_name == "grip_click":
+		jetpack_on = true
+		jet_pack_audio_player.play(0.0)
+	else:
+		var action = left_control_map_actions.get(xr_action_name)
+		if action != null:
+			Input.action_press(action)
 
 
 func _on_left_hand_button_released(xr_action_name):
-	var action = left_control_map_actions.get(xr_action_name)
-	if action != null:
-		Input.action_release(action)
+	if xr_action_name == "grip_click":
+		jetpack_on = false
+		jet_pack_audio_player.stop()
+	else:
+		var action = left_control_map_actions.get(xr_action_name)
+		if action != null:
+			Input.action_release(action)

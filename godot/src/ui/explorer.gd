@@ -141,7 +141,7 @@ func _ready():
 	if cmd_location != null:
 		start_parcel_position = cmd_location
 
-	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
+	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y) + Vector3(8.0, 0.0, -8.0)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
 	Global.scene_runner.camera_node = player.camera
@@ -366,6 +366,7 @@ func move_to(position: Vector3, skip_loading: bool):
 		return
 	player.set_position(position)
 	var cur_parcel_position = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
+	prints("cur_parcel_position:", cur_parcel_position, position)
 	if not skip_loading:
 		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
 			loading_ui.enable_loading_screen()
@@ -375,7 +376,9 @@ func teleport_to(parcel: Vector2i, realm: String = ""):
 	if not realm.is_empty() && realm != Global.realm.get_realm_string():
 		Global.realm.async_set_realm(realm)
 
-	move_to(Vector3i(parcel.x * 16, 3, -parcel.y * 16), false)
+	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
+	prints("Teleport to parcel: ", parcel, move_to_position)
+	move_to(move_to_position, false)
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true

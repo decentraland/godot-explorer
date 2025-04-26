@@ -31,10 +31,10 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_cjop4"]
 size = Vector3(4800, 0.1, 4800)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nddgg"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_x854j"]
-material = SubResource("ShaderMaterial_lovo8")
+material = SubResource("ShaderMaterial_nddgg")
 size = Vector2(4800, 4800)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fstik"]

@@ -1,7 +1,8 @@
-[gd_scene load_steps=16 format=3 uid="uid://cuic8diqbxs83"]
+[gd_scene load_steps=21 format=3 uid="uid://cuic8diqbxs83"]
 
 [ext_resource type="Script" uid="uid://c8uwwssfiqy04" path="res://src/vr/vr_lobby.gd" id="1_my51n"]
 [ext_resource type="PackedScene" uid="uid://b228p8k6sonve" path="res://addons/godot-xr-tools/player/fade/fade_collision.tscn" id="2_inngf"]
+[ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_xx3dg"]
 [ext_resource type="PackedScene" uid="uid://hpr0v012ghsb" path="res://addons/godot-xr-tools/hands/scenes/highpoly/left_tac_glove.tscn" id="3_570d0"]
 [ext_resource type="PackedScene" uid="uid://cqhw276realc" path="res://addons/godot-xr-tools/functions/function_pointer.tscn" id="4_ejpxq"]
 [ext_resource type="PackedScene" uid="uid://38ff1blglbdy" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="5_3u4lg"]
@@ -26,6 +27,20 @@ sky = SubResource("Sky_411pe")
 tonemap_mode = 2
 glow_enabled = true
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_8wwks"]
+size = Vector3(4800, 0.1, 4800)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_hbw2f"]
+material = SubResource("ShaderMaterial_lovo8")
+size = Vector2(4800, 4800)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_igl6k"]
+albedo_texture = ExtResource("2_xx3dg")
+uv1_scale = Vector3(4800, 4800, 4800)
+texture_filter = 0
+
 [node name="VrLobby" type="Node3D"]
 script = ExtResource("1_my51n")
 
@@ -35,6 +50,21 @@ environment = SubResource("Environment_o37lb")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
 sky_mode = 1
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+collision_layer = 2147483649
+collision_mask = 2147483649
+input_ray_pickable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+shape = SubResource("BoxShape3D_8wwks")
+
+[node name="Floor" type="MeshInstance3D" parent="StaticBody3D/CollisionShape3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+mesh = SubResource("PlaneMesh_hbw2f")
+skeleton = NodePath("../../../XROrigin3D/PlayerBody")
+surface_material_override/0 = SubResource("StandardMaterial3D_igl6k")
 
 [node name="XROrigin3D" type="XROrigin3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.728815, 0)
@@ -74,9 +104,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.000184953, 0)
 [node name="GameUI" parent="XROrigin3D/UIOrigin3D" instance=ExtResource("6_dmvnc")]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -4)
-screen_size = Vector2(4, 4)
+screen_size = Vector2(7, 4)
 scene = ExtResource("7_kbcta")
-viewport_size = Vector2(720, 720)
+viewport_size = Vector2(1280, 720)
 transparent = 0
 alpha_scissor_threshold = 1.0
 unshaded = true

@@ -113,7 +113,7 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                     .join(file_name),
             );
 
-            let lib_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}", output_folder_name);
+            let lib_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/", output_folder_name);
             let destination_path = format!("{lib_folder}/{file_name}");
 
             copy_with_error_context(&source_path, &destination_path, false).map_err(
@@ -163,9 +163,9 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                 })?;
             }
 
-            /*copy_ffmpeg_libraries(target, lib_folder.clone(), false).map_err(|e| {
+            copy_ffmpeg_libraries(target, lib_folder.clone(), false).map_err(|e| {
                 anyhow::anyhow!("Failed to copy FFmpeg libraries to {}: {}", lib_folder, e)
-            })?;*/
+            })?;
         }
 
         other => return Err(anyhow::anyhow!("Unknown target: {}", other)),
