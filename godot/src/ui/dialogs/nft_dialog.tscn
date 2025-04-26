@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://ca84fs1dxdp6e"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gqdup"]
-[ext_resource type="Script" path="res://src/ui/dialogs/nft_dialog.gd" id="1_insdf"]
+[ext_resource type="Script" uid="uid://c7j7m3nuc2wb1" path="res://src/ui/dialogs/nft_dialog.gd" id="1_insdf"]
 [ext_resource type="SpriteFrames" uid="uid://bthpplsqs257v" path="res://assets/nftshape/loading_animation_sprite.tres" id="3_6iawc"]
 
 [node name="Panel_NFTDialog" type="Panel"]

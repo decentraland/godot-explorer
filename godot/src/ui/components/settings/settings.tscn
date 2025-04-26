@@ -678,6 +678,7 @@ text_overrun_behavior = 1
 clip_text = true
 item_count = 11
 popup/item_0/text = "mannakia.dcl.eth"
+popup/item_0/id = 0
 popup/item_1/text = "http://127.0.0.1:8000"
 popup/item_1/id = 1
 popup/item_2/text = "https://sdk-test-scenes.decentraland.zone"

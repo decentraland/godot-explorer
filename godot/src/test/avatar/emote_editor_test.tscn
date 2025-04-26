@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3 uid="uid://chlpbo1hwhm6s"]
 
-[ext_resource type="Script" path="res://src/test/avatar/emote_editor_test.gd" id="1_powqw"]
+[ext_resource type="Script" uid="uid://cycrrt4qav6ei" path="res://src/test/avatar/emote_editor_test.gd" id="1_powqw"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="2_ldtsl"]
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/emote_editor/emote_editor.tscn" id="3_jsvro"]
 

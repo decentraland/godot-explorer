@@ -1,6 +1,6 @@
 [gd_scene load_steps=6 format=3 uid="uid://blv7r5folt1d5"]
 
-[ext_resource type="Script" path="res://src/logic/player/player.gd" id="1_5bfm2"]
+[ext_resource type="Script" uid="uid://bwfhs05dq8dhm" path="res://src/logic/player/player.gd" id="1_5bfm2"]
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="2_n22nx"]
 [ext_resource type="PackedScene" uid="uid://cbtq7kaarx6mp" path="res://src/logic/player/camera_mode_area_detector.tscn" id="2_rco65"]
 

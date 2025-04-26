@@ -1,6 +1,6 @@
 [gd_scene load_steps=22 format=3 uid="uid://nexo8k0ub5ty"]
 
-[ext_resource type="Script" path="res://src/ui/components/discover/carrousel/discover_carrousel_item.gd" id="1_foqq3"]
+[ext_resource type="Script" uid="uid://d37ufifgl18y4" path="res://src/ui/components/discover/carrousel/discover_carrousel_item.gd" id="1_foqq3"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gao81"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="3_o4xes"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="4_4uq2a"]
@@ -47,7 +47,7 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [sub_resource type="Curve" id="Curve_6fe12"]
-max_value = 2.0
+_limits = [0.0, 2.0, 0.0, 1.0]
 _data = [Vector2(0.09, 1.28552), 0.0, 0.0, 0, 0, Vector2(0.34, 1.87802), 0.0, 0.0, 0, 0, Vector2(0.966667, 0.146113), 0.0, 0.0, 0, 0]
 point_count = 3
 
