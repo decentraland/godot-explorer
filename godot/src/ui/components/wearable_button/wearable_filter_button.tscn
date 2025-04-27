@@ -13,10 +13,14 @@ mouse_default_cursor_shape = 2
 theme_type_variation = &"WhiteButton"
 toggle_mode = true
 action_mode = 0
+keep_pressed_outside = true
 text = "Body"
 icon = ExtResource("1_rx2nd")
 expand_icon = true
 script = ExtResource("2_5x3mr")
 filter_category = 1
 
+[connection signal="button_down" from="." to="." method="_on_button_down"]
+[connection signal="button_up" from="." to="." method="_on_button_up"]
+[connection signal="pressed" from="." to="." method="_on_pressed"]
 [connection signal="toggled" from="." to="." method="_on_toggled"]

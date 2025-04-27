@@ -41,9 +41,15 @@ var jetpack_force = 15.0  # Adjust this to tune the power
 var horizontal_scale = 0.5  # Scale for X and Z axes
 
 var jetpack_on := false
+var loading := false
+var menu_opened := false
 
 # gdlint:ignore = async-function-name
 func _ready():
+	Global.loading_started.connect(self._on_loading_started)
+	Global.loading_finished.connect(self._on_loading_finished)
+	Global.on_menu_open.connect(self._on_menu_open)
+	Global.on_menu_close.connect(self._on_menu_close)
 	microphone_gltf.hide()
 	prints("Starts XRPlayer")
 
@@ -54,6 +60,21 @@ func _ready():
 	await get_tree().process_frame
 	pose_recentered()
 
+func _on_menu_open():
+	menu_opened = true
+
+func _on_menu_close():
+	menu_opened = false
+
+func _on_loading_started():
+	right_hand.hide()
+	left_hand.hide()
+	loading = true
+
+func _on_loading_finished():
+	right_hand.show()
+	left_hand.show()
+	loading = false
 
 func pose_recentered():
 	XRServer.center_on_hmd(XRServer.RESET_BUT_KEEP_TILT, true)
@@ -64,28 +85,29 @@ func _process(delta):
 	if !xr_camera:
 		return
 
-	# Get the target Y rotation (camera's Y rotation)
-	var target_rotation_y = xr_camera.rotation.y
+	if not menu_opened or loading:
+		# Get the target Y rotation (camera's Y rotation)
+		var target_rotation_y = xr_camera.rotation.y
 
-	# Get the current Y rotation of the object
-	var current_rotation_y = ui_origin_3d.rotation.y
+		# Get the current Y rotation of the object
+		var current_rotation_y = ui_origin_3d.rotation.y
 
-	# Calculate the difference in Y rotation
-	var difference = target_rotation_y - current_rotation_y
+		# Calculate the difference in Y rotation
+		var difference = target_rotation_y - current_rotation_y
 
-	# Wrap the angle difference to the range [-PI, PI] for smooth interpolation
-	difference = fmod(difference + PI, 2 * PI) - PI
+		# Wrap the angle difference to the range [-PI, PI] for smooth interpolation
+		difference = fmod(difference + PI, 2 * PI) - PI
 
-	# Calculate the interpolation factor
-	var t = min(1, delta * follow_speed)
+		# Calculate the interpolation factor
+		var t = min(1, delta * follow_speed)
 
-	# Interpolate based on the curve
-	var interpolated_t = follow_curve.sample_baked(t)
+		# Interpolate based on the curve
+		var interpolated_t = follow_curve.sample_baked(t)
 
-	# Update the object's Y rotation
-	ui_origin_3d.rotation.y = current_rotation_y + difference * interpolated_t
-	
-	if jetpack_on:
+		# Update the object's Y rotation
+		ui_origin_3d.rotation.y = current_rotation_y + difference * interpolated_t
+		
+	if jetpack_on and !loading	:
 		var thrust_direction = -left_hand.global_transform.basis.z
 		
 		# Scale X and Z to be softer
@@ -129,6 +151,8 @@ func _on_right_hand_button_released(xr_action_name):
 
 
 func _on_left_hand_button_pressed(xr_action_name):
+	if loading:
+		return
 	if xr_action_name == "grip_click":
 		jetpack_on = true
 		jet_pack_audio_player.play(0.0)
@@ -139,6 +163,8 @@ func _on_left_hand_button_pressed(xr_action_name):
 
 
 func _on_left_hand_button_released(xr_action_name):
+	if loading:
+		return
 	if xr_action_name == "grip_click":
 		jetpack_on = false
 		jet_pack_audio_player.stop()

@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://ytsxet2k47lj"]
 
-[ext_resource type="Script" uid="uid://bi6luswebriq0" path="res://addons/godot-xr-tools/user_settings/user_settings_ui.gd" id="1"]
+[ext_resource type="Script" path="res://addons/godot-xr-tools/user_settings/user_settings_ui.gd" id="1"]
 
 [node name="UserSettingsUI" type="TabContainer"]
 offset_right = 214.0
@@ -118,7 +118,7 @@ size_flags_horizontal = 3
 min_value = 1.0
 max_value = 2.5
 step = 0.05
-value = 1.0
+value = 1.5
 
 [node name="HSeparator" type="HSeparator" parent="Player/PlayerVBox"]
 layout_mode = 2
