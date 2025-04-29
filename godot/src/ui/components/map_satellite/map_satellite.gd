@@ -29,27 +29,37 @@ const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrou
 const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
 const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archipelago_circle.tscn")
 
-@onready var margin_container: MarginContainer = $MarginContainer
-@onready var cards_v_box_container: VBoxContainer = %CardsVBoxContainer
-@onready var cards_scroll_container: ScrollContainer = %CardsScrollContainer
-@onready var no_results: VBoxContainer = %NoResults
-
 @onready var archipelagos_control: Control = %ArchipelagosControl
+
+
+@onready var portrait_panel_container: PanelContainer = %PortraitPanelContainer
+@onready var landscape_panel_container: PanelContainer = %LandscapePanelContainer
+
 
 @onready var sub_viewport_container: SubViewportContainer = $SubViewportContainer
 @onready var map_viewport: SubViewport = %MapViewport
 @onready var map: Control = %Map
 @onready var camera: Camera2D = %Camera2D
-@onready var animation_player: AnimationPlayer = $AnimationPlayer
-@onready var sidebar: Control = %SidebarLandscape
-@onready var color_rect_close_sidebar: ColorRect = %ColorRectCloseSidebar
-@onready var portrait: VBoxContainer = %Portrait
-@onready var landscape: VBoxContainer = %Landscape
+@onready var archipelago_button: Button = %ArchipelagoButton
+
+@onready var portrait: Control = %Portrait
+@onready var landscape: Control = %Landscape
+
+
 @onready var portrait_filters: HBoxContainer = %PortraitFilters
 @onready var landscape_filters: HBoxContainer = %LandscapeFilters
+
 @onready var portrait_map_searchbar: PanelContainer = %PortraitMapSearchbar
 @onready var landscape_map_searchbar: PanelContainer = %LandscapeMapSearchbar
-@onready var archipelago_button: Button = %ArchipelagoButton
+
+@onready var portrait_cards: HBoxContainer = %PortraitCards
+@onready var landscape_cards: VBoxContainer = %LandscapeCards
+@onready var portrait_no_results: VBoxContainer = %PortraitNoResults
+@onready var landscape_no_results: VBoxContainer = %LandscapeNoResults
+@onready var landscape_cards_scroll: ScrollContainer = %LandscapeCardsScroll
+@onready var portrait_cards_scroll: ScrollContainer = %PortraitCardsScroll
+@onready var landscape_sidebar_container: VBoxContainer = %LandscapeSidebarContainer
+@onready var portrait_sidebar_container: VBoxContainer = %PortraitSidebarContainer
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 const SIDE_BAR_WIDTH = 300
@@ -62,6 +72,11 @@ var live_places_ids = []
 
 
 func _ready():
+	update_layout()
+
+	landscape_sidebar_container.position.x = -landscape_panel_container.size.x + 5
+	portrait_sidebar_container.position.y = portrait_panel_container.size.y - 5
+
 	get_viewport().connect("size_changed", self._on_viewport_resized)
 	archipelago_button.toggle_mode = true
 	archipelagos_control.visible = archipelago_button.button_pressed
@@ -71,8 +86,6 @@ func _ready():
 	landscape_map_searchbar.clean_searchbar.connect(_close_from_searchbar)
 	landscape_map_searchbar.submited_text.connect(_submitted_text_from_searchbar)
 	landscape_map_searchbar.reset()
-	color_rect_close_sidebar.hide()
-	sidebar.position = Vector2(color_rect_close_sidebar.size.x-5, 0)	
 	var group := ButtonGroup.new()
 	group.allow_unpress = true
 	for i in range(13):
@@ -148,11 +161,6 @@ func clamp_camera_position() -> void:
 		
 	map_is_on_top = camera.position.y <= min_pos.y + MAP_TOP_MARGIN
 
-func _process(_delta):
-	if map_is_on_top and margin_container.visible:
-		animation_player.play('hide_filters')
-	elif not map_is_on_top and not margin_container.visible:
-		animation_player.play('show_filters')
 
 func center_camera_on_parcel(parcel:Vector2i) -> void:
 	var zoom_on_parcel = MAX_ZOOM
@@ -190,7 +198,6 @@ func show_marker_at_parcel(parcel: Vector2i):
 
 func spawn_pin(category:int, place):
 	var pin = MAP_PIN.instantiate()
-	
 	var center_coord:Vector2i
 	if category != 14:
 		pin.scene_title = place.title
@@ -222,10 +229,19 @@ func _on_pin_clicked(coord:Vector2i):
 	show_marker_at_parcel(coord)
 
 func create_place_card(place)->void:
-	var item = DISCOVER_CARROUSEL_ITEM.instantiate()
-	item.item_pressed.connect(_item_pressed)
-	cards_v_box_container.add_child(item)
-	item.set_data(place)
+	var item_p = DISCOVER_CARROUSEL_ITEM.instantiate()
+	var item_l = DISCOVER_CARROUSEL_ITEM.instantiate()
+	
+	item_p.item_pressed.connect(_item_pressed)
+	item_l.item_pressed.connect(_item_pressed)
+	
+	portrait_cards.add_child(item_p)
+	landscape_cards.add_child(item_l)
+	item_p.scale = Vector2(2.5,2.5)
+	item_p.scale = Vector2(1.8,1.8)
+	item_p.set_data(place)
+	item_l.set_data(place)
+
 
 func _item_pressed(place)->void:
 	show_marker_at_parcel(get_center_from_rect_coords(place.positions))
@@ -320,11 +336,15 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 			spawn_pin(type, place)
 			
 		if places_to_show == 0:
-			no_results.show()
-			cards_scroll_container.hide()
+			portrait_no_results.show()
+			portrait_cards_scroll.hide()
+			landscape_no_results.show()
+			landscape_cards_scroll.hide()
 		else:
-			no_results.hide()
-			cards_scroll_container.show()
+			portrait_no_results.hide()
+			portrait_cards_scroll.show()
+			landscape_no_results.hide()
+			landscape_cards_scroll.show()
 		_open_sidebar()
 	
 		
@@ -340,12 +360,18 @@ func _on_color_rect_gui_input(event: InputEvent) -> void:
 
 func _open_sidebar()->void:
 	var duration = .4
-	create_tween().tween_property(sidebar, "position", Vector2(size.x-sidebar.size.x, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	var tween = create_tween()
+	tween.tween_property(landscape_sidebar_container, "position", Vector2.ZERO, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	tween.tween_property(portrait_sidebar_container, "position", Vector2.ZERO, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 
+	
 func _close_sidebar()->void:
 	var duration = .4
-	create_tween().tween_property(sidebar, "position", Vector2(size.x-5, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
-	cards_scroll_container.scroll_vertical = 0
+	var tween = create_tween()
+	tween.tween_property(landscape_sidebar_container, "position", Vector2(-landscape_sidebar_container.size.x + 5, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	tween.tween_property(portrait_sidebar_container, "position", Vector2(0, portrait_panel_container.size.y - 5), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	portrait_cards_scroll.scroll_horizontal = 0
+	landscape_cards_scroll.scroll_vertical = 0
 	filtered_places = []
 
 func _close_from_searchbar():
@@ -371,15 +397,21 @@ func _submitted_text_from_searchbar(text:String):
 				continue
 			spawn_pin(0, place)
 	if places_to_show == 0:
-		no_results.show()
-		cards_scroll_container.hide()
+		portrait_no_results.show()
+		portrait_cards_scroll.hide()
+		landscape_no_results.show()
+		landscape_cards_scroll.hide()
 	else:
-		no_results.hide()
-		cards_scroll_container.show()
+		portrait_no_results.hide()
+		portrait_cards_scroll.show()
+		landscape_no_results.hide()
+		landscape_cards_scroll.show()
 	_open_sidebar()
 
 func _clean_list_and_pins()->void:
-	for child in cards_v_box_container.get_children():
+	for child in portrait_cards.get_children():
+		child.queue_free()
+	for child in landscape_cards.get_children():
 		child.queue_free()
 	for child in map.get_children():
 		if child is MapPin:
@@ -437,11 +469,15 @@ func _on_check_box_toggled(toggled_on: bool) -> void:
 func update_layout()->void:
 	if Global.is_orientation_portrait():
 		portrait.show()
+		portrait_sidebar_container.show()
 		landscape.hide()
+		landscape_sidebar_container.hide()
 	else:
 		portrait.hide()
+		portrait_sidebar_container.hide()
 		landscape.show()
-
+		landscape_sidebar_container.show()
+		
 func _on_map_gui_input(event):
 	if event is InputEventScreenTouch:
 		if event.pressed:

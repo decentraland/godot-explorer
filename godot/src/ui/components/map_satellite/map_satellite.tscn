@@ -1,9 +1,7 @@
-[gd_scene load_steps=19 format=3 uid="uid://duuasgi2pnb8k"]
+[gd_scene load_steps=12 format=3 uid="uid://duuasgi2pnb8k"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
 [ext_resource type="PackedScene" uid="uid://diojwgryptiuw" path="res://src/ui/components/map_satellite/map_searchbar.tscn" id="4_ju8cx"]
-[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_w1xks"]
-[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="5_qwbvm"]
 [ext_resource type="Texture2D" uid="uid://cg0awu10wijew" path="res://assets/ui/place_categories/provisory-archipelagos.svg" id="6_cmtv6"]
 [ext_resource type="Texture2D" uid="uid://tf0rlaicf452" path="res://assets/ui/map/empty-search.svg" id="6_m7gk0"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="7_unheb"]
@@ -27,15 +25,6 @@ bg_color = Color(1, 1, 1, 1)
 corner_radius_top_left = 24
 corner_radius_top_right = 24
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2w04b"]
-content_margin_left = 10.0
-content_margin_right = 10.0
-bg_color = Color(0.168627, 0.160784, 0.188235, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-
 [sub_resource type="LabelSettings" id="LabelSettings_iemrq"]
 font = ExtResource("7_unheb")
 font_size = 24
@@ -44,120 +33,6 @@ font_color = Color(0.513233, 0.513233, 0.513233, 1)
 [sub_resource type="LabelSettings" id="LabelSettings_77036"]
 font = ExtResource("8_0jug1")
 font_color = Color(0.513726, 0.513726, 0.513726, 1)
-
-[sub_resource type="Animation" id="Animation_lrm6h"]
-length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("MarginContainer:modulate")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Color(1, 1, 1, 1)]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("MarginContainer:visible")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [true]
-}
-tracks/2/type = "value"
-tracks/2/imported = false
-tracks/2/enabled = true
-tracks/2/path = NodePath("CanvasLayer/ColorRectCloseSidebar:modulate")
-tracks/2/interp = 1
-tracks/2/loop_wrap = true
-tracks/2/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Color(1, 1, 1, 0)]
-}
-tracks/3/type = "value"
-tracks/3/imported = false
-tracks/3/enabled = true
-tracks/3/path = NodePath("CanvasLayer/ColorRectCloseSidebar:visible")
-tracks/3/interp = 1
-tracks/3/loop_wrap = true
-tracks/3/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [true]
-}
-
-[sub_resource type="Animation" id="Animation_5tr2o"]
-resource_name = "hide_filters"
-length = 0.3
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("MarginContainer:modulate")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.3),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("MarginContainer:visible")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0.3),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [false]
-}
-
-[sub_resource type="Animation" id="Animation_gfhgp"]
-resource_name = "show_filters"
-length = 0.3
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("MarginContainer:modulate")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.3),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("MarginContainer:visible")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [true]
-}
-
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_q556g"]
-_data = {
-"RESET": SubResource("Animation_lrm6h"),
-"hide_filters": SubResource("Animation_5tr2o"),
-"show_filters": SubResource("Animation_gfhgp")
-}
 
 [node name="MapSatellite" type="Control"]
 layout_mode = 3
@@ -224,7 +99,7 @@ mouse_filter = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 54.0
+offset_bottom = 125.0
 grow_horizontal = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 0
@@ -236,97 +111,6 @@ theme_override_constants/margin_bottom = 30
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 20
-
-[node name="Portrait" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 20
-
-[node name="PortraitMapSearchbar" parent="MarginContainer/VBoxContainer/Portrait" instance=ExtResource("4_ju8cx")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
-
-[node name="FilterScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/Portrait"]
-custom_minimum_size = Vector2(0, 35)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
-horizontal_scroll_mode = 3
-vertical_scroll_mode = 0
-
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/Portrait/FilterScrollContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/margin_bottom = 5
-
-[node name="PortraitFilters" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Portrait/FilterScrollContainer/MarginContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 60)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 2
-mouse_filter = 2
-theme_override_constants/separation = 11
-
-[node name="Landscape" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 20
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Landscape"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_right = 30
-
-[node name="LandscapeMapSearchbar" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2/MarginContainer" instance=ExtResource("4_ju8cx")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
-
-[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 2.0
-
-[node name="FilterScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2/Control"]
-custom_minimum_size = Vector2(0, 35)
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 2.0
-horizontal_scroll_mode = 3
-vertical_scroll_mode = 0
-
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2/Control/FilterScrollContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/margin_bottom = 5
-
-[node name="LandscapeFilters" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2/Control/FilterScrollContainer/MarginContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 60)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 2
-mouse_filter = 2
-theme_override_constants/separation = 11
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -374,8 +158,8 @@ icon = ExtResource("6_cmtv6")
 icon_alignment = 1
 expand_icon = true
 
-[node name="LandscapeSidebarContainer" type="VBoxContainer" parent="."]
-visible = false
+[node name="Portrait" type="Control" parent="."]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -384,85 +168,108 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Control" type="Control" parent="LandscapeSidebarContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-mouse_force_pass_scroll_events = false
+[node name="PortraitSearchContainer" type="MarginContainer" parent="Portrait"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 206.0
+grow_horizontal = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 30
 
-[node name="HBoxContainer" type="HBoxContainer" parent="LandscapeSidebarContainer"]
+[node name="Portrait" type="VBoxContainer" parent="Portrait/PortraitSearchContainer"]
+custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
-size_flags_vertical = 3
-size_flags_stretch_ratio = 3.0
 mouse_filter = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 20
 
-[node name="SidebarLandscape" type="MarginContainer" parent="LandscapeSidebarContainer/HBoxContainer"]
+[node name="PortraitMapSearchbar" parent="Portrait/PortraitSearchContainer/Portrait" instance=ExtResource("4_ju8cx")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 0
 
-[node name="PanelContainer" type="PanelContainer" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape"]
+[node name="FilterScrollContainer" type="ScrollContainer" parent="Portrait/PortraitSearchContainer/Portrait"]
+custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="Portrait/PortraitSearchContainer/Portrait/FilterScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_bottom = 5
+
+[node name="PortraitFilters" type="HBoxContainer" parent="Portrait/PortraitSearchContainer/Portrait/FilterScrollContainer/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 11
+
+[node name="PortraitSidebarContainer" type="VBoxContainer" parent="Portrait"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Control" type="Control" parent="Portrait/PortraitSidebarContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 2.0
+mouse_filter = 2
+mouse_force_pass_scroll_events = false
+
+[node name="PortraitPanelContainer" type="PanelContainer" parent="Portrait/PortraitSidebarContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
 
-[node name="MarginContainer" type="MarginContainer" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape/PanelContainer"]
+[node name="MarginContainer2" type="MarginContainer" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer"]
 layout_mode = 2
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-
-[node name="Button_Close" type="Button" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape/PanelContainer/MarginContainer"]
-visible = false
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 2
-size_flags_horizontal = 8
-size_flags_vertical = 0
-focus_mode = 0
-theme = ExtResource("4_w1xks")
-theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
-theme_override_constants/icon_max_width = 20
-theme_override_styles/normal = SubResource("StyleBoxFlat_2w04b")
-icon = ExtResource("5_qwbvm")
-icon_alignment = 1
-expand_icon = true
-
-[node name="MarginContainer2" type="MarginContainer" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape/PanelContainer"]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape/PanelContainer/MarginContainer2"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2"]
 layout_mode = 2
 alignment = 1
 
-[node name="CardsScrollContainer" type="ScrollContainer" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape/PanelContainer/MarginContainer2/VBoxContainer"]
+[node name="PortraitCardsScroll" type="ScrollContainer" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
-size_flags_horizontal = 4
 size_flags_vertical = 3
-horizontal_scroll_mode = 0
-vertical_scroll_mode = 3
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
 
-[node name="CardsVBoxContainer" type="VBoxContainer" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape/PanelContainer/MarginContainer2/VBoxContainer/CardsScrollContainer"]
+[node name="PortraitCards" type="HBoxContainer" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer/PortraitCardsScroll"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 5
+alignment = 1
 
-[node name="NoResults" type="VBoxContainer" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape/PanelContainer/MarginContainer2/VBoxContainer"]
+[node name="PortraitNoResults" type="VBoxContainer" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 15
 
-[node name="TextureRect" type="TextureRect" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape/PanelContainer/MarginContainer2/VBoxContainer/NoResults"]
+[node name="TextureRect" type="TextureRect" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer/PortraitNoResults"]
 modulate = Color(1, 1, 1, 0.419608)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -470,13 +277,13 @@ size_flags_vertical = 4
 texture = ExtResource("6_m7gk0")
 stretch_mode = 3
 
-[node name="Label" type="Label" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape/PanelContainer/MarginContainer2/VBoxContainer/NoResults"]
+[node name="Label" type="Label" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer/PortraitNoResults"]
 layout_mode = 2
 text = "No results found"
 label_settings = SubResource("LabelSettings_iemrq")
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="LandscapeSidebarContainer/HBoxContainer/SidebarLandscape/PanelContainer/MarginContainer2/VBoxContainer/NoResults"]
+[node name="Label2" type="Label" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer/PortraitNoResults"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 text = "Make sure your search is spelled correctly."
@@ -484,29 +291,163 @@ label_settings = SubResource("LabelSettings_77036")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="Control" type="Control" parent="LandscapeSidebarContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 2.0
-
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
-visible = false
-
-[node name="ColorRectCloseSidebar" type="ColorRect" parent="CanvasLayer"]
+[node name="Landscape" type="Control" parent="."]
 unique_name_in_owner = true
-modulate = Color(1, 1, 1, 0)
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 1
-color = Color(0, 0, 0, 0.501961)
+mouse_filter = 2
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-libraries = {
-"": SubResource("AnimationLibrary_q556g")
-}
+[node name="LandscapeSarchcontainer" type="MarginContainer" parent="Landscape"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 91.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 30
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="Landscape/LandscapeSarchcontainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="MarginContainer" type="MarginContainer" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_right = 30
+
+[node name="LandscapeMapSearchbar" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2/MarginContainer" instance=ExtResource("4_ju8cx")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+
+[node name="Control" type="Control" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 3.0
+
+[node name="FilterScrollContainer" type="ScrollContainer" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2/Control"]
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2/Control/FilterScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_bottom = 5
+
+[node name="LandscapeFilters" type="HBoxContainer" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2/Control/FilterScrollContainer/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 11
+
+[node name="LandscapeSidebarContainer" type="VBoxContainer" parent="Landscape"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Control" type="Control" parent="Landscape/LandscapeSidebarContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+mouse_force_pass_scroll_events = false
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Landscape/LandscapeSidebarContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 3.0
+mouse_filter = 2
+
+[node name="LandscapePanelContainer" type="PanelContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
+
+[node name="MarginContainer" type="MarginContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 30
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="LandscapeCardsScroll" type="ScrollContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="LandscapeCards" type="VBoxContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer/LandscapeCardsScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+
+[node name="LandscapeNoResults" type="VBoxContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer/LandscapeNoResults"]
+modulate = Color(1, 1, 1, 0.419608)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("6_m7gk0")
+stretch_mode = 3
+
+[node name="Label" type="Label" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer/LandscapeNoResults"]
+layout_mode = 2
+text = "No results found"
+label_settings = SubResource("LabelSettings_iemrq")
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer/LandscapeNoResults"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+text = "Make sure your search is spelled correctly."
+label_settings = SubResource("LabelSettings_77036")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Control" type="Control" parent="Landscape/LandscapeSidebarContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 3.0
+mouse_filter = 2
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="." method="_on_map_gui_input"]
