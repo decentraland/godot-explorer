@@ -1,102 +1,12 @@
-[gd_scene load_steps=8 format=3 uid="uid://d0k650qhta26q"]
+[gd_scene load_steps=4 format=3 uid="uid://d0k650qhta26q"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_pin.gd" id="1_ndfeu"]
 [ext_resource type="Texture2D" uid="uid://bs3gvy2pgaqr" path="res://assets/ui/place_categories/music-pin.svg" id="2_hpfdi"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_y1xt0"]
-font_size = 20
+font_size = 26
 outline_size = 6
 outline_color = Color(0, 0, 0, 1)
-
-[sub_resource type="Animation" id="Animation_qnqs7"]
-length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite2D/Label:visible")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [true]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Sprite2D/Label:self_modulate")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Color(1, 1, 1, 1)]
-}
-
-[sub_resource type="Animation" id="Animation_sbaag"]
-resource_name = "hide_title"
-length = 0.3
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite2D/Label:visible")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0.3),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [false]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Sprite2D/Label:self_modulate")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0, 0.3),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
-}
-
-[sub_resource type="Animation" id="Animation_0b6bq"]
-resource_name = "show_title"
-length = 0.3
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Sprite2D/Label:visible")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [true]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Sprite2D/Label:self_modulate")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0, 0.3),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
-}
-
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_75m6n"]
-_data = {
-"RESET": SubResource("Animation_qnqs7"),
-"hide_title": SubResource("Animation_sbaag"),
-"show_title": SubResource("Animation_0b6bq")
-}
 
 [node name="MapPin" type="Control"]
 custom_minimum_size = Vector2(26.5, 26.5)
@@ -115,20 +25,23 @@ pin_category = 10
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 unique_name_in_owner = true
-position = Vector2(13, 17)
+position = Vector2(13, 1)
 texture = ExtResource("2_hpfdi")
 offset = Vector2(0.25, -23)
 
 [node name="Label" type="Label" parent="Sprite2D"]
 custom_minimum_size = Vector2(200, 0)
-anchors_preset = 5
+anchors_preset = 7
 anchor_left = 0.5
+anchor_top = 1.0
 anchor_right = 0.5
-offset_left = -145.5
-offset_top = -133.0
-offset_right = 78.0
-offset_bottom = -63.0
+anchor_bottom = 1.0
+offset_left = -221.0
+offset_top = -280.0
+offset_right = 120.0
+offset_bottom = -193.0
 grow_horizontal = 2
+grow_vertical = 0
 pivot_offset = Vector2(111.75, 70)
 size_flags_horizontal = 4
 text = "asd asd asdav"
@@ -137,19 +50,12 @@ horizontal_alignment = 1
 vertical_alignment = 2
 autowrap_mode = 2
 
-[node name="Control" type="Control" parent="."]
+[node name="Control" type="Control" parent="Sprite2D"]
 layout_mode = 3
 anchors_preset = 0
-offset_left = -4.0
-offset_top = -37.0
-offset_right = 32.0
-offset_bottom = 15.0
-mouse_filter = 1
+offset_left = -36.0
+offset_top = -72.0
+offset_right = 37.0
+offset_bottom = 25.0
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-libraries = {
-"": SubResource("AnimationLibrary_75m6n")
-}
-
-[connection signal="mouse_entered" from="Control" to="." method="_on_control_mouse_entered"]
-[connection signal="mouse_exited" from="Control" to="." method="_on_control_mouse_exited"]
+[connection signal="gui_input" from="Sprite2D/Control" to="." method="_on_control_gui_input"]

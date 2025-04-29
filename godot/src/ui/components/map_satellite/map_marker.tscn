@@ -1,0 +1,49 @@
+[gd_scene load_steps=4 format=3 uid="uid://cic3ckk8o08jx"]
+
+[ext_resource type="Script" path="res://src/ui/components/map_satellite/map_marker.gd" id="1_cjdtt"]
+[ext_resource type="Texture2D" uid="uid://dmfk50m8cogvs" path="res://src/ui/components/map_satellite/assets/cursor.svg" id="2_rqccf"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_y1xt0"]
+font_size = 26
+outline_size = 6
+outline_color = Color(0, 0, 0, 1)
+
+[node name="MapMarker" type="Control"]
+custom_minimum_size = Vector2(26.5, 26.5)
+layout_mode = 3
+anchor_right = 0.037
+anchor_bottom = 0.037
+offset_right = -0.139999
+offset_bottom = -0.139999
+pivot_offset = Vector2(13.25, 13.25)
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 1
+script = ExtResource("1_cjdtt")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(13.25, 13.25)
+scale = Vector2(0.207, 0.207)
+texture = ExtResource("2_rqccf")
+
+[node name="Label" type="Label" parent="Sprite2D"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -547.092
+offset_top = -68.8213
+offset_right = -347.092
+offset_bottom = -35.8213
+grow_horizontal = 2
+grow_vertical = 0
+pivot_offset = Vector2(99.75, 0.5)
+size_flags_horizontal = 4
+text = "1,2"
+label_settings = SubResource("LabelSettings_y1xt0")
+horizontal_alignment = 1
+autowrap_mode = 2

@@ -26,7 +26,7 @@ corner_radius_bottom_left = 20
 
 [node name="MapSearchbar" type="PanelContainer"]
 z_index = 20
-custom_minimum_size = Vector2(600, 60)
+custom_minimum_size = Vector2(200, 60)
 offset_right = 280.0
 offset_bottom = 34.0
 size_flags_horizontal = 6

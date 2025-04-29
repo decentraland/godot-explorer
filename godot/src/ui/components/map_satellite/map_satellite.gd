@@ -23,6 +23,7 @@ var PAN_THRESHOLD := 5.0
 var pan_started := false
 var just_zoomed := false 
 
+const MAP_MARKER = preload("res://src/ui/components/map_satellite/map_marker.tscn")
 const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
 const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn")
 const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
@@ -35,12 +36,10 @@ const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archip
 
 @onready var archipelagos_control: Control = %ArchipelagosControl
 
-@onready var cursor_marker: Sprite2D = %CursorMarker
 @onready var sub_viewport_container: SubViewportContainer = $SubViewportContainer
 @onready var map_viewport: SubViewport = %MapViewport
 @onready var map: Control = %Map
 @onready var camera: Camera2D = %Camera2D
-@onready var coordinates_label: Label = %CoordinatesLabel
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var sidebar: Control = %SidebarLandscape
 @onready var color_rect_close_sidebar: ColorRect = %ColorRectCloseSidebar
@@ -64,7 +63,7 @@ var live_places_ids = []
 
 func _ready():
 	get_viewport().connect("size_changed", self._on_viewport_resized)
-
+	archipelago_button.toggle_mode = true
 	archipelagos_control.visible = archipelago_button.button_pressed
 	portrait_map_searchbar.clean_searchbar.connect(_close_from_searchbar)
 	portrait_map_searchbar.submited_text.connect(_submitted_text_from_searchbar)
@@ -163,36 +162,37 @@ func center_camera_on_parcel(parcel:Vector2i) -> void:
 	tween.tween_property(camera, "zoom", zoom_on_parcel, 0.3).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 	
 	await tween.finished
-	update_label_settings(zoom_on_parcel)
 	
 func handle_click(event_position:Vector2)-> void:
 	var coords = event_position / PARCEL_SIZE
 	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
 	clicked_parcel.emit(parcel_coords)
-	show_cursor_at_parcel(parcel_coords)
+	show_marker_at_parcel(parcel_coords)
 
 func get_parcel_position(parcel: Vector2i) -> Vector2:
 	var parcel_position = Vector2(parcel + PARCEL_OFFSET) * PARCEL_SIZE + PARCEL_SIZE / 2
 	return parcel_position
 
-func show_cursor_at_parcel(parcel: Vector2i):
+func show_marker_at_parcel(parcel: Vector2i):
+	for child in map.get_children():
+		if child is Marker:
+			child.queue_free()
+			
 	center_camera_on_parcel(parcel)
-	var pos = get_parcel_position(parcel)
-	cursor_marker.position = pos
-	cursor_marker.visible = true
-	
-	coordinates_label.text = '%s, %s' % [parcel.x, -parcel.y]
-	coordinates_label.show()
-	update_label_settings(camera.zoom)
+	var marker = MAP_MARKER.instantiate()
+	var pos = get_parcel_position(parcel) - marker.size / 2
+	marker.position = pos	
+	marker.marker_x = parcel.x
+	marker.marker_y = -parcel.y
+	map.add_child(marker)
+	marker.visible = true
+	marker.update()
 
-func update_label_settings(target_zoom) -> void:
-	const FONT_SIZE = 18
-	const OUTLINE_SIZE = 6
-	coordinates_label.label_settings.font_size = int(FONT_SIZE / target_zoom.x)
-	coordinates_label.label_settings.outline_size = int(OUTLINE_SIZE / target_zoom.x)
+
 
 func spawn_pin(category:int, place):
 	var pin = MAP_PIN.instantiate()
+	
 	var center_coord:Vector2i
 	if category != 14:
 		pin.scene_title = place.title
@@ -208,11 +208,20 @@ func spawn_pin(category:int, place):
 		pin.scene_title = place.name
 		
 	var pos = get_parcel_position(center_coord) - pin.size / 2
+	
+	pin.pin_x = center_coord.x
+	pin.pin_y = center_coord.y
+	pin.connect("touched_pin", Callable(self, "_on_pin_clicked"))
+
 	pin.pin_category = category
-	pin.z_index = cursor_marker.z_index+1
+	pin.z_index = 5
 	
 	pin.position = pos
 	map.add_child(pin)
+
+func _on_pin_clicked(coord:Vector2i):
+	clicked_parcel.emit(coord)
+	show_marker_at_parcel(coord)
 
 func create_place_card(place)->void:
 	var item = DISCOVER_CARROUSEL_ITEM.instantiate()
@@ -221,7 +230,7 @@ func create_place_card(place)->void:
 	item.set_data(place)
 
 func _item_pressed(place)->void:
-	show_cursor_at_parcel(get_center_from_rect_coords(place.positions))
+	show_marker_at_parcel(get_center_from_rect_coords(place.positions))
 
 func get_center_from_rect_coords(coords: Array) -> Vector2i:
 	if coords.size() == 1:
@@ -514,4 +523,4 @@ func handle_tap(pos: Vector2):
 	var coords = pos / PARCEL_SIZE
 	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
 	clicked_parcel.emit(parcel_coords)
-	show_cursor_at_parcel(parcel_coords)
+	show_marker_at_parcel(parcel_coords)
