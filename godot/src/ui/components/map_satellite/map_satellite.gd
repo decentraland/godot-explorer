@@ -188,8 +188,6 @@ func show_marker_at_parcel(parcel: Vector2i):
 	marker.visible = true
 	marker.update()
 
-
-
 func spawn_pin(category:int, place):
 	var pin = MAP_PIN.instantiate()
 	
@@ -334,12 +332,12 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 		portrait_map_searchbar.update_filtered_category()
 		landscape_map_searchbar.filter_type = type
 		landscape_map_searchbar.update_filtered_category()
-		
+
 func _on_color_rect_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if !event.pressed:
 			_close_sidebar()
-			
+
 func _open_sidebar()->void:
 	var duration = .4
 	create_tween().tween_property(sidebar, "position", Vector2(size.x-sidebar.size.x, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
@@ -359,7 +357,7 @@ func _close_from_searchbar():
 			child.button_pressed = false
 	_clean_list_and_pins()
 	_close_sidebar()
-	
+
 func _submitted_text_from_searchbar(text:String):
 	var places_to_show = 0
 	_clean_list_and_pins()
@@ -411,8 +409,7 @@ func _async_draw_archipelagos() -> void:
 			var pos = get_parcel_position(center_coord)
 			archipelagos_control.add_child(circle)
 			circle.set_circle(pos, radius)
-			
-			
+
 func get_center_from_rect_coords_array(coords: Array) -> Vector2i:
 	var min_x = INF
 	var max_x = -INF
@@ -433,11 +430,9 @@ func get_center_from_rect_coords_array(coords: Array) -> Vector2i:
 
 	return Vector2i(center_x, -center_y)
 
-
 func _on_check_box_toggled(toggled_on: bool) -> void:
 	archipelagos_control.visible = toggled_on
 	update_layout()
-
 
 func update_layout()->void:
 	if Global.is_orientation_portrait():
@@ -446,7 +441,6 @@ func update_layout()->void:
 	else:
 		portrait.hide()
 		landscape.show()
-
 
 func _on_map_gui_input(event):
 	if event is InputEventScreenTouch:

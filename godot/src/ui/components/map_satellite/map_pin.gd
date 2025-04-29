@@ -48,8 +48,6 @@ func set_category(category: PinCategoryEnum) -> void:
 		printerr("_update_pin_category_icon texture_path not found ", image_path)
 
 func _process(_delta: float) -> void:
-	#const FONT_SIZE = 16
-	#const FONT_OUTLINE_SIZE = 6
 	var camera_zoom = get_sibling_camera_zoom()
 	sprite_2d.scale = Vector2.ONE / camera_zoom
 

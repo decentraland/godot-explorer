@@ -1,9 +1,11 @@
-[gd_scene load_steps=4 format=3 uid="uid://d0k650qhta26q"]
+[gd_scene load_steps=5 format=3 uid="uid://d0k650qhta26q"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_pin.gd" id="1_ndfeu"]
 [ext_resource type="Texture2D" uid="uid://bs3gvy2pgaqr" path="res://assets/ui/place_categories/music-pin.svg" id="2_hpfdi"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_5kvc2"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_y1xt0"]
+font = ExtResource("3_5kvc2")
 font_size = 26
 outline_size = 6
 outline_color = Color(0, 0, 0, 1)
