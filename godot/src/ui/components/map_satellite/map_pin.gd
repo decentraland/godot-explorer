@@ -25,12 +25,22 @@ enum PinCategoryEnum {
 @export var pin_category: PinCategoryEnum
 @export var coord_x: int
 @export var coord_y: int
+
 @export var scene_title: String
 @onready var label: Label = $Sprite2D/Label
 @onready var sprite_2d: Sprite2D = %Sprite2D
+@onready var cluster: PanelContainer = $Sprite2D/PanelContainer
+@onready var cluster_label: Label = $Sprite2D/PanelContainer/Label
+
+const cluster_radius:int = 60
 
 func _ready():
-	label.text = scene_title
+	if scene_title.length() > 0:
+		label.text = scene_title
+		label.show()
+	else:
+		label.hide()
+	
 	set_category(pin_category)
 	
 func set_category(category: PinCategoryEnum) -> void:
@@ -47,6 +57,14 @@ func set_category(category: PinCategoryEnum) -> void:
 	else:
 		printerr("_update_pin_category_icon texture_path not found ", image_path)
 
+func set_place(place:Place) -> void:
+	label.text = place.title
+	
+func show_cluster(quantity: int = 1):
+	if quantity > 1:
+		cluster_label.text = str(quantity)
+		cluster.show()
+	
 func _process(_delta: float) -> void:
 	var camera_zoom = get_sibling_camera_zoom()
 	sprite_2d.scale = Vector2.ONE / camera_zoom

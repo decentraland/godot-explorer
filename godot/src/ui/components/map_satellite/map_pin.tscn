@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://d0k650qhta26q"]
+[gd_scene load_steps=6 format=3 uid="uid://d0k650qhta26q"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_pin.gd" id="1_ndfeu"]
 [ext_resource type="Texture2D" uid="uid://bs3gvy2pgaqr" path="res://assets/ui/place_categories/music-pin.svg" id="2_hpfdi"]
@@ -10,14 +10,19 @@ font_size = 26
 outline_size = 6
 outline_color = Color(0, 0, 0, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3v801"]
+bg_color = Color(1, 0, 0, 1)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
 [node name="MapPin" type="Control"]
 custom_minimum_size = Vector2(26.5, 26.5)
 layout_mode = 3
 anchors_preset = 0
 offset_right = -0.139999
 offset_bottom = -0.139999
-grow_horizontal = 2
-grow_vertical = 2
 pivot_offset = Vector2(13.25, 13.25)
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -32,6 +37,7 @@ texture = ExtResource("2_hpfdi")
 offset = Vector2(0.25, -23)
 
 [node name="Label" type="Label" parent="Sprite2D"]
+visible = false
 custom_minimum_size = Vector2(200, 0)
 anchors_preset = 7
 anchor_left = 0.5
@@ -60,5 +66,19 @@ offset_left = -36.0
 offset_top = -72.0
 offset_right = 37.0
 offset_bottom = 25.0
+
+[node name="PanelContainer" type="PanelContainer" parent="Sprite2D"]
+visible = false
+offset_left = 22.5
+offset_top = -80.0
+offset_right = 62.5
+offset_bottom = -40.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_3v801")
+
+[node name="Label" type="Label" parent="Sprite2D/PanelContainer"]
+layout_mode = 2
+text = "1"
+label_settings = SubResource("LabelSettings_y1xt0")
+horizontal_alignment = 1
 
 [connection signal="gui_input" from="Sprite2D/Control" to="." method="_on_control_gui_input"]
