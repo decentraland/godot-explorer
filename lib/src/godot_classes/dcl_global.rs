@@ -98,6 +98,9 @@ pub struct DclGlobal {
 #[godot_api]
 impl INode for DclGlobal {
     fn init(base: Base<Node>) -> Self {
+        #[cfg(feature = "use_deno")]
+        crate::dcl::js::init_runtime();
+
         #[cfg(target_os = "android")]
         android::init_logger();
 
@@ -125,12 +128,12 @@ impl INode for DclGlobal {
 
         let args = godot::engine::Os::singleton().get_cmdline_args();
 
-        let testing_scene_mode = args.find("--scene-test".into(), None).is_some();
-        let preview_mode = args.find("--preview".into(), None).is_some();
-        let developer_mode = args.find("--dev".into(), None).is_some();
+        let testing_scene_mode = args.find(&"--scene-test".into(), None).is_some();
+        let preview_mode = args.find(&"--preview".into(), None).is_some();
+        let developer_mode = args.find(&"--dev".into(), None).is_some();
 
         let fixed_skybox_time =
-            testing_scene_mode || args.find("--scene-renderer".into(), None).is_some();
+            testing_scene_mode || args.find(&"--scene-renderer".into(), None).is_some();
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 

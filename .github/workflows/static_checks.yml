@@ -17,7 +17,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.77.2
+          toolchain: 1.79
           override: true
           components: clippy, rustfmt
       - run: rustup component add rustfmt
