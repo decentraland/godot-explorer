@@ -2,6 +2,8 @@ class_name MapPin
 
 extends Control
 signal touched_pin(pos:Vector2i)
+signal play_sound
+
 var pin_x:int
 var pin_y:int
 
@@ -35,6 +37,7 @@ enum PinCategoryEnum {
 const cluster_radius:int = 60
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
 	if scene_title.length() > 0:
 		label.text = scene_title
 		label.show()
@@ -82,4 +85,6 @@ func get_sibling_camera_zoom() -> Vector2:
 func _on_control_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
+			self.play_sound.emit()
 			emit_signal("touched_pin", Vector2i(pin_x, pin_y))
+			

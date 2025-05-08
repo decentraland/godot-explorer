@@ -2,7 +2,6 @@ extends Control
 
 signal clicked_parcel(parcel: Vector2i)
 
-
 const TILE_SIZE = Vector2(512, 512)
 const GRID_SIZE = Vector2(16, 16)
 const PARCELS_PER_TILE = Vector2(20, 20)
@@ -12,10 +11,13 @@ const MAP_SIZE = PARCEL_SIZE * Vector2(340,340)
 const PARCEL_OFFSET = Vector2i(170,170)
 const MAP_CENTER = MAP_SIZE / 2
 const TILE_DISPLACEMENT = Vector2(18,18) * PARCEL_SIZE
-
-
 const MIN_ZOOM := Vector2(0.2, 0.2)
 const MAX_ZOOM := Vector2(2, 2)
+const MAP_MARKER = preload("res://src/ui/components/map_satellite/map_marker.tscn")
+const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
+const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn")
+const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
+const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archipelago_circle.tscn")
 var active_touches := {}
 var last_pinch_distance := 0.0
 var last_pan_position := Vector2.ZERO
@@ -23,35 +25,23 @@ var PAN_THRESHOLD := 5.0
 var pan_started := false
 var just_zoomed := false 
 
-const MAP_MARKER = preload("res://src/ui/components/map_satellite/map_marker.tscn")
-const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
-const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn")
-const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
-const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archipelago_circle.tscn")
+var dragging:=false
+var last_mouse_position: Vector2
 
 @onready var archipelagos_control: Control = %ArchipelagosControl
-
-
 @onready var portrait_panel_container: PanelContainer = %PortraitPanelContainer
 @onready var landscape_panel_container: PanelContainer = %LandscapePanelContainer
-
-
 @onready var sub_viewport_container: SubViewportContainer = $SubViewportContainer
 @onready var map_viewport: SubViewport = %MapViewport
 @onready var map: Control = %Map
 @onready var camera: Camera2D = %Camera2D
 @onready var archipelago_button: Button = %ArchipelagoButton
-
 @onready var portrait: Control = %Portrait
 @onready var landscape: Control = %Landscape
-
-
 @onready var portrait_filters: HBoxContainer = %PortraitFilters
 @onready var landscape_filters: HBoxContainer = %LandscapeFilters
-
 @onready var portrait_map_searchbar: PanelContainer = %PortraitMapSearchbar
 @onready var landscape_map_searchbar: PanelContainer = %LandscapeMapSearchbar
-
 @onready var portrait_cards: HBoxContainer = %PortraitCards
 @onready var landscape_cards: VBoxContainer = %LandscapeCards
 @onready var portrait_no_results: VBoxContainer = %PortraitNoResults
@@ -69,14 +59,10 @@ var active_filter: int = -1
 var poi_places_ids = []
 var live_places_ids = []
 
-
-
 func _ready():
 	update_layout()
-
 	landscape_sidebar_container.position.x = -landscape_panel_container.size.x + 5
 	portrait_sidebar_container.position.y = portrait_panel_container.size.y - 5
-
 	get_viewport().connect("size_changed", self._on_viewport_resized)
 	archipelago_button.toggle_mode = true
 	archipelagos_control.visible = archipelago_button.button_pressed
@@ -101,11 +87,9 @@ func _ready():
 		btnl.filter_type = i
 		btnl.connect("filter_toggled", Callable(self, "_on_filter_button_toggled"))
 		landscape_filters.add_child(btnl)
-			
 	map_viewport.size = MAP_SIZE
 	map.size = MAP_SIZE
 	center_camera_on_parcel(Vector2i(0,1))
-	
 	
 	# Drawing the entire map using tiles
 	for y in range(GRID_SIZE.y):
@@ -135,14 +119,11 @@ func _ready():
 		
 	_async_draw_archipelagos()
 	#var circle = ARCHIPELAGO_CIRCLE.instantiate()
-	
+
 func _on_viewport_resized()->void:
 	update_layout()
 	map_viewport.size = size
 	clamp_camera_position()
-
-
-	
 
 func clamp_camera_position() -> void:
 	const MAP_TOP_MARGIN = 50
@@ -161,7 +142,6 @@ func clamp_camera_position() -> void:
 		
 	map_is_on_top = camera.position.y <= min_pos.y + MAP_TOP_MARGIN
 
-
 func center_camera_on_parcel(parcel:Vector2i) -> void:
 	var zoom_on_parcel = MAX_ZOOM
 	var target_position = get_parcel_position(parcel)
@@ -170,7 +150,7 @@ func center_camera_on_parcel(parcel:Vector2i) -> void:
 	tween.tween_property(camera, "zoom", zoom_on_parcel, 0.3).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 	
 	await tween.finished
-	
+
 func handle_click(event_position:Vector2)-> void:
 	var coords = event_position / PARCEL_SIZE
 	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
@@ -241,7 +221,6 @@ func create_place_card(place)->void:
 	item_p.scale = Vector2(1.8,1.8)
 	item_p.set_data(place)
 	item_l.set_data(place)
-
 
 func _item_pressed(place)->void:
 	show_marker_at_parcel(get_center_from_rect_coords(place.positions))
@@ -364,7 +343,6 @@ func _open_sidebar()->void:
 	tween.tween_property(landscape_sidebar_container, "position", Vector2.ZERO, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 	tween.tween_property(portrait_sidebar_container, "position", Vector2.ZERO, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 
-	
 func _close_sidebar()->void:
 	var duration = .4
 	var tween = create_tween()
@@ -472,12 +450,13 @@ func update_layout()->void:
 		portrait_sidebar_container.show()
 		landscape.hide()
 		landscape_sidebar_container.hide()
+		%ArchipelagoButtonMargin.add_theme_constant_override("margin_top", 160)
 	else:
 		portrait.hide()
 		portrait_sidebar_container.hide()
 		landscape.show()
 		landscape_sidebar_container.show()
-		
+		%ArchipelagoButtonMargin.add_theme_constant_override("margin_top", 75)
 func _on_map_gui_input(event):
 	if event is InputEventScreenTouch:
 		if event.pressed:
@@ -489,7 +468,6 @@ func _on_map_gui_input(event):
 				just_zoomed = false
 
 			elif active_touches.size() == 2:
-				# El segundo dedo acaba de tocar: inicializamos la distancia de zoom
 				var positions = active_touches.values()
 				last_pinch_distance = positions[0].distance_to(positions[1])
 
@@ -502,7 +480,6 @@ func _on_map_gui_input(event):
 
 				active_touches.erase(event.index)
 
-			# Si queda menos de 2 dedos, desactivamos el modo zoom
 			if active_touches.size() < 2:
 				last_pinch_distance = 0.0
 
@@ -511,9 +488,10 @@ func _on_map_gui_input(event):
 			active_touches[event.index] = event.position
 
 			if active_touches.size() == 1:
-				var distance = event.position.distance_to(last_pan_position)
-				if distance >= PAN_THRESHOLD and not just_zoomed:
+				if not pan_started:
 					pan_started = true
+					last_pan_position = event.position
+				else:
 					handle_pan(event)
 
 			elif active_touches.size() == 2:
@@ -521,8 +499,11 @@ func _on_map_gui_input(event):
 
 func handle_pan(event: InputEventScreenDrag):
 	var delta = event.position - last_pan_position
-	camera.position -= delta / camera.zoom
+	# Convertimos el delta de pantalla a coordenadas del mundo
+	var world_delta = delta / camera.zoom
+	camera.position -= world_delta
 	last_pan_position = event.position
+	clamp_camera_position()
 
 func handle_zoom():
 	var touch_positions = active_touches.values()
@@ -533,20 +514,22 @@ func handle_zoom():
 	if last_pinch_distance > 0.0 and current_distance > 0.0:
 		var delta_ratio = (current_distance - last_pinch_distance) / last_pinch_distance
 
-		# Filtramos valores extremos (esto cubre vibraciones)
 		if abs(delta_ratio) > 0.01 and abs(delta_ratio) < 0.5:
 			apply_zoom(delta_ratio)
 			just_zoomed = true
 
-	# Actualizamos la distancia suavemente
 	last_pinch_distance = lerp(last_pinch_distance, current_distance, 0.5)
 
 func apply_zoom(delta_ratio: float):
-	var zoom_strength = 1.0  # delta_ratio ya es proporcional
+	var zoom_strength = 1.0
 	var zoom_factor = 1.0 + delta_ratio * zoom_strength
-
 	var new_zoom = camera.zoom * Vector2(zoom_factor, zoom_factor)
-	camera.zoom = new_zoom.clamp(Vector2(0.5, 0.5), Vector2(4, 4))
+	
+	# Ajustamos los límites de zoom según el tamaño del mapa
+	var min_zoom = max(size.x / MAP_SIZE.x, size.y / MAP_SIZE.y) * 0.5
+	var max_zoom = 4.0
+	camera.zoom = new_zoom.clamp(Vector2(min_zoom, min_zoom), Vector2(max_zoom, max_zoom))
+	clamp_camera_position()
 
 func handle_tap(pos: Vector2):
 	print(pos)

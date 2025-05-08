@@ -24,6 +24,8 @@ func _update_category_button():
 
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
+
 	toggle_mode = true
 	connect("toggled", Callable(self, '_on_toggled'))
 	_update_category_button()
