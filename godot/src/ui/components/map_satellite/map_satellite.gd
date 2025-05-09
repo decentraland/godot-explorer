@@ -11,7 +11,7 @@ const MAP_SIZE = PARCEL_SIZE * Vector2(340,340)
 const PARCEL_OFFSET = Vector2i(170,170)
 const MAP_CENTER = MAP_SIZE / 2
 const TILE_DISPLACEMENT = Vector2(18,18) * PARCEL_SIZE
-const MIN_ZOOM := Vector2(0.2, 0.2)
+const MIN_ZOOM := Vector2(1, 1)
 const MAX_ZOOM := Vector2(2, 2)
 const MAP_MARKER = preload("res://src/ui/components/map_satellite/map_marker.tscn")
 const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
@@ -60,6 +60,8 @@ var poi_places_ids = []
 var live_places_ids = []
 
 func _ready():
+	UiSounds.install_audio_recusirve(self)
+
 	update_layout()
 	landscape_sidebar_container.position.x = -landscape_panel_container.size.x + 5
 	portrait_sidebar_container.position.y = portrait_panel_container.size.y - 5
@@ -218,7 +220,7 @@ func create_place_card(place)->void:
 	portrait_cards.add_child(item_p)
 	landscape_cards.add_child(item_l)
 	item_p.scale = Vector2(2.5,2.5)
-	item_p.scale = Vector2(1.8,1.8)
+	item_l.scale = Vector2(4,4)
 	item_p.set_data(place)
 	item_l.set_data(place)
 
@@ -332,11 +334,6 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 		landscape_map_searchbar.filter_type = type
 		landscape_map_searchbar.update_filtered_category()
 
-func _on_color_rect_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if !event.pressed:
-			_close_sidebar()
-
 func _open_sidebar()->void:
 	var duration = .4
 	var tween = create_tween()
@@ -440,9 +437,7 @@ func get_center_from_rect_coords_array(coords: Array) -> Vector2i:
 
 	return Vector2i(center_x, -center_y)
 
-func _on_check_box_toggled(toggled_on: bool) -> void:
-	archipelagos_control.visible = toggled_on
-	update_layout()
+	
 
 func update_layout()->void:
 	if Global.is_orientation_portrait():
@@ -457,7 +452,14 @@ func update_layout()->void:
 		landscape.show()
 		landscape_sidebar_container.show()
 		%ArchipelagoButtonMargin.add_theme_constant_override("margin_top", 75)
+		
 func _on_map_gui_input(event):
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			camera.zoom = clamp(camera.zoom * 1.1, MIN_ZOOM, MAX_ZOOM)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			camera.zoom = clamp(camera.zoom * 0.9, MIN_ZOOM, MAX_ZOOM)
+			
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			active_touches[event.index] = event.position
@@ -537,3 +539,8 @@ func handle_tap(pos: Vector2):
 	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
 	clicked_parcel.emit(parcel_coords)
 	show_marker_at_parcel(parcel_coords)
+
+
+func _on_archipelago_button_toggled(toggled_on: bool) -> void:
+	archipelagos_control.visible = toggled_on
+	update_layout()

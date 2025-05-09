@@ -69,6 +69,10 @@ func install_audio(node: Node):
 		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover"))
 		node.button_down.connect(self.play_sound.bind(&"generic_button_press"))
 		node.button_up.connect(self.play_sound.bind(&"generic_button_release"))
+		if node.toggle_mode:
+			node.toggled.connect(
+			func(toggled_on): play_sound(&"toggle_enable" if toggled_on else &"toggle_disable")
+		)
 	elif node is LineEdit:
 		node.text_changed.connect(func(_new_text): play_sound(&"inputfield_entertext"))
 	elif node is PlaceFilterButton:
@@ -77,7 +81,7 @@ func install_audio(node: Node):
 		node.button_up.connect(self.play_sound.bind(&"generic_button_release"))
 	elif node is MapPin:
 		node.play_sound.connect(self.play_sound.bind(&"ui_fade_in"))
-		
+		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover"))
 	else:
 		sound_added = false
 	

@@ -1,6 +1,7 @@
-[gd_scene load_steps=12 format=3 uid="uid://duuasgi2pnb8k"]
+[gd_scene load_steps=13 format=3 uid="uid://duuasgi2pnb8k"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
+[ext_resource type="Script" path="res://src/ui/components/map_satellite/map_component.gd" id="2_m2asp"]
 [ext_resource type="PackedScene" uid="uid://diojwgryptiuw" path="res://src/ui/components/map_satellite/map_searchbar.tscn" id="4_ju8cx"]
 [ext_resource type="Texture2D" uid="uid://cg0awu10wijew" path="res://assets/ui/place_categories/provisory-archipelagos.svg" id="6_cmtv6"]
 [ext_resource type="Texture2D" uid="uid://tf0rlaicf452" path="res://assets/ui/map/empty-search.svg" id="6_m7gk0"]
@@ -21,7 +22,7 @@ corner_radius_bottom_right = 19
 corner_radius_bottom_left = 19
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vrqoo"]
-bg_color = Color(1, 1, 1, 1)
+bg_color = Color(0.894118, 0.894118, 0.894118, 1)
 corner_radius_top_left = 24
 corner_radius_top_right = 24
 
@@ -67,6 +68,7 @@ anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 mouse_filter = 1
+script = ExtResource("2_m2asp")
 
 [node name="ColorRect" type="ColorRect" parent="SubViewportContainer/MapViewport/Map"]
 layout_mode = 1
@@ -80,11 +82,9 @@ color = Color(0.887392, 0.550205, 0.700621, 1)
 
 [node name="Camera2D" type="Camera2D" parent="SubViewportContainer/MapViewport/Map"]
 unique_name_in_owner = true
-position_smoothing_speed = 50.0
 
 [node name="ArchipelagosControl" type="Control" parent="SubViewportContainer/MapViewport/Map"]
 unique_name_in_owner = true
-visible = false
 z_index = 3
 layout_mode = 1
 anchors_preset = 15
@@ -98,7 +98,7 @@ mouse_filter = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 125.0
+offset_bottom = 290.0
 grow_horizontal = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 0
@@ -161,6 +161,7 @@ expand_icon = true
 
 [node name="Portrait" type="Control" parent="."]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -294,7 +295,6 @@ autowrap_mode = 2
 
 [node name="Landscape" type="Control" parent="."]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -373,6 +373,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Control" type="Control" parent="Landscape/LandscapeSidebarContainer"]
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -381,7 +382,7 @@ mouse_force_pass_scroll_events = false
 [node name="HBoxContainer" type="HBoxContainer" parent="Landscape/LandscapeSidebarContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-size_flags_stretch_ratio = 4.0
+size_flags_stretch_ratio = 5.0
 mouse_filter = 2
 
 [node name="LandscapePanelContainer" type="PanelContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer"]
@@ -454,4 +455,4 @@ mouse_filter = 2
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="." method="_on_map_gui_input"]
-[connection signal="toggled" from="MarginContainer/VBoxContainer/HBoxContainer/ArchipelagoButtonMargin/ArchipelagoButton" to="." method="_on_check_box_toggled"]
+[connection signal="toggled" from="MarginContainer/VBoxContainer/HBoxContainer/ArchipelagoButtonMargin/ArchipelagoButton" to="." method="_on_archipelago_button_toggled"]
