@@ -82,6 +82,9 @@ color = Color(0.887392, 0.550205, 0.700621, 1)
 
 [node name="Camera2D" type="Camera2D" parent="SubViewportContainer/MapViewport/Map"]
 unique_name_in_owner = true
+position_smoothing_enabled = true
+position_smoothing_speed = 25.0
+editor_draw_drag_margin = true
 
 [node name="ArchipelagosControl" type="Control" parent="SubViewportContainer/MapViewport/Map"]
 unique_name_in_owner = true
@@ -161,7 +164,6 @@ expand_icon = true
 
 [node name="Portrait" type="Control" parent="."]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -234,6 +236,7 @@ mouse_force_pass_scroll_events = false
 
 [node name="PortraitPanelContainer" type="PanelContainer" parent="Portrait/PortraitSidebarContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
@@ -387,6 +390,7 @@ mouse_filter = 2
 
 [node name="LandscapePanelContainer" type="PanelContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
@@ -453,6 +457,29 @@ size_flags_horizontal = 3
 size_flags_stretch_ratio = 3.0
 mouse_filter = 2
 
+[node name="POICheckBox" type="CheckBox" parent="."]
+visible = false
+layout_mode = 0
+offset_left = 469.0
+offset_top = 278.0
+offset_right = 685.0
+offset_bottom = 316.0
+button_pressed = true
+text = "Show Point of Interest"
+
+[node name="LiveCheckBox" type="CheckBox" parent="."]
+visible = false
+layout_mode = 0
+offset_left = 469.0
+offset_top = 311.0
+offset_right = 685.0
+offset_bottom = 349.0
+button_pressed = true
+text = "Show Live Events"
+
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="." method="_on_map_gui_input"]
+[connection signal="map_tapped" from="SubViewportContainer/MapViewport/Map" to="." method="handle_tap"]
 [connection signal="toggled" from="MarginContainer/VBoxContainer/HBoxContainer/ArchipelagoButtonMargin/ArchipelagoButton" to="." method="_on_archipelago_button_toggled"]
+[connection signal="toggled" from="POICheckBox" to="." method="_on_show_poi_toggled"]
+[connection signal="toggled" from="LiveCheckBox" to="." method="_on_show_live_toggled"]

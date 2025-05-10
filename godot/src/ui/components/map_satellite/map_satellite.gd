@@ -58,13 +58,14 @@ var filtered_places: Array = []
 var active_filter: int = -1
 var poi_places_ids = []
 var live_places_ids = []
+var show_poi:= true
+var show_live:= true
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
-
 	update_layout()
-	landscape_sidebar_container.position.x = -landscape_panel_container.size.x + 5
-	portrait_sidebar_container.position.y = portrait_panel_container.size.y - 5
+	_close_sidebar()
+	
 	get_viewport().connect("size_changed", self._on_viewport_resized)
 	archipelago_button.toggle_mode = true
 	archipelagos_control.visible = archipelago_button.button_pressed
@@ -112,12 +113,12 @@ func _ready():
 	var poi_places = await async_load_category('poi')
 	poi_places_ids = poi_places.map(func(poi_place): return poi_place.id )
 	for i in range(poi_places.size()):
-		spawn_pin(13, poi_places[i])
+		spawn_pin(13, poi_places[i], 'poi_pins')
 		
 	var live_places = await async_load_category('live')
 	live_places_ids = live_places.map(func(live_place): return live_place.id )
 	for i in range(live_places.size()):
-		spawn_pin(14, live_places[i])	
+		spawn_pin(14, live_places[i], 'live_pins')	
 		
 	_async_draw_archipelagos()
 	#var circle = ARCHIPELAGO_CIRCLE.instantiate()
@@ -153,12 +154,6 @@ func center_camera_on_parcel(parcel:Vector2i) -> void:
 	
 	await tween.finished
 
-func handle_click(event_position:Vector2)-> void:
-	var coords = event_position / PARCEL_SIZE
-	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
-	clicked_parcel.emit(parcel_coords)
-	show_marker_at_parcel(parcel_coords)
-
 func get_parcel_position(parcel: Vector2i) -> Vector2:
 	var parcel_position = Vector2(parcel + PARCEL_OFFSET) * PARCEL_SIZE + PARCEL_SIZE / 2
 	return parcel_position
@@ -178,7 +173,7 @@ func show_marker_at_parcel(parcel: Vector2i):
 	marker.visible = true
 	marker.update()
 
-func spawn_pin(category:int, place):
+func spawn_pin(category:int, place, group:String):
 	var pin = MAP_PIN.instantiate()
 	var center_coord:Vector2i
 	if category != 14:
@@ -205,7 +200,10 @@ func spawn_pin(category:int, place):
 	
 	pin.position = pos
 	map.add_child(pin)
-
+	pin.add_to_group(group)
+	if group == 'hidden':
+		pin.visible = false
+		
 func _on_pin_clicked(coord:Vector2i):
 	clicked_parcel.emit(coord)
 	show_marker_at_parcel(coord)
@@ -295,13 +293,14 @@ func async_load_category(category:String) -> Array:
 
 func _on_filter_button_toggled(pressed: bool, type: int):
 	var places_to_show = 0
+	_clean_list_and_pins()
 	if not pressed:
 		filtered_places = []
-		_clean_list_and_pins()
 		portrait_map_searchbar.reset()
 		landscape_map_searchbar.reset()
-		_close_sidebar()
+		_close_sidebar(0.4)
 	else:
+		
 		active_filter = type
 		filtered_places = await async_load_category(Place.Categories.keys()[type].to_lower())
 		
@@ -313,8 +312,9 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 			create_place_card(place)
 			places_to_show = places_to_show + 1
 			if place.id in poi_places_ids:
-				continue
-			spawn_pin(type, place)
+				spawn_pin(type, place, 'hidden')
+			else:
+				spawn_pin(type, place, 'pins')
 			
 		if places_to_show == 0:
 			portrait_no_results.show()
@@ -335,15 +335,18 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 		landscape_map_searchbar.update_filtered_category()
 
 func _open_sidebar()->void:
+	if !landscape_panel_container.visible:
+		landscape_panel_container.show()
+	if !portrait_panel_container.visible:
+		portrait_panel_container.show()
 	var duration = .4
 	var tween = create_tween()
 	tween.tween_property(landscape_sidebar_container, "position", Vector2.ZERO, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 	tween.tween_property(portrait_sidebar_container, "position", Vector2.ZERO, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 
-func _close_sidebar()->void:
-	var duration = .4
+func _close_sidebar(duration:float=0.0)->void:
 	var tween = create_tween()
-	tween.tween_property(landscape_sidebar_container, "position", Vector2(-landscape_sidebar_container.size.x + 5, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	tween.tween_property(landscape_sidebar_container, "position", Vector2(-landscape_panel_container.size.x + 5, 0), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 	tween.tween_property(portrait_sidebar_container, "position", Vector2(0, portrait_panel_container.size.y - 5), duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 	portrait_cards_scroll.scroll_horizontal = 0
 	landscape_cards_scroll.scroll_vertical = 0
@@ -369,8 +372,8 @@ func _submitted_text_from_searchbar(text:String):
 				create_place_card(place)
 				places_to_show = places_to_show + 1
 			if place.id in poi_places_ids:
-				continue
-			spawn_pin(0, place)
+				spawn_pin(0, place, 'hidden')
+			spawn_pin(0, place, 'pins')
 	if places_to_show == 0:
 		portrait_no_results.show()
 		portrait_cards_scroll.hide()
@@ -389,9 +392,8 @@ func _clean_list_and_pins()->void:
 	for child in landscape_cards.get_children():
 		child.queue_free()
 	for child in map.get_children():
-		if child is MapPin:
-			if child.pin_category != 13 and child.pin_category != 14 :
-					child.queue_free() 
+		if child.is_in_group('pins') or child.is_in_group('hidden'):
+			child.queue_free() 
 
 func _async_draw_archipelagos() -> void:
 	const URL = "https://archipelago-ea-stats.decentraland.org/hot-scenes"
@@ -407,7 +409,7 @@ func _async_draw_archipelagos() -> void:
 			var circle = ARCHIPELAGO_CIRCLE.instantiate()
 			var center_coord
 			if archipelago.parcels.size() != 1:
-				center_coord = get_center_from_rect_coords_array(archipelago.parcels)
+				center_coord = _get_center_from_rect_coords_array(archipelago.parcels)
 			else:
 				var x = archipelago.parcels[0][0]
 				var y = -archipelago.parcels[0][1]
@@ -417,7 +419,7 @@ func _async_draw_archipelagos() -> void:
 			archipelagos_control.add_child(circle)
 			circle.set_circle(pos, radius)
 
-func get_center_from_rect_coords_array(coords: Array) -> Vector2i:
+func _get_center_from_rect_coords_array(coords: Array) -> Vector2i:
 	var min_x = INF
 	var max_x = -INF
 	var min_y = INF
@@ -437,8 +439,6 @@ func get_center_from_rect_coords_array(coords: Array) -> Vector2i:
 
 	return Vector2i(center_x, -center_y)
 
-	
-
 func update_layout()->void:
 	if Global.is_orientation_portrait():
 		portrait.show()
@@ -452,86 +452,6 @@ func update_layout()->void:
 		landscape.show()
 		landscape_sidebar_container.show()
 		%ArchipelagoButtonMargin.add_theme_constant_override("margin_top", 75)
-		
-func _on_map_gui_input(event):
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			camera.zoom = clamp(camera.zoom * 1.1, MIN_ZOOM, MAX_ZOOM)
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			camera.zoom = clamp(camera.zoom * 0.9, MIN_ZOOM, MAX_ZOOM)
-			
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			active_touches[event.index] = event.position
-
-			if active_touches.size() == 1:
-				last_pan_position = event.position
-				pan_started = false
-				just_zoomed = false
-
-			elif active_touches.size() == 2:
-				var positions = active_touches.values()
-				last_pinch_distance = positions[0].distance_to(positions[1])
-
-		else:
-			if active_touches.has(event.index):
-				var released_position = event.position
-				var distance = released_position.distance_to(last_pan_position)
-				if distance < PAN_THRESHOLD and not pan_started and not just_zoomed:
-					handle_tap(released_position)
-
-				active_touches.erase(event.index)
-
-			if active_touches.size() < 2:
-				last_pinch_distance = 0.0
-
-	elif event is InputEventScreenDrag:
-		if active_touches.has(event.index):
-			active_touches[event.index] = event.position
-
-			if active_touches.size() == 1:
-				if not pan_started:
-					pan_started = true
-					last_pan_position = event.position
-				else:
-					handle_pan(event)
-
-			elif active_touches.size() == 2:
-				handle_zoom()
-
-func handle_pan(event: InputEventScreenDrag):
-	var delta = event.position - last_pan_position
-	# Convertimos el delta de pantalla a coordenadas del mundo
-	var world_delta = delta / camera.zoom
-	camera.position -= world_delta
-	last_pan_position = event.position
-	clamp_camera_position()
-
-func handle_zoom():
-	var touch_positions = active_touches.values()
-	var p1 = touch_positions[0]
-	var p2 = touch_positions[1]
-	var current_distance = p1.distance_to(p2)
-
-	if last_pinch_distance > 0.0 and current_distance > 0.0:
-		var delta_ratio = (current_distance - last_pinch_distance) / last_pinch_distance
-
-		if abs(delta_ratio) > 0.01 and abs(delta_ratio) < 0.5:
-			apply_zoom(delta_ratio)
-			just_zoomed = true
-
-	last_pinch_distance = lerp(last_pinch_distance, current_distance, 0.5)
-
-func apply_zoom(delta_ratio: float):
-	var zoom_strength = 1.0
-	var zoom_factor = 1.0 + delta_ratio * zoom_strength
-	var new_zoom = camera.zoom * Vector2(zoom_factor, zoom_factor)
-	
-	# Ajustamos los límites de zoom según el tamaño del mapa
-	var min_zoom = max(size.x / MAP_SIZE.x, size.y / MAP_SIZE.y) * 0.5
-	var max_zoom = 4.0
-	camera.zoom = new_zoom.clamp(Vector2(min_zoom, min_zoom), Vector2(max_zoom, max_zoom))
-	clamp_camera_position()
 
 func handle_tap(pos: Vector2):
 	print(pos)
@@ -540,7 +460,20 @@ func handle_tap(pos: Vector2):
 	clicked_parcel.emit(parcel_coords)
 	show_marker_at_parcel(parcel_coords)
 
-
 func _on_archipelago_button_toggled(toggled_on: bool) -> void:
 	archipelagos_control.visible = toggled_on
-	update_layout()
+
+func _on_show_poi_toggled(toggled_on: bool) -> void:
+	show_poi = toggled_on
+	for child in map.get_children():
+		if child.is_in_group('poi_pins'):
+			child.visible = toggled_on
+		if child.is_in_group('hidden'):
+			child.visible = !toggled_on
+			
+func _on_show_live_toggled(toggled_on: bool) -> void:
+	show_live = toggled_on
+	for child in map.get_children():
+		if child.is_in_group('live_pins'):
+			child.visible = toggled_on
+		
