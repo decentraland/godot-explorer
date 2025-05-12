@@ -82,7 +82,6 @@ color = Color(0.887392, 0.550205, 0.700621, 1)
 
 [node name="Camera2D" type="Camera2D" parent="SubViewportContainer/MapViewport/Map"]
 unique_name_in_owner = true
-position_smoothing_enabled = true
 position_smoothing_speed = 25.0
 editor_draw_drag_margin = true
 
@@ -477,6 +476,7 @@ offset_bottom = 349.0
 button_pressed = true
 text = "Show Live Events"
 
+[connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="SubViewportContainer/MapViewport/Map" method="_on_gui_input"]
 [connection signal="toggled" from="MarginContainer/VBoxContainer/HBoxContainer/ArchipelagoButtonMargin/ArchipelagoButton" to="." method="_on_archipelago_button_toggled"]
 [connection signal="toggled" from="POICheckBox" to="." method="_on_show_poi_toggled"]
 [connection signal="toggled" from="LiveCheckBox" to="." method="_on_show_live_toggled"]

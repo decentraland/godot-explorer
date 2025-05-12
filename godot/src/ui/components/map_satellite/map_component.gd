@@ -18,29 +18,8 @@ func _ready():
 	set_process_input(true)
 
 func _input(event):
-	# --- Tacto: inicio o fin de un toque ---
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			active_touches[event.index] = event.position
-			if active_touches.size() == 1:
-				touch_start_pos = event.position
-				touch_id = event.index
-				dragging = false
-		else:
-			active_touches.erase(event.index)
-			if event.index == touch_id:
-				var distance = touch_start_pos.distance_to(event.position)
-				if distance < TAP_THRESHOLD:
-					var world_pos = to_local_position(event.position)
-					print("Emitiendo tap desde index:%d" % event.index)
-					emit_signal("map_tapped", world_pos)
-					camera.position = world_pos
-				touch_id = -1
-			if active_touches.size() < 2:
-				last_pinch_distance = 0.0
-
 	# --- Movimiento del dedo ---
-	elif event is InputEventScreenDrag:
+	if event is InputEventScreenDrag:
 		active_touches[event.index] = event.position
 
 		if active_touches.size() == 1 and event.index == touch_id:
@@ -83,3 +62,29 @@ func apply_zoom(delta_ratio: float):
 	var zoom_factor = 1.0 + delta_ratio * zoom_strength
 	var new_zoom = camera.zoom * Vector2(zoom_factor, zoom_factor)
 	camera.zoom = new_zoom.clamp(MIN_ZOOM, MAX_ZOOM)
+
+
+func _on_gui_input(event: InputEvent) -> void:
+	# --- Tacto: inicio o fin de un toque ---
+	if event is InputEventScreenTouch:
+		var mouse_position = get_viewport().get_mouse_position()
+		if event.pressed:
+			active_touches[event.index] = event.position
+			if active_touches.size() == 1:
+				touch_start_pos = mouse_position
+				prints("Mouse down:", touch_start_pos)
+				touch_id = event.index
+				dragging = false
+		else:
+			active_touches.erase(event.index)
+			if event.index == touch_id:
+				var distance = touch_start_pos.distance_to(mouse_position)
+				prints("Distance", distance, touch_start_pos, mouse_position)
+				if distance < TAP_THRESHOLD:
+					var world_pos = event.position
+					print("Emitiendo tap desde index:%d" % event.index)
+					map_tapped.emit(world_pos)
+					#camera.position = world_pos
+				touch_id = -1
+			if active_touches.size() < 2:
+				last_pinch_distance = 0.0

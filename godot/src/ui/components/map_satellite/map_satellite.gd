@@ -148,12 +148,9 @@ func clamp_camera_position() -> void:
 	map_is_on_top = camera.position.y <= min_pos.y + MAP_TOP_MARGIN
 
 func center_camera_on_parcel(parcel:Vector2i) -> void:
-	var zoom_on_parcel = MAX_ZOOM
 	var target_position = get_parcel_position(parcel)
 	var tween = create_tween()
 	tween.tween_property(camera, "position", target_position, 0.3).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
-	tween.tween_property(camera, "zoom", zoom_on_parcel, 0.3).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
-	
 	await tween.finished
 
 func get_parcel_position(parcel: Vector2i) -> Vector2:
@@ -161,6 +158,7 @@ func get_parcel_position(parcel: Vector2i) -> Vector2:
 	return parcel_position
 
 func show_marker_at_parcel(parcel: Vector2i):
+	prints("Show market at parcel", parcel)
 	for child in map.get_children():
 		if child is Marker:
 			child.queue_free()
@@ -192,10 +190,11 @@ func spawn_pin(category:int, place, group:String):
 		pin.scene_title = place.name
 		
 	var pos = get_parcel_position(center_coord) - pin.size / 2
+	pos.y -= pin.size.y / 2 - 8
 	
 	pin.pin_x = center_coord.x
 	pin.pin_y = center_coord.y
-	pin.connect("touched_pin", Callable(self, "_on_pin_clicked"))
+	pin.touched_pin.connect(self._on_pin_clicked)
 
 	pin.pin_category = category
 	pin.z_index = 5

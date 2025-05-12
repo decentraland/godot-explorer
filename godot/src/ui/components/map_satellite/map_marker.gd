@@ -18,11 +18,9 @@ func _process(_delta: float) -> void:
 	var camera_zoom = get_sibling_camera_zoom()
 	control.scale = Vector2.ONE / camera_zoom.x
 	coordinates_label.position.y = label_position.y * camera_zoom.y 
-	pass
 	
 
 func update()->void:
-	print(marker_x,",", marker_y)
 	if coordinates_label:
 		coordinates_label.visible = true
 		coordinates_label.text = "{0},{1}".format([marker_x, marker_y])
