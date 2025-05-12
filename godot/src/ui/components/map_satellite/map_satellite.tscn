@@ -1,10 +1,12 @@
-[gd_scene load_steps=13 format=3 uid="uid://duuasgi2pnb8k"]
+[gd_scene load_steps=15 format=3 uid="uid://duuasgi2pnb8k"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_component.gd" id="2_m2asp"]
+[ext_resource type="PackedScene" uid="uid://bhl7c24uruj0a" path="res://src/ui/components/utils/orientation_container.tscn" id="3_dhpjd"]
 [ext_resource type="PackedScene" uid="uid://diojwgryptiuw" path="res://src/ui/components/map_satellite/map_searchbar.tscn" id="4_ju8cx"]
 [ext_resource type="Texture2D" uid="uid://cg0awu10wijew" path="res://assets/ui/place_categories/provisory-archipelagos.svg" id="6_cmtv6"]
 [ext_resource type="Texture2D" uid="uid://tf0rlaicf452" path="res://assets/ui/map/empty-search.svg" id="6_m7gk0"]
+[ext_resource type="Script" path="res://src/ui/components/utils/hide_orientation.gd" id="7_h2ipi"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="7_unheb"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_0jug1"]
 
@@ -96,39 +98,60 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
-anchors_preset = 10
+anchors_preset = 15
 anchor_right = 1.0
-offset_bottom = 290.0
+anchor_bottom = 1.0
 grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 0
+
+[node name="PlacesSearchbar" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 0
+size_flags_stretch_ratio = 0.0
 theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 0
 theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="OrientationContainer" parent="VBoxContainer/PlacesSearchbar" instance=ExtResource("3_dhpjd")]
 layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 15
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/PlacesSearchbar/OrientationContainer"]
 layout_mode = 2
-mouse_filter = 2
-alignment = 2
+size_flags_horizontal = 3
 
-[node name="ArchipelagoButtonMargin" type="MarginContainer" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Control2" type="Control" parent="VBoxContainer/PlacesSearchbar/OrientationContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+
+[node name="Searchbar" parent="VBoxContainer/PlacesSearchbar/OrientationContainer/HBoxContainer2" instance=ExtResource("4_ju8cx")]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
-theme_override_constants/margin_top = 165
-theme_override_constants/margin_right = 30
+size_flags_horizontal = 3
+size_flags_vertical = 0
 
-[node name="ArchipelagoButton" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer/ArchipelagoButtonMargin"]
+[node name="Control" type="Control" parent="VBoxContainer/PlacesSearchbar/OrientationContainer/HBoxContainer2"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PlacesSearchbar/OrientationContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 3.0
+theme_override_constants/separation = 10
+
+[node name="Control" type="Control" parent="VBoxContainer/PlacesSearchbar/OrientationContainer/HBoxContainer"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+script = ExtResource("7_h2ipi")
+
+[node name="ArchipelagoButton" type="Button" parent="VBoxContainer/PlacesSearchbar/OrientationContainer/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(65, 65)
 layout_mode = 2
+size_flags_vertical = 4
 mouse_default_cursor_shape = 2
 theme_override_colors/font_disabled_color = Color(1, 1, 1, 1)
 theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
@@ -161,40 +184,7 @@ icon = ExtResource("6_cmtv6")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Portrait" type="Control" parent="."]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="PortraitSearchContainer" type="MarginContainer" parent="Portrait"]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_bottom = 206.0
-grow_horizontal = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 30
-
-[node name="Portrait" type="VBoxContainer" parent="Portrait/PortraitSearchContainer"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 20
-
-[node name="PortraitMapSearchbar" parent="Portrait/PortraitSearchContainer/Portrait" instance=ExtResource("4_ju8cx")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
-
-[node name="FilterScrollContainer" type="ScrollContainer" parent="Portrait/PortraitSearchContainer/Portrait"]
+[node name="FilterScrollContainer" type="ScrollContainer" parent="VBoxContainer/PlacesSearchbar/OrientationContainer/HBoxContainer"]
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -202,12 +192,12 @@ size_flags_vertical = 0
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="Portrait/PortraitSearchContainer/Portrait/FilterScrollContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PlacesSearchbar/OrientationContainer/HBoxContainer/FilterScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/margin_bottom = 5
 
-[node name="PortraitFilters" type="HBoxContainer" parent="Portrait/PortraitSearchContainer/Portrait/FilterScrollContainer/MarginContainer"]
+[node name="HBoxContainer_Filters" type="HBoxContainer" parent="VBoxContainer/PlacesSearchbar/OrientationContainer/HBoxContainer/FilterScrollContainer/MarginContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
@@ -216,31 +206,35 @@ size_flags_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 11
 
-[node name="PortraitSidebarContainer" type="VBoxContainer" parent="Portrait"]
+[node name="SidebarContainer" type="VBoxContainer" parent="VBoxContainer"]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Control" type="Control" parent="Portrait/PortraitSidebarContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-size_flags_stretch_ratio = 2.0
+mouse_filter = 2
+
+[node name="Control" type="Control" parent="VBoxContainer/SidebarContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+size_flags_stretch_ratio = 4.0
 mouse_filter = 2
 mouse_force_pass_scroll_events = false
+script = ExtResource("7_h2ipi")
 
-[node name="PortraitPanelContainer" type="PanelContainer" parent="Portrait/PortraitSidebarContainer"]
-unique_name_in_owner = true
-visible = false
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/SidebarContainer"]
 layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/SidebarContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(275, 290)
+layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
 
-[node name="MarginContainer2" type="MarginContainer" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 20
@@ -248,187 +242,35 @@ theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer"]
 layout_mode = 2
 alignment = 1
 
-[node name="PortraitCardsScroll" type="ScrollContainer" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer"]
+[node name="CardsScroll" type="ScrollContainer" parent="VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 3
-vertical_scroll_mode = 0
-
-[node name="PortraitCards" type="HBoxContainer" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer/PortraitCardsScroll"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_constants/separation = 5
-alignment = 1
-
-[node name="PortraitNoResults" type="VBoxContainer" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/separation = 15
-
-[node name="TextureRect" type="TextureRect" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer/PortraitNoResults"]
-modulate = Color(1, 1, 1, 0.419608)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture = ExtResource("6_m7gk0")
-stretch_mode = 3
-
-[node name="Label" type="Label" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer/PortraitNoResults"]
-layout_mode = 2
-text = "No results found"
-label_settings = SubResource("LabelSettings_iemrq")
-horizontal_alignment = 1
-
-[node name="Label2" type="Label" parent="Portrait/PortraitSidebarContainer/PortraitPanelContainer/MarginContainer2/VBoxContainer/PortraitNoResults"]
-custom_minimum_size = Vector2(250, 0)
-layout_mode = 2
-text = "Make sure your search is spelled correctly."
-label_settings = SubResource("LabelSettings_77036")
-horizontal_alignment = 1
-autowrap_mode = 2
-
-[node name="Landscape" type="Control" parent="."]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="LandscapeSarchcontainer" type="MarginContainer" parent="Landscape"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_bottom = 91.0
-grow_horizontal = 2
-mouse_filter = 2
-theme_override_constants/margin_top = 30
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="Landscape/LandscapeSarchcontainer"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/separation = 10
-
-[node name="MarginContainer" type="MarginContainer" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_right = 30
-
-[node name="LandscapeMapSearchbar" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2/MarginContainer" instance=ExtResource("4_ju8cx")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
-
-[node name="Control" type="Control" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 3.0
-
-[node name="FilterScrollContainer" type="ScrollContainer" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2/Control"]
-custom_minimum_size = Vector2(0, 35)
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 2.0
-horizontal_scroll_mode = 3
-vertical_scroll_mode = 0
-
-[node name="MarginContainer" type="MarginContainer" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2/Control/FilterScrollContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/margin_bottom = 5
-
-[node name="LandscapeFilters" type="HBoxContainer" parent="Landscape/LandscapeSarchcontainer/HBoxContainer2/Control/FilterScrollContainer/MarginContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 60)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 2
-mouse_filter = 2
-theme_override_constants/separation = 11
-
-[node name="LandscapeSidebarContainer" type="VBoxContainer" parent="Landscape"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Control" type="Control" parent="Landscape/LandscapeSidebarContainer"]
-custom_minimum_size = Vector2(0, 120)
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-mouse_force_pass_scroll_events = false
-
-[node name="HBoxContainer" type="HBoxContainer" parent="Landscape/LandscapeSidebarContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-size_flags_stretch_ratio = 5.0
-mouse_filter = 2
-
-[node name="LandscapePanelContainer" type="PanelContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
-
-[node name="MarginContainer" type="MarginContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 30
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer"]
-layout_mode = 2
-alignment = 1
-
-[node name="LandscapeCardsScroll" type="ScrollContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 3
-horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
-[node name="LandscapeCards" type="VBoxContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer/LandscapeCardsScroll"]
+[node name="Cards" parent="VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CardsScroll" instance=ExtResource("3_dhpjd")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 5
+alignment = 1
+vertical = true
+invert = true
 
-[node name="LandscapeNoResults" type="VBoxContainer" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer"]
+[node name="NoResults" type="VBoxContainer" parent="VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 15
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer/LandscapeNoResults"]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer/NoResults"]
 modulate = Color(1, 1, 1, 0.419608)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -436,13 +278,13 @@ size_flags_vertical = 4
 texture = ExtResource("6_m7gk0")
 stretch_mode = 3
 
-[node name="Label" type="Label" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer/LandscapeNoResults"]
+[node name="Label" type="Label" parent="VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer/NoResults"]
 layout_mode = 2
 text = "No results found"
 label_settings = SubResource("LabelSettings_iemrq")
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="Landscape/LandscapeSidebarContainer/HBoxContainer/LandscapePanelContainer/MarginContainer/VBoxContainer/LandscapeNoResults"]
+[node name="Label2" type="Label" parent="VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer/NoResults"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 text = "Make sure your search is spelled correctly."
@@ -450,11 +292,15 @@ label_settings = SubResource("LabelSettings_77036")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="Control" type="Control" parent="Landscape/LandscapeSidebarContainer/HBoxContainer"]
+[node name="Control2" type="Control" parent="VBoxContainer/SidebarContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 size_flags_stretch_ratio = 3.0
 mouse_filter = 2
+mouse_force_pass_scroll_events = false
+script = ExtResource("7_h2ipi")
+hide_on_portrait = true
 
 [node name="POICheckBox" type="CheckBox" parent="."]
 visible = false
@@ -477,6 +323,6 @@ button_pressed = true
 text = "Show Live Events"
 
 [connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="SubViewportContainer/MapViewport/Map" method="_on_gui_input"]
-[connection signal="toggled" from="MarginContainer/VBoxContainer/HBoxContainer/ArchipelagoButtonMargin/ArchipelagoButton" to="." method="_on_archipelago_button_toggled"]
+[connection signal="toggled" from="VBoxContainer/PlacesSearchbar/OrientationContainer/HBoxContainer/ArchipelagoButton" to="." method="_on_archipelago_button_toggled"]
 [connection signal="toggled" from="POICheckBox" to="." method="_on_show_poi_toggled"]
 [connection signal="toggled" from="LiveCheckBox" to="." method="_on_show_live_toggled"]

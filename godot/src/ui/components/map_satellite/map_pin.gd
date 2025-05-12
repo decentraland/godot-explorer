@@ -30,9 +30,9 @@ enum PinCategoryEnum {
 
 @export var scene_title: String
 
-@onready var cluster: PanelContainer = $Sprite2D/PanelContainer
-@onready var cluster_label: Label = $Sprite2D/PanelContainer/Label
 @onready var label_scene_title: Label = %Label_SceneTitle
+@onready var container_cluster: PanelContainer = %Container_Cluster
+@onready var label_cluster: Label = %Label_Cluster
 
 const cluster_radius:int = 60
 
@@ -65,8 +65,8 @@ func set_place(place:Place) -> void:
 	
 func show_cluster(quantity: int = 1):
 	if quantity > 1:
-		cluster_label.text = str(quantity)
-		cluster.show()
+		label_cluster.text = str(quantity)
+		container_cluster.show()
 	
 func _process(_delta: float) -> void:
 	var camera_zoom = get_sibling_camera_zoom()
