@@ -477,9 +477,6 @@ offset_bottom = 349.0
 button_pressed = true
 text = "Show Live Events"
 
-[connection signal="gui_input" from="." to="." method="_on_gui_input"]
-[connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="." method="_on_map_gui_input"]
-[connection signal="map_tapped" from="SubViewportContainer/MapViewport/Map" to="." method="handle_tap"]
 [connection signal="toggled" from="MarginContainer/VBoxContainer/HBoxContainer/ArchipelagoButtonMargin/ArchipelagoButton" to="." method="_on_archipelago_button_toggled"]
 [connection signal="toggled" from="POICheckBox" to="." method="_on_show_poi_toggled"]
 [connection signal="toggled" from="LiveCheckBox" to="." method="_on_show_live_toggled"]

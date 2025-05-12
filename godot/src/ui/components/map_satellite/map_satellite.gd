@@ -62,6 +62,8 @@ var show_poi:= true
 var show_live:= true
 
 func _ready():
+	if not map.is_connected("map_tapped", Callable(self, "handle_tap")):
+		map.connect("map_tapped", Callable(self, "handle_tap"))
 	UiSounds.install_audio_recusirve(self)
 	update_layout()
 	_close_sidebar()
@@ -454,7 +456,6 @@ func update_layout()->void:
 		%ArchipelagoButtonMargin.add_theme_constant_override("margin_top", 75)
 
 func handle_tap(pos: Vector2):
-	print(pos)
 	var coords = pos / PARCEL_SIZE
 	var parcel_coords = Vector2i(coords) - PARCEL_OFFSET
 	clicked_parcel.emit(parcel_coords)
