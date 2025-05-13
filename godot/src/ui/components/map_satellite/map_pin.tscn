@@ -23,6 +23,7 @@ offset_bottom = 114.0
 pivot_offset = Vector2(51, 107)
 mouse_filter = 0
 mouse_force_pass_scroll_events = false
+mouse_default_cursor_shape = 2
 texture = ExtResource("2_hpfdi")
 script = ExtResource("1_ndfeu")
 

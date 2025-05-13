@@ -1,7 +1,7 @@
 [gd_scene load_steps=15 format=3 uid="uid://duuasgi2pnb8k"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
-[ext_resource type="PackedScene" uid="uid://bqsiu6b1b2sgq" path="res://src/ui/components/map_satellite/map_component.tscn" id="2_vyg1a"]
+[ext_resource type="Script" path="res://src/ui/components/map_satellite/map_component.gd" id="2_m2asp"]
 [ext_resource type="PackedScene" uid="uid://bhl7c24uruj0a" path="res://src/ui/components/utils/orientation_container.tscn" id="3_dhpjd"]
 [ext_resource type="PackedScene" uid="uid://diojwgryptiuw" path="res://src/ui/components/map_satellite/map_searchbar.tscn" id="4_ju8cx"]
 [ext_resource type="Texture2D" uid="uid://cg0awu10wijew" path="res://assets/ui/place_categories/provisory-archipelagos.svg" id="6_cmtv6"]
@@ -63,8 +63,40 @@ size = Vector2i(720, 720)
 size_2d_override_stretch = true
 render_target_update_mode = 4
 
-[node name="Map" parent="SubViewportContainer/MapViewport" instance=ExtResource("2_vyg1a")]
+[node name="Map" type="Control" parent="SubViewportContainer/MapViewport"]
 unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 1
+script = ExtResource("2_m2asp")
+
+[node name="ColorRect" type="ColorRect" parent="SubViewportContainer/MapViewport/Map"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.887392, 0.550205, 0.700621, 1)
+
+[node name="Camera2D" type="Camera2D" parent="SubViewportContainer/MapViewport/Map"]
+unique_name_in_owner = true
+position_smoothing_speed = 25.0
+editor_draw_drag_margin = true
+
+[node name="ArchipelagosControl" type="Control" parent="SubViewportContainer/MapViewport/Map"]
+unique_name_in_owner = true
+z_index = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -290,6 +322,7 @@ offset_bottom = 349.0
 button_pressed = true
 text = "Show Live Events"
 
+[connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="SubViewportContainer/MapViewport/Map" method="_on_gui_input"]
 [connection signal="toggled" from="VBoxContainer/PlacesSearchbar/OrientationContainer/HBoxContainer/ArchipelagoButton" to="." method="_on_archipelago_button_toggled"]
 [connection signal="toggled" from="POICheckBox" to="." method="_on_show_poi_toggled"]
 [connection signal="toggled" from="LiveCheckBox" to="." method="_on_show_live_toggled"]
