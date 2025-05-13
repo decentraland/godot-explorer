@@ -1,12 +1,15 @@
-[gd_scene load_steps=2 format=3 uid="uid://bqsiu6b1b2sgq"]
+[gd_scene load_steps=3 format=3 uid="uid://bqsiu6b1b2sgq"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_component.gd" id="1_hq8a4"]
+[ext_resource type="PackedScene" uid="uid://cic3ckk8o08jx" path="res://src/ui/components/map_satellite/map_marker.tscn" id="2_mkgxo"]
 
 [node name="Map" type="Control"]
 layout_mode = 3
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 1
 script = ExtResource("1_hq8a4")
 
@@ -20,20 +23,26 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.887392, 0.550205, 0.700621, 1)
 
+[node name="MapBackground" type="Control" parent="."]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2
+
 [node name="Camera2D" type="Camera2D" parent="."]
 unique_name_in_owner = true
 position_smoothing_speed = 25.0
 editor_draw_drag_margin = true
 
-[node name="ArchipelagosControl" type="Control" parent="."]
+[node name="Control" type="Control" parent="."]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="MapMarker" parent="." instance=ExtResource("2_mkgxo")]
 unique_name_in_owner = true
-z_index = 3
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
+pivot_offset = Vector2(-13.25, -13.25)
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

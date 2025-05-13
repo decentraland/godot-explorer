@@ -86,4 +86,3 @@ func _on_gui_input(event: InputEvent) -> void:
 		if event.pressed:
 			self.play_sound.emit()
 			touched_pin.emit(Vector2i(pin_x, pin_y))
-			prints("Touched pin emited at ", pin_x, pin_y)

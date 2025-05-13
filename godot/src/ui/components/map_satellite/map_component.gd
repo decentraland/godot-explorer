@@ -1,9 +1,12 @@
+class_name MapComponent
 extends Control
 
 signal clicked_parcel(parcel: Vector2i)
 
 @onready var camera := $Camera2D
-@onready var archipelagos_control: Control = %ArchipelagosControl
+@onready var map_marker: Marker = %MapMarker
+@onready var map_background: Control = %MapBackground
+@onready var control: Control = $Control
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 const TILE_SIZE = Vector2(512, 512)
@@ -42,12 +45,12 @@ func _ready():
 				tex_rect.stretch_mode = TextureRect.STRETCH_SCALE
 				tex_rect.size = TILE_SIZE
 				tex_rect.position = Vector2(x * TILE_SIZE.x, y * TILE_SIZE.y) + TILE_DISPLACEMENT
-				add_child(tex_rect)
+				map_background.add_child(tex_rect)
 			else:
 				push_error("Error loading map image: " + image_path)
 	
 	center_camera_on_parcel(Vector2i(0,1))
-	
+
 func _input(event):
 	# --- Movimiento del dedo ---
 	if event is InputEventScreenDrag:
@@ -101,26 +104,21 @@ func handle_tap(pos: Vector2):
 	show_marker_at_parcel(parcel_coords)
 
 func _on_gui_input(event: InputEvent) -> void:
-	# --- Tacto: inicio o fin de un toque ---
 	if event is InputEventScreenTouch:
 		var mouse_position = get_viewport().get_mouse_position()
 		if event.pressed:
 			active_touches[event.index] = event.position
 			if active_touches.size() == 1:
 				touch_start_pos = mouse_position
-				prints("Mouse down:", touch_start_pos)
 				touch_id = event.index
 				dragging = false
 		else:
 			active_touches.erase(event.index)
 			if event.index == touch_id:
 				var distance = touch_start_pos.distance_to(mouse_position)
-				prints("Distance", distance, touch_start_pos, mouse_position)
 				if distance < TAP_THRESHOLD:
 					var world_pos = event.position
-					print("Emitiendo tap desde index:%d" % event.index)
 					handle_tap(world_pos)
-					#camera.position = world_pos
 				touch_id = -1
 			if active_touches.size() < 2:
 				last_pinch_distance = 0.0
@@ -146,23 +144,26 @@ func async_draw_archipelagos() -> void:
 				center_coord = Vector2i(x,-y)
 			var radius = 50 + archipelago.usersTotalCount * 10
 			var pos = get_parcel_position(center_coord)
-			archipelagos_control.add_child(circle)
+			control.add_child(circle)
 			circle.set_circle(pos, radius)
-
-
+			circle.add_to_group('archipelagos')
 
 func get_poi_ids(poi_places):
 	poi_places_ids = poi_places.map(func(poi_place): return poi_place.id)
-	
+
 func create_pins(category:int, places:Array, group_name:String)->void:
-	
 	for i in range(places.size()):
-		print(poi_places_ids)
 		if poi_places_ids.has(places[i].id):
-			print('is poi')
 			spawn_pin(category, places[i], 'hidden')
 		else:
 			spawn_pin(category, places[i], group_name)
+	var pines = []
+	for child in get_children():
+		if child is MapPin:
+			pines.append(child)
+	pines.sort_custom(func(a, b): return a.pin_y < b.pin_y)		
+	for i in pines.size():
+		move_child(pines[i], i+5)
 
 func _get_center_from_rect_coords(coords: Array) -> Vector2i:
 	if coords.size() == 1:
@@ -236,15 +237,10 @@ func spawn_pin(category:int, place, group:String):
 		
 	var pos = get_parcel_position(center_coord) - pin.size / 2
 	pos.y -= pin.size.y / 2 - 8
-	
 	pin.pin_x = center_coord.x
 	pin.pin_y = center_coord.y
-	
 	pin.touched_pin.connect(self._on_pin_clicked)
-
 	pin.pin_category = category
-	pin.z_index = category + center_coord.y + MAP_SIZE.y
-	
 	pin.position = pos
 	add_child(pin)
 	pin.add_to_group(group)
@@ -258,20 +254,13 @@ func center_camera_on_parcel(parcel:Vector2i) -> void:
 	await tween.finished
 
 func show_marker_at_parcel(parcel: Vector2i):
-	prints("Show market at parcel", parcel)
-	for child in get_children():
-		if child is Marker:
-			child.queue_free()
-			
 	center_camera_on_parcel(parcel)
-	var marker = MAP_MARKER.instantiate()
-	var pos = get_parcel_position(parcel) - marker.size / 2
-	marker.position = pos	
-	marker.marker_x = parcel.x
-	marker.marker_y = -parcel.y
-	add_child(marker)
-	marker.visible = true
-	marker.update()
+	var pos = get_parcel_position(parcel) - map_marker.size / 2
+	map_marker.position = pos	
+	map_marker.marker_x = parcel.x
+	map_marker.marker_y = -parcel.y
+	map_marker.visible = true
+	map_marker.update()
 
 func _on_pin_clicked(coord:Vector2i):
 	clicked_parcel.emit(coord)
@@ -311,3 +300,6 @@ func show_live_toggled(toggled_on: bool) -> void:
 	for child in get_children():
 		if child.is_in_group('live_pins'):
 			child.visible = toggled_on
+
+func show_archipelagos_toggled(toggled_on: bool) -> void:
+	control.visible = toggled_on
