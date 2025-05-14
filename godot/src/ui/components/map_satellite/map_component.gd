@@ -147,6 +147,7 @@ func async_draw_archipelagos() -> void:
 			control.add_child(circle)
 			circle.set_circle(pos, radius)
 			circle.add_to_group('archipelagos')
+			
 
 func get_poi_ids(poi_places):
 	poi_places_ids = poi_places.map(func(poi_place): return poi_place.id)

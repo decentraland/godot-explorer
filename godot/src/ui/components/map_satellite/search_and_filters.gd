@@ -1,4 +1,4 @@
-extends VBoxContainer
+extends Control
 
 @export var map: MapComponent
 @onready var searchbar: PanelContainer = %Searchbar
@@ -8,6 +8,9 @@ extends VBoxContainer
 @onready var cards: BoxContainer = %Cards
 @onready var cards_scroll: ScrollContainer = %CardsScroll
 @onready var sidebar_container: BoxContainer = %SidebarContainer
+@onready var margin_container_sidebar: MarginContainer = $MarginContainer_Sidebar
+@onready var panel_container: PanelContainer = %PanelContainer
+@onready var flag_component: Control = %Flag
 
 const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn")
 const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
@@ -18,9 +21,14 @@ var filtered_places: Array = []
 var poi_places_ids = []
 var live_places_ids = []
 var map_is_on_top: bool = false
+var is_closed: bool = true
+var closed_position := Vector2.ZERO
 
 func _ready() -> void:
-	sidebar_container.hide()
+	get_window().size_changed.connect(self._on_size_changed)
+	_on_size_changed()
+	margin_container_sidebar.position = closed_position
+	
 	var group := ButtonGroup.new()
 	group.allow_unpress = true
 	for i in range(13):
@@ -39,13 +47,14 @@ func _ready() -> void:
 	searchbar.clean_searchbar.connect(_close_from_searchbar)
 	searchbar.submited_text.connect(_submitted_text_from_searchbar)
 	searchbar.reset()
+	_close_sidebar()
 
 func _close_from_searchbar():
 	for child in h_box_container_filters.get_children():
 		if child is Button and child.toggle_mode and child.filter_type == active_filter:
 			child.button_pressed = false
 	_clean_list()
-	_close_sidebar()
+	_close_sidebar(0.4)
 	
 func _submitted_text_from_searchbar(text:String):
 	var places_to_show = 0
@@ -95,14 +104,21 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 		map.create_pins(type, filtered_places, 'pins')
 
 func _open_sidebar()->void:
-	sidebar_container.show()
+	is_closed = false
+	if not sidebar_container.visible:
+		sidebar_container.show()
+	var duration = .4
+	var tween = create_tween()
+	tween.tween_property(margin_container_sidebar, "position", Vector2.ZERO, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 
 func _close_sidebar(duration:float=0.0)->void:
+	is_closed = true
 	cards_scroll.scroll_horizontal = 0
 	cards_scroll.scroll_vertical = 0
 	filtered_places = []
-	sidebar_container.hide()
-
+	var tween = create_tween()
+	tween.tween_property(margin_container_sidebar, "position", closed_position, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	
 func _clean_list()->void:
 	for child in cards.get_children():
 		child.queue_free()
@@ -152,3 +168,18 @@ func async_load_category(category:int) -> Array:
 		return json.data
 	else:
 		return []
+
+
+func _on_size_changed() -> void:
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	if window_size.x > window_size.y:
+		closed_position = Vector2(15 - panel_container.size.x, 0)
+		panel_container.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		panel_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	else:
+		closed_position = Vector2(0, panel_container.size.y - 15)
+		panel_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		panel_container.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+
+	if is_closed:
+		margin_container_sidebar.position = closed_position

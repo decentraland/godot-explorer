@@ -36,6 +36,7 @@ position_smoothing_speed = 25.0
 editor_draw_drag_margin = true
 
 [node name="Control" type="Control" parent="."]
+visible = false
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0

@@ -4,7 +4,7 @@ signal clicked_parcel(parcel: Vector2i)
 
 @onready var map: Control = %Map
 @onready var map_viewport: SubViewport = %MapViewport
-@onready var search_and_filters: VBoxContainer = $SearchAndFilters
+@onready var search_and_filters: Control = $SearchAndFilters
 
 var show_poi:= true
 var show_live:= true
