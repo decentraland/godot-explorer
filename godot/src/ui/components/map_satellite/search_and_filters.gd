@@ -179,7 +179,7 @@ func _on_size_changed() -> void:
 	else:
 		closed_position = Vector2(0, panel_container.size.y - 15)
 		panel_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		panel_container.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		panel_container.size_flags_vertical = Control.SIZE_SHRINK_END
 
 	if is_closed:
 		margin_container_sidebar.position = closed_position

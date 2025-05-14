@@ -170,11 +170,9 @@ size_flags_vertical = 3
 mouse_filter = 2
 
 [node name="Control" type="Control" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer"]
-visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-size_flags_stretch_ratio = 4.0
 mouse_filter = 2
 mouse_force_pass_scroll_events = false
 script = ExtResource("4_csu1b")
@@ -189,7 +187,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(275, 290)
 layout_mode = 2
 size_flags_horizontal = 0
-size_flags_vertical = 3
+size_flags_vertical = 8
 theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer"]
