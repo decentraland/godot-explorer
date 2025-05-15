@@ -1,9 +1,6 @@
 use std::time::Instant;
 
-use godot::{
-    log::godot_print,
-    prelude::{Callable, GString, ToGodot, Transform3D, VariantArray},
-};
+use godot::prelude::{Callable, GString, ToGodot, Transform3D, VariantArray};
 
 #[cfg(feature = "use_ffmpeg")]
 use super::components::{audio_stream::update_audio_stream, video_player::update_video_player};
