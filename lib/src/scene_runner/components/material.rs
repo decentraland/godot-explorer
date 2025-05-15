@@ -57,7 +57,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     }
                 }
 
-                let existing_material = if let Some(material_item) = scene.materials.get(&entity) {
+                let existing_material = if let Some(material_item) = scene.materials.get(entity) {
                     let material_item = material_item.weak_ref.call("get_ref", &[]);
 
                     if material_item.is_nil() {
@@ -104,7 +104,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     };
 
                     scene.materials.insert(
-                        entity.clone(),
+                        *entity,
                         MaterialItem {
                             dcl_mat: dcl_material.clone(),
                             weak_ref: weakref(godot_material.to_variant()),
@@ -174,7 +174,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let material_item = item.weak_ref.call("get_ref", &[]);
                 if material_item.is_nil() {
                     // item.alive = false;
-                    dead_materials.insert(entity.clone());
+                    dead_materials.insert(*entity);
                     continue;
                 }
 
@@ -226,7 +226,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     keep_dirty = true;
                 } else {
                     // item.waiting_textures = false;
-                    no_more_waiting_materials.insert(entity.clone());
+                    no_more_waiting_materials.insert(*entity);
                 }
             }
         }
