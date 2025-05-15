@@ -116,8 +116,9 @@ jobs:
         if: steps.check-s3.outputs.exists == 'false'
         run: |
           set -euo pipefail
+          export AWS_S3_CHECKSUM_MODE=disabled
           HASH=${{ steps.compute-hash.outputs.hash }}
-          ZIP_NAME="libdclgodot_${HASH}.zip"
+          ZIP_NAME="libdclgodot.zip"
           echo "📤 Uploading $ZIP_NAME to s3://$S3_BUCKET/$HASH/ ..."
           aws --endpoint-url "$S3_ENDPOINT" s3 cp "$ZIP_NAME" "s3://$S3_BUCKET/$HASH/$ZIP_NAME"
           echo "✅ Upload complete."
