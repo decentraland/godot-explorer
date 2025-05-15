@@ -128,6 +128,7 @@ func show_discover():
 	button_discover.set_pressed(true)
 	_open()
 
+
 func show_map():
 	select_node(control_map, false)
 	button_map.set_pressed(true)

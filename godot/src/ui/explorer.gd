@@ -141,7 +141,10 @@ func _ready():
 	if cmd_location != null:
 		start_parcel_position = cmd_location
 
-	player.position = 16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y) + Vector3(8.0, 0.0, -8.0)
+	player.position = (
+		16 * Vector3(start_parcel_position.x, 0.1, -start_parcel_position.y)
+		+ Vector3(8.0, 0.0, -8.0)
+	)
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
 	Global.scene_runner.camera_node = player.camera

@@ -34,6 +34,7 @@ enum WearableCategoryEnum {
 
 var press_time: int = 0
 
+
 func _update_category_icon():
 	var texture_path = (
 		"res://assets/ui/wearable_categories/"

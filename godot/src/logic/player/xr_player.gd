@@ -20,6 +20,13 @@ var left_control_map_actions = {
 	"primary_click": "ia_action_6",
 }
 
+var jetpack_force = 15.0  # Adjust this to tune the power
+var horizontal_scale = 0.5  # Scale for X and Z axes
+
+var jetpack_on := false
+var loading := false
+var menu_opened := false
+
 @onready var camera: Camera3D = $XRCamera3D
 @onready var avatar := $Avatar
 
@@ -37,12 +44,6 @@ var left_control_map_actions = {
 @onready var microphone_gltf = %MicrophoneGltf
 @onready var jet_pack_audio_player: AudioStreamPlayer = %JetPackAudioPlayer
 
-var jetpack_force = 15.0  # Adjust this to tune the power
-var horizontal_scale = 0.5  # Scale for X and Z axes
-
-var jetpack_on := false
-var loading := false
-var menu_opened := false
 
 # gdlint:ignore = async-function-name
 func _ready():
@@ -60,21 +61,26 @@ func _ready():
 	await get_tree().process_frame
 	pose_recentered()
 
+
 func _on_menu_open():
 	menu_opened = true
 
+
 func _on_menu_close():
 	menu_opened = false
+
 
 func _on_loading_started():
 	right_hand.hide()
 	left_hand.hide()
 	loading = true
 
+
 func _on_loading_finished():
 	right_hand.show()
 	left_hand.show()
 	loading = false
+
 
 func pose_recentered():
 	XRServer.center_on_hmd(XRServer.RESET_BUT_KEEP_TILT, true)
@@ -106,22 +112,22 @@ func _process(delta):
 
 		# Update the object's Y rotation
 		ui_origin_3d.rotation.y = current_rotation_y + difference * interpolated_t
-		
-	if jetpack_on and !loading	:
+
+	if jetpack_on and !loading:
 		var thrust_direction = -left_hand.global_transform.basis.z
-		
+
 		# Scale X and Z to be softer
 		var scaled_thrust = Vector3(
 			thrust_direction.x * horizontal_scale,
 			thrust_direction.y,  # Full power on Y
 			thrust_direction.z * horizontal_scale
 		)
-		
+
 		# Normalize AFTER scaling so we keep the direction shape correct
 		var final_thrust = scaled_thrust.normalized()
-		
+
 		player_body.velocity += final_thrust * jetpack_force * delta
-		
+
 		prints("Applying force...", player_body.velocity)
 
 
