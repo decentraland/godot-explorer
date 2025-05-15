@@ -212,12 +212,14 @@ func apply_fixes(gltf_instance: Node3D):
 			var material = mesh.surface_get_material(idx)
 			fix_material(material)
 
+
 func fix_material(mat: BaseMaterial3D):
 	# HACK: Workaround to fix an import error that sets the emisison texture as the albedo texture.
 	mat.emission_texture = null
-	
-	# HACK: Workaround to fix an import error where materials would have 
+
+	# HACK: Workaround to fix an import error where materials would have
 	mat.vertex_color_use_as_albedo = false
+
 
 func async_deferred_add_child():
 	var new_gltf_node = dcl_pending_node
