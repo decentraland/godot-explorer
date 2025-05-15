@@ -1,6 +1,8 @@
 class_name Player
 extends CharacterBody3D
 
+const DEFAULT_CAMERA_FOV = 75.0
+const SPRINTING_CAMERA_FOV = 100.0
 const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 
 var walk_speed = 1.5
@@ -43,8 +45,10 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 
 	if mode == Global.CameraMode.THIRD_PERSON:
 		var tween_out = create_tween()
-		tween_out.tween_property(camera, "position", THIRD_PERSON_CAMERA, 0.25).set_ease(
-			Tween.EASE_IN_OUT
+		(
+			tween_out
+			. tween_property(mount_camera, "spring_length", THIRD_PERSON_CAMERA.length(), 0.25)
+			. set_ease(Tween.EASE_IN_OUT)
 		)
 		avatar.set_hidden(false)
 		avatar.set_rotation(Vector3(0, 0, 0))
@@ -52,7 +56,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 			UiSounds.play_sound("ui_fade_out")
 	elif mode == Global.CameraMode.FIRST_PERSON:
 		var tween_in = create_tween()
-		tween_in.tween_property(camera, "position", Vector3(0, 0, -0.2), 0.25).set_ease(
+		tween_in.tween_property(mount_camera, "spring_length", -.2, 0.25).set_ease(
 			Tween.EASE_IN_OUT
 		)
 		avatar.set_hidden(true)
@@ -137,6 +141,7 @@ func _physics_process(dt: float) -> void:
 		avatar.rise = false
 		avatar.fall = false
 
+	camera.set_target_fov(DEFAULT_CAMERA_FOV)
 	if current_direction:
 		if Input.is_action_pressed("ia_walk"):
 			avatar.walk = true
@@ -145,6 +150,7 @@ func _physics_process(dt: float) -> void:
 			velocity.x = current_direction.x * walk_speed
 			velocity.z = current_direction.z * walk_speed
 		elif Input.is_action_pressed("ia_sprint"):
+			camera.set_target_fov(SPRINTING_CAMERA_FOV)
 			avatar.walk = false
 			avatar.run = true
 			avatar.jog = false
