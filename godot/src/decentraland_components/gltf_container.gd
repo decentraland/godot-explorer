@@ -107,6 +107,8 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 		timer.stop()
 		_finish_gltf_load(gltf_hash)
 		return
+
+	apply_fixes(res_instance)
 	dcl_pending_node = res_instance
 	timer.stop()
 	_finish_gltf_load(gltf_hash)
@@ -189,19 +191,33 @@ func async_load_gltf():
 		timer.stop()
 		return
 
-	remove_emission_texture(res_instance)
-
+	apply_fixes(res_instance)
 	dcl_pending_node = res_instance
 
 
-func remove_emission_texture(gltf_instance: Node3D):
-	# HACK: Workaround to fix an import error that sets the emisison texture as the albedo texture.
-	for child in gltf_instance.get_children():
-		if !(child is MeshInstance3D):
-			continue
-		var material = child.mesh.surface_get_material(0)
-		material.emission_texture = null
+func apply_fixes(gltf_instance: Node3D):
+	var meshes = []
+	var children = gltf_instance.get_children()
+	while children.size():
+		var child = children.pop_back()
+		if child is MeshInstance3D:
+			meshes.push_back(child)
+		var grandchildren = child.get_children()
+		for grandchild in grandchildren:
+			children.push_back(grandchild)
 
+	for instance in meshes:
+		var mesh = instance.mesh
+		for idx in mesh.get_surface_count():
+			var material = mesh.surface_get_material(idx)
+			fix_material(material)
+
+func fix_material(mat: BaseMaterial3D):
+	# HACK: Workaround to fix an import error that sets the emisison texture as the albedo texture.
+	mat.emission_texture = null
+	
+	# HACK: Workaround to fix an import error where materials would have 
+	mat.vertex_color_use_as_albedo = false
 
 func async_deferred_add_child():
 	var new_gltf_node = dcl_pending_node

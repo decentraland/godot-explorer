@@ -16,7 +16,10 @@ use crate::{
     scene_runner::scene::{MaterialItem, Scene},
 };
 use godot::{
-    engine::{base_material_3d::Transparency, MeshInstance3D, StandardMaterial3D},
+    engine::{
+        base_material_3d::{Feature, ShadingMode, Transparency},
+        MeshInstance3D, StandardMaterial3D,
+    },
     prelude::*,
 };
 use utilities::weakref;
@@ -54,18 +57,17 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     }
                 }
 
-                let existing_material =
-                    if let Some(material_item) = scene.materials.get(&dcl_material) {
-                        let material_item = material_item.weak_ref.call("get_ref", &[]);
+                let existing_material = if let Some(material_item) = scene.materials.get(&entity) {
+                    let material_item = material_item.weak_ref.call("get_ref", &[]);
 
-                        if material_item.is_nil() {
-                            None
-                        } else {
-                            Some(material_item)
-                        }
-                    } else {
+                    if material_item.is_nil() {
                         None
-                    };
+                    } else {
+                        Some(material_item)
+                    }
+                } else {
+                    None
+                };
 
                 if existing_material.is_none() {
                     for tex in dcl_material.get_textures().into_iter().flatten() {
@@ -102,8 +104,9 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     };
 
                     scene.materials.insert(
-                        dcl_material.clone(),
+                        entity.clone(),
                         MaterialItem {
+                            dcl_mat: dcl_material.clone(),
                             weak_ref: weakref(godot_material.to_variant()),
                             waiting_textures,
                             alive: true,
@@ -120,6 +123,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material.set_roughness(0.0);
                         godot_material.set_specular(0.0);
 
+                        godot_material.set_shading_mode(ShadingMode::UNSHADED);
                         godot_material.set_albedo(unlit.diffuse_color.0.to_godot());
                     }
                     DclMaterial::Pbr(pbr) => {
@@ -133,13 +137,12 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             .clone()
                             .multiply(pbr.emissive_intensity.0);
                         godot_material.set_emission(emission.to_godot());
+                        godot_material.set_feature(Feature::EMISSION, true);
                         godot_material.set_albedo(pbr.albedo_color.0.to_godot());
                     }
                 }
-
                 let mesh_renderer =
                     node_3d.try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
-
                 if let Some(mut mesh_renderer) = mesh_renderer {
                     mesh_renderer.set_surface_override_material(0, godot_material.upcast());
                 }
@@ -165,12 +168,13 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         let mut dead_materials = HashSet::with_capacity(scene.materials.capacity());
         let mut no_more_waiting_materials = HashSet::new();
 
-        for (dcl_material, item) in scene.materials.iter() {
+        for (entity, item) in scene.materials.iter() {
+            let dcl_material = item.dcl_mat.clone();
             if item.waiting_textures {
                 let material_item = item.weak_ref.call("get_ref", &[]);
                 if material_item.is_nil() {
                     // item.alive = false;
-                    dead_materials.insert(dcl_material.clone());
+                    dead_materials.insert(entity.clone());
                     continue;
                 }
 
@@ -222,7 +226,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     keep_dirty = true;
                 } else {
                     // item.waiting_textures = false;
-                    no_more_waiting_materials.insert(dcl_material.clone());
+                    no_more_waiting_materials.insert(entity.clone());
                 }
             }
         }
