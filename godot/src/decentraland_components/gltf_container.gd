@@ -114,11 +114,29 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 
 static func _process_next_gltf_load():
 	while currently_loading_assets.size() < MAX_CONCURRENT_LOADS and pending_load_queue.size() > 0:
-		var next_gltf = pending_load_queue.pop_front()
+		# Prioritize GLTFs from the current scene
+		var idx = -1
+		for i in range(pending_load_queue.size()):
+			var candidate = pending_load_queue[i]
+			if candidate != null and candidate.is_current_scene():
+				idx = i
+				break
+		var next_gltf = null
+		if idx != -1:
+			next_gltf = pending_load_queue[idx]
+			pending_load_queue.remove_at(idx)
+		else:
+			next_gltf = pending_load_queue.pop_front()
 		if next_gltf != null:
 			next_gltf.async_try_load_gltf_from_local_file(next_gltf.dcl_gltf_hash)
 		else:
 			break
+
+
+func is_current_scene():
+	if dcl_scene_id == Global.scene_runner.get_current_parcel_scene_id():
+		return true
+	return false
 
 
 func async_load_gltf():
