@@ -105,7 +105,7 @@ jobs:
         run: |
           set -euo pipefail
           HASH=${{ steps.compute-hash.outputs.hash }}
-          ZIP_NAME="libdclgodot_${HASH}.zip"
+          ZIP_NAME="libdclgodot.zip"
           echo "📦 Creating $ZIP_NAME ..."
           cd artifacts
           zip -r "../$ZIP_NAME" *
