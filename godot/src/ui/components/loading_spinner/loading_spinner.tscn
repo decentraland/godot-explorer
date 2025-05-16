@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://buu3ox7iefpgx"]
 
 [ext_resource type="Texture2D" uid="uid://dx7vyin0sc2ne" path="res://assets/ui/loading_spinner_progress.png" id="1_roup2"]
-[ext_resource type="Script" path="res://src/ui/components/loading_spinner/loading_spinner.gd" id="2_rds4p"]
+[ext_resource type="Script" uid="uid://chldogpo72e70" path="res://src/ui/components/loading_spinner/loading_spinner.gd" id="2_rds4p"]
 
 [sub_resource type="Animation" id="Animation_h8jfn"]
 resource_name = "spin"
@@ -22,7 +22,7 @@ tracks/0/keys = {
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_rrpsh"]
 _data = {
-"spin": SubResource("Animation_h8jfn")
+&"spin": SubResource("Animation_h8jfn")
 }
 
 [node name="TextureProgressBar" type="TextureProgressBar"]

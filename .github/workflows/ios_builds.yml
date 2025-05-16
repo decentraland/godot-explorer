@@ -1,4 +1,4 @@
-name: 🍏 iOS
+name: 🍏 iOS (only lib)
 on:
   workflow_call:
 
@@ -32,17 +32,28 @@ jobs:
       - name: Cargo install
         run: cargo run -- install --platforms ios
 
-      - name: Build
+      # - name: Build MacOS
+      #   run: cargo run -- build --release
+
+      - name: Build iOS
         run: cargo run -- build --release --target ios
 
-      - name: Import Assets
-        uses: ./.github/actions/import-assets
+      # - name: Import Assets
+      #   uses: ./.github/actions/import-assets
 
-      - name: Export
-        run: cargo run -- export --target ios
+      # - name: Export
+      #   run: cargo run -- export --target ios
+
+      # - uses: actions/upload-artifact@v4
+      #   with:
+      #     name: decentraland-godot-ios
+      #     path: |
+      #       exports/**/*
+      #     if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:
-          name: decentraland-godot-ios
+          name: libdclgodot_ios
           path: |
-            exports/**/*
+            lib/target/aarch64-apple-ios/release/libdclgodot.dylib
+          if-no-files-found: error

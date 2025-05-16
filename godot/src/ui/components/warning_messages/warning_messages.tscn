@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://dx873niilktrw"]
 
-[ext_resource type="Script" path="res://src/ui/components/warning_messages/warning_messages.gd" id="1_7f5aa"]
+[ext_resource type="Script" uid="uid://bvgoype0v63d1" path="res://src/ui/components/warning_messages/warning_messages.gd" id="1_7f5aa"]
 
 [node name="WarningMessages" type="VBoxContainer"]
 anchors_preset = 5

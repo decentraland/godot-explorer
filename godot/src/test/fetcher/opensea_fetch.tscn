@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://cfox5r1jvnvo"]
 
-[ext_resource type="Script" path="res://src/test/fetcher/opensea_fetch.gd" id="1_vg2d3"]
+[ext_resource type="Script" uid="uid://ddwf6l84digy" path="res://src/test/fetcher/opensea_fetch.gd" id="1_vg2d3"]
 
 [node name="opensea_fetch" type="Control"]
 layout_mode = 3

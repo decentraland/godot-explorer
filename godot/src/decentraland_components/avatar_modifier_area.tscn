@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3 uid="uid://dwuxt3ek8imib"]
 
-[ext_resource type="Script" path="res://src/decentraland_components/avatar_modifier_area.gd" id="1_d4psk"]
+[ext_resource type="Script" uid="uid://v1bj4b5r52hq" path="res://src/decentraland_components/avatar_modifier_area.gd" id="1_d4psk"]
 [ext_resource type="PackedScene" uid="uid://ksn0qud7g0lq" path="res://src/helpers_components/force_global_scale_component.tscn" id="2_swr5t"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_dvgte"]

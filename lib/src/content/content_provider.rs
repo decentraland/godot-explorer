@@ -119,7 +119,7 @@ pub struct ContentProviderContext {
 
 unsafe impl Send for ContentProviderContext {}
 
-const ASSET_OPTIMIZED_BASE_URL: &str = "https://storage.kuruk.net/optimized/v4";
+const ASSET_OPTIMIZED_BASE_URL: &str = "https://storage.kuruk.net/optimized/v5";
 
 #[godot_api]
 impl INode for ContentProvider {

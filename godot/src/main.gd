@@ -39,6 +39,7 @@ func _start():
 
 	if Global.is_xr():
 		print("Running in XR mode")
+		Global.set_orientation_landscape()
 		get_tree().change_scene_to_file("res://src/vr/vr_lobby.tscn")
 	elif args.has("--avatar-renderer"):
 		print("Running in Avatar-Renderer mode")

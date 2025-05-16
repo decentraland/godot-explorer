@@ -4,10 +4,15 @@ set -euo pipefail
 # Set the explorer path to the current working directory.
 EXPLORER_PATH="$(pwd)"
 
-# Clone the Godot Android template if it does not exist.
+# Unzip Godot Android template if it does not exist.
 if [ ! -d "${EXPLORER_PATH}/godot/android/" ]; then
-    echo "Checking out Godot Android template..."
-    git clone https://github.com/decentraland/godot-explorer-android-template "${EXPLORER_PATH}/godot/android"
+    echo "Unzip out Godot Android template..."
+    mkdir -p "${EXPLORER_PATH}/godot/android/"
+    mkdir -p "${EXPLORER_PATH}/godot/android/build"
+    unzip "${HOME}/.local/share/godot/export_templates/4.4.1.stable/android_source.zip" \
+        -d "${EXPLORER_PATH}/godot/android/build"
+    echo "4.4.1.stable" > "${EXPLORER_PATH}/godot/android/.build_version"
+    touch "${EXPLORER_PATH}/godot/android/build/.gdignore"
 fi
 
 # Set JAVA_HOME if not already set.
@@ -17,13 +22,8 @@ fi
 
 echo "Build for Linux x86_64"
 cd "${EXPLORER_PATH}"
-cargo run -- install --platforms android
-cargo run -- build
 
-echo "Link export templates"
-mkdir -p "${HOME}/.local/share/godot/export_templates/"
-cd "${HOME}/.local/share/godot/export_templates/"
-ln -sf "${EXPLORER_PATH}/.bin/godot/templates/templates/" "4.3.stable"
+cargo run -- build
 
 echo "Build for Android (arm64)"
 cd "${EXPLORER_PATH}/lib"
