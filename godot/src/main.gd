@@ -2,7 +2,7 @@ extends Node
 
 
 func _ready():
-	Global.set_orientation_portrait()
+	#Global.set_orientation_portrait()
 	start.call_deferred()
 
 
@@ -35,6 +35,7 @@ func start():
 
 
 func _start():
+	
 	var args = OS.get_cmdline_args()
 
 	if Global.is_xr():

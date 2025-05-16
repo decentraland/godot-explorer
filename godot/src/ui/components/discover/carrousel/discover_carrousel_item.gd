@@ -65,18 +65,21 @@ func set_description(_description: String):
 
 
 func set_views(_views: int):
-	container_views.set_visible(_views > 0)
-	label_views.text = _format_number(_views)
+	if is_instance_valid(label_views):
+		container_views.set_visible(_views > 0)
+		label_views.text = _format_number(_views)
 
 
 func set_likes_percent(_likes: float):
-	container_likes.set_visible(_likes > 0.0)
-	label_likes.text = str(round(_likes * 100)) + "%"
+	if is_instance_valid(label_likes):
+		container_likes.set_visible(_likes > 0.0)
+		label_likes.text = str(round(_likes * 100)) + "%"
 
 
 func set_online(_online: int):
-	container_online.set_visible(_online > 0)
-	label_online.text = _format_number(_online)
+	if is_instance_valid(label_online):
+		container_online.set_visible(_online > 0)
+		label_online.text = _format_number(_online)
 
 
 func _format_number(num: int) -> String:

@@ -1,0 +1,545 @@
+[gd_scene load_steps=16 format=3 uid="uid://duuasgi2pnb8k"]
+
+[ext_resource type="Script" path="res://src/ui/components/map_satellite/map_satellite.gd" id="1_ke4q2"]
+[ext_resource type="PackedScene" uid="uid://diojwgryptiuw" path="res://src/ui/components/map_satellite/map_searchbar.tscn" id="4_ju8cx"]
+[ext_resource type="Texture2D" uid="uid://cg0awu10wijew" path="res://assets/ui/place_categories/provisory-archipelagos.svg" id="6_cmtv6"]
+[ext_resource type="Texture2D" uid="uid://tf0rlaicf452" path="res://assets/ui/map/empty-search.svg" id="6_m7gk0"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="7_unheb"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_0jug1"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c8imc"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1gvcs"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.779388, 0.367146, 0, 1)
+corner_radius_top_left = 19
+corner_radius_top_right = 19
+corner_radius_bottom_right = 19
+corner_radius_bottom_left = 19
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vrqoo"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+
+[sub_resource type="LabelSettings" id="LabelSettings_iemrq"]
+font = ExtResource("7_unheb")
+font_size = 24
+font_color = Color(0.513233, 0.513233, 0.513233, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_77036"]
+font = ExtResource("8_0jug1")
+font_color = Color(0.513726, 0.513726, 0.513726, 1)
+
+[sub_resource type="Animation" id="Animation_lrm6h"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MarginContainer:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("MarginContainer:visible")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [true]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("CanvasLayer/ColorRectCloseSidebar:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 0)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("CanvasLayer/ColorRectCloseSidebar:visible")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [true]
+}
+
+[sub_resource type="Animation" id="Animation_5tr2o"]
+resource_name = "hide_filters"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MarginContainer:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.3),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("MarginContainer:visible")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.3),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+
+[sub_resource type="Animation" id="Animation_gfhgp"]
+resource_name = "show_filters"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MarginContainer:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.3),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("MarginContainer:visible")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [true]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_q556g"]
+_data = {
+"RESET": SubResource("Animation_lrm6h"),
+"hide_filters": SubResource("Animation_5tr2o"),
+"show_filters": SubResource("Animation_gfhgp")
+}
+
+[node name="MapSatellite" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ke4q2")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MapViewport" type="SubViewport" parent="SubViewportContainer"]
+unique_name_in_owner = true
+disable_3d = true
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(720, 720)
+size_2d_override_stretch = true
+render_target_update_mode = 4
+
+[node name="Map" type="Control" parent="SubViewportContainer/MapViewport"]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 1
+
+[node name="ColorRect" type="ColorRect" parent="SubViewportContainer/MapViewport/Map"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.887392, 0.550205, 0.700621, 1)
+
+[node name="Camera2D" type="Camera2D" parent="SubViewportContainer/MapViewport/Map"]
+unique_name_in_owner = true
+position_smoothing_enabled = true
+position_smoothing_speed = 40.0
+
+[node name="ArchipelagosControl" type="Control" parent="SubViewportContainer/MapViewport/Map"]
+unique_name_in_owner = true
+visible = false
+z_index = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 54.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 30
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+
+[node name="Portrait" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+
+[node name="PortraitMapSearchbar" parent="MarginContainer/VBoxContainer/Portrait" instance=ExtResource("4_ju8cx")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+
+[node name="FilterScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/Portrait"]
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/Portrait/FilterScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_bottom = 5
+
+[node name="PortraitFilters" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Portrait/FilterScrollContainer/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 11
+
+[node name="Landscape" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Landscape"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_right = 30
+
+[node name="LandscapeMapSearchbar" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2/MarginContainer" instance=ExtResource("4_ju8cx")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+
+[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+
+[node name="FilterScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2/Control"]
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2/Control/FilterScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_bottom = 5
+
+[node name="LandscapeFilters" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Landscape/HBoxContainer2/Control/FilterScrollContainer/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 11
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+alignment = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_right = 30
+
+[node name="ArchipelagoButton" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(65, 65)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_colors/font_disabled_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 6
+theme_override_fonts/font = ExtResource("7_unheb")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_1gvcs")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/hover = SubResource("StyleBoxFlat_1gvcs")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_1gvcs")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_1gvcs")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxEmpty_c8imc")
+theme_override_styles/normal = SubResource("StyleBoxEmpty_c8imc")
+toggle_mode = true
+icon = ExtResource("6_cmtv6")
+icon_alignment = 1
+expand_icon = true
+
+[node name="LandscapeSidebarContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Control" type="Control" parent="LandscapeSidebarContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+mouse_force_pass_scroll_events = false
+
+[node name="HBoxContainer" type="HBoxContainer" parent="LandscapeSidebarContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 3.0
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="PanelContainer" type="PanelContainer" parent="LandscapeSidebarContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="LandscapeSidebarContainer/HBoxContainer/PanelContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="LandscapeCardsScroll" type="ScrollContainer" parent="LandscapeSidebarContainer/HBoxContainer/PanelContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
+
+[node name="LandscapeCards" type="VBoxContainer" parent="LandscapeSidebarContainer/HBoxContainer/PanelContainer/VBoxContainer/LandscapeCardsScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+
+[node name="LandscapeNoResults" type="VBoxContainer" parent="LandscapeSidebarContainer/HBoxContainer/PanelContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="LandscapeSidebarContainer/HBoxContainer/PanelContainer/VBoxContainer/LandscapeNoResults"]
+modulate = Color(1, 1, 1, 0.419608)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("6_m7gk0")
+stretch_mode = 3
+
+[node name="Label" type="Label" parent="LandscapeSidebarContainer/HBoxContainer/PanelContainer/VBoxContainer/LandscapeNoResults"]
+layout_mode = 2
+text = "No results found"
+label_settings = SubResource("LabelSettings_iemrq")
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="LandscapeSidebarContainer/HBoxContainer/PanelContainer/VBoxContainer/LandscapeNoResults"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+text = "Make sure your search is spelled correctly."
+label_settings = SubResource("LabelSettings_77036")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Control" type="Control" parent="LandscapeSidebarContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+
+[node name="PortraitSidebarContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Control" type="Control" parent="PortraitSidebarContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 2.0
+mouse_filter = 2
+mouse_force_pass_scroll_events = false
+
+[node name="PanelContainer" type="PanelContainer" parent="PortraitSidebarContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
+
+[node name="MarginContainer2" type="MarginContainer" parent="PortraitSidebarContainer/PanelContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 30
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PortraitSidebarContainer/PanelContainer/MarginContainer2"]
+layout_mode = 2
+alignment = 1
+
+[node name="PortraitCardsScroll" type="ScrollContainer" parent="PortraitSidebarContainer/PanelContainer/MarginContainer2/VBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="PortraitCards" type="HBoxContainer" parent="PortraitSidebarContainer/PanelContainer/MarginContainer2/VBoxContainer/PortraitCardsScroll"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+
+[node name="PortraitNoResults" type="VBoxContainer" parent="PortraitSidebarContainer/PanelContainer/MarginContainer2/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 15
+
+[node name="TextureRect" type="TextureRect" parent="PortraitSidebarContainer/PanelContainer/MarginContainer2/VBoxContainer/PortraitNoResults"]
+modulate = Color(1, 1, 1, 0.419608)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("6_m7gk0")
+stretch_mode = 3
+
+[node name="Label" type="Label" parent="PortraitSidebarContainer/PanelContainer/MarginContainer2/VBoxContainer/PortraitNoResults"]
+layout_mode = 2
+text = "No results found"
+label_settings = SubResource("LabelSettings_iemrq")
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="PortraitSidebarContainer/PanelContainer/MarginContainer2/VBoxContainer/PortraitNoResults"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+text = "Make sure your search is spelled correctly."
+label_settings = SubResource("LabelSettings_77036")
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="ColorRectCloseSidebar" type="ColorRect" parent="CanvasLayer"]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+color = Color(0, 0, 0, 0.501961)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_q556g")
+}
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="gui_input" from="SubViewportContainer/MapViewport/Map" to="." method="_on_map_gui_input"]
+[connection signal="toggled" from="MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/ArchipelagoButton" to="." method="_on_check_box_toggled"]
