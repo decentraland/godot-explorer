@@ -5,8 +5,10 @@ signal clicked_parcel(parcel: Vector2i)
 
 @onready var camera := $Camera2D
 @onready var map_marker: Marker = %MapMarker
-@onready var map_background: Control = %MapBackground
-@onready var control: Control = $Control
+@onready var control_archipelagos: Control = %ControlArchipelagos
+@onready var tiled_map: Control = %TiledMap
+@onready var color_rect_map: ColorRect = %ColorRect_Map
+
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 const TILE_SIZE = Vector2(512, 512)
@@ -31,10 +33,17 @@ var active_touches := {}
 var just_zoomed := false
 var poi_places_ids = []
 
+# The size of the map in parcels
+var map_parcel_size: Vector2
+# The top left parcel
+var map_topleft_parcel_position: Vector2
 
 func _ready():
+	color_rect_map.position = TILE_DISPLACEMENT
 	set_process_input(true)
 	self.size = MAP_SIZE
+	map_parcel_size = Vector2(512, 512)
+	map_topleft_parcel_position = TILE_DISPLACEMENT
 	for y in range(GRID_SIZE.y):
 		for x in range(GRID_SIZE.x):
 			var image_path = IMAGE_FOLDER + "%d,%d.jpg" % [x, y]
@@ -45,7 +54,7 @@ func _ready():
 				tex_rect.stretch_mode = TextureRect.STRETCH_SCALE
 				tex_rect.size = TILE_SIZE
 				tex_rect.position = Vector2(x * TILE_SIZE.x, y * TILE_SIZE.y) + TILE_DISPLACEMENT
-				map_background.add_child(tex_rect)
+				tiled_map.add_child(tex_rect)
 			else:
 				push_error("Error loading map image: " + image_path)
 	
@@ -144,7 +153,7 @@ func async_draw_archipelagos() -> void:
 				center_coord = Vector2i(x,-y)
 			var radius = 50 + archipelago.usersTotalCount * 10
 			var pos = get_parcel_position(center_coord)
-			control.add_child(circle)
+			control_archipelagos.add_child(circle)
 			circle.set_circle(pos, radius)
 			circle.add_to_group('archipelagos')
 			
@@ -303,4 +312,4 @@ func show_live_toggled(toggled_on: bool) -> void:
 			child.visible = toggled_on
 
 func show_archipelagos_toggled(toggled_on: bool) -> void:
-	control.visible = toggled_on
+	control_archipelagos.visible = toggled_on
