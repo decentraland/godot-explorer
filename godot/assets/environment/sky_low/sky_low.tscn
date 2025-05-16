@@ -5,19 +5,19 @@
 
 [sub_resource type="Environment" id="Environment_mvu0t"]
 background_mode = 2
-background_energy_multiplier = 0.5
 sky = ExtResource("2_xkl7w")
 ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
 ambient_light_sky_contribution = 0.4
+reflected_light_source = 2
 tonemap_mode = 3
-glow_levels/1 = 16.0
-glow_levels/2 = 16.0
-glow_levels/3 = 16.0
-glow_levels/4 = 16.0
-glow_levels/5 = 16.0
-glow_levels/6 = 16.0
-glow_levels/7 = 2.95
-glow_blend_mode = 0
+glow_enabled = true
+glow_levels/1 = 0.4
+glow_levels/2 = 0.3
+glow_levels/3 = 0.2
+glow_levels/4 = 0.1
+glow_levels/5 = 0.0
+glow_intensity = 1.5
+glow_blend_mode = 1
 fog_density = 0.001
 adjustment_brightness = 1.2
 adjustment_saturation = 1.2
