@@ -1,17 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://bqsiu6b1b2sgq"]
+[gd_scene load_steps=3 format=3 uid="uid://bqsiu6b1b2sgq"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/map_component.gd" id="1_hq8a4"]
-[ext_resource type="Shader" path="res://src/ui/components/map_shader/map.gdshader" id="2_d5f5o"]
 [ext_resource type="PackedScene" uid="uid://cic3ckk8o08jx" path="res://src/ui/components/map_satellite/map_marker.tscn" id="2_mkgxo"]
-[ext_resource type="Texture2D" uid="uid://cfarfg4y15d1e" path="res://src/ui/components/map_shader/minimap.png" id="3_s208q"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_1lkqo"]
-shader = ExtResource("2_d5f5o")
-shader_parameter/global_transform = null
-shader_parameter/size = 40.0
-shader_parameter/line_width_px = 1.0
-shader_parameter/selected_tile = Vector2(20, 20)
-shader_parameter/map_data = ExtResource("3_s208q")
 
 [node name="Map" type="Control"]
 layout_mode = 3
@@ -20,6 +10,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 mouse_filter = 1
 script = ExtResource("1_hq8a4")
 
@@ -43,19 +35,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="ColorRect_Map" type="ColorRect" parent="."]
-unique_name_in_owner = true
-material = SubResource("ShaderMaterial_1lkqo")
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_right = -257.0
-offset_bottom = -318.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
 [node name="Camera2D" type="Camera2D" parent="."]
 unique_name_in_owner = true
 position_smoothing_speed = 25.0
@@ -63,10 +42,12 @@ editor_draw_drag_margin = true
 
 [node name="ControlArchipelagos" type="Control" parent="."]
 unique_name_in_owner = true
-visible = false
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="MapMarker" parent="." instance=ExtResource("2_mkgxo")]
 unique_name_in_owner = true

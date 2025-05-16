@@ -55,9 +55,9 @@ func _process(_dt):
 		Global.metrics.update_position("%d,%d" % [parcel_position.x, parcel_position.y])
 
 
-func _on_parcels_procesed(parcels, empty):
-	control_minimap.control_map_shader.set_used_parcels(parcels, empty)
-	control_menu.control_map.control_map_shader.set_used_parcels(parcels, empty)
+#func _on_parcels_procesed(parcels, empty):
+	#control_minimap.control_map_shader.set_used_parcels(parcels, empty)
+	#control_menu.control_map.control_map_shader.set_used_parcels(parcels, empty)
 
 
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
@@ -150,7 +150,7 @@ func _ready():
 	ui_root.add_child(Global.scene_runner.base_ui)
 	ui_root.move_child(Global.scene_runner.base_ui, 0)
 
-	Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
+	#Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
 	Global.scene_fetcher.notify_pending_loading_scenes.connect(
 		self._on_notify_pending_loading_scenes
 	)

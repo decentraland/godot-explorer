@@ -7,7 +7,6 @@ signal clicked_parcel(parcel: Vector2i)
 @onready var map_marker: Marker = %MapMarker
 @onready var control_archipelagos: Control = %ControlArchipelagos
 @onready var tiled_map: Control = %TiledMap
-@onready var color_rect_map: ColorRect = %ColorRect_Map
 
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
@@ -39,9 +38,8 @@ var map_parcel_size: Vector2
 var map_topleft_parcel_position: Vector2
 
 func _ready():
-	color_rect_map.position = TILE_DISPLACEMENT
 	set_process_input(true)
-	self.size = MAP_SIZE
+	#self.size = MAP_SIZE
 	map_parcel_size = Vector2(512, 512)
 	map_topleft_parcel_position = TILE_DISPLACEMENT
 	for y in range(GRID_SIZE.y):
@@ -153,9 +151,11 @@ func async_draw_archipelagos() -> void:
 				center_coord = Vector2i(x,-y)
 			var radius = 50 + archipelago.usersTotalCount * 10
 			var pos = get_parcel_position(center_coord)
-			control_archipelagos.add_child(circle)
+			#control_archipelagos.add_child(circle)
+			add_child(circle)
 			circle.set_circle(pos, radius)
 			circle.add_to_group('archipelagos')
+			circle.hide()
 			
 
 func get_poi_ids(poi_places):
@@ -312,4 +312,6 @@ func show_live_toggled(toggled_on: bool) -> void:
 			child.visible = toggled_on
 
 func show_archipelagos_toggled(toggled_on: bool) -> void:
-	control_archipelagos.visible = toggled_on
+	for child in get_children():
+		if child.is_in_group('archipelagos'):
+			child.visible = toggled_on
