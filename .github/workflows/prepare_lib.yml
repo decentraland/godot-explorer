@@ -120,5 +120,5 @@ jobs:
           HASH=${{ steps.compute-hash.outputs.hash }}
           ZIP_NAME="libdclgodot.zip"
           echo "📤 Uploading $ZIP_NAME to s3://$S3_BUCKET/$HASH/ ..."
-          aws --endpoint-url "$S3_ENDPOINT" s3 cp "$ZIP_NAME" "s3://$S3_BUCKET/$HASH/$ZIP_NAME"
+          aws --endpoint-url "$S3_ENDPOINT" s3 cp --checksum-algorithm=CRC32 "$ZIP_NAME" "s3://$S3_BUCKET/$HASH/$ZIP_NAME"
           echo "✅ Upload complete."
