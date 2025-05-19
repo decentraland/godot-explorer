@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://dytk736oxi1yj"]
+[gd_scene load_steps=15 format=3 uid="uid://dytk736oxi1yj"]
 
 [ext_resource type="Script" path="res://src/ui/components/map_satellite/search_and_filters.gd" id="1_2len1"]
 [ext_resource type="PackedScene" uid="uid://bhl7c24uruj0a" path="res://src/ui/components/utils/orientation_container.tscn" id="2_vpn0w"]
@@ -22,7 +22,7 @@ corner_radius_top_right = 19
 corner_radius_bottom_right = 19
 corner_radius_bottom_left = 19
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vrqoo"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sr2e4"]
 bg_color = Color(0.894118, 0.894118, 0.894118, 1)
 corner_radius_top_left = 24
 corner_radius_top_right = 24
@@ -35,6 +35,11 @@ font_color = Color(0.513233, 0.513233, 0.513233, 1)
 [sub_resource type="LabelSettings" id="LabelSettings_77036"]
 font = ExtResource("8_fepdh")
 font_color = Color(0.513726, 0.513726, 0.513726, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vrqoo"]
+bg_color = Color(0.894118, 0.894118, 0.894118, 1)
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
 
 [node name="SearchAndFilters" type="Control"]
 layout_mode = 3
@@ -150,7 +155,7 @@ size_flags_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 11
 
-[node name="MarginContainer_Sidebar" type="MarginContainer" parent="."]
+[node name="SearchResultsContainer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -158,40 +163,23 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_top = 115
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer_Sidebar"]
-layout_mode = 2
-mouse_filter = 2
-
-[node name="SidebarContainer" type="VBoxContainer" parent="MarginContainer_Sidebar/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-
-[node name="Control" type="Control" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer"]
-visible = false
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-mouse_filter = 2
-mouse_force_pass_scroll_events = false
-script = ExtResource("4_csu1b")
-
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-
-[node name="PanelContainer" type="PanelContainer" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer"]
+[node name="PortraitPanelContainer" type="PanelContainer" parent="SearchResultsContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(275, 290)
-layout_mode = 2
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -60.0
+grow_horizontal = 2
+grow_vertical = 0
 size_flags_horizontal = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
+theme_override_styles/panel = SubResource("StyleBoxFlat_sr2e4")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer"]
+[node name="PortraitContainer" type="MarginContainer" parent="SearchResultsContainer/PortraitPanelContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 20
@@ -199,19 +187,23 @@ theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer"]
-layout_mode = 2
-alignment = 1
-
-[node name="CardsScroll" type="ScrollContainer" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="SearchResults" type="Control" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
+
+[node name="CardsScroll" type="ScrollContainer" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 3
 
-[node name="Cards" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CardsScroll" instance=ExtResource("2_vpn0w")]
+[node name="Cards" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults/CardsScroll" instance=ExtResource("2_vpn0w")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -220,15 +212,20 @@ alignment = 2
 vertical = true
 invert = true
 
-[node name="NoResults" type="VBoxContainer" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="NoResults" type="VBoxContainer" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 15
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer/NoResults"]
+[node name="TextureRect" type="TextureRect" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults/NoResults"]
 modulate = Color(1, 1, 1, 0.419608)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -236,13 +233,13 @@ size_flags_vertical = 4
 texture = ExtResource("7_4gbog")
 stretch_mode = 3
 
-[node name="Label" type="Label" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer/NoResults"]
+[node name="Label" type="Label" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults/NoResults"]
 layout_mode = 2
 text = "No results found"
 label_settings = SubResource("LabelSettings_iemrq")
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer/PanelContainer/MarginContainer/VBoxContainer/NoResults"]
+[node name="Label2" type="Label" parent="SearchResultsContainer/PortraitPanelContainer/PortraitContainer/SearchResults/NoResults"]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 text = "Make sure your search is spelled correctly."
@@ -250,15 +247,27 @@ label_settings = SubResource("LabelSettings_77036")
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="Control2" type="Control" parent="MarginContainer_Sidebar/VBoxContainer/SidebarContainer/HBoxContainer"]
+[node name="LandscapePanelContainer" type="PanelContainer" parent="SearchResultsContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(275, 290)
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.156
+anchor_bottom = 1.0
+offset_top = -0.32
+offset_right = 275.0
+grow_vertical = 2
+size_flags_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_vrqoo")
+
+[node name="LandscapeContainer" type="MarginContainer" parent="SearchResultsContainer/LandscapePanelContainer"]
+unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-size_flags_stretch_ratio = 3.0
 mouse_filter = 2
-mouse_force_pass_scroll_events = false
-script = ExtResource("4_csu1b")
-hide_on_portrait = true
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 30
 
 [node name="Flag" type="Control" parent="."]
 unique_name_in_owner = true

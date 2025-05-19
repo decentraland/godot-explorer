@@ -92,7 +92,6 @@ func _unhandled_input(event):
 			_async_request_hide_menu()
 		if event.pressed and event.keycode == KEY_M:
 			if selected_node == control_map_satellite:
-				control_map_satellite.refresh_viewport_size
 				_async_request_hide_menu()
 			else:
 				show_map()
@@ -129,7 +128,6 @@ func show_last():
 
 func show_map():
 	#select_node(control_map, false)
-	control_map_satellite.refresh_viewport_size()
 	select_node(control_map_satellite, false)
 	button_map.set_pressed(true)
 	_open()
@@ -168,9 +166,6 @@ func _on_control_settings_toggle_ram_usage_visibility(visibility):
 
 
 func select_node(node: Node, play_sfx: bool = true):
-	if (node == control_map_satellite):
-		control_map_satellite.refresh_viewport_size()
-
 	if selected_node != node:
 		fade_out(selected_node)
 		fade_in(node)

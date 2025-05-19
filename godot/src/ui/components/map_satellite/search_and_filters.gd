@@ -7,10 +7,13 @@ extends Control
 @onready var no_results: VBoxContainer = %NoResults
 @onready var cards: BoxContainer = %Cards
 @onready var cards_scroll: ScrollContainer = %CardsScroll
-@onready var sidebar_container: BoxContainer = %SidebarContainer
-@onready var margin_container_sidebar: MarginContainer = $MarginContainer_Sidebar
 @onready var panel_container: PanelContainer = %PanelContainer
 @onready var flag_component: Control = %Flag
+@onready var portrait_container: MarginContainer = %PortraitContainer
+@onready var landscape_container: MarginContainer = %LandscapeContainer
+@onready var search_results: Control = %SearchResults
+@onready var portrait_panel_container: PanelContainer = %PortraitPanelContainer
+@onready var landscape_panel_container: PanelContainer = %LandscapePanelContainer
 
 const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn")
 const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
@@ -22,12 +25,10 @@ var poi_places_ids = []
 var live_places_ids = []
 var map_is_on_top: bool = false
 var is_closed: bool = true
-var closed_position := Vector2.ZERO
 
 func _ready() -> void:
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
-	margin_container_sidebar.position = closed_position
 	
 	var group := ButtonGroup.new()
 	group.allow_unpress = true
@@ -54,7 +55,7 @@ func _close_from_searchbar():
 		if child is Button and child.toggle_mode and child.filter_type == active_filter:
 			child.button_pressed = false
 	_clean_list()
-	_close_sidebar(0.4)
+	_close_sidebar()
 	
 func _submitted_text_from_searchbar(text:String):
 	var places_to_show = 0
@@ -81,7 +82,7 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 	if not pressed:
 		filtered_places = []
 		searchbar.reset()
-		_close_sidebar(0.4)
+		_close_sidebar()
 	else:
 		active_filter = type
 		filtered_places = await async_load_category(active_filter)
@@ -105,19 +106,25 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 
 func _open_sidebar()->void:
 	is_closed = false
-	if not sidebar_container.visible:
-		sidebar_container.show()
-	var duration = .4
-	var tween = create_tween()
-	tween.tween_property(margin_container_sidebar, "position", Vector2.ZERO, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	# TODO: Do tween
+	prints("Opening")
+	
+	if Global.is_orientation_portrait():
+		portrait_panel_container.show()
+		landscape_panel_container.hide()
+	else:
+		landscape_panel_container.show()
+		portrait_panel_container.hide()
 
-func _close_sidebar(duration:float=0.0)->void:
+func _close_sidebar()->void:
 	is_closed = true
 	cards_scroll.scroll_horizontal = 0
 	cards_scroll.scroll_vertical = 0
 	filtered_places = []
-	var tween = create_tween()
-	tween.tween_property(margin_container_sidebar, "position", closed_position, duration).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
+	
+	portrait_panel_container.hide()
+	landscape_panel_container.hide()
+	
 	
 func _clean_list()->void:
 	for child in cards.get_children():
@@ -173,13 +180,10 @@ func async_load_category(category:int) -> Array:
 func _on_size_changed() -> void:
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	if window_size.x > window_size.y:
-		closed_position = Vector2(15 - panel_container.size.x, 0)
-		panel_container.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		panel_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		search_results.reparent(landscape_container)
+		portrait_panel_container.hide()
+		landscape_panel_container.visible = !is_closed
 	else:
-		closed_position = Vector2(0, panel_container.size.y - 15)
-		panel_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		panel_container.size_flags_vertical = Control.SIZE_SHRINK_END
-
-	if is_closed:
-		margin_container_sidebar.position = closed_position
+		search_results.reparent(portrait_container)
+		portrait_panel_container.visible = !is_closed
+		landscape_panel_container.hide()
