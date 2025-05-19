@@ -40,7 +40,7 @@ func async_load_place_position(position: Vector2i):
 	var result = await PromiseUtils.async_awaiter(promise)
 
 	if result is PromiseError:
-		printerr("Error request places", result.get_error())
+		printerr("Error request places jump in", result.get_error())
 		return
 
 	var json: Dictionary = result.get_string_response_as_json()
