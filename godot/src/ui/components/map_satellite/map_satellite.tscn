@@ -12,6 +12,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 script = ExtResource("1_ke4q2")
 
 [node name="SubViewportContainer" type="SubViewportContainer" parent="."]
@@ -36,6 +38,7 @@ unique_name_in_owner = true
 [node name="SearchAndFilters" parent="." node_paths=PackedStringArray("map") instance=ExtResource("3_433db")]
 layout_mode = 1
 map = NodePath("../SubViewportContainer/MapViewport/Map")
+metadata/_edit_use_anchors_ = true
 
 [node name="POICheckBox" type="CheckBox" parent="."]
 visible = false
