@@ -7,6 +7,7 @@ signal clicked_parcel(parcel: Vector2i)
 @onready var map_marker: Marker = %MapMarker
 @onready var control_archipelagos: Control = %ControlArchipelagos
 @onready var tiled_map: Control = %TiledMap
+@onready var color_rect_background: ColorRect = %ColorRect_Background
 
 
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
@@ -32,16 +33,20 @@ var active_touches := {}
 var just_zoomed := false
 var poi_places_ids = []
 
-# The size of the map in parcels
-var map_parcel_size: Vector2
-# The top left parcel
-var map_topleft_parcel_position: Vector2
-
 func _ready():
 	set_process_input(true)
-	#self.size = MAP_SIZE
-	map_parcel_size = Vector2(512, 512)
-	map_topleft_parcel_position = TILE_DISPLACEMENT
+	#tiled_map.anchor_left = 0.5
+	#tiled_map.anchor_right = 0.5
+	#tiled_map.anchor_top = 0.5
+	#tiled_map.anchor_bottom = 0.5
+#
+	#color_rect_background.anchor_left = 0.5
+	#color_rect_background.anchor_right = 0.5
+	#color_rect_background.anchor_top = 0.5
+	#color_rect_background.anchor_bottom = 0.5
+	
+	tiled_map.size = Vector2(340*PARCEL_SIZE)
+	color_rect_background.size = tiled_map.size
 	for y in range(GRID_SIZE.y):
 		for x in range(GRID_SIZE.x):
 			var image_path = IMAGE_FOLDER + "%d,%d.jpg" % [x, y]
@@ -51,7 +56,7 @@ func _ready():
 				tex_rect.texture = tex
 				tex_rect.stretch_mode = TextureRect.STRETCH_SCALE
 				tex_rect.size = TILE_SIZE
-				tex_rect.position = Vector2(x * TILE_SIZE.x, y * TILE_SIZE.y) + TILE_DISPLACEMENT
+				tex_rect.position = Vector2(x * TILE_SIZE.x, y * TILE_SIZE.y)+TILE_DISPLACEMENT
 				tiled_map.add_child(tex_rect)
 			else:
 				push_error("Error loading map image: " + image_path)
@@ -59,7 +64,6 @@ func _ready():
 	center_camera_on_parcel(Vector2i(0,1))
 
 func _input(event):
-	# --- Movimiento del dedo ---
 	if event is InputEventScreenDrag:
 		active_touches[event.index] = event.position
 
@@ -70,7 +74,6 @@ func _input(event):
 		elif active_touches.size() == 2:
 			handle_zoom()
 
-	# --- Zoom con rueda del mouse ---
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			camera.zoom = clamp(camera.zoom * 1.1, MIN_ZOOM, MAX_ZOOM)
@@ -156,7 +159,6 @@ func async_draw_archipelagos() -> void:
 			circle.set_circle(pos, radius)
 			circle.add_to_group('archipelagos')
 			circle.hide()
-			
 
 func get_poi_ids(poi_places):
 	poi_places_ids = poi_places.map(func(poi_place): return poi_place.id)
@@ -277,22 +279,8 @@ func _on_pin_clicked(coord:Vector2i):
 	show_marker_at_parcel(coord)
 
 func card_pressed(place)->void:
-	show_marker_at_parcel(_get_center_from_rect_coords(place.positions))
-
-func clamp_camera_position() -> void:
-	const MAP_TOP_MARGIN = 50
-	var min_pos:Vector2 = size / 2 / camera.zoom
-	var max_pos:Vector2 = MAP_SIZE - min_pos
-
-	if MAP_SIZE.x * camera.zoom.x < size.x:
-		camera.position.x = ( size.x  + MAP_SIZE.x ) / 2
-	else:
-		camera.position.x = clamp(camera.position.x, min_pos.x, max_pos.x)
-
-	if MAP_SIZE.y * camera.zoom.y < size.y:
-		camera.position.y = ( size.y  + MAP_SIZE.y ) / 2
-	else:
-		camera.position.y = clamp(camera.position.y, min_pos.y, max_pos.y)
+	var coord = _get_center_from_rect_coords(place.positions)
+	_on_pin_clicked(coord)
 
 func clear_pins()->void:
 	for child in get_children():

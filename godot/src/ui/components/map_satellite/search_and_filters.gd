@@ -7,24 +7,21 @@ extends Control
 @onready var no_results: VBoxContainer = %NoResults
 @onready var cards: BoxContainer = %Cards
 @onready var cards_scroll: ScrollContainer = %CardsScroll
-@onready var panel_container: PanelContainer = %PanelContainer
-@onready var flag_component: Control = %Flag
 @onready var portrait_container: MarginContainer = %PortraitContainer
 @onready var landscape_container: MarginContainer = %LandscapeContainer
 @onready var search_results: Control = %SearchResults
 @onready var portrait_panel_container: PanelContainer = %PortraitPanelContainer
 @onready var landscape_panel_container: PanelContainer = %LandscapePanelContainer
+@onready var search_results_container: Control = %SearchResultsContainer
 
 const DISCOVER_CARROUSEL_ITEM = preload("res://src/ui/components/discover/carrousel/discover_carrousel_item.tscn")
 const PLACE_CATEGORY_FILTER_BUTTON = preload("res://src/ui/components/map_satellite/place_category_filter_button.tscn")
-const SIDE_BAR_WIDTH = 300
 
 var active_filter: int = -1
 var filtered_places: Array = []
-var poi_places_ids = []
-var live_places_ids = []
-var map_is_on_top: bool = false
 var is_closed: bool = true
+var ignore_button_signals := false
+var closed_position: Vector2
 
 func _ready() -> void:
 	get_window().size_changed.connect(self._on_size_changed)
@@ -32,6 +29,7 @@ func _ready() -> void:
 	
 	var group := ButtonGroup.new()
 	group.allow_unpress = true
+	
 	for i in range(13):
 		var btn: PlaceFilterButton = PLACE_CATEGORY_FILTER_BUTTON.instantiate()
 		btn.button_group = group
@@ -48,14 +46,10 @@ func _ready() -> void:
 	searchbar.clean_searchbar.connect(_close_from_searchbar)
 	searchbar.submited_text.connect(_submitted_text_from_searchbar)
 	searchbar.reset()
-	_close_sidebar()
 
 func _close_from_searchbar():
-	for child in h_box_container_filters.get_children():
-		if child is Button and child.toggle_mode and child.filter_type == active_filter:
-			child.button_pressed = false
-	_clean_list()
 	_close_sidebar()
+	_clean_list()
 	
 func _submitted_text_from_searchbar(text:String):
 	var places_to_show = 0
@@ -80,9 +74,10 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 	_clean_list()
 	map.clear_pins()
 	if not pressed:
+		if ignore_button_signals:
+			return
 		filtered_places = []
 		searchbar.reset()
-		_close_sidebar()
 	else:
 		active_filter = type
 		filtered_places = await async_load_category(active_filter)
@@ -106,9 +101,8 @@ func _on_filter_button_toggled(pressed: bool, type: int):
 
 func _open_sidebar()->void:
 	is_closed = false
-	# TODO: Do tween
-	prints("Opening")
-	
+	var tween = create_tween()
+	tween.tween_property(search_results_container, "position", Vector2.ZERO, 0.4).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_OUT)
 	if Global.is_orientation_portrait():
 		portrait_panel_container.show()
 		landscape_panel_container.hide()
@@ -121,11 +115,15 @@ func _close_sidebar()->void:
 	cards_scroll.scroll_horizontal = 0
 	cards_scroll.scroll_vertical = 0
 	filtered_places = []
-	
+	for child in h_box_container_filters.get_children():
+		if child is Button and child.toggle_mode and child.filter_type == active_filter:
+			ignore_button_signals = true
+			child.button_pressed = false
+			ignore_button_signals = false
 	portrait_panel_container.hide()
 	landscape_panel_container.hide()
-	
-	
+	search_results_container.position = closed_position
+
 func _clean_list()->void:
 	for child in cards.get_children():
 		child.queue_free()
@@ -176,14 +174,20 @@ func async_load_category(category:int) -> Array:
 	else:
 		return []
 
-
 func _on_size_changed() -> void:
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	if window_size.x > window_size.y:
+		closed_position = Vector2(-landscape_panel_container.size.x, 0)
 		search_results.reparent(landscape_container)
 		portrait_panel_container.hide()
 		landscape_panel_container.visible = !is_closed
 	else:
+		closed_position = Vector2(0, portrait_panel_container.size.y)
 		search_results.reparent(portrait_container)
 		portrait_panel_container.visible = !is_closed
 		landscape_panel_container.hide()
+	
+	if is_closed:
+		search_results_container.position = closed_position
+	else:
+		search_results_container.position = Vector2.ZERO
