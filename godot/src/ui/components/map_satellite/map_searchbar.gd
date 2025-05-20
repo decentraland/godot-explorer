@@ -1,18 +1,16 @@
 extends PanelContainer
 
-@export var filter_type: Place.Categories = Place.Categories.ALL
-
 signal clean_searchbar
 signal submited_text
+
+@export var filter_type: Place.Categories = Place.Categories.ALL
+
+var search_texture = preload("res://src/ui/components/debug_panel/icons/Search.svg")
+var texture_path = ""
 
 @onready var icon: TextureRect = %Icon
 @onready var label: DclUiInput = %Label
 @onready var texture_button: Button = %TextureButton
-
-var searchTexture = preload("res://src/ui/components/debug_panel/icons/Search.svg")
-
-var texture_path = ""
-
 
 func _ready() -> void:
 	update_filtered_category()
@@ -35,7 +33,7 @@ func reset() -> void:
 	label.clear()
 	label.editable = true
 	icon.self_modulate = "#000000"
-	icon.texture = searchTexture
+	icon.texture = search_texture
 
 
 func update_filtered_category():

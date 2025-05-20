@@ -1,14 +1,6 @@
 class_name MapComponent
 extends Control
 
-signal clicked_parcel(parcel: Vector2i)
-
-@onready var camera := $Camera2D
-@onready var map_marker: Marker = %MapMarker
-@onready var control_archipelagos: Control = %ControlArchipelagos
-@onready var tiled_map: Control = %TiledMap
-@onready var color_rect_background: ColorRect = %ColorRect_Background
-
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 const TILE_SIZE = Vector2(512, 512)
 const GRID_SIZE = Vector2(16, 16)
@@ -24,6 +16,9 @@ const TILE_DISPLACEMENT = Vector2(18, 18) * PARCEL_SIZE
 const MAP_MARKER = preload("res://src/ui/components/map_satellite/map_marker.tscn")
 const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
 const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archipelago_circle.tscn")
+
+signal clicked_parcel(parcel: Vector2i)
+
 var dragging := false
 var touch_start_pos := Vector2.ZERO
 var touch_id := -1
@@ -32,19 +27,15 @@ var active_touches := {}
 var just_zoomed := false
 var poi_places_ids = []
 
+@onready var camera := $Camera2D
+@onready var map_marker: Marker = %MapMarker
+@onready var control_archipelagos: Control = %ControlArchipelagos
+@onready var tiled_map: Control = %TiledMap
+@onready var color_rect_background: ColorRect = %ColorRect_Background
 
 func _ready():
 	set_process_input(true)
-	#tiled_map.anchor_left = 0.5
-	#tiled_map.anchor_right = 0.5
-	#tiled_map.anchor_top = 0.5
-	#tiled_map.anchor_bottom = 0.5
-#
-	#color_rect_background.anchor_left = 0.5
-	#color_rect_background.anchor_right = 0.5
-	#color_rect_background.anchor_top = 0.5
-	#color_rect_background.anchor_bottom = 0.5
-
+	
 	tiled_map.size = Vector2(340 * PARCEL_SIZE)
 	color_rect_background.size = tiled_map.size
 	for y in range(GRID_SIZE.y):
@@ -61,7 +52,7 @@ func _ready():
 			else:
 				push_error("Error loading map image: " + image_path)
 
-	center_camera_on_parcel(Vector2i(0, 1))
+	async_center_camera_on_parcel(Vector2i(0, 1))
 
 
 func _input(event):
@@ -273,7 +264,7 @@ func spawn_pin(category: int, place, group: String):
 		pin.visible = false
 
 
-func center_camera_on_parcel(parcel: Vector2i) -> void:
+func async_center_camera_on_parcel(parcel: Vector2i) -> void:
 	var target_position = get_parcel_position(parcel)
 	var tween = create_tween()
 	(
@@ -286,7 +277,7 @@ func center_camera_on_parcel(parcel: Vector2i) -> void:
 
 
 func show_marker_at_parcel(parcel: Vector2i):
-	center_camera_on_parcel(parcel)
+	async_center_camera_on_parcel(parcel)
 	var pos = get_parcel_position(parcel) - map_marker.size / 2
 	map_marker.position = pos
 	map_marker.marker_x = parcel.x

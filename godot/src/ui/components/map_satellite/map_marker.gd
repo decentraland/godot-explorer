@@ -1,16 +1,14 @@
 extends Control
 class_name Marker
 
-@onready var sprite_2d: Sprite2D = %Sprite2D
-@onready var coordinates_label: Label = %CoordinatesLabel
-@onready var control: Control = %Control
+const LABEL_POSITION = Vector2(-50, 28)
 
 var marker_x: int = 0
 var marker_y: int = 0
-const label_position = Vector2(-50, 28)
 
-const std_scale = Vector2(0.207, 0.207)
-
+@onready var sprite_2d: Sprite2D = %Sprite2D
+@onready var coordinates_label: Label = %CoordinatesLabel
+@onready var control: Control = %Control
 
 func _ready() -> void:
 	update()
@@ -19,7 +17,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	var camera_zoom = get_sibling_camera_zoom()
 	control.scale = Vector2.ONE / camera_zoom.x
-	coordinates_label.position.y = label_position.y * camera_zoom.y
+	coordinates_label.position.y = LABEL_POSITION.y * camera_zoom.y
 
 
 func update() -> void:

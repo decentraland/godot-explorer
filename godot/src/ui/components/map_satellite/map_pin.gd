@@ -1,12 +1,6 @@
 class_name MapPin
 extends TextureRect
 
-signal touched_pin(pos: Vector2i)
-signal play_sound
-
-var pin_x: int
-var pin_y: int
-
 enum PinCategoryEnum {
 	ALL,
 	FAVORITES,
@@ -24,17 +18,21 @@ enum PinCategoryEnum {
 	POI,
 	LIVE
 }
+
+signal touched_pin(pos: Vector2i)
+signal play_sound
+
 @export var pin_category: PinCategoryEnum
 @export var coord_x: int
 @export var coord_y: int
-
 @export var scene_title: String
+
+var pin_x: int
+var pin_y: int
 
 @onready var label_scene_title: Label = %Label_SceneTitle
 @onready var container_cluster: PanelContainer = %Container_Cluster
 @onready var label_cluster: Label = %Label_Cluster
-
-const cluster_radius: int = 60
 
 
 func _ready():

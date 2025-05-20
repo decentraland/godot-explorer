@@ -1,7 +1,7 @@
 class_name Places
 extends Node
 
-const PinCategories = {
+const PIN_CATEGORIES = {
 	"FAVORITES": "favorites",
 	"ART": "art",
 	"CRYPTO": "crypto",
