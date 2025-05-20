@@ -34,3 +34,7 @@ func _async_on_map_clicked_parcel(parcel: Vector2i) -> void:
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String) -> void:
 	jump_in.hide()
 	Global.teleport_to(parcel_position, realm)
+
+
+func _on_map_clicked_parcel(parcel: Vector2i) -> void:
+	_async_on_map_clicked_parcel(parcel)
