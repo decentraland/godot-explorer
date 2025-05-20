@@ -11,19 +11,22 @@ const label_position = Vector2(-50, 28)
 
 const std_scale = Vector2(0.207, 0.207)
 
+
 func _ready() -> void:
 	update()
+
 
 func _process(_delta: float) -> void:
 	var camera_zoom = get_sibling_camera_zoom()
 	control.scale = Vector2.ONE / camera_zoom.x
-	coordinates_label.position.y = label_position.y * camera_zoom.y 
-	
+	coordinates_label.position.y = label_position.y * camera_zoom.y
 
-func update()->void:
+
+func update() -> void:
 	if coordinates_label:
 		coordinates_label.visible = true
 		coordinates_label.text = "{0},{1}".format([marker_x, marker_y])
+
 
 func get_sibling_camera_zoom() -> Vector2:
 	var parent = get_parent()

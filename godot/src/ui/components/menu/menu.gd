@@ -181,7 +181,7 @@ func _on_button_settings_pressed():
 func _on_button_map_pressed():
 	#select_node(control_map)
 	select_node(control_map_satellite)
-	
+
 
 func _on_button_discover_pressed():
 	select_node(control_discover)

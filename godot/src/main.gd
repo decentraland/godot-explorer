@@ -35,7 +35,6 @@ func start():
 
 
 func _start():
-	
 	var args = OS.get_cmdline_args()
 
 	if Global.is_xr():

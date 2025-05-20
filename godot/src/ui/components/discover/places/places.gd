@@ -17,6 +17,7 @@ const PinCategories = {
 	"POI": "poi"
 }
 
+
 class Categories:
 	const ALL: String = "all"
 	const FAVORITES: String = "favorites"
@@ -33,7 +34,6 @@ class Categories:
 	const BUSINESS: String = "business"
 	const POI: String = "poi"
 
-	
 	const ALL_CATEGORIES: PackedStringArray = [
 		ALL,
 		FAVORITES,

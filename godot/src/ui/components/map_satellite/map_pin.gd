@@ -1,11 +1,11 @@
 class_name MapPin
 extends TextureRect
 
-signal touched_pin(pos:Vector2i)
+signal touched_pin(pos: Vector2i)
 signal play_sound
 
-var pin_x:int
-var pin_y:int
+var pin_x: int
+var pin_y: int
 
 enum PinCategoryEnum {
 	ALL,
@@ -34,7 +34,8 @@ enum PinCategoryEnum {
 @onready var container_cluster: PanelContainer = %Container_Cluster
 @onready var label_cluster: Label = %Label_Cluster
 
-const cluster_radius:int = 60
+const cluster_radius: int = 60
+
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
@@ -43,34 +44,39 @@ func _ready():
 		label_scene_title.show()
 	else:
 		label_scene_title.hide()
-	
+
 	set_category(pin_category)
-	
+
+
 func set_category(category: PinCategoryEnum) -> void:
 	var category_string = PinCategoryEnum.keys()[category].to_lower()
 	if category_string == null:
 		push_error("Category not found: %s" % category_string)
 		return
-	
+
 	var image_path := "res://assets/ui/place_categories/%s-pin.svg" % category_string
 	var loaded_texture := load(image_path)
-	
+
 	if loaded_texture:
 		self.texture = loaded_texture
 	else:
 		printerr("_update_pin_category_icon texture_path not found ", image_path)
 
-func set_place(place:Place) -> void:
+
+func set_place(place: Place) -> void:
 	label_scene_title.text = place.title
-	
+
+
 func show_cluster(quantity: int = 1):
 	if quantity > 1:
 		label_cluster.text = str(quantity)
 		container_cluster.show()
-	
+
+
 func _process(_delta: float) -> void:
 	var camera_zoom = get_sibling_camera_zoom()
 	scale = Vector2.ONE / camera_zoom
+
 
 func get_sibling_camera_zoom() -> Vector2:
 	var parent = get_parent()
@@ -80,6 +86,7 @@ func get_sibling_camera_zoom() -> Vector2:
 		if sibrling is Camera2D:
 			return sibrling.zoom
 	return Vector2.ONE
+
 
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:

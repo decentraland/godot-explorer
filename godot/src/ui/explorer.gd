@@ -59,8 +59,8 @@ func _process(_dt):
 
 
 #func _on_parcels_procesed(parcels, empty):
-	#control_minimap.control_map_shader.set_used_parcels(parcels, empty)
-	#control_menu.control_map.control_map_shader.set_used_parcels(parcels, empty)
+#control_minimap.control_map_shader.set_used_parcels(parcels, empty)
+#control_menu.control_map.control_map_shader.set_used_parcels(parcels, empty)
 
 
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc

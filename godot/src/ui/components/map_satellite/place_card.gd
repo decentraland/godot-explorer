@@ -1,28 +1,30 @@
 extends Control
 
-@export var img_url:String= ''
-@export var title_place:String= "Place's Name"
-@export var contact_name:String= ''
+@export var img_url: String = ""
+@export var title_place: String = "Place's Name"
+@export var contact_name: String = ""
 @onready var texture_rect: TextureRect = %TextureRect
 @onready var panel_to_round: PanelContainer = %PanelToRound
 @onready var label_title: Label = %LabelTitle
 @onready var label_creator: Label = %LabelCreator
 @onready var creator_h_box_container: HBoxContainer = %CreatorHBoxContainer
 
+
 func _ready() -> void:
-	if title_place == 'Empty':
+	if title_place == "Empty":
 		hide()
 		return
-	
+
 	# IDK why it doesnt work to round image
 	panel_to_round.clip_contents = true
-	
+
 	set_title(title_place)
 	set_creator(contact_name)
 	_async_download_image(img_url)
-	
+
 	if contact_name.length() <= 0:
 		creator_h_box_container.hide()
+
 
 func _async_download_image(url: String):
 	var url_hash = get_hash_from_url(url)
@@ -33,6 +35,7 @@ func _async_download_image(url: String):
 		return
 	if is_instance_valid(self):  # maybe was deleted...
 		set_image(result.texture)
+
 
 func get_hash_from_url(url: String) -> String:
 	if url.contains("/content/contents/"):
@@ -50,17 +53,20 @@ func get_hash_from_url(url: String) -> String:
 		return url_hash.hex_encode()
 
 	return "temp-file"
-	
+
+
 func set_image(_texture: Texture2D):
 	if is_instance_valid(texture_rect):
 		texture_rect.texture = _texture
 
+
 func set_title(_title: String) -> void:
 	label_title.text = title_place.substr(0, 25)
 	if title_place.length() > 25:
-		label_title.text = label_title.text + '...'
-		
+		label_title.text = label_title.text + "..."
+
+
 func set_creator(_creator: String) -> void:
 	label_creator.text = contact_name.substr(0, 25)
 	if contact_name.length() > 25:
-		label_creator.text = label_creator.text + '...'
+		label_creator.text = label_creator.text + "..."

@@ -12,7 +12,7 @@ const GRID_SIZE = Vector2(16, 16)
 const PARCELS_PER_TILE = Vector2(20, 20)
 const PARCEL_SIZE = TILE_SIZE / PARCELS_PER_TILE
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
-const TILE_DISPLACEMENT = Vector2(18,18) * PARCEL_SIZE
+const TILE_DISPLACEMENT = Vector2(18, 18) * PARCEL_SIZE
 
 # Draging variables
 var is_dragging = false
@@ -47,6 +47,7 @@ func _ready():
 				map.add_child(tex_rect)
 			else:
 				push_error("Error loading map image: " + image_path)
+
 
 func set_zoom(new_zoom_value: int) -> void:
 	var center_parcel_position: Vector2 = get_center_position()
@@ -116,7 +117,6 @@ func get_parcel_from_mouse() -> Vector2i:
 
 func set_selected_parcel(parcel_position: Vector2):
 	pass
-	
 
 
 func set_used_parcels(used_parcel, emtpy_parcels):

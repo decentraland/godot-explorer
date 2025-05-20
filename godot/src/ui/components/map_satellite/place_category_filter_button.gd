@@ -3,8 +3,8 @@ extends Button
 
 signal filter_toggled(is_on: bool, type: int)
 
-@export var filter_type:Place.Categories = Place.Categories.ALL
- #
+@export var filter_type: Place.Categories = Place.Categories.ALL
+#
 
 
 func _update_category_button():
@@ -19,15 +19,15 @@ func _update_category_button():
 			icon = texture
 	else:
 		printerr("_update_place_category_icon texture_path not found ", texture_path)
-		
-	self.text= Place.Categories.keys()[filter_type].capitalize()
+
+	self.text = Place.Categories.keys()[filter_type].capitalize()
 
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 
 	toggle_mode = true
-	connect("toggled", Callable(self, '_on_toggled'))
+	connect("toggled", Callable(self, "_on_toggled"))
 	_update_category_button()
 
 

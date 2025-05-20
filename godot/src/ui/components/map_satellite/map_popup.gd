@@ -6,16 +6,17 @@ extends PanelContainer
 
 # Called when the node enters the scene tree for the first time.
 func set_text(msg: String):
-	size = Vector2(0,0)
-	label.size = Vector2(0,0)
+	size = Vector2(0, 0)
+	label.size = Vector2(0, 0)
 	label.text = msg
+
 
 func show_at(screen_size: Vector2):
 	await get_tree().process_frame
 	var mouse_screen_pos = get_viewport().get_mouse_position()
-	set_position_clamped(mouse_screen_pos + Vector2(16,16), screen_size)
-	animation_player.play('show')
-	
+	set_position_clamped(mouse_screen_pos + Vector2(16, 16), screen_size)
+	animation_player.play("show")
+
 
 func set_position_clamped(pos: Vector2, screen_size: Vector2):
 	var popup_size = size

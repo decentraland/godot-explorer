@@ -1,6 +1,6 @@
 extends PanelContainer
 
-@export var filter_type:Place.Categories = Place.Categories.ALL
+@export var filter_type: Place.Categories = Place.Categories.ALL
 
 signal clean_searchbar
 signal submited_text
@@ -11,7 +11,8 @@ signal submited_text
 
 var searchTexture = preload("res://src/ui/components/debug_panel/icons/Search.svg")
 
-var texture_path = '' 
+var texture_path = ""
+
 
 func _ready() -> void:
 	update_filtered_category()
@@ -27,14 +28,16 @@ func _process(_delta: float) -> void:
 
 func _on_texture_button_pressed() -> void:
 	reset()
-	
+
+
 func reset() -> void:
 	clean_searchbar.emit()
 	label.clear()
 	label.editable = true
-	icon.self_modulate = '#000000'
+	icon.self_modulate = "#000000"
 	icon.texture = searchTexture
-	
+
+
 func update_filtered_category():
 	label.editable = false
 	texture_path = (
@@ -46,10 +49,10 @@ func update_filtered_category():
 		var texture = load(texture_path)
 		if texture != null:
 			icon.texture = texture
-			icon.self_modulate = '#ffffff'
+			icon.self_modulate = "#ffffff"
 	else:
 		printerr("_update_place_category_icon texture_path not found ", texture_path)
-		
+
 	label.text = Place.Categories.keys()[filter_type].capitalize()
 
 
