@@ -38,8 +38,32 @@ func _check_lib_dependency():
 		var target_dir = ProjectSettings.globalize_path("res://../lib/target/")
 		var output := []
 		OS.execute("unzip", [zip_save, "-d", target_dir], output)
+		DirAccess.remove_absolute(zip_save)
+		
+		write_downloaded_rust_version(rust_folder_hash)
 		prints("Unzip:", output)
 		prints("Lib dependency downloaded and extracted.")
+
+func write_downloaded_rust_version(hash: String):
+	var file_path = ProjectSettings.globalize_path("res://../lib/target/downloaded_rust_version.txt")
+	var file = FileAccess.open(file_path, FileAccess.WRITE)
+	if file:
+		file.store_string(hash)
+		file.close()
+
+func read_downloaded_rust_version() -> String:
+	var file_path = ProjectSettings.globalize_path("res://../lib/target/downloaded_rust_version.txt")
+	
+	if FileAccess.file_exists(file_path):
+		var file = FileAccess.open(file_path, FileAccess.READ)
+		if file:
+			var content = file.get_as_text()
+			file.close()
+			return content
+		else:
+			return ""
+	else:
+		return ""
 
 class DclBuildPlugin extends EditorExportPlugin:
 	var is_xr_export: bool = false
