@@ -16,32 +16,72 @@ static func set_xr_mode(enabled: bool):
 
 # Helper function to download a file from a URL and save it to a specified path.
 static func download_file(parent_node: Node, url: String, save_path: String) -> bool:
-	var http = HTTPRequest.new()
+	var http := HTTPRequest.new()
+	var timer := Timer.new()
+	timer.wait_time = 0.1  # 100ms
+	timer.one_shot = false
+
+	# Prepare HTTPRequest
 	parent_node.add_child(http)
 	http.set_download_file(save_path)
+
+	# Track progress using a timer
+	parent_node.add_child(timer)
+	var total_size := -1
+	timer.timeout.connect(func():
+		var downloaded = http.get_downloaded_bytes()
+
+		if total_size <= 0:
+			total_size = http.get_body_size()  # This becomes >0 when headers are received
+
+		if total_size > 0:
+			var percent = int((float(downloaded) / float(total_size)) * 100.0)
+			print("Download progress: %d%% (%d / %d bytes)" % [percent, downloaded, total_size])
+		else:
+			print("Downloading... %d bytes (total size unknown yet)" % downloaded)
+	)
+
+	timer.start()
+
+	# Start request
 	var err = http.request(url)
 	if err != OK:
-		prints("HTTP request error: ", err)
+		push_error("HTTP request error: %s" % err)
+		timer.queue_free()
+		http.queue_free()
 		return false
-	await http.request_completed
+
+	# Wait for completion
+	var result = await http.request_completed
+	var status_code = result[1]
+
+	timer.stop()
+	timer.queue_free()
 	http.queue_free()
+
+	if status_code != 200:
+		push_error("Download failed. HTTP status: %d" % status_code)
+		return false
+
+	print("Download completed successfully.")
 	return true
+
+
 
 # Check if lib dependency exists; if not, download and extract it.
 func _check_lib_dependency():
 	var rust_folder_hash: String = get_rust_folder_hash()
-	prints("Downloading lib...", rust_folder_hash)
 	var zip_save = ProjectSettings.globalize_path("res://../libdclgodot.zip")
 	var dep_url: String = LIB_DEP_URL % rust_folder_hash
-	if await DclBuildEditorPlugin.download_file(self, LIB_DEP_URL, zip_save):
+	prints("Downloading lib...", dep_url)
+	if await DclBuildEditorPlugin.download_file(self, dep_url, zip_save):
+		prints("Done")
 		# Defaulting to debug build in editor; adjust as needed.
 		var target_dir = ProjectSettings.globalize_path("res://../lib/target/")
-		var output := []
 		unzip_to_dir(zip_save, target_dir)
 		DirAccess.remove_absolute(zip_save)
 		
 		write_downloaded_rust_version(rust_folder_hash)
-		prints("Unzip:", output)
 		prints("Lib dependency downloaded and extracted.")
 
 func write_downloaded_rust_version(hash: String):
