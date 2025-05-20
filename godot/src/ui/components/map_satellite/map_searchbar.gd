@@ -12,6 +12,7 @@ var texture_path = ""
 @onready var label: DclUiInput = %Label
 @onready var texture_button: Button = %TextureButton
 
+
 func _ready() -> void:
 	update_filtered_category()
 

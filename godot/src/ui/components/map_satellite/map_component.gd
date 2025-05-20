@@ -1,6 +1,8 @@
 class_name MapComponent
 extends Control
 
+signal clicked_parcel(parcel: Vector2i)
+
 const IMAGE_FOLDER = "res://src/ui/components/map_satellite/assets/4/"
 const TILE_SIZE = Vector2(512, 512)
 const GRID_SIZE = Vector2(16, 16)
@@ -17,8 +19,6 @@ const MAP_MARKER = preload("res://src/ui/components/map_satellite/map_marker.tsc
 const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
 const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archipelago_circle.tscn")
 
-signal clicked_parcel(parcel: Vector2i)
-
 var dragging := false
 var touch_start_pos := Vector2.ZERO
 var touch_id := -1
@@ -33,9 +33,10 @@ var poi_places_ids = []
 @onready var tiled_map: Control = %TiledMap
 @onready var color_rect_background: ColorRect = %ColorRect_Background
 
+
 func _ready():
 	set_process_input(true)
-	
+
 	tiled_map.size = Vector2(340 * PARCEL_SIZE)
 	color_rect_background.size = tiled_map.size
 	for y in range(GRID_SIZE.y):

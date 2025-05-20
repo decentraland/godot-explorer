@@ -1,5 +1,5 @@
-extends Control
 class_name Marker
+extends Control
 
 const LABEL_POSITION = Vector2(-50, 28)
 
@@ -9,6 +9,7 @@ var marker_y: int = 0
 @onready var sprite_2d: Sprite2D = %Sprite2D
 @onready var coordinates_label: Label = %CoordinatesLabel
 @onready var control: Control = %Control
+
 
 func _ready() -> void:
 	update()

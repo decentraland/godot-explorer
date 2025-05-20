@@ -1,6 +1,9 @@
 class_name MapPin
 extends TextureRect
 
+signal touched_pin(pos: Vector2i)
+signal play_sound
+
 enum PinCategoryEnum {
 	ALL,
 	FAVORITES,
@@ -18,9 +21,6 @@ enum PinCategoryEnum {
 	POI,
 	LIVE
 }
-
-signal touched_pin(pos: Vector2i)
-signal play_sound
 
 @export var pin_category: PinCategoryEnum
 @export var coord_x: int
