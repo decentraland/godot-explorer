@@ -5,7 +5,7 @@ extends EditorPlugin
 const GODOT_XR_TOOLS_PLUGIN_NAME = "godot-xr-tools"
 
 # New URL constants for dependency downloads
-const ANDROID_DEP_URL = "http://example.com/android_dependency.zip"
+const ANDROID_DEP_URL = "https://godot-artifacts.kuruk.net/android_deps.zip"
 const LIB_DEP_URL = "https://godot-artifacts.kuruk.net/%s/libdclgodot.zip"
 
 static func set_xr_mode(enabled: bool):
@@ -30,9 +30,9 @@ static func download_file(parent_node: Node, url: String, save_path: String) -> 
 # Check if lib dependency exists; if not, download and extract it.
 func _check_lib_dependency():
 	var rust_folder_hash: String = get_rust_folder_hash()
-	prints("Downloading lib...", rust_folder_hash)
 	var zip_save = ProjectSettings.globalize_path("res://../libdclgodot.zip")
 	var dep_url: String = LIB_DEP_URL % rust_folder_hash
+	prints("Downloading lib...", dep_url)
 	if await DclBuildEditorPlugin.download_file(self, LIB_DEP_URL, zip_save):
 		# Defaulting to debug build in editor; adjust as needed.
 		var target_dir = ProjectSettings.globalize_path("res://../lib/target/")
@@ -77,22 +77,23 @@ class DclBuildPlugin extends EditorExportPlugin:
 
 		is_xr_export = features.has("xr")
 		is_android_export = features.has("android") and !is_xr_export
+		
+		if is_xr_export:
+			DclBuildEditorPlugin.set_xr_mode(true)
 
 		# Check for Android dependency if in Android or XR export.
 		if (is_android_export or is_xr_export):
 			var android_dir = ProjectSettings.globalize_path("res://android")
 			if DirAccess.dir_exists_absolute(android_dir):
-				prints("Android dependency missing? Downloading dependency ZIP...")
-				var zip_save = ProjectSettings.globalize_path("res://android_dependency.zip")
-				var parent_node = EditorInterface.get_base_control()
-				if await DclBuildEditorPlugin.download_file(parent_node, ANDROID_DEP_URL, zip_save):
-					var build_type = "debug" if is_debug else "release"
-					var target_dir = ProjectSettings.globalize_path("res://android/build/libs/" + build_type + "/")
+				var build_type = "debug" if is_debug else "release"
+				var target_dir = ProjectSettings.globalize_path("res://android/build/libs/" + build_type + "/arm64-v8a/deps/")
+				if DirAccess.dir_exists_absolute(target_dir) == false:
+					DirAccess.make_dir_recursive_absolute(target_dir)
+					prints("Android dependency missing? Unzipping dependency ZIP...")
+					var zip_save = ProjectSettings.globalize_path("res://../.bin/android_dependencies.zip")
 					OS.execute("unzip", [zip_save, "-d", target_dir])
-					prints("Android dependency downloaded and extracted.")
-		
-		if is_xr_export:
-			DclBuildEditorPlugin.set_xr_mode(true)
+					DirAccess.remove_absolute(zip_save)
+					prints("Android dependency extracted.")
 			
 		
 	func _export_end():
@@ -127,6 +128,13 @@ func _enter_tree():
 	set_xr_mode(false)
 	add_export_plugin(BUILD_PLUGIN)
 	add_tool_menu_item("Update Godot Rust", self._check_lib_dependency)
+	
+	var zip_save = ProjectSettings.globalize_path("res://../.bin/android_dependencies.zip")
+	if not FileAccess.file_exists(zip_save):
+		prints("Android dependency missing? Downloading dependency ZIP...", zip_save)
+		var parent_node = EditorInterface.get_base_control()
+		await DclBuildEditorPlugin.download_file(parent_node, ANDROID_DEP_URL, zip_save)
+		prints("Android dependency downloaded.")
 
 func _exit_tree():
 	remove_export_plugin(BUILD_PLUGIN)
