@@ -123,6 +123,12 @@ func show_last():
 	color_rect_header.show()
 
 
+func show_discover():
+	select_node(control_discover, false)
+	button_discover.set_pressed(true)
+	_open()
+
+
 func show_map():
 	select_node(control_map, false)
 	button_map.set_pressed(true)
@@ -210,11 +216,13 @@ func fade_out(node: Control):
 
 func _on_visibility_changed():
 	if is_visible_in_tree():
+		Global.on_menu_open.emit()
 		UiSounds.play_sound("mainmenu_widget_open")
 		grab_focus()
 		Global.explorer_release_focus()
 	else:
 		UiSounds.play_sound("mainmenu_widget_close")
+		Global.on_menu_close.emit()
 
 
 func _async_deploy_if_has_changes():

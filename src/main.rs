@@ -128,12 +128,6 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
-                    Arg::new("link-libs")
-                        .short('l')
-                        .help("link libs instead of copying (only linux)")
-                        .takes_value(false),
-                )
-                .arg(
                     Arg::new("resource-tracking")
                         .short('x')
                         .help("enables resource tracking feature")
@@ -159,12 +153,6 @@ fn main() -> Result<(), anyhow::Error> {
                         .short('r')
                         .long("release")
                         .help("build release mode (but it doesn't use godot release build")
-                        .takes_value(false),
-                )
-                .arg(
-                    Arg::new("link-libs")
-                        .short('l')
-                        .help("link libs instead of copying (only linux)")
                         .takes_value(false),
                 )
                 .arg(
@@ -195,12 +183,12 @@ fn main() -> Result<(), anyhow::Error> {
 
     let res = match subcommand {
         ("install", sm) => {
-            let no_templates = sm.is_present("no-templates");
             let platforms: Vec<String> = sm
                 .values_of("platforms")
                 .map(|vals| vals.map(String::from).collect())
                 .unwrap_or_default();
 
+            let no_templates = sm.is_present("no-templates") || platforms.is_empty();
             // Call your install function and pass the templates
             install_dependency::install(no_templates, &platforms)
         }
@@ -223,7 +211,6 @@ fn main() -> Result<(), anyhow::Error> {
 
             run::build(
                 sm.is_present("release"),
-                sm.is_present("link-libs"),
                 build_args,
                 None,
                 sm.value_of("target"),
@@ -251,7 +238,6 @@ fn main() -> Result<(), anyhow::Error> {
 
             run::build(
                 sm.is_present("release"),
-                sm.is_present("link-libs"),
                 build_args,
                 None,
                 sm.value_of("target"),
@@ -317,7 +303,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|(k, v)| (k.to_string(), v.to_string()))
     .collect();
 
-    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
+    run::build(false, vec![], Some(build_envs.clone()), None)?;
 
     run::run(false, true, vec![], false)?;
 
@@ -356,7 +342,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     .map(|it| it.to_string())
     .collect();
 
-    run::build(false, false, vec![], Some(build_envs.clone()), None)?;
+    run::build(false, vec![], Some(build_envs.clone()), None)?;
 
     run::run(false, false, extra_args, true)?;
 

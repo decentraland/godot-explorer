@@ -1,5 +1,7 @@
 extends DclGlobal
 
+signal on_menu_open
+signal on_menu_close
 signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)

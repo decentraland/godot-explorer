@@ -2,7 +2,20 @@
 # Decentraland Godot Rust
 [![codecov](https://codecov.io/gh/decentraland/godot-explorer/branch/main/graph/badge.svg)](https://codecov.io/gh/decentraland/godot-explorer)
 
-## Set up project
+## Set up project without compiling Rust (easy)
+
+1. Clone the repo using `git clone https://github.com/decentraland/godot-explorer`
+  - If you're in Windows we suggest to clone the repo in a very short path like `C:/gexplorer` due https://developercommunity.visualstudio.com/t/clexe-compiler-driver-cannot-handle-long-file-path/975889
+2. Download Godot Editor fork from https://github.com/decentraland/godotengine/releases/tag/4.4.1-stable
+  - Linux: https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.linux.editor.x86_64.zip
+  - Mac: https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.macos.editor.arm64.zip
+  - Windows: https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.windows.editor.x86_64.exe.zip
+3. Execute `python download_dependencies.py` script at root
+4. Open the project at the `godot` folder
+
+# Advanced
+
+## Set up project compiling Rust
 
 1. Clone the repo using `git clone https://github.com/decentraland/godot-explorer`
   - If you're in Windows we suggest to clone the repo in a very short path like `C:/gexplorer` due https://developercommunity.visualstudio.com/t/clexe-compiler-driver-cannot-handle-long-file-path/975889
@@ -37,29 +50,22 @@ Execute the following commands for building Godot:
 docker run -v $(pwd):/app/ -it kuruk/dcl-godot-android-builder-rust
 
 # Compile for Android
+cargo run -- install --platforms android
 cd lib
 ./android-build.sh # arm64
 ./android-build.sh x86_64 # android x86_64 if needed
 cd ../../ # return
 
 # Compile for Linux
-cargo run -- install --platforms android
+cargo run -- install --platforms linux
 cargo run -- build
 cd ../../ # return
 
 # Generate .APK
-## Download Android Template, only one time needed
-cd godot/
-git clone https://github.com/decentraland/godot-explorer-android-template.git android # Only one time
-cd ../
 
 ## Build Android and Export APK for arm64
 ./build-android-apk.sh
 ```
-
-## Contributing
-
-More details on [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Debugging the library
 This repo is set up to be opened with Visual Studio Code. In the section `Run and Debug` in the Activity bar, you can find the configuration for your platform.
@@ -67,6 +73,10 @@ This repo is set up to be opened with Visual Studio Code. In the section `Run an
 ## Run test with coverage
 1. Ensure you are in the root folder first
 2. Run `cargo run -- coverage --dev`. It'll create a `coverage` folder with the index.html with the all information. In order to run these commands, you need to have llvm-tools and grcov installed. You can install them with `rustup component add llvm-tools-preview` and `cargo install grcov`.
+
+# Contributing
+
+More details on [CONTRIBUTING.md](CONTRIBUTING.md)
 
 # Mobile targets
 See `lib/builds.md`

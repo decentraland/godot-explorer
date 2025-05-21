@@ -189,8 +189,9 @@ func _async_fetch_places(url: String, limit: int = 100):
 		discover_carrousel_item_loading.hide()
 
 	if result is PromiseError:
-		report_loading_status.emit(CarrouselGenerator.LoadingStatus.ERROR)
-		printerr("Error request places", result.get_error())
+		if loaded_elements == 0:
+			report_loading_status.emit(CarrouselGenerator.LoadingStatus.ERROR)
+		printerr("Error request places ", url, " ", result.get_error())
 		return
 
 	var json: Dictionary = result.get_string_response_as_json()

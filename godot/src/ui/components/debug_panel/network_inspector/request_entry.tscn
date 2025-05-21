@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://dvntl234e4lne"]
 
-[ext_resource type="Script" path="res://src/ui/components/debug_panel/network_inspector/request_entry.gd" id="1_w2skl"]
+[ext_resource type="Script" uid="uid://di5kiptl1km1x" path="res://src/ui/components/debug_panel/network_inspector/request_entry.gd" id="1_w2skl"]
 
 [node name="RequestEntry" type="Control"]
 custom_minimum_size = Vector2(1280, 26)

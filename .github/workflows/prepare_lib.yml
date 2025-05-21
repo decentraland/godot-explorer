@@ -1,0 +1,132 @@
+name: 📚 Publish Libs Artifacts
+on:
+  workflow_call:
+    secrets:
+      S3_ENDPOINT:
+        required: true
+      S3_ACCESS_KEY_ID:
+        required: true
+      S3_SECRET_ACCESS_KEY:
+        required: true
+      S3_BUCKET:
+        required: true
+
+env:
+  S3_ENDPOINT:       ${{ secrets.S3_ENDPOINT }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+  S3_BUCKET:         ${{ secrets.S3_BUCKET }}
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute folder hash
+        id: compute-hash
+        run: |
+          git config --global core.autocrlf input
+          set -euo pipefail
+          echo "🔍 Computing SHA-256 over all .rs & .toml files..."
+          HASH=$(python3 folder_hash.py)
+          echo "• Folder-hash = $HASH"
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+
+      - name: Check if ZIP already exists in S3
+        id: check-s3
+        run: |
+          set -euo pipefail
+          HASH=${{ steps.compute-hash.outputs.hash }}
+          ZIP_NAME="libdclgodot_${HASH}.zip"
+          echo "🔎 Checking s3://$S3_BUCKET/$HASH/$ZIP_NAME ..."
+          if aws --endpoint-url "$S3_ENDPOINT" s3 ls "s3://$S3_BUCKET/$HASH/$ZIP_NAME" | grep -q .; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Exit early if already uploaded
+        if: steps.check-s3.outputs.exists == 'true'
+        run: |
+          echo "✅ ZIP for hash ${{ steps.compute-hash.outputs.hash }} already exists; skipping upload."
+          exit 0
+
+      # Only runs if !exists
+      - name: Download all artifacts
+        if: steps.check-s3.outputs.exists == 'false'
+        run: |
+          mkdir -p artifacts
+
+      - name: Download iOS artifact
+        if: steps.check-s3.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot_ios
+          path: artifacts/libdclgodot_ios
+
+      - name: Download Windows artifact
+        if: steps.check-s3.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot_windows
+          path: artifacts/libdclgodot_windows
+
+      - name: Download Android artifact
+        if: steps.check-s3.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot_android
+          path: artifacts/libdclgodot_android
+
+      - name: Download Linux artifact
+        if: steps.check-s3.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot_linux
+          path: artifacts/libdclgodot_linux
+
+      - name: Download macOS artifact
+        if: steps.check-s3.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot_macos
+          path: artifacts/libdclgodot_macos
+
+      - name: Download FFMPEG artifacts for Windows
+        if: steps.check-s3.outputs.exists == 'false'
+        run: |
+          set -e
+          # URL of the 7z archive
+          URL="https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-full_build-shared.7z"
+          ARCHIVE="ffmpeg-6.0-full_build-shared.7z"
+          DEST_DIR="artifacts/libdclgodot_windows"
+
+          # Download the archive
+          wget -O "$ARCHIVE" "$URL"
+          echo "Extracting .dll files..."
+          7z e "$ARCHIVE" -o"$DEST_DIR" -r "*.dll"
+
+      - name: Create ZIP file with all artifacts
+        if: steps.check-s3.outputs.exists == 'false'
+        run: |
+          set -euo pipefail
+          HASH=${{ steps.compute-hash.outputs.hash }}
+          ZIP_NAME="libdclgodot.zip"
+          echo "📦 Creating $ZIP_NAME ..."
+          cd artifacts
+          zip -r "../$ZIP_NAME" *
+          cd ..
+          echo "✅ ZIP created: $ZIP_NAME"
+
+      - name: Upload ZIP to S3
+        if: steps.check-s3.outputs.exists == 'false'
+        run: |
+          set -euo pipefail
+          export AWS_S3_CHECKSUM_MODE=disabled
+          HASH=${{ steps.compute-hash.outputs.hash }}
+          ZIP_NAME="libdclgodot.zip"
+          echo "📤 Uploading $ZIP_NAME to s3://$S3_BUCKET/$HASH/ ..."
+          aws --endpoint-url "$S3_ENDPOINT" s3 cp --checksum-algorithm=CRC32 "$ZIP_NAME" "s3://$S3_BUCKET/$HASH/$ZIP_NAME"
+          echo "✅ Upload complete."
