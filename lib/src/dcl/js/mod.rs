@@ -266,11 +266,13 @@ pub(crate) fn scene_thread(
         .build()
         .unwrap();
 
-    let script = rt.block_on(async { runtime.execute_script("<loader>", scene_code.into()) });
+    let script =
+        rt.block_on(async { runtime.execute_script("<loader>", scene_code.clone().into()) });
 
     let script = match script {
         Err(e) => {
             tracing::error!("[scene thread {scene_id:?}] script load error: {}", e);
+            tracing::error!("[scene thread {scene_id:?}] script code:\n{}", scene_code);
             return;
         }
         Ok(script) => script,

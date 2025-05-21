@@ -33,17 +33,13 @@ jobs:
         run: cargo run -- install --platforms linux
 
       - name: Build
-        working-directory: lib
-        run: cargo build --release
+        run: cargo run -- build --release
 
       - name: Test
         working-directory: lib
         run: cargo test --release -- --skip auth
 
       # Export section
-      - name: Copy library
-        run: cp lib/target/release/libdclgodot.so godot/lib/
-
       - name: Import Assets
         uses: ./.github/actions/import-assets
 
@@ -55,3 +51,11 @@ jobs:
           name: decentraland-godot-linux
           path: |
             exports/**/*
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libdclgodot_linux
+          path: |
+            lib/target/release/libdclgodot.so
+          if-no-files-found: error

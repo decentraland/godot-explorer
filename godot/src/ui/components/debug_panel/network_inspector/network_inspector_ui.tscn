@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://m5v31kdhwpyn"]
 
-[ext_resource type="Script" path="res://src/ui/components/debug_panel/network_inspector/network_inspector_ui.gd" id="1_c55gl"]
+[ext_resource type="Script" uid="uid://c52q2ml7cwol7" path="res://src/ui/components/debug_panel/network_inspector/network_inspector_ui.gd" id="1_c55gl"]
 [ext_resource type="PackedScene" uid="uid://dvntl234e4lne" path="res://src/ui/components/debug_panel/network_inspector/request_entry.tscn" id="2_5px5s"]
 
 [node name="NetworkInspectorUi" type="Panel"]

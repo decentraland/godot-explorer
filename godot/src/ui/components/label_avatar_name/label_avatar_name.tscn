@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://di2rgjpkv0c11"]
 
-[ext_resource type="Script" path="res://src/ui/components/label_avatar_name/label_avatar_name.gd" id="1_pplfg"]
+[ext_resource type="Script" uid="uid://dq8mu0q0jg80h" path="res://src/ui/components/label_avatar_name/label_avatar_name.gd" id="1_pplfg"]
 
 [node name="LabelAvatarName" type="Control"]
 layout_mode = 3

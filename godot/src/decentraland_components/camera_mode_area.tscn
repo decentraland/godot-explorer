@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3 uid="uid://b18cq0sobskjn"]
 
-[ext_resource type="Script" path="res://src/decentraland_components/camera_mode_area.gd" id="1_bo2c6"]
+[ext_resource type="Script" uid="uid://dys2asbvlbvj1" path="res://src/decentraland_components/camera_mode_area.gd" id="1_bo2c6"]
 [ext_resource type="PackedScene" uid="uid://ksn0qud7g0lq" path="res://src/helpers_components/force_global_scale_component.tscn" id="3_lqqmy"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_dvgte"]

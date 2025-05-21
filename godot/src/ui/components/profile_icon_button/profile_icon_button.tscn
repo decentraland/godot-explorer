@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://dg3ev4a5gn1up"]
 
-[ext_resource type="Script" path="res://src/ui/components/profile_icon_button/profile_icon_button.gd" id="1_0g3fx"]
+[ext_resource type="Script" uid="uid://bkf51txjwjnm5" path="res://src/ui/components/profile_icon_button/profile_icon_button.gd" id="1_0g3fx"]
 [ext_resource type="Texture2D" uid="uid://bxgklimw13m4d" path="res://assets/themes/dark_dcl_theme/icons/Profile.svg" id="1_uo4jm"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uo7mg"]

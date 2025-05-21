@@ -383,7 +383,9 @@ func async_load_scene(
 		scene_hash_zip, asset_url
 	)
 	var download_res = await PromiseUtils.async_awaiter(download_promise)
-	if download_res is PromiseError:
+	if Global.is_xr():
+		print("Scene optimization skipped")
+	elif download_res is PromiseError:
 		printerr("Scene ", scene_entity_id, " is not optimized, failed to download zip.")
 	else:
 		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)

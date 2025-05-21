@@ -1,0 +1,160 @@
+[gd_scene load_steps=12 format=3 uid="uid://duc3m6vo2r4jq"]
+
+[ext_resource type="Script" uid="uid://dnsf2xauwicx" path="res://src/vr/vr_menu_watch.gd" id="1_xics8"]
+[ext_resource type="Texture2D" uid="uid://ck0o5otm5qv8k" path="res://assets/ui/nav-bar-icons/explorer-off.svg" id="2_1vdh0"]
+[ext_resource type="Script" uid="uid://b1cexory4fl5b" path="res://src/ui/components/menu_navbar_button/menu_navbar_button.gd" id="3_hhnnt"]
+[ext_resource type="Texture2D" uid="uid://in6jrkrtptfk" path="res://assets/ui/nav-bar-icons/explorer-on.svg" id="4_pfo3o"]
+[ext_resource type="Texture2D" uid="uid://dpbvomx45a2bu" path="res://assets/ui/nav-bar-icons/map-off.svg" id="5_8b6k5"]
+[ext_resource type="Texture2D" uid="uid://b6o2c0qb56axv" path="res://assets/ui/nav-bar-icons/map-on.svg" id="6_dqob8"]
+[ext_resource type="Texture2D" uid="uid://3w81orc6dom3" path="res://assets/ui/nav-bar-icons/backpack-off.svg" id="7_e507s"]
+[ext_resource type="Texture2D" uid="uid://6imcvlsym60g" path="res://assets/ui/nav-bar-icons/backpack-on.svg" id="8_a4mv6"]
+[ext_resource type="Texture2D" uid="uid://3hwotq2y3fji" path="res://assets/ui/nav-bar-icons/settings-off.svg" id="9_coeiw"]
+[ext_resource type="Texture2D" uid="uid://btbdt48fn6ys1" path="res://assets/ui/nav-bar-icons/settings-on.svg" id="10_5a77g"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_lqghx"]
+resource_local_to_scene = false
+resource_name = "Tabs"
+
+[node name="VrMenuWatch" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_xics8")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0862745, 0.0784314, 0.105882, 1)
+
+[node name="HBoxContainer" type="GridContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -269.5
+offset_top = -252.0
+offset_right = 269.5
+offset_bottom = 252.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/h_separation = 150
+theme_override_constants/v_separation = 100
+columns = 2
+
+[node name="Button_Discover" type="Button" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 250)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/icon_max_width = 200
+theme_override_font_sizes/font_size = 40
+toggle_mode = true
+button_group = SubResource("ButtonGroup_lqghx")
+text = "DISCOVER"
+icon = ExtResource("2_1vdh0")
+flat = true
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+script = ExtResource("3_hhnnt")
+button_pressed_icon = ExtResource("4_pfo3o")
+metadata/disable_ui_sounds = true
+
+[node name="Button_Map" type="Button" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 250)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/icon_max_width = 200
+theme_override_font_sizes/font_size = 40
+toggle_mode = true
+button_group = SubResource("ButtonGroup_lqghx")
+text = "GENESIS MAP"
+icon = ExtResource("5_8b6k5")
+flat = true
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+script = ExtResource("3_hhnnt")
+button_pressed_icon = ExtResource("6_dqob8")
+metadata/disable_ui_sounds = true
+
+[node name="Button_Backpack" type="Button" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 250)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/icon_max_width = 200
+theme_override_font_sizes/font_size = 40
+toggle_mode = true
+button_group = SubResource("ButtonGroup_lqghx")
+text = "BACKPACK"
+icon = ExtResource("7_e507s")
+flat = true
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+script = ExtResource("3_hhnnt")
+button_pressed_icon = ExtResource("8_a4mv6")
+metadata/disable_ui_sounds = true
+
+[node name="Button_Settings" type="Button" parent="HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 250)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"ButtonFlat_Tab"
+theme_override_colors/icon_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/icon_normal_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/icon_max_width = 200
+theme_override_font_sizes/font_size = 40
+toggle_mode = true
+button_group = SubResource("ButtonGroup_lqghx")
+text = "SETTINGS"
+icon = ExtResource("9_coeiw")
+flat = true
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+script = ExtResource("3_hhnnt")
+button_pressed_icon = ExtResource("10_5a77g")
+metadata/disable_ui_sounds = true
+
+[connection signal="pressed" from="HBoxContainer/Button_Discover" to="." method="_on_button_discover_pressed"]
+[connection signal="pressed" from="HBoxContainer/Button_Map" to="." method="_on_button_map_pressed"]
+[connection signal="pressed" from="HBoxContainer/Button_Backpack" to="." method="_on_button_backpack_pressed"]
+[connection signal="pressed" from="HBoxContainer/Button_Settings" to="." method="_on_button_settings_pressed"]

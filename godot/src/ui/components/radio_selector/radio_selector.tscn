@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://b5lfwgmd7h8cj"]
 
-[ext_resource type="Script" path="res://src/ui/components/radio_selector/radio_selector.gd" id="1_4st25"]
+[ext_resource type="Script" uid="uid://p8d65t5ggjw5" path="res://src/ui/components/radio_selector/radio_selector.gd" id="1_4st25"]
 
 [node name="RadioSelector" type="HFlowContainer"]
 offset_right = 632.0
