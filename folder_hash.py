@@ -3,6 +3,7 @@ import os
 import hashlib
 import unicodedata
 import sys
+sys.stdout.reconfigure(line_buffering=True)
 
 def find_files(base):
     for root, dirs, files in os.walk(base):

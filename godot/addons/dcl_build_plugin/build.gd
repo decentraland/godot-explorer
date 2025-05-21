@@ -64,18 +64,10 @@ class DclBuildPlugin extends EditorExportPlugin:
 
 var BUILD_PLUGIN = DclBuildPlugin.new()
 
-func _check_lib_dependency():
-	ExecutePython.run(["../download_dependencies.py"])
-
 func _enter_tree():
 	prints("Dcl Build Plugin enabled")
 	set_xr_mode(false)
 	add_export_plugin(BUILD_PLUGIN)
-	add_tool_menu_item("Execute download script", self._check_lib_dependency)
-
-func _ready():
-	_check_lib_dependency()
 
 func _exit_tree():
 	remove_export_plugin(BUILD_PLUGIN)
-	remove_tool_menu_item("Execute download script")
