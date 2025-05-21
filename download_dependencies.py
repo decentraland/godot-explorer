@@ -137,7 +137,7 @@ def download_rust_lib():
 
 if __name__ == "__main__":
     download_android_dependencies()
-    #download_rust_lib()
+    download_rust_lib()
 
     if platform.system().lower() == "windows":
         download_ffmpeg_windows()
