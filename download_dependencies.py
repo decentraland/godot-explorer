@@ -5,6 +5,7 @@ import subprocess
 import sys
 import platform
 import glob
+from folder_hash import get_rust_folder_hash
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -66,17 +67,6 @@ def unzip_file(zip_path, extract_to):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(extract_to)
     print("Extraction complete.")
-
-def get_rust_folder_hash():
-    try:
-        result = subprocess.run(["python", FOLDER_HASH_SCRIPT], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if result.returncode != 0:
-            print("Error running folder_hash.py:\n", result.stderr)
-            return ""
-        return result.stdout.strip().splitlines()[0]
-    except Exception as e:
-        print("Exception during folder hash:", e)
-        return ""
 
 def download_android_dependencies():
     if not os.path.exists(ANDROID_ZIP):
