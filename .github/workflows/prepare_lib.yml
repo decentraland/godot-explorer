@@ -27,6 +27,7 @@ jobs:
       - name: Compute folder hash
         id: compute-hash
         run: |
+          git config --global core.autocrlf input
           set -euo pipefail
           echo "🔍 Computing SHA-256 over all .rs & .toml files..."
           HASH=$(python3 folder_hash.py)
