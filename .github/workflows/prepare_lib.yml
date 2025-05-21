@@ -57,7 +57,6 @@ jobs:
         if: steps.check-s3.outputs.exists == 'false'
         run: |
           mkdir -p artifacts
-        shell: bash
 
       - name: Download iOS artifact
         if: steps.check-s3.outputs.exists == 'false'
@@ -93,6 +92,20 @@ jobs:
         with:
           name: libdclgodot_macos
           path: artifacts/libdclgodot_macos
+
+      - name: Download FFMPEG artifacts for Windows
+        if: steps.check-s3.outputs.exists == 'false'
+        run: |
+          set -e
+          # URL of the 7z archive
+          URL="https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-full_build-shared.7z"
+          ARCHIVE="ffmpeg-6.0-full_build-shared.7z"
+          DEST_DIR="artifacts/libdclgodot_windows"
+
+          # Download the archive
+          wget -O "$ARCHIVE" "$URL"
+          echo "Extracting .dll files..."
+          7z e "$ARCHIVE" -o"$DEST_DIR" -r "*.dll"
 
       - name: Create ZIP file with all artifacts
         if: steps.check-s3.outputs.exists == 'false'
