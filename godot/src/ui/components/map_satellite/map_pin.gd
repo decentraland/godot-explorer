@@ -61,7 +61,7 @@ func set_category(category: PinCategoryEnum) -> void:
 		printerr("_update_pin_category_icon texture_path not found ", image_path)
 
 
-func set_place(place: Place) -> void:
+func set_place(place: Places) -> void:
 	label_scene_title.text = place.title
 
 

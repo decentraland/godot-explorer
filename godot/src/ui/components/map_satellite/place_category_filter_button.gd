@@ -3,14 +3,14 @@ extends Button
 
 signal filter_toggled(is_on: bool, type: int)
 
-@export var filter_type: Place.Categories = Place.Categories.ALL
+@export var filter_type: Places.Categories = Places.Categories.ALL
 #
 
 
 func _update_category_button():
 	var texture_path = (
 		"res://assets/ui/place_categories/"
-		+ Place.Categories.keys()[filter_type].to_lower()
+		+ Places.Categories.keys()[filter_type].to_lower()
 		+ "-icon.svg"
 	)
 	if ResourceLoader.exists(texture_path):
@@ -20,7 +20,7 @@ func _update_category_button():
 	else:
 		printerr("_update_place_category_icon texture_path not found ", texture_path)
 
-	self.text = Place.Categories.keys()[filter_type].capitalize()
+	self.text = Places.Categories.keys()[filter_type].capitalize()
 
 
 func _ready():

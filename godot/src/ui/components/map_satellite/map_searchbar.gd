@@ -3,7 +3,7 @@ extends PanelContainer
 signal clean_searchbar
 signal submited_text
 
-@export var filter_type: Place.Categories = Place.Categories.ALL
+@export var filter_type: Places.Categories = Places.Categories.ALL
 
 var search_texture = preload("res://src/ui/components/debug_panel/icons/Search.svg")
 var texture_path = ""
@@ -41,7 +41,7 @@ func update_filtered_category():
 	label.editable = false
 	texture_path = (
 		"res://assets/ui/place_categories/"
-		+ Place.Categories.keys()[filter_type].to_lower()
+		+ Places.Categories.keys()[filter_type].to_lower()
 		+ "-icon.svg"
 	)
 	if ResourceLoader.exists(texture_path):
@@ -52,7 +52,7 @@ func update_filtered_category():
 	else:
 		printerr("_update_place_category_icon texture_path not found ", texture_path)
 
-	label.text = Place.Categories.keys()[filter_type].capitalize()
+	label.text = Places.Categories.keys()[filter_type].capitalize()
 
 
 func _on_label_text_submitted(new_text: String) -> void:
