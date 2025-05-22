@@ -17,7 +17,7 @@ use crate::{
 };
 use godot::{
     engine::{
-        base_material_3d::{EmissionOperator, Feature, Flags, ShadingMode, Transparency},
+        base_material_3d::{Feature, Flags, ShadingMode, Transparency},
         MeshInstance3D, StandardMaterial3D,
     },
     prelude::*,
