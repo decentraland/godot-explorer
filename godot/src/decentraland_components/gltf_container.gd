@@ -214,12 +214,9 @@ func apply_fixes(gltf_instance: Node3D):
 
 
 func fix_material(mat: BaseMaterial3D):
-	# HACK: Workaround to fix an import error that sets the emisison texture as the albedo texture.
-	mat.emission_texture = null
+	mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
 	mat.emission_energy_multiplier = 0.2
 	mat.albedo_texture_force_srgb = true
-
-	# HACK: Workaround to fix an import error where materials would have
 	mat.vertex_color_use_as_albedo = false
 
 
