@@ -144,7 +144,6 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                         // In the same way, godot uses sRGB instead of linear colors.
                         godot_material.set_emission(emission.to_godot().linear_to_srgb());
-                        godot_material.set_emission_operator(EmissionOperator::MULTIPLY);
                         godot_material.set_feature(Feature::EMISSION, true);
                         godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
                         godot_material.set_albedo(pbr.albedo_color.0.to_godot().linear_to_srgb());
