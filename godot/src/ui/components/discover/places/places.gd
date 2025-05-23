@@ -33,5 +33,3 @@ const PIN_CATEGORIES = {
 	"BUSINESS": "business",
 	"POI": "poi"
 }
-
-
