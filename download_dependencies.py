@@ -100,8 +100,8 @@ def download_ffmpeg_windows():
     os.remove(FFMPEG_ZIP)
     print(f"✅ FFMPEG extracted to {FFMPEG_TARGET}")
 
-def download_rust_lib():
-    rust_hash = get_rust_folder_hash()
+def download_rust_lib(override_hash=None):
+    rust_hash = override_hash or get_rust_folder_hash()
     if not rust_hash:
         print("❌ Failed to compute rust folder hash.")
         return
@@ -126,8 +126,10 @@ def download_rust_lib():
     print(f"✅ Rust lib updated to version {rust_hash}")
 
 if __name__ == "__main__":
+    rust_hash_override = sys.argv[1] if len(sys.argv) > 1 else None
+
     download_android_dependencies()
-    download_rust_lib()
+    download_rust_lib(override_hash=rust_hash_override)
 
     if platform.system().lower() == "windows":
         download_ffmpeg_windows()
