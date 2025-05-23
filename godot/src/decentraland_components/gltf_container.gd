@@ -218,6 +218,7 @@ func fix_material(mat: BaseMaterial3D):
 	mat.albedo_texture_force_srgb = true
 	mat.vertex_color_use_as_albedo = false
 
+
 func async_deferred_add_child():
 	var new_gltf_node = dcl_pending_node
 	dcl_pending_node = null
