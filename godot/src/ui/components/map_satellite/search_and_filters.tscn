@@ -1,13 +1,14 @@
-[gd_scene load_steps=15 format=3 uid="uid://dytk736oxi1yj"]
+[gd_scene load_steps=16 format=3 uid="uid://dytk736oxi1yj"]
 
-[ext_resource type="Script" path="res://src/ui/components/map_satellite/search_and_filters.gd" id="1_2len1"]
+[ext_resource type="Script" uid="uid://b2recqti6a326" path="res://src/ui/components/map_satellite/search_and_filters.gd" id="1_2len1"]
 [ext_resource type="PackedScene" uid="uid://bhl7c24uruj0a" path="res://src/ui/components/utils/orientation_container.tscn" id="2_vpn0w"]
 [ext_resource type="PackedScene" uid="uid://diojwgryptiuw" path="res://src/ui/components/map_satellite/map_searchbar.tscn" id="3_xl8us"]
-[ext_resource type="Script" path="res://src/ui/components/utils/hide_orientation.gd" id="4_csu1b"]
+[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="4_csu1b"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="5_518ky"]
 [ext_resource type="Texture2D" uid="uid://cg0awu10wijew" path="res://assets/ui/place_categories/provisory-archipelagos.svg" id="6_mjn3i"]
 [ext_resource type="Texture2D" uid="uid://tf0rlaicf452" path="res://assets/ui/map/empty-search.svg" id="7_4gbog"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_fepdh"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="9_q77y0"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c8imc"]
 
@@ -105,16 +106,16 @@ mouse_default_cursor_shape = 2
 theme_override_colors/font_disabled_color = Color(1, 1, 1, 1)
 theme_override_colors/font_hover_pressed_color = Color(1, 1, 1, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 6
 theme_override_fonts/font = ExtResource("5_518ky")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_c8imc")
@@ -268,6 +269,12 @@ theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 30
+script = ExtResource("9_q77y0")
+default_margin = 20
+use_right = false
+use_top = false
+use_bottom = false
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
 [connection signal="resized" from="." to="." method="_on_resized"]
 [connection signal="toggled" from="PlacesSearchbar/OrientationContainer/HBoxContainer/ArchipelagoButton" to="." method="_on_archipelago_button_toggled"]

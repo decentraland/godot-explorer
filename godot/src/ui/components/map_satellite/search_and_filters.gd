@@ -22,7 +22,7 @@ var closed_position: Vector2
 @onready var cards: BoxContainer = %Cards
 @onready var cards_scroll: ScrollContainer = %CardsScroll
 @onready var portrait_container: MarginContainer = %PortraitContainer
-@onready var landscape_container: MarginContainer = %LandscapeContainer
+@onready var landscape_container: SafeMarginContainer = %LandscapeContainer
 @onready var search_results: Control = %SearchResults
 @onready var portrait_panel_container: PanelContainer = %PortraitPanelContainer
 @onready var landscape_panel_container: PanelContainer = %LandscapePanelContainer

@@ -1,22 +1,6 @@
 class_name Places
 extends Node
 
-const PIN_CATEGORIES = {
-	"FAVORITES": "favorites",
-	"ART": "art",
-	"CRYPTO": "crypto",
-	"SOCIAL": "social",
-	"GAME": "games",
-	"SHOP": "shop",
-	"EDUCATION": "education",
-	"MUSIC": "music",
-	"FASHION": "fashion",
-	"CASINO": "casino",
-	"SPORTS": "sports",
-	"BUSINESS": "business",
-	"POI": "poi"
-}
-
 enum Categories {
 	ALL,
 	FAVORITES,
@@ -33,3 +17,21 @@ enum Categories {
 	BUSINESS,
 	POI
 }
+
+const PIN_CATEGORIES = {
+	"FAVORITES": "favorites",
+	"ART": "art",
+	"CRYPTO": "crypto",
+	"SOCIAL": "social",
+	"GAME": "games",
+	"SHOP": "shop",
+	"EDUCATION": "education",
+	"MUSIC": "music",
+	"FASHION": "fashion",
+	"CASINO": "casino",
+	"SPORTS": "sports",
+	"BUSINESS": "business",
+	"POI": "poi"
+}
+
+
