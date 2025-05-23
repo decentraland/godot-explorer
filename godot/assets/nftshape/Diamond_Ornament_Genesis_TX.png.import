@@ -2,14 +2,13 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b3w4w01ghplcc"
+uid="uid://8pjc8c7cdphg"
 path.s3tc="res://.godot/imported/Diamond_Ornament_Genesis_TX.png-31a25101775da3e601c7b09008f5f83b.s3tc.ctex"
 path.etc2="res://.godot/imported/Diamond_Ornament_Genesis_TX.png-31a25101775da3e601c7b09008f5f83b.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
-generator_parameters={}
 
 [deps]
 

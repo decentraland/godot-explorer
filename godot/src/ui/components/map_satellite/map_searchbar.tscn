@@ -1,0 +1,95 @@
+[gd_scene load_steps=8 format=3 uid="uid://diojwgryptiuw"]
+
+[ext_resource type="Script" path="res://src/ui/components/map_satellite/map_searchbar.gd" id="1_0aw6h"]
+[ext_resource type="StyleBox" uid="uid://lc8bxtgqy8cj" path="res://assets/themes/filter_pill_normal.tres" id="1_7usvv"]
+[ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/debug_panel/icons/Search.svg" id="2_itwvs"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_auoo4"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="4_cauxe"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_js5t6"]
+content_margin_left = 7.0
+content_margin_top = 7.0
+content_margin_right = 7.0
+content_margin_bottom = 7.0
+bg_color = Color(0.847474, 0.847474, 0.847474, 1)
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o1v5x"]
+bg_color = Color(0.847474, 0.847474, 0.847474, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[node name="MapSearchbar" type="PanelContainer"]
+z_index = 20
+custom_minimum_size = Vector2(200, 60)
+offset_right = 280.0
+offset_bottom = 34.0
+size_flags_horizontal = 6
+size_flags_vertical = 3
+theme_override_styles/panel = ExtResource("1_7usvv")
+script = ExtResource("1_0aw6h")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = -5
+theme_override_constants/margin_bottom = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="Icon" type="TextureRect" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+self_modulate = Color(0, 0, 0, 1)
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("2_itwvs")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="Label" type="DclUiInput" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("4_auoo4")
+theme_override_font_sizes/font_size = 28
+placeholder_text = "Search"
+flat = true
+
+[node name="TextureButton" type="Button" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_disabled_color = Color(0, 0, 0, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_styles/focus = SubResource("StyleBoxFlat_js5t6")
+theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_js5t6")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_js5t6")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_js5t6")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_js5t6")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_js5t6")
+theme_override_styles/hover = SubResource("StyleBoxFlat_js5t6")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_o1v5x")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_js5t6")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_js5t6")
+theme_override_styles/normal = SubResource("StyleBoxFlat_js5t6")
+icon = ExtResource("4_cauxe")
+icon_alignment = 1
+
+[connection signal="text_submitted" from="MarginContainer/HBoxContainer/Label" to="." method="_on_label_text_submitted"]
+[connection signal="pressed" from="MarginContainer/HBoxContainer/TextureButton" to="." method="_on_texture_button_pressed"]

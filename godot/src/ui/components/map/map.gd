@@ -65,13 +65,5 @@ func _on_control_map_shader_parcel_click(_parcel_position):
 
 
 func _on_jump_in_jump_in(parcel_position: Vector2i, realm: String) -> void:
-	var explorer = Global.get_explorer()
-	if is_instance_valid(explorer):
-		explorer.teleport_to(parcel_position, realm)
-		jump_in.hide()
-		explorer.hide_menu()
-	else:
-		Global.get_config().last_realm_joined = realm
-		Global.get_config().last_parcel_position = parcel_position
-		Global.get_config().add_place_to_last_places(parcel_position, realm)
-		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+	jump_in.hide()
+	Global.teleport_to(parcel_position, realm)

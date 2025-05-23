@@ -10,7 +10,7 @@ uniform float line_width_px = 1.0;
 uniform vec2 selected_tile = vec2(20.0, 20.0);
 
 const vec3[] colors = {
-	vec3(0.0, 0.0, 0.0), // without 
+	vec3(0.0, 0.0, 0.0), // without
 	vec3(0.314,0.329,0.831), // district
 	vec3(0.439,0.675,0.463), // plaza
 	vec3(0.443,0.424,0.478), // road
@@ -29,14 +29,14 @@ void fragment() {
 	vec2 frag_position = floor(world_position);
 	float fx = frag_position.x / size, fy = (frag_position.y / size) + 1.0;
 	float cx = floor(fx), cy = floor(fy);
-	
+
 	vec4 pixel_data = texelFetch(map_data, ivec2(int(cx), int(cy)), 0);
 	int flagsR = int(pixel_data.r * 255.0);
 	int flagsG = int(pixel_data.g * 255.0);
 
 	bool topMask = (flagsR & 0x8) > 0;
 	bool leftMask = (flagsR & 0x10) > 0;
-	
+
 	vec3 parcel_color;
 	if (flagsG == 32) {
 		parcel_color = colors[1];
@@ -75,10 +75,10 @@ void fragment() {
 	if (borderTop && (fy - cy < line_width)) {
 		resolved_color = vec4(0.0, 0.0, 0.0, COLOR.a);
 	}
-	
+
 	if (selected_tile.x == cx && selected_tile.y == cy) {
 		resolved_color += vec4(0.7, 0.1, 0.1, COLOR.a);
 	}
-	
+
 	COLOR = resolved_color;
 }

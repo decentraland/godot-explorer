@@ -5,7 +5,6 @@
 [ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="3_1stdy"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="3_66uy4"]
 [ext_resource type="PackedScene" uid="uid://bp6yn0qw2s6ua" path="res://src/ui/components/discover/discover.tscn" id="4_5qyiw"]
-[ext_resource type="PackedScene" uid="uid://dkqc3of3acx2i" path="res://src/ui/components/map/map.tscn" id="4_jtsir"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="4_lblvr"]
 [ext_resource type="ButtonGroup" uid="uid://bxbiah4vi02n2" path="res://src/ui/components/menu/button_group_menu.tres" id="5_ili3w"]
 [ext_resource type="Shader" uid="uid://ctbwfwlyggrm0" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
@@ -30,6 +29,7 @@
 [ext_resource type="PackedScene" uid="uid://cuduuu2b4u4bn" path="res://src/ui/components/profile_settings/profile_settings.tscn" id="18_x0kg3"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="22_1kuym"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/button_profile/navbar_profile_button.tscn" id="22_n1jkd"]
+[ext_resource type="PackedScene" uid="uid://duuasgi2pnb8k" path="res://src/ui/components/map_satellite/map_satellite.tscn" id="25_53o0i"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5emsx"]
 
@@ -397,6 +397,7 @@ grow_vertical = 2
 
 [node name="Control_Discover" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("4_5qyiw")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 
 [node name="Control_Settings" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("3_1stdy")]
@@ -405,9 +406,8 @@ visible = false
 layout_mode = 1
 offset_bottom = 19.0
 
-[node name="Control_Map" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("4_jtsir")]
+[node name="Control_MapSatellite" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("25_53o0i")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 
 [node name="Control_Backpack" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("8_d38wp")]
@@ -446,6 +446,7 @@ layout_mode = 1
 backpack = NodePath("../Control_Backpack")
 
 [node name="BottomBar_Portrait" type="PanelContainer" parent="VBoxContainer"]
+visible = false
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_080im")
