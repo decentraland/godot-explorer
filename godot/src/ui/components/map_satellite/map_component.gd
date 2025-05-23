@@ -13,9 +13,7 @@ const MAX_ZOOM := Vector2(2, 2)
 const TAP_THRESHOLD := 10.0  # en píxeles
 const MAP_SIZE = PARCEL_SIZE * Vector2(340, 340)
 const PARCEL_OFFSET = Vector2i(170, 170)
-const MAP_CENTER = MAP_SIZE / 2
 const TILE_DISPLACEMENT = Vector2(18, 18) * PARCEL_SIZE
-const MAP_MARKER = preload("res://src/ui/components/map_satellite/map_marker.tscn")
 const MAP_PIN := preload("res://src/ui/components/map_satellite/map_pin.tscn")
 const ARCHIPELAGO_CIRCLE = preload("res://src/ui/components/map_satellite/archipelago_circle.tscn")
 
@@ -36,6 +34,7 @@ var poi_places_ids = []
 
 func _ready():
 	set_process_input(true)
+	hide_marker()
 
 	tiled_map.size = Vector2(340 * PARCEL_SIZE)
 	color_rect_background.size = tiled_map.size
@@ -278,6 +277,7 @@ func async_center_camera_on_parcel(parcel: Vector2i) -> void:
 
 
 func show_marker_at_parcel(parcel: Vector2i):
+	map_marker.show()
 	async_center_camera_on_parcel(parcel)
 	var pos = get_parcel_position(parcel) - map_marker.size / 2
 	map_marker.position = pos
@@ -321,3 +321,7 @@ func show_archipelagos_toggled(toggled_on: bool) -> void:
 	for child in get_children():
 		if child.is_in_group("archipelagos"):
 			child.visible = toggled_on
+
+
+func hide_marker() -> void:
+	map_marker.hide()

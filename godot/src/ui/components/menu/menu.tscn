@@ -1,11 +1,10 @@
-[gd_scene load_steps=44 format=3 uid="uid://co44hxd7jbcjs"]
+[gd_scene load_steps=43 format=3 uid="uid://co44hxd7jbcjs"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_ji0pe"]
 [ext_resource type="Script" uid="uid://cpa0oxye73bch" path="res://src/ui/components/menu/menu.gd" id="2_cgghr"]
 [ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/components/settings/settings.tscn" id="3_1stdy"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="3_66uy4"]
 [ext_resource type="PackedScene" uid="uid://bp6yn0qw2s6ua" path="res://src/ui/components/discover/discover.tscn" id="4_5qyiw"]
-[ext_resource type="PackedScene" uid="uid://dkqc3of3acx2i" path="res://src/ui/components/map/map.tscn" id="4_jtsir"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="4_lblvr"]
 [ext_resource type="ButtonGroup" uid="uid://bxbiah4vi02n2" path="res://src/ui/components/menu/button_group_menu.tres" id="5_ili3w"]
 [ext_resource type="Shader" uid="uid://ctbwfwlyggrm0" path="res://src/ui/components/menu/menu_rainbow.gdshader" id="5_k4wpn"]
@@ -409,11 +408,6 @@ offset_bottom = 19.0
 
 [node name="Control_MapSatellite" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("25_53o0i")]
 unique_name_in_owner = true
-layout_mode = 1
-
-[node name="Control_Map" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("4_jtsir")]
-unique_name_in_owner = true
-visible = false
 layout_mode = 1
 
 [node name="Control_Backpack" parent="VBoxContainer/ColorRect_Background/Menus" instance=ExtResource("8_d38wp")]

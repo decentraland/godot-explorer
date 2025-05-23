@@ -58,11 +58,6 @@ func _process(_dt):
 		Global.metrics.update_position("%d,%d" % [parcel_position.x, parcel_position.y])
 
 
-#func _on_parcels_procesed(parcels, empty):
-#control_minimap.control_map_shader.set_used_parcels(parcels, empty)
-#control_menu.control_map.control_map_shader.set_used_parcels(parcels, empty)
-
-
 # TODO: this can be a command line parser and get some helpers like get_string("--realm"), etc
 func get_params_from_cmd():
 	var args := OS.get_cmdline_args()
@@ -156,7 +151,6 @@ func _ready():
 	ui_safe_area.add_child(Global.scene_runner.base_ui)
 	ui_safe_area.move_child(Global.scene_runner.base_ui, 0)
 
-	#Global.scene_fetcher.connect("parcels_processed", self._on_parcels_procesed)
 	Global.scene_fetcher.notify_pending_loading_scenes.connect(
 		self._on_notify_pending_loading_scenes
 	)
@@ -290,7 +284,6 @@ func _on_control_menu_jump_to(parcel: Vector2i):
 
 func _on_control_menu_hide_menu():
 	control_menu.close()
-	control_menu.control_map.clear()
 	ui_root.grab_focus()
 
 

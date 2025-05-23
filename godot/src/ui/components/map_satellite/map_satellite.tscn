@@ -70,4 +70,5 @@ visible = false
 [connection signal="clicked_parcel" from="SubViewportContainer/MapViewport/Map" to="." method="_on_map_clicked_parcel"]
 [connection signal="toggled" from="POICheckBox" to="." method="_on_show_poi_toggled"]
 [connection signal="toggled" from="LiveCheckBox" to="." method="_on_show_live_toggled"]
+[connection signal="close" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_close"]
 [connection signal="jump_in" from="CanvasLayer/JumpIn" to="." method="_on_jump_in_jump_in"]

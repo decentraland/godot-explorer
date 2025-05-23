@@ -2,6 +2,7 @@ class_name JumpInWrapper
 extends Control
 
 signal jump_in(position: Vector2i, realm: String)
+signal close
 
 @onready var panel_jump_in_portrait: JumpIn = %PanelJumpInPortrait
 @onready var panel_jump_in_landscape: JumpIn = %PanelJumpInLandscape
@@ -100,3 +101,4 @@ func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if !event.pressed:
 			_close()
+			close.emit()

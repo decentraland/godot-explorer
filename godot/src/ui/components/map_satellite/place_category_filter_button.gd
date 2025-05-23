@@ -4,7 +4,6 @@ extends Button
 signal filter_toggled(is_on: bool, type: int)
 
 @export var filter_type: Places.Categories = Places.Categories.ALL
-#
 
 
 func _update_category_button():

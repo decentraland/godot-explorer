@@ -22,7 +22,6 @@ var fade_out_tween: Tween = null
 
 @onready var control_discover = %Control_Discover
 @onready var control_settings = %Control_Settings
-@onready var control_map = %Control_Map
 @onready var control_map_satellite: Control = %Control_MapSatellite
 @onready var control_backpack: Backpack = %Control_Backpack
 @onready var control_profile_settings: ProfileSettings = %Control_ProfileSettings
@@ -61,13 +60,11 @@ func _ready():
 	button_discover.set_pressed(true)
 	portrait_button_discover.set_pressed(true)
 	selected_node = control_discover
-	control_map.hide()
 	control_map_satellite.hide()
 	control_settings.hide()
 	control_discover.show()
 	control_backpack.hide()
 	control_profile_settings.hide()
-	control_map.jump_to.connect(_jump_to)
 	control_map_satellite.jump_to.connect(_jump_to)
 
 	# Leave it, because we can open a browser with the Magic Wallet
@@ -79,7 +76,6 @@ func _unhandled_input(event):
 		if event.pressed and event.keycode == KEY_TAB:
 			pressed_index = group.get_pressed_button().get_index()
 			buttons_quantity = group.get_buttons().size() - 1
-			control_map.clear()
 
 			if pressed_index < buttons_quantity:
 				group.get_buttons()[pressed_index + 1].set_pressed(true)
@@ -133,7 +129,6 @@ func show_discover():
 
 
 func show_map():
-	#select_node(control_map, false)
 	select_node(control_map_satellite, false)
 	button_map.set_pressed(true)
 	_open()
@@ -185,7 +180,6 @@ func _on_button_settings_pressed():
 
 
 func _on_button_map_pressed():
-	#select_node(control_map)
 	select_node(control_map_satellite)
 
 
