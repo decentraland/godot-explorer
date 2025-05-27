@@ -24,7 +24,7 @@ var _node_cache: Dictionary = {}
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	_connect_signals()
-	
+
 	if metadata.is_empty():
 		set_image(texture)
 		set_views(views)
@@ -42,18 +42,19 @@ func _get_node_safe(node_name: String) -> Node:
 		_node_cache[node_name] = get_node_or_null("%" + node_name)
 	return _node_cache[node_name]
 
+
 func _get_button_close() -> Button:
 	return _get_node_safe("Button_Close")
-	
-	
+
+
 func _get_button_like() -> Button:
 	return _get_node_safe("Button_Like")
-	
-	
+
+
 func _get_button_jump_in() -> Button:
 	return _get_node_safe("Button_JumpIn")
-	
-	
+
+
 func _get_label_location() -> Label:
 	return _get_node_safe("Label_Location")
 
@@ -111,12 +112,12 @@ func _connect_signals():
 	if button_close:
 		if not button_close.pressed.is_connected(_on_button_close_pressed):
 			button_close.pressed.connect(_on_button_close_pressed)
-	
+
 	var button_jump_in = _get_button_jump_in()
 	if button_jump_in:
 		if not button_jump_in.pressed.is_connected(_on_button_jump_in_pressed):
 			button_jump_in.pressed.connect(_on_button_jump_in_pressed)
-	
+
 	var button_like = _get_button_like()
 	if button_like:
 		if not button_like.pressed.is_connected(_on_button_like_pressed):
