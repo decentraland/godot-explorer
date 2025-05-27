@@ -3,8 +3,8 @@ extends Control
 
 signal jump_in(position: Vector2i, realm: String)
 
-@onready var panel_jump_in_portrait: JumpIn = %PanelJumpInPortrait
-@onready var panel_jump_in_landscape: JumpIn = %PanelJumpInLandscape
+@onready var panel_jump_in_portrait: PlaceItem = %PanelJumpInPortrait
+@onready var panel_jump_in_landscape: PlaceItem = %PanelJumpInLandscape
 @onready var texture_progress_bar: TextureProgressBar = %TextureProgressBar
 
 
