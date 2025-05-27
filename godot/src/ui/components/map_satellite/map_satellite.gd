@@ -16,7 +16,12 @@ func _ready():
 	UiSounds.install_audio_recusirve(self)
 
 
-# TO IMPLEMENT (need to add a menu)
+# TODO: A menu with layer options,
+# show/hide events and POI,
+# change between shader or satellite,
+# the archipelagos button
+
+
 func _on_show_poi_toggled(toggled_on: bool) -> void:
 	show_poi = toggled_on
 	map.show_poi_toggled(toggled_on)
