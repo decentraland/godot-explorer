@@ -3,12 +3,12 @@
 [ext_resource type="Script" uid="uid://w0a41hnsqd" path="res://assets/environment/sky_base.gd" id="1_0y4pc"]
 [ext_resource type="Sky" uid="uid://l82r2nfrgcbx" path="res://assets/sky.tres" id="2_13tc8"]
 
-[sub_resource type="Environment" id="Environment_8xuge"]
+[sub_resource type="Environment" id="Environment_d58k0"]
 background_mode = 2
-background_energy_multiplier = 0.5
 sky = ExtResource("2_13tc8")
 ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
 ambient_light_sky_contribution = 0.4
+reflected_light_source = 2
 tonemap_mode = 3
 glow_enabled = true
 glow_levels/1 = 0.4
@@ -17,14 +17,17 @@ glow_levels/3 = 0.0
 glow_levels/5 = 0.0
 glow_intensity = 1.5
 glow_blend_mode = 1
+glow_hdr_threshold = 0.8
 glow_hdr_scale = 0.0
-fog_sky_affect = 0.0
+fog_density = 0.001
+adjustment_brightness = 1.2
+adjustment_saturation = 1.2
 
 [node name="SkyHigh_WIP" type="Node"]
 script = ExtResource("1_0y4pc")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_8xuge")
+environment = SubResource("Environment_d58k0")
 
 [node name="SunLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(-0.00710599, -0.978071, 0.20815, 0.00639971, 0.208107, 0.978085, -0.999954, 0.00828236, 0.00478057, 0, 0, 0)

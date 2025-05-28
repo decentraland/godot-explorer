@@ -215,7 +215,7 @@ lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
 day_night_cycle={
 "type": "float",
-"value": 0.0
+"value": -0.43
 }
 
 [xr]

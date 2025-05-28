@@ -9,6 +9,8 @@ render_mode use_half_res_pass;
 
 const float TIME_OFFSET = .43;
 
+uniform sampler2D milky_way_noise : source_color;
+
 uniform sampler2D clouds_tex : source_color;
 uniform sampler2D clouds_gradient_day : source_color, repeat_disable, hint_default_white;
 uniform sampler2D clouds_gradient_night : source_color, repeat_disable, hint_default_white;
@@ -96,7 +98,6 @@ vec3 dither_interleaved(vec3 rgb, float levels, vec2 frag_coord) {
     return rgb + noise / (levels - 1.0);
 }
 
-
 void sky() {
 	/* float day_night_cycle = fract(TIME*.1); */
 	float cycle = day_night_cycle + TIME_OFFSET;
@@ -104,7 +105,8 @@ void sky() {
 
 	vec3 sun_dir = normalize(vec3(0.2, 1.0, 0.0));
 	sun_dir.yz = rotate2D(sun_dir.yz, PI*2.0*cycle);
-	float dot_val= dot(sun_dir, EYEDIR);
+	float dot_val = dot(sun_dir, EYEDIR);
+
 	float is_sun = max(sign(dot_val),0.0);
 	float eye_dot =abs(dot(EYEDIR, vec3(.0,1.0,.0)));
 	float horizon = 1.0-smoothstep(0.0,0.1,eye_dot);
@@ -130,8 +132,12 @@ void sky() {
 		vec2 uv = world_aligned_uv( rd, rd*.5-.5, vec3(0.0), vec2(.0));
 
 		vec2 center;
-		float stars = smoothstep(.0,.2,voronoiEdges(uv*300.0,0.9,0.0,0.0,0.0, center).a);
-		float clouds = textureLod(clouds_tex, theta_phi*2.0, 0.0).r * smoothstep(.99,0.8,eye_dot);
+		float clouds = textureLod(clouds_tex, theta_phi * 1.0, 0.0).r;
+        clouds = smoothstep(.2,.7,clouds* smoothstep(1.0,0.3,eye_dot)) * (.5*clouds + .5) - clouds * .1;
+        vec4 voronoi_data = voronoiEdges(uv*300.0,0.95 + clouds * .05,0.0,0.0,0.0, center);
+		float stars = smoothstep(.0,.2,voronoi_data.a);
+        float milky_way = smoothstep(.5,1.0,dot(EYEDIR, normalize(vec3(0.0,EYEDIR.yz))))* texture(milky_way_noise, (EYEDIR.xz+1.0)*.5).r ;
+        stars *= milky_way;
 
 		float sun = mix(
 			moon_shape,
