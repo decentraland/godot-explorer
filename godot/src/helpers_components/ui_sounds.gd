@@ -58,7 +58,7 @@ func install_audio(node: Node):
 		node.play_emote.connect(func(_data): self.play_sound(&"backpack_item_equip"))
 	elif node is EmoteEditorItem:
 		node.select_emote.connect(func(_data): self.play_sound(&"mainmenu_tile_highlight"))
-	elif node is EmoteEditorItem:
+	elif node is PlaceItem:
 		node.item_pressed.connect(func(_data): play_sound(&"mainmenu_tile_highlight"))
 	elif node is CheckBox or node is OptionButton:
 		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover"))
