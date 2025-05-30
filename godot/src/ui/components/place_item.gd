@@ -203,7 +203,7 @@ func set_data(item_data):
 		if not image_url.is_empty():
 			_async_download_image(image_url)
 		else:
-			set_image(texture_placeholder)
+			set_image(texture_placeholder) 
 
 	var location_vector = item_data.get("base_position", "0,0").split(",")
 	if location_vector.size() == 2:
