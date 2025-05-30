@@ -184,7 +184,7 @@ func set_creator(_creator: String):
 	var label = _get_label_creator()
 	var container = _get_container_creator()
 	if label and container:
-		container.visible = not _creator.is_empty()
+		container.set_visible(not _creator.is_empty())
 		label.text = _creator
 
 
