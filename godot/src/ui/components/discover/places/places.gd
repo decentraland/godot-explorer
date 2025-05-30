@@ -23,7 +23,7 @@ const PIN_CATEGORIES = {
 	"ART": "art",
 	"CRYPTO": "crypto",
 	"SOCIAL": "social",
-	"GAME": "games",
+	"GAME": "game",
 	"SHOP": "shop",
 	"EDUCATION": "education",
 	"MUSIC": "music",
