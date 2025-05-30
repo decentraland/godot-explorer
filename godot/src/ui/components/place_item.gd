@@ -198,12 +198,12 @@ func set_data(item_data):
 	set_likes_percent(like_score if like_score is float else 0.0)
 	set_online(item_data.get("user_count", 0))
 
-	var image_url = item_data.get("image", "")
-	if not image_url.is_empty():
-		set_image(texture_placeholder)
-		_async_download_image(image_url)
-	else:
-		set_image(texture_placeholder)
+	if _get_texture_image():
+		var image_url = item_data.get("image", "")
+		if not image_url.is_empty():
+			_async_download_image(image_url)
+		else:
+			set_image(texture_placeholder)
 
 	var location_vector = item_data.get("base_position", "0,0").split(",")
 	if location_vector.size() == 2:
@@ -224,10 +224,10 @@ func _async_download_image(url: String):
 	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
+		set_image(texture_placeholder)
 		printerr("places_generator::_async_download_image promise error: ", result.get_error())
 		return
-	if is_instance_valid(self):  # maybe was deleted...
-		set_image(result.texture)
+	set_image(result.texture)
 
 
 func _on_button_jump_in_pressed():
