@@ -2,14 +2,13 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c63k4f2p4v0ju"
+uid="uid://cudsh0y27c1wt"
 path.s3tc="res://.godot/imported/Tape_Genesis_TX.png-68f6b56cd4af45db4f890da61c58f5e2.s3tc.ctex"
 path.etc2="res://.godot/imported/Tape_Genesis_TX.png-68f6b56cd4af45db4f890da61c58f5e2.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
-generator_parameters={}
 
 [deps]
 

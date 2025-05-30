@@ -3,6 +3,7 @@ import os
 import hashlib
 import unicodedata
 import sys
+import platform
 sys.stdout.reconfigure(line_buffering=True)
 
 def find_files(base):
@@ -23,6 +24,8 @@ def get_base_dir():
     return os.path.join(script_dir, "lib", "src")
 
 def warn_if_autocrlf_not_input():
+    if platform.system().lower() != "windows":
+        return
     try:
         import subprocess
         result = subprocess.run(
@@ -38,7 +41,7 @@ def warn_if_autocrlf_not_input():
         print("⚠️  Git not detected or not a Git repository.")
 
 
-def main():
+def folder_hash():
     base = get_base_dir()
 
     files = list(find_files(base))
@@ -61,8 +64,11 @@ def main():
     joined = "\n".join(lines).encode("utf-8")
 
     folder_hash = hashlib.sha256(joined).hexdigest()
-    print(folder_hash)
+    return folder_hash
+
+def get_rust_folder_hash():
+    warn_if_autocrlf_not_input()
+    return folder_hash()
 
 if __name__ == "__main__":
-    main()
-    warn_if_autocrlf_not_input()
+    print(get_rust_folder_hash())
