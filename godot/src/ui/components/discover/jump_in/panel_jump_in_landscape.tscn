@@ -1,7 +1,7 @@
 [gd_scene load_steps=27 format=3 uid="uid://b8837sg55qd8m"]
 
-[ext_resource type="Script" uid="uid://cjadoa1x66pe6" path="res://src/ui/components/discover/jump_in/panel_jump_in.gd" id="1_6fwth"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gki2s"]
+[ext_resource type="Script" uid="uid://0ncqo78wbgqv" path="res://src/ui/components/discover/jump_in/jump_in.gd" id="1_lek7s"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="2_7i6jj"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_wh5hw"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_oea3m"]
@@ -64,7 +64,7 @@ offset_left = -324.0
 grow_horizontal = 0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_eaed0")
-script = ExtResource("1_6fwth")
+script = ExtResource("1_lek7s")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2

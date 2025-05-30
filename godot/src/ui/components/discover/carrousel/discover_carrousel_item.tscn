@@ -1,6 +1,6 @@
 [gd_scene load_steps=22 format=3 uid="uid://nexo8k0ub5ty"]
 
-[ext_resource type="Script" uid="uid://d37ufifgl18y4" path="res://src/ui/components/discover/carrousel/discover_carrousel_item.gd" id="1_foqq3"]
+[ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_w66jn"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="2_gao81"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="3_o4xes"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="4_4uq2a"]
@@ -69,7 +69,7 @@ custom_minimum_size = Vector2(235, 226)
 offset_right = 225.0
 offset_bottom = 175.0
 mouse_filter = 1
-script = ExtResource("1_foqq3")
+script = ExtResource("1_w66jn")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
