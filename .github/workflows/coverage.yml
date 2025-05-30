@@ -80,6 +80,9 @@ jobs:
       - name: Import Assets
         uses: ./.github/actions/import-assets
 
+      - name: Import Assets 2
+        uses: ./.github/actions/import-assets
+
       - name: Run xtask coverage
         run: |
           export DISPLAY=:99
