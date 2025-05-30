@@ -9,7 +9,7 @@ concurrency:
 jobs:
   coverage:
     name: Test & Coverage
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
