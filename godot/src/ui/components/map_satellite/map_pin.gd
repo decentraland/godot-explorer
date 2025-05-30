@@ -10,7 +10,7 @@ enum PinCategoryEnum {
 	ART,
 	CRYPTO,
 	SOCIAL,
-	GAMES,
+	GAME,
 	SHOP,
 	EDUCATION,
 	MUSIC,
