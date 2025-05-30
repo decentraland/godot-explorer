@@ -11,7 +11,7 @@ gradient = SubResource("Gradient_o4o57")
 width = 2
 
 [sub_resource type="Gradient" id="Gradient_gikcw"]
-colors = PackedColorArray(0.140744, 0.000228958, 0.254497, 1, 0.235358, 0.000198106, 0.719567, 1)
+colors = PackedColorArray(0.140744, 0.000228958, 0.254497, 1, 0.386864, 0.323299, 1, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_33c0e"]
 gradient = SubResource("Gradient_gikcw")
