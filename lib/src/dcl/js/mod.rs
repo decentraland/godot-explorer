@@ -279,7 +279,6 @@ pub(crate) fn scene_thread(
     let script = match script {
         Err(e) => {
             tracing::error!("[scene thread {scene_id:?}] script load error: {}", e);
-            tracing::error!("[scene thread {scene_id:?}] script code:\n{}", scene_code);
             return;
         }
         Ok(script) => script,
