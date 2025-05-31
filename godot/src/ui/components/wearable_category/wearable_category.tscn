@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://cnabnesv3iw5v"]
 
-[ext_resource type="Script" path="res://src/ui/components/wearable_category/wearable_category.gd" id="1_b7rfm"]
+[ext_resource type="Script" uid="uid://m71pbxrives3" path="res://src/ui/components/wearable_category/wearable_category.gd" id="1_b7rfm"]
 [ext_resource type="Texture2D" uid="uid://di5oa3ptamiwb" path="res://assets/ui/wearable_categories/hat-icon.svg" id="2_m2knh"]
 
 [node name="Wearable_Category" type="Control"]

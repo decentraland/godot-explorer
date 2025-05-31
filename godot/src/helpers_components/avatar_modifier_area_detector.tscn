@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://ci0fn7h7pxdmc"]
 
-[ext_resource type="Script" path="res://src/helpers_components/avatar_modifier_area_detector.gd" id="1_kynwj"]
+[ext_resource type="Script" uid="uid://dsrlx32jmkuf7" path="res://src/helpers_components/avatar_modifier_area_detector.gd" id="1_kynwj"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_aqpo3"]
 margin = 0.05

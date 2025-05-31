@@ -2,6 +2,7 @@ class_name JumpInWrapper
 extends Control
 
 signal jump_in(position: Vector2i, realm: String)
+signal close
 
 @onready var panel_jump_in_portrait: JumpIn = %PanelJumpInPortrait
 @onready var panel_jump_in_landscape: JumpIn = %PanelJumpInLandscape
@@ -16,8 +17,8 @@ func _ready():
 	texture_progress_bar.hide()
 
 
-func _emit_jump_in(position: Vector2i, realm: String):
-	jump_in.emit(position, realm)
+func _emit_jump_in(pos: Vector2i, realm: String):
+	jump_in.emit(pos, realm)
 
 
 func _close():
@@ -25,13 +26,13 @@ func _close():
 	UiSounds.play_sound("mainmenu_widget_close")
 
 
-func async_load_place_position(position: Vector2i):
+func async_load_place_position(pos: Vector2i):
 	panel_jump_in_portrait.hide()
 	panel_jump_in_landscape.hide()
 	show()
 	texture_progress_bar.show()
 	var url: String = "https://places.decentraland.org/api/places?limit=1"
-	url += "&positions=%d,%d" % [position.x, position.y]
+	url += "&positions=%d,%d" % [pos.x, pos.y]
 
 	var headers = {"Content-Type": "application/json"}
 	var promise: Promise = Global.http_requester.request_json(
@@ -40,7 +41,7 @@ func async_load_place_position(position: Vector2i):
 	var result = await PromiseUtils.async_awaiter(promise)
 
 	if result is PromiseError:
-		printerr("Error request places", result.get_error())
+		printerr("Error request places jump in", result.get_error())
 		return
 
 	var json: Dictionary = result.get_string_response_as_json()
@@ -100,3 +101,4 @@ func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if !event.pressed:
 			_close()
+			close.emit()

@@ -6727,14 +6727,14 @@ tracks/84/keys = PackedFloat32Array(0, 1, -0.0183318, -0.00605017, 0.00142374, 0
 
 [resource]
 _data = {
-"clap": SubResource("Animation_iengm"),
-"dance": SubResource("Animation_k5wdr"),
-"fistpump": SubResource("Animation_qpsqn"),
-"handsair": SubResource("Animation_fu88j"),
-"headexplode": SubResource("Animation_363er"),
-"kiss": SubResource("Animation_6dt8y"),
-"money": SubResource("Animation_evn7r"),
-"raiseHand": SubResource("Animation_6orph"),
-"shrug": SubResource("Animation_p70ci"),
-"wave": SubResource("Animation_5nxyg")
+&"clap": SubResource("Animation_iengm"),
+&"dance": SubResource("Animation_k5wdr"),
+&"fistpump": SubResource("Animation_qpsqn"),
+&"handsair": SubResource("Animation_fu88j"),
+&"headexplode": SubResource("Animation_363er"),
+&"kiss": SubResource("Animation_6dt8y"),
+&"money": SubResource("Animation_evn7r"),
+&"raiseHand": SubResource("Animation_6orph"),
+&"shrug": SubResource("Animation_p70ci"),
+&"wave": SubResource("Animation_5nxyg")
 }

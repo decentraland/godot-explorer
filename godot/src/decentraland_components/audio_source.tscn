@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://baayc6o6lb8u"]
 
-[ext_resource type="Script" path="res://src/decentraland_components/audio_source.gd" id="1_hwkbw"]
+[ext_resource type="Script" uid="uid://8qurlimerxeg" path="res://src/decentraland_components/audio_source.gd" id="1_hwkbw"]
 
 [node name="audio_source" type="DclAudioSource"]
 bus = &"Scene"

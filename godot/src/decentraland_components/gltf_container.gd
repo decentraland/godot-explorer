@@ -8,14 +8,42 @@ enum GltfContainerLoadingState {
 	FINISHED = 4,
 }
 
+const MAX_CONCURRENT_LOADS := 10
+
+var dcl_gltf_hash := ""
+var optimized := false
+
 @onready var timer = $Timer
+
+# Static variable to track currently loading assets
+static var currently_loading_assets := []
+# Static queue and flag for throttling
+static var pending_load_queue := []
 
 
 func _ready():
 	self.async_load_gltf.call_deferred()
 
 
+# Helper to handle finishing a load (success or error)
+func _finish_gltf_load(gltf_hash: String):
+	currently_loading_assets.erase(gltf_hash)
+	_process_next_gltf_load()
+
+
 func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
+	self.optimized = true
+
+	# Throttling: If already loading max, queue and return
+	if currently_loading_assets.size() >= MAX_CONCURRENT_LOADS:
+		if not pending_load_queue.has(self):
+			pending_load_queue.append(self)
+		return
+
+	# Add asset to loading list and print
+	if not currently_loading_assets.has(gltf_hash):
+		currently_loading_assets.append(gltf_hash)
+
 	var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
@@ -25,10 +53,14 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 				% [dcl_scene_id, gltf_hash]
 			)
 		)
+		_finish_gltf_load(gltf_hash)
 		return
 
 	var main_tree = get_tree()
 	if not is_instance_valid(main_tree):
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
+		_finish_gltf_load(gltf_hash)
 		return
 
 	var scene_file = "res://glbs/" + gltf_hash + ".tscn"
@@ -36,11 +68,13 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 		printerr("File %s doesn't exists" % scene_file)
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		_finish_gltf_load(gltf_hash)
 		return
 	var err = ResourceLoader.load_threaded_request(scene_file)
 	if err != OK:
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		_finish_gltf_load(gltf_hash)
 		return
 
 	var status = ResourceLoader.load_threaded_get_status(scene_file)
@@ -52,6 +86,7 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 	if resource == null:
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		_finish_gltf_load(gltf_hash)
 		return
 
 	var gltf_node = resource.instantiate()
@@ -63,10 +98,45 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 		printerr("Error on fetch gltf: ", res_instance.get_error())
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		_finish_gltf_load(gltf_hash)
 		return
 
+	if res_instance == null:
+		printerr("instance_gltf_colliders returned null for hash: ", gltf_hash)
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
+		_finish_gltf_load(gltf_hash)
+		return
 	dcl_pending_node = res_instance
 	timer.stop()
+	_finish_gltf_load(gltf_hash)
+
+
+static func _process_next_gltf_load():
+	while currently_loading_assets.size() < MAX_CONCURRENT_LOADS and pending_load_queue.size() > 0:
+		# Prioritize GLTFs from the current scene
+		var idx = -1
+		for i in range(pending_load_queue.size()):
+			var candidate = pending_load_queue[i]
+			if candidate != null and candidate.is_current_scene():
+				idx = i
+				break
+		var next_gltf = null
+		if idx != -1:
+			next_gltf = pending_load_queue[idx]
+			pending_load_queue.remove_at(idx)
+		else:
+			next_gltf = pending_load_queue.pop_front()
+		if next_gltf != null:
+			next_gltf.async_try_load_gltf_from_local_file(next_gltf.dcl_gltf_hash)
+		else:
+			break
+
+
+func is_current_scene():
+	if dcl_scene_id == Global.scene_runner.get_current_parcel_scene_id():
+		return true
+	return false
 
 
 func async_load_gltf():
@@ -74,6 +144,7 @@ func async_load_gltf():
 
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
 	var file_hash = content_mapping.get_hash(dcl_gltf_src)
+	self.dcl_gltf_hash = file_hash
 	if file_hash.is_empty():
 		dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND
 		timer.stop()

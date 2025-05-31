@@ -1,7 +1,7 @@
 [gd_scene load_steps=11 format=3 uid="uid://cuduuu2b4u4bn"]
 
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="1_0j6l3"]
-[ext_resource type="Script" path="res://src/ui/components/profile_settings/profile_settings.gd" id="1_t2la2"]
+[ext_resource type="Script" uid="uid://dc2kn2egscg1a" path="res://src/ui/components/profile_settings/profile_settings.gd" id="1_t2la2"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_auqtd"]
 [ext_resource type="Texture2D" uid="uid://7fya3pcmhbsp" path="res://assets/ui/Account.png" id="3_8spyp"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_3t0sv"]

@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://vwdeof50oue7"]
 
-[ext_resource type="Script" path="res://src/ui/components/voice_chat_recorder/voice_chat_recorder.gd" id="1_0c8v7"]
+[ext_resource type="Script" uid="uid://dqpk827xdxpcy" path="res://src/ui/components/voice_chat_recorder/voice_chat_recorder.gd" id="1_0c8v7"]
 
 [node name="VoiceChatRecorder" type="VoiceChatRecorder"]
 script = ExtResource("1_0c8v7")

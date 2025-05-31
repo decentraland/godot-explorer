@@ -1,6 +1,6 @@
 [gd_scene load_steps=10 format=3 uid="uid://blc0mna12dsxo"]
 
-[ext_resource type="Script" path="res://src/ui/components/emotes/emote_item_ui.gd" id="1_hlkld"]
+[ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/emotes/emote_item_ui.gd" id="1_hlkld"]
 [ext_resource type="Texture2D" uid="uid://caviqeg8b20gg" path="res://assets/avatar/default_emotes_thumbnails/clap.png" id="2_ynh3m"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_obw18"]
 

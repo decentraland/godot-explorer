@@ -1,7 +1,7 @@
 [gd_scene load_steps=9 format=3 uid="uid://bamnvinmv5e6g"]
 
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="1_rbo0n"]
-[ext_resource type="Script" path="res://src/ui/components/wearable_panel/wearable_panel.gd" id="1_wjefq"]
+[ext_resource type="Script" uid="uid://cvhm8mmjxckj" path="res://src/ui/components/wearable_panel/wearable_panel.gd" id="1_wjefq"]
 [ext_resource type="Texture2D" uid="uid://51aqusjxdtb3" path="res://assets/ui/InfoCardBase.png" id="2_eceik"]
 [ext_resource type="Texture2D" uid="uid://cdkqwe4n7eu0a" path="res://assets/themes/icons/HideUIIcon.png" id="3_d0tom"]
 [ext_resource type="PackedScene" uid="uid://cnabnesv3iw5v" path="res://src/ui/components/wearable_category/wearable_category.tscn" id="3_f2n7s"]
