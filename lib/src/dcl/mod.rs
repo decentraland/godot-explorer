@@ -122,6 +122,7 @@ pub struct SpawnDclSceneData {
 
 impl DclScene {
     pub fn spawn_new_js_dcl_scene(spawn_dcl_scene_data: SpawnDclSceneData) -> Self {
+        #[cfg_attr(not(feature = "use_deno"), allow(unused_variables))]
         let (main_sender_to_thread, thread_receive_from_renderer) =
             tokio::sync::mpsc::channel::<RendererResponse>(1);
 

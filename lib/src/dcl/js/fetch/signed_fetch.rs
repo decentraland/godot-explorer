@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
-use deno_core::{error::AnyError, op, OpState};
+use deno_core::{error::AnyError, op2, OpState};
 use http::Uri;
 
 use crate::{
@@ -32,11 +32,12 @@ struct SignedFetchMeta {
     realm: SignedFetchMetaRealm,
 }
 
-#[op]
+#[op2(async)]
+#[serde]
 pub async fn op_signed_fetch_headers(
     op_state: Rc<RefCell<OpState>>,
-    uri: String,
-    method: Option<String>,
+    #[string] uri: String,
+    #[string] method: Option<String>,
 ) -> Result<Vec<(String, String)>, AnyError> {
     let wallet = op_state
         .borrow()
