@@ -156,9 +156,19 @@ fn get_v8_version_using_metadata() -> anyhow::Result<String> {
 /// This function is used for both iOS and Android targets.
 fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &String) -> anyhow::Result<()> {
     // Set the RUSTY_V8_MIRROR environment variable.
-    with_build_envs.insert(
+    /*with_build_envs.insert(
         "RUSTY_V8_MIRROR".to_string(),
         "https://github.com/leanmendoza/rusty_v8/releases/download".to_string(),
+    );*/
+
+    with_build_envs.insert(
+        "RUSTY_V8_ARCHIVE".to_string(),
+        "/Users/kuruk/Projects/rusty_v8/out/v0.106.0/librusty_v8_debug_aarch64-apple-ios.a.gz".to_string(),
+    );
+
+        with_build_envs.insert(
+        "RUSTY_V8_SRC_BINDING_PATH".to_string(),
+        "/Users/kuruk/Projects/rusty_v8/out/v0.106.0/src_binding_debug_aarch64-apple-ios.rs".to_string(),
     );
 
     // Choose the binding file name based on the target.
@@ -170,12 +180,12 @@ fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &Str
     };
     let version = get_v8_version_using_metadata()?;
 
-    let rusty_v8_mirror = with_build_envs
+    /*let rusty_v8_mirror = with_build_envs
         .get("RUSTY_V8_MIRROR")
         .expect("RUSTY_V8_MIRROR should be set");
-    let v8_binding_url = format!("{}/v{}/{}", rusty_v8_mirror, version, v8_binding_file_name);
+    let v8_binding_url = format!("{}/v{}/{}", rusty_v8_mirror, version, v8_binding_file_name);*/
 
-    println!("v8 binding url: {}", v8_binding_url);
+    //println!("v8 binding url: {}", v8_binding_url);
 
     // Determine the absolute path for the binding file inside the target directory.
     let current_dir = std::env::current_dir()?;
@@ -183,10 +193,10 @@ fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &Str
     let binding_file_path = target_dir.join(v8_binding_file_name);
 
     // Set the RUSTY_V8_SRC_BINDING_PATH environment variable.
-    with_build_envs.insert(
+    /*with_build_envs.insert(
         "RUSTY_V8_SRC_BINDING_PATH".to_string(),
         binding_file_path.to_string_lossy().to_string(),
-    );
+    );*/
 
     // Ensure the target directory exists.
     if !target_dir.exists() {
@@ -194,7 +204,7 @@ fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &Str
     }
 
     // Download the binding file if it does not already exist.
-    if !binding_file_path.exists() {
+    /*if !binding_file_path.exists() {
         let status = std::process::Command::new("curl")
             .args(&[
                 "-L",
@@ -209,7 +219,7 @@ fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &Str
                 v8_binding_url
             ));
         }
-    }
+    }*/
     Ok(())
 }
 
