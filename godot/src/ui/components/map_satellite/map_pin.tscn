@@ -1,0 +1,70 @@
+[gd_scene load_steps=6 format=3 uid="uid://d0k650qhta26q"]
+
+[ext_resource type="Script" uid="uid://1r5rsta8qsw1" path="res://src/ui/components/map_satellite/map_pin.gd" id="1_ndfeu"]
+[ext_resource type="Texture2D" uid="uid://bs3gvy2pgaqr" path="res://assets/ui/place_categories/music-pin.svg" id="2_hpfdi"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="3_5kvc2"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_y1xt0"]
+font = ExtResource("3_5kvc2")
+font_size = 26
+outline_size = 6
+outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3v801"]
+bg_color = Color(1, 0, 0, 1)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[node name="MapPin" type="TextureRect"]
+offset_right = 102.0
+offset_bottom = 114.0
+pivot_offset = Vector2(51, 107)
+mouse_filter = 0
+mouse_force_pass_scroll_events = false
+mouse_default_cursor_shape = 2
+texture = ExtResource("2_hpfdi")
+script = ExtResource("1_ndfeu")
+
+[node name="Label_SceneTitle" type="Label" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -170.5
+offset_top = -140.0
+offset_right = 170.5
+offset_bottom = -53.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(169.5, 46.5)
+size_flags_horizontal = 4
+text = "Label"
+label_settings = SubResource("LabelSettings_y1xt0")
+horizontal_alignment = 1
+vertical_alignment = 2
+autowrap_mode = 2
+
+[node name="Container_Cluster" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 74.5
+offset_top = -9.0
+offset_right = 114.5
+offset_bottom = 31.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_3v801")
+
+[node name="Label_Cluster" type="Label" parent="Container_Cluster"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "1"
+label_settings = SubResource("LabelSettings_y1xt0")
+horizontal_alignment = 1
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]

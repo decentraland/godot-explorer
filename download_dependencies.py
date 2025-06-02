@@ -5,6 +5,7 @@ import subprocess
 import sys
 import platform
 import glob
+from folder_hash import get_rust_folder_hash
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -67,17 +68,6 @@ def unzip_file(zip_path, extract_to):
         zip_ref.extractall(extract_to)
     print("Extraction complete.")
 
-def get_rust_folder_hash():
-    try:
-        result = subprocess.run(["python", FOLDER_HASH_SCRIPT], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if result.returncode != 0:
-            print("Error running folder_hash.py:\n", result.stderr)
-            return ""
-        return result.stdout.strip().splitlines()[0]
-    except Exception as e:
-        print("Exception during folder hash:", e)
-        return ""
-
 def download_android_dependencies():
     if not os.path.exists(ANDROID_ZIP):
         print("Android dependencies missing. Downloading...")
@@ -110,8 +100,8 @@ def download_ffmpeg_windows():
     os.remove(FFMPEG_ZIP)
     print(f"✅ FFMPEG extracted to {FFMPEG_TARGET}")
 
-def download_rust_lib():
-    rust_hash = get_rust_folder_hash()
+def download_rust_lib(override_hash=None):
+    rust_hash = override_hash or get_rust_folder_hash()
     if not rust_hash:
         print("❌ Failed to compute rust folder hash.")
         return
@@ -136,8 +126,10 @@ def download_rust_lib():
     print(f"✅ Rust lib updated to version {rust_hash}")
 
 if __name__ == "__main__":
+    rust_hash_override = sys.argv[1] if len(sys.argv) > 1 else None
+
     download_android_dependencies()
-    #download_rust_lib()
+    download_rust_lib(override_hash=rust_hash_override)
 
     if platform.system().lower() == "windows":
         download_ffmpeg_windows()
