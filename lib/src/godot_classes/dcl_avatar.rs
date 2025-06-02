@@ -1,3 +1,4 @@
+use crate::godot_classes::dcl_hashing::get_hash_number;
 use godot::prelude::*;
 
 use crate::avatars::avatar_type::DclAvatarWireFormat;
@@ -75,6 +76,33 @@ impl INode3D for DclAvatar {
         }
     }
 }
+
+// Taken from https://github.com/decentraland/unity-explorer/blob/2ec0987a4c880f8723478329a3f2f71e373db288/Explorer/Assets/Scenes/Main.unity#L563
+const NICKNAME_COLORS: [Color; 23] = [
+    Color::from_rgb(0.67138505, 0.38714847, 0.9433962),
+    Color::from_rgb(0.8324557, 0.6273585, 1.0),
+    Color::from_rgb(0.8716914, 0.3820755, 1.0),
+    Color::from_rgb(1.0, 0.2028302, 0.9783837),
+    Color::from_rgb(1.0, 0.3537736, 0.92354745),
+    Color::from_rgb(1.0, 0.5235849, 0.79682314),
+    Color::from_rgb(1.0, 0.7019608, 0.9433204),
+    Color::from_rgb(1.0, 0.28773582, 0.30953965),
+    Color::from_rgb(1.0, 0.4292453, 0.46791336),
+    Color::from_rgb(1.0, 0.6367924, 0.66624165),
+    Color::from_rgb(1.0, 0.5053185, 0.08018869),
+    Color::from_rgb(1.0, 0.65705246, 0.0),
+    Color::from_rgb(1.0, 0.8548728, 0.0),
+    Color::from_rgb(1.0, 0.9431928, 0.6084906),
+    Color::from_rgb(0.51564926, 0.8679245, 0.0),
+    Color::from_rgb(0.6194137, 0.9607843, 0.121568605),
+    Color::from_rgb(0.858401, 1.0, 0.5613208),
+    Color::from_rgb(0.0, 1.0, 0.7287984),
+    Color::from_rgb(0.5330188, 1.0, 0.9353978),
+    Color::from_rgb(0.60784316, 0.8391339, 1.0),
+    Color::from_rgb(0.60784316, 0.6527446, 1.0),
+    Color::from_rgb(0.48584908, 0.7057166, 1.0),
+    Color::from_rgb(0.2783019, 0.7820757, 1.0),
+];
 
 #[godot_api]
 impl DclAvatar {
@@ -180,8 +208,8 @@ impl DclAvatar {
                         prev_scene_id.to_variant(),
                     ],
                 );
+                return true;
             }
-            return true;
         } else if self.current_parcel_scene_id == SceneId::INVALID.0 {
             let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
             let scene_id: i32 = scene_runner
@@ -230,5 +258,11 @@ impl DclAvatar {
                 }
             }
         }
+    }
+
+    #[func]
+    pub fn get_nickname_color(&self, nickname: GString) -> Color {
+        let hash = get_hash_number(nickname.to_string(), 0, NICKNAME_COLORS.len() as i32 - 1);
+        return NICKNAME_COLORS[hash as usize];
     }
 }
