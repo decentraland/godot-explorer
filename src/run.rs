@@ -134,11 +134,12 @@ fn get_v8_version_using_metadata() -> anyhow::Result<String> {
     let metadata = cmd.exec()?;
 
     // Find the package corresponding to "lib/Cargo.toml"
-    let lib_package = metadata.packages
+    let lib_package = metadata
+        .packages
         .iter()
         .find(|pkg| pkg.manifest_path.ends_with("lib/Cargo.toml"))
         .ok_or_else(|| anyhow::anyhow!("lib package not found in cargo metadata"))?;
-    
+
     // Iterate through its dependencies to locate "v8"
     for dependency in &lib_package.dependencies {
         if dependency.name == "v8" {
@@ -151,24 +152,16 @@ fn get_v8_version_using_metadata() -> anyhow::Result<String> {
     Err(anyhow::anyhow!("v8 dependency not found in cargo metadata"))
 }
 
-
 /// Sets up V8 bindings by configuring environment variables and downloading the binding file if needed.
 /// This function is used for both iOS and Android targets.
-fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &String) -> anyhow::Result<()> {
+fn setup_v8_bindings(
+    with_build_envs: &mut HashMap<String, String>,
+    target: &String,
+) -> anyhow::Result<()> {
     // Set the RUSTY_V8_MIRROR environment variable.
-    /*with_build_envs.insert(
-        "RUSTY_V8_MIRROR".to_string(),
-        "https://github.com/leanmendoza/rusty_v8/releases/download".to_string(),
-    );*/
-
     with_build_envs.insert(
-        "RUSTY_V8_ARCHIVE".to_string(),
-        "/Users/kuruk/Projects/rusty_v8/out/v0.106.0/librusty_v8_debug_aarch64-apple-ios.a.gz".to_string(),
-    );
-
-        with_build_envs.insert(
-        "RUSTY_V8_SRC_BINDING_PATH".to_string(),
-        "/Users/kuruk/Projects/rusty_v8/out/v0.106.0/src_binding_debug_aarch64-apple-ios.rs".to_string(),
+        "RUSTY_V8_MIRROR".to_string(),
+        "https://github.com/dclexplorer/rusty_v8/releases/download".to_string(),
     );
 
     // Choose the binding file name based on the target.
@@ -180,10 +173,10 @@ fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &Str
     };
     let version = get_v8_version_using_metadata()?;
 
-    /*let rusty_v8_mirror = with_build_envs
+    let rusty_v8_mirror = with_build_envs
         .get("RUSTY_V8_MIRROR")
         .expect("RUSTY_V8_MIRROR should be set");
-    let v8_binding_url = format!("{}/v{}/{}", rusty_v8_mirror, version, v8_binding_file_name);*/
+    let v8_binding_url = format!("{}/v{}/{}", rusty_v8_mirror, version, v8_binding_file_name);
 
     //println!("v8 binding url: {}", v8_binding_url);
 
@@ -193,10 +186,10 @@ fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &Str
     let binding_file_path = target_dir.join(v8_binding_file_name);
 
     // Set the RUSTY_V8_SRC_BINDING_PATH environment variable.
-    /*with_build_envs.insert(
+    with_build_envs.insert(
         "RUSTY_V8_SRC_BINDING_PATH".to_string(),
         binding_file_path.to_string_lossy().to_string(),
-    );*/
+    );
 
     // Ensure the target directory exists.
     if !target_dir.exists() {
@@ -204,7 +197,7 @@ fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &Str
     }
 
     // Download the binding file if it does not already exist.
-    /*if !binding_file_path.exists() {
+    if !binding_file_path.exists() {
         let status = std::process::Command::new("curl")
             .args(&[
                 "-L",
@@ -219,7 +212,7 @@ fn setup_v8_bindings(with_build_envs: &mut HashMap<String, String>, target: &Str
                 v8_binding_url
             ));
         }
-    }*/
+    }
     Ok(())
 }
 
