@@ -46,9 +46,9 @@ else
     export RUSTFLAGS="-L${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/lib/aarch64-unknown-linux-musl"
 
     # CI 
-    export RUSTY_V8_MIRROR=https://github.com/leanmendoza/rusty_v8/releases/download
+    export RUSTY_V8_MIRROR=https://github.com/dclexplorer/rusty_v8/releases/download
     V8_BINDING_FILE_NAME=src_binding_debug_aarch64-linux-android.rs
-    V8_BINDING=$RUSTY_V8_MIRROR/v0.105.1/$V8_BINDING_FILE_NAME
+    V8_BINDING=$RUSTY_V8_MIRROR/v0.106.0/$V8_BINDING_FILE_NAME
     export RUSTY_V8_SRC_BINDING_PATH=$(pwd)/target/$V8_BINDING_FILE_NAME
     # download if not exists
     if [ ! -f "target/$V8_BINDING_FILE_NAME" ]; then
