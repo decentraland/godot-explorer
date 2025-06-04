@@ -17,7 +17,6 @@ glow_levels/3 = 0.0
 glow_levels/5 = 0.0
 glow_intensity = 1.5
 glow_blend_mode = 1
-glow_hdr_threshold = 0.8
 glow_hdr_scale = 0.0
 fog_density = 0.001
 adjustment_brightness = 1.2

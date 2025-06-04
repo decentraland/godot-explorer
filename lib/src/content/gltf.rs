@@ -187,46 +187,6 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                                     }
                                 }
                             }
-
-                            base_material.set_flag(Flags::ALBEDO_FROM_VERTEX_COLOR, false);
-                            base_material.set_feature(Feature::EMISSION, true);
-
-                            // Induced rules for metallic specular roughness
-                            // - If material has metallic texture then metallic value should be
-                            // multiplied by .5
-                            if let Some(_metallic_texture) =
-                                base_material.get_texture(TextureParam::METALLIC)
-                            {
-                                let mut metallic_value = base_material.get_metallic();
-                                metallic_value *= 0.5;
-                                base_material.set_metallic(metallic_value);
-                            }
-
-                            let material_name = base_material.get_name().to_string();
-                            // Induced rules for emission operator:
-                            // - If material name ends with "emission" -> ADD
-                            // - If material has same texture as emission and albedo -> MULTIPLY
-                            // - else -> ADD
-                            let operator = if material_name.ends_with("emission") {
-                                EmissionOperator::ADD
-                            } else if let Some(emission_texture) =
-                                base_material.get_texture(TextureParam::EMISSION)
-                            {
-                                if let Some(albedo_texture) =
-                                    base_material.get_texture(TextureParam::ALBEDO)
-                                {
-                                    if emission_texture == albedo_texture {
-                                        EmissionOperator::MULTIPLY
-                                    } else {
-                                        EmissionOperator::ADD
-                                    }
-                                } else {
-                                    EmissionOperator::ADD
-                                }
-                            } else {
-                                EmissionOperator::ADD
-                            };
-                            base_material.set_emission_operator(operator);
                         }
                     }
                 }
