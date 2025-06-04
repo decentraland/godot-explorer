@@ -92,7 +92,9 @@ async fn op_crdt_recv_from_renderer(
     let mut receiver = op_state
         .borrow_mut()
         .try_take::<tokio::sync::mpsc::Receiver<RendererResponse>>()
-        .ok_or(anyhow::Error::msg("already borrowed"))?;
+        .ok_or(anyhow::Error::msg(
+            "Failed to borrow `tokio::sync::mpsc::Receiver<RendererResponse>`: it is already borrowed elsewhere. Ensure the receiver is not in use concurrently."
+        ))?;
     let response = receiver.recv().await;
 
     let mut op_state = op_state.borrow_mut();
