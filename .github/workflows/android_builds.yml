@@ -30,7 +30,6 @@ jobs:
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
-          rustup target add x86_64-linux-android
       - name: Cargo install
         run: cargo run -- install --platforms android
       - name: Build
