@@ -353,17 +353,22 @@ pub(crate) fn scene_thread(
         // if the crdtSendToRenderer is not called, we didn't process the RendererResponse, so the SceneKill will be never be processed...
         let main_thread_processed = state.borrow().borrow::<SceneProcessMainThreadMessages>().0;
         if !main_thread_processed {
-            let mut receiver = state
+            let receiver = state
                 .borrow_mut()
-                .take::<tokio::sync::mpsc::Receiver<RendererResponse>>();
-            let response = receiver.blocking_recv();
-            if let Some(RendererResponse::Kill) = response {
-                tracing::info!("scene_id {:?} doesn't process the main thread messages, killing scene from scene thread", scene_id);
-                break;
+                .try_take::<tokio::sync::mpsc::Receiver<RendererResponse>>();
+            
+            if let Some(mut receiver) = receiver {
+                let response = receiver.blocking_recv();
+                if let Some(RendererResponse::Kill) = response {
+                    tracing::info!("scene_id {:?} doesn't process the main thread messages, killing scene from scene thread", scene_id);
+                    break;
+                } else {
+                    state.borrow_mut().put(receiver); // put it again...
+                }
             } else {
-                state.borrow_mut().put(receiver); // put it again...
+                tracing::error!("Failed to take receiver for scene_id {:?}, sleeping for 1000ms", scene_id);
+                std::thread::sleep(Duration::from_millis(1000));
             }
-            break;
         }
 
         let value = state.borrow().borrow::<SceneDying>().0;
@@ -392,6 +397,9 @@ async fn run_script(
     arg_fn: impl for<'a> Fn(&mut v8::HandleScope<'a>) -> Vec<v8::Local<'a, v8::Value>>,
 ) -> Result<(), AnyError> {
     // set up scene i/o
+    let op_state = runtime.op_state();
+    op_state.borrow_mut().put(());
+
     let promise = {
         let scope = &mut runtime.handle_scope();
         let script_this = v8::Local::new(scope, script.clone());
