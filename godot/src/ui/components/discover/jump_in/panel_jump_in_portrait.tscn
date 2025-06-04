@@ -399,3 +399,5 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_4ehdd")
 icon = ExtResource("14_qecj2")
 icon_alignment = 1
 expand_icon = true
+
+[connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
