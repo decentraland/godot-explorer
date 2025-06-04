@@ -170,7 +170,11 @@ impl DclAvatarWireFormat {
     fn set_wearables(&mut self, wearables: PackedStringArray) {
         let mut wearables_vec = Vec::new();
         for i in 0..wearables.len() {
-            wearables_vec.push(wearables.get(i).as_ref().unwrap().to_string());
+            if let Some(wearable) = wearables.get(i).as_ref() {
+                wearables_vec.push(wearable.to_string());
+            } else {
+                tracing::error!("Invalid wearable at index {}", i);
+            }
         }
         self.inner.wearables = wearables_vec;
     }
