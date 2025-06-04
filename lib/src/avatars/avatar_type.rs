@@ -188,9 +188,16 @@ impl DclAvatarWireFormat {
 
         let mut emotes_vec = Vec::new();
         for i in 0..10 {
+            let urn = if let Some(emote) = emotes.get(i).as_ref() {
+                emote.to_string()
+            } else {
+                tracing::error!("Missing emote at slot {}", i);
+                String::new()
+            };
+
             emotes_vec.push(AvatarEmote {
                 slot: i as u32,
-                urn: emotes.get(i).as_ref().unwrap().to_string(),
+                urn,
             });
         }
         self.inner.emotes = Some(emotes_vec);

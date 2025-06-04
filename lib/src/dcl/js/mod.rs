@@ -356,7 +356,7 @@ pub(crate) fn scene_thread(
             let receiver = state
                 .borrow_mut()
                 .try_take::<tokio::sync::mpsc::Receiver<RendererResponse>>();
-            
+
             if let Some(mut receiver) = receiver {
                 let response = receiver.blocking_recv();
                 if let Some(RendererResponse::Kill) = response {
@@ -366,7 +366,10 @@ pub(crate) fn scene_thread(
                     state.borrow_mut().put(receiver); // put it again...
                 }
             } else {
-                tracing::error!("Failed to take receiver for scene_id {:?}, sleeping for 1000ms", scene_id);
+                tracing::error!(
+                    "Failed to take receiver for scene_id {:?}, sleeping for 1000ms",
+                    scene_id
+                );
                 std::thread::sleep(Duration::from_millis(1000));
             }
         }
