@@ -401,3 +401,4 @@ icon_alignment = 1
 expand_icon = true
 
 [connection signal="pressed" from="VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer/MarginContainer/VBoxContainer/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
+[connection signal="pressed" from="Control/Button_Close" to="." method="_on_button_close_pressed"]
