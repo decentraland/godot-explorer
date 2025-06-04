@@ -1,7 +1,7 @@
-[gd_scene load_steps=27 format=3 uid="uid://b8837sg55qd8m"]
+[gd_scene load_steps=31 format=3 uid="uid://b8837sg55qd8m"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gki2s"]
-[ext_resource type="Script" uid="uid://0ncqo78wbgqv" path="res://src/ui/components/discover/jump_in/jump_in.gd" id="1_lek7s"]
+[ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_limbe"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="2_7i6jj"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_wh5hw"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_oea3m"]
@@ -15,6 +15,10 @@
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_yuhpx"]
 [ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="11_t0eof"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="12_eg42m"]
+[ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/Like.svg" id="16_limbe"]
+[ext_resource type="Texture2D" uid="uid://bbfacjlfqblgk" path="res://assets/ui/Dislike.svg" id="17_smlb1"]
+[ext_resource type="Texture2D" uid="uid://dq3skqqbudygj" path="res://assets/ui/heart.svg" id="18_mpouh"]
+[ext_resource type="Texture2D" uid="uid://jwjwv7o28h0o" path="res://assets/ui/share.svg" id="19_guuy4"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_eaed0"]
 bg_color = Color(0.92549, 0.921569, 0.929412, 1)
@@ -64,7 +68,7 @@ offset_left = -324.0
 grow_horizontal = 0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_eaed0")
-script = ExtResource("1_lek7s")
+script = ExtResource("1_limbe")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
@@ -347,6 +351,54 @@ layout_mode = 2
 text = "JUMP IN"
 icon = ExtResource("12_eg42m")
 icon_alignment = 2
+expand_icon = true
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Button_Like" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"WhiteButton"
+toggle_mode = true
+icon = ExtResource("16_limbe")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_Dislike" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"WhiteButton"
+toggle_mode = true
+icon = ExtResource("17_smlb1")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_Fav" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"WhiteButton"
+toggle_mode = true
+icon = ExtResource("18_mpouh")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_Share" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"WhiteButton"
+disabled = true
+toggle_mode = true
+icon = ExtResource("19_guuy4")
+icon_alignment = 1
 expand_icon = true
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
