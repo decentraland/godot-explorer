@@ -1,46 +1,55 @@
-[gd_resource type="Sky" load_steps=18 format=3 uid="uid://l82r2nfrgcbx"]
+[gd_resource type="Sky" load_steps=21 format=3 uid="uid://l82r2nfrgcbx"]
 
 [ext_resource type="Shader" uid="uid://cpu82bv2y58bl" path="res://shaders/sky.gdshader" id="1_bggni"]
+[ext_resource type="Texture2D" uid="uid://byoq8loywg516" path="res://assets/environment/panorama_image.png" id="2_ljc2v"]
 
 [sub_resource type="Gradient" id="Gradient_o4o57"]
-offsets = PackedFloat32Array(0.140436, 0.837772)
-colors = PackedColorArray(0.517251, 0.665659, 1, 1, 1, 1, 1, 1)
+colors = PackedColorArray(0.740011, 0.848556, 0.999999, 1, 1, 1, 1, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_7vh77"]
 gradient = SubResource("Gradient_o4o57")
 width = 2
 
 [sub_resource type="Gradient" id="Gradient_gikcw"]
-colors = PackedColorArray(0.140744, 0.000228958, 0.254497, 1, 0.235358, 0.000198106, 0.719567, 1)
+colors = PackedColorArray(0.343792, 0.000684323, 0.483585, 1, 0.368376, 0.00165907, 0.662806, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_33c0e"]
 gradient = SubResource("Gradient_gikcw")
 width = 2
 
-[sub_resource type="Gradient" id="Gradient_gtks6"]
+[sub_resource type="Gradient" id="Gradient_5s28x"]
+offsets = PackedFloat32Array(0, 0.725632)
 
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_bbgy8"]
-noise_type = 5
-fractal_octaves = 7
-fractal_weighted_strength = 0.25
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_ljc2v"]
+noise_type = 2
+frequency = 0.04
+fractal_type = 2
 
-[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_x8sx6"]
-seamless = true
-seamless_blend_skirt = 0.578
-color_ramp = SubResource("Gradient_gtks6")
-noise = SubResource("FastNoiseLite_bbgy8")
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_8yx6h"]
+width = 64
+height = 64
+color_ramp = SubResource("Gradient_5s28x")
+noise = SubResource("FastNoiseLite_ljc2v")
 
 [sub_resource type="Gradient" id="Gradient_fb67a"]
-offsets = PackedFloat32Array(0, 0.244147, 0.525084, 0.752508, 1)
-colors = PackedColorArray(1, 1, 1, 1, 1, 0.458027, 0.205551, 1, 0.662778, 0.743771, 1, 1, 1, 0.458824, 0.203922, 1, 1, 1, 1, 1)
+offsets = PackedFloat32Array(0, 0.158845, 0.483755, 0.870036, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 0.458027, 0.205551, 1, 0.883214, 0, 0.0726989, 1, 1, 0.458824, 0.203922, 1, 1, 1, 1, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_nrrql"]
 gradient = SubResource("Gradient_fb67a")
 width = 5
 
+[sub_resource type="Gradient" id="Gradient_8yx6h"]
+offsets = PackedFloat32Array(0.483755, 1)
+colors = PackedColorArray(0, 0.599795, 0.873399, 1, 0.121488, 0.000196012, 0.236836, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_8513b"]
+gradient = SubResource("Gradient_8yx6h")
+width = 3
+
 [sub_resource type="Gradient" id="Gradient_paq02"]
-offsets = PackedFloat32Array(0, 0.331104, 0.491639, 0.665552, 1)
-colors = PackedColorArray(0.960784, 0.494118, 0, 1, 0.629251, 0.0174917, 1.92523e-07, 1, 0, 0, 0, 1, 0.559215, 0, 0.146574, 1, 0.960165, 0.492818, 0, 1)
+offsets = PackedFloat32Array(0, 0.241877, 0.491639, 0.776173, 1)
+colors = PackedColorArray(1, 0.54902, 0.176471, 1, 0.629251, 0.0174917, 1.92523e-07, 1, 0, 0, 0, 1, 0.559215, 0, 0.146574, 1, 0.999999, 0.5475, 0.178287, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_c4tp5"]
 gradient = SubResource("Gradient_paq02")
@@ -49,16 +58,16 @@ width = 5
 [sub_resource type="Gradient" id="Gradient_dn7ne"]
 interpolation_mode = 2
 interpolation_color_space = 2
-offsets = PackedFloat32Array(0, 0.38983, 0.79661, 1)
-colors = PackedColorArray(2.52686e-07, 0.159275, 0.233158, 1, 0.362861, 0.000795168, 0.513489, 1, 0, 0.793592, 0.582014, 1, 2.52686e-07, 0.159275, 0.233158, 1)
+offsets = PackedFloat32Array(0, 0.288809, 0.79661, 1)
+colors = PackedColorArray(1, 1, 1, 1, 0.839233, 0.509745, 3.85046e-07, 1, 0.791751, 0, 0.111045, 1, 1, 1, 1, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_g2lqa"]
 gradient = SubResource("Gradient_dn7ne")
 width = 6
 
 [sub_resource type="Gradient" id="Gradient_og5o5"]
-offsets = PackedFloat32Array(0, 0.214047, 0.709443, 1)
-colors = PackedColorArray(1, 1, 1, 1, 0.755973, 0, 0.394386, 1, 1, 0.668246, 0.398002, 1, 1, 1, 1, 1)
+offsets = PackedFloat32Array(0.537906)
+colors = PackedColorArray(1, 1, 1, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_xttk3"]
 gradient = SubResource("Gradient_og5o5")
@@ -66,10 +75,12 @@ width = 6
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fx4kt"]
 shader = ExtResource("1_bggni")
-shader_parameter/clouds_tex = SubResource("NoiseTexture2D_x8sx6")
+shader_parameter/milky_way_noise = SubResource("NoiseTexture2D_8yx6h")
+shader_parameter/clouds_panorama = ExtResource("2_ljc2v")
+shader_parameter/sky_gradient = SubResource("GradientTexture1D_8513b")
 shader_parameter/clouds_gradient_day = SubResource("GradientTexture1D_7vh77")
 shader_parameter/clouds_gradient_night = SubResource("GradientTexture1D_33c0e")
-shader_parameter/energy = 1.0
+shader_parameter/energy = 0.7
 shader_parameter/gamma = 1.0
 shader_parameter/tint_color_cycle_top = SubResource("GradientTexture1D_xttk3")
 shader_parameter/tint_color_cycle_bottom = SubResource("GradientTexture1D_g2lqa")
@@ -77,7 +88,8 @@ shader_parameter/sun_color_cycle = SubResource("GradientTexture1D_c4tp5")
 shader_parameter/moon_color_cycle = SubResource("GradientTexture1D_nrrql")
 shader_parameter/dither_range = 0.1
 shader_parameter/dither_amount = 256.0
-shader_parameter/floor_color = Color(9.14484e-07, 0.301144, 0.386001, 1)
+shader_parameter/other_sun_rotation_offset = Vector2(0.3, 0.3)
+shader_parameter/floor_color = Color(0, 0.301978, 0.158083, 1)
 
 [resource]
 sky_material = SubResource("ShaderMaterial_fx4kt")
