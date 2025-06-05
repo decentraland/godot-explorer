@@ -52,6 +52,7 @@ pub enum SceneState {
 }
 
 pub struct MaterialItem {
+    pub dcl_mat: DclMaterial,
     pub weak_ref: godot::prelude::Variant,
     pub waiting_textures: bool,
     pub alive: bool,
@@ -189,7 +190,7 @@ pub struct Scene {
     pub last_tick_us: i64,
     pub next_tick_us: i64,
 
-    pub materials: HashMap<DclMaterial, MaterialItem>,
+    pub materials: HashMap<SceneEntityId, MaterialItem>,
     pub dirty_materials: bool,
 
     pub scene_type: SceneType,
