@@ -19,8 +19,7 @@ use godot::{
     engine::{
         base_material_3d::{Feature, Flags, ShadingMode, Transparency},
         MeshInstance3D, StandardMaterial3D,
-    },
-    prelude::*,
+    }, global::weakref, prelude::*
 };
 
 pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
