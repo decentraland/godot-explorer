@@ -22,3 +22,5 @@ target/
 *.profraw
 coverage
 godoteditor/
+
+__pycache__
