@@ -46,10 +46,6 @@ window/size/window_width_override=1280
 window/size/window_height_override=720
 window/handheld/orientation=6
 
-[editor]
-
-run/main_run_args="--realm https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest --position 56,-54 --skip-lobby"
-
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/dcl_build_plugin/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/webview-godot-android/plugin.cfg")
