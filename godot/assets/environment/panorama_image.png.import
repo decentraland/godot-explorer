@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://byoq8loywg516"
-path.s3tc="res://.godot/imported/panorama_image.png-dc754b58f8837ad6d82485f39c8f4d1c.s3tc.ctex"
-path.etc2="res://.godot/imported/panorama_image.png-dc754b58f8837ad6d82485f39c8f4d1c.etc2.ctex"
+path.s3tc="res://.godot/imported/panorama_image.png-4a1ba4f2713eef6011c5f5ed67a2ca2d.s3tc.ctex"
+path.etc2="res://.godot/imported/panorama_image.png-4a1ba4f2713eef6011c5f5ed67a2ca2d.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://panorama_image.png"
-dest_files=["res://.godot/imported/panorama_image.png-dc754b58f8837ad6d82485f39c8f4d1c.s3tc.ctex", "res://.godot/imported/panorama_image.png-dc754b58f8837ad6d82485f39c8f4d1c.etc2.ctex"]
+source_file="res://assets/environment/panorama_image.png"
+dest_files=["res://.godot/imported/panorama_image.png-4a1ba4f2713eef6011c5f5ed67a2ca2d.s3tc.ctex", "res://.godot/imported/panorama_image.png-4a1ba4f2713eef6011c5f5ed67a2ca2d.etc2.ctex"]
 
 [params]
 

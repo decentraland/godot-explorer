@@ -1,7 +1,7 @@
 [gd_resource type="Sky" load_steps=21 format=3 uid="uid://l82r2nfrgcbx"]
 
 [ext_resource type="Shader" uid="uid://cpu82bv2y58bl" path="res://shaders/sky.gdshader" id="1_bggni"]
-[ext_resource type="Texture2D" uid="uid://byoq8loywg516" path="res://panorama_image.png" id="2_ljc2v"]
+[ext_resource type="Texture2D" uid="uid://byoq8loywg516" path="res://assets/environment/panorama_image.png" id="2_ljc2v"]
 
 [sub_resource type="Gradient" id="Gradient_o4o57"]
 colors = PackedColorArray(0.740011, 0.848556, 0.999999, 1, 1, 1, 1, 1)
