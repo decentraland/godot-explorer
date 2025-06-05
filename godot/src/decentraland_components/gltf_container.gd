@@ -214,24 +214,29 @@ func apply_fixes(gltf_instance: Node3D):
 
 
 func fix_material(mat: BaseMaterial3D):
-	# Induced rules for metallic specular roughness                                      
-	# - If material has metallic texture then metallic value should be                   
-	# multiplied by .5                                                                   
+	# Induced rules for metallic specular roughness
+	# - If material has metallic texture then metallic value should be
+	# multiplied by .5
 	if mat.metallic_texture:
 		mat.metallic *= .5
-	
+
 	# To replicate foundation
 	mat.vertex_color_use_as_albedo = false
 
 	# Emission rules
 	set_emission_params(mat)
 
-func set_emission_params(mat:BaseMaterial3D):
+
+func set_emission_params(mat: BaseMaterial3D):
 	if mat.resource_name.contains("_emission"):
 		mat.emission_enabled = true
 		return
 
-	if mat.albedo_texture and mat.albedo_texture == mat.emission_texture and mat.emission == Color.BLACK:
+	if (
+		mat.albedo_texture
+		and mat.albedo_texture == mat.emission_texture
+		and mat.emission == Color.BLACK
+	):
 		mat.emission_enabled = false
 		return
 
