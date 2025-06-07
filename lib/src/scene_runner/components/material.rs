@@ -20,9 +20,9 @@ use godot::{
         base_material_3d::{Feature, Flags, ShadingMode, Transparency},
         MeshInstance3D, StandardMaterial3D,
     },
+    global::weakref,
     prelude::*,
 };
-use utilities::weakref;
 
 pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;

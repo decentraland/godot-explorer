@@ -281,6 +281,30 @@ impl SceneCrdtStateProtoComponents {{
 }
 
 fn main() -> io::Result<()> {
+    // ---------- Linux, Android, the BSDs, Windows-gnu, and other ld/LLD users
+    #[cfg(any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "dragonfly",
+        all(windows, target_env = "gnu")   // the MinGW toolchain
+    ))]
+    println!("cargo:rustc-link-arg=-Wl,--allow-multiple-definition");
+
+    // ---------- macOS & iOS (Apple ld64)
+    //
+    //  -multiply_defined,suppress   = choose first definition, ignore the rest
+    #[cfg(any(target_vendor = "apple", target_os = "ios"))]
+    println!("cargo:rustc-link-arg=-Wl,-multiply_defined,suppress");
+
+    // ---------- Windows MSVC (link.exe or lld-link)
+    //
+    //  /FORCE:MULTIPLE  = keep first symbol, drop duplicates
+    #[cfg(all(windows, target_env = "msvc"))]
+    println!("cargo:rustc-link-arg=/FORCE:MULTIPLE");
+
     let mut proto_components = vec![];
     let mut proto_files = vec![];
     let dir_path = Path::new(COMPONENT_BASE_DIR);

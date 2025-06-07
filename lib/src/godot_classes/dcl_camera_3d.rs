@@ -15,7 +15,7 @@ pub struct DclCamera3D {
 }
 
 #[godot_api]
-impl INode3D for DclCamera3D {
+impl ICamera3D for DclCamera3D {
     fn process(&mut self, delta: f64) {
         let speed = self.get_smoothing_speed();
         let current_fov = self.base().get_fov();
