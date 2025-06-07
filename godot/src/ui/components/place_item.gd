@@ -9,6 +9,7 @@ const DISLIKE = preload("res://assets/ui/dislike.svg")
 const DISLIKE_SOLID = preload("res://assets/ui/dislike_solid.svg")
 const LIKE = preload("res://assets/ui/like.svg")
 const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
+const PLACES_API_BASE_URL = "https://places.decentraland.org/api"
 
 @export var texture: Texture2D = texture_placeholder
 @export var title: String = "Scene Title"
@@ -23,13 +24,13 @@ const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
 
 var texture_placeholder = load("res://assets/ui/placeholder.png")
 var _data = null
+var _id = null
 var _node_cache: Dictionary = {}
 
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	_connect_signals()
-	_update_buttons_icons()
 
 	if metadata.is_empty():
 		set_image(texture)
@@ -53,6 +54,10 @@ func _get_button_close() -> Button:
 	return _get_node_safe("Button_Close")
 
 
+func _get_buttons_container() -> HBoxContainer:
+	return _get_node_safe("HBoxContainer_Buttons")
+	
+	
 func _get_button_like() -> Button:
 	return _get_node_safe("Button_Like")
 
@@ -208,6 +213,8 @@ func set_creator(_creator: String):
 
 func set_data(item_data):
 	_data = item_data
+	_update_buttons_icons()
+
 	set_title(item_data.get("title", ""))
 	set_description(_get_or_empty_string(item_data, "description"))
 
@@ -215,7 +222,7 @@ func set_data(item_data):
 	var like_score = item_data.get("like_score", 0.0)
 	set_likes_percent(like_score if like_score is float else 0.0)
 	set_online(item_data.get("user_count", 0))
-
+	
 	if _get_texture_image():
 		var image_url = item_data.get("image", "")
 		if not image_url.is_empty():
@@ -298,31 +305,128 @@ func _on_button_share_pressed() -> void:
 
 
 func _on_button_like_toggled(toggled_on: bool) -> void:
-	print("like: ", toggled_on)
-	_update_buttons_icons()
-
-
-func _on_button_dislike_toggled(toggled_on: bool) -> void:
-	print("dislike: ", toggled_on)
-	_update_buttons_icons()
-
-
-func _on_button_fav_toggled(toggled_on: bool) -> void:
-	print("fav: ", toggled_on)
-
-
-func _update_buttons_icons() -> void:
+	var place_id = _data.get("id", null)
 	var button_like = _get_button_like()
 	var button_dislike = _get_button_dislike()
 	
+	if place_id == null:
+		if button_like:
+			button_like.set_pressed_no_signal(!toggled_on)
+		return
+		
+	var url = PLACES_API_BASE_URL + "/places/" + place_id + "/likes"
+	var body: String
+	
+	if toggled_on:
+		# Activar like
+		body = JSON.stringify({ like = true })
+		# Desactivar dislike visualmente si estaba activado
+		if button_dislike and button_dislike.is_pressed():
+			button_dislike.set_pressed_no_signal(false)
+	else:
+		# Desactivar like (volver a neutral)
+		body = JSON.stringify({ like = null })
+	
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+	if response != null:
+		await _update_buttons_icons()
+	else:
+		# Revertir el estado del botón si falló el PATCH
+		if button_like:
+			button_like.set_pressed_no_signal(!toggled_on)
+		printerr("Error patching likes")
+
+
+func _on_button_dislike_toggled(toggled_on: bool) -> void:
+	var place_id = _data.get("id", null)
+	var button_dislike = _get_button_dislike()
+	var button_like = _get_button_like()
+	
+	if place_id == null:
+		if button_dislike:
+			button_dislike.set_pressed_no_signal(!toggled_on)
+		return
+		
+	var url = PLACES_API_BASE_URL + "/places/" + place_id + "/likes"
+	var body
+	
+	if toggled_on:
+		# Activar dislike
+		body = JSON.stringify({ like = false })
+		# Desactivar like visualmente si estaba activado
+		if button_like and button_like.is_pressed():
+			button_like.set_pressed_no_signal(false)
+	else:
+		# Desactivar dislike (volver a neutral)
+		body = JSON.stringify({ like = null })
+	
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+	if response != null:
+		await _update_buttons_icons()
+	else:
+		if button_dislike:
+			button_dislike.set_pressed_no_signal(!toggled_on)
+		printerr("Error patching likes")
+
+
+func _on_button_fav_toggled(toggled_on: bool) -> void:
+	var place_id = _data.get("id", null)
+	var button_fav = _get_button_fav()
+	
+	if place_id == null:
+		if button_fav:
+			button_fav.set_pressed_no_signal(!toggled_on)
+		return
+		
+	var url = PLACES_API_BASE_URL + "/places/" + place_id + "/favorites"
+	var body = JSON.stringify({ favorites = toggled_on })
+	
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+	if response != null:
+		await _update_buttons_icons()
+	else:
+		if button_fav:
+			button_fav.set_pressed_no_signal(!toggled_on)
+		printerr("Error patching favorites")
+
+
+func _update_buttons_icons() -> void:
+	var place_id = _data.get("id", null)
+	var buttons_container = _get_buttons_container()
+	
+	if place_id == null:
+		if buttons_container:
+			buttons_container.visible = false
+		return
+		
+	if buttons_container:	
+		buttons_container.visible = true
+	
+	var url = PLACES_API_BASE_URL + "/places/" + place_id
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
+	
+	if response == null:
+		printerr("Error al obtener datos del lugar")
+		return
+		
+	var place_data = response.data
+	var button_like = _get_button_like()
+	var button_dislike = _get_button_dislike()
+	var button_fav = _get_button_fav()
+	
 	if button_like:
+		button_like.set_pressed_no_signal(place_data.user_like)
 		if button_like.is_pressed():
 			button_like.icon = LIKE_SOLID
 		else:
 			button_like.icon = LIKE
 	
 	if button_dislike:
+		button_dislike.set_pressed_no_signal(place_data.user_dislike)
 		if button_dislike.is_pressed():
 			button_dislike.icon = DISLIKE_SOLID
 		else:
 			button_dislike.icon = DISLIKE
+	
+	if button_fav:
+		button_fav.set_pressed_no_signal(place_data.user_favorite)

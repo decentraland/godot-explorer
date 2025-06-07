@@ -364,10 +364,11 @@ icon = ExtResource("12_eg42m")
 icon_alignment = 2
 expand_icon = true
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
+[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Button_Like" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2"]
+[node name="Button_Like" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(46, 46)
 layout_mode = 2
@@ -386,7 +387,7 @@ icon = ExtResource("16_limbe")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Dislike" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2"]
+[node name="Button_Dislike" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(46, 46)
 layout_mode = 2
@@ -405,7 +406,7 @@ icon = ExtResource("17_smlb1")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Fav" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2"]
+[node name="Button_Fav" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(46, 46)
 layout_mode = 2
@@ -423,7 +424,7 @@ icon = ExtResource("18_mpouh")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Share" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2"]
+[node name="Button_Share" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons"]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(46, 46)
@@ -465,7 +466,7 @@ autowrap_mode = 2
 
 [connection signal="pressed" from="VBoxContainer/TextureRect_Image/Button_Close" to="." method="_on_button_close_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2/Button_Like" to="." method="_on_button_like_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2/Button_Dislike" to="." method="_on_button_dislike_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2/Button_Fav" to="." method="_on_button_fav_toggled"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer2/Button_Share" to="." method="_on_button_share_pressed"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons/Button_Like" to="." method="_on_button_like_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons/Button_Dislike" to="." method="_on_button_dislike_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons/Button_Fav" to="." method="_on_button_fav_toggled"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons/Button_Share" to="." method="_on_button_share_pressed"]
