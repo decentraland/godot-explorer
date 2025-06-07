@@ -29,4 +29,8 @@ script = ExtResource("1_sxikl")
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_ncxa3")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+visible = false
+
+[node name="MoonLight" type="DirectionalLight3D" parent="."]
+visible = false
