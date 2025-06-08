@@ -128,8 +128,6 @@ func _process(delta):
 
 		player_body.velocity += final_thrust * jetpack_force * delta
 
-		prints("Applying force...", player_body.velocity)
-
 
 func _on_right_hand_button_pressed(xr_action_name):
 	var action = right_control_map_actions.get(xr_action_name)

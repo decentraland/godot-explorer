@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://daypireqakfqb"
-path.s3tc="res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.s3tc.ctex"
-path.etc2="res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.etc2.ctex"
+path.bptc="res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.bptc.ctex"
+path.astc="res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -13,17 +13,17 @@ metadata={
 [deps]
 
 source_file="res://assets/environment/StarDust.png"
-dest_files=["res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.s3tc.ctex", "res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.etc2.ctex"]
+dest_files=["res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.bptc.ctex", "res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
