@@ -134,7 +134,7 @@ void sky() {
     vec3 clouds_sample = textureLod(clouds_panorama, theta_phi.yx * vec2(1.0,-1.0),0.0).rgb;
     float clouds_mask = 1.0 - clouds_sample.r;
     float clouds_gradient = clouds_sample.g;
-    
+
 	float sun_shape = max(
       smoothstep(.99+horizon_distortion*.05, 1.0, abs(dot_val+.0025*gold_noise(FRAGCOORD.xy, 1.0))+horizon*.02),
       smoothstep(.998+horizon_distortion*.02, 1.0, abs(dot_val_offset+.0015*gold_noise(FRAGCOORD.xy, 1.0))+horizon*.02)

@@ -22,34 +22,34 @@
 _data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
 point_count = 2
 
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_1id24"]
+animation = &"Grip"
+
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_tstu5"]
 animation = &"Grip"
 
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_ms2i7"]
-animation = &"Grip"
-
-[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_thuec"]
+[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_ms2i7"]
 filter_enabled = true
 filters = ["Armature/Skeleton3D:Little_Distal_R", "Armature/Skeleton3D:Little_Intermediate_R", "Armature/Skeleton3D:Little_Metacarpal_R", "Armature/Skeleton3D:Little_Proximal_R", "Armature/Skeleton3D:Middle_Distal_R", "Armature/Skeleton3D:Middle_Intermediate_R", "Armature/Skeleton3D:Middle_Metacarpal_R", "Armature/Skeleton3D:Middle_Proximal_R", "Armature/Skeleton3D:Ring_Distal_R", "Armature/Skeleton3D:Ring_Intermediate_R", "Armature/Skeleton3D:Ring_Metacarpal_R", "Armature/Skeleton3D:Ring_Proximal_R", "Armature/Skeleton3D:Thumb_Distal_R", "Armature/Skeleton3D:Thumb_Metacarpal_R", "Armature/Skeleton3D:Thumb_Proximal_R", "Armature/Skeleton:Little_Distal_R", "Armature/Skeleton:Little_Intermediate_R", "Armature/Skeleton:Little_Proximal_R", "Armature/Skeleton:Middle_Distal_R", "Armature/Skeleton:Middle_Intermediate_R", "Armature/Skeleton:Middle_Proximal_R", "Armature/Skeleton:Ring_Distal_R", "Armature/Skeleton:Ring_Intermediate_R", "Armature/Skeleton:Ring_Proximal_R", "Armature/Skeleton:Thumb_Distal_R", "Armature/Skeleton:Thumb_Proximal_R"]
 
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_qwo35"]
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_thuec"]
 animation = &"Grip 5"
 
-[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_eb1ah"]
+[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_qwo35"]
 filter_enabled = true
 filters = ["Armature/Skeleton3D:Index_Distal_R", "Armature/Skeleton3D:Index_Intermediate_R", "Armature/Skeleton3D:Index_Metacarpal_R", "Armature/Skeleton3D:Index_Proximal_R", "Armature/Skeleton:Index_Distal_R", "Armature/Skeleton:Index_Intermediate_R", "Armature/Skeleton:Index_Proximal_R"]
 
-[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_bjl1i"]
+[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_eb1ah"]
 graph_offset = Vector2(-552.664, 107.301)
-nodes/ClosedHand1/node = SubResource("AnimationNodeAnimation_tstu5")
+nodes/ClosedHand1/node = SubResource("AnimationNodeAnimation_1id24")
 nodes/ClosedHand1/position = Vector2(-600, 300)
-nodes/ClosedHand2/node = SubResource("AnimationNodeAnimation_ms2i7")
+nodes/ClosedHand2/node = SubResource("AnimationNodeAnimation_tstu5")
 nodes/ClosedHand2/position = Vector2(-360, 300)
-nodes/Grip/node = SubResource("AnimationNodeBlend2_thuec")
+nodes/Grip/node = SubResource("AnimationNodeBlend2_ms2i7")
 nodes/Grip/position = Vector2(0, 40)
-nodes/OpenHand/node = SubResource("AnimationNodeAnimation_qwo35")
+nodes/OpenHand/node = SubResource("AnimationNodeAnimation_thuec")
 nodes/OpenHand/position = Vector2(-600, 100)
-nodes/Trigger/node = SubResource("AnimationNodeBlend2_eb1ah")
+nodes/Trigger/node = SubResource("AnimationNodeBlend2_qwo35")
 nodes/Trigger/position = Vector2(-360, 40)
 node_connections = [&"Grip", 0, &"Trigger", &"Grip", 1, &"ClosedHand2", &"Trigger", 0, &"OpenHand", &"Trigger", 1, &"ClosedHand1", &"output", 0, &"Grip"]
 
@@ -132,7 +132,7 @@ bone_idx = 9
 
 [node name="AnimationTree" parent="RightHand/RightHand" index="1"]
 root_node = NodePath("../Hand_Glove_low_R")
-tree_root = SubResource("AnimationNodeBlendTree_bjl1i")
+tree_root = SubResource("AnimationNodeBlendTree_eb1ah")
 
 [node name="MicrophoneGltf" parent="RightHand" instance=ExtResource("5_lohwq")]
 unique_name_in_owner = true
@@ -145,14 +145,8 @@ transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0.0134784, -0.0923617, 
 [node name="MovementDirect" parent="RightHand" instance=ExtResource("7_ergla")]
 
 [node name="PlayerBody" parent="." instance=ExtResource("8_4m0vb")]
-collision_layer = 2148007939
-collision_mask = 2148007939
-slide_on_ceiling = false
-wall_min_slide_angle = 0.785398
-floor_snap_length = 0.4
-platform_on_leave = 2
-platform_floor_layers = 2148007939
-platform_wall_layers = 2148007939
+collision_layer = 0
+collision_mask = 2
 push_rigid_bodies = false
 physics = SubResource("Resource_3ty7k")
 ground_control = 1
