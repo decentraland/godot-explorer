@@ -69,15 +69,6 @@ unique_name_in_owner = true
 [node name="EnvironmentSelector" parent="world" instance=ExtResource("4_f5cdi")]
 unique_name_in_owner = true
 
-[node name="SceneUIContainer" type="MarginContainer" parent="."]
-unique_name_in_owner = true
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("5_c8ksg")
-
 [node name="UI" type="Control" parent="."]
 unique_name_in_owner = true
 layout_mode = 3
@@ -317,6 +308,17 @@ theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="SceneUIContainer" type="MarginContainer" parent="UI"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_c8ksg")
 
 [node name="Timer_FPSLabel" type="Timer" parent="UI"]
 autostart = true

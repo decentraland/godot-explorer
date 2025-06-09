@@ -466,9 +466,10 @@ func _on_h_slider_scene_radius_drag_ended(_value_changed: bool) -> void:
 
 
 func _on_h_slider_skybox_time_drag_started() -> void:
-	var main_camera = get_viewport().get_camera_3d()
-	preview_camera_3d.global_transform = main_camera.global_transform
-	preview_viewport_container.show()
+	var main_camera = get_tree().root.get_camera_3d()
+	if main_camera != null:
+		preview_camera_3d.global_transform = main_camera.global_transform
+		preview_viewport_container.show()
 
 
 func _on_h_slider_skybox_time_drag_ended(_value_changed: bool) -> void:

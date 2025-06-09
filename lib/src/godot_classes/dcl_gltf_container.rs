@@ -141,14 +141,14 @@ impl DclGltfContainer {
             } else {
                 let animation_list = animation_player.get_animation_list();
                 let animation_name = if animation_list.len() > 1 {
-                    let value = animation_list.get(0).to_string();
+                    let value = animation_list.get(0).as_ref().unwrap().to_string();
                     if value == DUMMY_ANIMATION_NAME {
-                        animation_list.get(1).to_string()
+                        animation_list.get(1).as_ref().unwrap().to_string()
                     } else {
                         value
                     }
                 } else if !animation_list.is_empty() {
-                    animation_list.get(0).to_string()
+                    animation_list.get(0).as_ref().unwrap().to_string()
                 } else {
                     return;
                 };

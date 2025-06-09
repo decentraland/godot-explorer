@@ -53,8 +53,7 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
             let source_file = format!(
                 "{RUST_LIB_PROJECT_FOLDER}target/aarch64-apple-ios/{mode}/libdclgodot.dylib"
             );
-            let dest =
-                format!("{RUST_LIB_PROJECT_FOLDER}target/libdclgodot_ios/libdclgodot.dylib");
+            let dest = format!("{RUST_LIB_PROJECT_FOLDER}target/libdclgodot_ios/libdclgodot.dylib");
 
             copy_with_error_context(&source_file, &dest, false)?;
 
@@ -75,8 +74,7 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                 "libdclgodot_android"
             };
 
-            let dest =
-                format!("{RUST_LIB_PROJECT_FOLDER}target/${android_folder}/libdclgodot.so");
+            let dest = format!("{RUST_LIB_PROJECT_FOLDER}target/${android_folder}/libdclgodot.so");
 
             copy_with_error_context(&source_file, &dest, false)?;
 
@@ -116,16 +114,14 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
             let lib_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/", output_folder_name);
             let destination_path = format!("{lib_folder}/{file_name}");
 
-            copy_with_error_context(&source_path, &destination_path, false).map_err(
-                |e| {
-                    anyhow::anyhow!(
-                        "Failed to copy from {:?} to {:?}: {}",
-                        source_path,
-                        destination_path,
-                        e
-                    )
-                },
-            )?;
+            copy_with_error_context(&source_path, &destination_path, false).map_err(|e| {
+                anyhow::anyhow!(
+                    "Failed to copy from {:?} to {:?}: {}",
+                    source_path,
+                    destination_path,
+                    e
+                )
+            })?;
 
             // If on Windows and debug mode, also copy PDB
             if debug_mode && target == "win64" {

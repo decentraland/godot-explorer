@@ -86,7 +86,8 @@ func pose_recentered():
 	XRServer.center_on_hmd(XRServer.RESET_BUT_KEEP_TILT, true)
 
 
-func _process(delta):
+func _physics_process(delta: float) -> void:
+	position.y = max(position.y, 0)
 	# Skip if no camera to track
 	if !xr_camera:
 		return
@@ -127,8 +128,6 @@ func _process(delta):
 		var final_thrust = scaled_thrust.normalized()
 
 		player_body.velocity += final_thrust * jetpack_force * delta
-
-		prints("Applying force...", player_body.velocity)
 
 
 func _on_right_hand_button_pressed(xr_action_name):

@@ -67,20 +67,26 @@ impl DclTestingTools {
             diff_img.save_png(save_diff_to_path);
         }
 
-        let mut data_diff_factor = Vec::with_capacity(pixel_count);
+        // ---------------- Similarity computation ----------------
+        // Accumulate the squared channel differences directly to avoid extra
+        // allocations and possible integer overflows.
+        let mut summatory: u64 = 0;
         for pixel_index in 0..pixel_count {
             let index = pixel_index * 3;
             let [r, g, b] = &data_diff[index..index + 3] else {
                 panic!("Invalid index");
             };
-            let diff_sum_i = ((*r as i32) * (*r as i32))
-                + ((*g as i32) * (*g as i32))
-                + ((*b as i32) * (*b as i32));
-            data_diff_factor.push(diff_sum_i);
+            let dr = *r as i64;
+            let dg = *g as i64;
+            let db = *b as i64;
+            summatory += (dr * dr + dg * dg + db * db) as u64;
         }
+        let summatory = summatory as f64;
 
-        let summatory = data_diff_factor.iter().sum::<i32>() as f64;
-        let factor = 1.0 / (3 * (u8::MAX as usize).pow(2) * pixel_count) as f64;
+        // Do the large multiplication in floating-point space to prevent any
+        // intermediate usize overflows.
+        let denom = 3.0 * (u8::MAX as f64).powi(2) * pixel_count as f64;
+        let factor = 1.0 / denom;
         let score: f64 = (1.0 - factor * summatory).sqrt();
 
         score

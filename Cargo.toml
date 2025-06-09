@@ -19,3 +19,4 @@ glob = "*"
 tokio = { version = "1.26.0", features = ["sync", "rt-multi-thread", "net"] }
 directories = "5.0.1"
 image = "0.24.9"
+cargo_metadata = "0.19.2"

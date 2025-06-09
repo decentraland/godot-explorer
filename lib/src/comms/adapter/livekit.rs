@@ -11,7 +11,7 @@ use livekit::{
         audio_source::native::NativeAudioSource,
         prelude::{AudioSourceOptions, RtcAudioSource},
     },
-    DataPacket, DataPacketKind, RoomOptions,
+    DataPacket, RoomOptions,
 };
 use prost::Message;
 
@@ -411,7 +411,7 @@ fn spawn_livekit_task(
             echo_cancellation: true,
             noise_suppression: true,
             auto_gain_control: true,
-        }, 48000, 1);
+        }, 48000, 1, None);
         let mic_track = LocalTrack::Audio(LocalAudioTrack::create_audio_track("mic", RtcAudioSource::Native(native_source.clone())));
         room.local_participant().publish_track(mic_track, TrackPublishOptions{ source: TrackSource::Microphone, ..Default::default() }).await.unwrap();
 
@@ -473,7 +473,7 @@ fn spawn_livekit_task(
                                     livekit::track::RemoteTrack::Audio(audio) => {
                                         let sender = sender.clone();
                                         rt2.spawn(async move {
-                                            let mut x = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track());
+                                            let mut x = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track(), 48000, 1);
 
                                             tracing::debug!("remove track from {:?}", participant.identity().0.as_str());
 
@@ -519,12 +519,8 @@ fn spawn_livekit_task(
                         break 'stream;
                     };
 
-                    let kind = if outgoing.unreliable {
-                        DataPacketKind::Lossy
-                    } else {
-                        DataPacketKind::Reliable
-                    };
-                    if let Err(e) = room.local_participant().publish_data(DataPacket { payload: outgoing.data, kind, ..Default::default() }).await {
+                    let reliable = !outgoing.unreliable;
+                    if let Err(e) = room.local_participant().publish_data(DataPacket { payload: outgoing.data, reliable, ..Default::default() }).await {
                         tracing::debug!("outgoing failed: {e}; not exiting loop though since it often fails at least once or twice at the start...");
                         // break 'stream;
                     };
