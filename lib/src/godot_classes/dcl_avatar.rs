@@ -263,6 +263,6 @@ impl DclAvatar {
     #[func]
     pub fn get_nickname_color(&self, nickname: GString) -> Color {
         let hash = get_hash_number(nickname.to_string(), 0, NICKNAME_COLORS.len() as i32 - 1);
-        NICKNAME_COLORS[hash as usize];
+        NICKNAME_COLORS[hash as usize]
     }
 }
