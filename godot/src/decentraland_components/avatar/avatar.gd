@@ -51,6 +51,7 @@ var wearable_promises = null
 
 @onready var avatar_modifier_area_detector = $avatar_modifier_area_detector
 
+
 func _ready():
 	var billboard_mode = (
 		BaseMaterial3D.BillboardMode.BILLBOARD_FIXED_Y
@@ -135,7 +136,6 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 
 	var wearable_to_request := []
 
-
 	var splitted_nickname = new_avatar_name.split("#", false)
 	nickname_ui.nickname = splitted_nickname[0]
 	if splitted_nickname.size() > 1:
@@ -145,7 +145,6 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 
 	if hide_name:
 		nickname_quad.hide()
-	
 
 	wearable_to_request.append_array(avatar_data.get_wearables())
 
