@@ -18,7 +18,7 @@ func _on_change_parcel(_position: Vector2i):
 func _on_change_scene_id(scene_id: int):
 	texture_rect_sdk6.hide()
 	if scene_id == -1:
-		label_scene_title.hide()
+		label_scene_title.text = 'Unknown place'
 		return
 
 	var scene = Global.scene_fetcher.get_scene_data_by_scene_id(scene_id)
@@ -27,4 +27,5 @@ func _on_change_scene_id(scene_id: int):
 		label_scene_title.text = scene.scene_entity_definition.get_title()
 		label_scene_title.show()
 	else:
-		label_scene_title.hide()
+		label_scene_title.text = 'Unknown place'
+		label_scene_title.show()
