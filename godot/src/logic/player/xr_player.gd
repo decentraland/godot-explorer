@@ -86,7 +86,8 @@ func pose_recentered():
 	XRServer.center_on_hmd(XRServer.RESET_BUT_KEEP_TILT, true)
 
 
-func _process(delta):
+func _physics_process(delta: float) -> void:
+	position.y = max(position.y, 0)
 	# Skip if no camera to track
 	if !xr_camera:
 		return

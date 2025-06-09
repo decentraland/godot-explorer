@@ -96,6 +96,9 @@ viewport_size = Vector2(1280, 720)
 unshaded = true
 scene_properties_keys = PackedStringArray("vr_menu_watch.gd")
 
+[node name="MovementDirect" parent="LeftHand" instance=ExtResource("7_ergla")]
+strafe = true
+
 [node name="RightHand" type="XRController3D" parent="."]
 tracker = &"right_hand"
 
@@ -142,11 +145,15 @@ transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0.0134784, -0.0923617, 
 
 [node name="MovementTurn" parent="RightHand" instance=ExtResource("6_1eggb")]
 
-[node name="MovementDirect" parent="RightHand" instance=ExtResource("7_ergla")]
-
 [node name="PlayerBody" parent="." instance=ExtResource("8_4m0vb")]
-collision_layer = 0
-collision_mask = 2
+collision_layer = 2148007939
+collision_mask = 2148007939
+slide_on_ceiling = false
+wall_min_slide_angle = 0.785398
+floor_snap_length = 0.4
+platform_on_leave = 2
+platform_floor_layers = 2148007939
+platform_wall_layers = 2148007939
 push_rigid_bodies = false
 physics = SubResource("Resource_3ty7k")
 ground_control = 1
