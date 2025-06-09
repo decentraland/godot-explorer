@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc, time::Duration};
 
-use deno_core::{error::AnyError, op, Op, OpDecl, OpState};
+use deno_core::{error::AnyError, op2, OpDecl, OpState};
 use http::HeaderValue;
 use reqwest::Response;
 use serde::Serialize;
@@ -18,10 +18,10 @@ mod signed_fetch;
 
 pub fn ops() -> Vec<OpDecl> {
     vec![
-        op_fetch_custom::DECL,
-        op_fetch_consume_text::DECL,
-        op_fetch_consume_bytes::DECL,
-        signed_fetch::op_signed_fetch_headers::DECL,
+        op_fetch_custom(),
+        op_fetch_consume_text(),
+        op_fetch_consume_bytes(),
+        signed_fetch::op_signed_fetch_headers(),
     ]
 }
 
@@ -71,15 +71,17 @@ impl FetchRequestsState {
     }
 }
 
-#[op]
+#[op2(async)]
+#[serde]
+#[allow(clippy::too_many_arguments)]
 async fn op_fetch_custom(
     op_state: Rc<RefCell<OpState>>,
-    method: String,
-    url: String,
-    headers: HashMap<String, String>,
+    #[string] method: String,
+    #[string] url: String,
+    #[serde] headers: HashMap<String, String>,
     has_body: bool,
-    body_data: String,
-    _redirect: String, // TODO: unimplemented
+    #[string] body_data: String,
+    #[string] _redirect: String, // TODO: unimplemented
     timeout: u32,
 ) -> Result<FetchResponse, AnyError> {
     let maybe_network_inspector_sender = op_state
@@ -282,7 +284,8 @@ async fn op_fetch_custom(
     }
 }
 
-#[op]
+#[op2(async)]
+#[string]
 async fn op_fetch_consume_text(
     op_state: Rc<RefCell<OpState>>,
     req_id: u32,
@@ -371,7 +374,8 @@ async fn op_fetch_consume_text(
     }
     Err(anyhow::Error::msg("couldn't get response"))
 }
-#[op]
+#[op2(async)]
+#[serde]
 async fn op_fetch_consume_bytes(
     op_state: Rc<RefCell<OpState>>,
     req_id: u32,
