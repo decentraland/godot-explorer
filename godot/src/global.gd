@@ -385,7 +385,6 @@ func async_signed_fetch(url:String, method:int, _body:String=""):
 		
 	var headers: Dictionary = headers_result
 	
-	# Agregar Content-Type si hay un cuerpo en el request
 	if not _body.is_empty():
 		headers["Content-Type"] = "application/json"
 	
