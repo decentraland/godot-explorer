@@ -3,10 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use godot::{
     builtin::{meta::ToGodot, Dictionary, GString, Variant, VariantArray},
     engine::{
-        animation::TrackType,
-        base_material_3d::{DiffuseMode, Feature, Flags, SpecularMode, TextureParam},
-        global::Error,
-        node::ProcessMode,
+        animation::TrackType, base_material_3d::TextureParam, global::Error, node::ProcessMode,
         AnimatableBody3D, Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D,
         CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture,
         MeshInstance3D, Node, Node3D, StaticBody3D,
@@ -187,14 +184,6 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32) {
                                     }
                                 }
                             }
-
-                            base_material.set_flag(Flags::ALBEDO_FROM_VERTEX_COLOR, false);
-                            base_material.set_feature(Feature::EMISSION, true);
-
-                            // Set Toon
-                            base_material.set_roughness(0.0);
-                            base_material.set_specular_mode(SpecularMode::DISABLED);
-                            base_material.set_diffuse_mode(DiffuseMode::TOON);
                         }
                     }
                 }

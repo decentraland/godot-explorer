@@ -208,17 +208,50 @@ func apply_fixes(gltf_instance: Node3D):
 
 	for instance in meshes:
 		var mesh = instance.mesh
-		for idx in mesh.get_surface_count():
+		for idx in range(mesh.get_surface_count()):
 			var material = mesh.surface_get_material(idx)
 			fix_material(material)
 
 
 func fix_material(mat: BaseMaterial3D):
-	# HACK: Workaround to fix an import error that sets the emisison texture as the albedo texture.
-	mat.emission_texture = null
+	# Induced rules for metallic specular roughness
+	# - If material has metallic texture then metallic value should be
+	# multiplied by .5
+	if mat.metallic_texture:
+		mat.metallic *= .5
 
-	# HACK: Workaround to fix an import error where materials would have
+	# To replicate foundation
 	mat.vertex_color_use_as_albedo = false
+
+	# Emission rules
+	set_emission_params(mat)
+
+
+func set_emission_params(mat: BaseMaterial3D):
+	if mat.resource_name.contains("_emission"):
+		mat.emission_enabled = true
+		return
+
+	if (
+		mat.albedo_texture
+		and mat.albedo_texture == mat.emission_texture
+		and mat.emission == Color.BLACK
+	):
+		mat.emission_enabled = false
+		return
+
+	if !mat.albedo_texture and !mat.emission_texture and mat.emission != Color.BLACK:
+		mat.emission_enabled = true
+		mat.emission_energy_multiplier = 1.0
+		mat.emission_operator = BaseMaterial3D.EMISSION_OP_ADD
+		return
+
+	if mat.albedo_texture and mat.emission_texture and mat.emission == Color.BLACK:
+		mat.emission_enabled = true
+		mat.emission_energy_multiplier = 2.0
+		mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
+		mat.emission = Color.WHITE
+		return
 
 
 func async_deferred_add_child():

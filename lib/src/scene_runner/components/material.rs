@@ -17,7 +17,7 @@ use crate::{
 };
 use godot::{
     engine::{
-        base_material_3d::{Feature, ShadingMode, Transparency},
+        base_material_3d::{Feature, Flags, ShadingMode, Transparency},
         MeshInstance3D, StandardMaterial3D,
     },
     prelude::*,
@@ -124,6 +124,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         godot_material.set_specular(0.0);
 
                         godot_material.set_shading_mode(ShadingMode::UNSHADED);
+                        godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
                         godot_material
                             .set_albedo(unlit.diffuse_color.0.to_godot().linear_to_srgb());
                     }
@@ -139,12 +140,12 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             .multiply(pbr.emissive_intensity.0);
 
                         // In the Mobile renderer, HDR will be capped at 2.0 so we'll have to reduce the energy multiplier to be able to see fluctuations in energy
-                        godot_material.set_emission_energy_multiplier(0.1);
+                        godot_material.set_emission_energy_multiplier(0.2);
 
                         // In the same way, godot uses sRGB instead of linear colors.
                         godot_material.set_emission(emission.to_godot().linear_to_srgb());
-
                         godot_material.set_feature(Feature::EMISSION, true);
+                        godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, true);
                         godot_material.set_albedo(pbr.albedo_color.0.to_godot().linear_to_srgb());
                     }
                 }

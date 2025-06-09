@@ -24,7 +24,7 @@ func set_skybox_and_shadow(skybox_index: int):
 		sky.queue_free()
 
 	if Global.testing_scene_mode:
-		sky = load("res://assets/environment/sky_test/sky_test.tscn").instantiate()
+		sky = load("res://assets/environment/sky_high/sky_high.tscn").instantiate()
 	else:
 		match skybox_index:
 			0:
@@ -32,6 +32,7 @@ func set_skybox_and_shadow(skybox_index: int):
 			1:
 				sky = load("res://assets/environment/sky_medium/sky_medium.tscn").instantiate()
 			2:
+				# gdlint:ignore = duplicated-load
 				sky = load("res://assets/environment/sky_high/sky_high.tscn").instantiate()
 
 	add_child(sky)
