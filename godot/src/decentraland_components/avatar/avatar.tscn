@@ -806,7 +806,8 @@ bone_idx = 61
 
 [node name="NicknameQuad" type="Sprite3D" parent="Armature/Skeleton3D/BoneAttachment3D_Name"]
 unique_name_in_owner = true
-transform = Transform3D(1, 0.00020682, -1.83739e-05, -0.000206452, 0.999844, 0.0176546, 2.20121e-05, -0.0176548, 0.999844, 0, 40, 0)
+transform = Transform3D(1, 0.00020682, -1.83739e-05, -0.000206452, 0.999844, 0.0176546, 2.20121e-05, -0.0176548, 0.999844, 0, 75, 0)
+cast_shadow = 0
 visibility_range_end = 7.0
 pixel_size = 0.075
 billboard = 1

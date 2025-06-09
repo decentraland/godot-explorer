@@ -119,7 +119,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	var new_avatar_name: String = profile.get_name()
 	if not profile.has_claimed_name():
 		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
-	# label_3d_name.modulate = Color.GOLD if profile.has_claimed_name() else Color.WHITE
+	# TODO: Claimed name checkmark
 
 	avatar_id = profile.get_ethereum_address()
 
