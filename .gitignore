@@ -22,3 +22,6 @@ target/
 *.profraw
 coverage
 godoteditor/
+
+# Created from download_dependencies.py
+__pycache__

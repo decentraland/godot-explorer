@@ -29,10 +29,6 @@ echo "Build for Android (arm64)"
 cd "${EXPLORER_PATH}/lib"
 bash android-build.sh
 
-echo "Build for Android (x86_64)"
-cd "${EXPLORER_PATH}/lib"
-bash android-build.sh x86_64
-
 # Temporarily disable strict error checking for the debug key setup.
 set +e
 echo "Setup Android Debug Keys"

@@ -237,7 +237,7 @@ func open_webview_url(url):
 
 
 func open_url(url: String, use_webkit: bool = false):
-	if use_webkit:
+	if use_webkit and not Global.is_xr():
 		if webkit_ios_plugin != null:
 			webkit_ios_plugin.open_auth_url(url)
 		elif webkit_android_plugin != null:

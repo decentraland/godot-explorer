@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://daypireqakfqb"
-path.bptc="res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.bptc.ctex"
-path.astc="res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.astc.ctex"
+uid="uid://byoq8loywg516"
+path.bptc="res://.godot/imported/panorama_image.png-4a1ba4f2713eef6011c5f5ed67a2ca2d.bptc.ctex"
+path.astc="res://.godot/imported/panorama_image.png-4a1ba4f2713eef6011c5f5ed67a2ca2d.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/environment/StarDust.png"
-dest_files=["res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.bptc.ctex", "res://.godot/imported/StarDust.png-2485707fe02f80be50ed670b5031821a.astc.ctex"]
+source_file="res://assets/environment/panorama_image.png"
+dest_files=["res://.godot/imported/panorama_image.png-4a1ba4f2713eef6011c5f5ed67a2ca2d.bptc.ctex", "res://.godot/imported/panorama_image.png-4a1ba4f2713eef6011c5f5ed67a2ca2d.astc.ctex"]
 
 [params]
 

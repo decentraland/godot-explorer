@@ -1,32 +1,13 @@
-[gd_scene load_steps=4 format=3 uid="uid://y5q8yolbxvfv"]
+[gd_scene load_steps=3 format=3 uid="uid://y5q8yolbxvfv"]
 
 [ext_resource type="Script" uid="uid://w0a41hnsqd" path="res://assets/environment/sky_base.gd" id="2_5v3h1"]
-[ext_resource type="Sky" uid="uid://l82r2nfrgcbx" path="res://assets/sky.tres" id="2_auxen"]
-
-[sub_resource type="Environment" id="Environment_mvu0t"]
-background_mode = 2
-background_energy_multiplier = 0.5
-sky = ExtResource("2_auxen")
-ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
-ambient_light_sky_contribution = 0.4
-tonemap_mode = 3
-glow_levels/1 = 16.0
-glow_levels/2 = 16.0
-glow_levels/3 = 16.0
-glow_levels/4 = 16.0
-glow_levels/5 = 16.0
-glow_levels/6 = 16.0
-glow_levels/7 = 2.95
-glow_blend_mode = 0
-fog_sky_affect = 0.0
-adjustment_brightness = 1.2
-adjustment_saturation = 1.2
+[ext_resource type="Environment" uid="uid://b0er3qu7hwmqs" path="res://assets/environment/game_environment.tres" id="2_duxmw"]
 
 [node name="SkyMedium" type="Node"]
 script = ExtResource("2_5v3h1")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_mvu0t")
+environment = ExtResource("2_duxmw")
 
 [node name="SunLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(-0.00710599, -0.978071, 0.20815, 0.00639971, 0.208107, 0.978085, -0.999954, 0.0082824, 0.00478191, 0, 0, 0)
