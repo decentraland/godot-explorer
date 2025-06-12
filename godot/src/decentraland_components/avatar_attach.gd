@@ -37,7 +37,7 @@ func _process(_delta):
 		0:
 			p.global_transform = _player_avatar_node.global_transform
 		1:
-			p.global_transform = _player_avatar_node.label_3d_name.global_transform
+			p.global_transform = _player_avatar_node.nickname_quad.global_transform
 		2:
 			p.global_transform = (
 				_player_avatar_node.body_shape_skeleton_3d.global_transform
