@@ -376,6 +376,8 @@ func http_method_to_string(method: int) -> String:
 
 
 func async_signed_fetch(url:String, method:int, _body:String=""):
+	print("url: ", url, " - method: ", http_method_to_string(method))
+	print("body: ", _body)
 	var headers_promise = Global.player_identity.async_get_identity_headers(url, _body, http_method_to_string(method))
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 	
@@ -384,7 +386,7 @@ func async_signed_fetch(url:String, method:int, _body:String=""):
 		return
 		
 	var headers: Dictionary = headers_result
-	
+	print("headers: ", headers)
 	if not _body.is_empty():
 		headers["Content-Type"] = "application/json"
 	

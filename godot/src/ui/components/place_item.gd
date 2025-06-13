@@ -377,9 +377,8 @@ func _on_button_fav_toggled(toggled_on: bool) -> void:
 		if button_fav:
 			button_fav.set_pressed_no_signal(!toggled_on)
 		return
-		
 	var url = PLACES_API_BASE_URL + "/places/" + place_id + "/favorites"
-	var body = JSON.stringify({ favorites = toggled_on })
+	var body = JSON.stringify({"favorites":toggled_on})
 	
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
 	if response != null:
