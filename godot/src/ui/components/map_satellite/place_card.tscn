@@ -1,6 +1,6 @@
 [gd_scene load_steps=11 format=3 uid="uid://cvjqx7t78ubg1"]
 
-[ext_resource type="Script" path="res://src/ui/components/map_satellite/place_card.gd" id="1_88qcw"]
+[ext_resource type="Script" uid="uid://cah7yukvf1v0n" path="res://src/ui/components/map_satellite/place_card.gd" id="1_88qcw"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="2_wujfc"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_6pnhg"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="4_ds3ql"]
@@ -86,7 +86,7 @@ layout_mode = 2
 [node name="LabelTitle" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Place's Name"
+text = "Unknown place"
 label_settings = SubResource("LabelSettings_0urn1")
 
 [node name="CreatorHBoxContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer"]

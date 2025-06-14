@@ -190,7 +190,7 @@ func set_creator(_creator: String):
 
 func set_data(item_data):
 	_data = item_data
-	set_title(item_data.get("title", ""))
+	set_title(item_data.get("title", "Unknown place"))
 	set_description(_get_or_empty_string(item_data, "description"))
 
 	set_views(item_data.get("user_visits", 0))

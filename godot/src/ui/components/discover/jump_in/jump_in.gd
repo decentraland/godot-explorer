@@ -48,7 +48,7 @@ func async_load_place_position(pos: Vector2i):
 
 	if json.data.is_empty():
 		var unknown_place: Dictionary = {
-			"base_position": "%d,%d" % [position.x, position.y], "title": "Unknown place"
+			"base_position": "%d,%d" % [pos.x, pos.y], "title": "Unknown place"
 		}
 		set_data(unknown_place)
 	else:
