@@ -55,7 +55,7 @@ export CXXFLAGS="-v --target=aarch64-linux-android"
 export RUSTFLAGS="-L${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/lib/aarch64-unknown-linux-musl"
 
 # CI - Download V8 binding for aarch64
-download_v8_binding "debug" "aarch64-linux-android"
+download_v8_binding "release" "aarch64-linux-android"
 echo "RUSTY_V8_SRC_BINDING_PATH: $RUSTY_V8_SRC_BINDING_PATH"
 GODOT_DIR=../godot
 
