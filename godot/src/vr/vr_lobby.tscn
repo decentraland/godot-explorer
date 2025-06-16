@@ -1,10 +1,11 @@
-[gd_scene load_steps=16 format=3 uid="uid://cuic8diqbxs83"]
+[gd_scene load_steps=41 format=3 uid="uid://cuic8diqbxs83"]
 
-[ext_resource type="Script" path="res://src/vr/vr_lobby.gd" id="1_my51n"]
+[ext_resource type="Script" uid="uid://c8uwwssfiqy04" path="res://src/vr/vr_lobby.gd" id="1_my51n"]
 [ext_resource type="PackedScene" uid="uid://b228p8k6sonve" path="res://addons/godot-xr-tools/player/fade/fade_collision.tscn" id="2_inngf"]
+[ext_resource type="Texture2D" uid="uid://by286h7kaeqr3" path="res://assets/empty-scenes/Floor_Grass.png" id="2_xx3dg"]
 [ext_resource type="PackedScene" uid="uid://hpr0v012ghsb" path="res://addons/godot-xr-tools/hands/scenes/highpoly/left_tac_glove.tscn" id="3_570d0"]
 [ext_resource type="PackedScene" uid="uid://cqhw276realc" path="res://addons/godot-xr-tools/functions/function_pointer.tscn" id="4_ejpxq"]
-[ext_resource type="PackedScene" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="5_3u4lg"]
+[ext_resource type="PackedScene" uid="uid://btknduttnmoxf" path="res://addons/godot-xr-tools/misc/vr_common_shader_cache.tscn" id="5_3u4lg"]
 [ext_resource type="PackedScene" uid="uid://dup2vp8v5rpi5" path="res://addons/godot-xr-tools/hands/scenes/highpoly/right_tac_glove.tscn" id="5_fl6n2"]
 [ext_resource type="PackedScene" uid="uid://clujaf3u776a3" path="res://addons/godot-xr-tools/objects/viewport_2d_in_3d.tscn" id="6_dmvnc"]
 [ext_resource type="PackedScene" uid="uid://clc5dre31iskm" path="res://addons/godot-xr-tools/xr/start_xr.tscn" id="6_u581l"]
@@ -12,29 +13,154 @@
 [ext_resource type="PackedScene" uid="uid://brh1yknqh4ux6" path="res://src/ui/components/auth/lobby.tscn" id="7_kbcta"]
 [ext_resource type="PackedScene" uid="uid://b6bk2pj8vbj28" path="res://addons/godot-xr-tools/functions/movement_turn.tscn" id="9_wqiq7"]
 [ext_resource type="PackedScene" uid="uid://diyu06cw06syv" path="res://addons/godot-xr-tools/player/player_body.tscn" id="11_wgpw8"]
+[ext_resource type="Script" uid="uid://w0a41hnsqd" path="res://assets/environment/sky_base.gd" id="14_hbw2f"]
+[ext_resource type="Shader" uid="uid://cpu82bv2y58bl" path="res://shaders/sky.gdshader" id="15_igl6k"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_fnm28"]
-sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
-ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+[sub_resource type="BoxShape3D" id="BoxShape3D_8wwks"]
+size = Vector3(4800, 0.1, 4800)
 
-[sub_resource type="Sky" id="Sky_411pe"]
-sky_material = SubResource("ProceduralSkyMaterial_fnm28")
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_lovo8"]
 
-[sub_resource type="Environment" id="Environment_o37lb"]
-background_mode = 1
-sky = SubResource("Sky_411pe")
-tonemap_mode = 2
-glow_enabled = true
+[sub_resource type="PlaneMesh" id="PlaneMesh_hbw2f"]
+material = SubResource("ShaderMaterial_lovo8")
+size = Vector2(4800, 4800)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_igl6k"]
+albedo_texture = ExtResource("2_xx3dg")
+uv1_scale = Vector3(4800, 4800, 4800)
+texture_filter = 0
+
+[sub_resource type="Gradient" id="Gradient_jjqd7"]
+colors = PackedColorArray(0.740011, 0.848556, 0.999999, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_b0xhr"]
+gradient = SubResource("Gradient_jjqd7")
+width = 2
+
+[sub_resource type="Gradient" id="Gradient_pfhcn"]
+colors = PackedColorArray(0.343792, 0.000684323, 0.483585, 1, 0.368376, 0.00165907, 0.662806, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_vbr15"]
+gradient = SubResource("Gradient_pfhcn")
+width = 2
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_vykal"]
+load_path = "res://.godot/imported/panorama_image.png-4a1ba4f2713eef6011c5f5ed67a2ca2d.bptc.ctex"
+
+[sub_resource type="Gradient" id="Gradient_1bus3"]
+offsets = PackedFloat32Array(0, 0.725632)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_mo3tb"]
+noise_type = 2
+frequency = 0.04
+fractal_type = 2
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_m2hf1"]
+width = 64
+height = 64
+generate_mipmaps = false
+color_ramp = SubResource("Gradient_1bus3")
+noise = SubResource("FastNoiseLite_mo3tb")
+
+[sub_resource type="Gradient" id="Gradient_jpfgw"]
+offsets = PackedFloat32Array(0, 0.158845, 0.483755, 0.870036, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 0.458027, 0.205551, 1, 0.883214, 0, 0.0726989, 1, 1, 0.458824, 0.203922, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_ink5a"]
+gradient = SubResource("Gradient_jpfgw")
+width = 5
+
+[sub_resource type="Gradient" id="Gradient_skx88"]
+offsets = PackedFloat32Array(0.483755, 1)
+colors = PackedColorArray(0, 0.599795, 0.873399, 1, 0.121488, 0.000196012, 0.236836, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_40ch8"]
+gradient = SubResource("Gradient_skx88")
+width = 3
+
+[sub_resource type="Gradient" id="Gradient_mmwma"]
+offsets = PackedFloat32Array(0, 0.241877, 0.491639, 0.776173, 1)
+colors = PackedColorArray(1, 0.54902, 0.176471, 1, 0.629251, 0.0174917, 1.92523e-07, 1, 0, 0, 0, 1, 0.559215, 0, 0.146574, 1, 0.999999, 0.5475, 0.178287, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_hiplr"]
+gradient = SubResource("Gradient_mmwma")
+width = 5
+
+[sub_resource type="Gradient" id="Gradient_lg5yp"]
+interpolation_mode = 2
+interpolation_color_space = 2
+offsets = PackedFloat32Array(0, 0.288809, 0.79661, 1)
+colors = PackedColorArray(1, 1, 1, 1, 0.839233, 0.509745, 3.85046e-07, 1, 0.791751, 0, 0.111045, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_2wrxk"]
+gradient = SubResource("Gradient_lg5yp")
+width = 6
+
+[sub_resource type="Gradient" id="Gradient_okgco"]
+offsets = PackedFloat32Array(0.537906)
+colors = PackedColorArray(1, 1, 1, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_rvum1"]
+gradient = SubResource("Gradient_okgco")
+width = 6
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kbusk"]
+shader = ExtResource("15_igl6k")
+shader_parameter/milky_way_noise = SubResource("NoiseTexture2D_m2hf1")
+shader_parameter/clouds_panorama = SubResource("CompressedTexture2D_vykal")
+shader_parameter/sky_gradient = SubResource("GradientTexture1D_40ch8")
+shader_parameter/clouds_gradient_day = SubResource("GradientTexture1D_b0xhr")
+shader_parameter/clouds_gradient_night = SubResource("GradientTexture1D_vbr15")
+shader_parameter/energy = 0.7
+shader_parameter/gamma = 1.0
+shader_parameter/tint_color_cycle_top = SubResource("GradientTexture1D_rvum1")
+shader_parameter/tint_color_cycle_bottom = SubResource("GradientTexture1D_2wrxk")
+shader_parameter/sun_color_cycle = SubResource("GradientTexture1D_hiplr")
+shader_parameter/moon_color_cycle = SubResource("GradientTexture1D_ink5a")
+shader_parameter/dither_range = 0.1
+shader_parameter/dither_amount = 256.0
+shader_parameter/other_sun_rotation_offset = Vector2(0.3, 0.3)
+shader_parameter/floor_color = Color(0, 0.301978, 0.158083, 1)
+
+[sub_resource type="Sky" id="Sky_g8up3"]
+sky_material = SubResource("ShaderMaterial_kbusk")
+radiance_size = 0
+
+[sub_resource type="Environment" id="Environment_cpk0a"]
+background_mode = 2
+sky = SubResource("Sky_g8up3")
+ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
+ambient_light_sky_contribution = 0.4
+reflected_light_source = 2
+tonemap_mode = 3
+glow_levels/1 = 0.4
+glow_levels/2 = 0.3
+glow_levels/3 = 0.0
+glow_levels/5 = 0.0
+glow_intensity = 1.5
+glow_blend_mode = 1
+glow_hdr_scale = 0.0
+fog_density = 0.001
+adjustment_brightness = 1.2
+adjustment_saturation = 1.2
 
 [node name="VrLobby" type="Node3D"]
 script = ExtResource("1_my51n")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_o37lb")
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+collision_layer = 2147483649
+collision_mask = 2147483649
+input_ray_pickable = false
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
-sky_mode = 1
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+shape = SubResource("BoxShape3D_8wwks")
+
+[node name="Floor" type="MeshInstance3D" parent="StaticBody3D/CollisionShape3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+mesh = SubResource("PlaneMesh_hbw2f")
+skeleton = NodePath("../../../XROrigin3D/PlayerBody")
+surface_material_override/0 = SubResource("StandardMaterial3D_igl6k")
 
 [node name="XROrigin3D" type="XROrigin3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.728815, 0)
@@ -85,5 +211,27 @@ scene_properties_keys = PackedStringArray("lobby.gd")
 [node name="PlayerBody" parent="XROrigin3D" instance=ExtResource("11_wgpw8")]
 
 [node name="StartXR" parent="." instance=ExtResource("6_u581l")]
+
+[node name="SkyHigh_WIP" type="Node" parent="."]
+script = ExtResource("14_hbw2f")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="SkyHigh_WIP"]
+environment = SubResource("Environment_cpk0a")
+
+[node name="SunLight" type="DirectionalLight3D" parent="SkyHigh_WIP"]
+transform = Transform3D(-0.00710599, -0.978071, 0.20815, 0.00639971, 0.208107, 0.978085, -0.999954, 0.00828236, 0.00478057, 0, 0, 0)
+light_color = Color(1, 0.988235, 0.768627, 1)
+light_energy = 0.1
+light_bake_mode = 0
+shadow_enabled = true
+shadow_opacity = 0.7
+
+[node name="MoonLight" type="DirectionalLight3D" parent="SkyHigh_WIP"]
+transform = Transform3D(0.97446, 0.00413862, -0.224522, 0.22456, -0.0179592, 0.974295, 0, -0.99983, -0.0184299, 0, 0, 0)
+light_color = Color(0.77, 0.992333, 1, 1)
+light_energy = 0.1
+light_bake_mode = 0
+shadow_enabled = true
+shadow_opacity = 0.7
 
 [connection signal="button_pressed" from="XROrigin3D/RightHandController" to="." method="_on_right_hand_controller_button_pressed"]

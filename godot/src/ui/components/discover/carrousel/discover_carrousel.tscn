@@ -1,8 +1,8 @@
 [gd_scene load_steps=6 format=3 uid="uid://3de823q04ptd"]
 
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="1_qm5fw"]
-[ext_resource type="Script" path="res://src/ui/components/discover/carrousel/discover_carrousel.gd" id="1_somjb"]
-[ext_resource type="Script" path="res://src/ui/components/discover/scrollbar_requester.gd" id="3_dtbt6"]
+[ext_resource type="Script" uid="uid://crybq4wivxc3l" path="res://src/ui/components/discover/carrousel/discover_carrousel.gd" id="1_somjb"]
+[ext_resource type="Script" uid="uid://bufowrcf714pf" path="res://src/ui/components/discover/scrollbar_requester.gd" id="3_dtbt6"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_ix28e"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_amqeq"]

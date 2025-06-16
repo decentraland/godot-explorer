@@ -22,3 +22,6 @@ mono_crash.*.json
 .directory
 .DS_Store
 *~
+
+# Decentraland ignores
+/output/

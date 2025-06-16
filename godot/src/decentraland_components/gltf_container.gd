@@ -8,14 +8,42 @@ enum GltfContainerLoadingState {
 	FINISHED = 4,
 }
 
+const MAX_CONCURRENT_LOADS := 10
+
+var dcl_gltf_hash := ""
+var optimized := false
+
 @onready var timer = $Timer
+
+# Static variable to track currently loading assets
+static var currently_loading_assets := []
+# Static queue and flag for throttling
+static var pending_load_queue := []
 
 
 func _ready():
 	self.async_load_gltf.call_deferred()
 
 
+# Helper to handle finishing a load (success or error)
+func _finish_gltf_load(gltf_hash: String):
+	currently_loading_assets.erase(gltf_hash)
+	_process_next_gltf_load()
+
+
 func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
+	self.optimized = true
+
+	# Throttling: If already loading max, queue and return
+	if currently_loading_assets.size() >= MAX_CONCURRENT_LOADS:
+		if not pending_load_queue.has(self):
+			pending_load_queue.append(self)
+		return
+
+	# Add asset to loading list and print
+	if not currently_loading_assets.has(gltf_hash):
+		currently_loading_assets.append(gltf_hash)
+
 	var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(gltf_hash)
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
@@ -25,10 +53,14 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 				% [dcl_scene_id, gltf_hash]
 			)
 		)
+		_finish_gltf_load(gltf_hash)
 		return
 
 	var main_tree = get_tree()
 	if not is_instance_valid(main_tree):
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
+		_finish_gltf_load(gltf_hash)
 		return
 
 	var scene_file = "res://glbs/" + gltf_hash + ".tscn"
@@ -36,11 +68,13 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 		printerr("File %s doesn't exists" % scene_file)
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		_finish_gltf_load(gltf_hash)
 		return
 	var err = ResourceLoader.load_threaded_request(scene_file)
 	if err != OK:
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		_finish_gltf_load(gltf_hash)
 		return
 
 	var status = ResourceLoader.load_threaded_get_status(scene_file)
@@ -52,6 +86,7 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 	if resource == null:
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		_finish_gltf_load(gltf_hash)
 		return
 
 	var gltf_node = resource.instantiate()
@@ -63,10 +98,47 @@ func async_try_load_gltf_from_local_file(gltf_hash: String) -> void:
 		printerr("Error on fetch gltf: ", res_instance.get_error())
 		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
 		timer.stop()
+		_finish_gltf_load(gltf_hash)
 		return
 
+	if res_instance == null:
+		printerr("instance_gltf_colliders returned null for hash: ", gltf_hash)
+		dcl_gltf_loading_state = GltfContainerLoadingState.FINISHED_WITH_ERROR
+		timer.stop()
+		_finish_gltf_load(gltf_hash)
+		return
+
+	apply_fixes(res_instance)
 	dcl_pending_node = res_instance
 	timer.stop()
+	_finish_gltf_load(gltf_hash)
+
+
+static func _process_next_gltf_load():
+	while currently_loading_assets.size() < MAX_CONCURRENT_LOADS and pending_load_queue.size() > 0:
+		# Prioritize GLTFs from the current scene
+		var idx = -1
+		for i in range(pending_load_queue.size()):
+			var candidate = pending_load_queue[i]
+			if candidate != null and candidate.is_current_scene():
+				idx = i
+				break
+		var next_gltf = null
+		if idx != -1:
+			next_gltf = pending_load_queue[idx]
+			pending_load_queue.remove_at(idx)
+		else:
+			next_gltf = pending_load_queue.pop_front()
+		if next_gltf != null:
+			next_gltf.async_try_load_gltf_from_local_file(next_gltf.dcl_gltf_hash)
+		else:
+			break
+
+
+func is_current_scene():
+	if dcl_scene_id == Global.scene_runner.get_current_parcel_scene_id():
+		return true
+	return false
 
 
 func async_load_gltf():
@@ -74,6 +146,7 @@ func async_load_gltf():
 
 	self.dcl_gltf_src = dcl_gltf_src.to_lower()
 	var file_hash = content_mapping.get_hash(dcl_gltf_src)
+	self.dcl_gltf_hash = file_hash
 	if file_hash.is_empty():
 		dcl_gltf_loading_state = GltfContainerLoadingState.NOT_FOUND
 		timer.stop()
@@ -118,18 +191,67 @@ func async_load_gltf():
 		timer.stop()
 		return
 
-	remove_emission_texture(res_instance)
-
+	apply_fixes(res_instance)
 	dcl_pending_node = res_instance
 
 
-func remove_emission_texture(gltf_instance: Node3D):
-	# HACK: Workaround to fix an import error that sets the emisison texture as the albedo texture.
-	for child in gltf_instance.get_children():
-		if !(child is MeshInstance3D):
-			continue
-		var material = child.mesh.surface_get_material(0)
-		material.emission_texture = null
+func apply_fixes(gltf_instance: Node3D):
+	var meshes = []
+	var children = gltf_instance.get_children()
+	while children.size():
+		var child = children.pop_back()
+		if child is MeshInstance3D:
+			meshes.push_back(child)
+		var grandchildren = child.get_children()
+		for grandchild in grandchildren:
+			children.push_back(grandchild)
+
+	for instance in meshes:
+		var mesh = instance.mesh
+		for idx in range(mesh.get_surface_count()):
+			var material = mesh.surface_get_material(idx)
+			fix_material(material)
+
+
+func fix_material(mat: BaseMaterial3D):
+	# Induced rules for metallic specular roughness
+	# - If material has metallic texture then metallic value should be
+	# multiplied by .5
+	if mat.metallic_texture:
+		mat.metallic *= .5
+
+	# To replicate foundation
+	mat.vertex_color_use_as_albedo = false
+
+	# Emission rules
+	set_emission_params(mat)
+
+
+func set_emission_params(mat: BaseMaterial3D):
+	if mat.resource_name.contains("_emission"):
+		mat.emission_enabled = true
+		return
+
+	if (
+		mat.albedo_texture
+		and mat.albedo_texture == mat.emission_texture
+		and mat.emission == Color.BLACK
+	):
+		mat.emission_enabled = false
+		return
+
+	if !mat.albedo_texture and !mat.emission_texture and mat.emission != Color.BLACK:
+		mat.emission_enabled = true
+		mat.emission_energy_multiplier = 1.0
+		mat.emission_operator = BaseMaterial3D.EMISSION_OP_ADD
+		return
+
+	if mat.albedo_texture and mat.emission_texture and mat.emission == Color.BLACK:
+		mat.emission_enabled = true
+		mat.emission_energy_multiplier = 2.0
+		mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
+		mat.emission = Color.WHITE
+		return
 
 
 func async_deferred_add_child():

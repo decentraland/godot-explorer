@@ -1,13 +1,13 @@
 [gd_scene load_steps=27 format=3 uid="uid://b8837sg55qd8m"]
 
-[ext_resource type="Script" path="res://src/ui/components/discover/jump_in/panel_jump_in.gd" id="1_6fwth"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gki2s"]
+[ext_resource type="Script" uid="uid://0ncqo78wbgqv" path="res://src/ui/components/discover/jump_in/jump_in.gd" id="1_lek7s"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="2_7i6jj"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_wh5hw"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_oea3m"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_38j5r"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="5_x7ql2"]
-[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_cpxdn"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_cpxdn"]
 [ext_resource type="Texture2D" uid="uid://mkgmqaf7qdvg" path="res://assets/ui/Like solid.svg" id="6_h2ki8"]
 [ext_resource type="Texture2D" uid="uid://beo554etknddh" path="res://assets/ui/PreviewIcon.svg" id="7_ytgcx"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="8_whopg"]
@@ -34,7 +34,7 @@ corner_radius_bottom_left = 12
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ak0ex"]
 
 [sub_resource type="Curve" id="Curve_6fe12"]
-max_value = 2.0
+_limits = [0.0, 2.0, 0.0, 1.0]
 _data = [Vector2(0.09, 1.28552), 0.0, 0.0, 0, 0, Vector2(0.34, 1.87802), 0.0, 0.0, 0, 0, Vector2(0.966667, 0.146113), 0.0, 0.0, 0, 0]
 point_count = 3
 
@@ -64,7 +64,7 @@ offset_left = -324.0
 grow_horizontal = 0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_eaed0")
-script = ExtResource("1_6fwth")
+script = ExtResource("1_lek7s")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
@@ -90,8 +90,8 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("5_38j5r")
-theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 20
 theme_override_styles/normal = SubResource("StyleBoxFlat_bsiub")
 icon = ExtResource("5_x7ql2")
@@ -213,12 +213,12 @@ modulate = Color(0.0862745, 0.0823529, 0.0941176, 1)
 custom_minimum_size = Vector2(25, 0)
 layout_mode = 2
 theme = ExtResource("5_38j5r")
-theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_disabled_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
 theme_override_constants/icon_max_width = 20
 theme_override_styles/focus = SubResource("StyleBoxEmpty_b6og1")
 theme_override_styles/disabled = SubResource("StyleBoxEmpty_hhrtg")

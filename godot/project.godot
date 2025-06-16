@@ -13,9 +13,9 @@ config_version=5
 config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
 run/main_scene="res://src/main.tscn"
-config/features=PackedStringArray("4.3")
-boot_splash/image="res://assets/ui/isologotipo.png"
+config/features=PackedStringArray("4.4")
 boot_splash/fullsize=false
+boot_splash/image="res://assets/ui/isologotipo.png"
 config/icon="res://decentraland_logo_squared.png"
 
 [audio]
@@ -48,7 +48,7 @@ window/handheld/orientation=6
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dcl_build_plugin/plugin.cfg", "res://addons/godot-xr-tools/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/webview-godot-android/plugin.cfg")
+enabled=PackedStringArray("res://addons/dcl_build_plugin/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/webview-godot-android/plugin.cfg")
 
 [filesystem]
 
@@ -201,8 +201,8 @@ reflections/sky_reflections/texture_array_reflections=false
 reflections/sky_reflections/ggx_samples=16
 shading/overrides/force_vertex_shading=true
 shading/overrides/force_lambert_over_burley=true
-environment/glow/upscale_mode=0
 anti_aliasing/quality/msaa_3d=1
+environment/glow/upscale_mode=0
 anti_aliasing/quality/screen_space_aa=1
 lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
@@ -211,7 +211,7 @@ lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
 day_night_cycle={
 "type": "float",
-"value": 0.0
+"value": 2.595
 }
 
 [xr]

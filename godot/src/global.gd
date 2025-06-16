@@ -1,5 +1,7 @@
 extends DclGlobal
 
+signal on_menu_open
+signal on_menu_close
 signal loading_started
 signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
@@ -235,7 +237,7 @@ func open_webview_url(url):
 
 
 func open_url(url: String, use_webkit: bool = false):
-	if use_webkit:
+	if use_webkit and not Global.is_xr():
 		if webkit_ios_plugin != null:
 			webkit_ios_plugin.open_auth_url(url)
 		elif webkit_android_plugin != null:
@@ -335,3 +337,15 @@ func set_orientation_portrait():
 
 func set_orientation_sensor():
 	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
+
+
+func teleport_to(parcel_position: Vector2i, new_realm: String):
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.teleport_to(parcel_position, new_realm)
+		explorer.hide_menu()
+	else:
+		Global.get_config().last_realm_joined = new_realm
+		Global.get_config().last_parcel_position = parcel_position
+		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
+		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")

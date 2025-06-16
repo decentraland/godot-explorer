@@ -1,32 +1,13 @@
-[gd_scene load_steps=4 format=3 uid="uid://dsqq58ubnjwen"]
+[gd_scene load_steps=3 format=3 uid="uid://dsqq58ubnjwen"]
 
-[ext_resource type="Script" path="res://assets/environment/sky_base.gd" id="1_u1jk8"]
-[ext_resource type="Sky" uid="uid://l82r2nfrgcbx" path="res://assets/sky.tres" id="2_xkl7w"]
-
-[sub_resource type="Environment" id="Environment_mvu0t"]
-background_mode = 2
-background_energy_multiplier = 0.5
-sky = ExtResource("2_xkl7w")
-ambient_light_color = Color(0.815686, 0.784314, 0.658824, 1)
-ambient_light_sky_contribution = 0.4
-tonemap_mode = 3
-glow_levels/1 = 16.0
-glow_levels/2 = 16.0
-glow_levels/3 = 16.0
-glow_levels/4 = 16.0
-glow_levels/5 = 16.0
-glow_levels/6 = 16.0
-glow_levels/7 = 2.95
-glow_blend_mode = 0
-fog_density = 0.001
-adjustment_brightness = 1.2
-adjustment_saturation = 1.2
+[ext_resource type="Script" uid="uid://w0a41hnsqd" path="res://assets/environment/sky_base.gd" id="1_u1jk8"]
+[ext_resource type="Environment" uid="uid://b0er3qu7hwmqs" path="res://assets/environment/game_environment.tres" id="2_kml7e"]
 
 [node name="SkyLow" type="Node"]
 script = ExtResource("1_u1jk8")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_mvu0t")
+environment = ExtResource("2_kml7e")
 
 [node name="SunLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(-0.00710599, -0.978071, 0.20815, 0.00639971, 0.208107, 0.978085, -0.999954, 0.00828236, 0.00478057, 0, 0, 0)
@@ -39,7 +20,7 @@ shadow_opacity = 0.7
 [node name="MoonLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.97446, 0.00413862, -0.224522, 0.22456, -0.0179592, 0.974295, 0, -0.99983, -0.0184299, 0, 0, 0)
 light_color = Color(0.77, 0.992333, 1, 1)
-light_energy = 0.1
+light_energy = 0.05
 light_bake_mode = 0
 shadow_enabled = true
 shadow_opacity = 0.7

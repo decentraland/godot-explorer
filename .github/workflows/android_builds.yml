@@ -22,7 +22,7 @@ jobs:
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.77.2
+          toolchain: 1.79
           override: true
           components: clippy, rustfmt
       - name: Set up cache
@@ -30,7 +30,8 @@ jobs:
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
-          rustup target add x86_64-linux-android
+      - name: Cargo install
+        run: cargo run -- install --platforms android linux
       - name: Build
         run: |
           bash build-android-apk.sh
@@ -55,9 +56,18 @@ jobs:
         with:
           name: Android APK
           path: android-artifacts/
+          if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
           name: Meta Quest APK
           path: meta-quest-artifacts/
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libdclgodot_android
+          path: |
+            lib/target/aarch64-linux-android/release/libdclgodot.so
+          if-no-files-found: error

@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://dbfqv02fhhl06"]
 
-[ext_resource type="Script" path="res://src/tool/avatar_renderer/avatar_renderer_standalone.gd" id="1_24a53"]
+[ext_resource type="Script" uid="uid://bd3x48k2vd57n" path="res://src/tool/avatar_renderer/avatar_renderer_standalone.gd" id="1_24a53"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="2_05642"]
 
 [node name="AvatarRendererScene" type="Node"]

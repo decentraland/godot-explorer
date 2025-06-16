@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://drmwih6numdke"]
 
-[ext_resource type="Script" path="res://assets/environment/sky_base.gd" id="1_sxikl"]
+[ext_resource type="Script" uid="uid://w0a41hnsqd" path="res://assets/environment/sky_base.gd" id="1_sxikl"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ahgj8"]
 sky_top_color = Color(0.85098, 0.913725, 1, 1)
@@ -29,4 +29,8 @@ script = ExtResource("1_sxikl")
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_ncxa3")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+visible = false
+
+[node name="MoonLight" type="DirectionalLight3D" parent="."]
+visible = false

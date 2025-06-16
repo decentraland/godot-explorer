@@ -90,9 +90,9 @@ impl DclAvatarWireFormat {
 
         for (i, emote) in DEFAULT_EMOTES.iter().enumerate() {
             if let Some(emote) = used_emotes.iter().find(|e| e.slot == i as u32) {
-                emotes.set(i, GString::from(emote.urn.as_str()));
+                emotes[i] = GString::from(emote.urn.as_str());
             } else {
-                emotes.set(i, GString::from(*emote));
+                emotes[i] = GString::from(*emote);
             }
         }
         emotes
@@ -170,7 +170,11 @@ impl DclAvatarWireFormat {
     fn set_wearables(&mut self, wearables: PackedStringArray) {
         let mut wearables_vec = Vec::new();
         for i in 0..wearables.len() {
-            wearables_vec.push(wearables.get(i).to_string());
+            if let Some(wearable) = wearables.get(i).as_ref() {
+                wearables_vec.push(wearable.to_string());
+            } else {
+                tracing::error!("Invalid wearable at index {}", i);
+            }
         }
         self.inner.wearables = wearables_vec;
     }
@@ -184,9 +188,16 @@ impl DclAvatarWireFormat {
 
         let mut emotes_vec = Vec::new();
         for i in 0..10 {
+            let urn = if let Some(emote) = emotes.get(i).as_ref() {
+                emote.to_string()
+            } else {
+                tracing::error!("Missing emote at slot {}", i);
+                String::new()
+            };
+
             emotes_vec.push(AvatarEmote {
                 slot: i as u32,
-                urn: emotes.get(i).to_string(),
+                urn,
             });
         }
         self.inner.emotes = Some(emotes_vec);
@@ -204,10 +215,14 @@ impl DclAvatarWireFormat {
 
     #[func]
     pub fn from_godot_dictionary(dictionary: Dictionary) -> Gd<DclAvatarWireFormat> {
-        let value = godot::engine::Json::stringify(dictionary.to_variant());
-        DclAvatarWireFormat::from_gd(
-            serde_json::from_str(value.to_string().as_str()).unwrap_or_default(),
-        )
+        // 1) stringify the Godot Dictionary → JSON5-ish string
+        let json_str = godot::engine::Json::stringify(dictionary.to_variant()).to_string();
+
+        // 2) parse with json5 (tolerant of trailing commas)
+        let avatar: AvatarWireFormat = json5::from_str(&json_str).unwrap_or_default();
+
+        // 3) wrap and return
+        DclAvatarWireFormat::from_gd(avatar)
     }
 
     #[func]

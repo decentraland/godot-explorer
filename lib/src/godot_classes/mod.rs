@@ -38,7 +38,7 @@ where
 {
     fn to_godot_from_json(&self) -> Result<godot::prelude::Variant, String> {
         let json_str = serde_json::to_string(&self).map_err(|e| e.to_string())?;
-        let mut json_parser = godot::engine::Json::new_gd();
+        let mut json_parser = godot::classes::Json::new_gd();
         if json_parser.parse(json_str.into()) == godot::engine::global::Error::OK {
             Ok(json_parser.get_data())
         } else {
@@ -48,6 +48,6 @@ where
 
     fn from_godot_to_json(value: godot::prelude::Variant) -> Result<Self, String> {
         let json_str = godot::engine::Json::stringify(value).to_string();
-        serde_json::from_str(json_str.as_str()).map_err(|e| e.to_string())
+        json5::from_str(json_str.as_str()).map_err(|e| e.to_string())
     }
 }

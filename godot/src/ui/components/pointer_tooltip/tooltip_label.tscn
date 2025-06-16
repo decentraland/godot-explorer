@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://d0rqfy34immue"]
 
 [ext_resource type="FontFile" uid="uid://cmc7ku5u0efdy" path="res://assets/themes/fonts/lato_family/Lato-Bold.ttf" id="1_1lcoh"]
-[ext_resource type="Script" path="res://src/ui/components/pointer_tooltip/tooltip_label.gd" id="1_ut63f"]
+[ext_resource type="Script" uid="uid://5u25dqo7og70" path="res://src/ui/components/pointer_tooltip/tooltip_label.gd" id="1_ut63f"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_473nw"]
 bg_color = Color(0, 0, 0, 0.501961)

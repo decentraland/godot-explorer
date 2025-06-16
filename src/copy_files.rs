@@ -1,7 +1,7 @@
 use std::{env, fs, io, path::Path};
 
 use crate::{
-    consts::{BIN_FOLDER, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    consts::{BIN_FOLDER, RUST_LIB_PROJECT_FOLDER},
     path::adjust_canonicalization,
 };
 
@@ -45,11 +45,7 @@ pub fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(
     Ok(())
 }
 
-pub fn copy_library(
-    target: &String,
-    debug_mode: bool,
-    link_libs: bool,
-) -> Result<(), anyhow::Error> {
+pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Error> {
     let mode = if debug_mode { "debug" } else { "release" };
 
     match target.as_str() {
@@ -57,30 +53,33 @@ pub fn copy_library(
             let source_file = format!(
                 "{RUST_LIB_PROJECT_FOLDER}target/aarch64-apple-ios/{mode}/libdclgodot.dylib"
             );
-            let dest = format!("{}lib/ios/libdclgodot.dylib", GODOT_PROJECT_FOLDER);
+            let dest = format!("{RUST_LIB_PROJECT_FOLDER}target/libdclgodot_ios/libdclgodot.dylib");
 
-            copy_with_error_context(&source_file, &dest, link_libs)?;
+            copy_with_error_context(&source_file, &dest, false)?;
 
             // If you need ffmpeg for iOS specifically:
-            // copy_ffmpeg_libraries(target, format!("{}ios/", GODOT_PROJECT_FOLDER), link_libs)?;
+            // copy_ffmpeg_libraries(target, format!("{}ios/", GODOT_PROJECT_FOLDER), false)?;
         }
 
         "android" => {
+            let arch = env::consts::ARCH;
+
             let source_file = format!(
-                "{RUST_LIB_PROJECT_FOLDER}target/aarch64-linux-android/{mode}/libdclgodot.so"
+                "{RUST_LIB_PROJECT_FOLDER}target/{arch}-linux-android/{mode}/libdclgodot.so"
             );
 
-            let dest1 = format!("{}lib/android/arm64/libdclgodot.so", GODOT_PROJECT_FOLDER);
-            copy_with_error_context(&source_file, &dest1, link_libs)?;
+            let android_folder = if arch == "x86_64" {
+                "libdclgodot_android_x86"
+            } else {
+                "libdclgodot_android"
+            };
 
-            let dest2 = format!(
-                "{}android/build/libs/release/arm64-v8a/libdclgodot.so",
-                GODOT_PROJECT_FOLDER
-            );
-            copy_with_error_context(&source_file, &dest2, link_libs)?;
+            let dest = format!("{RUST_LIB_PROJECT_FOLDER}target/${android_folder}/libdclgodot.so");
+
+            copy_with_error_context(&source_file, &dest, false)?;
 
             // If you need ffmpeg for Android specifically:
-            // copy_ffmpeg_libraries(target, format!("{}android/arm64/", GODOT_PROJECT_FOLDER), link_libs)?;
+            // copy_ffmpeg_libraries(target, format!("{}android/arm64/", GODOT_PROJECT_FOLDER), false)?;
         }
 
         "win64" | "linux" | "macos" => {
@@ -89,6 +88,13 @@ pub fn copy_library(
                 "win64" => "dclgodot.dll",
                 "linux" => "libdclgodot.so",
                 "macos" => "libdclgodot.dylib",
+                _ => unreachable!(), // already covered by the match above
+            };
+
+            let output_folder_name = match target.as_str() {
+                "win64" => "libdclgodot_windows",
+                "linux" => "libdclgodot_linux",
+                "macos" => "libdclgodot_macos",
                 _ => unreachable!(), // already covered by the match above
             };
 
@@ -105,29 +111,17 @@ pub fn copy_library(
                     .join(file_name),
             );
 
-            let lib_folder = format!("{}lib/", GODOT_PROJECT_FOLDER);
-            let destination_path = adjust_canonicalization(
-                std::fs::canonicalize(&lib_folder)
-                    .map_err(|e| {
-                        anyhow::anyhow!(
-                            "Failed to canonicalize destination folder {}: {}",
-                            lib_folder.to_string(),
-                            e
-                        )
-                    })?
-                    .join(file_name),
-            );
+            let lib_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/", output_folder_name);
+            let destination_path = format!("{lib_folder}/{file_name}");
 
-            copy_if_modified(source_path.clone(), destination_path.clone(), link_libs).map_err(
-                |e| {
-                    anyhow::anyhow!(
-                        "Failed to copy from {:?} to {:?}: {}",
-                        source_path,
-                        destination_path,
-                        e
-                    )
-                },
-            )?;
+            copy_with_error_context(&source_path, &destination_path, false).map_err(|e| {
+                anyhow::anyhow!(
+                    "Failed to copy from {:?} to {:?}: {}",
+                    source_path,
+                    destination_path,
+                    e
+                )
+            })?;
 
             // If on Windows and debug mode, also copy PDB
             if debug_mode && target == "win64" {
@@ -155,7 +149,7 @@ pub fn copy_library(
                         .join(pdb_name),
                 );
 
-                copy_if_modified(pdb_source.clone(), pdb_dest.clone(), link_libs).map_err(|e| {
+                copy_with_error_context(&pdb_source, &pdb_dest, false).map_err(|e| {
                     anyhow::anyhow!(
                         "Failed to copy PDB from {:?} to {:?}: {}",
                         pdb_source,
@@ -165,7 +159,7 @@ pub fn copy_library(
                 })?;
             }
 
-            copy_ffmpeg_libraries(target, lib_folder.clone(), link_libs).map_err(|e| {
+            copy_ffmpeg_libraries(target, lib_folder.clone(), false).map_err(|e| {
                 anyhow::anyhow!("Failed to copy FFmpeg libraries to {}: {}", lib_folder, e)
             })?;
         }
@@ -224,7 +218,8 @@ pub fn copy_ffmpeg_libraries(
 
                 if file_name.ends_with(".dll") {
                     let dest_path = format!("{dest_folder}{file_name}");
-                    copy_if_modified(entry.path(), dest_path, link_libs)?;
+                    let source_path = entry.path().to_str().unwrap().to_string();
+                    copy_with_error_context(&source_path, &dest_path, link_libs)?;
                 }
             }
         }

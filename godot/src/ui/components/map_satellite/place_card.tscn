@@ -1,0 +1,115 @@
+[gd_scene load_steps=11 format=3 uid="uid://cvjqx7t78ubg1"]
+
+[ext_resource type="Script" uid="uid://cah7yukvf1v0n" path="res://src/ui/components/map_satellite/place_card.gd" id="1_88qcw"]
+[ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="2_wujfc"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_6pnhg"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="4_ds3ql"]
+[ext_resource type="Texture2D" uid="uid://msi357rn4mni" path="res://assets/ui/loading/RightArrow.svg" id="5_dwvv3"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8fqpk"]
+bg_color = Color(0.968627, 0.968627, 0.968627, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xt230"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="LabelSettings" id="LabelSettings_0urn1"]
+font = ExtResource("3_6pnhg")
+font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_f30ea"]
+font = ExtResource("4_ds3ql")
+font_size = 12
+font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_ybe31"]
+font = ExtResource("3_6pnhg")
+font_size = 12
+font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+
+[node name="PlaceCard" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 80)
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -40.0
+offset_right = -466.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_8fqpk")
+script = ExtResource("1_88qcw")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PanelToRound" type="PanelContainer" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_xt230")
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer/PanelToRound"]
+unique_name_in_owner = true
+layout_mode = 2
+texture = ExtResource("2_wujfc")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = -2
+alignment = 1
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="LabelTitle" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer/HBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Unknown place"
+label_settings = SubResource("LabelSettings_0urn1")
+
+[node name="CreatorHBoxContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer/CreatorHBoxContainer"]
+layout_mode = 2
+text = "created by"
+label_settings = SubResource("LabelSettings_f30ea")
+
+[node name="LabelCreator" type="Label" parent="MarginContainer/HBoxContainer/VBoxContainer/CreatorHBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Creator"
+label_settings = SubResource("LabelSettings_ybe31")
+
+[node name="TextureRect2" type="TextureRect" parent="MarginContainer/HBoxContainer"]
+modulate = Color(1, 0.176471, 0.333333, 1)
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("5_dwvv3")
+expand_mode = 3
+stretch_mode = 5

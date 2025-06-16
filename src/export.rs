@@ -2,11 +2,13 @@ use std::{collections::HashMap, fs, io, path::Path, process::ExitStatus};
 
 use crate::{
     consts::{
-        BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
+        EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
         GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
     },
     copy_files::copy_ffmpeg_libraries,
-    install_dependency::{download_and_extract_zip, set_executable_permission},
+    install_dependency::{
+        download_and_extract_zip, godot_export_templates_path, set_executable_permission,
+    },
     path::{adjust_canonicalization, get_godot_path},
 };
 
@@ -188,7 +190,7 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
     };
 
     // Process each template and download the associated files
-    let dest_path = format!("{BIN_FOLDER}godot/templates");
+    let dest_path = godot_export_templates_path().expect("Failed to get template path");
 
     for template in templates {
         if let Some(files) = file_map.get(template.as_str()) {
