@@ -83,6 +83,8 @@ fn prepare_build_args_envs(
             "-F",
             "use_deno",
             "-F",
+            "use_livekit",
+            "-F",
             "enable_inspector",
         ]);
     }

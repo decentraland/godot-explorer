@@ -22,7 +22,7 @@ use crate::{
     dcl::components::proto_components::kernel::comms::rfc4,
 };
 
-use super::adapter_trait::Adapter;
+use super::{adapter_trait::Adapter, movement_compressed::MovementCompressed};
 
 pub struct NetworkMessage {
     pub data: Vec<u8>,
@@ -131,8 +131,57 @@ impl LivekitRoom {
 
                     match message.message {
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Position(position)) => {
+                            tracing::info!(
+                                "Received Position from {:#x}: pos({}, {}, {}), rot({}, {}, {}, {})", 
+                                message.address,
+                                position.position_x, position.position_y, position.position_z,
+                                position.rotation_x, position.rotation_y, position.rotation_z, position.rotation_w
+                            );
                             avatar_scene
                                 .update_avatar_transform_with_rfc4_position(peer.alias, &position);
+                        }
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::Movement(movement)) => {
+                            tracing::info!(
+                                "Received Movement from {:#x}: pos({}, {}, {}), rot_y({}), vel({}, {}, {})", 
+                                message.address,
+                                movement.position_x, movement.position_y, movement.position_z,
+                                movement.rotation_y,
+                                movement.velocity_x, movement.velocity_y, movement.velocity_z
+                            );
+                            avatar_scene
+                                .update_avatar_transform_with_rfc4_movement(peer.alias, &movement);
+                        }
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::MovementCompressed(movement_compressed)) => {
+                            // Decompress movement data
+                            let movement = MovementCompressed::from_proto(movement_compressed);
+                            
+                            // Get position from compressed movement
+                            // Note: We need realm bounds for proper position calculation
+                            // For now, using a default if not available
+                            let pos = movement.position(
+                                godot::prelude::Vector2i::new(i32::MAX, i32::MAX), 
+                                godot::prelude::Vector2i::new(i32::MAX, i32::MAX)
+                            );
+                            
+                            let rotation_rad = movement.temporal.rotation_f32();
+                            let velocity = movement.velocity();
+                            
+                            tracing::info!(
+                                "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
+                                message.address,
+                                pos.x, pos.y, pos.z,
+                                rotation_rad,
+                                velocity.x, velocity.y, velocity.z,
+                                movement.temporal.timestamp()
+                            );
+                            
+                            avatar_scene
+                                .update_avatar_transform_with_movement_compressed(
+                                    peer.alias, 
+                                    pos, 
+                                    rotation_rad,
+                                    movement.temporal.timestamp() as u32
+                                );
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Chat(chat)) => {
                             self.chats.push((message.address, chat));

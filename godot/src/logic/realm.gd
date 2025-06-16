@@ -3,7 +3,7 @@ extends DclRealm
 
 signal realm_changed
 
-const MAIN_REALM: String = "https://realm-provider.decentraland.org/main"
+const MAIN_REALM: String = "https://realm-provider-ea.decentraland.org/main"
 
 const WORLDS_URL: String = "https://worlds-content-server.decentraland.org/world/"
 
@@ -19,7 +19,8 @@ const DAO_SERVERS: Array[String] = [
 	"https://peer.kyllian.me/",
 	"https://peer.uadevops.com/",
 	"https://peer.dclnodes.io/",
-	"https://realm-provider.decentraland.org/main/"
+	"https://realm-provider.decentraland.org/main/",
+	"https://realm-provider-ea.decentraland.org/main/"
 ]
 
 var _has_realm = false
