@@ -405,7 +405,7 @@ func _update_buttons_icons() -> void:
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
 	
 	if response == null:
-		printerr("Error al obtener datos del lugar")
+		printerr("Error getting place's data")
 		return
 		
 	var place_data = response.data
