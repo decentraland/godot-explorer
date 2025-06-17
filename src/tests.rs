@@ -23,7 +23,7 @@ fn test_avatar_generation(
         "--rendering-driver",
         "opengl3",
         "--rendering-method",
-        "mobile",
+        "gl_compatibility",
         "--avatar-renderer",
         "--avatars",
         avatar_test_input.to_str().unwrap(),
