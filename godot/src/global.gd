@@ -375,10 +375,12 @@ func http_method_to_string(method: int) -> String:
 			return "GET"  # Default fallback
 
 
-func async_signed_fetch(url:String, method:int, _body:String=""):
-	var headers_promise = Global.player_identity.async_get_identity_headers(url, _body, http_method_to_string(method))
+func async_signed_fetch(url: String, method: int, _body: String = ""):
+	var headers_promise = Global.player_identity.async_get_identity_headers(
+		url, _body, http_method_to_string(method)
+	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
-	
+
 	if headers_result is PromiseError:
 		printerr("Error getting identity headers: ", headers_result.get_error())
 		return
@@ -386,13 +388,13 @@ func async_signed_fetch(url:String, method:int, _body:String=""):
 	var headers: Dictionary = headers_result
 	if not _body.is_empty():
 		headers["Content-Type"] = "application/json"
-	
+
 	var response_promise: Promise = Global.http_requester.request_json(url, method, _body, headers)
 	var response_result = await PromiseUtils.async_awaiter(response_promise)
-	
+
 	if response_result is PromiseError:
 		printerr("Error making HTTP request: ", response_result.get_error())
 		return
-	
+
 	var json: Dictionary = response_result.get_string_response_as_json()
 	return json

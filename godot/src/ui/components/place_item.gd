@@ -25,7 +25,7 @@ var _node_cache: Dictionary = {}
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	_connect_signals()
-	
+
 	engagement_bar = _get_engagement_bar()
 
 	if metadata.is_empty():
@@ -48,6 +48,7 @@ func _get_node_safe(node_name: String) -> Node:
 
 func _get_engagement_bar() -> HBoxContainer:
 	return _get_node_safe("EngagementBar")
+
 
 func _get_button_close() -> Button:
 	return _get_node_safe("Button_Close")
@@ -195,7 +196,7 @@ func set_data(item_data):
 	var like_score = item_data.get("like_score", 0.0)
 	set_likes_percent(like_score if like_score is float else 0.0)
 	set_online(item_data.get("user_count", 0))
-	
+
 	if _get_texture_image():
 		var image_url = item_data.get("image", "")
 		if not image_url.is_empty():

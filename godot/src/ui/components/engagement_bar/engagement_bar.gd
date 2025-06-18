@@ -6,18 +6,19 @@ const LIKE = preload("res://assets/ui/like.svg")
 const LIKE_SOLID = preload("res://assets/ui/like_solid.svg")
 const PLACES_API_BASE_URL = "https://places.decentraland.org/api"
 
-var place_id
-
 @export var show_share_button: bool = false:
 	set(value):
 		show_share_button = value
 		if button_share:
 			button_share.visible = value
 
+var place_id
+
 @onready var button_like: Button = %Button_Like
 @onready var button_dislike: Button = %Button_Dislike
 @onready var button_fav: Button = %Button_Fav
 @onready var button_share: Button = %Button_Share
+
 
 func _ready() -> void:
 	if button_share:
