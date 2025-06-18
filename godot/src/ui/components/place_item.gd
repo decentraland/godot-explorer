@@ -216,7 +216,7 @@ func set_data(item_data):
 		set_realm(world_name, world_name)
 	else:
 		set_realm(Realm.MAIN_REALM, "Genesis City")
-	
+
 	if engagement_bar:
 		engagement_bar.update_data(_data.get("id", null))
 
