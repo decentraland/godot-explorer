@@ -8,11 +8,20 @@ const PLACES_API_BASE_URL = "https://places.decentraland.org/api"
 
 var place_id
 
+@export var show_share_button: bool = false:
+	set(value):
+		show_share_button = value
+		if button_share:
+			button_share.visible = value
+
 @onready var button_like: Button = %Button_Like
 @onready var button_dislike: Button = %Button_Dislike
 @onready var button_fav: Button = %Button_Fav
 @onready var button_share: Button = %Button_Share
 
+func _ready() -> void:
+	if button_share:
+		button_share.visible = show_share_button
 
 func update_data(id = null) -> void:
 	place_id = id
@@ -34,26 +43,24 @@ func _on_button_like_toggled(toggled_on: bool) -> void:
 		button_like.set_pressed_no_signal(!toggled_on)
 		return
 		
+	disable_buttons()
+	
 	var url = PLACES_API_BASE_URL + "/places/" + place_id + "/likes"
 	var body: String
 	
 	if toggled_on:
-		# Activar like
 		body = JSON.stringify({ like = true })
-		# Desactivar dislike visualmente si estaba activado
-		if button_dislike.is_pressed():
-			button_dislike.set_pressed_no_signal(false)
 	else:
-		# Desactivar like (volver a neutral)
 		body = JSON.stringify({ like = null })
 	
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
 	if response != null:
 		await _update_buttons_icons()
 	else:
-		# Revertir el estado del botón si falló el PATCH
 		button_like.set_pressed_no_signal(!toggled_on)
 		printerr("Error patching likes")
+		
+	enable_buttons()
 
 
 func _on_button_dislike_toggled(toggled_on: bool) -> void:
@@ -61,17 +68,14 @@ func _on_button_dislike_toggled(toggled_on: bool) -> void:
 		button_dislike.set_pressed_no_signal(!toggled_on)
 		return
 		
+	disable_buttons()
+	
 	var url = PLACES_API_BASE_URL + "/places/" + place_id + "/likes"
 	var body
 	
 	if toggled_on:
-		# Activar dislike
 		body = JSON.stringify({ like = false })
-		# Desactivar like visualmente si estaba activado
-		if button_like.is_pressed():
-			button_like.set_pressed_no_signal(false)
 	else:
-		# Desactivar dislike (volver a neutral)
 		body = JSON.stringify({ like = null })
 	
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
@@ -81,6 +85,8 @@ func _on_button_dislike_toggled(toggled_on: bool) -> void:
 		if button_dislike:
 			button_dislike.set_pressed_no_signal(!toggled_on)
 		printerr("Error patching likes")
+	
+	enable_buttons()
 
 
 func _on_button_fav_toggled(toggled_on: bool) -> void:
@@ -88,6 +94,8 @@ func _on_button_fav_toggled(toggled_on: bool) -> void:
 		button_fav.set_pressed_no_signal(!toggled_on)
 		return
 		
+	disable_buttons()
+	
 	var url = PLACES_API_BASE_URL + "/places/" + place_id + "/favorites"
 	var body = JSON.stringify({"favorites":toggled_on})
 	
@@ -98,14 +106,19 @@ func _on_button_fav_toggled(toggled_on: bool) -> void:
 		if button_fav:
 			button_fav.set_pressed_no_signal(!toggled_on)
 		printerr("Error patching favorites")
+	
+	enable_buttons()
 
 
 func _update_buttons_icons() -> void:
+	disable_buttons()
+	
 	var url = PLACES_API_BASE_URL + "/places/" + place_id
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
 	
 	if response == null:
 		printerr("Error getting place's data")
+		enable_buttons()
 		return
 		
 	var place_data = response.data
@@ -123,3 +136,27 @@ func _update_buttons_icons() -> void:
 		button_dislike.icon = DISLIKE
 
 	button_fav.set_pressed_no_signal(place_data.user_favorite)
+	
+	enable_buttons()
+
+func disable_buttons() -> void:
+	if button_like:
+		button_like.disabled = true
+		button_like.get_node("TextureProgressBar").show()
+	if button_dislike:
+		button_dislike.disabled = true
+		button_dislike.get_node("TextureProgressBar").show()
+	if button_fav:
+		button_fav.disabled = true
+		button_fav.get_node("TextureProgressBar").show()
+
+func enable_buttons() -> void:
+	if button_like:
+		button_like.disabled = false
+		button_like.get_node("TextureProgressBar").hide()
+	if button_dislike:
+		button_dislike.disabled = false
+		button_dislike.get_node("TextureProgressBar").hide()
+	if button_fav:
+		button_fav.disabled = false
+		button_fav.get_node("TextureProgressBar").hide()

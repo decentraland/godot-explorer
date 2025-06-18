@@ -26,7 +26,7 @@ func _ready():
 	UiSounds.install_audio_recusirve(self)
 	_connect_signals()
 	
-	engagement_bar = get_node_or_null("%EngagementBar")
+	engagement_bar = _get_engagement_bar()
 
 	if metadata.is_empty():
 		set_image(texture)
@@ -45,6 +45,9 @@ func _get_node_safe(node_name: String) -> Node:
 		_node_cache[node_name] = get_node_or_null("%" + node_name)
 	return _node_cache[node_name]
 
+
+func _get_engagement_bar() -> HBoxContainer:
+	return _get_node_safe("EngagementBar")
 
 func _get_button_close() -> Button:
 	return _get_node_safe("Button_Close")
@@ -183,7 +186,6 @@ func set_creator(_creator: String):
 
 
 func set_data(item_data):
-	print(item_data.get("title", "Unknown place"), item_data)
 	_data = item_data
 
 	set_title(item_data.get("title", "Unknown place"))
