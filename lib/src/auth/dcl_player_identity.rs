@@ -355,7 +355,9 @@ impl DclPlayerIdentity {
         let Some(ephemeral_auth_chain) = self.ephemeral_auth_chain.clone() else {
             tracing::error!("ephemeral auth chain not initialized");
             let mut promise_clone = promise.clone();
-            promise_clone.bind_mut().reject("Ephemeral auth chain not initialized".into());
+            promise_clone
+                .bind_mut()
+                .reject("Ephemeral auth chain not initialized".into());
             return promise;
         };
 
@@ -365,11 +367,13 @@ impl DclPlayerIdentity {
                 Err(e) => {
                     tracing::error!("Invalid URI: {}", e);
                     let mut promise_clone = promise.clone();
-                    promise_clone.bind_mut().reject(format!("Invalid URI: {}", e).into());
+                    promise_clone
+                        .bind_mut()
+                        .reject(format!("Invalid URI: {}", e).into());
                     return promise;
                 }
             };
-            
+
             let method = method.to_string();
             let metadata = metadata.to_string();
 
@@ -382,12 +386,15 @@ impl DclPlayerIdentity {
                         Ok(json) => json,
                         Err(e) => {
                             tracing::error!("Failed to parse metadata as JSON: {}", e);
-                            let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
+                            let Ok(mut promise) =
+                                Gd::<Promise>::try_from_instance_id(promise_instance_id)
                             else {
                                 tracing::error!("error getting promise");
                                 return;
                             };
-                            promise.bind_mut().reject(format!("Invalid metadata JSON: {}", e).into());
+                            promise
+                                .bind_mut()
+                                .reject(format!("Invalid metadata JSON: {}", e).into());
                             return;
                         }
                     }
@@ -416,7 +423,9 @@ impl DclPlayerIdentity {
             });
         } else {
             let mut promise_clone = promise.clone();
-            promise_clone.bind_mut().reject("Tokio runtime not initialized".into());
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
         }
 
         promise
