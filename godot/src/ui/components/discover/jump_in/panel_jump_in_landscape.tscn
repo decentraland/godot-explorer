@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3 uid="uid://b8837sg55qd8m"]
+[gd_scene load_steps=30 format=3 uid="uid://b8837sg55qd8m"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gki2s"]
 [ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_limbe"]
@@ -17,13 +17,7 @@
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="12_eg42m"]
 [ext_resource type="StyleBox" uid="uid://dnfryl87xc26f" path="res://src/ui/components/discover/jump_in/jump_in_button_hover.tres" id="15_7cmxw"]
 [ext_resource type="StyleBox" uid="uid://bjw0qd6a67c5f" path="res://src/ui/components/discover/jump_in/jump_in_button.tres" id="15_mpouh"]
-[ext_resource type="Texture2D" uid="uid://3omhfeyiw43d" path="res://assets/ui/like.svg" id="16_limbe"]
-[ext_resource type="StyleBox" uid="uid://dhbw2a5306luc" path="res://src/ui/components/discover/jump_in/like_button_hover.tres" id="17_7cmxw"]
-[ext_resource type="StyleBox" uid="uid://cmld8wgql6udq" path="res://src/ui/components/discover/jump_in/like_button.tres" id="17_guuy4"]
-[ext_resource type="Texture2D" uid="uid://bbfacjlfqblgk" path="res://assets/ui/dislike.svg" id="17_smlb1"]
-[ext_resource type="Texture2D" uid="uid://dq3skqqbudygj" path="res://assets/ui/heart.svg" id="18_mpouh"]
-[ext_resource type="Texture2D" uid="uid://jwjwv7o28h0o" path="res://assets/ui/share.svg" id="19_guuy4"]
-[ext_resource type="ButtonGroup" uid="uid://rsv6t7byp3yk" path="res://src/ui/components/discover/jump_in/likes_button_group_landscape.tres" id="20_ja3ps"]
+[ext_resource type="PackedScene" uid="uid://cmarw81knjomw" path="res://src/ui/components/engagement_bar/engagement_bar.tscn" id="18_582y3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_eaed0"]
 bg_color = Color(0.92549, 0.921569, 0.929412, 1)
@@ -364,79 +358,9 @@ icon = ExtResource("12_eg42m")
 icon_alignment = 2
 expand_icon = true
 
-[node name="HBoxContainer_Buttons" type="HBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
+[node name="EngagementBar" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer" instance=ExtResource("18_582y3")]
 unique_name_in_owner = true
 layout_mode = 2
-
-[node name="Button_Like" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(46, 46)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_type_variation = &"WhiteButton"
-theme_override_colors/icon_hover_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_styles/hover_pressed = ExtResource("17_7cmxw")
-theme_override_styles/hover = ExtResource("17_7cmxw")
-theme_override_styles/pressed = ExtResource("17_guuy4")
-theme_override_styles/normal = ExtResource("17_guuy4")
-toggle_mode = true
-button_group = ExtResource("20_ja3ps")
-icon = ExtResource("16_limbe")
-icon_alignment = 1
-expand_icon = true
-
-[node name="Button_Dislike" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(46, 46)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_type_variation = &"WhiteButton"
-theme_override_colors/icon_hover_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_styles/hover_pressed = ExtResource("17_7cmxw")
-theme_override_styles/hover = ExtResource("17_7cmxw")
-theme_override_styles/pressed = ExtResource("17_guuy4")
-theme_override_styles/normal = ExtResource("17_guuy4")
-toggle_mode = true
-button_group = ExtResource("20_ja3ps")
-icon = ExtResource("17_smlb1")
-icon_alignment = 1
-expand_icon = true
-
-[node name="Button_Fav" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(46, 46)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_type_variation = &"WhiteButton"
-theme_override_colors/icon_hover_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_colors/icon_pressed_color = Color(1, 0.176471, 0.333333, 1)
-theme_override_styles/hover_pressed = ExtResource("17_7cmxw")
-theme_override_styles/hover = ExtResource("17_7cmxw")
-theme_override_styles/pressed = ExtResource("17_guuy4")
-theme_override_styles/normal = ExtResource("17_guuy4")
-toggle_mode = true
-icon = ExtResource("18_mpouh")
-icon_alignment = 1
-expand_icon = true
-
-[node name="Button_Share" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons"]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(46, 46)
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_type_variation = &"WhiteButton"
-disabled = true
-toggle_mode = true
-icon = ExtResource("19_guuy4")
-icon_alignment = 1
-expand_icon = true
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
@@ -466,7 +390,3 @@ autowrap_mode = 2
 
 [connection signal="pressed" from="VBoxContainer/TextureRect_Image/Button_Close" to="." method="_on_button_close_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/Button_JumpIn" to="." method="_on_button_jump_in_pressed"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons/Button_Like" to="." method="_on_button_like_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons/Button_Dislike" to="." method="_on_button_dislike_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons/Button_Fav" to="." method="_on_button_fav_toggled"]
-[connection signal="pressed" from="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer/HBoxContainer_Buttons/Button_Share" to="." method="_on_button_share_pressed"]
