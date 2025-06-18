@@ -139,7 +139,7 @@ icon = ExtResource("7_k1hts")
 icon_alignment = 1
 expand_icon = true
 
-[connection signal="toggled" from="Button_Like" to="." method="_on_button_like_toggled"]
-[connection signal="toggled" from="Button_Dislike" to="." method="_on_button_dislike_toggled"]
-[connection signal="toggled" from="Button_Fav" to="." method="_on_button_fav_toggled"]
+[connection signal="toggled" from="Button_Like" to="." method="_async_on_button_like_toggled"]
+[connection signal="toggled" from="Button_Dislike" to="." method="_async_on_button_dislike_toggled"]
+[connection signal="toggled" from="Button_Fav" to="." method="_async_on_button_fav_toggled"]
 [connection signal="pressed" from="Button_Share" to="." method="_on_button_share_pressed"]

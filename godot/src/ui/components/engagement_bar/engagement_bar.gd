@@ -27,12 +27,12 @@ func _ready() -> void:
 
 func update_data(id = null) -> void:
 	place_id = id
-	update_visibility()
+	async_update_visibility()
 
 
-func update_visibility() -> void:
+func async_update_visibility() -> void:
 	if place_id != null:
-		await _update_buttons_icons()
+		await _async_update_buttons_icons()
 		show()
 	else:
 		hide()
@@ -42,7 +42,7 @@ func _on_button_share_pressed() -> void:
 	pass  # Replace with function body.
 
 
-func _on_button_like_toggled(toggled_on: bool) -> void:
+func _async_on_button_like_toggled(toggled_on: bool) -> void:
 	if place_id == null:
 		button_like.set_pressed_no_signal(!toggled_on)
 		return
@@ -59,7 +59,7 @@ func _on_button_like_toggled(toggled_on: bool) -> void:
 
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
 	if response != null:
-		await _update_buttons_icons()
+		await _async_update_buttons_icons()
 	else:
 		button_like.set_pressed_no_signal(!toggled_on)
 		printerr("Error patching likes")
@@ -67,7 +67,7 @@ func _on_button_like_toggled(toggled_on: bool) -> void:
 	enable_buttons()
 
 
-func _on_button_dislike_toggled(toggled_on: bool) -> void:
+func _async_on_button_dislike_toggled(toggled_on: bool) -> void:
 	if place_id == null:
 		button_dislike.set_pressed_no_signal(!toggled_on)
 		return
@@ -84,7 +84,7 @@ func _on_button_dislike_toggled(toggled_on: bool) -> void:
 
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
 	if response != null:
-		await _update_buttons_icons()
+		await _async_update_buttons_icons()
 	else:
 		if button_dislike:
 			button_dislike.set_pressed_no_signal(!toggled_on)
@@ -93,7 +93,7 @@ func _on_button_dislike_toggled(toggled_on: bool) -> void:
 	enable_buttons()
 
 
-func _on_button_fav_toggled(toggled_on: bool) -> void:
+func _async_on_button_fav_toggled(toggled_on: bool) -> void:
 	if place_id == null:
 		button_fav.set_pressed_no_signal(!toggled_on)
 		return
@@ -105,7 +105,7 @@ func _on_button_fav_toggled(toggled_on: bool) -> void:
 
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
 	if response != null:
-		await _update_buttons_icons()
+		await _async_update_buttons_icons()
 	else:
 		if button_fav:
 			button_fav.set_pressed_no_signal(!toggled_on)
@@ -114,7 +114,7 @@ func _on_button_fav_toggled(toggled_on: bool) -> void:
 	enable_buttons()
 
 
-func _update_buttons_icons() -> void:
+func _async_update_buttons_icons() -> void:
 	disable_buttons()
 
 	var url = PLACES_API_BASE_URL + "/places/" + place_id
