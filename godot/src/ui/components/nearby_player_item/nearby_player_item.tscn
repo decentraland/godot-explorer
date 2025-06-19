@@ -1,0 +1,116 @@
+[gd_scene load_steps=9 format=3 uid="uid://d30nejywxmhpn"]
+
+[ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="1_40sym"]
+[ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_gljko"]
+[ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="3_cmtom"]
+[ext_resource type="Texture2D" uid="uid://wqjnen6q0kbj" path="res://assets/ui/report.svg" id="5_n1xiu"]
+[ext_resource type="Texture2D" uid="uid://ceh3pvhtpwjhp" path="res://assets/ui/audio_off.svg" id="6_p3duq"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66h5u"]
+bg_color = Color(1, 1, 1, 0.0823529)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="LabelSettings" id="LabelSettings_roypi"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_h5lif"]
+font_size = 12
+
+[node name="NearbyPlayerItem" type="MarginContainer"]
+offset_right = 290.0
+offset_bottom = 53.0
+theme_override_constants/margin_right = 10
+
+[node name="NearbyPlayerItem" type="Panel" parent="."]
+custom_minimum_size = Vector2(0, 53)
+layout_mode = 2
+size_flags_horizontal = 3
+theme = ExtResource("1_gljko")
+theme_override_styles/panel = SubResource("StyleBoxFlat_66h5u")
+
+[node name="MarginContainer" type="MarginContainer" parent="NearbyPlayerItem"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="NearbyPlayerItem/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 9
+
+[node name="ProfilePicture" parent="NearbyPlayerItem/MarginContainer/HBoxContainer" instance=ExtResource("1_40sym")]
+layout_mode = 2
+size_flags_horizontal = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="NearbyPlayerItem/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = -4
+alignment = 1
+
+[node name="Label_Nick" type="Label" parent="NearbyPlayerItem/MarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+text = "Nickname"
+label_settings = SubResource("LabelSettings_roypi")
+
+[node name="Label_Status" type="Label" parent="NearbyPlayerItem/MarginContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+text = "Online"
+label_settings = SubResource("LabelSettings_h5lif")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="NearbyPlayerItem/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 3
+alignment = 1
+
+[node name="Button_BlockUser" type="Button" parent="NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(25, 25)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/icon_max_width = 25
+toggle_mode = true
+icon = ExtResource("3_cmtom")
+flat = true
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_Mute" type="Button" parent="NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(25, 25)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/icon_max_width = 25
+toggle_mode = true
+icon = ExtResource("6_p3duq")
+flat = true
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_Report" type="Button" parent="NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(25, 25)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/icon_max_width = 25
+toggle_mode = true
+icon = ExtResource("5_n1xiu")
+flat = true
+icon_alignment = 1
+expand_icon = true
+
+[connection signal="pressed" from="NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer/Button_BlockUser" to="NearbyPlayerItem/MarginContainer/HBoxContainer/ProfilePicture" method="_on_button_block_user_pressed"]
+[connection signal="pressed" from="NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer/Button_Mute" to="NearbyPlayerItem/MarginContainer/HBoxContainer/ProfilePicture" method="_on_button_mute_pressed"]
+[connection signal="pressed" from="NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer/Button_Report" to="NearbyPlayerItem/MarginContainer/HBoxContainer/ProfilePicture" method="_on_button_report_pressed"]

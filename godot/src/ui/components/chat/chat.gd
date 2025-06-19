@@ -11,6 +11,11 @@ var hide_tween = null
 @onready var rich_text_label_chat = %RichTextLabel_Chat
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
+@onready var button_nearby_users: Button = %Button_NearbyUsers
+@onready var margin_container_chat: MarginContainer = %MarginContainer_Chat
+@onready var margin_container_nearby: MarginContainer = %MarginContainer_Nearby
+@onready var button_back: Button = %Button_Back
+@onready var texture_rect_logo: TextureRect = %TextureRect_Logo
 
 @onready var timer_hide = %Timer_Hide
 
@@ -126,3 +131,33 @@ func _on_timer_hide_timeout():
 	hide_tween = get_tree().create_tween()
 	modulate = Color.WHITE
 	hide_tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.5)
+
+
+func update_nearby_users(users:int = -1) -> void:
+	var quantity
+	var rng = RandomNumberGenerator.new()
+	
+	if users > 0:
+		quantity = users
+	else:
+		quantity = rng.randi_range(1, 100)
+	button_nearby_users.text = str(quantity)	
+
+func _on_button_2_pressed() -> void:
+	update_nearby_users()
+
+
+func _on_button_nearby_users_pressed() -> void:
+	margin_container_nearby.show()
+	button_back.show()
+	timer_hide.stop()
+	margin_container_chat.hide()
+	texture_rect_logo.hide()
+
+
+func _on_button_back_pressed() -> void:
+	margin_container_nearby.hide()
+	button_back.hide()
+	timer_hide.start()
+	margin_container_chat.show()
+	texture_rect_logo.show()
