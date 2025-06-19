@@ -16,6 +16,7 @@ var hide_tween = null
 @onready var margin_container_nearby: MarginContainer = %MarginContainer_Nearby
 @onready var button_back: Button = %Button_Back
 @onready var texture_rect_logo: TextureRect = %TextureRect_Logo
+@onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
 
 @onready var timer_hide = %Timer_Hide
 
@@ -150,14 +151,18 @@ func _on_button_2_pressed() -> void:
 func _on_button_nearby_users_pressed() -> void:
 	margin_container_nearby.show()
 	button_back.show()
-	timer_hide.stop()
+	h_box_container_nearby_users.show()
 	margin_container_chat.hide()
 	texture_rect_logo.hide()
+	button_nearby_users.hide()
+	timer_hide.stop()
 
 
 func _on_button_back_pressed() -> void:
 	margin_container_nearby.hide()
 	button_back.hide()
-	timer_hide.start()
+	h_box_container_nearby_users.hide()
 	margin_container_chat.show()
 	texture_rect_logo.show()
+	button_nearby_users.show()
+	timer_hide.start()

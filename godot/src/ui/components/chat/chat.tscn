@@ -56,6 +56,7 @@ theme_override_constants/margin_bottom = 8
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer"]
 layout_mode = 2
+theme_override_constants/separation = 11
 
 [node name="Button_Back" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
@@ -83,32 +84,26 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "Nearby"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
+[node name="HBoxContainer_NearbyUsers" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
-[node name="Label2" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 16
-text = "-"
-
-[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer"]
+[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
 custom_minimum_size = Vector2(15, 15)
 layout_mode = 2
 texture = ExtResource("3_bhyuy")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_MembersQuantity" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer"]
+[node name="Label_MembersQuantity" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "20"
 
-[node name="Label" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)

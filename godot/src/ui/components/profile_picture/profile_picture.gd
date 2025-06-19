@@ -11,15 +11,3 @@ func _async_update_profile_picture(profile: DclUserProfile):
 		printerr("profile_picture::_async_download_image promise error: ", result.get_error())
 		return
 	texture_rect_profile.texture = result.texture
-
-
-func _on_button_block_user_pressed() -> void:
-	pass # Replace with function body.
-
-
-func _on_button_mute_pressed() -> void:
-	pass # Replace with function body.
-
-
-func _on_button_report_pressed() -> void:
-	pass # Replace with function body.
