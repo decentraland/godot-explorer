@@ -58,6 +58,8 @@ func _async_on_button_like_toggled(toggled_on: bool) -> void:
 		body = JSON.stringify({like = null})
 
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+	if response is PromiseError:
+		printerr("Error patching likes: ", response.get_error())
 	if response != null:
 		await _async_update_buttons_icons()
 	else:
@@ -83,6 +85,8 @@ func _async_on_button_dislike_toggled(toggled_on: bool) -> void:
 		body = JSON.stringify({like = null})
 
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+	if response is PromiseError:
+		printerr("Error patching likes: ", response.get_error())
 	if response != null:
 		await _async_update_buttons_icons()
 	else:
@@ -104,6 +108,8 @@ func _async_on_button_fav_toggled(toggled_on: bool) -> void:
 	var body = JSON.stringify({"favorites": toggled_on})
 
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+	if response is PromiseError:
+		printerr("Error patching favorites: ", response.get_error())
 	if response != null:
 		await _async_update_buttons_icons()
 	else:
@@ -124,8 +130,11 @@ func _async_update_buttons_icons() -> void:
 		printerr("Error getting place's data")
 		enable_buttons()
 		return
+	if response is PromiseError:
+		printerr("Error getting place's data: ", response.get_error())
 
-	var place_data = response.data
+	var json: Dictionary = response.get_string_response_as_json()
+	var place_data = json.data
 
 	button_like.set_pressed_no_signal(place_data.user_like)
 	if button_like.is_pressed():
