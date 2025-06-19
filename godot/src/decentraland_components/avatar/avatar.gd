@@ -137,9 +137,13 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 	var wearable_to_request := []
 
 	var splitted_nickname = new_avatar_name.split("#", false)
-	nickname_ui.nickname = splitted_nickname[0]
 	if splitted_nickname.size() > 1:
+		nickname_ui.nickname = splitted_nickname[0]
 		nickname_ui.tag = splitted_nickname[1]
+	else:
+		nickname_ui.nickname = new_avatar_name
+		nickname_ui.tag = ""
+
 	nickname_ui.nickname_color = get_nickname_color(new_avatar_name)
 	nickname_ui.mic_enabled = false
 
