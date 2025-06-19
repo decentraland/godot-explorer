@@ -25,8 +25,12 @@ jobs:
           toolchain: 1.79
           override: true
           components: clippy, rustfmt
-      - name: Set up cache
-        uses: ./.github/actions/set-up-cache
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android
+          workspaces: |
+            .
+            lib/
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
