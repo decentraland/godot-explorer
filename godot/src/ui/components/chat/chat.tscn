@@ -1,11 +1,10 @@
-[gd_scene load_steps=12 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=10 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="3_bhyuy"]
 [ext_resource type="Texture2D" uid="uid://bwhq0um6jgi1n" path="res://assets/ui/loading/LeftArrow.svg" id="3_lt7hs"]
 [ext_resource type="Texture2D" uid="uid://byv55qwr3riuh" path="res://assets/themes/dark_dcl_theme/icons/send.svg" id="3_umu3q"]
-[ext_resource type="Texture2D" uid="uid://dju11x2qyib75" path="res://assets/ui/menu_icon.svg" id="4_bhyuy"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_euk1h"]
 [ext_resource type="PackedScene" uid="uid://d30nejywxmhpn" path="res://src/ui/components/nearby_player_item/nearby_player_item.tscn" id="6_nh78v"]
 
@@ -20,10 +19,6 @@ corner_radius_bottom_left = 6
 bg_color = Color(0, 0, 0, 1)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
-
-[sub_resource type="StyleBoxLine" id="StyleBoxLine_bhyuy"]
-color = Color(1, 1, 1, 0.141176)
-vertical = true
 
 [node name="Panel_Chat" type="Panel"]
 custom_minimum_size = Vector2(300, 250)
@@ -71,7 +66,6 @@ size_flags_horizontal = 0
 size_flags_vertical = 0
 theme_override_constants/icon_max_width = 20
 icon = ExtResource("3_lt7hs")
-flat = true
 icon_alignment = 1
 
 [node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
@@ -89,24 +83,44 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "Nearby"
 
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
+visible = false
+layout_mode = 2
+
+[node name="Label2" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "-"
+
+[node name="TextureRect_Logo" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(15, 15)
+layout_mode = 2
+texture = ExtResource("3_bhyuy")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_MembersQuantity" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "20"
+
+[node name="Label" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "Members"
+
 [node name="Button_NearbyUsers" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 15
 text = " 20"
 icon = ExtResource("3_bhyuy")
-
-[node name="VSeparator" type="VSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_constants/separation = 3
-theme_override_styles/separator = SubResource("StyleBoxLine_bhyuy")
-
-[node name="Button2" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_constants/icon_max_width = 5
-icon = ExtResource("4_bhyuy")
 
 [node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer"]
 unique_name_in_owner = true
@@ -188,7 +202,6 @@ layout_mode = 2
 [connection signal="timeout" from="Timer_Hide" to="." method="_on_timer_hide_timeout"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/Button_Back" to="." method="_on_button_back_pressed"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/Button_NearbyUsers" to="." method="_on_button_nearby_users_pressed"]
-[connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/Button2" to="." method="_on_button_2_pressed"]
 [connection signal="focus_exited" from="VBoxContainer/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]
 [connection signal="text_submitted" from="VBoxContainer/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_text_submitted"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/Button_Send" to="." method="_on_button_send_pressed"]
