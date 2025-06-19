@@ -1,7 +1,8 @@
-[gd_scene load_steps=77 format=3 uid="uid://dvu5i0n51gph3"]
+[gd_scene load_steps=78 format=3 uid="uid://dvu5i0n51gph3"]
 
 [ext_resource type="Script" uid="uid://du2j4yjo5etlb" path="res://src/decentraland_components/avatar/avatar.gd" id="1_stmqn"]
 [ext_resource type="PackedScene" uid="uid://d1i02k5nxmje6" path="res://src/decentraland_components/nickname_ui.tscn" id="2_kjemr"]
+[ext_resource type="Script" uid="uid://c7mvc1cramdxg" path="res://src/decentraland_components/avatar/nickname_quad.gd" id="2_mwwx3"]
 [ext_resource type="AnimationLibrary" uid="uid://bfbk8s54f1krh" path="res://assets/animations/locomotion.res" id="3_piipk"]
 [ext_resource type="AnimationLibrary" uid="uid://by2djy1ah7psb" path="res://assets/animations/default_emotes.tres" id="4_mgm58"]
 [ext_resource type="AnimationLibrary" uid="uid://bt3bj0k3qqmbn" path="res://assets/animations/idle.res" id="5_h07gr"]
@@ -808,13 +809,15 @@ bone_idx = 61
 unique_name_in_owner = true
 transform = Transform3D(1, 0.00020682, -1.83739e-05, -0.000206452, 0.999844, 0.0176546, 2.20121e-05, -0.0176548, 0.999844, 0, 75, 0)
 cast_shadow = 0
-visibility_range_end = 7.0
-pixel_size = 0.075
+visibility_range_end = 15.0
+pixel_size = 0.05
 billboard = 1
 double_sided = false
 fixed_size = true
-alpha_cut = 1
 texture = SubResource("ViewportTexture_mwwx3")
+script = ExtResource("2_mwwx3")
+fade_end = 15.0
+fade_start = 10.0
 
 [node name="NicknameViewport" type="SubViewport" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad"]
 unique_name_in_owner = true

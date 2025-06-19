@@ -74,6 +74,7 @@ func _ready():
 
 	set_camera_mode(Global.CameraMode.THIRD_PERSON)
 	avatar.activate_attach_points()
+	avatar.hide_name = true
 
 	floor_snap_length = 0.2
 
