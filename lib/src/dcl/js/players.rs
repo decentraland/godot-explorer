@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use deno_core::{error::AnyError, op, Op, OpDecl, OpState};
+use deno_core::{error::AnyError, op2, OpDecl, OpState};
 
 use crate::dcl::{
     components::{proto_components::common::Color3, SceneEntityId},
@@ -10,16 +10,17 @@ use crate::dcl::{
 
 pub fn ops() -> Vec<OpDecl> {
     vec![
-        op_get_player_data::DECL,
-        op_get_connected_players::DECL,
-        op_get_players_in_scene::DECL,
+        op_get_player_data(),
+        op_get_connected_players(),
+        op_get_players_in_scene(),
     ]
 }
 
-#[op]
+#[op2(async)]
+#[serde]
 async fn op_get_player_data(
     op_state: Rc<RefCell<OpState>>,
-    user_id: String,
+    #[string] user_id: String,
 ) -> Result<Option<UserData>, AnyError> {
     let (sx, rx) = tokio::sync::oneshot::channel::<Option<UserData>>();
 
@@ -34,7 +35,8 @@ async fn op_get_player_data(
     rx.await.map_err(|e| anyhow::anyhow!(e))
 }
 
-#[op]
+#[op2(async)]
+#[serde]
 async fn op_get_players_in_scene(op_state: Rc<RefCell<OpState>>) -> Result<Vec<String>, AnyError> {
     let (sx, rx) = tokio::sync::oneshot::channel::<Vec<String>>();
 
@@ -47,7 +49,8 @@ async fn op_get_players_in_scene(op_state: Rc<RefCell<OpState>>) -> Result<Vec<S
     rx.await.map_err(|e| anyhow::anyhow!(e))
 }
 
-#[op]
+#[op2(async)]
+#[serde]
 async fn op_get_connected_players(op_state: Rc<RefCell<OpState>>) -> Result<Vec<String>, AnyError> {
     let (sx, rx) = tokio::sync::oneshot::channel::<Vec<String>>();
 

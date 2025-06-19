@@ -90,9 +90,9 @@ impl DclAvatarWireFormat {
 
         for (i, emote) in DEFAULT_EMOTES.iter().enumerate() {
             if let Some(emote) = used_emotes.iter().find(|e| e.slot == i as u32) {
-                emotes.set(i, GString::from(emote.urn.as_str()));
+                emotes[i] = GString::from(emote.urn.as_str());
             } else {
-                emotes.set(i, GString::from(*emote));
+                emotes[i] = GString::from(*emote);
             }
         }
         emotes
@@ -170,7 +170,11 @@ impl DclAvatarWireFormat {
     fn set_wearables(&mut self, wearables: PackedStringArray) {
         let mut wearables_vec = Vec::new();
         for i in 0..wearables.len() {
-            wearables_vec.push(wearables.get(i).to_string());
+            if let Some(wearable) = wearables.get(i).as_ref() {
+                wearables_vec.push(wearable.to_string());
+            } else {
+                tracing::error!("Invalid wearable at index {}", i);
+            }
         }
         self.inner.wearables = wearables_vec;
     }
@@ -184,9 +188,16 @@ impl DclAvatarWireFormat {
 
         let mut emotes_vec = Vec::new();
         for i in 0..10 {
+            let urn = if let Some(emote) = emotes.get(i).as_ref() {
+                emote.to_string()
+            } else {
+                tracing::error!("Missing emote at slot {}", i);
+                String::new()
+            };
+
             emotes_vec.push(AvatarEmote {
                 slot: i as u32,
-                urn: emotes.get(i).to_string(),
+                urn,
             });
         }
         self.inner.emotes = Some(emotes_vec);
