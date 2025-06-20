@@ -329,8 +329,6 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
         .expect("failed to serialize scene_test_coords");
 
     let extra_args = [
-        "--rendering-driver",
-        "opengl3",
         "--scene-test",
         scene_test_coords_str.as_str(),
         "--realm",

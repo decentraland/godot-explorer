@@ -20,10 +20,6 @@ fn test_avatar_generation(
 
     let avatar_test_input = Path::new("./../tests/avatars-test-input.json");
     let extra_args = [
-        "--rendering-driver",
-        "opengl3",
-        "--rendering-method",
-        "gl_compatibility",
         "--avatar-renderer",
         "--avatars",
         avatar_test_input.to_str().unwrap(),
@@ -56,10 +52,6 @@ fn test_scene_generation(
     }
     let scene_test_input = Path::new("./../tests/scene-renderer-test-input.json");
     let extra_args = [
-        "--rendering-driver",
-        "opengl3",
-        "--rendering-method",
-        "gl_compatibility",
         "--scene-renderer",
         "--scene-input-file",
         scene_test_input.to_str().unwrap(),
