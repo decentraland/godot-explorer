@@ -16,6 +16,7 @@ signal close
 @export var realm: String = Realm.MAIN_REALM
 @export var realm_title: String = "Genesis City"
 
+var engagement_bar: HBoxContainer
 var texture_placeholder = load("res://assets/ui/placeholder.png")
 var _data = null
 var _node_cache: Dictionary = {}
@@ -24,6 +25,8 @@ var _node_cache: Dictionary = {}
 func _ready():
 	UiSounds.install_audio_recusirve(self)
 	_connect_signals()
+
+	engagement_bar = _get_engagement_bar()
 
 	if metadata.is_empty():
 		set_image(texture)
@@ -43,12 +46,12 @@ func _get_node_safe(node_name: String) -> Node:
 	return _node_cache[node_name]
 
 
+func _get_engagement_bar() -> HBoxContainer:
+	return _get_node_safe("EngagementBar")
+
+
 func _get_button_close() -> Button:
 	return _get_node_safe("Button_Close")
-
-
-func _get_button_like() -> Button:
-	return _get_node_safe("Button_Like")
 
 
 func _get_button_jump_in() -> Button:
@@ -118,11 +121,6 @@ func _connect_signals():
 		if not button_jump_in.pressed.is_connected(_on_button_jump_in_pressed):
 			button_jump_in.pressed.connect(_on_button_jump_in_pressed)
 
-	var button_like = _get_button_like()
-	if button_like:
-		if not button_like.pressed.is_connected(_on_button_like_pressed):
-			button_like.pressed.connect(_on_button_like_pressed)
-
 
 func set_location(_location: Vector2i):
 	var label = _get_label_location()
@@ -190,6 +188,7 @@ func set_creator(_creator: String):
 
 func set_data(item_data):
 	_data = item_data
+
 	set_title(item_data.get("title", "Unknown place"))
 	set_description(_get_or_empty_string(item_data, "description"))
 
@@ -218,6 +217,9 @@ func set_data(item_data):
 	else:
 		set_realm(Realm.MAIN_REALM, "Genesis City")
 
+	if engagement_bar:
+		engagement_bar.update_data(_data.get("id", null))
+
 
 func _async_download_image(url: String):
 	var url_hash = get_hash_from_url(url)
@@ -236,10 +238,6 @@ func _on_button_jump_in_pressed():
 
 func _on_button_close_pressed() -> void:
 	close.emit()
-
-
-func _on_button_like_pressed() -> void:
-	print("Like button pressed")
 
 
 func _on_pressed():
