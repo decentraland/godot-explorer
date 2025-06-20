@@ -25,12 +25,6 @@ jobs:
           toolchain: 1.79
           override: true
           components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: android
-          workspaces: |
-            .
-            lib/
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
