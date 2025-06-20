@@ -1,10 +1,9 @@
-[gd_scene load_steps=6 format=3 uid="uid://vc72j0sq70jq"]
+[gd_scene load_steps=5 format=3 uid="uid://vc72j0sq70jq"]
 
 [ext_resource type="Script" uid="uid://0ncqo78wbgqv" path="res://src/ui/components/discover/jump_in/jump_in.gd" id="1_6j21g"]
 [ext_resource type="PackedScene" uid="uid://bc5irf8ns8k10" path="res://src/ui/components/discover/jump_in/panel_jump_in_portrait.tscn" id="2_mlrqc"]
 [ext_resource type="PackedScene" uid="uid://b8837sg55qd8m" path="res://src/ui/components/discover/jump_in/panel_jump_in_landscape.tscn" id="3_duas1"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_jvwlf"]
-[ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="4_mu208"]
 
 [node name="JumpIn" type="ColorRect"]
 anchors_preset = 15
@@ -24,17 +23,6 @@ offset_top = -454.0
 unique_name_in_owner = true
 layout_mode = 1
 offset_left = -292.0
-script = ExtResource("4_mu208")
-texture = null
-title = "Scene Title"
-description = "Scene Description"
-views = 0
-onlines = 0
-likes_percent = 0.0
-metadata = {}
-location = Vector2i(0, 0)
-realm = "https://realm-provider.decentraland.org/main"
-realm_title = "Genesis City"
 
 [node name="TextureProgressBar" parent="." instance=ExtResource("4_jvwlf")]
 unique_name_in_owner = true

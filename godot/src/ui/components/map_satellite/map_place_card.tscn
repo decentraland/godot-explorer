@@ -6,7 +6,7 @@
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="5_faxkj"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="6_xw8gt"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="7_c72oj"]
-[ext_resource type="Texture2D" uid="uid://mkgmqaf7qdvg" path="res://assets/ui/Like solid.svg" id="8_hcf3h"]
+[ext_resource type="Texture2D" uid="uid://mkgmqaf7qdvg" path="res://assets/ui/like_solid.svg" id="8_hcf3h"]
 [ext_resource type="Texture2D" uid="uid://beo554etknddh" path="res://assets/ui/PreviewIcon.svg" id="9_lplip"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="10_aneee"]
 
