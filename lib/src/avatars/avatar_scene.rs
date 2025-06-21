@@ -431,6 +431,71 @@ impl AvatarScene {
         self._update_avatar_transform(&entity_id, dcl_transform);
     }
 
+    pub fn update_avatar_transform_with_rfc4_movement(
+        &mut self,
+        alias: u32,
+        movement: &rfc4::Movement,
+    ) {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            // TODO: handle this condition
+            return;
+        };
+
+        // Convert rotation_y from degrees to radians and create quaternion
+        let rotation_rad = movement.rotation_y * std::f32::consts::PI / 180.0;
+        let rotation_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
+            x: 0.0,
+            y: rotation_rad,
+            z: 0.0,
+        });
+
+        let dcl_transform = DclTransformAndParent {
+            translation: godot::prelude::Vector3 {
+                x: movement.position_x,
+                y: movement.position_y,
+                z: movement.position_z,
+            },
+            rotation: rotation_quat,
+            scale: godot::prelude::Vector3::ONE,
+            parent: SceneEntityId::ROOT,
+        };
+
+        self._update_avatar_transform(&entity_id, dcl_transform);
+    }
+
+    pub fn update_avatar_transform_with_movement_compressed(
+        &mut self,
+        alias: u32,
+        position: godot::prelude::Vector3,
+        rotation_rad: f32,
+        _timestamp: u32,
+    ) {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            // TODO: handle this condition
+            return;
+        };
+
+        // Create quaternion from rotation (already in radians)
+        let rotation_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
+            x: 0.0,
+            y: rotation_rad,
+            z: 0.0,
+        });
+
+        let dcl_transform = DclTransformAndParent {
+            translation: position,
+            rotation: rotation_quat,
+            scale: godot::prelude::Vector3::ONE,
+            parent: SceneEntityId::ROOT,
+        };
+
+        self._update_avatar_transform(&entity_id, dcl_transform);
+    }
+
     pub fn update_avatar_by_alias(&mut self, alias: u32, profile: &UserProfile) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
