@@ -10,7 +10,7 @@
   - Linux: https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.linux.editor.x86_64.zip
   - Mac: https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.macos.editor.arm64.zip
   - Windows: https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.windows.editor.x86_64.exe.zip
-3. Execute `python download_dependencies.py` script at root (if it doesn't work properly visit https://github.com/decentraland/godot-explorer/actions/runs/15830385767/job/44622334482 and copy the Folder-hash of `Compute folder hash` step, then execute the script at root using the folder hash value `python download_dependencies.py value`)
+3. Execute `python download_dependencies.py` script from the project root. If it doesn't match you can go to the latest commit on the main branch (or the branch you're currently on if you've modified Rust code), and check the "Prepare libs" step in the GitHub Actions workflow. Copy the folder hash shown there and run the script with it like so: `python download_dependencies.py <folder-hash>`
 4. Open the project at the `godot` folder
 
 # Advanced
