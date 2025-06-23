@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc, time::Instant};
 use ethers_core::types::H160;
 use futures_util::StreamExt;
 use godot::prelude::{GString, Gd, PackedVector2Array};
+use godot::global::godot_print;
 use http::Uri;
 use livekit::{
     options::TrackPublishOptions,
@@ -236,8 +237,8 @@ impl LivekitRoom {
                             );
                         }
                         ToSceneMessage::VoiceFrame(frame) => {
-                            // If all the frame.data is 0, we skip the frame
-                            if frame.data.iter().all(|&c| c == 0) {
+                            // If all the frame.data is less than 10, we skip the frame
+                            if frame.data.iter().all(|&c| c.abs() < 10 ) {
                                 continue;
                             }
 
