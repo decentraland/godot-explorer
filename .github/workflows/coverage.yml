@@ -40,9 +40,6 @@ jobs:
           override: true
           components: llvm-tools-preview
 
-      - name: Set up cache
-        uses: ./.github/actions/set-up-cache
-
       - name: Prepare graphics renderering
         run: |
           sudo apt-get -y install xvfb
