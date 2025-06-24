@@ -9,7 +9,7 @@ concurrency:
 jobs:
   coverage:
     name: Test & Coverage
-    runs-on: ubuntu-latest
+    runs-on: gpu-godot-docker
     env:
       GODOT4_BIN: ${{ github.workspace }}/.bin/godot/godot4_bin
     steps:
@@ -39,9 +39,6 @@ jobs:
           toolchain: 1.79
           override: true
           components: llvm-tools-preview
-
-      - name: Set up cache
-        uses: ./.github/actions/set-up-cache
 
       - name: Prepare graphics renderering
         run: |

@@ -179,22 +179,18 @@ func on_request(offset: int, limit: int) -> void:
 
 
 func _async_fetch_places(url: String, limit: int = 100):
-	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
-		url, HTTPClient.METHOD_GET, "", headers
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
 	if is_instance_valid(discover_carrousel_item_loading):
 		discover_carrousel_item_loading.hide()
 
-	if result is PromiseError:
+	if response is PromiseError:
 		if loaded_elements == 0:
 			report_loading_status.emit(CarrouselGenerator.LoadingStatus.ERROR)
-		printerr("Error request places ", url, " ", result.get_error())
+		printerr("Error request places ", url, " ", response.get_error())
 		return
 
-	var json: Dictionary = result.get_string_response_as_json()
+	var json: Dictionary = response.get_string_response_as_json()
 
 	if json.data.is_empty():
 		if loaded_elements == 0:

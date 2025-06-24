@@ -351,29 +351,66 @@ impl DclPlayerIdentity {
         let promise = Promise::new_alloc();
         let promise_instance_id = promise.instance_id();
 
-        if let Some(handle) = TokioRuntime::static_clone_handle() {
-            let ephemeral_auth_chain = self
-                .ephemeral_auth_chain
-                .as_ref()
-                .expect("ephemeral auth chain not initialized")
-                .clone();
+        // Check ephemeral auth chain before spawning
+        let Some(ephemeral_auth_chain) = self.ephemeral_auth_chain.clone() else {
+            tracing::error!("ephemeral auth chain not initialized");
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Ephemeral auth chain not initialized".into());
+            return promise;
+        };
 
-            let uri = http::Uri::try_from(uri.to_string().as_str()).expect("Invalid url");
+        if let Some(handle) = TokioRuntime::static_clone_handle() {
+            let uri = match http::Uri::try_from(uri.to_string().as_str()) {
+                Ok(uri) => uri,
+                Err(e) => {
+                    tracing::error!("Invalid URI: {}", e);
+                    let mut promise_clone = promise.clone();
+                    promise_clone
+                        .bind_mut()
+                        .reject(format!("Invalid URI: {}", e).into());
+                    return promise;
+                }
+            };
+
             let method = method.to_string();
             let metadata = metadata.to_string();
 
             handle.spawn(async move {
+                // Parse metadata from string to JSON value
+                let metadata_json = if metadata.is_empty() {
+                    serde_json::Value::Null
+                } else {
+                    match serde_json::from_str(&metadata) {
+                        Ok(json) => json,
+                        Err(e) => {
+                            tracing::error!("Failed to parse metadata as JSON: {}", e);
+                            let Ok(mut promise) =
+                                Gd::<Promise>::try_from_instance_id(promise_instance_id)
+                            else {
+                                tracing::error!("error getting promise");
+                                return;
+                            };
+                            promise
+                                .bind_mut()
+                                .reject(format!("Invalid metadata JSON: {}", e).into());
+                            return;
+                        }
+                    }
+                };
+
                 let headers = super::wallet::sign_request(
                     method.as_str(),
                     &uri,
                     &ephemeral_auth_chain,
-                    metadata,
+                    metadata_json,
                 )
                 .await;
 
                 let mut dict = Dictionary::default();
                 for (key, value) in headers {
-                    dict.set(key.to_godot(), value.to_godot());
+                    dict.set(key, value);
                 }
 
                 let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
@@ -384,6 +421,11 @@ impl DclPlayerIdentity {
 
                 promise.bind_mut().resolve_with_data(dict.to_variant());
             });
+        } else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("Tokio runtime not initialized".into());
         }
 
         promise

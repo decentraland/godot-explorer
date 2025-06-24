@@ -30,13 +30,13 @@ offset_right = 40.0
 offset_bottom = 40.0
 value = 100.0
 fill_mode = 4
-texture_progress = ExtResource("1_roup2")
 radial_fill_degrees = 60.0
+texture_progress = ExtResource("1_roup2")
 script = ExtResource("2_rds4p")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
-"": SubResource("AnimationLibrary_rrpsh")
+&"": SubResource("AnimationLibrary_rrpsh")
 }
 autoplay = "spin"
 
