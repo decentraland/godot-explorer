@@ -189,6 +189,8 @@ func async_load_category(category: int) -> Array:
 	var url: String
 	if category_string == "all":
 		url = "https://places.decentraland.org/api/places?offset=0&limit=50&order_by=most_active&order=desc&with_realms_detail=true"
+	if category_string == "favorites":
+		url = "https://places.decentraland.org/api/places?offset=0&limit=500&order_by=most_active&order=desc&with_realms_detail=true&only_favorites=true"
 	elif category_string == "live":
 		url = "https://events.decentraland.org/api/events/?list=live"
 	else:
@@ -196,12 +198,11 @@ func async_load_category(category: int) -> Array:
 			"https://places.decentraland.org/api/places?offset=0&limit=50&order_by=most_active&order=desc&categories=%s&with_realms_detail=true"
 			% category_string
 		)
-	var promise: Promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
-	var result = await PromiseUtils.async_awaiter(promise)
-	if result is PromiseError:
-		printerr("Error request POIs: ", result.get_error())
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+	if response is PromiseError:
+		printerr("Error request POIs: ", response.get_error())
 		return []
-	var json: Dictionary = result.get_string_response_as_json()
+	var json: Dictionary = response.get_string_response_as_json()
 	if json.has("data"):
 		return json.data
 	return []

@@ -102,7 +102,13 @@ impl RustHttpQueueRequester {
         // tracing::info!("Requesting json: {:?}", url.to_string());
 
         let method = match method {
+            godot::engine::http_client::Method::GET => http::Method::GET,
             godot::engine::http_client::Method::POST => http::Method::POST,
+            godot::engine::http_client::Method::PUT => http::Method::PUT,
+            godot::engine::http_client::Method::DELETE => http::Method::DELETE,
+            godot::engine::http_client::Method::PATCH => http::Method::PATCH,
+            godot::engine::http_client::Method::HEAD => http::Method::HEAD,
+            godot::engine::http_client::Method::OPTIONS => http::Method::OPTIONS,
             _ => http::Method::GET,
         };
 
