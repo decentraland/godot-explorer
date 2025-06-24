@@ -120,7 +120,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	var new_avatar_name: String = profile.get_name()
 	if not profile.has_claimed_name():
 		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
-	# TODO: Claimed name checkmark
+	nickname_ui.name_claimed = profile.has_claimed_name()
 
 	avatar_id = profile.get_ethereum_address()
 
@@ -149,6 +149,8 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 
 	if hide_name:
 		nickname_quad.hide()
+	else:
+		nickname_quad.show()
 
 	wearable_to_request.append_array(avatar_data.get_wearables())
 

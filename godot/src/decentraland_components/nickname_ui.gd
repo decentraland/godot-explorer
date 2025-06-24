@@ -1,6 +1,12 @@
 @tool
 extends MarginContainer
 
+@export var name_claimed := false:
+	set(value):
+		name_claimed = value
+		hash_container.visible = !value
+		checkmark_container.visible = value
+
 @export var mic_enabled := false:
 	set(value):
 		mic_enabled = value
@@ -24,3 +30,5 @@ extends MarginContainer
 @onready var mic_enabled_icon = %MicEnabled
 @onready var tag_label = %Tag
 @onready var nickname_label = %Nickname
+@onready var hash_container = %Hash
+@onready var checkmark_container = %ClaimedCheckmark

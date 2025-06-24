@@ -808,6 +808,7 @@ bone_idx = 61
 [node name="NicknameQuad" type="Sprite3D" parent="Armature/Skeleton3D/BoneAttachment3D_Name"]
 unique_name_in_owner = true
 transform = Transform3D(1, 0.00020682, -1.83739e-05, -0.000206452, 0.999844, 0.0176546, 2.20121e-05, -0.0176548, 0.999844, 0, 75, 0)
+visible = false
 cast_shadow = 0
 visibility_range_end = 15.0
 pixel_size = 0.05
@@ -821,8 +822,10 @@ fade_start = 10.0
 
 [node name="NicknameViewport" type="SubViewport" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad"]
 unique_name_in_owner = true
+disable_3d = true
 transparent_bg = true
-size = Vector2i(526, 155)
+canvas_item_default_texture_filter = 2
+size = Vector2i(1052, 310)
 
 [node name="NicknameUI" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad/NicknameViewport" instance=ExtResource("2_kjemr")]
 unique_name_in_owner = true
