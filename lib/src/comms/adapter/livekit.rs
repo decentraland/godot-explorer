@@ -2,7 +2,6 @@ use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use ethers_core::types::H160;
 use futures_util::StreamExt;
-use godot::global::godot_print;
 use godot::prelude::{GString, Gd, PackedVector2Array};
 use http::Uri;
 use livekit::{
