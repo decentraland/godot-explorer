@@ -77,6 +77,7 @@ width = 6
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fx4kt"]
 shader = ExtResource("1_bggni")
 shader_parameter/milky_way_noise = SubResource("NoiseTexture2D_8yx6h")
+shader_parameter/stars_energy = 1.0
 shader_parameter/clouds_panorama = ExtResource("2_ljc2v")
 shader_parameter/sky_gradient = SubResource("GradientTexture1D_8513b")
 shader_parameter/clouds_gradient_day = SubResource("GradientTexture1D_7vh77")
