@@ -5,13 +5,14 @@ signal submit_message(message: String)
 const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
 const ACK: String = "␆"
+const NEARBY_PLAYER_ITEM = preload("res://src/ui/components/nearby_player_item/nearby_player_item.tscn")
 
 var hide_tween = null
-
 @onready var rich_text_label_chat = %RichTextLabel_Chat
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
 @onready var button_nearby_users: Button = %Button_NearbyUsers
+@onready var label_members_quantity: Label = %Label_MembersQuantity
 @onready var margin_container_chat: MarginContainer = %MarginContainer_Chat
 @onready var margin_container_nearby: MarginContainer = %MarginContainer_Nearby
 @onready var button_back: Button = %Button_Back
@@ -19,9 +20,13 @@ var hide_tween = null
 @onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
 
 @onready var timer_hide = %Timer_Hide
+@onready var timer_update_remote_avatars: Timer = %Timer_UpdateRemoteAvatars
+@onready var v_box_container_nearby_players: VBoxContainer = %VBoxContainer_NearbyPlayers
 
 
 func _ready():
+	update_nearby_users()
+	timer_update_remote_avatars.start()
 	add_chat_message(
 		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
 	)
@@ -134,18 +139,20 @@ func _on_timer_hide_timeout():
 	hide_tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.5)
 
 
-func update_nearby_users(users:int = -1) -> void:
-	var quantity
-	var rng = RandomNumberGenerator.new()
+func update_nearby_users() -> void:
 	
-	if users > 0:
-		quantity = users
-	else:
-		quantity = rng.randi_range(1, 100)
-	button_nearby_users.text = str(quantity)	
-
-func _on_button_2_pressed() -> void:
-	update_nearby_users()
+	var remote_avatars = Global.avatars.get_avatars()
+	button_nearby_users.text = str(remote_avatars.size())
+	label_members_quantity.text = str(remote_avatars.size())
+	
+	for child in v_box_container_nearby_players.get_children():
+		child.queue_free()
+	
+	for avatar in remote_avatars:
+		print(avatar.get_avatar_name())
+		var avatar_item = NEARBY_PLAYER_ITEM.instantiate()
+		v_box_container_nearby_players.add_child(avatar_item)
+		avatar_item.set_data(avatar)
 
 
 func _on_button_nearby_users_pressed() -> void:
@@ -166,3 +173,7 @@ func _on_button_back_pressed() -> void:
 	texture_rect_logo.show()
 	button_nearby_users.show()
 	timer_hide.start()
+
+
+func _on_timer_update_remote_avatars_timeout() -> void:
+	update_nearby_users()

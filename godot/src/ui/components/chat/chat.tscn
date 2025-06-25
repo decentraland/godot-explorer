@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=9 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
@@ -6,7 +6,6 @@
 [ext_resource type="Texture2D" uid="uid://bwhq0um6jgi1n" path="res://assets/ui/loading/LeftArrow.svg" id="3_lt7hs"]
 [ext_resource type="Texture2D" uid="uid://byv55qwr3riuh" path="res://assets/themes/dark_dcl_theme/icons/send.svg" id="3_umu3q"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_euk1h"]
-[ext_resource type="PackedScene" uid="uid://d30nejywxmhpn" path="res://src/ui/components/nearby_player_item/nearby_player_item.tscn" id="6_nh78v"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xauh3"]
 bg_color = Color(0, 0, 0, 0.235294)
@@ -32,6 +31,11 @@ script = ExtResource("1_llfi5")
 unique_name_in_owner = true
 wait_time = 3.0
 one_shot = true
+
+[node name="Timer_UpdateRemoteAvatars" type="Timer" parent="."]
+unique_name_in_owner = true
+wait_time = 3.0
+autostart = true
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -97,6 +101,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Label_MembersQuantity" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/HBoxContainer_NearbyUsers"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -114,7 +119,6 @@ text = "Members"
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 15
-text = " 20"
 icon = ExtResource("3_bhyuy")
 
 [node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer"]
@@ -170,31 +174,15 @@ theme_override_constants/margin_bottom = 8
 [node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer_Nearby"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Nearby/ScrollContainer"]
+[node name="VBoxContainer_NearbyPlayers" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Nearby/ScrollContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 2
 
-[node name="NearbyPlayerItem" parent="VBoxContainer/MarginContainer_Nearby/ScrollContainer/VBoxContainer" instance=ExtResource("6_nh78v")]
-layout_mode = 2
-
-[node name="NearbyPlayerItem4" parent="VBoxContainer/MarginContainer_Nearby/ScrollContainer/VBoxContainer" instance=ExtResource("6_nh78v")]
-layout_mode = 2
-
-[node name="NearbyPlayerItem5" parent="VBoxContainer/MarginContainer_Nearby/ScrollContainer/VBoxContainer" instance=ExtResource("6_nh78v")]
-layout_mode = 2
-
-[node name="NearbyPlayerItem6" parent="VBoxContainer/MarginContainer_Nearby/ScrollContainer/VBoxContainer" instance=ExtResource("6_nh78v")]
-layout_mode = 2
-
-[node name="NearbyPlayerItem2" parent="VBoxContainer/MarginContainer_Nearby/ScrollContainer/VBoxContainer" instance=ExtResource("6_nh78v")]
-layout_mode = 2
-
-[node name="NearbyPlayerItem3" parent="VBoxContainer/MarginContainer_Nearby/ScrollContainer/VBoxContainer" instance=ExtResource("6_nh78v")]
-layout_mode = 2
-
 [connection signal="timeout" from="Timer_Hide" to="." method="_on_timer_hide_timeout"]
+[connection signal="timeout" from="Timer_UpdateRemoteAvatars" to="." method="_on_timer_update_remote_avatars_timeout"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/Button_Back" to="." method="_on_button_back_pressed"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/Button_NearbyUsers" to="." method="_on_button_nearby_users_pressed"]
 [connection signal="focus_exited" from="VBoxContainer/MarginContainer_Chat/VBoxContainer/HBoxContainer_LineEdit/LineEdit_Command" to="." method="_on_line_edit_command_focus_exited"]

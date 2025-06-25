@@ -75,9 +75,12 @@ theme_override_constants/separation = -4
 alignment = 1
 
 [node name="Label_Nick" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Nickname"
 label_settings = SubResource("LabelSettings_roypi")
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="Label_Status" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2

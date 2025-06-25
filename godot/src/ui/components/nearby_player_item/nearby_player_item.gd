@@ -1,6 +1,10 @@
 extends Control
 
 @onready var panel_nearby_player_item: Panel = %Panel_NearbyPlayerItem
+@onready var label_nick: Label = %Label_Nick
+
+func set_data(avatar):
+	label_nick.text = avatar.get_avatar_name()
 
 func _on_mouse_entered() -> void:
 	panel_nearby_player_item.self_modulate = "#ffffff"
