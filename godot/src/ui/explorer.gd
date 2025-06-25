@@ -94,11 +94,10 @@ func _ready():
 	player.set_name("Player")
 	world.add_child(player)
 
+	
+	timer_broadcast_position.player_node = player
 	if Global.is_xr():
-		timer_broadcast_position.follow_node = player
 		player.vr_screen.set_instantiate_scene(ui_root)
-	else:
-		timer_broadcast_position.follow_node = player.avatar
 
 	emote_wheel.avatar_node = player.avatar
 
