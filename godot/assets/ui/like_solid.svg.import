@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://mkgmqaf7qdvg"
-path="res://.godot/imported/Like solid.svg-6008685fcb661c801dac2dee8716a8a9.ctex"
+path="res://.godot/imported/like_solid.svg-4027785cc4340a370425edb069a314c2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/Like solid.svg"
-dest_files=["res://.godot/imported/Like solid.svg-6008685fcb661c801dac2dee8716a8a9.ctex"]
+source_file="res://assets/ui/like_solid.svg"
+dest_files=["res://.godot/imported/like_solid.svg-4027785cc4340a370425edb069a314c2.ctex"]
 
 [params]
 

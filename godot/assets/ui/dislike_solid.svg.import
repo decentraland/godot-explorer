@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b17d71ayfvaya"
-path="res://.godot/imported/Dislike.svg-e9de8b86e4990514afec400bf75d7a40.ctex"
+uid="uid://b7w2u0j7ftvsg"
+path="res://.godot/imported/dislike_solid.svg-7b012a543e2db73e958af775047feb23.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/Dislike.svg"
-dest_files=["res://.godot/imported/Dislike.svg-e9de8b86e4990514afec400bf75d7a40.ctex"]
+source_file="res://assets/ui/dislike_solid.svg"
+dest_files=["res://.godot/imported/dislike_solid.svg-7b012a543e2db73e958af775047feb23.ctex"]
 
 [params]
 

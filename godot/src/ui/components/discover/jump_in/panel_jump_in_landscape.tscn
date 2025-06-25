@@ -1,20 +1,23 @@
-[gd_scene load_steps=27 format=3 uid="uid://b8837sg55qd8m"]
+[gd_scene load_steps=30 format=3 uid="uid://b8837sg55qd8m"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_gki2s"]
-[ext_resource type="Script" uid="uid://0ncqo78wbgqv" path="res://src/ui/components/discover/jump_in/jump_in.gd" id="1_lek7s"]
+[ext_resource type="Script" uid="uid://dqrm5fg1bv6rg" path="res://src/ui/components/place_item.gd" id="1_limbe"]
 [ext_resource type="Texture2D" uid="uid://cmls1puqgwrwi" path="res://assets/ui/placeholder.png" id="2_7i6jj"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_wh5hw"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_oea3m"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="5_38j5r"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="5_x7ql2"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="6_cpxdn"]
-[ext_resource type="Texture2D" uid="uid://mkgmqaf7qdvg" path="res://assets/ui/Like solid.svg" id="6_h2ki8"]
+[ext_resource type="Texture2D" uid="uid://mkgmqaf7qdvg" path="res://assets/ui/like_solid.svg" id="6_h2ki8"]
 [ext_resource type="Texture2D" uid="uid://beo554etknddh" path="res://assets/ui/PreviewIcon.svg" id="7_ytgcx"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="8_whopg"]
 [ext_resource type="Texture2D" uid="uid://2phiy0bi4o0i" path="res://assets/themes/dark_dcl_theme/icons/PinOutline.svg" id="9_jthfk"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_yuhpx"]
 [ext_resource type="Texture2D" uid="uid://due5xfsacc6ne" path="res://assets/themes/dark_dcl_theme/icons/Map.svg" id="11_t0eof"]
 [ext_resource type="Texture2D" uid="uid://b7vyl6n0g3uxh" path="res://assets/ui/JumpInIcnWhite.svg" id="12_eg42m"]
+[ext_resource type="StyleBox" uid="uid://dnfryl87xc26f" path="res://src/ui/components/discover/jump_in/jump_in_button_hover.tres" id="15_7cmxw"]
+[ext_resource type="StyleBox" uid="uid://bjw0qd6a67c5f" path="res://src/ui/components/discover/jump_in/jump_in_button.tres" id="15_mpouh"]
+[ext_resource type="PackedScene" uid="uid://cmarw81knjomw" path="res://src/ui/components/engagement_bar/engagement_bar.tscn" id="18_582y3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_eaed0"]
 bg_color = Color(0.92549, 0.921569, 0.929412, 1)
@@ -64,7 +67,7 @@ offset_left = -324.0
 grow_horizontal = 0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_eaed0")
-script = ExtResource("1_lek7s")
+script = ExtResource("1_limbe")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
@@ -120,6 +123,7 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/separation = 8
 
 [node name="HBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
@@ -344,10 +348,19 @@ clip_text = true
 [node name="Button_JumpIn" type="Button" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
+focus_mode = 0
+theme_override_styles/hover_pressed = ExtResource("15_mpouh")
+theme_override_styles/hover = ExtResource("15_7cmxw")
+theme_override_styles/pressed = ExtResource("15_mpouh")
+theme_override_styles/normal = ExtResource("15_mpouh")
 text = "JUMP IN"
 icon = ExtResource("12_eg42m")
 icon_alignment = 2
 expand_icon = true
+
+[node name="EngagementBar" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer" instance=ExtResource("18_582y3")]
+unique_name_in_owner = true
+layout_mode = 2
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2

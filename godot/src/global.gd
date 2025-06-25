@@ -349,3 +349,45 @@ func teleport_to(parcel_position: Vector2i, new_realm: String):
 		Global.get_config().last_parcel_position = parcel_position
 		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+
+
+func http_method_to_string(method: int) -> String:
+	match method:
+		HTTPClient.METHOD_GET:
+			return "GET"
+		HTTPClient.METHOD_POST:
+			return "POST"
+		HTTPClient.METHOD_PUT:
+			return "PUT"
+		HTTPClient.METHOD_DELETE:
+			return "DELETE"
+		HTTPClient.METHOD_HEAD:
+			return "HEAD"
+		HTTPClient.METHOD_OPTIONS:
+			return "OPTIONS"
+		HTTPClient.METHOD_PATCH:
+			return "PATCH"
+		HTTPClient.METHOD_CONNECT:
+			return "CONNECT"
+		HTTPClient.METHOD_TRACE:
+			return "TRACE"
+		_:
+			return "GET"  # Default fallback
+
+
+func async_signed_fetch(url: String, method: int, _body: String = ""):
+	var headers_promise = Global.player_identity.async_get_identity_headers(
+		url, _body, http_method_to_string(method)
+	)
+	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
+
+	if headers_result is PromiseError:
+		return headers_result
+
+	var headers: Dictionary = headers_result
+	if not _body.is_empty():
+		headers["Content-Type"] = "application/json"
+
+	var response_promise: Promise = Global.http_requester.request_json(url, method, _body, headers)
+
+	return await PromiseUtils.async_awaiter(response_promise)

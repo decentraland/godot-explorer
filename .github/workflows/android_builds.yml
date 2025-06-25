@@ -25,13 +25,11 @@ jobs:
           toolchain: 1.79
           override: true
           components: clippy, rustfmt
-      - name: Set up cache
-        uses: ./.github/actions/set-up-cache
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
       - name: Cargo install
-        run: cargo run -- install --platforms android
+        run: cargo run -- install --platforms android linux
       - name: Build
         run: |
           bash build-android-apk.sh

@@ -36,6 +36,7 @@ download_v8_binding() {
     # download if not exists
     if [ ! -f "target/$V8_BINDING_FILE_NAME" ]; then
         echo "Downloading V8 binding: $V8_BINDING_FILE_NAME"
+        mkdir -p target/
         curl -L -o target/$V8_BINDING_FILE_NAME $V8_BINDING
     else
         echo "V8 binding already exists: $V8_BINDING_FILE_NAME"
@@ -54,8 +55,8 @@ export CXXFLAGS="-v --target=aarch64-linux-android"
 export RUSTFLAGS="-L${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/lib/aarch64-unknown-linux-musl"
 
 # CI - Download V8 binding for aarch64
-download_v8_binding "debug" "aarch64-linux-android"
-
+download_v8_binding "release" "aarch64-linux-android"
+echo "RUSTY_V8_SRC_BINDING_PATH: $RUSTY_V8_SRC_BINDING_PATH"
 GODOT_DIR=../godot
 
 # Local development
