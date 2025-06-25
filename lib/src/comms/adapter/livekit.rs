@@ -16,21 +16,27 @@ use livekit::{
 use prost::Message;
 
 use crate::{
-    auth::wallet::AsH160,
-    avatars::avatar_scene::AvatarScene,
-    comms::profile::{SerializedProfile, UserProfile},
-    dcl::components::proto_components::kernel::comms::rfc4,
+    auth::wallet::AsH160, avatars::avatar_scene::AvatarScene, comms::profile::{SerializedProfile, UserProfile}, content::profile::prepare_request_requirements, dcl::components::proto_components::kernel::comms::rfc4
 };
 
 use super::{adapter_trait::Adapter, movement_compressed::MovementCompressed};
+
+use crate::{
+    content::profile::request_lambda_profile
+};
 
 pub struct NetworkMessage {
     pub data: Vec<u8>,
     pub unreliable: bool,
 }
 
+struct Rfc4Message {
+    message: rfc4::packet::Message,
+    protocol_version: u32,
+}
+
 enum ToSceneMessage<'a> {
-    Rfc4(rfc4::packet::Message),
+    Rfc4(Rfc4Message),
     InitVoice(livekit::webrtc::prelude::AudioFrame<'a>),
     VoiceFrame(livekit::webrtc::prelude::AudioFrame<'a>),
 }
@@ -45,6 +51,7 @@ struct Peer {
     alias: u32,
     profile: Option<UserProfile>,
     announced_version: Option<u32>,
+    protocol_version: u32,
 }
 
 pub struct LivekitRoom {
@@ -120,6 +127,7 @@ impl LivekitRoom {
                                 alias: self.peer_alias_counter,
                                 profile: None,
                                 announced_version: None,
+                                protocol_version: 0,
                             },
                         );
                         avatar_scene.add_avatar(
@@ -144,199 +152,242 @@ impl LivekitRoom {
                         self.peer_identities.get_mut(&message.address).unwrap()
                     };
 
+                    // Update the peer's protocol version
+                    if let ToSceneMessage::Rfc4(rfc4_msg) = &message.message {
+                        peer.protocol_version = rfc4_msg.protocol_version;
+                    }
+
                     match message.message {
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::Position(position)) => {
-                            tracing::debug!(
-                                "Received Position from {:#x}: pos({}, {}, {}), rot({}, {}, {}, {})", 
-                                message.address,
-                                position.position_x, position.position_y, position.position_z,
-                                position.rotation_x, position.rotation_y, position.rotation_z, position.rotation_w
-                            );
-                            avatar_scene
-                                .update_avatar_transform_with_rfc4_position(peer.alias, &position);
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::Movement(movement)) => {
-                            tracing::debug!(
-                                "Received Movement from {:#x}: pos({}, {}, {}), rot_y({}), vel({}, {}, {})", 
-                                message.address,
-                                movement.position_x, movement.position_y, movement.position_z,
-                                movement.rotation_y,
-                                movement.velocity_x, movement.velocity_y, movement.velocity_z
-                            );
-                            avatar_scene
-                                .update_avatar_transform_with_movement(peer.alias, &movement);
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::MovementCompressed(
-                            movement_compressed,
-                        )) => {
-                            // Decompress movement data
-                            let movement = MovementCompressed::from_proto(movement_compressed);
-
-                            // Get position from compressed movement
-                            // Note: We need realm bounds for proper position calculation
-                            // For now, using a default if not available
-                            let pos = movement.position(
-                                godot::prelude::Vector2i::new(i32::MAX, i32::MAX),
-                                godot::prelude::Vector2i::new(i32::MAX, i32::MAX),
-                            );
-
-                            let rotation_rad = movement.temporal.rotation_f32();
-                            let velocity = movement.velocity();
-
-                            tracing::debug!(
-                                "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
-                                message.address,
-                                pos.x, pos.y, pos.z,
-                                rotation_rad,
-                                velocity.x, velocity.y, velocity.z,
-                                movement.temporal.timestamp()
-                            );
-
-                            avatar_scene.update_avatar_transform_with_movement_compressed(
-                                peer.alias,
-                                pos,
-                                rotation_rad,
-                                movement.temporal.timestamp() as u32,
-                            );
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::Chat(chat)) => {
-                            tracing::info!("Received Chat from {:#x}: {:?}", message.address, chat);
-                            self.chats.push((message.address, chat));
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileVersion(
-                            announce_profile_version,
-                        )) => {
-                            tracing::info!(
-                                "Received ProfileVersion from {:#x}: {:?}",
-                                message.address,
-                                announce_profile_version
-                            );
-
-                            let announced_version = announce_profile_version.profile_version;
-                            let current_version =
-                                peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
-
-                            // Update the peer's announced version
-                            peer.announced_version = Some(announced_version);
-
-                            // If the announced version is newer than what we have, request the profile
-                            if announced_version > current_version {
-                                tracing::info!(
-                                    "Requesting newer profile from {:#x}: announced={}, current={}",
+                        ToSceneMessage::Rfc4(rfc4_msg) => match rfc4_msg.message {
+                            rfc4::packet::Message::Position(position) => {
+                                tracing::debug!(
+                                    "Received Position from {:#x}: pos({}, {}, {}), rot({}, {}, {}, {})", 
                                     message.address,
-                                    announced_version,
-                                    current_version
+                                    position.position_x, position.position_y, position.position_z,
+                                    position.rotation_x, position.rotation_y, position.rotation_z, position.rotation_w
+                                );
+                                avatar_scene
+                                    .update_avatar_transform_with_rfc4_position(peer.alias, &position);
+                            }
+                            rfc4::packet::Message::Movement(movement) => {
+                                tracing::debug!(
+                                    "Received Movement from {:#x}: pos({}, {}, {}), rot_y({}), vel({}, {}, {})", 
+                                    message.address,
+                                    movement.position_x, movement.position_y, movement.position_z,
+                                    movement.rotation_y,
+                                    movement.velocity_x, movement.velocity_y, movement.velocity_z
+                                );
+                                avatar_scene
+                                    .update_avatar_transform_with_movement(peer.alias, &movement);
+                            }
+                            rfc4::packet::Message::MovementCompressed(
+                                movement_compressed,
+                            ) => {
+                                // Decompress movement data
+                                let movement = MovementCompressed::from_proto(movement_compressed);
+
+                                // Get position from compressed movement
+                                // Note: We need realm bounds for proper position calculation
+                                // For now, using a default if not available
+                                let pos = movement.position(
+                                    godot::prelude::Vector2i::new(i32::MAX, i32::MAX),
+                                    godot::prelude::Vector2i::new(i32::MAX, i32::MAX),
                                 );
 
-                                self.send_rfc4(
-                                    rfc4::Packet {
-                                        message: Some(rfc4::packet::Message::ProfileRequest(
-                                            rfc4::ProfileRequest {
-                                                address: format!("{:#x}", message.address),
-                                                profile_version: current_version,
-                                            },
-                                        )),
-                                        protocol_version: 0,
-                                    },
-                                    true,
+                                let rotation_rad = movement.temporal.rotation_f32();
+                                let velocity = movement.velocity();
+
+                                tracing::debug!(
+                                    "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
+                                    message.address,
+                                    pos.x, pos.y, pos.z,
+                                    rotation_rad,
+                                    velocity.x, velocity.y, velocity.z,
+                                    movement.temporal.timestamp()
+                                );
+
+                                avatar_scene.update_avatar_transform_with_movement_compressed(
+                                    peer.alias,
+                                    pos,
+                                    rotation_rad,
+                                    movement.temporal.timestamp() as u32,
                                 );
                             }
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileRequest(
-                            profile_request,
-                        )) => {
-                            tracing::info!(
-                                "Received ProfileRequest from {:#x}: {:?}",
-                                message.address,
-                                profile_request
-                            );
+                            rfc4::packet::Message::Chat(chat) => {
+                                tracing::info!("Received Chat from {:#x}: {:?}", message.address, chat);
+                                self.chats.push((message.address, chat));
+                            }
+                            rfc4::packet::Message::ProfileVersion(
+                                announce_profile_version,
+                            ) => {
+                                tracing::info!(
+                                    "Received ProfileVersion from {:#x}: {:?}",
+                                    message.address,
+                                    announce_profile_version
+                                );
 
-                            tracing::info!("comms > received ProfileRequest {:?}", profile_request);
+                                let announced_version = announce_profile_version.profile_version;
+                                let current_version =
+                                    peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
 
-                            if let Some(addr) = profile_request.address.as_h160() {
-                                if addr == self.player_address {
-                                    if let Some(profile) = self.player_profile.as_ref() {
-                                        self.last_profile_response_sent = Instant::now();
+                                // Update the peer's announced version
+                                peer.announced_version = Some(announced_version);
 
+                                // If the announced version is newer than what we have, request the profile
+                                if announced_version > current_version {
+                                    tracing::info!(
+                                        "Requesting newer profile from {:#x}: announced={}, current={}",
+                                        message.address,
+                                        announced_version,
+                                        current_version
+                                    );
+
+                                    // if peer protocol version is 100, instead of requesting profile, we fetch from lambda
+                                    if peer.protocol_version == 100 {
+                                        tracing::info!(
+                                            "comms > requesting profile from lambda for {:#x}",
+                                            message.address
+                                        );
+                                        // Spawn a task to fetch the profile from the lambda
+                                        let address = message.address;
+                                        let peer_alias = peer.alias;
+                                        tokio::spawn(async move {
+                                            let (lamda_server_base_url, profile_base_url, http_requester) =
+                                                prepare_request_requirements();
+                                            let result = request_lambda_profile(
+                                                address,
+                                                lamda_server_base_url.as_str(),
+                                                profile_base_url.as_str(),
+                                                http_requester,
+                                            )
+                                            .await;
+                                            if let Ok(profile) = result {
+                                                avatar_scene.update_avatar_by_alias(peer_alias, &profile);
+                                            } else {
+                                                tracing::error!(
+                                                    "comms > failed to fetch profile from lambda for {:#x}: {:?}",
+                                                    address,
+                                                    result
+                                                );
+                                                return;
+                                            }
+                                        });
+                                    } else {
+                                        // TODO: we can always use the behavior of the protocol version 100
                                         self.send_rfc4(
                                             rfc4::Packet {
+                                                message: Some(rfc4::packet::Message::ProfileRequest(
+                                                    rfc4::ProfileRequest {
+                                                        address: format!("{:#x}", message.address),
+                                                        profile_version: current_version,
+                                                    },
+                                                )),
                                                 protocol_version: 0,
-                                                message: Some(
-                                                    rfc4::packet::Message::ProfileResponse(
-                                                        rfc4::ProfileResponse {
-                                                            serialized_profile:
-                                                                serde_json::to_string(
-                                                                    &profile.content,
-                                                                )
-                                                                .unwrap(),
-                                                            base_url: profile.base_url.clone(),
-                                                        },
-                                                    ),
-                                                ),
                                             },
-                                            false,
+                                            true,
                                         );
                                     }
                                 }
                             }
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileResponse(
-                            profile_response,
-                        )) => {
-                            tracing::info!(
-                                "Received ProfileResponse from {:#x}: {:?}",
-                                message.address,
-                                profile_response
-                            );
-                            let serialized_profile: SerializedProfile =
-                                match serde_json::from_str(&profile_response.serialized_profile) {
-                                    Ok(p) => p,
-                                    Err(_e) => {
-                                        tracing::error!(
-                                            "comms > invalid data ProfileResponse {:?}",
-                                            profile_response
-                                        );
-                                        continue;
+                            rfc4::packet::Message::ProfileRequest(
+                                profile_request,
+                            ) => {
+                                tracing::info!(
+                                    "Received ProfileRequest from {:#x}: {:?}",
+                                    message.address,
+                                    profile_request
+                                );
+
+                                tracing::info!("comms > received ProfileRequest {:?}", profile_request);
+
+                                if let Some(addr) = profile_request.address.as_h160() {
+                                    if addr == self.player_address {
+                                        if let Some(profile) = self.player_profile.as_ref() {
+                                            self.last_profile_response_sent = Instant::now();
+
+                                            self.send_rfc4(
+                                                rfc4::Packet {
+                                                    protocol_version: 0,
+                                                    message: Some(
+                                                        rfc4::packet::Message::ProfileResponse(
+                                                            rfc4::ProfileResponse {
+                                                                serialized_profile:
+                                                                    serde_json::to_string(
+                                                                        &profile.content,
+                                                                    )
+                                                                    .unwrap(),
+                                                                base_url: profile.base_url.clone(),
+                                                            },
+                                                        ),
+                                                    ),
+                                                },
+                                                false,
+                                            );
+                                        }
                                     }
+                                }
+                            }
+                            rfc4::packet::Message::ProfileResponse(
+                                profile_response,
+                            ) => {
+                                tracing::info!(
+                                    "Received ProfileResponse from {:#x}: {:?}",
+                                    message.address,
+                                    profile_response
+                                );
+                                let serialized_profile: SerializedProfile =
+                                    match serde_json::from_str(&profile_response.serialized_profile) {
+                                        Ok(p) => p,
+                                        Err(_e) => {
+                                            tracing::error!(
+                                                "comms > invalid data ProfileResponse {:?}",
+                                                profile_response
+                                            );
+                                            continue;
+                                        }
+                                    };
+
+                                let incoming_version = serialized_profile.version as u32;
+                                let current_version = if let Some(profile) = peer.profile.as_ref() {
+                                    profile.version
+                                } else {
+                                    0
                                 };
 
-                            let incoming_version = serialized_profile.version as u32;
-                            let current_version = if let Some(profile) = peer.profile.as_ref() {
-                                profile.version
-                            } else {
-                                0
-                            };
+                                tracing::warn!(
+                                    "comms > received ProfileResponse from {:#x}: incoming_version={}, current_version={}",
+                                    message.address,
+                                    incoming_version,
+                                    current_version
+                                );
 
-                            tracing::warn!(
-                                "comms > received ProfileResponse from {:#x}: incoming_version={}, current_version={}",
-                                message.address,
-                                incoming_version,
-                                current_version
-                            );
+                                if incoming_version <= current_version {
+                                    continue;
+                                }
 
-                            if incoming_version <= current_version {
-                                continue;
+                                let profile = UserProfile {
+                                    version: incoming_version,
+                                    content: serialized_profile.clone(),
+                                    base_url: profile_response.base_url.clone(),
+                                };
+
+                                avatar_scene.update_avatar_by_alias(peer.alias, &profile);
+                                peer.profile = Some(profile);
                             }
+                            rfc4::packet::Message::Scene(scene) => {
+                                let entry = self
+                                    .incoming_scene_messages
+                                    .entry(scene.scene_id)
+                                    .or_default();
 
-                            let profile = UserProfile {
-                                version: incoming_version,
-                                content: serialized_profile.clone(),
-                                base_url: profile_response.base_url.clone(),
-                            };
-
-                            avatar_scene.update_avatar_by_alias(peer.alias, &profile);
-                            peer.profile = Some(profile);
+                                // TODO: should we limit the size of the queue or accumulated bytes?
+                                entry.push((message.address, scene.data));
+                            }
+                            rfc4::packet::Message::Voice(_voice) => {}
+                            _ => {
+                                tracing::debug!("comms > unhandled rfc4 message");
+                            }
                         }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::Scene(scene)) => {
-                            let entry = self
-                                .incoming_scene_messages
-                                .entry(scene.scene_id)
-                                .or_default();
-
-                            // TODO: should we limit the size of the queue or accumulated bytes?
-                            entry.push((message.address, scene.data));
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::Voice(_voice)) => {}
                         ToSceneMessage::InitVoice(frame) => {
                             avatar_scene.spawn_voice_channel(
                                 peer.alias,
@@ -591,7 +642,10 @@ fn spawn_livekit_task(
                                     continue;
                                 };
                                 if let Err(e) = sender.send(IncomingMessage {
-                                    message: ToSceneMessage::Rfc4(message),
+                                    message: ToSceneMessage::Rfc4(Rfc4Message {
+                                        message,
+                                        protocol_version: packet.protocol_version,
+                                    }),
                                     address,
                                 }).await {
                                     tracing::warn!("app pipe broken ({e}), existing loop");
