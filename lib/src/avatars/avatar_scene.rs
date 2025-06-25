@@ -431,11 +431,7 @@ impl AvatarScene {
         self._update_avatar_transform(&entity_id, dcl_transform);
     }
 
-    pub fn update_avatar_transform_with_movement(
-        &mut self,
-        alias: u32,
-        movement: &rfc4::Movement,
-    ) {
+    pub fn update_avatar_transform_with_movement(&mut self, alias: u32, movement: &rfc4::Movement) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {

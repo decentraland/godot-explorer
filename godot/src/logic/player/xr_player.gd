@@ -178,8 +178,10 @@ func _on_left_hand_button_released(xr_action_name):
 		if action != null:
 			Input.action_release(action)
 
+
 func get_broadcast_position() -> Vector3:
 	return get_global_transform().origin
+
 
 func get_broadcast_rotation_quaternion() -> Quaternion:
 	return get_global_transform().basis.get_rotation_quaternion()

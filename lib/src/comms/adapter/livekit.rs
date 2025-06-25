@@ -126,7 +126,7 @@ impl LivekitRoom {
                             self.peer_alias_counter,
                             GString::from(format!("{:#x}", message.address)),
                         );
-                        
+
                         // Immediately request profile for new peer
                         self.send_rfc4(
                             rfc4::Packet {
@@ -140,7 +140,7 @@ impl LivekitRoom {
                             },
                             true,
                         );
-                        
+
                         self.peer_identities.get_mut(&message.address).unwrap()
                     };
 
@@ -166,21 +166,23 @@ impl LivekitRoom {
                             avatar_scene
                                 .update_avatar_transform_with_movement(peer.alias, &movement);
                         }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::MovementCompressed(movement_compressed)) => {
+                        ToSceneMessage::Rfc4(rfc4::packet::Message::MovementCompressed(
+                            movement_compressed,
+                        )) => {
                             // Decompress movement data
                             let movement = MovementCompressed::from_proto(movement_compressed);
-                            
+
                             // Get position from compressed movement
                             // Note: We need realm bounds for proper position calculation
                             // For now, using a default if not available
                             let pos = movement.position(
-                                godot::prelude::Vector2i::new(i32::MAX, i32::MAX), 
-                                godot::prelude::Vector2i::new(i32::MAX, i32::MAX)
+                                godot::prelude::Vector2i::new(i32::MAX, i32::MAX),
+                                godot::prelude::Vector2i::new(i32::MAX, i32::MAX),
                             );
-                            
+
                             let rotation_rad = movement.temporal.rotation_f32();
                             let velocity = movement.velocity();
-                            
+
                             tracing::debug!(
                                 "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
                                 message.address,
@@ -189,21 +191,16 @@ impl LivekitRoom {
                                 velocity.x, velocity.y, velocity.z,
                                 movement.temporal.timestamp()
                             );
-                            
-                            avatar_scene
-                                .update_avatar_transform_with_movement_compressed(
-                                    peer.alias, 
-                                    pos, 
-                                    rotation_rad,
-                                    movement.temporal.timestamp() as u32
-                                );
+
+                            avatar_scene.update_avatar_transform_with_movement_compressed(
+                                peer.alias,
+                                pos,
+                                rotation_rad,
+                                movement.temporal.timestamp() as u32,
+                            );
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Chat(chat)) => {
-                            tracing::info!(
-                                "Received Chat from {:#x}: {:?}",
-                                message.address,
-                                chat
-                            );
+                            tracing::info!("Received Chat from {:#x}: {:?}", message.address, chat);
                             self.chats.push((message.address, chat));
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileVersion(
@@ -214,13 +211,14 @@ impl LivekitRoom {
                                 message.address,
                                 announce_profile_version
                             );
-                            
+
                             let announced_version = announce_profile_version.profile_version;
-                            let current_version = peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
-                            
+                            let current_version =
+                                peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
+
                             // Update the peer's announced version
                             peer.announced_version = Some(announced_version);
-                            
+
                             // If the announced version is newer than what we have, request the profile
                             if announced_version > current_version {
                                 tracing::info!(
@@ -229,7 +227,7 @@ impl LivekitRoom {
                                     announced_version,
                                     current_version
                                 );
-                                
+
                                 self.send_rfc4(
                                     rfc4::Packet {
                                         message: Some(rfc4::packet::Message::ProfileRequest(
@@ -443,7 +441,7 @@ impl LivekitRoom {
         self.player_profile = Some(new_profile);
 
         tracing::info!("player_profile changed: {:?}", self.player_profile);
-        
+
         // Increment version counter and broadcast immediately
         tracing::info!(
             "comms > broadcasting profile version: {}",

@@ -3,5 +3,5 @@ pub mod adapter_trait;
 pub mod archipelago;
 #[cfg(feature = "use_livekit")]
 pub mod livekit;
-pub mod ws_room;
 pub mod movement_compressed;
+pub mod ws_room;

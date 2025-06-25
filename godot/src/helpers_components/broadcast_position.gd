@@ -1,14 +1,15 @@
 extends Timer
 
+# Tuning constants
+const POSITION_THRESHOLD := 0.05  # 5 cm
+const ROTATION_THRESHOLD := 0.01  # Approx ~0.57 degrees (in radians)
+
 @export var player_node: Node3D
 
 var last_position_sent: Vector3 = Vector3.ZERO
 var last_rotation_sent: Quaternion = Quaternion()
 var counter: int = 0
 
-# Tuning constants
-const POSITION_THRESHOLD := 0.05         # 5 cm
-const ROTATION_THRESHOLD := 0.01         # Approx ~0.57 degrees (in radians)
 
 func _on_timeout():
 	var position: Vector3 = player_node.get_broadcast_position()

@@ -94,7 +94,6 @@ func _ready():
 	player.set_name("Player")
 	world.add_child(player)
 
-	
 	timer_broadcast_position.player_node = player
 	if Global.is_xr():
 		player.vr_screen.set_instantiate_scene(ui_root)

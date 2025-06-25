@@ -199,8 +199,10 @@ func avatar_look_at(target_position: Vector3):
 func _on_avatar_visibility_changed():
 	pass  # Replace with function body.
 
+
 func get_broadcast_position() -> Vector3:
 	return avatar.get_global_transform().origin
+
 
 func get_broadcast_rotation_quaternion() -> Quaternion:
 	var rotation_y := 0.0
@@ -214,7 +216,7 @@ func get_broadcast_rotation_quaternion() -> Quaternion:
 	rotation_y = wrapf(rotation_y, -PI, PI)
 
 	# 2. Snap to 1-degree steps (≈0.01745 rad)
-	const SNAP_STEP := 0.0174533   # PI / 180
+	const SNAP_STEP := 0.0174533  # PI / 180
 	rotation_y = snapped(rotation_y, SNAP_STEP)
 
 	# 3. Build the quaternion
