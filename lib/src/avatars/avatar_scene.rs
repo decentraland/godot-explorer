@@ -431,7 +431,7 @@ impl AvatarScene {
         self._update_avatar_transform(&entity_id, dcl_transform);
     }
 
-    pub fn update_avatar_transform_with_rfc4_movement(
+    pub fn update_avatar_transform_with_movement(
         &mut self,
         alias: u32,
         movement: &rfc4::Movement,
@@ -440,6 +440,7 @@ impl AvatarScene {
             *entity_id
         } else {
             // TODO: handle this condition
+            tracing::warn!("Avatar with alias {} not found", alias);
             return;
         };
 
@@ -476,6 +477,7 @@ impl AvatarScene {
             *entity_id
         } else {
             // TODO: handle this condition
+            tracing::warn!("Avatar with alias {} not found", alias);
             return;
         };
 

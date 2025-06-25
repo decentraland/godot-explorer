@@ -95,7 +95,7 @@ impl LivekitRoom {
             last_profile_response_sent: Instant::now(),
             last_profile_request_sent: Instant::now(),
             peer_alias_counter: 0,
-            last_profile_version_announced: 0,
+            last_profile_version_announced: 1,
             chats: Vec::new(),
             incoming_scene_messages: HashMap::new(),
         }
@@ -126,12 +126,27 @@ impl LivekitRoom {
                             self.peer_alias_counter,
                             GString::from(format!("{:#x}", message.address)),
                         );
+                        
+                        // Immediately request profile for new peer
+                        self.send_rfc4(
+                            rfc4::Packet {
+                                message: Some(rfc4::packet::Message::ProfileRequest(
+                                    rfc4::ProfileRequest {
+                                        address: format!("{:#x}", message.address),
+                                        profile_version: 0,
+                                    },
+                                )),
+                                protocol_version: 0,
+                            },
+                            true,
+                        );
+                        
                         self.peer_identities.get_mut(&message.address).unwrap()
                     };
 
                     match message.message {
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Position(position)) => {
-                            tracing::info!(
+                            tracing::debug!(
                                 "Received Position from {:#x}: pos({}, {}, {}), rot({}, {}, {}, {})", 
                                 message.address,
                                 position.position_x, position.position_y, position.position_z,
@@ -141,7 +156,7 @@ impl LivekitRoom {
                                 .update_avatar_transform_with_rfc4_position(peer.alias, &position);
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Movement(movement)) => {
-                            tracing::info!(
+                            tracing::debug!(
                                 "Received Movement from {:#x}: pos({}, {}, {}), rot_y({}), vel({}, {}, {})", 
                                 message.address,
                                 movement.position_x, movement.position_y, movement.position_z,
@@ -149,7 +164,7 @@ impl LivekitRoom {
                                 movement.velocity_x, movement.velocity_y, movement.velocity_z
                             );
                             avatar_scene
-                                .update_avatar_transform_with_rfc4_movement(peer.alias, &movement);
+                                .update_avatar_transform_with_movement(peer.alias, &movement);
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::MovementCompressed(movement_compressed)) => {
                             // Decompress movement data
@@ -166,7 +181,7 @@ impl LivekitRoom {
                             let rotation_rad = movement.temporal.rotation_f32();
                             let velocity = movement.velocity();
                             
-                            tracing::info!(
+                            tracing::debug!(
                                 "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
                                 message.address,
                                 pos.x, pos.y, pos.z,
@@ -184,23 +199,59 @@ impl LivekitRoom {
                                 );
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::Chat(chat)) => {
+                            tracing::info!(
+                                "Received Chat from {:#x}: {:?}",
+                                message.address,
+                                chat
+                            );
                             self.chats.push((message.address, chat));
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileVersion(
                             announce_profile_version,
                         )) => {
-                            peer.announced_version = Some(
+                            tracing::info!(
+                                "Received ProfileVersion from {:#x}: {:?}",
+                                message.address,
                                 announce_profile_version
-                                    .profile_version
-                                    .max(peer.announced_version.unwrap_or(0)),
                             );
+                            
+                            let announced_version = announce_profile_version.profile_version;
+                            let current_version = peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
+                            
+                            // Update the peer's announced version
+                            peer.announced_version = Some(announced_version);
+                            
+                            // If the announced version is newer than what we have, request the profile
+                            if announced_version > current_version {
+                                tracing::info!(
+                                    "Requesting newer profile from {:#x}: announced={}, current={}",
+                                    message.address,
+                                    announced_version,
+                                    current_version
+                                );
+                                
+                                self.send_rfc4(
+                                    rfc4::Packet {
+                                        message: Some(rfc4::packet::Message::ProfileRequest(
+                                            rfc4::ProfileRequest {
+                                                address: format!("{:#x}", message.address),
+                                                profile_version: current_version,
+                                            },
+                                        )),
+                                        protocol_version: 0,
+                                    },
+                                    true,
+                                );
+                            }
                         }
                         ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileRequest(
                             profile_request,
                         )) => {
-                            if self.last_profile_response_sent.elapsed().as_secs_f32() < 10.0 {
-                                continue;
-                            }
+                            tracing::info!(
+                                "Received ProfileRequest from {:#x}: {:?}",
+                                message.address,
+                                profile_request
+                            );
 
                             tracing::info!("comms > received ProfileRequest {:?}", profile_request);
 
@@ -234,6 +285,11 @@ impl LivekitRoom {
                         ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileResponse(
                             profile_response,
                         )) => {
+                            tracing::info!(
+                                "Received ProfileResponse from {:#x}: {:?}",
+                                message.address,
+                                profile_response
+                            );
                             let serialized_profile: SerializedProfile =
                                 match serde_json::from_str(&profile_response.serialized_profile) {
                                     Ok(p) => p,
@@ -252,6 +308,13 @@ impl LivekitRoom {
                             } else {
                                 0
                             };
+
+                            tracing::warn!(
+                                "comms > received ProfileResponse from {:#x}: incoming_version={}, current_version={}",
+                                message.address,
+                                incoming_version,
+                                current_version
+                            );
 
                             if incoming_version <= current_version {
                                 continue;
@@ -373,8 +436,30 @@ impl LivekitRoom {
             .is_ok()
     }
 
-    fn _change_profile(&mut self, new_profile: UserProfile) {
+    fn _change_profile(&mut self, mut new_profile: UserProfile) {
+        self.last_profile_version_announced += 1;
+        new_profile.content.version = self.last_profile_version_announced as i64;
+
         self.player_profile = Some(new_profile);
+
+        tracing::info!("player_profile changed: {:?}", self.player_profile);
+        
+        // Increment version counter and broadcast immediately
+        tracing::info!(
+            "comms > broadcasting profile version: {}",
+            self.last_profile_version_announced
+        );
+        self.send_rfc4(
+            rfc4::Packet {
+                message: Some(rfc4::packet::Message::ProfileVersion(
+                    rfc4::AnnounceProfileVersion {
+                        profile_version: self.last_profile_version_announced,
+                    },
+                )),
+                protocol_version: 0,
+            },
+            false,
+        );
     }
 
     fn _consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
