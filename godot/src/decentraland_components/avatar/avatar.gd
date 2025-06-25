@@ -39,8 +39,11 @@ var wearable_promises = null
 
 @onready var animation_tree = $AnimationTree
 @onready var animation_player = $AnimationPlayer
-@onready var label_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name/Label3D_Name
-@onready var sprite_3d_mic_enabled = %Sprite3D_MicEnabled
+
+@onready var nickname_ui = %NicknameUI
+@onready var nickname_quad = %NicknameQuad
+@onready var nickname_viewport = %NicknameViewport
+
 @onready var timer_hide_mic = %Timer_HideMic
 @onready var body_shape_skeleton_3d: Skeleton3D = $Armature/Skeleton3D
 @onready var bone_attachment_3d_name = $Armature/Skeleton3D/BoneAttachment3D_Name
@@ -55,8 +58,7 @@ func _ready():
 		if Global.is_xr()
 		else BaseMaterial3D.BillboardMode.BILLBOARD_ENABLED
 	)
-	sprite_3d_mic_enabled.billboard = billboard_mode
-	label_3d_name.billboard = billboard_mode
+	nickname_quad.billboard = billboard_mode
 
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._attach_point_skeleton_updated)
@@ -78,7 +80,7 @@ func _ready():
 		audio_player_emote.name = audio_player_name
 
 	# Hide mic when the avatar is spawned
-	sprite_3d_mic_enabled.hide()
+	nickname_ui.mic_enabled = false
 
 
 func try_show():
@@ -118,7 +120,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	var new_avatar_name: String = profile.get_name()
 	if not profile.has_claimed_name():
 		new_avatar_name += "#" + profile.get_ethereum_address().right(4)
-	label_3d_name.modulate = Color.GOLD if profile.has_claimed_name() else Color.WHITE
+	nickname_ui.name_claimed = profile.has_claimed_name()
 
 	avatar_id = profile.get_ethereum_address()
 
@@ -134,10 +136,21 @@ func async_update_avatar(new_avatar: DclAvatarWireFormat, new_avatar_name: Strin
 
 	var wearable_to_request := []
 
-	sprite_3d_mic_enabled.hide()
-	label_3d_name.text = new_avatar_name
+	var splitted_nickname = new_avatar_name.split("#", false)
+	if splitted_nickname.size() > 1:
+		nickname_ui.nickname = splitted_nickname[0]
+		nickname_ui.tag = splitted_nickname[1]
+	else:
+		nickname_ui.nickname = new_avatar_name
+		nickname_ui.tag = ""
+
+	nickname_ui.nickname_color = get_nickname_color(new_avatar_name)
+	nickname_ui.mic_enabled = false
+
 	if hide_name:
-		label_3d_name.hide()
+		nickname_quad.hide()
+	else:
+		nickname_quad.show()
 
 	wearable_to_request.append_array(avatar_data.get_wearables())
 
@@ -474,6 +487,9 @@ func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
 
+	if nickname_viewport.size != Vector2i(nickname_ui.size):
+		nickname_viewport.size = Vector2i(nickname_ui.size)
+
 	var self_idle = !self.jog && !self.walk && !self.run && !self.rise && !self.fall
 	emote_controller.process(self_idle)
 
@@ -510,7 +526,8 @@ func push_voice_frame(frame):
 		voice_chat_audio_player.play()
 
 	voice_chat_audio_player.get_stream_playback().push_buffer(frame)
-	sprite_3d_mic_enabled.show()
+	nickname_ui.mic_enabled = true
+	print("Pushing voice frame from: ", avatar_name)
 	timer_hide_mic.start()
 
 
@@ -541,7 +558,7 @@ func _attach_point_skeleton_updated():
 
 
 func _on_timer_hide_mic_timeout():
-	sprite_3d_mic_enabled.hide()
+	nickname_ui.mic_enabled = false
 
 
 func _play_emote_audio(file_hash: String):

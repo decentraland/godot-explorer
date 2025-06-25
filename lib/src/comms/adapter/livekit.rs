@@ -285,8 +285,8 @@ impl LivekitRoom {
                             );
                         }
                         ToSceneMessage::VoiceFrame(frame) => {
-                            // If all the frame.data is 0, we skip the frame
-                            if frame.data.iter().all(|&c| c == 0) {
+                            // If all the frame.data is less than 10, we skip the frame
+                            if frame.data.iter().all(|&c| c.abs() < 10) {
                                 continue;
                             }
 

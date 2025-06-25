@@ -1,12 +1,16 @@
-[gd_scene load_steps=76 format=3 uid="uid://dvu5i0n51gph3"]
+[gd_scene load_steps=78 format=3 uid="uid://dvu5i0n51gph3"]
 
 [ext_resource type="Script" uid="uid://du2j4yjo5etlb" path="res://src/decentraland_components/avatar/avatar.gd" id="1_stmqn"]
-[ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="2_uh4pv"]
+[ext_resource type="PackedScene" uid="uid://d1i02k5nxmje6" path="res://src/decentraland_components/nickname_ui.tscn" id="2_kjemr"]
+[ext_resource type="Script" uid="uid://c7mvc1cramdxg" path="res://src/decentraland_components/avatar/nickname_quad.gd" id="2_mwwx3"]
 [ext_resource type="AnimationLibrary" uid="uid://bfbk8s54f1krh" path="res://assets/animations/locomotion.res" id="3_piipk"]
 [ext_resource type="AnimationLibrary" uid="uid://by2djy1ah7psb" path="res://assets/animations/default_emotes.tres" id="4_mgm58"]
 [ext_resource type="AnimationLibrary" uid="uid://bt3bj0k3qqmbn" path="res://assets/animations/idle.res" id="5_h07gr"]
 [ext_resource type="PackedScene" uid="uid://ci0fn7h7pxdmc" path="res://src/helpers_components/avatar_modifier_area_detector.tscn" id="6_yae5p"]
 [ext_resource type="PackedScene" uid="uid://1llql2trpa5s" path="res://src/decentraland_components/avatar/avatar_sfxs.tscn" id="7_xt6ge"]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_mwwx3"]
+viewport_path = NodePath("Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad/NicknameViewport")
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_v3xl2"]
 resource_local_to_scene = true
@@ -801,26 +805,36 @@ transform = Transform3D(1, 2.38203e-07, 3.14903e-08, -2.82214e-08, -0.0137107, 0
 bone_name = "Avatar_Head"
 bone_idx = 61
 
-[node name="Label3D_Name" type="Label3D" parent="Armature/Skeleton3D/BoneAttachment3D_Name"]
-transform = Transform3D(-100, -1.2776e-06, 1.0215e-05, -1.14584e-06, 99.9906, 1.37115, -1.32296e-05, 1.37115, -99.9906, 0, 38.112, 0)
-billboard = 1
-font_size = 20
-outline_size = 6
-
-[node name="Sprite3D_MicEnabled" type="Sprite3D" parent="Armature/Skeleton3D/BoneAttachment3D_Name"]
+[node name="NicknameQuad" type="Sprite3D" parent="Armature/Skeleton3D/BoneAttachment3D_Name"]
 unique_name_in_owner = true
-transform = Transform3D(0.999999, 4.65575e-05, 1.41427e-06, -4.63296e-05, 0.997652, -0.0684757, -4.61359e-06, 0.0684754, 0.997652, -0.437868, 56.5398, 3.99656)
-pixel_size = 0.15
+transform = Transform3D(1, 0.00020682, -1.83739e-05, -0.000206452, 0.999844, 0.0176546, 2.20121e-05, -0.0176548, 0.999844, 0, 75, 0)
+visible = false
+cast_shadow = 0
+visibility_range_end = 15.0
+pixel_size = 0.05
 billboard = 1
-alpha_antialiasing_mode = 1
-texture_filter = 1
-texture = ExtResource("2_uh4pv")
+double_sided = false
+fixed_size = true
+texture = SubResource("ViewportTexture_mwwx3")
+script = ExtResource("2_mwwx3")
+fade_end = 15.0
+fade_start = 10.0
+
+[node name="NicknameViewport" type="SubViewport" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad"]
+unique_name_in_owner = true
+disable_3d = true
+transparent_bg = true
+canvas_item_default_texture_filter = 2
+size = Vector2i(1052, 310)
+
+[node name="NicknameUI" parent="Armature/Skeleton3D/BoneAttachment3D_Name/NicknameQuad/NicknameViewport" instance=ExtResource("2_kjemr")]
+unique_name_in_owner = true
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
-"": ExtResource("3_piipk"),
-"default_emotes": ExtResource("4_mgm58"),
-"idle": ExtResource("5_h07gr")
+&"": ExtResource("3_piipk"),
+&"default_emotes": ExtResource("4_mgm58"),
+&"idle": ExtResource("5_h07gr")
 }
 
 [node name="AnimationTree" type="AnimationTree" parent="."]

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://3omhfeyiw43d"
-path="res://.godot/imported/Like.svg-ea8dbd55d0ab4e0e5cad5215370dde9d.ctex"
+uid="uid://b7w2u0j7ftvsg"
+path="res://.godot/imported/dislike_solid.svg-7b012a543e2db73e958af775047feb23.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/Like.svg"
-dest_files=["res://.godot/imported/Like.svg-ea8dbd55d0ab4e0e5cad5215370dde9d.ctex"]
+source_file="res://assets/ui/dislike_solid.svg"
+dest_files=["res://.godot/imported/dislike_solid.svg-7b012a543e2db73e958af775047feb23.ctex"]
 
 [params]
 
@@ -32,6 +32,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=5.0
+svg/scale=1.0
 editor/scale_with_editor_scale=false
 editor/convert_colors_with_editor_theme=false
