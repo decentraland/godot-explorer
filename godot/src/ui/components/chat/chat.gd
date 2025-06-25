@@ -14,10 +14,10 @@ var hide_tween = null
 @onready var button_nearby_users: Button = %Button_NearbyUsers
 @onready var label_members_quantity: Label = %Label_MembersQuantity
 @onready var margin_container_chat: MarginContainer = %MarginContainer_Chat
-@onready var margin_container_nearby: MarginContainer = %MarginContainer_Nearby
 @onready var button_back: Button = %Button_Back
 @onready var texture_rect_logo: TextureRect = %TextureRect_Logo
 @onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
+@onready var panel_nearby: Panel = %Panel_Nearby
 
 @onready var timer_hide = %Timer_Hide
 @onready var timer_update_remote_avatars: Timer = %Timer_UpdateRemoteAvatars
@@ -149,14 +149,14 @@ func update_nearby_users() -> void:
 		child.queue_free()
 	
 	for avatar in remote_avatars:
-		print(avatar.get_avatar_name())
 		var avatar_item = NEARBY_PLAYER_ITEM.instantiate()
+		print(avatar.get_avatar_name())
 		v_box_container_nearby_players.add_child(avatar_item)
-		avatar_item.set_data(avatar)
+		await avatar_item.async_set_data(avatar)
 
 
 func _on_button_nearby_users_pressed() -> void:
-	margin_container_nearby.show()
+	panel_nearby.show()
 	button_back.show()
 	h_box_container_nearby_users.show()
 	margin_container_chat.hide()
@@ -166,7 +166,7 @@ func _on_button_nearby_users_pressed() -> void:
 
 
 func _on_button_back_pressed() -> void:
-	margin_container_nearby.hide()
+	panel_nearby.hide()
 	button_back.hide()
 	h_box_container_nearby_users.hide()
 	margin_container_chat.show()

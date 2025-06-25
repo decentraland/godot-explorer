@@ -4,6 +4,8 @@
 [ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/nearby_player_item/nearby_player_item.gd" id="1_77ytx"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_gljko"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="3_cmtom"]
+[ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="4_io7c4"]
+[ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="5_4mds5"]
 [ext_resource type="Texture2D" uid="uid://wqjnen6q0kbj" path="res://assets/ui/report.svg" id="5_n1xiu"]
 [ext_resource type="Texture2D" uid="uid://ceh3pvhtpwjhp" path="res://assets/ui/audio_off.svg" id="6_p3duq"]
 
@@ -14,16 +16,11 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[sub_resource type="LabelSettings" id="LabelSettings_roypi"]
-
-[sub_resource type="LabelSettings" id="LabelSettings_h5lif"]
-font_size = 12
-
 [node name="NearbyPlayerItem" type="Control"]
 custom_minimum_size = Vector2(0, 53)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 280.0
+offset_right = 242.0
 offset_bottom = 53.0
 size_flags_horizontal = 3
 script = ExtResource("1_77ytx")
@@ -35,7 +32,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_right = 10
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 15
 
 [node name="Panel_NearbyPlayerItem" type="Panel" parent="MarginContainer"]
 unique_name_in_owner = true
@@ -63,29 +61,74 @@ mouse_filter = 2
 theme_override_constants/separation = 9
 
 [node name="ProfilePicture" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer" instance=ExtResource("1_40sym")]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 1
 mouse_filter = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
+[node name="Nickname" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-mouse_filter = 2
+size_flags_vertical = 4
+
+[node name="MicEnabled" type="MarginContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/margin_right = 10
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/MicEnabled"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("4_io7c4")
+expand_mode = 3
+stretch_mode = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname"]
+layout_mode = 2
 theme_override_constants/separation = -4
 alignment = 1
 
-[node name="Label_Nick" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Nickname"
-label_settings = SubResource("LabelSettings_roypi")
-clip_text = true
-text_overrun_behavior = 3
+size_flags_horizontal = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "X"
 
-[node name="Label_Status" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/VBoxContainer"]
+[node name="Hash" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
-text = "Online"
-label_settings = SubResource("LabelSettings_h5lif")
+theme_override_constants/separation = 0
+
+[node name="HashTag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer/Hash"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
+theme_override_font_sizes/font_size = 13
+text = "#"
+
+[node name="Tag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer/Hash"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
+theme_override_font_sizes/font_size = 13
+text = "X"
+
+[node name="ClaimedCheckmark" type="MarginContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/ClaimedCheckmark"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("5_4mds5")
+expand_mode = 3
+stretch_mode = 4
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 layout_mode = 2
@@ -106,7 +149,6 @@ mouse_default_cursor_shape = 2
 theme_override_constants/icon_max_width = 25
 toggle_mode = true
 icon = ExtResource("3_cmtom")
-flat = true
 icon_alignment = 1
 expand_icon = true
 
@@ -122,7 +164,6 @@ mouse_default_cursor_shape = 2
 theme_override_constants/icon_max_width = 25
 toggle_mode = true
 icon = ExtResource("6_p3duq")
-flat = true
 icon_alignment = 1
 expand_icon = true
 
@@ -138,7 +179,6 @@ mouse_default_cursor_shape = 2
 theme_override_constants/icon_max_width = 25
 toggle_mode = true
 icon = ExtResource("5_n1xiu")
-flat = true
 icon_alignment = 1
 expand_icon = true
 
