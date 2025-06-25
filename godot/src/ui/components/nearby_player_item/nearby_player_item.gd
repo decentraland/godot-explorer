@@ -1,5 +1,7 @@
 extends Control
 
+var avatar = null  # Variable para almacenar el avatar asociado
+
 @onready var panel_nearby_player_item: Panel = %Panel_NearbyPlayerItem
 @onready var mic_enabled: MarginContainer = %MicEnabled
 @onready var nickname: Label = %Nickname
@@ -8,7 +10,12 @@ extends Control
 @onready var claimed_checkmark: MarginContainer = %ClaimedCheckmark
 @onready var profile_picture: ProfilePicture = %ProfilePicture
 
-func async_set_data(avatar):
+func async_set_data(avatar_param = null):
+	if avatar_param != null:
+		avatar = avatar_param
+	elif avatar == null:
+		return
+	
 	await profile_picture.async_update_profile_picture(avatar)
 	var avatar_name = avatar.get_avatar_name()
 	var splitted_nickname = avatar_name.split("#", false)
@@ -20,7 +27,7 @@ func async_set_data(avatar):
 		claimed_checkmark.hide()
 	else:
 		if avatar_name == "":
-			hide()
+			pass #hide()
 		else:
 			nickname.text = avatar_name
 			tag.text = ""

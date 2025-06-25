@@ -8,6 +8,7 @@ const ACK: String = "␆"
 const NEARBY_PLAYER_ITEM = preload("res://src/ui/components/nearby_player_item/nearby_player_item.tscn")
 
 var hide_tween = null
+var nearby_avatars = null
 @onready var rich_text_label_chat = %RichTextLabel_Chat
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
@@ -140,19 +141,78 @@ func _on_timer_hide_timeout():
 
 
 func update_nearby_users() -> void:
-	
 	var remote_avatars = Global.avatars.get_avatars()
 	button_nearby_users.text = str(remote_avatars.size())
 	label_members_quantity.text = str(remote_avatars.size())
 	
-	for child in v_box_container_nearby_players.get_children():
-		child.queue_free()
+	print("=== DEBUG UPDATE NEARBY USERS ===")
+	print("Remote avatars count: ", remote_avatars.size())
 	
-	for avatar in remote_avatars:
+	# Debug: mostrar nombres de avatares remotos
+	for i in range(remote_avatars.size()):
+		var avatar = remote_avatars[i]
+		var name = avatar.get_avatar_name()
+		print("Remote avatar ", i, ": '", name, "' (length: ", name.length(), ")")
+	
+	# Obtener avatares de los elementos UI actuales
+	var children_avatars = []
+	for child in v_box_container_nearby_players.get_children():
+		if child.avatar != null:
+			children_avatars.append(child.avatar)
+	
+	print("Children avatars count: ", children_avatars.size())
+	
+	# Generar arrays de avatares a remover y agregar
+	var avatars_to_remove = []
+	for child_avatar in children_avatars:
+		var found = false
+		for remote_avatar in remote_avatars:
+			if child_avatar.get_avatar_name() == remote_avatar.get_avatar_name():
+				found = true
+				break
+		if not found:
+			avatars_to_remove.append(child_avatar)
+	
+	var avatars_to_add = []
+	for remote_avatar in remote_avatars:
+		var found = false
+		for child_avatar in children_avatars:
+			if remote_avatar.get_avatar_name() == child_avatar.get_avatar_name():
+				found = true
+				break
+		if not found:
+			avatars_to_add.append(remote_avatar)
+	
+	print("Avatars to remove: ", avatars_to_remove.size())
+	print("Avatars to add: ", avatars_to_add.size())
+	
+	# Eliminar elementos UI de avatares que ya no están
+	for child in v_box_container_nearby_players.get_children():
+		if child.avatar != null:
+			for avatar_to_remove in avatars_to_remove:
+				if child.avatar.get_avatar_name() == avatar_to_remove.get_avatar_name():
+					child.queue_free()
+					break
+	
+	# Agregar nuevos elementos UI
+	for avatar in avatars_to_add:
 		var avatar_item = NEARBY_PLAYER_ITEM.instantiate()
-		print(avatar.get_avatar_name())
+		avatar_item.avatar = avatar
 		v_box_container_nearby_players.add_child(avatar_item)
-		await avatar_item.async_set_data(avatar)
+		await avatar_item.async_set_data()
+	
+	print("After adding, children count: ", v_box_container_nearby_players.get_children().size())
+	
+	# Ordenar elementos alfabéticamente por nombre de avatar
+	var children = v_box_container_nearby_players.get_children()
+	children.sort_custom(func(a, b): return a.avatar.get_avatar_name() < b.avatar.get_avatar_name())
+	
+	# Reorganizar los elementos en el contenedor
+	for child in children:
+		v_box_container_nearby_players.move_child(child, -1)
+	
+	print("Final children count: ", v_box_container_nearby_players.get_children().size())
+	print("=== END DEBUG ===")
 
 
 func _on_button_nearby_users_pressed() -> void:
@@ -177,3 +237,12 @@ func _on_button_back_pressed() -> void:
 
 func _on_timer_update_remote_avatars_timeout() -> void:
 	update_nearby_users()
+
+
+func _on_button_print_pressed() -> void:
+	var i = 0
+	var remote_avatars = Global.avatars.get_avatars()
+	for avatar in remote_avatars:
+		i = i+1
+		var name = avatar.get_avatar_name()
+		print(i, ") ", avatar, " ------ ", name)
