@@ -145,9 +145,7 @@ func _on_timer_hide_timeout():
 
 func update_nearby_users() -> void:
 	var remote_avatars = Global.avatars.get_avatars()
-	print("updating", remote_avatars)
-	button_nearby_users.text = str(remote_avatars.size())
-	label_members_quantity.text = str(remote_avatars.size())
+	
 	
 	var children_avatars = []
 	for child in v_box_container_nearby_players.get_children():
@@ -171,7 +169,7 @@ func update_nearby_users() -> void:
 			if remote_avatar.get_avatar_name() == child_avatar.get_avatar_name():
 				found = true
 				break
-		if not found:
+		if not found and remote_avatar.get_avatar_name() != "":
 			avatars_to_add.append(remote_avatar)
 	
 	for child in v_box_container_nearby_players.get_children():
@@ -197,6 +195,8 @@ func update_nearby_users() -> void:
 	for child in children:
 		v_box_container_nearby_players.move_child(child, -1)
 
+	button_nearby_users.text = str(children.size())
+	label_members_quantity.text = str(children.size())
 
 func _on_button_nearby_users_pressed() -> void:
 	panel_nearby.show()

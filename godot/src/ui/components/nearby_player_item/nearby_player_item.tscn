@@ -5,7 +5,7 @@
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_gljko"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="3_cmtom"]
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="4_io7c4"]
-[ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="5_4mds5"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_cmtom"]
 [ext_resource type="Texture2D" uid="uid://wqjnen6q0kbj" path="res://assets/ui/report.svg" id="5_n1xiu"]
 [ext_resource type="Texture2D" uid="uid://ceh3pvhtpwjhp" path="res://assets/ui/audio_off.svg" id="6_p3duq"]
 
@@ -96,6 +96,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_cmtom")
 theme_override_font_sizes/font_size = 15
 text = "X"
 
@@ -116,19 +117,6 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
 theme_override_font_sizes/font_size = 13
 text = "X"
-
-[node name="ClaimedCheckmark" type="MarginContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname"]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/ClaimedCheckmark"]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture = ExtResource("5_4mds5")
-expand_mode = 3
-stretch_mode = 4
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer"]
 layout_mode = 2

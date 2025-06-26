@@ -7,7 +7,6 @@ var avatar:DclAvatar = null
 @onready var nickname: Label = %Nickname
 @onready var hash_container: HBoxContainer = %Hash
 @onready var tag: Label = %Tag
-@onready var claimed_checkmark: MarginContainer = %ClaimedCheckmark
 @onready var profile_picture: ProfilePicture = %ProfilePicture
 
 func async_set_data(avatar_param = null):
@@ -29,13 +28,8 @@ func async_set_data(avatar_param = null):
 	var avatar_name = avatar.get_avatar_name()
 
 	if avatar_name.is_empty():
-		print("Avatar name is empty, hiding item temporarily")
-		nickname.text = "Loading..."
-		tag.text = ""
-		tag.hide()
-		hash_container.hide()
-		claimed_checkmark.hide()
-		return
+		print("Deleting element because name is empty")
+		queue_free()
 	
 	var splitted_nickname = avatar_name.split("#", false)
 	if splitted_nickname.size() > 1:
@@ -43,13 +37,11 @@ func async_set_data(avatar_param = null):
 		tag.text = splitted_nickname[1]
 		tag.show()
 		hash_container.show()
-		claimed_checkmark.hide()
 	else:
 		nickname.text = avatar_name
 		tag.text = ""
 		tag.hide()
 		hash_container.hide()
-		claimed_checkmark.show()
 	
 	var nickname_color = avatar.get_nickname_color(avatar_name)
 	nickname.add_theme_color_override("font_color", nickname_color)
