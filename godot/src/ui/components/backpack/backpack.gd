@@ -166,6 +166,8 @@ func _on_profile_changed(new_profile: DclUserProfile):
 	mutable_profile = new_profile.duplicated()
 	current_profile = new_profile.duplicated()
 	mutable_avatar = mutable_profile.get_avatar()
+	
+	prints("Profile change!: ", mutable_profile.get_profile_version(), current_profile.get_profile_version())
 
 	request_update_avatar = true
 	request_show_wearables = true
@@ -331,6 +333,7 @@ func async_save_profile():
 
 	mutable_profile.set_avatar(mutable_avatar)
 
+	prints("Profile change!: ", mutable_profile.get_profile_version(), current_profile.get_profile_version())
 	await Global.player_identity.async_deploy_profile(mutable_profile, true)
 
 

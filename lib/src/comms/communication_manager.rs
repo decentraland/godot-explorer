@@ -251,7 +251,7 @@ impl CommunicationManager {
                 message: text.to_string(),
                 timestamp: 0.0,
             })),
-            protocol_version: 0,
+            protocol_version: 100,
         };
 
         match &mut self.current_connection {

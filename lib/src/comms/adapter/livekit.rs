@@ -16,7 +16,7 @@ use livekit::{
 use prost::Message;
 
 use crate::{
-    auth::wallet::AsH160, avatars::avatar_scene::AvatarScene, comms::profile::{SerializedProfile, UserProfile}, content::profile::prepare_request_requirements, dcl::components::proto_components::kernel::comms::rfc4
+    auth::wallet::AsH160, avatars::avatar_scene::AvatarScene, comms::profile::{SerializedProfile, UserProfile}, content::profile::prepare_request_requirements, dcl::components::proto_components::kernel::comms::rfc4, scene_runner::tokio_runtime::TokioRuntime
 };
 
 use super::{adapter_trait::Adapter, movement_compressed::MovementCompressed};
@@ -46,6 +46,12 @@ struct IncomingMessage<'a> {
     address: H160,
 }
 
+struct ProfileUpdate {
+    address: H160,
+    peer_alias: u32,
+    profile: UserProfile,
+}
+
 #[derive(Debug)]
 struct Peer {
     alias: u32,
@@ -65,11 +71,15 @@ pub struct LivekitRoom {
     peer_alias_counter: u32,
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
-    last_profile_version_announced: u32,
+    last_profile_version_announced: Option<u32>,
     chats: Vec<(H160, rfc4::Chat)>,
 
     // Scene messges
     incoming_scene_messages: HashMap<String, Vec<(H160, Vec<u8>)>>,
+    
+    // Profile updates from async tasks
+    profile_update_receiver: tokio::sync::mpsc::Receiver<ProfileUpdate>,
+    profile_update_sender: tokio::sync::mpsc::Sender<ProfileUpdate>,
 }
 
 impl LivekitRoom {
@@ -83,6 +93,7 @@ impl LivekitRoom {
         let (sender, receiver_from_thread) = tokio::sync::mpsc::channel(1000);
         let (sender_to_thread, receiver) = tokio::sync::mpsc::channel(1000);
         let (mic_sender_to_thread, mic_receiver) = tokio::sync::mpsc::channel(1000);
+        let (profile_update_sender, profile_update_receiver) = tokio::sync::mpsc::channel(100);
 
         let _ = std::thread::Builder::new()
             .name("livekit dcl thread".into())
@@ -102,9 +113,11 @@ impl LivekitRoom {
             last_profile_response_sent: Instant::now(),
             last_profile_request_sent: Instant::now(),
             peer_alias_counter: 0,
-            last_profile_version_announced: 1,
+            last_profile_version_announced: None,
             chats: Vec::new(),
             incoming_scene_messages: HashMap::new(),
+            profile_update_receiver,
+            profile_update_sender,
         }
     }
 
@@ -113,6 +126,19 @@ impl LivekitRoom {
     fn _poll(&mut self) -> bool {
         let mut avatar_scene_ref = self.avatars.clone();
         let mut avatar_scene = avatar_scene_ref.bind_mut();
+
+        // First, handle any pending profile updates from async tasks
+        while let Ok(update) = self.profile_update_receiver.try_recv() {
+            tracing::warn!(
+                "comms > received profile update for {:#x}: {:?}",
+                update.address,
+                update.profile
+            );
+            avatar_scene.update_avatar_by_alias(update.peer_alias, &update.profile);
+            if let Some(peer) = self.peer_identities.get_mut(&update.address) {
+                peer.profile = Some(update.profile);
+            }
+        }
 
         loop {
             match self.receiver_from_thread.try_recv() {
@@ -127,7 +153,7 @@ impl LivekitRoom {
                                 alias: self.peer_alias_counter,
                                 profile: None,
                                 announced_version: None,
-                                protocol_version: 0,
+                                protocol_version: 100,
                             },
                         );
                         avatar_scene.add_avatar(
@@ -144,7 +170,7 @@ impl LivekitRoom {
                                         profile_version: 0,
                                     },
                                 )),
-                                protocol_version: 0,
+                                protocol_version: 100,
                             },
                             true,
                         );
@@ -243,50 +269,39 @@ impl LivekitRoom {
                                     );
 
                                     // if peer protocol version is 100, instead of requesting profile, we fetch from lambda
-                                    if peer.protocol_version == 100 {
-                                        tracing::info!(
-                                            "comms > requesting profile from lambda for {:#x}",
-                                            message.address
-                                        );
-                                        // Spawn a task to fetch the profile from the lambda
-                                        let address = message.address;
-                                        let peer_alias = peer.alias;
-                                        tokio::spawn(async move {
-                                            let (lamda_server_base_url, profile_base_url, http_requester) =
-                                                prepare_request_requirements();
-                                            let result = request_lambda_profile(
+                                    tracing::info!(
+                                        "comms > requesting profile from lambda for {:#x}",
+                                        message.address
+                                    );
+                                    // Spawn a task to fetch the profile from the lambda
+                                    let address = message.address;
+                                    let peer_alias = peer.alias;
+                                    let profile_sender = self.profile_update_sender.clone();
+                                    let (lamda_server_base_url, profile_base_url, http_requester) =
+                                        prepare_request_requirements();
+
+                                    TokioRuntime::spawn(async move {
+                                        let result = request_lambda_profile(
+                                            address,
+                                            lamda_server_base_url.as_str(),
+                                            profile_base_url.as_str(),
+                                            http_requester,
+                                        )
+                                        .await;
+                                        if let Ok(profile) = result {
+                                            let _ = profile_sender.send(ProfileUpdate {
                                                 address,
-                                                lamda_server_base_url.as_str(),
-                                                profile_base_url.as_str(),
-                                                http_requester,
-                                            )
-                                            .await;
-                                            if let Ok(profile) = result {
-                                                avatar_scene.update_avatar_by_alias(peer_alias, &profile);
-                                            } else {
-                                                tracing::error!(
-                                                    "comms > failed to fetch profile from lambda for {:#x}: {:?}",
-                                                    address,
-                                                    result
-                                                );
-                                                return;
-                                            }
-                                        });
-                                    } else {
-                                        // TODO: we can always use the behavior of the protocol version 100
-                                        self.send_rfc4(
-                                            rfc4::Packet {
-                                                message: Some(rfc4::packet::Message::ProfileRequest(
-                                                    rfc4::ProfileRequest {
-                                                        address: format!("{:#x}", message.address),
-                                                        profile_version: current_version,
-                                                    },
-                                                )),
-                                                protocol_version: 0,
-                                            },
-                                            true,
-                                        );
-                                    }
+                                                peer_alias,
+                                                profile,
+                                            }).await;
+                                        } else {
+                                            tracing::error!(
+                                                "comms > failed to fetch profile from lambda for {:#x}: {:?}",
+                                                address,
+                                                result
+                                            );
+                                        }
+                                    });
                                 }
                             }
                             rfc4::packet::Message::ProfileRequest(
@@ -307,7 +322,7 @@ impl LivekitRoom {
 
                                             self.send_rfc4(
                                                 rfc4::Packet {
-                                                    protocol_version: 0,
+                                                    protocol_version: 100,
                                                     message: Some(
                                                         rfc4::packet::Message::ProfileResponse(
                                                             rfc4::ProfileResponse {
@@ -353,13 +368,6 @@ impl LivekitRoom {
                                 } else {
                                     0
                                 };
-
-                                tracing::warn!(
-                                    "comms > received ProfileResponse from {:#x}: incoming_version={}, current_version={}",
-                                    message.address,
-                                    incoming_version,
-                                    current_version
-                                );
 
                                 if incoming_version <= current_version {
                                     continue;
@@ -454,23 +462,25 @@ impl LivekitRoom {
                                 profile_version,
                             },
                         )),
-                        protocol_version: 0,
+                        protocol_version: 100,
                     },
                     true,
                 );
             }
 
-            self.send_rfc4(
-                rfc4::Packet {
-                    message: Some(rfc4::packet::Message::ProfileVersion(
-                        rfc4::AnnounceProfileVersion {
-                            profile_version: self.last_profile_version_announced,
-                        },
-                    )),
-                    protocol_version: 0,
-                },
-                false,
-            );
+            if let Some(profile_version) = self.last_profile_version_announced {
+                self.send_rfc4(
+                    rfc4::Packet {
+                        message: Some(rfc4::packet::Message::ProfileVersion(
+                            rfc4::AnnounceProfileVersion {
+                                profile_version,
+                            },
+                        )),
+                        protocol_version: 100,
+                    },
+                    false,
+                );
+            }
         }
 
         true
@@ -485,27 +495,19 @@ impl LivekitRoom {
             .is_ok()
     }
 
-    fn _change_profile(&mut self, mut new_profile: UserProfile) {
-        self.last_profile_version_announced += 1;
-        new_profile.content.version = self.last_profile_version_announced as i64;
-
+    fn _change_profile(&mut self, new_profile: UserProfile) {
+        let profile_version = new_profile.version;
+        self.last_profile_version_announced = Some(new_profile.version);
         self.player_profile = Some(new_profile);
 
-        tracing::info!("player_profile changed: {:?}", self.player_profile);
-
-        // Increment version counter and broadcast immediately
-        tracing::info!(
-            "comms > broadcasting profile version: {}",
-            self.last_profile_version_announced
-        );
         self.send_rfc4(
             rfc4::Packet {
                 message: Some(rfc4::packet::Message::ProfileVersion(
                     rfc4::AnnounceProfileVersion {
-                        profile_version: self.last_profile_version_announced,
+                        profile_version,
                     },
                 )),
-                protocol_version: 0,
+                protocol_version: 100,
             },
             false,
         );

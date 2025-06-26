@@ -316,6 +316,9 @@ impl DclPlayerIdentity {
         profile.content.eth_address = self.get_address_str().to_string();
         let profile = DclUserProfile::from_gd(profile);
         self.profile = Some(profile.clone());
+        tracing::warn!(
+            "profile > set default profile",
+        );
 
         self.base_mut().call_deferred(
             "emit_signal".into(),
@@ -326,6 +329,9 @@ impl DclPlayerIdentity {
     #[func]
     pub fn set_profile(&mut self, profile: Gd<DclUserProfile>) {
         self.profile = Some(profile.clone());
+        tracing::warn!(
+            "profile > set profile func",
+        );
 
         self.base_mut().call_deferred(
             "emit_signal".into(),
@@ -434,26 +440,27 @@ impl DclPlayerIdentity {
     #[func]
     pub fn async_prepare_deploy_profile(
         &self,
-        new_profile: Gd<DclUserProfile>,
+        mut new_profile: Gd<DclUserProfile>,
         has_new_snapshots: bool,
     ) -> Gd<Promise> {
         let promise = Promise::new_alloc();
         let promise_instance_id = promise.instance_id();
 
-        let current_profile = if let Some(profile) = self.profile.clone() {
-            profile
-        } else {
-            DclUserProfile::from_gd(UserProfile {
-                version: 0,
-                ..Default::default()
-            })
-        };
+        let mut new_profile = new_profile.bind_mut();
+        new_profile.inner.version += 1;
+        new_profile.inner.content.version = new_profile.inner.version as i64;
 
-        let new_profile = new_profile.bind();
         let mut new_user_profile = new_profile.inner.clone();
         let eth_address = self.get_address_str().to_string();
-        new_user_profile.version = current_profile.bind().inner.version + 1;
-        new_user_profile.content.version = new_user_profile.version as i64;
+        new_user_profile.version = new_profile.inner.version;
+        new_user_profile.content.version = new_profile.inner.content.version;
+
+        tracing::warn!(
+            "profile > Preparing deploy profile for address: {}, version: {}",
+            eth_address,
+            new_user_profile.version
+        );
+
         new_user_profile.content.user_id = Some(eth_address.clone());
         new_user_profile.content.eth_address = eth_address;
 
@@ -514,6 +521,9 @@ impl DclPlayerIdentity {
             Ok(profile) => {
                 let new_profile = DclUserProfile::from_gd(profile);
                 self.profile = Some(new_profile.clone());
+                tracing::warn!(
+                    "profile > set profile from lambda",
+                );
 
                 self.base_mut().call_deferred(
                     "emit_signal".into(),
