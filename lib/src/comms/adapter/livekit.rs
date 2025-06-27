@@ -186,17 +186,18 @@ impl LivekitRoom {
                     match message.message {
                         ToSceneMessage::Rfc4(rfc4_msg) => match rfc4_msg.message {
                             rfc4::packet::Message::Position(position) => {
-                                tracing::debug!(
+                                continue; // Skip position messages for now
+                                /*tracing::debug!(
                                     "Received Position from {:#x}: pos({}, {}, {}), rot({}, {}, {}, {})", 
                                     message.address,
                                     position.position_x, position.position_y, position.position_z,
                                     position.rotation_x, position.rotation_y, position.rotation_z, position.rotation_w
                                 );
                                 avatar_scene
-                                    .update_avatar_transform_with_rfc4_position(peer.alias, &position);
+                                    .update_avatar_transform_with_rfc4_position(peer.alias, &position);*/
                             }
                             rfc4::packet::Message::Movement(movement) => {
-                                tracing::debug!(
+                                tracing::info!(
                                     "Received Movement from {:#x}: pos({}, {}, {}), rot_y({}), vel({}, {}, {})", 
                                     message.address,
                                     movement.position_x, movement.position_y, movement.position_z,
@@ -209,34 +210,46 @@ impl LivekitRoom {
                             rfc4::packet::Message::MovementCompressed(
                                 movement_compressed,
                             ) => {
+                                tracing::debug!("movement compressed data: {movement_compressed:?}");
+                                
                                 // Decompress movement data
                                 let movement = MovementCompressed::from_proto(movement_compressed);
 
-                                // Get position from compressed movement
-                                // Note: We need realm bounds for proper position calculation
-                                // For now, using a default if not available
-                                let pos = movement.position(
-                                    godot::prelude::Vector2i::new(i32::MAX, i32::MAX),
-                                    godot::prelude::Vector2i::new(i32::MAX, i32::MAX),
-                                );
-
-                                let rotation_rad = movement.temporal.rotation_f32();
+                                // Get realm bounds - you'll need to get these from the actual realm configuration
+                                // For now using reasonable default bounds, but this should come from the realm
+                                let realm_min = godot::prelude::Vector2i::new(-150, -150);
+                                let realm_max = godot::prelude::Vector2i::new(163, 158);
+                                
+                                // Get position from compressed movement with proper realm bounds
+                                let pos = movement.position(realm_min, realm_max);
                                 let velocity = movement.velocity();
+                                let rotation_rad = movement.temporal.rotation_f32();
+                                let timestamp = movement.temporal.timestamp_f32();
 
-                                tracing::debug!(
+                                tracing::info!(
                                     "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
                                     message.address,
-                                    pos.x, pos.y, pos.z,
+                                    pos.x, pos.y, -pos.z,
                                     rotation_rad,
                                     velocity.x, velocity.y, velocity.z,
-                                    movement.temporal.timestamp()
+                                    timestamp
+                                );
+
+                                // Check if we can get grounded and jumping state
+                                let grounded = movement.temporal.grounded_or_err().unwrap_or(true);
+                                let jumping = movement.temporal.jump_or_err().unwrap_or(false)
+                                    .max(movement.temporal.long_jump_or_err().unwrap_or(false));
+
+                                tracing::debug!(
+                                    "MovementCompressed extra data: grounded={}, jumping={}",
+                                    grounded, jumping
                                 );
 
                                 avatar_scene.update_avatar_transform_with_movement_compressed(
                                     peer.alias,
                                     pos,
                                     rotation_rad,
-                                    movement.temporal.timestamp() as u32,
+                                    timestamp as u32,
                                 );
                             }
                             rfc4::packet::Message::Chat(chat) => {
@@ -289,6 +302,11 @@ impl LivekitRoom {
                                         )
                                         .await;
                                         if let Ok(profile) = result {
+                                            tracing::warn!(
+                                                "fetch profile lambda > fetch profile from lambda for {:#x}: {:?}",
+                                                address,
+                                                profile.clone()
+                                            );
                                             let _ = profile_sender.send(ProfileUpdate {
                                                 address,
                                                 peer_alias,
@@ -296,7 +314,7 @@ impl LivekitRoom {
                                             }).await;
                                         } else {
                                             tracing::error!(
-                                                "comms > failed to fetch profile from lambda for {:#x}: {:?}",
+                                                "fetch profile lambda > failed to fetch profile from lambda for {:#x}: {:?}",
                                                 address,
                                                 result
                                             );
@@ -500,7 +518,7 @@ impl LivekitRoom {
         self.last_profile_version_announced = Some(new_profile.version);
         self.player_profile = Some(new_profile);
 
-        self.send_rfc4(
+        /*self.send_rfc4(
             rfc4::Packet {
                 message: Some(rfc4::packet::Message::ProfileVersion(
                     rfc4::AnnounceProfileVersion {
@@ -510,7 +528,7 @@ impl LivekitRoom {
                 protocol_version: 100,
             },
             false,
-        );
+        );*/
     }
 
     fn _consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {

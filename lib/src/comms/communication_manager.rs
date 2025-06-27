@@ -3,7 +3,7 @@ use godot::prelude::*;
 use http::Uri;
 
 use crate::{
-    comms::{adapter::ws_room::WebSocketRoom, signed_login::SignedLoginMeta},
+    comms::{adapter::{movement_compressed::MoveKind, ws_room::WebSocketRoom}, signed_login::SignedLoginMeta},
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::dcl_global::DclGlobal,
 };
@@ -12,6 +12,8 @@ use super::{
     adapter::adapter_trait::Adapter,
     signed_login::{SignedLogin, SignedLoginPollStatus},
 };
+
+use crate::comms::adapter::movement_compressed::{MovementCompressed, Temporal, Movement};
 
 #[cfg(feature = "use_livekit")]
 use crate::comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom};
@@ -119,7 +121,7 @@ impl CommunicationManager {
     pub fn send_scene_message(&mut self, scene_id: String, data: Vec<u8>) {
         let scene_message = rfc4::Packet {
             message: Some(rfc4::packet::Message::Scene(rfc4::Scene { scene_id, data })),
-            protocol_version: 0,
+            protocol_version: 100,
         };
         match &mut self.current_connection {
             CommsConnection::Connected(adapter) => {
@@ -202,6 +204,110 @@ impl CommunicationManager {
     }
 
     #[func]
+    fn broadcast_movement(&mut self, position: Vector3, rotation_y: f32, velocity: Vector3, compressed: bool) -> bool {
+        let get_packet = || {
+            if compressed {
+                // Create MovementCompressed packet using the pattern from the other engine
+                
+                // Get current time (you may want to use a proper timestamp source)
+                let time = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs_f64();
+                
+                // Get realm bounds - using default values for now, you may want to get actual bounds
+                let realm_bounds = (godot::prelude::Vector2i::new(-150, -150), godot::prelude::Vector2i::new(150, 150));
+                
+                let movement = Movement::new(
+                    position,
+                    velocity,
+                    realm_bounds.0,
+                    realm_bounds.1,
+                );
+                
+                // For temporal data, we need to determine these values based on game state
+                // Using defaults for now - you may want to pass these as parameters
+                let temporal = Temporal::from_parts(
+                    time,
+                    false, // is_emote - determine from game state
+                    rotation_y,
+                    movement.velocity_tier(),
+                    MoveKind::Idle, // move_kind - determine from game state (0 = walk, 1 = run, etc.)
+                    true, // is_grounded - determine from game state
+                );
+                
+                let movement_compressed = MovementCompressed { temporal, movement };
+
+                let movement_packet = rfc4::MovementCompressed {
+                    temporal_data: i32::from_le_bytes(movement_compressed.temporal.into_bytes()),
+                    movement_data: i64::from_le_bytes(movement_compressed.movement.into_bytes()),
+                };
+                
+                rfc4::Packet {
+                    message: Some(rfc4::packet::Message::MovementCompressed(
+                        movement_packet
+                    )),
+                    protocol_version: 100,
+                }
+            } else {
+                // Create regular Movement packet with all required fields
+
+                // Get current time
+                let timestamp = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs_f32();
+                
+                let movement_packet = rfc4::Movement {
+                    timestamp,
+                    position_x: position.x,
+                    position_y: position.y,
+                    position_z: -position.z,
+                    velocity_x: velocity.x,
+                    velocity_y: velocity.y,
+                    velocity_z: -velocity.z,
+                    rotation_y,
+                    // Animation and state fields - you may want to pass these as parameters
+                    movement_blend_value: 0.0, // Calculate based on velocity magnitude
+                    slide_blend_value: 0.0,
+                    is_grounded: true, // Determine from game state
+                    is_jumping: false, // Determine from game state
+                    is_long_jump: false,
+                    is_long_fall: false,
+                    is_falling: false,
+                    is_stunned: false,
+                };
+
+                rfc4::Packet {
+                    message: Some(rfc4::packet::Message::Movement(movement_packet)),
+                    protocol_version: 100,
+                }
+            }
+        };
+
+        let message_sent = match &mut self.current_connection {
+            CommsConnection::None
+            | CommsConnection::SignedLogin(_)
+            | CommsConnection::WaitingForIdentity(_) => false,
+            CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), true),
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => {
+                archipelago.update_position(position);
+                if let Some(adapter) = archipelago.adapter_as_mut() {
+                    adapter.send_rfc4(get_packet(), true)
+                } else {
+                    false
+                }
+            }
+        };
+
+        if message_sent {
+            self.last_position_broadcast_index += 1;
+        }
+        message_sent
+    }
+
+    #[func]
     fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
         let index = self.last_position_broadcast_index;
         let get_packet = || {
@@ -218,7 +324,7 @@ impl CommunicationManager {
 
             rfc4::Packet {
                 message: Some(rfc4::packet::Message::Position(position_packet)),
-                protocol_version: 0,
+                protocol_version: 100,
             }
         };
 
