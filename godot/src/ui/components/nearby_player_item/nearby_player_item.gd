@@ -14,19 +14,14 @@ func async_set_data(avatar_param = null):
 		avatar = avatar_param
 	elif avatar == null:
 		return
-	
-	# Actualizar imagen de perfil solo si el avatar tiene datos de snapshots
 	var avatar_data = avatar.get_avatar_data()
 	if avatar_data != null:
-		var face256_hash = avatar_data.get_snapshots_face_hash()
-		var face256_url = avatar_data.get_snapshots_face_url()
-		
-		# Solo intentar cargar la imagen si tenemos datos válidos
-		if not face256_hash.is_empty() and not face256_url.is_empty():
-			profile_picture.async_update_profile_picture(avatar)
+		profile_picture.async_update_profile_picture(avatar)
+	else:
+		printerr("NO AVATAR DATA")
 	
+	#TODO: I think this will be redundant when client receive depured avatar list.
 	var avatar_name = avatar.get_avatar_name()
-
 	if avatar_name.is_empty():
 		print("Deleting element because name is empty")
 		queue_free()
@@ -55,15 +50,10 @@ func _on_mouse_exited() -> void:
 
 
 func _on_button_block_user_pressed() -> void:
-	print('block')
+	print("Block ", avatar.get_avatar_name().to_upper())
+	# TODO: Update adding the address instead the name
 
-
-func _on_button_mute_pressed() -> void:
-	var avatar_position = avatar.get_current_parcel_position()
-	print(avatar_position)
 
 func _on_button_report_pressed() -> void:
-	var avatar_name = avatar.get_avatar_name()
-	var splitted_nickname = avatar_name.split("#", false)
-	print(splitted_nickname)
-	async_set_data(avatar)
+	print("Report ", avatar.get_avatar_name().to_upper())
+	# TODO: Update adding the address instead the name

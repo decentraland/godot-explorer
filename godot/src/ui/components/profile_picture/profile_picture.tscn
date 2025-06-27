@@ -18,6 +18,7 @@ size_flags_vertical = 3
 script = ExtResource("1_xkyte")
 
 [node name="Panel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
 clip_children = 2
 layout_mode = 1
 anchors_preset = 8
