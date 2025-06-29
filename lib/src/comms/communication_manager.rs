@@ -1,13 +1,18 @@
 use ethers_core::types::H160;
 use godot::prelude::*;
 use http::Uri;
+#[cfg(feature = "use_livekit")]
+use std::sync::Arc;
 use std::time::Instant;
 
 use crate::{
     comms::{adapter::{movement_compressed::MoveKind, ws_room::WebSocketRoom, message_processor::MessageProcessor}, signed_login::SignedLoginMeta},
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::dcl_global::DclGlobal,
+    auth::wallet,
+    scene_runner::tokio_runtime::TokioRuntime,
 };
+use serde::{Deserialize, Serialize};
 
 use super::{
     adapter::adapter_trait::Adapter,
@@ -16,8 +21,60 @@ use super::{
 
 use crate::comms::adapter::movement_compressed::{MovementCompressed, Temporal, Movement};
 
+const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scene-adapter";
+
+#[derive(Serialize, Deserialize)]
+pub struct GatekeeperResponse {
+    adapter: String,
+}
+
+#[allow(clippy::large_enum_variant)]
+enum MainRoom {
+    WebSocket(WebSocketRoom),
+    #[cfg(feature = "use_livekit")]
+    LiveKit(LivekitRoom),
+}
+
+impl MainRoom {
+    fn poll(&mut self) {
+        match self {
+            MainRoom::WebSocket(ws_room) => {
+                ws_room.poll();
+            }
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => {
+                livekit_room.poll();
+            }
+        }
+    }
+    
+    fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
+        match self {
+            MainRoom::WebSocket(ws_room) => ws_room.send_rfc4(packet, unreliable),
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => livekit_room.send_rfc4(packet, unreliable),
+        }
+    }
+    
+    fn clean(&mut self) {
+        match self {
+            MainRoom::WebSocket(ws_room) => ws_room.clean(),
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => livekit_room.clean(),
+        }
+    }
+    
+    fn support_voice_chat(&self) -> bool {
+        match self {
+            MainRoom::WebSocket(_) => false,
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => livekit_room.support_voice_chat(),
+        }
+    }
+}
+
 #[cfg(feature = "use_livekit")]
-use crate::comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom};
+use crate::{comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom}, dcl::SceneId, http_request::http_queue_requester::HttpQueueRequester};
 
 #[allow(clippy::large_enum_variant)]
 enum CommsConnection {
@@ -34,15 +91,16 @@ enum CommsConnection {
 #[class(base=Node)]
 pub struct CommunicationManager {
     current_connection: CommsConnection,
-    current_connection_str: String,
+    current_connection_str: GString,
     last_position_broadcast_index: u64,
     voice_chat_enabled: bool,
     start_time: Instant,
     
     // Store active rooms for MessageProcessor mode
-    active_ws_room: Option<WebSocketRoom>,
+    main_room: Option<MainRoom>,
     #[cfg(feature = "use_livekit")]
-    active_livekit_room: Option<LivekitRoom>,
+    scene_room: Option<LivekitRoom>,
+    current_scene_id: Option<GString>,
 
     base: Base<Node>,
 }
@@ -52,13 +110,14 @@ impl INode for CommunicationManager {
     fn init(base: Base<Node>) -> Self {
         CommunicationManager {
             current_connection: CommsConnection::None,
-            current_connection_str: String::default(),
+            current_connection_str: GString::default(),
             last_position_broadcast_index: 0,
             voice_chat_enabled: false,
             start_time: Instant::now(),
-            active_ws_room: None,
+            main_room: None,
             #[cfg(feature = "use_livekit")]
-            active_livekit_room: None,
+            scene_room: None,
+            current_scene_id: None,
             base,
         }
     }
@@ -118,13 +177,15 @@ impl INode for CommunicationManager {
                 }
             }
             CommsConnection::MessageProcessor(processor) => {
-                // Poll active rooms first
-                if let Some(ws_room) = &mut self.active_ws_room {
-                    ws_room.poll();
+                // Poll main room first
+                if let Some(main_room) = &mut self.main_room {
+                    main_room.poll();
                 }
+                
+                // Poll scene room (if connected)
                 #[cfg(feature = "use_livekit")]
-                if let Some(livekit_room) = &mut self.active_livekit_room {
-                    livekit_room.poll();
+                if let Some(scene_room) = &mut self.scene_room {
+                    scene_room.poll();
                 }
                 
                 // Then poll the processor
@@ -156,14 +217,11 @@ impl CommunicationManager {
                 adapter.send_rfc4(scene_message, true);
             }
             CommsConnection::MessageProcessor(_) => {
-                // Send via active rooms
-                if let Some(ws_room) = &mut self.active_ws_room {
-                    ws_room.send_rfc4(scene_message.clone(), true);
+                // Send via main room
+                if let Some(main_room) = &mut self.main_room {
+                    main_room.send_rfc4(scene_message, true);
                 }
-                #[cfg(feature = "use_livekit")]
-                if let Some(livekit_room) = &mut self.active_livekit_room {
-                    livekit_room.send_rfc4(scene_message, true);
-                }
+                // TODO: Later we might want to send scene messages via scene_room too
             }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
@@ -201,15 +259,16 @@ impl CommunicationManager {
         let adapter = match &mut self.current_connection {
             CommsConnection::Connected(adapter) => Some(adapter.as_mut()),
             CommsConnection::MessageProcessor(_) => {
-                // For MessageProcessor, use active rooms directly
-                #[cfg(feature = "use_livekit")]
-                if let Some(livekit_room) = &mut self.active_livekit_room {
-                    Some(livekit_room as &mut dyn Adapter)
+                // For MessageProcessor, use main room if it supports voice chat
+                if let Some(main_room) = &mut self.main_room {
+                    match main_room {
+                        MainRoom::WebSocket(_) => None, // WebSocket doesn't support voice
+                        #[cfg(feature = "use_livekit")]
+                        MainRoom::LiveKit(livekit_room) => Some(livekit_room as &mut dyn Adapter),
+                    }
                 } else {
                     None
                 }
-                #[cfg(not(feature = "use_livekit"))]
-                None
             }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
@@ -353,16 +412,12 @@ impl CommunicationManager {
             | CommsConnection::WaitingForIdentity(_) => false,
             CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), true),
             CommsConnection::MessageProcessor(_) => {
-                // Send via active rooms
-                let mut sent = false;
-                if let Some(ws_room) = &mut self.active_ws_room {
-                    sent |= ws_room.send_rfc4(get_packet(), true);
+                // Send via main room
+                if let Some(main_room) = &mut self.main_room {
+                    main_room.send_rfc4(get_packet(), true)
+                } else {
+                    false
                 }
-                #[cfg(feature = "use_livekit")]
-                if let Some(livekit_room) = &mut self.active_livekit_room {
-                    sent |= livekit_room.send_rfc4(get_packet(), true);
-                }
-                sent
             }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
@@ -408,16 +463,12 @@ impl CommunicationManager {
             | CommsConnection::WaitingForIdentity(_) => false,
             CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), true),
             CommsConnection::MessageProcessor(_) => {
-                // Send via active rooms
-                let mut sent = false;
-                if let Some(ws_room) = &mut self.active_ws_room {
-                    sent |= ws_room.send_rfc4(get_packet(), true);
+                // Send via main room
+                if let Some(main_room) = &mut self.main_room {
+                    main_room.send_rfc4(get_packet(), true)
+                } else {
+                    false
                 }
-                #[cfg(feature = "use_livekit")]
-                if let Some(livekit_room) = &mut self.active_livekit_room {
-                    sent |= livekit_room.send_rfc4(get_packet(), true);
-                }
-                sent
             }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
@@ -452,16 +503,12 @@ impl CommunicationManager {
             | CommsConnection::WaitingForIdentity(_) => false,
             CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), false),
             CommsConnection::MessageProcessor(_) => {
-                // Send via active rooms
-                let mut sent = false;
-                if let Some(ws_room) = &mut self.active_ws_room {
-                    sent |= ws_room.send_rfc4(get_packet(), false);
+                // Send via main room
+                if let Some(main_room) = &mut self.main_room {
+                    main_room.send_rfc4(get_packet(), false)
+                } else {
+                    false
                 }
-                #[cfg(feature = "use_livekit")]
-                if let Some(livekit_room) = &mut self.active_livekit_room {
-                    sent |= livekit_room.send_rfc4(get_packet(), false);
-                }
-                sent
             }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
@@ -485,6 +532,12 @@ impl CommunicationManager {
         player_identity.connect(
             "profile_changed".into(),
             self.base().callable("_on_profile_changed"),
+        );
+
+        let mut scene_runner = DclGlobal::singleton().bind().get_scene_runner();
+        scene_runner.connect(
+            "on_change_scene_id".into(),
+            self.base().callable("_on_change_scene_id"),
         );
     }
 
@@ -575,7 +628,7 @@ impl CommunicationManager {
 
         self.current_connection = CommsConnection::None;
         self.current_connection_str
-            .clone_from(&comms_fixed_adapter_str);
+            .clone_from(&comms_fixed_adapter_str.to_godot());
         let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
         tracing::info!("change_adapter to protocol {protocol} and address {comms_address}");
@@ -608,7 +661,7 @@ impl CommunicationManager {
                 ws_room.set_message_processor_sender(processor_sender);
                 
                 // Store the room and set the connection
-                self.active_ws_room = Some(ws_room);
+                self.main_room = Some(MainRoom::WebSocket(ws_room));
                 self.current_connection = CommsConnection::MessageProcessor(processor);
             }
             "signed-login" => {
@@ -654,7 +707,7 @@ impl CommunicationManager {
                 livekit_room.set_message_processor_sender(processor_sender);
                 
                 // Store the room and set the connection
-                self.active_livekit_room = Some(livekit_room);
+                self.main_room = Some(MainRoom::LiveKit(livekit_room));
                 self.current_connection = CommsConnection::MessageProcessor(processor);
             }
 
@@ -683,15 +736,12 @@ impl CommunicationManager {
         self.voice_chat_enabled = match &self.current_connection {
             CommsConnection::Connected(adapter) => adapter.support_voice_chat(),
             CommsConnection::MessageProcessor(_) => {
-                // Check if any active room supports voice chat
-                #[cfg(feature = "use_livekit")]
-                if let Some(livekit_room) = &self.active_livekit_room {
-                    livekit_room.support_voice_chat()
+                // Check if main room supports voice chat
+                if let Some(main_room) = &self.main_room {
+                    main_room.support_voice_chat()
                 } else {
                     false
                 }
-                #[cfg(not(feature = "use_livekit"))]
-                false
             }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
@@ -726,22 +776,23 @@ impl CommunicationManager {
             CommsConnection::Archipelago(archipelago) => archipelago.clean(),
         }
 
-        // Clean up active rooms
-        if let Some(ws_room) = &mut self.active_ws_room {
-            ws_room.clean();
+        // Clean up rooms
+        if let Some(main_room) = &mut self.main_room {
+            main_room.clean();
         }
-        #[cfg(feature = "use_livekit")]
-        if let Some(livekit_room) = &mut self.active_livekit_room {
-            livekit_room.clean();
-        }
+        self.main_room = None;
         
-        self.active_ws_room = None;
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            scene_room.clean();
+        }
         #[cfg(feature = "use_livekit")]
         {
-            self.active_livekit_room = None;
+            self.scene_room = None;
         }
+        self.current_scene_id = None;
         self.current_connection = CommsConnection::None;
-        self.current_connection_str = String::default();
+        self.current_connection_str = GString::default();
     }
 
     #[func]
@@ -773,6 +824,148 @@ impl CommunicationManager {
     pub fn get_current_adapter_conn_str(&self) -> GString {
         GString::from(self.current_connection_str.clone())
     }
+    
+    #[cfg(feature = "use_livekit")]
+    #[func]
+    pub fn _on_change_scene_id(&mut self, scene_id: i32) {
+        use std::sync::Arc;
+
+        use crate::http_request::http_queue_requester::HttpQueueRequester;
+
+        let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
+        let scene_entity_id = scene_runner.bind().get_scene_entity_id(scene_id);
+        
+        // Check if scene has actually changed
+        if let Some(current_scene) = &self.current_scene_id {
+            if current_scene == &scene_entity_id {
+                return; // No change needed
+            }
+        }
+        
+        tracing::info!("Scene changed to: {}", scene_entity_id);
+        
+        // Clean up existing scene room
+        if let Some(scene_room) = &mut self.scene_room {
+            scene_room.clean();
+        }
+        self.scene_room = None;
+        self.current_scene_id = Some(scene_entity_id.clone());
+        
+        // Get player identity for signing
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity_bind = player_identity.bind();
+        
+        let Some(ephemeral_auth_chain) = player_identity_bind.try_get_ephemeral_auth_chain() else {
+            tracing::error!("No ephemeral auth chain available for scene room connection");
+            return;
+        };
+        
+        let _avatar_scene = DclGlobal::singleton().bind().get_avatars();
+        let _player_profile = player_identity_bind.clone_profile();
+        
+        // Spawn async task to get scene adapter and connect
+        let scene_entity_id = scene_entity_id.to_string();
+        let realm_name = DclGlobal::singleton().bind().get_realm().get("realm_name".into()).to_string();
+        let http_requester: Arc<HttpQueueRequester> = DclGlobal::singleton()
+            .bind()
+            .get_http_requester()
+            .bind()
+            .get_http_queue_requester();
+        TokioRuntime::spawn(async move {
+            match get_scene_adapter(http_requester, &scene_entity_id, &realm_name, &ephemeral_auth_chain).await {
+                Ok(adapter_url) => {
+                    tracing::info!("Got scene adapter URL for scene '{}': {}", scene_entity_id, adapter_url);
+                    
+                    // Parse the adapter URL to extract LiveKit connection details
+                    if adapter_url.starts_with("livekit:") {
+                        // Extract the actual LiveKit URL after "livekit:"
+                        let livekit_url = &adapter_url[8..]; // Remove "livekit:" prefix
+                        tracing::info!("Connecting scene room to LiveKit: {}", livekit_url);
+                        
+                        // TODO: Here you would create the scene room connection
+                        // Since we can't access &mut self from this async context,
+                        // you could use a channel or other mechanism to notify the main thread
+                        // For now, this serves as the foundation for scene room connection
+                    } else {
+                        tracing::warn!("Unsupported scene adapter type: {}", adapter_url);
+                    }
+                },
+                Err(e) => {
+                    tracing::error!("Failed to get scene adapter for scene '{}': {}", scene_entity_id, e);
+                }
+            }
+        });
+    }
+    
+}
+
+#[cfg(feature = "use_livekit")]
+async fn get_scene_adapter(
+    http_requester: Arc<HttpQueueRequester>,
+    scene_id: &str,
+    realm_name: &str,
+    ephemeral_auth_chain: &crate::auth::ephemeral_auth_chain::EphemeralAuthChain,
+) -> Result<String, Box<dyn std::error::Error>> {
+    
+    // Create the request body
+
+    use crate::http_request::request_response::{RequestOption, ResponseEnum, ResponseType};
+    let request_body = serde_json::json!({
+        "sceneId": scene_id,
+        "realmName": realm_name
+    });
+    let metadata_json = request_body.to_string();
+    
+    // Create URI
+    let uri = http::Uri::from_static(GATEKEEPER_URL);
+    let method = http::Method::POST;
+    
+    // Sign the request
+    let headers = wallet::sign_request(
+        method.as_str(),
+        &uri,
+        ephemeral_auth_chain,
+        metadata_json.clone(),
+    )
+    .await;
+
+    let request_option = RequestOption::new(
+        0,
+        uri.to_string(),
+        method,
+        ResponseType::AsJson,
+        Some(metadata_json.as_bytes().to_vec()),
+        Some(headers.into_iter().collect()),
+        None,
+    );
+    
+    let response = http_requester.request(request_option, 0).await
+        .map_err(|e| format!("Request failed: {}", e.error_message))?;
+
+    if !response.status_code.is_success() {
+        return Err(format!("HTTP error: {}", response.status_code).into());
+    }
+
+    // Extract response data
+    let response_data = response.response_data
+        .map_err(|e| format!("Response data error: {}", e))?;
+
+    // Parse the response based on type
+    let gatekeeper_response: GatekeeperResponse = match response_data {
+        ResponseEnum::String(text) => serde_json::from_str(&text)?,
+        ResponseEnum::Json(json_result) => {
+            let json_value = json_result?; // Extract the Result first
+            serde_json::from_value(json_value)?
+        },
+        ResponseEnum::Bytes(bytes) => {
+            let text = String::from_utf8(bytes)
+                .map_err(|e| format!("Invalid UTF-8: {}", e))?;
+            serde_json::from_str(&text)?
+        },
+        _ => return Err("Unexpected response type".into()),
+    };
+
+    Ok(gatekeeper_response.adapter)
 }
 
 fn get_chat_array(chats: Vec<(H160, rfc4::Chat)>) -> VariantArray {

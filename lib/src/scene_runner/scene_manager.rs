@@ -298,6 +298,14 @@ impl SceneManager {
     }
 
     #[func]
+    pub fn get_scene_entity_id(&self, scene_id: i32) -> GString {
+        if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
+            return GString::from(scene.scene_entity_definition.id.clone());
+        }
+        GString::default()
+    }
+
+    #[func]
     fn get_scene_is_paused(&self, scene_id: i32) -> bool {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
             scene.paused
