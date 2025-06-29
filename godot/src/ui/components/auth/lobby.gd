@@ -105,15 +105,16 @@ func _ready():
 
 	var session_account: Dictionary = Global.get_config().session_account
 
-	if Global.player_identity.try_recover_account(session_account):
-		loading_first_profile = true
-		show_panel(control_loading)
-
 	if args.has("--guest-profile"):
+		session_account.clear()
 		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()
 		Global.player_identity.create_guest_account()
 		Global.player_identity.set_default_profile()
+
+	if Global.player_identity.try_recover_account(session_account):
+		loading_first_profile = true
+		show_panel(control_loading)
 
 	elif _skip_lobby:
 		show_panel(control_loading)

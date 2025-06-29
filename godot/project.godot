@@ -48,7 +48,7 @@ window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--realm https://realm-provider-ea.decentraland.org/main --location 150,150 --skip-lobby --guest-profile"
+run/main_run_args="--realm https://realm-provider-ea.decentraland.org/main --location 150,150 --skip-lobby"
 
 [editor_plugins]
 
