@@ -185,7 +185,10 @@ impl MessageProcessor {
     fn process_message(&mut self, message: IncomingMessage) {
         // Handle peer creation/updates first
         let peer_alias = if let Some(peer) = self.peer_identities.get_mut(&message.address) {
-            // Update existing peer
+            // Update existing peer - log if this is from a different room than before
+            tracing::debug!("📨 Message from {:#x} via room '{}' (existing peer, alias: {})", 
+                message.address, message.room_id, peer.alias);
+            
             if let MessageType::Rfc4(rfc4_msg) = &message.message {
                 peer.protocol_version = rfc4_msg.protocol_version;
             }
@@ -206,6 +209,9 @@ impl MessageProcessor {
 
             self.peer_alias_counter += 1;
             let new_alias = self.peer_alias_counter;
+            
+            tracing::info!("🆕 Creating new peer {:#x} from room '{}' with alias: {}", 
+                message.address, message.room_id, new_alias);
             
             self.peer_identities.insert(
                 message.address,

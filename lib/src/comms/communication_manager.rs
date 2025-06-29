@@ -24,8 +24,9 @@ use crate::comms::adapter::movement_compressed::{MovementCompressed, Temporal, M
 
 const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scene-adapter";
 
-// Temporary flag to disable archipelago connections for testing
+// Temporary flags for testing different connection scenarios
 const DISABLE_ARCHIPELAGO: bool = false;
+const DISABLE_SCENE_ROOM: bool = true;
 
 #[derive(Serialize, Deserialize)]
 pub struct GatekeeperResponse {
@@ -373,6 +374,11 @@ impl CommunicationManager {
 
     #[func]
     fn broadcast_movement(&mut self, compressed: bool, position: Vector3, rotation_y: f32, velocity: Vector3, walk: bool, run: bool, jog: bool, rise: bool, fall: bool, land: bool) -> bool {
+        // Update archipelago position if connected via archipelago
+        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+            archipelago.update_position(position);
+        }
+        
         let rotation_y = rotation_y.to_degrees();
 
         let get_packet = || {
@@ -496,6 +502,11 @@ impl CommunicationManager {
 
     #[func]
     fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
+        // Update archipelago position if connected via archipelago
+        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+            archipelago.update_position(position);
+        }
+        
         let index = self.last_position_broadcast_index;
         let get_packet = || {
             let position_packet = rfc4::Position {
@@ -876,6 +887,7 @@ impl CommunicationManager {
     pub fn get_current_adapter_conn_str(&self) -> GString {
         GString::from(self.current_connection_str.clone())
     }
+
     
     #[cfg(feature = "use_livekit")]
     fn handle_scene_room_connection_request(&mut self, request: SceneRoomConnectionRequest) {
@@ -959,6 +971,12 @@ impl CommunicationManager {
         }
         self.scene_room = None;
         self.current_scene_id = Some(scene_entity_id.clone());
+        
+        // Check if scene rooms are disabled
+        if DISABLE_SCENE_ROOM {
+            tracing::info!("⚠️  Scene room connections are disabled (DISABLE_SCENE_ROOM = true)");
+            return;
+        }
         
         // Get player identity for signing
         let player_identity = DclGlobal::singleton().bind().get_player_identity();
