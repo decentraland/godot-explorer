@@ -12,6 +12,7 @@ use crate::{
     auth::wallet,
     scene_runner::tokio_runtime::TokioRuntime,
 };
+use tokio::sync::mpsc;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -26,6 +27,12 @@ const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scen
 #[derive(Serialize, Deserialize)]
 pub struct GatekeeperResponse {
     adapter: String,
+}
+
+#[derive(Debug)]
+pub struct SceneRoomConnectionRequest {
+    pub scene_id: String,
+    pub livekit_url: String,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -102,12 +109,21 @@ pub struct CommunicationManager {
     scene_room: Option<LivekitRoom>,
     current_scene_id: Option<GString>,
 
+    // Channel for scene room connection requests from async tasks
+    #[cfg(feature = "use_livekit")]
+    scene_room_connection_receiver: mpsc::Receiver<SceneRoomConnectionRequest>,
+    #[cfg(feature = "use_livekit")]
+    scene_room_connection_sender: mpsc::Sender<SceneRoomConnectionRequest>,
+
     base: Base<Node>,
 }
 
 #[godot_api]
 impl INode for CommunicationManager {
     fn init(base: Base<Node>) -> Self {
+        #[cfg(feature = "use_livekit")]
+        let (scene_room_connection_sender, scene_room_connection_receiver) = mpsc::channel(10);
+        
         CommunicationManager {
             current_connection: CommsConnection::None,
             current_connection_str: GString::default(),
@@ -118,6 +134,10 @@ impl INode for CommunicationManager {
             #[cfg(feature = "use_livekit")]
             scene_room: None,
             current_scene_id: None,
+            #[cfg(feature = "use_livekit")]
+            scene_room_connection_receiver,
+            #[cfg(feature = "use_livekit")]
+            scene_room_connection_sender,
             base,
         }
     }
@@ -127,6 +147,12 @@ impl INode for CommunicationManager {
     }
 
     fn process(&mut self, _dt: f64) {
+        // Handle scene room connection requests from async tasks
+        #[cfg(feature = "use_livekit")]
+        while let Ok(request) = self.scene_room_connection_receiver.try_recv() {
+            self.handle_scene_room_connection_request(request);
+        }
+
         match &mut self.current_connection {
             CommsConnection::None => {}
             CommsConnection::WaitingForIdentity(adapter_url) => {
@@ -406,7 +432,7 @@ impl CommunicationManager {
             }
         };
 
-        let message_sent = match &mut self.current_connection {
+        let mut message_sent = match &mut self.current_connection {
             CommsConnection::None
             | CommsConnection::SignedLogin(_)
             | CommsConnection::WaitingForIdentity(_) => false,
@@ -429,6 +455,16 @@ impl CommunicationManager {
                 }
             }
         };
+
+        // Also send to scene room if it exists (dual broadcasting)
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            let scene_sent = scene_room.send_rfc4(get_packet(), true);
+            message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
+            if scene_sent {
+                tracing::debug!("📡 Movement also sent to scene room");
+            }
+        }
 
         if message_sent {
             self.last_position_broadcast_index += 1;
@@ -457,7 +493,7 @@ impl CommunicationManager {
             }
         };
 
-        let message_sent = match &mut self.current_connection {
+        let mut message_sent = match &mut self.current_connection {
             CommsConnection::None
             | CommsConnection::SignedLogin(_)
             | CommsConnection::WaitingForIdentity(_) => false,
@@ -480,6 +516,16 @@ impl CommunicationManager {
                 }
             }
         };
+
+        // Also send to scene room if it exists (dual broadcasting)
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            let scene_sent = scene_room.send_rfc4(get_packet(), true);
+            message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
+            if scene_sent {
+                tracing::debug!("📡 Position also sent to scene room");
+            }
+        }
 
         if message_sent {
             self.last_position_broadcast_index += 1;
@@ -826,6 +872,74 @@ impl CommunicationManager {
     }
     
     #[cfg(feature = "use_livekit")]
+    fn handle_scene_room_connection_request(&mut self, request: SceneRoomConnectionRequest) {
+        tracing::info!("🔌 Processing scene room connection request for scene '{}' with URL: {}", request.scene_id, request.livekit_url);
+        
+        // Try to create scene room based on current connection type
+        match &mut self.current_connection {
+            CommsConnection::MessageProcessor(processor) => {
+                // Clean up existing scene room
+                if let Some(scene_room) = &mut self.scene_room {
+                    tracing::info!("🧹 Cleaning up existing scene room");
+                    scene_room.clean();
+                }
+                
+                // Create new LiveKit room for the scene
+                let room_id = format!("scene-{}", request.scene_id);
+                tracing::info!("🚀 Creating new scene room with ID: {}", room_id);
+                
+                let mut scene_room = LivekitRoom::new(request.livekit_url.clone(), room_id);
+                
+                // Connect the scene room to the message processor
+                let processor_sender = processor.get_message_sender();
+                scene_room.set_message_processor_sender(processor_sender);
+                
+                self.scene_room = Some(scene_room);
+                tracing::info!("✅ Scene room successfully created and connected to message processor");
+            },
+            CommsConnection::Archipelago(archipelago) => {
+                // For archipelago connections, check if they have a message processor
+                if let Some(processor_sender) = archipelago.get_message_processor_sender() {
+                    // Clean up existing scene room
+                    if let Some(scene_room) = &mut self.scene_room {
+                        tracing::info!("🧹 Cleaning up existing scene room");
+                        scene_room.clean();
+                    }
+                    
+                    // Create new LiveKit room for the scene
+                    let room_id = format!("scene-{}", request.scene_id);
+                    tracing::info!("🚀 Creating new scene room with ID: {} (archipelago mode)", room_id);
+                    
+                    let mut scene_room = LivekitRoom::new(request.livekit_url.clone(), room_id);
+                    scene_room.set_message_processor_sender(processor_sender);
+                    self.scene_room = Some(scene_room);
+                    tracing::info!("✅ Scene room successfully created and connected to archipelago message processor");
+                } else {
+                    tracing::warn!("⚠️  Cannot create scene room: Archipelago message processor not ready");
+                }
+            },
+            CommsConnection::None | CommsConnection::WaitingForIdentity(_) => {
+                tracing::info!("📝 No active connection yet, scene room will be created when connection is established");
+                // Store the request to retry when connection becomes available
+                // For now, just log - in the future we could queue these requests
+            },
+            _ => {
+                tracing::warn!("⚠️  Cannot create scene room: Unsupported connection type (current connection: {:?})", 
+                    match &self.current_connection {
+                        CommsConnection::None => "None",
+                        CommsConnection::WaitingForIdentity(_) => "WaitingForIdentity",
+                        CommsConnection::SignedLogin(_) => "SignedLogin",
+                        CommsConnection::Connected(_) => "Connected",
+                        CommsConnection::MessageProcessor(_) => "MessageProcessor",
+                        #[cfg(feature = "use_livekit")]
+                        CommsConnection::Archipelago(_) => "Archipelago",
+                    }
+                );
+            }
+        }
+    }
+
+    #[cfg(feature = "use_livekit")]
     #[func]
     pub fn _on_change_scene_id(&mut self, scene_id: i32) {
         use std::sync::Arc;
@@ -871,27 +985,39 @@ impl CommunicationManager {
             .get_http_requester()
             .bind()
             .get_http_queue_requester();
+        let connection_sender = self.scene_room_connection_sender.clone();
         TokioRuntime::spawn(async move {
+            tracing::info!("Requesting scene adapter for scene: {}", scene_entity_id);
             match get_scene_adapter(http_requester, &scene_entity_id, &realm_name, &ephemeral_auth_chain).await {
                 Ok(adapter_url) => {
-                    tracing::info!("Got scene adapter URL for scene '{}': {}", scene_entity_id, adapter_url);
+                    tracing::info!("✅ Got scene adapter URL for scene '{}': {}", scene_entity_id, adapter_url);
                     
                     // Parse the adapter URL to extract LiveKit connection details
                     if adapter_url.starts_with("livekit:") {
                         // Extract the actual LiveKit URL after "livekit:"
                         let livekit_url = &adapter_url[8..]; // Remove "livekit:" prefix
-                        tracing::info!("Connecting scene room to LiveKit: {}", livekit_url);
+                        tracing::info!("🔗 Preparing to connect scene room to LiveKit: {}", livekit_url);
                         
-                        // TODO: Here you would create the scene room connection
-                        // Since we can't access &mut self from this async context,
-                        // you could use a channel or other mechanism to notify the main thread
-                        // For now, this serves as the foundation for scene room connection
+                        // Send connection request to main thread via channel
+                        let request = SceneRoomConnectionRequest {
+                            scene_id: scene_entity_id.clone(),
+                            livekit_url: livekit_url.to_string(),
+                        };
+                        
+                        match connection_sender.send(request).await {
+                            Ok(()) => {
+                                tracing::info!("📤 Scene room connection request sent to main thread for scene '{}'", scene_entity_id);
+                            },
+                            Err(e) => {
+                                tracing::error!("❌ Failed to send scene room connection request: {}", e);
+                            }
+                        }
                     } else {
-                        tracing::warn!("Unsupported scene adapter type: {}", adapter_url);
+                        tracing::warn!("⚠️  Unsupported scene adapter type: {}", adapter_url);
                     }
                 },
                 Err(e) => {
-                    tracing::error!("Failed to get scene adapter for scene '{}': {}", scene_entity_id, e);
+                    tracing::error!("❌ Failed to get scene adapter for scene '{}': {}", scene_entity_id, e);
                 }
             }
         });
@@ -905,7 +1031,7 @@ async fn get_scene_adapter(
     scene_id: &str,
     realm_name: &str,
     ephemeral_auth_chain: &crate::auth::ephemeral_auth_chain::EphemeralAuthChain,
-) -> Result<String, Box<dyn std::error::Error>> {
+) -> Result<String, String> {
     
     // Create the request body
 
@@ -914,27 +1040,33 @@ async fn get_scene_adapter(
         "sceneId": scene_id,
         "realmName": realm_name
     });
-    let metadata_json = request_body.to_string();
+    let metadata_json_string = request_body.to_string();
+    
+    tracing::info!("🔄 Making scene adapter request to: {}", GATEKEEPER_URL);
+    tracing::info!("📋 Request body: {}", metadata_json_string);
     
     // Create URI
     let uri = http::Uri::from_static(GATEKEEPER_URL);
     let method = http::Method::POST;
     
     // Sign the request
+    tracing::info!("🔐 Signing request with ephemeral auth chain");
     let headers = wallet::sign_request(
         method.as_str(),
         &uri,
         ephemeral_auth_chain,
-        metadata_json.clone(),
+        request_body,  // Pass the serde_json::Value directly, not the string
     )
     .await;
+    
+    tracing::info!("📝 Generated {} authentication headers", headers.len());
 
     let request_option = RequestOption::new(
         0,
         uri.to_string(),
         method,
         ResponseType::AsJson,
-        Some(metadata_json.as_bytes().to_vec()),
+        Some(metadata_json_string.as_bytes().to_vec()),
         Some(headers.into_iter().collect()),
         None,
     );
@@ -942,8 +1074,11 @@ async fn get_scene_adapter(
     let response = http_requester.request(request_option, 0).await
         .map_err(|e| format!("Request failed: {}", e.error_message))?;
 
+    tracing::info!("📡 Received HTTP response with status: {}", response.status_code);
+
     if !response.status_code.is_success() {
-        return Err(format!("HTTP error: {}", response.status_code).into());
+        tracing::error!("❌ HTTP request failed with status: {}", response.status_code);
+        return Err(format!("HTTP error: {}", response.status_code));
     }
 
     // Extract response data
@@ -951,20 +1086,27 @@ async fn get_scene_adapter(
         .map_err(|e| format!("Response data error: {}", e))?;
 
     // Parse the response based on type
+    tracing::info!("🔍 Parsing gatekeeper response");
     let gatekeeper_response: GatekeeperResponse = match response_data {
-        ResponseEnum::String(text) => serde_json::from_str(&text)?,
+        ResponseEnum::String(text) => {
+            tracing::info!("📄 Response as string: {}", text);
+            serde_json::from_str(&text).map_err(|e| format!("JSON parse error: {}", e))?
+        },
         ResponseEnum::Json(json_result) => {
-            let json_value = json_result?; // Extract the Result first
-            serde_json::from_value(json_value)?
+            let json_value = json_result.map_err(|e| format!("JSON result error: {}", e))?; // Extract the Result first
+            tracing::info!("📊 Response as JSON: {}", json_value);
+            serde_json::from_value(json_value).map_err(|e| format!("JSON value parse error: {}", e))?
         },
         ResponseEnum::Bytes(bytes) => {
             let text = String::from_utf8(bytes)
                 .map_err(|e| format!("Invalid UTF-8: {}", e))?;
-            serde_json::from_str(&text)?
+            tracing::info!("📄 Response as bytes->string: {}", text);
+            serde_json::from_str(&text).map_err(|e| format!("JSON parse error: {}", e))?
         },
-        _ => return Err("Unexpected response type".into()),
+        _ => return Err("Unexpected response type".to_string()),
     };
 
+    tracing::info!("✅ Successfully parsed gatekeeper response: adapter = '{}'", gatekeeper_response.adapter);
     Ok(gatekeeper_response.adapter)
 }
 

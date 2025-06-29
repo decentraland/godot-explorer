@@ -373,6 +373,10 @@ impl ArchipelagoManager {
     pub fn update_position(&mut self, position: Vector3) {
         self.player_position = position;
     }
+    
+    pub fn get_message_processor_sender(&self) -> Option<tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>> {
+        self.message_processor.as_ref().map(|processor| processor.get_message_sender())
+    }
 }
 
 fn get_next_packet(mut peer: Gd<WebSocketPeer>) -> Option<(usize, server_packet::Message)> {
