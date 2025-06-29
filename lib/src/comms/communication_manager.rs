@@ -25,7 +25,7 @@ use crate::comms::adapter::movement_compressed::{MovementCompressed, Temporal, M
 const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scene-adapter";
 
 // Temporary flag to disable archipelago connections for testing
-const DISABLE_ARCHIPELAGO: bool = true;
+const DISABLE_ARCHIPELAGO: bool = false;
 
 #[derive(Serialize, Deserialize)]
 pub struct GatekeeperResponse {
@@ -285,23 +285,15 @@ impl CommunicationManager {
             message: Some(rfc4::packet::Message::Scene(rfc4::Scene { scene_id, data })),
             protocol_version: 100,
         };
-        // Send via main room if available
+        // Send to main room if available
         if let Some(main_room) = &mut self.main_room {
-            main_room.send_rfc4(scene_message, true);
-        } else {
-            // Fallback to legacy adapter-based sending
-            match &mut self.current_connection {
-                CommsConnection::Connected(adapter) => {
-                    adapter.send_rfc4(scene_message, true);
-                }
-                #[cfg(feature = "use_livekit")]
-                CommsConnection::Archipelago(archipelago) => {
-                    if let Some(adapter) = archipelago.adapter_as_mut() {
-                        adapter.send_rfc4(scene_message, true);
-                    }
-                }
-                _ => {}
-            }
+            main_room.send_rfc4(scene_message.clone(), true);
+        }
+        
+        // Also send to scene room if available
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            scene_room.send_rfc4(scene_message, true);
         }
     }
 
@@ -479,28 +471,14 @@ impl CommunicationManager {
             }
         };
 
-        // Send via main room if available, otherwise fallback to adapter-specific logic
+        // Send to main room if available
         let mut message_sent = if let Some(main_room) = &mut self.main_room {
             main_room.send_rfc4(get_packet(), true)
         } else {
-            match &mut self.current_connection {
-                CommsConnection::None
-                | CommsConnection::SignedLogin(_)
-                | CommsConnection::WaitingForIdentity(_) => false,
-                CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), true),
-                #[cfg(feature = "use_livekit")]
-                CommsConnection::Archipelago(archipelago) => {
-                    archipelago.update_position(position);
-                    if let Some(adapter) = archipelago.adapter_as_mut() {
-                        adapter.send_rfc4(get_packet(), true)
-                    } else {
-                        false
-                    }
-                }
-            }
+            false
         };
 
-        // Also send to scene room if it exists (dual broadcasting)
+        // Also send to scene room if available (dual broadcasting)
         #[cfg(feature = "use_livekit")]
         if let Some(scene_room) = &mut self.scene_room {
             let scene_sent = scene_room.send_rfc4(get_packet(), true);
@@ -537,28 +515,14 @@ impl CommunicationManager {
             }
         };
 
-        // Send via main room if available, otherwise fallback to adapter-specific logic
+        // Send to main room if available
         let mut message_sent = if let Some(main_room) = &mut self.main_room {
             main_room.send_rfc4(get_packet(), true)
         } else {
-            match &mut self.current_connection {
-                CommsConnection::None
-                | CommsConnection::SignedLogin(_)
-                | CommsConnection::WaitingForIdentity(_) => false,
-                CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), true),
-                #[cfg(feature = "use_livekit")]
-                CommsConnection::Archipelago(archipelago) => {
-                    archipelago.update_position(position);
-                    if let Some(adapter) = archipelago.adapter_as_mut() {
-                        adapter.send_rfc4(get_packet(), true)
-                    } else {
-                        false
-                    }
-                }
-            }
+            false
         };
 
-        // Also send to scene room if it exists (dual broadcasting)
+        // Also send to scene room if available (dual broadcasting)
         #[cfg(feature = "use_livekit")]
         if let Some(scene_room) = &mut self.scene_room {
             let scene_sent = scene_room.send_rfc4(get_packet(), true);
@@ -576,7 +540,7 @@ impl CommunicationManager {
 
     #[func]
     fn send_chat(&mut self, text: GString) -> bool {
-        let get_packet = || rfc4::Packet {
+        let packet = rfc4::Packet {
             message: Some(rfc4::packet::Message::Chat(rfc4::Chat {
                 message: text.to_string(),
                 timestamp: self.start_time.elapsed().as_secs_f64(),
@@ -584,25 +548,20 @@ impl CommunicationManager {
             protocol_version: 100,
         };
 
-        // Send via main room if available, otherwise fallback to adapter-specific logic
+        let mut sent = false;
+
+        // Send to main room if available
         if let Some(main_room) = &mut self.main_room {
-            main_room.send_rfc4(get_packet(), false)
-        } else {
-            match &mut self.current_connection {
-                CommsConnection::None
-                | CommsConnection::SignedLogin(_)
-                | CommsConnection::WaitingForIdentity(_) => false,
-                CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), false),
-                #[cfg(feature = "use_livekit")]
-                CommsConnection::Archipelago(archipelago) => {
-                    if let Some(adapter) = archipelago.adapter_as_mut() {
-                        adapter.send_rfc4(get_packet(), false)
-                    } else {
-                        false
-                    }
-                }
-            }
+            sent = main_room.send_rfc4(packet.clone(), false) || sent;
         }
+
+        // Also send to scene room if available
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            sent = scene_room.send_rfc4(packet, false) || sent;
+        }
+
+        sent
     }
 
     #[func]
