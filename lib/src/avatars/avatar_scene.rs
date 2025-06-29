@@ -41,6 +41,10 @@ pub struct AvatarScene {
     crdt_state: SceneCrdtState,
 
     last_updated_profile: HashMap<SceneEntityId, UserProfile>,
+    
+    // Timestamp tracking for movement messages
+    last_movement_timestamp: HashMap<AvatarAlias, f32>,
+    last_position_index: HashMap<AvatarAlias, u32>,
 }
 
 #[godot_api]
@@ -53,6 +57,8 @@ impl INode for AvatarScene {
             avatar_godot_scene: HashMap::new(),
             avatar_address: HashMap::new(),
             last_updated_profile: HashMap::new(),
+            last_movement_timestamp: HashMap::new(),
+            last_position_index: HashMap::new(),
         }
     }
 
@@ -335,6 +341,8 @@ impl AvatarScene {
             self.avatar_address.retain(|_, v| *v != alias);
 
             self.last_updated_profile.remove(&entity_id);
+            self.last_movement_timestamp.remove(&alias);
+            self.last_position_index.remove(&alias);
 
             avatar.queue_free();
             self.base_mut().remove_child(avatar.upcast());
@@ -404,13 +412,25 @@ impl AvatarScene {
         &mut self,
         alias: u32,
         transform: &rfc4::Position,
-    ) {
+    ) -> bool {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
             // TODO: handle this condition
-            return;
+            return false;
         };
+
+        // Skip position messages if we have movement messages (Movement has priority)
+        if self.last_movement_timestamp.contains_key(&alias) {
+            return false;
+        }
+
+        // Check position index to ensure we only process newer positions
+        if let Some(last_index) = self.last_position_index.get(&alias) {
+            if transform.index <= *last_index {
+                return false; // Skip if the position index is not newer than the last one
+            }
+        }
 
         let dcl_transform = DclTransformAndParent {
             translation: godot::prelude::Vector3 {
@@ -429,16 +449,25 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform);
+        self.last_position_index.insert(alias, transform.index);
+        true
     }
 
-    pub fn update_avatar_transform_with_movement(&mut self, alias: u32, movement: &rfc4::Movement) {
+    pub fn update_avatar_transform_with_movement(&mut self, alias: u32, movement: &rfc4::Movement) -> bool {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
             // TODO: handle this condition
             tracing::warn!("Avatar with alias {} not found", alias);
-            return;
+            return false;
         };
+
+        // Discard if movement.timestamp is older than the last one
+        if let Some(last_timestamp) = self.last_movement_timestamp.get(&alias) {
+            if movement.timestamp < *last_timestamp {
+                return false;
+            }
+        }
 
         // Convert rotation_y from degrees to radians and create quaternion
         let rotation_rad = movement.rotation_y * std::f32::consts::PI / 180.0;
@@ -460,6 +489,8 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform);
+        self.last_movement_timestamp.insert(alias, movement.timestamp);
+        true
     }
 
     pub fn update_avatar_transform_with_movement_compressed(
@@ -467,14 +498,22 @@ impl AvatarScene {
         alias: u32,
         position: godot::prelude::Vector3,
         rotation_rad: f32,
-    ) {
+        timestamp: f32,
+    ) -> bool {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
             // TODO: handle this condition
             tracing::warn!("Avatar with alias {} not found", alias);
-            return;
+            return false;
         };
+
+        // Discard if timestamp is older than the last one
+        if let Some(last_timestamp) = self.last_movement_timestamp.get(&alias) {
+            if timestamp < *last_timestamp {
+                return false;
+            }
+        }
 
         // Create quaternion from rotation (already in radians)
         let rotation_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
@@ -491,6 +530,8 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform);
+        self.last_movement_timestamp.insert(alias, timestamp);
+        true
     }
 
     pub fn update_avatar_by_alias(&mut self, alias: u32, profile: &UserProfile) {

@@ -58,8 +58,6 @@ struct Peer {
     profile: Option<UserProfile>,
     announced_version: Option<u32>,
     protocol_version: u32,
-    last_movement_timestamp: Option<f32>,
-    last_position_index: Option<u32>,
     last_activity: Instant,
 }
 
@@ -161,8 +159,6 @@ impl LivekitRoom {
                                 profile: None,
                                 announced_version: None,
                                 protocol_version: 100,
-                                last_movement_timestamp: None,
-                                last_position_index: None,
                                 last_activity: Instant::now(),
                             },
                         );
@@ -197,26 +193,15 @@ impl LivekitRoom {
                     match message.message {
                         ToSceneMessage::Rfc4(rfc4_msg) => match rfc4_msg.message {
                             rfc4::packet::Message::Position(position) => {
-                                if peer.last_movement_timestamp.is_some() {
-                                    continue; // If we received a Movement message, we will comunicate with the Movement message and ignore the Positions
-                                }
-
-                                if let Some(last_index) = peer.last_position_index {
-                                    if last_index >= position.index {
-                                        continue; // Skip if the position index is not newer than the last one
-                                    }
-                                }
-
-                                // Skip position messages for now
                                 tracing::info!(
                                     "Received Position from {:#x}: pos({}, {}, {}), rot({}, {}, {}, {})", 
                                     message.address,
                                     position.position_x, position.position_y, position.position_z,
                                     position.rotation_x, position.rotation_y, position.rotation_z, position.rotation_w
                                 );
-                                avatar_scene
-                                    .update_avatar_transform_with_rfc4_position(peer.alias, &position);
-                                peer.last_position_index = Some(position.index);
+                                
+                                // Let avatar_scene handle timestamp validation
+                                avatar_scene.update_avatar_transform_with_rfc4_position(peer.alias, &position);
                             }
                             rfc4::packet::Message::Movement(movement) => {
                                 tracing::info!(
@@ -228,20 +213,10 @@ impl LivekitRoom {
                                     movement.velocity_x, movement.velocity_y, movement.velocity_z,
                                     movement.movement_blend_value,
                                     movement.slide_blend_value,
-
                                 );
 
-                                // discard if movement.timestamp is too older than the last one
-                                if let Some(last_timestamp) = peer.last_movement_timestamp {
-                                    if movement.timestamp < last_timestamp {
-                                        continue;
-                                    }
-                                }
-
-                                avatar_scene
-                                    .update_avatar_transform_with_movement(peer.alias, &movement);
-
-                                peer.last_movement_timestamp = Some(movement.timestamp);
+                                // Let avatar_scene handle timestamp validation
+                                avatar_scene.update_avatar_transform_with_movement(peer.alias, &movement);
                             }
                             rfc4::packet::Message::MovementCompressed(
                                 movement_compressed,
@@ -262,12 +237,6 @@ impl LivekitRoom {
                                 let rotation_rad = movement.temporal.rotation_f32();
                                 let timestamp = movement.temporal.timestamp_f32();
 
-                                if let Some(last_timestamp) = peer.last_movement_timestamp {
-                                    if timestamp < last_timestamp {
-                                        continue; // Skip if the timestamp is not newer than the last one
-                                    }
-                                }
-
                                 tracing::info!(
                                     "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
                                     message.address,
@@ -277,13 +246,13 @@ impl LivekitRoom {
                                     timestamp
                                 );
 
+                                // Let avatar_scene handle timestamp validation
                                 avatar_scene.update_avatar_transform_with_movement_compressed(
                                     peer.alias,
                                     pos,
                                     rotation_rad,
+                                    timestamp,
                                 );
-
-                                peer.last_movement_timestamp = Some(timestamp);
                             }
                             rfc4::packet::Message::Chat(chat) => {
                                 tracing::info!("Received Chat from {:#x}: {:?}", message.address, chat);
