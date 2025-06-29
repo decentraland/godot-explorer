@@ -4,7 +4,7 @@ use http::Uri;
 use std::time::Instant;
 
 use crate::{
-    comms::{adapter::{movement_compressed::MoveKind, ws_room::WebSocketRoom}, signed_login::SignedLoginMeta},
+    comms::{adapter::{movement_compressed::MoveKind, ws_room::WebSocketRoom, message_processor::MessageProcessor}, signed_login::SignedLoginMeta},
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::dcl_global::DclGlobal,
 };
@@ -27,6 +27,7 @@ enum CommsConnection {
     #[cfg(feature = "use_livekit")]
     Archipelago(ArchipelagoManager),
     Connected(Box<dyn Adapter>),
+    MessageProcessor(MessageProcessor),
 }
 
 #[derive(GodotClass)]
@@ -37,6 +38,11 @@ pub struct CommunicationManager {
     last_position_broadcast_index: u64,
     voice_chat_enabled: bool,
     start_time: Instant,
+    
+    // Store active rooms for MessageProcessor mode
+    active_ws_room: Option<WebSocketRoom>,
+    #[cfg(feature = "use_livekit")]
+    active_livekit_room: Option<LivekitRoom>,
 
     base: Base<Node>,
 }
@@ -50,6 +56,9 @@ impl INode for CommunicationManager {
             last_position_broadcast_index: 0,
             voice_chat_enabled: false,
             start_time: Instant::now(),
+            active_ws_room: None,
+            #[cfg(feature = "use_livekit")]
+            active_livekit_room: None,
             base,
         }
     }
@@ -83,22 +92,14 @@ impl INode for CommunicationManager {
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 archipelago.poll();
-                if let Some(adapter) = archipelago.adapter_as_mut() {
-                    let adapter = adapter.as_mut();
-                    let adapter_polling_ok = adapter.poll();
-                    let chats = adapter.consume_chats();
+                let chats = archipelago.consume_chats();
 
-                    if !chats.is_empty() {
-                        let chats_variant_array = get_chat_array(chats);
-                        self.base_mut().emit_signal(
-                            "chat_message".into(),
-                            &[chats_variant_array.to_variant()],
-                        );
-                    }
-
-                    if !adapter_polling_ok {
-                        self.current_connection = CommsConnection::None;
-                    }
+                if !chats.is_empty() {
+                    let chats_variant_array = get_chat_array(chats);
+                    self.base_mut().emit_signal(
+                        "chat_message".into(),
+                        &[chats_variant_array.to_variant()],
+                    );
                 }
             }
             CommsConnection::Connected(adapter) => {
@@ -116,6 +117,30 @@ impl INode for CommunicationManager {
                     self.current_connection = CommsConnection::None;
                 }
             }
+            CommsConnection::MessageProcessor(processor) => {
+                // Poll active rooms first
+                if let Some(ws_room) = &mut self.active_ws_room {
+                    ws_room.poll();
+                }
+                #[cfg(feature = "use_livekit")]
+                if let Some(livekit_room) = &mut self.active_livekit_room {
+                    livekit_room.poll();
+                }
+                
+                // Then poll the processor
+                let processor_polling_ok = processor.poll();
+                let chats = processor.consume_chats();
+
+                if !chats.is_empty() {
+                    let chats_variant_array = get_chat_array(chats);
+                    self.base_mut()
+                        .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
+                }
+
+                if !processor_polling_ok {
+                    self.current_connection = CommsConnection::None;
+                }
+            }
         }
     }
 }
@@ -130,6 +155,16 @@ impl CommunicationManager {
             CommsConnection::Connected(adapter) => {
                 adapter.send_rfc4(scene_message, true);
             }
+            CommsConnection::MessageProcessor(_) => {
+                // Send via active rooms
+                if let Some(ws_room) = &mut self.active_ws_room {
+                    ws_room.send_rfc4(scene_message.clone(), true);
+                }
+                #[cfg(feature = "use_livekit")]
+                if let Some(livekit_room) = &mut self.active_livekit_room {
+                    livekit_room.send_rfc4(scene_message, true);
+                }
+            }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 if let Some(adapter) = archipelago.adapter_as_mut() {
@@ -143,13 +178,10 @@ impl CommunicationManager {
     pub fn get_pending_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
         match &mut self.current_connection {
             CommsConnection::Connected(adapter) => adapter.consume_scene_messages(scene_id),
+            CommsConnection::MessageProcessor(processor) => processor.consume_scene_messages(scene_id),
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
-                if let Some(adapter) = archipelago.adapter_as_mut() {
-                    adapter.consume_scene_messages(scene_id)
-                } else {
-                    vec![]
-                }
+                archipelago.consume_scene_messages(scene_id)
             }
             _ => vec![],
         }
@@ -167,18 +199,27 @@ impl CommunicationManager {
     #[func]
     fn broadcast_voice(&mut self, frame: PackedVector2Array) {
         let adapter = match &mut self.current_connection {
-            CommsConnection::Connected(adapter) => adapter,
+            CommsConnection::Connected(adapter) => Some(adapter.as_mut()),
+            CommsConnection::MessageProcessor(_) => {
+                // For MessageProcessor, use active rooms directly
+                #[cfg(feature = "use_livekit")]
+                if let Some(livekit_room) = &mut self.active_livekit_room {
+                    Some(livekit_room as &mut dyn Adapter)
+                } else {
+                    None
+                }
+                #[cfg(not(feature = "use_livekit"))]
+                None
+            }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
-                let Some(adapter) = archipelago.adapter_as_mut() else {
-                    return;
-                };
-
-                adapter
+                archipelago.adapter_as_mut().map(|a| a.as_mut())
             }
-            _ => {
-                return;
-            }
+            _ => None,
+        };
+        
+        let Some(adapter) = adapter else {
+            return;
         };
         if !adapter.support_voice_chat() {
             return;
@@ -311,6 +352,18 @@ impl CommunicationManager {
             | CommsConnection::SignedLogin(_)
             | CommsConnection::WaitingForIdentity(_) => false,
             CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), true),
+            CommsConnection::MessageProcessor(_) => {
+                // Send via active rooms
+                let mut sent = false;
+                if let Some(ws_room) = &mut self.active_ws_room {
+                    sent |= ws_room.send_rfc4(get_packet(), true);
+                }
+                #[cfg(feature = "use_livekit")]
+                if let Some(livekit_room) = &mut self.active_livekit_room {
+                    sent |= livekit_room.send_rfc4(get_packet(), true);
+                }
+                sent
+            }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 archipelago.update_position(position);
@@ -354,6 +407,18 @@ impl CommunicationManager {
             | CommsConnection::SignedLogin(_)
             | CommsConnection::WaitingForIdentity(_) => false,
             CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), true),
+            CommsConnection::MessageProcessor(_) => {
+                // Send via active rooms
+                let mut sent = false;
+                if let Some(ws_room) = &mut self.active_ws_room {
+                    sent |= ws_room.send_rfc4(get_packet(), true);
+                }
+                #[cfg(feature = "use_livekit")]
+                if let Some(livekit_room) = &mut self.active_livekit_room {
+                    sent |= livekit_room.send_rfc4(get_packet(), true);
+                }
+                sent
+            }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 archipelago.update_position(position);
@@ -386,6 +451,18 @@ impl CommunicationManager {
             | CommsConnection::SignedLogin(_)
             | CommsConnection::WaitingForIdentity(_) => false,
             CommsConnection::Connected(adapter) => adapter.send_rfc4(get_packet(), false),
+            CommsConnection::MessageProcessor(_) => {
+                // Send via active rooms
+                let mut sent = false;
+                if let Some(ws_room) = &mut self.active_ws_room {
+                    sent |= ws_room.send_rfc4(get_packet(), false);
+                }
+                #[cfg(feature = "use_livekit")]
+                if let Some(livekit_room) = &mut self.active_livekit_room {
+                    sent |= livekit_room.send_rfc4(get_packet(), false);
+                }
+                sent
+            }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 if let Some(adapter) = archipelago.adapter_as_mut() {
@@ -512,12 +589,27 @@ impl CommunicationManager {
 
         match protocol {
             "ws-room" => {
-                self.current_connection = CommsConnection::Connected(Box::new(WebSocketRoom::new(
+                // Create message processor
+                let processor = MessageProcessor::new(
+                    current_ephemeral_auth_chain.signer(),
+                    player_profile.clone(),
+                    avatar_scene.clone(),
+                );
+                let processor_sender = processor.get_message_sender();
+                
+                // Create WebSocket room with message processor
+                let mut ws_room = WebSocketRoom::new(
                     comms_address,
+                    format!("ws-room-{}", comms_address),
                     current_ephemeral_auth_chain,
                     player_profile,
                     avatar_scene,
-                )));
+                );
+                ws_room.set_message_processor_sender(processor_sender);
+                
+                // Store the room and set the connection
+                self.active_ws_room = Some(ws_room);
+                self.current_connection = CommsConnection::MessageProcessor(processor);
             }
             "signed-login" => {
                 let Ok(uri) = Uri::try_from(comms_address.to_string()) else {
@@ -546,12 +638,24 @@ impl CommunicationManager {
 
             #[cfg(feature = "use_livekit")]
             "livekit" => {
-                self.current_connection = CommsConnection::Connected(Box::new(LivekitRoom::new(
-                    comms_address.to_string(),
+                // Create message processor
+                let processor = MessageProcessor::new(
                     current_ephemeral_auth_chain.signer(),
-                    player_profile,
-                    avatar_scene,
-                )));
+                    player_profile.clone(),
+                    avatar_scene.clone(),
+                );
+                let processor_sender = processor.get_message_sender();
+                
+                // Create LiveKit room with message processor
+                let mut livekit_room = LivekitRoom::new(
+                    comms_address.to_string(),
+                    format!("livekit-{}", comms_address),
+                );
+                livekit_room.set_message_processor_sender(processor_sender);
+                
+                // Store the room and set the connection
+                self.active_livekit_room = Some(livekit_room);
+                self.current_connection = CommsConnection::MessageProcessor(processor);
             }
 
             #[cfg(not(feature = "use_livekit"))]
@@ -578,6 +682,17 @@ impl CommunicationManager {
 
         self.voice_chat_enabled = match &self.current_connection {
             CommsConnection::Connected(adapter) => adapter.support_voice_chat(),
+            CommsConnection::MessageProcessor(_) => {
+                // Check if any active room supports voice chat
+                #[cfg(feature = "use_livekit")]
+                if let Some(livekit_room) = &self.active_livekit_room {
+                    livekit_room.support_voice_chat()
+                } else {
+                    false
+                }
+                #[cfg(not(feature = "use_livekit"))]
+                false
+            }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 if let Some(adapter) = archipelago.adapter() {
@@ -604,10 +719,27 @@ impl CommunicationManager {
             CommsConnection::Connected(adapter) => {
                 adapter.clean();
             }
+            CommsConnection::MessageProcessor(processor) => {
+                processor.clean();
+            }
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => archipelago.clean(),
         }
 
+        // Clean up active rooms
+        if let Some(ws_room) = &mut self.active_ws_room {
+            ws_room.clean();
+        }
+        #[cfg(feature = "use_livekit")]
+        if let Some(livekit_room) = &mut self.active_livekit_room {
+            livekit_room.clean();
+        }
+        
+        self.active_ws_room = None;
+        #[cfg(feature = "use_livekit")]
+        {
+            self.active_livekit_room = None;
+        }
         self.current_connection = CommsConnection::None;
         self.current_connection_str = String::default();
     }
@@ -621,6 +753,7 @@ impl CommunicationManager {
         };
         match &mut self.current_connection {
             CommsConnection::Connected(adapter) => adapter.change_profile(player_profile),
+            CommsConnection::MessageProcessor(processor) => processor.change_profile(player_profile),
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => archipelago.change_profile(player_profile),
             _ => {}

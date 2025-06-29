@@ -6,9 +6,12 @@ use crate::{
     comms::profile::UserProfile,
     dcl::components::proto_components::{
         common::Position,
-        kernel::comms::v3::{
-            client_packet, server_packet, ChallengeRequestMessage, ClientPacket, Heartbeat,
-            ServerPacket, SignedChallengeMessage,
+        kernel::comms::{
+            rfc4,
+            v3::{
+                client_packet, server_packet, ChallengeRequestMessage, ClientPacket, Heartbeat,
+                ServerPacket, SignedChallengeMessage,
+            },
         },
     },
 };
@@ -16,7 +19,7 @@ use ethers_core::types::H160;
 use godot::{engine::WebSocketPeer, prelude::*};
 use prost::Message;
 
-use super::{adapter_trait::Adapter, livekit::LivekitRoom};
+use super::{adapter_trait::Adapter, livekit::LivekitRoom, message_processor::MessageProcessor};
 
 #[derive(Clone)]
 enum ArchipelagoState {
@@ -43,6 +46,7 @@ pub struct ArchipelagoManager {
     last_send_heartbeat: Instant,
 
     adapter: Option<Box<dyn Adapter>>,
+    message_processor: Option<MessageProcessor>,
 }
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(3);
@@ -74,6 +78,7 @@ impl ArchipelagoManager {
             player_profile,
             last_try_to_connect: Instant::now(),
             adapter: None,
+            message_processor: None,
             avatar_scene,
             player_position: Vector3::new(0.0, 0.0, 0.0),
             last_send_heartbeat: Instant::now(),
@@ -256,12 +261,23 @@ impl ArchipelagoManager {
         } else {
             true
         };
+        
+        // Poll the MessageProcessor if it exists
+        let processor_ok = if let Some(processor) = self.message_processor.as_mut() {
+            processor.poll()
+        } else {
+            true
+        };
+        
         if !adapter_ok {
             self.adapter = None;
         }
+        if !processor_ok {
+            self.message_processor = None;
+        }
     }
 
-    pub fn clean(&self) {
+    pub fn clean(&mut self) {
         let mut peer = self.ws_peer.clone();
         peer.close();
         match peer.get_ready_state() {
@@ -271,6 +287,12 @@ impl ArchipelagoManager {
             }
             _ => {}
         }
+        
+        // Clean up the MessageProcessor
+        if let Some(processor) = &mut self.message_processor {
+            processor.clean();
+        }
+        self.message_processor = None;
     }
 
     fn _handle_messages(&mut self) {
@@ -291,12 +313,23 @@ impl ArchipelagoManager {
                     };
                     match protocol {
                         "livekit" => {
-                            self.adapter = Some(Box::new(LivekitRoom::new(
-                                comms_address.to_string(),
-                                self.ephemeral_auth_chain.signer(),
+                            // Create MessageProcessor for this connection
+                            let processor = MessageProcessor::new(
+                                self.player_address,
                                 self.player_profile.clone(),
                                 self.avatar_scene.clone(),
-                            )));
+                            );
+                            let processor_sender = processor.get_message_sender();
+                            
+                            // Create LiveKit room with MessageProcessor connection
+                            let mut livekit_room = LivekitRoom::new(
+                                comms_address.to_string(),
+                                format!("archipelago-livekit-{}", msg.island_id),
+                            );
+                            livekit_room.set_message_processor_sender(processor_sender);
+                            
+                            self.adapter = Some(Box::new(livekit_room));
+                            self.message_processor = Some(processor);
                         }
                         _ => {
                             tracing::info!(
@@ -312,9 +345,28 @@ impl ArchipelagoManager {
     }
 
     pub fn change_profile(&mut self, new_profile: UserProfile) {
-        self.player_profile = Some(new_profile);
+        self.player_profile = Some(new_profile.clone());
         if let Some(adapter) = self.adapter.as_mut() {
-            adapter.change_profile(self.player_profile.clone().unwrap());
+            adapter.change_profile(new_profile.clone());
+        }
+        if let Some(processor) = self.message_processor.as_mut() {
+            processor.change_profile(new_profile);
+        }
+    }
+    
+    pub fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
+        if let Some(processor) = self.message_processor.as_mut() {
+            processor.consume_chats()
+        } else {
+            Vec::new()
+        }
+    }
+    
+    pub fn consume_scene_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
+        if let Some(processor) = self.message_processor.as_mut() {
+            processor.consume_scene_messages(scene_id)
+        } else {
+            Vec::new()
         }
     }
 

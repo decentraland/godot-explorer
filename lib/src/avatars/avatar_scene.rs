@@ -115,6 +115,12 @@ impl AvatarScene {
 
     #[func]
     pub fn add_avatar(&mut self, alias: u32, address: GString) {
+        // Check if avatar with this alias already exists
+        if self.avatar_entity.contains_key(&alias) {
+            tracing::debug!("Avatar with alias {} already exists, discarding", alias);
+            return;
+        }
+        
         // TODO: the entity Self::MAX_ENTITY_ID + 1 would be a buggy avatar
         let entity_id = self
             .get_next_entity_id()
