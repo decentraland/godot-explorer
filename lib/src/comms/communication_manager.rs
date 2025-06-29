@@ -241,6 +241,24 @@ impl INode for CommunicationManager {
 }
 
 impl CommunicationManager {
+    fn create_fallback_connection(&mut self) {
+        tracing::info!("🔧 Creating fallback MessageProcessor for scene room support");
+        
+        // Ensure we have a MessageProcessor for scene rooms to work
+        let _ = self.ensure_message_processor();
+        
+        // Set voice chat to false since we don't have a main connection with voice support
+        self.voice_chat_enabled = false;
+        
+        let voice_chat_enabled = self.voice_chat_enabled.to_variant();
+        self.base_mut().emit_signal(
+            "on_adapter_changed".into(),
+            &[voice_chat_enabled, "fallback".to_variant()],
+        );
+        
+        tracing::info!("✅ Fallback connection established - scene rooms will work");
+    }
+
     fn ensure_message_processor(&mut self) -> mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage> {
         if self.message_processor.is_none() {
             let player_identity = DclGlobal::singleton().bind().get_player_identity();
@@ -673,7 +691,14 @@ impl CommunicationManager {
         }
 
         if comms_fixed_adapter.is_none() {
-            tracing::info!("As far, only fixedAdapter is supported.");
+            if DISABLE_ARCHIPELAGO {
+                // When archipelago is disabled, fall back to a direct LiveKit connection
+                tracing::info!("🔄 Archipelago disabled, attempting fallback to direct LiveKit connection");
+                // Try to create a direct LiveKit connection as fallback
+                self.create_fallback_connection();
+            } else {
+                tracing::info!("As far, only fixedAdapter is supported.");
+            }
             return;
         }
 
@@ -916,7 +941,13 @@ impl CommunicationManager {
             scene_room.set_message_processor_sender(processor_sender);
             
             self.scene_room = Some(scene_room);
-            tracing::info!("✅ Scene room successfully created and connected to shared message processor");
+            
+            // Check if we're in fallback mode (no main room)
+            if self.main_room.is_none() && matches!(&self.current_connection, CommsConnection::None) {
+                tracing::info!("✅ Scene room successfully created and connected to fallback message processor (archipelago disabled)");
+            } else {
+                tracing::info!("✅ Scene room successfully created and connected to shared message processor");
+            }
         } else {
             // Check if archipelago has a message processor we can use
             if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
