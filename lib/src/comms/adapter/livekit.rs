@@ -71,7 +71,6 @@ pub struct LivekitRoom {
     peer_alias_counter: u32,
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
-    last_profile_version_announced: Option<u32>,
     chats: Vec<(H160, rfc4::Chat)>,
 
     // Scene messges
@@ -113,7 +112,6 @@ impl LivekitRoom {
             last_profile_response_sent: Instant::now(),
             last_profile_request_sent: Instant::now(),
             peer_alias_counter: 0,
-            last_profile_version_announced: None,
             chats: Vec::new(),
             incoming_scene_messages: HashMap::new(),
             profile_update_receiver,
@@ -198,11 +196,15 @@ impl LivekitRoom {
                             }
                             rfc4::packet::Message::Movement(movement) => {
                                 tracing::info!(
-                                    "Received Movement from {:#x}: pos({}, {}, {}), rot_y({}), vel({}, {}, {})", 
+                                    "Received Movement from {:#x}: timestamp({}) pos({}, {}, {}), rot_y({}), vel({}, {}, {}) blend({}), slide_blend({})", 
                                     message.address,
+                                    movement.timestamp,
                                     movement.position_x, movement.position_y, movement.position_z,
                                     movement.rotation_y,
-                                    movement.velocity_x, movement.velocity_y, movement.velocity_z
+                                    movement.velocity_x, movement.velocity_y, movement.velocity_z,
+                                    movement.movement_blend_value,
+                                    movement.slide_blend_value,
+
                                 );
                                 avatar_scene
                                     .update_avatar_transform_with_movement(peer.alias, &movement);
@@ -486,7 +488,11 @@ impl LivekitRoom {
                 );
             }
 
-            if let Some(profile_version) = self.last_profile_version_announced {
+            if let Some(profile) = &self.player_profile {
+                let profile_version = profile.version;
+                tracing::warn!(
+                    "comms > announcing profile version {profile_version} to all peers"
+                );
                 self.send_rfc4(
                     rfc4::Packet {
                         message: Some(rfc4::packet::Message::ProfileVersion(
@@ -515,10 +521,13 @@ impl LivekitRoom {
 
     fn _change_profile(&mut self, new_profile: UserProfile) {
         let profile_version = new_profile.version;
-        self.last_profile_version_announced = Some(new_profile.version);
         self.player_profile = Some(new_profile);
+        tracing::warn!(
+            "comms > changing profile to version {profile_version} for player {:#x}",
+            self.player_address
+        );
 
-        /*self.send_rfc4(
+        self.send_rfc4(
             rfc4::Packet {
                 message: Some(rfc4::packet::Message::ProfileVersion(
                     rfc4::AnnounceProfileVersion {
@@ -528,7 +537,7 @@ impl LivekitRoom {
                 protocol_version: 100,
             },
             false,
-        );*/
+        );
     }
 
     fn _consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {

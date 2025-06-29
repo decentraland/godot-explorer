@@ -1,6 +1,7 @@
 use ethers_core::types::H160;
 use godot::prelude::*;
 use http::Uri;
+use std::time::Instant;
 
 use crate::{
     comms::{adapter::{movement_compressed::MoveKind, ws_room::WebSocketRoom}, signed_login::SignedLoginMeta},
@@ -35,6 +36,7 @@ pub struct CommunicationManager {
     current_connection_str: String,
     last_position_broadcast_index: u64,
     voice_chat_enabled: bool,
+    start_time: Instant,
 
     base: Base<Node>,
 }
@@ -47,6 +49,7 @@ impl INode for CommunicationManager {
             current_connection_str: String::default(),
             last_position_broadcast_index: 0,
             voice_chat_enabled: false,
+            start_time: Instant::now(),
             base,
         }
     }
@@ -204,16 +207,15 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn broadcast_movement(&mut self, position: Vector3, rotation_y: f32, velocity: Vector3, compressed: bool) -> bool {
+    fn broadcast_movement(&mut self, compressed: bool, position: Vector3, rotation_y: f32, velocity: Vector3, walk: bool, run: bool, jog: bool, rise: bool, fall: bool, land: bool) -> bool {
+        let rotation_y = rotation_y.to_degrees();
+
         let get_packet = || {
             if compressed {
                 // Create MovementCompressed packet using the pattern from the other engine
                 
-                // Get current time (you may want to use a proper timestamp source)
-                let time = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs_f64();
+                // Get elapsed time since start
+                let time = self.start_time.elapsed().as_secs_f64();
                 
                 // Get realm bounds - using default values for now, you may want to get actual bounds
                 let realm_bounds = (godot::prelude::Vector2i::new(-150, -150), godot::prelude::Vector2i::new(150, 150));
@@ -225,15 +227,25 @@ impl CommunicationManager {
                     realm_bounds.1,
                 );
                 
+                // Determine move kind from parameters
+                let move_kind = if run {
+                    MoveKind::Run
+                } else if jog {
+                    MoveKind::Jog
+                } else if walk {
+                    MoveKind::Walk
+                } else {
+                    MoveKind::Idle
+                };
+                
                 // For temporal data, we need to determine these values based on game state
-                // Using defaults for now - you may want to pass these as parameters
                 let temporal = Temporal::from_parts(
                     time,
                     false, // is_emote - determine from game state
                     rotation_y,
                     movement.velocity_tier(),
-                    MoveKind::Idle, // move_kind - determine from game state (0 = walk, 1 = run, etc.)
-                    true, // is_grounded - determine from game state
+                    move_kind,
+                    !fall && !rise, // is_grounded - not grounded if falling or rising
                 );
                 
                 let movement_compressed = MovementCompressed { temporal, movement };
@@ -252,11 +264,19 @@ impl CommunicationManager {
             } else {
                 // Create regular Movement packet with all required fields
 
-                // Get current time
-                let timestamp = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs_f32();
+                // Get elapsed time since start
+                let timestamp = self.start_time.elapsed().as_secs_f32();
+                
+                // Calculate movement blend value based on velocity and movement type
+                let movement_blend_value = if run {
+                    3.0
+                } else if jog {
+                    2.0
+                } else if walk {
+                    1.0
+                } else {
+                    0.0
+                };
                 
                 let movement_packet = rfc4::Movement {
                     timestamp,
@@ -265,18 +285,19 @@ impl CommunicationManager {
                     position_z: -position.z,
                     velocity_x: velocity.x,
                     velocity_y: velocity.y,
-                    velocity_z: -velocity.z,
-                    rotation_y,
-                    // Animation and state fields - you may want to pass these as parameters
-                    movement_blend_value: 0.0, // Calculate based on velocity magnitude
+                    velocity_z: velocity.z,
+                    rotation_y: -rotation_y,
+                    movement_blend_value,
                     slide_blend_value: 0.0,
-                    is_grounded: true, // Determine from game state
-                    is_jumping: false, // Determine from game state
+                    is_grounded: land,
+                    is_jumping: rise,
                     is_long_jump: false,
                     is_long_fall: false,
-                    is_falling: false,
+                    is_falling: fall,
                     is_stunned: false,
                 };
+
+                //tracing::info!("Movement packet: {:?}", movement_packet);
 
                 rfc4::Packet {
                     message: Some(rfc4::packet::Message::Movement(movement_packet)),
@@ -355,7 +376,7 @@ impl CommunicationManager {
         let get_packet = || rfc4::Packet {
             message: Some(rfc4::packet::Message::Chat(rfc4::Chat {
                 message: text.to_string(),
-                timestamp: 0.0,
+                timestamp: self.start_time.elapsed().as_secs_f64(),
             })),
             protocol_version: 100,
         };
