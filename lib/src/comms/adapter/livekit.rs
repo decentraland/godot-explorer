@@ -60,6 +60,7 @@ struct Peer {
     protocol_version: u32,
     last_movement_timestamp: Option<f32>,
     last_position_index: Option<u32>,
+    last_activity: Instant,
 }
 
 pub struct LivekitRoom {
@@ -146,6 +147,12 @@ impl LivekitRoom {
                     let peer = if let Some(value) = self.peer_identities.get_mut(&message.address) {
                         value
                     } else {
+                        // Check if there's an existing peer with the same address (reconnection case)
+                        if let Some(existing_peer) = self.peer_identities.remove(&message.address) {
+                            tracing::info!("Removing old peer {:#x} (alias: {}) due to reconnection", message.address, existing_peer.alias);
+                            avatar_scene.remove_avatar(existing_peer.alias);
+                        }
+
                         self.peer_alias_counter += 1;
                         self.peer_identities.insert(
                             message.address,
@@ -156,6 +163,7 @@ impl LivekitRoom {
                                 protocol_version: 100,
                                 last_movement_timestamp: None,
                                 last_position_index: None,
+                                last_activity: Instant::now(),
                             },
                         );
                         avatar_scene.add_avatar(
@@ -180,10 +188,11 @@ impl LivekitRoom {
                         self.peer_identities.get_mut(&message.address).unwrap()
                     };
 
-                    // Update the peer's protocol version
+                    // Update the peer's protocol version and activity
                     if let ToSceneMessage::Rfc4(rfc4_msg) = &message.message {
                         peer.protocol_version = rfc4_msg.protocol_version;
                     }
+                    peer.last_activity = Instant::now();
 
                     match message.message {
                         ToSceneMessage::Rfc4(rfc4_msg) => match rfc4_msg.message {
@@ -470,6 +479,27 @@ impl LivekitRoom {
                     tracing::error!("error polling livekit thread: {err}");
                     return false;
                 }
+            }
+        }
+
+        // Remove inactive avatars (avatars that haven't sent messages for 5+ seconds)
+        let inactive_threshold = std::time::Duration::from_secs(5);
+        let inactive_peers: Vec<H160> = self
+            .peer_identities
+            .iter()
+            .filter_map(|(address, peer)| {
+                if peer.last_activity.elapsed() > inactive_threshold {
+                    Some(*address)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for address in inactive_peers {
+            if let Some(peer) = self.peer_identities.remove(&address) {
+                tracing::info!("Removing inactive avatar {:#x} (alias: {})", address, peer.alias);
+                avatar_scene.remove_avatar(peer.alias);
             }
         }
 
