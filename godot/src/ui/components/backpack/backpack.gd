@@ -333,7 +333,6 @@ func async_save_profile():
 
 	mutable_profile.set_avatar(mutable_avatar)
 
-	prints("Profile change!: ", mutable_profile.get_profile_version(), current_profile.get_profile_version())
 	await Global.player_identity.async_deploy_profile(mutable_profile, true)
 
 

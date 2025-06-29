@@ -31,6 +31,6 @@ func _on_timeout():
 
 	# Use the new broadcast_movement function with compression enabled
 	var avatar = player_node.avatar
-	Global.comms.broadcast_movement(true, position, rotation_y, player_node.velocity, avatar.walk, avatar.run, avatar.jog, avatar.rise, avatar.fall, avatar.land)
+	Global.comms.broadcast_movement(false, position, rotation_y, player_node.velocity, avatar.walk, avatar.run, avatar.jog, avatar.rise, avatar.fall, avatar.land)
 	last_position_sent = position
 	last_rotation_sent = rotation

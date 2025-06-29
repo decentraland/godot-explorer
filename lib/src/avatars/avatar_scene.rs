@@ -467,7 +467,6 @@ impl AvatarScene {
         alias: u32,
         position: godot::prelude::Vector3,
         rotation_rad: f32,
-        _timestamp: u32,
     ) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
