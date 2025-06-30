@@ -268,6 +268,9 @@ impl INode for CommunicationManager {
 
             // Handle outgoing messages from MessageProcessor (like ProfileResponse)
             outgoing_messages = processor.consume_outgoing_messages();
+            if !outgoing_messages.is_empty() {
+                tracing::warn!("📤 Consumed {} outgoing messages from MessageProcessor", outgoing_messages.len());
+            }
 
             if !processor_polling_ok {
                 // Reset the message processor if it fails
@@ -283,32 +286,15 @@ impl INode for CommunicationManager {
 
         // Handle outgoing messages after borrowing is done
         for outgoing in outgoing_messages {
-            if let Some(target_room) = &outgoing.target_room {
-                // Send to specific room
-                if let Some(main_room) = &mut self.main_room {
-                    if target_room.starts_with("livekit-") || target_room.starts_with("ws-room-") {
-                        main_room.send_rfc4(outgoing.packet.clone(), outgoing.unreliable);
-                        tracing::debug!("📤 Sent outgoing message to main room: {}", target_room);
-                    }
-                }
-                #[cfg(feature = "use_livekit")]
-                if let Some(scene_room) = &mut self.scene_room {
-                    if target_room.starts_with("scene-") {
-                        scene_room.send_rfc4(outgoing.packet, outgoing.unreliable);
-                        tracing::debug!("📤 Sent outgoing message to scene room: {}", target_room);
-                    }
-                }
-            } else {
-                // Broadcast to all rooms
-                if let Some(main_room) = &mut self.main_room {
-                    main_room.send_rfc4(outgoing.packet.clone(), outgoing.unreliable);
-                }
-                #[cfg(feature = "use_livekit")]
-                if let Some(scene_room) = &mut self.scene_room {
-                    scene_room.send_rfc4(outgoing.packet, outgoing.unreliable);
-                }
-                tracing::debug!("📤 Broadcast outgoing message to all rooms");
+            // Always broadcast to all rooms
+            if let Some(main_room) = &mut self.main_room {
+                main_room.send_rfc4(outgoing.packet.clone(), outgoing.unreliable);
             }
+            #[cfg(feature = "use_livekit")]
+            if let Some(scene_room) = &mut self.scene_room {
+                scene_room.send_rfc4(outgoing.packet.clone(), outgoing.unreliable);
+            }
+            tracing::warn!("📤 Broadcast outgoing message to all rooms");
         }
 
         if processor_reset {
@@ -457,6 +443,7 @@ impl CommunicationManager {
     }
 
     fn announce_initial_profile(&mut self) {
+        return; // we need to discover the profile with the profile version
         let player_identity = DclGlobal::singleton().bind().get_player_identity();
         let player_identity_bind = player_identity.bind();
 
