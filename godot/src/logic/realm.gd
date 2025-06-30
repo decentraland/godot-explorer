@@ -192,6 +192,40 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 		realm_name = configuration.get("realmName", "no_realm_name")
 		network_id = int(configuration.get("networkId", 1))  # 1=Ethereum
 
+		# get minimap
+		var map_config = configuration.get("map", {})
+		var sizes = map_config.get("sizes", [])
+
+		# Initialize with extreme values
+		var min_bounds: Vector2i = Vector2i(INF, INF)
+		var max_bounds: Vector2i = Vector2i(-INF, -INF)
+
+		# Process each size entry
+		for size_dict in sizes:
+			var left = size_dict.get("left", 0)
+			var top = size_dict.get("top", 0)
+			var right = size_dict.get("right", 0)
+			var bottom = size_dict.get("bottom", 0)
+			
+			# Update minimum bounds (leftmost and bottommost points)
+			min_bounds.x = mini(min_bounds.x, left)
+			min_bounds.y = mini(min_bounds.y, bottom)
+			
+			# Update maximum bounds (rightmost and topmost points)
+			max_bounds.x = maxi(max_bounds.x, right)
+			max_bounds.y = maxi(max_bounds.y, top)
+
+		# Handle empty array case
+		if sizes.is_empty():
+			min_bounds = Vector2i(-150, -150)
+			max_bounds = Vector2i(163, 158)
+		
+		set_realm_min_bounds(min_bounds)
+		set_realm_max_bounds(max_bounds)
+
+		print("Min bounds: ", min_bounds)
+		print("Max bounds: ", max_bounds)
+
 		content_base_url = Realm.ensure_ends_with_slash(
 			realm_about.get("content", {}).get("publicUrl")
 		)

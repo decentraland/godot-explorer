@@ -596,6 +596,8 @@ impl CommunicationManager {
 
         let rotation_y = rotation_y.to_degrees();
 
+        let velocity = Vector3::new(velocity.x, velocity.y, -velocity.z);
+
         let get_packet = || {
             if compressed {
                 // Create MovementCompressed packet using the pattern from the other engine
@@ -1239,10 +1241,11 @@ impl CommunicationManager {
 
         // Spawn async task to get scene adapter and connect
         let scene_entity_id = scene_entity_id.to_string();
-        let realm_name = DclGlobal::singleton()
+        let realm = DclGlobal::singleton()
             .bind()
-            .get_realm()
-            .get("realm_name".into())
+            .get_realm();
+        let realm_name = realm
+            .bind().get_realm_name()
             .to_string();
         let http_requester: Arc<HttpQueueRequester> = DclGlobal::singleton()
             .bind()
@@ -1250,6 +1253,11 @@ impl CommunicationManager {
             .bind()
             .get_http_queue_requester();
         let connection_sender = self.scene_room_connection_sender.clone();
+
+
+        self.set_realm_bounds(realm.bind().get_realm_min_bounds(),
+                              realm.bind().get_realm_max_bounds());
+
         TokioRuntime::spawn(async move {
             tracing::info!("Requesting scene adapter for scene: {}", scene_entity_id);
             match get_scene_adapter(
@@ -1306,6 +1314,16 @@ impl CommunicationManager {
                 }
             }
         });
+    }
+    
+    #[func]
+    pub fn set_realm_bounds(&mut self, min_bounds: Vector2i, max_bounds: Vector2i) {        
+        if let Some(processor) = self.message_processor.as_mut() {
+            processor.set_realm_bounds(min_bounds, max_bounds);
+            tracing::info!("🌐 Realm bounds updated: min=({}, {}), max=({}, {})", min_bounds.x, min_bounds.y, max_bounds.x, max_bounds.y);
+        } else {
+            tracing::warn!("⚠️  Cannot set realm bounds: MessageProcessor not initialized");
+        }
     }
 }
 

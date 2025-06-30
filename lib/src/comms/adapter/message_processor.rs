@@ -146,6 +146,10 @@ pub struct MessageProcessor {
     // Profile fetch failures from async tasks
     profile_failure_receiver: mpsc::Receiver<ProfileFetchFailure>,
     profile_failure_sender: mpsc::Sender<ProfileFetchFailure>,
+    
+    // Configurable realm bounds for movement compression
+    realm_min: godot::prelude::Vector2i,
+    realm_max: godot::prelude::Vector2i,
 }
 
 impl MessageProcessor {
@@ -185,6 +189,9 @@ impl MessageProcessor {
             profile_update_sender,
             profile_failure_receiver,
             profile_failure_sender,
+            // Default realm bounds
+            realm_min: godot::prelude::Vector2i::new(-150, -150),
+            realm_max: godot::prelude::Vector2i::new(163, 158),
         }
     }
 
@@ -193,6 +200,20 @@ impl MessageProcessor {
     /// Rooms should use this sender to forward all incoming messages for centralized processing
     pub fn get_message_sender(&self) -> mpsc::Sender<IncomingMessage> {
         self.message_sender.clone()
+    }
+    
+    /// Sets the realm bounds for movement compression
+    ///
+    /// These bounds define the coordinate space for quantizing movement data.
+    /// The default values are (-150, -150) to (163, 158).
+    ///
+    /// # Arguments
+    /// * `min` - The minimum x,y coordinates of the realm
+    /// * `max` - The maximum x,y coordinates of the realm
+    pub fn set_realm_bounds(&mut self, min: godot::prelude::Vector2i, max: godot::prelude::Vector2i) {
+        self.realm_min = min;
+        self.realm_max = max;
+        tracing::info!("Updated realm bounds: min={:?}, max={:?}", min, max);
     }
 
     /// Consumes and returns all pending outgoing messages
@@ -574,13 +595,8 @@ impl MessageProcessor {
                 // Decompress movement data
                 let movement = MovementCompressed::from_proto(movement_compressed);
 
-                // Get realm bounds - you'll need to get these from the actual realm configuration
-                // For now using reasonable default bounds, but this should come from the realm
-                let realm_min = godot::prelude::Vector2i::new(-150, -150);
-                let realm_max = godot::prelude::Vector2i::new(163, 158);
-
-                // Get position from compressed movement with proper realm bounds
-                let pos = movement.position(realm_min, realm_max);
+                // Get position from compressed movement with configured realm bounds
+                let pos = movement.position(self.realm_min, self.realm_max);
                 let velocity = movement.velocity();
                 let rotation_rad = -movement.temporal.rotation_f32();
                 let timestamp = movement.temporal.timestamp_f32();

@@ -30,6 +30,12 @@ pub struct DclRealm {
     #[var]
     content_base_url: GString,
 
+    #[var]
+    realm_min_bounds: Vector2i,
+
+    #[var]
+    realm_max_bounds: Vector2i,
+
     _base: Base<Node>,
 }
 
