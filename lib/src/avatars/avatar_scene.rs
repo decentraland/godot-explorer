@@ -468,9 +468,17 @@ impl AvatarScene {
             return false;
         };
 
-        // Discard if movement.timestamp is older than the last one
+        // Discard if movement.timestamp is older than the last one (with tolerance)
+        const TIMESTAMP_TOLERANCE: f32 = 0.001;
         if let Some(last_timestamp) = self.last_movement_timestamp.get(&alias) {
-            if movement.timestamp < *last_timestamp {
+            // Only discard if the new timestamp is significantly older
+            if movement.timestamp < *last_timestamp - TIMESTAMP_TOLERANCE {
+                return false;
+            }
+            // If timestamps are nearly identical (within tolerance), also skip to avoid duplicate processing
+            if (movement.timestamp - *last_timestamp).abs() < TIMESTAMP_TOLERANCE {
+                tracing::info!("Discarding duplicate movement for alias {} - timestamps too close: {} vs {} (diff: {})", 
+                    alias, movement.timestamp, *last_timestamp, (movement.timestamp - *last_timestamp).abs());
                 return false;
             }
         }
@@ -514,9 +522,17 @@ impl AvatarScene {
             return false;
         };
 
-        // Discard if timestamp is older than the last one
+        // Discard if timestamp is older than the last one (with tolerance)
+        const TIMESTAMP_TOLERANCE: f32 = 0.001;
         if let Some(last_timestamp) = self.last_movement_timestamp.get(&alias) {
-            if timestamp < *last_timestamp {
+            // Only discard if the new timestamp is significantly older
+            if timestamp < *last_timestamp - TIMESTAMP_TOLERANCE {
+                return false;
+            }
+            // If timestamps are nearly identical (within tolerance), also skip to avoid duplicate processing
+            if (timestamp - *last_timestamp).abs() < TIMESTAMP_TOLERANCE {
+                tracing::info!("Discarding duplicate compressed movement for alias {} - timestamps too close: {} vs {} (diff: {})", 
+                    alias, timestamp, *last_timestamp, (timestamp - *last_timestamp).abs());
                 return false;
             }
         }
