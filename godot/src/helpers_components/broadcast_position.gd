@@ -7,19 +7,21 @@ const ROTATION_THRESHOLD := 0.01  # Approx ~0.57 degrees (in radians)
 @export var player_node: Node3D
 
 var last_position_sent: Vector3 = Vector3.ZERO
-var last_rotation_sent: Quaternion = Quaternion()
+var last_rotation_sent: float = INF
 var counter: int = 0
 
 
 func _on_timeout():
+	if not player_node or not player_node.avatar:
+		printerr("No player node or player_node.avatar")
+		return
 	var position: Vector3 = player_node.get_broadcast_position()
 	var rotation_y = player_node.get_broadcast_rotation_y()
 
-	# 3. Build the quaternion
-	var rotation: Quaternion = Quaternion.from_euler(Vector3(0, rotation_y, 0))
-
 	var position_changed: bool = position.distance_to(last_position_sent) >= POSITION_THRESHOLD
-	var rotation_changed: bool = rotation.angle_to(last_rotation_sent) >= ROTATION_THRESHOLD
+	var rotation_changed: bool = (
+		absf(wrapf(rotation_y - last_rotation_sent, -PI, PI)) >= ROTATION_THRESHOLD
+	)
 
 	# If neither changed significantly, delay broadcasting
 	if not position_changed and not rotation_changed:
@@ -43,5 +45,8 @@ func _on_timeout():
 		avatar.fall,
 		avatar.land
 	)
+
+	var rotation: Quaternion = Quaternion.from_euler(Vector3(0, rotation_y, 0))
+	Global.comms.broadcast_position_and_rotation(position, rotation)
 	last_position_sent = position
-	last_rotation_sent = rotation
+	last_rotation_sent = rotation_y

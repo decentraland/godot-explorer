@@ -1298,6 +1298,8 @@ impl CommunicationManager {
             realm.bind().get_realm_max_bounds(),
         );
 
+        tracing::warn!("Requesting scene adapter... realm_name is '{}'", realm_name);
+
         TokioRuntime::spawn(async move {
             tracing::info!("Requesting scene adapter for scene: {}", scene_entity_id);
             match get_scene_adapter(
