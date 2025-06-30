@@ -47,10 +47,14 @@ pub struct ArchipelagoManager {
 
     adapter: Option<Box<dyn Adapter>>,
     message_processor: Option<MessageProcessor>,
-    shared_processor_sender: Option<tokio::sync::mpsc::Sender<super::message_processor::IncomingMessage>>,
+    shared_processor_sender:
+        Option<tokio::sync::mpsc::Sender<super::message_processor::IncomingMessage>>,
 }
 
+// Constants
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(3);
+const RECONNECT_INTERVAL_SECS: u64 = 1;
+const DCL_CHALLENGE_PREFIX: &str = "dcl-";
 
 impl ArchipelagoManager {
     pub fn new(
@@ -87,7 +91,10 @@ impl ArchipelagoManager {
         }
     }
 
-    pub fn set_shared_processor_sender(&mut self, sender: tokio::sync::mpsc::Sender<super::message_processor::IncomingMessage>) {
+    pub fn set_shared_processor_sender(
+        &mut self,
+        sender: tokio::sync::mpsc::Sender<super::message_processor::IncomingMessage>,
+    ) {
         self.shared_processor_sender = Some(sender);
     }
 
@@ -136,7 +143,9 @@ impl ArchipelagoManager {
         match self.state.clone() {
             ArchipelagoState::Connecting => match ws_state {
                 godot::engine::web_socket_peer::State::CLOSED => {
-                    if (Instant::now() - self.last_try_to_connect).as_secs() > 1 {
+                    if (Instant::now() - self.last_try_to_connect).as_secs()
+                        > RECONNECT_INTERVAL_SECS
+                    {
                         let ws_protocols = {
                             let mut v = PackedStringArray::new();
                             v.push(GString::from("archipelago"));
@@ -179,7 +188,7 @@ impl ArchipelagoManager {
 
                                 let challenge_to_sign = challenge_msg.challenge_to_sign.clone();
 
-                                if !challenge_to_sign.starts_with("dcl-") {
+                                if !challenge_to_sign.starts_with(DCL_CHALLENGE_PREFIX) {
                                     tracing::error!("invalid challenge to sign");
                                     return;
                                 }
@@ -267,14 +276,14 @@ impl ArchipelagoManager {
         } else {
             true
         };
-        
+
         // Poll the MessageProcessor if it exists
         let processor_ok = if let Some(processor) = self.message_processor.as_mut() {
             processor.poll()
         } else {
             true
         };
-        
+
         if !adapter_ok {
             self.adapter = None;
         }
@@ -293,7 +302,7 @@ impl ArchipelagoManager {
             }
             _ => {}
         }
-        
+
         // Clean up the MessageProcessor
         if let Some(processor) = &mut self.message_processor {
             processor.clean();
@@ -319,13 +328,19 @@ impl ArchipelagoManager {
                     };
                     match protocol {
                         "livekit" => {
-                            let processor_sender = if let Some(shared_sender) = &self.shared_processor_sender {
+                            let processor_sender = if let Some(shared_sender) =
+                                &self.shared_processor_sender
+                            {
                                 // Use shared processor from CommunicationManager
-                                tracing::info!("Using shared MessageProcessor for archipelago LiveKit room");
+                                tracing::info!(
+                                    "Using shared MessageProcessor for archipelago LiveKit room"
+                                );
                                 shared_sender.clone()
                             } else {
                                 // Create our own MessageProcessor (fallback)
-                                tracing::info!("Creating dedicated MessageProcessor for archipelago");
+                                tracing::info!(
+                                    "Creating dedicated MessageProcessor for archipelago"
+                                );
                                 let processor = MessageProcessor::new(
                                     self.player_address,
                                     self.player_profile.clone(),
@@ -335,14 +350,14 @@ impl ArchipelagoManager {
                                 self.message_processor = Some(processor);
                                 sender
                             };
-                            
+
                             // Create LiveKit room with MessageProcessor connection
                             let mut livekit_room = LivekitRoom::new(
                                 comms_address.to_string(),
                                 format!("archipelago-livekit-{}", msg.island_id),
                             );
                             livekit_room.set_message_processor_sender(processor_sender);
-                            
+
                             self.adapter = Some(Box::new(livekit_room));
                         }
                         _ => {
@@ -367,7 +382,7 @@ impl ArchipelagoManager {
             processor.change_profile(new_profile);
         }
     }
-    
+
     pub fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
         if let Some(processor) = self.message_processor.as_mut() {
             processor.consume_chats()
@@ -375,7 +390,7 @@ impl ArchipelagoManager {
             Vec::new()
         }
     }
-    
+
     pub fn consume_scene_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
         if let Some(processor) = self.message_processor.as_mut() {
             processor.consume_scene_messages(scene_id)
@@ -387,9 +402,14 @@ impl ArchipelagoManager {
     pub fn update_position(&mut self, position: Vector3) {
         self.player_position = position;
     }
-    
-    pub fn get_message_processor_sender(&self) -> Option<tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>> {
-        self.message_processor.as_ref().map(|processor| processor.get_message_sender())
+
+    pub fn get_message_processor_sender(
+        &self,
+    ) -> Option<tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>>
+    {
+        self.message_processor
+            .as_ref()
+            .map(|processor| processor.get_message_sender())
     }
 }
 

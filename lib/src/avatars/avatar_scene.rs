@@ -41,7 +41,7 @@ pub struct AvatarScene {
     crdt_state: SceneCrdtState,
 
     last_updated_profile: HashMap<SceneEntityId, UserProfile>,
-    
+
     // Timestamp tracking for movement messages
     last_movement_timestamp: HashMap<AvatarAlias, f32>,
     last_position_index: HashMap<AvatarAlias, u32>,
@@ -120,7 +120,7 @@ impl AvatarScene {
             tracing::debug!("Avatar with alias {} already exists, discarding", alias);
             return;
         }
-        
+
         // TODO: the entity Self::MAX_ENTITY_ID + 1 would be a buggy avatar
         let entity_id = self
             .get_next_entity_id()
@@ -459,7 +459,11 @@ impl AvatarScene {
         true
     }
 
-    pub fn update_avatar_transform_with_movement(&mut self, alias: u32, movement: &rfc4::Movement) -> bool {
+    pub fn update_avatar_transform_with_movement(
+        &mut self,
+        alias: u32,
+        movement: &rfc4::Movement,
+    ) -> bool {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
@@ -503,7 +507,8 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform);
-        self.last_movement_timestamp.insert(alias, movement.timestamp);
+        self.last_movement_timestamp
+            .insert(alias, movement.timestamp);
         true
     }
 

@@ -1,8 +1,7 @@
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{collections::HashMap, sync::Arc};
 
 use ethers_core::types::H160;
 use futures_util::StreamExt;
-use godot::prelude::{GString, Gd, PackedVector2Array};
 use http::Uri;
 use livekit::{
     options::TrackPublishOptions,
@@ -16,44 +15,52 @@ use livekit::{
 use prost::Message;
 
 use crate::{
-    auth::wallet::AsH160, avatars::avatar_scene::AvatarScene, comms::profile::{SerializedProfile, UserProfile}, content::profile::prepare_request_requirements, dcl::components::proto_components::kernel::comms::rfc4, scene_runner::tokio_runtime::TokioRuntime
+    auth::wallet::AsH160, comms::profile::UserProfile,
+    dcl::components::proto_components::kernel::comms::rfc4,
 };
 
-use super::{adapter_trait::Adapter, movement_compressed::MovementCompressed, message_processor::{IncomingMessage, MessageType, Rfc4Message, VoiceInitData, VoiceFrameData}};
-
-use crate::{
-    content::profile::request_lambda_profile
+use super::{
+    adapter_trait::Adapter,
+    message_processor::{IncomingMessage, MessageType, Rfc4Message, VoiceFrameData, VoiceInitData},
 };
+
+// Constants
+const CHANNEL_SIZE: usize = 1000;
 
 pub struct NetworkMessage {
     pub data: Vec<u8>,
     pub unreliable: bool,
 }
 
-
 pub struct LivekitRoom {
     sender_to_thread: tokio::sync::mpsc::Sender<NetworkMessage>,
     mic_sender_to_thread: tokio::sync::mpsc::Sender<Vec<i16>>,
-    receiver_from_thread: tokio::sync::mpsc::Receiver<crate::comms::adapter::message_processor::IncomingMessage>,
+    receiver_from_thread:
+        tokio::sync::mpsc::Receiver<crate::comms::adapter::message_processor::IncomingMessage>,
     room_id: String,
-    message_processor_sender: Option<tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>>,
+    message_processor_sender: Option<
+        tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>,
+    >,
 }
 
 impl LivekitRoom {
-    pub fn new(
-        remote_address: String,
-        room_id: String,
-    ) -> Self {
+    pub fn new(remote_address: String, room_id: String) -> Self {
         tracing::debug!(">> lk connect async : {remote_address}");
-        let (sender, receiver_from_thread) = tokio::sync::mpsc::channel(1000);
-        let (sender_to_thread, receiver) = tokio::sync::mpsc::channel(1000);
-        let (mic_sender_to_thread, mic_receiver) = tokio::sync::mpsc::channel(1000);
+        let (sender, receiver_from_thread) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+        let (sender_to_thread, receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+        let (mic_sender_to_thread, mic_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
 
         let room_id_clone = room_id.clone();
         let _ = std::thread::Builder::new()
             .name("livekit dcl thread".into())
             .spawn(move || {
-                spawn_livekit_task(remote_address, receiver, sender, mic_receiver, room_id_clone);
+                spawn_livekit_task(
+                    remote_address,
+                    receiver,
+                    sender,
+                    mic_receiver,
+                    room_id_clone,
+                );
             })
             .unwrap();
 
@@ -65,8 +72,13 @@ impl LivekitRoom {
             message_processor_sender: None,
         }
     }
-    
-    pub fn set_message_processor_sender(&mut self, sender: tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>) {
+
+    pub fn set_message_processor_sender(
+        &mut self,
+        sender: tokio::sync::mpsc::Sender<
+            crate::comms::adapter::message_processor::IncomingMessage,
+        >,
+    ) {
         self.message_processor_sender = Some(sender);
     }
 
@@ -84,7 +96,7 @@ impl LivekitRoom {
             // If no processor is connected, just drain the messages to prevent backing up
             while let Ok(_) = self.receiver_from_thread.try_recv() {}
         }
-        
+
         true
     }
 
@@ -253,7 +265,7 @@ fn spawn_livekit_task(
                                                 return;
                                             };
 
-                                            let _ = sender.send(IncomingMessage {
+                                            if let Err(e) = sender.send(IncomingMessage {
                                                 message: MessageType::InitVoice(VoiceInitData {
                                                     sample_rate: frame.sample_rate,
                                                     num_channels: frame.num_channels,
@@ -261,7 +273,10 @@ fn spawn_livekit_task(
                                                 }),
                                                 address,
                                                 room_id: room_id_clone.clone(),
-                                            }).await;
+                                            }).await {
+                                                tracing::warn!("Failed to send InitVoice message: {}", e);
+                                                return;
+                                            }
 
                                             while let Some(frame) = x.next().await {
                                                 let frame: livekit::webrtc::prelude::AudioFrame = frame;

@@ -6,21 +6,27 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::{
-    comms::{adapter::{movement_compressed::MoveKind, ws_room::WebSocketRoom, message_processor::MessageProcessor}, signed_login::SignedLoginMeta},
+    auth::wallet,
+    comms::{
+        adapter::{
+            message_processor::MessageProcessor, movement_compressed::MoveKind,
+            ws_room::WebSocketRoom,
+        },
+        signed_login::SignedLoginMeta,
+    },
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::dcl_global::DclGlobal,
-    auth::wallet,
     scene_runner::tokio_runtime::TokioRuntime,
 };
-use tokio::sync::mpsc;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
 
 use super::{
     adapter::adapter_trait::Adapter,
     signed_login::{SignedLogin, SignedLoginPollStatus},
 };
 
-use crate::comms::adapter::movement_compressed::{MovementCompressed, Temporal, Movement};
+use crate::comms::adapter::movement_compressed::{Movement, MovementCompressed, Temporal};
 
 const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scene-adapter";
 
@@ -58,7 +64,7 @@ impl MainRoom {
             }
         }
     }
-    
+
     fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
         match self {
             MainRoom::WebSocket(ws_room) => ws_room.send_rfc4(packet, unreliable),
@@ -66,7 +72,7 @@ impl MainRoom {
             MainRoom::LiveKit(livekit_room) => livekit_room.send_rfc4(packet, unreliable),
         }
     }
-    
+
     fn clean(&mut self) {
         match self {
             MainRoom::WebSocket(ws_room) => ws_room.clean(),
@@ -74,7 +80,7 @@ impl MainRoom {
             MainRoom::LiveKit(livekit_room) => livekit_room.clean(),
         }
     }
-    
+
     fn support_voice_chat(&self) -> bool {
         match self {
             MainRoom::WebSocket(_) => false,
@@ -85,7 +91,11 @@ impl MainRoom {
 }
 
 #[cfg(feature = "use_livekit")]
-use crate::{comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom}, dcl::SceneId, http_request::http_queue_requester::HttpQueueRequester};
+use crate::{
+    comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom},
+    dcl::SceneId,
+    http_request::http_queue_requester::HttpQueueRequester,
+};
 
 #[allow(clippy::large_enum_variant)]
 enum CommsConnection {
@@ -97,6 +107,19 @@ enum CommsConnection {
     Connected(Box<dyn Adapter>),
 }
 
+/// Main communication orchestrator for Decentraland Godot Explorer
+///
+/// Manages all network communications including:
+/// - Main room connections (WebSocket or LiveKit for archipelago)
+/// - Scene-specific rooms (LiveKit for proximity voice/data)
+/// - Profile announcements and updates
+/// - Movement and position updates
+/// - Voice chat
+///
+/// Architecture:
+/// - Uses a shared MessageProcessor for centralized message handling
+/// - Supports multiple simultaneous room connections
+/// - Handles peer lifecycle across different rooms
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct CommunicationManager {
@@ -107,10 +130,10 @@ pub struct CommunicationManager {
     start_time: Instant,
     last_profile_version_broadcast: Instant,
     archipelago_profile_announced: bool,
-    
+
     // Shared message processor for all adapters
     message_processor: Option<MessageProcessor>,
-    
+
     // Store active rooms
     main_room: Option<MainRoom>,
     #[cfg(feature = "use_livekit")]
@@ -131,7 +154,7 @@ impl INode for CommunicationManager {
     fn init(base: Base<Node>) -> Self {
         #[cfg(feature = "use_livekit")]
         let (scene_room_connection_sender, scene_room_connection_receiver) = mpsc::channel(10);
-        
+
         CommunicationManager {
             current_connection: CommsConnection::None,
             current_connection_str: GString::default(),
@@ -165,11 +188,12 @@ impl INode for CommunicationManager {
         }
 
         // Check if we need to announce profile for archipelago (before borrowing)
-        let should_announce_archipelago = if let CommsConnection::Archipelago(ref archipelago) = &self.current_connection {
-            !self.archipelago_profile_announced && archipelago.adapter().is_some()
-        } else {
-            false
-        };
+        let should_announce_archipelago =
+            if let CommsConnection::Archipelago(ref archipelago) = &self.current_connection {
+                !self.archipelago_profile_announced && archipelago.adapter().is_some()
+            } else {
+                false
+            };
 
         match &mut self.current_connection {
             CommsConnection::None => {}
@@ -199,10 +223,8 @@ impl INode for CommunicationManager {
 
                 if !chats.is_empty() {
                     let chats_variant_array = get_chat_array(chats);
-                    self.base_mut().emit_signal(
-                        "chat_message".into(),
-                        &[chats_variant_array.to_variant()],
-                    );
+                    self.base_mut()
+                        .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
                 }
             }
             CommsConnection::Connected(adapter) => {
@@ -233,7 +255,7 @@ impl INode for CommunicationManager {
         let mut processor_reset = false;
         let mut chat_signals = Vec::new();
         let mut outgoing_messages = Vec::new();
-        
+
         if let Some(processor) = &mut self.message_processor {
             let processor_polling_ok = processor.poll();
             let chats = processor.consume_chats();
@@ -295,7 +317,7 @@ impl INode for CommunicationManager {
         if let Some(main_room) = &mut self.main_room {
             main_room.poll();
         }
-        
+
         // Poll scene room (if active)
         #[cfg(feature = "use_livekit")]
         if let Some(scene_room) = &mut self.scene_room {
@@ -313,23 +335,25 @@ impl INode for CommunicationManager {
 impl CommunicationManager {
     fn create_fallback_connection(&mut self) {
         tracing::info!("🔧 Creating fallback MessageProcessor for scene room support");
-        
+
         // Ensure we have a MessageProcessor for scene rooms to work
         let _ = self.ensure_message_processor();
-        
+
         // Set voice chat to false since we don't have a main connection with voice support
         self.voice_chat_enabled = false;
-        
+
         let voice_chat_enabled = self.voice_chat_enabled.to_variant();
         self.base_mut().emit_signal(
             "on_adapter_changed".into(),
             &[voice_chat_enabled, "fallback".to_variant()],
         );
-        
+
         tracing::info!("✅ Fallback connection established - scene rooms will work");
     }
 
-    fn ensure_message_processor(&mut self) -> mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage> {
+    fn ensure_message_processor(
+        &mut self,
+    ) -> mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage> {
         if self.message_processor.is_none() {
             let player_identity = DclGlobal::singleton().bind().get_player_identity();
             let player_identity_bind = player_identity.bind();
@@ -337,16 +361,15 @@ impl CommunicationManager {
             let player_profile = player_identity_bind.clone_profile();
             let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
-            let processor = MessageProcessor::new(
-                player_address,
-                player_profile,
-                avatar_scene,
-            );
+            let processor = MessageProcessor::new(player_address, player_profile, avatar_scene);
             let sender = processor.get_message_sender();
             self.message_processor = Some(processor);
             sender
         } else {
-            self.message_processor.as_ref().unwrap().get_message_sender()
+            self.message_processor
+                .as_ref()
+                .unwrap()
+                .get_message_sender()
         }
     }
 
@@ -359,7 +382,7 @@ impl CommunicationManager {
         if let Some(main_room) = &mut self.main_room {
             main_room.send_rfc4(scene_message.clone(), true);
         }
-        
+
         // Also send to scene room if available
         #[cfg(feature = "use_livekit")]
         if let Some(scene_room) = &mut self.scene_room {
@@ -387,34 +410,45 @@ impl CommunicationManager {
     fn broadcast_profile_version(&mut self) {
         let player_identity = DclGlobal::singleton().bind().get_player_identity();
         let player_identity_bind = player_identity.bind();
-        
+
         if let Some(player_profile) = player_identity_bind.clone_profile() {
             let profile_version_packet = rfc4::Packet {
-                message: Some(rfc4::packet::Message::ProfileVersion(rfc4::AnnounceProfileVersion {
-                    profile_version: player_profile.version,
-                })),
+                message: Some(rfc4::packet::Message::ProfileVersion(
+                    rfc4::AnnounceProfileVersion {
+                        profile_version: player_profile.version,
+                    },
+                )),
                 protocol_version: 100,
             };
 
             // Send to main room if available
             if let Some(main_room) = &mut self.main_room {
                 main_room.send_rfc4(profile_version_packet.clone(), false);
-                tracing::info!("📡 ProfileVersion broadcast to main room: version {}", player_profile.version);
+                tracing::info!(
+                    "📡 ProfileVersion broadcast to main room: version {}",
+                    player_profile.version
+                );
             }
 
             // Also send to scene room if available
             #[cfg(feature = "use_livekit")]
             if let Some(scene_room) = &mut self.scene_room {
                 scene_room.send_rfc4(profile_version_packet.clone(), false);
-                tracing::info!("📡 ProfileVersion broadcast to scene room: version {}", player_profile.version);
+                tracing::info!(
+                    "📡 ProfileVersion broadcast to scene room: version {}",
+                    player_profile.version
+                );
             }
-            
+
             // Send through archipelago's adapter if available
             #[cfg(feature = "use_livekit")]
             if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
                 if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.send_rfc4(profile_version_packet, false);
-                    tracing::info!("📡 ProfileVersion broadcast through archipelago: version {}", player_profile.version);
+                    tracing::info!(
+                        "📡 ProfileVersion broadcast through archipelago: version {}",
+                        player_profile.version
+                    );
                 }
             }
         }
@@ -423,7 +457,7 @@ impl CommunicationManager {
     fn announce_initial_profile(&mut self) {
         let player_identity = DclGlobal::singleton().bind().get_player_identity();
         let player_identity_bind = player_identity.bind();
-        
+
         if let Some(player_profile) = player_identity_bind.clone_profile() {
             // Send ProfileResponse packet
             let profile_response_packet = rfc4::Packet {
@@ -439,9 +473,11 @@ impl CommunicationManager {
 
             // Send ProfileVersion packet
             let profile_version_packet = rfc4::Packet {
-                message: Some(rfc4::packet::Message::ProfileVersion(rfc4::AnnounceProfileVersion {
-                    profile_version: player_profile.version,
-                })),
+                message: Some(rfc4::packet::Message::ProfileVersion(
+                    rfc4::AnnounceProfileVersion {
+                        profile_version: player_profile.version,
+                    },
+                )),
                 protocol_version: 100,
             };
 
@@ -449,7 +485,10 @@ impl CommunicationManager {
             if let Some(main_room) = &mut self.main_room {
                 main_room.send_rfc4(profile_response_packet.clone(), false);
                 main_room.send_rfc4(profile_version_packet.clone(), false);
-                tracing::info!("📡 Initial profile announced to main room: version {}", player_profile.version);
+                tracing::info!(
+                    "📡 Initial profile announced to main room: version {}",
+                    player_profile.version
+                );
             }
 
             // Also send to scene room if available
@@ -457,16 +496,22 @@ impl CommunicationManager {
             if let Some(scene_room) = &mut self.scene_room {
                 scene_room.send_rfc4(profile_response_packet.clone(), false);
                 scene_room.send_rfc4(profile_version_packet.clone(), false);
-                tracing::info!("📡 Initial profile announced to scene room: version {}", player_profile.version);
+                tracing::info!(
+                    "📡 Initial profile announced to scene room: version {}",
+                    player_profile.version
+                );
             }
-            
+
             // Send through archipelago's adapter if available
             #[cfg(feature = "use_livekit")]
             if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
                 if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.send_rfc4(profile_response_packet, false);
                     adapter.send_rfc4(profile_version_packet, false);
-                    tracing::info!("📡 Initial profile announced through archipelago: version {}", player_profile.version);
+                    tracing::info!(
+                        "📡 Initial profile announced through archipelago: version {}",
+                        player_profile.version
+                    );
                 }
             }
         }
@@ -499,7 +544,7 @@ impl CommunicationManager {
                 _ => None,
             }
         };
-        
+
         let Some(adapter) = adapter else {
             return;
         };
@@ -530,31 +575,41 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn broadcast_movement(&mut self, compressed: bool, position: Vector3, rotation_y: f32, velocity: Vector3, walk: bool, run: bool, jog: bool, rise: bool, fall: bool, land: bool) -> bool {
+    fn broadcast_movement(
+        &mut self,
+        compressed: bool,
+        position: Vector3,
+        rotation_y: f32,
+        velocity: Vector3,
+        walk: bool,
+        run: bool,
+        jog: bool,
+        rise: bool,
+        fall: bool,
+        land: bool,
+    ) -> bool {
         // Update archipelago position if connected via archipelago
         if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
             archipelago.update_position(position);
         }
-        
+
         let rotation_y = rotation_y.to_degrees();
 
         let get_packet = || {
             if compressed {
                 // Create MovementCompressed packet using the pattern from the other engine
-                
+
                 // Get elapsed time since start
                 let time = self.start_time.elapsed().as_secs_f64();
-                
+
                 // Get realm bounds - using default values for now, you may want to get actual bounds
-                let realm_bounds = (godot::prelude::Vector2i::new(-150, -150), godot::prelude::Vector2i::new(150, 150));
-                
-                let movement = Movement::new(
-                    position,
-                    velocity,
-                    realm_bounds.0,
-                    realm_bounds.1,
+                let realm_bounds = (
+                    godot::prelude::Vector2i::new(-150, -150),
+                    godot::prelude::Vector2i::new(150, 150),
                 );
-                
+
+                let movement = Movement::new(position, velocity, realm_bounds.0, realm_bounds.1);
+
                 // Determine move kind from parameters
                 let move_kind = if run {
                     MoveKind::Run
@@ -565,7 +620,7 @@ impl CommunicationManager {
                 } else {
                     MoveKind::Idle
                 };
-                
+
                 // For temporal data, we need to determine these values based on game state
                 let temporal = Temporal::from_parts(
                     time,
@@ -575,18 +630,16 @@ impl CommunicationManager {
                     move_kind,
                     !fall && !rise, // is_grounded - not grounded if falling or rising
                 );
-                
+
                 let movement_compressed = MovementCompressed { temporal, movement };
 
                 let movement_packet = rfc4::MovementCompressed {
                     temporal_data: i32::from_le_bytes(movement_compressed.temporal.into_bytes()),
                     movement_data: i64::from_le_bytes(movement_compressed.movement.into_bytes()),
                 };
-                
+
                 rfc4::Packet {
-                    message: Some(rfc4::packet::Message::MovementCompressed(
-                        movement_packet
-                    )),
+                    message: Some(rfc4::packet::Message::MovementCompressed(movement_packet)),
                     protocol_version: 100,
                 }
             } else {
@@ -594,7 +647,7 @@ impl CommunicationManager {
 
                 // Get elapsed time since start
                 let timestamp = self.start_time.elapsed().as_secs_f32();
-                
+
                 // Calculate movement blend value based on velocity and movement type
                 let movement_blend_value = if run {
                     3.0
@@ -605,7 +658,7 @@ impl CommunicationManager {
                 } else {
                     0.0
                 };
-                
+
                 let movement_packet = rfc4::Movement {
                     timestamp,
                     position_x: position.x,
@@ -654,7 +707,7 @@ impl CommunicationManager {
                 tracing::info!("📡 Movement also sent to scene room");
             }
         }
-        
+
         // Also send through archipelago's adapter if available
         #[cfg(feature = "use_livekit")]
         if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
@@ -679,7 +732,7 @@ impl CommunicationManager {
         if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
             archipelago.update_position(position);
         }
-        
+
         let index = self.last_position_broadcast_index;
         let get_packet = || {
             let position_packet = rfc4::Position {
@@ -719,7 +772,7 @@ impl CommunicationManager {
                 tracing::info!("📡 Position also sent to scene room");
             }
         }
-        
+
         // Also send through archipelago's adapter if available
         #[cfg(feature = "use_livekit")]
         if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
@@ -854,7 +907,9 @@ impl CommunicationManager {
         if comms_fixed_adapter.is_none() {
             if DISABLE_ARCHIPELAGO {
                 // When archipelago is disabled, fall back to a direct LiveKit connection
-                tracing::info!("🔄 Archipelago disabled, attempting fallback to direct LiveKit connection");
+                tracing::info!(
+                    "🔄 Archipelago disabled, attempting fallback to direct LiveKit connection"
+                );
                 // Try to create a direct LiveKit connection as fallback
                 self.create_fallback_connection();
             } else {
@@ -886,7 +941,7 @@ impl CommunicationManager {
         self.current_connection = CommsConnection::None;
         self.current_connection_str
             .clone_from(&comms_fixed_adapter_str.to_godot());
-        self.archipelago_profile_announced = false;  // Reset flag when changing adapters
+        self.archipelago_profile_announced = false; // Reset flag when changing adapters
         let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
         tracing::info!("change_adapter to protocol {protocol} and address {comms_address}");
@@ -902,7 +957,7 @@ impl CommunicationManager {
             "ws-room" => {
                 // Ensure shared message processor is created
                 let processor_sender = self.ensure_message_processor();
-                
+
                 // Create WebSocket room with shared message processor
                 let mut ws_room = WebSocketRoom::new(
                     comms_address,
@@ -912,10 +967,10 @@ impl CommunicationManager {
                     avatar_scene,
                 );
                 ws_room.set_message_processor_sender(processor_sender);
-                
+
                 // Store the room - no need to change connection type
                 self.main_room = Some(MainRoom::WebSocket(ws_room));
-                
+
                 // Announce initial profile to the room
                 self.announce_initial_profile();
             }
@@ -948,17 +1003,17 @@ impl CommunicationManager {
             "livekit" => {
                 // Ensure shared message processor is created
                 let processor_sender = self.ensure_message_processor();
-                
+
                 // Create LiveKit room with shared message processor
                 let mut livekit_room = LivekitRoom::new(
                     comms_address.to_string(),
                     format!("livekit-{}", comms_address),
                 );
                 livekit_room.set_message_processor_sender(processor_sender);
-                
+
                 // Store the room - no need to change connection type
                 self.main_room = Some(MainRoom::LiveKit(livekit_room));
-                
+
                 // Announce initial profile to the room
                 self.announce_initial_profile();
             }
@@ -974,11 +1029,13 @@ impl CommunicationManager {
             #[cfg(feature = "use_livekit")]
             "archipelago" => {
                 if DISABLE_ARCHIPELAGO {
-                    tracing::info!("⚠️  Archipelago connections are disabled (DISABLE_ARCHIPELAGO = true)");
+                    tracing::info!(
+                        "⚠️  Archipelago connections are disabled (DISABLE_ARCHIPELAGO = true)"
+                    );
                 } else {
                     // Ensure we have a message processor
                     let processor_sender = self.ensure_message_processor();
-                    
+
                     let mut archipelago = ArchipelagoManager::new(
                         comms_address,
                         current_ephemeral_auth_chain.clone(),
@@ -986,7 +1043,7 @@ impl CommunicationManager {
                         avatar_scene,
                     );
                     archipelago.set_shared_processor_sender(processor_sender);
-                    
+
                     self.current_connection = CommsConnection::Archipelago(archipelago);
                 }
             }
@@ -1043,7 +1100,7 @@ impl CommunicationManager {
             main_room.clean();
         }
         self.main_room = None;
-        
+
         #[cfg(feature = "use_livekit")]
         if let Some(scene_room) = &mut self.scene_room {
             scene_room.clean();
@@ -1069,7 +1126,7 @@ impl CommunicationManager {
         if let Some(processor) = &mut self.message_processor {
             processor.change_profile(player_profile.clone());
         }
-        
+
         // Also update adapters that need direct profile updates
         let profile_version = player_profile.version;
         match &mut self.current_connection {
@@ -1081,7 +1138,10 @@ impl CommunicationManager {
 
         // Immediately broadcast ProfileVersion when profile changes
         self.broadcast_profile_version();
-        tracing::info!("📡 Profile changed - immediately broadcasting ProfileVersion: version {}", profile_version);
+        tracing::info!(
+            "📡 Profile changed - immediately broadcasting ProfileVersion: version {}",
+            profile_version
+        );
     }
 
     #[func]
@@ -1098,34 +1158,37 @@ impl CommunicationManager {
         GString::from(self.current_connection_str.clone())
     }
 
-    
     #[cfg(feature = "use_livekit")]
     fn handle_scene_room_connection_request(&mut self, request: SceneRoomConnectionRequest) {
-        tracing::info!("🔌 Processing scene room connection request for scene '{}' with URL: {}", request.scene_id, request.livekit_url);
-        
+        tracing::info!(
+            "🔌 Processing scene room connection request for scene '{}' with URL: {}",
+            request.scene_id,
+            request.livekit_url
+        );
+
         // Ensure we have a message processor (create one if needed)
         let processor_sender = self.ensure_message_processor();
-        
+
         // Clean up existing scene room
         if let Some(scene_room) = &mut self.scene_room {
             tracing::info!("🧹 Cleaning up existing scene room");
             scene_room.clean();
         }
-        
+
         // Create new LiveKit room for the scene
         let room_id = format!("scene-{}", request.scene_id);
         tracing::info!("🚀 Creating new scene room with ID: {}", room_id);
-        
+
         let mut scene_room = LivekitRoom::new(request.livekit_url.clone(), room_id);
-        
+
         // Connect the scene room to the message processor
         scene_room.set_message_processor_sender(processor_sender);
-        
+
         self.scene_room = Some(scene_room);
-        
+
         // Announce initial profile to the scene room
         self.announce_initial_profile();
-        
+
         tracing::info!("✅ Scene room successfully created and connected to message processor");
     }
 
@@ -1138,44 +1201,48 @@ impl CommunicationManager {
 
         let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
         let scene_entity_id = scene_runner.bind().get_scene_entity_id(scene_id);
-        
+
         // Check if scene has actually changed
         if let Some(current_scene) = &self.current_scene_id {
             if current_scene == &scene_entity_id {
                 return; // No change needed
             }
         }
-        
+
         tracing::info!("Scene changed to: {}", scene_entity_id);
-        
+
         // Clean up existing scene room
         if let Some(scene_room) = &mut self.scene_room {
             scene_room.clean();
         }
         self.scene_room = None;
         self.current_scene_id = Some(scene_entity_id.clone());
-        
+
         // Check if scene rooms are disabled
         if DISABLE_SCENE_ROOM {
             tracing::info!("⚠️  Scene room connections are disabled (DISABLE_SCENE_ROOM = true)");
             return;
         }
-        
+
         // Get player identity for signing
         let player_identity = DclGlobal::singleton().bind().get_player_identity();
         let player_identity_bind = player_identity.bind();
-        
+
         let Some(ephemeral_auth_chain) = player_identity_bind.try_get_ephemeral_auth_chain() else {
             tracing::error!("No ephemeral auth chain available for scene room connection");
             return;
         };
-        
+
         let _avatar_scene = DclGlobal::singleton().bind().get_avatars();
         let _player_profile = player_identity_bind.clone_profile();
-        
+
         // Spawn async task to get scene adapter and connect
         let scene_entity_id = scene_entity_id.to_string();
-        let realm_name = DclGlobal::singleton().bind().get_realm().get("realm_name".into()).to_string();
+        let realm_name = DclGlobal::singleton()
+            .bind()
+            .get_realm()
+            .get("realm_name".into())
+            .to_string();
         let http_requester: Arc<HttpQueueRequester> = DclGlobal::singleton()
             .bind()
             .get_http_requester()
@@ -1184,41 +1251,61 @@ impl CommunicationManager {
         let connection_sender = self.scene_room_connection_sender.clone();
         TokioRuntime::spawn(async move {
             tracing::info!("Requesting scene adapter for scene: {}", scene_entity_id);
-            match get_scene_adapter(http_requester, &scene_entity_id, &realm_name, &ephemeral_auth_chain).await {
+            match get_scene_adapter(
+                http_requester,
+                &scene_entity_id,
+                &realm_name,
+                &ephemeral_auth_chain,
+            )
+            .await
+            {
                 Ok(adapter_url) => {
-                    tracing::info!("✅ Got scene adapter URL for scene '{}': {}", scene_entity_id, adapter_url);
-                    
+                    tracing::info!(
+                        "✅ Got scene adapter URL for scene '{}': {}",
+                        scene_entity_id,
+                        adapter_url
+                    );
+
                     // Parse the adapter URL to extract LiveKit connection details
                     if adapter_url.starts_with("livekit:") {
                         // Extract the actual LiveKit URL after "livekit:"
                         let livekit_url = &adapter_url[8..]; // Remove "livekit:" prefix
-                        tracing::info!("🔗 Preparing to connect scene room to LiveKit: {}", livekit_url);
-                        
+                        tracing::info!(
+                            "🔗 Preparing to connect scene room to LiveKit: {}",
+                            livekit_url
+                        );
+
                         // Send connection request to main thread via channel
                         let request = SceneRoomConnectionRequest {
                             scene_id: scene_entity_id.clone(),
                             livekit_url: livekit_url.to_string(),
                         };
-                        
+
                         match connection_sender.send(request).await {
                             Ok(()) => {
                                 tracing::info!("📤 Scene room connection request sent to main thread for scene '{}'", scene_entity_id);
-                            },
+                            }
                             Err(e) => {
-                                tracing::error!("❌ Failed to send scene room connection request: {}", e);
+                                tracing::error!(
+                                    "❌ Failed to send scene room connection request: {}",
+                                    e
+                                );
                             }
                         }
                     } else {
                         tracing::warn!("⚠️  Unsupported scene adapter type: {}", adapter_url);
                     }
-                },
+                }
                 Err(e) => {
-                    tracing::error!("❌ Failed to get scene adapter for scene '{}': {}", scene_entity_id, e);
+                    tracing::error!(
+                        "❌ Failed to get scene adapter for scene '{}': {}",
+                        scene_entity_id,
+                        e
+                    );
                 }
             }
         });
     }
-    
 }
 
 #[cfg(feature = "use_livekit")]
@@ -1228,7 +1315,6 @@ async fn get_scene_adapter(
     realm_name: &str,
     ephemeral_auth_chain: &crate::auth::ephemeral_auth_chain::EphemeralAuthChain,
 ) -> Result<String, String> {
-    
     // Create the request body
 
     use crate::http_request::request_response::{RequestOption, ResponseEnum, ResponseType};
@@ -1237,24 +1323,24 @@ async fn get_scene_adapter(
         "realmName": realm_name
     });
     let metadata_json_string = request_body.to_string();
-    
+
     tracing::info!("🔄 Making scene adapter request to: {}", GATEKEEPER_URL);
     tracing::info!("📋 Request body: {}", metadata_json_string);
-    
+
     // Create URI
     let uri = http::Uri::from_static(GATEKEEPER_URL);
     let method = http::Method::POST;
-    
+
     // Sign the request
     tracing::info!("🔐 Signing request with ephemeral auth chain");
     let headers = wallet::sign_request(
         method.as_str(),
         &uri,
         ephemeral_auth_chain,
-        request_body,  // Pass the serde_json::Value directly, not the string
+        request_body, // Pass the serde_json::Value directly, not the string
     )
     .await;
-    
+
     tracing::info!("📝 Generated {} authentication headers", headers.len());
 
     let request_option = RequestOption::new(
@@ -1266,19 +1352,28 @@ async fn get_scene_adapter(
         Some(headers.into_iter().collect()),
         None,
     );
-    
-    let response = http_requester.request(request_option, 0).await
+
+    let response = http_requester
+        .request(request_option, 0)
+        .await
         .map_err(|e| format!("Request failed: {}", e.error_message))?;
 
-    tracing::info!("📡 Received HTTP response with status: {}", response.status_code);
+    tracing::info!(
+        "📡 Received HTTP response with status: {}",
+        response.status_code
+    );
 
     if !response.status_code.is_success() {
-        tracing::error!("❌ HTTP request failed with status: {}", response.status_code);
+        tracing::error!(
+            "❌ HTTP request failed with status: {}",
+            response.status_code
+        );
         return Err(format!("HTTP error: {}", response.status_code));
     }
 
     // Extract response data
-    let response_data = response.response_data
+    let response_data = response
+        .response_data
         .map_err(|e| format!("Response data error: {}", e))?;
 
     // Parse the response based on type
@@ -1287,22 +1382,25 @@ async fn get_scene_adapter(
         ResponseEnum::String(text) => {
             tracing::info!("📄 Response as string: {}", text);
             serde_json::from_str(&text).map_err(|e| format!("JSON parse error: {}", e))?
-        },
+        }
         ResponseEnum::Json(json_result) => {
             let json_value = json_result.map_err(|e| format!("JSON result error: {}", e))?; // Extract the Result first
             tracing::info!("📊 Response as JSON: {}", json_value);
-            serde_json::from_value(json_value).map_err(|e| format!("JSON value parse error: {}", e))?
-        },
+            serde_json::from_value(json_value)
+                .map_err(|e| format!("JSON value parse error: {}", e))?
+        }
         ResponseEnum::Bytes(bytes) => {
-            let text = String::from_utf8(bytes)
-                .map_err(|e| format!("Invalid UTF-8: {}", e))?;
+            let text = String::from_utf8(bytes).map_err(|e| format!("Invalid UTF-8: {}", e))?;
             tracing::info!("📄 Response as bytes->string: {}", text);
             serde_json::from_str(&text).map_err(|e| format!("JSON parse error: {}", e))?
-        },
+        }
         _ => return Err("Unexpected response type".to_string()),
     };
 
-    tracing::info!("✅ Successfully parsed gatekeeper response: adapter = '{}'", gatekeeper_response.adapter);
+    tracing::info!(
+        "✅ Successfully parsed gatekeeper response: adapter = '{}'",
+        gatekeeper_response.adapter
+    );
     Ok(gatekeeper_response.adapter)
 }
 

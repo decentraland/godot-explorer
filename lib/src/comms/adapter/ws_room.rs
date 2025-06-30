@@ -17,7 +17,16 @@ use godot::{engine::WebSocketPeer, prelude::*};
 use prost::Message;
 use tracing::error;
 
-use super::{adapter_trait::Adapter, message_processor::{IncomingMessage, MessageType, Rfc4Message}};
+use super::{
+    adapter_trait::Adapter,
+    message_processor::{IncomingMessage, MessageType, Rfc4Message},
+};
+
+// Constants
+const RECONNECT_INTERVAL_SECS: u64 = 1;
+const PROFILE_REQUEST_INTERVAL_SECS: f32 = 10.0;
+const INITIAL_TIMESTAMP_OFFSET_SECS: u64 = 1000;
+const DCL_CHALLENGE_PREFIX: &str = "dcl-";
 
 #[derive(Clone)]
 enum WsRoomState {
@@ -89,7 +98,7 @@ impl WebSocketRoom {
             ws_url.to_string()
         };
 
-        let old_time = Instant::now() - Duration::from_secs(1000);
+        let old_time = Instant::now() - Duration::from_secs(INITIAL_TIMESTAMP_OFFSET_SECS);
 
         Self {
             ws_peer: WebSocketPeer::new_gd(),
@@ -109,11 +118,13 @@ impl WebSocketRoom {
             last_try_to_connect: old_time,
         }
     }
-    
-    pub fn set_message_processor_sender(&mut self, sender: tokio::sync::mpsc::Sender<IncomingMessage>) {
+
+    pub fn set_message_processor_sender(
+        &mut self,
+        sender: tokio::sync::mpsc::Sender<IncomingMessage>,
+    ) {
         self.message_processor_sender = Some(sender);
     }
-
 
     fn _send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
         let mut buf = Vec::new();
@@ -165,7 +176,9 @@ impl WebSocketRoom {
         match self.state.clone() {
             WsRoomState::Connecting => match ws_state {
                 godot::engine::web_socket_peer::State::CLOSED => {
-                    if (Instant::now() - self.last_try_to_connect).as_secs() > 1 {
+                    if (Instant::now() - self.last_try_to_connect).as_secs()
+                        > RECONNECT_INTERVAL_SECS
+                    {
                         let ws_protocols = {
                             let mut v = PackedStringArray::new();
                             v.push(GString::from("rfc5"));
@@ -214,7 +227,7 @@ impl WebSocketRoom {
 
                                 let challenge_to_sign = challenge_msg.challenge_to_sign.clone();
 
-                                if !challenge_to_sign.starts_with("dcl-") {
+                                if !challenge_to_sign.starts_with(DCL_CHALLENGE_PREFIX) {
                                     tracing::error!("invalid challenge to sign");
                                     return;
                                 }
@@ -284,14 +297,19 @@ impl WebSocketRoom {
                                         *alias,
                                         GString::from(format!("{:#x}", peer.address)),
                                     );
-                                    
+
                                     // Send PeerJoined event to MessageProcessor
                                     if let Some(sender) = &self.message_processor_sender {
-                                        let _ = sender.try_send(IncomingMessage {
+                                        if let Err(e) = sender.try_send(IncomingMessage {
                                             message: MessageType::PeerJoined,
                                             address: peer.address,
                                             room_id: self.room_id.clone(),
-                                        });
+                                        }) {
+                                            tracing::warn!(
+                                                "Failed to send PeerJoined event: {}",
+                                                e
+                                            );
+                                        }
                                     }
                                 }
                             }
@@ -346,14 +364,19 @@ impl WebSocketRoom {
                         self.avatars
                             .bind_mut()
                             .add_avatar(peer.alias, GString::from(format!("{:#x}", h160)));
-                        
+
                         // Send PeerJoined event to MessageProcessor
                         if let Some(sender) = &self.message_processor_sender {
-                            let _ = sender.try_send(IncomingMessage {
+                            if let Err(e) = sender.try_send(IncomingMessage {
                                 message: MessageType::PeerJoined,
                                 address: h160,
                                 room_id: self.room_id.clone(),
-                            });
+                            }) {
+                                tracing::warn!(
+                                    "Failed to send PeerJoined event for new peer: {}",
+                                    e
+                                );
+                            }
                         }
                     } else {
                         tracing::warn!("Invalid address in PeerJoinMessage");
@@ -362,14 +385,16 @@ impl WebSocketRoom {
                 ws_packet::Message::PeerLeaveMessage(peer) => {
                     if let Some(peer_data) = self.peer_identities.remove(&peer.alias) {
                         self.avatars.bind_mut().remove_avatar(peer.alias);
-                        
+
                         // Send PeerLeft event to MessageProcessor
                         if let Some(sender) = &self.message_processor_sender {
-                            let _ = sender.try_send(IncomingMessage {
+                            if let Err(e) = sender.try_send(IncomingMessage {
                                 message: MessageType::PeerLeft,
                                 address: peer_data.address,
                                 room_id: self.room_id.clone(),
-                            });
+                            }) {
+                                tracing::warn!("Failed to send PeerLeft event: {}", e);
+                            }
                         }
                     }
                 }
@@ -401,7 +426,7 @@ impl WebSocketRoom {
                             address: peer.address,
                             room_id: self.room_id.clone(),
                         };
-                        
+
                         if let Err(err) = sender.try_send(incoming_message) {
                             tracing::warn!("Failed to forward WS message to processor: {}", err);
                         }
@@ -417,7 +442,10 @@ impl WebSocketRoom {
                                     );
                             }
                             _ => {
-                                tracing::debug!("WS room handling message locally (no processor): {:?}", message);
+                                tracing::debug!(
+                                    "WS room handling message locally (no processor): {:?}",
+                                    message
+                                );
                             }
                         }
                     }
@@ -431,7 +459,7 @@ impl WebSocketRoom {
             }
         }
 
-        if self.last_profile_request_sent.elapsed().as_secs_f32() > 10.0 {
+        if self.last_profile_request_sent.elapsed().as_secs_f32() > PROFILE_REQUEST_INTERVAL_SECS {
             self.last_profile_request_sent = Instant::now();
 
             let to_request = self
