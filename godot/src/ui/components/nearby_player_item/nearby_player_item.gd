@@ -50,10 +50,8 @@ func _on_mouse_exited() -> void:
 
 
 func _on_button_block_user_pressed() -> void:
-	print("Block ", avatar.get_avatar_name().to_upper())
-	# TODO: Update adding the address instead the name
+	print("Block ", avatar.avatar_id, " (", avatar.get_avatar_name(), ")")
 
 
 func _on_button_report_pressed() -> void:
-	print("Report ", avatar.get_avatar_name().to_upper())
-	# TODO: Update adding the address instead the name
+	print("Report ", avatar.avatar_id, " (", avatar.get_avatar_name(), ")")

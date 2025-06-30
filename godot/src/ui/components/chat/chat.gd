@@ -220,12 +220,3 @@ func _on_button_back_pressed() -> void:
 
 func _on_timer_update_remote_avatars_timeout() -> void:
 	update_nearby_users()
-
-
-func _on_button_print_pressed() -> void:
-	var i = 0
-	var remote_avatars = Global.avatars.get_avatars()
-	for avatar in remote_avatars:
-		i = i+1
-		var avatar_name = avatar.get_avatar_name()
-		print(i, ") ", avatar, " ------ ", avatar_name)
