@@ -6,8 +6,8 @@ const SPRINTING_CAMERA_FOV = 100.0
 const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 
 var walk_speed = 1.5
-var jog_speed = 5.0
-var run_speed = 8.0
+var jog_speed = 8.0
+var run_speed = 11.0
 var gravity := 10.0
 var jump_height := 1.0
 var jump_velocity_0 := sqrt(2 * jump_height * gravity)
