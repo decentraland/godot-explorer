@@ -124,6 +124,7 @@ pub struct MessageProcessor {
 
     // Timing
     last_profile_request_sent: Instant,
+    #[allow(dead_code)]
     last_profile_response_sent: Instant,
 
     // Chat and scene messages (bounded to prevent memory exhaustion)
@@ -657,7 +658,7 @@ impl MessageProcessor {
                 );
 
                 // Check if they're requesting our player's profile
-                if let Some(requested_address) = profile_request.address.parse::<H160>().ok() {
+                if let Ok(requested_address) = profile_request.address.parse::<H160>() {
                     if requested_address == self.player_address {
                         // They're requesting our profile - send ProfileResponse
                         if let Some(player_profile) = &self.player_profile {
@@ -762,7 +763,7 @@ impl MessageProcessor {
                 let entry = self
                     .incoming_scene_messages
                     .entry(scene.scene_id.clone())
-                    .or_insert_with(VecDeque::new);
+                    .or_default();
 
                 // Enforce bounded queue per scene
                 if entry.len() >= MAX_SCENE_MESSAGES_PER_SCENE {

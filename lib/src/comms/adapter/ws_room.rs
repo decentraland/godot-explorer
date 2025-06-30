@@ -6,7 +6,7 @@ use std::{
 use crate::{
     auth::{ephemeral_auth_chain::EphemeralAuthChain, wallet::AsH160},
     avatars::avatar_scene::AvatarScene,
-    comms::profile::{SerializedProfile, UserProfile},
+    comms::profile::UserProfile,
     dcl::components::proto_components::kernel::comms::{
         rfc4::{self},
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
@@ -75,6 +75,7 @@ pub struct WebSocketRoom {
 
     // Trade-off with other peers (kept for backwards compatibility)
     avatars: Gd<AvatarScene>,
+    #[allow(dead_code)]
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
 }

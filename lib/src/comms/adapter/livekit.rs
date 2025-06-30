@@ -37,6 +37,7 @@ pub struct LivekitRoom {
     mic_sender_to_thread: tokio::sync::mpsc::Sender<Vec<i16>>,
     receiver_from_thread:
         tokio::sync::mpsc::Receiver<crate::comms::adapter::message_processor::IncomingMessage>,
+    #[allow(dead_code)]
     room_id: String,
     message_processor_sender: Option<
         tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>,
@@ -94,7 +95,7 @@ impl LivekitRoom {
             }
         } else {
             // If no processor is connected, just drain the messages to prevent backing up
-            while let Ok(_) = self.receiver_from_thread.try_recv() {}
+            while self.receiver_from_thread.try_recv().is_ok() {}
         }
 
         true

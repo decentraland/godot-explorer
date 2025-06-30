@@ -93,7 +93,6 @@ impl MainRoom {
 #[cfg(feature = "use_livekit")]
 use crate::{
     comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom},
-    dcl::SceneId,
     http_request::http_queue_requester::HttpQueueRequester,
 };
 
@@ -104,6 +103,7 @@ enum CommsConnection {
     SignedLogin(SignedLogin),
     #[cfg(feature = "use_livekit")]
     Archipelago(ArchipelagoManager),
+    #[allow(dead_code)]
     Connected(Box<dyn Adapter>),
 }
 
@@ -575,6 +575,7 @@ impl CommunicationManager {
     }
 
     #[func]
+    #[allow(clippy::too_many_arguments)]
     fn broadcast_movement(
         &mut self,
         compressed: bool,
@@ -1155,7 +1156,7 @@ impl CommunicationManager {
 
     #[func]
     pub fn get_current_adapter_conn_str(&self) -> GString {
-        GString::from(self.current_connection_str.clone())
+        self.current_connection_str.clone()
     }
 
     #[cfg(feature = "use_livekit")]
@@ -1269,7 +1270,7 @@ impl CommunicationManager {
                     // Parse the adapter URL to extract LiveKit connection details
                     if adapter_url.starts_with("livekit:") {
                         // Extract the actual LiveKit URL after "livekit:"
-                        let livekit_url = &adapter_url[8..]; // Remove "livekit:" prefix
+                        let livekit_url = adapter_url.strip_prefix("livekit:").unwrap_or(&adapter_url);
                         tracing::info!(
                             "🔗 Preparing to connect scene room to LiveKit: {}",
                             livekit_url
