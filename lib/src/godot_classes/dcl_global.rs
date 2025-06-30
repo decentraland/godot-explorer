@@ -34,7 +34,7 @@ mod android {
         let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
             .with_span_events(FmtSpan::CLOSE)
             .with_thread_names(true)
-            .with_filter(LevelFilter::DEBUG);
+            .with_filter(LevelFilter::WARN);
 
         registry().with(android_layer).init();
     }
