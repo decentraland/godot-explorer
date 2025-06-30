@@ -621,7 +621,7 @@ impl MessageProcessor {
                 );
             }
             rfc4::packet::Message::Chat(chat) => {
-                tracing::debug!("Received Chat from {:#x}: {:?}", address, chat);
+                tracing::info!("Received Chat from {:#x}: {:?}", address, chat);
 
                 // Enforce bounded queue for chat messages
                 if self.chats.len() >= MAX_CHAT_MESSAGES {
@@ -995,8 +995,24 @@ impl MessageProcessor {
                 entry.push_back((address, scene.data));
             }
             rfc4::packet::Message::Voice(_voice) => {}
-            _ => {
-                tracing::debug!("comms > unhandled rfc4 message");
+            rfc4::packet::Message::PlayerEmote(player_emote) => {
+                tracing::debug!(
+                    "Received PlayerEmote from {:#x}: {:?}",
+                    address,
+                    player_emote
+                );
+
+                // Let avatar_scene handle emotes
+                let mut avatar_scene_ref = self.avatars.clone();
+                let mut avatar_scene = avatar_scene_ref.bind_mut();
+                avatar_scene.play_emote(
+                    peer_alias,
+                    player_emote.incremental_id,
+                    &player_emote.urn,
+                );
+            }
+            rfc4::packet::Message::SceneEmote(_) => {
+                tracing::warn!("Not implemented: SceneEmote handling in message_processor");
             }
         }
     }

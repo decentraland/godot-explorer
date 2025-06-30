@@ -324,6 +324,21 @@ impl DclPlayerIdentity {
         );
     }
 
+        #[func]
+    pub fn set_random_profile(&mut self) {
+        let mut profile = UserProfile::randomize();
+        profile.content.user_id = Some(self.get_address_str().to_string());
+        profile.content.eth_address = self.get_address_str().to_string();
+        let profile = DclUserProfile::from_gd(profile);
+        self.profile = Some(profile.clone());
+        tracing::warn!("profile > set random profile",);
+
+        self.base_mut().call_deferred(
+            "emit_signal".into(),
+            &["profile_changed".to_variant(), profile.to_variant()],
+        );
+    }
+
     #[func]
     pub fn set_profile(&mut self, profile: Gd<DclUserProfile>) {
         self.profile = Some(profile.clone());

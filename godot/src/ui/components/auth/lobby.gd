@@ -107,10 +107,12 @@ func _ready():
 
 	if args.has("--guest-profile"):
 		session_account.clear()
-		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()
 		Global.player_identity.create_guest_account()
-		Global.player_identity.set_default_profile()
+		Global.player_identity.set_random_profile()
+		var random_profile = Global.player_identity.get_profile_or_null()
+		if random_profile != null:
+			Global.get_config().guest_profile = random_profile.to_godot_dictionary()
 
 	if Global.player_identity.try_recover_account(session_account):
 		loading_first_profile = true
@@ -118,7 +120,6 @@ func _ready():
 
 	elif _skip_lobby:
 		show_panel(control_loading)
-		create_guest_account_if_needed()
 		go_to_explorer.call_deferred()
 	else:
 		show_panel(control_start)

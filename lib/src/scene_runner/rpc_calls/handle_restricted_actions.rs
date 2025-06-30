@@ -1,6 +1,6 @@
 use crate::{
     dcl::{scene_apis::RpcResultSender, SceneId},
-    godot_classes::dcl_confirm_dialog::DclConfirmDialog,
+    godot_classes::{dcl_confirm_dialog::DclConfirmDialog, dcl_global::DclGlobal},
     scene_runner::{
         global_get_node_helper::{
             get_avatar_node, get_dialog_stack_node, get_explorer_node, get_realm_node,
@@ -323,6 +323,7 @@ pub fn trigger_scene_emote(
     let urn = format!("urn:decentraland:off-chain:scene-emote:{file_hash}-{looping}");
     let mut avatar_node = get_avatar_node(scene);
     avatar_node.call("async_play_emote".into(), &[urn.to_variant()]);
-    avatar_node.call("broadcast_avatar_animation".into(), &[urn.to_variant()]);
+
+    DclGlobal::singleton().bind().get_comms().bind_mut().send_emote(urn.to_godot());
     response.send(Ok(()));
 }

@@ -126,6 +126,7 @@ pub struct CommunicationManager {
     current_connection: CommsConnection,
     current_connection_str: GString,
     last_position_broadcast_index: u64,
+    last_emote_incremental_id: u32,
     voice_chat_enabled: bool,
     start_time: Instant,
     last_profile_version_broadcast: Instant,
@@ -159,6 +160,7 @@ impl INode for CommunicationManager {
             current_connection: CommsConnection::None,
             current_connection_str: GString::default(),
             last_position_broadcast_index: 0,
+            last_emote_incremental_id: 0,
             voice_chat_enabled: false,
             start_time: Instant::now(),
             last_profile_version_broadcast: Instant::now(),
@@ -627,11 +629,11 @@ impl CommunicationManager {
                 // For temporal data, we need to determine these values based on game state
                 let temporal = Temporal::from_parts(
                     time,
-                    false, // is_emote - determine from game state
+                    false,
                     rotation_y,
                     movement.velocity_tier(),
                     move_kind,
-                    !fall && !rise, // is_grounded - not grounded if falling or rising
+                    !fall && !rise,
                 );
 
                 let movement_compressed = MovementCompressed { temporal, movement };
@@ -800,6 +802,40 @@ impl CommunicationManager {
             message: Some(rfc4::packet::Message::Chat(rfc4::Chat {
                 message: text.to_string(),
                 timestamp: self.start_time.elapsed().as_secs_f64(),
+            })),
+            protocol_version: 100,
+        };
+
+        let mut sent = false;
+
+        // Send to main room if available
+        if let Some(main_room) = &mut self.main_room {
+            sent = main_room.send_rfc4(packet.clone(), false) || sent;
+        }
+
+        // Also send to scene room if available
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            sent = scene_room.send_rfc4(packet, false) || sent;
+        }
+
+        sent
+    }
+
+    #[func]
+    pub fn send_emote(
+        &mut self,
+        emote_urn: GString,
+    ) -> bool {
+        let timestamp = godot::engine::Time::singleton().get_unix_time_from_system() * 1000.0;
+        self.send_chat(format!("␐{} {}", emote_urn.to_string(), timestamp).into());
+
+        self.last_emote_incremental_id += 1;
+
+        let packet = rfc4::Packet {
+            message: Some(rfc4::packet::Message::PlayerEmote(rfc4::PlayerEmote {
+                urn: emote_urn.to_string(),
+                incremental_id: self.last_emote_incremental_id,
             })),
             protocol_version: 100,
         };

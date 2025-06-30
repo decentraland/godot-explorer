@@ -20,7 +20,7 @@ var hidden: bool = false
 var finish_loading = false
 var wearables_by_category: Dictionary = {}
 
-var emote_controller: AvatarEmoteController
+var emote_controller: AvatarEmoteController # Rust binded. Don't change this variable name
 
 var generate_attach_points: bool = false
 var right_hand_idx: int = -1
@@ -566,7 +566,3 @@ func _play_emote_audio(file_hash: String):
 
 func async_play_emote(emote_urn: String):
 	await emote_controller.async_play_emote(emote_urn)
-
-
-func broadcast_avatar_animation(emote_id: String) -> void:
-	emote_controller.broadcast_avatar_animation(emote_id)

@@ -45,6 +45,8 @@ pub struct AvatarScene {
     // Timestamp tracking for movement messages
     last_movement_timestamp: HashMap<AvatarAlias, f32>,
     last_position_index: HashMap<AvatarAlias, u32>,
+
+    last_emote_incremental_id: HashMap<AvatarAlias, u32>,
 }
 
 #[godot_api]
@@ -59,6 +61,7 @@ impl INode for AvatarScene {
             last_updated_profile: HashMap::new(),
             last_movement_timestamp: HashMap::new(),
             last_position_index: HashMap::new(),
+            last_emote_incremental_id: HashMap::new(),
         }
     }
 
@@ -566,6 +569,38 @@ impl AvatarScene {
         };
 
         self.update_avatar(entity_id, profile);
+    }
+
+    pub fn play_emote(&mut self, alias: u32, incremental_id: u32, emote_urn: &String) {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            return;
+        };
+
+        // Discard if the emote is less than or equal to the last played emote
+        if let Some(last_incremental_id) = self.last_emote_incremental_id.get(&
+            alias) {
+            if incremental_id <= *last_incremental_id {
+                tracing::debug!(
+                    "Discarding emote {} for alias {}: incremental_id {} <= last_emote_incremental_id {}",
+                    emote_urn,
+                    alias,
+                    incremental_id,
+                    last_incremental_id
+                );
+                return;
+            }
+        }
+        
+
+        // Store the last emote incremental ID for this alias
+        self.last_emote_incremental_id
+            .insert(alias, incremental_id);
+
+        if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
+            avatar_scene.call("async_play_emote".into(), &[emote_urn.to_variant()]);
+        }
     }
 
     pub fn update_avatar(&mut self, entity_id: SceneEntityId, profile: &UserProfile) {
