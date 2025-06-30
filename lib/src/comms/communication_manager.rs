@@ -269,7 +269,7 @@ impl INode for CommunicationManager {
             // Handle outgoing messages from MessageProcessor (like ProfileResponse)
             outgoing_messages = processor.consume_outgoing_messages();
             if !outgoing_messages.is_empty() {
-                tracing::warn!("📤 Consumed {} outgoing messages from MessageProcessor", outgoing_messages.len());
+                tracing::debug!("📤 Consumed {} outgoing messages from MessageProcessor", outgoing_messages.len());
             }
 
             if !processor_polling_ok {
@@ -294,7 +294,7 @@ impl INode for CommunicationManager {
             if let Some(scene_room) = &mut self.scene_room {
                 scene_room.send_rfc4(outgoing.packet.clone(), outgoing.unreliable);
             }
-            tracing::warn!("📤 Broadcast outgoing message to all rooms");
+            tracing::debug!("📤 Broadcast outgoing message to all rooms");
         }
 
         if processor_reset {
@@ -443,7 +443,6 @@ impl CommunicationManager {
     }
 
     fn announce_initial_profile(&mut self) {
-        return; // we need to discover the profile with the profile version
         let player_identity = DclGlobal::singleton().bind().get_player_identity();
         let player_identity_bind = player_identity.bind();
 
@@ -916,7 +915,7 @@ impl CommunicationManager {
             }
         });
 
-        tracing::warn!(
+        tracing::debug!(
             "Comms protocol: {}, fixedAdapter: {:?}",
             comms_protocol,
             comms_fixed_adapter

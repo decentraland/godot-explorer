@@ -242,10 +242,10 @@ impl MessageProcessor {
     pub fn poll(&mut self) -> bool {
         // Handle profile updates from async tasks
         while let Ok(update) = self.profile_update_receiver.try_recv() {
-            tracing::warn!(
-                "comms > received profile update for {:#x}: {:?}",
+            tracing::debug!(
+                "Received profile update for {:#x}: version {}",
                 update.address,
-                update.profile
+                update.profile.version
             );
 
             // Brief borrow scope for avatar update
@@ -459,8 +459,8 @@ impl MessageProcessor {
             if let Err(e) = self.outgoing_sender.try_send(outgoing) {
                 tracing::warn!("Failed to queue initial ProfileRequest for new peer: {}", e);
             } else {
-                tracing::warn!(
-                    "📤 Sending initial ProfileRequest for new peer {:#x} - broadcast to all rooms",
+                tracing::debug!(
+                    "📤 Sending initial ProfileRequest for new peer {:#x}",
                     message.address
                 );
             }
@@ -637,10 +637,10 @@ impl MessageProcessor {
                 self.chats.push_back((address, chat));
             }
             rfc4::packet::Message::ProfileVersion(announce_profile_version) => {
-                tracing::warn!(
-                    "Received ProfileVersion from {:#x}: {:?}",
+                tracing::debug!(
+                    "Received ProfileVersion from {:#x}: version {}",
                     address,
-                    announce_profile_version
+                    announce_profile_version.profile_version
                 );
 
                 let announced_version = announce_profile_version.profile_version;
@@ -656,7 +656,7 @@ impl MessageProcessor {
                         peer.profile_fetch_failures = 0;
                         peer.profile_fetch_banned_until = None;
                         peer.profile_fetch_attempted = false;
-                        tracing::warn!(
+                        tracing::debug!(
                                 "New profile version announced for {:#x}: {} (was {:?}), resetting failure tracking",
                                 address,
                                 announced_version,
@@ -698,7 +698,7 @@ impl MessageProcessor {
                         .map_or(false, |p| p.profile_fetch_attempted)
                     && !is_banned
                 {
-                    tracing::warn!(
+                    tracing::info!(
                         "Requesting newer profile from {:#x}: announced={}, current={}",
                         address,
                         announced_version,
@@ -732,10 +732,10 @@ impl MessageProcessor {
                         )
                         .await;
                         if let Ok(profile) = result {
-                            tracing::warn!(
-                                "fetch profile lambda > fetch profile from lambda for {:#x}: {:?}",
+                            tracing::debug!(
+                                "Fetched profile from lambda for {:#x}: version {}",
                                 address,
-                                profile.clone()
+                                profile.version
                             );
                             // Check if the fetched version matches what was announced
                             let version_mismatch = profile.version < announced_version_for_retry;
@@ -773,7 +773,7 @@ impl MessageProcessor {
                             );
 
                             // Lambda fetch failed, likely a guest user - send ProfileRequest to peer
-                            tracing::warn!(
+                            tracing::info!(
                                 "Profile not found on lambda for {:#x}, sending ProfileRequest to peer (likely guest user)",
                                 address
                             );
@@ -799,8 +799,8 @@ impl MessageProcessor {
                                     e
                                 );
                             } else {
-                                tracing::warn!(
-                                    "📤 Sending ProfileRequest for {:#x} (version {}) after lambda failure - broadcast to all rooms",
+                                tracing::debug!(
+                                    "📤 Sending ProfileRequest for {:#x} (version {}) after lambda failure",
                                     address,
                                     announced_version_for_retry
                                 );
@@ -815,21 +815,13 @@ impl MessageProcessor {
                                 .await;
                         }
                     });
-                } else {
-                    tracing::warn!(
-                        "No profile update needed for {:#x}: announced={}, current={}, banned={}",
-                        address,
-                        announced_version,
-                        current_version,
-                        is_banned
-                    );
                 }
             }
             rfc4::packet::Message::ProfileRequest(profile_request) => {
-                tracing::warn!(
-                    "Received ProfileRequest from {:#x}: {:?}",
+                tracing::debug!(
+                    "Received ProfileRequest from {:#x} for address {}",
                     address,
-                    profile_request
+                    profile_request.address
                 );
 
                 // Parse the requested address
@@ -865,7 +857,7 @@ impl MessageProcessor {
                                 );
                             }
                         } else {
-                            tracing::warn!(
+                            tracing::debug!(
                                 "ProfileRequest for our address but no profile available"
                             );
                         }
@@ -920,10 +912,9 @@ impl MessageProcessor {
                 }
             }
             rfc4::packet::Message::ProfileResponse(profile_response) => {
-                tracing::warn!(
-                    "Received ProfileResponse from {:#x}: {:?}",
-                    address,
-                    profile_response
+                tracing::debug!(
+                    "Received ProfileResponse from {:#x}",
+                    address
                 );
 
                 let serialized_profile: SerializedProfile =
@@ -987,14 +978,14 @@ impl MessageProcessor {
                     peer.profile = Some(profile);
                     peer.profile_fetch_attempted = false; // Reset so we can fetch again if needed
                     
-                    tracing::warn!(
+                    tracing::info!(
                         "Updated profile for {:#x} (alias {}) to version {}",
                         profile_address,
                         peer.alias,
                         incoming_version
                     );
                 } else {
-                    tracing::warn!(
+                    tracing::debug!(
                         "Received ProfileResponse for unknown peer {:#x}",
                         profile_address
                     );
