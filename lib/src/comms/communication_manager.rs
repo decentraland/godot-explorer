@@ -269,7 +269,10 @@ impl INode for CommunicationManager {
             // Handle outgoing messages from MessageProcessor (like ProfileResponse)
             outgoing_messages = processor.consume_outgoing_messages();
             if !outgoing_messages.is_empty() {
-                tracing::debug!("📤 Consumed {} outgoing messages from MessageProcessor", outgoing_messages.len());
+                tracing::debug!(
+                    "📤 Consumed {} outgoing messages from MessageProcessor",
+                    outgoing_messages.len()
+                );
             }
 
             if !processor_polling_ok {

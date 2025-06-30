@@ -499,11 +499,7 @@ impl MessageProcessor {
             }
             MessageType::Rfc4(rfc4_msg) => {
                 // Handle RFC4 messages
-                self.handle_rfc4_message(
-                    rfc4_msg.message.clone(),
-                    peer_alias,
-                    message.address,
-                );
+                self.handle_rfc4_message(rfc4_msg.message.clone(), peer_alias, message.address);
             }
             MessageType::PeerJoined => {
                 // Peer joined event - ensure peer exists and update room activity
@@ -709,10 +705,7 @@ impl MessageProcessor {
                     }
 
                     // First, try to fetch from lambda server
-                    tracing::debug!(
-                        "comms > requesting profile from lambda for {:#x}",
-                        address
-                    );
+                    tracing::debug!("comms > requesting profile from lambda for {:#x}", address);
 
                     let profile_sender = self.profile_update_sender.clone();
                     let profile_failure_sender = self.profile_failure_sender.clone();
@@ -849,10 +842,7 @@ impl MessageProcessor {
                             if let Err(e) = self.outgoing_sender.try_send(outgoing) {
                                 tracing::warn!("Failed to queue ProfileResponse: {}", e);
                             } else {
-                                tracing::debug!(
-                                    "📤 Sending ProfileResponse to {:#x}",
-                                    address
-                                );
+                                tracing::debug!("📤 Sending ProfileResponse to {:#x}", address);
                             }
                         } else {
                             tracing::debug!(
@@ -910,10 +900,7 @@ impl MessageProcessor {
                 }
             }
             rfc4::packet::Message::ProfileResponse(profile_response) => {
-                tracing::debug!(
-                    "Received ProfileResponse from {:#x}",
-                    address
-                );
+                tracing::debug!("Received ProfileResponse from {:#x}", address);
 
                 let serialized_profile: SerializedProfile =
                     match serde_json::from_str(&profile_response.serialized_profile) {
@@ -975,7 +962,7 @@ impl MessageProcessor {
                     avatar_scene.update_avatar_by_alias(peer.alias, &profile);
                     peer.profile = Some(profile);
                     peer.profile_fetch_attempted = false; // Reset so we can fetch again if needed
-                    
+
                     tracing::info!(
                         "Updated profile for {:#x} (alias {}) to version {}",
                         profile_address,
