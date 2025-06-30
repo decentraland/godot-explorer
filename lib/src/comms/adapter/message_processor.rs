@@ -27,6 +27,8 @@ pub enum MessageType {
     Rfc4(Rfc4Message),
     InitVoice(VoiceInitData),
     VoiceFrame(VoiceFrameData),
+    PeerJoined,     // Peer joined a room
+    PeerLeft,       // Peer left a room
 }
 
 #[derive(Debug, Clone)]
@@ -61,6 +63,7 @@ struct Peer {
     announced_version: Option<u32>,
     protocol_version: u32,
     last_activity: Instant,
+    room_activity: HashMap<String, Instant>,  // Track last activity per room
 }
 
 struct ProfileUpdate {
@@ -170,28 +173,47 @@ impl MessageProcessor {
             self.process_message(message);
         }
         
-        // Remove inactive avatars (avatars that haven't sent messages for 5+ seconds)
-        let inactive_threshold = std::time::Duration::from_secs(5);
-        let inactive_peers: Vec<H160> = self
-            .peer_identities
-            .iter()
-            .filter_map(|(address, peer)| {
-                if peer.last_activity.elapsed() > inactive_threshold {
-                    Some(*address)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        if !inactive_peers.is_empty() {
-            let mut avatar_scene_ref = self.avatars.clone();
-            let mut avatar_scene = avatar_scene_ref.bind_mut();
+        // Remove inactive avatars (only if inactive in ALL rooms)
+        // With proper lifecycle events, we can use a longer timeout as a safety net
+        let inactive_threshold = std::time::Duration::from_secs(30);
+        let mut peers_to_update: Vec<(H160, Vec<String>)> = Vec::new();
+        
+        // First pass: identify which rooms are inactive for each peer
+        for (address, peer) in self.peer_identities.iter_mut() {
+            let mut inactive_rooms = Vec::new();
             
-            for address in inactive_peers {
-                if let Some(peer) = self.peer_identities.remove(&address) {
-                    tracing::info!("Removing inactive avatar {:#x} (alias: {})", address, peer.alias);
-                    avatar_scene.remove_avatar(peer.alias);
+            // Check each room the peer has been seen in
+            let rooms_to_check: Vec<String> = peer.room_activity.keys().cloned().collect();
+            for room_id in rooms_to_check {
+                if let Some(&last_seen) = peer.room_activity.get(&room_id) {
+                    if last_seen.elapsed() > inactive_threshold {
+                        inactive_rooms.push(room_id);
+                    }
+                }
+            }
+            
+            if !inactive_rooms.is_empty() {
+                peers_to_update.push((*address, inactive_rooms));
+            }
+        }
+        
+        // Second pass: remove inactive rooms
+        for (address, inactive_rooms) in peers_to_update {
+            if let Some(peer) = self.peer_identities.get_mut(&address) {
+                // Remove inactive rooms
+                for room in &inactive_rooms {
+                    peer.room_activity.remove(room);
+                    tracing::debug!("⏰ Peer {:#x} (alias: {}) timed out in room '{}' (safety cleanup)", 
+                        address, peer.alias, room);
+                }
+                
+                // Note: We don't remove the peer here anymore.
+                // Peers should only be removed via explicit PeerLeft events
+                // or if they have no rooms AND are inactive for the threshold
+                if peer.room_activity.is_empty() && peer.last_activity.elapsed() > inactive_threshold {
+                    tracing::warn!("⏰ Peer {:#x} (alias: {}) has no active rooms and timed out - considering removal", 
+                        address, peer.alias);
+                    // We could remove here, but it's better to wait for explicit PeerLeft events
                 }
             }
         }
@@ -210,33 +232,33 @@ impl MessageProcessor {
         
         // Handle peer creation/updates first
         let peer_alias = if let Some(peer) = self.peer_identities.get_mut(&message.address) {
-            // Update existing peer - log if this is from a different room than before
-            tracing::debug!("📨 Message from {:#x} via room '{}' (existing peer, alias: {})", 
-                message.address, message.room_id, peer.alias);
+            // Update existing peer - check if this is from a new room
+            if !peer.room_activity.contains_key(&message.room_id) {
+                tracing::info!("📨 Existing peer {:#x} (alias: {}) now also seen in room '{}'", 
+                    message.address, peer.alias, message.room_id);
+            } else {
+                tracing::debug!("📨 Message from {:#x} via room '{}' (existing peer, alias: {})", 
+                    message.address, message.room_id, peer.alias);
+            }
+            
+            // Update activity for this specific room
+            peer.room_activity.insert(message.room_id.clone(), Instant::now());
+            peer.last_activity = Instant::now();
             
             if let MessageType::Rfc4(rfc4_msg) = &message.message {
                 peer.protocol_version = rfc4_msg.protocol_version;
             }
-            peer.last_activity = Instant::now();
             peer.alias
         } else {
-            // Check if there's an existing peer with the same address (reconnection case)
-            if let Some(existing_peer) = self.peer_identities.remove(&message.address) {
-                tracing::info!("Removing old peer {:#x} (alias: {}) due to reconnection", message.address, existing_peer.alias);
-                
-                // Brief borrow to remove old avatar
-                {
-                    let mut avatar_scene_ref = self.avatars.clone();
-                    let mut avatar_scene = avatar_scene_ref.bind_mut();
-                    avatar_scene.remove_avatar(existing_peer.alias);
-                }
-            }
-
+            // Create new peer only if it doesn't exist
             self.peer_alias_counter += 1;
             let new_alias = self.peer_alias_counter;
             
             tracing::info!("🆕 Creating new peer {:#x} from room '{}' with alias: {}", 
                 message.address, message.room_id, new_alias);
+            
+            let mut room_activity = HashMap::new();
+            room_activity.insert(message.room_id.clone(), Instant::now());
             
             self.peer_identities.insert(
                 message.address,
@@ -250,6 +272,7 @@ impl MessageProcessor {
                         100
                     },
                     last_activity: Instant::now(),
+                    room_activity,
                 },
             );
             
@@ -297,6 +320,36 @@ impl MessageProcessor {
             MessageType::Rfc4(rfc4_msg) => {
                 // Handle RFC4 messages
                 self.handle_rfc4_message(rfc4_msg.message.clone(), peer_alias, message.address, room_id.clone());
+            }
+            MessageType::PeerJoined => {
+                // Peer joined event - ensure peer exists and update room activity
+                tracing::info!("👋 Peer {:#x} joined room '{}' (alias: {})", 
+                    message.address, room_id, peer_alias);
+            }
+            MessageType::PeerLeft => {
+                // Handle peer leaving a room
+                self.handle_peer_left(message.address, room_id);
+            }
+        }
+    }
+    
+    fn handle_peer_left(&mut self, address: H160, room_id: String) {
+        if let Some(peer) = self.peer_identities.get_mut(&address) {
+            peer.room_activity.remove(&room_id);
+            tracing::info!("👋 Peer {:#x} (alias: {}) left room '{}'", 
+                address, peer.alias, room_id);
+            
+            // If peer has no more active rooms, remove it
+            if peer.room_activity.is_empty() {
+                let alias = peer.alias;
+                self.peer_identities.remove(&address);
+                tracing::info!("🗑️  Removing peer {:#x} (alias: {}) - no longer in any rooms", 
+                    address, alias);
+                
+                // Remove avatar
+                let mut avatar_scene_ref = self.avatars.clone();
+                let mut avatar_scene = avatar_scene_ref.bind_mut();
+                avatar_scene.remove_avatar(alias);
             }
         }
     }

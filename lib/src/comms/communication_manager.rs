@@ -782,6 +782,8 @@ impl CommunicationManager {
             "on_change_scene_id".into(),
             self.base().callable("_on_change_scene_id"),
         );
+
+        self._on_change_scene_id(scene_runner.bind().get_current_parcel_scene_id());
     }
 
     #[func]
@@ -1095,64 +1097,30 @@ impl CommunicationManager {
     fn handle_scene_room_connection_request(&mut self, request: SceneRoomConnectionRequest) {
         tracing::info!("🔌 Processing scene room connection request for scene '{}' with URL: {}", request.scene_id, request.livekit_url);
         
-        // Try to create scene room using shared message processor
-        if self.message_processor.is_some() {
-            // Clean up existing scene room
-            if let Some(scene_room) = &mut self.scene_room {
-                tracing::info!("🧹 Cleaning up existing scene room");
-                scene_room.clean();
-            }
-            
-            // Create new LiveKit room for the scene
-            let room_id = format!("scene-{}", request.scene_id);
-            tracing::info!("🚀 Creating new scene room with ID: {}", room_id);
-            
-            let mut scene_room = LivekitRoom::new(request.livekit_url.clone(), room_id);
-            
-            // Connect the scene room to the shared message processor
-            let processor_sender = self.message_processor.as_ref().unwrap().get_message_sender();
-            scene_room.set_message_processor_sender(processor_sender);
-            
-            self.scene_room = Some(scene_room);
-            
-            // Announce initial profile to the scene room
-            self.announce_initial_profile();
-            
-            // Check if we're in fallback mode (no main room)
-            if self.main_room.is_none() && matches!(&self.current_connection, CommsConnection::None) {
-                tracing::info!("✅ Scene room successfully created and connected to fallback message processor (archipelago disabled)");
-            } else {
-                tracing::info!("✅ Scene room successfully created and connected to shared message processor");
-            }
-        } else {
-            // Check if archipelago has a message processor we can use
-            if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
-                if let Some(processor_sender) = archipelago.get_message_processor_sender() {
-                    // Clean up existing scene room
-                    if let Some(scene_room) = &mut self.scene_room {
-                        tracing::info!("🧹 Cleaning up existing scene room");
-                        scene_room.clean();
-                    }
-                    
-                    // Create new LiveKit room for the scene
-                    let room_id = format!("scene-{}", request.scene_id);
-                    tracing::info!("🚀 Creating new scene room with ID: {} (archipelago mode)", room_id);
-                    
-                    let mut scene_room = LivekitRoom::new(request.livekit_url.clone(), room_id);
-                    scene_room.set_message_processor_sender(processor_sender);
-                    self.scene_room = Some(scene_room);
-                    
-                    // Announce initial profile to the scene room
-                    self.announce_initial_profile();
-                    
-                    tracing::info!("✅ Scene room successfully created and connected to archipelago message processor");
-                } else {
-                    tracing::warn!("⚠️  Cannot create scene room: Archipelago message processor not ready");
-                }
-            } else {
-                tracing::info!("📝 No message processor available yet, scene room will be created when connection is established");
-            }
+        // Ensure we have a message processor (create one if needed)
+        let processor_sender = self.ensure_message_processor();
+        
+        // Clean up existing scene room
+        if let Some(scene_room) = &mut self.scene_room {
+            tracing::info!("🧹 Cleaning up existing scene room");
+            scene_room.clean();
         }
+        
+        // Create new LiveKit room for the scene
+        let room_id = format!("scene-{}", request.scene_id);
+        tracing::info!("🚀 Creating new scene room with ID: {}", room_id);
+        
+        let mut scene_room = LivekitRoom::new(request.livekit_url.clone(), room_id);
+        
+        // Connect the scene room to the message processor
+        scene_room.set_message_processor_sender(processor_sender);
+        
+        self.scene_room = Some(scene_room);
+        
+        // Announce initial profile to the scene room
+        self.announce_initial_profile();
+        
+        tracing::info!("✅ Scene room successfully created and connected to message processor");
     }
 
     #[cfg(feature = "use_livekit")]

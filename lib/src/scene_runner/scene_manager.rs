@@ -792,7 +792,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_current_parcel_scene_id(&self) -> i32 {
+    pub fn get_current_parcel_scene_id(&self) -> i32 {
         self.current_parcel_scene_id.0
     }
 

@@ -284,6 +284,15 @@ impl WebSocketRoom {
                                         *alias,
                                         GString::from(format!("{:#x}", peer.address)),
                                     );
+                                    
+                                    // Send PeerJoined event to MessageProcessor
+                                    if let Some(sender) = &self.message_processor_sender {
+                                        let _ = sender.try_send(IncomingMessage {
+                                            message: MessageType::PeerJoined,
+                                            address: peer.address,
+                                            room_id: self.room_id.clone(),
+                                        });
+                                    }
                                 }
                             }
                             _ => {
@@ -337,15 +346,32 @@ impl WebSocketRoom {
                         self.avatars
                             .bind_mut()
                             .add_avatar(peer.alias, GString::from(format!("{:#x}", h160)));
-                        // TODO: message XXX joined
+                        
+                        // Send PeerJoined event to MessageProcessor
+                        if let Some(sender) = &self.message_processor_sender {
+                            let _ = sender.try_send(IncomingMessage {
+                                message: MessageType::PeerJoined,
+                                address: h160,
+                                room_id: self.room_id.clone(),
+                            });
+                        }
                     } else {
-                        // TODO: Invalid address
+                        tracing::warn!("Invalid address in PeerJoinMessage");
                     }
                 }
                 ws_packet::Message::PeerLeaveMessage(peer) => {
-                    self.peer_identities.remove(&peer.alias);
-                    self.avatars.bind_mut().remove_avatar(peer.alias);
-                    // TODO: message XXX left
+                    if let Some(peer_data) = self.peer_identities.remove(&peer.alias) {
+                        self.avatars.bind_mut().remove_avatar(peer.alias);
+                        
+                        // Send PeerLeft event to MessageProcessor
+                        if let Some(sender) = &self.message_processor_sender {
+                            let _ = sender.try_send(IncomingMessage {
+                                message: MessageType::PeerLeft,
+                                address: peer_data.address,
+                                room_id: self.room_id.clone(),
+                            });
+                        }
+                    }
                 }
                 ws_packet::Message::PeerUpdateMessage(update) => {
                     let packet = match rfc4::Packet::decode(update.body.as_slice()) {

@@ -288,6 +288,30 @@ fn spawn_livekit_task(
                                 }
                             }
                         }
+                        livekit::RoomEvent::ParticipantConnected(participant) => {
+                            if let Some(address) = participant.identity().0.as_str().as_h160() {
+                                tracing::info!("👋 Participant {:#x} connected to LiveKit room", address);
+                                if let Err(e) = sender.send(IncomingMessage {
+                                    message: MessageType::PeerJoined,
+                                    address,
+                                    room_id: room_id.clone(),
+                                }).await {
+                                    tracing::warn!("Failed to send PeerJoined: {}", e);
+                                }
+                            }
+                        }
+                        livekit::RoomEvent::ParticipantDisconnected(participant) => {
+                            if let Some(address) = participant.identity().0.as_str().as_h160() {
+                                tracing::info!("👋 Participant {:#x} disconnected from LiveKit room", address);
+                                if let Err(e) = sender.send(IncomingMessage {
+                                    message: MessageType::PeerLeft,
+                                    address,
+                                    room_id: room_id.clone(),
+                                }).await {
+                                    tracing::warn!("Failed to send PeerLeft: {}", e);
+                                }
+                            }
+                        }
                         _ => { tracing::debug!("Event: {:?}", incoming); }
                     };
                 }
