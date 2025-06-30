@@ -1255,6 +1255,10 @@ impl CommunicationManager {
         let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
         let scene_entity_id = scene_runner.bind().get_scene_entity_id(scene_id);
 
+        if scene_entity_id.is_empty() {
+            return; // ignore if empty
+        }
+
         // Check if scene has actually changed
         if let Some(current_scene) = &self.current_scene_id {
             if current_scene == &scene_entity_id {
