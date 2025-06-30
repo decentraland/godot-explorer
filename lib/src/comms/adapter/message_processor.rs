@@ -175,7 +175,7 @@ impl MessageProcessor {
         
         // Remove inactive avatars (only if inactive in ALL rooms)
         // With proper lifecycle events, we can use a longer timeout as a safety net
-        let inactive_threshold = std::time::Duration::from_secs(30);
+        let inactive_threshold = std::time::Duration::from_secs(5);
         let mut peers_to_update: Vec<(H160, Vec<String>)> = Vec::new();
         
         // First pass: identify which rooms are inactive for each peer
@@ -197,7 +197,8 @@ impl MessageProcessor {
             }
         }
         
-        // Second pass: remove inactive rooms
+        // Second pass: remove inactive rooms and check if peer should be removed
+        let mut peers_to_remove = Vec::new();
         for (address, inactive_rooms) in peers_to_update {
             if let Some(peer) = self.peer_identities.get_mut(&address) {
                 // Remove inactive rooms
@@ -207,13 +208,25 @@ impl MessageProcessor {
                         address, peer.alias, room);
                 }
                 
-                // Note: We don't remove the peer here anymore.
-                // Peers should only be removed via explicit PeerLeft events
-                // or if they have no rooms AND are inactive for the threshold
+                // If peer has no active rooms left AND has been inactive, remove it
                 if peer.room_activity.is_empty() && peer.last_activity.elapsed() > inactive_threshold {
-                    tracing::warn!("⏰ Peer {:#x} (alias: {}) has no active rooms and timed out - considering removal", 
+                    tracing::info!("⏰ Peer {:#x} (alias: {}) has no active rooms and timed out - removing", 
                         address, peer.alias);
-                    // We could remove here, but it's better to wait for explicit PeerLeft events
+                    peers_to_remove.push(address);
+                }
+            }
+        }
+        
+        // Remove peers that have no active rooms and timed out
+        if !peers_to_remove.is_empty() {
+            let mut avatar_scene_ref = self.avatars.clone();
+            let mut avatar_scene = avatar_scene_ref.bind_mut();
+            
+            for address in peers_to_remove {
+                if let Some(peer) = self.peer_identities.remove(&address) {
+                    tracing::info!("🗑️ Removed inactive peer {:#x} (alias: {})", 
+                        address, peer.alias);
+                    avatar_scene.remove_avatar(peer.alias);
                 }
             }
         }

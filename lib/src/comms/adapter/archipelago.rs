@@ -47,6 +47,7 @@ pub struct ArchipelagoManager {
 
     adapter: Option<Box<dyn Adapter>>,
     message_processor: Option<MessageProcessor>,
+    shared_processor_sender: Option<tokio::sync::mpsc::Sender<super::message_processor::IncomingMessage>>,
 }
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(3);
@@ -79,10 +80,15 @@ impl ArchipelagoManager {
             last_try_to_connect: Instant::now(),
             adapter: None,
             message_processor: None,
+            shared_processor_sender: None,
             avatar_scene,
             player_position: Vector3::new(0.0, 0.0, 0.0),
             last_send_heartbeat: Instant::now(),
         }
+    }
+
+    pub fn set_shared_processor_sender(&mut self, sender: tokio::sync::mpsc::Sender<super::message_processor::IncomingMessage>) {
+        self.shared_processor_sender = Some(sender);
     }
 
     pub fn adapter_as_mut(&mut self) -> Option<&mut Box<dyn Adapter>> {
@@ -313,13 +319,22 @@ impl ArchipelagoManager {
                     };
                     match protocol {
                         "livekit" => {
-                            // Create MessageProcessor for this connection
-                            let processor = MessageProcessor::new(
-                                self.player_address,
-                                self.player_profile.clone(),
-                                self.avatar_scene.clone(),
-                            );
-                            let processor_sender = processor.get_message_sender();
+                            let processor_sender = if let Some(shared_sender) = &self.shared_processor_sender {
+                                // Use shared processor from CommunicationManager
+                                tracing::info!("Using shared MessageProcessor for archipelago LiveKit room");
+                                shared_sender.clone()
+                            } else {
+                                // Create our own MessageProcessor (fallback)
+                                tracing::info!("Creating dedicated MessageProcessor for archipelago");
+                                let processor = MessageProcessor::new(
+                                    self.player_address,
+                                    self.player_profile.clone(),
+                                    self.avatar_scene.clone(),
+                                );
+                                let sender = processor.get_message_sender();
+                                self.message_processor = Some(processor);
+                                sender
+                            };
                             
                             // Create LiveKit room with MessageProcessor connection
                             let mut livekit_room = LivekitRoom::new(
@@ -329,7 +344,6 @@ impl ArchipelagoManager {
                             livekit_room.set_message_processor_sender(processor_sender);
                             
                             self.adapter = Some(Box::new(livekit_room));
-                            self.message_processor = Some(processor);
                         }
                         _ => {
                             tracing::info!(
