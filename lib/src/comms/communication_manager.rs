@@ -976,12 +976,18 @@ impl CommunicationManager {
                 if DISABLE_ARCHIPELAGO {
                     tracing::info!("⚠️  Archipelago connections are disabled (DISABLE_ARCHIPELAGO = true)");
                 } else {
-                    self.current_connection = CommsConnection::Archipelago(ArchipelagoManager::new(
+                    // Ensure we have a message processor
+                    let processor_sender = self.ensure_message_processor();
+                    
+                    let mut archipelago = ArchipelagoManager::new(
                         comms_address,
                         current_ephemeral_auth_chain.clone(),
                         player_profile,
                         avatar_scene,
-                    ));
+                    );
+                    archipelago.set_shared_processor_sender(processor_sender);
+                    
+                    self.current_connection = CommsConnection::Archipelago(archipelago);
                 }
             }
             _ => {
