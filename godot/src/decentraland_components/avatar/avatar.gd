@@ -527,7 +527,6 @@ func push_voice_frame(frame):
 
 	voice_chat_audio_player.get_stream_playback().push_buffer(frame)
 	nickname_ui.mic_enabled = true
-	print("Pushing voice frame from: ", avatar_name)
 	timer_hide_mic.start()
 
 

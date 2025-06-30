@@ -582,7 +582,7 @@ impl MessageProcessor {
                 // Get position from compressed movement with proper realm bounds
                 let pos = movement.position(realm_min, realm_max);
                 let velocity = movement.velocity();
-                let rotation_rad = movement.temporal.rotation_f32();
+                let rotation_rad = -movement.temporal.rotation_f32();
                 let timestamp = movement.temporal.timestamp_f32();
 
                 tracing::debug!(

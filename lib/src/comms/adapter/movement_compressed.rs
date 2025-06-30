@@ -371,7 +371,7 @@ impl MovementCompressed {
         Vector3::new(
             parcel_pos.x + rel_pos.x,
             rel_pos.y,
-            -(parcel_pos.z + rel_pos.z),
+            parcel_pos.z + rel_pos.z,
         )
     }
 
