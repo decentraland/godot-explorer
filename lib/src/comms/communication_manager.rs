@@ -902,9 +902,7 @@ impl CommunicationManager {
                 .get(StringName::from("adapter"))
                 .map(|v| GString::from_variant(&v).to_string())
             {
-                if temp.starts_with("fixed-adapter:") {
-                    Some(temp.replace("fixed-adapter:", "").into())
-                } else if temp.starts_with("archipelago:") {
+                if temp.starts_with("archipelago:") {
                     if DISABLE_ARCHIPELAGO {
                         tracing::info!("⚠️  Archipelago URL detected but ignored due to DISABLE_ARCHIPELAGO flag: {}", temp);
                         None
@@ -920,6 +918,22 @@ impl CommunicationManager {
         } else {
             None
         };
+
+        // if starts with fixed-adapter: remove it
+        let comms_fixed_adapter = comms_fixed_adapter.map(|s| {
+            let s = s.to_string();
+            if s.starts_with("fixed-adapter:") {
+                GString::from(s[14..].to_string())
+            } else {
+                s.to_godot()
+            }
+        });
+
+        tracing::warn!(
+            "Comms protocol: {}, fixedAdapter: {:?}",
+            comms_protocol,
+            comms_fixed_adapter
+        );
 
         Some((comms_protocol, comms_fixed_adapter))
     }
