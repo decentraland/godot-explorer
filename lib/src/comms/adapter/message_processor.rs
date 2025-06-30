@@ -503,7 +503,6 @@ impl MessageProcessor {
                     rfc4_msg.message.clone(),
                     peer_alias,
                     message.address,
-                    room_id.clone(),
                 );
             }
             MessageType::PeerJoined => {
@@ -555,7 +554,6 @@ impl MessageProcessor {
         message: rfc4::packet::Message,
         peer_alias: u32,
         address: H160,
-        room_id: String,
     ) {
         match message {
             rfc4::packet::Message::Position(position) => {
