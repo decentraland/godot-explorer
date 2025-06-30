@@ -84,13 +84,24 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn set_has_claimed_nlame(&mut self, has_claimed_name: bool) {
+    fn set_has_claimed_name(&mut self, has_claimed_name: bool) {
         self.inner.content.has_claimed_name = Some(has_claimed_name);
     }
 
     #[func]
     fn set_avatar(&mut self, avatar: Gd<DclAvatarWireFormat>) {
         self.inner.content.avatar = avatar.bind().inner.clone();
+    }
+
+    #[func]
+    fn increment_profile_version(&mut self) {
+        self.inner.content.version += 1;
+        self.inner.version = self.inner.content.version as u32;
+    }
+
+    #[func]
+    fn get_profile_version(&self) -> u32 {
+        self.inner.content.version as u32
     }
 
     #[func]

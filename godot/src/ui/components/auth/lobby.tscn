@@ -109,7 +109,6 @@ script = ExtResource("3_wk266")
 
 [node name="Loading" type="Control" parent="Main"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="TextureProgressBar" parent="Main/Loading" instance=ExtResource("11_7iulh")]
@@ -387,6 +386,7 @@ icon = ExtResource("13_43yag")
 
 [node name="RestoreAndChooseName" type="Control" parent="Main"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
 [node name="OrientationContainer" type="BoxContainer" parent="Main/RestoreAndChooseName"]

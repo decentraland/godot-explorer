@@ -61,7 +61,7 @@ func _on_line_edit_name_text_changed(new_name):
 		or backpack.mutable_profile.has_claimed_name()
 	):
 		backpack.mutable_profile.set_name(new_name)
-		backpack.mutable_profile.set_has_claimed_nlame(false)
+		backpack.mutable_profile.set_has_claimed_name(false)
 
 
 func _on_check_button_toggled(toggled_on):
@@ -81,4 +81,4 @@ func _on_radio_selector_claimed_names_select_item(_index: int, item: String) -> 
 		or !backpack.mutable_profile.has_claimed_name()
 	):
 		backpack.mutable_profile.set_name(new_name)
-		backpack.mutable_profile.set_has_claimed_nlame(true)
+		backpack.mutable_profile.set_has_claimed_name(true)

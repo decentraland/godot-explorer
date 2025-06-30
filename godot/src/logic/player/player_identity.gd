@@ -65,6 +65,7 @@ func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) 
 	if is_guest_profile:
 		Global.get_config().guest_profile = new_profile.to_godot_dictionary()
 		Global.get_config().save_to_settings_file()
+		new_profile.increment_profile_version()
 		self.set_profile(new_profile)
 		return
 
