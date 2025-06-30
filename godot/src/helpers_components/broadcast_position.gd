@@ -26,8 +26,8 @@ func _on_timeout():
 		counter += 1
 		if counter < 10:
 			return
-	else:
-		counter = 0  # Reset counter when movement/rotation occurs
+
+	counter = 0 # Reset counter when movement/rotation occurs
 
 	# Use the new broadcast_movement function with compression enabled
 	var avatar = player_node.avatar

@@ -47,6 +47,13 @@ pub struct VoiceFrameData {
     pub data: Vec<i16>,
 }
 
+#[derive(Debug, Clone)]
+pub struct OutgoingMessage {
+    pub packet: rfc4::Packet,
+    pub unreliable: bool,
+    pub target_room: Option<String>, // None means broadcast to all rooms
+}
+
 #[derive(Debug)]
 struct Peer {
     alias: u32,
@@ -63,9 +70,13 @@ struct ProfileUpdate {
 }
 
 pub struct MessageProcessor {
-    // Message channel for receiving messages from multiple rooms
+    // Message channels for receiving messages from multiple rooms
     message_receiver: mpsc::Receiver<IncomingMessage>,
     message_sender: mpsc::Sender<IncomingMessage>,
+    
+    // Outgoing message channel for sending responses back to rooms
+    outgoing_receiver: mpsc::Receiver<OutgoingMessage>,
+    outgoing_sender: mpsc::Sender<OutgoingMessage>,
     
     // Avatar management
     avatars: Gd<AvatarScene>,
@@ -96,11 +107,14 @@ impl MessageProcessor {
         avatars: Gd<AvatarScene>,
     ) -> Self {
         let (message_sender, message_receiver) = mpsc::channel(1000);
+        let (outgoing_sender, outgoing_receiver) = mpsc::channel(1000);
         let (profile_update_sender, profile_update_receiver) = mpsc::channel(100);
         
         Self {
             message_receiver,
             message_sender,
+            outgoing_receiver,
+            outgoing_sender,
             avatars,
             peer_identities: HashMap::new(),
             peer_alias_counter: 0,
@@ -118,6 +132,15 @@ impl MessageProcessor {
     /// Get a sender for rooms to send messages to this processor
     pub fn get_message_sender(&self) -> mpsc::Sender<IncomingMessage> {
         self.message_sender.clone()
+    }
+    
+    /// Consume outgoing messages that need to be sent by rooms
+    pub fn consume_outgoing_messages(&mut self) -> Vec<OutgoingMessage> {
+        let mut messages = Vec::new();
+        while let Ok(message) = self.outgoing_receiver.try_recv() {
+            messages.push(message);
+        }
+        messages
     }
     
     /// Process all pending messages and return true if should continue
@@ -176,13 +199,15 @@ impl MessageProcessor {
         // Periodic profile requests
         if self.last_profile_request_sent.elapsed().as_secs_f32() > 10.0 {
             self.last_profile_request_sent = Instant::now();
-            // TODO: Implement profile request broadcasting to all rooms
+            // NOTE: ProfileVersion broadcasting is now handled at CommunicationManager level
         }
         
         true
     }
     
     fn process_message(&mut self, message: IncomingMessage) {
+        let room_id = message.room_id.clone(); // Extract room_id for later use
+        
         // Handle peer creation/updates first
         let peer_alias = if let Some(peer) = self.peer_identities.get_mut(&message.address) {
             // Update existing peer - log if this is from a different room than before
@@ -271,7 +296,7 @@ impl MessageProcessor {
             }
             MessageType::Rfc4(rfc4_msg) => {
                 // Handle RFC4 messages
-                self.handle_rfc4_message(rfc4_msg.message.clone(), peer_alias, message.address);
+                self.handle_rfc4_message(rfc4_msg.message.clone(), peer_alias, message.address, room_id.clone());
             }
         }
     }
@@ -281,10 +306,11 @@ impl MessageProcessor {
         message: rfc4::packet::Message,
         peer_alias: u32,
         address: H160,
+        room_id: String,
     ) {
         match message {
             rfc4::packet::Message::Position(position) => {
-                tracing::info!(
+                tracing::debug!(
                     "Received Position from {:#x}: pos({}, {}, {}), rot({}, {}, {}, {})", 
                     address,
                     position.position_x, position.position_y, position.position_z,
@@ -297,7 +323,7 @@ impl MessageProcessor {
                 avatar_scene.update_avatar_transform_with_rfc4_position(peer_alias, &position);
             }
             rfc4::packet::Message::Movement(movement) => {
-                tracing::info!(
+                tracing::debug!(
                     "Received Movement from {:#x}: timestamp({}) pos({}, {}, {}), rot_y({}), vel({}, {}, {}) blend({}), slide_blend({})", 
                     address,
                     movement.timestamp,
@@ -330,7 +356,7 @@ impl MessageProcessor {
                 let rotation_rad = movement.temporal.rotation_f32();
                 let timestamp = movement.temporal.timestamp_f32();
 
-                tracing::info!(
+                tracing::debug!(
                     "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
                     address,
                     pos.x, pos.y, -pos.z,
@@ -354,7 +380,7 @@ impl MessageProcessor {
                 self.chats.push((address, chat));
             }
             rfc4::packet::Message::ProfileVersion(announce_profile_version) => {
-                tracing::info!(
+                tracing::debug!(
                     "Received ProfileVersion from {:#x}: {:?}",
                     address,
                     announce_profile_version
@@ -380,9 +406,30 @@ impl MessageProcessor {
                         current_version
                     );
 
-                    // Fetch from lambda server
+                    // First, try sending a ProfileRequest to the peer directly
+                    let request_packet = rfc4::Packet {
+                        message: Some(rfc4::packet::Message::ProfileRequest(rfc4::ProfileRequest {
+                            address: format!("{:#x}", address),
+                            profile_version: announced_version,
+                        })),
+                        protocol_version: 100,
+                    };
+
+                    let outgoing = OutgoingMessage {
+                        packet: request_packet,
+                        unreliable: false,
+                        target_room: Some(room_id.clone()),
+                    };
+
+                    if let Err(e) = self.outgoing_sender.try_send(outgoing) {
+                        tracing::warn!("Failed to queue ProfileRequest: {}", e);
+                    } else {
+                        tracing::info!("📤 Sending ProfileRequest to {:#x} via room '{}'", address, room_id);
+                    }
+
+                    // Also fetch from lambda server as fallback
                     tracing::info!(
-                        "comms > requesting profile from lambda for {:#x}",
+                        "comms > also requesting profile from lambda for {:#x} as fallback",
                         address
                     );
                     
@@ -420,17 +467,50 @@ impl MessageProcessor {
                 }
             }
             rfc4::packet::Message::ProfileRequest(profile_request) => {
-                tracing::info!(
+                tracing::debug!(
                     "Received ProfileRequest from {:#x}: {:?}",
                     address,
                     profile_request
                 );
 
-                // TODO: Respond with profile if it's for our player
-                // This will need to communicate back to the originating room
+                // Check if they're requesting our player's profile
+                if let Some(requested_address) = profile_request.address.parse::<H160>().ok() {
+                    if requested_address == self.player_address {
+                        // They're requesting our profile - send ProfileResponse
+                        if let Some(player_profile) = &self.player_profile {
+                            let serialized_profile = serde_json::to_string(&player_profile.content)
+                                .unwrap_or_else(|_| "{}".to_string());
+                            
+                            let response_packet = rfc4::Packet {
+                                message: Some(rfc4::packet::Message::ProfileResponse(rfc4::ProfileResponse {
+                                    serialized_profile,
+                                    base_url: player_profile.base_url.clone(),
+                                })),
+                                protocol_version: 100,
+                            };
+
+                            // Send response back to the requesting room
+                            let outgoing = OutgoingMessage {
+                                packet: response_packet,
+                                unreliable: false,
+                                target_room: Some(room_id.clone()),
+                            };
+
+                            if let Err(e) = self.outgoing_sender.try_send(outgoing) {
+                                tracing::warn!("Failed to queue ProfileResponse: {}", e);
+                            } else {
+                                tracing::info!("📤 Sending ProfileResponse to {:#x} via room '{}'", address, room_id);
+                            }
+                        } else {
+                            tracing::warn!("ProfileRequest for our address but no profile available");
+                        }
+                    }
+                } else {
+                    tracing::warn!("Invalid address in ProfileRequest: {}", profile_request.address);
+                }
             }
             rfc4::packet::Message::ProfileResponse(profile_response) => {
-                tracing::info!(
+                tracing::debug!(
                     "Received ProfileResponse from {:#x}: {:?}",
                     address,
                     profile_response
@@ -500,7 +580,7 @@ impl MessageProcessor {
     
     pub fn change_profile(&mut self, new_profile: UserProfile) {
         self.player_profile = Some(new_profile);
-        // TODO: Broadcast profile version to all rooms
+        // NOTE: ProfileVersion broadcasting is now handled at CommunicationManager level
     }
     
     pub fn clean(&mut self) {

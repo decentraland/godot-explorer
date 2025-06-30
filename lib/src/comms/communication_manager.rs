@@ -26,7 +26,7 @@ const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scen
 
 // Temporary flags for testing different connection scenarios
 const DISABLE_ARCHIPELAGO: bool = false;
-const DISABLE_SCENE_ROOM: bool = true;
+const DISABLE_SCENE_ROOM: bool = false;
 
 #[derive(Serialize, Deserialize)]
 pub struct GatekeeperResponse {
@@ -105,6 +105,8 @@ pub struct CommunicationManager {
     last_position_broadcast_index: u64,
     voice_chat_enabled: bool,
     start_time: Instant,
+    last_profile_version_broadcast: Instant,
+    archipelago_profile_announced: bool,
     
     // Shared message processor for all adapters
     message_processor: Option<MessageProcessor>,
@@ -136,6 +138,8 @@ impl INode for CommunicationManager {
             last_position_broadcast_index: 0,
             voice_chat_enabled: false,
             start_time: Instant::now(),
+            last_profile_version_broadcast: Instant::now(),
+            archipelago_profile_announced: false,
             message_processor: None,
             main_room: None,
             #[cfg(feature = "use_livekit")]
@@ -159,6 +163,13 @@ impl INode for CommunicationManager {
         while let Ok(request) = self.scene_room_connection_receiver.try_recv() {
             self.handle_scene_room_connection_request(request);
         }
+
+        // Check if we need to announce profile for archipelago (before borrowing)
+        let should_announce_archipelago = if let CommsConnection::Archipelago(ref archipelago) = &self.current_connection {
+            !self.archipelago_profile_announced && archipelago.adapter().is_some()
+        } else {
+            false
+        };
 
         match &mut self.current_connection {
             CommsConnection::None => {}
@@ -211,21 +222,73 @@ impl INode for CommunicationManager {
             }
         }
 
+        // Announce profile for archipelago if needed (after releasing the borrow)
+        if should_announce_archipelago {
+            self.announce_initial_profile();
+            self.archipelago_profile_announced = true;
+            tracing::info!("📡 Initial profile announced for archipelago connection");
+        }
+
         // Poll the shared message processor (if active)
+        let mut processor_reset = false;
+        let mut chat_signals = Vec::new();
+        let mut outgoing_messages = Vec::new();
+        
         if let Some(processor) = &mut self.message_processor {
             let processor_polling_ok = processor.poll();
             let chats = processor.consume_chats();
 
             if !chats.is_empty() {
-                let chats_variant_array = get_chat_array(chats);
-                self.base_mut()
-                    .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
+                chat_signals.push(get_chat_array(chats));
             }
+
+            // Handle outgoing messages from MessageProcessor (like ProfileResponse)
+            outgoing_messages = processor.consume_outgoing_messages();
 
             if !processor_polling_ok {
                 // Reset the message processor if it fails
-                self.message_processor = None;
+                processor_reset = true;
             }
+        }
+
+        // Handle chat signals after borrowing is done
+        for chats_variant_array in chat_signals {
+            self.base_mut()
+                .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
+        }
+
+        // Handle outgoing messages after borrowing is done
+        for outgoing in outgoing_messages {
+            if let Some(target_room) = &outgoing.target_room {
+                // Send to specific room
+                if let Some(main_room) = &mut self.main_room {
+                    if target_room.starts_with("livekit-") || target_room.starts_with("ws-room-") {
+                        main_room.send_rfc4(outgoing.packet.clone(), outgoing.unreliable);
+                        tracing::debug!("📤 Sent outgoing message to main room: {}", target_room);
+                    }
+                }
+                #[cfg(feature = "use_livekit")]
+                if let Some(scene_room) = &mut self.scene_room {
+                    if target_room.starts_with("scene-") {
+                        scene_room.send_rfc4(outgoing.packet, outgoing.unreliable);
+                        tracing::debug!("📤 Sent outgoing message to scene room: {}", target_room);
+                    }
+                }
+            } else {
+                // Broadcast to all rooms
+                if let Some(main_room) = &mut self.main_room {
+                    main_room.send_rfc4(outgoing.packet.clone(), outgoing.unreliable);
+                }
+                #[cfg(feature = "use_livekit")]
+                if let Some(scene_room) = &mut self.scene_room {
+                    scene_room.send_rfc4(outgoing.packet, outgoing.unreliable);
+                }
+                tracing::debug!("📤 Broadcast outgoing message to all rooms");
+            }
+        }
+
+        if processor_reset {
+            self.message_processor = None;
         }
 
         // Poll main room (if active)
@@ -237,6 +300,12 @@ impl INode for CommunicationManager {
         #[cfg(feature = "use_livekit")]
         if let Some(scene_room) = &mut self.scene_room {
             scene_room.poll();
+        }
+
+        // Periodic ProfileVersion broadcasting (every 10 seconds)
+        if self.last_profile_version_broadcast.elapsed().as_secs() >= 10 {
+            self.broadcast_profile_version();
+            self.last_profile_version_broadcast = Instant::now();
         }
     }
 }
@@ -311,6 +380,94 @@ impl CommunicationManager {
                     archipelago.consume_scene_messages(scene_id)
                 }
                 _ => vec![],
+            }
+        }
+    }
+
+    fn broadcast_profile_version(&mut self) {
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity_bind = player_identity.bind();
+        
+        if let Some(player_profile) = player_identity_bind.clone_profile() {
+            let profile_version_packet = rfc4::Packet {
+                message: Some(rfc4::packet::Message::ProfileVersion(rfc4::AnnounceProfileVersion {
+                    profile_version: player_profile.version,
+                })),
+                protocol_version: 100,
+            };
+
+            // Send to main room if available
+            if let Some(main_room) = &mut self.main_room {
+                main_room.send_rfc4(profile_version_packet.clone(), false);
+                tracing::info!("📡 ProfileVersion broadcast to main room: version {}", player_profile.version);
+            }
+
+            // Also send to scene room if available
+            #[cfg(feature = "use_livekit")]
+            if let Some(scene_room) = &mut self.scene_room {
+                scene_room.send_rfc4(profile_version_packet.clone(), false);
+                tracing::info!("📡 ProfileVersion broadcast to scene room: version {}", player_profile.version);
+            }
+            
+            // Send through archipelago's adapter if available
+            #[cfg(feature = "use_livekit")]
+            if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
+                    adapter.send_rfc4(profile_version_packet, false);
+                    tracing::info!("📡 ProfileVersion broadcast through archipelago: version {}", player_profile.version);
+                }
+            }
+        }
+    }
+
+    fn announce_initial_profile(&mut self) {
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity_bind = player_identity.bind();
+        
+        if let Some(player_profile) = player_identity_bind.clone_profile() {
+            // Send ProfileResponse packet
+            let profile_response_packet = rfc4::Packet {
+                message: Some(rfc4::packet::Message::ProfileResponse(
+                    rfc4::ProfileResponse {
+                        serialized_profile: serde_json::to_string(&player_profile.content)
+                            .unwrap_or_default(),
+                        base_url: player_profile.base_url.clone(),
+                    },
+                )),
+                protocol_version: 100,
+            };
+
+            // Send ProfileVersion packet
+            let profile_version_packet = rfc4::Packet {
+                message: Some(rfc4::packet::Message::ProfileVersion(rfc4::AnnounceProfileVersion {
+                    profile_version: player_profile.version,
+                })),
+                protocol_version: 100,
+            };
+
+            // Send to main room if available
+            if let Some(main_room) = &mut self.main_room {
+                main_room.send_rfc4(profile_response_packet.clone(), false);
+                main_room.send_rfc4(profile_version_packet.clone(), false);
+                tracing::info!("📡 Initial profile announced to main room: version {}", player_profile.version);
+            }
+
+            // Also send to scene room if available
+            #[cfg(feature = "use_livekit")]
+            if let Some(scene_room) = &mut self.scene_room {
+                scene_room.send_rfc4(profile_response_packet.clone(), false);
+                scene_room.send_rfc4(profile_version_packet.clone(), false);
+                tracing::info!("📡 Initial profile announced to scene room: version {}", player_profile.version);
+            }
+            
+            // Send through archipelago's adapter if available
+            #[cfg(feature = "use_livekit")]
+            if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
+                    adapter.send_rfc4(profile_response_packet, false);
+                    adapter.send_rfc4(profile_version_packet, false);
+                    tracing::info!("📡 Initial profile announced through archipelago: version {}", player_profile.version);
+                }
             }
         }
     }
@@ -479,7 +636,11 @@ impl CommunicationManager {
 
         // Send to main room if available
         let mut message_sent = if let Some(main_room) = &mut self.main_room {
-            main_room.send_rfc4(get_packet(), true)
+            let sent = main_room.send_rfc4(get_packet(), true);
+            if sent {
+                tracing::info!("📡 Movement sent to main room");
+            }
+            sent
         } else {
             false
         };
@@ -490,7 +651,19 @@ impl CommunicationManager {
             let scene_sent = scene_room.send_rfc4(get_packet(), true);
             message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
             if scene_sent {
-                tracing::debug!("📡 Movement also sent to scene room");
+                tracing::info!("📡 Movement also sent to scene room");
+            }
+        }
+        
+        // Also send through archipelago's adapter if available
+        #[cfg(feature = "use_livekit")]
+        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+            if let Some(adapter) = archipelago.adapter_as_mut() {
+                let sent = adapter.send_rfc4(get_packet(), true);
+                if sent {
+                    tracing::info!("📡 Movement also sent through archipelago");
+                    message_sent = true;
+                }
             }
         }
 
@@ -528,7 +701,11 @@ impl CommunicationManager {
 
         // Send to main room if available
         let mut message_sent = if let Some(main_room) = &mut self.main_room {
-            main_room.send_rfc4(get_packet(), true)
+            let sent = main_room.send_rfc4(get_packet(), true);
+            if sent {
+                tracing::info!("📡 Position sent to main room");
+            }
+            sent
         } else {
             false
         };
@@ -539,7 +716,19 @@ impl CommunicationManager {
             let scene_sent = scene_room.send_rfc4(get_packet(), true);
             message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
             if scene_sent {
-                tracing::debug!("📡 Position also sent to scene room");
+                tracing::info!("📡 Position also sent to scene room");
+            }
+        }
+        
+        // Also send through archipelago's adapter if available
+        #[cfg(feature = "use_livekit")]
+        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+            if let Some(adapter) = archipelago.adapter_as_mut() {
+                let sent = adapter.send_rfc4(get_packet(), true);
+                if sent {
+                    tracing::info!("📡 Position also sent through archipelago");
+                    message_sent = true;
+                }
             }
         }
 
@@ -695,6 +884,7 @@ impl CommunicationManager {
         self.current_connection = CommsConnection::None;
         self.current_connection_str
             .clone_from(&comms_fixed_adapter_str.to_godot());
+        self.archipelago_profile_announced = false;  // Reset flag when changing adapters
         let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
         tracing::info!("change_adapter to protocol {protocol} and address {comms_address}");
@@ -723,6 +913,9 @@ impl CommunicationManager {
                 
                 // Store the room - no need to change connection type
                 self.main_room = Some(MainRoom::WebSocket(ws_room));
+                
+                // Announce initial profile to the room
+                self.announce_initial_profile();
             }
             "signed-login" => {
                 let Ok(uri) = Uri::try_from(comms_address.to_string()) else {
@@ -763,6 +956,9 @@ impl CommunicationManager {
                 
                 // Store the room - no need to change connection type
                 self.main_room = Some(MainRoom::LiveKit(livekit_room));
+                
+                // Announce initial profile to the room
+                self.announce_initial_profile();
             }
 
             #[cfg(not(feature = "use_livekit"))]
@@ -851,6 +1047,7 @@ impl CommunicationManager {
         self.current_scene_id = None;
         self.current_connection = CommsConnection::None;
         self.current_connection_str = GString::default();
+        self.archipelago_profile_announced = false;
     }
 
     #[func]
@@ -866,12 +1063,17 @@ impl CommunicationManager {
         }
         
         // Also update adapters that need direct profile updates
+        let profile_version = player_profile.version;
         match &mut self.current_connection {
-            CommsConnection::Connected(adapter) => adapter.change_profile(player_profile),
+            CommsConnection::Connected(adapter) => adapter.change_profile(player_profile.clone()),
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => archipelago.change_profile(player_profile),
             _ => {}
         }
+
+        // Immediately broadcast ProfileVersion when profile changes
+        self.broadcast_profile_version();
+        tracing::info!("📡 Profile changed - immediately broadcasting ProfileVersion: version {}", profile_version);
     }
 
     #[func]
@@ -913,6 +1115,9 @@ impl CommunicationManager {
             
             self.scene_room = Some(scene_room);
             
+            // Announce initial profile to the scene room
+            self.announce_initial_profile();
+            
             // Check if we're in fallback mode (no main room)
             if self.main_room.is_none() && matches!(&self.current_connection, CommsConnection::None) {
                 tracing::info!("✅ Scene room successfully created and connected to fallback message processor (archipelago disabled)");
@@ -936,6 +1141,10 @@ impl CommunicationManager {
                     let mut scene_room = LivekitRoom::new(request.livekit_url.clone(), room_id);
                     scene_room.set_message_processor_sender(processor_sender);
                     self.scene_room = Some(scene_room);
+                    
+                    // Announce initial profile to the scene room
+                    self.announce_initial_profile();
+                    
                     tracing::info!("✅ Scene room successfully created and connected to archipelago message processor");
                 } else {
                     tracing::warn!("⚠️  Cannot create scene room: Archipelago message processor not ready");

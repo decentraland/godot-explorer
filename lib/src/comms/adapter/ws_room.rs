@@ -68,7 +68,6 @@ pub struct WebSocketRoom {
     avatars: Gd<AvatarScene>,
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
-    last_profile_version_announced: u32,
 }
 
 impl WebSocketRoom {
@@ -108,7 +107,6 @@ impl WebSocketRoom {
             last_profile_response_sent: old_time,
             last_profile_request_sent: old_time,
             last_try_to_connect: old_time,
-            last_profile_version_announced: 0,
         }
     }
     
@@ -278,38 +276,7 @@ impl WebSocketRoom {
                                     ),
                                 );
 
-                                if let Some(profile) = self.player_profile.as_ref().cloned() {
-                                    self.send_rfc4(
-                                        rfc4::Packet {
-                                            message: Some(rfc4::packet::Message::ProfileResponse(
-                                                rfc4::ProfileResponse {
-                                                    serialized_profile: serde_json::to_string(
-                                                        &profile.content,
-                                                    )
-                                                    .unwrap(),
-                                                    base_url: profile.base_url.clone(),
-                                                },
-                                            )),
-                                            protocol_version: 0,
-                                        },
-                                        false,
-                                    );
-
-                                    self.last_profile_version_announced = profile.version;
-
-                                    self.send_rfc4(
-                                        rfc4::Packet {
-                                            message: Some(rfc4::packet::Message::ProfileVersion(
-                                                rfc4::AnnounceProfileVersion {
-                                                    profile_version: self
-                                                        .last_profile_version_announced,
-                                                },
-                                            )),
-                                            protocol_version: 0,
-                                        },
-                                        false,
-                                    );
-                                }
+                                // Profile announcement is now handled by CommunicationManager
 
                                 self.avatars.bind_mut().clean();
                                 for (alias, peer) in self.peer_identities.iter() {
@@ -476,22 +443,7 @@ impl WebSocketRoom {
             }
         }
 
-        if let Some(profile) = &self.player_profile {
-            if self.last_profile_version_announced != profile.version {
-                self.last_profile_version_announced = profile.version;
-                self.send_rfc4(
-                    rfc4::Packet {
-                        message: Some(rfc4::packet::Message::ProfileVersion(
-                            rfc4::AnnounceProfileVersion {
-                                profile_version: self.last_profile_version_announced,
-                            },
-                        )),
-                        protocol_version: 0,
-                    },
-                    false,
-                );
-            }
-        }
+        // Profile version updates are now handled by CommunicationManager
     }
 
     fn _change_profile(&mut self, new_profile: UserProfile) {
