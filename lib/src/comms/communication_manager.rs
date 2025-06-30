@@ -825,7 +825,7 @@ impl CommunicationManager {
     #[func]
     pub fn send_emote(&mut self, emote_urn: GString) -> bool {
         let timestamp = godot::engine::Time::singleton().get_unix_time_from_system() * 1000.0;
-        self.send_chat(format!("␐{} {}", emote_urn.to_string(), timestamp).into());
+        self.send_chat(format!("␐{} {}", emote_urn, timestamp).into());
 
         self.last_emote_incremental_id += 1;
 
@@ -922,8 +922,8 @@ impl CommunicationManager {
         // if starts with fixed-adapter: remove it
         let comms_fixed_adapter = comms_fixed_adapter.map(|s| {
             let s = s.to_string();
-            if s.starts_with("fixed-adapter:") {
-                GString::from(s[14..].to_string())
+            if let Some(stripped) = s.strip_prefix("fixed-adapter:") {
+                GString::from(stripped.to_string())
             } else {
                 s.to_godot()
             }

@@ -27,7 +27,7 @@ impl SerializedProfile {
             .collect();
 
         // Generate random description
-        let descriptions = vec![
+        let descriptions = [
             "Crypto enthusiast and DeFi explorer",
             "Building the future of Web3",
             "Digital artist and NFT creator",
@@ -199,7 +199,7 @@ impl AvatarWireFormat {
         });
 
         // Random snapshots - extended list for more variety
-        let snapshot_ids = vec![
+        let snapshot_ids = [
             (
                 "bafkreigxesh5owgy4vreca65nh33zqw7br6haokkltmzg3mn22g5whcfbq",
                 "bafkreibykc3l7ai5z5zik7ypxlqetgtmiepr42al6jcn4yovdgezycwa2y",
@@ -242,7 +242,7 @@ impl AvatarWireFormat {
 
     fn random_emotes(rng: &mut impl Rng) -> Vec<AvatarEmote> {
         // Common emote URNs
-        let available_emotes = vec![
+        let available_emotes = [
             "urn:decentraland:matic:collections-v2:0x1b559817181633db1246da7dc3722c31a034d5cc:0:0",
             "urn:decentraland:matic:collections-v2:0x1b559817181633db1246da7dc3722c31a034d5cc:0:1",
             "urn:decentraland:matic:collections-v2:0x1b559817181633db1246da7dc3722c31a034d5cc:0:2",
