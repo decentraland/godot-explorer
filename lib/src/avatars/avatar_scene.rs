@@ -481,8 +481,6 @@ impl AvatarScene {
             }
             // If timestamps are nearly identical (within tolerance), also skip to avoid duplicate processing
             if (movement.timestamp - *last_timestamp).abs() < TIMESTAMP_TOLERANCE {
-                tracing::info!("Discarding duplicate movement for alias {} - timestamps too close: {} vs {} (diff: {})", 
-                    alias, movement.timestamp, *last_timestamp, (movement.timestamp - *last_timestamp).abs());
                 return false;
             }
         }
@@ -536,8 +534,6 @@ impl AvatarScene {
             }
             // If timestamps are nearly identical (within tolerance), also skip to avoid duplicate processing
             if (timestamp - *last_timestamp).abs() < TIMESTAMP_TOLERANCE {
-                tracing::info!("Discarding duplicate compressed movement for alias {} - timestamps too close: {} vs {} (diff: {})", 
-                    alias, timestamp, *last_timestamp, (timestamp - *last_timestamp).abs());
                 return false;
             }
         }

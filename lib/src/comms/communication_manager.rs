@@ -424,7 +424,7 @@ impl CommunicationManager {
             // Send to main room if available
             if let Some(main_room) = &mut self.main_room {
                 main_room.send_rfc4(profile_version_packet.clone(), false);
-                tracing::info!(
+                tracing::debug!(
                     "📡 ProfileVersion broadcast to main room: version {}",
                     player_profile.version
                 );
@@ -434,7 +434,7 @@ impl CommunicationManager {
             #[cfg(feature = "use_livekit")]
             if let Some(scene_room) = &mut self.scene_room {
                 scene_room.send_rfc4(profile_version_packet.clone(), false);
-                tracing::info!(
+                tracing::debug!(
                     "📡 ProfileVersion broadcast to scene room: version {}",
                     player_profile.version
                 );
@@ -445,7 +445,7 @@ impl CommunicationManager {
             if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
                 if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.send_rfc4(profile_version_packet, false);
-                    tracing::info!(
+                    tracing::debug!(
                         "📡 ProfileVersion broadcast through archipelago: version {}",
                         player_profile.version
                     );
@@ -485,7 +485,7 @@ impl CommunicationManager {
             if let Some(main_room) = &mut self.main_room {
                 main_room.send_rfc4(profile_response_packet.clone(), false);
                 main_room.send_rfc4(profile_version_packet.clone(), false);
-                tracing::info!(
+                tracing::debug!(
                     "📡 Initial profile announced to main room: version {}",
                     player_profile.version
                 );
@@ -496,7 +496,7 @@ impl CommunicationManager {
             if let Some(scene_room) = &mut self.scene_room {
                 scene_room.send_rfc4(profile_response_packet.clone(), false);
                 scene_room.send_rfc4(profile_version_packet.clone(), false);
-                tracing::info!(
+                tracing::debug!(
                     "📡 Initial profile announced to scene room: version {}",
                     player_profile.version
                 );
@@ -508,7 +508,7 @@ impl CommunicationManager {
                 if let Some(adapter) = archipelago.adapter_as_mut() {
                     adapter.send_rfc4(profile_response_packet, false);
                     adapter.send_rfc4(profile_version_packet, false);
-                    tracing::info!(
+                    tracing::debug!(
                         "📡 Initial profile announced through archipelago: version {}",
                         player_profile.version
                     );
@@ -692,7 +692,7 @@ impl CommunicationManager {
         let mut message_sent = if let Some(main_room) = &mut self.main_room {
             let sent = main_room.send_rfc4(get_packet(), true);
             if sent {
-                tracing::info!("📡 Movement sent to main room");
+                tracing::debug!("📡 Movement sent to main room");
             }
             sent
         } else {
@@ -705,7 +705,7 @@ impl CommunicationManager {
             let scene_sent = scene_room.send_rfc4(get_packet(), true);
             message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
             if scene_sent {
-                tracing::info!("📡 Movement also sent to scene room");
+                tracing::debug!("📡 Movement also sent to scene room");
             }
         }
 
@@ -715,7 +715,7 @@ impl CommunicationManager {
             if let Some(adapter) = archipelago.adapter_as_mut() {
                 let sent = adapter.send_rfc4(get_packet(), true);
                 if sent {
-                    tracing::info!("📡 Movement also sent through archipelago");
+                    tracing::debug!("📡 Movement also sent through archipelago");
                     message_sent = true;
                 }
             }
@@ -757,7 +757,7 @@ impl CommunicationManager {
         let mut message_sent = if let Some(main_room) = &mut self.main_room {
             let sent = main_room.send_rfc4(get_packet(), true);
             if sent {
-                tracing::info!("📡 Position sent to main room");
+                tracing::debug!("📡 Position sent to main room");
             }
             sent
         } else {
@@ -770,7 +770,7 @@ impl CommunicationManager {
             let scene_sent = scene_room.send_rfc4(get_packet(), true);
             message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
             if scene_sent {
-                tracing::info!("📡 Position also sent to scene room");
+                tracing::debug!("📡 Position also sent to scene room");
             }
         }
 
@@ -780,7 +780,7 @@ impl CommunicationManager {
             if let Some(adapter) = archipelago.adapter_as_mut() {
                 let sent = adapter.send_rfc4(get_packet(), true);
                 if sent {
-                    tracing::info!("📡 Position also sent through archipelago");
+                    tracing::debug!("📡 Position also sent through archipelago");
                     message_sent = true;
                 }
             }

@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use ethers_core::types::H160;
@@ -87,12 +87,20 @@ struct Peer {
     protocol_version: u32,
     last_activity: Instant,
     room_activity: HashMap<String, Instant>, // Track last activity per room
+    profile_fetch_attempted: bool, // Track if we already tried to fetch this profile
+    profile_fetch_failures: u8, // Count consecutive failures
+    profile_fetch_banned_until: Option<Instant>, // Ban fetching until this time
 }
 
 struct ProfileUpdate {
     address: H160,
     peer_alias: u32,
     profile: UserProfile,
+}
+
+struct ProfileFetchFailure {
+    address: H160,
+    announced_version: u32,
 }
 
 /// Central message processor that handles all incoming and outgoing messages
@@ -134,6 +142,10 @@ pub struct MessageProcessor {
     // Profile updates from async tasks
     profile_update_receiver: mpsc::Receiver<ProfileUpdate>,
     profile_update_sender: mpsc::Sender<ProfileUpdate>,
+    
+    // Profile fetch failures from async tasks
+    profile_failure_receiver: mpsc::Receiver<ProfileFetchFailure>,
+    profile_failure_sender: mpsc::Sender<ProfileFetchFailure>,
 }
 
 impl MessageProcessor {
@@ -152,6 +164,8 @@ impl MessageProcessor {
         let (outgoing_sender, outgoing_receiver) = mpsc::channel(OUTGOING_CHANNEL_SIZE);
         let (profile_update_sender, profile_update_receiver) =
             mpsc::channel(PROFILE_UPDATE_CHANNEL_SIZE);
+        let (profile_failure_sender, profile_failure_receiver) =
+            mpsc::channel(PROFILE_UPDATE_CHANNEL_SIZE);
 
         Self {
             message_receiver,
@@ -169,6 +183,8 @@ impl MessageProcessor {
             incoming_scene_messages: HashMap::new(),
             profile_update_receiver,
             profile_update_sender,
+            profile_failure_receiver,
+            profile_failure_sender,
         }
     }
 
@@ -217,6 +233,28 @@ impl MessageProcessor {
 
             if let Some(peer) = self.peer_identities.get_mut(&update.address) {
                 peer.profile = Some(update.profile);
+                peer.profile_fetch_attempted = false; // Reset so we can fetch again if needed
+                peer.profile_fetch_failures = 0; // Reset failure count on success
+                peer.profile_fetch_banned_until = None; // Clear any ban
+            }
+        }
+
+        // Handle profile fetch failures
+        while let Ok(failure) = self.profile_failure_receiver.try_recv() {
+            if let Some(peer) = self.peer_identities.get_mut(&failure.address) {
+                peer.profile_fetch_failures += 1;
+                peer.profile_fetch_attempted = false; // Allow retry
+                
+                if peer.profile_fetch_failures >= 2 {
+                    // Ban profile fetching for 30 seconds after 2 failures
+                    peer.profile_fetch_banned_until = Some(Instant::now() + Duration::from_secs(30));
+                    tracing::warn!(
+                        "Banning profile fetch for {:#x} for 30 seconds after {} failures (announced version {} not available)",
+                        failure.address,
+                        peer.profile_fetch_failures,
+                        failure.announced_version
+                    );
+                }
             }
         }
 
@@ -311,7 +349,7 @@ impl MessageProcessor {
         let peer_alias = if let Some(peer) = self.peer_identities.get_mut(&message.address) {
             // Update existing peer - check if this is from a new room
             if !peer.room_activity.contains_key(&message.room_id) {
-                tracing::info!(
+                tracing::debug!(
                     "📨 Existing peer {:#x} (alias: {}) now also seen in room '{}'",
                     message.address,
                     peer.alias,
@@ -363,6 +401,9 @@ impl MessageProcessor {
                     },
                     last_activity: Instant::now(),
                     room_activity,
+                    profile_fetch_attempted: false,
+                    profile_fetch_failures: 0,
+                    profile_fetch_banned_until: None,
                 },
             );
 
@@ -374,7 +415,31 @@ impl MessageProcessor {
                     .add_avatar(new_alias, GString::from(format!("{:#x}", message.address)));
             }
 
-            // TODO: Send profile request to the room where this message came from
+            // Send initial profile request to the room where this message came from
+            let request_packet = rfc4::Packet {
+                message: Some(rfc4::packet::Message::ProfileRequest(rfc4::ProfileRequest {
+                    address: format!("{:#x}", message.address),
+                    profile_version: 0, // Request any version
+                })),
+                protocol_version: DEFAULT_PROTOCOL_VERSION,
+            };
+
+            let outgoing = OutgoingMessage {
+                packet: request_packet,
+                unreliable: false,
+                target_room: Some(room_id.clone()),
+            };
+
+            if let Err(e) = self.outgoing_sender.try_send(outgoing) {
+                tracing::warn!("Failed to queue initial ProfileRequest for new peer: {}", e);
+            } else {
+                tracing::debug!(
+                    "📤 Sending initial ProfileRequest for new peer {:#x} via room '{}'",
+                    message.address,
+                    room_id
+                );
+            }
+
             new_alias
         };
 
@@ -418,7 +483,7 @@ impl MessageProcessor {
             }
             MessageType::PeerJoined => {
                 // Peer joined event - ensure peer exists and update room activity
-                tracing::info!(
+                tracing::debug!(
                     "👋 Peer {:#x} joined room '{}' (alias: {})",
                     message.address,
                     room_id,
@@ -435,7 +500,7 @@ impl MessageProcessor {
     fn handle_peer_left(&mut self, address: H160, room_id: String) {
         if let Some(peer) = self.peer_identities.get_mut(&address) {
             peer.room_activity.remove(&room_id);
-            tracing::info!(
+            tracing::debug!(
                 "👋 Peer {:#x} (alias: {}) left room '{}'",
                 address,
                 peer.alias,
@@ -540,7 +605,7 @@ impl MessageProcessor {
                 );
             }
             rfc4::packet::Message::Chat(chat) => {
-                tracing::info!("Received Chat from {:#x}: {:?}", address, chat);
+                tracing::debug!("Received Chat from {:#x}: {:?}", address, chat);
 
                 // Enforce bounded queue for chat messages
                 if self.chats.len() >= MAX_CHAT_MESSAGES {
@@ -564,14 +629,50 @@ impl MessageProcessor {
                 let (current_version, peer_alias_for_async) =
                     if let Some(peer) = self.peer_identities.get_mut(&address) {
                         let current_version = peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
+                        
+                        // If announcing a different version than before, reset failure tracking
+                        if peer.announced_version != Some(announced_version) {
+                            peer.profile_fetch_failures = 0;
+                            peer.profile_fetch_banned_until = None;
+                            peer.profile_fetch_attempted = false;
+                            tracing::debug!(
+                                "New profile version announced for {:#x}: {} (was {:?}), resetting failure tracking",
+                                address,
+                                announced_version,
+                                peer.announced_version
+                            );
+                        }
+                        
                         peer.announced_version = Some(announced_version);
                         (current_version, peer.alias)
                     } else {
                         (0, peer_alias)
                     };
 
-                // If the announced version is newer than what we have, request the profile
-                if announced_version > current_version {
+                // Check if profile fetch is banned
+                let is_banned = if let Some(peer) = self.peer_identities.get(&address) {
+                    if let Some(banned_until) = peer.profile_fetch_banned_until {
+                        if Instant::now() < banned_until {
+                            tracing::debug!(
+                                "Profile fetch for {:#x} is banned for {} more seconds",
+                                address,
+                                (banned_until - Instant::now()).as_secs()
+                            );
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+
+                // If the announced version is newer than what we have AND we haven't tried to fetch it yet AND not banned
+                if announced_version > current_version 
+                    && !self.peer_identities.get(&address).map_or(false, |p| p.profile_fetch_attempted) 
+                    && !is_banned {
                     tracing::info!(
                         "Requesting newer profile from {:#x}: announced={}, current={}",
                         address,
@@ -599,20 +700,29 @@ impl MessageProcessor {
                     if let Err(e) = self.outgoing_sender.try_send(outgoing) {
                         tracing::warn!("Failed to queue ProfileRequest: {}", e);
                     } else {
-                        tracing::info!(
+                        tracing::debug!(
                             "📤 Sending ProfileRequest to {:#x} via room '{}'",
                             address,
                             room_id
                         );
                     }
 
+                    // Mark that we're attempting to fetch this profile
+                    if let Some(peer) = self.peer_identities.get_mut(&address) {
+                        peer.profile_fetch_attempted = true;
+                    }
+
                     // Also fetch from lambda server as fallback
-                    tracing::info!(
+                    tracing::debug!(
                         "comms > also requesting profile from lambda for {:#x} as fallback",
                         address
                     );
 
                     let profile_sender = self.profile_update_sender.clone();
+                    let profile_failure_sender = self.profile_failure_sender.clone();
+                    let outgoing_sender = self.outgoing_sender.clone();
+                    let room_id_for_retry = room_id.clone();
+                    let announced_version_for_retry = announced_version;
                     let (lamda_server_base_url, profile_base_url, http_requester) =
                         prepare_request_requirements();
 
@@ -630,6 +740,22 @@ impl MessageProcessor {
                                 address,
                                 profile.clone()
                             );
+                            // Check if the fetched version matches what was announced
+                            let version_mismatch = profile.version < announced_version_for_retry;
+                            if version_mismatch {
+                                tracing::warn!(
+                                    "Profile version mismatch for {:#x}: announced={}, fetched={}",
+                                    address,
+                                    announced_version_for_retry,
+                                    profile.version
+                                );
+                                // Send failure notification
+                                let _ = profile_failure_sender.send(ProfileFetchFailure {
+                                    address,
+                                    announced_version: announced_version_for_retry,
+                                }).await;
+                            }
+                            
                             if let Err(e) = profile_sender
                                 .send(ProfileUpdate {
                                     address,
@@ -646,6 +772,35 @@ impl MessageProcessor {
                                 address,
                                 result
                             );
+                            
+                            // Lambda fetch failed, send another ProfileRequest as retry
+                            let retry_packet = rfc4::Packet {
+                                message: Some(rfc4::packet::Message::ProfileRequest(
+                                    rfc4::ProfileRequest {
+                                        address: format!("{:#x}", address),
+                                        profile_version: announced_version_for_retry,
+                                    },
+                                )),
+                                protocol_version: DEFAULT_PROTOCOL_VERSION,
+                            };
+
+                            let outgoing = OutgoingMessage {
+                                packet: retry_packet,
+                                unreliable: false,
+                                target_room: Some(room_id_for_retry),
+                            };
+
+                            if let Err(e) = outgoing_sender.try_send(outgoing) {
+                                tracing::warn!("Failed to queue ProfileRequest retry after lambda failure: {}", e);
+                            } else {
+                                tracing::debug!("📤 Retrying ProfileRequest to {:#x} after lambda failure", address);
+                            }
+                            
+                            // Send failure notification
+                            let _ = profile_failure_sender.send(ProfileFetchFailure {
+                                address,
+                                announced_version: announced_version_for_retry,
+                            }).await;
                         }
                     });
                 }
@@ -657,10 +812,10 @@ impl MessageProcessor {
                     profile_request
                 );
 
-                // Check if they're requesting our player's profile
+                // Parse the requested address
                 if let Ok(requested_address) = profile_request.address.parse::<H160>() {
+                    // First check if they're requesting our player's profile
                     if requested_address == self.player_address {
-                        // They're requesting our profile - send ProfileResponse
                         if let Some(player_profile) = &self.player_profile {
                             let serialized_profile = serde_json::to_string(&player_profile.content)
                                 .unwrap_or_else(|_| "{}".to_string());
@@ -685,7 +840,7 @@ impl MessageProcessor {
                             if let Err(e) = self.outgoing_sender.try_send(outgoing) {
                                 tracing::warn!("Failed to queue ProfileResponse: {}", e);
                             } else {
-                                tracing::info!(
+                                tracing::debug!(
                                     "📤 Sending ProfileResponse to {:#x} via room '{}'",
                                     address,
                                     room_id
@@ -696,6 +851,50 @@ impl MessageProcessor {
                                 "ProfileRequest for our address but no profile available"
                             );
                         }
+                    } else if let Some(peer) = self.peer_identities.get(&requested_address) {
+                        // Check if we have this peer's profile cached
+                        if let Some(peer_profile) = &peer.profile {
+                            let serialized_profile = serde_json::to_string(&peer_profile.content)
+                                .unwrap_or_else(|_| "{}".to_string());
+
+                            let response_packet = rfc4::Packet {
+                                message: Some(rfc4::packet::Message::ProfileResponse(
+                                    rfc4::ProfileResponse {
+                                        serialized_profile,
+                                        base_url: peer_profile.base_url.clone(),
+                                    },
+                                )),
+                                protocol_version: DEFAULT_PROTOCOL_VERSION,
+                            };
+
+                            // Send response back to the requesting room
+                            let outgoing = OutgoingMessage {
+                                packet: response_packet,
+                                unreliable: false,
+                                target_room: Some(room_id.clone()),
+                            };
+
+                            if let Err(e) = self.outgoing_sender.try_send(outgoing) {
+                                tracing::warn!("Failed to queue ProfileResponse for cached peer: {}", e);
+                            } else {
+                                tracing::debug!(
+                                    "📤 Sending cached ProfileResponse for {:#x} to {:#x} via room '{}'",
+                                    requested_address,
+                                    address,
+                                    room_id
+                                );
+                            }
+                        } else {
+                            tracing::debug!(
+                                "ProfileRequest for {:#x} but no cached profile available",
+                                requested_address
+                            );
+                        }
+                    } else {
+                        tracing::debug!(
+                            "ProfileRequest for unknown peer {:#x}",
+                            requested_address
+                        );
                     }
                 } else {
                     tracing::warn!(
@@ -743,6 +942,7 @@ impl MessageProcessor {
                     let mut avatar_scene = avatar_scene_ref.bind_mut();
                     avatar_scene.update_avatar_by_alias(peer_alias, &profile);
                     peer.profile = Some(profile);
+                    peer.profile_fetch_attempted = false; // Reset so we can fetch again if needed
                 }
             }
             rfc4::packet::Message::Scene(scene) => {

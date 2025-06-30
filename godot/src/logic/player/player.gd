@@ -214,7 +214,7 @@ func get_broadcast_rotation_y() -> float:
 
 	# 1. Wrap into [-PI, PI) so we never go past the discontinuity
 	rotation_y = wrapf(rotation_y, -PI, PI)
-	
+
 	# 2. Snap to 1-degree steps (≈0.01745 rad)
 	const SNAP_STEP := 0.0174533  # PI / 180
 	rotation_y = snapped(rotation_y, SNAP_STEP)
