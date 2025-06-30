@@ -87,8 +87,8 @@ struct Peer {
     protocol_version: u32,
     last_activity: Instant,
     room_activity: HashMap<String, Instant>, // Track last activity per room
-    profile_fetch_attempted: bool, // Track if we already tried to fetch this profile
-    profile_fetch_failures: u8, // Count consecutive failures
+    profile_fetch_attempted: bool,           // Track if we already tried to fetch this profile
+    profile_fetch_failures: u8,              // Count consecutive failures
     profile_fetch_banned_until: Option<Instant>, // Ban fetching until this time
 }
 
@@ -142,11 +142,11 @@ pub struct MessageProcessor {
     // Profile updates from async tasks
     profile_update_receiver: mpsc::Receiver<ProfileUpdate>,
     profile_update_sender: mpsc::Sender<ProfileUpdate>,
-    
+
     // Profile fetch failures from async tasks
     profile_failure_receiver: mpsc::Receiver<ProfileFetchFailure>,
     profile_failure_sender: mpsc::Sender<ProfileFetchFailure>,
-    
+
     // Configurable realm bounds for movement compression
     realm_min: godot::prelude::Vector2i,
     realm_max: godot::prelude::Vector2i,
@@ -201,7 +201,7 @@ impl MessageProcessor {
     pub fn get_message_sender(&self) -> mpsc::Sender<IncomingMessage> {
         self.message_sender.clone()
     }
-    
+
     /// Sets the realm bounds for movement compression
     ///
     /// These bounds define the coordinate space for quantizing movement data.
@@ -210,7 +210,11 @@ impl MessageProcessor {
     /// # Arguments
     /// * `min` - The minimum x,y coordinates of the realm
     /// * `max` - The maximum x,y coordinates of the realm
-    pub fn set_realm_bounds(&mut self, min: godot::prelude::Vector2i, max: godot::prelude::Vector2i) {
+    pub fn set_realm_bounds(
+        &mut self,
+        min: godot::prelude::Vector2i,
+        max: godot::prelude::Vector2i,
+    ) {
         self.realm_min = min;
         self.realm_max = max;
         tracing::info!("Updated realm bounds: min={:?}, max={:?}", min, max);
@@ -265,10 +269,11 @@ impl MessageProcessor {
             if let Some(peer) = self.peer_identities.get_mut(&failure.address) {
                 peer.profile_fetch_failures += 1;
                 peer.profile_fetch_attempted = false; // Allow retry
-                
+
                 if peer.profile_fetch_failures >= 2 {
                     // Ban profile fetching for 30 seconds after 2 failures
-                    peer.profile_fetch_banned_until = Some(Instant::now() + Duration::from_secs(30));
+                    peer.profile_fetch_banned_until =
+                        Some(Instant::now() + Duration::from_secs(30));
                     tracing::warn!(
                         "Banning profile fetch for {:#x} for 30 seconds after {} failures (announced version {} not available)",
                         failure.address,
@@ -438,10 +443,12 @@ impl MessageProcessor {
 
             // Send initial profile request to the room where this message came from
             let request_packet = rfc4::Packet {
-                message: Some(rfc4::packet::Message::ProfileRequest(rfc4::ProfileRequest {
-                    address: format!("{:#x}", message.address),
-                    profile_version: 0, // Request any version
-                })),
+                message: Some(rfc4::packet::Message::ProfileRequest(
+                    rfc4::ProfileRequest {
+                        address: format!("{:#x}", message.address),
+                        profile_version: 0, // Request any version
+                    },
+                )),
                 protocol_version: DEFAULT_PROTOCOL_VERSION,
             };
 
@@ -642,28 +649,29 @@ impl MessageProcessor {
                 let announced_version = announce_profile_version.profile_version;
 
                 // Get current version and update peer
-                let (current_version, peer_alias_for_async) =
-                    if let Some(peer) = self.peer_identities.get_mut(&address) {
-                        let current_version = peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
-                        
-                        // If announcing a different version than before, reset failure tracking
-                        if peer.announced_version != Some(announced_version) {
-                            peer.profile_fetch_failures = 0;
-                            peer.profile_fetch_banned_until = None;
-                            peer.profile_fetch_attempted = false;
-                            tracing::debug!(
+                let (current_version, peer_alias_for_async) = if let Some(peer) =
+                    self.peer_identities.get_mut(&address)
+                {
+                    let current_version = peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
+
+                    // If announcing a different version than before, reset failure tracking
+                    if peer.announced_version != Some(announced_version) {
+                        peer.profile_fetch_failures = 0;
+                        peer.profile_fetch_banned_until = None;
+                        peer.profile_fetch_attempted = false;
+                        tracing::debug!(
                                 "New profile version announced for {:#x}: {} (was {:?}), resetting failure tracking",
                                 address,
                                 announced_version,
                                 peer.announced_version
                             );
-                        }
-                        
-                        peer.announced_version = Some(announced_version);
-                        (current_version, peer.alias)
-                    } else {
-                        (0, peer_alias)
-                    };
+                    }
+
+                    peer.announced_version = Some(announced_version);
+                    (current_version, peer.alias)
+                } else {
+                    (0, peer_alias)
+                };
 
                 // Check if profile fetch is banned
                 let is_banned = if let Some(peer) = self.peer_identities.get(&address) {
@@ -686,9 +694,13 @@ impl MessageProcessor {
                 };
 
                 // If the announced version is newer than what we have AND we haven't tried to fetch it yet AND not banned
-                if announced_version > current_version 
-                    && !self.peer_identities.get(&address).map_or(false, |p| p.profile_fetch_attempted) 
-                    && !is_banned {
+                if announced_version > current_version
+                    && !self
+                        .peer_identities
+                        .get(&address)
+                        .map_or(false, |p| p.profile_fetch_attempted)
+                    && !is_banned
+                {
                     tracing::info!(
                         "Requesting newer profile from {:#x}: announced={}, current={}",
                         address,
@@ -766,12 +778,14 @@ impl MessageProcessor {
                                     profile.version
                                 );
                                 // Send failure notification
-                                let _ = profile_failure_sender.send(ProfileFetchFailure {
-                                    address,
-                                    announced_version: announced_version_for_retry,
-                                }).await;
+                                let _ = profile_failure_sender
+                                    .send(ProfileFetchFailure {
+                                        address,
+                                        announced_version: announced_version_for_retry,
+                                    })
+                                    .await;
                             }
-                            
+
                             if let Err(e) = profile_sender
                                 .send(ProfileUpdate {
                                     address,
@@ -788,7 +802,7 @@ impl MessageProcessor {
                                 address,
                                 result
                             );
-                            
+
                             // Lambda fetch failed, send another ProfileRequest as retry
                             let retry_packet = rfc4::Packet {
                                 message: Some(rfc4::packet::Message::ProfileRequest(
@@ -807,16 +821,24 @@ impl MessageProcessor {
                             };
 
                             if let Err(e) = outgoing_sender.try_send(outgoing) {
-                                tracing::warn!("Failed to queue ProfileRequest retry after lambda failure: {}", e);
+                                tracing::warn!(
+                                    "Failed to queue ProfileRequest retry after lambda failure: {}",
+                                    e
+                                );
                             } else {
-                                tracing::debug!("📤 Retrying ProfileRequest to {:#x} after lambda failure", address);
+                                tracing::debug!(
+                                    "📤 Retrying ProfileRequest to {:#x} after lambda failure",
+                                    address
+                                );
                             }
-                            
+
                             // Send failure notification
-                            let _ = profile_failure_sender.send(ProfileFetchFailure {
-                                address,
-                                announced_version: announced_version_for_retry,
-                            }).await;
+                            let _ = profile_failure_sender
+                                .send(ProfileFetchFailure {
+                                    address,
+                                    announced_version: announced_version_for_retry,
+                                })
+                                .await;
                         }
                     });
                 }
@@ -891,7 +913,10 @@ impl MessageProcessor {
                             };
 
                             if let Err(e) = self.outgoing_sender.try_send(outgoing) {
-                                tracing::warn!("Failed to queue ProfileResponse for cached peer: {}", e);
+                                tracing::warn!(
+                                    "Failed to queue ProfileResponse for cached peer: {}",
+                                    e
+                                );
                             } else {
                                 tracing::debug!(
                                     "📤 Sending cached ProfileResponse for {:#x} to {:#x} via room '{}'",
@@ -907,10 +932,7 @@ impl MessageProcessor {
                             );
                         }
                     } else {
-                        tracing::debug!(
-                            "ProfileRequest for unknown peer {:#x}",
-                            requested_address
-                        );
+                        tracing::debug!("ProfileRequest for unknown peer {:#x}", requested_address);
                     }
                 } else {
                     tracing::warn!(
@@ -1005,11 +1027,7 @@ impl MessageProcessor {
                 // Let avatar_scene handle emotes
                 let mut avatar_scene_ref = self.avatars.clone();
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.play_emote(
-                    peer_alias,
-                    player_emote.incremental_id,
-                    &player_emote.urn,
-                );
+                avatar_scene.play_emote(peer_alias, player_emote.incremental_id, &player_emote.urn);
             }
             rfc4::packet::Message::SceneEmote(_) => {
                 tracing::warn!("Not implemented: SceneEmote handling in message_processor");

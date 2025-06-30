@@ -20,7 +20,7 @@ var hidden: bool = false
 var finish_loading = false
 var wearables_by_category: Dictionary = {}
 
-var emote_controller: AvatarEmoteController # Rust binded. Don't change this variable name
+var emote_controller: AvatarEmoteController  # Rust binded. Don't change this variable name
 
 var generate_attach_points: bool = false
 var right_hand_idx: int = -1

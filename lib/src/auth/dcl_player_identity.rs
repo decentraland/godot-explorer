@@ -324,7 +324,7 @@ impl DclPlayerIdentity {
         );
     }
 
-        #[func]
+    #[func]
     pub fn set_random_profile(&mut self) {
         let mut profile = UserProfile::randomize();
         profile.content.user_id = Some(self.get_address_str().to_string());

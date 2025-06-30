@@ -206,11 +206,11 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 			var top = size_dict.get("top", 0)
 			var right = size_dict.get("right", 0)
 			var bottom = size_dict.get("bottom", 0)
-			
+
 			# Update minimum bounds (leftmost and bottommost points)
 			min_bounds.x = mini(min_bounds.x, left)
 			min_bounds.y = mini(min_bounds.y, bottom)
-			
+
 			# Update maximum bounds (rightmost and topmost points)
 			max_bounds.x = maxi(max_bounds.x, right)
 			max_bounds.y = maxi(max_bounds.y, top)
@@ -219,7 +219,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 		if sizes.is_empty():
 			min_bounds = Vector2i(-150, -150)
 			max_bounds = Vector2i(163, 158)
-		
+
 		set_realm_min_bounds(min_bounds)
 		set_realm_max_bounds(max_bounds)
 

@@ -324,6 +324,10 @@ pub fn trigger_scene_emote(
     let mut avatar_node = get_avatar_node(scene);
     avatar_node.call("async_play_emote".into(), &[urn.to_variant()]);
 
-    DclGlobal::singleton().bind().get_comms().bind_mut().send_emote(urn.to_godot());
+    DclGlobal::singleton()
+        .bind()
+        .get_comms()
+        .bind_mut()
+        .send_emote(urn.to_godot());
     response.send(Ok(()));
 }

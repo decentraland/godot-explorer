@@ -579,8 +579,7 @@ impl AvatarScene {
         };
 
         // Discard if the emote is less than or equal to the last played emote
-        if let Some(last_incremental_id) = self.last_emote_incremental_id.get(&
-            alias) {
+        if let Some(last_incremental_id) = self.last_emote_incremental_id.get(&alias) {
             if incremental_id <= *last_incremental_id {
                 tracing::debug!(
                     "Discarding emote {} for alias {}: incremental_id {} <= last_emote_incremental_id {}",
@@ -592,11 +591,9 @@ impl AvatarScene {
                 return;
             }
         }
-        
 
         // Store the last emote incremental ID for this alias
-        self.last_emote_incremental_id
-            .insert(alias, incremental_id);
+        self.last_emote_incremental_id.insert(alias, incremental_id);
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar_scene.call("async_play_emote".into(), &[emote_urn.to_variant()]);

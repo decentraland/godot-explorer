@@ -1,7 +1,10 @@
-use rand::Rng;
 use rand::distributions::Alphanumeric;
+use rand::Rng;
 
-use crate::comms::profile::{AvatarColor, AvatarColor3, AvatarEmote, AvatarSnapshots, AvatarWireFormat, SerializedProfile, UserProfile};
+use crate::comms::profile::{
+    AvatarColor, AvatarColor3, AvatarEmote, AvatarSnapshots, AvatarWireFormat, SerializedProfile,
+    UserProfile,
+};
 
 impl UserProfile {
     pub fn randomize() -> Self {
@@ -16,13 +19,13 @@ impl UserProfile {
 impl SerializedProfile {
     pub fn randomize() -> Self {
         let mut rng = rand::thread_rng();
-        
+
         // Generate random name (8-15 alphanumeric characters)
         let name_length = rng.gen_range(8..=15);
         let name: String = (0..name_length)
             .map(|_| rng.sample(Alphanumeric) as char)
             .collect();
-        
+
         // Generate random description
         let descriptions = vec![
             "Crypto enthusiast and DeFi explorer",
@@ -35,13 +38,13 @@ impl SerializedProfile {
             "Virtual world explorer",
             "Digital fashion collector",
             "Decentraland citizen",
-            "",  // Some profiles might have no description
+            "", // Some profiles might have no description
         ];
         let description = descriptions[rng.gen_range(0..descriptions.len())].to_string();
-        
+
         // Use AvatarWireFormat::randomize() for the avatar
         let avatar = AvatarWireFormat::randomize();
-        
+
         // Create profile with randomized name, description, avatar, and address
         Self {
             name,
@@ -57,7 +60,7 @@ impl SerializedProfile {
 impl AvatarWireFormat {
     pub fn randomize() -> Self {
         let mut rng = rand::thread_rng();
-        
+
         // Avatar configurations from paste.txt
         let avatar_configs = vec![
             // Config 1: Female with cat eyes
@@ -77,7 +80,6 @@ impl AvatarWireFormat {
                 "urn:decentraland:matic:collections-v2:0x5826113f948fe30978b822b210c7399dd4c0342a:1:105312291668557186697918027683670432318895095400549111254310977562",
                 "urn:decentraland:matic:collections-v2:0xf239a55ebc3f42f164c47e3ee450d62b8926f4f0:0:6"
             ], vec![]),
-            
             // Config 2: Male with cat eyes and pumpkin mouth
             ("urn:decentraland:off-chain:base-avatars:BaseMale", vec![
                 "urn:decentraland:matic:collections-v2:0x4ea1cfe9e8ca641fbe362469f79029a0eaa6a996:0:1",
@@ -95,7 +97,6 @@ impl AvatarWireFormat {
                 "urn:decentraland:ethereum:collections-v1:halloween_2020:hwn_2020_pumpkin_mouth:394",
                 "urn:decentraland:matic:collections-v2:0xcbd17d94f5be12fff27566c23888d6936b8e70b8:6:631873750011343120187508166102022593913370572403294667525865865262"
             ], vec!["eyewear", "hands_wear", "facial_hair"]),
-            
             // Config 3: Simple Male avatar
             ("urn:decentraland:off-chain:base-avatars:BaseMale", vec![
                 "urn:decentraland:off-chain:base-avatars:yellow_tshirt",
@@ -104,7 +105,6 @@ impl AvatarWireFormat {
                 "urn:decentraland:off-chain:base-avatars:keanu_hair",
                 "urn:decentraland:off-chain:base-avatars:granpa_beard"
             ], vec![]),
-            
             // Config 4: Male with force render
             ("urn:decentraland:off-chain:base-avatars:BaseMale", vec![
                 "urn:decentraland:matic:collections-v2:0xa83c8951dd73843bf5f7e9936e72a345a3e79874:8:842498333348457493583344221469363458551160763204392890034487820295",
@@ -124,7 +124,6 @@ impl AvatarWireFormat {
                 "urn:decentraland:off-chain:base-avatars:f_eyebrows_00",
                 "urn:decentraland:matic:collections-v2:0xac3b666704ec025b2e59f22249830a07b6fb9573:0:30"
             ], vec!["helmet", "lower_body", "tiara", "hands_wear", "feet", "upper_body"]),
-            
             // Config 5: Male with mask
             ("urn:decentraland:off-chain:base-avatars:BaseMale", vec![
                 "urn:decentraland:off-chain:base-avatars:Thunder_earring",
@@ -136,7 +135,6 @@ impl AvatarWireFormat {
                 "urn:decentraland:matic:collections-v2:0x0dc28547b88100eb6b3f3890f0501607aa5dd6be:0:3202",
                 "urn:decentraland:matic:collections-v2:0xbf83965191065487db0644812649d5238435c723:1:105312291668557186697918027683670432318895095400549111254310978934"
             ], vec![]),
-            
             // Config 6: Cybersoldier
             ("urn:decentraland:off-chain:base-avatars:BaseMale", vec![
                 "urn:decentraland:off-chain:base-avatars:mouth_03",
@@ -149,7 +147,6 @@ impl AvatarWireFormat {
                 "urn:decentraland:ethereum:collections-v1:cybermike_cybersoldier_set:cybersoldier_leggings_lower_body:34",
                 "urn:decentraland:ethereum:collections-v1:cybermike_cybersoldier_set:cybersoldier_torso_upper_body:35"
             ], vec![]),
-            
             // Config 7: Female casual
             ("urn:decentraland:off-chain:base-avatars:BaseFemale", vec![
                 "urn:decentraland:off-chain:base-avatars:colored_sweater",
@@ -159,7 +156,6 @@ impl AvatarWireFormat {
                 "urn:decentraland:off-chain:base-avatars:black_sun_glasses",
                 "urn:decentraland:off-chain:base-avatars:f_mouth_05"
             ], vec![]),
-            
             // Config 8: Female school uniform
             ("urn:decentraland:off-chain:base-avatars:BaseFemale", vec![
                 "urn:decentraland:off-chain:base-avatars:school_shirt",
@@ -170,11 +166,11 @@ impl AvatarWireFormat {
                 "urn:decentraland:off-chain:base-avatars:blue_star_earring"
             ], vec![]),
         ];
-        
+
         // Pick a random avatar configuration
         let config_idx = rng.gen_range(0..avatar_configs.len());
         let (body_shape, wearables, force_render) = &avatar_configs[config_idx];
-        
+
         // Random eye color
         let eyes = Some(AvatarColor {
             color: AvatarColor3 {
@@ -183,7 +179,7 @@ impl AvatarWireFormat {
                 b: rng.gen_range(0.0..1.0),
             },
         });
-        
+
         // Random hair color (more natural range)
         let hair = Some(AvatarColor {
             color: AvatarColor3 {
@@ -192,7 +188,7 @@ impl AvatarWireFormat {
                 b: rng.gen_range(0.0..0.6),
             },
         });
-        
+
         // Random skin color (natural skin tone range)
         let skin = Some(AvatarColor {
             color: AvatarColor3 {
@@ -201,17 +197,32 @@ impl AvatarWireFormat {
                 b: rng.gen_range(0.3..0.9),
             },
         });
-        
+
         // Random snapshots - extended list for more variety
         let snapshot_ids = vec![
-            ("bafkreigxesh5owgy4vreca65nh33zqw7br6haokkltmzg3mn22g5whcfbq", "bafkreibykc3l7ai5z5zik7ypxlqetgtmiepr42al6jcn4yovdgezycwa2y"),
-            ("bafkreidzk6zms72eeciw7gdvkxq5zpekz7ceqs5qhgmfso3e6q24skr6wa", "bafkreidyaysvsyof3f2s2k7ufmhkksm6lsawebg7bcdqlnzimwumu5qz7e"),
-            ("bafkreih4usuqlcxaklfvpojpwcmyoitgwugrfwqhzn5lm6ajfgn2swqfsi", "bafkreihznohs6c5ye5wcqnixzayo7g4ezxejkpfr5klol25clhsib2f56e"),
-            ("bafkreie3gtdpfqvb5uqfsvufkz6x5ms5vxzzgnxogh5pph7r7qpw3v2pgu", "bafkreidm2xnfr2qoev3vlmn5mt3x6tt5sbsyzlezw4htqcvgcqvrbhzywu"),
-            ("bafkreie64rp6lc3nnxh3mpvt4kkwvfrvdavzxgfmb73gnjt3hlwfghp5iq", "bafkreiezr3giw7ktjksklllllnzuru7xqf4rpe4p7u6xm2hxnvqhfb2pui"),
+            (
+                "bafkreigxesh5owgy4vreca65nh33zqw7br6haokkltmzg3mn22g5whcfbq",
+                "bafkreibykc3l7ai5z5zik7ypxlqetgtmiepr42al6jcn4yovdgezycwa2y",
+            ),
+            (
+                "bafkreidzk6zms72eeciw7gdvkxq5zpekz7ceqs5qhgmfso3e6q24skr6wa",
+                "bafkreidyaysvsyof3f2s2k7ufmhkksm6lsawebg7bcdqlnzimwumu5qz7e",
+            ),
+            (
+                "bafkreih4usuqlcxaklfvpojpwcmyoitgwugrfwqhzn5lm6ajfgn2swqfsi",
+                "bafkreihznohs6c5ye5wcqnixzayo7g4ezxejkpfr5klol25clhsib2f56e",
+            ),
+            (
+                "bafkreie3gtdpfqvb5uqfsvufkz6x5ms5vxzzgnxogh5pph7r7qpw3v2pgu",
+                "bafkreidm2xnfr2qoev3vlmn5mt3x6tt5sbsyzlezw4htqcvgcqvrbhzywu",
+            ),
+            (
+                "bafkreie64rp6lc3nnxh3mpvt4kkwvfrvdavzxgfmb73gnjt3hlwfghp5iq",
+                "bafkreiezr3giw7ktjksklllllnzuru7xqf4rpe4p7u6xm2hxnvqhfb2pui",
+            ),
         ];
         let (body_snapshot, face_snapshot) = snapshot_ids[rng.gen_range(0..snapshot_ids.len())];
-        
+
         Self {
             emotes: Some(Self::random_emotes(&mut rng)),
             body_shape: Some(body_shape.to_string()),
@@ -228,7 +239,7 @@ impl AvatarWireFormat {
             force_render: Some(force_render.iter().map(|s| s.to_string()).collect()),
         }
     }
-    
+
     fn random_emotes(rng: &mut impl Rng) -> Vec<AvatarEmote> {
         // Common emote URNs
         let available_emotes = vec![
@@ -241,12 +252,12 @@ impl AvatarWireFormat {
             "urn:decentraland:matic:collections-v2:0x574f64ac2e7ed325798ebe623edd27fe32df0b37:0:1",
             "urn:decentraland:matic:collections-v2:0x574f64ac2e7ed325798ebe623edd27fe32df0b37:0:2",
         ];
-        
+
         // Randomly select 3-6 emotes
         let num_emotes = rng.gen_range(3..=6);
         let mut selected_emotes = Vec::new();
         let mut used_indices = std::collections::HashSet::new();
-        
+
         for slot in 0..num_emotes {
             let mut idx;
             loop {
@@ -255,13 +266,13 @@ impl AvatarWireFormat {
                     break;
                 }
             }
-            
+
             selected_emotes.push(AvatarEmote {
                 slot: slot as u32,
                 urn: available_emotes[idx].to_string(),
             });
         }
-        
+
         selected_emotes
     }
 }

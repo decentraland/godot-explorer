@@ -328,28 +328,27 @@ impl ArchipelagoManager {
                     };
                     match protocol {
                         "livekit" => {
-                            let processor_sender = if let Some(shared_sender) =
-                                &self.shared_processor_sender
-                            {
-                                // Use shared processor from CommunicationManager
-                                tracing::info!(
+                            let processor_sender =
+                                if let Some(shared_sender) = &self.shared_processor_sender {
+                                    // Use shared processor from CommunicationManager
+                                    tracing::info!(
                                     "Using shared MessageProcessor for archipelago LiveKit room"
                                 );
-                                shared_sender.clone()
-                            } else {
-                                // Create our own MessageProcessor (fallback)
-                                tracing::info!(
-                                    "Creating dedicated MessageProcessor for archipelago"
-                                );
-                                let processor = MessageProcessor::new(
-                                    self.player_address,
-                                    self.player_profile.clone(),
-                                    self.avatar_scene.clone(),
-                                );
-                                let sender = processor.get_message_sender();
-                                self.message_processor = Some(processor);
-                                sender
-                            };
+                                    shared_sender.clone()
+                                } else {
+                                    // Create our own MessageProcessor (fallback)
+                                    tracing::info!(
+                                        "Creating dedicated MessageProcessor for archipelago"
+                                    );
+                                    let processor = MessageProcessor::new(
+                                        self.player_address,
+                                        self.player_profile.clone(),
+                                        self.avatar_scene.clone(),
+                                    );
+                                    let sender = processor.get_message_sender();
+                                    self.message_processor = Some(processor);
+                                    sender
+                                };
 
                             // Create LiveKit room with MessageProcessor connection
                             // Archipelago rooms use auto_subscribe: true (default) to automatically receive all peers

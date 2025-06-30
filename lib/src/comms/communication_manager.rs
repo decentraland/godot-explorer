@@ -823,10 +823,7 @@ impl CommunicationManager {
     }
 
     #[func]
-    pub fn send_emote(
-        &mut self,
-        emote_urn: GString,
-    ) -> bool {
+    pub fn send_emote(&mut self, emote_urn: GString) -> bool {
         let timestamp = godot::engine::Time::singleton().get_unix_time_from_system() * 1000.0;
         self.send_chat(format!("␐{} {}", emote_urn.to_string(), timestamp).into());
 
@@ -1220,7 +1217,8 @@ impl CommunicationManager {
         let room_id = format!("scene-{}", request.scene_id);
         tracing::info!("🚀 Creating new scene room with ID: {}", room_id);
 
-        let mut scene_room = LivekitRoom::new_with_options(request.livekit_url.clone(), room_id, false);
+        let mut scene_room =
+            LivekitRoom::new_with_options(request.livekit_url.clone(), room_id, false);
 
         // Connect the scene room to the message processor
         scene_room.set_message_processor_sender(processor_sender);
@@ -1279,12 +1277,8 @@ impl CommunicationManager {
 
         // Spawn async task to get scene adapter and connect
         let scene_entity_id = scene_entity_id.to_string();
-        let realm = DclGlobal::singleton()
-            .bind()
-            .get_realm();
-        let realm_name = realm
-            .bind().get_realm_name()
-            .to_string();
+        let realm = DclGlobal::singleton().bind().get_realm();
+        let realm_name = realm.bind().get_realm_name().to_string();
         let http_requester: Arc<HttpQueueRequester> = DclGlobal::singleton()
             .bind()
             .get_http_requester()
@@ -1292,9 +1286,10 @@ impl CommunicationManager {
             .get_http_queue_requester();
         let connection_sender = self.scene_room_connection_sender.clone();
 
-
-        self.set_realm_bounds(realm.bind().get_realm_min_bounds(),
-                              realm.bind().get_realm_max_bounds());
+        self.set_realm_bounds(
+            realm.bind().get_realm_min_bounds(),
+            realm.bind().get_realm_max_bounds(),
+        );
 
         TokioRuntime::spawn(async move {
             tracing::info!("Requesting scene adapter for scene: {}", scene_entity_id);
@@ -1316,7 +1311,8 @@ impl CommunicationManager {
                     // Parse the adapter URL to extract LiveKit connection details
                     if adapter_url.starts_with("livekit:") {
                         // Extract the actual LiveKit URL after "livekit:"
-                        let livekit_url = adapter_url.strip_prefix("livekit:").unwrap_or(&adapter_url);
+                        let livekit_url =
+                            adapter_url.strip_prefix("livekit:").unwrap_or(&adapter_url);
                         tracing::info!(
                             "🔗 Preparing to connect scene room to LiveKit: {}",
                             livekit_url
@@ -1353,12 +1349,18 @@ impl CommunicationManager {
             }
         });
     }
-    
+
     #[func]
-    pub fn set_realm_bounds(&mut self, min_bounds: Vector2i, max_bounds: Vector2i) {        
+    pub fn set_realm_bounds(&mut self, min_bounds: Vector2i, max_bounds: Vector2i) {
         if let Some(processor) = self.message_processor.as_mut() {
             processor.set_realm_bounds(min_bounds, max_bounds);
-            tracing::info!("🌐 Realm bounds updated: min=({}, {}), max=({}, {})", min_bounds.x, min_bounds.y, max_bounds.x, max_bounds.y);
+            tracing::info!(
+                "🌐 Realm bounds updated: min=({}, {}), max=({}, {})",
+                min_bounds.x,
+                min_bounds.y,
+                max_bounds.x,
+                max_bounds.y
+            );
         } else {
             tracing::warn!("⚠️  Cannot set realm bounds: MessageProcessor not initialized");
         }

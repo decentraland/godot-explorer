@@ -48,10 +48,19 @@ impl LivekitRoom {
     pub fn new(remote_address: String, room_id: String) -> Self {
         Self::new_with_options(remote_address, room_id, true)
     }
-    
+
     pub fn new_with_options(remote_address: String, room_id: String, auto_subscribe: bool) -> Self {
-        let room_type = if auto_subscribe { "Archipelago/Main" } else { "Scene" };
-        tracing::info!("🔧 Creating {} LiveKit room '{}' with auto_subscribe={}", room_type, room_id, auto_subscribe);
+        let room_type = if auto_subscribe {
+            "Archipelago/Main"
+        } else {
+            "Scene"
+        };
+        tracing::info!(
+            "🔧 Creating {} LiveKit room '{}' with auto_subscribe={}",
+            room_type,
+            room_id,
+            auto_subscribe
+        );
         let (sender, receiver_from_thread) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
         let (sender_to_thread, receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
         let (mic_sender_to_thread, mic_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
