@@ -46,7 +46,12 @@ pub struct LivekitRoom {
 
 impl LivekitRoom {
     pub fn new(remote_address: String, room_id: String) -> Self {
-        tracing::debug!(">> lk connect async : {remote_address}");
+        Self::new_with_options(remote_address, room_id, true)
+    }
+    
+    pub fn new_with_options(remote_address: String, room_id: String, auto_subscribe: bool) -> Self {
+        let room_type = if auto_subscribe { "Archipelago/Main" } else { "Scene" };
+        tracing::info!("🔧 Creating {} LiveKit room '{}' with auto_subscribe={}", room_type, room_id, auto_subscribe);
         let (sender, receiver_from_thread) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
         let (sender_to_thread, receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
         let (mic_sender_to_thread, mic_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
@@ -61,6 +66,7 @@ impl LivekitRoom {
                     sender,
                     mic_receiver,
                     room_id_clone,
+                    auto_subscribe,
                 );
             })
             .unwrap();
@@ -158,6 +164,7 @@ fn spawn_livekit_task(
     sender: tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>,
     mut mic_receiver: tokio::sync::mpsc::Receiver<Vec<i16>>,
     room_id: String,
+    auto_subscribe: bool,
 ) {
     let url = Uri::try_from(remote_address).unwrap();
     let address = format!(
@@ -184,7 +191,8 @@ fn spawn_livekit_task(
     let rt2 = rt.clone();
 
     let task = rt.spawn(async move {
-        let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe: true, adaptive_stream: false, dynacast: false, ..Default::default() }).await.unwrap();
+        tracing::info!("🔌 Connecting to LiveKit room '{}' with auto_subscribe={}", room_id, auto_subscribe);
+        let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await.unwrap();
         let native_source = NativeAudioSource::new(AudioSourceOptions{
             echo_cancellation: true,
             noise_suppression: true,

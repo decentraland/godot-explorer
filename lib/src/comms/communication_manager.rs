@@ -1008,6 +1008,7 @@ impl CommunicationManager {
                 let processor_sender = self.ensure_message_processor();
 
                 // Create LiveKit room with shared message processor
+                // Main rooms use auto_subscribe: true (default) to automatically receive all peers
                 let mut livekit_room = LivekitRoom::new(
                     comms_address.to_string(),
                     format!("livekit-{}", comms_address),
@@ -1179,10 +1180,11 @@ impl CommunicationManager {
         }
 
         // Create new LiveKit room for the scene
+        // Scene rooms use auto_subscribe: false to manually control subscriptions
         let room_id = format!("scene-{}", request.scene_id);
         tracing::info!("🚀 Creating new scene room with ID: {}", room_id);
 
-        let mut scene_room = LivekitRoom::new(request.livekit_url.clone(), room_id);
+        let mut scene_room = LivekitRoom::new_with_options(request.livekit_url.clone(), room_id, false);
 
         // Connect the scene room to the message processor
         scene_room.set_message_processor_sender(processor_sender);

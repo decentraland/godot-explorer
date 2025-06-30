@@ -352,6 +352,7 @@ impl ArchipelagoManager {
                             };
 
                             // Create LiveKit room with MessageProcessor connection
+                            // Archipelago rooms use auto_subscribe: true (default) to automatically receive all peers
                             let mut livekit_room = LivekitRoom::new(
                                 comms_address.to_string(),
                                 format!("archipelago-livekit-{}", msg.island_id),
