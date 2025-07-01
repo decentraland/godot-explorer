@@ -138,6 +138,9 @@ pub struct MessageProcessor {
     chats: VecDeque<(H160, rfc4::Chat)>,
     incoming_scene_messages: HashMap<String, VecDeque<(H160, Vec<u8>)>>,
 
+    // Track last chat timestamp per sender to filter duplicates
+    last_chat_timestamps: HashMap<H160, f64>,
+
     // Profile updates from async tasks
     profile_update_receiver: mpsc::Receiver<ProfileUpdate>,
     profile_update_sender: mpsc::Sender<ProfileUpdate>,
@@ -184,6 +187,7 @@ impl MessageProcessor {
             last_profile_response_sent: Instant::now(),
             chats: VecDeque::new(),
             incoming_scene_messages: HashMap::new(),
+            last_chat_timestamps: HashMap::new(),
             profile_update_receiver,
             profile_update_sender,
             profile_failure_receiver,
@@ -354,6 +358,9 @@ impl MessageProcessor {
                         peer.alias
                     );
                     avatar_scene.remove_avatar(peer.alias);
+
+                    // Clean up chat timestamp tracking for removed peer
+                    self.last_chat_timestamps.remove(&address);
                 }
             }
         }
@@ -541,6 +548,9 @@ impl MessageProcessor {
                 let mut avatar_scene_ref = self.avatars.clone();
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene.remove_avatar(alias);
+
+                // Clean up chat timestamp tracking for removed peer
+                self.last_chat_timestamps.remove(&address);
             }
         }
     }
@@ -620,6 +630,26 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::Chat(chat) => {
                 tracing::info!("Received Chat from {:#x}: {:?}", address, chat);
+
+                // Check for duplicate messages based on timestamp
+                const TIMESTAMP_TOLERANCE: f64 = 0.001;
+
+                // Check if we've seen a recent message from this sender
+                if let Some(&last_timestamp) = self.last_chat_timestamps.get(&address) {
+                    // If the new timestamp is older or within tolerance of the last one, it's a duplicate
+                    if chat.timestamp <= last_timestamp + TIMESTAMP_TOLERANCE {
+                        tracing::debug!(
+                            "Discarding duplicate chat from {:#x}: timestamp {} <= {} (last + tolerance)",
+                            address,
+                            chat.timestamp,
+                            last_timestamp + TIMESTAMP_TOLERANCE
+                        );
+                        return;
+                    }
+                }
+
+                // Update the last timestamp for this sender
+                self.last_chat_timestamps.insert(address, chat.timestamp);
 
                 // Enforce bounded queue for chat messages
                 if self.chats.len() >= MAX_CHAT_MESSAGES {
@@ -1047,5 +1077,6 @@ impl MessageProcessor {
 
     pub fn clean(&mut self) {
         self.peer_identities.clear();
+        self.last_chat_timestamps.clear();
     }
 }
