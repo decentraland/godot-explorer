@@ -5,6 +5,8 @@ use http::Uri;
 use std::sync::Arc;
 use std::time::Instant;
 
+#[cfg(feature = "use_livekit")]
+use crate::{auth::wallet, scene_runner::tokio_runtime::TokioRuntime};
 use crate::{
     comms::{
         adapter::{
@@ -16,8 +18,6 @@ use crate::{
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::dcl_global::DclGlobal,
 };
-#[cfg(feature = "use_livekit")]
-use crate::{auth::wallet, scene_runner::tokio_runtime::TokioRuntime};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -910,7 +910,10 @@ impl CommunicationManager {
                     }
                     #[cfg(not(feature = "use_livekit"))]
                     {
-                        tracing::info!("⚠️  Archipelago URL detected but LiveKit feature is not enabled: {}", temp);
+                        tracing::info!(
+                            "⚠️  Archipelago URL detected but LiveKit feature is not enabled: {}",
+                            temp
+                        );
                         None
                     }
                 } else {
