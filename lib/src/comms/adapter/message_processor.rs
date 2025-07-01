@@ -9,31 +9,20 @@ use tokio::sync::mpsc;
 
 use crate::{
     avatars::avatar_scene::AvatarScene,
-    comms::profile::{SerializedProfile, UserProfile},
-    content::profile::prepare_request_requirements,
-    content::profile::request_lambda_profile,
+    comms::{
+        consts::{
+            DEFAULT_PROTOCOL_VERSION, INACTIVE_PEER_THRESHOLD_SECS, MAX_CHAT_MESSAGES,
+            MAX_SCENE_IDS, MAX_SCENE_MESSAGES_PER_SCENE, MESSAGE_CHANNEL_SIZE,
+            OUTGOING_CHANNEL_SIZE, PROFILE_REQUEST_INTERVAL_SECS, PROFILE_UPDATE_CHANNEL_SIZE,
+        },
+        profile::{SerializedProfile, UserProfile},
+    },
+    content::profile::{prepare_request_requirements, request_lambda_profile},
     dcl::components::proto_components::kernel::comms::rfc4,
     scene_runner::tokio_runtime::TokioRuntime,
 };
 
 use super::movement_compressed::MovementCompressed;
-
-// Constants for bounded queue sizes to prevent memory exhaustion
-const MAX_CHAT_MESSAGES: usize = 100;
-const MAX_SCENE_MESSAGES_PER_SCENE: usize = 50;
-const MAX_SCENE_IDS: usize = 20;
-
-// Message channel sizes
-const MESSAGE_CHANNEL_SIZE: usize = 1000;
-const OUTGOING_CHANNEL_SIZE: usize = 1000;
-const PROFILE_UPDATE_CHANNEL_SIZE: usize = 100;
-
-// Timing constants
-const INACTIVE_PEER_THRESHOLD_SECS: u64 = 5;
-const PROFILE_REQUEST_INTERVAL_SECS: f32 = 10.0;
-
-// Protocol version
-const DEFAULT_PROTOCOL_VERSION: u32 = 100;
 
 /// Represents an incoming message from a communication room
 #[derive(Debug, Clone)]

@@ -6,13 +6,16 @@ use std::sync::Arc;
 use std::time::Instant;
 
 #[cfg(feature = "use_livekit")]
-use crate::{auth::wallet, scene_runner::tokio_runtime::TokioRuntime};
+use crate::{
+    auth::wallet, comms::consts::DISABLE_ARCHIPELAGO, scene_runner::tokio_runtime::TokioRuntime,
+};
 use crate::{
     comms::{
         adapter::{
             message_processor::MessageProcessor, movement_compressed::MoveKind,
             ws_room::WebSocketRoom,
         },
+        consts::DEFAULT_PROTOCOL_VERSION,
         signed_login::SignedLoginMeta,
     },
     dcl::components::proto_components::kernel::comms::rfc4,
@@ -27,15 +30,6 @@ use super::{
 };
 
 use crate::comms::adapter::movement_compressed::{Movement, MovementCompressed, Temporal};
-
-#[cfg(feature = "use_livekit")]
-const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scene-adapter";
-
-// Temporary flags for testing different connection scenarios
-#[cfg(feature = "use_livekit")]
-const DISABLE_ARCHIPELAGO: bool = false;
-#[cfg(feature = "use_livekit")]
-const DISABLE_SCENE_ROOM: bool = false;
 
 #[derive(Serialize, Deserialize)]
 pub struct GatekeeperResponse {
@@ -372,7 +366,7 @@ impl CommunicationManager {
     pub fn send_scene_message(&mut self, scene_id: String, data: Vec<u8>) {
         let scene_message = rfc4::Packet {
             message: Some(rfc4::packet::Message::Scene(rfc4::Scene { scene_id, data })),
-            protocol_version: 100,
+            protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
         // Send to main room if available
         if let Some(main_room) = &mut self.main_room {
@@ -410,7 +404,7 @@ impl CommunicationManager {
                         profile_version: player_profile.version,
                     },
                 )),
-                protocol_version: 100,
+                protocol_version: DEFAULT_PROTOCOL_VERSION,
             };
 
             // Send to main room if available
@@ -460,7 +454,7 @@ impl CommunicationManager {
                         base_url: player_profile.base_url.clone(),
                     },
                 )),
-                protocol_version: 100,
+                protocol_version: DEFAULT_PROTOCOL_VERSION,
             };
 
             // Send ProfileVersion packet
@@ -470,7 +464,7 @@ impl CommunicationManager {
                         profile_version: player_profile.version,
                     },
                 )),
-                protocol_version: 100,
+                protocol_version: DEFAULT_PROTOCOL_VERSION,
             };
 
             // Send to main room if available
@@ -633,7 +627,7 @@ impl CommunicationManager {
 
                 rfc4::Packet {
                     message: Some(rfc4::packet::Message::MovementCompressed(movement_packet)),
-                    protocol_version: 100,
+                    protocol_version: DEFAULT_PROTOCOL_VERSION,
                 }
             } else {
                 // Create regular Movement packet with all required fields
@@ -675,7 +669,7 @@ impl CommunicationManager {
 
                 rfc4::Packet {
                     message: Some(rfc4::packet::Message::Movement(movement_packet)),
-                    protocol_version: 100,
+                    protocol_version: DEFAULT_PROTOCOL_VERSION,
                 }
             }
         };
@@ -742,7 +736,7 @@ impl CommunicationManager {
 
             rfc4::Packet {
                 message: Some(rfc4::packet::Message::Position(position_packet)),
-                protocol_version: 100,
+                protocol_version: DEFAULT_PROTOCOL_VERSION,
             }
         };
 
@@ -792,7 +786,7 @@ impl CommunicationManager {
                 message: text.to_string(),
                 timestamp: self.start_time.elapsed().as_secs_f64(),
             })),
-            protocol_version: 100,
+            protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
 
         let mut sent = false;
@@ -823,7 +817,7 @@ impl CommunicationManager {
                 urn: emote_urn.to_string(),
                 incremental_id: self.last_emote_incremental_id,
             })),
-            protocol_version: 100,
+            protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
 
         let mut sent = false;
@@ -1259,7 +1253,10 @@ impl CommunicationManager {
     pub fn _on_change_scene_id(&mut self, scene_id: i32) {
         use std::sync::Arc;
 
-        use crate::http_request::http_queue_requester::HttpQueueRequester;
+        use crate::{
+            comms::consts::DISABLE_SCENE_ROOM,
+            http_request::http_queue_requester::HttpQueueRequester,
+        };
 
         let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
         let scene_entity_id = scene_runner.bind().get_scene_entity_id(scene_id);
@@ -1405,7 +1402,10 @@ async fn get_scene_adapter(
 ) -> Result<String, String> {
     // Create the request body
 
-    use crate::http_request::request_response::{RequestOption, ResponseEnum, ResponseType};
+    use crate::{
+        comms::consts::GATEKEEPER_URL,
+        http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
+    };
     let request_body = serde_json::json!({
         "sceneId": scene_id,
         "realmName": realm_name
