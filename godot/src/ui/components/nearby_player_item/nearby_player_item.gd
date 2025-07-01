@@ -66,16 +66,7 @@ func _on_mouse_exited() -> void:
 
 
 func is_text_overflowing() -> bool:
-	var text_width = (
-		nickname
-		. get_theme_font("font")
-		. get_string_size(
-			nickname.text, HORIZONTAL_ALIGNMENT_LEFT, -1, nickname.get_theme_font_size("font_size")
-		)
-		. x
-	)
-	var container_width = vbox_container_nickname.size.x
-	return text_width > container_width
+	return nickname.size.x > 135
 
 
 func start_marquee_effect() -> void:
@@ -84,9 +75,8 @@ func start_marquee_effect() -> void:
 
 	is_marquee_active = true
 
-	var text_width = nickname.size.x
 	var container_width = vbox_container_nickname.size.x
-	var max_scroll_distance = text_width - container_width
+	var max_scroll_distance = nickname.size.x - container_width
 
 	if max_scroll_distance <= 0:
 		return
