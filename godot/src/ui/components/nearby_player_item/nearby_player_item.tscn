@@ -86,34 +86,43 @@ texture = ExtResource("4_io7c4")
 expand_mode = 3
 stretch_mode = 4
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname"]
+[node name="VBoxContainer_Nickname" type="VBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname"]
+unique_name_in_owner = true
 clip_contents = true
+custom_minimum_size = Vector2(60, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = -4
 alignment = 1
 
-[node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer"]
+[node name="ScrollContainer_Nickname" type="ScrollContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 19)
+layout_mode = 2
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 0
+
+[node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/ScrollContainer_Nickname"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("5_cmtom")
 theme_override_font_sizes/font_size = 15
 text = "X"
-clip_text = true
 
-[node name="Hash" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer"]
+[node name="Hash" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="HashTag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer/Hash"]
+[node name="HashTag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
 theme_override_font_sizes/font_size = 13
 text = "#"
 
-[node name="Tag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer/Hash"]
+[node name="Tag" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname/Hash"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
