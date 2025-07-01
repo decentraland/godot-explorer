@@ -128,6 +128,7 @@ impl DclScene {
 
         let scene_id = spawn_dcl_scene_data.scene_id;
         let scene_crdt = Arc::new(Mutex::new(SceneCrdtState::from_proto()));
+        #[cfg(feature = "use_deno")]
         let thread_scene_crdt = scene_crdt.clone();
 
         let thread_join_handle = std::thread::Builder::new()

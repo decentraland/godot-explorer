@@ -6,7 +6,6 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::{
-    auth::wallet,
     comms::{
         adapter::{
             message_processor::MessageProcessor, movement_compressed::MoveKind,
@@ -16,8 +15,9 @@ use crate::{
     },
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::dcl_global::DclGlobal,
-    scene_runner::tokio_runtime::TokioRuntime,
 };
+#[cfg(feature = "use_livekit")]
+use crate::{auth::wallet, scene_runner::tokio_runtime::TokioRuntime};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -28,10 +28,13 @@ use super::{
 
 use crate::comms::adapter::movement_compressed::{Movement, MovementCompressed, Temporal};
 
+#[cfg(feature = "use_livekit")]
 const GATEKEEPER_URL: &str = "https://comms-gatekeeper.decentraland.org/get-scene-adapter";
 
 // Temporary flags for testing different connection scenarios
+#[cfg(feature = "use_livekit")]
 const DISABLE_ARCHIPELAGO: bool = false;
+#[cfg(feature = "use_livekit")]
 const DISABLE_SCENE_ROOM: bool = false;
 
 #[derive(Serialize, Deserialize)]
@@ -195,12 +198,15 @@ impl INode for CommunicationManager {
         }
 
         // Check if we need to announce profile for archipelago (before borrowing)
+        #[cfg(feature = "use_livekit")]
         let should_announce_archipelago =
             if let CommsConnection::Archipelago(ref archipelago) = &self.current_connection {
                 !self.archipelago_profile_announced && archipelago.adapter().is_some()
             } else {
                 false
             };
+        #[cfg(not(feature = "use_livekit"))]
+        let should_announce_archipelago = false;
 
         match &mut self.current_connection {
             CommsConnection::None => {}
@@ -322,6 +328,7 @@ impl INode for CommunicationManager {
 }
 
 impl CommunicationManager {
+    #[cfg(feature = "use_livekit")]
     fn create_fallback_connection(&mut self) {
         tracing::info!("🔧 Creating fallback MessageProcessor for scene room support");
 
@@ -575,6 +582,7 @@ impl CommunicationManager {
         land: bool,
     ) -> bool {
         // Update archipelago position if connected via archipelago
+        #[cfg(feature = "use_livekit")]
         if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
             archipelago.update_position(position);
         }
@@ -714,6 +722,7 @@ impl CommunicationManager {
     #[func]
     fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
         // Update archipelago position if connected via archipelago
+        #[cfg(feature = "use_livekit")]
         if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
             archipelago.update_position(position);
         }
@@ -846,13 +855,20 @@ impl CommunicationManager {
             self.base().callable("_on_profile_changed"),
         );
 
-        let mut scene_runner = DclGlobal::singleton().bind().get_scene_runner();
-        scene_runner.connect(
-            "on_change_scene_id".into(),
-            self.base().callable("_on_change_scene_id"),
-        );
+        #[cfg(feature = "use_livekit")]
+        {
+            let mut scene_runner = DclGlobal::singleton().bind().get_scene_runner();
+            scene_runner.connect(
+                "on_change_scene_id".into(),
+                self.base().callable("_on_change_scene_id"),
+            );
+        }
 
-        self._on_change_scene_id(scene_runner.bind().get_current_parcel_scene_id());
+        #[cfg(feature = "use_livekit")]
+        {
+            let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
+            self._on_change_scene_id(scene_runner.bind().get_current_parcel_scene_id());
+        }
     }
 
     #[func]
@@ -883,11 +899,19 @@ impl CommunicationManager {
                 .map(|v| GString::from_variant(&v).to_string())
             {
                 if temp.starts_with("archipelago:") {
-                    if DISABLE_ARCHIPELAGO {
-                        tracing::info!("⚠️  Archipelago URL detected but ignored due to DISABLE_ARCHIPELAGO flag: {}", temp);
+                    #[cfg(feature = "use_livekit")]
+                    {
+                        if DISABLE_ARCHIPELAGO {
+                            tracing::info!("⚠️  Archipelago URL detected but ignored due to DISABLE_ARCHIPELAGO flag: {}", temp);
+                            None
+                        } else {
+                            Some(temp.to_string()[12..].into())
+                        }
+                    }
+                    #[cfg(not(feature = "use_livekit"))]
+                    {
+                        tracing::info!("⚠️  Archipelago URL detected but LiveKit feature is not enabled: {}", temp);
                         None
-                    } else {
-                        Some(temp.to_string()[12..].into())
                     }
                 } else {
                     None
@@ -935,6 +959,7 @@ impl CommunicationManager {
         }
 
         if comms_fixed_adapter.is_none() {
+            #[cfg(feature = "use_livekit")]
             if DISABLE_ARCHIPELAGO {
                 // When archipelago is disabled, fall back to a direct LiveKit connection
                 tracing::info!(
@@ -945,6 +970,8 @@ impl CommunicationManager {
             } else {
                 tracing::info!("As far, only fixedAdapter is supported.");
             }
+            #[cfg(not(feature = "use_livekit"))]
+            tracing::info!("As far, only fixedAdapter is supported.");
             return;
         }
 
