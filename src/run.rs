@@ -28,7 +28,7 @@ pub fn run(
     if itest {
         args.push("--headless");
         args.push("--rendering-driver");
-        args.push("mobile");
+        args.push("vulkan");
         args.push("--verbose");
         args.push("--test-runner");
     }
