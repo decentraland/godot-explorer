@@ -132,6 +132,9 @@ pub struct CommunicationManager {
     last_profile_version_broadcast: Instant,
     archipelago_profile_announced: bool,
 
+    realm_min_bounds: Vector2i,
+    realm_max_bounds: Vector2i,
+
     // Shared message processor for all adapters
     message_processor: Option<MessageProcessor>,
 
@@ -174,6 +177,8 @@ impl INode for CommunicationManager {
             scene_room_connection_receiver,
             #[cfg(feature = "use_livekit")]
             scene_room_connection_sender,
+            realm_min_bounds: godot::prelude::Vector2i::new(-150, -150),
+            realm_max_bounds: godot::prelude::Vector2i::new(163, 158),
             base,
         }
     }
@@ -221,13 +226,6 @@ impl INode for CommunicationManager {
             #[cfg(feature = "use_livekit")]
             CommsConnection::Archipelago(archipelago) => {
                 archipelago.poll();
-                let chats = archipelago.consume_chats();
-
-                if !chats.is_empty() {
-                    let chats_variant_array = get_chat_array(chats);
-                    self.base_mut()
-                        .emit_signal("chat_message".into(), &[chats_variant_array.to_variant()]);
-                }
             }
             CommsConnection::Connected(adapter) => {
                 let adapter = adapter.as_mut();
@@ -389,10 +387,6 @@ impl CommunicationManager {
             // Fallback to legacy adapter-based consumption
             match &mut self.current_connection {
                 CommsConnection::Connected(adapter) => adapter.consume_scene_messages(scene_id),
-                #[cfg(feature = "use_livekit")]
-                CommsConnection::Archipelago(archipelago) => {
-                    archipelago.consume_scene_messages(scene_id)
-                }
                 _ => vec![],
             }
         }
@@ -591,18 +585,15 @@ impl CommunicationManager {
 
         let get_packet = || {
             if compressed {
-                // Create MovementCompressed packet using the pattern from the other engine
-
                 // Get elapsed time since start
                 let time = self.start_time.elapsed().as_secs_f64();
 
-                // Get realm bounds - using default values for now, you may want to get actual bounds
-                let realm_bounds = (
-                    godot::prelude::Vector2i::new(-150, -150),
-                    godot::prelude::Vector2i::new(150, 150),
+                let movement = Movement::new(
+                    position,
+                    velocity,
+                    self.realm_min_bounds,
+                    self.realm_max_bounds,
                 );
-
-                let movement = Movement::new(position, velocity, realm_bounds.0, realm_bounds.1);
 
                 // Determine move kind from parameters
                 let move_kind = if run {
@@ -1080,7 +1071,6 @@ impl CommunicationManager {
                         comms_address,
                         current_ephemeral_auth_chain.clone(),
                         player_profile,
-                        avatar_scene,
                     );
                     archipelago.set_shared_processor_sender(processor_sender);
 
@@ -1298,8 +1288,6 @@ impl CommunicationManager {
             realm.bind().get_realm_max_bounds(),
         );
 
-        tracing::warn!("Requesting scene adapter... realm_name is '{}'", realm_name);
-
         TokioRuntime::spawn(async move {
             tracing::info!("Requesting scene adapter for scene: {}", scene_entity_id);
             match get_scene_adapter(
@@ -1362,6 +1350,8 @@ impl CommunicationManager {
     #[func]
     pub fn set_realm_bounds(&mut self, min_bounds: Vector2i, max_bounds: Vector2i) {
         if let Some(processor) = self.message_processor.as_mut() {
+            self.realm_min_bounds = min_bounds;
+            self.realm_max_bounds = max_bounds;
             processor.set_realm_bounds(min_bounds, max_bounds);
             tracing::info!(
                 "🌐 Realm bounds updated: min=({}, {}), max=({}, {})",

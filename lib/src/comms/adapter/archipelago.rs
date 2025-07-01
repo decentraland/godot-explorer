@@ -2,16 +2,12 @@ use std::time::{Duration, Instant};
 
 use crate::{
     auth::ephemeral_auth_chain::EphemeralAuthChain,
-    avatars::avatar_scene::AvatarScene,
     comms::profile::UserProfile,
     dcl::components::proto_components::{
         common::Position,
-        kernel::comms::{
-            rfc4,
-            v3::{
-                client_packet, server_packet, ChallengeRequestMessage, ClientPacket, Heartbeat,
-                ServerPacket, SignedChallengeMessage,
-            },
+        kernel::comms::v3::{
+            client_packet, server_packet, ChallengeRequestMessage, ClientPacket, Heartbeat,
+            ServerPacket, SignedChallengeMessage,
         },
     },
 };
@@ -19,7 +15,7 @@ use ethers_core::types::H160;
 use godot::{engine::WebSocketPeer, prelude::*};
 use prost::Message;
 
-use super::{adapter_trait::Adapter, livekit::LivekitRoom, message_processor::MessageProcessor};
+use super::{adapter_trait::Adapter, livekit::LivekitRoom};
 
 #[derive(Clone)]
 enum ArchipelagoState {
@@ -42,11 +38,9 @@ pub struct ArchipelagoManager {
     player_profile: Option<UserProfile>,
     player_position: Vector3,
     ephemeral_auth_chain: EphemeralAuthChain,
-    avatar_scene: Gd<AvatarScene>,
     last_send_heartbeat: Instant,
 
     adapter: Option<Box<dyn Adapter>>,
-    message_processor: Option<MessageProcessor>,
     shared_processor_sender:
         Option<tokio::sync::mpsc::Sender<super::message_processor::IncomingMessage>>,
 }
@@ -61,7 +55,6 @@ impl ArchipelagoManager {
         ws_url: &str,
         ephemeral_auth_chain: EphemeralAuthChain,
         player_profile: Option<UserProfile>,
-        avatar_scene: Gd<AvatarScene>,
     ) -> Self {
         let lower_url = ws_url.to_lowercase();
         let ws_url = if !lower_url.starts_with("ws://") && !lower_url.starts_with("wss://") {
@@ -83,9 +76,7 @@ impl ArchipelagoManager {
             player_profile,
             last_try_to_connect: Instant::now(),
             adapter: None,
-            message_processor: None,
             shared_processor_sender: None,
-            avatar_scene,
             player_position: Vector3::new(0.0, 0.0, 0.0),
             last_send_heartbeat: Instant::now(),
         }
@@ -277,18 +268,8 @@ impl ArchipelagoManager {
             true
         };
 
-        // Poll the MessageProcessor if it exists
-        let processor_ok = if let Some(processor) = self.message_processor.as_mut() {
-            processor.poll()
-        } else {
-            true
-        };
-
         if !adapter_ok {
             self.adapter = None;
-        }
-        if !processor_ok {
-            self.message_processor = None;
         }
     }
 
@@ -302,12 +283,6 @@ impl ArchipelagoManager {
             }
             _ => {}
         }
-
-        // Clean up the MessageProcessor
-        if let Some(processor) = &mut self.message_processor {
-            processor.clean();
-        }
-        self.message_processor = None;
     }
 
     fn _handle_messages(&mut self) {
@@ -328,37 +303,25 @@ impl ArchipelagoManager {
                     };
                     match protocol {
                         "livekit" => {
-                            let processor_sender =
-                                if let Some(shared_sender) = &self.shared_processor_sender {
-                                    // Use shared processor from CommunicationManager
-                                    tracing::info!(
+                            if let Some(shared_sender) = &self.shared_processor_sender {
+                                tracing::info!(
                                     "Using shared MessageProcessor for archipelago LiveKit room"
                                 );
-                                    shared_sender.clone()
-                                } else {
-                                    // Create our own MessageProcessor (fallback)
-                                    tracing::info!(
-                                        "Creating dedicated MessageProcessor for archipelago"
-                                    );
-                                    let processor = MessageProcessor::new(
-                                        self.player_address,
-                                        self.player_profile.clone(),
-                                        self.avatar_scene.clone(),
-                                    );
-                                    let sender = processor.get_message_sender();
-                                    self.message_processor = Some(processor);
-                                    sender
-                                };
 
-                            // Create LiveKit room with MessageProcessor connection
-                            // Archipelago rooms use auto_subscribe: true (default) to automatically receive all peers
-                            let mut livekit_room = LivekitRoom::new(
-                                comms_address.to_string(),
-                                format!("archipelago-livekit-{}", msg.island_id),
-                            );
-                            livekit_room.set_message_processor_sender(processor_sender);
+                                // Create LiveKit room with MessageProcessor connection
+                                // Archipelago rooms use auto_subscribe: true (default) to automatically receive all peers
+                                let mut livekit_room = LivekitRoom::new(
+                                    comms_address.to_string(),
+                                    format!("archipelago-livekit-{}", msg.island_id),
+                                );
+                                livekit_room.set_message_processor_sender(shared_sender.clone());
 
-                            self.adapter = Some(Box::new(livekit_room));
+                                self.adapter = Some(Box::new(livekit_room));
+                            } else {
+                                tracing::error!(
+                                    "Cannot create LiveKit adapter: shared_processor_sender is not set"
+                                );
+                            }
                         }
                         _ => {
                             tracing::info!(
@@ -376,40 +339,12 @@ impl ArchipelagoManager {
     pub fn change_profile(&mut self, new_profile: UserProfile) {
         self.player_profile = Some(new_profile.clone());
         if let Some(adapter) = self.adapter.as_mut() {
-            adapter.change_profile(new_profile.clone());
-        }
-        if let Some(processor) = self.message_processor.as_mut() {
-            processor.change_profile(new_profile);
-        }
-    }
-
-    pub fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
-        if let Some(processor) = self.message_processor.as_mut() {
-            processor.consume_chats()
-        } else {
-            Vec::new()
-        }
-    }
-
-    pub fn consume_scene_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
-        if let Some(processor) = self.message_processor.as_mut() {
-            processor.consume_scene_messages(scene_id)
-        } else {
-            Vec::new()
+            adapter.change_profile(new_profile);
         }
     }
 
     pub fn update_position(&mut self, position: Vector3) {
         self.player_position = position;
-    }
-
-    pub fn get_message_processor_sender(
-        &self,
-    ) -> Option<tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>>
-    {
-        self.message_processor
-            .as_ref()
-            .map(|processor| processor.get_message_sender())
     }
 }
 
