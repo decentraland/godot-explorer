@@ -6,7 +6,7 @@ use std::{
 use crate::{
     auth::{ephemeral_auth_chain::EphemeralAuthChain, wallet::AsH160},
     avatars::avatar_scene::AvatarScene,
-    comms::profile::{SerializedProfile, UserProfile},
+    comms::profile::UserProfile,
     dcl::components::proto_components::kernel::comms::{
         rfc4::{self},
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
@@ -17,7 +17,16 @@ use godot::{engine::WebSocketPeer, prelude::*};
 use prost::Message;
 use tracing::error;
 
-use super::adapter_trait::Adapter;
+use super::{
+    adapter_trait::Adapter,
+    message_processor::{IncomingMessage, MessageType, Rfc4Message},
+};
+
+// Constants
+const RECONNECT_INTERVAL_SECS: u64 = 1;
+const PROFILE_REQUEST_INTERVAL_SECS: f32 = 10.0;
+const INITIAL_TIMESTAMP_OFFSET_SECS: u64 = 1000;
+const DCL_CHALLENGE_PREFIX: &str = "dcl-";
 
 #[derive(Clone)]
 enum WsRoomState {
@@ -60,20 +69,21 @@ pub struct WebSocketRoom {
     ephemeral_auth_chain: EphemeralAuthChain,
     peer_identities: HashMap<u32, Peer>,
 
-    // Trade-off with other peers
+    // Message processor integration
+    room_id: String,
+    message_processor_sender: Option<tokio::sync::mpsc::Sender<IncomingMessage>>,
+
+    // Trade-off with other peers (kept for backwards compatibility)
     avatars: Gd<AvatarScene>,
-    chats: Vec<(H160, rfc4::Chat)>,
+    #[allow(dead_code)]
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
-    last_profile_version_announced: u32,
-
-    // Scene messges
-    incoming_scene_messages: HashMap<String, Vec<(H160, Vec<u8>)>>,
 }
 
 impl WebSocketRoom {
     pub fn new(
         ws_url: &str,
+        room_id: String,
         ephemeral_auth_chain: EphemeralAuthChain,
         player_profile: Option<UserProfile>,
         avatars: Gd<AvatarScene>,
@@ -89,7 +99,7 @@ impl WebSocketRoom {
             ws_url.to_string()
         };
 
-        let old_time = Instant::now() - Duration::from_secs(1000);
+        let old_time = Instant::now() - Duration::from_secs(INITIAL_TIMESTAMP_OFFSET_SECS);
 
         Self {
             ws_peer: WebSocketPeer::new_gd(),
@@ -100,19 +110,21 @@ impl WebSocketRoom {
             player_profile,
             from_alias: 0,
             peer_identities: HashMap::new(),
+            room_id,
+            message_processor_sender: None,
             avatars,
-            chats: Vec::new(),
             signature: None,
             last_profile_response_sent: old_time,
             last_profile_request_sent: old_time,
             last_try_to_connect: old_time,
-            last_profile_version_announced: 0,
-            incoming_scene_messages: HashMap::new(),
         }
     }
 
-    fn _consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
-        std::mem::take(&mut self.chats)
+    pub fn set_message_processor_sender(
+        &mut self,
+        sender: tokio::sync::mpsc::Sender<IncomingMessage>,
+    ) {
+        self.message_processor_sender = Some(sender);
     }
 
     fn _send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
@@ -165,7 +177,9 @@ impl WebSocketRoom {
         match self.state.clone() {
             WsRoomState::Connecting => match ws_state {
                 godot::engine::web_socket_peer::State::CLOSED => {
-                    if (Instant::now() - self.last_try_to_connect).as_secs() > 1 {
+                    if (Instant::now() - self.last_try_to_connect).as_secs()
+                        > RECONNECT_INTERVAL_SECS
+                    {
                         let ws_protocols = {
                             let mut v = PackedStringArray::new();
                             v.push(GString::from("rfc5"));
@@ -214,7 +228,7 @@ impl WebSocketRoom {
 
                                 let challenge_to_sign = challenge_msg.challenge_to_sign.clone();
 
-                                if !challenge_to_sign.starts_with("dcl-") {
+                                if !challenge_to_sign.starts_with(DCL_CHALLENGE_PREFIX) {
                                     tracing::error!("invalid challenge to sign");
                                     return;
                                 }
@@ -276,38 +290,7 @@ impl WebSocketRoom {
                                     ),
                                 );
 
-                                if let Some(profile) = self.player_profile.as_ref().cloned() {
-                                    self.send_rfc4(
-                                        rfc4::Packet {
-                                            message: Some(rfc4::packet::Message::ProfileResponse(
-                                                rfc4::ProfileResponse {
-                                                    serialized_profile: serde_json::to_string(
-                                                        &profile.content,
-                                                    )
-                                                    .unwrap(),
-                                                    base_url: profile.base_url.clone(),
-                                                },
-                                            )),
-                                            protocol_version: 0,
-                                        },
-                                        false,
-                                    );
-
-                                    self.last_profile_version_announced = profile.version;
-
-                                    self.send_rfc4(
-                                        rfc4::Packet {
-                                            message: Some(rfc4::packet::Message::ProfileVersion(
-                                                rfc4::AnnounceProfileVersion {
-                                                    profile_version: self
-                                                        .last_profile_version_announced,
-                                                },
-                                            )),
-                                            protocol_version: 0,
-                                        },
-                                        false,
-                                    );
-                                }
+                                // Profile announcement is now handled by CommunicationManager
 
                                 self.avatars.bind_mut().clean();
                                 for (alias, peer) in self.peer_identities.iter() {
@@ -315,6 +298,20 @@ impl WebSocketRoom {
                                         *alias,
                                         GString::from(format!("{:#x}", peer.address)),
                                     );
+
+                                    // Send PeerJoined event to MessageProcessor
+                                    if let Some(sender) = &self.message_processor_sender {
+                                        if let Err(e) = sender.try_send(IncomingMessage {
+                                            message: MessageType::PeerJoined,
+                                            address: peer.address,
+                                            room_id: self.room_id.clone(),
+                                        }) {
+                                            tracing::warn!(
+                                                "Failed to send PeerJoined event: {}",
+                                                e
+                                            );
+                                        }
+                                    }
                                 }
                             }
                             _ => {
@@ -368,15 +365,39 @@ impl WebSocketRoom {
                         self.avatars
                             .bind_mut()
                             .add_avatar(peer.alias, GString::from(format!("{:#x}", h160)));
-                        // TODO: message XXX joined
+
+                        // Send PeerJoined event to MessageProcessor
+                        if let Some(sender) = &self.message_processor_sender {
+                            if let Err(e) = sender.try_send(IncomingMessage {
+                                message: MessageType::PeerJoined,
+                                address: h160,
+                                room_id: self.room_id.clone(),
+                            }) {
+                                tracing::warn!(
+                                    "Failed to send PeerJoined event for new peer: {}",
+                                    e
+                                );
+                            }
+                        }
                     } else {
-                        // TODO: Invalid address
+                        tracing::warn!("Invalid address in PeerJoinMessage");
                     }
                 }
                 ws_packet::Message::PeerLeaveMessage(peer) => {
-                    self.peer_identities.remove(&peer.alias);
-                    self.avatars.bind_mut().remove_avatar(peer.alias);
-                    // TODO: message XXX left
+                    if let Some(peer_data) = self.peer_identities.remove(&peer.alias) {
+                        self.avatars.bind_mut().remove_avatar(peer.alias);
+
+                        // Send PeerLeft event to MessageProcessor
+                        if let Some(sender) = &self.message_processor_sender {
+                            if let Err(e) = sender.try_send(IncomingMessage {
+                                message: MessageType::PeerLeft,
+                                address: peer_data.address,
+                                room_id: self.room_id.clone(),
+                            }) {
+                                tracing::warn!("Failed to send PeerLeft event: {}", e);
+                            }
+                        }
+                    }
                 }
                 ws_packet::Message::PeerUpdateMessage(update) => {
                     let packet = match rfc4::Packet::decode(update.body.as_slice()) {
@@ -396,117 +417,37 @@ impl WebSocketRoom {
                         continue;
                     };
 
-                    match message {
-                        rfc4::packet::Message::Position(position) => {
-                            self.avatars
-                                .bind_mut()
-                                .update_avatar_transform_with_rfc4_position(
-                                    update.from_alias,
-                                    &position,
+                    // Forward message to message processor if available
+                    if let Some(sender) = &self.message_processor_sender {
+                        let incoming_message = IncomingMessage {
+                            message: MessageType::Rfc4(Rfc4Message {
+                                message,
+                                protocol_version: packet.protocol_version,
+                            }),
+                            address: peer.address,
+                            room_id: self.room_id.clone(),
+                        };
+
+                        if let Err(err) = sender.try_send(incoming_message) {
+                            tracing::warn!("Failed to forward WS message to processor: {}", err);
+                        }
+                    } else {
+                        // Fallback: handle locally (legacy mode)
+                        match message {
+                            rfc4::packet::Message::Position(position) => {
+                                self.avatars
+                                    .bind_mut()
+                                    .update_avatar_transform_with_rfc4_position(
+                                        update.from_alias,
+                                        &position,
+                                    );
+                            }
+                            _ => {
+                                tracing::debug!(
+                                    "WS room handling message locally (no processor): {:?}",
+                                    message
                                 );
-                        }
-                        rfc4::packet::Message::Chat(chat) => {
-                            self.chats.push((peer.address, chat));
-                        }
-                        rfc4::packet::Message::ProfileVersion(announce_profile_version) => {
-                            self.peer_identities
-                                .get_mut(&update.from_alias)
-                                .unwrap()
-                                .announced_version = Some(
-                                announce_profile_version
-                                    .profile_version
-                                    .max(peer.announced_version.unwrap_or(0)),
-                            );
-                        }
-                        rfc4::packet::Message::ProfileRequest(profile_request) => {
-                            if self.last_profile_response_sent.elapsed().as_secs_f32() < 10.0 {
-                                continue;
                             }
-
-                            tracing::info!("comms > received ProfileRequest {:?}", profile_request);
-
-                            if let Some(addr) = profile_request.address.as_h160() {
-                                if addr == self.player_address {
-                                    if let Some(profile) = &self.player_profile {
-                                        self.last_profile_response_sent = Instant::now();
-
-                                        self.send_rfc4(
-                                            rfc4::Packet {
-                                                message: Some(
-                                                    rfc4::packet::Message::ProfileResponse(
-                                                        rfc4::ProfileResponse {
-                                                            serialized_profile:
-                                                                serde_json::to_string(
-                                                                    &profile.content,
-                                                                )
-                                                                .unwrap(),
-                                                            base_url: profile.base_url.clone(),
-                                                        },
-                                                    ),
-                                                ),
-                                                protocol_version: 0,
-                                            },
-                                            false,
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                        rfc4::packet::Message::ProfileResponse(profile_response) => {
-                            let serialized_profile: SerializedProfile =
-                                match serde_json::from_str(&profile_response.serialized_profile) {
-                                    Ok(p) => p,
-                                    Err(_e) => {
-                                        error!(
-                                            "comms > invalid data ProfileResponse {:?}",
-                                            profile_response
-                                        );
-                                        continue;
-                                    }
-                                };
-
-                            let incoming_version = serialized_profile.version as u32;
-                            let current_version = if let Some(profile) = peer.profile.as_ref() {
-                                profile.version
-                            } else {
-                                0
-                            };
-
-                            if incoming_version < current_version {
-                                error!(
-                                    "comms > old version ProfileResponse {:?}",
-                                    profile_response
-                                );
-                                continue;
-                            }
-
-                            let profile = UserProfile {
-                                version: incoming_version,
-                                content: serialized_profile.clone(),
-                                base_url: profile_response.base_url.clone(),
-                            };
-
-                            self.avatars
-                                .bind_mut()
-                                .update_avatar_by_alias(update.from_alias, &profile);
-
-                            self.peer_identities
-                                .get_mut(&update.from_alias)
-                                .unwrap()
-                                .profile = Some(profile);
-                        }
-                        rfc4::packet::Message::Scene(scene) => {
-                            let entry = self
-                                .incoming_scene_messages
-                                .entry(scene.scene_id)
-                                .or_default();
-
-                            // TODO: should we limit the size of the queue or accumulated bytes?
-                            entry.push((peer.address, scene.data));
-                        }
-                        rfc4::packet::Message::Voice(_voice) => {}
-                        _ => {
-                            tracing::error!("comms > unknown message");
                         }
                     }
                 }
@@ -519,7 +460,7 @@ impl WebSocketRoom {
             }
         }
 
-        if self.last_profile_request_sent.elapsed().as_secs_f32() > 10.0 {
+        if self.last_profile_request_sent.elapsed().as_secs_f32() > PROFILE_REQUEST_INTERVAL_SECS {
             self.last_profile_request_sent = Instant::now();
 
             let to_request = self
@@ -557,22 +498,7 @@ impl WebSocketRoom {
             }
         }
 
-        if let Some(profile) = &self.player_profile {
-            if self.last_profile_version_announced != profile.version {
-                self.last_profile_version_announced = profile.version;
-                self.send_rfc4(
-                    rfc4::Packet {
-                        message: Some(rfc4::packet::Message::ProfileVersion(
-                            rfc4::AnnounceProfileVersion {
-                                profile_version: self.last_profile_version_announced,
-                            },
-                        )),
-                        protocol_version: 0,
-                    },
-                    false,
-                );
-            }
-        }
+        // Profile version updates are now handled by CommunicationManager
     }
 
     fn _change_profile(&mut self, new_profile: UserProfile) {
@@ -608,7 +534,8 @@ impl Adapter for WebSocketRoom {
     }
 
     fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
-        self._consume_chats()
+        // Chats are now handled by MessageProcessor
+        Vec::new()
     }
 
     fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
@@ -621,11 +548,8 @@ impl Adapter for WebSocketRoom {
         false
     }
 
-    fn consume_scene_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
-        if let Some(messages) = self.incoming_scene_messages.get_mut(scene_id) {
-            std::mem::take(messages)
-        } else {
-            Vec::new()
-        }
+    fn consume_scene_messages(&mut self, _scene_id: &str) -> Vec<(H160, Vec<u8>)> {
+        // Scene messages are now handled by MessageProcessor
+        Vec::new()
     }
 }

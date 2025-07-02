@@ -27,6 +27,8 @@ pub fn run(
 
     if itest {
         args.push("--headless");
+        args.push("--rendering-driver");
+        args.push("vulkan");
         args.push("--verbose");
         args.push("--test-runner");
     }
@@ -82,6 +84,8 @@ fn prepare_build_args_envs(
             "--no-default-features",
             "-F",
             "use_deno",
+            "-F",
+            "use_livekit",
             "-F",
             "enable_inspector",
         ]);
