@@ -9,7 +9,7 @@ var avatar: DclAvatar = null
 var is_marquee_active: bool = false
 var marquee_tween: Tween
 var marquee_speed: float = 60.0
-var pause_duration: float = 0.75
+var pause_duration: float = 2
 
 @onready var panel_nearby_player_item: Panel = %Panel_NearbyPlayerItem
 @onready var mic_enabled: MarginContainer = %MicEnabled
