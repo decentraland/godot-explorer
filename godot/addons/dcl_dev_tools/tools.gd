@@ -4,6 +4,7 @@ extends EditorPlugin
 var tools = [
 	preload("./dev_tools/test_runner/tool.gd").new(self),
 	preload("./dev_tools/typical_places/tool.gd").new(self),
+	preload("./dev_tools/renderdoc/tool.gd").new(self)
 ]
 
 var custom_menu: MenuButton

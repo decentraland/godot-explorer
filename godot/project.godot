@@ -190,6 +190,10 @@ pointing/emulate_touch_from_mouse=true
 
 limits/debugger/max_chars_per_second=3276800
 
+[renderdoc]
+
+executable_path="/usr/bin/qrenderdoc"
+
 [rendering]
 
 occlusion_culling/bvh_build_quality=0

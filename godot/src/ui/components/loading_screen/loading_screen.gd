@@ -33,6 +33,7 @@ var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer
 
 @onready var loading_screen_progress_logic = $LoadingScreenProgressLogic
 @onready var timer_check_progress_timeout = $Timer_CheckProgressTimeout
+@onready var debug_chronometer := Chronometer.new()
 
 
 func _ready():
@@ -45,12 +46,16 @@ func _ready():
 
 # Forward
 func enable_loading_screen():
+	if !debug_chronometer:
+		debug_chronometer = Chronometer.new()
+	debug_chronometer.restart("Starting to load scene")
 	Global.loading_started.emit()
 	Global.release_mouse()
 	loading_screen_progress_logic.enable_loading_screen()
 
 
 func async_hide_loading_screen_effect():
+	debug_chronometer.lap("Finished loading scene")
 	Global.loading_finished.emit()
 	timer_check_progress_timeout.stop()
 	var tween = get_tree().create_tween()

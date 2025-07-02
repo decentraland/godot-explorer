@@ -14,6 +14,7 @@ var places = {
 	"Game Night": Vector2(1, 81)
 }
 
+
 func populate_menu(menu: PopupMenu, id: int):
 	var submenu = PopupMenu.new()
 	for place_id in places.keys().size():
@@ -22,14 +23,22 @@ func populate_menu(menu: PopupMenu, id: int):
 	menu.add_submenu_node_item("Launch on", submenu, id)
 	submenu.id_pressed.connect(_on_menu_item_selected)
 
+
 func _on_menu_item_selected(id: int):
 	var place = places.keys()[id]
 	var coord = places[place]
 
 	var old_args = ProjectSettings.get("editor/run/main_run_args")
-	ProjectSettings.set("editor/run/main_run_args", "--skip-lobby --realm https://realm-provider.decentraland.org/main --location %d,%d" % [coord.x, coord.y])
+	ProjectSettings.set(
+		"editor/run/main_run_args",
+		(
+			"--skip-lobby --realm https://realm-provider.decentraland.org/main --location %d,%d"
+			% [coord.x, coord.y]
+		)
+	)
 	plugin.get_editor_interface().play_main_scene()
 	ProjectSettings.set("editor/run/main_run_args", old_args)
+
 
 # No-op. is a submenu.
 func execute():
