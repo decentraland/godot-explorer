@@ -54,18 +54,3 @@ jobs:
     secrets:
       QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
       QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
-
-  prepare-lib:
-    name: 📚 Publish Libs Artifacts
-    needs:
-      - windows-build
-      - linux-build
-      - android-build
-      - ios-build
-      - macos-build
-    uses: ./.github/workflows/prepare_lib.yml
-    secrets:
-      S3_ENDPOINT:       ${{ secrets.S3_ENDPOINT }}
-      S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
-      S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
