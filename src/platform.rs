@@ -11,6 +11,23 @@ pub struct PlatformInfo {
     pub display_name: String,
 }
 
+/// Detect Linux package manager
+pub fn detect_linux_package_manager() -> Option<&'static str> {
+    if check_command("apt-get") {
+        Some("apt")
+    } else if check_command("pacman") {
+        Some("pacman")
+    } else if check_command("dnf") {
+        Some("dnf")
+    } else if check_command("yum") {
+        Some("yum")
+    } else if check_command("zypper") {
+        Some("zypper")
+    } else {
+        None
+    }
+}
+
 /// Get current platform information
 pub fn get_platform_info() -> PlatformInfo {
     let os = env::consts::OS;
@@ -164,6 +181,96 @@ pub fn get_android_target_arch() -> &'static str {
 #[allow(dead_code)]
 pub fn get_ios_target_arch() -> &'static str {
     "aarch64-apple-ios"
+}
+
+/// Check development dependencies based on OS
+pub fn check_development_dependencies() -> Vec<(&'static str, bool, &'static str)> {
+    let platform = get_platform_info();
+    
+    match platform.os.as_str() {
+        "linux" => vec![
+            // Audio/Video deps
+            ("libasound2-dev", check_pkg_config("alsa"), "ALSA sound library"),
+            ("libudev-dev", check_pkg_config("libudev"), "udev library"),
+            // FFmpeg deps
+            ("libavcodec-dev", check_pkg_config("libavcodec"), "FFmpeg codec library"),
+            ("libavformat-dev", check_pkg_config("libavformat"), "FFmpeg format library"),
+            ("libavutil-dev", check_pkg_config("libavutil"), "FFmpeg utilities"),
+            ("libavfilter-dev", check_pkg_config("libavfilter"), "FFmpeg filter library"),
+            ("libavdevice-dev", check_pkg_config("libavdevice"), "FFmpeg device library"),
+            // LiveKit deps
+            ("libssl-dev", check_pkg_config("openssl"), "OpenSSL library"),
+            ("libx11-dev", check_pkg_config("x11"), "X11 library"),
+            ("libgl1-mesa-dev", check_pkg_config("gl"), "OpenGL library"),
+            ("libxext-dev", check_pkg_config("xext"), "X11 extension library"),
+            // Build tools
+            ("clang", check_command("clang"), "C/C++ compiler"),
+            ("pkg-config", check_command("pkg-config"), "Package configuration tool"),
+        ],
+        "macos" => vec![
+            ("ffmpeg", check_command("ffmpeg"), "FFmpeg multimedia framework"),
+            ("pkg-config", check_command("pkg-config"), "Package configuration tool"),
+        ],
+        "windows" => vec![
+            // Windows deps are handled differently
+        ],
+        _ => vec![],
+    }
+}
+
+/// Check if a library is available via pkg-config
+fn check_pkg_config(lib: &str) -> bool {
+    if !check_command("pkg-config") {
+        return false;
+    }
+    
+    std::process::Command::new("pkg-config")
+        .args(&["--exists", lib])
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+/// Get installation command for missing dependencies
+pub fn get_install_command() -> Option<String> {
+    let platform = get_platform_info();
+    
+    match platform.os.as_str() {
+        "linux" => {
+            if let Some(pkg_manager) = detect_linux_package_manager() {
+                match pkg_manager {
+                    "apt" => Some(
+                        "sudo apt-get update && sudo apt-get install -y \\\n  \
+                         libasound2-dev libudev-dev \\\n  \
+                         clang curl pkg-config \\\n  \
+                         libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev \\\n  \
+                         libssl-dev libx11-dev libgl1-mesa-dev libxext-dev".to_string()
+                    ),
+                    "pacman" => Some(
+                        "sudo pacman -S --needed \\\n  \
+                         alsa-lib systemd-libs \\\n  \
+                         clang curl pkgconf \\\n  \
+                         ffmpeg \\\n  \
+                         openssl libx11 mesa libxext".to_string()
+                    ),
+                    "dnf" => Some(
+                        "sudo dnf install -y \\\n  \
+                         alsa-lib-devel systemd-devel \\\n  \
+                         clang curl pkg-config \\\n  \
+                         ffmpeg-devel \\\n  \
+                         openssl-devel libX11-devel mesa-libGL-devel libXext-devel".to_string()
+                    ),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        }
+        "macos" => Some(
+            "brew install ffmpeg@6 pkg-config".to_string()
+        ),
+        _ => None,
+    }
 }
 
 /// Suggest how to install missing dependency

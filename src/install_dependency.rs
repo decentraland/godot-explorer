@@ -12,7 +12,7 @@ use zip::ZipArchive;
 use crate::download_file::download_file;
 use crate::export::prepare_templates;
 use crate::ui::{print_message, print_section, MessageType, create_spinner};
-use crate::platform::{get_platform_info, check_command};
+use crate::platform::{get_platform_info, check_command, check_development_dependencies, get_install_command};
 
 use crate::consts::{
     BIN_FOLDER, GODOT4_BIN_BASE_URL, GODOT_CURRENT_VERSION, PROTOC_BASE_URL,
@@ -340,6 +340,26 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
     
     let platform = get_platform_info();
     print_message(MessageType::Info, &format!("Platform: {}", platform.display_name));
+    
+    // Check for missing development dependencies
+    let dev_deps = check_development_dependencies();
+    let missing_deps: Vec<_> = dev_deps.iter()
+        .filter(|(_, available, _)| !available)
+        .collect();
+    
+    if !missing_deps.is_empty() {
+        print_message(MessageType::Warning, "Missing development dependencies detected:");
+        for (dep, _, desc) in &missing_deps {
+            print_message(MessageType::Error, &format!("  {} - {}", dep, desc));
+        }
+        
+        if let Some(install_cmd) = get_install_command() {
+            print_message(MessageType::Info, "\nTo install missing dependencies, run:");
+            println!("\n{}\n", install_cmd);
+            print_message(MessageType::Warning, "Please install these dependencies before continuing.");
+            return Err(anyhow::anyhow!("Missing required development dependencies"));
+        }
+    }
     
     let persistent_path = get_persistent_path(Some("test.zip".into())).unwrap();
     print_message(MessageType::Info, &format!("Cache directory: {}", persistent_path));

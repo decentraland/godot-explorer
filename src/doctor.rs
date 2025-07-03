@@ -1,5 +1,6 @@
 use crate::platform::{
     check_android_sdk, check_ios_development, check_required_tools, get_platform_info, suggest_install,
+    check_development_dependencies, get_install_command,
 };
 use crate::ui::{print_divider, print_message, print_section, MessageType};
 use std::env;
@@ -25,6 +26,27 @@ pub fn run_doctor() -> anyhow::Result<()> {
             print_message(MessageType::Error, &format!("{} - {} (NOT FOUND)", tool, description));
             suggest_install(tool);
             all_tools_ok = false;
+        }
+    }
+    
+    // Check development dependencies
+    print_divider();
+    print_section("Development Dependencies");
+    let mut missing_deps = false;
+    
+    for (dep, available, description) in check_development_dependencies() {
+        if available {
+            print_message(MessageType::Success, &format!("{} - {}", dep, description));
+        } else {
+            print_message(MessageType::Error, &format!("{} - {} (NOT FOUND)", dep, description));
+            missing_deps = true;
+        }
+    }
+    
+    if missing_deps {
+        if let Some(install_cmd) = get_install_command() {
+            print_message(MessageType::Info, "To install all missing dependencies, run:");
+            println!("\n{}\n", install_cmd);
         }
     }
     
@@ -58,10 +80,14 @@ pub fn run_doctor() -> anyhow::Result<()> {
     // Summary
     print_divider();
     print_section("Summary");
-    if all_tools_ok {
-        print_message(MessageType::Success, "All required tools are installed!");
+    if all_tools_ok && !missing_deps {
+        print_message(MessageType::Success, "All required tools and dependencies are installed!");
     } else {
-        print_message(MessageType::Warning, "Some tools are missing. Please install them before proceeding.");
+        print_message(MessageType::Warning, "Some tools or dependencies are missing. Please install them before proceeding.");
+        
+        if missing_deps && get_install_command().is_some() {
+            print_message(MessageType::Info, "Run the command shown above to install missing dependencies.");
+        }
     }
     
     Ok(())
