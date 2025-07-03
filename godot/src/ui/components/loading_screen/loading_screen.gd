@@ -68,6 +68,12 @@ func async_hide_loading_screen_effect():
 	background.use_parent_material = false  # enable material
 	self.position.y = 0
 
+	# Debug singleton for counting resources
+	var counter = get_tree().get_root().get_node_or_null("ResourceCounter")
+	if counter:
+		await get_tree().create_timer(5).timeout
+		counter.log_active_counts()
+
 
 func _on_texture_rect_right_arrow_gui_input(event):
 	if event is InputEventScreenTouch:

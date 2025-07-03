@@ -4,7 +4,8 @@ extends EditorPlugin
 var tools = [
 	preload("./dev_tools/test_runner/tool.gd").new(self),
 	preload("./dev_tools/typical_places/tool.gd").new(self),
-	preload("./dev_tools/renderdoc/tool.gd").new(self)
+	preload("./dev_tools/renderdoc/tool.gd").new(self),
+	preload("./dev_tools/resource_counter/tool.gd").new(self)
 ]
 
 var custom_menu: MenuButton
@@ -41,6 +42,8 @@ func _exit_tree() -> void:
 	container.add_child(custom_menu)
 	remove_control_from_container(EditorPlugin.CONTAINER_TOOLBAR, custom_menu)
 	custom_menu.queue_free()
+	for tool in tools:
+		tool.cleanup()
 
 
 func _position_menu() -> void:

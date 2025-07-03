@@ -26,6 +26,9 @@ func _is_renderdoc_available() -> bool:
 func populate_menu(menu: PopupMenu, id: int):
 	menu.add_item("Launch RenderDoc", id)
 	menu.set_item_disabled(id, !_is_renderdoc_available())
+	ProjectSettings.settings_changed.connect(
+		func(): menu.set_item_disabled(id, !_is_renderdoc_available())
+	)
 
 
 func execute():
