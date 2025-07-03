@@ -62,19 +62,12 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
         }
 
         "android" => {
-            let arch = env::consts::ARCH;
-
+            // For Android, we're always building for aarch64 (arm64)
             let source_file = format!(
-                "{RUST_LIB_PROJECT_FOLDER}target/{arch}-linux-android/{mode}/libdclgodot.so"
+                "{RUST_LIB_PROJECT_FOLDER}target/aarch64-linux-android/{mode}/libdclgodot.so"
             );
 
-            let android_folder = if arch == "x86_64" {
-                "libdclgodot_android_x86"
-            } else {
-                "libdclgodot_android"
-            };
-
-            let dest = format!("{RUST_LIB_PROJECT_FOLDER}target/${android_folder}/libdclgodot.so");
+            let dest = format!("{RUST_LIB_PROJECT_FOLDER}target/libdclgodot_android/libdclgodot.so");
 
             copy_with_error_context(&source_file, &dest, false)?;
 

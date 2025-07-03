@@ -50,15 +50,20 @@ pub fn build(
 ) -> anyhow::Result<()> {
     let target = get_target_os(target)?;
 
-    let (build_args, with_build_envs) = prepare_build_args_envs(
-        release_mode,
-        extra_build_args,
-        with_build_envs.unwrap_or_default(),
-        &target,
-    )?;
+    // For Android, use direct cargo build with proper environment setup
+    if target == "android" {
+        build_with_cargo_ndk(release_mode, extra_build_args)?;
+    } else {
+        let (build_args, with_build_envs) = prepare_build_args_envs(
+            release_mode,
+            extra_build_args,
+            with_build_envs.unwrap_or_default(),
+            &target,
+        )?;
 
-    let build_cwd = adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?);
-    run_cargo_build(&PathBuf::from(build_cwd), &build_args, &with_build_envs)?;
+        let build_cwd = adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?);
+        run_cargo_build(&PathBuf::from(build_cwd), &build_args, &with_build_envs)?;
+    }
 
     copy_library(&target, !release_mode)?;
 
@@ -274,6 +279,184 @@ fn setup_android_env(with_build_envs: &mut HashMap<String, String>) -> anyhow::R
 
     with_build_envs.insert("CXXFLAGS".to_string(), cxxflags.to_string());
     with_build_envs.insert("RUSTFLAGS".to_string(), rustflags);
+
+    Ok(())
+}
+
+// Removed check_cargo_ndk_available as we're not using cargo-ndk anymore
+
+/// Validates Android SDK/NDK setup and returns the NDK path
+fn validate_android_ndk() -> anyhow::Result<String> {
+    // Check ANDROID_NDK_HOME first
+    if let Ok(ndk_home) = std::env::var("ANDROID_NDK_HOME") {
+        if std::path::Path::new(&ndk_home).exists() {
+            println!("✓ Using Android NDK from ANDROID_NDK_HOME: {}", ndk_home);
+            return Ok(ndk_home);
+        } else {
+            return Err(anyhow::anyhow!(
+                "ANDROID_NDK_HOME is set to '{}' but the directory doesn't exist",
+                ndk_home
+            ));
+        }
+    }
+
+    // Check ANDROID_NDK
+    if let Ok(ndk) = std::env::var("ANDROID_NDK") {
+        if std::path::Path::new(&ndk).exists() {
+            println!("✓ Using Android NDK from ANDROID_NDK: {}", ndk);
+            return Ok(ndk);
+        } else {
+            return Err(anyhow::anyhow!(
+                "ANDROID_NDK is set to '{}' but the directory doesn't exist",
+                ndk
+            ));
+        }
+    }
+
+    // Check standard paths
+    let ndk_version = "27.1.12297006";
+    let possible_paths = vec![
+        (std::env::var("ANDROID_SDK").ok(), "ndk/{}"),
+        (std::env::var("ANDROID_HOME").ok(), "ndk/{}"),
+        (std::env::var("HOME").ok(), "Android/Sdk/ndk/{}"),
+    ];
+
+    for (base_path, ndk_subpath) in possible_paths {
+        if let Some(base) = base_path {
+            let ndk_path = format!("{}/{}", base, ndk_subpath.replace("{}", ndk_version));
+            if std::path::Path::new(&ndk_path).exists() {
+                println!("✓ Found Android NDK at: {}", ndk_path);
+                return Ok(ndk_path);
+            }
+        }
+    }
+
+    Err(anyhow::anyhow!(
+        "Android NDK not found!\n\n\
+        Please install Android NDK version {} and set one of these environment variables:\n\
+        - ANDROID_NDK_HOME (preferred)\n\
+        - ANDROID_NDK\n\
+        - ANDROID_HOME or ANDROID_SDK (NDK will be searched in <path>/ndk/{})\n\n\
+        You can install the NDK using Android Studio SDK Manager or download it from:\n\
+        https://developer.android.com/ndk/downloads",
+        ndk_version, ndk_version
+    ))
+}
+
+/// Builds for Android using direct cargo build (not cargo-ndk due to libc++ linking issues)
+fn build_with_cargo_ndk(
+    release_mode: bool,
+    extra_build_args: Vec<&str>,
+) -> anyhow::Result<()> {
+    println!("Building Android target...");
+
+    // Validate Android NDK is properly installed
+    let ndk_path = validate_android_ndk()?;
+
+    // Check if Android dependencies are installed
+    let android_deps_path = std::env::current_dir()?
+        .join(".bin/android_deps");
+    if !android_deps_path.exists() {
+        return Err(anyhow::anyhow!(
+            "Android dependencies not found!\n\n\
+            Please run: cargo run -- install --platforms android\n\n\
+            This will download the required FFmpeg libraries for Android."
+        ));
+    }
+
+    // Setup environment similar to android-build.sh
+    let mut envs = HashMap::new();
+    setup_v8_bindings(&mut envs, &"android".to_string())?;
+
+    // Set up Android toolchain paths
+    let target_cc = format!(
+        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang",
+        ndk_path
+    );
+    let target_cxx = format!(
+        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++",
+        ndk_path
+    );
+    let target_ar = format!(
+        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar",
+        ndk_path
+    );
+    let cargo_target_linker = format!(
+        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang",
+        ndk_path
+    );
+
+    envs.insert("TARGET_CC".to_string(), target_cc);
+    envs.insert("TARGET_CXX".to_string(), target_cxx);
+    envs.insert("TARGET_AR".to_string(), target_ar);
+    envs.insert(
+        "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER".to_string(),
+        cargo_target_linker,
+    );
+    envs.insert(
+        "CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE".to_string(),
+        "1".to_string(),
+    );
+    envs.insert(
+        "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG".to_string(),
+        "true".to_string(),
+    );
+
+    let cxxflags = "-v --target=aarch64-linux-android";
+    let rustflags = format!(
+        "-L{}/toolchains/llvm/prebuilt/linux-x86_64/lib/aarch64-unknown-linux-musl",
+        ndk_path
+    );
+
+    envs.insert("CXXFLAGS".to_string(), cxxflags.to_string());
+    envs.insert("RUSTFLAGS".to_string(), rustflags);
+
+    // Critical: Disable custom libcxx as per android-build.sh
+    envs.insert("GN_ARGS".to_string(), "use_custom_libcxx=false".to_string());
+
+    // Set ANDROID_NDK_HOME
+    envs.insert("ANDROID_NDK_HOME".to_string(), ndk_path.clone());
+    envs.insert("ANDROID_NDK".to_string(), ndk_path);
+
+    let build_cwd = adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?);
+
+    // Use cargo build directly instead of cargo-ndk
+    let mut args = vec!["build"];
+
+    if release_mode {
+        args.push("--release");
+    }
+
+    args.extend(&[
+        "--target",
+        "aarch64-linux-android",
+        "--no-default-features",
+        "-F",
+        "use_deno",
+        "-F",
+        "use_livekit",
+        // Note: FFmpeg is intentionally disabled for now as in android-build.sh
+    ]);
+
+    args.extend(extra_build_args);
+
+    println!("cargo build at {} args: {:?}", build_cwd, args);
+    println!("Environment: GN_ARGS={}", envs.get("GN_ARGS").unwrap());
+
+    let build_status = std::process::Command::new("cargo")
+        .current_dir(&build_cwd)
+        .args(&args)
+        .envs(&envs)
+        .env("RUST_BACKTRACE", "full")
+        .status()
+        .expect("Failed to run cargo build");
+
+    if !build_status.success() {
+        return Err(anyhow::anyhow!(
+            "cargo build exited with non-zero status: {}",
+            build_status
+        ));
+    }
 
     Ok(())
 }

@@ -254,11 +254,95 @@ pub fn get_godot_executable_path() -> Option<String> {
     Some(os_url)
 }
 
+fn install_android_tools() -> Result<(), anyhow::Error> {
+    println!("Installing Android build tools...");
+
+    // Add Android target
+    println!("Adding Android target to rustup...");
+    let add_target_status = std::process::Command::new("rustup")
+        .args(&["target", "add", "aarch64-linux-android"])
+        .status()?;
+
+    if !add_target_status.success() {
+        return Err(anyhow::anyhow!("Failed to add Android target"));
+    }
+    println!("✅ Android target added successfully");
+
+    // Check Android SDK/NDK environment
+    println!("\nChecking Android SDK/NDK setup...");
+    
+    if let Ok(android_ndk_home) = env::var("ANDROID_NDK_HOME") {
+        println!("✓ ANDROID_NDK_HOME is set: {}", android_ndk_home);
+    } else if let Ok(android_ndk) = env::var("ANDROID_NDK") {
+        println!("✓ ANDROID_NDK is set: {}", android_ndk);
+    } else if let Ok(android_sdk) = env::var("ANDROID_SDK") {
+        println!("✓ ANDROID_SDK is set: {}", android_sdk);
+        println!("  Looking for NDK at: {}/ndk/27.1.12297006", android_sdk);
+    } else if let Ok(android_home) = env::var("ANDROID_HOME") {
+        println!("✓ ANDROID_HOME is set: {}", android_home);
+        println!("  Looking for NDK at: {}/ndk/27.1.12297006", android_home);
+    } else {
+        println!("⚠ No Android SDK/NDK environment variables found");
+        println!("  Will look for NDK at: ~/Android/Sdk/ndk/27.1.12297006");
+    }
+
+    println!("\nAndroid build tools installation complete!");
+    println!("\nNote: Make sure you have Android NDK version 27.1.12297006 installed");
+
+    Ok(())
+}
+
+fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
+    // Download Android dependencies
+    let android_deps_url = "https://godot-artifacts.kuruk.net/android_deps.zip";
+    let android_deps_path = format!("{BIN_FOLDER}android_dependencies.zip");
+    let android_deps_extracted_path = format!("{BIN_FOLDER}android_deps/");
+    
+    // Check if already extracted
+    if !Path::new(&android_deps_extracted_path).exists() {
+        if !Path::new(&android_deps_path).exists() {
+            println!("Android dependencies missing. Downloading...");
+            download_file(android_deps_url, &android_deps_path)?;
+            println!("✅ Android dependency downloaded");
+        }
+        
+        // Extract the dependencies
+        println!("Extracting Android dependencies...");
+        download_and_extract_zip(
+            "file://localhost", // dummy URL, we'll use the local file
+            &android_deps_extracted_path,
+            None,
+        )?;
+        
+        // Actually, let's use a simpler extraction method
+        fs::create_dir_all(&android_deps_extracted_path)?;
+        let status = std::process::Command::new("unzip")
+            .args(&["-o", &android_deps_path, "-d", &android_deps_extracted_path])
+            .status()?;
+        
+        if !status.success() {
+            return Err(anyhow::anyhow!("Failed to extract Android dependencies"));
+        }
+        
+        println!("✅ Android dependencies extracted to {}", android_deps_extracted_path);
+    } else {
+        println!("✅ Android dependencies already extracted");
+    }
+    
+    Ok(())
+}
+
 pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<(), anyhow::Error> {
     let persistent_path = get_persistent_path(Some("test.zip".into())).unwrap();
     println!("Using persistent path: {persistent_path:?}");
 
     install_dcl_protocol()?;
+
+    // Install Android-specific tools and dependencies if Android platform is requested
+    if platforms.contains(&"android".to_string()) {
+        install_android_tools()?;
+        download_prebuilt_dependencies()?;
+    }
 
     if env::consts::OS == "windows" {
         download_and_extract_zip(

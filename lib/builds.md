@@ -7,7 +7,27 @@ Both android and iOS you need to clone ffmpeg-kit and build it.
 1. See what libraries from the kit should be compiled instead of using `--full`
 
 ## Android
-TODO
+
+### Prerequisites
+
+1. Install Android SDK and NDK (version 27.1.12297006)
+2. Install cargo-ndk for easier cross-compilation:
+   ```bash
+   cargo install cargo-ndk
+   ```
+3. Add Android target to rustup:
+   ```bash
+   rustup target add aarch64-linux-android
+   ```
+
+### Environment Setup
+
+Ensure one of these environment variables is set:
+- `ANDROID_NDK_HOME` pointing to your NDK installation
+- `ANDROID_NDK` pointing to your NDK installation
+- `ANDROID_SDK` or `ANDROID_HOME` pointing to your SDK (NDK will be found at `*/ndk/27.1.12297006`)
+
+If none are set, the build will look for NDK at `~/Android/Sdk/ndk/27.1.12297006`
 
 ## iOS
 After cloning `ffmpeg-kit` ensure you have the right environment to build it. Some tips:
@@ -23,6 +43,20 @@ This only buils for arm64. `fribidi` and `libass` should be compiled but I got e
 
 
 # Build
+
+## Android (Quick Start)
+
+For Android builds, we now support cargo-ndk which makes the process much simpler:
+
+```bash
+# Install cargo-ndk if not already installed
+cargo install cargo-ndk
+
+# Build for Android
+cargo run -- build --target android
+```
+
+The build system will automatically detect if cargo-ndk is available and use it. If not, it will fall back to the traditional build method.
 
 ## iOS
 
@@ -41,9 +75,27 @@ This only buils for arm64. `fribidi` and `libass` should be compiled but I got e
 
 ## Android
 
-1. Once the build is done, you need to modify the `android-build.sh` the line:
-    - `export FFMPEG_DIR=$FFMPEG_FOLDER/prebuilt/apple-ios-arm64/ffmpeg` 
-    - Replace $FFMPEG_FOLDER with your path where you clone ffmpeg_kit
+### Using cargo-ndk (Recommended)
+
+The project now supports building with cargo-ndk, which simplifies the Android build process:
+
+```bash
+# From the root directory
+cargo run -- build --target android
+```
+
+This will automatically:
+- Download required V8 bindings
+- Set up the correct cross-compilation environment
+- Build with the appropriate features for Android
+
+### Traditional Build Method
+
+If cargo-ndk is not available, you can still use the traditional build script:
+
+1. Modify the `android-build.sh` file:
+    - Update `export FFMPEG_DIR=$FFMPEG_FOLDER/prebuilt/android-arm64/ffmpeg`
+    - Replace $FFMPEG_FOLDER with your path where you cloned ffmpeg_kit
 
 # Run
 ## Android

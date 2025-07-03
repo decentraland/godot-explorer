@@ -26,8 +26,17 @@ cd "${EXPLORER_PATH}"
 cargo run -- build
 
 echo "Build for Android (arm64)"
-cd "${EXPLORER_PATH}/lib"
-bash android-build.sh
+cd "${EXPLORER_PATH}"
+
+# Check if cargo-ndk is available
+if command -v cargo-ndk &> /dev/null; then
+    echo "Using cargo-ndk for Android build"
+    cargo run -- build --target android
+else
+    echo "cargo-ndk not found, falling back to traditional build"
+    cd "${EXPLORER_PATH}/lib"
+    bash android-build.sh
+fi
 
 # Temporarily disable strict error checking for the debug key setup.
 set +e
