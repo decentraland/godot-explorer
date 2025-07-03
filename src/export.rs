@@ -10,6 +10,8 @@ use crate::{
         download_and_extract_zip, godot_export_templates_path, set_executable_permission,
     },
     path::{adjust_canonicalization, get_godot_path},
+    ui::{print_message, print_section, MessageType, create_spinner},
+    platform::validate_platform_for_target,
 };
 
 #[allow(dead_code)]
@@ -95,6 +97,8 @@ pub fn import_assets() -> ExitStatus {
 }
 
 pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
+    print_section("Exporting Project");
+    
     let program = get_godot_path();
 
     // Make exports directory
@@ -110,6 +114,11 @@ pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
 
     // Determine final target if not specified
     let target = get_target_os(target)?;
+    
+    // Validate platform requirements
+    validate_platform_for_target(&target)?;
+    
+    print_message(MessageType::Info, &format!("Target platform: {}", target));
 
     // Determine output file name
     let output_file_name = match target.as_str() {
@@ -140,7 +149,8 @@ pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
         output_path_godot_param.as_str(),
     ];
 
-    println!("Running the export build with command: {:?}", args);
+    print_message(MessageType::Step, "Running Godot export...");
+    let spinner = create_spinner("Exporting project...");
 
     let export_status = std::process::Command::new(program.as_str())
         .args(&args)
@@ -149,8 +159,14 @@ pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
         ))
         .status()
         .expect("Failed to run Godot");
+    
+    spinner.finish();
 
     if !std::path::Path::new(output_rel_path.as_str()).exists() && target != "ios" {
+        print_message(MessageType::Error, "Export failed. Common issues:");
+        print_message(MessageType::Info, "- Missing export templates (run: cargo run -- install --platforms <platform>)");
+        print_message(MessageType::Info, "- Invalid export preset in project.godot");
+        print_message(MessageType::Info, "- Missing platform-specific dependencies");
         return Err(anyhow::anyhow!(
             "Output file was not generated. pre-import godot status: {:?}, project-export godot status: {:?}",
             import_assets_status,
@@ -164,6 +180,8 @@ pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
     }
 
     copy_ffmpeg_libraries(&target, EXPORTS_FOLDER.to_string(), false)?;
+    
+    print_message(MessageType::Success, &format!("Export completed: {}", output_rel_path));
 
     Ok(())
 }

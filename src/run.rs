@@ -7,6 +7,8 @@ use crate::{
     copy_files::copy_library,
     export::get_target_os,
     path::{adjust_canonicalization, get_godot_path},
+    ui::{print_message, print_build_status, MessageType},
+    platform::validate_platform_for_target,
 };
 
 pub fn run(
@@ -49,6 +51,11 @@ pub fn build(
     target: Option<&str>,
 ) -> anyhow::Result<()> {
     let target = get_target_os(target)?;
+    
+    // Validate platform requirements
+    validate_platform_for_target(&target)?;
+    
+    print_build_status(&target, "starting");
 
     // For Android, use direct cargo build with proper environment setup
     if target == "android" {
@@ -66,6 +73,8 @@ pub fn build(
     }
 
     copy_library(&target, !release_mode)?;
+    
+    print_build_status(&target, "success");
 
     Ok(())
 }
@@ -82,16 +91,7 @@ fn prepare_build_args_envs(
         build_args.push("--release");
     }
 
-    if target == "macos" {
-        build_args.extend(&[
-            "--no-default-features",
-            "-F",
-            "use_deno",
-            "-F",
-            "enable_inspector",
-        ]);
-    }
-
+    // Don't add default features here - let the user control them
     build_args.extend(extra_build_args);
 
     if target == "ios" || target == "android" {
@@ -99,26 +99,12 @@ fn prepare_build_args_envs(
 
         match target.as_str() {
             "ios" => {
-                build_args.extend(&[
-                    "--no-default-features",
-                    "-F",
-                    "use_deno",
-                    "-F",
-                    "use_livekit",
-                ]);
+                // Add target, but let user control features
                 build_args.push("--target");
                 build_args.push("aarch64-apple-ios");
             }
             "android" => {
-                build_args.extend(&[
-                    "--no-default-features",
-                    "-F",
-                    "use_deno",
-                    "-F",
-                    "use_livekit",
-                    "-F",
-                    "use_ffmpeg",
-                ]);
+                // Add target, but let user control features
                 build_args.push("--target");
                 build_args.push("aarch64-linux-android");
                 setup_android_env(&mut with_build_envs)?;
@@ -290,7 +276,6 @@ fn validate_android_ndk() -> anyhow::Result<String> {
     // Check ANDROID_NDK_HOME first
     if let Ok(ndk_home) = std::env::var("ANDROID_NDK_HOME") {
         if std::path::Path::new(&ndk_home).exists() {
-            println!("✓ Using Android NDK from ANDROID_NDK_HOME: {}", ndk_home);
             return Ok(ndk_home);
         } else {
             return Err(anyhow::anyhow!(
@@ -303,7 +288,6 @@ fn validate_android_ndk() -> anyhow::Result<String> {
     // Check ANDROID_NDK
     if let Ok(ndk) = std::env::var("ANDROID_NDK") {
         if std::path::Path::new(&ndk).exists() {
-            println!("✓ Using Android NDK from ANDROID_NDK: {}", ndk);
             return Ok(ndk);
         } else {
             return Err(anyhow::anyhow!(
@@ -325,7 +309,6 @@ fn validate_android_ndk() -> anyhow::Result<String> {
         if let Some(base) = base_path {
             let ndk_path = format!("{}/{}", base, ndk_subpath.replace("{}", ndk_version));
             if std::path::Path::new(&ndk_path).exists() {
-                println!("✓ Found Android NDK at: {}", ndk_path);
                 return Ok(ndk_path);
             }
         }
@@ -348,10 +331,11 @@ fn build_with_cargo_ndk(
     release_mode: bool,
     extra_build_args: Vec<&str>,
 ) -> anyhow::Result<()> {
-    println!("Building Android target...");
+    print_message(MessageType::Step, "Building Android target...");
 
     // Validate Android NDK is properly installed
     let ndk_path = validate_android_ndk()?;
+    print_message(MessageType::Success, &format!("Using Android NDK: {}", ndk_path));
 
     // Check if Android dependencies are installed
     let android_deps_path = std::env::current_dir()?
@@ -430,18 +414,12 @@ fn build_with_cargo_ndk(
     args.extend(&[
         "--target",
         "aarch64-linux-android",
-        "--no-default-features",
-        "-F",
-        "use_deno",
-        "-F",
-        "use_livekit",
-        // Note: FFmpeg is intentionally disabled for now as in android-build.sh
     ]);
 
+    // Let user control features via command line
     args.extend(extra_build_args);
 
-    println!("cargo build at {} args: {:?}", build_cwd, args);
-    println!("Environment: GN_ARGS={}", envs.get("GN_ARGS").unwrap());
+    print_message(MessageType::Info, &format!("Running: cargo {}", args.join(" ")));
 
     let build_status = std::process::Command::new("cargo")
         .current_dir(&build_cwd)
@@ -467,7 +445,7 @@ fn run_cargo_build(
     build_args: &[String],
     envs: &HashMap<String, String>,
 ) -> anyhow::Result<()> {
-    println!("cargo build at {} args: {:?}", cwd.display(), build_args);
+    print_message(MessageType::Info, &format!("Running: cargo {}", build_args.join(" ")));
 
     let build_status = std::process::Command::new("cargo")
         .current_dir(cwd)
@@ -488,7 +466,7 @@ fn run_cargo_build(
 
 /// Runs Godot with the provided arguments and checks for successful exit.
 fn run_godot(program: &str, args: &[&str]) -> anyhow::Result<()> {
-    println!("Running Godot with args: {:?}", args);
+    print_message(MessageType::Step, "Starting Godot...");
     let status = std::process::Command::new(program)
         .args(args)
         .status()

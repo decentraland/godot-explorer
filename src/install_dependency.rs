@@ -11,6 +11,8 @@ use zip::ZipArchive;
 
 use crate::download_file::download_file;
 use crate::export::prepare_templates;
+use crate::ui::{print_message, print_section, MessageType, create_spinner};
+use crate::platform::{get_platform_info, check_command};
 
 use crate::consts::{
     BIN_FOLDER, GODOT4_BIN_BASE_URL, GODOT_CURRENT_VERSION, PROTOC_BASE_URL,
@@ -49,10 +51,12 @@ fn get_protocol_url() -> Result<String, anyhow::Error> {
 }
 
 pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
+    print_section("Installing DCL Protocol");
+    
     let protocol_url = get_protocol_url()?;
     let destination_path = format!("{RUST_LIB_PROJECT_FOLDER}src/dcl/components");
 
-    println!("Downloading {protocol_url:?}");
+    let spinner = create_spinner("Downloading protocol files...");
 
     let client = Client::new();
     let response = client.get(protocol_url).send()?;
@@ -76,6 +80,8 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
         let mut file = File::create(dest_path)?;
         io::copy(&mut entry, &mut file)?;
     }
+    
+    spinner.finish_with_message("✅ Protocol files installed");
 
     Ok(())
 }
@@ -153,10 +159,10 @@ pub fn download_and_extract_zip(
 
     // If the cached file exist, use it
     if let Some(already_existing_file) = get_existing_cached_file(persistent_cache.clone()) {
-        println!("Getting cached file of {url:?} (local path: {already_existing_file}");
+        print_message(MessageType::Info, &format!("Using cached file: {}", already_existing_file));
         fs::copy(already_existing_file, "./tmp-file.zip")?;
     } else {
-        println!("Downloading {url:?}");
+        print_message(MessageType::Info, &format!("Downloading: {}", url));
         download_file(url, "./tmp-file.zip")?;
 
         // when the download is done, copy the file to the persistent cache if it applies
@@ -255,39 +261,40 @@ pub fn get_godot_executable_path() -> Option<String> {
 }
 
 fn install_android_tools() -> Result<(), anyhow::Error> {
-    println!("Installing Android build tools...");
+    print_section("Android Build Tools");
 
     // Add Android target
-    println!("Adding Android target to rustup...");
+    let spinner = create_spinner("Adding Android target to rustup...");
     let add_target_status = std::process::Command::new("rustup")
         .args(&["target", "add", "aarch64-linux-android"])
         .status()?;
 
     if !add_target_status.success() {
+        spinner.finish_with_message("❌ Failed to add Android target");
         return Err(anyhow::anyhow!("Failed to add Android target"));
     }
-    println!("✅ Android target added successfully");
+    spinner.finish_with_message("✅ Android target added successfully");
 
     // Check Android SDK/NDK environment
-    println!("\nChecking Android SDK/NDK setup...");
+    print_message(MessageType::Step, "Checking Android SDK/NDK setup...");
     
     if let Ok(android_ndk_home) = env::var("ANDROID_NDK_HOME") {
-        println!("✓ ANDROID_NDK_HOME is set: {}", android_ndk_home);
+        print_message(MessageType::Success, &format!("ANDROID_NDK_HOME is set: {}", android_ndk_home));
     } else if let Ok(android_ndk) = env::var("ANDROID_NDK") {
-        println!("✓ ANDROID_NDK is set: {}", android_ndk);
+        print_message(MessageType::Success, &format!("ANDROID_NDK is set: {}", android_ndk));
     } else if let Ok(android_sdk) = env::var("ANDROID_SDK") {
-        println!("✓ ANDROID_SDK is set: {}", android_sdk);
-        println!("  Looking for NDK at: {}/ndk/27.1.12297006", android_sdk);
+        print_message(MessageType::Success, &format!("ANDROID_SDK is set: {}", android_sdk));
+        print_message(MessageType::Info, &format!("Looking for NDK at: {}/ndk/27.1.12297006", android_sdk));
     } else if let Ok(android_home) = env::var("ANDROID_HOME") {
-        println!("✓ ANDROID_HOME is set: {}", android_home);
-        println!("  Looking for NDK at: {}/ndk/27.1.12297006", android_home);
+        print_message(MessageType::Success, &format!("ANDROID_HOME is set: {}", android_home));
+        print_message(MessageType::Info, &format!("Looking for NDK at: {}/ndk/27.1.12297006", android_home));
     } else {
-        println!("⚠ No Android SDK/NDK environment variables found");
-        println!("  Will look for NDK at: ~/Android/Sdk/ndk/27.1.12297006");
+        print_message(MessageType::Warning, "No Android SDK/NDK environment variables found");
+        print_message(MessageType::Info, "Will look for NDK at: ~/Android/Sdk/ndk/27.1.12297006");
     }
 
-    println!("\nAndroid build tools installation complete!");
-    println!("\nNote: Make sure you have Android NDK version 27.1.12297006 installed");
+    print_message(MessageType::Success, "Android build tools installation complete!");
+    print_message(MessageType::Info, "Note: Make sure you have Android NDK version 27.1.12297006 installed");
 
     Ok(())
 }
@@ -301,13 +308,13 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
     // Check if already extracted
     if !Path::new(&android_deps_extracted_path).exists() {
         if !Path::new(&android_deps_path).exists() {
-            println!("Android dependencies missing. Downloading...");
+            print_message(MessageType::Info, "Android dependencies missing. Downloading...");
             download_file(android_deps_url, &android_deps_path)?;
-            println!("✅ Android dependency downloaded");
+            print_message(MessageType::Success, "Android dependency downloaded");
         }
         
         // Extract the dependencies
-        println!("Extracting Android dependencies...");
+        let spinner = create_spinner("Extracting Android dependencies...");
         download_and_extract_zip(
             "file://localhost", // dummy URL, we'll use the local file
             &android_deps_extracted_path,
@@ -321,21 +328,33 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
             .status()?;
         
         if !status.success() {
+            spinner.finish_with_message("❌ Failed to extract Android dependencies");
             return Err(anyhow::anyhow!("Failed to extract Android dependencies"));
         }
         
-        println!("✅ Android dependencies extracted to {}", android_deps_extracted_path);
+        spinner.finish_and_clear();
+        print_message(MessageType::Success, &format!("Android dependencies extracted to {}", android_deps_extracted_path));
     } else {
-        println!("✅ Android dependencies already extracted");
+        print_message(MessageType::Success, "Android dependencies already extracted");
     }
     
     Ok(())
 }
 
 pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<(), anyhow::Error> {
+    print_section("Installing Dependencies");
+    
+    let platform = get_platform_info();
+    print_message(MessageType::Info, &format!("Platform: {}", platform.display_name));
+    
     let persistent_path = get_persistent_path(Some("test.zip".into())).unwrap();
-    println!("Using persistent path: {persistent_path:?}");
+    print_message(MessageType::Info, &format!("Cache directory: {}", persistent_path));
 
+    // Check required tools first
+    if !check_command("protoc") {
+        print_message(MessageType::Warning, "protoc not found - it will be downloaded");
+    }
+    
     install_dcl_protocol()?;
 
     // Install Android-specific tools and dependencies if Android platform is requested
@@ -376,10 +395,14 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
         _ => (),
     };
     fs::copy(program_path, dest_program_path.as_str())?;
+    
+    print_message(MessageType::Success, "Godot binary installed");
 
     if !skip_download_templates {
         prepare_templates(platforms)?;
     }
+    
+    print_message(MessageType::Success, "Installation complete!");
 
     Ok(())
 }

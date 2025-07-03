@@ -18,6 +18,9 @@ mod install_dependency;
 mod path;
 mod run;
 mod tests;
+mod ui;
+mod platform;
+mod doctor;
 
 fn main() -> Result<(), anyhow::Error> {
     let cli = Command::new("xtask")
@@ -56,6 +59,7 @@ fn main() -> Result<(), anyhow::Error> {
             ),
         )
         .subcommand(Command::new("docs"))
+        .subcommand(Command::new("doctor").about("Check system health and dependencies"))
         .subcommand(
             Command::new("install")
                 .arg(
@@ -145,6 +149,24 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("target")
                         .help("target OS")
                         .takes_value(true),
+                ).arg(
+                    Arg::new("platform")
+                        .short('p')
+                        .long("platform")
+                        .help("additional platform to build (android/ios)")
+                        .takes_value(true),
+                ).arg(
+                    Arg::new("no-default-features")
+                        .long("no-default-features")
+                        .help("Do not activate default features")
+                        .takes_value(false),
+                ).arg(
+                    Arg::new("features")
+                        .long("features")
+                        .short('F')
+                        .help("Space-separated list of features to activate")
+                        .takes_value(true)
+                        .multiple_values(true),
                 ),
         ).subcommand(
             Command::new("build")
@@ -167,6 +189,18 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("target")
                         .help("target OS")
                         .takes_value(true),
+                ).arg(
+                    Arg::new("no-default-features")
+                        .long("no-default-features")
+                        .help("Do not activate default features")
+                        .takes_value(false),
+                ).arg(
+                    Arg::new("features")
+                        .long("features")
+                        .short('F')
+                        .help("Space-separated list of features to activate")
+                        .takes_value(true)
+                        .multiple_values(true),
                 ),
         );
     let matches = cli.get_matches();
@@ -177,7 +211,7 @@ fn main() -> Result<(), anyhow::Error> {
         unreachable!("unreachable branch")
     };
 
-    println!("Running subcommand `{:?}`", subcommand.0);
+    use ui::{print_message, MessageType};
 
     let root = xtaskops::ops::root_dir();
 
@@ -209,12 +243,36 @@ fn main() -> Result<(), anyhow::Error> {
                 build_args.extend(&["-F", "use_resource_tracking"]);
             }
 
+            // Handle feature flags
+            if sm.is_present("no-default-features") {
+                build_args.push("--no-default-features");
+            }
+            
+            if let Some(features) = sm.values_of("features") {
+                for feature in features {
+                    build_args.push("-F");
+                    build_args.push(feature);
+                }
+            }
+
+            // Build for host OS
             run::build(
                 sm.is_present("release"),
-                build_args,
+                build_args.clone(),
                 None,
                 sm.value_of("target"),
             )?;
+            
+            // Build for additional platform if specified
+            if let Some(platform) = sm.value_of("platform") {
+                print_message(MessageType::Step, &format!("Building for additional platform: {}", platform));
+                run::build(
+                    sm.is_present("release"),
+                    build_args,
+                    None,
+                    Some(platform),
+                )?;
+            }
 
             run::run(
                 sm.is_present("editor"),
@@ -234,6 +292,18 @@ fn main() -> Result<(), anyhow::Error> {
 
             if sm.is_present("resource-tracking") {
                 build_args.extend(&["-F", "use_resource_tracking"]);
+            }
+            
+            // Handle feature flags
+            if sm.is_present("no-default-features") {
+                build_args.push("--no-default-features");
+            }
+            
+            if let Some(features) = sm.values_of("features") {
+                for feature in features {
+                    build_args.push("-F");
+                    build_args.push(feature);
+                }
             }
 
             run::build(
@@ -269,11 +339,14 @@ fn main() -> Result<(), anyhow::Error> {
             sm.get_one::<String>("package")
                 .context("please provide a package with -p")?,
         ),
+        ("doctor", _) => {
+            doctor::run_doctor()
+        },
         _ => unreachable!("unreachable branch"),
     };
 
-    if res.is_err() {
-        println!("Fail running subcommand `{:?}`", subcommand.0);
+    if let Err(e) = &res {
+        print_message(MessageType::Error, &format!("Failed: {}", e));
     }
     res
     // xtaskops::tasks::main()
@@ -286,7 +359,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     remove_dir("./coverage")?;
     create_dir_all("./coverage")?;
 
-    println!("=== running coverage ===");
+    ui::print_section("Running Coverage");
     cmd!("cargo", "test", "--", "--skip", "auth")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
