@@ -2,7 +2,6 @@ use std::time::{Duration, Instant};
 
 use crate::{
     auth::ephemeral_auth_chain::EphemeralAuthChain,
-    avatars::avatar_scene::AvatarScene,
     comms::profile::UserProfile,
     dcl::components::proto_components::{
         common::Position,
@@ -39,20 +38,23 @@ pub struct ArchipelagoManager {
     player_profile: Option<UserProfile>,
     player_position: Vector3,
     ephemeral_auth_chain: EphemeralAuthChain,
-    avatar_scene: Gd<AvatarScene>,
     last_send_heartbeat: Instant,
 
     adapter: Option<Box<dyn Adapter>>,
+    shared_processor_sender:
+        Option<tokio::sync::mpsc::Sender<super::message_processor::IncomingMessage>>,
 }
 
+// Constants
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(3);
+const RECONNECT_INTERVAL_SECS: u64 = 1;
+const DCL_CHALLENGE_PREFIX: &str = "dcl-";
 
 impl ArchipelagoManager {
     pub fn new(
         ws_url: &str,
         ephemeral_auth_chain: EphemeralAuthChain,
         player_profile: Option<UserProfile>,
-        avatar_scene: Gd<AvatarScene>,
     ) -> Self {
         let lower_url = ws_url.to_lowercase();
         let ws_url = if !lower_url.starts_with("ws://") && !lower_url.starts_with("wss://") {
@@ -74,10 +76,17 @@ impl ArchipelagoManager {
             player_profile,
             last_try_to_connect: Instant::now(),
             adapter: None,
-            avatar_scene,
+            shared_processor_sender: None,
             player_position: Vector3::new(0.0, 0.0, 0.0),
             last_send_heartbeat: Instant::now(),
         }
+    }
+
+    pub fn set_shared_processor_sender(
+        &mut self,
+        sender: tokio::sync::mpsc::Sender<super::message_processor::IncomingMessage>,
+    ) {
+        self.shared_processor_sender = Some(sender);
     }
 
     pub fn adapter_as_mut(&mut self) -> Option<&mut Box<dyn Adapter>> {
@@ -125,7 +134,9 @@ impl ArchipelagoManager {
         match self.state.clone() {
             ArchipelagoState::Connecting => match ws_state {
                 godot::engine::web_socket_peer::State::CLOSED => {
-                    if (Instant::now() - self.last_try_to_connect).as_secs() > 1 {
+                    if (Instant::now() - self.last_try_to_connect).as_secs()
+                        > RECONNECT_INTERVAL_SECS
+                    {
                         let ws_protocols = {
                             let mut v = PackedStringArray::new();
                             v.push(GString::from("archipelago"));
@@ -168,7 +179,7 @@ impl ArchipelagoManager {
 
                                 let challenge_to_sign = challenge_msg.challenge_to_sign.clone();
 
-                                if !challenge_to_sign.starts_with("dcl-") {
+                                if !challenge_to_sign.starts_with(DCL_CHALLENGE_PREFIX) {
                                     tracing::error!("invalid challenge to sign");
                                     return;
                                 }
@@ -256,12 +267,13 @@ impl ArchipelagoManager {
         } else {
             true
         };
+
         if !adapter_ok {
             self.adapter = None;
         }
     }
 
-    pub fn clean(&self) {
+    pub fn clean(&mut self) {
         let mut peer = self.ws_peer.clone();
         peer.close();
         match peer.get_ready_state() {
@@ -291,12 +303,25 @@ impl ArchipelagoManager {
                     };
                     match protocol {
                         "livekit" => {
-                            self.adapter = Some(Box::new(LivekitRoom::new(
-                                comms_address.to_string(),
-                                self.ephemeral_auth_chain.signer(),
-                                self.player_profile.clone(),
-                                self.avatar_scene.clone(),
-                            )));
+                            if let Some(shared_sender) = &self.shared_processor_sender {
+                                tracing::info!(
+                                    "Using shared MessageProcessor for archipelago LiveKit room"
+                                );
+
+                                // Create LiveKit room with MessageProcessor connection
+                                // Archipelago rooms use auto_subscribe: true (default) to automatically receive all peers
+                                let mut livekit_room = LivekitRoom::new(
+                                    comms_address.to_string(),
+                                    format!("archipelago-livekit-{}", msg.island_id),
+                                );
+                                livekit_room.set_message_processor_sender(shared_sender.clone());
+
+                                self.adapter = Some(Box::new(livekit_room));
+                            } else {
+                                tracing::error!(
+                                    "Cannot create LiveKit adapter: shared_processor_sender is not set"
+                                );
+                            }
                         }
                         _ => {
                             tracing::info!(
@@ -312,9 +337,9 @@ impl ArchipelagoManager {
     }
 
     pub fn change_profile(&mut self, new_profile: UserProfile) {
-        self.player_profile = Some(new_profile);
+        self.player_profile = Some(new_profile.clone());
         if let Some(adapter) = self.adapter.as_mut() {
-            adapter.change_profile(self.player_profile.clone().unwrap());
+            adapter.change_profile(new_profile);
         }
     }
 

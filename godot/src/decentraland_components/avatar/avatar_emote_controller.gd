@@ -321,12 +321,6 @@ func play_emote_audio(file_hash: String):
 		avatar.audio_player_emote.play(0)
 
 
-func broadcast_avatar_animation(emote_id: String) -> void:
-	# Send emote
-	var timestamp = Time.get_unix_time_from_system() * 1000
-	Global.comms.send_chat("␐%s %d" % [emote_id, timestamp])
-
-
 func freeze_on_idle():
 	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED
 
