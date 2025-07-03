@@ -183,5 +183,5 @@ func get_broadcast_position() -> Vector3:
 	return get_global_transform().origin
 
 
-func get_broadcast_rotation_quaternion() -> float:
+func get_broadcast_rotation_y() -> float:
 	return rotation.y
