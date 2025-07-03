@@ -273,6 +273,69 @@ pub fn get_install_command() -> Option<String> {
     }
 }
 
+/// Get complete next steps instructions after installation
+pub fn get_next_steps_instructions() -> String {
+    let platform = get_platform_info();
+    let mut instructions = String::new();
+    
+    // Check if there are missing dependencies
+    let dev_deps = check_development_dependencies();
+    let has_missing_deps = dev_deps.iter().any(|(_, available, _)| !available);
+    
+    if has_missing_deps {
+        match platform.os.as_str() {
+            "linux" => {
+                instructions.push_str("For Linux development, you need to install system dependencies:\n");
+                if let Some(install_cmd) = get_install_command() {
+                    instructions.push_str("\n# Install required development dependencies:\n");
+                    instructions.push_str(&install_cmd);
+                    instructions.push('\n');
+                } else {
+                    instructions.push_str("\n# Check your package manager documentation for installing:\n");
+                    instructions.push_str("  - ALSA and udev development libraries\n");
+                    instructions.push_str("  - FFmpeg development libraries\n");
+                    instructions.push_str("  - OpenSSL, X11, and OpenGL development libraries\n");
+                    instructions.push_str("  - clang and pkg-config\n");
+                }
+            }
+            "macos" => {
+                instructions.push_str("For macOS development:\n");
+                instructions.push_str("\n# Install Homebrew if not already installed:\n");
+                instructions.push_str("# /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\n");
+                
+                if let Some(install_cmd) = get_install_command() {
+                    instructions.push_str("\n# Install required development dependencies:\n");
+                    instructions.push_str(&install_cmd);
+                    instructions.push_str("\n");
+                }
+                
+                instructions.push_str("\n# Set environment variables (add to ~/.zshrc or ~/.bash_profile):\n");
+                instructions.push_str("export PKG_CONFIG_PATH=\"/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig\"\n");
+                instructions.push_str("export CPPFLAGS=\"-I/opt/homebrew/opt/ffmpeg@6/include\"\n");
+                instructions.push_str("export LDFLAGS=\"-L/opt/homebrew/opt/ffmpeg@6/lib\"\n");
+            }
+            "windows" => {
+                instructions.push_str("For Windows development:\n");
+                instructions.push_str("\n# FFmpeg will be downloaded automatically during the build process.\n");
+                instructions.push_str("# Make sure you have Visual Studio with C++ development tools installed.\n");
+                instructions.push_str("\n# If you encounter issues, ensure LIBCLANG_PATH is set correctly:\n");
+                instructions.push_str("# You can find it in your Visual Studio installation, typically:\n");
+                instructions.push_str("# C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\LLVM\\x64\\bin\n");
+            }
+            _ => {}
+        }
+    }
+    
+    instructions.push_str("\n# To verify your setup, run:\n");
+    instructions.push_str("cargo run -- doctor\n");
+    instructions.push_str("\n# To build the project:\n");
+    instructions.push_str("cargo run -- build\n");
+    instructions.push_str("\n# To run the Godot editor:\n");
+    instructions.push_str("cargo run -- run -e\n");
+    
+    instructions
+}
+
 /// Suggest how to install missing dependency
 pub fn suggest_install(tool: &str) {
     use crate::ui::print_install_instructions;

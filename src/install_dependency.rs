@@ -12,7 +12,7 @@ use zip::ZipArchive;
 use crate::download_file::download_file;
 use crate::export::prepare_templates;
 use crate::ui::{print_message, print_section, MessageType, create_spinner};
-use crate::platform::{get_platform_info, check_command, check_development_dependencies, get_install_command};
+use crate::platform::{get_platform_info, check_command, check_development_dependencies, get_install_command, get_next_steps_instructions};
 
 use crate::consts::{
     BIN_FOLDER, GODOT4_BIN_BASE_URL, GODOT_CURRENT_VERSION, PROTOC_BASE_URL,
@@ -417,6 +417,12 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
     }
     
     print_message(MessageType::Success, "Installation complete!");
+    
+    // Show next steps based on OS
+    print_section("Next Steps");
+    
+    let next_steps = get_next_steps_instructions();
+    println!("{}", next_steps);
 
     Ok(())
 }
