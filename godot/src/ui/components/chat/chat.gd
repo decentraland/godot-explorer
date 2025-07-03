@@ -5,17 +5,31 @@ signal submit_message(message: String)
 const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
 const ACK: String = "␆"
+const NEARBY_PLAYER_ITEM = preload(
+	"res://src/ui/components/nearby_player_item/nearby_player_item.tscn"
+)
 
 var hide_tween = null
+var nearby_avatars = null
 
 @onready var rich_text_label_chat = %RichTextLabel_Chat
 @onready var h_box_container_line_edit = %HBoxContainer_LineEdit
 @onready var line_edit_command = %LineEdit_Command
-
+@onready var button_nearby_users: Button = %Button_NearbyUsers
+@onready var label_members_quantity: Label = %Label_MembersQuantity
+@onready var margin_container_chat: MarginContainer = %MarginContainer_Chat
+@onready var button_back: Button = %Button_Back
+@onready var texture_rect_logo: TextureRect = %TextureRect_Logo
+@onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
+@onready var panel_nearby: Panel = %Panel_Nearby
 @onready var timer_hide = %Timer_Hide
+@onready var timer_update_remote_avatars: Timer = %Timer_UpdateRemoteAvatars
+@onready var v_box_container_nearby_players: VBoxContainer = %VBoxContainer_NearbyPlayers
 
 
 func _ready():
+	async_update_nearby_users()
+	timer_update_remote_avatars.start()
 	add_chat_message(
 		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
 	)
@@ -126,3 +140,85 @@ func _on_timer_hide_timeout():
 	hide_tween = get_tree().create_tween()
 	modulate = Color.WHITE
 	hide_tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.5)
+
+
+func async_update_nearby_users() -> void:
+	var remote_avatars = Global.avatars.get_avatars()
+
+	var children_avatars = []
+	for child in v_box_container_nearby_players.get_children():
+		if child.avatar != null:
+			children_avatars.append(child.avatar)
+
+	var avatars_to_remove = []
+	for child_avatar in children_avatars:
+		var found = false
+		for remote_avatar in remote_avatars:
+			if child_avatar.get_avatar_name() == remote_avatar.get_avatar_name():
+				found = true
+				break
+		if not found:
+			avatars_to_remove.append(child_avatar)
+
+	var avatars_to_add = []
+	for remote_avatar in remote_avatars:
+		var found = false
+		for child_avatar in children_avatars:
+			if remote_avatar.get_avatar_name() == child_avatar.get_avatar_name():
+				found = true
+				break
+		if not found and remote_avatar.get_avatar_name() != "":
+			avatars_to_add.append(remote_avatar)
+
+	for child in v_box_container_nearby_players.get_children():
+		if child.avatar != null:
+			for avatar_to_remove in avatars_to_remove:
+				if child.avatar.get_avatar_name() == avatar_to_remove.get_avatar_name():
+					if (
+						child.avatar is Avatar
+						and child.avatar.avatar_loaded.is_connected(child.async_set_data)
+					):
+						child.avatar.avatar_loaded.disconnect(child.async_set_data)
+					child.queue_free()
+					break
+
+	for avatar in avatars_to_add:
+		var avatar_item = NEARBY_PLAYER_ITEM.instantiate()
+		v_box_container_nearby_players.add_child(avatar_item)
+
+		if avatar is Avatar:
+			avatar.avatar_loaded.connect(avatar_item.async_set_data)
+		await avatar_item.async_set_data(avatar)
+
+	var children = v_box_container_nearby_players.get_children()
+	children.sort_custom(func(a, b): return a.avatar.get_avatar_name() < b.avatar.get_avatar_name())
+
+	for child in children:
+		v_box_container_nearby_players.move_child(child, -1)
+
+	button_nearby_users.text = str(children.size())
+	label_members_quantity.text = str(children.size())
+
+
+func _on_button_nearby_users_pressed() -> void:
+	panel_nearby.show()
+	button_back.show()
+	h_box_container_nearby_users.show()
+	margin_container_chat.hide()
+	texture_rect_logo.hide()
+	button_nearby_users.hide()
+	timer_hide.stop()
+
+
+func _on_button_back_pressed() -> void:
+	panel_nearby.hide()
+	button_back.hide()
+	h_box_container_nearby_users.hide()
+	margin_container_chat.show()
+	texture_rect_logo.show()
+	button_nearby_users.show()
+	timer_hide.start()
+
+
+func _on_timer_update_remote_avatars_timeout() -> void:
+	async_update_nearby_users()
