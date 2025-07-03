@@ -70,6 +70,8 @@ multihash-codetable = { version = "0.1.1", features = ["digest", "sha2"] }
 cid = "0.11.0"
 multipart = { version = "0.18.0", default-features = false, features = ["client", "lazy_static"] }
 
+modular-bitfield = "0.11"
+
 [target.'cfg(target_os = "android")'.dependencies]
 ffmpeg-next = { git = "https://github.com/decentraland/rust-ffmpeg/", branch = "audioline-and-mobile-fix-6.1", features = ["fix_usize_size_t"], optional = true }
 jni = { version = "0.21.1", features = ["invocation"] }

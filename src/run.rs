@@ -29,6 +29,8 @@ pub fn run(
 
     if itest {
         args.push("--headless");
+        args.push("--rendering-driver");
+        args.push("vulkan");
         args.push("--verbose");
         args.push("--test-runner");
     }
@@ -131,7 +133,6 @@ fn prepare_build_args_envs(
         build_args.push("--release");
     }
 
-    // Don't add default features here - let the user control them
     build_args.extend(extra_build_args);
 
     if target == "ios" || target == "android" {
