@@ -1,8 +1,8 @@
+use crate::ui::create_download_progress;
 use reqwest::Url;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use crate::ui::create_download_progress;
 
 enum DownloadEvent {
     TotalSize(u64),
@@ -23,7 +23,7 @@ async fn download_file_thread(
             return;
         }
     };
-    
+
     // Send total size if available
     if let Some(len) = response.content_length() {
         let _ = sender.send(DownloadEvent::TotalSize(len));
@@ -63,7 +63,7 @@ pub fn _download_file(url: &str, path: &str) -> Result<(), anyhow::Error> {
     });
 
     let mut progress_bar = None;
-    
+
     // Process events
     loop {
         match receiver.recv() {

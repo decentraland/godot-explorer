@@ -1,6 +1,6 @@
+use crate::ui::{print_message, MessageType};
 use std::env;
 use which::which;
-use crate::ui::{print_message, MessageType};
 
 /// Platform information
 #[derive(Debug, Clone)]
@@ -32,7 +32,7 @@ pub fn detect_linux_package_manager() -> Option<&'static str> {
 pub fn get_platform_info() -> PlatformInfo {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
-    
+
     let display_name = match (os, arch) {
         ("linux", "x86_64") => "Linux (64-bit)",
         ("linux", "aarch64") => "Linux (ARM64)",
@@ -41,7 +41,7 @@ pub fn get_platform_info() -> PlatformInfo {
         ("macos", "aarch64") => "macOS (Apple Silicon)",
         _ => "Unknown platform",
     };
-    
+
     PlatformInfo {
         os: os.to_string(),
         arch: arch.to_string(),
@@ -62,27 +62,27 @@ pub fn check_android_sdk() -> Result<String, String> {
             return Ok(ndk_home);
         }
     }
-    
+
     if let Ok(ndk) = env::var("ANDROID_NDK") {
         if std::path::Path::new(&ndk).exists() {
             return Ok(ndk);
         }
     }
-    
+
     if let Ok(sdk) = env::var("ANDROID_SDK") {
         let ndk_path = format!("{}/ndk/27.1.12297006", sdk);
         if std::path::Path::new(&ndk_path).exists() {
             return Ok(ndk_path);
         }
     }
-    
+
     if let Ok(home) = env::var("ANDROID_HOME") {
         let ndk_path = format!("{}/ndk/27.1.12297006", home);
         if std::path::Path::new(&ndk_path).exists() {
             return Ok(ndk_path);
         }
     }
-    
+
     // Check default location
     if let Ok(home) = env::var("HOME") {
         let ndk_path = format!("{}/Android/Sdk/ndk/27.1.12297006", home);
@@ -90,7 +90,7 @@ pub fn check_android_sdk() -> Result<String, String> {
             return Ok(ndk_path);
         }
     }
-    
+
     Err("Android NDK not found. Please install Android NDK 27.1.12297006".to_string())
 }
 
@@ -100,12 +100,14 @@ pub fn check_ios_development() -> Result<(), String> {
     if platform.os != "macos" {
         return Err("iOS development is only available on macOS".to_string());
     }
-    
+
     // Check for Xcode command line tools
     if !check_command("xcrun") {
-        return Err("Xcode Command Line Tools not found. Install with: xcode-select --install".to_string());
+        return Err(
+            "Xcode Command Line Tools not found. Install with: xcode-select --install".to_string(),
+        );
     }
-    
+
     Ok(())
 }
 
@@ -116,7 +118,7 @@ pub fn get_required_tools() -> Vec<(&'static str, &'static str)> {
         ("cargo", "Rust package manager"),
         ("protoc", "Protocol Buffers compiler"),
     ];
-    
+
     let platform = get_platform_info();
     if platform.os == "windows" {
         // Windows-specific tools
@@ -126,7 +128,7 @@ pub fn get_required_tools() -> Vec<(&'static str, &'static str)> {
         tools.push(("curl", "Command line download tool"));
         tools.push(("unzip", "Archive extraction tool"));
     }
-    
+
     tools
 }
 
@@ -141,7 +143,7 @@ pub fn check_required_tools() -> Vec<(&'static str, bool, &'static str)> {
 /// Validate platform for target build
 pub fn validate_platform_for_target(target: &str) -> Result<(), anyhow::Error> {
     let platform = get_platform_info();
-    
+
     match target {
         "ios" => {
             if platform.os != "macos" {
@@ -160,13 +162,15 @@ pub fn validate_platform_for_target(target: &str) -> Result<(), anyhow::Error> {
         }
         "macos" => {
             if platform.os != "macos" {
-                print_message(MessageType::Warning, 
-                    "Cross-compiling for macOS from non-macOS platform may have limitations");
+                print_message(
+                    MessageType::Warning,
+                    "Cross-compiling for macOS from non-macOS platform may have limitations",
+                );
             }
         }
         _ => return Err(anyhow::anyhow!("Unknown target platform: {}", target)),
     }
-    
+
     Ok(())
 }
 
@@ -186,30 +190,70 @@ pub fn get_ios_target_arch() -> &'static str {
 /// Check development dependencies based on OS
 pub fn check_development_dependencies() -> Vec<(&'static str, bool, &'static str)> {
     let platform = get_platform_info();
-    
+
     match platform.os.as_str() {
         "linux" => vec![
             // Audio/Video deps
-            ("libasound2-dev", check_pkg_config("alsa"), "ALSA sound library"),
+            (
+                "libasound2-dev",
+                check_pkg_config("alsa"),
+                "ALSA sound library",
+            ),
             ("libudev-dev", check_pkg_config("libudev"), "udev library"),
             // FFmpeg deps
-            ("libavcodec-dev", check_pkg_config("libavcodec"), "FFmpeg codec library"),
-            ("libavformat-dev", check_pkg_config("libavformat"), "FFmpeg format library"),
-            ("libavutil-dev", check_pkg_config("libavutil"), "FFmpeg utilities"),
-            ("libavfilter-dev", check_pkg_config("libavfilter"), "FFmpeg filter library"),
-            ("libavdevice-dev", check_pkg_config("libavdevice"), "FFmpeg device library"),
+            (
+                "libavcodec-dev",
+                check_pkg_config("libavcodec"),
+                "FFmpeg codec library",
+            ),
+            (
+                "libavformat-dev",
+                check_pkg_config("libavformat"),
+                "FFmpeg format library",
+            ),
+            (
+                "libavutil-dev",
+                check_pkg_config("libavutil"),
+                "FFmpeg utilities",
+            ),
+            (
+                "libavfilter-dev",
+                check_pkg_config("libavfilter"),
+                "FFmpeg filter library",
+            ),
+            (
+                "libavdevice-dev",
+                check_pkg_config("libavdevice"),
+                "FFmpeg device library",
+            ),
             // LiveKit deps
             ("libssl-dev", check_pkg_config("openssl"), "OpenSSL library"),
             ("libx11-dev", check_pkg_config("x11"), "X11 library"),
             ("libgl1-mesa-dev", check_pkg_config("gl"), "OpenGL library"),
-            ("libxext-dev", check_pkg_config("xext"), "X11 extension library"),
+            (
+                "libxext-dev",
+                check_pkg_config("xext"),
+                "X11 extension library",
+            ),
             // Build tools
             ("clang", check_command("clang"), "C/C++ compiler"),
-            ("pkg-config", check_command("pkg-config"), "Package configuration tool"),
+            (
+                "pkg-config",
+                check_command("pkg-config"),
+                "Package configuration tool",
+            ),
         ],
         "macos" => vec![
-            ("ffmpeg", check_command("ffmpeg"), "FFmpeg multimedia framework"),
-            ("pkg-config", check_command("pkg-config"), "Package configuration tool"),
+            (
+                "ffmpeg",
+                check_command("ffmpeg"),
+                "FFmpeg multimedia framework",
+            ),
+            (
+                "pkg-config",
+                check_command("pkg-config"),
+                "Package configuration tool",
+            ),
         ],
         "windows" => vec![
             // Windows deps are handled differently
@@ -223,7 +267,7 @@ fn check_pkg_config(lib: &str) -> bool {
     if !check_command("pkg-config") {
         return false;
     }
-    
+
     std::process::Command::new("pkg-config")
         .args(&["--exists", lib])
         .status()
@@ -234,7 +278,7 @@ fn check_pkg_config(lib: &str) -> bool {
 /// Get installation command for missing dependencies
 pub fn get_install_command() -> Option<String> {
     let platform = get_platform_info();
-    
+
     match platform.os.as_str() {
         "linux" => {
             if let Some(pkg_manager) = detect_linux_package_manager() {
@@ -266,9 +310,7 @@ pub fn get_install_command() -> Option<String> {
                 None
             }
         }
-        "macos" => Some(
-            "brew install ffmpeg@6 pkg-config".to_string()
-        ),
+        "macos" => Some("brew install ffmpeg@6 pkg-config".to_string()),
         _ => None,
     }
 }
@@ -277,21 +319,23 @@ pub fn get_install_command() -> Option<String> {
 pub fn get_next_steps_instructions() -> String {
     let platform = get_platform_info();
     let mut instructions = String::new();
-    
+
     // Check if there are missing dependencies
     let dev_deps = check_development_dependencies();
     let has_missing_deps = dev_deps.iter().any(|(_, available, _)| !available);
-    
+
     if has_missing_deps {
         match platform.os.as_str() {
             "linux" => {
-                instructions.push_str("For Linux development, you need to install system dependencies:\n");
+                instructions
+                    .push_str("For Linux development, you need to install system dependencies:\n");
                 if let Some(install_cmd) = get_install_command() {
                     instructions.push_str("\n# Install required development dependencies:\n");
                     instructions.push_str(&install_cmd);
                     instructions.push('\n');
                 } else {
-                    instructions.push_str("\n# Check your package manager documentation for installing:\n");
+                    instructions
+                        .push_str("\n# Check your package manager documentation for installing:\n");
                     instructions.push_str("  - ALSA and udev development libraries\n");
                     instructions.push_str("  - FFmpeg development libraries\n");
                     instructions.push_str("  - OpenSSL, X11, and OpenGL development libraries\n");
@@ -302,37 +346,48 @@ pub fn get_next_steps_instructions() -> String {
                 instructions.push_str("For macOS development:\n");
                 instructions.push_str("\n# Install Homebrew if not already installed:\n");
                 instructions.push_str("# /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\n");
-                
+
                 if let Some(install_cmd) = get_install_command() {
                     instructions.push_str("\n# Install required development dependencies:\n");
                     instructions.push_str(&install_cmd);
                     instructions.push_str("\n");
                 }
-                
-                instructions.push_str("\n# Set environment variables (add to ~/.zshrc or ~/.bash_profile):\n");
-                instructions.push_str("export PKG_CONFIG_PATH=\"/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig\"\n");
+
+                instructions.push_str(
+                    "\n# Set environment variables (add to ~/.zshrc or ~/.bash_profile):\n",
+                );
+                instructions.push_str(
+                    "export PKG_CONFIG_PATH=\"/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig\"\n",
+                );
                 instructions.push_str("export CPPFLAGS=\"-I/opt/homebrew/opt/ffmpeg@6/include\"\n");
                 instructions.push_str("export LDFLAGS=\"-L/opt/homebrew/opt/ffmpeg@6/lib\"\n");
             }
             "windows" => {
                 instructions.push_str("For Windows development:\n");
-                instructions.push_str("\n# FFmpeg will be downloaded automatically during the build process.\n");
-                instructions.push_str("# Make sure you have Visual Studio with C++ development tools installed.\n");
-                instructions.push_str("\n# If you encounter issues, ensure LIBCLANG_PATH is set correctly:\n");
-                instructions.push_str("# You can find it in your Visual Studio installation, typically:\n");
+                instructions.push_str(
+                    "\n# FFmpeg will be downloaded automatically during the build process.\n",
+                );
+                instructions.push_str(
+                    "# Make sure you have Visual Studio with C++ development tools installed.\n",
+                );
+                instructions.push_str(
+                    "\n# If you encounter issues, ensure LIBCLANG_PATH is set correctly:\n",
+                );
+                instructions
+                    .push_str("# You can find it in your Visual Studio installation, typically:\n");
                 instructions.push_str("# C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\LLVM\\x64\\bin\n");
             }
             _ => {}
         }
     }
-    
+
     instructions.push_str("\n# To verify your setup, run:\n");
     instructions.push_str("cargo run -- doctor\n");
     instructions.push_str("\n# To build the project:\n");
     instructions.push_str("cargo run -- build\n");
     instructions.push_str("\n# To run the Godot editor:\n");
     instructions.push_str("cargo run -- run -e\n");
-    
+
     instructions
 }
 

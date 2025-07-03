@@ -56,7 +56,7 @@ pub fn create_spinner(message: &str) -> ProgressBar {
 /// Print platform-specific installation instructions
 pub fn print_install_instructions(tool: &str, platform: &str) {
     print_message(MessageType::Info, &format!("To install {}, try:", tool));
-    
+
     match (tool, platform) {
         ("rustup", "linux") | ("rustup", "macos") => {
             println!("  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh");
@@ -109,7 +109,10 @@ pub fn print_install_instructions(tool: &str, platform: &str) {
             println!("  The xtask will download FFmpeg automatically for Windows");
         }
         _ => {
-            println!("  Please refer to the official documentation for {} on {}", tool, platform);
+            println!(
+                "  Please refer to the official documentation for {} on {}",
+                tool, platform
+            );
         }
     }
 }

@@ -11,16 +11,16 @@ use crate::consts::RUST_LIB_PROJECT_FOLDER;
 
 mod consts;
 mod copy_files;
+mod doctor;
 mod download_file;
 mod export;
 mod image_comparison;
 mod install_dependency;
 mod path;
+mod platform;
 mod run;
 mod tests;
 mod ui;
-mod platform;
-mod doctor;
 
 fn main() -> Result<(), anyhow::Error> {
     let cli = Command::new("xtask")
@@ -247,7 +247,7 @@ fn main() -> Result<(), anyhow::Error> {
             if sm.is_present("no-default-features") {
                 build_args.push("--no-default-features");
             }
-            
+
             if let Some(features) = sm.values_of("features") {
                 for feature in features {
                     build_args.push("-F");
@@ -262,16 +262,14 @@ fn main() -> Result<(), anyhow::Error> {
                 None,
                 sm.value_of("target"),
             )?;
-            
+
             // Build for additional platform if specified
             if let Some(platform) = sm.value_of("platform") {
-                print_message(MessageType::Step, &format!("Building for additional platform: {}", platform));
-                run::build(
-                    sm.is_present("release"),
-                    build_args,
-                    None,
-                    Some(platform),
-                )?;
+                print_message(
+                    MessageType::Step,
+                    &format!("Building for additional platform: {}", platform),
+                );
+                run::build(sm.is_present("release"), build_args, None, Some(platform))?;
             }
 
             run::run(
@@ -293,12 +291,12 @@ fn main() -> Result<(), anyhow::Error> {
             if sm.is_present("resource-tracking") {
                 build_args.extend(&["-F", "use_resource_tracking"]);
             }
-            
+
             // Handle feature flags
             if sm.is_present("no-default-features") {
                 build_args.push("--no-default-features");
             }
-            
+
             if let Some(features) = sm.values_of("features") {
                 for feature in features {
                     build_args.push("-F");
@@ -339,9 +337,7 @@ fn main() -> Result<(), anyhow::Error> {
             sm.get_one::<String>("package")
                 .context("please provide a package with -p")?,
         ),
-        ("doctor", _) => {
-            doctor::run_doctor()
-        },
+        ("doctor", _) => doctor::run_doctor(),
         _ => unreachable!("unreachable branch"),
     };
 

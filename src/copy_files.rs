@@ -67,7 +67,8 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                 "{RUST_LIB_PROJECT_FOLDER}target/aarch64-linux-android/{mode}/libdclgodot.so"
             );
 
-            let dest = format!("{RUST_LIB_PROJECT_FOLDER}target/libdclgodot_android/libdclgodot.so");
+            let dest =
+                format!("{RUST_LIB_PROJECT_FOLDER}target/libdclgodot_android/libdclgodot.so");
 
             copy_with_error_context(&source_file, &dest, false)?;
 

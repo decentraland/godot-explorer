@@ -11,8 +11,11 @@ use zip::ZipArchive;
 
 use crate::download_file::download_file;
 use crate::export::prepare_templates;
-use crate::ui::{print_message, print_section, MessageType, create_spinner};
-use crate::platform::{get_platform_info, check_command, check_development_dependencies, get_install_command, get_next_steps_instructions};
+use crate::platform::{
+    check_command, check_development_dependencies, get_install_command,
+    get_next_steps_instructions, get_platform_info,
+};
+use crate::ui::{create_spinner, print_message, print_section, MessageType};
 
 use crate::consts::{
     BIN_FOLDER, GODOT4_BIN_BASE_URL, GODOT_CURRENT_VERSION, PROTOC_BASE_URL,
@@ -52,7 +55,7 @@ fn get_protocol_url() -> Result<String, anyhow::Error> {
 
 pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
     print_section("Installing DCL Protocol");
-    
+
     let protocol_url = get_protocol_url()?;
     let destination_path = format!("{RUST_LIB_PROJECT_FOLDER}src/dcl/components");
 
@@ -80,7 +83,7 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
         let mut file = File::create(dest_path)?;
         io::copy(&mut entry, &mut file)?;
     }
-    
+
     spinner.finish_with_message("✅ Protocol files installed");
 
     Ok(())
@@ -159,7 +162,10 @@ pub fn download_and_extract_zip(
 
     // If the cached file exist, use it
     if let Some(already_existing_file) = get_existing_cached_file(persistent_cache.clone()) {
-        print_message(MessageType::Info, &format!("Using cached file: {}", already_existing_file));
+        print_message(
+            MessageType::Info,
+            &format!("Using cached file: {}", already_existing_file),
+        );
         fs::copy(already_existing_file, "./tmp-file.zip")?;
     } else {
         print_message(MessageType::Info, &format!("Downloading: {}", url));
@@ -277,24 +283,54 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
 
     // Check Android SDK/NDK environment
     print_message(MessageType::Step, "Checking Android SDK/NDK setup...");
-    
+
     if let Ok(android_ndk_home) = env::var("ANDROID_NDK_HOME") {
-        print_message(MessageType::Success, &format!("ANDROID_NDK_HOME is set: {}", android_ndk_home));
+        print_message(
+            MessageType::Success,
+            &format!("ANDROID_NDK_HOME is set: {}", android_ndk_home),
+        );
     } else if let Ok(android_ndk) = env::var("ANDROID_NDK") {
-        print_message(MessageType::Success, &format!("ANDROID_NDK is set: {}", android_ndk));
+        print_message(
+            MessageType::Success,
+            &format!("ANDROID_NDK is set: {}", android_ndk),
+        );
     } else if let Ok(android_sdk) = env::var("ANDROID_SDK") {
-        print_message(MessageType::Success, &format!("ANDROID_SDK is set: {}", android_sdk));
-        print_message(MessageType::Info, &format!("Looking for NDK at: {}/ndk/27.1.12297006", android_sdk));
+        print_message(
+            MessageType::Success,
+            &format!("ANDROID_SDK is set: {}", android_sdk),
+        );
+        print_message(
+            MessageType::Info,
+            &format!("Looking for NDK at: {}/ndk/27.1.12297006", android_sdk),
+        );
     } else if let Ok(android_home) = env::var("ANDROID_HOME") {
-        print_message(MessageType::Success, &format!("ANDROID_HOME is set: {}", android_home));
-        print_message(MessageType::Info, &format!("Looking for NDK at: {}/ndk/27.1.12297006", android_home));
+        print_message(
+            MessageType::Success,
+            &format!("ANDROID_HOME is set: {}", android_home),
+        );
+        print_message(
+            MessageType::Info,
+            &format!("Looking for NDK at: {}/ndk/27.1.12297006", android_home),
+        );
     } else {
-        print_message(MessageType::Warning, "No Android SDK/NDK environment variables found");
-        print_message(MessageType::Info, "Will look for NDK at: ~/Android/Sdk/ndk/27.1.12297006");
+        print_message(
+            MessageType::Warning,
+            "No Android SDK/NDK environment variables found",
+        );
+        print_message(
+            MessageType::Info,
+            "Will look for NDK at: ~/Android/Sdk/ndk/27.1.12297006",
+        );
     }
 
-    print_message(MessageType::Success, "Android build tools installation complete!");
-    print_message(MessageType::Info, "Note: Make sure you have Android NDK version 27.1.12297006 installed");
+    print_message(
+        MessageType::Success,
+        "Android build tools installation complete!",
+    );
+    print_message(
+        MessageType::Info,
+        "Note: Make sure you have Android NDK version 27.1.12297006 installed",
+    );
 
     Ok(())
 }
@@ -304,71 +340,99 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
     let android_deps_url = "https://godot-artifacts.kuruk.net/android_deps.zip";
     let android_deps_path = format!("{BIN_FOLDER}android_dependencies.zip");
     let android_deps_extracted_path = format!("{BIN_FOLDER}android_deps/");
-    
+
     // Check if already extracted
     if !Path::new(&android_deps_extracted_path).exists() {
         if !Path::new(&android_deps_path).exists() {
-            print_message(MessageType::Info, "Android dependencies missing. Downloading...");
+            print_message(
+                MessageType::Info,
+                "Android dependencies missing. Downloading...",
+            );
             download_file(android_deps_url, &android_deps_path)?;
             print_message(MessageType::Success, "Android dependency downloaded");
         }
-        
+
         // Extract the dependencies
         let spinner = create_spinner("Extracting Android dependencies...");
-        
+
         fs::create_dir_all(&android_deps_extracted_path)?;
         let status = std::process::Command::new("unzip")
             .args(&["-o", &android_deps_path, "-d", &android_deps_extracted_path])
             .status()?;
-        
+
         if !status.success() {
             spinner.finish_with_message("❌ Failed to extract Android dependencies");
             return Err(anyhow::anyhow!("Failed to extract Android dependencies"));
         }
-        
+
         spinner.finish_and_clear();
-        print_message(MessageType::Success, &format!("Android dependencies extracted to {}", android_deps_extracted_path));
+        print_message(
+            MessageType::Success,
+            &format!(
+                "Android dependencies extracted to {}",
+                android_deps_extracted_path
+            ),
+        );
     } else {
-        print_message(MessageType::Success, "Android dependencies already extracted");
+        print_message(
+            MessageType::Success,
+            "Android dependencies already extracted",
+        );
     }
-    
+
     Ok(())
 }
 
 pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<(), anyhow::Error> {
     print_section("Installing Dependencies");
-    
+
     let platform = get_platform_info();
-    print_message(MessageType::Info, &format!("Platform: {}", platform.display_name));
-    
+    print_message(
+        MessageType::Info,
+        &format!("Platform: {}", platform.display_name),
+    );
+
     // Check for missing development dependencies
     let dev_deps = check_development_dependencies();
-    let missing_deps: Vec<_> = dev_deps.iter()
+    let missing_deps: Vec<_> = dev_deps
+        .iter()
         .filter(|(_, available, _)| !available)
         .collect();
-    
+
     if !missing_deps.is_empty() {
-        print_message(MessageType::Warning, "Missing development dependencies detected:");
+        print_message(
+            MessageType::Warning,
+            "Missing development dependencies detected:",
+        );
         for (dep, _, desc) in &missing_deps {
             print_message(MessageType::Error, &format!("  {} - {}", dep, desc));
         }
-        
+
         if let Some(install_cmd) = get_install_command() {
             print_message(MessageType::Info, "\nTo install missing dependencies, run:");
             println!("\n{}\n", install_cmd);
-            print_message(MessageType::Warning, "Please install these dependencies before continuing.");
+            print_message(
+                MessageType::Warning,
+                "Please install these dependencies before continuing.",
+            );
             return Err(anyhow::anyhow!("Missing required development dependencies"));
         }
     }
-    
+
     let persistent_path = get_persistent_path(Some("test.zip".into())).unwrap();
-    print_message(MessageType::Info, &format!("Cache directory: {}", persistent_path));
+    print_message(
+        MessageType::Info,
+        &format!("Cache directory: {}", persistent_path),
+    );
 
     // Check required tools first
     if !check_command("protoc") {
-        print_message(MessageType::Warning, "protoc not found - it will be downloaded");
+        print_message(
+            MessageType::Warning,
+            "protoc not found - it will be downloaded",
+        );
     }
-    
+
     install_dcl_protocol()?;
 
     // Install Android-specific tools and dependencies if Android platform is requested
@@ -409,18 +473,18 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
         _ => (),
     };
     fs::copy(program_path, dest_program_path.as_str())?;
-    
+
     print_message(MessageType::Success, "Godot binary installed");
 
     if !skip_download_templates {
         prepare_templates(platforms)?;
     }
-    
+
     print_message(MessageType::Success, "Installation complete!");
-    
+
     // Show next steps based on OS
     print_section("Next Steps");
-    
+
     let next_steps = get_next_steps_instructions();
     println!("{}", next_steps);
 

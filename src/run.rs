@@ -7,8 +7,8 @@ use crate::{
     copy_files::copy_library,
     export::get_target_os,
     path::{adjust_canonicalization, get_godot_path},
-    ui::{print_message, print_build_status, MessageType},
     platform::validate_platform_for_target,
+    ui::{print_build_status, print_message, MessageType},
 };
 
 pub fn run(
@@ -53,10 +53,10 @@ pub fn build(
     target: Option<&str>,
 ) -> anyhow::Result<()> {
     let target = get_target_os(target)?;
-    
+
     // Validate platform requirements
     validate_platform_for_target(&target)?;
-    
+
     print_build_status(&target, "starting");
 
     // For Android, use direct cargo build with proper environment setup
@@ -64,35 +64,39 @@ pub fn build(
         // TODO: FFMPEG feature is going to be implemented for mobile platforms
         // For now, disable it for Android builds
         let mut android_build_args = extra_build_args.clone();
-        
+
         // Check if user already specified features
         let has_features = android_build_args.iter().any(|&arg| arg == "--features");
-        let has_no_default_features = android_build_args.iter().any(|&arg| arg == "--no-default-features");
-        
+        let has_no_default_features = android_build_args
+            .iter()
+            .any(|&arg| arg == "--no-default-features");
+
         if !has_no_default_features && !has_features {
             // If user didn't specify features, disable ffmpeg by default
             android_build_args.push("--no-default-features");
             android_build_args.push("--features");
             android_build_args.push("use_livekit,use_deno,enable_inspector");
         }
-        
+
         build_with_cargo_ndk(release_mode, android_build_args)?;
     } else if target == "ios" {
         // TODO: FFMPEG feature is going to be implemented for mobile platforms
         // For now, disable it for iOS builds
         let mut ios_build_args = extra_build_args.clone();
-        
+
         // Check if user already specified features
         let has_features = ios_build_args.iter().any(|&arg| arg == "--features");
-        let has_no_default_features = ios_build_args.iter().any(|&arg| arg == "--no-default-features");
-        
+        let has_no_default_features = ios_build_args
+            .iter()
+            .any(|&arg| arg == "--no-default-features");
+
         if !has_no_default_features && !has_features {
             // If user didn't specify features, disable ffmpeg by default
             ios_build_args.push("--no-default-features");
             ios_build_args.push("--features");
             ios_build_args.push("use_livekit,use_deno,enable_inspector");
         }
-        
+
         let (build_args, with_build_envs) = prepare_build_args_envs(
             release_mode,
             ios_build_args,
@@ -115,7 +119,7 @@ pub fn build(
     }
 
     copy_library(&target, !release_mode)?;
-    
+
     print_build_status(&target, "success");
 
     Ok(())
@@ -363,24 +367,24 @@ fn validate_android_ndk() -> anyhow::Result<String> {
         - ANDROID_HOME or ANDROID_SDK (NDK will be searched in <path>/ndk/{})\n\n\
         You can install the NDK using Android Studio SDK Manager or download it from:\n\
         https://developer.android.com/ndk/downloads",
-        ndk_version, ndk_version
+        ndk_version,
+        ndk_version
     ))
 }
 
 /// Builds for Android using direct cargo build (not cargo-ndk due to libc++ linking issues)
-fn build_with_cargo_ndk(
-    release_mode: bool,
-    extra_build_args: Vec<&str>,
-) -> anyhow::Result<()> {
+fn build_with_cargo_ndk(release_mode: bool, extra_build_args: Vec<&str>) -> anyhow::Result<()> {
     print_message(MessageType::Step, "Building Android target...");
 
     // Validate Android NDK is properly installed
     let ndk_path = validate_android_ndk()?;
-    print_message(MessageType::Success, &format!("Using Android NDK: {}", ndk_path));
+    print_message(
+        MessageType::Success,
+        &format!("Using Android NDK: {}", ndk_path),
+    );
 
     // Check if Android dependencies are installed
-    let android_deps_path = std::env::current_dir()?
-        .join(".bin/android_deps");
+    let android_deps_path = std::env::current_dir()?.join(".bin/android_deps");
     if !android_deps_path.exists() {
         return Err(anyhow::anyhow!(
             "Android dependencies not found!\n\n\
@@ -452,15 +456,15 @@ fn build_with_cargo_ndk(
         args.push("--release");
     }
 
-    args.extend(&[
-        "--target",
-        "aarch64-linux-android",
-    ]);
+    args.extend(&["--target", "aarch64-linux-android"]);
 
     // Let user control features via command line
     args.extend(extra_build_args);
 
-    print_message(MessageType::Info, &format!("Running: cargo {}", args.join(" ")));
+    print_message(
+        MessageType::Info,
+        &format!("Running: cargo {}", args.join(" ")),
+    );
 
     let build_status = std::process::Command::new("cargo")
         .current_dir(&build_cwd)
@@ -486,7 +490,10 @@ fn run_cargo_build(
     build_args: &[String],
     envs: &HashMap<String, String>,
 ) -> anyhow::Result<()> {
-    print_message(MessageType::Info, &format!("Running: cargo {}", build_args.join(" ")));
+    print_message(
+        MessageType::Info,
+        &format!("Running: cargo {}", build_args.join(" ")),
+    );
 
     let build_status = std::process::Command::new("cargo")
         .current_dir(cwd)
