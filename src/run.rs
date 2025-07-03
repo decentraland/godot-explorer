@@ -59,7 +59,47 @@ pub fn build(
 
     // For Android, use direct cargo build with proper environment setup
     if target == "android" {
-        build_with_cargo_ndk(release_mode, extra_build_args)?;
+        // TODO: FFMPEG feature is going to be implemented for mobile platforms
+        // For now, disable it for Android builds
+        let mut android_build_args = extra_build_args.clone();
+        
+        // Check if user already specified features
+        let has_features = android_build_args.iter().any(|&arg| arg == "--features");
+        let has_no_default_features = android_build_args.iter().any(|&arg| arg == "--no-default-features");
+        
+        if !has_no_default_features && !has_features {
+            // If user didn't specify features, disable ffmpeg by default
+            android_build_args.push("--no-default-features");
+            android_build_args.push("--features");
+            android_build_args.push("use_livekit,use_deno,enable_inspector");
+        }
+        
+        build_with_cargo_ndk(release_mode, android_build_args)?;
+    } else if target == "ios" {
+        // TODO: FFMPEG feature is going to be implemented for mobile platforms
+        // For now, disable it for iOS builds
+        let mut ios_build_args = extra_build_args.clone();
+        
+        // Check if user already specified features
+        let has_features = ios_build_args.iter().any(|&arg| arg == "--features");
+        let has_no_default_features = ios_build_args.iter().any(|&arg| arg == "--no-default-features");
+        
+        if !has_no_default_features && !has_features {
+            // If user didn't specify features, disable ffmpeg by default
+            ios_build_args.push("--no-default-features");
+            ios_build_args.push("--features");
+            ios_build_args.push("use_livekit,use_deno,enable_inspector");
+        }
+        
+        let (build_args, with_build_envs) = prepare_build_args_envs(
+            release_mode,
+            ios_build_args,
+            with_build_envs.unwrap_or_default(),
+            &target,
+        )?;
+
+        let build_cwd = adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?);
+        run_cargo_build(&PathBuf::from(build_cwd), &build_args, &with_build_envs)?;
     } else {
         let (build_args, with_build_envs) = prepare_build_args_envs(
             release_mode,

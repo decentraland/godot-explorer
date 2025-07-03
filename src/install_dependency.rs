@@ -315,13 +315,7 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
         
         // Extract the dependencies
         let spinner = create_spinner("Extracting Android dependencies...");
-        download_and_extract_zip(
-            "file://localhost", // dummy URL, we'll use the local file
-            &android_deps_extracted_path,
-            None,
-        )?;
         
-        // Actually, let's use a simpler extraction method
         fs::create_dir_all(&android_deps_extracted_path)?;
         let status = std::process::Command::new("unzip")
             .args(&["-o", &android_deps_path, "-d", &android_deps_extracted_path])

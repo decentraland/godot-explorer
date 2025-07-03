@@ -29,7 +29,6 @@ pub fn print_section(title: &str) {
 }
 
 /// Create a progress bar for downloads
-#[allow(dead_code)]
 pub fn create_download_progress(total_size: u64) -> ProgressBar {
     let pb = ProgressBar::new(total_size);
     pb.set_style(
