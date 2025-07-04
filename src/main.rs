@@ -117,9 +117,9 @@ fn main() -> Result<(), anyhow::Error> {
                     Arg::new("target")
                         .short('t')
                         .long("target")
-                        .help("target OS (android, ios, linux, win64, macos)")
+                        .help("target OS (android, ios, linux, win64, macos). Defaults to host platform if not specified")
                         .takes_value(true)
-                        .required(true),
+                        .required(false),
                 )
                 .arg(
                     Arg::new("format")

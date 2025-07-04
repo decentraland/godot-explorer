@@ -380,6 +380,13 @@ fn extract_android_template() -> Result<(), anyhow::Error> {
     let gdignore_file = format!("{}/build/.gdignore", android_build_dir);
     fs::write(&gdignore_file, "")?;
     
+    // Set executable permission on gradlew
+    let gradlew_path = format!("{}/build/gradlew", android_build_dir);
+    if Path::new(&gradlew_path).exists() {
+        set_executable_permission(Path::new(&gradlew_path))?;
+        print_message(MessageType::Info, "Set executable permission on gradlew");
+    }
+    
     print_message(MessageType::Success, "Android template extracted successfully");
     
     Ok(())
