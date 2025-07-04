@@ -5,7 +5,6 @@ var materials = []
 var unique_meshes = {}
 var unique_materials = {}
 
-
 func count(node: Node):
 	var mesh_nodes = get_meshes_below(node)
 	for instance in mesh_nodes:

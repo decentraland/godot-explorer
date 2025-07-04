@@ -46,10 +46,13 @@ func _init(a_plugin: EditorPlugin):
 				plugin.remove_autoload_singleton(SINGLETON_NAME)
 	)
 
-
 func populate_menu(menu: PopupMenu, id: int):
 	menu.add_item("Run Benchmark", id)
 
+	var args := OS.get_cmdline_args()
+	if args.has("--dcl-benchmark"):
+		print("Running Benchmark...")
+		execute()
 
 func execute():
 	var was_counting = ProjectSettings.get(SETTINGS_PATH_KEY)
