@@ -110,13 +110,33 @@ fn main() -> Result<(), anyhow::Error> {
                         .required(true),
                 ),
         )
-        .subcommand(Command::new("export").arg(
-            Arg::new("target")
-                .short('t')
-                .long("target")
-                .help("target OS")
-                .takes_value(true),
-        ))
+        .subcommand(
+            Command::new("export")
+                .arg(
+                    Arg::new("target")
+                        .short('t')
+                        .long("target")
+                        .help("target OS (android, ios, linux, win64, macos)")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("format")
+                        .short('f')
+                        .long("format")
+                        .help("Export format for Android: apk or aab")
+                        .takes_value(true)
+                        .possible_values(&["apk", "aab"])
+                        .default_value("apk"),
+                )
+                .arg(
+                    Arg::new("release")
+                        .short('r')
+                        .long("release")
+                        .help("Export in release mode (signed)")
+                        .takes_value(false),
+                ),
+        )
         .subcommand(Command::new("import-assets"))
         .subcommand(
             Command::new("run")
@@ -330,7 +350,12 @@ fn main() -> Result<(), anyhow::Error> {
             )?;
             Ok(())
         }
-        ("export", sm) => export::export(sm.value_of("target")),
+        ("export", sm) => {
+            let target = sm.value_of("target");
+            let format = sm.value_of("format").unwrap_or("apk");
+            let release = sm.is_present("release");
+            export::export(target, format, release)
+        }
         ("import-assets", _m) => {
             let status = import_assets();
             if !status.success() {

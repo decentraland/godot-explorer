@@ -1,4 +1,5 @@
 use std::{collections::HashMap, fs, io, path::Path, process::ExitStatus};
+use zip::ZipArchive;
 
 use crate::{
     consts::{
@@ -46,10 +47,14 @@ pub fn get_target_os(target: Option<&str>) -> anyhow::Result<String> {
                 // Android can usually be built from multiple platforms assuming you have the correct export templates
                 "android".to_string()
             }
+            "quest" => {
+                // Quest is essentially Android with specific settings
+                "quest".to_string()
+            }
             "linux" | "win64" | "macos" => t.to_string(),
             _ => {
                 return Err(anyhow::anyhow!(
-                    "Unsupported provided target: {}. Supported targets: ios, android, linux, win64, macos.",
+                    "Unsupported provided target: {}. Supported targets: ios, android, quest, linux, win64, macos.",
                     t
                 ));
             }
@@ -82,8 +87,6 @@ pub fn import_assets() -> ExitStatus {
         "--headless",
         "--rendering-driver",
         "opengl3",
-        "--quit-after",
-        "1000",
     ];
 
     println!("execute ${program} {:?}", args);
@@ -96,7 +99,7 @@ pub fn import_assets() -> ExitStatus {
         .expect("Failed to run Godot")
 }
 
-pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
+pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), anyhow::Error> {
     print_section("Exporting Project");
 
     let program = get_godot_path();
@@ -120,13 +123,31 @@ pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
 
     print_message(MessageType::Info, &format!("Target platform: {}", target));
 
+    // Extract Android template if needed
+    if target == "android" || target == "quest" {
+        extract_android_template()?;
+    }
+
     // Determine output file name
     let output_file_name = match target.as_str() {
         "linux" => "decentraland.godot.client.x86_64",
         "win64" => "decentraland.godot.client.exe",
         "macos" => "decentraland.godot.client.dmg",
         "ios" => "decentraland-godot-client.ipa",
-        "android" => "decentraland.godot.client.apk",
+        "android" => {
+            if format == "aab" {
+                "decentraland.godot.client.aab"
+            } else {
+                "decentraland.godot.client.apk"
+            }
+        }
+        "quest" => {
+            if format == "aab" {
+                "meta-quest.aab"
+            } else {
+                "meta-quest.apk"
+            }
+        }
         _ => return Err(anyhow::anyhow!("Unexpected final target: {}", target)),
     };
 
@@ -139,12 +160,21 @@ pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
     // This should reflect the correct relative path from the Godot project directory
     let output_path_godot_param = format!("./../exports/{output_file_name}");
 
+    // For Android/Quest AAB format, we need to update export_presets.cfg
+    let export_presets_backup = if (target == "android" || target == "quest") && format == "aab" {
+        update_export_presets_for_aab()?
+    } else {
+        None
+    };
+
+    let export_mode = if release { "--export-release" } else { "--export-debug" };
+    
     let args = vec![
         "-e",
         "--rendering-driver",
         "opengl3",
         "--headless",
-        "--export-debug",
+        export_mode,
         target.as_str(),
         output_path_godot_param.as_str(),
     ];
@@ -161,6 +191,11 @@ pub fn export(target: Option<&str>) -> Result<(), anyhow::Error> {
         .expect("Failed to run Godot");
 
     spinner.finish();
+    
+    // Restore export presets if we backed them up
+    if let Some(backup_content) = export_presets_backup {
+        restore_export_presets(backup_content)?;
+    }
 
     if !std::path::Path::new(output_rel_path.as_str()).exists() && target != "ios" {
         print_message(MessageType::Error, "Export failed. Common issues:");
@@ -241,5 +276,92 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
         }
     }
 
+    Ok(())
+}
+
+fn update_export_presets_for_aab() -> Result<Option<String>, anyhow::Error> {
+    let export_presets_path = format!("{}/export_presets.cfg", GODOT_PROJECT_FOLDER);
+    
+    // Read current content
+    let original_content = fs::read_to_string(&export_presets_path)?;
+    
+    // Update for AAB format
+    let updated_content = original_content
+        .replace("gradle_build/export_format=0", "gradle_build/export_format=1")
+        .replace("architectures/x86_64=true", "architectures/x86_64=false")
+        .replace("package/signed=true", "package/signed=false");
+    
+    // Write updated content
+    fs::write(&export_presets_path, &updated_content)?;
+    
+    Ok(Some(original_content))
+}
+
+fn restore_export_presets(original_content: String) -> Result<(), anyhow::Error> {
+    let export_presets_path = format!("{}/export_presets.cfg", GODOT_PROJECT_FOLDER);
+    fs::write(&export_presets_path, original_content)?;
+    Ok(())
+}
+
+fn extract_android_template() -> Result<(), anyhow::Error> {
+    let android_build_dir = format!("{}/android/", GODOT_PROJECT_FOLDER);
+    let android_build_path = Path::new(&android_build_dir);
+    
+    // Check if already extracted
+    if android_build_path.exists() {
+        print_message(MessageType::Info, "Android template already extracted");
+        return Ok(());
+    }
+    
+    print_message(MessageType::Step, "Extracting Android template...");
+    
+    // Get the template path
+    let templates_path = godot_export_templates_path()
+        .ok_or_else(|| anyhow::anyhow!("Could not determine export templates path"))?;
+    
+    let android_source_zip = format!("{}/android_source.zip", templates_path);
+    let android_source_path = Path::new(&android_source_zip);
+    
+    if !android_source_path.exists() {
+        return Err(anyhow::anyhow!(
+            "Android template not found at: {}. Run 'cargo run -- install --platforms android' first", 
+            android_source_zip
+        ));
+    }
+    
+    // Create directories
+    fs::create_dir_all(&android_build_dir)?;
+    let build_dir = format!("{}/build", android_build_dir);
+    fs::create_dir_all(&build_dir)?;
+    
+    // Extract the template
+    let file = fs::File::open(android_source_path)?;
+    let mut archive = ZipArchive::new(file)?;
+    
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let outpath = Path::new(&build_dir).join(file.mangled_name());
+        
+        if file.is_dir() {
+            fs::create_dir_all(&outpath)?;
+        } else {
+            if let Some(parent) = outpath.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let mut outfile = fs::File::create(&outpath)?;
+            io::copy(&mut file, &mut outfile)?;
+        }
+    }
+    
+    // Create version file
+    let version_file = format!("{}/.build_version", android_build_dir);
+    fs::write(&version_file, format!("{}.stable", GODOT_CURRENT_VERSION))?;
+    
+    // Create .gdignore file
+    let gdignore_file = format!("{}/build/.gdignore", android_build_dir);
+    fs::write(&gdignore_file, "")?;
+    
+    print_message(MessageType::Success, "Android template extracted successfully");
+    
     Ok(())
 }
