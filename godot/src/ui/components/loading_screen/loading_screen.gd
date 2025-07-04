@@ -33,6 +33,7 @@ var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer
 
 @onready var loading_screen_progress_logic = $LoadingScreenProgressLogic
 @onready var timer_check_progress_timeout = $Timer_CheckProgressTimeout
+@onready var debug_chronometer := Chronometer.new()
 
 
 func _ready():
@@ -45,12 +46,16 @@ func _ready():
 
 # Forward
 func enable_loading_screen():
+	if !debug_chronometer:
+		debug_chronometer = Chronometer.new()
+	debug_chronometer.restart("Starting to load scene")
 	Global.loading_started.emit()
 	Global.release_mouse()
 	loading_screen_progress_logic.enable_loading_screen()
 
 
 func async_hide_loading_screen_effect():
+	debug_chronometer.lap("Finished loading scene")
 	Global.loading_finished.emit()
 	timer_check_progress_timeout.stop()
 	var tween = get_tree().create_tween()
@@ -62,6 +67,12 @@ func async_hide_loading_screen_effect():
 	modulate = Color.WHITE
 	background.use_parent_material = false  # enable material
 	self.position.y = 0
+
+	# Debug singleton for counting resources
+	var counter = get_tree().get_root().get_node_or_null("ResourceCounter")
+	if counter:
+		await get_tree().create_timer(5).timeout
+		counter.log_active_counts()
 
 
 func _on_texture_rect_right_arrow_gui_input(event):
