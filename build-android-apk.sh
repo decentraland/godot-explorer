@@ -38,19 +38,17 @@ else
     bash android-build.sh
 fi
 
-# Temporarily disable strict error checking for the debug key setup.
-set +e
-echo "Setup Android Release Keys"
-cd /opt/ || exit 1
-keytool -keyalg RSA -genkeypair -alias androidreleasekey \
-    -keypass android -keystore release.keystore -storepass android \
-    -dname "CN=Android Release,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+# Generate Android release keystore if it doesn't exist
+if [ ! -f "${EXPLORER_PATH}/.bin/release.keystore" ]; then
+    echo "Generating Android Release Keys"
+    cd "${EXPLORER_PATH}"
+    cargo run -- generate-keystore --type release
+fi
 
-export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="/opt/release.keystore"
+# Set environment variables for Godot export
+export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="${EXPLORER_PATH}/.bin/release.keystore"
 export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
 export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
-# Re-enable strict error checking.
-set -e
 
 cd "${EXPLORER_PATH}/godot/"
 

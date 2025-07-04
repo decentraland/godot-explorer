@@ -16,6 +16,7 @@ mod download_file;
 mod export;
 mod image_comparison;
 mod install_dependency;
+mod keystore;
 mod path;
 mod platform;
 mod run;
@@ -77,6 +78,19 @@ fn main() -> Result<(), anyhow::Error> {
                 )
         )
         .subcommand(Command::new("update-protocol"))
+        .subcommand(
+            Command::new("generate-keystore")
+                .about("Generate Android keystore for app signing")
+                .arg(
+                    Arg::new("type")
+                        .short('t')
+                        .long("type")
+                        .help("Keystore type: debug or release")
+                        .takes_value(true)
+                        .possible_values(&["debug", "release"])
+                        .default_value("release"),
+                ),
+        )
         .subcommand(
             Command::new("compare-image-folders")
                 .arg(
@@ -227,6 +241,10 @@ fn main() -> Result<(), anyhow::Error> {
             install_dependency::install(no_templates, &platforms)
         }
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
+        ("generate-keystore", sm) => {
+            let keystore_type = sm.value_of("type").unwrap_or("release");
+            keystore::generate_keystore(keystore_type)
+        }
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
             let result_folder = Path::new(sm.value_of("result").unwrap());
