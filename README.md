@@ -1,85 +1,244 @@
+# Decentraland Godot Explorer
 
-# Decentraland Godot Rust
 [![codecov](https://codecov.io/gh/decentraland/godot-explorer/branch/main/graph/badge.svg)](https://codecov.io/gh/decentraland/godot-explorer)
+[![CI](https://github.com/decentraland/godot-explorer/actions/workflows/ci.yml/badge.svg)](https://github.com/decentraland/godot-explorer/actions)
+[![Android](https://github.com/decentraland/godot-explorer/actions/workflows/android_builds.yml/badge.svg)](https://github.com/decentraland/godot-explorer/actions)
 
-## Set up project without compiling Rust (easy)
+Decentraland Godot Explorer is a cross-platform metaverse client built with Godot 4.4.1 and Rust, supporting desktop, mobile, and VR platforms.
 
-1. Clone the repo using `git clone https://github.com/decentraland/godot-explorer`
-  - If you're in Windows we suggest to clone the repo in a very short path like `C:/gexplorer` due https://developercommunity.visualstudio.com/t/clexe-compiler-driver-cannot-handle-long-file-path/975889
-2. Download Godot Editor fork from https://github.com/decentraland/godotengine/releases/tag/4.4.1-stable
-  - Linux: https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.linux.editor.x86_64.zip
-  - Mac: https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.macos.editor.arm64.zip
-  - Windows: https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.windows.editor.x86_64.exe.zip
-3. Execute `python download_dependencies.py` script at root
-4. Open the project at the `godot` folder
+## ✨ Features
 
-# Advanced
+- **Cross-Platform**: Native support for Linux, Windows, macOS, Android, iOS, and VR
+- **High Performance**: Rust core with Godot rendering engine
+- **Decentraland SDK7**: Full compatibility with Decentraland scenes
+- **Voice Chat**: Integrated spatial audio via LiveKit WebRTC
+- **Web3 Integration**: Ethereum wallet support for NFTs and transactions
+- **Developer Friendly**: Hot reload, comprehensive testing, and debugging tools
 
-## Set up project compiling Rust
+## 🚀 Quick Start
 
-1. Clone the repo using `git clone https://github.com/decentraland/godot-explorer`
-  - If you're in Windows we suggest to clone the repo in a very short path like `C:/gexplorer` due https://developercommunity.visualstudio.com/t/clexe-compiler-driver-cannot-handle-long-file-path/975889
-2. Install [rust](https://www.rust-lang.org/tools/install)
-3. Download and install third party libraries
-    - **Linux** (apt-get based):
-      - Install alsa and udev: `sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev`
-      - Install ffmpeg deps: `sudo apt install -y --no-install-recommends clang curl pkg-config libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev`
-      - Install Livekit deps: `sudo apt update -y; sudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev`
-    - **MacOS**: `brew install ffmpeg@6 pkg-config`
-    - **Windows**: 
-      - download and unzip `https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z`
-      - set `FFMPEG_DIR` = `root folder where ffmpeg has been unzipped`
-      - add `ffmpeg\bin` to your `PATH`
-      - set `LIBCLANG_PATH` = `path to LLVM\x64\bin` (this is packaged with visual studio, or can be downloaded separately)
-    - the `.github/workflows/ci.yml` file can be useful to guide you
+### Option 1: Pre-built Binaries (Easy)
 
-4. Run `cargo run -- install --platforms linux` in the repo root folder (change linux to your target platform).
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/decentraland/godot-explorer
+   # Windows users: use a short path like C:/gexplorer
+   ```
 
-## Running and editing the project
+2. Download pre-built dependencies:
+   ```bash
+   python download_dependencies.py
+   ```
 
-1. Ensure you are in the root folder first
-2. You can run `cargo run -- run` to build the Rust library and execute the client. 
-- With adding `-r` it builds the library in release mode. Note: the Godot executable is an editor, so it's a `release_debug` build, see the Target section [here](https://docs.godotengine.org/en/stable/contributing/development/compiling/introduction_to_the_buildsystem.html) for more information.
-- With adding `-e` it also builds the library, but the project edition is executed instead of the client.
+3. Download Godot Editor fork (4.4.1):
+   - [Linux x86_64](https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.linux.editor.x86_64.zip)
+   - [macOS ARM64](https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.macos.editor.arm64.zip)
+   - [Windows x86_64](https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.windows.editor.x86_64.exe.zip)
 
-## Docker Set up project with Docker (for Android and Linux)
+4. Open the `godot` folder with the Godot Editor
 
-Execute the following commands for building Godot:
+### Option 2: Build from Source (Advanced)
+
+1. **Prerequisites**:
+   - [Rust 1.79+](https://www.rust-lang.org/tools/install)
+   - Git
+   - Platform-specific dependencies (see below)
+
+2. **Clone and setup**:
+   ```bash
+   git clone https://github.com/decentraland/godot-explorer
+   cd godot-explorer
+   
+   # Check system health
+   cargo run -- doctor
+   
+   # Install Godot and build tools
+   cargo run -- install --platforms <your-platform>
+   ```
+
+## 📦 Platform-Specific Dependencies
+
+### Linux (Ubuntu/Debian)
 ```bash
-# Run Docker (at the root project path)
-docker run -v $(pwd):/app/ -it kuruk/dcl-godot-android-builder-rust
-
-# Compile for Android
-cargo run -- install --platforms android
-cd lib
-./android-build.sh # arm64
-./android-build.sh x86_64 # android x86_64 if needed
-cd ../../ # return
-
-# Compile for Linux
-cargo run -- install --platforms linux
-cargo run -- build
-cd ../../ # return
-
-# Generate .APK
-
-## Build Android and Export APK for arm64
-./build-android-apk.sh
+sudo apt-get update && sudo apt-get install -y \
+  libasound2-dev libudev-dev \
+  clang curl pkg-config \
+  libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev \
+  libssl-dev libx11-dev libgl1-mesa-dev libxext-dev
 ```
 
-## Debugging the library
-This repo is set up to be opened with Visual Studio Code. In the section `Run and Debug` in the Activity bar, you can find the configuration for your platform.
+### macOS
+```bash
+brew install ffmpeg@6 pkg-config
 
-## Run test with coverage
-1. Ensure you are in the root folder first
-2. Run `cargo run -- coverage --dev`. It'll create a `coverage` folder with the index.html with the all information. In order to run these commands, you need to have llvm-tools and grcov installed. You can install them with `rustup component add llvm-tools-preview` and `cargo install grcov`.
+# Set environment variables (add to ~/.zshrc)
+export PKG_CONFIG_PATH="/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig:$PKG_CONFIG_PATH"
+```
 
-# Contributing
+### Windows
+1. Download [FFmpeg shared libraries](https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z)
+2. Set environment variables:
+   - `FFMPEG_DIR` = path to unzipped FFmpeg
+   - `LIBCLANG_PATH` = path to LLVM\x64\bin (comes with Visual Studio)
+3. Add `%FFMPEG_DIR%\bin` to PATH
 
-More details on [CONTRIBUTING.md](CONTRIBUTING.md)
+### Android Development
+- Android SDK with NDK 27.1.12297006
+- Set `ANDROID_SDK` or `ANDROID_HOME` environment variable
+- Run: `rustup target add aarch64-linux-android`
 
-# Mobile targets
-See `lib/builds.md`
+## 📋 Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `cargo run -- doctor` | Check system health and dependencies |
+| `cargo run -- install` | Install Godot and protoc |
+| `cargo run -- build` | Build for host platform |
+| `cargo run -- run` | Build and run the client |
+| `cargo run -- run -e` | Build and run the editor |
+| `cargo run -- export --target android` | Export Android APK |
+| `cargo run -- generate-keystore` | Generate Android signing key |
+
+## 🛠️ Development Workflow
+
+### Building and Running
+
+```bash
+# Build for host platform
+cargo run -- build
+
+# Run the client (builds automatically)
+cargo run -- run
+
+# Run the editor
+cargo run -- run -e
+
+# Run with specific features
+cargo run -- run --no-default-features --features use_livekit,use_deno
+```
+
+### Android Development
+
+```bash
+# Install Android dependencies
+cargo run -- install --platforms android
+
+# Generate signing keystore
+cargo run -- generate-keystore --type release
+
+# Build for Android
+cargo run -- build --target android
+
+# Export APK
+export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$(pwd)/.bin/release.keystore"
+export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
+export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
+cargo run -- export --target android --format apk --release
+
+# Export AAB for Play Store
+cargo run -- export --target android --format aab
+```
+
+### iOS Development (macOS only)
+
+```bash
+# Install iOS dependencies
+cargo run -- install --platforms ios
+rustup target add aarch64-apple-ios
+
+# Build for iOS
+cargo run -- build --target ios
+
+# Export iOS app
+cargo run -- export --target ios
+```
+
+## 🧪 Testing
+
+```bash
+# Run integration tests
+cargo run -- run --itest
+
+# Run scene tests
+cargo run -- run --stest
+
+# Generate test coverage
+rustup component add llvm-tools-preview
+cargo install grcov
+cargo run -- coverage --dev
+```
+
+## 🎮 Supported Platforms
+
+- **Desktop**: Linux, Windows, macOS
+- **Mobile**: Android (API 29+), iOS
+- **VR**: Quest (Meta), OpenXR compatible devices
+
+## 📁 Project Structure
+
+```
+godot-explorer/
+├── godot/              # Godot project files
+│   ├── src/            # GDScript source code
+│   └── project.godot   # Project configuration
+├── lib/                # Rust library
+│   ├── src/            # Rust source code
+│   └── Cargo.toml      # Rust dependencies
+├── src/                # Build system (xtask)
+└── exports/            # Build outputs
+```
+
+## 🐳 Docker Support
+
+For CI/CD or consistent build environments:
+
+```bash
+# Linux/Android builds
+docker run -v $(pwd):/app/ -it kuruk/dcl-godot-android-builder-rust
+
+# Inside container
+cargo run -- install --platforms android linux
+cargo run -- generate-keystore --type release
+cargo run -- build --target android
+cargo run -- export --target android --format apk --release
+```
+
+## 🔧 Troubleshooting
+
+1. **Check system health**:
+   ```bash
+   cargo run -- doctor
+   ```
+
+2. **Windows long path issues**: Clone to a short path like `C:/gexplorer`
+
+3. **Missing dependencies**: The doctor command will show what's missing and how to install it
+
+4. **Android build failures**: Ensure NDK 27.1.12297006 is installed and ANDROID_SDK is set
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+- Code style and formatting
+- Pull request process
+- Testing requirements
+- Documentation standards
+
+## 📚 Documentation
+
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Build System](src/README.md)
+- [Mobile Builds](lib/builds.md)
+- [Android Build Details](lib/ANDROID_BUILD.md)
+
+## 🔗 Links
+
+- [Decentraland](https://decentraland.org)
+- [Godot Engine Fork](https://github.com/decentraland/godotengine)
+- [Discord Community](https://dcl.gg/discord)
+
+---
 
 Powered by the Decentraland DAO
+
 ![Decentraland DAO logo](https://bafkreibci6gg3wbjvxzlqpuh353upzrssalqqoddb6c4rez33bcagqsc2a.ipfs.nftstorage.link/)
