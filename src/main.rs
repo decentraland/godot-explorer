@@ -188,7 +188,7 @@ fn main() -> Result<(), anyhow::Error> {
                     Arg::new("platform")
                         .short('p')
                         .long("platform")
-                        .help("additional platform to build (android/ios)")
+                        .help("Deploy and run on device (android/ios). With -e: just build for platform")
                         .takes_value(true),
                 ).arg(
                     Arg::new("no-default-features")
@@ -309,13 +309,28 @@ fn main() -> Result<(), anyhow::Error> {
                 sm.value_of("target"),
             )?;
             
-            // Check if platform flag is used without editor mode
+            // Check if platform flag is used
             if let Some(platform) = sm.value_of("platform") {
                 if !sm.is_present("editor") {
+                    // Running on device: build, export, install, and run
                     print_message(
-                        MessageType::Warning,
-                        "The --platform flag only works with -e (editor mode)",
+                        MessageType::Step,
+                        &format!("Building and deploying to {}", platform),
                     );
+                    
+                    // 1. Build for the platform
+                    run::build(sm.is_present("release"), build_args.clone(), None, Some(platform))?;
+                    
+                    // 2. Export APK/IPA
+                    let format = if platform == "android" { "apk" } else { "ipa" };
+                    let result = export::export(Some(platform), format, sm.is_present("release"));
+                    
+                    if result.is_ok() {
+                        // 3. Install and run on device
+                        run::deploy_and_run_on_device(platform, sm.is_present("release"))?;
+                    }
+                    
+                    return result;
                 } else {
                     print_message(
                         MessageType::Step,

@@ -3,12 +3,12 @@ use std::{collections::HashMap, io::BufRead, path::PathBuf};
 use cargo_metadata::MetadataCommand;
 
 use crate::{
-    consts::{GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    consts::{GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER, EXPORTS_FOLDER},
     copy_files::copy_library,
     export::get_target_os,
     path::{adjust_canonicalization, get_godot_path},
     platform::validate_platform_for_target,
-    ui::{print_build_status, print_message, MessageType},
+    ui::{print_build_status, print_message, create_spinner, MessageType},
 };
 
 pub fn run(
@@ -567,4 +567,186 @@ fn run_tests(program: &str, args: &[&str], scene_tests: bool) -> anyhow::Result<
     } else {
         Err(anyhow::anyhow!("test not run"))
     }
+}
+
+/// Deploy and run the application on a connected device
+pub fn deploy_and_run_on_device(platform: &str, release: bool) -> anyhow::Result<()> {
+    match platform {
+        "android" => deploy_and_run_android(release),
+        "ios" => deploy_and_run_ios(release),
+        _ => Err(anyhow::anyhow!("Unsupported platform for device deployment: {}", platform)),
+    }
+}
+
+/// Deploy and run on Android device using adb
+fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
+    // The APK name is always the same regardless of release/debug mode
+    let apk_name = "decentraland.godot.client.apk";
+    let apk_path = format!("{}/{}", EXPORTS_FOLDER, apk_name);
+    
+    // Check if APK exists
+    if !std::path::Path::new(&apk_path).exists() {
+        return Err(anyhow::anyhow!("APK not found at: {}", apk_path));
+    }
+    
+    // Check if adb is available
+    let adb_check = std::process::Command::new("which")
+        .arg("adb")
+        .output();
+        
+    if adb_check.is_err() || !adb_check.unwrap().status.success() {
+        return Err(anyhow::anyhow!(
+            "adb not found. Please install Android SDK and ensure adb is in your PATH"
+        ));
+    }
+    
+    // Check for connected devices
+    let spinner = create_spinner("Checking for connected Android devices...");
+    let devices_output = std::process::Command::new("adb")
+        .args(&["devices", "-l"])
+        .output()?;
+    spinner.finish();
+    
+    let devices_str = String::from_utf8_lossy(&devices_output.stdout);
+    let device_lines: Vec<&str> = devices_str
+        .lines()
+        .skip(1) // Skip "List of devices attached" header
+        .filter(|line| !line.is_empty() && line.contains("device"))
+        .collect();
+        
+    if device_lines.is_empty() {
+        return Err(anyhow::anyhow!(
+            "No Android devices found. Please connect a device and enable USB debugging."
+        ));
+    }
+    
+    print_message(
+        MessageType::Info,
+        &format!("Found {} connected device(s)", device_lines.len()),
+    );
+    
+    // Install APK
+    let spinner = create_spinner("Installing APK...");
+    let install_status = std::process::Command::new("adb")
+        .args(&["install", "-r", &apk_path])
+        .status()?;
+    spinner.finish();
+    
+    if !install_status.success() {
+        return Err(anyhow::anyhow!("Failed to install APK"));
+    }
+    
+    print_message(MessageType::Success, "APK installed successfully");
+    
+    // Launch the app
+    let spinner = create_spinner("Launching application...");
+    let launch_status = std::process::Command::new("adb")
+        .args(&[
+            "shell",
+            "am",
+            "start",
+            "-n",
+            "org.decentraland.godotexplorer/com.godot.game.GodotApp",
+        ])
+        .status()?;
+    spinner.finish();
+    
+    if !launch_status.success() {
+        return Err(anyhow::anyhow!("Failed to launch application"));
+    }
+    
+    print_message(MessageType::Success, "Application launched on device");
+    
+    // Show logs
+    print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
+    let _log_status = std::process::Command::new("adb")
+        .args(&["logcat", "-s", "godot:V", "GodotApp:V", "dclgodot:V"])
+        .status()?;
+    
+    Ok(())
+}
+
+/// Deploy and run on iOS device using ios-deploy or xcrun
+fn deploy_and_run_ios(_release: bool) -> anyhow::Result<()> {
+    // Check platform
+    if std::env::consts::OS != "macos" {
+        return Err(anyhow::anyhow!("iOS deployment is only supported on macOS"));
+    }
+    
+    // The IPA name is always the same regardless of release/debug mode
+    let ipa_name = "decentraland-godot-client.ipa";
+    let ipa_path = format!("{}/{}", EXPORTS_FOLDER, ipa_name);
+    
+    // For iOS, we typically export as .xcarchive or use Xcode project
+    // The actual implementation depends on how Godot exports iOS projects
+    
+    // Check if ios-deploy is available
+    let ios_deploy_check = std::process::Command::new("which")
+        .arg("ios-deploy")
+        .output();
+        
+    if ios_deploy_check.is_err() || !ios_deploy_check.unwrap().status.success() {
+        print_message(
+            MessageType::Warning,
+            "ios-deploy not found. Install with: brew install ios-deploy",
+        );
+        
+        // Try xcrun as fallback
+        return deploy_ios_with_xcrun(_release);
+    }
+    
+    // Check for connected devices
+    let spinner = create_spinner("Checking for connected iOS devices...");
+    let devices_output = std::process::Command::new("ios-deploy")
+        .args(&["-c", "-t", "1"])
+        .output()?;
+    spinner.finish();
+    
+    let devices_str = String::from_utf8_lossy(&devices_output.stdout);
+    if devices_str.contains("No devices found") {
+        return Err(anyhow::anyhow!(
+            "No iOS devices found. Please connect a device and trust this computer."
+        ));
+    }
+    
+    // Install and run
+    let spinner = create_spinner("Installing and launching on iOS device...");
+    let deploy_status = std::process::Command::new("ios-deploy")
+        .args(&[
+            "--bundle",
+            &ipa_path,
+            "--justlaunch",
+            "--debug",
+        ])
+        .status()?;
+    spinner.finish();
+    
+    if !deploy_status.success() {
+        return Err(anyhow::anyhow!("Failed to deploy to iOS device"));
+    }
+    
+    print_message(MessageType::Success, "Application launched on iOS device");
+    Ok(())
+}
+
+/// Fallback iOS deployment using xcrun
+fn deploy_ios_with_xcrun(_release: bool) -> anyhow::Result<()> {
+    // This is a simplified version - actual implementation would need
+    // to handle Xcode project properly
+    print_message(
+        MessageType::Info,
+        "Using xcrun for iOS deployment (limited functionality)",
+    );
+    
+    // List devices
+    let devices_output = std::process::Command::new("xcrun")
+        .args(&["devicectl", "device", "list"])
+        .output()?;
+        
+    let devices_str = String::from_utf8_lossy(&devices_output.stdout);
+    print_message(MessageType::Info, &format!("Available devices:\n{}", devices_str));
+    
+    Err(anyhow::anyhow!(
+        "Full iOS deployment requires ios-deploy. Please install it with: brew install ios-deploy"
+    ))
 }
