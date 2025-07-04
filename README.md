@@ -17,28 +17,6 @@ Decentraland Godot Explorer is a cross-platform metaverse client built with Godo
 
 ## 🚀 Quick Start
 
-### Option 1: Pre-built Binaries (Easy)
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/decentraland/godot-explorer
-   # Windows users: use a short path like C:/gexplorer
-   ```
-
-2. Download pre-built dependencies:
-   ```bash
-   python download_dependencies.py
-   ```
-
-3. Download Godot Editor fork (4.4.1):
-   - [Linux x86_64](https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.linux.editor.x86_64.zip)
-   - [macOS ARM64](https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.macos.editor.arm64.zip)
-   - [Windows x86_64](https://github.com/decentraland/godotengine/releases/download/4.4.1-stable/godot.4.4.1.stable.windows.editor.x86_64.exe.zip)
-
-4. Open the `godot` folder with the Godot Editor
-
-### Option 2: Build from Source (Advanced)
-
 1. **Prerequisites**:
    - [Rust 1.79+](https://www.rust-lang.org/tools/install)
    - Git
@@ -48,12 +26,22 @@ Decentraland Godot Explorer is a cross-platform metaverse client built with Godo
    ```bash
    git clone https://github.com/decentraland/godot-explorer
    cd godot-explorer
+   # Windows users: use a short path like C:/gexplorer
    
    # Check system health
    cargo run -- doctor
    
    # Install Godot and build tools
    cargo run -- install --platforms <your-platform>
+   ```
+
+3. **Run the project**:
+   ```bash
+   # Run the client (builds automatically)
+   cargo run -- run
+   
+   # Or run the editor
+   cargo run -- run -e
    ```
 
 ## 📦 Platform-Specific Dependencies
