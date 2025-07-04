@@ -449,32 +449,55 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
         )?;
     }
 
-    download_and_extract_zip(
-        get_protoc_url().unwrap().as_str(),
-        format!("{BIN_FOLDER}protoc").as_str(),
-        None,
-    )?;
-    download_and_extract_zip(
-        get_godot_url().unwrap().as_str(),
-        format!("{BIN_FOLDER}godot").as_str(),
-        Some(format!("{GODOT_CURRENT_VERSION}.executable.zip")),
-    )?;
+    // Check if protoc is already installed
+    let protoc_path = format!("{BIN_FOLDER}protoc/bin/protoc");
+    if !Path::new(&protoc_path).exists() {
+        print_section("Installing Protocol Buffers Compiler");
+        download_and_extract_zip(
+            get_protoc_url().unwrap().as_str(),
+            format!("{BIN_FOLDER}protoc").as_str(),
+            None,
+        )?;
+        print_message(MessageType::Success, "protoc installed");
+    } else {
+        print_message(MessageType::Success, "protoc already installed");
+    }
 
-    let program_path = format!("{BIN_FOLDER}godot/{}", get_godot_executable_path().unwrap());
-    let dest_program_path = format!("{BIN_FOLDER}godot/godot4_bin");
+    // Check if Godot is already installed
+    let godot_bin_path = format!("{BIN_FOLDER}godot/godot4_bin");
+    if !Path::new(&godot_bin_path).exists() {
+        print_section("Installing Godot Engine");
+        download_and_extract_zip(
+            get_godot_url().unwrap().as_str(),
+            format!("{BIN_FOLDER}godot").as_str(),
+            Some(format!("{GODOT_CURRENT_VERSION}.executable.zip")),
+        )?;
+        
+        let program_path = format!("{BIN_FOLDER}godot/{}", get_godot_executable_path().unwrap());
+        let dest_program_path = format!("{BIN_FOLDER}godot/godot4_bin");
 
+        match (env::consts::OS, env::consts::ARCH) {
+            ("linux", _) | ("macos", _) => {
+                set_executable_permission(Path::new(program_path.as_str()))?;
+            }
+            _ => (),
+        };
+        fs::copy(program_path, dest_program_path.as_str())?;
+        print_message(MessageType::Success, "Godot binary installed");
+    } else {
+        print_message(MessageType::Success, "Godot binary already installed");
+    }
+
+    // Set executable permissions for protoc if on Unix-like systems
     match (env::consts::OS, env::consts::ARCH) {
         ("linux", _) | ("macos", _) => {
-            set_executable_permission(Path::new(
-                format!("{BIN_FOLDER}protoc/bin/protoc").as_str(),
-            ))?;
-            set_executable_permission(Path::new(program_path.as_str()))?;
+            let protoc_bin = format!("{BIN_FOLDER}protoc/bin/protoc");
+            if Path::new(&protoc_bin).exists() {
+                set_executable_permission(Path::new(&protoc_bin))?;
+            }
         }
         _ => (),
     };
-    fs::copy(program_path, dest_program_path.as_str())?;
-
-    print_message(MessageType::Success, "Godot binary installed");
 
     if !skip_download_templates {
         prepare_templates(platforms)?;

@@ -167,14 +167,39 @@ fn check_godot_installation() {
         println!("  Run: cargo run -- install");
     }
 
-    // Check export templates
+    // Check export templates per platform
+    print_message(MessageType::Info, "Export templates status:");
     if let Some(templates_path) = crate::install_dependency::godot_export_templates_path() {
-        if Path::new(&templates_path).exists() {
-            print_message(MessageType::Success, "Godot export templates found");
-        } else {
-            print_message(MessageType::Info, "Godot export templates not installed");
-            println!("  Run: cargo run -- install --platforms <platform>");
+        let platforms = vec![
+            ("android", vec!["android_debug.apk", "android_release.apk", "android_source.zip"]),
+            ("ios", vec!["ios.zip"]),
+            ("linux", vec!["linux_debug.x86_64", "linux_release.x86_64"]),
+            ("macos", vec!["macos.zip"]),
+            ("windows", vec!["windows_debug_x86_64.exe", "windows_release_x86_64.exe"]),
+        ];
+        
+        for (platform, files) in platforms {
+            let mut all_found = true;
+            for file in &files {
+                let file_path = Path::new(&templates_path).join(file);
+                if !file_path.exists() {
+                    all_found = false;
+                    break;
+                }
+            }
+            
+            if all_found {
+                print_message(MessageType::Success, &format!("  {} - Installed", platform));
+            } else {
+                print_message(MessageType::Info, &format!("  {} - Not installed", platform));
+            }
         }
+        
+        print_message(MessageType::Info, "To install templates for specific platforms:");
+        println!("  Run: cargo run -- install --platforms <platform1>,<platform2>,...");
+        println!("  Available platforms: android, ios, linux, macos, windows");
+    } else {
+        print_message(MessageType::Warning, "Could not determine export templates path");
     }
 }
 
