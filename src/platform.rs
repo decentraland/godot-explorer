@@ -49,8 +49,17 @@ pub fn get_platform_info() -> PlatformInfo {
     }
 }
 
-/// Check if a command exists in PATH
+/// Check if a command exists in PATH or in local .bin directory
 pub fn check_command(cmd: &str) -> bool {
+    // First check if it exists in the local .bin directory (for protoc)
+    if cmd == "protoc" {
+        let local_protoc = std::path::Path::new(".bin/protoc/bin/protoc");
+        if local_protoc.exists() {
+            return true;
+        }
+    }
+    
+    // Otherwise check system PATH
     which(cmd).is_ok()
 }
 

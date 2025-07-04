@@ -79,20 +79,11 @@ pub fn print_install_instructions(tool: &str, platform: &str) {
             println!("  2. SDK Tools → NDK (Side by side) → Select version 27.1.12297006");
             println!("  3. Click 'Apply' to install");
         }
-        ("protoc", "linux") => {
-            println!("  # Ubuntu/Debian:");
-            println!("  sudo apt-get install protobuf-compiler");
-            println!("  # Fedora:");
-            println!("  sudo dnf install protobuf-compiler");
-            println!("  # Arch:");
-            println!("  sudo pacman -S protobuf");
-        }
-        ("protoc", "macos") => {
-            println!("  brew install protobuf");
-        }
-        ("protoc", "windows") => {
-            println!("  1. Download from: https://github.com/protocolbuffers/protobuf/releases");
-            println!("  2. Add to PATH");
+        ("protoc", _) => {
+            println!("  protoc is automatically installed by running:");
+            println!("  cargo run -- install");
+            println!("  ");
+            println!("  It will be available at: .bin/protoc/bin/protoc");
         }
         ("ffmpeg", "linux") => {
             println!("  # Ubuntu/Debian:");

@@ -24,7 +24,11 @@ pub fn run_doctor() -> anyhow::Result<()> {
 
     for (tool, available, description) in check_required_tools() {
         if available {
-            print_message(MessageType::Success, &format!("{} - {}", tool, description));
+            if tool == "protoc" && std::path::Path::new(".bin/protoc/bin/protoc").exists() {
+                print_message(MessageType::Success, &format!("{} - {} (using local: .bin/protoc/bin/protoc)", tool, description));
+            } else {
+                print_message(MessageType::Success, &format!("{} - {}", tool, description));
+            }
         } else {
             print_message(
                 MessageType::Error,
