@@ -1,3 +1,4 @@
+use crate::dependencies::BuildStatus;
 use crate::platform::{
     check_android_sdk, check_development_dependencies, check_ios_development, check_required_tools,
     get_install_command, get_platform_info, suggest_install,
@@ -87,6 +88,11 @@ pub fn run_doctor() -> anyhow::Result<()> {
         print_section("iOS Development");
         check_ios_setup();
     }
+
+    // Check build status
+    print_divider();
+    print_section("Build Status");
+    check_build_status();
 
     // Check environment variables
     print_divider();
@@ -264,6 +270,56 @@ fn check_ios_setup() {
         }
         Err(msg) => {
             print_message(MessageType::Warning, &msg);
+        }
+    }
+}
+
+fn check_build_status() {
+    let build_status = BuildStatus::check();
+    let platform = get_platform_info();
+    
+    // Host platform
+    let host_platform = &platform.os;
+    if build_status.host_built {
+        print_message(MessageType::Success, &format!("Host platform ({}) - Built", host_platform));
+    } else {
+        print_message(MessageType::Warning, &format!("Host platform ({}) - Not built", host_platform));
+        println!("  Run: cargo run -- build");
+    }
+    
+    // Android
+    if build_status.android_built {
+        print_message(MessageType::Success, "Android (ARM64) - Built");
+    } else {
+        print_message(MessageType::Info, "Android (ARM64) - Not built");
+        println!("  Run: cargo run -- build --target android");
+    }
+    
+    // iOS
+    if build_status.ios_built {
+        print_message(MessageType::Success, "iOS - Built");
+    } else {
+        print_message(MessageType::Info, "iOS - Not built");
+        if platform.os == "macos" {
+            println!("  Run: cargo run -- build --target ios");
+        }
+    }
+    
+    // Windows
+    if build_status.windows_built {
+        print_message(MessageType::Success, "Windows - Built");
+    } else {
+        print_message(MessageType::Info, "Windows - Not built");
+        println!("  Run: cargo run -- build --target windows");
+    }
+    
+    // macOS
+    if build_status.macos_built {
+        print_message(MessageType::Success, "macOS - Built");
+    } else {
+        print_message(MessageType::Info, "macOS - Not built");
+        if platform.os == "macos" {
+            println!("  Run: cargo run -- build --target macos");
         }
     }
 }

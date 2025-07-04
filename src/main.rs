@@ -11,6 +11,7 @@ use crate::consts::RUST_LIB_PROJECT_FOLDER;
 
 mod consts;
 mod copy_files;
+mod dependencies;
 mod doctor;
 mod download_file;
 mod export;
@@ -258,7 +259,11 @@ fn main() -> Result<(), anyhow::Error> {
 
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
             // Call your install function and pass the templates
-            install_dependency::install(no_templates, &platforms)
+            let result = install_dependency::install(no_templates, &platforms);
+            if result.is_ok() {
+                dependencies::suggest_next_steps("install", None);
+            }
+            result
         }
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
         ("generate-keystore", sm) => {
@@ -272,6 +277,9 @@ fn main() -> Result<(), anyhow::Error> {
                 .map_err(|e| anyhow::anyhow!(e))
         }
         ("run", sm) => {
+            // Check dependencies first
+            dependencies::check_command_dependencies("run", None)?;
+            
             let mut build_args: Vec<&str> = sm
                 .values_of("build-args")
                 .map(|v| v.collect())
@@ -293,23 +301,32 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
 
-            // Build for host OS
+            // Build for host OS first
             run::build(
                 sm.is_present("release"),
                 build_args.clone(),
                 None,
                 sm.value_of("target"),
             )?;
-
-            // Build for additional platform if specified
+            
+            // Check if platform flag is used without editor mode
             if let Some(platform) = sm.value_of("platform") {
-                print_message(
-                    MessageType::Step,
-                    &format!("Building for additional platform: {}", platform),
-                );
-                run::build(sm.is_present("release"), build_args, None, Some(platform))?;
+                if !sm.is_present("editor") {
+                    print_message(
+                        MessageType::Warning,
+                        "The --platform flag only works with -e (editor mode)",
+                    );
+                } else {
+                    print_message(
+                        MessageType::Step,
+                        &format!("Building for additional platform: {}", platform),
+                    );
+                    // Build for the additional platform
+                    run::build(sm.is_present("release"), build_args, None, Some(platform))?;
+                }
             }
 
+            // Now run
             run::run(
                 sm.is_present("editor"),
                 sm.is_present("itest"),
@@ -321,6 +338,11 @@ fn main() -> Result<(), anyhow::Error> {
             Ok(())
         }
         ("build", sm) => {
+            let target = sm.value_of("target");
+            
+            // Check dependencies first
+            dependencies::check_command_dependencies("build", target)?;
+            
             let mut build_args: Vec<&str> = sm
                 .values_of("build-args")
                 .map(|v| v.collect())
@@ -342,21 +364,42 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
 
-            run::build(
+            let result = run::build(
                 sm.is_present("release"),
                 build_args,
                 None,
-                sm.value_of("target"),
-            )?;
-            Ok(())
+                target,
+            );
+            
+            if result.is_ok() {
+                dependencies::suggest_next_steps("build", target);
+            }
+            
+            result
         }
         ("export", sm) => {
             let target = sm.value_of("target");
             let format = sm.value_of("format").unwrap_or("apk");
             let release = sm.is_present("release");
-            export::export(target, format, release)
+            
+            // Check dependencies first
+            dependencies::check_command_dependencies("export", target)?;
+            
+            let result = export::export(target, format, release);
+            
+            if result.is_ok() {
+                dependencies::suggest_next_steps("export", target);
+            }
+            
+            result
         }
         ("import-assets", _m) => {
+            // Check dependencies first
+            dependencies::check_command_dependencies("import-assets", None)?;
+            
+            // Build for host OS first (import-assets needs the library)
+            run::build(false, vec![], None, None)?;
+            
             let status = import_assets();
             if !status.success() {
                 println!("WARN: cargo build exited with non-zero status: {}", status);
