@@ -75,12 +75,6 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(true)
                         .multiple_values(true),
                 )
-                .arg(
-                    Arg::new("skip-dependency-check")
-                        .long("skip-dependency-check")
-                        .help("skip system dependency checks (useful for CI)")
-                        .takes_value(false),
-                ),
         )
         .subcommand(Command::new("update-protocol"))
         .subcommand(
@@ -229,9 +223,8 @@ fn main() -> Result<(), anyhow::Error> {
                 .unwrap_or_default();
 
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
-            let skip_dependency_check = sm.is_present("skip-dependency-check");
             // Call your install function and pass the templates
-            install_dependency::install(no_templates, &platforms, skip_dependency_check)
+            install_dependency::install(no_templates, &platforms)
         }
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
         ("compare-image-folders", sm) => {
