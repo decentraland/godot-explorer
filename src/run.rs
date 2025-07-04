@@ -75,7 +75,7 @@ pub fn build(
             // If user didn't specify features, disable ffmpeg by default
             android_build_args.push("--no-default-features");
             android_build_args.push("--features");
-            android_build_args.push("use_livekit,use_deno,enable_inspector");
+            android_build_args.push("android");
         }
 
         build_with_cargo_ndk(release_mode, android_build_args)?;
@@ -94,7 +94,7 @@ pub fn build(
             // If user didn't specify features, disable ffmpeg by default
             ios_build_args.push("--no-default-features");
             ios_build_args.push("--features");
-            ios_build_args.push("use_livekit,use_deno,enable_inspector");
+            ios_build_args.push("ios");
         }
 
         let (build_args, with_build_envs) = prepare_build_args_envs(

@@ -216,7 +216,6 @@ day_night_cycle={
 
 [xr]
 
-openxr/enabled=true
 openxr/foveation_level=3
 shaders/enabled=true
 openxr/enabled.xr=true
