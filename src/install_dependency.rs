@@ -356,13 +356,25 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
         let spinner = create_spinner("Extracting Android dependencies...");
 
         fs::create_dir_all(&android_deps_extracted_path)?;
-        let status = std::process::Command::new("unzip")
-            .args(&["-o", &android_deps_path, "-d", &android_deps_extracted_path])
-            .status()?;
+        
+        // Use the zip crate to extract instead of system unzip
+        let file = File::open(&android_deps_path)?;
+        let mut zip_archive = ZipArchive::new(file)?;
 
-        if !status.success() {
-            spinner.finish_with_message("❌ Failed to extract Android dependencies");
-            return Err(anyhow::anyhow!("Failed to extract Android dependencies"));
+        for i in 0..zip_archive.len() {
+            let mut file = zip_archive.by_index(i)?;
+            let file_path = file.mangled_name();
+            let dest_path = Path::new(&android_deps_extracted_path).join(file_path);
+            
+            if file.is_dir() {
+                fs::create_dir_all(&dest_path)?;
+            } else {
+                if let Some(parent) = dest_path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                let mut extracted_file = File::create(&dest_path)?;
+                std::io::copy(&mut file, &mut extracted_file)?;
+            }
         }
 
         spinner.finish_and_clear();

@@ -135,7 +135,6 @@ pub fn get_required_tools() -> Vec<(&'static str, &'static str)> {
     } else {
         // Unix-like tools
         tools.push(("curl", "Command line download tool"));
-        tools.push(("unzip", "Archive extraction tool"));
     }
 
     tools
