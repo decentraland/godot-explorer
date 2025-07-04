@@ -28,6 +28,11 @@ func async_set_data(avatar_param = null):
 		avatar = avatar_param
 	elif avatar == null:
 		return
+	
+	# Verificar que el avatar es válido antes de acceder a él
+	if not is_instance_valid(avatar):
+		return
+		
 	var avatar_data = avatar.get_avatar_data()
 	if avatar_data != null:
 		profile_picture.async_update_profile_picture(avatar)

@@ -21,13 +21,15 @@ var nearby_avatars = null
 @onready var button_back: Button = %Button_Back
 @onready var texture_rect_logo: TextureRect = %TextureRect_Logo
 @onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
-@onready var panel_nearby: Panel = %Panel_Nearby
+@onready var margin_container_chat_nearby: Panel = %Panel_Nearby
 @onready var timer_hide = %Timer_Hide
 @onready var timer_update_remote_avatars: Timer = %Timer_UpdateRemoteAvatars
 @onready var v_box_container_nearby_players: VBoxContainer = %VBoxContainer_NearbyPlayers
+@onready var margin_container_nearby: MarginContainer = %MarginContainer_Nearby
 
 
 func _ready():
+	_on_button_back_pressed()
 	async_update_nearby_users()
 	timer_update_remote_avatars.start()
 	add_chat_message(
@@ -68,7 +70,7 @@ func on_chats_arrived(chats: Array):
 				avatar = Global.scene_runner.player_avatar_node
 
 		var avatar_name: String = ""
-		if avatar != null:
+		if avatar != null and is_instance_valid(avatar):
 			avatar_name = avatar.get_avatar_name()
 
 		if avatar_name.is_empty():
@@ -80,7 +82,8 @@ func on_chats_arrived(chats: Array):
 		if message.begins_with(EMOTE):
 			message = message.substr(1)  # Remove prefix
 			var expression_id = message.split(" ")[0]  # Get expression id ([1] is timestamp)
-			avatar.emote_controller.async_play_emote(expression_id)
+			if avatar != null and is_instance_valid(avatar):
+				avatar.emote_controller.async_play_emote(expression_id)
 		elif message.begins_with(REQUEST_PING):
 			pass  # TODO: Send ACK
 		elif message.begins_with(ACK):
@@ -112,6 +115,7 @@ func _on_line_edit_command_focus_exited():
 
 
 func toggle_open_chat():
+	_on_button_back_pressed()
 	_set_open_chat(not h_box_container_line_edit.visible)
 
 
@@ -147,13 +151,18 @@ func async_update_nearby_users() -> void:
 
 	var children_avatars = []
 	for child in v_box_container_nearby_players.get_children():
-		if child.avatar != null:
+		if child.avatar != null and is_instance_valid(child.avatar):
 			children_avatars.append(child.avatar)
 
 	var avatars_to_remove = []
 	for child_avatar in children_avatars:
+		if not is_instance_valid(child_avatar):
+			continue
+			
 		var found = false
 		for remote_avatar in remote_avatars:
+			if not is_instance_valid(remote_avatar):
+				continue
 			if child_avatar.get_avatar_name() == remote_avatar.get_avatar_name():
 				found = true
 				break
@@ -162,8 +171,13 @@ func async_update_nearby_users() -> void:
 
 	var avatars_to_add = []
 	for remote_avatar in remote_avatars:
+		if not is_instance_valid(remote_avatar):
+			continue
+			
 		var found = false
 		for child_avatar in children_avatars:
+			if not is_instance_valid(child_avatar):
+				continue
 			if remote_avatar.get_avatar_name() == child_avatar.get_avatar_name():
 				found = true
 				break
@@ -171,8 +185,10 @@ func async_update_nearby_users() -> void:
 			avatars_to_add.append(remote_avatar)
 
 	for child in v_box_container_nearby_players.get_children():
-		if child.avatar != null:
+		if child.avatar != null and is_instance_valid(child.avatar):
 			for avatar_to_remove in avatars_to_remove:
+				if not is_instance_valid(avatar_to_remove):
+					continue
 				if child.avatar.get_avatar_name() == avatar_to_remove.get_avatar_name():
 					if (
 						child.avatar is Avatar
@@ -191,17 +207,27 @@ func async_update_nearby_users() -> void:
 		await avatar_item.async_set_data(avatar)
 
 	var children = v_box_container_nearby_players.get_children()
-	children.sort_custom(func(a, b): return a.avatar.get_avatar_name() < b.avatar.get_avatar_name())
-
+	var valid_children = []
 	for child in children:
+		if child.avatar != null and is_instance_valid(child.avatar):
+			valid_children.append(child)
+	
+	valid_children.sort_custom(func(a, b): 
+		if not is_instance_valid(a.avatar) or not is_instance_valid(b.avatar):
+			return false
+		return a.avatar.get_avatar_name() < b.avatar.get_avatar_name()
+	)
+
+	for child in valid_children:
 		v_box_container_nearby_players.move_child(child, -1)
 
-	button_nearby_users.text = str(children.size())
-	label_members_quantity.text = str(children.size())
+	button_nearby_users.text = str(valid_children.size())
+	label_members_quantity.text = str(valid_children.size())
 
 
 func _on_button_nearby_users_pressed() -> void:
-	panel_nearby.show()
+	self_modulate = "#00000080"
+	margin_container_nearby.show()
 	button_back.show()
 	h_box_container_nearby_users.show()
 	margin_container_chat.hide()
@@ -211,7 +237,8 @@ func _on_button_nearby_users_pressed() -> void:
 
 
 func _on_button_back_pressed() -> void:
-	panel_nearby.hide()
+	self_modulate = "#00000040"
+	margin_container_nearby.hide()
 	button_back.hide()
 	h_box_container_nearby_users.hide()
 	margin_container_chat.show()

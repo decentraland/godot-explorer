@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=13 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
@@ -6,23 +6,57 @@
 [ext_resource type="Texture2D" uid="uid://bwhq0um6jgi1n" path="res://assets/ui/loading/LeftArrow.svg" id="3_lt7hs"]
 [ext_resource type="Texture2D" uid="uid://byv55qwr3riuh" path="res://assets/themes/dark_dcl_theme/icons/send.svg" id="3_umu3q"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_euk1h"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_mb7k1"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xauh3"]
-bg_color = Color(0, 0, 0, 0.235294)
+bg_color = Color(1, 1, 1, 1)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8g52q"]
-bg_color = Color(0, 0, 0, 1)
+bg_color = Color(0, 0, 0, 0.7)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nh78v"]
-bg_color = Color(0, 0, 0, 0.772549)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_euk1h"]
+content_margin_left = 14.0
+content_margin_top = 5.0
+content_margin_right = 14.0
+content_margin_bottom = 5.0
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mb7k1"]
+content_margin_left = 14.0
+content_margin_top = 5.0
+content_margin_right = 14.0
+content_margin_bottom = 5.0
+bg_color = Color(0.168627, 0.160784, 0.188235, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lt7hs"]
+content_margin_left = 14.0
+content_margin_top = 5.0
+content_margin_right = 14.0
+content_margin_bottom = 5.0
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 5
 
 [node name="Panel_Chat" type="Panel"]
+self_modulate = Color(0, 0, 0, 0.4)
 custom_minimum_size = Vector2(300, 250)
 size_flags_vertical = 0
 mouse_filter = 2
@@ -69,11 +103,17 @@ theme_override_constants/separation = 11
 [node name="Button_Back" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(35, 35)
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
+theme = ExtResource("1_ytipc")
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 20
+theme_override_styles/hover = SubResource("StyleBoxFlat_euk1h")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
+theme_override_styles/normal = SubResource("StyleBoxFlat_mb7k1")
 icon = ExtResource("3_lt7hs")
 icon_alignment = 1
 
@@ -89,6 +129,7 @@ stretch_mode = 5
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_mb7k1")
 theme_override_font_sizes/font_size = 16
 text = "Nearby"
 
@@ -109,6 +150,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_mb7k1")
 theme_override_font_sizes/font_size = 16
 text = "20"
 
@@ -116,13 +158,24 @@ text = "20"
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_mb7k1")
 theme_override_font_sizes/font_size = 16
 text = "Members"
 
 [node name="Button_NearbyUsers" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(35, 35)
 layout_mode = 2
+theme = ExtResource("1_ytipc")
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 15
+theme_override_fonts/font = ExtResource("5_mb7k1")
+theme_override_styles/hover = SubResource("StyleBoxFlat_lt7hs")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
+theme_override_styles/normal = SubResource("StyleBoxFlat_mb7k1")
+toggle_mode = true
+text = "0"
 icon = ExtResource("3_bhyuy")
 
 [node name="MarginContainer_Chat" type="MarginContainer" parent="VBoxContainer"]
@@ -165,20 +218,10 @@ size_flags_vertical = 3
 bbcode_enabled = true
 scroll_following = true
 
-[node name="Panel_Nearby" type="Panel" parent="VBoxContainer"]
+[node name="MarginContainer_Nearby" type="MarginContainer" parent="VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_nh78v")
-
-[node name="MarginContainer_Nearby" type="MarginContainer" parent="VBoxContainer/Panel_Nearby"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 size_flags_vertical = 3
 theme = ExtResource("1_ytipc")
 theme_override_constants/margin_left = 8
@@ -186,10 +229,11 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/Panel_Nearby/MarginContainer_Nearby"]
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer_Nearby"]
 layout_mode = 2
+vertical_scroll_mode = 2
 
-[node name="VBoxContainer_NearbyPlayers" type="VBoxContainer" parent="VBoxContainer/Panel_Nearby/MarginContainer_Nearby/ScrollContainer"]
+[node name="VBoxContainer_NearbyPlayers" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Nearby/ScrollContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://d30nejywxmhpn"]
+[gd_scene load_steps=13 format=3 uid="uid://d30nejywxmhpn"]
 
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="1_40sym"]
 [ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/nearby_player_item/nearby_player_item.gd" id="1_77ytx"]
@@ -15,6 +15,39 @@ corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_io7c4"]
+content_margin_left = 14.0
+content_margin_top = 5.0
+content_margin_right = 14.0
+content_margin_bottom = 5.0
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4mds5"]
+content_margin_left = 14.0
+content_margin_top = 5.0
+content_margin_right = 14.0
+content_margin_bottom = 5.0
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cmtom"]
+content_margin_left = 10.0
+content_margin_right = 10.0
+bg_color = Color(0.168627, 0.160784, 0.188235, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [node name="NearbyPlayerItem" type="Control"]
 custom_minimum_size = Vector2(284, 53)
@@ -50,9 +83,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 10
+theme_override_constants/margin_left = 5
 theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 10
+theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer"]
@@ -133,19 +166,25 @@ text = "X"
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_constants/separation = 3
+theme_override_constants/separation = 10
 alignment = 1
 
 [node name="Button_BlockUser" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(25, 25)
+custom_minimum_size = Vector2(35, 35)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 tooltip_text = "Block"
 mouse_filter = 1
 mouse_default_cursor_shape = 2
-theme_override_constants/icon_max_width = 25
+theme = ExtResource("1_gljko")
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_styles/hover = SubResource("StyleBoxFlat_io7c4")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_4mds5")
+theme_override_styles/normal = SubResource("StyleBoxFlat_cmtom")
 toggle_mode = true
 icon = ExtResource("6_cmtom")
 icon_alignment = 1
@@ -153,14 +192,20 @@ expand_icon = true
 
 [node name="Button_MuteUser" type="Button" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(25, 25)
+custom_minimum_size = Vector2(35, 35)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 tooltip_text = "Block"
 mouse_filter = 1
 mouse_default_cursor_shape = 2
-theme_override_constants/icon_max_width = 25
+theme = ExtResource("1_gljko")
+theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
+theme_override_constants/icon_max_width = 20
+theme_override_styles/hover = SubResource("StyleBoxFlat_io7c4")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_4mds5")
+theme_override_styles/normal = SubResource("StyleBoxFlat_cmtom")
 toggle_mode = true
 icon = ExtResource("7_io7c4")
 icon_alignment = 1
