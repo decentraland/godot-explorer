@@ -254,14 +254,24 @@ pub fn check_development_dependencies() -> Vec<(&'static str, bool, &'static str
         ],
         "macos" => vec![
             (
-                "ffmpeg",
-                check_command("ffmpeg"),
-                "FFmpeg multimedia framework",
-            ),
-            (
                 "pkg-config",
                 check_command("pkg-config"),
                 "Package configuration tool",
+            ),
+            (
+                "libavcodec",
+                check_pkg_config("libavcodec"),
+                "FFmpeg codec library",
+            ),
+            (
+                "libavformat",
+                check_pkg_config("libavformat"),
+                "FFmpeg format library",
+            ),
+            (
+                "libavutil",
+                check_pkg_config("libavutil"),
+                "FFmpeg utilities library",
             ),
         ],
         "windows" => vec![

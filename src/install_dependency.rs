@@ -383,7 +383,7 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<(), anyhow::Error> {
+pub fn install(skip_download_templates: bool, platforms: &[String], skip_dependency_check: bool) -> Result<(), anyhow::Error> {
     print_section("Installing Dependencies");
 
     let platform = get_platform_info();
@@ -392,31 +392,38 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
         &format!("Platform: {}", platform.display_name),
     );
 
-    // Check for missing development dependencies
-    let dev_deps = check_development_dependencies();
-    let missing_deps: Vec<_> = dev_deps
-        .iter()
-        .filter(|(_, available, _)| !available)
-        .collect();
+    // Check for missing development dependencies unless skipped
+    if !skip_dependency_check {
+        let dev_deps = check_development_dependencies();
+        let missing_deps: Vec<_> = dev_deps
+            .iter()
+            .filter(|(_, available, _)| !available)
+            .collect();
 
-    if !missing_deps.is_empty() {
-        print_message(
-            MessageType::Warning,
-            "Missing development dependencies detected:",
-        );
-        for (dep, _, desc) in &missing_deps {
-            print_message(MessageType::Error, &format!("  {} - {}", dep, desc));
-        }
-
-        if let Some(install_cmd) = get_install_command() {
-            print_message(MessageType::Info, "\nTo install missing dependencies, run:");
-            println!("\n{}\n", install_cmd);
+        if !missing_deps.is_empty() {
             print_message(
                 MessageType::Warning,
-                "Please install these dependencies before continuing.",
+                "Missing development dependencies detected:",
             );
-            return Err(anyhow::anyhow!("Missing required development dependencies"));
+            for (dep, _, desc) in &missing_deps {
+                print_message(MessageType::Error, &format!("  {} - {}", dep, desc));
+            }
+
+            if let Some(install_cmd) = get_install_command() {
+                print_message(MessageType::Info, "\nTo install missing dependencies, run:");
+                println!("\n{}\n", install_cmd);
+                print_message(
+                    MessageType::Warning,
+                    "Please install these dependencies before continuing.",
+                );
+                return Err(anyhow::anyhow!("Missing required development dependencies"));
+            }
         }
+    } else {
+        print_message(
+            MessageType::Info,
+            "Skipping dependency checks (--skip-dependency-check flag)",
+        );
     }
 
     let persistent_path = get_persistent_path(Some("test.zip".into())).unwrap();
