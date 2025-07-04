@@ -54,15 +54,11 @@ cargo run -- run --stest                  # Scene tests
 cargo run -- generate-keystore --type release  # Creates .bin/release.keystore
 cargo run -- generate-keystore --type debug    # Creates .bin/debug.keystore
 
-# Export Android builds
-export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$(pwd)/.bin/release.keystore"
-export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
-export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
-
-cargo run -- export --target android --format apk           # Build APK
-cargo run -- export --target android --format apk --release # Signed APK
-cargo run -- export --target android --format aab           # Build AAB for Play Store
-cargo run -- export --target quest --format apk             # Meta Quest build
+# Export Android builds (automatically uses .bin/release.keystore for --release)
+cargo run -- export --target android --format apk           # Build debug APK
+cargo run -- export --target android --format apk --release # Build signed APK
+cargo run -- export --target android --format aab --release # Build AAB for Play Store
+cargo run -- export --target quest --format apk --release   # Meta Quest build
 ```
 
 ### Code Quality
@@ -146,10 +142,7 @@ cargo run -- export --target ios
    # Build for Android
    cargo run -- build --target android
    
-   # Export APK or AAB
-   export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$(pwd)/.bin/release.keystore"
-   export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
-   export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
+   # Export APK or AAB (keystore is automatically configured)
    cargo run -- export --target android --format apk --release
    
    # Or use Docker (for CI/CD):

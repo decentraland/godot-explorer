@@ -38,29 +38,17 @@ jobs:
       - name: Generate Android keystore
         run: |
           cargo run -- generate-keystore --type release
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$(pwd)/.bin/release.keystore"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
       
       - name: Export Android APK
         run: |
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$(pwd)/.bin/release.keystore"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
           cargo run -- export --target android --format apk --release
       
       - name: Export Android AAB
         run: |
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$(pwd)/.bin/release.keystore"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
           cargo run -- export --target android --format aab
       
       - name: Export Quest APK
         run: |
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$(pwd)/.bin/release.keystore"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
-          export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
           cargo run -- export --target quest --format apk --release || true
 
       # Copy Android Artifacts

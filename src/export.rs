@@ -3,7 +3,7 @@ use zip::ZipArchive;
 
 use crate::{
     consts::{
-        EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
+        BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
         GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
     },
     copy_files::copy_ffmpeg_libraries,
@@ -182,11 +182,30 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     print_message(MessageType::Step, "Running Godot export...");
     let spinner = create_spinner("Exporting project...");
 
-    let export_status = std::process::Command::new(program.as_str())
-        .args(&args)
-        .current_dir(adjust_canonicalization(
-            std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap(),
-        ))
+    let mut export_command = std::process::Command::new(program.as_str());
+    export_command.args(&args);
+    export_command.current_dir(adjust_canonicalization(
+        std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap(),
+    ));
+
+    // Set Android keystore environment variables if exporting for Android/Quest
+    if (target == "android" || target == "quest") && release {
+        let keystore_path = format!("{}release.keystore", BIN_FOLDER);
+        let keystore_abs_path = std::fs::canonicalize(&keystore_path)
+            .unwrap_or_else(|_| Path::new(&keystore_path).to_path_buf());
+        
+        if !Path::new(&keystore_path).exists() {
+            print_message(MessageType::Warning, "Release keystore not found. Generate it with: cargo run -- generate-keystore --type release");
+        } else {
+            print_message(MessageType::Info, &format!("Using keystore: {}", keystore_abs_path.display()));
+        }
+        
+        export_command.env("GODOT_ANDROID_KEYSTORE_RELEASE_PATH", keystore_abs_path);
+        export_command.env("GODOT_ANDROID_KEYSTORE_RELEASE_USER", "androidreleasekey");
+        export_command.env("GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD", "android");
+    }
+
+    let export_status = export_command
         .status()
         .expect("Failed to run Godot");
 

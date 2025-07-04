@@ -129,14 +129,11 @@ cargo run -- generate-keystore --type release
 # Build for Android
 cargo run -- build --target android
 
-# Export APK
-export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$(pwd)/.bin/release.keystore"
-export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
-export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
+# Export APK (automatically uses .bin/release.keystore)
 cargo run -- export --target android --format apk --release
 
 # Export AAB for Play Store
-cargo run -- export --target android --format aab
+cargo run -- export --target android --format aab --release
 ```
 
 ### iOS Development (macOS only)
