@@ -14,25 +14,55 @@ Decentraland Godot Explorer is a cross-platform metaverse client that combines:
 
 All commands use the xtask pattern via `cargo run --`:
 
+### System Health & Dependencies
+```bash
+# Check system health and dependencies
+cargo run -- doctor
+
+# Install dependencies (specify platforms: linux, windows, macos, android, ios)
+cargo run -- install                      # Installs protoc and Godot only
+cargo run -- install --platforms linux    # Also installs Linux export templates
+cargo run -- install --platforms android  # Also installs Android tools and templates
+```
+
 ### Development
 ```bash
-# Install dependencies (specify platforms: linux, windows, macos, android, ios)
-cargo run -- install --platforms linux
-cargo run -- install --platforms android  # Installs cargo-ndk and Android target
-
 # Build the Rust library
-cargo run -- build
-cargo run -- build -r  # Release mode
-cargo run -- build --target android  # Android build using cargo-ndk
+cargo run -- build                        # Build for host platform
+cargo run -- build -r                     # Release mode
+cargo run -- build --target android       # Android build (no cargo-ndk, uses direct cargo)
+cargo run -- build --target ios           # iOS build (macOS only)
 
-# Run the client
-cargo run -- run
-cargo run -- run -r    # Release mode
-cargo run -- run -e    # Run editor
+# Run the client (automatically builds first)
+cargo run -- run                          # Run client
+cargo run -- run -r                       # Release mode
+cargo run -- run -e                       # Run editor
+cargo run -- run -e --platform android    # Run editor and also build for Android
+
+# Feature flags
+cargo run -- build --no-default-features --features use_livekit,use_deno
+cargo run -- run --no-default-features --features use_livekit,use_deno
 
 # Run tests
-cargo run -- run --itest  # Integration tests
-cargo run -- run --stest  # Scene tests
+cargo run -- run --itest                  # Integration tests
+cargo run -- run --stest                  # Scene tests
+```
+
+### Android Development
+```bash
+# Generate Android keystore
+cargo run -- generate-keystore --type release  # Creates .bin/release.keystore
+cargo run -- generate-keystore --type debug    # Creates .bin/debug.keystore
+
+# Export Android builds
+export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$(pwd)/.bin/release.keystore"
+export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
+export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
+
+cargo run -- export --target android --format apk           # Build APK
+cargo run -- export --target android --format apk --release # Signed APK
+cargo run -- export --target android --format aab           # Build AAB for Play Store
+cargo run -- export --target quest --format apk             # Meta Quest build
 ```
 
 ### Code Quality
@@ -48,12 +78,20 @@ gdlint godot/
 
 # Generate test coverage
 cargo run -- coverage --dev
+
+# Import assets
+cargo run -- import-assets
 ```
 
 ### Export & Distribution
 ```bash
 # Export for target OS
-cargo run -- export --target <OS>
+cargo run -- export --target linux
+cargo run -- export --target windows
+cargo run -- export --target macos
+cargo run -- export --target android --format apk
+cargo run -- export --target android --format aab
+cargo run -- export --target ios
 ```
 
 ## Architecture
@@ -99,13 +137,22 @@ cargo run -- export --target <OS>
 
 3. **For Android development**:
    ```bash
-   # First install Android tools
+   # First install Android tools and dependencies
    cargo run -- install --platforms android
    
-   # Then build for Android
+   # Generate keystore for signing
+   cargo run -- generate-keystore --type release
+   
+   # Build for Android
    cargo run -- build --target android
    
-   # Or use Docker:
+   # Export APK or AAB
+   export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$(pwd)/.bin/release.keystore"
+   export GODOT_ANDROID_KEYSTORE_RELEASE_USER="androidreleasekey"
+   export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="android"
+   cargo run -- export --target android --format apk --release
+   
+   # Or use Docker (for CI/CD):
    docker run -v $(pwd):/app/ -it kuruk/dcl-godot-android-builder-rust
    ```
 
@@ -113,9 +160,38 @@ cargo run -- export --target <OS>
 
 - The project uses a forked Godot 4.4.1 - don't update the engine version
 - Windows users should clone to short paths (e.g., `C:/gexplorer`)
-- The Rust toolchain is pinned in `rust-toolchain.toml`
+- The Rust toolchain is pinned in `rust-toolchain.toml` (1.79)
 - For coverage testing, install: `rustup component add llvm-tools-preview && cargo install grcov`
 - Integration with Decentraland SDK7 requires the JavaScript runtime to be properly initialized
+- **Android builds**: No longer use cargo-ndk due to NDK 27 issues. Direct cargo build with `GN_ARGS=use_custom_libcxx=false`
+- **FFmpeg**: Automatically disabled for Android/iOS builds (TODO: mobile implementation)
+- **Dependencies**: Run `cargo run -- doctor` to check system health and missing dependencies
+- **Build order**: Commands now check dependencies and suggest next steps automatically
+
+## New Features (Recent Updates)
+
+### Enhanced Developer Experience
+- **Colored output**: All xtask commands now use colored output for better readability
+- **Progress indicators**: Long-running operations show progress bars
+- **Dependency checking**: Commands validate prerequisites and provide helpful error messages
+- **Platform detection**: Automatically detects OS and suggests platform-specific commands
+- **Smart defaults**: FFmpeg automatically disabled for mobile platforms
+
+### Improved Android Workflow
+```bash
+# Complete Android build workflow
+cargo run -- install --platforms android           # Install Android dependencies
+cargo run -- generate-keystore --type release      # Generate signing key
+cargo run -- build --target android                # Build Rust library
+cargo run -- export --target android --format apk  # Export APK
+```
+
+### Command Dependencies
+The build system now enforces proper command order:
+- `build` requires: protoc installed
+- `run` requires: Godot installed (builds automatically)
+- `export` requires: Godot installed, host built, target platform built
+- `import-assets` requires: Godot installed (builds automatically)
 
 ## Common Tasks
 
