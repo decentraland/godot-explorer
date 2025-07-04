@@ -336,6 +336,9 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
 }
 
 fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
+    // Ensure BIN_FOLDER exists
+    fs::create_dir_all(BIN_FOLDER)?;
+    
     // Download Android dependencies
     let android_deps_url = "https://godot-artifacts.kuruk.net/android_deps.zip";
     let android_deps_path = format!("{BIN_FOLDER}android_dependencies.zip");
