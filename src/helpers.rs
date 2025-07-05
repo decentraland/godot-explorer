@@ -1,0 +1,188 @@
+use std::path::PathBuf;
+use std::fs;
+use anyhow::Result;
+use crate::consts::*;
+
+/// Helper function to canonicalize a path with better error context
+pub fn canonicalize_with_context(path: &str, context: &str) -> Result<PathBuf> {
+    fs::canonicalize(path)
+        .map_err(|e| anyhow::anyhow!("Failed to canonicalize {} ({}): {}", context, path, e))
+}
+
+/// Get the library file extension for the current or specified platform
+pub fn get_lib_extension(target: &str) -> &'static str {
+    match target {
+        "windows" | "win64" => ".dll",
+        "linux" => ".so", 
+        "macos" => ".dylib",
+        "android" => ".so",
+        "ios" => ".a",
+        _ => ".so", // default to Linux
+    }
+}
+
+/// Get the executable extension for the current or specified platform
+pub fn get_exe_extension(target: &str) -> &'static str {
+    match target {
+        "windows" | "win64" => ".exe",
+        _ => "",
+    }
+}
+
+/// Helper to construct Android NDK path
+pub fn get_android_ndk_path(sdk_root: &str) -> PathBuf {
+    PathBuf::from(sdk_root)
+        .join("ndk")
+        .join(crate::consts::ANDROID_NDK_VERSION)
+}
+
+/// Check if a command exists and is executable
+pub fn command_exists(cmd: &str) -> bool {
+    std::process::Command::new(cmd)
+        .arg("--version")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
+}
+
+/// Android build environment configuration
+pub struct AndroidBuildEnv {
+    pub ndk_path: String,
+    pub target_cc: String,
+    pub target_cxx: String,
+    pub target_ar: String,
+    pub cargo_target_linker: String,
+}
+
+impl AndroidBuildEnv {
+    pub fn new(ndk_path: String) -> Self {
+        let toolchain_base = format!("{}/toolchains/llvm/prebuilt/linux-x86_64/bin", ndk_path);
+        
+        Self {
+            target_cc: format!("{}/aarch64-linux-android{}-clang", toolchain_base, crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")),
+            target_cxx: format!("{}/aarch64-linux-android{}-clang++", toolchain_base, crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")),
+            target_ar: format!("{}/llvm-ar", toolchain_base),
+            cargo_target_linker: format!("{}/aarch64-linux-android{}-clang", toolchain_base, crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")),
+            ndk_path,
+        }
+    }
+    
+    pub fn apply_to_env(&self, env: &mut std::collections::HashMap<String, String>) {
+        env.insert("TARGET_CC".to_string(), self.target_cc.clone());
+        env.insert("TARGET_CXX".to_string(), self.target_cxx.clone());
+        env.insert("TARGET_AR".to_string(), self.target_ar.clone());
+        env.insert("CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER".to_string(), self.cargo_target_linker.clone());
+        env.insert("CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE".to_string(), "1".to_string());
+        env.insert("CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG".to_string(), "true".to_string());
+        
+        let cxxflags = "-v --target=aarch64-linux-android";
+        let rustflags = format!(
+            "-L{}/toolchains/llvm/prebuilt/linux-x86_64/lib/aarch64-unknown-linux-musl",
+            self.ndk_path
+        );
+        
+        env.insert("CXXFLAGS".to_string(), cxxflags.to_string());
+        env.insert("RUSTFLAGS".to_string(), rustflags);
+    }
+}
+
+/// Construct FFmpeg download URL for a given platform
+pub fn get_ffmpeg_url(platform: &str) -> String {
+    let arch = match platform {
+        "linux" => "linux64",
+        "windows" | "win64" => "win64",
+        "macos" => "macos64",
+        _ => "linux64",
+    };
+    
+    let extension = match platform {
+        "windows" | "win64" => "zip",
+        _ => "tar.xz",
+    };
+    
+    format!("{}/ffmpeg-{}-{}-{}.{}", 
+        FFMPEG_BASE_URL, 
+        FFMPEG_VERSION_TAG,
+        arch,
+        FFMPEG_BUILD_TYPE,
+        extension
+    )
+}
+
+/// Extract filename from FFmpeg URL
+pub fn get_ffmpeg_filename_from_url(url: &str) -> Option<String> {
+    url.split('/').last().map(|s| s.to_string())
+}
+
+/// Get the extracted folder name from FFmpeg archive
+pub fn get_ffmpeg_extracted_folder(platform: &str) -> String {
+    let arch = match platform {
+        "linux" => "linux64",
+        "windows" | "win64" => "win64", 
+        "macos" => "macos64",
+        _ => "linux64",
+    };
+    
+    format!("ffmpeg-{}-{}-{}", FFMPEG_VERSION_TAG, arch, FFMPEG_BUILD_TYPE)
+}
+
+/// Generic success message for already installed components
+pub fn already_installed_message(component: &str) -> String {
+    format!("{} {}", component, MSG_ALREADY_INSTALLED)
+}
+
+/// Generic success message for already extracted components
+pub fn already_extracted_message(component: &str) -> String {
+    format!("{} {}", component, MSG_ALREADY_EXTRACTED)
+}
+
+/// Common path constructors for bin folder
+pub struct BinPaths;
+
+impl BinPaths {
+    pub fn godot() -> PathBuf {
+        PathBuf::from(BIN_FOLDER).join("godot")
+    }
+    
+    pub fn godot_bin() -> PathBuf {
+        Self::godot().join("godot4_bin")
+    }
+    
+    pub fn protoc() -> PathBuf {
+        PathBuf::from(BIN_FOLDER).join("protoc")
+    }
+    
+    pub fn protoc_bin() -> PathBuf {
+        Self::protoc().join("bin").join("protoc")
+    }
+    
+    pub fn ffmpeg() -> PathBuf {
+        PathBuf::from(BIN_FOLDER).join("ffmpeg")
+    }
+    
+    pub fn ffmpeg_bin() -> PathBuf {
+        Self::ffmpeg().join("bin").join("ffmpeg")
+    }
+    
+    pub fn android_deps() -> PathBuf {
+        PathBuf::from(BIN_FOLDER).join("android_deps")
+    }
+    
+    pub fn android_deps_zip() -> PathBuf {
+        PathBuf::from(BIN_FOLDER).join("android_dependencies.zip")
+    }
+    
+    pub fn keystore(filename: &str) -> PathBuf {
+        PathBuf::from(BIN_FOLDER).join(filename)
+    }
+    
+    pub fn temp_dir(name: &str) -> PathBuf {
+        PathBuf::from(BIN_FOLDER).join(name)
+    }
+}
+
+/// Common Android SDK path patterns
+pub fn get_default_android_sdk_path() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
+    PathBuf::from(home).join("Android/Sdk")
+}

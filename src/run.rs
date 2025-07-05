@@ -3,7 +3,7 @@ use std::{collections::HashMap, io::BufRead, path::PathBuf};
 use cargo_metadata::MetadataCommand;
 
 use crate::{
-    consts::{GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER, EXPORTS_FOLDER},
+    consts::{ANDROID_NDK_VERSION, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER, EXPORTS_FOLDER},
     copy_files::copy_library,
     export::get_target_os,
     path::{adjust_canonicalization, get_godot_path},
@@ -311,10 +311,10 @@ fn setup_android_env(with_build_envs: &mut HashMap<String, String>) -> anyhow::R
 
     let android_ndk_path = android_ndk.unwrap_or_else(|| {
         if let Some(android_sdk_path) = android_sdk {
-            format!("{}/ndk/27.1.12297006", android_sdk_path)
+            format!("{}/ndk/{}", android_sdk_path, ANDROID_NDK_VERSION)
         } else {
             let home = std::env::var("HOME").expect("HOME environment not set");
-            format!("{}/Android/Sdk/ndk/27.1.12297006", home)
+            format!("{}/Android/Sdk/ndk/{}", home, ANDROID_NDK_VERSION)
         }
     });
 
@@ -395,7 +395,7 @@ fn validate_android_ndk() -> anyhow::Result<String> {
     }
 
     // Check standard paths
-    let ndk_version = "27.1.12297006";
+    let ndk_version = ANDROID_NDK_VERSION;
     let possible_paths = vec![
         (std::env::var("ANDROID_SDK").ok(), "ndk/{}"),
         (std::env::var("ANDROID_HOME").ok(), "ndk/{}"),

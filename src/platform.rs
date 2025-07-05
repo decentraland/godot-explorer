@@ -1,3 +1,4 @@
+use crate::consts::ANDROID_NDK_VERSION;
 use crate::ui::{print_message, MessageType};
 use std::env;
 use which::which;
@@ -79,14 +80,14 @@ pub fn check_android_sdk() -> Result<String, String> {
     }
 
     if let Ok(sdk) = env::var("ANDROID_SDK") {
-        let ndk_path = format!("{}/ndk/27.1.12297006", sdk);
+        let ndk_path = format!("{}/ndk/{}", sdk, ANDROID_NDK_VERSION);
         if std::path::Path::new(&ndk_path).exists() {
             return Ok(ndk_path);
         }
     }
 
     if let Ok(home) = env::var("ANDROID_HOME") {
-        let ndk_path = format!("{}/ndk/27.1.12297006", home);
+        let ndk_path = format!("{}/ndk/{}", home, ANDROID_NDK_VERSION);
         if std::path::Path::new(&ndk_path).exists() {
             return Ok(ndk_path);
         }
@@ -94,13 +95,13 @@ pub fn check_android_sdk() -> Result<String, String> {
 
     // Check default location
     if let Ok(home) = env::var("HOME") {
-        let ndk_path = format!("{}/Android/Sdk/ndk/27.1.12297006", home);
+        let ndk_path = format!("{}/Android/Sdk/ndk/{}", home, ANDROID_NDK_VERSION);
         if std::path::Path::new(&ndk_path).exists() {
             return Ok(ndk_path);
         }
     }
 
-    Err("Android NDK not found. Please install Android NDK 27.1.12297006".to_string())
+    Err(format!("Android NDK not found. Please install Android NDK {}", ANDROID_NDK_VERSION))
 }
 
 /// Check if iOS development is available (macOS only)

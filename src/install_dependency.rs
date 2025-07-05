@@ -10,6 +10,7 @@ use tar::Archive;
 use xz2::read::XzDecoder;
 use zip::ZipArchive;
 
+use crate::consts::*;
 use crate::download_file::download_file;
 use crate::export::prepare_templates;
 use crate::platform::{
@@ -341,7 +342,7 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
         );
         print_message(
             MessageType::Info,
-            &format!("Looking for NDK at: {}/ndk/27.1.12297006", android_sdk),
+            &format!("Looking for NDK at: {}/ndk/{}", android_sdk, ANDROID_NDK_VERSION),
         );
     } else if let Ok(android_home) = env::var("ANDROID_HOME") {
         print_message(
@@ -350,7 +351,7 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
         );
         print_message(
             MessageType::Info,
-            &format!("Looking for NDK at: {}/ndk/27.1.12297006", android_home),
+            &format!("Looking for NDK at: {}/ndk/{}", android_home, ANDROID_NDK_VERSION),
         );
     } else {
         print_message(
@@ -359,7 +360,7 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
         );
         print_message(
             MessageType::Info,
-            "Will look for NDK at: ~/Android/Sdk/ndk/27.1.12297006",
+            &format!("Will look for NDK at: ~/Android/Sdk/ndk/{}", ANDROID_NDK_VERSION),
         );
     }
 
@@ -369,7 +370,7 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
     );
     print_message(
         MessageType::Info,
-        "Note: Make sure you have Android NDK version 27.1.12297006 installed",
+        &format!("Note: Make sure you have Android NDK version {} installed", ANDROID_NDK_VERSION),
     );
 
     Ok(())

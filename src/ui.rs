@@ -2,6 +2,8 @@ use colored::*;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
+use crate::consts::ANDROID_NDK_VERSION;
+
 /// Message types with consistent icons and colors
 pub enum MessageType {
     Info,
@@ -76,7 +78,7 @@ pub fn print_install_instructions(tool: &str, platform: &str) {
         }
         ("android-ndk", _) => {
             println!("  1. Open Android Studio SDK Manager");
-            println!("  2. SDK Tools → NDK (Side by side) → Select version 27.1.12297006");
+            println!("  2. SDK Tools → NDK (Side by side) → Select version {}", ANDROID_NDK_VERSION);
             println!("  3. Click 'Apply' to install");
         }
         ("protoc", _) => {

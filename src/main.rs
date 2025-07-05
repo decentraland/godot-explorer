@@ -15,6 +15,7 @@ mod dependencies;
 mod doctor;
 mod download_file;
 mod export;
+mod helpers;
 mod image_comparison;
 mod install_dependency;
 mod keystore;
