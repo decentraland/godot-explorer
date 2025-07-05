@@ -171,7 +171,7 @@ fn check_rust_targets() {
 }
 
 fn check_ffmpeg_installation() {
-    let local_ffmpeg = format!("{BIN_FOLDER}ffmpeg/ffmpeg");
+    let local_ffmpeg = format!("{BIN_FOLDER}ffmpeg/bin/ffmpeg");
     let local_ffmpeg_exists = Path::new(&local_ffmpeg).exists();
     
     // Check local installation first
@@ -185,7 +185,7 @@ fn check_ffmpeg_installation() {
                 let version_str = String::from_utf8_lossy(&output.stdout);
                 let first_line = version_str.lines().next().unwrap_or("");
                 
-                if version_str.contains("ffmpeg version 6.") {
+                if version_str.contains("ffmpeg version n6.") {
                     print_message(
                         MessageType::Success,
                         &format!("FFmpeg 6.x found (local) - {}", first_line)
@@ -218,7 +218,7 @@ fn check_ffmpeg_installation() {
                     let version_str = String::from_utf8_lossy(&output.stdout);
                     let first_line = version_str.lines().next().unwrap_or("");
                     
-                    if version_str.contains("ffmpeg version 6.") {
+                    if version_str.contains("ffmpeg version n6.") {
                         print_message(
                             MessageType::Success,
                             &format!("FFmpeg 6.x found (system) - {}", first_line)

@@ -41,6 +41,11 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
         if metadata.is_dir() {
             copy_dir_all(&src_path, &dst_path)?;
         } else if metadata.file_type().is_symlink() {
+            // Remove existing file/symlink if it exists
+            if dst_path.exists() {
+                fs::remove_file(&dst_path).ok();
+            }
+            
             // Handle symlinks
             let link_target = fs::read_link(&src_path)?;
             #[cfg(unix)]
@@ -54,7 +59,10 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
                 fs::copy(&src_path, &dst_path)?;
             }
         } else {
-            // Regular file
+            // Regular file - remove existing if present
+            if dst_path.exists() {
+                fs::remove_file(&dst_path)?;
+            }
             fs::copy(&src_path, &dst_path)?;
         }
     }
@@ -612,7 +620,7 @@ pub fn download_and_extract_tar_xz(
 
 pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
     let ffmpeg_folder = format!("{BIN_FOLDER}ffmpeg");
-    let ffmpeg_bin = format!("{}/ffmpeg", ffmpeg_folder);
+    let ffmpeg_bin = format!("{}/bin/ffmpeg", ffmpeg_folder);
     
     // Check if FFmpeg is already installed
     if Path::new(&ffmpeg_bin).exists() {
@@ -623,7 +631,7 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
             
         if let Ok(output) = output {
             let version_str = String::from_utf8_lossy(&output.stdout);
-            if version_str.contains("ffmpeg version 6.") {
+            if version_str.contains("ffmpeg version n6.") {
                 print_message(MessageType::Success, "FFmpeg 6.x already installed");
                 return Ok(());
             } else {
@@ -640,6 +648,11 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
             // Use BtbN's shared library builds for FFmpeg 6.1
             let url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1.tar.xz";
             let temp_extract_path = format!("{BIN_FOLDER}ffmpeg_temp");
+            
+            // Clean up any existing temp directory first
+            if Path::new(&temp_extract_path).exists() {
+                fs::remove_dir_all(&temp_extract_path)?;
+            }
             
             download_and_extract_tar_xz(
                 url,
@@ -666,6 +679,10 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
                     // Copy directory recursively using a simple recursive copy
                     copy_dir_all(&src, Path::new(&dst))?;
                 } else {
+                    // Remove existing file if present
+                    if Path::new(&dst).exists() {
+                        fs::remove_file(&dst)?;
+                    }
                     fs::copy(&src, &dst)?;
                 }
             }
@@ -679,8 +696,13 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
                 }
             }
             
-            // Clean up temp directory
-            fs::remove_dir_all(&temp_extract_path).ok();
+            // Clean up temp directory - this time with error handling
+            if let Err(e) = fs::remove_dir_all(&temp_extract_path) {
+                print_message(
+                    MessageType::Warning,
+                    &format!("Failed to clean up temp directory: {}", e)
+                );
+            }
             
             print_message(MessageType::Success, "FFmpeg 6.1 shared libraries installed for Linux");
         }
