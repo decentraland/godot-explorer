@@ -29,7 +29,7 @@ jobs:
         run: |
           rustup target add aarch64-linux-android
       - name: Cargo install
-        run: cargo run -- install --platforms android linux
+        run: cargo run -- install --targets android linux
       - name: Build Rust libraries
         run: |
           cargo run -- build

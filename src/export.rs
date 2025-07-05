@@ -220,7 +220,7 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
         print_message(MessageType::Error, "Export failed. Common issues:");
         print_message(
             MessageType::Info,
-            "- Missing export templates (run: cargo run -- install --platforms <platform>)",
+            "- Missing export templates (run: cargo run -- install --targets <platform>)",
         );
         print_message(
             MessageType::Info,
@@ -263,7 +263,7 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
     let templates = if platforms.is_empty() {
         println!("No specific templates provided, downloading all templates.");
         println!(
-            "For downloading for a specific platform use: `cargo run -- install --platform linux`"
+            "For downloading for a specific platform use: `cargo run -- install --targets linux`"
         );
         file_map
             .keys()
@@ -343,7 +343,7 @@ fn extract_android_template() -> Result<(), anyhow::Error> {
     
     if !android_source_path.exists() {
         return Err(anyhow::anyhow!(
-            "Android template not found at: {}. Run 'cargo run -- install --platforms android' first", 
+            "Android template not found at: {}. Run 'cargo run -- install --targets android' first", 
             android_source_zip
         ));
     }

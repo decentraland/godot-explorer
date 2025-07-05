@@ -71,9 +71,9 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
-                    Arg::new("platforms")
-                        .long("platforms")
-                        .help("download platform, can use multiple platforms, use like `--platforms linux android`")
+                    Arg::new("targets")
+                        .long("targets")
+                        .help("download platform, can use multiple platforms, use like `--targets linux android`")
                         .takes_value(true)
                         .multiple_values(true),
                 )
@@ -253,7 +253,7 @@ fn main() -> Result<(), anyhow::Error> {
     let res = match subcommand {
         ("install", sm) => {
             let platforms: Vec<String> = sm
-                .values_of("platforms")
+                .values_of("targets")
                 .map(|vals| vals.map(String::from).collect())
                 .unwrap_or_default();
 

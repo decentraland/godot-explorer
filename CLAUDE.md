@@ -21,8 +21,8 @@ cargo run -- doctor
 
 # Install dependencies (specify platforms: linux, windows, macos, android, ios)
 cargo run -- install                      # Installs protoc and Godot only
-cargo run -- install --platforms linux    # Also installs Linux export templates
-cargo run -- install --platforms android  # Also installs Android tools and templates
+cargo run -- install --targets linux    # Also installs Linux export templates
+cargo run -- install --targets android  # Also installs Android tools and templates
 ```
 
 ### Development
@@ -37,7 +37,7 @@ cargo run -- build --target ios           # iOS build (macOS only)
 cargo run -- run                          # Run client
 cargo run -- run -r                       # Release mode
 cargo run -- run -e                       # Run editor
-cargo run -- run -e --platform android    # Run editor and also build for Android
+cargo run -- run -e --target android    # Run editor and also build for Android
 
 # Feature flags
 cargo run -- build --no-default-features --features use_livekit,use_deno
@@ -134,7 +134,7 @@ cargo run -- export --target ios
 3. **For Android development**:
    ```bash
    # First install Android tools and dependencies
-   cargo run -- install --platforms android
+   cargo run -- install --targets android
    
    # Generate keystore for signing
    cargo run -- generate-keystore --type release
@@ -173,7 +173,7 @@ cargo run -- export --target ios
 ### Improved Android Workflow
 ```bash
 # Complete Android build workflow
-cargo run -- install --platforms android           # Install Android dependencies
+cargo run -- install --targets android           # Install Android dependencies
 cargo run -- generate-keystore --type release      # Generate signing key
 cargo run -- build --target android                # Build Rust library
 cargo run -- export --target android --format apk  # Export APK

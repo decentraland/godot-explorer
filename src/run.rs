@@ -156,6 +156,9 @@ fn prepare_build_args_envs(
             }
             _ => {}
         }
+    } else {
+        // For desktop platforms, set up FFmpeg paths if local installation exists
+        setup_ffmpeg_env(&mut with_build_envs, target)?;
     }
 
     let build_args: Vec<String> = build_args.iter().map(|&s| s.to_string()).collect();
@@ -249,6 +252,55 @@ fn setup_v8_bindings(
             ));
         }
     }
+    Ok(())
+}
+
+/// Sets up environment variables for FFmpeg if local installation exists
+fn setup_ffmpeg_env(with_build_envs: &mut HashMap<String, String>, target: &str) -> anyhow::Result<()> {
+    // Skip for mobile platforms
+    if target == "android" || target == "ios" {
+        return Ok(());
+    }
+    
+    let local_ffmpeg_path = format!("{}ffmpeg", crate::consts::BIN_FOLDER);
+    if std::path::Path::new(&local_ffmpeg_path).exists() {
+        // Get absolute path for FFmpeg
+        let absolute_ffmpeg_path = std::fs::canonicalize(&local_ffmpeg_path)?;
+        let absolute_ffmpeg_str = absolute_ffmpeg_path.to_string_lossy();
+        
+        // Set PKG_CONFIG_PATH to help find our local FFmpeg
+        let pkg_config_path = format!("{}/lib/pkgconfig", absolute_ffmpeg_str);
+        if let Some(existing_path) = with_build_envs.get("PKG_CONFIG_PATH") {
+            with_build_envs.insert("PKG_CONFIG_PATH".to_string(), format!("{}:{}", pkg_config_path, existing_path));
+        } else {
+            with_build_envs.insert("PKG_CONFIG_PATH".to_string(), pkg_config_path.clone());
+        }
+        
+        // Also add lib directory to LD_LIBRARY_PATH for runtime
+        let lib_path = format!("{}/lib", absolute_ffmpeg_str);
+        if let Some(existing_path) = with_build_envs.get("LD_LIBRARY_PATH") {
+            with_build_envs.insert("LD_LIBRARY_PATH".to_string(), format!("{}:{}", lib_path, existing_path));
+        } else {
+            with_build_envs.insert("LD_LIBRARY_PATH".to_string(), lib_path);
+        }
+        
+        // Set FFMPEG_DIR for ffmpeg-sys-next
+        with_build_envs.insert("FFMPEG_DIR".to_string(), absolute_ffmpeg_str.to_string());
+        
+        // Also set PKG_CONFIG_ALLOW_SYSTEM_LIBS and PKG_CONFIG_ALLOW_SYSTEM_CFLAGS
+        with_build_envs.insert("PKG_CONFIG_ALLOW_SYSTEM_LIBS".to_string(), "1".to_string());
+        with_build_envs.insert("PKG_CONFIG_ALLOW_SYSTEM_CFLAGS".to_string(), "1".to_string());
+        
+        print_message(
+            MessageType::Info,
+            &format!("Using local FFmpeg 6.1 from: {}", absolute_ffmpeg_str)
+        );
+        print_message(
+            MessageType::Info,
+            &format!("PKG_CONFIG_PATH set to: {}", pkg_config_path)
+        );
+    }
+    
     Ok(())
 }
 
@@ -388,7 +440,7 @@ fn build_with_cargo_ndk(release_mode: bool, extra_build_args: Vec<&str>) -> anyh
     if !android_deps_path.exists() {
         return Err(anyhow::anyhow!(
             "Android dependencies not found!\n\n\
-            Please run: cargo run -- install --platforms android\n\n\
+            Please run: cargo run -- install --targets android\n\n\
             This will download the required FFmpeg libraries for Android."
         ));
     }

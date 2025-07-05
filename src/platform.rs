@@ -208,32 +208,8 @@ pub fn check_development_dependencies() -> Vec<(&'static str, bool, &'static str
                 "ALSA sound library",
             ),
             ("libudev-dev", check_pkg_config("libudev"), "udev library"),
-            // FFmpeg deps
-            (
-                "libavcodec-dev",
-                check_pkg_config("libavcodec"),
-                "FFmpeg codec library",
-            ),
-            (
-                "libavformat-dev",
-                check_pkg_config("libavformat"),
-                "FFmpeg format library",
-            ),
-            (
-                "libavutil-dev",
-                check_pkg_config("libavutil"),
-                "FFmpeg utilities",
-            ),
-            (
-                "libavfilter-dev",
-                check_pkg_config("libavfilter"),
-                "FFmpeg filter library",
-            ),
-            (
-                "libavdevice-dev",
-                check_pkg_config("libavdevice"),
-                "FFmpeg device library",
-            ),
+            // FFmpeg is now installed locally via cargo run -- install
+            // No need to check for system FFmpeg dev packages
             // LiveKit deps
             ("libssl-dev", check_pkg_config("openssl"), "OpenSSL library"),
             ("libx11-dev", check_pkg_config("x11"), "X11 library"),
@@ -257,21 +233,8 @@ pub fn check_development_dependencies() -> Vec<(&'static str, bool, &'static str
                 check_command("pkg-config"),
                 "Package configuration tool",
             ),
-            (
-                "libavcodec",
-                check_pkg_config("libavcodec"),
-                "FFmpeg codec library",
-            ),
-            (
-                "libavformat",
-                check_pkg_config("libavformat"),
-                "FFmpeg format library",
-            ),
-            (
-                "libavutil",
-                check_pkg_config("libavutil"),
-                "FFmpeg utilities library",
-            ),
+            // FFmpeg is now installed locally via cargo run -- install
+            // No need to check for system FFmpeg packages
         ],
         "windows" => vec![
             // Windows deps are handled differently
@@ -288,29 +251,7 @@ fn check_pkg_config(lib: &str) -> bool {
 
     let mut cmd = std::process::Command::new("pkg-config");
     
-    // On macOS, add Homebrew's ffmpeg@6 to PKG_CONFIG_PATH
-    if get_platform_info().os == "macos" && lib.starts_with("libav") {
-        // Try multiple possible Homebrew locations
-        let homebrew_paths = vec![
-            "/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig",  // Apple Silicon
-            "/usr/local/opt/ffmpeg@6/lib/pkgconfig",     // Intel Mac
-            "/opt/homebrew/opt/ffmpeg/lib/pkgconfig",    // Regular ffmpeg
-            "/usr/local/opt/ffmpeg/lib/pkgconfig",       // Regular ffmpeg Intel
-        ];
-        
-        let existing_path = env::var("PKG_CONFIG_PATH").unwrap_or_default();
-        let mut new_paths = vec![existing_path.clone()];
-        
-        for path in homebrew_paths {
-            if std::path::Path::new(path).exists() {
-                new_paths.push(path.to_string());
-            }
-        }
-        
-        if new_paths.len() > 1 {
-            cmd.env("PKG_CONFIG_PATH", new_paths.join(":"));
-        }
-    }
+    // FFmpeg is now installed locally, no need to check system paths
     
     cmd.args(&["--exists", lib])
         .status()
@@ -330,21 +271,18 @@ pub fn get_install_command() -> Option<String> {
                         "sudo apt-get update && sudo apt-get install -y \\\n  \
                          libasound2-dev libudev-dev \\\n  \
                          clang curl pkg-config \\\n  \
-                         libavcodec-dev libavformat-dev libavutil-dev libavfilter-dev libavdevice-dev \\\n  \
                          libssl-dev libx11-dev libgl1-mesa-dev libxext-dev".to_string()
                     ),
                     "pacman" => Some(
                         "sudo pacman -S --needed \\\n  \
                          alsa-lib systemd-libs \\\n  \
                          clang curl pkgconf \\\n  \
-                         ffmpeg \\\n  \
                          openssl libx11 mesa libxext".to_string()
                     ),
                     "dnf" => Some(
                         "sudo dnf install -y \\\n  \
                          alsa-lib-devel systemd-devel \\\n  \
                          clang curl pkg-config \\\n  \
-                         ffmpeg-devel \\\n  \
                          openssl-devel libX11-devel mesa-libGL-devel libXext-devel".to_string()
                     ),
                     _ => None,
@@ -353,7 +291,7 @@ pub fn get_install_command() -> Option<String> {
                 None
             }
         }
-        "macos" => Some("brew install ffmpeg@6 pkg-config".to_string()),
+        "macos" => Some("brew install pkg-config".to_string()),
         _ => None,
     }
 }
@@ -380,7 +318,6 @@ pub fn get_next_steps_instructions() -> String {
                     instructions
                         .push_str("\n# Check your package manager documentation for installing:\n");
                     instructions.push_str("  - ALSA and udev development libraries\n");
-                    instructions.push_str("  - FFmpeg development libraries\n");
                     instructions.push_str("  - OpenSSL, X11, and OpenGL development libraries\n");
                     instructions.push_str("  - clang and pkg-config\n");
                 }
@@ -396,20 +333,8 @@ pub fn get_next_steps_instructions() -> String {
                     instructions.push_str("\n");
                 }
 
-                instructions.push_str(
-                    "\n# Set environment variables (add to ~/.zshrc or ~/.bash_profile):\n",
-                );
-                instructions.push_str("# For Apple Silicon Macs:\n");
-                instructions.push_str(
-                    "export PKG_CONFIG_PATH=\"/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig:$PKG_CONFIG_PATH\"\n",
-                );
-                instructions.push_str("# For Intel Macs:\n");
-                instructions.push_str(
-                    "# export PKG_CONFIG_PATH=\"/usr/local/opt/ffmpeg@6/lib/pkgconfig:$PKG_CONFIG_PATH\"\n",
-                );
-                instructions.push_str("\n# Optional: Also set compiler flags\n");
-                instructions.push_str("export CPPFLAGS=\"-I/opt/homebrew/opt/ffmpeg@6/include\"\n");
-                instructions.push_str("export LDFLAGS=\"-L/opt/homebrew/opt/ffmpeg@6/lib\"\n");
+                // FFmpeg is now installed locally via cargo run -- install
+                // No need for system environment setup
             }
             "windows" => {
                 instructions.push_str("For Windows development:\n");

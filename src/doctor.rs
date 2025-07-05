@@ -1,3 +1,4 @@
+use crate::consts::BIN_FOLDER;
 use crate::dependencies::BuildStatus;
 use crate::platform::{
     check_android_sdk, check_development_dependencies, check_ios_development, check_required_tools,
@@ -76,6 +77,11 @@ pub fn run_doctor() -> anyhow::Result<()> {
     print_divider();
     print_section("Godot Engine");
     check_godot_installation();
+
+    // Check FFmpeg installation
+    print_divider();
+    print_section("FFmpeg");
+    check_ffmpeg_installation();
 
     // Check Android development
     print_divider();
@@ -164,6 +170,78 @@ fn check_rust_targets() {
     }
 }
 
+fn check_ffmpeg_installation() {
+    let local_ffmpeg = format!("{BIN_FOLDER}ffmpeg/ffmpeg");
+    let local_ffmpeg_exists = Path::new(&local_ffmpeg).exists();
+    
+    // Check local installation first
+    if local_ffmpeg_exists {
+        let output = std::process::Command::new(&local_ffmpeg)
+            .arg("-version")
+            .output();
+            
+        match output {
+            Ok(output) => {
+                let version_str = String::from_utf8_lossy(&output.stdout);
+                let first_line = version_str.lines().next().unwrap_or("");
+                
+                if version_str.contains("ffmpeg version 6.") {
+                    print_message(
+                        MessageType::Success,
+                        &format!("FFmpeg 6.x found (local) - {}", first_line)
+                    );
+                } else {
+                    print_message(
+                        MessageType::Warning,
+                        &format!("FFmpeg found (local) but not version 6.x - {}", first_line)
+                    );
+                    println!("  Run: cargo run -- install");
+                }
+            }
+            Err(_) => {
+                print_message(MessageType::Error, "Failed to check FFmpeg version");
+            }
+        }
+    } else {
+        // Check system FFmpeg
+        let system_check = std::process::Command::new("which")
+            .arg("ffmpeg")
+            .output();
+            
+        if system_check.is_ok() && system_check.unwrap().status.success() {
+            let output = std::process::Command::new("ffmpeg")
+                .arg("-version")
+                .output();
+                
+            match output {
+                Ok(output) => {
+                    let version_str = String::from_utf8_lossy(&output.stdout);
+                    let first_line = version_str.lines().next().unwrap_or("");
+                    
+                    if version_str.contains("ffmpeg version 6.") {
+                        print_message(
+                            MessageType::Success,
+                            &format!("FFmpeg 6.x found (system) - {}", first_line)
+                        );
+                    } else {
+                        print_message(
+                            MessageType::Warning,
+                            &format!("FFmpeg found (system) but not version 6.x - {}", first_line)
+                        );
+                        println!("  FFmpeg 6.x is required. Run: cargo run -- install");
+                    }
+                }
+                Err(_) => {
+                    print_message(MessageType::Error, "Failed to check FFmpeg version");
+                }
+            }
+        } else {
+            print_message(MessageType::Error, "FFmpeg not found");
+            println!("  Run: cargo run -- install");
+        }
+    }
+}
+
 fn check_godot_installation() {
     let godot_path = Path::new(".bin/godot/godot4_bin");
     if godot_path.exists() {
@@ -202,7 +280,7 @@ fn check_godot_installation() {
         }
         
         print_message(MessageType::Info, "To install templates for specific platforms:");
-        println!("  Run: cargo run -- install --platforms <platform1>,<platform2>,...");
+        println!("  Run: cargo run -- install --targets <platform1>,<platform2>,...");
         println!("  Available platforms: android, ios, linux, macos, windows");
     } else {
         print_message(MessageType::Warning, "Could not determine export templates path");
@@ -238,7 +316,7 @@ fn check_android_setup() {
                 print_message(MessageType::Success, "Android dependencies downloaded");
             } else {
                 print_message(MessageType::Info, "Android dependencies not downloaded");
-                println!("  Run: cargo run -- install --platforms android");
+                println!("  Run: cargo run -- install --targets android");
             }
         }
         Err(msg) => {

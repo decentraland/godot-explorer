@@ -160,7 +160,7 @@ pub fn check_command_dependencies(command: &str, target: Option<&str>) -> Result
                 
                 if !check_export_templates_for_platform(target_platform) {
                     print_message(MessageType::Error, &format!("Export templates for '{}' not installed", target_platform));
-                    print_message(MessageType::Info, &format!("Run: cargo run -- install --platforms {}", target_platform));
+                    print_message(MessageType::Info, &format!("Run: cargo run -- install --targets {}", target_platform));
                     return Err(anyhow::anyhow!("Missing export templates"));
                 }
             }
