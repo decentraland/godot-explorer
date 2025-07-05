@@ -81,19 +81,6 @@ fn main() -> Result<(), anyhow::Error> {
         )
         .subcommand(Command::new("update-protocol"))
         .subcommand(
-            Command::new("generate-keystore")
-                .about("Generate Android keystore for app signing")
-                .arg(
-                    Arg::new("type")
-                        .short('t')
-                        .long("type")
-                        .help("Keystore type: debug or release")
-                        .takes_value(true)
-                        .possible_values(&["debug", "release"])
-                        .default_value("release"),
-                ),
-        )
-        .subcommand(
             Command::new("compare-image-folders")
                 .arg(
                     Arg::new("snapshots")
@@ -267,10 +254,6 @@ fn main() -> Result<(), anyhow::Error> {
             result
         }
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
-        ("generate-keystore", sm) => {
-            let keystore_type = sm.value_of("type").unwrap_or("release");
-            keystore::generate_keystore(keystore_type)
-        }
         ("compare-image-folders", sm) => {
             let snapshot_folder = Path::new(sm.value_of("snapshots").unwrap());
             let result_folder = Path::new(sm.value_of("result").unwrap());

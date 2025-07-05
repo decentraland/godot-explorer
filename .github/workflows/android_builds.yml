@@ -35,10 +35,6 @@ jobs:
           cargo run -- build
           cargo run -- build --target android
       
-      - name: Generate Android keystore
-        run: |
-          cargo run -- generate-keystore --type release
-      
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release

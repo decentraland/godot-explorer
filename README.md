@@ -85,7 +85,6 @@ export PKG_CONFIG_PATH="/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig:$PKG_CONFIG_PAT
 | `cargo run -- run` | Build and run the client |
 | `cargo run -- run -e` | Build and run the editor |
 | `cargo run -- export --target android` | Export Android APK |
-| `cargo run -- generate-keystore` | Generate Android signing key |
 
 ## 🛠️ Development Workflow
 
@@ -110,9 +109,6 @@ cargo run -- run --no-default-features --features use_livekit,use_deno
 ```bash
 # Install Android dependencies
 cargo run -- install --targets android
-
-# Generate signing keystore
-cargo run -- generate-keystore --type release
 
 # Build for Android
 cargo run -- build --target android
@@ -183,7 +179,6 @@ docker run -v $(pwd):/app/ -it kuruk/dcl-godot-android-builder-rust
 
 # Inside container
 cargo run -- install --targets android linux
-cargo run -- generate-keystore --type release
 cargo run -- build --target android
 cargo run -- export --target android --format apk --release
 ```

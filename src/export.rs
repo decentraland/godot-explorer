@@ -3,7 +3,7 @@ use zip::ZipArchive;
 
 use crate::{
     consts::{
-        BIN_FOLDER, EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
+        EXPORTS_FOLDER, GODOT4_EXPORT_TEMPLATES_BASE_URL, GODOT_CURRENT_VERSION,
         GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
     },
     copy_files::copy_ffmpeg_libraries,
@@ -189,20 +189,21 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     ));
 
     // Set Android keystore environment variables if exporting for Android/Quest
-    if (target == "android" || target == "quest") && release {
-        let keystore_path = format!("{}release.keystore", BIN_FOLDER);
-        let keystore_abs_path = std::fs::canonicalize(&keystore_path)
-            .unwrap_or_else(|_| Path::new(&keystore_path).to_path_buf());
+    if target == "android" || target == "quest" {
+        let keystore_type = if release { "release" } else { "debug" };
         
-        if !Path::new(&keystore_path).exists() {
-            print_message(MessageType::Warning, "Release keystore not found. Generate it with: cargo run -- generate-keystore --type release");
-        } else {
-            print_message(MessageType::Info, &format!("Using keystore: {}", keystore_abs_path.display()));
-        }
+        // Generate keystore if it doesn't exist
+        let keystore_path = crate::keystore::generate_keystore(keystore_type)?;
+        let keystore_abs_path = std::fs::canonicalize(&keystore_path)?;
         
-        export_command.env("GODOT_ANDROID_KEYSTORE_RELEASE_PATH", keystore_abs_path);
-        export_command.env("GODOT_ANDROID_KEYSTORE_RELEASE_USER", "androidreleasekey");
-        export_command.env("GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD", "android");
+        print_message(MessageType::Info, &format!("Using keystore: {}", keystore_abs_path.display()));
+        
+        let (keystore_user, keystore_password) = crate::keystore::get_keystore_credentials(keystore_type);
+        let env_prefix = format!("GODOT_ANDROID_KEYSTORE_{}", keystore_type.to_uppercase());
+        
+        export_command.env(format!("{}_PATH", env_prefix), keystore_abs_path);
+        export_command.env(format!("{}_USER", env_prefix), keystore_user);
+        export_command.env(format!("{}_PASSWORD", env_prefix), keystore_password);
     }
 
     let export_status = export_command

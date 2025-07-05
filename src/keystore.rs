@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-pub fn generate_keystore(keystore_type: &str) -> Result<(), anyhow::Error> {
+pub fn generate_keystore(keystore_type: &str) -> Result<String, anyhow::Error> {
     print_section(&format!("Generating Android {} keystore", keystore_type));
 
     // Check if keytool is available
@@ -23,11 +23,10 @@ pub fn generate_keystore(keystore_type: &str) -> Result<(), anyhow::Error> {
     // Check if keystore already exists
     if Path::new(&keystore_path).exists() {
         print_message(
-            MessageType::Warning,
-            &format!("Keystore already exists at: {}", keystore_path),
+            MessageType::Info,
+            &format!("Using existing {} keystore", keystore_type),
         );
-        print_message(MessageType::Info, "Delete it first if you want to regenerate.");
-        return Ok(());
+        return Ok(keystore_path);
     }
 
     let alias = format!("android{}key", keystore_type);
@@ -60,17 +59,12 @@ pub fn generate_keystore(keystore_type: &str) -> Result<(), anyhow::Error> {
         &format!("Keystore generated successfully at: {}", keystore_path),
     );
 
-    // Show environment variables to set
-    print_section("Environment Variables");
-    print_message(MessageType::Info, "Set these environment variables for Godot export:");
-    
-    let keystore_abs_path = std::fs::canonicalize(&keystore_path)?;
-    let keystore_abs_path_str = keystore_abs_path.to_string_lossy();
-    
-    let env_prefix = format!("GODOT_ANDROID_KEYSTORE_{}", keystore_type.to_uppercase());
-    println!("\nexport {}_PATH=\"{}\"", env_prefix, keystore_abs_path_str);
-    println!("export {}_USER=\"{}\"", env_prefix, alias);
-    println!("export {}_PASSWORD=\"{}\"", env_prefix, storepass);
+    Ok(keystore_path)
+}
 
-    Ok(())
+/// Get keystore credentials for a given keystore type
+pub fn get_keystore_credentials(keystore_type: &str) -> (String, String) {
+    let alias = format!("android{}key", keystore_type);
+    let password = "android";
+    (alias, password.to_string())
 }

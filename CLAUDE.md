@@ -50,15 +50,15 @@ cargo run -- run --stest                  # Scene tests
 
 ### Android Development
 ```bash
-# Generate Android keystore
-cargo run -- generate-keystore --type release  # Creates .bin/release.keystore
-cargo run -- generate-keystore --type debug    # Creates .bin/debug.keystore
-
-# Export Android builds (automatically uses .bin/release.keystore for --release)
-cargo run -- export --target android --format apk           # Build debug APK
-cargo run -- export --target android --format apk --release # Build signed APK
+# Export Android builds (keystores are generated automatically if needed)
+cargo run -- export --target android --format apk           # Build debug APK (uses debug keystore)
+cargo run -- export --target android --format apk --release # Build signed APK (uses release keystore)
 cargo run -- export --target android --format aab --release # Build AAB for Play Store
 cargo run -- export --target quest --format apk --release   # Meta Quest build
+
+# Note: Keystores are automatically created in .bin/ folder:
+# - .bin/debug.keystore for debug builds
+# - .bin/release.keystore for release builds
 ```
 
 ### Code Quality
@@ -136,13 +136,10 @@ cargo run -- export --target ios
    # First install Android tools and dependencies
    cargo run -- install --targets android
    
-   # Generate keystore for signing
-   cargo run -- generate-keystore --type release
-   
    # Build for Android
    cargo run -- build --target android
    
-   # Export APK or AAB (keystore is automatically configured)
+   # Export APK or AAB (keystore is automatically generated and configured)
    cargo run -- export --target android --format apk --release
    
    # Or use Docker (for CI/CD):
