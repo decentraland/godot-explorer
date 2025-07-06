@@ -115,7 +115,7 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("format")
                         .help("Export format for Android: apk or aab")
                         .takes_value(true)
-                        .possible_values(&["apk", "aab"])
+                        .possible_values(["apk", "aab"])
                         .default_value("apk"),
                 )
                 .arg(

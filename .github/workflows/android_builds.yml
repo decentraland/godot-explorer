@@ -34,6 +34,7 @@ jobs:
         run: |
           cargo run -- build
           cargo run -- build --target android
+          cargo run -- import-assets
       
       - name: Export Android APK
         run: |
@@ -45,12 +46,15 @@ jobs:
       
       - name: Export Quest APK
         run: |
-          cargo run -- export --target quest --format apk --release || true
+          cargo run -- export --target quest --format apk --release
 
       # Copy Android Artifacts
       - name: Copy Android Artifacts
         if: success() || failure()
         run: |
+          pwd
+          ls -la
+          ls -la exports/
           mkdir -p android-artifacts
           mv exports/decentraland.godot.client.apk android-artifacts/ || true
           mv exports/decentraland.godot.client.aab android-artifacts/ || true

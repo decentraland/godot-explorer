@@ -6,6 +6,7 @@ use crate::{
     consts::{ANDROID_NDK_VERSION, GODOT_PROJECT_FOLDER, RUST_LIB_PROJECT_FOLDER, EXPORTS_FOLDER},
     copy_files::copy_library,
     export::get_target_os,
+    helpers::{get_android_ndk_path, AndroidBuildEnv, BinPaths},
     path::{adjust_canonicalization, get_godot_path},
     platform::validate_platform_for_target,
     ui::{print_build_status, print_message, create_spinner, MessageType},
@@ -238,7 +239,7 @@ fn setup_v8_bindings(
     // Download the binding file if it does not already exist.
     if !binding_file_path.exists() {
         let status = std::process::Command::new("curl")
-            .args(&[
+            .args([
                 "-L",
                 "-o",
                 binding_file_path.to_str().unwrap(),
@@ -262,8 +263,8 @@ fn setup_ffmpeg_env(with_build_envs: &mut HashMap<String, String>, target: &str)
         return Ok(());
     }
     
-    let local_ffmpeg_path = format!("{}ffmpeg", crate::consts::BIN_FOLDER);
-    if std::path::Path::new(&local_ffmpeg_path).exists() {
+    let local_ffmpeg_path = BinPaths::ffmpeg();
+    if local_ffmpeg_path.exists() {
         // Get absolute path for FFmpeg
         let absolute_ffmpeg_path = std::fs::canonicalize(&local_ffmpeg_path)?;
         let absolute_ffmpeg_str = absolute_ffmpeg_path.to_string_lossy();
@@ -311,57 +312,21 @@ fn setup_android_env(with_build_envs: &mut HashMap<String, String>) -> anyhow::R
 
     let android_ndk_path = android_ndk.unwrap_or_else(|| {
         if let Some(android_sdk_path) = android_sdk {
-            format!("{}/ndk/{}", android_sdk_path, ANDROID_NDK_VERSION)
+            get_android_ndk_path(&android_sdk_path).to_string_lossy().to_string()
         } else {
             let home = std::env::var("HOME").expect("HOME environment not set");
-            format!("{}/Android/Sdk/ndk/{}", home, ANDROID_NDK_VERSION)
+            let android_sdk = format!("{}/Android/Sdk", home);
+            get_android_ndk_path(&android_sdk).to_string_lossy().to_string()
         }
     });
 
+    // Use AndroidBuildEnv struct to configure environment
+    let android_env = AndroidBuildEnv::new(android_ndk_path.clone());
+    android_env.apply_to_env(with_build_envs);
+    
+    // Also set ANDROID_NDK and ANDROID_NDK_HOME
     with_build_envs.insert("ANDROID_NDK".to_string(), android_ndk_path.clone());
-    with_build_envs.insert("ANDROID_NDK_HOME".to_string(), android_ndk_path.clone());
-
-    let target_cc = format!(
-        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang",
-        android_ndk_path
-    );
-    let target_cxx = format!(
-        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++",
-        android_ndk_path
-    );
-    let target_ar = format!(
-        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar",
-        android_ndk_path
-    );
-    let cargo_target_linker = format!(
-        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang",
-        android_ndk_path
-    );
-
-    with_build_envs.insert("TARGET_CC".to_string(), target_cc);
-    with_build_envs.insert("TARGET_CXX".to_string(), target_cxx);
-    with_build_envs.insert("TARGET_AR".to_string(), target_ar);
-    with_build_envs.insert(
-        "CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE".to_string(),
-        "1".to_string(),
-    );
-    with_build_envs.insert(
-        "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER".to_string(),
-        cargo_target_linker,
-    );
-    with_build_envs.insert(
-        "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG".to_string(),
-        "true".to_string(),
-    );
-
-    let cxxflags = "-v --target=aarch64-linux-android";
-    let rustflags = format!(
-        "-L{}/toolchains/llvm/prebuilt/linux-x86_64/lib/aarch64-unknown-linux-musl",
-        android_ndk_path
-    );
-
-    with_build_envs.insert("CXXFLAGS".to_string(), cxxflags.to_string());
-    with_build_envs.insert("RUSTFLAGS".to_string(), rustflags);
+    with_build_envs.insert("ANDROID_NDK_HOME".to_string(), android_ndk_path);
 
     Ok(())
 }
@@ -436,7 +401,7 @@ fn build_with_cargo_ndk(release_mode: bool, extra_build_args: Vec<&str>) -> anyh
     );
 
     // Check if Android dependencies are installed
-    let android_deps_path = std::env::current_dir()?.join(".bin/android_deps");
+    let android_deps_path = BinPaths::android_deps();
     if !android_deps_path.exists() {
         return Err(anyhow::anyhow!(
             "Android dependencies not found!\n\n\
@@ -449,48 +414,9 @@ fn build_with_cargo_ndk(release_mode: bool, extra_build_args: Vec<&str>) -> anyh
     let mut envs = HashMap::new();
     setup_v8_bindings(&mut envs, &"android".to_string())?;
 
-    // Set up Android toolchain paths
-    let target_cc = format!(
-        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang",
-        ndk_path
-    );
-    let target_cxx = format!(
-        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++",
-        ndk_path
-    );
-    let target_ar = format!(
-        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar",
-        ndk_path
-    );
-    let cargo_target_linker = format!(
-        "{}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang",
-        ndk_path
-    );
-
-    envs.insert("TARGET_CC".to_string(), target_cc);
-    envs.insert("TARGET_CXX".to_string(), target_cxx);
-    envs.insert("TARGET_AR".to_string(), target_ar);
-    envs.insert(
-        "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER".to_string(),
-        cargo_target_linker,
-    );
-    envs.insert(
-        "CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE".to_string(),
-        "1".to_string(),
-    );
-    envs.insert(
-        "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG".to_string(),
-        "true".to_string(),
-    );
-
-    let cxxflags = "-v --target=aarch64-linux-android";
-    let rustflags = format!(
-        "-L{}/toolchains/llvm/prebuilt/linux-x86_64/lib/aarch64-unknown-linux-musl",
-        ndk_path
-    );
-
-    envs.insert("CXXFLAGS".to_string(), cxxflags.to_string());
-    envs.insert("RUSTFLAGS".to_string(), rustflags);
+    // Use AndroidBuildEnv struct to configure environment
+    let android_env = AndroidBuildEnv::new(ndk_path.clone());
+    android_env.apply_to_env(&mut envs);
 
     // Critical: Disable custom libcxx as per android-build.sh
     envs.insert("GN_ARGS".to_string(), "use_custom_libcxx=false".to_string());
@@ -655,7 +581,7 @@ fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
     // Check for connected devices
     let spinner = create_spinner("Checking for connected Android devices...");
     let devices_output = std::process::Command::new("adb")
-        .args(&["devices", "-l"])
+        .args(["devices", "-l"])
         .output()?;
     spinner.finish();
     
@@ -680,7 +606,7 @@ fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
     // Install APK
     let spinner = create_spinner("Installing APK...");
     let install_status = std::process::Command::new("adb")
-        .args(&["install", "-r", &apk_path])
+        .args(["install", "-r", &apk_path])
         .status()?;
     spinner.finish();
     
@@ -693,7 +619,7 @@ fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
     // Launch the app
     let spinner = create_spinner("Launching application...");
     let launch_status = std::process::Command::new("adb")
-        .args(&[
+        .args([
             "shell",
             "am",
             "start",
@@ -712,7 +638,7 @@ fn deploy_and_run_android(_release: bool) -> anyhow::Result<()> {
     // Show logs
     print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
     let _log_status = std::process::Command::new("adb")
-        .args(&["logcat", "-s", "godot:V", "GodotApp:V", "dclgodot:V"])
+        .args(["logcat", "-s", "godot:V", "GodotApp:V", "dclgodot:V"])
         .status()?;
     
     Ok(())
@@ -750,7 +676,7 @@ fn deploy_and_run_ios(_release: bool) -> anyhow::Result<()> {
     // Check for connected devices
     let spinner = create_spinner("Checking for connected iOS devices...");
     let devices_output = std::process::Command::new("ios-deploy")
-        .args(&["-c", "-t", "1"])
+        .args(["-c", "-t", "1"])
         .output()?;
     spinner.finish();
     
@@ -764,7 +690,7 @@ fn deploy_and_run_ios(_release: bool) -> anyhow::Result<()> {
     // Install and run
     let spinner = create_spinner("Installing and launching on iOS device...");
     let deploy_status = std::process::Command::new("ios-deploy")
-        .args(&[
+        .args([
             "--bundle",
             &ipa_path,
             "--justlaunch",
@@ -792,7 +718,7 @@ fn deploy_ios_with_xcrun(_release: bool) -> anyhow::Result<()> {
     
     // List devices
     let devices_output = std::process::Command::new("xcrun")
-        .args(&["devicectl", "device", "list"])
+        .args(["devicectl", "device", "list"])
         .output()?;
         
     let devices_str = String::from_utf8_lossy(&devices_output.stdout);

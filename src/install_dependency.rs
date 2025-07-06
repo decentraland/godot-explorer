@@ -13,6 +13,7 @@ use zip::ZipArchive;
 use crate::consts::*;
 use crate::download_file::download_file;
 use crate::export::prepare_templates;
+use crate::helpers::BinPaths;
 use crate::platform::{
     check_command, check_development_dependencies, get_install_command,
     get_next_steps_instructions, get_platform_info,
@@ -313,7 +314,7 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
     // Add Android target
     let spinner = create_spinner("Adding Android target to rustup...");
     let add_target_status = std::process::Command::new("rustup")
-        .args(&["target", "add", "aarch64-linux-android"])
+        .args(["target", "add", "aarch64-linux-android"])
         .status()?;
 
     if !add_target_status.success() {
@@ -382,17 +383,17 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
     
     // Download Android dependencies
     let android_deps_url = "https://godot-artifacts.kuruk.net/android_deps.zip";
-    let android_deps_path = format!("{BIN_FOLDER}android_dependencies.zip");
-    let android_deps_extracted_path = format!("{BIN_FOLDER}android_deps/");
+    let android_deps_path = BinPaths::android_deps_zip();
+    let android_deps_extracted_path = BinPaths::android_deps();
 
     // Check if already extracted
-    if !Path::new(&android_deps_extracted_path).exists() {
-        if !Path::new(&android_deps_path).exists() {
+    if !android_deps_extracted_path.exists() {
+        if !android_deps_path.exists() {
             print_message(
                 MessageType::Info,
                 "Android dependencies missing. Downloading...",
             );
-            download_file(android_deps_url, &android_deps_path)?;
+            download_file(android_deps_url, android_deps_path.to_str().unwrap())?;
             print_message(MessageType::Success, "Android dependency downloaded");
         }
 
@@ -408,7 +409,7 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
         for i in 0..zip_archive.len() {
             let mut file = zip_archive.by_index(i)?;
             let file_path = file.mangled_name();
-            let dest_path = Path::new(&android_deps_extracted_path).join(file_path);
+            let dest_path = android_deps_extracted_path.join(file_path);
             
             if file.is_dir() {
                 fs::create_dir_all(&dest_path)?;
@@ -426,7 +427,7 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
             MessageType::Success,
             &format!(
                 "Android dependencies extracted to {}",
-                android_deps_extracted_path
+                android_deps_extracted_path.display()
             ),
         );
     } else {
@@ -510,12 +511,12 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
     install_ffmpeg()?;
 
     // Check if protoc is already installed
-    let protoc_path = format!("{BIN_FOLDER}protoc/bin/protoc");
-    if !Path::new(&protoc_path).exists() {
+    let protoc_path = BinPaths::protoc_bin();
+    if !protoc_path.exists() {
         print_section("Installing Protocol Buffers Compiler");
         download_and_extract_zip(
             get_protoc_url().unwrap().as_str(),
-            format!("{BIN_FOLDER}protoc").as_str(),
+            BinPaths::protoc().to_str().unwrap(),
             None,
         )?;
         print_message(MessageType::Success, "protoc installed");
@@ -524,25 +525,25 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
     }
 
     // Check if Godot is already installed
-    let godot_bin_path = format!("{BIN_FOLDER}godot/godot4_bin");
-    if !Path::new(&godot_bin_path).exists() {
+    let godot_bin_path = BinPaths::godot_bin();
+    if !godot_bin_path.exists() {
         print_section("Installing Godot Engine");
         download_and_extract_zip(
             get_godot_url().unwrap().as_str(),
-            format!("{BIN_FOLDER}godot").as_str(),
+            BinPaths::godot().to_str().unwrap(),
             Some(format!("{GODOT_CURRENT_VERSION}.executable.zip")),
         )?;
         
-        let program_path = format!("{BIN_FOLDER}godot/{}", get_godot_executable_path().unwrap());
-        let dest_program_path = format!("{BIN_FOLDER}godot/godot4_bin");
+        let program_path = BinPaths::godot().join(get_godot_executable_path().unwrap());
+        let dest_program_path = BinPaths::godot_bin();
 
         match (env::consts::OS, env::consts::ARCH) {
             ("linux", _) | ("macos", _) => {
-                set_executable_permission(Path::new(program_path.as_str()))?;
+                set_executable_permission(&program_path)?;
             }
             _ => (),
         };
-        fs::copy(program_path, dest_program_path.as_str())?;
+        fs::copy(program_path, &dest_program_path)?;
         print_message(MessageType::Success, "Godot binary installed");
     } else {
         print_message(MessageType::Success, "Godot binary already installed");
@@ -551,9 +552,9 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
     // Set executable permissions for protoc if on Unix-like systems
     match (env::consts::OS, env::consts::ARCH) {
         ("linux", _) | ("macos", _) => {
-            let protoc_bin = format!("{BIN_FOLDER}protoc/bin/protoc");
-            if Path::new(&protoc_bin).exists() {
-                set_executable_permission(Path::new(&protoc_bin))?;
+            let protoc_bin = BinPaths::protoc_bin();
+            if protoc_bin.exists() {
+                set_executable_permission(&protoc_bin)?;
             }
         }
         _ => (),
@@ -620,11 +621,11 @@ pub fn download_and_extract_tar_xz(
 }
 
 pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
-    let ffmpeg_folder = format!("{BIN_FOLDER}ffmpeg");
-    let ffmpeg_bin = format!("{}/bin/ffmpeg", ffmpeg_folder);
+    let ffmpeg_folder = BinPaths::ffmpeg();
+    let ffmpeg_bin = BinPaths::ffmpeg_bin();
     
     // Check if FFmpeg is already installed
-    if Path::new(&ffmpeg_bin).exists() {
+    if ffmpeg_bin.exists() {
         // Check version
         let output = std::process::Command::new(&ffmpeg_bin)
             .arg("-version")
@@ -648,40 +649,40 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
         "linux" => {
             // Use BtbN's shared library builds for FFmpeg 6.1
             let url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1.tar.xz";
-            let temp_extract_path = format!("{BIN_FOLDER}ffmpeg_temp");
+            let temp_extract_path = BinPaths::temp_dir("ffmpeg_temp");
             
             // Clean up any existing temp directory first
-            if Path::new(&temp_extract_path).exists() {
+            if temp_extract_path.exists() {
                 fs::remove_dir_all(&temp_extract_path)?;
             }
             
             download_and_extract_tar_xz(
                 url,
-                &temp_extract_path,
+                temp_extract_path.to_str().unwrap(),
                 Some("ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1.tar.xz".to_string()),
             )?;
             
             // The archive extracts to a folder like ffmpeg-n6.0.1-linux64-gpl-shared-6.0
             // We need to move its contents to our ffmpeg folder
-            let extracted_folder = format!("{}/ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1", temp_extract_path);
+            let extracted_folder = temp_extract_path.join("ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1");
             
             // Create the final ffmpeg folder
             fs::create_dir_all(&ffmpeg_folder)?;
             
             // Copy everything from the extracted folder
             // This includes bin/, lib/, include/ directories needed for development
-            for entry in fs::read_dir(&extracted_folder)? {
+            for entry in fs::read_dir(extracted_folder)? {
                 let entry = entry?;
                 let file_name = entry.file_name();
                 let src = entry.path();
-                let dst = format!("{}/{}", ffmpeg_folder, file_name.to_string_lossy());
+                let dst = ffmpeg_folder.join(file_name);
                 
                 if src.is_dir() {
                     // Copy directory recursively using a simple recursive copy
-                    copy_dir_all(&src, Path::new(&dst))?;
+                    copy_dir_all(&src, &dst)?;
                 } else {
                     // Remove existing file if present
-                    if Path::new(&dst).exists() {
+                    if dst.exists() {
                         fs::remove_file(&dst)?;
                     }
                     fs::copy(&src, &dst)?;
@@ -689,8 +690,8 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
             }
             
             // Set executable permissions for binaries
-            let bin_dir = format!("{}/bin", ffmpeg_folder);
-            if Path::new(&bin_dir).exists() {
+            let bin_dir = ffmpeg_folder.join("bin");
+            if bin_dir.exists() {
                 for entry in fs::read_dir(&bin_dir)? {
                     let entry = entry?;
                     set_executable_permission(&entry.path())?;

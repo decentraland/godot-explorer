@@ -2,6 +2,7 @@ use std::{env, fs, io, path::Path};
 
 use crate::{
     consts::{BIN_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    helpers::get_lib_extension,
     path::adjust_canonicalization,
 };
 
@@ -78,12 +79,12 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
 
         "win64" | "linux" | "macos" => {
             // For Windows, Linux, Mac we revert to the old logic:
-            let file_name = match target.as_str() {
-                "win64" => "dclgodot.dll",
-                "linux" => "libdclgodot.so",
-                "macos" => "libdclgodot.dylib",
-                _ => unreachable!(), // already covered by the match above
+            let lib_prefix = match target.as_str() {
+                "win64" => "",
+                _ => "lib",
             };
+            let lib_ext = get_lib_extension(target.as_str());
+            let file_name = format!("{}dclgodot{}", lib_prefix, lib_ext);
 
             let output_folder_name = match target.as_str() {
                 "win64" => "libdclgodot_windows",
@@ -195,11 +196,11 @@ fn copy_with_error_context(
 }
 
 pub fn copy_ffmpeg_libraries(
-    target: &String,
+    target: &str,
     dest_folder: String,
     link_libs: bool,
 ) -> Result<(), anyhow::Error> {
-    match target.as_str() {
+    match target {
         "win64" => {
             // copy ffmpeg .dll
             let ffmpeg_dll_folder = format!("{BIN_FOLDER}ffmpeg/ffmpeg-6.0-full_build-shared/bin");
@@ -260,7 +261,7 @@ pub fn copy_ffmpeg_libraries(
                     if !version_parts.is_empty() {
                         // Create major version symlink (e.g., libavcodec.so.60)
                         let major_link = format!("{}{}.so.{}", dest_folder, base_name, version_parts[0]);
-                        create_symlink(&versioned_file, &major_link)?;
+                        create_symlink(versioned_file, &major_link)?;
                         
                         // Create base symlink (e.g., libavcodec.so)
                         let base_link = format!("{}{}.so", dest_folder, base_name);

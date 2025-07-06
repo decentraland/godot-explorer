@@ -3,7 +3,10 @@ use std::fs;
 use anyhow::Result;
 use crate::consts::*;
 
+// TODO: Use these helper functions to reduce code duplication throughout the codebase
+
 /// Helper function to canonicalize a path with better error context
+#[allow(dead_code)]
 pub fn canonicalize_with_context(path: &str, context: &str) -> Result<PathBuf> {
     fs::canonicalize(path)
         .map_err(|e| anyhow::anyhow!("Failed to canonicalize {} ({}): {}", context, path, e))
@@ -37,6 +40,8 @@ pub fn get_android_ndk_path(sdk_root: &str) -> PathBuf {
 }
 
 /// Check if a command exists and is executable
+// TODO: Replace repeated command checking patterns with this function
+#[allow(dead_code)]
 pub fn command_exists(cmd: &str) -> bool {
     std::process::Command::new(cmd)
         .arg("--version")
@@ -87,6 +92,8 @@ impl AndroidBuildEnv {
 }
 
 /// Construct FFmpeg download URL for a given platform
+// TODO: Refactor install_dependency.rs to use this function instead of hardcoded URLs
+#[allow(dead_code)]
 pub fn get_ffmpeg_url(platform: &str) -> String {
     let arch = match platform {
         "linux" => "linux64",
@@ -110,11 +117,14 @@ pub fn get_ffmpeg_url(platform: &str) -> String {
 }
 
 /// Extract filename from FFmpeg URL
+#[allow(dead_code)]
 pub fn get_ffmpeg_filename_from_url(url: &str) -> Option<String> {
     url.split('/').last().map(|s| s.to_string())
 }
 
 /// Get the extracted folder name from FFmpeg archive
+// TODO: Use in install_dependency.rs to avoid hardcoding folder names
+#[allow(dead_code)]
 pub fn get_ffmpeg_extracted_folder(platform: &str) -> String {
     let arch = match platform {
         "linux" => "linux64",
@@ -126,15 +136,6 @@ pub fn get_ffmpeg_extracted_folder(platform: &str) -> String {
     format!("ffmpeg-{}-{}-{}", FFMPEG_VERSION_TAG, arch, FFMPEG_BUILD_TYPE)
 }
 
-/// Generic success message for already installed components
-pub fn already_installed_message(component: &str) -> String {
-    format!("{} {}", component, MSG_ALREADY_INSTALLED)
-}
-
-/// Generic success message for already extracted components
-pub fn already_extracted_message(component: &str) -> String {
-    format!("{} {}", component, MSG_ALREADY_EXTRACTED)
-}
 
 /// Common path constructors for bin folder
 pub struct BinPaths;
@@ -182,6 +183,8 @@ impl BinPaths {
 }
 
 /// Common Android SDK path patterns
+// TODO: Use in platform.rs and run.rs for Android SDK detection
+#[allow(dead_code)]
 pub fn get_default_android_sdk_path() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
     PathBuf::from(home).join("Android/Sdk")

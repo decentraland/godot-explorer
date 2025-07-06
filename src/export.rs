@@ -7,6 +7,7 @@ use crate::{
         GODOT_PLATFORM_FILES, GODOT_PROJECT_FOLDER,
     },
     copy_files::copy_ffmpeg_libraries,
+    helpers::get_exe_extension,
     install_dependency::{
         download_and_extract_zip, godot_export_templates_path, set_executable_permission,
     },
@@ -129,9 +130,10 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     }
 
     // Determine output file name
+    let exe_ext = get_exe_extension(&target);
     let output_file_name = match target.as_str() {
         "linux" => "decentraland.godot.client.x86_64",
-        "win64" => "decentraland.godot.client.exe",
+        "win64" => format!("decentraland.godot.client{}", exe_ext),
         "macos" => "decentraland.godot.client.dmg",
         "ios" => "decentraland-godot-client.ipa",
         "android" => {
@@ -194,7 +196,7 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
         
         // Generate keystore if it doesn't exist
         let keystore_path = crate::keystore::generate_keystore(keystore_type)?;
-        let keystore_abs_path = std::fs::canonicalize(&keystore_path)?;
+        let keystore_abs_path = std::fs::canonicalize(keystore_path)?;
         
         print_message(MessageType::Info, &format!("Using keystore: {}", keystore_abs_path.display()));
         
@@ -312,14 +314,14 @@ fn update_export_presets_for_aab() -> Result<Option<String>, anyhow::Error> {
         .replace("package/signed=true", "package/signed=false");
     
     // Write updated content
-    fs::write(&export_presets_path, &updated_content)?;
+    fs::write(&export_presets_path, updated_content)?;
     
     Ok(Some(original_content))
 }
 
 fn restore_export_presets(original_content: String) -> Result<(), anyhow::Error> {
     let export_presets_path = format!("{}/export_presets.cfg", GODOT_PROJECT_FOLDER);
-    fs::write(&export_presets_path, original_content)?;
+    fs::write(export_presets_path, original_content)?;
     Ok(())
 }
 
@@ -375,11 +377,11 @@ fn extract_android_template() -> Result<(), anyhow::Error> {
     
     // Create version file
     let version_file = format!("{}/.build_version", android_build_dir);
-    fs::write(&version_file, format!("{}.stable", GODOT_CURRENT_VERSION))?;
+    fs::write(version_file, format!("{}.stable", GODOT_CURRENT_VERSION))?;
     
     // Create .gdignore file
     let gdignore_file = format!("{}/build/.gdignore", android_build_dir);
-    fs::write(&gdignore_file, "")?;
+    fs::write(gdignore_file, "")?;
     
     // Set executable permission on gradlew
     let gradlew_path = format!("{}/build/gradlew", android_build_dir);

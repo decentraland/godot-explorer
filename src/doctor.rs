@@ -1,5 +1,6 @@
 use crate::consts::BIN_FOLDER;
 use crate::dependencies::BuildStatus;
+use crate::helpers::BinPaths;
 use crate::platform::{
     check_android_sdk, check_development_dependencies, check_ios_development, check_required_tools,
     get_install_command, get_platform_info, suggest_install,
@@ -143,7 +144,7 @@ fn check_rust_targets() {
 
     for (target, description) in targets_to_check {
         let output = std::process::Command::new("rustup")
-            .args(&["target", "list", "--installed"])
+            .args(["target", "list", "--installed"])
             .output();
 
         match output {
@@ -171,8 +172,8 @@ fn check_rust_targets() {
 }
 
 fn check_ffmpeg_installation() {
-    let local_ffmpeg = format!("{BIN_FOLDER}ffmpeg/bin/ffmpeg");
-    let local_ffmpeg_exists = Path::new(&local_ffmpeg).exists();
+    let local_ffmpeg = BinPaths::ffmpeg_bin();
+    let local_ffmpeg_exists = local_ffmpeg.exists();
     
     // Check local installation first
     if local_ffmpeg_exists {
@@ -297,7 +298,7 @@ fn check_android_setup() {
 
             // Check if Android target is installed
             let output = std::process::Command::new("rustup")
-                .args(&["target", "list", "--installed"])
+                .args(["target", "list", "--installed"])
                 .output();
 
             if let Ok(output) = output {
@@ -333,7 +334,7 @@ fn check_ios_setup() {
 
             // Check if iOS target is installed
             let output = std::process::Command::new("rustup")
-                .args(&["target", "list", "--installed"])
+                .args(["target", "list", "--installed"])
                 .output();
 
             if let Ok(output) = output {

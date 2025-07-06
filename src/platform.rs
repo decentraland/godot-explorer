@@ -1,4 +1,5 @@
 use crate::consts::ANDROID_NDK_VERSION;
+use crate::helpers::get_android_ndk_path;
 use crate::ui::{print_message, MessageType};
 use std::env;
 use which::which;
@@ -80,24 +81,25 @@ pub fn check_android_sdk() -> Result<String, String> {
     }
 
     if let Ok(sdk) = env::var("ANDROID_SDK") {
-        let ndk_path = format!("{}/ndk/{}", sdk, ANDROID_NDK_VERSION);
-        if std::path::Path::new(&ndk_path).exists() {
-            return Ok(ndk_path);
+        let ndk_path = get_android_ndk_path(&sdk);
+        if ndk_path.exists() {
+            return Ok(ndk_path.to_string_lossy().to_string());
         }
     }
 
     if let Ok(home) = env::var("ANDROID_HOME") {
-        let ndk_path = format!("{}/ndk/{}", home, ANDROID_NDK_VERSION);
-        if std::path::Path::new(&ndk_path).exists() {
-            return Ok(ndk_path);
+        let ndk_path = get_android_ndk_path(&home);
+        if ndk_path.exists() {
+            return Ok(ndk_path.to_string_lossy().to_string());
         }
     }
 
     // Check default location
     if let Ok(home) = env::var("HOME") {
-        let ndk_path = format!("{}/Android/Sdk/ndk/{}", home, ANDROID_NDK_VERSION);
-        if std::path::Path::new(&ndk_path).exists() {
-            return Ok(ndk_path);
+        let android_sdk = format!("{}/Android/Sdk", home);
+        let ndk_path = get_android_ndk_path(&android_sdk);
+        if ndk_path.exists() {
+            return Ok(ndk_path.to_string_lossy().to_string());
         }
     }
 
@@ -254,7 +256,7 @@ fn check_pkg_config(lib: &str) -> bool {
     
     // FFmpeg is now installed locally, no need to check system paths
     
-    cmd.args(&["--exists", lib])
+    cmd.args(["--exists", lib])
         .status()
         .map(|status| status.success())
         .unwrap_or(false)
@@ -331,7 +333,7 @@ pub fn get_next_steps_instructions() -> String {
                 if let Some(install_cmd) = get_install_command() {
                     instructions.push_str("\n# Install required development dependencies:\n");
                     instructions.push_str(&install_cmd);
-                    instructions.push_str("\n");
+                    instructions.push('\n');
                 }
 
                 // FFmpeg is now installed locally via cargo run -- install
