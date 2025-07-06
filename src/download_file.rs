@@ -1,9 +1,11 @@
+use crate::ui::create_download_progress;
 use reqwest::Url;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
 enum DownloadEvent {
+    TotalSize(u64),
     Progress(u64),
     Result(Result<(), anyhow::Error>),
 }
@@ -21,6 +23,11 @@ async fn download_file_thread(
             return;
         }
     };
+
+    // Send total size if available
+    if let Some(len) = response.content_length() {
+        let _ = sender.send(DownloadEvent::TotalSize(len));
+    }
 
     let mut downloaded = 0;
 
@@ -55,22 +62,35 @@ pub fn _download_file(url: &str, path: &str) -> Result<(), anyhow::Error> {
         download_file_thread(url, path, sender).await;
     });
 
-    let mut last_download_report = 0;
+    let mut progress_bar = None;
+
     // Process events
     loop {
         match receiver.recv() {
             Ok(event) => match event {
+                DownloadEvent::TotalSize(total) => {
+                    progress_bar = Some(create_download_progress(total));
+                }
                 DownloadEvent::Progress(bytes) => {
-                    if bytes - last_download_report > 5e6 as u64 {
-                        println!("Bytes downloaded: {bytes}");
-                        last_download_report = bytes;
+                    if let Some(ref pb) = progress_bar {
+                        pb.set_position(bytes);
                     }
                 }
                 DownloadEvent::Result(res) => {
+                    if let Some(pb) = progress_bar {
+                        if res.is_ok() {
+                            pb.finish_with_message("Download completed");
+                        } else {
+                            pb.finish_with_message("Download failed");
+                        }
+                    }
                     return res;
                 }
             },
             Err(err) => {
+                if let Some(pb) = progress_bar {
+                    pb.finish_with_message("Download interrupted");
+                }
                 return Err(err.into());
             }
         }

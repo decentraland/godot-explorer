@@ -33,13 +33,29 @@ class DclBuildPlugin extends EditorExportPlugin:
 			if DirAccess.dir_exists_absolute(android_dir):
 				var build_type = "debug" if is_debug else "release"
 				var target_dir = ProjectSettings.globalize_path("res://android/build/libs/" + build_type + "/arm64-v8a/deps/")
-				if DirAccess.dir_exists_absolute(target_dir) == false:
+				
+				# Check if directory exists and contains at least one file
+				var needs_extraction = true
+				if DirAccess.dir_exists_absolute(target_dir):
+					var dir = DirAccess.open(target_dir)
+					if dir:
+						dir.list_dir_begin()
+						var file_name = dir.get_next()
+						if file_name != "":
+							needs_extraction = false
+							prints("Android dependencies found in:", target_dir)
+						dir.list_dir_end()
+				
+				if needs_extraction:
 					DirAccess.make_dir_recursive_absolute(target_dir)
-					prints("Android dependency missing? Unzipping dependency ZIP...")
+					prints("Android dependencies missing. Unzipping dependency ZIP...")
 					var zip_save = ProjectSettings.globalize_path("res://../.bin/android_dependencies.zip")
-					UnZip.unzip_to_dir(zip_save, target_dir)
-					DirAccess.remove_absolute(zip_save)
-					prints("Android dependency extracted.")
+					if FileAccess.file_exists(zip_save):
+						UnZip.unzip_to_dir(zip_save, target_dir)
+						prints("Android dependencies extracted to:", target_dir)
+					else:
+						push_error("Android dependencies ZIP not found at: " + zip_save)
+						push_error("Please run: cargo run -- install --targets android")
 			
 		
 	func _export_end():

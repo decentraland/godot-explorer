@@ -31,7 +31,7 @@ jobs:
 
       # Build section
       - name: Cargo install
-        run: cargo run -- install --platforms windows
+        run: cargo run -- install --targets windows
 
       - name: Build
         run: cargo run -- build --release

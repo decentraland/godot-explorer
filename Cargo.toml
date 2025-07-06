@@ -13,6 +13,7 @@ serde = "1.0.152"
 flate2 = "1.0.*"
 tar = "0.4.*"
 zip = "0.5.*"
+xz2 = "0.1"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "blocking"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
 glob = "*"
@@ -20,3 +21,6 @@ tokio = { version = "1.26.0", features = ["sync", "rt-multi-thread", "net"] }
 directories = "5.0.1"
 image = "0.24.9"
 cargo_metadata = "0.19.2"
+colored = "2.0"
+indicatif = "0.17"
+which = "4.4"

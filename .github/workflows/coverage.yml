@@ -57,7 +57,7 @@ jobs:
         run: sudo apt update -y; sudo apt install -y libssl-dev libx11-dev libgl1-mesa-dev libxext-dev
         if: runner.os == 'linux'
 
-      - name: cargo xtask install
+      - name: cargo run -- install
         run: cargo run -- install --no-templates
 
       # Build section
