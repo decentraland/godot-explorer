@@ -105,13 +105,10 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
 
     let program = get_godot_path();
 
-    // Make exports directory
-    if std::path::Path::new(EXPORTS_FOLDER).exists() {
-        fs::remove_dir_all(EXPORTS_FOLDER)?;
+    // Make exports directory if it doesn't exist
+    if !std::path::Path::new(EXPORTS_FOLDER).exists() {
+        fs::create_dir(EXPORTS_FOLDER)?;
     }
-    std::thread::sleep(std::time::Duration::from_secs(1));
-    fs::create_dir(EXPORTS_FOLDER)?;
-    std::thread::sleep(std::time::Duration::from_secs(1));
 
     // Do imports and one project open
     let import_assets_status = import_assets();
