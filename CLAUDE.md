@@ -41,6 +41,7 @@ cargo run -- run -e --target android      # Run editor and also build for Androi
 cargo run -- run --target android         # Build, export APK, and deploy to device
 cargo run -- run --target ios             # Build, export IPA, and deploy to device
 cargo run -- run --target android --hotreload  # Build and push .so only (requires debug APK)
+cargo run -- run --target android --hotreload -- --skip-lobby  # Hotreload with app parameters
 
 # Feature flags
 cargo run -- build --no-default-features --features use_livekit,use_deno

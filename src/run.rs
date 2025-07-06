@@ -730,7 +730,7 @@ fn deploy_ios_with_xcrun(_release: bool) -> anyhow::Result<()> {
 }
 
 /// Hot reload Android .so file by pushing it directly to the device
-pub fn hotreload_android(release: bool) -> anyhow::Result<()> {
+pub fn hotreload_android(release: bool, extras: Vec<String>) -> anyhow::Result<()> {
     print_message(MessageType::Step, "Hot reloading Android library...");
     
     // Check if adb is available
@@ -858,15 +858,43 @@ pub fn hotreload_android(release: bool) -> anyhow::Result<()> {
         .args(["shell", "am", "force-stop", package_name])
         .status()?;
     
-    // Start the app
+    // Start the app with extras
+    let activity = format!("{}/com.godot.game.GodotApp", package_name);
+    let mut start_args = vec![
+        "shell".to_string(),
+        "am".to_string(),
+        "start".to_string(),
+        "-n".to_string(),
+        activity,
+    ];
+    
+    // Add extras as intent parameters
+    if !extras.is_empty() {
+        // Convert Godot command line args to Android intent extras
+        // For example: --skip-lobby becomes -e skip-lobby true
+        for extra in &extras {
+            if let Some(arg) = extra.strip_prefix("--") {
+                start_args.push("-e".to_string());
+                start_args.push(arg.to_string());
+                start_args.push("true".to_string());
+            } else if extra.starts_with('-') {
+                // Single dash arguments
+                if let Some(arg) = extra.strip_prefix("-") {
+                    start_args.push("-e".to_string());
+                    start_args.push(arg.to_string());
+                    start_args.push("true".to_string());
+                }
+            }
+        }
+        
+        print_message(
+            MessageType::Info,
+            &format!("Launching with extras: {:?}", extras),
+        );
+    }
+    
     let start_status = std::process::Command::new("adb")
-        .args([
-            "shell",
-            "am",
-            "start",
-            "-n",
-            &format!("{}/com.godot.game.GodotApp", package_name),
-        ])
+        .args(&start_args)
         .status()?;
     
     if !start_status.success() {

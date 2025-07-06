@@ -306,8 +306,13 @@ fn main() -> Result<(), anyhow::Error> {
                     // Build for Android
                     run::build(sm.is_present("release"), build_args.clone(), None, Some(platform))?;
                     
+                    // Get extras to pass to the app
+                    let extras: Vec<String> = sm.values_of("extras")
+                        .map(|v| v.map(|it| it.into()).collect())
+                        .unwrap_or_default();
+                    
                     // Push the .so file to device
-                    run::hotreload_android(sm.is_present("release"))?;
+                    run::hotreload_android(sm.is_present("release"), extras)?;
                     
                     return Ok(());
                 } else {
