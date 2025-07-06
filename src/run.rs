@@ -47,6 +47,15 @@ pub fn run(
     }
 }
 
+/// Check if build args already have feature specifications
+fn has_feature_args(build_args: &[&str]) -> (bool, bool) {
+    let has_features = build_args.iter().any(|&arg| arg == "--features");
+    let has_no_default_features = build_args
+        .iter()
+        .any(|&arg| arg == "--no-default-features");
+    (has_features, has_no_default_features)
+}
+
 pub fn build(
     release_mode: bool,
     extra_build_args: Vec<&str>,
@@ -65,13 +74,8 @@ pub fn build(
         // TODO: FFMPEG feature is going to be implemented for mobile platforms
         // For now, disable it for Android builds
         let mut android_build_args = extra_build_args.clone();
-
-        // Check if user already specified features
-        let has_features = android_build_args.iter().any(|&arg| arg == "--features");
-        let has_no_default_features = android_build_args
-            .iter()
-            .any(|&arg| arg == "--no-default-features");
-
+        
+        let (has_features, has_no_default_features) = has_feature_args(&android_build_args);
         if !has_no_default_features && !has_features {
             // If user didn't specify features, disable ffmpeg by default
             android_build_args.push("--no-default-features");
@@ -84,13 +88,8 @@ pub fn build(
         // TODO: FFMPEG feature is going to be implemented for mobile platforms
         // For now, disable it for iOS builds
         let mut ios_build_args = extra_build_args.clone();
-
-        // Check if user already specified features
-        let has_features = ios_build_args.iter().any(|&arg| arg == "--features");
-        let has_no_default_features = ios_build_args
-            .iter()
-            .any(|&arg| arg == "--no-default-features");
-
+        
+        let (has_features, has_no_default_features) = has_feature_args(&ios_build_args);
         if !has_no_default_features && !has_features {
             // If user didn't specify features, disable ffmpeg by default
             ios_build_args.push("--no-default-features");

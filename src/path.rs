@@ -22,6 +22,6 @@ pub fn get_godot_path() -> String {
             BinPaths::godot()
                 .join(install_dependency::get_godot_executable_path().unwrap())
         )
-        .expect("Did you executed `cargo run -- install`?"),
+        .expect("Did you execute `cargo run -- install`?"),
     )
 }
