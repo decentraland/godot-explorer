@@ -32,8 +32,8 @@ jobs:
         run: cargo run -- install --targets android linux
       - name: Build Rust libraries
         run: |
-          cargo run -- build
-          cargo run -- build --target android
+          cargo run -- build --release
+          cargo run -- build --release --target android
           cargo run -- import-assets
       
       - name: Export Android APK
