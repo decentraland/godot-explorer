@@ -173,8 +173,8 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Target platform to build for. For android/ios: without -e deploys to device, with -e just builds")
                         .takes_value(true),
                 ).arg(
-                    Arg::new("hotreload")
-                        .long("hotreload")
+                    Arg::new("only-lib")
+                        .long("only-lib")
                         .help("For Android: push .so file directly to device instead of full APK deployment")
                         .takes_value(false),
                 ).arg(
