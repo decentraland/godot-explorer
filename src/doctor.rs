@@ -27,7 +27,13 @@ pub fn run_doctor() -> anyhow::Result<()> {
     for (tool, available, description) in check_required_tools() {
         if available {
             if tool == "protoc" && std::path::Path::new(".bin/protoc/bin/protoc").exists() {
-                print_message(MessageType::Success, &format!("{} - {} (using local: .bin/protoc/bin/protoc)", tool, description));
+                print_message(
+                    MessageType::Success,
+                    &format!(
+                        "{} - {} (using local: .bin/protoc/bin/protoc)",
+                        tool, description
+                    ),
+                );
             } else {
                 print_message(MessageType::Success, &format!("{} - {}", tool, description));
             }
@@ -173,27 +179,27 @@ fn check_rust_targets() {
 fn check_ffmpeg_installation() {
     let local_ffmpeg = BinPaths::ffmpeg_bin();
     let local_ffmpeg_exists = local_ffmpeg.exists();
-    
+
     // Check local installation first
     if local_ffmpeg_exists {
         let output = std::process::Command::new(&local_ffmpeg)
             .arg("-version")
             .output();
-            
+
         match output {
             Ok(output) => {
                 let version_str = String::from_utf8_lossy(&output.stdout);
                 let first_line = version_str.lines().next().unwrap_or("");
-                
+
                 if version_str.contains("ffmpeg version n6.") {
                     print_message(
                         MessageType::Success,
-                        &format!("FFmpeg 6.x found (local) - {}", first_line)
+                        &format!("FFmpeg 6.x found (local) - {}", first_line),
                     );
                 } else {
                     print_message(
                         MessageType::Warning,
-                        &format!("FFmpeg found (local) but not version 6.x - {}", first_line)
+                        &format!("FFmpeg found (local) but not version 6.x - {}", first_line),
                     );
                     println!("  Run: cargo run -- install");
                 }
@@ -204,29 +210,27 @@ fn check_ffmpeg_installation() {
         }
     } else {
         // Check system FFmpeg
-        let system_check = std::process::Command::new("which")
-            .arg("ffmpeg")
-            .output();
-            
+        let system_check = std::process::Command::new("which").arg("ffmpeg").output();
+
         if system_check.is_ok() && system_check.unwrap().status.success() {
             let output = std::process::Command::new("ffmpeg")
                 .arg("-version")
                 .output();
-                
+
             match output {
                 Ok(output) => {
                     let version_str = String::from_utf8_lossy(&output.stdout);
                     let first_line = version_str.lines().next().unwrap_or("");
-                    
+
                     if version_str.contains("ffmpeg version n6.") {
                         print_message(
                             MessageType::Success,
-                            &format!("FFmpeg 6.x found (system) - {}", first_line)
+                            &format!("FFmpeg 6.x found (system) - {}", first_line),
                         );
                     } else {
                         print_message(
                             MessageType::Warning,
-                            &format!("FFmpeg found (system) but not version 6.x - {}", first_line)
+                            &format!("FFmpeg found (system) but not version 6.x - {}", first_line),
                         );
                         println!("  FFmpeg 6.x is required. Run: cargo run -- install");
                     }
@@ -255,13 +259,23 @@ fn check_godot_installation() {
     print_message(MessageType::Info, "Export templates status:");
     if let Some(templates_path) = crate::install_dependency::godot_export_templates_path() {
         let platforms = vec![
-            ("android", vec!["android_debug.apk", "android_release.apk", "android_source.zip"]),
+            (
+                "android",
+                vec![
+                    "android_debug.apk",
+                    "android_release.apk",
+                    "android_source.zip",
+                ],
+            ),
             ("ios", vec!["ios.zip"]),
             ("linux", vec!["linux_debug.x86_64", "linux_release.x86_64"]),
             ("macos", vec!["macos.zip"]),
-            ("windows", vec!["windows_debug_x86_64.exe", "windows_release_x86_64.exe"]),
+            (
+                "windows",
+                vec!["windows_debug_x86_64.exe", "windows_release_x86_64.exe"],
+            ),
         ];
-        
+
         for (platform, files) in platforms {
             let mut all_found = true;
             for file in &files {
@@ -271,19 +285,28 @@ fn check_godot_installation() {
                     break;
                 }
             }
-            
+
             if all_found {
                 print_message(MessageType::Success, &format!("  {} - Installed", platform));
             } else {
-                print_message(MessageType::Info, &format!("  {} - Not installed", platform));
+                print_message(
+                    MessageType::Info,
+                    &format!("  {} - Not installed", platform),
+                );
             }
         }
-        
-        print_message(MessageType::Info, "To install templates for specific platforms:");
+
+        print_message(
+            MessageType::Info,
+            "To install templates for specific platforms:",
+        );
         println!("  Run: cargo run -- install --targets <platform1>,<platform2>,...");
         println!("  Available platforms: android, ios, linux, macos, windows");
     } else {
-        print_message(MessageType::Warning, "Could not determine export templates path");
+        print_message(
+            MessageType::Warning,
+            "Could not determine export templates path",
+        );
     }
 }
 
@@ -355,16 +378,22 @@ fn check_ios_setup() {
 fn check_build_status() {
     let build_status = BuildStatus::check();
     let platform = get_platform_info();
-    
+
     // Host platform
     let host_platform = &platform.os;
     if build_status.host_built {
-        print_message(MessageType::Success, &format!("Host platform ({}) - Built", host_platform));
+        print_message(
+            MessageType::Success,
+            &format!("Host platform ({}) - Built", host_platform),
+        );
     } else {
-        print_message(MessageType::Warning, &format!("Host platform ({}) - Not built", host_platform));
+        print_message(
+            MessageType::Warning,
+            &format!("Host platform ({}) - Not built", host_platform),
+        );
         println!("  Run: cargo run -- build");
     }
-    
+
     // Android
     if build_status.android_built {
         print_message(MessageType::Success, "Android (ARM64) - Built");
@@ -372,7 +401,7 @@ fn check_build_status() {
         print_message(MessageType::Info, "Android (ARM64) - Not built");
         println!("  Run: cargo run -- build --target android");
     }
-    
+
     // iOS
     if build_status.ios_built {
         print_message(MessageType::Success, "iOS - Built");
@@ -382,7 +411,7 @@ fn check_build_status() {
             println!("  Run: cargo run -- build --target ios");
         }
     }
-    
+
     // Windows
     if build_status.windows_built {
         print_message(MessageType::Success, "Windows - Built");
@@ -390,7 +419,7 @@ fn check_build_status() {
         print_message(MessageType::Info, "Windows - Not built");
         println!("  Run: cargo run -- build --target windows");
     }
-    
+
     // macOS
     if build_status.macos_built {
         print_message(MessageType::Success, "macOS - Built");

@@ -223,24 +223,27 @@ pub fn copy_ffmpeg_libraries(
         "linux" => {
             // copy ffmpeg .so files from local installation
             let ffmpeg_lib_folder = format!("{BIN_FOLDER}ffmpeg/lib");
-            
+
             if Path::new(&ffmpeg_lib_folder).exists() {
                 // Strategy: Only copy the actual versioned .so files (e.g., libavcodec.so.60.3.100)
                 // Then create symlinks for the others
-                let mut copied_libs: std::collections::HashMap<String, String> = std::collections::HashMap::new();
-                
+                let mut copied_libs: std::collections::HashMap<String, String> =
+                    std::collections::HashMap::new();
+
                 // First, find and copy only the fully versioned libraries
                 for entry in fs::read_dir(&ffmpeg_lib_folder)? {
                     let entry = entry?;
                     let file_name = entry.file_name().to_str().unwrap().to_string();
-                    
+
                     // Look for fully versioned libraries (e.g., libavcodec.so.60.3.100)
-                    if file_name.starts_with("lib") && file_name.contains(".so.") && 
-                       file_name.matches('.').count() >= 4 {
+                    if file_name.starts_with("lib")
+                        && file_name.contains(".so.")
+                        && file_name.matches('.').count() >= 4
+                    {
                         let dest_path = format!("{dest_folder}{file_name}");
                         let source_path = entry.path().to_str().unwrap().to_string();
                         copy_with_error_context(&source_path, &dest_path, link_libs)?;
-                        
+
                         // Extract library base name (e.g., "libavcodec" from "libavcodec.so.60.3.100")
                         if let Some(base) = file_name.split(".so.").next() {
                             copied_libs.insert(base.to_string(), file_name.clone());
@@ -248,31 +251,35 @@ pub fn copy_ffmpeg_libraries(
                         println!("Copied: {}", file_name);
                     }
                 }
-                
+
                 // Now create symlinks for each library
                 for (base_name, versioned_file) in &copied_libs {
                     // Extract version parts (e.g., "60.3.100" -> ["60", "3", "100"])
                     let version_part = versioned_file.split(".so.").nth(1).unwrap_or("");
                     let version_parts: Vec<&str> = version_part.split('.').collect();
-                    
+
                     // Create symlinks from most specific to least specific
                     // e.g., libavcodec.so.60 -> libavcodec.so.60.3.100
                     //       libavcodec.so -> libavcodec.so.60
                     if !version_parts.is_empty() {
                         // Create major version symlink (e.g., libavcodec.so.60)
-                        let major_link = format!("{}{}.so.{}", dest_folder, base_name, version_parts[0]);
+                        let major_link =
+                            format!("{}{}.so.{}", dest_folder, base_name, version_parts[0]);
                         create_symlink(versioned_file, &major_link)?;
-                        
+
                         // Create base symlink (e.g., libavcodec.so)
                         let base_link = format!("{}{}.so", dest_folder, base_name);
                         let major_link_name = format!("{}.so.{}", base_name, version_parts[0]);
                         create_symlink(&major_link_name, &base_link)?;
                     }
                 }
-                
+
                 println!("Copied FFmpeg shared libraries to {}", dest_folder);
             } else {
-                println!("Warning: FFmpeg lib folder not found at {}", ffmpeg_lib_folder);
+                println!(
+                    "Warning: FFmpeg lib folder not found at {}",
+                    ffmpeg_lib_folder
+                );
             }
         }
         _ => {
@@ -289,14 +296,18 @@ fn create_symlink(target: &str, link_path: &str) -> io::Result<()> {
     if Path::new(link_path).exists() {
         fs::remove_file(link_path).ok();
     }
-    
+
     #[cfg(unix)]
     {
         use std::os::unix::fs::symlink;
         symlink(target, link_path)?;
-        println!("Created symlink: {} -> {}", Path::new(link_path).file_name().unwrap().to_string_lossy(), target);
+        println!(
+            "Created symlink: {} -> {}",
+            Path::new(link_path).file_name().unwrap().to_string_lossy(),
+            target
+        );
     }
-    
+
     #[cfg(not(unix))]
     {
         // On non-Unix systems, just copy the file
@@ -306,7 +317,7 @@ fn create_symlink(target: &str, link_path: &str) -> io::Result<()> {
             fs::copy(&target_path, link_path)?;
         }
     }
-    
+
     Ok(())
 }
 

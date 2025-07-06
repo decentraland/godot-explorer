@@ -38,7 +38,7 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
         let entry = entry?;
         let src_path = entry.path();
         let dst_path = dst.as_ref().join(entry.file_name());
-        
+
         let metadata = entry.metadata()?;
         if metadata.is_dir() {
             copy_dir_all(&src_path, &dst_path)?;
@@ -47,7 +47,7 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
             if dst_path.exists() {
                 fs::remove_file(&dst_path).ok();
             }
-            
+
             // Handle symlinks
             let link_target = fs::read_link(&src_path)?;
             #[cfg(unix)]
@@ -343,7 +343,10 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
         );
         print_message(
             MessageType::Info,
-            &format!("Looking for NDK at: {}/ndk/{}", android_sdk, ANDROID_NDK_VERSION),
+            &format!(
+                "Looking for NDK at: {}/ndk/{}",
+                android_sdk, ANDROID_NDK_VERSION
+            ),
         );
     } else if let Ok(android_home) = env::var("ANDROID_HOME") {
         print_message(
@@ -352,7 +355,10 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
         );
         print_message(
             MessageType::Info,
-            &format!("Looking for NDK at: {}/ndk/{}", android_home, ANDROID_NDK_VERSION),
+            &format!(
+                "Looking for NDK at: {}/ndk/{}",
+                android_home, ANDROID_NDK_VERSION
+            ),
         );
     } else {
         print_message(
@@ -361,7 +367,10 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
         );
         print_message(
             MessageType::Info,
-            &format!("Will look for NDK at: ~/Android/Sdk/ndk/{}", ANDROID_NDK_VERSION),
+            &format!(
+                "Will look for NDK at: ~/Android/Sdk/ndk/{}",
+                ANDROID_NDK_VERSION
+            ),
         );
     }
 
@@ -371,7 +380,10 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
     );
     print_message(
         MessageType::Info,
-        &format!("Note: Make sure you have Android NDK version {} installed", ANDROID_NDK_VERSION),
+        &format!(
+            "Note: Make sure you have Android NDK version {} installed",
+            ANDROID_NDK_VERSION
+        ),
     );
 
     Ok(())
@@ -380,7 +392,7 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
 fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
     // Ensure BIN_FOLDER exists
     fs::create_dir_all(BIN_FOLDER)?;
-    
+
     // Download Android dependencies
     let android_deps_url = "https://godot-artifacts.kuruk.net/android_deps.zip";
     let android_deps_path = BinPaths::android_deps_zip();
@@ -401,7 +413,7 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
         let spinner = create_spinner("Extracting Android dependencies...");
 
         fs::create_dir_all(&android_deps_extracted_path)?;
-        
+
         // Use the zip crate to extract instead of system unzip
         let file = File::open(&android_deps_path)?;
         let mut zip_archive = ZipArchive::new(file)?;
@@ -410,7 +422,7 @@ fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
             let mut file = zip_archive.by_index(i)?;
             let file_path = file.mangled_name();
             let dest_path = android_deps_extracted_path.join(file_path);
-            
+
             if file.is_dir() {
                 fs::create_dir_all(&dest_path)?;
             } else {
@@ -468,15 +480,18 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
         if let Some(install_cmd) = get_install_command() {
             print_message(MessageType::Info, "\nTo install missing dependencies, run:");
             println!("\n{}\n", install_cmd);
-            
+
             // Add macOS-specific help
             if platform.os == "macos" {
-                print_message(MessageType::Info, "\nNote: If FFmpeg is installed but not detected:");
+                print_message(
+                    MessageType::Info,
+                    "\nNote: If FFmpeg is installed but not detected:",
+                );
                 println!("  1. Check if PKG_CONFIG_PATH is set correctly");
                 println!("  2. For Homebrew ffmpeg@6: export PKG_CONFIG_PATH=\"/opt/homebrew/opt/ffmpeg@6/lib/pkgconfig:$PKG_CONFIG_PATH\"");
                 println!("  3. For Intel Macs: export PKG_CONFIG_PATH=\"/usr/local/opt/ffmpeg@6/lib/pkgconfig:$PKG_CONFIG_PATH\"");
             }
-            
+
             print_message(
                 MessageType::Warning,
                 "Please install these dependencies before continuing.",
@@ -533,7 +548,7 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
             BinPaths::godot().to_str().unwrap(),
             Some(format!("{GODOT_CURRENT_VERSION}.executable.zip")),
         )?;
-        
+
         let program_path = BinPaths::godot().join(get_godot_executable_path().unwrap());
         let dest_program_path = BinPaths::godot_bin();
 
@@ -623,52 +638,56 @@ pub fn download_and_extract_tar_xz(
 pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
     let ffmpeg_folder = BinPaths::ffmpeg();
     let ffmpeg_bin = BinPaths::ffmpeg_bin();
-    
+
     // Check if FFmpeg is already installed
     if ffmpeg_bin.exists() {
         // Check version
         let output = std::process::Command::new(&ffmpeg_bin)
             .arg("-version")
             .output();
-            
+
         if let Ok(output) = output {
             let version_str = String::from_utf8_lossy(&output.stdout);
             if version_str.contains("ffmpeg version n6.") {
                 print_message(MessageType::Success, "FFmpeg 6.x already installed");
                 return Ok(());
             } else {
-                print_message(MessageType::Warning, "FFmpeg found but not version 6.x, reinstalling...");
+                print_message(
+                    MessageType::Warning,
+                    "FFmpeg found but not version 6.x, reinstalling...",
+                );
                 fs::remove_dir_all(&ffmpeg_folder).ok();
             }
         }
     }
-    
+
     print_section("Installing FFmpeg 6.1");
-    
+
     match env::consts::OS {
         "linux" => {
             // Use BtbN's shared library builds for FFmpeg 6.1
             let url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1.tar.xz";
             let temp_extract_path = BinPaths::temp_dir("ffmpeg_temp");
-            
+
             // Clean up any existing temp directory first
             if temp_extract_path.exists() {
                 fs::remove_dir_all(&temp_extract_path)?;
             }
-            
+
             download_and_extract_tar_xz(
                 url,
                 temp_extract_path.to_str().unwrap(),
                 Some("ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1.tar.xz".to_string()),
             )?;
-            
+
             // The archive extracts to a folder like ffmpeg-n6.0.1-linux64-gpl-shared-6.0
             // We need to move its contents to our ffmpeg folder
-            let extracted_folder = temp_extract_path.join("ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1");
-            
+            let extracted_folder =
+                temp_extract_path.join("ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1");
+
             // Create the final ffmpeg folder
             fs::create_dir_all(&ffmpeg_folder)?;
-            
+
             // Copy everything from the extracted folder
             // This includes bin/, lib/, include/ directories needed for development
             for entry in fs::read_dir(extracted_folder)? {
@@ -676,7 +695,7 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
                 let file_name = entry.file_name();
                 let src = entry.path();
                 let dst = ffmpeg_folder.join(file_name);
-                
+
                 if src.is_dir() {
                     // Copy directory recursively using a simple recursive copy
                     copy_dir_all(&src, &dst)?;
@@ -688,7 +707,7 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
                     fs::copy(&src, &dst)?;
                 }
             }
-            
+
             // Set executable permissions for binaries
             let bin_dir = ffmpeg_folder.join("bin");
             if bin_dir.exists() {
@@ -697,16 +716,19 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
                     set_executable_permission(&entry.path())?;
                 }
             }
-            
+
             // Clean up temp directory - this time with error handling
             if let Err(e) = fs::remove_dir_all(&temp_extract_path) {
                 print_message(
                     MessageType::Warning,
-                    &format!("Failed to clean up temp directory: {}", e)
+                    &format!("Failed to clean up temp directory: {}", e),
                 );
             }
-            
-            print_message(MessageType::Success, "FFmpeg 6.1 shared libraries installed for Linux");
+
+            print_message(
+                MessageType::Success,
+                "FFmpeg 6.1 shared libraries installed for Linux",
+            );
         }
         "windows" => {
             download_and_extract_zip(
@@ -726,10 +748,13 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
         _ => {
             print_message(
                 MessageType::Warning,
-                &format!("FFmpeg installation not supported for OS: {}", env::consts::OS),
+                &format!(
+                    "FFmpeg installation not supported for OS: {}",
+                    env::consts::OS
+                ),
             );
         }
     }
-    
+
     Ok(())
 }

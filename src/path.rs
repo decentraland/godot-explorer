@@ -19,8 +19,7 @@ pub fn adjust_canonicalization<P: AsRef<std::path::Path>>(p: P) -> String {
 pub fn get_godot_path() -> String {
     adjust_canonicalization(
         std::fs::canonicalize(
-            BinPaths::godot()
-                .join(install_dependency::get_godot_executable_path().unwrap())
+            BinPaths::godot().join(install_dependency::get_godot_executable_path().unwrap()),
         )
         .expect("Did you execute `cargo run -- install`?"),
     )

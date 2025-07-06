@@ -166,8 +166,12 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
         None
     };
 
-    let export_mode = if release { "--export-release" } else { "--export-debug" };
-    
+    let export_mode = if release {
+        "--export-release"
+    } else {
+        "--export-debug"
+    };
+
     let args = vec![
         "-e",
         "--rendering-driver",
@@ -190,27 +194,29 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     // Set Android keystore environment variables if exporting for Android/Quest
     if target == "android" || target == "quest" {
         let keystore_type = if release { "release" } else { "debug" };
-        
+
         // Generate keystore if it doesn't exist
         let keystore_path = crate::keystore::generate_keystore(keystore_type)?;
         let keystore_abs_path = std::fs::canonicalize(keystore_path)?;
-        
-        print_message(MessageType::Info, &format!("Using keystore: {}", keystore_abs_path.display()));
-        
-        let (keystore_user, keystore_password) = crate::keystore::get_keystore_credentials(keystore_type);
+
+        print_message(
+            MessageType::Info,
+            &format!("Using keystore: {}", keystore_abs_path.display()),
+        );
+
+        let (keystore_user, keystore_password) =
+            crate::keystore::get_keystore_credentials(keystore_type);
         let env_prefix = format!("GODOT_ANDROID_KEYSTORE_{}", keystore_type.to_uppercase());
-        
+
         export_command.env(format!("{}_PATH", env_prefix), keystore_abs_path);
         export_command.env(format!("{}_USER", env_prefix), keystore_user);
         export_command.env(format!("{}_PASSWORD", env_prefix), keystore_password);
     }
 
-    let export_status = export_command
-        .status()
-        .expect("Failed to run Godot");
+    let export_status = export_command.status().expect("Failed to run Godot");
 
     spinner.finish();
-    
+
     // Restore export presets if we backed them up
     if let Some(backup_content) = export_presets_backup {
         restore_export_presets(backup_content)?;
@@ -300,19 +306,22 @@ pub fn prepare_templates(platforms: &[String]) -> Result<(), anyhow::Error> {
 
 fn update_export_presets_for_aab() -> Result<Option<String>, anyhow::Error> {
     let export_presets_path = format!("{}/export_presets.cfg", GODOT_PROJECT_FOLDER);
-    
+
     // Read current content
     let original_content = fs::read_to_string(&export_presets_path)?;
-    
+
     // Update for AAB format
     let updated_content = original_content
-        .replace("gradle_build/export_format=0", "gradle_build/export_format=1")
+        .replace(
+            "gradle_build/export_format=0",
+            "gradle_build/export_format=1",
+        )
         .replace("architectures/x86_64=true", "architectures/x86_64=false")
         .replace("package/signed=true", "package/signed=false");
-    
+
     // Write updated content
     fs::write(&export_presets_path, updated_content)?;
-    
+
     Ok(Some(original_content))
 }
 
@@ -325,42 +334,42 @@ fn restore_export_presets(original_content: String) -> Result<(), anyhow::Error>
 fn extract_android_template() -> Result<(), anyhow::Error> {
     let android_build_dir = format!("{}/android/", GODOT_PROJECT_FOLDER);
     let android_build_path = Path::new(&android_build_dir);
-    
+
     // Check if already extracted
     if android_build_path.exists() {
         print_message(MessageType::Info, "Android template already extracted");
         return Ok(());
     }
-    
+
     print_message(MessageType::Step, "Extracting Android template...");
-    
+
     // Get the template path
     let templates_path = godot_export_templates_path()
         .ok_or_else(|| anyhow::anyhow!("Could not determine export templates path"))?;
-    
+
     let android_source_zip = format!("{}/android_source.zip", templates_path);
     let android_source_path = Path::new(&android_source_zip);
-    
+
     if !android_source_path.exists() {
         return Err(anyhow::anyhow!(
-            "Android template not found at: {}. Run 'cargo run -- install --targets android' first", 
+            "Android template not found at: {}. Run 'cargo run -- install --targets android' first",
             android_source_zip
         ));
     }
-    
+
     // Create directories
     fs::create_dir_all(&android_build_dir)?;
     let build_dir = format!("{}/build", android_build_dir);
     fs::create_dir_all(&build_dir)?;
-    
+
     // Extract the template
     let file = fs::File::open(android_source_path)?;
     let mut archive = ZipArchive::new(file)?;
-    
+
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
         let outpath = Path::new(&build_dir).join(file.mangled_name());
-        
+
         if file.is_dir() {
             fs::create_dir_all(&outpath)?;
         } else {
@@ -371,23 +380,26 @@ fn extract_android_template() -> Result<(), anyhow::Error> {
             io::copy(&mut file, &mut outfile)?;
         }
     }
-    
+
     // Create version file
     let version_file = format!("{}/.build_version", android_build_dir);
     fs::write(version_file, format!("{}.stable", GODOT_CURRENT_VERSION))?;
-    
+
     // Create .gdignore file
     let gdignore_file = format!("{}/build/.gdignore", android_build_dir);
     fs::write(gdignore_file, "")?;
-    
+
     // Set executable permission on gradlew
     let gradlew_path = format!("{}/build/gradlew", android_build_dir);
     if Path::new(&gradlew_path).exists() {
         set_executable_permission(Path::new(&gradlew_path))?;
         print_message(MessageType::Info, "Set executable permission on gradlew");
     }
-    
-    print_message(MessageType::Success, "Android template extracted successfully");
-    
+
+    print_message(
+        MessageType::Success,
+        "Android template extracted successfully",
+    );
+
     Ok(())
 }

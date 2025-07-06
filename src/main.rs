@@ -262,7 +262,7 @@ fn main() -> Result<(), anyhow::Error> {
         ("run", sm) => {
             // Check dependencies first
             dependencies::check_command_dependencies("run", None)?;
-            
+
             let mut build_args: Vec<&str> = sm
                 .values_of("build-args")
                 .map(|v| v.collect())
@@ -287,33 +287,39 @@ fn main() -> Result<(), anyhow::Error> {
             // Check if target is specified
             let target = sm.value_of("target");
             let is_hotreload = sm.is_present("hotreload");
-            
+
             // For android/ios targets, check if we should deploy to device
-            let should_deploy = target.is_some() && 
-                               (target == Some("android") || target == Some("ios")) && 
-                               !sm.is_present("editor");
-            
+            let should_deploy = target.is_some()
+                && (target == Some("android") || target == Some("ios"))
+                && !sm.is_present("editor");
+
             if should_deploy {
                 let platform = target.unwrap();
-                
+
                 if is_hotreload && platform == "android" {
                     // Hotreload mode: build and push .so file only
                     print_message(
                         MessageType::Step,
                         "Building for Android hotreload (push .so only)",
                     );
-                    
+
                     // Build for Android
-                    run::build(sm.is_present("release"), build_args.clone(), None, Some(platform))?;
-                    
+                    run::build(
+                        sm.is_present("release"),
+                        build_args.clone(),
+                        None,
+                        Some(platform),
+                    )?;
+
                     // Get extras to pass to the app
-                    let extras: Vec<String> = sm.values_of("extras")
+                    let extras: Vec<String> = sm
+                        .values_of("extras")
                         .map(|v| v.map(|it| it.into()).collect())
                         .unwrap_or_default();
-                    
+
                     // Push the .so file to device
                     run::hotreload_android(sm.is_present("release"), extras)?;
-                    
+
                     return Ok(());
                 } else {
                     // Normal deployment: build, export, install, and run
@@ -321,37 +327,32 @@ fn main() -> Result<(), anyhow::Error> {
                         MessageType::Step,
                         &format!("Building and deploying to {}", platform),
                     );
-                    
+
                     // 1. Build for host OS first
+                    run::build(sm.is_present("release"), build_args.clone(), None, None)?;
+
+                    // 2. Build for the platform
                     run::build(
                         sm.is_present("release"),
                         build_args.clone(),
                         None,
-                        None,
+                        Some(platform),
                     )?;
-                    
-                    // 2. Build for the platform
-                    run::build(sm.is_present("release"), build_args.clone(), None, Some(platform))?;
-                    
+
                     // 3. Export APK/IPA
                     let format = if platform == "android" { "apk" } else { "ipa" };
                     let result = export::export(Some(platform), format, sm.is_present("release"));
-                    
+
                     if result.is_ok() {
                         // 4. Install and run on device
                         run::deploy_and_run_on_device(platform, sm.is_present("release"))?;
                     }
-                    
+
                     return result;
                 }
             } else {
                 // Normal build (either host OS or just build for target without deploying)
-                run::build(
-                    sm.is_present("release"),
-                    build_args,
-                    None,
-                    target,
-                )?;
+                run::build(sm.is_present("release"), build_args, None, target)?;
             }
 
             // Now run
@@ -367,10 +368,10 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("build", sm) => {
             let target = sm.value_of("target");
-            
+
             // Check dependencies first
             dependencies::check_command_dependencies("build", target)?;
-            
+
             let mut build_args: Vec<&str> = sm
                 .values_of("build-args")
                 .map(|v| v.collect())
@@ -392,42 +393,37 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
 
-            let result = run::build(
-                sm.is_present("release"),
-                build_args,
-                None,
-                target,
-            );
-            
+            let result = run::build(sm.is_present("release"), build_args, None, target);
+
             if result.is_ok() {
                 dependencies::suggest_next_steps("build", target);
             }
-            
+
             result
         }
         ("export", sm) => {
             let target = sm.value_of("target");
             let format = sm.value_of("format").unwrap_or("apk");
             let release = sm.is_present("release");
-            
+
             // Check dependencies first
             dependencies::check_command_dependencies("export", target)?;
-            
+
             let result = export::export(target, format, release);
-            
+
             if result.is_ok() {
                 dependencies::suggest_next_steps("export", target);
             }
-            
+
             result
         }
         ("import-assets", _m) => {
             // Check dependencies first
             dependencies::check_command_dependencies("import-assets", None)?;
-            
+
             // Build for host OS first (import-assets needs the library)
             run::build(false, vec![], None, None)?;
-            
+
             let status = import_assets();
             if !status.success() {
                 println!("WARN: cargo build exited with non-zero status: {}", status);

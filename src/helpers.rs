@@ -1,7 +1,7 @@
-use std::path::PathBuf;
-use std::fs;
-use anyhow::Result;
 use crate::consts::*;
+use anyhow::Result;
+use std::fs;
+use std::path::PathBuf;
 
 // TODO: Use these helper functions to reduce code duplication throughout the codebase
 
@@ -16,7 +16,7 @@ pub fn canonicalize_with_context(path: &str, context: &str) -> Result<PathBuf> {
 pub fn get_lib_extension(target: &str) -> &'static str {
     match target {
         "windows" | "win64" => ".dll",
-        "linux" => ".so", 
+        "linux" => ".so",
         "macos" => ".dylib",
         "android" => ".so",
         "ios" => ".a",
@@ -62,30 +62,51 @@ pub struct AndroidBuildEnv {
 impl AndroidBuildEnv {
     pub fn new(ndk_path: String) -> Self {
         let toolchain_base = format!("{}/toolchains/llvm/prebuilt/linux-x86_64/bin", ndk_path);
-        
+
         Self {
-            target_cc: format!("{}/aarch64-linux-android{}-clang", toolchain_base, crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")),
-            target_cxx: format!("{}/aarch64-linux-android{}-clang++", toolchain_base, crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")),
+            target_cc: format!(
+                "{}/aarch64-linux-android{}-clang",
+                toolchain_base,
+                crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")
+            ),
+            target_cxx: format!(
+                "{}/aarch64-linux-android{}-clang++",
+                toolchain_base,
+                crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")
+            ),
             target_ar: format!("{}/llvm-ar", toolchain_base),
-            cargo_target_linker: format!("{}/aarch64-linux-android{}-clang", toolchain_base, crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")),
+            cargo_target_linker: format!(
+                "{}/aarch64-linux-android{}-clang",
+                toolchain_base,
+                crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")
+            ),
             ndk_path,
         }
     }
-    
+
     pub fn apply_to_env(&self, env: &mut std::collections::HashMap<String, String>) {
         env.insert("TARGET_CC".to_string(), self.target_cc.clone());
         env.insert("TARGET_CXX".to_string(), self.target_cxx.clone());
         env.insert("TARGET_AR".to_string(), self.target_ar.clone());
-        env.insert("CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER".to_string(), self.cargo_target_linker.clone());
-        env.insert("CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE".to_string(), "1".to_string());
-        env.insert("CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG".to_string(), "true".to_string());
-        
+        env.insert(
+            "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER".to_string(),
+            self.cargo_target_linker.clone(),
+        );
+        env.insert(
+            "CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE".to_string(),
+            "1".to_string(),
+        );
+        env.insert(
+            "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG".to_string(),
+            "true".to_string(),
+        );
+
         let cxxflags = "-v --target=aarch64-linux-android";
         let rustflags = format!(
             "-L{}/toolchains/llvm/prebuilt/linux-x86_64/lib/aarch64-unknown-linux-musl",
             self.ndk_path
         );
-        
+
         env.insert("CXXFLAGS".to_string(), cxxflags.to_string());
         env.insert("RUSTFLAGS".to_string(), rustflags);
     }
@@ -101,18 +122,15 @@ pub fn get_ffmpeg_url(platform: &str) -> String {
         "macos" => "macos64",
         _ => "linux64",
     };
-    
+
     let extension = match platform {
         "windows" | "win64" => "zip",
         _ => "tar.xz",
     };
-    
-    format!("{}/ffmpeg-{}-{}-{}.{}", 
-        FFMPEG_BASE_URL, 
-        FFMPEG_VERSION_TAG,
-        arch,
-        FFMPEG_BUILD_TYPE,
-        extension
+
+    format!(
+        "{}/ffmpeg-{}-{}-{}.{}",
+        FFMPEG_BASE_URL, FFMPEG_VERSION_TAG, arch, FFMPEG_BUILD_TYPE, extension
     )
 }
 
@@ -128,14 +146,16 @@ pub fn get_ffmpeg_filename_from_url(url: &str) -> Option<String> {
 pub fn get_ffmpeg_extracted_folder(platform: &str) -> String {
     let arch = match platform {
         "linux" => "linux64",
-        "windows" | "win64" => "win64", 
+        "windows" | "win64" => "win64",
         "macos" => "macos64",
         _ => "linux64",
     };
-    
-    format!("ffmpeg-{}-{}-{}", FFMPEG_VERSION_TAG, arch, FFMPEG_BUILD_TYPE)
-}
 
+    format!(
+        "ffmpeg-{}-{}-{}",
+        FFMPEG_VERSION_TAG, arch, FFMPEG_BUILD_TYPE
+    )
+}
 
 /// Common path constructors for bin folder
 pub struct BinPaths;
@@ -144,39 +164,39 @@ impl BinPaths {
     pub fn godot() -> PathBuf {
         PathBuf::from(BIN_FOLDER).join("godot")
     }
-    
+
     pub fn godot_bin() -> PathBuf {
         Self::godot().join("godot4_bin")
     }
-    
+
     pub fn protoc() -> PathBuf {
         PathBuf::from(BIN_FOLDER).join("protoc")
     }
-    
+
     pub fn protoc_bin() -> PathBuf {
         Self::protoc().join("bin").join("protoc")
     }
-    
+
     pub fn ffmpeg() -> PathBuf {
         PathBuf::from(BIN_FOLDER).join("ffmpeg")
     }
-    
+
     pub fn ffmpeg_bin() -> PathBuf {
         Self::ffmpeg().join("bin").join("ffmpeg")
     }
-    
+
     pub fn android_deps() -> PathBuf {
         PathBuf::from(BIN_FOLDER).join("android_deps")
     }
-    
+
     pub fn android_deps_zip() -> PathBuf {
         PathBuf::from(BIN_FOLDER).join("android_dependencies.zip")
     }
-    
+
     pub fn keystore(filename: &str) -> PathBuf {
         PathBuf::from(BIN_FOLDER).join(filename)
     }
-    
+
     pub fn temp_dir(name: &str) -> PathBuf {
         PathBuf::from(BIN_FOLDER).join(name)
     }

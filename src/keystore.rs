@@ -16,10 +16,10 @@ pub fn generate_keystore(keystore_type: &str) -> Result<String, anyhow::Error> {
 
     // Ensure .bin directory exists
     fs::create_dir_all(BIN_FOLDER)?;
-    
+
     let keystore_filename = format!("{}.keystore", keystore_type);
     let keystore_path = BinPaths::keystore(&keystore_filename);
-    
+
     // Check if keystore already exists
     if keystore_path.exists() {
         print_message(
@@ -34,19 +34,30 @@ pub fn generate_keystore(keystore_type: &str) -> Result<String, anyhow::Error> {
     let storepass = "android";
     let dname = format!("CN=Android {},O=Android,C=US", keystore_type.to_uppercase());
 
-    print_message(MessageType::Info, &format!("Creating keystore at: {}", keystore_path.display()));
+    print_message(
+        MessageType::Info,
+        &format!("Creating keystore at: {}", keystore_path.display()),
+    );
 
     let status = Command::new("keytool")
         .args([
-            "-keyalg", "RSA",
+            "-keyalg",
+            "RSA",
             "-genkeypair",
-            "-alias", &alias,
-            "-keypass", keypass,
-            "-keystore", keystore_path.to_str().unwrap(),
-            "-storepass", storepass,
-            "-dname", &dname,
-            "-validity", "9999",
-            "-deststoretype", "pkcs12",
+            "-alias",
+            &alias,
+            "-keypass",
+            keypass,
+            "-keystore",
+            keystore_path.to_str().unwrap(),
+            "-storepass",
+            storepass,
+            "-dname",
+            &dname,
+            "-validity",
+            "9999",
+            "-deststoretype",
+            "pkcs12",
         ])
         .status()?;
 
@@ -56,7 +67,10 @@ pub fn generate_keystore(keystore_type: &str) -> Result<String, anyhow::Error> {
 
     print_message(
         MessageType::Success,
-        &format!("Keystore generated successfully at: {}", keystore_path.display()),
+        &format!(
+            "Keystore generated successfully at: {}",
+            keystore_path.display()
+        ),
     );
 
     Ok(keystore_path.to_string_lossy().to_string())

@@ -78,7 +78,10 @@ pub fn print_install_instructions(tool: &str, platform: &str) {
         }
         ("android-ndk", _) => {
             println!("  1. Open Android Studio SDK Manager");
-            println!("  2. SDK Tools → NDK (Side by side) → Select version {}", ANDROID_NDK_VERSION);
+            println!(
+                "  2. SDK Tools → NDK (Side by side) → Select version {}",
+                ANDROID_NDK_VERSION
+            );
             println!("  3. Click 'Apply' to install");
         }
         ("protoc", _) => {

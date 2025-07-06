@@ -48,4 +48,3 @@ pub const FFMPEG_BASE_URL: &str = "https://github.com/BtbN/FFmpeg-Builds/release
 pub const FFMPEG_VERSION_TAG: &str = "n6.1-latest";
 #[allow(dead_code)]
 pub const FFMPEG_BUILD_TYPE: &str = "lgpl-shared-6.1";
-

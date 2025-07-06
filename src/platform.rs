@@ -60,7 +60,7 @@ pub fn check_command(cmd: &str) -> bool {
             return true;
         }
     }
-    
+
     // Otherwise check system PATH
     which(cmd).is_ok()
 }
@@ -103,7 +103,10 @@ pub fn check_android_sdk() -> Result<String, String> {
         }
     }
 
-    Err(format!("Android NDK not found. Please install Android NDK {}", ANDROID_NDK_VERSION))
+    Err(format!(
+        "Android NDK not found. Please install Android NDK {}",
+        ANDROID_NDK_VERSION
+    ))
 }
 
 /// Check if iOS development is available (macOS only)
@@ -253,9 +256,9 @@ fn check_pkg_config(lib: &str) -> bool {
     }
 
     let mut cmd = std::process::Command::new("pkg-config");
-    
+
     // FFmpeg is now installed locally, no need to check system paths
-    
+
     cmd.args(["--exists", lib])
         .status()
         .map(|status| status.success())
@@ -274,19 +277,22 @@ pub fn get_install_command() -> Option<String> {
                         "sudo apt-get update && sudo apt-get install -y \\\n  \
                          libasound2-dev libudev-dev \\\n  \
                          clang curl pkg-config \\\n  \
-                         libssl-dev libx11-dev libgl1-mesa-dev libxext-dev".to_string()
+                         libssl-dev libx11-dev libgl1-mesa-dev libxext-dev"
+                            .to_string(),
                     ),
                     "pacman" => Some(
                         "sudo pacman -S --needed \\\n  \
                          alsa-lib systemd-libs \\\n  \
                          clang curl pkgconf \\\n  \
-                         openssl libx11 mesa libxext".to_string()
+                         openssl libx11 mesa libxext"
+                            .to_string(),
                     ),
                     "dnf" => Some(
                         "sudo dnf install -y \\\n  \
                          alsa-lib-devel systemd-devel \\\n  \
                          clang curl pkg-config \\\n  \
-                         openssl-devel libX11-devel mesa-libGL-devel libXext-devel".to_string()
+                         openssl-devel libX11-devel mesa-libGL-devel libXext-devel"
+                            .to_string(),
                     ),
                     _ => None,
                 }
