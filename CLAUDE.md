@@ -40,6 +40,7 @@ cargo run -- run -e                       # Run editor
 cargo run -- run -e --target android      # Run editor and also build for Android
 cargo run -- run --target android         # Build, export APK, and deploy to device
 cargo run -- run --target ios             # Build, export IPA, and deploy to device
+cargo run -- run --target android --hotreload  # Build and push .so only (requires root or debug APK)
 
 # Feature flags
 cargo run -- build --no-default-features --features use_livekit,use_deno

@@ -728,3 +728,209 @@ fn deploy_ios_with_xcrun(_release: bool) -> anyhow::Result<()> {
         "Full iOS deployment requires ios-deploy. Please install it with: brew install ios-deploy"
     ))
 }
+
+/// Hot reload Android .so file by pushing it directly to the device
+pub fn hotreload_android(release: bool) -> anyhow::Result<()> {
+    print_message(MessageType::Step, "Hot reloading Android library...");
+    
+    // Check if adb is available
+    if !std::process::Command::new("which")
+        .arg("adb")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        return Err(anyhow::anyhow!(
+            "adb not found. Please install Android SDK and ensure adb is in your PATH"
+        ));
+    }
+    
+    // Check for connected devices
+    let spinner = create_spinner("Checking for connected Android devices...");
+    let devices_output = std::process::Command::new("adb")
+        .args(["devices", "-l"])
+        .output()?;
+    spinner.finish();
+    
+    let devices_str = String::from_utf8_lossy(&devices_output.stdout);
+    let device_lines: Vec<&str> = devices_str
+        .lines()
+        .skip(1) // Skip "List of devices attached" header
+        .filter(|line| !line.is_empty() && line.contains("device"))
+        .collect();
+        
+    if device_lines.is_empty() {
+        return Err(anyhow::anyhow!(
+            "No Android devices found. Please connect a device and enable USB debugging."
+        ));
+    }
+    
+    print_message(
+        MessageType::Info,
+        &format!("Found {} connected device(s)", device_lines.len()),
+    );
+    
+    // Get the .so file path
+    let build_mode = if release { "release" } else { "debug" };
+    let so_path = format!(
+        "{}target/aarch64-linux-android/{}/libdclgodot.so",
+        RUST_LIB_PROJECT_FOLDER,
+        build_mode
+    );
+    
+    // Check if .so file exists
+    if !std::path::Path::new(&so_path).exists() {
+        return Err(anyhow::anyhow!(
+            ".so file not found at: {}. Please build for Android first.",
+            so_path
+        ));
+    }
+    
+    // Push the .so file to the device
+    let package_name = "org.decentraland.godotexplorer";
+    
+    print_message(
+        MessageType::Warning,
+        "Note: Android hotreload requires either:\n  1. A rooted device, or\n  2. An app built with android:debuggable=\"true\", or\n  3. Using app's internal storage (files directory)"
+    );
+    
+    let spinner = create_spinner("Pushing .so file to device...");
+    
+    // First, push to temp location
+    let temp_path = "/data/local/tmp/libdclgodot.so";
+    let push_to_temp = std::process::Command::new("adb")
+        .args(["push", &so_path, temp_path])
+        .status()?;
+        
+    if !push_to_temp.success() {
+        spinner.finish();
+        return Err(anyhow::anyhow!("Failed to push .so file to device"));
+    }
+    
+    spinner.finish();
+    
+    // Try different methods to get the library into the app
+    
+    // Method 1: Try using run-as (requires debuggable app)
+    print_message(MessageType::Step, "Attempting to copy library using run-as...");
+    let run_as_status = std::process::Command::new("adb")
+        .args([
+            "shell",
+            &format!(
+                "run-as {} sh -c 'cp {} /data/data/{}/libdclgodot.so && chmod 755 /data/data/{}/libdclgodot.so'",
+                package_name, temp_path, package_name, package_name
+            ),
+        ])
+        .output()?;
+    
+    let run_as_success = run_as_status.status.success();
+    
+    if run_as_success {
+        print_message(MessageType::Success, "Library copied to app data directory!");
+        print_message(
+            MessageType::Info,
+            "Note: The app will need to be configured to load from this location"
+        );
+    } else {
+        // Method 2: Try with root
+        print_message(MessageType::Step, "run-as failed, attempting with root access...");
+        
+        // First check if we have root
+        let root_check = std::process::Command::new("adb")
+            .args(["shell", "su", "-c", "echo 'root works'"])
+            .output()?;
+            
+        if root_check.status.success() {
+            // Find the actual app installation path
+            let app_path_output = std::process::Command::new("adb")
+                .args(["shell", "pm", "path", package_name])
+                .output()?;
+            
+            let app_path_str = String::from_utf8_lossy(&app_path_output.stdout);
+            
+            // Extract the base path from the package path
+            let actual_lib_path = if let Some(path_line) = app_path_str.lines().next() {
+                if let Some(path) = path_line.strip_prefix("package:") {
+                    if let Some(base_path) = path.rsplit_once('/').map(|(base, _)| base) {
+                        format!("{}/lib/arm64-v8a/libdclgodot.so", base_path)
+                    } else {
+                        format!("/data/app/{}/lib/arm64-v8a/libdclgodot.so", package_name)
+                    }
+                } else {
+                    format!("/data/app/{}/lib/arm64-v8a/libdclgodot.so", package_name)
+                }
+            } else {
+                format!("/data/app/{}/lib/arm64-v8a/libdclgodot.so", package_name)
+            };
+            
+            // Copy with root
+            let root_copy = std::process::Command::new("adb")
+                .args(["shell", "su", "-c", &format!("cp {} {} && chmod 755 {}", temp_path, actual_lib_path, actual_lib_path)])
+                .status()?;
+                
+            if root_copy.success() {
+                print_message(MessageType::Success, "Library copied with root access!");
+            } else {
+                return Err(anyhow::anyhow!(
+                    "Failed to copy library even with root access. Path: {}",
+                    actual_lib_path
+                ));
+            }
+        } else {
+            // Clean up temp file
+            std::process::Command::new("adb")
+                .args(["shell", "rm", temp_path])
+                .status()
+                .ok();
+                
+            return Err(anyhow::anyhow!(
+                "Hotreload requires either:\n\
+                1. Root access on the device\n\
+                2. A debug build of the app (android:debuggable=\"true\")\n\
+                3. Modify the app to load libraries from its data directory\n\n\
+                For now, please use the normal deployment: cargo run -- run --target android"
+            ));
+        }
+    }
+    
+    // Clean up temp file
+    std::process::Command::new("adb")
+        .args(["shell", "rm", temp_path])
+        .status()
+        .ok();
+    
+    print_message(MessageType::Success, "Library pushed successfully!");
+    
+    // Restart the app to load the new library
+    print_message(MessageType::Step, "Restarting application...");
+    
+    // Stop the app
+    std::process::Command::new("adb")
+        .args(["shell", "am", "force-stop", package_name])
+        .status()?;
+    
+    // Start the app
+    let start_status = std::process::Command::new("adb")
+        .args([
+            "shell",
+            "am",
+            "start",
+            "-n",
+            &format!("{}/com.godot.game.GodotApp", package_name),
+        ])
+        .status()?;
+    
+    if !start_status.success() {
+        return Err(anyhow::anyhow!("Failed to restart application"));
+    }
+    
+    print_message(MessageType::Success, "Application restarted with new library!");
+    
+    // Show logs
+    print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
+    std::process::Command::new("adb")
+        .args(["logcat", "-s", "godot:V", "GodotApp:V", "dclgodot:V"])
+        .status()?;
+    
+    Ok(())
+}
