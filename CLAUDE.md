@@ -37,7 +37,9 @@ cargo run -- build --target ios           # iOS build (macOS only)
 cargo run -- run                          # Run client
 cargo run -- run -r                       # Release mode
 cargo run -- run -e                       # Run editor
-cargo run -- run -e --target android    # Run editor and also build for Android
+cargo run -- run -e --target android      # Run editor and also build for Android
+cargo run -- run --target android         # Build, export APK, and deploy to device
+cargo run -- run --target ios             # Build, export IPA, and deploy to device
 
 # Feature flags
 cargo run -- build --no-default-features --features use_livekit,use_deno
@@ -171,7 +173,6 @@ cargo run -- export --target ios
 ```bash
 # Complete Android build workflow
 cargo run -- install --targets android           # Install Android dependencies
-cargo run -- generate-keystore --type release      # Generate signing key
 cargo run -- build --target android                # Build Rust library
 cargo run -- export --target android --format apk  # Export APK
 ```

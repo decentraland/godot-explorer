@@ -170,13 +170,7 @@ fn main() -> Result<(), anyhow::Error> {
                     Arg::new("target")
                         .short('t')
                         .long("target")
-                        .help("target OS")
-                        .takes_value(true),
-                ).arg(
-                    Arg::new("platform")
-                        .short('p')
-                        .long("platform")
-                        .help("Deploy and run on device (android/ios). With -e: just build for platform")
+                        .help("Target platform to build for. For android/ios: without -e deploys to device, with -e just builds")
                         .takes_value(true),
                 ).arg(
                     Arg::new("no-default-features")
@@ -285,44 +279,51 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
 
-            // Build for host OS first
-            run::build(
-                sm.is_present("release"),
-                build_args.clone(),
-                None,
-                sm.value_of("target"),
-            )?;
+            // Check if target is specified
+            let target = sm.value_of("target");
             
-            // Check if platform flag is used
-            if let Some(platform) = sm.value_of("platform") {
-                if !sm.is_present("editor") {
-                    // Running on device: build, export, install, and run
-                    print_message(
-                        MessageType::Step,
-                        &format!("Building and deploying to {}", platform),
-                    );
-                    
-                    // 1. Build for the platform
-                    run::build(sm.is_present("release"), build_args.clone(), None, Some(platform))?;
-                    
-                    // 2. Export APK/IPA
-                    let format = if platform == "android" { "apk" } else { "ipa" };
-                    let result = export::export(Some(platform), format, sm.is_present("release"));
-                    
-                    if result.is_ok() {
-                        // 3. Install and run on device
-                        run::deploy_and_run_on_device(platform, sm.is_present("release"))?;
-                    }
-                    
-                    return result;
-                } else {
-                    print_message(
-                        MessageType::Step,
-                        &format!("Building for additional platform: {}", platform),
-                    );
-                    // Build for the additional platform
-                    run::build(sm.is_present("release"), build_args, None, Some(platform))?;
+            // For android/ios targets, check if we should deploy to device
+            let should_deploy = target.is_some() && 
+                               (target == Some("android") || target == Some("ios")) && 
+                               !sm.is_present("editor");
+            
+            if should_deploy {
+                let platform = target.unwrap();
+                // Running on device: build, export, install, and run
+                print_message(
+                    MessageType::Step,
+                    &format!("Building and deploying to {}", platform),
+                );
+                
+                // 1. Build for host OS first
+                run::build(
+                    sm.is_present("release"),
+                    build_args.clone(),
+                    None,
+                    None,
+                )?;
+                
+                // 2. Build for the platform
+                run::build(sm.is_present("release"), build_args.clone(), None, Some(platform))?;
+                
+                // 3. Export APK/IPA
+                let format = if platform == "android" { "apk" } else { "ipa" };
+                let result = export::export(Some(platform), format, sm.is_present("release"));
+                
+                if result.is_ok() {
+                    // 4. Install and run on device
+                    run::deploy_and_run_on_device(platform, sm.is_present("release"))?;
                 }
+                
+                return result;
+            } else {
+                // Normal build (either host OS or just build for target without deploying)
+                run::build(
+                    sm.is_present("release"),
+                    build_args,
+                    None,
+                    target,
+                )?;
             }
 
             // Now run

@@ -206,10 +206,7 @@ pub fn suggest_next_steps(command: &str, target: Option<&str>) {
             print_section("Next Steps");
             
             if let Some(target_platform) = target {
-                if target_platform == "android" || target_platform == "quest" {
-                    print_message(MessageType::Step, "Generate keystore for Android signing:");
-                    print_message(MessageType::Info, "  cargo run -- generate-keystore");
-                    
+                if target_platform == "android" || target_platform == "quest" {                    
                     print_message(MessageType::Step, "Export Android APK:");
                     print_message(MessageType::Info, "  cargo run -- export --target android --format apk");
                     
