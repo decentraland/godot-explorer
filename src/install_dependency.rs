@@ -711,7 +711,7 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
         "windows" => {
             download_and_extract_zip(
                 "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-win64-lgpl-shared-6.1.zip",
-                &ffmpeg_folder,
+                ffmpeg_folder.to_str().unwrap(),
                 Some("ffmpeg-n6.1-latest-win64-lgpl-shared-6.1.zip".to_string()),
             )?;
             print_message(MessageType::Success, "FFmpeg 6.0 installed for Windows");

@@ -2,7 +2,6 @@ use crate::consts::BIN_FOLDER;
 use crate::helpers::BinPaths;
 use crate::ui::{print_message, print_section, MessageType};
 use std::fs;
-use std::path::Path;
 use std::process::Command;
 
 pub fn generate_keystore(keystore_type: &str) -> Result<String, anyhow::Error> {

@@ -132,22 +132,22 @@ pub fn export(target: Option<&str>, format: &str, release: bool) -> Result<(), a
     // Determine output file name
     let exe_ext = get_exe_extension(&target);
     let output_file_name = match target.as_str() {
-        "linux" => "decentraland.godot.client.x86_64",
+        "linux" => "decentraland.godot.client.x86_64".to_string(),
         "win64" => format!("decentraland.godot.client{}", exe_ext),
-        "macos" => "decentraland.godot.client.dmg",
-        "ios" => "decentraland-godot-client.ipa",
+        "macos" => "decentraland.godot.client.dmg".to_string(),
+        "ios" => "decentraland-godot-client.ipa".to_string(),
         "android" => {
             if format == "aab" {
-                "decentraland.godot.client.aab"
+                "decentraland.godot.client.aab".to_string()
             } else {
-                "decentraland.godot.client.apk"
+                "decentraland.godot.client.apk".to_string()
             }
         }
         "quest" => {
             if format == "aab" {
-                "meta-quest.aab"
+                "meta-quest.aab".to_string()
             } else {
-                "meta-quest.apk"
+                "meta-quest.apk".to_string()
             }
         }
         _ => return Err(anyhow::anyhow!("Unexpected final target: {}", target)),

@@ -1,4 +1,3 @@
-use crate::consts::BIN_FOLDER;
 use crate::dependencies::BuildStatus;
 use crate::helpers::BinPaths;
 use crate::platform::{

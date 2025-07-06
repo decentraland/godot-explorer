@@ -103,7 +103,7 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                             e
                         )
                     })?
-                    .join(file_name),
+                    .join(&file_name),
             );
 
             let lib_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/", output_folder_name);
