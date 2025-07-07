@@ -138,6 +138,8 @@ func _set_open_chat(value: bool):
 
 
 func _on_timer_hide_timeout():
+	if margin_container_nearby.visible:
+		return
 	if hide_tween != null:
 		hide_tween.stop()
 
@@ -249,3 +251,4 @@ func _on_button_back_pressed() -> void:
 
 func _on_timer_update_remote_avatars_timeout() -> void:
 	async_update_nearby_users()
+	print('updating')

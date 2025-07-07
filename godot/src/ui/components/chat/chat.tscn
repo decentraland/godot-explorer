@@ -21,10 +21,10 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_euk1h"]
-content_margin_left = 14.0
-content_margin_top = 5.0
-content_margin_right = 14.0
-content_margin_bottom = 5.0
+content_margin_left = 10.0
+content_margin_top = 0.0
+content_margin_right = 10.0
+content_margin_bottom = 0.0
 bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
@@ -33,10 +33,10 @@ corner_radius_bottom_left = 6
 corner_detail = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mb7k1"]
-content_margin_left = 14.0
-content_margin_top = 5.0
-content_margin_right = 14.0
-content_margin_bottom = 5.0
+content_margin_left = 10.0
+content_margin_top = 0.0
+content_margin_right = 10.0
+content_margin_bottom = 0.0
 bg_color = Color(0.168627, 0.160784, 0.188235, 1)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
@@ -44,10 +44,10 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lt7hs"]
-content_margin_left = 14.0
-content_margin_top = 5.0
-content_margin_right = 14.0
-content_margin_bottom = 5.0
+content_margin_left = 10.0
+content_margin_top = 0.0
+content_margin_right = 10.0
+content_margin_bottom = 0.0
 bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
@@ -174,7 +174,6 @@ theme_override_fonts/font = ExtResource("5_mb7k1")
 theme_override_styles/hover = SubResource("StyleBoxFlat_lt7hs")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_euk1h")
 theme_override_styles/normal = SubResource("StyleBoxFlat_mb7k1")
-toggle_mode = true
 text = "0"
 icon = ExtResource("3_bhyuy")
 

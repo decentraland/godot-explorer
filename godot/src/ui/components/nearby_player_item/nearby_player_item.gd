@@ -15,12 +15,12 @@ var pause_duration: float = 2
 @onready var mic_enabled: MarginContainer = %MicEnabled
 @onready var nickname: Label = %Nickname
 @onready var scroll_container_nickname: ScrollContainer = %ScrollContainer_Nickname
-@onready var vbox_container_nickname: VBoxContainer = %VBoxContainer_Nickname
 @onready var hash_container: HBoxContainer = %Hash
 @onready var tag: Label = %Tag
 @onready var profile_picture: ProfilePicture = %ProfilePicture
 @onready var button_block_user: Button = %Button_BlockUser
 @onready var button_mute_user: Button = %Button_MuteUser
+@onready var v_box_container_nickname: VBoxContainer = %VBoxContainer_Nickname
 
 
 func async_set_data(avatar_param = null):
@@ -71,7 +71,7 @@ func _on_mouse_exited() -> void:
 
 
 func is_text_overflowing() -> bool:
-	return nickname.size.x > 135
+	return nickname.size.x > scroll_container_nickname.size.x
 
 
 func start_marquee_effect() -> void:
@@ -80,9 +80,7 @@ func start_marquee_effect() -> void:
 
 	is_marquee_active = true
 
-	var container_width = vbox_container_nickname.size.x
-	var max_scroll_distance = nickname.size.x - container_width
-
+	var max_scroll_distance = nickname.size.x - scroll_container_nickname.size.x
 	if max_scroll_distance <= 0:
 		return
 

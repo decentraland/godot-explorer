@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://d30nejywxmhpn"]
+[gd_scene load_steps=12 format=3 uid="uid://d30nejywxmhpn"]
 
 [ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/profile_picture/profile_picture.tscn" id="1_40sym"]
 [ext_resource type="Script" uid="uid://01ks4grp4i30" path="res://src/ui/components/nearby_player_item/nearby_player_item.gd" id="1_77ytx"]
@@ -17,22 +17,8 @@ corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_io7c4"]
-content_margin_left = 14.0
-content_margin_top = 5.0
-content_margin_right = 14.0
-content_margin_bottom = 5.0
-bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-corner_detail = 5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4mds5"]
-content_margin_left = 14.0
-content_margin_top = 5.0
-content_margin_right = 14.0
-content_margin_bottom = 5.0
+content_margin_left = 10.0
+content_margin_right = 10.0
 bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.784314)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
@@ -130,7 +116,7 @@ alignment = 1
 
 [node name="ScrollContainer_Nickname" type="ScrollContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Nickname/VBoxContainer_Nickname"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 19)
+custom_minimum_size = Vector2(118, 19)
 layout_mode = 2
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
@@ -183,7 +169,7 @@ theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1
 theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 20
 theme_override_styles/hover = SubResource("StyleBoxFlat_io7c4")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_4mds5")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_io7c4")
 theme_override_styles/normal = SubResource("StyleBoxFlat_cmtom")
 toggle_mode = true
 icon = ExtResource("6_cmtom")
@@ -204,7 +190,7 @@ theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1
 theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 20
 theme_override_styles/hover = SubResource("StyleBoxFlat_io7c4")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_4mds5")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_io7c4")
 theme_override_styles/normal = SubResource("StyleBoxFlat_cmtom")
 toggle_mode = true
 icon = ExtResource("7_io7c4")
