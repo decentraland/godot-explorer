@@ -52,7 +52,9 @@ func populate_menu(menu: PopupMenu, id: int):
 	var args := OS.get_cmdline_args()
 	if args.has("--dcl-benchmark"):
 		print("Running Benchmark...")
-		execute()
+		await execute()
+		plugin.get_editor_interface().get_editor_main_screen().get_tree().quit()
+
 
 func execute():
 	var was_counting = ProjectSettings.get(SETTINGS_PATH_KEY)
