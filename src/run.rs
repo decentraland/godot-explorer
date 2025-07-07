@@ -839,7 +839,7 @@ pub fn hotreload_android(release: bool, extras: Vec<String>) -> anyhow::Result<(
 
     print_message(
         MessageType::Warning,
-        "Note: Android hotreload requires an app built with android:debuggable=\"true\"",
+        "Note: Android push (like using --only-lib) requires an app built with android:debuggable=\"true\"",
     );
 
     let spinner = create_spinner("Pushing .so file to device...");

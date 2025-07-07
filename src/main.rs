@@ -286,7 +286,7 @@ fn main() -> Result<(), anyhow::Error> {
 
             // Check if target is specified
             let target = sm.value_of("target");
-            let is_hotreload = sm.is_present("hotreload");
+            let is_only_lib = sm.is_present("only-lib");
 
             // For android/ios targets, check if we should deploy to device
             let should_deploy = target.is_some()
@@ -296,11 +296,11 @@ fn main() -> Result<(), anyhow::Error> {
             if should_deploy {
                 let platform = target.unwrap();
 
-                if is_hotreload && platform == "android" {
+                if is_only_lib && platform == "android" {
                     // Hotreload mode: build and push .so file only
                     print_message(
                         MessageType::Step,
-                        "Building for Android hotreload (push .so only)",
+                        "Building for Android (only lib, push .so only)",
                     );
 
                     // Build for Android
