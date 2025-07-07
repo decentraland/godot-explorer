@@ -61,24 +61,40 @@ pub struct AndroidBuildEnv {
 
 impl AndroidBuildEnv {
     pub fn new(ndk_path: String) -> Self {
-        let toolchain_base = format!("{}/toolchains/llvm/prebuilt/linux-x86_64/bin", ndk_path);
+        // Determine the host OS directory name for NDK prebuilt toolchains
+        let host_tag = if cfg!(windows) {
+            "windows-x86_64"
+        } else if cfg!(target_os = "macos") {
+            "darwin-x86_64"
+        } else {
+            "linux-x86_64"
+        };
+        
+        let toolchain_base = format!("{}/toolchains/llvm/prebuilt/{}/bin", ndk_path, host_tag);
+        
+        // On Windows, the executables have .cmd extension
+        let clang_suffix = if cfg!(windows) { ".cmd" } else { "" };
+        let ar_suffix = if cfg!(windows) { ".exe" } else { "" };
 
         Self {
             target_cc: format!(
-                "{}/aarch64-linux-android{}-clang",
+                "{}/aarch64-linux-android{}-clang{}",
                 toolchain_base,
-                crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")
+                crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", ""),
+                clang_suffix
             ),
             target_cxx: format!(
-                "{}/aarch64-linux-android{}-clang++",
+                "{}/aarch64-linux-android{}-clang++{}",
                 toolchain_base,
-                crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")
+                crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", ""),
+                clang_suffix
             ),
-            target_ar: format!("{}/llvm-ar", toolchain_base),
+            target_ar: format!("{}/llvm-ar{}", toolchain_base, ar_suffix),
             cargo_target_linker: format!(
-                "{}/aarch64-linux-android{}-clang",
+                "{}/aarch64-linux-android{}-clang{}",
                 toolchain_base,
-                crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", "")
+                crate::consts::ANDROID_PLATFORM_VERSION.replace("android-", ""),
+                clang_suffix
             ),
             ndk_path,
         }
@@ -102,9 +118,19 @@ impl AndroidBuildEnv {
         );
 
         let cxxflags = "-v --target=aarch64-linux-android";
+        
+        // Use the same host tag for lib path
+        let host_tag = if cfg!(windows) {
+            "windows-x86_64"
+        } else if cfg!(target_os = "macos") {
+            "darwin-x86_64"
+        } else {
+            "linux-x86_64"
+        };
+        
         let rustflags = format!(
-            "-L{}/toolchains/llvm/prebuilt/linux-x86_64/lib/aarch64-unknown-linux-musl",
-            self.ndk_path
+            "-L{}/toolchains/llvm/prebuilt/{}/lib/aarch64-unknown-linux-musl",
+            self.ndk_path, host_tag
         );
 
         env.insert("CXXFLAGS".to_string(), cxxflags.to_string());
