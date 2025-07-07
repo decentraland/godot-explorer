@@ -61,6 +61,9 @@ pub struct AndroidBuildEnv {
 
 impl AndroidBuildEnv {
     pub fn new(ndk_path: String) -> Self {
+        // Normalize path separators for consistency
+        let ndk_path = ndk_path.replace('\\', "/");
+        
         // Determine the host OS directory name for NDK prebuilt toolchains
         let host_tag = if cfg!(windows) {
             "windows-x86_64"
@@ -108,6 +111,21 @@ impl AndroidBuildEnv {
             "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER".to_string(),
             self.cargo_target_linker.clone(),
         );
+        
+        // Don't set CC/CXX/AR directly as it confuses build scripts about the host
+        // Only set the target-specific versions
+        
+        // Set CLANG_PATH for bindgen
+        let host_tag = if cfg!(windows) {
+            "windows-x86_64"
+        } else if cfg!(target_os = "macos") {
+            "darwin-x86_64"
+        } else {
+            "linux-x86_64"
+        };
+        let clang_path = format!("{}/toolchains/llvm/prebuilt/{}/bin", self.ndk_path, host_tag);
+        env.insert("CLANG_PATH".to_string(), clang_path);
+        
         env.insert(
             "CARGO_FFMPEG_SYS_DISABLE_SIZE_T_IS_USIZE".to_string(),
             "1".to_string(),
@@ -117,7 +135,11 @@ impl AndroidBuildEnv {
             "true".to_string(),
         );
 
-        let cxxflags = "-v --target=aarch64-linux-android";
+        // Set up sysroot for proper cross-compilation
+        let sysroot = format!("{}/toolchains/llvm/prebuilt/{}/sysroot", self.ndk_path, host_tag);
+        
+        // Set up target-specific flags
+        let target_cflags = format!("--target=aarch64-linux-android --sysroot={}", sysroot);
         
         // Use the same host tag for lib path
         let host_tag = if cfg!(windows) {
@@ -128,13 +150,47 @@ impl AndroidBuildEnv {
             "linux-x86_64"
         };
         
+        // Add both the musl lib and the sysroot lib paths
         let rustflags = format!(
-            "-L{}/toolchains/llvm/prebuilt/{}/lib/aarch64-unknown-linux-musl",
-            self.ndk_path, host_tag
+            "-L{}/toolchains/llvm/prebuilt/{}/lib/aarch64-unknown-linux-musl -L{}/usr/lib/aarch64-linux-android",
+            self.ndk_path, host_tag, sysroot
         );
 
-        env.insert("CXXFLAGS".to_string(), cxxflags.to_string());
+        // Set target-specific CFLAGS/CXXFLAGS
+        env.insert("CFLAGS_aarch64_linux_android".to_string(), target_cflags.clone());
+        env.insert("CXXFLAGS_aarch64_linux_android".to_string(), target_cflags.clone());
+        env.insert("CFLAGS_aarch64-linux-android".to_string(), target_cflags.clone());
+        env.insert("CXXFLAGS_aarch64-linux-android".to_string(), target_cflags);
         env.insert("RUSTFLAGS".to_string(), rustflags);
+        
+        // Set TARGET_SYSROOT for other tools that might need it
+        env.insert("TARGET_SYSROOT".to_string(), sysroot.clone());
+        
+        // Force pkg-config to use Android sysroot
+        env.insert("PKG_CONFIG_SYSROOT_DIR".to_string(), sysroot.clone());
+        env.insert("PKG_CONFIG_ALLOW_CROSS".to_string(), "1".to_string());
+        
+        // Ensure build scripts know we're cross-compiling
+        env.insert("CARGO_CFG_TARGET_OS".to_string(), "android".to_string());
+        env.insert("CARGO_CFG_TARGET_ARCH".to_string(), "aarch64".to_string());
+        
+        // Explicitly tell build scripts about host compiler to prevent confusion
+        if cfg!(windows) {
+            // On Windows, we want build scripts to use MSVC for host builds
+            env.insert("HOST_CC".to_string(), "cl.exe".to_string());
+            env.insert("HOST_CXX".to_string(), "cl.exe".to_string());
+            env.insert("HOST_AR".to_string(), "lib.exe".to_string());
+        }
+        
+        // For bzip2-sys and similar C dependencies
+        env.insert("CC_aarch64_linux_android".to_string(), self.target_cc.clone());
+        env.insert("CXX_aarch64_linux_android".to_string(), self.target_cxx.clone());
+        env.insert("AR_aarch64_linux_android".to_string(), self.target_ar.clone());
+        
+        // Some build scripts look for these with underscores
+        env.insert("CC_aarch64-linux-android".to_string(), self.target_cc.clone());
+        env.insert("CXX_aarch64-linux-android".to_string(), self.target_cxx.clone());
+        env.insert("AR_aarch64-linux-android".to_string(), self.target_ar.clone());
     }
 }
 
