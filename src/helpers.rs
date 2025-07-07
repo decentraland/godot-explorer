@@ -183,17 +183,17 @@ pub fn get_ffmpeg_extracted_folder(platform: &str) -> String {
     )
 }
 
-/// Check if a tool is installed (either in .bin or system PATH)
+/// Check if a tool is installed (only in .bin folder)
 pub fn is_tool_installed(tool: &str) -> bool {
     match tool {
-        "protoc" => BinPaths::protoc_bin().exists() || which::which("protoc").is_ok(),
-        "ffmpeg" => BinPaths::ffmpeg_bin().exists() || which::which("ffmpeg").is_ok(),
+        "protoc" => BinPaths::protoc_bin().exists(),
+        "ffmpeg" => BinPaths::ffmpeg_bin().exists(),
         "godot" | "godot4_bin" => BinPaths::godot_bin().exists(),
         _ => which::which(tool).is_ok(),
     }
 }
 
-/// Get the path to a tool (prioritizing local .bin over system PATH)
+/// Get the path to a tool (only from local .bin folder)
 pub fn get_tool_path(tool: &str) -> Option<PathBuf> {
     match tool {
         "protoc" => {
@@ -201,7 +201,7 @@ pub fn get_tool_path(tool: &str) -> Option<PathBuf> {
             if local.exists() {
                 Some(local)
             } else {
-                which::which("protoc").ok()
+                None
             }
         }
         "ffmpeg" => {
@@ -209,7 +209,7 @@ pub fn get_tool_path(tool: &str) -> Option<PathBuf> {
             if local.exists() {
                 Some(local)
             } else {
-                which::which("ffmpeg").ok()
+                None
             }
         }
         "godot" | "godot4_bin" => {

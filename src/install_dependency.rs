@@ -638,12 +638,27 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
 
     // Check if FFmpeg is already installed
     if let Some(ffmpeg_path) = crate::helpers::get_tool_path("ffmpeg") {
-        // Only check local installation for version
-        if ffmpeg_path.starts_with(".bin") {
-            // Check version
-            let output = std::process::Command::new(&ffmpeg_path)
-                .arg("-version")
-                .output();
+        // Check if it's the local FFmpeg by seeing if the path contains .bin
+        let path_str = ffmpeg_path.to_string_lossy();
+        let is_local = path_str.contains(".bin");
+        
+        if is_local {
+            // For local FFmpeg, we need to set LD_LIBRARY_PATH
+            let mut cmd = std::process::Command::new(&ffmpeg_path);
+            cmd.arg("-version");
+            
+            // Set LD_LIBRARY_PATH to include the lib directory
+            let lib_path = Path::new(".bin/ffmpeg/lib");
+            if lib_path.exists() {
+                let lib_path_str = lib_path.to_string_lossy();
+                if let Ok(existing_ld_path) = env::var("LD_LIBRARY_PATH") {
+                    cmd.env("LD_LIBRARY_PATH", format!("{}:{}", lib_path_str, existing_ld_path));
+                } else {
+                    cmd.env("LD_LIBRARY_PATH", lib_path_str.to_string());
+                }
+            }
+            
+            let output = cmd.output();
 
             if let Ok(output) = output {
                 let version_str = String::from_utf8_lossy(&output.stdout);
@@ -657,6 +672,13 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
                     );
                     fs::remove_dir_all(&ffmpeg_folder).ok();
                 }
+            } else {
+                // If we can't run ffmpeg, it might be missing libraries
+                print_message(
+                    MessageType::Warning,
+                    "Failed to check FFmpeg version, reinstalling...",
+                );
+                fs::remove_dir_all(&ffmpeg_folder).ok();
             }
         }
     }

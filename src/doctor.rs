@@ -186,15 +186,33 @@ fn check_rust_targets() {
 
 fn check_ffmpeg_installation() {
     if let Some(ffmpeg_path) = crate::helpers::get_tool_path("ffmpeg") {
-        let output = std::process::Command::new(&ffmpeg_path)
-            .arg("-version")
-            .output();
+        // Check if it's the local FFmpeg by seeing if the path contains .bin
+        let path_str = ffmpeg_path.to_string_lossy();
+        let is_local = path_str.contains(".bin");
+        
+        // If it's local FFmpeg, we need to set LD_LIBRARY_PATH
+        let mut cmd = std::process::Command::new(&ffmpeg_path);
+        cmd.arg("-version");
+        
+        if is_local {
+            // Set LD_LIBRARY_PATH to include the lib directory
+            let lib_path = Path::new(".bin/ffmpeg/lib");
+            if lib_path.exists() {
+                let lib_path_str = lib_path.to_string_lossy();
+                if let Ok(existing_ld_path) = env::var("LD_LIBRARY_PATH") {
+                    cmd.env("LD_LIBRARY_PATH", format!("{}:{}", lib_path_str, existing_ld_path));
+                } else {
+                    cmd.env("LD_LIBRARY_PATH", lib_path_str.to_string());
+                }
+            }
+        }
+        
+        let output = cmd.output();
 
         match output {
             Ok(output) => {
                 let version_str = String::from_utf8_lossy(&output.stdout);
                 let first_line = version_str.lines().next().unwrap_or("");
-                let is_local = ffmpeg_path.starts_with(".bin");
 
                 if version_str.contains("ffmpeg version n6.") {
                     print_message(
@@ -214,15 +232,15 @@ fn check_ffmpeg_installation() {
                             first_line
                         ),
                     );
-                    if is_local {
-                        println!("  Run: cargo run -- install");
-                    } else {
-                        println!("  FFmpeg 6.x is required. Run: cargo run -- install");
-                    }
+                    println!("  FFmpeg 6.x is required. Run: cargo run -- install");
                 }
             }
-            Err(_) => {
-                print_message(MessageType::Error, "Failed to check FFmpeg version");
+            Err(e) => {
+                print_message(MessageType::Error, &format!("Failed to check FFmpeg version: {}", e));
+                if is_local {
+                    println!("  This might be due to missing shared libraries.");
+                    println!("  Try running: cargo run -- install");
+                }
             }
         }
     } else {
