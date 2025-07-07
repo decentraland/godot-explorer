@@ -1,5 +1,4 @@
 use crate::dependencies::BuildStatus;
-use crate::helpers::BinPaths;
 use crate::platform::{
     check_android_sdk, check_development_dependencies, check_ios_development, check_required_tools,
     get_install_command, get_platform_info, suggest_install,
@@ -32,7 +31,9 @@ pub fn run_doctor() -> anyhow::Result<()> {
                         MessageType::Success,
                         &format!(
                             "{} - {} (using local: {})",
-                            tool, description, tool_path.display()
+                            tool,
+                            description,
+                            tool_path.display()
                         ),
                     );
                 } else {
@@ -198,16 +199,18 @@ fn check_ffmpeg_installation() {
                 if version_str.contains("ffmpeg version n6.") {
                     print_message(
                         MessageType::Success,
-                        &format!("FFmpeg 6.x found ({}) - {}", 
-                            if is_local { "local" } else { "system" }, 
+                        &format!(
+                            "FFmpeg 6.x found ({}) - {}",
+                            if is_local { "local" } else { "system" },
                             first_line
                         ),
                     );
                 } else {
                     print_message(
                         MessageType::Warning,
-                        &format!("FFmpeg found ({}) but not version 6.x - {}", 
-                            if is_local { "local" } else { "system" }, 
+                        &format!(
+                            "FFmpeg found ({}) but not version 6.x - {}",
+                            if is_local { "local" } else { "system" },
                             first_line
                         ),
                     );
@@ -420,7 +423,7 @@ fn check_environment_variables() {
         ("ANDROID_NDK", "Android NDK location (alternative)"),
         ("HOME", "User home directory"),
     ];
-    
+
     // Add Windows-specific environment variables
     if cfg!(windows) {
         vars_to_check.push(("LIBCLANG_PATH", "Clang library path for bindgen"));
@@ -441,7 +444,10 @@ fn check_environment_variables() {
                     } else if path.exists() {
                         print_message(
                             MessageType::Warning,
-                            &format!("{}: {} ({}) - libclang.dll not found", var, value, description),
+                            &format!(
+                                "{}: {} ({}) - libclang.dll not found",
+                                var, value, description
+                            ),
                         );
                     } else {
                         print_message(
@@ -462,21 +468,31 @@ fn check_environment_variables() {
                     if let Some(detected_path) = crate::platform::find_libclang_path() {
                         print_message(
                             MessageType::Success,
-                            &format!("{}: Not set but auto-detected at: {} ({})", var, detected_path, description),
+                            &format!(
+                                "{}: Not set but auto-detected at: {} ({})",
+                                var, detected_path, description
+                            ),
                         );
                         println!("  To use this path, set it with:");
                         println!("  set LIBCLANG_PATH={}", detected_path);
-                        println!("  Or add it to your system environment variables for permanent use.");
+                        println!(
+                            "  Or add it to your system environment variables for permanent use."
+                        );
                     } else {
                         print_message(
                             MessageType::Warning,
-                            &format!("{}: Not set ({}) - Required for Windows builds", var, description),
+                            &format!(
+                                "{}: Not set ({}) - Required for Windows builds",
+                                var, description
+                            ),
                         );
                         println!("  Common locations:");
                         println!("  - C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\LLVM\\x64\\bin");
                         println!("  - C:\\Program Files\\LLVM\\bin");
                         println!("\n  We tried to auto-detect using vswhere but couldn't find a valid installation.");
-                        println!("  Make sure Visual Studio is installed with C++ development tools.");
+                        println!(
+                            "  Make sure Visual Studio is installed with C++ development tools."
+                        );
                     }
                 } else {
                     print_message(

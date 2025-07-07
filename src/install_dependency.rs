@@ -556,7 +556,7 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
             }
             _ => (),
         };
-        fs::copy(program_path, &dest_program_path)?;
+        fs::copy(program_path, dest_program_path)?;
         print_message(MessageType::Success, "Godot binary installed");
     } else {
         print_message(MessageType::Success, "Godot binary already installed");

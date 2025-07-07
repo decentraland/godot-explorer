@@ -243,11 +243,8 @@ fn setup_v8_bindings(
     } else {
         binding_file_path.to_string_lossy().to_string()
     };
-    
-    with_build_envs.insert(
-        "RUSTY_V8_SRC_BINDING_PATH".to_string(),
-        binding_path_str,
-    );
+
+    with_build_envs.insert("RUSTY_V8_SRC_BINDING_PATH".to_string(), binding_path_str);
 
     // Ensure the target directory exists.
     if !target_dir.exists() {
@@ -288,7 +285,7 @@ fn setup_ffmpeg_env(
     if local_ffmpeg_path.exists() {
         // Get absolute path for FFmpeg and adjust for Windows UNC paths
         let absolute_ffmpeg_path = std::fs::canonicalize(&local_ffmpeg_path)?;
-        let absolute_ffmpeg_str = crate::path::adjust_canonicalization(&absolute_ffmpeg_path);
+        let absolute_ffmpeg_str = crate::path::adjust_canonicalization(absolute_ffmpeg_path);
 
         // Set PKG_CONFIG_PATH to help find our local FFmpeg
         let pkg_config_path = format!("{}/lib/pkgconfig", absolute_ffmpeg_str);
@@ -933,7 +930,7 @@ pub fn hotreload_android(release: bool, extras: Vec<String>) -> anyhow::Result<(
                 start_args.push("true".to_string());
             } else if extra.starts_with('-') {
                 // Single dash arguments
-                if let Some(arg) = extra.strip_prefix("-") {
+                if let Some(arg) = extra.strip_prefix('-') {
                     start_args.push("-e".to_string());
                     start_args.push(arg.to_string());
                     start_args.push("true".to_string());

@@ -215,7 +215,11 @@ impl BinPaths {
     }
 
     pub fn protoc_bin() -> PathBuf {
-        let protoc_name = if cfg!(windows) { "protoc.exe" } else { "protoc" };
+        let protoc_name = if cfg!(windows) {
+            "protoc.exe"
+        } else {
+            "protoc"
+        };
         Self::protoc().join("bin").join(protoc_name)
     }
 
@@ -224,7 +228,11 @@ impl BinPaths {
     }
 
     pub fn ffmpeg_bin() -> PathBuf {
-        let ffmpeg_name = if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" };
+        let ffmpeg_name = if cfg!(windows) {
+            "ffmpeg.exe"
+        } else {
+            "ffmpeg"
+        };
         Self::ffmpeg().join("bin").join(ffmpeg_name)
     }
 

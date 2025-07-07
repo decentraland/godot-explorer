@@ -207,7 +207,10 @@ pub fn copy_ffmpeg_libraries(
 
             // Check if the folder exists
             if !Path::new(&ffmpeg_dll_folder).exists() {
-                println!("Warning: FFmpeg bin folder not found at {}", ffmpeg_dll_folder);
+                println!(
+                    "Warning: FFmpeg bin folder not found at {}",
+                    ffmpeg_dll_folder
+                );
                 return Ok(());
             }
 

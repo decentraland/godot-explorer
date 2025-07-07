@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::{
-    consts::{BIN_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    consts::RUST_LIB_PROJECT_FOLDER,
     platform::get_platform_info,
     ui::{print_message, print_section, MessageType},
 };

@@ -2,7 +2,6 @@ use crate::consts::ANDROID_NDK_VERSION;
 use crate::helpers::get_android_ndk_path;
 use crate::ui::{print_message, MessageType};
 use std::env;
-use which::which;
 
 /// Platform information
 #[derive(Debug, Clone)]
@@ -277,12 +276,12 @@ fn check_libclang_path() -> bool {
             return libclang_dll.exists();
         }
     }
-    
+
     // If not set, try to auto-detect it
-    if let Some(_) = find_libclang_path() {
+    if find_libclang_path().is_some() {
         return true;
     }
-    
+
     false
 }
 
@@ -292,17 +291,17 @@ pub fn find_libclang_path() -> Option<String> {
     if !cfg!(windows) {
         return None;
     }
-    
+
     // Try using vswhere to find Visual Studio installation
     let vswhere_paths = vec![
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe",
         "C:\\Program Files\\Microsoft Visual Studio\\Installer\\vswhere.exe",
     ];
-    
+
     for vswhere_path in vswhere_paths {
         if std::path::Path::new(vswhere_path).exists() {
             if let Ok(output) = std::process::Command::new(vswhere_path)
-                .args(&["-latest", "-property", "installationPath"])
+                .args(["-latest", "-property", "installationPath"])
                 .output()
             {
                 if output.status.success() {
@@ -318,7 +317,7 @@ pub fn find_libclang_path() -> Option<String> {
             }
         }
     }
-    
+
     // Fallback: try common installation paths
     let common_paths = vec![
         "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\LLVM\\x64\\bin",
@@ -329,21 +328,21 @@ pub fn find_libclang_path() -> Option<String> {
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Tools\\LLVM\\x64\\bin",
         "C:\\Program Files\\LLVM\\bin",
     ];
-    
+
     for path_str in common_paths {
         let path = std::path::Path::new(path_str);
         if path.exists() && path.join("libclang.dll").exists() {
             return Some(path_str.to_string());
         }
     }
-    
+
     None
 }
 
 /// Check if Visual Studio is installed
 fn check_vs_installed() -> bool {
     // Check common Visual Studio installation paths
-    let vs_paths = vec![
+    let vs_paths = [
         "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community",
         "C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional",
         "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise",
@@ -351,8 +350,10 @@ fn check_vs_installed() -> bool {
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional",
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise",
     ];
-    
-    vs_paths.iter().any(|path| std::path::Path::new(path).exists())
+
+    vs_paths
+        .iter()
+        .any(|path| std::path::Path::new(path).exists())
 }
 
 /// Get installation command for missing dependencies
@@ -443,13 +444,12 @@ pub fn get_next_steps_instructions() -> String {
                 instructions.push_str(
                     "# Make sure you have Visual Studio with C++ development tools installed.\n",
                 );
-                instructions.push_str(
-                    "\n# IMPORTANT: LIBCLANG_PATH environment variable:\n",
-                );
+                instructions.push_str("\n# IMPORTANT: LIBCLANG_PATH environment variable:\n");
                 instructions.push_str("# This is required for bindgen to work properly.\n");
                 instructions.push_str("# The build system will try to auto-detect it from Visual Studio, but you can set it manually:\n");
-                instructions
-                    .push_str("\n# Auto-detection uses vswhere to find Visual Studio's LLVM installation.\n");
+                instructions.push_str(
+                    "\n# Auto-detection uses vswhere to find Visual Studio's LLVM installation.\n",
+                );
                 instructions.push_str("# If auto-detection fails, set it manually:\n");
                 instructions.push_str("# set LIBCLANG_PATH=C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\LLVM\\x64\\bin\n");
                 instructions.push_str("\n# Or if you have LLVM installed separately:\n");
