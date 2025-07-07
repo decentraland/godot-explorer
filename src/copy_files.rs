@@ -203,10 +203,16 @@ pub fn copy_ffmpeg_libraries(
     match target {
         "win64" => {
             // copy ffmpeg .dll
-            let ffmpeg_dll_folder = format!("{BIN_FOLDER}ffmpeg/ffmpeg-6.0-full_build-shared/bin");
+            let ffmpeg_dll_folder = format!("{BIN_FOLDER}ffmpeg/bin");
+
+            // Check if the folder exists
+            if !Path::new(&ffmpeg_dll_folder).exists() {
+                println!("Warning: FFmpeg bin folder not found at {}", ffmpeg_dll_folder);
+                return Ok(());
+            }
 
             // copy all dlls in ffmpeg_dll_folder to exports folder
-            for entry in fs::read_dir(ffmpeg_dll_folder)? {
+            for entry in fs::read_dir(&ffmpeg_dll_folder)? {
                 let entry = entry?;
                 let ty = entry.file_type()?;
                 if ty.is_file() {

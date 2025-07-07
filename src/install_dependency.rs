@@ -680,7 +680,7 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
                 Some("ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1.tar.xz".to_string()),
             )?;
 
-            // The archive extracts to a folder like ffmpeg-n6.0.1-linux64-gpl-shared-6.0
+            // The archive extracts to a folder like ffmpeg
             // We need to move its contents to our ffmpeg folder
             let extracted_folder =
                 temp_extract_path.join("ffmpeg-n6.1-latest-linux64-lgpl-shared-6.1");
