@@ -334,30 +334,44 @@ fn setup_ffmpeg_env(
 
 /// Sets up environment variables needed for building on Android.
 fn setup_android_env(with_build_envs: &mut HashMap<String, String>) -> anyhow::Result<()> {
-    let android_ndk = std::env::var("ANDROID_NDK").ok();
-    let android_sdk = std::env::var("ANDROID_SDK").ok();
+    // Try to find Android NDK using the platform detection from check_android_sdk
+    match crate::platform::check_android_sdk() {
+        Ok(ndk_path) => {
+            // Use AndroidBuildEnv struct to configure environment
+            let android_env = AndroidBuildEnv::new(ndk_path.clone());
+            android_env.apply_to_env(with_build_envs);
 
-    let android_ndk_path = android_ndk.unwrap_or_else(|| {
-        if let Some(android_sdk_path) = android_sdk {
-            get_android_ndk_path(&android_sdk_path)
-                .to_string_lossy()
-                .to_string()
-        } else {
-            let home = std::env::var("HOME").expect("HOME environment not set");
-            let android_sdk = format!("{}/Android/Sdk", home);
-            get_android_ndk_path(&android_sdk)
-                .to_string_lossy()
-                .to_string()
+            // Also set ANDROID_NDK and ANDROID_NDK_HOME
+            with_build_envs.insert("ANDROID_NDK".to_string(), ndk_path.clone());
+            with_build_envs.insert("ANDROID_NDK_HOME".to_string(), ndk_path);
         }
-    });
+        Err(_) => {
+            // Fallback to old behavior if platform detection fails
+            let android_ndk = std::env::var("ANDROID_NDK").ok();
+            let android_sdk = std::env::var("ANDROID_SDK").ok();
 
-    // Use AndroidBuildEnv struct to configure environment
-    let android_env = AndroidBuildEnv::new(android_ndk_path.clone());
-    android_env.apply_to_env(with_build_envs);
+            let android_ndk_path = android_ndk.unwrap_or_else(|| {
+                if let Some(android_sdk_path) = android_sdk {
+                    get_android_ndk_path(&android_sdk_path)
+                        .to_string_lossy()
+                        .to_string()
+                } else {
+                    // This will likely fail, but we'll get a better error message later
+                    String::new()
+                }
+            });
 
-    // Also set ANDROID_NDK and ANDROID_NDK_HOME
-    with_build_envs.insert("ANDROID_NDK".to_string(), android_ndk_path.clone());
-    with_build_envs.insert("ANDROID_NDK_HOME".to_string(), android_ndk_path);
+            if !android_ndk_path.is_empty() {
+                // Use AndroidBuildEnv struct to configure environment
+                let android_env = AndroidBuildEnv::new(android_ndk_path.clone());
+                android_env.apply_to_env(with_build_envs);
+
+                // Also set ANDROID_NDK and ANDROID_NDK_HOME
+                with_build_envs.insert("ANDROID_NDK".to_string(), android_ndk_path.clone());
+                with_build_envs.insert("ANDROID_NDK_HOME".to_string(), android_ndk_path);
+            }
+        }
+    }
 
     Ok(())
 }
@@ -366,58 +380,51 @@ fn setup_android_env(with_build_envs: &mut HashMap<String, String>) -> anyhow::R
 
 /// Validates Android SDK/NDK setup and returns the NDK path
 fn validate_android_ndk() -> anyhow::Result<String> {
-    // Check ANDROID_NDK_HOME first
-    if let Ok(ndk_home) = std::env::var("ANDROID_NDK_HOME") {
-        if std::path::Path::new(&ndk_home).exists() {
-            return Ok(ndk_home);
-        } else {
-            return Err(anyhow::anyhow!(
-                "ANDROID_NDK_HOME is set to '{}' but the directory doesn't exist",
-                ndk_home
-            ));
+    // Use the centralized platform detection
+    match crate::platform::check_android_sdk() {
+        Ok(ndk_path) => Ok(ndk_path),
+        Err(_) => {
+            let ndk_version = ANDROID_NDK_VERSION;
+            
+            // Provide OS-specific help
+            let os_specific_help = match std::env::consts::OS {
+                "windows" => {
+                    "Common Android SDK locations on Windows:\n\
+                    - %USERPROFILE%\\AppData\\Local\\Android\\Sdk\n\
+                    - %USERPROFILE%\\Android\\Sdk\n\
+                    - C:\\Android\\Sdk\n\
+                    - C:\\Program Files\\Android\\android-sdk"
+                }
+                "macos" => {
+                    "Common Android SDK locations on macOS:\n\
+                    - ~/Library/Android/sdk\n\
+                    - ~/Android/Sdk\n\
+                    - /usr/local/share/android-sdk (Homebrew)\n\
+                    - /Applications/Android Studio.app/Contents/sdk"
+                }
+                _ => {
+                    "Common Android SDK locations on Linux:\n\
+                    - ~/Android/Sdk\n\
+                    - /opt/android-sdk\n\
+                    - ~/.android/sdk"
+                }
+            };
+            
+            Err(anyhow::anyhow!(
+                "Android NDK not found!\n\n\
+                Please install Android NDK version {} and set one of these environment variables:\n\
+                - ANDROID_NDK_HOME (preferred)\n\
+                - ANDROID_NDK\n\
+                - ANDROID_HOME or ANDROID_SDK (NDK will be searched in <path>/ndk/{})\n\n\
+                {}\n\n\
+                You can install the NDK using Android Studio SDK Manager or download it from:\n\
+                https://developer.android.com/ndk/downloads",
+                ndk_version,
+                ndk_version,
+                os_specific_help
+            ))
         }
     }
-
-    // Check ANDROID_NDK
-    if let Ok(ndk) = std::env::var("ANDROID_NDK") {
-        if std::path::Path::new(&ndk).exists() {
-            return Ok(ndk);
-        } else {
-            return Err(anyhow::anyhow!(
-                "ANDROID_NDK is set to '{}' but the directory doesn't exist",
-                ndk
-            ));
-        }
-    }
-
-    // Check standard paths
-    let ndk_version = ANDROID_NDK_VERSION;
-    let possible_paths = vec![
-        (std::env::var("ANDROID_SDK").ok(), "ndk/{}"),
-        (std::env::var("ANDROID_HOME").ok(), "ndk/{}"),
-        (std::env::var("HOME").ok(), "Android/Sdk/ndk/{}"),
-    ];
-
-    for (base_path, ndk_subpath) in possible_paths {
-        if let Some(base) = base_path {
-            let ndk_path = format!("{}/{}", base, ndk_subpath.replace("{}", ndk_version));
-            if std::path::Path::new(&ndk_path).exists() {
-                return Ok(ndk_path);
-            }
-        }
-    }
-
-    Err(anyhow::anyhow!(
-        "Android NDK not found!\n\n\
-        Please install Android NDK version {} and set one of these environment variables:\n\
-        - ANDROID_NDK_HOME (preferred)\n\
-        - ANDROID_NDK\n\
-        - ANDROID_HOME or ANDROID_SDK (NDK will be searched in <path>/ndk/{})\n\n\
-        You can install the NDK using Android Studio SDK Manager or download it from:\n\
-        https://developer.android.com/ndk/downloads",
-        ndk_version,
-        ndk_version
-    ))
 }
 
 /// Builds for Android using direct cargo build (not cargo-ndk due to libc++ linking issues)

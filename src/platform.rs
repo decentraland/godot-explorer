@@ -2,6 +2,7 @@ use crate::consts::ANDROID_NDK_VERSION;
 use crate::helpers::get_android_ndk_path;
 use crate::ui::{print_message, MessageType};
 use std::env;
+use std::path::PathBuf;
 
 /// Platform information
 #[derive(Debug, Clone)]
@@ -55,6 +56,75 @@ pub fn check_command(cmd: &str) -> bool {
     crate::helpers::is_tool_installed(cmd)
 }
 
+/// Get default Android SDK paths for different operating systems
+fn get_default_android_sdk_paths() -> Vec<String> {
+    let mut paths = Vec::new();
+    
+    match env::consts::OS {
+        "windows" => {
+            // Common Windows paths
+            if let Ok(userprofile) = env::var("USERPROFILE") {
+                paths.push(format!("{}\\Android\\Sdk", userprofile));
+                paths.push(format!("{}\\AppData\\Local\\Android\\Sdk", userprofile));
+                paths.push(format!("{}\\AppData\\Local\\Android\\sdk", userprofile));
+            }
+            
+            if let Ok(localappdata) = env::var("LOCALAPPDATA") {
+                paths.push(format!("{}\\Android\\Sdk", localappdata));
+                paths.push(format!("{}\\Android\\sdk", localappdata));
+            }
+            
+            // Default paths used by Android Studio on Windows
+            paths.push("C:\\Android\\Sdk".to_string());
+            paths.push("C:\\Android\\sdk".to_string());
+            paths.push("C:\\Users\\Public\\Android\\Sdk".to_string());
+            
+            if let Ok(programfiles) = env::var("ProgramFiles") {
+                paths.push(format!("{}\\Android\\android-sdk", programfiles));
+            }
+            
+            if let Ok(programfiles_x86) = env::var("ProgramFiles(x86)") {
+                paths.push(format!("{}\\Android\\android-sdk", programfiles_x86));
+            }
+        }
+        "macos" => {
+            // Common macOS paths
+            if let Ok(home) = env::var("HOME") {
+                paths.push(format!("{}/Library/Android/sdk", home));
+                paths.push(format!("{}/Android/Sdk", home));
+                paths.push(format!("{}/android-sdk", home));
+                paths.push(format!("{}/android-sdk-macosx", home));
+                paths.push(format!("{}/.android/sdk", home));
+            }
+            
+            // Homebrew installation paths
+            paths.push("/usr/local/share/android-sdk".to_string());
+            paths.push("/opt/homebrew/share/android-sdk".to_string());
+            paths.push("/opt/homebrew/Caskroom/android-sdk".to_string());
+            
+            // Android Studio default paths
+            paths.push("/Applications/Android Studio.app/Contents/sdk".to_string());
+        }
+        _ => {
+            // Linux and other Unix-like systems
+            if let Ok(home) = env::var("HOME") {
+                paths.push(format!("{}/Android/Sdk", home));
+                paths.push(format!("{}/android-sdk", home));
+                paths.push(format!("{}/android-sdk-linux", home));
+                paths.push(format!("{}/.android/sdk", home));
+            }
+            
+            // System-wide installations
+            paths.push("/opt/android-sdk".to_string());
+            paths.push("/opt/android-sdk-linux".to_string());
+            paths.push("/usr/local/android-sdk".to_string());
+            paths.push("/usr/share/android-sdk".to_string());
+        }
+    }
+    
+    paths
+}
+
 /// Check if Android SDK is properly configured
 pub fn check_android_sdk() -> Result<String, String> {
     // Check environment variables in order of preference
@@ -84,12 +154,14 @@ pub fn check_android_sdk() -> Result<String, String> {
         }
     }
 
-    // Check default location
-    if let Ok(home) = env::var("HOME") {
-        let android_sdk = format!("{}/Android/Sdk", home);
-        let ndk_path = get_android_ndk_path(&android_sdk);
-        if ndk_path.exists() {
-            return Ok(ndk_path.to_string_lossy().to_string());
+    // Check default locations based on OS
+    let possible_sdk_paths = get_default_android_sdk_paths();
+    for sdk_path in possible_sdk_paths {
+        if std::path::Path::new(&sdk_path).exists() {
+            let ndk_path = get_android_ndk_path(&sdk_path);
+            if ndk_path.exists() {
+                return Ok(ndk_path.to_string_lossy().to_string());
+            }
         }
     }
 
