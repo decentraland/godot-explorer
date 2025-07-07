@@ -237,9 +237,16 @@ fn setup_v8_bindings(
     let binding_file_path = target_dir.join(v8_binding_file_name);
 
     // Set the RUSTY_V8_SRC_BINDING_PATH environment variable.
+    // Adjust path for Windows to remove extended path prefix
+    let binding_path_str = if cfg!(windows) {
+        crate::path::adjust_canonicalization(&binding_file_path)
+    } else {
+        binding_file_path.to_string_lossy().to_string()
+    };
+    
     with_build_envs.insert(
         "RUSTY_V8_SRC_BINDING_PATH".to_string(),
-        binding_file_path.to_string_lossy().to_string(),
+        binding_path_str,
     );
 
     // Ensure the target directory exists.
@@ -500,8 +507,24 @@ fn run_cargo_build(
         &format!("Running: cargo {}", build_args.join(" ")),
     );
 
+    // On Windows, we need to use a path without the extended prefix
+    // to avoid issues with build scripts that use OUT_DIR
+    let working_dir = if cfg!(windows) {
+        // Try to use a relative path if we're already in the correct directory
+        let current_dir = std::env::current_dir()?;
+        if current_dir == *cwd {
+            PathBuf::from(".")
+        } else {
+            // Convert to string and back to remove extended prefix
+            let cwd_str = crate::path::adjust_canonicalization(cwd);
+            PathBuf::from(cwd_str)
+        }
+    } else {
+        cwd.clone()
+    };
+
     let build_status = std::process::Command::new("cargo")
-        .current_dir(cwd)
+        .current_dir(&working_dir)
         .args(build_args)
         .envs(envs)
         .status()
