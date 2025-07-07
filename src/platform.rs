@@ -53,16 +53,7 @@ pub fn get_platform_info() -> PlatformInfo {
 
 /// Check if a command exists in PATH or in local .bin directory
 pub fn check_command(cmd: &str) -> bool {
-    // First check if it exists in the local .bin directory (for protoc)
-    if cmd == "protoc" {
-        let local_protoc = std::path::Path::new(".bin/protoc/bin/protoc");
-        if local_protoc.exists() {
-            return true;
-        }
-    }
-
-    // Otherwise check system PATH
-    which(cmd).is_ok()
+    crate::helpers::is_tool_installed(cmd)
 }
 
 /// Check if Android SDK is properly configured
@@ -243,7 +234,17 @@ pub fn check_development_dependencies() -> Vec<(&'static str, bool, &'static str
             // No need to check for system FFmpeg packages
         ],
         "windows" => vec![
-            // Windows deps are handled differently
+            // Windows-specific checks
+            (
+                "LIBCLANG_PATH",
+                check_libclang_path(),
+                "Clang library path for bindgen",
+            ),
+            (
+                "cl.exe",
+                check_command("cl") || check_vs_installed(),
+                "Visual Studio C++ compiler",
+            ),
         ],
         _ => vec![],
     }
@@ -263,6 +264,95 @@ fn check_pkg_config(lib: &str) -> bool {
         .status()
         .map(|status| status.success())
         .unwrap_or(false)
+}
+
+/// Check if LIBCLANG_PATH is set and valid
+fn check_libclang_path() -> bool {
+    // First check if LIBCLANG_PATH is already set
+    if let Ok(libclang_path) = env::var("LIBCLANG_PATH") {
+        // Check if the path exists and contains libclang.dll
+        let path = std::path::Path::new(&libclang_path);
+        if path.exists() {
+            let libclang_dll = path.join("libclang.dll");
+            return libclang_dll.exists();
+        }
+    }
+    
+    // If not set, try to auto-detect it
+    if let Some(_) = find_libclang_path() {
+        return true;
+    }
+    
+    false
+}
+
+/// Try to find LIBCLANG_PATH automatically using vswhere
+pub fn find_libclang_path() -> Option<String> {
+    // Only try on Windows
+    if !cfg!(windows) {
+        return None;
+    }
+    
+    // Try using vswhere to find Visual Studio installation
+    let vswhere_paths = vec![
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe",
+        "C:\\Program Files\\Microsoft Visual Studio\\Installer\\vswhere.exe",
+    ];
+    
+    for vswhere_path in vswhere_paths {
+        if std::path::Path::new(vswhere_path).exists() {
+            if let Ok(output) = std::process::Command::new(vswhere_path)
+                .args(&["-latest", "-property", "installationPath"])
+                .output()
+            {
+                if output.status.success() {
+                    let install_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !install_path.is_empty() {
+                        let libclang_path = format!("{}\\VC\\Tools\\LLVM\\x64\\bin", install_path);
+                        let path = std::path::Path::new(&libclang_path);
+                        if path.exists() && path.join("libclang.dll").exists() {
+                            return Some(libclang_path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Fallback: try common installation paths
+    let common_paths = vec![
+        "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\LLVM\\x64\\bin",
+        "C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional\\VC\\Tools\\LLVM\\x64\\bin",
+        "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\LLVM\\x64\\bin",
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\LLVM\\x64\\bin",
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Tools\\LLVM\\x64\\bin",
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Tools\\LLVM\\x64\\bin",
+        "C:\\Program Files\\LLVM\\bin",
+    ];
+    
+    for path_str in common_paths {
+        let path = std::path::Path::new(path_str);
+        if path.exists() && path.join("libclang.dll").exists() {
+            return Some(path_str.to_string());
+        }
+    }
+    
+    None
+}
+
+/// Check if Visual Studio is installed
+fn check_vs_installed() -> bool {
+    // Check common Visual Studio installation paths
+    let vs_paths = vec![
+        "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community",
+        "C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional",
+        "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise",
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community",
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional",
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise",
+    ];
+    
+    vs_paths.iter().any(|path| std::path::Path::new(path).exists())
 }
 
 /// Get installation command for missing dependencies
@@ -354,11 +444,17 @@ pub fn get_next_steps_instructions() -> String {
                     "# Make sure you have Visual Studio with C++ development tools installed.\n",
                 );
                 instructions.push_str(
-                    "\n# If you encounter issues, ensure LIBCLANG_PATH is set correctly:\n",
+                    "\n# IMPORTANT: LIBCLANG_PATH environment variable:\n",
                 );
+                instructions.push_str("# This is required for bindgen to work properly.\n");
+                instructions.push_str("# The build system will try to auto-detect it from Visual Studio, but you can set it manually:\n");
                 instructions
-                    .push_str("# You can find it in your Visual Studio installation, typically:\n");
-                instructions.push_str("# C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\LLVM\\x64\\bin\n");
+                    .push_str("\n# Auto-detection uses vswhere to find Visual Studio's LLVM installation.\n");
+                instructions.push_str("# If auto-detection fails, set it manually:\n");
+                instructions.push_str("# set LIBCLANG_PATH=C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\LLVM\\x64\\bin\n");
+                instructions.push_str("\n# Or if you have LLVM installed separately:\n");
+                instructions.push_str("# set LIBCLANG_PATH=C:\\Program Files\\LLVM\\bin\n");
+                instructions.push_str("\n# To set it permanently, use System Environment Variables in Windows Settings.\n");
             }
             _ => {}
         }

@@ -80,13 +80,11 @@ fn check_macos_build(lib_target_path: &str) -> bool {
 }
 
 pub fn check_godot_installed() -> bool {
-    let godot_path = format!("{}/godot/godot4_bin", BIN_FOLDER);
-    Path::new(&godot_path).exists()
+    crate::helpers::is_tool_installed("godot")
 }
 
 pub fn check_protoc_installed() -> bool {
-    let protoc_path = format!("{}/protoc/bin/protoc", BIN_FOLDER);
-    Path::new(&protoc_path).exists()
+    crate::helpers::is_tool_installed("protoc")
 }
 
 pub fn check_export_templates_for_platform(platform: &str) -> bool {

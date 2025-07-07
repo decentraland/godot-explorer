@@ -157,6 +157,47 @@ pub fn get_ffmpeg_extracted_folder(platform: &str) -> String {
     )
 }
 
+/// Check if a tool is installed (either in .bin or system PATH)
+pub fn is_tool_installed(tool: &str) -> bool {
+    match tool {
+        "protoc" => BinPaths::protoc_bin().exists() || which::which("protoc").is_ok(),
+        "ffmpeg" => BinPaths::ffmpeg_bin().exists() || which::which("ffmpeg").is_ok(),
+        "godot" | "godot4_bin" => BinPaths::godot_bin().exists(),
+        _ => which::which(tool).is_ok(),
+    }
+}
+
+/// Get the path to a tool (prioritizing local .bin over system PATH)
+pub fn get_tool_path(tool: &str) -> Option<PathBuf> {
+    match tool {
+        "protoc" => {
+            let local = BinPaths::protoc_bin();
+            if local.exists() {
+                Some(local)
+            } else {
+                which::which("protoc").ok()
+            }
+        }
+        "ffmpeg" => {
+            let local = BinPaths::ffmpeg_bin();
+            if local.exists() {
+                Some(local)
+            } else {
+                which::which("ffmpeg").ok()
+            }
+        }
+        "godot" | "godot4_bin" => {
+            let local = BinPaths::godot_bin();
+            if local.exists() {
+                Some(local)
+            } else {
+                None
+            }
+        }
+        _ => which::which(tool).ok(),
+    }
+}
+
 /// Common path constructors for bin folder
 pub struct BinPaths;
 
@@ -174,7 +215,8 @@ impl BinPaths {
     }
 
     pub fn protoc_bin() -> PathBuf {
-        Self::protoc().join("bin").join("protoc")
+        let protoc_name = if cfg!(windows) { "protoc.exe" } else { "protoc" };
+        Self::protoc().join("bin").join(protoc_name)
     }
 
     pub fn ffmpeg() -> PathBuf {
@@ -182,7 +224,8 @@ impl BinPaths {
     }
 
     pub fn ffmpeg_bin() -> PathBuf {
-        Self::ffmpeg().join("bin").join("ffmpeg")
+        let ffmpeg_name = if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" };
+        Self::ffmpeg().join("bin").join(ffmpeg_name)
     }
 
     pub fn android_deps() -> PathBuf {

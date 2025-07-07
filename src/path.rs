@@ -8,8 +8,13 @@ pub fn adjust_canonicalization<P: AsRef<std::path::Path>>(p: P) -> String {
 #[cfg(target_os = "windows")]
 pub fn adjust_canonicalization<P: AsRef<std::path::Path>>(p: P) -> String {
     const VERBATIM_PREFIX: &str = r#"\\?\"#;
+    const VERBATIM_UNC_PREFIX: &str = r#"\\?\UNC\"#;
     let p = p.as_ref().display().to_string();
-    if let Some(stripped) = p.strip_prefix(VERBATIM_PREFIX) {
+    
+    if let Some(stripped) = p.strip_prefix(VERBATIM_UNC_PREFIX) {
+        // Convert \\?\UNC\server\share to \\server\share
+        format!(r#"\\{}"#, stripped)
+    } else if let Some(stripped) = p.strip_prefix(VERBATIM_PREFIX) {
         stripped.to_string()
     } else {
         p

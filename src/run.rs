@@ -102,8 +102,8 @@ pub fn build(
             &target,
         )?;
 
-        let build_cwd = adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?);
-        run_cargo_build(&PathBuf::from(build_cwd), &build_args, &with_build_envs)?;
+        let build_cwd = std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?;
+        run_cargo_build(&build_cwd, &build_args, &with_build_envs)?;
     } else {
         let (build_args, with_build_envs) = prepare_build_args_envs(
             release_mode,
@@ -112,8 +112,8 @@ pub fn build(
             &target,
         )?;
 
-        let build_cwd = adjust_canonicalization(std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?);
-        run_cargo_build(&PathBuf::from(build_cwd), &build_args, &with_build_envs)?;
+        let build_cwd = std::fs::canonicalize(RUST_LIB_PROJECT_FOLDER)?;
+        run_cargo_build(&build_cwd, &build_args, &with_build_envs)?;
     }
 
     copy_library(&target, !release_mode)?;
@@ -136,6 +136,20 @@ fn prepare_build_args_envs(
     }
 
     build_args.extend(extra_build_args);
+
+    // On Windows, try to auto-set LIBCLANG_PATH if not already set
+    #[cfg(windows)]
+    {
+        if std::env::var("LIBCLANG_PATH").is_err() {
+            if let Some(libclang_path) = crate::platform::find_libclang_path() {
+                print_message(
+                    MessageType::Info,
+                    &format!("Auto-detected LIBCLANG_PATH: {}", libclang_path),
+                );
+                with_build_envs.insert("LIBCLANG_PATH".to_string(), libclang_path);
+            }
+        }
+    }
 
     if target == "ios" || target == "android" {
         setup_v8_bindings(&mut with_build_envs, target)?;
@@ -265,9 +279,9 @@ fn setup_ffmpeg_env(
 
     let local_ffmpeg_path = BinPaths::ffmpeg();
     if local_ffmpeg_path.exists() {
-        // Get absolute path for FFmpeg
+        // Get absolute path for FFmpeg and adjust for Windows UNC paths
         let absolute_ffmpeg_path = std::fs::canonicalize(&local_ffmpeg_path)?;
-        let absolute_ffmpeg_str = absolute_ffmpeg_path.to_string_lossy();
+        let absolute_ffmpeg_str = crate::path::adjust_canonicalization(&absolute_ffmpeg_path);
 
         // Set PKG_CONFIG_PATH to help find our local FFmpeg
         let pkg_config_path = format!("{}/lib/pkgconfig", absolute_ffmpeg_str);
@@ -292,7 +306,7 @@ fn setup_ffmpeg_env(
         }
 
         // Set FFMPEG_DIR for ffmpeg-sys-next
-        with_build_envs.insert("FFMPEG_DIR".to_string(), absolute_ffmpeg_str.to_string());
+        with_build_envs.insert("FFMPEG_DIR".to_string(), absolute_ffmpeg_str.clone());
 
         // Also set PKG_CONFIG_ALLOW_SYSTEM_LIBS and PKG_CONFIG_ALLOW_SYSTEM_CFLAGS
         with_build_envs.insert("PKG_CONFIG_ALLOW_SYSTEM_LIBS".to_string(), "1".to_string());

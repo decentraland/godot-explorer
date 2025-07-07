@@ -26,14 +26,21 @@ pub fn run_doctor() -> anyhow::Result<()> {
 
     for (tool, available, description) in check_required_tools() {
         if available {
-            if tool == "protoc" && std::path::Path::new(".bin/protoc/bin/protoc").exists() {
-                print_message(
-                    MessageType::Success,
-                    &format!(
-                        "{} - {} (using local: .bin/protoc/bin/protoc)",
-                        tool, description
-                    ),
-                );
+            if let Some(tool_path) = crate::helpers::get_tool_path(tool) {
+                if tool_path.starts_with(".bin") {
+                    print_message(
+                        MessageType::Success,
+                        &format!(
+                            "{} - {} (using local: {})",
+                            tool, description, tool_path.display()
+                        ),
+                    );
+                } else {
+                    print_message(
+                        MessageType::Success,
+                        &format!("{} - {} (system)", tool, description),
+                    );
+                }
             } else {
                 print_message(MessageType::Success, &format!("{} - {}", tool, description));
             }
@@ -177,12 +184,8 @@ fn check_rust_targets() {
 }
 
 fn check_ffmpeg_installation() {
-    let local_ffmpeg = BinPaths::ffmpeg_bin();
-    let local_ffmpeg_exists = local_ffmpeg.exists();
-
-    // Check local installation first
-    if local_ffmpeg_exists {
-        let output = std::process::Command::new(&local_ffmpeg)
+    if let Some(ffmpeg_path) = crate::helpers::get_tool_path("ffmpeg") {
+        let output = std::process::Command::new(&ffmpeg_path)
             .arg("-version")
             .output();
 
@@ -190,18 +193,29 @@ fn check_ffmpeg_installation() {
             Ok(output) => {
                 let version_str = String::from_utf8_lossy(&output.stdout);
                 let first_line = version_str.lines().next().unwrap_or("");
+                let is_local = ffmpeg_path.starts_with(".bin");
 
                 if version_str.contains("ffmpeg version n6.") {
                     print_message(
                         MessageType::Success,
-                        &format!("FFmpeg 6.x found (local) - {}", first_line),
+                        &format!("FFmpeg 6.x found ({}) - {}", 
+                            if is_local { "local" } else { "system" }, 
+                            first_line
+                        ),
                     );
                 } else {
                     print_message(
                         MessageType::Warning,
-                        &format!("FFmpeg found (local) but not version 6.x - {}", first_line),
+                        &format!("FFmpeg found ({}) but not version 6.x - {}", 
+                            if is_local { "local" } else { "system" }, 
+                            first_line
+                        ),
                     );
-                    println!("  Run: cargo run -- install");
+                    if is_local {
+                        println!("  Run: cargo run -- install");
+                    } else {
+                        println!("  FFmpeg 6.x is required. Run: cargo run -- install");
+                    }
                 }
             }
             Err(_) => {
@@ -209,46 +223,13 @@ fn check_ffmpeg_installation() {
             }
         }
     } else {
-        // Check system FFmpeg
-        let system_check = std::process::Command::new("which").arg("ffmpeg").output();
-
-        if system_check.is_ok() && system_check.unwrap().status.success() {
-            let output = std::process::Command::new("ffmpeg")
-                .arg("-version")
-                .output();
-
-            match output {
-                Ok(output) => {
-                    let version_str = String::from_utf8_lossy(&output.stdout);
-                    let first_line = version_str.lines().next().unwrap_or("");
-
-                    if version_str.contains("ffmpeg version n6.") {
-                        print_message(
-                            MessageType::Success,
-                            &format!("FFmpeg 6.x found (system) - {}", first_line),
-                        );
-                    } else {
-                        print_message(
-                            MessageType::Warning,
-                            &format!("FFmpeg found (system) but not version 6.x - {}", first_line),
-                        );
-                        println!("  FFmpeg 6.x is required. Run: cargo run -- install");
-                    }
-                }
-                Err(_) => {
-                    print_message(MessageType::Error, "Failed to check FFmpeg version");
-                }
-            }
-        } else {
-            print_message(MessageType::Error, "FFmpeg not found");
-            println!("  Run: cargo run -- install");
-        }
+        print_message(MessageType::Error, "FFmpeg not found");
+        println!("  Run: cargo run -- install");
     }
 }
 
 fn check_godot_installation() {
-    let godot_path = Path::new(".bin/godot/godot4_bin");
-    if godot_path.exists() {
+    if crate::helpers::is_tool_installed("godot") {
         print_message(MessageType::Success, "Godot binary found");
     } else {
         print_message(MessageType::Warning, "Godot binary not found");
@@ -432,27 +413,77 @@ fn check_build_status() {
 }
 
 fn check_environment_variables() {
-    let vars_to_check = vec![
+    let mut vars_to_check = vec![
         ("ANDROID_HOME", "Android SDK location"),
         ("ANDROID_SDK", "Android SDK location (alternative)"),
         ("ANDROID_NDK_HOME", "Android NDK location"),
         ("ANDROID_NDK", "Android NDK location (alternative)"),
         ("HOME", "User home directory"),
     ];
+    
+    // Add Windows-specific environment variables
+    if cfg!(windows) {
+        vars_to_check.push(("LIBCLANG_PATH", "Clang library path for bindgen"));
+    }
 
     for (var, description) in vars_to_check {
         match env::var(var) {
             Ok(value) => {
-                print_message(
-                    MessageType::Success,
-                    &format!("{}: {} ({})", var, value, description),
-                );
+                // Special validation for LIBCLANG_PATH
+                if var == "LIBCLANG_PATH" {
+                    let path = Path::new(&value);
+                    let libclang_dll = path.join("libclang.dll");
+                    if path.exists() && libclang_dll.exists() {
+                        print_message(
+                            MessageType::Success,
+                            &format!("{}: {} ({}) ✓", var, value, description),
+                        );
+                    } else if path.exists() {
+                        print_message(
+                            MessageType::Warning,
+                            &format!("{}: {} ({}) - libclang.dll not found", var, value, description),
+                        );
+                    } else {
+                        print_message(
+                            MessageType::Error,
+                            &format!("{}: {} ({}) - Path does not exist", var, value, description),
+                        );
+                    }
+                } else {
+                    print_message(
+                        MessageType::Success,
+                        &format!("{}: {} ({})", var, value, description),
+                    );
+                }
             }
             Err(_) => {
-                print_message(
-                    MessageType::Info,
-                    &format!("{}: Not set ({})", var, description),
-                );
+                if var == "LIBCLANG_PATH" && cfg!(windows) {
+                    // Try to auto-detect LIBCLANG_PATH
+                    if let Some(detected_path) = crate::platform::find_libclang_path() {
+                        print_message(
+                            MessageType::Success,
+                            &format!("{}: Not set but auto-detected at: {} ({})", var, detected_path, description),
+                        );
+                        println!("  To use this path, set it with:");
+                        println!("  set LIBCLANG_PATH={}", detected_path);
+                        println!("  Or add it to your system environment variables for permanent use.");
+                    } else {
+                        print_message(
+                            MessageType::Warning,
+                            &format!("{}: Not set ({}) - Required for Windows builds", var, description),
+                        );
+                        println!("  Common locations:");
+                        println!("  - C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\LLVM\\x64\\bin");
+                        println!("  - C:\\Program Files\\LLVM\\bin");
+                        println!("\n  We tried to auto-detect using vswhere but couldn't find a valid installation.");
+                        println!("  Make sure Visual Studio is installed with C++ development tools.");
+                    }
+                } else {
+                    print_message(
+                        MessageType::Info,
+                        &format!("{}: Not set ({})", var, description),
+                    );
+                }
             }
         }
     }

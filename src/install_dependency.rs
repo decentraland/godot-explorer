@@ -49,9 +49,9 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
             }
 
             // Handle symlinks
-            let link_target = fs::read_link(&src_path)?;
             #[cfg(unix)]
             {
+                let link_target = fs::read_link(&src_path)?;
                 use std::os::unix::fs::symlink;
                 symlink(&link_target, &dst_path)?;
             }
@@ -526,8 +526,7 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
     install_ffmpeg()?;
 
     // Check if protoc is already installed
-    let protoc_path = BinPaths::protoc_bin();
-    if !protoc_path.exists() {
+    if !crate::helpers::is_tool_installed("protoc") {
         print_section("Installing Protocol Buffers Compiler");
         download_and_extract_zip(
             get_protoc_url().unwrap().as_str(),
@@ -540,8 +539,7 @@ pub fn install(skip_download_templates: bool, platforms: &[String]) -> Result<()
     }
 
     // Check if Godot is already installed
-    let godot_bin_path = BinPaths::godot_bin();
-    if !godot_bin_path.exists() {
+    if !crate::helpers::is_tool_installed("godot") {
         print_section("Installing Godot Engine");
         download_and_extract_zip(
             get_godot_url().unwrap().as_str(),
@@ -637,26 +635,28 @@ pub fn download_and_extract_tar_xz(
 
 pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
     let ffmpeg_folder = BinPaths::ffmpeg();
-    let ffmpeg_bin = BinPaths::ffmpeg_bin();
 
     // Check if FFmpeg is already installed
-    if ffmpeg_bin.exists() {
-        // Check version
-        let output = std::process::Command::new(&ffmpeg_bin)
-            .arg("-version")
-            .output();
+    if let Some(ffmpeg_path) = crate::helpers::get_tool_path("ffmpeg") {
+        // Only check local installation for version
+        if ffmpeg_path.starts_with(".bin") {
+            // Check version
+            let output = std::process::Command::new(&ffmpeg_path)
+                .arg("-version")
+                .output();
 
-        if let Ok(output) = output {
-            let version_str = String::from_utf8_lossy(&output.stdout);
-            if version_str.contains("ffmpeg version n6.") {
-                print_message(MessageType::Success, "FFmpeg 6.x already installed");
-                return Ok(());
-            } else {
-                print_message(
-                    MessageType::Warning,
-                    "FFmpeg found but not version 6.x, reinstalling...",
-                );
-                fs::remove_dir_all(&ffmpeg_folder).ok();
+            if let Ok(output) = output {
+                let version_str = String::from_utf8_lossy(&output.stdout);
+                if version_str.contains("ffmpeg version n6.") {
+                    print_message(MessageType::Success, "FFmpeg 6.x already installed");
+                    return Ok(());
+                } else {
+                    print_message(
+                        MessageType::Warning,
+                        "FFmpeg found but not version 6.x, reinstalling...",
+                    );
+                    fs::remove_dir_all(&ffmpeg_folder).ok();
+                }
             }
         }
     }
@@ -731,12 +731,52 @@ pub fn install_ffmpeg() -> Result<(), anyhow::Error> {
             );
         }
         "windows" => {
+            let temp_extract_path = BinPaths::temp_dir("ffmpeg_temp");
+
+            // Clean up any existing temp directory first
+            if temp_extract_path.exists() {
+                fs::remove_dir_all(&temp_extract_path)?;
+            }
+
             download_and_extract_zip(
                 "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-win64-lgpl-shared-6.1.zip",
-                ffmpeg_folder.to_str().unwrap(),
+                temp_extract_path.to_str().unwrap(),
                 Some("ffmpeg-n6.1-latest-win64-lgpl-shared-6.1.zip".to_string()),
             )?;
-            print_message(MessageType::Success, "FFmpeg 6.0 installed for Windows");
+
+            // The archive extracts to a folder like ffmpeg-n6.1-latest-win64-lgpl-shared-6.1
+            let extracted_folder =
+                temp_extract_path.join("ffmpeg-n6.1-latest-win64-lgpl-shared-6.1");
+
+            // Create the final ffmpeg folder
+            fs::create_dir_all(&ffmpeg_folder)?;
+
+            // Copy everything from the extracted folder
+            for entry in fs::read_dir(extracted_folder)? {
+                let entry = entry?;
+                let file_name = entry.file_name();
+                let src = entry.path();
+                let dst = ffmpeg_folder.join(file_name);
+
+                if src.is_dir() {
+                    copy_dir_all(&src, &dst)?;
+                } else {
+                    if dst.exists() {
+                        fs::remove_file(&dst)?;
+                    }
+                    fs::copy(&src, &dst)?;
+                }
+            }
+
+            // Clean up temp directory
+            if let Err(e) = fs::remove_dir_all(&temp_extract_path) {
+                print_message(
+                    MessageType::Warning,
+                    &format!("Failed to clean up temp directory: {}", e),
+                );
+            }
+
+            print_message(MessageType::Success, "FFmpeg 6.1 installed for Windows");
         }
         "macos" => {
             // For macOS, we could use evermeet.cx builds or similar
