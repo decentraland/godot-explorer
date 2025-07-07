@@ -69,9 +69,9 @@ impl AndroidBuildEnv {
         } else {
             "linux-x86_64"
         };
-        
+
         let toolchain_base = format!("{}/toolchains/llvm/prebuilt/{}/bin", ndk_path, host_tag);
-        
+
         // On Windows, the executables have .cmd extension
         let clang_suffix = if cfg!(windows) { ".cmd" } else { "" };
         let ar_suffix = if cfg!(windows) { ".exe" } else { "" };
@@ -118,7 +118,7 @@ impl AndroidBuildEnv {
         );
 
         let cxxflags = "-v --target=aarch64-linux-android";
-        
+
         // Use the same host tag for lib path
         let host_tag = if cfg!(windows) {
             "windows-x86_64"
@@ -127,7 +127,7 @@ impl AndroidBuildEnv {
         } else {
             "linux-x86_64"
         };
-        
+
         let rustflags = format!(
             "-L{}/toolchains/llvm/prebuilt/{}/lib/aarch64-unknown-linux-musl",
             self.ndk_path, host_tag

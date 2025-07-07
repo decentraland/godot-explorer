@@ -285,9 +285,12 @@ fn main() -> io::Result<()> {
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
     let target_vendor = env::var("CARGO_CFG_TARGET_VENDOR").unwrap_or_default();
-    
-    if matches!(target_os.as_str(), "linux" | "android" | "freebsd" | "netbsd" | "openbsd" | "dragonfly")
-        || (target_os == "windows" && target_env == "gnu") {
+
+    if matches!(
+        target_os.as_str(),
+        "linux" | "android" | "freebsd" | "netbsd" | "openbsd" | "dragonfly"
+    ) || (target_os == "windows" && target_env == "gnu")
+    {
         println!("cargo:rustc-link-arg=-Wl,--allow-multiple-definition");
     }
 
@@ -302,8 +305,9 @@ fn main() -> io::Result<()> {
     //
     //  /FORCE:MULTIPLE  = keep first symbol, drop duplicates
     // Only apply this when actually building FOR Windows, not just ON Windows
-    if env::var("CARGO_CFG_TARGET_OS").unwrap_or_default() == "windows" 
-        && env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default() == "msvc" {
+    if env::var("CARGO_CFG_TARGET_OS").unwrap_or_default() == "windows"
+        && env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default() == "msvc"
+    {
         println!("cargo:rustc-link-arg=/FORCE:MULTIPLE");
     }
 
