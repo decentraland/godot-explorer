@@ -189,24 +189,27 @@ fn check_ffmpeg_installation() {
         // Check if it's the local FFmpeg by seeing if the path contains .bin
         let path_str = ffmpeg_path.to_string_lossy();
         let is_local = path_str.contains(".bin");
-        
+
         // If it's local FFmpeg, we need to set LD_LIBRARY_PATH
         let mut cmd = std::process::Command::new(&ffmpeg_path);
         cmd.arg("-version");
-        
+
         if is_local {
             // Set LD_LIBRARY_PATH to include the lib directory
             let lib_path = Path::new(".bin/ffmpeg/lib");
             if lib_path.exists() {
                 let lib_path_str = lib_path.to_string_lossy();
                 if let Ok(existing_ld_path) = env::var("LD_LIBRARY_PATH") {
-                    cmd.env("LD_LIBRARY_PATH", format!("{}:{}", lib_path_str, existing_ld_path));
+                    cmd.env(
+                        "LD_LIBRARY_PATH",
+                        format!("{}:{}", lib_path_str, existing_ld_path),
+                    );
                 } else {
                     cmd.env("LD_LIBRARY_PATH", lib_path_str.to_string());
                 }
             }
         }
-        
+
         let output = cmd.output();
 
         match output {
@@ -236,7 +239,10 @@ fn check_ffmpeg_installation() {
                 }
             }
             Err(e) => {
-                print_message(MessageType::Error, &format!("Failed to check FFmpeg version: {}", e));
+                print_message(
+                    MessageType::Error,
+                    &format!("Failed to check FFmpeg version: {}", e),
+                );
                 if is_local {
                     println!("  This might be due to missing shared libraries.");
                     println!("  Try running: cargo run -- install");

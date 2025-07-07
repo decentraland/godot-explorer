@@ -2,7 +2,6 @@ use crate::consts::ANDROID_NDK_VERSION;
 use crate::helpers::get_android_ndk_path;
 use crate::ui::{print_message, MessageType};
 use std::env;
-use std::path::PathBuf;
 
 /// Platform information
 #[derive(Debug, Clone)]
@@ -59,7 +58,7 @@ pub fn check_command(cmd: &str) -> bool {
 /// Get default Android SDK paths for different operating systems
 fn get_default_android_sdk_paths() -> Vec<String> {
     let mut paths = Vec::new();
-    
+
     match env::consts::OS {
         "windows" => {
             // Common Windows paths
@@ -68,21 +67,21 @@ fn get_default_android_sdk_paths() -> Vec<String> {
                 paths.push(format!("{}\\AppData\\Local\\Android\\Sdk", userprofile));
                 paths.push(format!("{}\\AppData\\Local\\Android\\sdk", userprofile));
             }
-            
+
             if let Ok(localappdata) = env::var("LOCALAPPDATA") {
                 paths.push(format!("{}\\Android\\Sdk", localappdata));
                 paths.push(format!("{}\\Android\\sdk", localappdata));
             }
-            
+
             // Default paths used by Android Studio on Windows
             paths.push("C:\\Android\\Sdk".to_string());
             paths.push("C:\\Android\\sdk".to_string());
             paths.push("C:\\Users\\Public\\Android\\Sdk".to_string());
-            
+
             if let Ok(programfiles) = env::var("ProgramFiles") {
                 paths.push(format!("{}\\Android\\android-sdk", programfiles));
             }
-            
+
             if let Ok(programfiles_x86) = env::var("ProgramFiles(x86)") {
                 paths.push(format!("{}\\Android\\android-sdk", programfiles_x86));
             }
@@ -96,12 +95,12 @@ fn get_default_android_sdk_paths() -> Vec<String> {
                 paths.push(format!("{}/android-sdk-macosx", home));
                 paths.push(format!("{}/.android/sdk", home));
             }
-            
+
             // Homebrew installation paths
             paths.push("/usr/local/share/android-sdk".to_string());
             paths.push("/opt/homebrew/share/android-sdk".to_string());
             paths.push("/opt/homebrew/Caskroom/android-sdk".to_string());
-            
+
             // Android Studio default paths
             paths.push("/Applications/Android Studio.app/Contents/sdk".to_string());
         }
@@ -113,7 +112,7 @@ fn get_default_android_sdk_paths() -> Vec<String> {
                 paths.push(format!("{}/android-sdk-linux", home));
                 paths.push(format!("{}/.android/sdk", home));
             }
-            
+
             // System-wide installations
             paths.push("/opt/android-sdk".to_string());
             paths.push("/opt/android-sdk-linux".to_string());
@@ -121,7 +120,7 @@ fn get_default_android_sdk_paths() -> Vec<String> {
             paths.push("/usr/share/android-sdk".to_string());
         }
     }
-    
+
     paths
 }
 

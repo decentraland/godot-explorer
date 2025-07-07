@@ -385,7 +385,7 @@ fn validate_android_ndk() -> anyhow::Result<String> {
         Ok(ndk_path) => Ok(ndk_path),
         Err(_) => {
             let ndk_version = ANDROID_NDK_VERSION;
-            
+
             // Provide OS-specific help
             let os_specific_help = match std::env::consts::OS {
                 "windows" => {
@@ -409,7 +409,7 @@ fn validate_android_ndk() -> anyhow::Result<String> {
                     - ~/.android/sdk"
                 }
             };
-            
+
             Err(anyhow::anyhow!(
                 "Android NDK not found!\n\n\
                 Please install Android NDK version {} and set one of these environment variables:\n\
