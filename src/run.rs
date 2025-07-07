@@ -149,18 +149,6 @@ fn prepare_build_args_envs(
                 with_build_envs.insert("LIBCLANG_PATH".to_string(), libclang_path);
             }
         }
-        
-        // Check if we're in a VS Developer Command Prompt
-        if std::env::var("VSINSTALLDIR").is_err() || std::env::var("VCINSTALLDIR").is_err() {
-            print_message(
-                MessageType::Warning,
-                "Visual Studio environment not detected. Build dependencies may fail.",
-            );
-            print_message(
-                MessageType::Info,
-                "Consider running from 'Developer Command Prompt for VS' or 'x64 Native Tools Command Prompt'",
-            );
-        }
     }
 
     if target == "ios" || target == "android" {
