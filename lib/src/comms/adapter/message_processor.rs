@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     time::{Duration, Instant},
 };
 
@@ -141,6 +141,10 @@ pub struct MessageProcessor {
     // Configurable realm bounds for movement compression
     realm_min: godot::prelude::Vector2i,
     realm_max: godot::prelude::Vector2i,
+
+    // Cached blocked/muted addresses for performance
+    blocked_addresses: HashSet<H160>,
+    muted_addresses: HashSet<H160>,
 }
 
 impl MessageProcessor {
@@ -161,6 +165,9 @@ impl MessageProcessor {
             mpsc::channel(PROFILE_UPDATE_CHANNEL_SIZE);
         let (profile_failure_sender, profile_failure_receiver) =
             mpsc::channel(PROFILE_UPDATE_CHANNEL_SIZE);
+
+        // Convert blocked/muted addresses from strings to H160 for performance
+        let (blocked_addresses, muted_addresses) = Self::extract_address_sets(&player_profile);
 
         Self {
             message_receiver,
@@ -184,7 +191,37 @@ impl MessageProcessor {
             // Default realm bounds
             realm_min: godot::prelude::Vector2i::new(-150, -150),
             realm_max: godot::prelude::Vector2i::new(163, 158),
+            blocked_addresses,
+            muted_addresses,
         }
+    }
+
+    /// Extracts blocked and muted addresses from the player profile
+    fn extract_address_sets(
+        player_profile: &Option<UserProfile>,
+    ) -> (HashSet<H160>, HashSet<H160>) {
+        let mut blocked = HashSet::new();
+        let mut muted = HashSet::new();
+
+        if let Some(profile) = player_profile {
+            if let Some(blocked_list) = &profile.content.blocked {
+                for addr_str in blocked_list {
+                    if let Ok(addr) = addr_str.parse::<H160>() {
+                        blocked.insert(addr);
+                    }
+                }
+            }
+
+            if let Some(muted_list) = &profile.content.muted {
+                for addr_str in muted_list {
+                    if let Ok(addr) = addr_str.parse::<H160>() {
+                        muted.insert(addr);
+                    }
+                }
+            }
+        }
+
+        (blocked, muted)
     }
 
     /// Returns a sender channel that rooms can use to send messages to this processor
@@ -364,6 +401,11 @@ impl MessageProcessor {
     }
 
     fn process_message(&mut self, message: IncomingMessage) {
+        // Check if user is blocked (using cached set for O(1) lookup)
+        if self.blocked_addresses.contains(&message.address) {
+            return; // blocked - ignore all messages
+        }
+
         let room_id = message.room_id.clone(); // Extract room_id for later use
 
         // Handle peer creation/updates first
@@ -477,6 +519,11 @@ impl MessageProcessor {
                 );
             }
             MessageType::VoiceFrame(voice_frame) => {
+                // Check if user is muted for voice (using cached set for O(1) lookup)
+                if self.muted_addresses.contains(&message.address) {
+                    return; // muted - ignore voice frames
+                }
+
                 // If all the frame.data is less than 10, we skip the frame
                 if voice_frame.data.iter().all(|&c| c.abs() < 10) {
                     return;
@@ -619,6 +666,11 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::Chat(chat) => {
                 tracing::info!("Received Chat from {:#x}: {:?}", address, chat);
+
+                // Check if user is muted for chat (using cached set for O(1) lookup)
+                if self.muted_addresses.contains(&address) {
+                    return; // muted - ignore chat messages
+                }
 
                 // Check for duplicate messages based on timestamp
                 const TIMESTAMP_TOLERANCE: f64 = 0.001;
@@ -1060,6 +1112,12 @@ impl MessageProcessor {
     }
 
     pub fn change_profile(&mut self, new_profile: UserProfile) {
+        // Update cached blocked/muted sets when profile changes
+        let (blocked_addresses, muted_addresses) =
+            Self::extract_address_sets(&Some(new_profile.clone()));
+        self.blocked_addresses = blocked_addresses;
+        self.muted_addresses = muted_addresses;
+
         self.player_profile = Some(new_profile);
         // NOTE: ProfileVersion broadcasting is now handled at CommunicationManager level
     }
