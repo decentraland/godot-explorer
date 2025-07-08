@@ -11,13 +11,19 @@ use crate::consts::RUST_LIB_PROJECT_FOLDER;
 
 mod consts;
 mod copy_files;
+mod dependencies;
+mod doctor;
 mod download_file;
 mod export;
+mod helpers;
 mod image_comparison;
 mod install_dependency;
+mod keystore;
 mod path;
+mod platform;
 mod run;
 mod tests;
+mod ui;
 
 fn main() -> Result<(), anyhow::Error> {
     let cli = Command::new("xtask")
@@ -56,6 +62,7 @@ fn main() -> Result<(), anyhow::Error> {
             ),
         )
         .subcommand(Command::new("docs"))
+        .subcommand(Command::new("doctor").about("Check system health and dependencies"))
         .subcommand(
             Command::new("install")
                 .arg(
@@ -65,12 +72,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
-                    Arg::new("platforms")
-                        .long("platforms")
-                        .help("download platform, can use multiple platforms, use like `--platforms linux android`")
+                    Arg::new("targets")
+                        .long("targets")
+                        .help("download platform, can use multiple platforms, use like `--targets linux android`")
                         .takes_value(true)
                         .multiple_values(true),
-                ),
+                )
         )
         .subcommand(Command::new("update-protocol"))
         .subcommand(
@@ -92,13 +99,33 @@ fn main() -> Result<(), anyhow::Error> {
                         .required(true),
                 ),
         )
-        .subcommand(Command::new("export").arg(
-            Arg::new("target")
-                .short('t')
-                .long("target")
-                .help("target OS")
-                .takes_value(true),
-        ))
+        .subcommand(
+            Command::new("export")
+                .arg(
+                    Arg::new("target")
+                        .short('t')
+                        .long("target")
+                        .help("target OS (android, ios, linux, win64, macos). Defaults to host platform if not specified")
+                        .takes_value(true)
+                        .required(false),
+                )
+                .arg(
+                    Arg::new("format")
+                        .short('f')
+                        .long("format")
+                        .help("Export format for Android: apk or aab")
+                        .takes_value(true)
+                        .possible_values(["apk", "aab"])
+                        .default_value("apk"),
+                )
+                .arg(
+                    Arg::new("release")
+                        .short('r')
+                        .long("release")
+                        .help("Export in release mode (signed)")
+                        .takes_value(false),
+                ),
+        )
         .subcommand(Command::new("import-assets"))
         .subcommand(
             Command::new("run")
@@ -143,8 +170,25 @@ fn main() -> Result<(), anyhow::Error> {
                     Arg::new("target")
                         .short('t')
                         .long("target")
-                        .help("target OS")
+                        .help("Target platform to build for. For android/ios: without -e deploys to device, with -e just builds")
                         .takes_value(true),
+                ).arg(
+                    Arg::new("only-lib")
+                        .long("only-lib")
+                        .help("For Android: push .so file directly to device instead of full APK deployment")
+                        .takes_value(false),
+                ).arg(
+                    Arg::new("no-default-features")
+                        .long("no-default-features")
+                        .help("Do not activate default features")
+                        .takes_value(false),
+                ).arg(
+                    Arg::new("features")
+                        .long("features")
+                        .short('F')
+                        .help("Space-separated list of features to activate")
+                        .takes_value(true)
+                        .multiple_values(true),
                 ),
         ).subcommand(
             Command::new("build")
@@ -167,6 +211,18 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("target")
                         .help("target OS")
                         .takes_value(true),
+                ).arg(
+                    Arg::new("no-default-features")
+                        .long("no-default-features")
+                        .help("Do not activate default features")
+                        .takes_value(false),
+                ).arg(
+                    Arg::new("features")
+                        .long("features")
+                        .short('F')
+                        .help("Space-separated list of features to activate")
+                        .takes_value(true)
+                        .multiple_values(true),
                 ),
         );
     let matches = cli.get_matches();
@@ -177,20 +233,24 @@ fn main() -> Result<(), anyhow::Error> {
         unreachable!("unreachable branch")
     };
 
-    println!("Running subcommand `{:?}`", subcommand.0);
+    use ui::{print_message, MessageType};
 
     let root = xtaskops::ops::root_dir();
 
     let res = match subcommand {
         ("install", sm) => {
             let platforms: Vec<String> = sm
-                .values_of("platforms")
+                .values_of("targets")
                 .map(|vals| vals.map(String::from).collect())
                 .unwrap_or_default();
 
             let no_templates = sm.is_present("no-templates") || platforms.is_empty();
             // Call your install function and pass the templates
-            install_dependency::install(no_templates, &platforms)
+            let result = install_dependency::install(no_templates, &platforms);
+            if result.is_ok() {
+                dependencies::suggest_next_steps("install", None);
+            }
+            result
         }
         ("update-protocol", _) => install_dependency::install_dcl_protocol(),
         ("compare-image-folders", sm) => {
@@ -200,6 +260,9 @@ fn main() -> Result<(), anyhow::Error> {
                 .map_err(|e| anyhow::anyhow!(e))
         }
         ("run", sm) => {
+            // Check dependencies first
+            dependencies::check_command_dependencies("run", None)?;
+
             let mut build_args: Vec<&str> = sm
                 .values_of("build-args")
                 .map(|v| v.collect())
@@ -209,13 +272,90 @@ fn main() -> Result<(), anyhow::Error> {
                 build_args.extend(&["-F", "use_resource_tracking"]);
             }
 
-            run::build(
-                sm.is_present("release"),
-                build_args,
-                None,
-                sm.value_of("target"),
-            )?;
+            // Handle feature flags
+            if sm.is_present("no-default-features") {
+                build_args.push("--no-default-features");
+            }
 
+            if let Some(features) = sm.values_of("features") {
+                for feature in features {
+                    build_args.push("-F");
+                    build_args.push(feature);
+                }
+            }
+
+            // Check if target is specified
+            let target = sm.value_of("target");
+            let is_only_lib = sm.is_present("only-lib");
+
+            // For android/ios targets, check if we should deploy to device
+            let should_deploy = target.is_some()
+                && (target == Some("android") || target == Some("ios"))
+                && !sm.is_present("editor");
+
+            if should_deploy {
+                let platform = target.unwrap();
+
+                if is_only_lib && platform == "android" {
+                    // Hotreload mode: build and push .so file only
+                    print_message(
+                        MessageType::Step,
+                        "Building for Android (only lib, push .so only)",
+                    );
+
+                    // Build for Android
+                    run::build(
+                        sm.is_present("release"),
+                        build_args.clone(),
+                        None,
+                        Some(platform),
+                    )?;
+
+                    // Get extras to pass to the app
+                    let extras: Vec<String> = sm
+                        .values_of("extras")
+                        .map(|v| v.map(|it| it.into()).collect())
+                        .unwrap_or_default();
+
+                    // Push the .so file to device
+                    run::hotreload_android(sm.is_present("release"), extras)?;
+
+                    return Ok(());
+                } else {
+                    // Normal deployment: build, export, install, and run
+                    print_message(
+                        MessageType::Step,
+                        &format!("Building and deploying to {}", platform),
+                    );
+
+                    // 1. Build for host OS first
+                    run::build(sm.is_present("release"), build_args.clone(), None, None)?;
+
+                    // 2. Build for the platform
+                    run::build(
+                        sm.is_present("release"),
+                        build_args.clone(),
+                        None,
+                        Some(platform),
+                    )?;
+
+                    // 3. Export APK/IPA
+                    let format = if platform == "android" { "apk" } else { "ipa" };
+                    let result = export::export(Some(platform), format, sm.is_present("release"));
+
+                    if result.is_ok() {
+                        // 4. Install and run on device
+                        run::deploy_and_run_on_device(platform, sm.is_present("release"))?;
+                    }
+
+                    return result;
+                }
+            } else {
+                // Normal build (either host OS or just build for target without deploying)
+                run::build(sm.is_present("release"), build_args, None, target)?;
+            }
+
+            // Now run
             run::run(
                 sm.is_present("editor"),
                 sm.is_present("itest"),
@@ -227,6 +367,11 @@ fn main() -> Result<(), anyhow::Error> {
             Ok(())
         }
         ("build", sm) => {
+            let target = sm.value_of("target");
+
+            // Check dependencies first
+            dependencies::check_command_dependencies("build", target)?;
+
             let mut build_args: Vec<&str> = sm
                 .values_of("build-args")
                 .map(|v| v.collect())
@@ -236,16 +381,49 @@ fn main() -> Result<(), anyhow::Error> {
                 build_args.extend(&["-F", "use_resource_tracking"]);
             }
 
-            run::build(
-                sm.is_present("release"),
-                build_args,
-                None,
-                sm.value_of("target"),
-            )?;
-            Ok(())
+            // Handle feature flags
+            if sm.is_present("no-default-features") {
+                build_args.push("--no-default-features");
+            }
+
+            if let Some(features) = sm.values_of("features") {
+                for feature in features {
+                    build_args.push("-F");
+                    build_args.push(feature);
+                }
+            }
+
+            let result = run::build(sm.is_present("release"), build_args, None, target);
+
+            if result.is_ok() {
+                dependencies::suggest_next_steps("build", target);
+            }
+
+            result
         }
-        ("export", sm) => export::export(sm.value_of("target")),
+        ("export", sm) => {
+            let target = sm.value_of("target");
+            let format = sm.value_of("format").unwrap_or("apk");
+            let release = sm.is_present("release");
+
+            // Check dependencies first
+            dependencies::check_command_dependencies("export", target)?;
+
+            let result = export::export(target, format, release);
+
+            if result.is_ok() {
+                dependencies::suggest_next_steps("export", target);
+            }
+
+            result
+        }
         ("import-assets", _m) => {
+            // Check dependencies first
+            dependencies::check_command_dependencies("import-assets", None)?;
+
+            // Build for host OS first (import-assets needs the library)
+            run::build(false, vec![], None, None)?;
+
             let status = import_assets();
             if !status.success() {
                 println!("WARN: cargo build exited with non-zero status: {}", status);
@@ -269,11 +447,12 @@ fn main() -> Result<(), anyhow::Error> {
             sm.get_one::<String>("package")
                 .context("please provide a package with -p")?,
         ),
+        ("doctor", _) => doctor::run_doctor(),
         _ => unreachable!("unreachable branch"),
     };
 
-    if res.is_err() {
-        println!("Fail running subcommand `{:?}`", subcommand.0);
+    if let Err(e) = &res {
+        print_message(MessageType::Error, &format!("Failed: {}", e));
     }
     res
     // xtaskops::tasks::main()
@@ -286,7 +465,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
     remove_dir("./coverage")?;
     create_dir_all("./coverage")?;
 
-    println!("=== running coverage ===");
+    ui::print_section("Running Coverage");
     cmd!("cargo", "test", "--", "--skip", "auth")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
