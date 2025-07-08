@@ -57,7 +57,7 @@ corner_detail = 5
 
 [node name="Panel_Chat" type="Panel"]
 self_modulate = Color(0, 0, 0, 0.4)
-custom_minimum_size = Vector2(300, 250)
+custom_minimum_size = Vector2(370, 250)
 size_flags_vertical = 0
 mouse_filter = 2
 theme = ExtResource("1_ytipc")
@@ -212,6 +212,7 @@ expand_icon = true
 
 [node name="RichTextLabel_Chat" type="RichTextLabel" parent="VBoxContainer/MarginContainer_Chat/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 bbcode_enabled = true

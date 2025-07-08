@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://c6jl46ahx31ud"]
+[gd_scene load_steps=5 format=3 uid="uid://c6jl46ahx31ud"]
 
 [ext_resource type="Script" uid="uid://05w073ui6sec" path="res://src/ui/components/profile_picture/profile_picture.gd" id="1_xkyte"]
 [ext_resource type="Texture2D" uid="uid://c3y600q1cirt5" path="res://assets/ui/ProfileExample.png" id="2_q0svu"]
@@ -8,6 +8,23 @@ corner_radius_top_left = 23
 corner_radius_top_right = 23
 corner_radius_bottom_right = 23
 corner_radius_bottom_left = 23
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xkyte"]
+draw_center = false
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.720301, 0.000135729, 0.629692, 1)
+corner_radius_top_left = 200
+corner_radius_top_right = 200
+corner_radius_bottom_right = 200
+corner_radius_bottom_left = 200
+corner_detail = 10
+expand_margin_left = 1.0
+expand_margin_top = 1.0
+expand_margin_right = 1.0
+expand_margin_bottom = 1.0
 
 [node name="ProfilePicture" type="Control"]
 custom_minimum_size = Vector2(43, 43)
@@ -42,3 +59,21 @@ mouse_filter = 2
 texture = ExtResource("2_q0svu")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="Panel_Border" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+clip_children = 2
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -22.0
+offset_top = -22.0
+offset_right = 21.0
+offset_bottom = 21.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_xkyte")
