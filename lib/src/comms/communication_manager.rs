@@ -785,6 +785,14 @@ impl CommunicationManager {
         message_sent
     }
 
+    /// Called when the social blacklist changes to update the MessageProcessor cache
+    #[func]
+    pub fn on_blacklist_changed(&mut self) {
+        if let Some(processor) = &mut self.message_processor {
+            processor.refresh_blacklist_cache();
+        }
+    }
+
     #[func]
     fn send_chat(&mut self, text: GString) -> bool {
         let packet = rfc4::Packet {
@@ -853,6 +861,15 @@ impl CommunicationManager {
         player_identity.connect(
             "profile_changed".into(),
             self.base().callable("_on_profile_changed"),
+        );
+
+        // Connect to social blacklist changes
+        let global = DclGlobal::singleton();
+        let global_bind = global.bind();
+        let mut social_blacklist = global_bind.social_blacklist.clone();
+        social_blacklist.connect(
+            "blacklist_changed".into(),
+            self.base().callable("on_blacklist_changed"),
         );
 
         #[cfg(feature = "use_livekit")]

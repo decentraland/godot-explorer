@@ -576,6 +576,20 @@ impl AvatarScene {
         self.update_avatar(entity_id, profile);
     }
 
+    pub fn set_avatar_blocked(&mut self, alias: u32, blocked: bool) {
+        if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
+                avatar.call("set_hidden".into(), &[blocked.to_variant()]);
+            }
+        }
+    }
+
+    pub fn set_avatar_blocked_by_address(&mut self, address: &H160, blocked: bool) {
+        if let Some(alias) = self.avatar_address.get(address) {
+            self.set_avatar_blocked(*alias, blocked);
+        }
+    }
+
     pub fn play_emote(&mut self, alias: u32, incremental_id: u32, emote_urn: &String) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id

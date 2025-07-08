@@ -164,7 +164,7 @@ impl INode for DclGlobal {
             metrics: Metrics::new_alloc(),
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
             network_inspector: NetworkInspector::new_alloc(),
-            social_blacklist: DclSocialBlacklist::new_gd(),
+            social_blacklist: DclSocialBlacklist::new_alloc(),
 
             #[cfg(feature = "enable_inspector")]
             has_javascript_debugger: true,

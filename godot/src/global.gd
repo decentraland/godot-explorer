@@ -123,6 +123,8 @@ func _ready():
 
 	self.avatars = AvatarScene.new()
 	self.avatars.set_name("avatar_scene")
+	
+	self.social_blacklist.set_name("social_blacklist")
 
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
@@ -138,6 +140,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.testing_tools)
 	get_tree().root.add_child.call_deferred(self.metrics)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
+	get_tree().root.add_child.call_deferred(self.social_blacklist)
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)

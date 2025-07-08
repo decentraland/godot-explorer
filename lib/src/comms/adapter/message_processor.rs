@@ -202,8 +202,12 @@ impl MessageProcessor {
     pub fn set_social_blacklist(&mut self, blacklist: Gd<DclSocialBlacklist>) {
         // Update cached sets when blacklist changes
         let blacklist_bind = blacklist.bind();
-        self.cached_blocked = blacklist_bind.get_blocked_set().clone();
-        self.cached_muted = blacklist_bind.get_muted_set().clone();
+        self.cached_blocked
+            .clone_from(blacklist_bind.get_blocked_set());
+
+        // Merge blocked users into muted cache (blocked users are also muted)
+        self.cached_muted.clone_from(blacklist_bind.get_muted_set());
+        self.cached_muted.extend(blacklist_bind.get_blocked_set());
         drop(blacklist_bind);
 
         self.social_blacklist = Some(blacklist);
@@ -213,8 +217,61 @@ impl MessageProcessor {
     pub fn refresh_blacklist_cache(&mut self) {
         if let Some(blacklist) = &self.social_blacklist {
             let blacklist_bind = blacklist.bind();
-            self.cached_blocked = blacklist_bind.get_blocked_set().clone();
-            self.cached_muted = blacklist_bind.get_muted_set().clone();
+            let new_blocked = blacklist_bind.get_blocked_set().clone();
+            let new_muted = blacklist_bind.get_muted_set().clone();
+
+            // Find newly blocked addresses (in new set but not in old set)
+            let newly_blocked: Vec<H160> = new_blocked
+                .difference(&self.cached_blocked)
+                .cloned()
+                .collect();
+
+            // Find newly unblocked addresses (in old set but not in new set)
+            let newly_unblocked: Vec<H160> = self
+                .cached_blocked
+                .difference(&new_blocked)
+                .cloned()
+                .collect();
+
+            // Update the cached sets
+            self.cached_blocked = new_blocked.clone();
+            // Merge blocked users into muted cache (blocked users are also muted)
+            self.cached_muted = new_muted;
+            self.cached_muted.extend(&new_blocked);
+
+            // Hide avatars for newly blocked users
+            if !newly_blocked.is_empty() {
+                let mut avatar_scene_ref = self.avatars.clone();
+                let mut avatar_scene = avatar_scene_ref.bind_mut();
+
+                for blocked_address in newly_blocked {
+                    if let Some(peer) = self.peer_identities.get(&blocked_address) {
+                        tracing::info!(
+                            "🚫 Hiding avatar for blocked user {:#x} (alias: {})",
+                            blocked_address,
+                            peer.alias
+                        );
+                        avatar_scene.set_avatar_blocked(peer.alias, true);
+                    }
+                }
+            }
+
+            // Show avatars for newly unblocked users
+            if !newly_unblocked.is_empty() {
+                let mut avatar_scene_ref = self.avatars.clone();
+                let mut avatar_scene = avatar_scene_ref.bind_mut();
+
+                for unblocked_address in newly_unblocked {
+                    if let Some(peer) = self.peer_identities.get(&unblocked_address) {
+                        tracing::info!(
+                            "✅ Showing avatar for unblocked user {:#x} (alias: {})",
+                            unblocked_address,
+                            peer.alias
+                        );
+                        avatar_scene.set_avatar_blocked(peer.alias, false);
+                    }
+                }
+            }
         }
     }
 
@@ -395,11 +452,6 @@ impl MessageProcessor {
     }
 
     fn process_message(&mut self, message: IncomingMessage) {
-        // Check if user is blocked (using cached set for O(1) lookup)
-        if self.cached_blocked.contains(&message.address) {
-            return; // blocked - ignore all messages
-        }
-
         let room_id = message.room_id.clone(); // Extract room_id for later use
 
         // Handle peer creation/updates first
@@ -470,6 +522,16 @@ impl MessageProcessor {
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene
                     .add_avatar(new_alias, GString::from(format!("{:#x}", message.address)));
+
+                // If the user is blocked, hide the avatar immediately
+                if self.cached_blocked.contains(&message.address) {
+                    tracing::info!(
+                        "🚫 New peer {:#x} (alias: {}) is blocked, hiding avatar",
+                        message.address,
+                        new_alias
+                    );
+                    avatar_scene.set_avatar_blocked(new_alias, true);
+                }
             }
 
             // Send initial profile request to the room where this message came from
@@ -514,8 +576,9 @@ impl MessageProcessor {
             }
             MessageType::VoiceFrame(voice_frame) => {
                 // Check if user is muted for voice (using cached set for O(1) lookup)
+                // Note: cached_muted includes both muted AND blocked users
                 if self.cached_muted.contains(&message.address) {
-                    return; // muted - ignore voice frames
+                    return; // muted/blocked - ignore voice frames
                 }
 
                 // If all the frame.data is less than 10, we skip the frame
@@ -662,8 +725,9 @@ impl MessageProcessor {
                 tracing::info!("Received Chat from {:#x}: {:?}", address, chat);
 
                 // Check if user is muted for chat (using cached set for O(1) lookup)
+                // Note: cached_muted includes both muted AND blocked users
                 if self.cached_muted.contains(&address) {
-                    return; // muted - ignore chat messages
+                    return; // muted/blocked - ignore chat messages
                 }
 
                 // Check for duplicate messages based on timestamp

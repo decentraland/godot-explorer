@@ -1,7 +1,11 @@
 use std::collections::HashSet;
 
 use ethers_core::types::H160;
-use godot::{builtin::Array, obj::{Base, Gd}, prelude::*};
+use godot::{
+    builtin::Array,
+    obj::{Base, Gd},
+    prelude::*,
+};
 
 use crate::avatars::dcl_user_profile::DclUserProfile;
 
@@ -9,16 +13,18 @@ use crate::avatars::dcl_user_profile::DclUserProfile;
 /// This is used for efficient filtering of incoming messages without
 /// requiring heavy profile updates for each block/mute operation
 #[derive(GodotClass)]
-#[class(base=RefCounted)]
+#[class(base=Node)]
 pub struct DclSocialBlacklist {
+    base: Base<Node>,
     blocked_addresses: HashSet<H160>,
     muted_addresses: HashSet<H160>,
 }
 
 #[godot_api]
-impl IRefCounted for DclSocialBlacklist {
-    fn init(_base: Base<RefCounted>) -> Self {
+impl INode for DclSocialBlacklist {
+    fn init(base: Base<Node>) -> Self {
         Self {
+            base,
             blocked_addresses: HashSet::new(),
             muted_addresses: HashSet::new(),
         }
@@ -27,11 +33,19 @@ impl IRefCounted for DclSocialBlacklist {
 
 #[godot_api]
 impl DclSocialBlacklist {
+    /// Signal emitted when the blocked or muted lists change
+    #[signal]
+    fn blacklist_changed() {}
+
     /// Add a single address to the blocked list
     #[func]
     pub fn add_blocked(&mut self, address: GString) -> bool {
         if let Ok(addr) = address.to_string().parse::<H160>() {
-            self.blocked_addresses.insert(addr)
+            let changed = self.blocked_addresses.insert(addr);
+            if changed {
+                self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+            }
+            changed
         } else {
             godot_error!("Invalid address format: {}", address);
             false
@@ -42,7 +56,11 @@ impl DclSocialBlacklist {
     #[func]
     pub fn remove_blocked(&mut self, address: GString) -> bool {
         if let Ok(addr) = address.to_string().parse::<H160>() {
-            self.blocked_addresses.remove(&addr)
+            let changed = self.blocked_addresses.remove(&addr);
+            if changed {
+                self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+            }
+            changed
         } else {
             godot_error!("Invalid address format: {}", address);
             false
@@ -63,7 +81,11 @@ impl DclSocialBlacklist {
     #[func]
     pub fn add_muted(&mut self, address: GString) -> bool {
         if let Ok(addr) = address.to_string().parse::<H160>() {
-            self.muted_addresses.insert(addr)
+            let changed = self.muted_addresses.insert(addr);
+            if changed {
+                self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+            }
+            changed
         } else {
             godot_error!("Invalid address format: {}", address);
             false
@@ -74,7 +96,11 @@ impl DclSocialBlacklist {
     #[func]
     pub fn remove_muted(&mut self, address: GString) -> bool {
         if let Ok(addr) = address.to_string().parse::<H160>() {
-            self.muted_addresses.remove(&addr)
+            let changed = self.muted_addresses.remove(&addr);
+            if changed {
+                self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+            }
+            changed
         } else {
             godot_error!("Invalid address format: {}", address);
             false
@@ -94,37 +120,55 @@ impl DclSocialBlacklist {
     /// Add multiple addresses to the blocked list
     #[func]
     pub fn append_blocked(&mut self, addresses: Array<GString>) {
+        let mut changed = false;
         for address in addresses.iter_shared() {
             if let Ok(addr) = address.to_string().parse::<H160>() {
-                self.blocked_addresses.insert(addr);
+                if self.blocked_addresses.insert(addr) {
+                    changed = true;
+                }
             } else {
                 godot_error!("Invalid address format: {}", address);
             }
+        }
+        if changed {
+            self.base_mut().emit_signal("blacklist_changed".into(), &[]);
         }
     }
 
     /// Add multiple addresses to the muted list
     #[func]
     pub fn append_muted(&mut self, addresses: Array<GString>) {
+        let mut changed = false;
         for address in addresses.iter_shared() {
             if let Ok(addr) = address.to_string().parse::<H160>() {
-                self.muted_addresses.insert(addr);
+                if self.muted_addresses.insert(addr) {
+                    changed = true;
+                }
             } else {
                 godot_error!("Invalid address format: {}", address);
             }
+        }
+        if changed {
+            self.base_mut().emit_signal("blacklist_changed".into(), &[]);
         }
     }
 
     /// Clear all blocked addresses
     #[func]
     pub fn clear_blocked(&mut self) {
-        self.blocked_addresses.clear();
+        if !self.blocked_addresses.is_empty() {
+            self.blocked_addresses.clear();
+            self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+        }
     }
 
     /// Clear all muted addresses
     #[func]
     pub fn clear_muted(&mut self) {
-        self.muted_addresses.clear();
+        if !self.muted_addresses.is_empty() {
+            self.muted_addresses.clear();
+            self.base_mut().emit_signal("blacklist_changed".into(), &[]);
+        }
     }
 
     /// Get all blocked addresses as an array
@@ -157,11 +201,14 @@ impl DclSocialBlacklist {
         self.blocked_addresses.clear();
         self.muted_addresses.clear();
 
+        let mut changed = false;
+
         // Load blocked addresses
         if let Some(blocked_list) = &inner.content.blocked {
             for addr_str in blocked_list {
                 if let Ok(addr) = addr_str.parse::<H160>() {
                     self.blocked_addresses.insert(addr);
+                    changed = true;
                 }
             }
         }
@@ -171,8 +218,13 @@ impl DclSocialBlacklist {
             for addr_str in muted_list {
                 if let Ok(addr) = addr_str.parse::<H160>() {
                     self.muted_addresses.insert(addr);
+                    changed = true;
                 }
             }
+        }
+
+        if changed {
+            self.base_mut().emit_signal("blacklist_changed".into(), &[]);
         }
     }
 

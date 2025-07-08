@@ -131,33 +131,29 @@ func _on_button_report_pressed() -> void:
 
 
 func _on_button_block_user_toggled(toggled_on: bool) -> void:
-	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
 	if toggled_on:
-		profile.add_blocked(avatar.avatar_id)
+		Global.social_blacklist.add_blocked(avatar.avatar_id)
 	else:
-		profile.remove_blocked(avatar.avatar_id)
+		Global.social_blacklist.remove_blocked(avatar.avatar_id)
 	_update_buttons()
 
 func _on_button_mute_user_toggled(toggled_on: bool) -> void:
-	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
 	if toggled_on:
-		profile.add_muted(avatar.avatar_id)
+		Global.social_blacklist.add_muted(avatar.avatar_id)
 	else:
-		profile.remove_muted(avatar.avatar_id)
+		Global.social_blacklist.remove_muted(avatar.avatar_id)
 	_update_buttons()
 	
 
 func _update_buttons() -> void:
-	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
-	
-	var is_blocked = profile.is_blocked(avatar.avatar_id)
+	var is_blocked = Global.social_blacklist.is_blocked(avatar.avatar_id)
 	button_block_user.set_pressed_no_signal(is_blocked)
 	if is_blocked:
 		button_block_user.icon = BLOCK
 	else:
 		button_block_user.icon = UNBLOCK
 	
-	var is_muted = profile.is_muted(avatar.avatar_id)
+	var is_muted = Global.social_blacklist.is_muted(avatar.avatar_id)
 	button_mute_user.set_pressed_no_signal(is_muted)
 	if is_muted:
 		button_mute_user.icon = MUTE

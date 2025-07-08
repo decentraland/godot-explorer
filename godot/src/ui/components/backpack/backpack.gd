@@ -122,7 +122,8 @@ func _ready():
 		_on_profile_changed(profile)
 
 	# responsive
-	get_window().size_changed.connect(self._on_size_changed)
+	if get_window() != null:
+		get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed.call_deferred()
 
 
