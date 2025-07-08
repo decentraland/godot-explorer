@@ -10,14 +10,16 @@ use crate::{
     auth::wallet, comms::consts::DISABLE_ARCHIPELAGO, scene_runner::tokio_runtime::TokioRuntime,
 };
 use crate::{
-    avatars::dcl_user_profile::DclUserProfile, comms::{
+    comms::{
         adapter::{
             message_processor::MessageProcessor, movement_compressed::MoveKind,
             ws_room::WebSocketRoom,
         },
         consts::DEFAULT_PROTOCOL_VERSION,
         signed_login::SignedLoginMeta,
-    }, dcl::components::proto_components::kernel::comms::rfc4, godot_classes::dcl_global::DclGlobal
+    },
+    dcl::components::proto_components::kernel::comms::rfc4,
+    godot_classes::dcl_global::DclGlobal,
 };
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
@@ -349,7 +351,13 @@ impl CommunicationManager {
             let player_profile = player_identity_bind.clone_profile();
             let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
-            let processor = MessageProcessor::new(player_address, player_profile, avatar_scene);
+            let mut processor = MessageProcessor::new(player_address, player_profile, avatar_scene);
+
+            // Set the social blacklist if available
+            let global = DclGlobal::singleton();
+            let global_bind = global.bind();
+            processor.set_social_blacklist(global_bind.social_blacklist.clone());
+
             let sender = processor.get_message_sender();
             self.message_processor = Some(processor);
             sender

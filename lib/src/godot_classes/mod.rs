@@ -19,6 +19,7 @@ pub mod dcl_realm;
 #[cfg(feature = "use_resource_tracking")]
 pub mod dcl_resource_tracker;
 pub mod dcl_scene_node;
+pub mod dcl_social_blacklist;
 pub mod dcl_tokio_rpc;
 pub mod dcl_ui_background;
 pub mod dcl_ui_control;

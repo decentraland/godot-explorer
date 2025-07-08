@@ -19,6 +19,7 @@ use crate::{
     },
     content::profile::{prepare_request_requirements, request_lambda_profile},
     dcl::components::proto_components::kernel::comms::rfc4,
+    godot_classes::dcl_social_blacklist::DclSocialBlacklist,
     scene_runner::tokio_runtime::TokioRuntime,
 };
 
@@ -142,9 +143,12 @@ pub struct MessageProcessor {
     realm_min: godot::prelude::Vector2i,
     realm_max: godot::prelude::Vector2i,
 
-    // Cached blocked/muted addresses for performance
-    blocked_addresses: HashSet<H160>,
-    muted_addresses: HashSet<H160>,
+    // Social blacklist for blocked/muted filtering
+    social_blacklist: Option<Gd<DclSocialBlacklist>>,
+
+    // Cached blocked/muted sets for performance (updated when social_blacklist changes)
+    cached_blocked: HashSet<H160>,
+    cached_muted: HashSet<H160>,
 }
 
 impl MessageProcessor {
@@ -165,9 +169,6 @@ impl MessageProcessor {
             mpsc::channel(PROFILE_UPDATE_CHANNEL_SIZE);
         let (profile_failure_sender, profile_failure_receiver) =
             mpsc::channel(PROFILE_UPDATE_CHANNEL_SIZE);
-
-        // Convert blocked/muted addresses from strings to H160 for performance
-        let (blocked_addresses, muted_addresses) = Self::extract_address_sets(&player_profile);
 
         Self {
             message_receiver,
@@ -191,37 +192,30 @@ impl MessageProcessor {
             // Default realm bounds
             realm_min: godot::prelude::Vector2i::new(-150, -150),
             realm_max: godot::prelude::Vector2i::new(163, 158),
-            blocked_addresses,
-            muted_addresses,
+            social_blacklist: None,
+            cached_blocked: HashSet::new(),
+            cached_muted: HashSet::new(),
         }
     }
 
-    /// Extracts blocked and muted addresses from the player profile
-    fn extract_address_sets(
-        player_profile: &Option<UserProfile>,
-    ) -> (HashSet<H160>, HashSet<H160>) {
-        let mut blocked = HashSet::new();
-        let mut muted = HashSet::new();
+    /// Sets the social blacklist reference for filtering blocked/muted users
+    pub fn set_social_blacklist(&mut self, blacklist: Gd<DclSocialBlacklist>) {
+        // Update cached sets when blacklist changes
+        let blacklist_bind = blacklist.bind();
+        self.cached_blocked = blacklist_bind.get_blocked_set().clone();
+        self.cached_muted = blacklist_bind.get_muted_set().clone();
+        drop(blacklist_bind);
 
-        if let Some(profile) = player_profile {
-            if let Some(blocked_list) = &profile.content.blocked {
-                for addr_str in blocked_list {
-                    if let Ok(addr) = addr_str.parse::<H160>() {
-                        blocked.insert(addr);
-                    }
-                }
-            }
+        self.social_blacklist = Some(blacklist);
+    }
 
-            if let Some(muted_list) = &profile.content.muted {
-                for addr_str in muted_list {
-                    if let Ok(addr) = addr_str.parse::<H160>() {
-                        muted.insert(addr);
-                    }
-                }
-            }
+    /// Updates the cached blocked/muted sets from the social blacklist
+    pub fn refresh_blacklist_cache(&mut self) {
+        if let Some(blacklist) = &self.social_blacklist {
+            let blacklist_bind = blacklist.bind();
+            self.cached_blocked = blacklist_bind.get_blocked_set().clone();
+            self.cached_muted = blacklist_bind.get_muted_set().clone();
         }
-
-        (blocked, muted)
     }
 
     /// Returns a sender channel that rooms can use to send messages to this processor
@@ -402,7 +396,7 @@ impl MessageProcessor {
 
     fn process_message(&mut self, message: IncomingMessage) {
         // Check if user is blocked (using cached set for O(1) lookup)
-        if self.blocked_addresses.contains(&message.address) {
+        if self.cached_blocked.contains(&message.address) {
             return; // blocked - ignore all messages
         }
 
@@ -520,7 +514,7 @@ impl MessageProcessor {
             }
             MessageType::VoiceFrame(voice_frame) => {
                 // Check if user is muted for voice (using cached set for O(1) lookup)
-                if self.muted_addresses.contains(&message.address) {
+                if self.cached_muted.contains(&message.address) {
                     return; // muted - ignore voice frames
                 }
 
@@ -668,7 +662,7 @@ impl MessageProcessor {
                 tracing::info!("Received Chat from {:#x}: {:?}", address, chat);
 
                 // Check if user is muted for chat (using cached set for O(1) lookup)
-                if self.muted_addresses.contains(&address) {
+                if self.cached_muted.contains(&address) {
                     return; // muted - ignore chat messages
                 }
 
@@ -1112,12 +1106,6 @@ impl MessageProcessor {
     }
 
     pub fn change_profile(&mut self, new_profile: UserProfile) {
-        // Update cached blocked/muted sets when profile changes
-        let (blocked_addresses, muted_addresses) =
-            Self::extract_address_sets(&Some(new_profile.clone()));
-        self.blocked_addresses = blocked_addresses;
-        self.muted_addresses = muted_addresses;
-
         self.player_profile = Some(new_profile);
         // NOTE: ProfileVersion broadcasting is now handled at CommunicationManager level
     }

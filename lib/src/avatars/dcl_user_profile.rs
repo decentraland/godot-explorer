@@ -3,7 +3,6 @@ use godot::{
     obj::Gd,
     prelude::*,
 };
-use std::collections::HashSet;
 
 use crate::comms::profile::UserProfile;
 
@@ -116,67 +115,5 @@ impl DclUserProfile {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
         let value = godot::engine::Json::parse_string(value.into());
         value.to::<Dictionary>()
-    }
-
-    #[func]
-    pub fn add_blocked(&mut self, address: GString) {
-        let address = address.to_string();
-        if let Some(ref mut blocked) = self.inner.content.blocked {
-            blocked.insert(address);
-        } else {
-            let mut set = HashSet::new();
-            set.insert(address);
-            self.inner.content.blocked = Some(set);
-        }
-    }
-
-    #[func]
-    pub fn remove_blocked(&mut self, address: GString) {
-        let address = address.to_string();
-        if let Some(ref mut blocked) = self.inner.content.blocked {
-            blocked.remove(&address);
-        }
-    }
-
-    #[func]
-    pub fn is_blocked(&self, address: GString) -> bool {
-        let address = address.to_string();
-        self.inner
-            .content
-            .blocked
-            .as_ref()
-            .map(|blocked| blocked.contains(&address))
-            .unwrap_or(false)
-    }
-
-    #[func]
-    pub fn add_muted(&mut self, address: GString) {
-        let address = address.to_string();
-        if let Some(ref mut muted) = self.inner.content.muted {
-            muted.insert(address);
-        } else {
-            let mut set = HashSet::new();
-            set.insert(address);
-            self.inner.content.muted = Some(set);
-        }
-    }
-
-    #[func]
-    pub fn remove_muted(&mut self, address: GString) {
-        let address = address.to_string();
-        if let Some(ref mut muted) = self.inner.content.muted {
-            muted.remove(&address);
-        }
-    }
-
-    #[func]
-    pub fn is_muted(&self, address: GString) -> bool {
-        let address = address.to_string();
-        self.inner
-            .content
-            .muted
-            .as_ref()
-            .map(|muted| muted.contains(&address))
-            .unwrap_or(false)
     }
 }

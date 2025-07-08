@@ -19,8 +19,8 @@ use crate::{
 };
 
 use super::{
-    dcl_config::DclConfig, dcl_realm::DclRealm, dcl_tokio_rpc::DclTokioRpc,
-    portables::DclPortableExperienceController,
+    dcl_config::DclConfig, dcl_realm::DclRealm, dcl_social_blacklist::DclSocialBlacklist,
+    dcl_tokio_rpc::DclTokioRpc, portables::DclPortableExperienceController,
 };
 
 #[cfg(target_os = "android")]
@@ -93,6 +93,9 @@ pub struct DclGlobal {
 
     #[var]
     pub network_inspector: Gd<NetworkInspector>,
+
+    #[var]
+    pub social_blacklist: Gd<DclSocialBlacklist>,
 }
 
 #[godot_api]
@@ -161,6 +164,7 @@ impl INode for DclGlobal {
             metrics: Metrics::new_alloc(),
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
             network_inspector: NetworkInspector::new_alloc(),
+            social_blacklist: DclSocialBlacklist::new_gd(),
 
             #[cfg(feature = "enable_inspector")]
             has_javascript_debugger: true,
