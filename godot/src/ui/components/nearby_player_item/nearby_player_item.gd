@@ -21,11 +21,15 @@ var pause_duration: float = 2
 @onready var button_block_user: Button = %Button_BlockUser
 @onready var button_mute_user: Button = %Button_MuteUser
 @onready var v_box_container_nickname: VBoxContainer = %VBoxContainer_Nickname
+@onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
+
 
 
 func async_set_data(avatar_param = null):
 	if avatar_param != null:
 		avatar = avatar_param
+		_update_buttons()
+
 	elif avatar == null:
 		return
 	
@@ -45,17 +49,17 @@ func async_set_data(avatar_param = null):
 		print("Deleting element because name is empty")
 		queue_free()
 
-	var splitted_nickname = avatar_name.split("#", false)
-	if splitted_nickname.size() > 1:
-		nickname.text = splitted_nickname[0]
-		tag.text = splitted_nickname[1]
-		tag.show()
-		hash_container.show()
+
+	var position = avatar_name.find("#")
+	if position != -1:
+		nickname.text = avatar_name.left(position)
+		texture_rect_claimed_checkmark.hide()
 	else:
 		nickname.text = avatar_name
-		tag.text = ""
-		tag.hide()
-		hash_container.hide()
+		texture_rect_claimed_checkmark.show()
+
+	tag.text = avatar.avatar_id.right(4)
+	
 
 	var nickname_color = avatar.get_nickname_color(avatar_name)
 	nickname.add_theme_color_override("font_color", nickname_color)
@@ -127,26 +131,39 @@ func _on_button_report_pressed() -> void:
 
 
 func _on_button_block_user_toggled(toggled_on: bool) -> void:
+	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
 	if toggled_on:
-		print("Block ", avatar.avatar_id, " (", avatar.get_avatar_name(), ")")
-		# var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
-		# profile.add_blocked(avatar.avatar_id)
-		# profile.remove_blocked()
-		# profile.is_blocked()
-		button_block_user.icon = BLOCK
+		profile.add_blocked(avatar.avatar_id)
 	else:
-		print("Unblock ", avatar.avatar_id, " (", avatar.get_avatar_name(), ")")
-		button_block_user.icon = UNBLOCK
-
+		profile.remove_blocked(avatar.avatar_id)
+	_update_buttons()
 
 func _on_button_mute_user_toggled(toggled_on: bool) -> void:
+	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
 	if toggled_on:
-		print("Mute ", avatar.avatar_id, " (", avatar.get_avatar_name(), ")")
+		profile.add_muted(avatar.avatar_id)
+	else:
+		profile.remove_muted(avatar.avatar_id)
+	_update_buttons()
+	
+
+func _update_buttons() -> void:
+	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+	
+	var is_blocked = profile.is_blocked(avatar.avatar_id)
+	button_block_user.set_pressed_no_signal(is_blocked)
+	if is_blocked:
+		button_block_user.icon = BLOCK
+	else:
+		button_block_user.icon = UNBLOCK
+	
+	var is_muted = profile.is_muted(avatar.avatar_id)
+	button_mute_user.set_pressed_no_signal(is_muted)
+	if is_muted:
 		button_mute_user.icon = MUTE
 	else:
-		print("Unmute ", avatar.avatar_id, " (", avatar.get_avatar_name(), ")")
 		button_mute_user.icon = UNMUTE
-
-
+	
+	
 func _exit_tree() -> void:
 	stop_marquee_effect()
