@@ -129,6 +129,10 @@ func _on_button_report_pressed() -> void:
 func _on_button_block_user_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		print("Block ", avatar.avatar_id, " (", avatar.get_avatar_name(), ")")
+		# var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+		# profile.add_blocked(avatar.avatar_id)
+		# profile.remove_blocked()
+		# profile.is_blocked()
 		button_block_user.icon = BLOCK
 	else:
 		print("Unblock ", avatar.avatar_id, " (", avatar.get_avatar_name(), ")")

@@ -10,16 +10,14 @@ use crate::{
     auth::wallet, comms::consts::DISABLE_ARCHIPELAGO, scene_runner::tokio_runtime::TokioRuntime,
 };
 use crate::{
-    comms::{
+    avatars::dcl_user_profile::DclUserProfile, comms::{
         adapter::{
             message_processor::MessageProcessor, movement_compressed::MoveKind,
             ws_room::WebSocketRoom,
         },
         consts::DEFAULT_PROTOCOL_VERSION,
         signed_login::SignedLoginMeta,
-    },
-    dcl::components::proto_components::kernel::comms::rfc4,
-    godot_classes::dcl_global::DclGlobal,
+    }, dcl::components::proto_components::kernel::comms::rfc4, godot_classes::dcl_global::DclGlobal
 };
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
@@ -1173,6 +1171,7 @@ impl CommunicationManager {
     fn _on_update_profile(&mut self) {
         let dcl_player_identity = DclGlobal::singleton().bind().get_player_identity();
         let player_identity = dcl_player_identity.bind();
+
         let Some(player_profile) = player_identity.clone_profile() else {
             return;
         };
