@@ -78,7 +78,10 @@ jni = { version = "0.21.1", features = ["invocation"] }
 paranoid-android = "0.2.1"
 
 [features]
-default = ["use_ffmpeg", "use_livekit", "use_deno", "enable_inspector"]
+# FFMPEG disabled until next iteration
+default = ["use_livekit", "use_deno", "enable_inspector"]
+android = ["use_livekit", "use_deno"]
+ios = ["use_livekit", "use_deno"]
 use_ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
 use_deno = ["dep:deno_core", "dep:v8"]

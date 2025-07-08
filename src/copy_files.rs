@@ -2,6 +2,7 @@ use std::{env, fs, io, path::Path};
 
 use crate::{
     consts::{BIN_FOLDER, RUST_LIB_PROJECT_FOLDER},
+    helpers::get_lib_extension,
     path::adjust_canonicalization,
 };
 
@@ -62,19 +63,13 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
         }
 
         "android" => {
-            let arch = env::consts::ARCH;
-
+            // For Android, we're always building for aarch64 (arm64)
             let source_file = format!(
-                "{RUST_LIB_PROJECT_FOLDER}target/{arch}-linux-android/{mode}/libdclgodot.so"
+                "{RUST_LIB_PROJECT_FOLDER}target/aarch64-linux-android/{mode}/libdclgodot.so"
             );
 
-            let android_folder = if arch == "x86_64" {
-                "libdclgodot_android_x86"
-            } else {
-                "libdclgodot_android"
-            };
-
-            let dest = format!("{RUST_LIB_PROJECT_FOLDER}target/${android_folder}/libdclgodot.so");
+            let dest =
+                format!("{RUST_LIB_PROJECT_FOLDER}target/libdclgodot_android/libdclgodot.so");
 
             copy_with_error_context(&source_file, &dest, false)?;
 
@@ -84,12 +79,12 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
 
         "win64" | "linux" | "macos" => {
             // For Windows, Linux, Mac we revert to the old logic:
-            let file_name = match target.as_str() {
-                "win64" => "dclgodot.dll",
-                "linux" => "libdclgodot.so",
-                "macos" => "libdclgodot.dylib",
-                _ => unreachable!(), // already covered by the match above
+            let lib_prefix = match target.as_str() {
+                "win64" => "",
+                _ => "lib",
             };
+            let lib_ext = get_lib_extension(target.as_str());
+            let file_name = format!("{}dclgodot{}", lib_prefix, lib_ext);
 
             let output_folder_name = match target.as_str() {
                 "win64" => "libdclgodot_windows",
@@ -108,7 +103,7 @@ pub fn copy_library(target: &String, debug_mode: bool) -> Result<(), anyhow::Err
                             e
                         )
                     })?
-                    .join(file_name),
+                    .join(&file_name),
             );
 
             let lib_folder = format!("{RUST_LIB_PROJECT_FOLDER}target/{}/", output_folder_name);
@@ -201,33 +196,140 @@ fn copy_with_error_context(
 }
 
 pub fn copy_ffmpeg_libraries(
-    target: &String,
+    target: &str,
     dest_folder: String,
     link_libs: bool,
 ) -> Result<(), anyhow::Error> {
-    if target == "win64" {
-        // copy ffmpeg .dll
-        let ffmpeg_dll_folder = format!("{BIN_FOLDER}ffmpeg/ffmpeg-6.0-full_build-shared/bin");
+    match target {
+        "win64" => {
+            // copy ffmpeg .dll
+            let ffmpeg_dll_folder = format!("{BIN_FOLDER}ffmpeg/bin");
 
-        // copy all dlls in ffmpeg_dll_folder to exports folder
-        for entry in fs::read_dir(ffmpeg_dll_folder)? {
-            let entry = entry?;
-            let ty = entry.file_type()?;
-            if ty.is_file() {
-                let file_name = entry.file_name().to_str().unwrap().to_string();
+            // Check if the folder exists
+            if !Path::new(&ffmpeg_dll_folder).exists() {
+                println!(
+                    "Warning: FFmpeg bin folder not found at {}",
+                    ffmpeg_dll_folder
+                );
+                return Ok(());
+            }
 
-                if file_name.ends_with(".dll") {
-                    let dest_path = format!("{dest_folder}{file_name}");
-                    let source_path = entry.path().to_str().unwrap().to_string();
-                    copy_with_error_context(&source_path, &dest_path, link_libs)?;
+            // copy all dlls in ffmpeg_dll_folder to exports folder
+            for entry in fs::read_dir(&ffmpeg_dll_folder)? {
+                let entry = entry?;
+                let ty = entry.file_type()?;
+                if ty.is_file() {
+                    let file_name = entry.file_name().to_str().unwrap().to_string();
+
+                    if file_name.ends_with(".dll") {
+                        let dest_path = format!("{dest_folder}{file_name}");
+                        let source_path = entry.path().to_str().unwrap().to_string();
+                        copy_with_error_context(&source_path, &dest_path, link_libs)?;
+                    }
                 }
             }
+        }
+        "linux" => {
+            // copy ffmpeg .so files from local installation
+            let ffmpeg_lib_folder = format!("{BIN_FOLDER}ffmpeg/lib");
+
+            if Path::new(&ffmpeg_lib_folder).exists() {
+                // Strategy: Only copy the actual versioned .so files (e.g., libavcodec.so.60.3.100)
+                // Then create symlinks for the others
+                let mut copied_libs: std::collections::HashMap<String, String> =
+                    std::collections::HashMap::new();
+
+                // First, find and copy only the fully versioned libraries
+                for entry in fs::read_dir(&ffmpeg_lib_folder)? {
+                    let entry = entry?;
+                    let file_name = entry.file_name().to_str().unwrap().to_string();
+
+                    // Look for fully versioned libraries (e.g., libavcodec.so.60.3.100)
+                    if file_name.starts_with("lib")
+                        && file_name.contains(".so.")
+                        && file_name.matches('.').count() >= 4
+                    {
+                        let dest_path = format!("{dest_folder}{file_name}");
+                        let source_path = entry.path().to_str().unwrap().to_string();
+                        copy_with_error_context(&source_path, &dest_path, link_libs)?;
+
+                        // Extract library base name (e.g., "libavcodec" from "libavcodec.so.60.3.100")
+                        if let Some(base) = file_name.split(".so.").next() {
+                            copied_libs.insert(base.to_string(), file_name.clone());
+                        }
+                        println!("Copied: {}", file_name);
+                    }
+                }
+
+                // Now create symlinks for each library
+                for (base_name, versioned_file) in &copied_libs {
+                    // Extract version parts (e.g., "60.3.100" -> ["60", "3", "100"])
+                    let version_part = versioned_file.split(".so.").nth(1).unwrap_or("");
+                    let version_parts: Vec<&str> = version_part.split('.').collect();
+
+                    // Create symlinks from most specific to least specific
+                    // e.g., libavcodec.so.60 -> libavcodec.so.60.3.100
+                    //       libavcodec.so -> libavcodec.so.60
+                    if !version_parts.is_empty() {
+                        // Create major version symlink (e.g., libavcodec.so.60)
+                        let major_link =
+                            format!("{}{}.so.{}", dest_folder, base_name, version_parts[0]);
+                        create_symlink(versioned_file, &major_link)?;
+
+                        // Create base symlink (e.g., libavcodec.so)
+                        let base_link = format!("{}{}.so", dest_folder, base_name);
+                        let major_link_name = format!("{}.so.{}", base_name, version_parts[0]);
+                        create_symlink(&major_link_name, &base_link)?;
+                    }
+                }
+
+                println!("Copied FFmpeg shared libraries to {}", dest_folder);
+            } else {
+                println!(
+                    "Warning: FFmpeg lib folder not found at {}",
+                    ffmpeg_lib_folder
+                );
+            }
+        }
+        _ => {
+            // No FFmpeg libraries to copy for other platforms
         }
     }
     Ok(())
 }
 
 // Function to move the directory and its contents recursively
+/// Create a symlink helper function
+fn create_symlink(target: &str, link_path: &str) -> io::Result<()> {
+    // Remove existing file/link if it exists
+    if Path::new(link_path).exists() {
+        fs::remove_file(link_path).ok();
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::symlink;
+        symlink(target, link_path)?;
+        println!(
+            "Created symlink: {} -> {}",
+            Path::new(link_path).file_name().unwrap().to_string_lossy(),
+            target
+        );
+    }
+
+    #[cfg(not(unix))]
+    {
+        // On non-Unix systems, just copy the file
+        let link_dir = Path::new(link_path).parent().unwrap();
+        let target_path = link_dir.join(target);
+        if target_path.exists() {
+            fs::copy(&target_path, link_path)?;
+        }
+    }
+
+    Ok(())
+}
+
 pub fn move_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
     // Check if destination exists, create it if it doesn't
     if !dest.exists() {
