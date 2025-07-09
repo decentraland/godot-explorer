@@ -9,10 +9,11 @@ var list_size: int = 0
 
 @onready var v_box_container_nearby_players: VBoxContainer = %VBoxContainer_NearbyPlayers
 
+
 func async_update_nearby_users(remote_avatars: Array) -> void:
 	list_size = remote_avatars.size()
 	size_changed.emit()
-	
+
 	print(list_size)
 	prints("async_update_nearby_users - received", remote_avatars.size(), "avatars")
 	var children_avatars = []
@@ -93,7 +94,7 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 
 	for child in valid_children:
 		v_box_container_nearby_players.move_child(child, -1)
-	
+
 
 func _compare_avatar_names(a, b):
 	if not is_instance_valid(a.avatar) or not is_instance_valid(b.avatar):

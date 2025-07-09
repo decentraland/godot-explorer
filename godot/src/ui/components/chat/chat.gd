@@ -6,7 +6,6 @@ const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
 const ACK: String = "␆"
 
-
 var hide_tween = null
 var nearby_avatars = null
 
@@ -150,6 +149,7 @@ func _on_timer_hide_timeout():
 func update_nearby_quantity() -> void:
 	button_nearby_users.text = str(avatars_list.list_size)
 	label_members_quantity.text = str(avatars_list.list_size)
+
 
 func _on_button_nearby_users_pressed() -> void:
 	self_modulate = "#00000080"
