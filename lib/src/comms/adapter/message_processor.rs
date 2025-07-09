@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     time::{Duration, Instant},
 };
 
@@ -19,6 +19,7 @@ use crate::{
     },
     content::profile::{prepare_request_requirements, request_lambda_profile},
     dcl::components::proto_components::kernel::comms::rfc4,
+    godot_classes::dcl_social_blacklist::DclSocialBlacklist,
     scene_runner::tokio_runtime::TokioRuntime,
 };
 
@@ -141,6 +142,13 @@ pub struct MessageProcessor {
     // Configurable realm bounds for movement compression
     realm_min: godot::prelude::Vector2i,
     realm_max: godot::prelude::Vector2i,
+
+    // Social blacklist for blocked/muted filtering
+    social_blacklist: Option<Gd<DclSocialBlacklist>>,
+
+    // Cached blocked/muted sets for performance (updated when social_blacklist changes)
+    cached_blocked: HashSet<H160>,
+    cached_muted: HashSet<H160>,
 }
 
 impl MessageProcessor {
@@ -184,6 +192,86 @@ impl MessageProcessor {
             // Default realm bounds
             realm_min: godot::prelude::Vector2i::new(-150, -150),
             realm_max: godot::prelude::Vector2i::new(163, 158),
+            social_blacklist: None,
+            cached_blocked: HashSet::new(),
+            cached_muted: HashSet::new(),
+        }
+    }
+
+    /// Sets the social blacklist reference for filtering blocked/muted users
+    pub fn set_social_blacklist(&mut self, blacklist: Gd<DclSocialBlacklist>) {
+        // Update cached sets when blacklist changes
+        let blacklist_bind = blacklist.bind();
+        self.cached_blocked
+            .clone_from(blacklist_bind.get_blocked_set());
+
+        // Merge blocked users into muted cache (blocked users are also muted)
+        self.cached_muted.clone_from(blacklist_bind.get_muted_set());
+        self.cached_muted.extend(blacklist_bind.get_blocked_set());
+        drop(blacklist_bind);
+
+        self.social_blacklist = Some(blacklist);
+    }
+
+    /// Updates the cached blocked/muted sets from the social blacklist
+    pub fn refresh_blacklist_cache(&mut self) {
+        if let Some(blacklist) = &self.social_blacklist {
+            let blacklist_bind = blacklist.bind();
+            let new_blocked = blacklist_bind.get_blocked_set().clone();
+            let new_muted = blacklist_bind.get_muted_set().clone();
+
+            // Find newly blocked addresses (in new set but not in old set)
+            let newly_blocked: Vec<H160> = new_blocked
+                .difference(&self.cached_blocked)
+                .cloned()
+                .collect();
+
+            // Find newly unblocked addresses (in old set but not in new set)
+            let newly_unblocked: Vec<H160> = self
+                .cached_blocked
+                .difference(&new_blocked)
+                .cloned()
+                .collect();
+
+            // Update the cached sets
+            self.cached_blocked.clone_from(&new_blocked);
+            // Merge blocked users into muted cache (blocked users are also muted)
+            self.cached_muted = new_muted;
+            self.cached_muted.extend(&new_blocked);
+
+            // Hide avatars for newly blocked users
+            if !newly_blocked.is_empty() {
+                let mut avatar_scene_ref = self.avatars.clone();
+                let mut avatar_scene = avatar_scene_ref.bind_mut();
+
+                for blocked_address in newly_blocked {
+                    if let Some(peer) = self.peer_identities.get(&blocked_address) {
+                        tracing::info!(
+                            "🚫 Hiding avatar for blocked user {:#x} (alias: {})",
+                            blocked_address,
+                            peer.alias
+                        );
+                        avatar_scene.set_avatar_blocked(peer.alias, true);
+                    }
+                }
+            }
+
+            // Show avatars for newly unblocked users
+            if !newly_unblocked.is_empty() {
+                let mut avatar_scene_ref = self.avatars.clone();
+                let mut avatar_scene = avatar_scene_ref.bind_mut();
+
+                for unblocked_address in newly_unblocked {
+                    if let Some(peer) = self.peer_identities.get(&unblocked_address) {
+                        tracing::info!(
+                            "✅ Showing avatar for unblocked user {:#x} (alias: {})",
+                            unblocked_address,
+                            peer.alias
+                        );
+                        avatar_scene.set_avatar_blocked(peer.alias, false);
+                    }
+                }
+            }
         }
     }
 
@@ -434,6 +522,16 @@ impl MessageProcessor {
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene
                     .add_avatar(new_alias, GString::from(format!("{:#x}", message.address)));
+
+                // If the user is blocked, hide the avatar immediately
+                if self.cached_blocked.contains(&message.address) {
+                    tracing::info!(
+                        "🚫 New peer {:#x} (alias: {}) is blocked, hiding avatar",
+                        message.address,
+                        new_alias
+                    );
+                    avatar_scene.set_avatar_blocked(new_alias, true);
+                }
             }
 
             // Send initial profile request to the room where this message came from
@@ -477,6 +575,12 @@ impl MessageProcessor {
                 );
             }
             MessageType::VoiceFrame(voice_frame) => {
+                // Check if user is muted for voice (using cached set for O(1) lookup)
+                // Note: cached_muted includes both muted AND blocked users
+                if self.cached_muted.contains(&message.address) {
+                    return; // muted/blocked - ignore voice frames
+                }
+
                 // If all the frame.data is less than 10, we skip the frame
                 if voice_frame.data.iter().all(|&c| c.abs() < 10) {
                     return;
@@ -619,6 +723,12 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::Chat(chat) => {
                 tracing::info!("Received Chat from {:#x}: {:?}", address, chat);
+
+                // Check if user is muted for chat (using cached set for O(1) lookup)
+                // Note: cached_muted includes both muted AND blocked users
+                if self.cached_muted.contains(&address) {
+                    return; // muted/blocked - ignore chat messages
+                }
 
                 // Check for duplicate messages based on timestamp
                 const TIMESTAMP_TOLERANCE: f64 = 0.001;

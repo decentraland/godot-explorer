@@ -53,7 +53,6 @@ func _ready():
 		_set_is_mobile(true)
 
 	# Setup
-	http_requester = RustHttpQueueRequester.new()
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
 	music_player = MusicPlayer.new()
@@ -65,8 +64,24 @@ func _ready():
 	if FORCE_TEST:
 		Global.testing_scene_mode = true
 
+	# Create GDScript extensions of Rust classes
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
+
+	self.realm = Realm.new()
+	self.realm.set_name("realm")
+
+	self.dcl_tokio_rpc = DclTokioRpc.new()
+	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
+
+	self.player_identity = PlayerIdentity.new()
+	self.player_identity.set_name("player_identity")
+
+	self.testing_tools = TestingTools.new()
+	self.testing_tools.set_name("testing_tool")
+
+	self.portable_experience_controller = PortableExperienceController.new()
+	self.portable_experience_controller.set_name("portable_experience_controller")
 
 	if args.has("--clear-cache-startup"):
 		prints("Clear cache startup!")
@@ -92,37 +107,18 @@ func _ready():
 	if Engine.has_singleton("WebKit"):
 		webkit_ios_plugin = Engine.get_singleton("WebKit")
 
+	# Initialize metrics with proper user_id and session_id
 	self.metrics = Metrics.create_metrics(
 		self.config.analytics_user_id, DclConfig.generate_uuid_v4()
 	)
 	self.metrics.set_name("metrics")
 
-	self.realm = Realm.new()
-	self.realm.set_name("realm")
-
-	self.dcl_tokio_rpc = DclTokioRpc.new()
-	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
-
-	self.player_identity = PlayerIdentity.new()
-	self.player_identity.set_name("player_identity")
-
-	self.testing_tools = TestingTools.new()
-	self.testing_tools.set_name("testing_tool")
-
-	self.content_provider = ContentProvider.new()
-	self.content_provider.set_name("content_provider")
-
+	# Create the GDScript-only components
 	self.scene_fetcher = SceneFetcher.new()
 	self.scene_fetcher.set_name("scene_fetcher")
 
 	self.skybox_time = SkyboxTime.new()
 	self.skybox_time.set_name("skybox_time")
-
-	self.portable_experience_controller = PortableExperienceController.new()
-	self.portable_experience_controller.set_name("portable_experience_controller")
-
-	self.avatars = AvatarScene.new()
-	self.avatars.set_name("avatar_scene")
 
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
@@ -138,6 +134,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.testing_tools)
 	get_tree().root.add_child.call_deferred(self.metrics)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
+	get_tree().root.add_child.call_deferred(self.social_blacklist)
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
@@ -391,3 +388,8 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	var response_promise: Promise = Global.http_requester.request_json(url, method, _body, headers)
 
 	return await PromiseUtils.async_awaiter(response_promise)
+
+
+# Save profile without generating new snapshots (for non-visual changes)
+func async_save_profile_metadata(profile: DclUserProfile):
+	await ProfileService.async_deploy_profile(profile, false)

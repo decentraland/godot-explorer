@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 use crate::{
     dcl::components::proto_components::{
@@ -95,8 +96,10 @@ pub struct SerializedProfile {
     #[serde(rename = "tutorialStep")]
     pub tutorial_step: u32,
     pub email: Option<String>,
-    pub blocked: Option<Vec<String>>,
-    pub muted: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked: Option<HashSet<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub muted: Option<HashSet<String>>,
     pub interests: Option<Vec<String>>,
     #[serde(rename = "hasClaimedName")]
     pub has_claimed_name: Option<bool>,
