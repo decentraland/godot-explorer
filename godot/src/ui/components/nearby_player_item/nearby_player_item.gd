@@ -42,15 +42,13 @@ func async_set_data(avatar_param = null):
 		printerr("NO AVATAR DATA")
 
 	if !avatar.finish_loading:
-		# Show a placeholder while loading
-		nickname.text = "Loading..."
-		texture_rect_claimed_checkmark.hide()
-		tag.text = ""
+		hide()
 	else:
+		show()
 		var avatar_name = avatar.get_avatar_name()
-		var position = avatar_name.find("#")
-		if position != -1:
-			nickname.text = avatar_name.left(position)
+		var tag_position = avatar_name.find("#")
+		if tag_position != -1:
+			nickname.text = avatar_name.left(tag_position)
 			texture_rect_claimed_checkmark.hide()
 		else:
 			nickname.text = avatar_name
@@ -129,14 +127,6 @@ func _on_button_report_pressed() -> void:
 	print("Report ", avatar.avatar_id, " (", avatar.get_avatar_name(), ")")
 
 
-func _on_button_block_user_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		Global.social_blacklist.add_blocked(avatar.avatar_id)
-	else:
-		Global.social_blacklist.remove_blocked(avatar.avatar_id)
-	_update_buttons()
-
-
 func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		Global.social_blacklist.add_muted(avatar.avatar_id)
@@ -149,9 +139,13 @@ func _update_buttons() -> void:
 	var is_blocked = Global.social_blacklist.is_blocked(avatar.avatar_id)
 	button_block_user.set_pressed_no_signal(is_blocked)
 	if is_blocked:
-		button_block_user.icon = BLOCK
+		button_block_user.icon = null
+		button_block_user.text = "UNBLOCK"
+		button_mute_user.hide()
 	else:
-		button_block_user.icon = UNBLOCK
+		button_block_user.icon = BLOCK
+		button_block_user.text = ""
+		button_mute_user.show()
 
 	var is_muted = Global.social_blacklist.is_muted(avatar.avatar_id)
 	button_mute_user.set_pressed_no_signal(is_muted)
@@ -163,3 +157,13 @@ func _update_buttons() -> void:
 
 func _exit_tree() -> void:
 	stop_marquee_effect()
+
+
+func _on_button_block_user_pressed() -> void:
+	var is_blocked = Global.social_blacklist.is_blocked(avatar.avatar_id)
+	print(is_blocked)
+	if is_blocked:
+		Global.social_blacklist.remove_blocked(avatar.avatar_id)
+	else:
+		Global.social_blacklist.add_blocked(avatar.avatar_id)
+	_update_buttons()

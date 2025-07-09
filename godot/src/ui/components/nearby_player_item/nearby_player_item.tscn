@@ -199,10 +199,10 @@ theme = ExtResource("1_gljko")
 theme_override_colors/icon_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_colors/font_pressed_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_constants/icon_max_width = 20
+theme_override_font_sizes/font_size = 12
 theme_override_styles/hover = SubResource("StyleBoxFlat_io7c4")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_io7c4")
 theme_override_styles/normal = SubResource("StyleBoxFlat_cmtom")
-toggle_mode = true
 icon = ExtResource("6_cmtom")
 icon_alignment = 1
 expand_icon = true
@@ -245,6 +245,6 @@ expand_icon = true
 
 [connection signal="mouse_entered" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_entered"]
 [connection signal="mouse_exited" from="MarginContainer/Panel_NearbyPlayerItem" to="." method="_on_mouse_exited"]
-[connection signal="toggled" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer/Button_BlockUser" to="." method="_on_button_block_user_toggled"]
+[connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer/Button_BlockUser" to="." method="_on_button_block_user_pressed"]
 [connection signal="toggled" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer/Button_MuteUser" to="." method="_on_button_mute_user_toggled"]
 [connection signal="pressed" from="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/HBoxContainer/Button_Report" to="." method="_on_button_report_pressed"]
