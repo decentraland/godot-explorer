@@ -94,6 +94,9 @@ fn sync_crdt_lww_component<T>(
 
 #[godot_api]
 impl AvatarScene {
+    #[signal]
+    fn avatar_scene_changed(avatars: Array<Gd<DclAvatar>>) {}
+
     #[func]
     pub fn update_primary_player_profile(&mut self, profile: Gd<DclUserProfile>) {
         self.update_avatar(SceneEntityId::PLAYER, &profile.bind().inner);
@@ -200,6 +203,10 @@ impl AvatarScene {
 
         self.base_mut().add_child(new_avatar.clone().upcast());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
+        
+        // Emit signal with updated avatar list
+        let avatars = self.get_avatars();
+        self.base_mut().emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
     }
 
     #[func]
@@ -370,6 +377,10 @@ impl AvatarScene {
                     .deleted_entities
                     .insert(entity_id);
             }
+            
+            // Emit signal with updated avatar list
+            let avatars = self.get_avatars();
+            self.base_mut().emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
         }
     }
 
@@ -579,7 +590,7 @@ impl AvatarScene {
     pub fn set_avatar_blocked(&mut self, alias: u32, blocked: bool) {
         if let Some(entity_id) = self.avatar_entity.get(&alias) {
             if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
-                avatar.call("set_hidden".into(), &[blocked.to_variant()]);
+                avatar.call("set_blocked_and_hidden".into(), &[blocked.to_variant()]);
             }
         }
     }

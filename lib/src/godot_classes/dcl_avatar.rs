@@ -6,6 +6,9 @@ use crate::dcl::SceneId;
 
 use super::dcl_global::DclGlobal;
 
+// Global counter for unique avatar IDs (non-atomic since init is always on main thread)
+static mut AVATAR_ID_COUNTER: u32 = 0;
+
 #[derive(Var, GodotConvert, Export)]
 #[godot(via = i32)]
 pub enum AvatarMovementType {
@@ -24,11 +27,17 @@ struct LerpState {
 #[derive(GodotClass)]
 #[class(base=Node3D)]
 pub struct DclAvatar {
+    #[var(get)]
+    unique_id: u32,
+
     #[var]
     avatar_data: Gd<DclAvatarWireFormat>,
 
     #[var]
     avatar_name: GString,
+
+    #[var]
+    blocked: bool,
 
     #[export]
     movement_type: AvatarMovementType,
@@ -59,7 +68,15 @@ pub struct DclAvatar {
 #[godot_api]
 impl INode3D for DclAvatar {
     fn init(base: Base<Node3D>) -> Self {
+        // Increment and get the next unique ID (safe since init is always on main thread)
+        let unique_id = unsafe {
+            let id = AVATAR_ID_COUNTER;
+            AVATAR_ID_COUNTER += 1;
+            id
+        };
+        
         Self {
+            unique_id,
             movement_type: AvatarMovementType::ExternalController,
             current_parcel_scene_id: SceneId::INVALID.0,
             current_parcel_position: Vector2i::new(i32::MAX, i32::MAX),
@@ -73,6 +90,7 @@ impl INode3D for DclAvatar {
             land: false,
             avatar_data: DclAvatarWireFormat::from_gd(Default::default()),
             avatar_name: "".into(),
+            blocked: false,
         }
     }
 }
@@ -264,5 +282,12 @@ impl DclAvatar {
     pub fn get_nickname_color(&self, nickname: GString) -> Color {
         let hash = get_hash_number(nickname.to_string(), 0, NICKNAME_COLORS.len() as i32 - 1);
         NICKNAME_COLORS[hash as usize]
+    }
+
+    #[func]
+    pub fn set_blocked_and_hidden(&mut self, value: bool) {
+        self.blocked = value;
+        // Call the GDScript set_hidden method
+        self.base_mut().call("set_hidden".into(), &[value.to_variant()]);
     }
 }

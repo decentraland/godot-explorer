@@ -45,20 +45,27 @@ func async_set_data(avatar_param = null):
 
 	#TODO: I think this will be redundant when client receive depured avatar list.
 	var avatar_name = avatar.get_avatar_name()
+	# Don't delete items with empty names - they might still be loading
+	# if avatar_name.is_empty():
+	#	print("Deleting element because name is empty")
+	#	queue_free()
+
+
 	if avatar_name.is_empty():
-		print("Deleting element because name is empty")
-		queue_free()
-
-
-	var position = avatar_name.find("#")
-	if position != -1:
-		nickname.text = avatar_name.left(position)
+		# Show a placeholder while loading
+		nickname.text = "Loading..."
 		texture_rect_claimed_checkmark.hide()
+		tag.text = ""
 	else:
-		nickname.text = avatar_name
-		texture_rect_claimed_checkmark.show()
+		var position = avatar_name.find("#")
+		if position != -1:
+			nickname.text = avatar_name.left(position)
+			texture_rect_claimed_checkmark.hide()
+		else:
+			nickname.text = avatar_name
+			texture_rect_claimed_checkmark.show()
 
-	tag.text = avatar.avatar_id.right(4)
+		tag.text = avatar.avatar_id.right(4)
 	
 
 	var nickname_color = avatar.get_nickname_color(avatar_name)
