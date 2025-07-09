@@ -224,7 +224,7 @@ impl ProfileService {
     ) -> Result<serde_json::Value, anyhow::Error> {
         // Update profile fields
         profile.content.user_id = Some(eth_address.clone());
-        profile.content.eth_address = eth_address.clone();
+        profile.content.eth_address.clone_from(&eth_address);
 
         // Prepare deployment data
         let unix_time = std::time::SystemTime::now()

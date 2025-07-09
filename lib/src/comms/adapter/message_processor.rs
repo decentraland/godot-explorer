@@ -234,7 +234,7 @@ impl MessageProcessor {
                 .collect();
 
             // Update the cached sets
-            self.cached_blocked = new_blocked.clone();
+            self.cached_blocked.clone_from(&new_blocked);
             // Merge blocked users into muted cache (blocked users are also muted)
             self.cached_muted = new_muted;
             self.cached_muted.extend(&new_blocked);
