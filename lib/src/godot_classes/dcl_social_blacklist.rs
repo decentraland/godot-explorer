@@ -197,18 +197,19 @@ impl DclSocialBlacklist {
         let profile_bind = profile.bind();
         let inner = &profile_bind.inner;
 
+        // Store current state to check if anything changed
+        let old_blocked = self.blocked_addresses.clone();
+        let old_muted = self.muted_addresses.clone();
+
         // Clear existing lists
         self.blocked_addresses.clear();
         self.muted_addresses.clear();
-
-        let mut changed = false;
 
         // Load blocked addresses
         if let Some(blocked_list) = &inner.content.blocked {
             for addr_str in blocked_list {
                 if let Ok(addr) = addr_str.parse::<H160>() {
                     self.blocked_addresses.insert(addr);
-                    changed = true;
                 }
             }
         }
@@ -218,12 +219,12 @@ impl DclSocialBlacklist {
             for addr_str in muted_list {
                 if let Ok(addr) = addr_str.parse::<H160>() {
                     self.muted_addresses.insert(addr);
-                    changed = true;
                 }
             }
         }
 
-        if changed {
+        // Only emit signal if the lists actually changed
+        if old_blocked != self.blocked_addresses || old_muted != self.muted_addresses {
             self.base_mut().emit_signal("blacklist_changed".into(), &[]);
         }
     }

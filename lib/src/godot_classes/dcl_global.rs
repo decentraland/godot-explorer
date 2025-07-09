@@ -13,6 +13,7 @@ use crate::{
     content::content_provider::ContentProvider,
     dcl::common::set_scene_log_enabled,
     http_request::rust_http_queue_requester::RustHttpQueueRequester,
+    profile::profile_service::ProfileService,
     scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
     test_runner::testing_tools::DclTestingTools,
     tools::network_inspector::{NetworkInspector, NetworkInspectorSender},
@@ -71,7 +72,7 @@ pub struct DclGlobal {
     pub player_identity: Gd<DclPlayerIdentity>,
     #[var]
     pub content_provider: Gd<ContentProvider>,
-    #[var]
+    #[var(get)]
     pub http_requester: Gd<RustHttpQueueRequester>,
     #[var]
     pub dcl_tokio_rpc: Gd<DclTokioRpc>,
@@ -96,6 +97,9 @@ pub struct DclGlobal {
 
     #[var]
     pub social_blacklist: Gd<DclSocialBlacklist>,
+
+    #[var(get)]
+    pub profile_service: Gd<ProfileService>,
 }
 
 #[godot_api]
@@ -117,17 +121,38 @@ impl INode for DclGlobal {
 
         log_panics::init();
 
+        // Initialize Rust classes
         let mut avatars: Gd<AvatarScene> = AvatarScene::new_alloc();
         let mut comms: Gd<CommunicationManager> = CommunicationManager::new_alloc();
         let mut scene_runner: Gd<SceneManager> = SceneManager::new_alloc();
         let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::new_alloc();
+        let mut content_provider: Gd<ContentProvider> = ContentProvider::new_alloc();
+        let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
+        let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
+        let mut metrics: Gd<Metrics> = Metrics::new_alloc();
+
+        // For now, keep using base Rust classes - GDScript extensions will be created in global.gd
+        let mut realm: Gd<DclRealm> = DclRealm::new_alloc();
+        let mut dcl_tokio_rpc: Gd<DclTokioRpc> = DclTokioRpc::new_alloc();
+        let mut player_identity: Gd<DclPlayerIdentity> = DclPlayerIdentity::new_alloc();
+        let mut testing_tools: Gd<DclTestingTools> = DclTestingTools::new_alloc();
+        let mut portable_experience_controller: Gd<DclPortableExperienceController> =
+            DclPortableExperienceController::new_alloc();
 
         tokio_runtime.set_name("tokio_runtime".into());
         scene_runner.set_name("scene_runner".into());
         scene_runner.set_process_mode(ProcessMode::DISABLED);
-
         comms.set_name("comms".into());
-        avatars.set_name("avatars".into());
+        avatars.set_name("avatar_scene".into());
+        realm.set_name("realm".into());
+        dcl_tokio_rpc.set_name("dcl_tokio_rpc".into());
+        player_identity.set_name("player_identity".into());
+        testing_tools.set_name("testing_tool".into());
+        content_provider.set_name("content_provider".into());
+        portable_experience_controller.set_name("portable_experience_controller".into());
+        network_inspector.set_name("network_inspector".into());
+        social_blacklist.set_name("social_blacklist".into());
+        metrics.set_name("metrics".into());
 
         let args = godot::engine::Os::singleton().get_cmdline_args();
 
@@ -141,6 +166,10 @@ impl INode for DclGlobal {
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
         let is_mobile = godot::engine::Os::singleton().has_feature("mobile".into());
+
+        // For now, use base class - ConfigData will be created in global.gd
+        let config = DclConfig::new_gd();
+
         Self {
             _base: base,
             is_mobile,
@@ -149,22 +178,23 @@ impl INode for DclGlobal {
             comms,
             avatars,
             tokio_runtime,
-            testing_tools: DclTestingTools::new_alloc(),
-            realm: DclRealm::new_alloc(),
-            portable_experience_controller: DclPortableExperienceController::new_alloc(),
+            testing_tools,
+            realm,
+            portable_experience_controller,
             preview_mode,
             testing_scene_mode,
             fixed_skybox_time,
-            dcl_tokio_rpc: DclTokioRpc::new_alloc(),
-            player_identity: DclPlayerIdentity::new_alloc(),
-            content_provider: ContentProvider::new_alloc(),
+            dcl_tokio_rpc,
+            player_identity,
+            content_provider,
             http_requester: RustHttpQueueRequester::new_gd(),
-            config: DclConfig::new_gd(),
+            config,
             ethereum_provider: Arc::new(EthereumProvider::new()),
-            metrics: Metrics::new_alloc(),
+            metrics,
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
-            network_inspector: NetworkInspector::new_alloc(),
-            social_blacklist: DclSocialBlacklist::new_alloc(),
+            network_inspector,
+            social_blacklist,
+            profile_service: ProfileService::new_gd(),
 
             #[cfg(feature = "enable_inspector")]
             has_javascript_debugger: true,

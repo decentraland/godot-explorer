@@ -30,6 +30,10 @@ var avatar_wearables_body_shape_cache: Dictionary = {}
 
 var avatar_loading_counter: int = 0
 
+# Timer for debounced blacklist changes
+var blacklist_deploy_timer: Timer
+var is_loading_profile: bool = false
+
 @onready var skin_color_picker = %Color_Picker_Button
 @onready var color_picker_panel = $Color_Picker_Panel
 @onready var grid_container_wearables_list = %GridContainer_WearablesList
@@ -79,6 +83,16 @@ func _ready():
 
 	skin_color_picker.hide()
 	Global.player_identity.profile_changed.connect(self._on_profile_changed)
+
+	# Setup blacklist change timer
+	blacklist_deploy_timer = Timer.new()
+	blacklist_deploy_timer.wait_time = 5.0
+	blacklist_deploy_timer.one_shot = true
+	blacklist_deploy_timer.timeout.connect(self._on_blacklist_deploy_timer_timeout)
+	add_child(blacklist_deploy_timer)
+
+	# Connect to blacklist changes
+	Global.social_blacklist.blacklist_changed.connect(self._on_blacklist_changed)
 
 	for wearable_filter_button in container_main_categories.get_children():
 		if wearable_filter_button is WearableFilterButton:
@@ -164,6 +178,7 @@ func _update_visible_categories():
 
 
 func _on_profile_changed(new_profile: DclUserProfile):
+	is_loading_profile = true
 	mutable_profile = new_profile.duplicated()
 	current_profile = new_profile.duplicated()
 	mutable_avatar = mutable_profile.get_avatar()
@@ -175,21 +190,11 @@ func _on_profile_changed(new_profile: DclUserProfile):
 	)
 
 	# Update social blacklist from the profile
-	if (
-		Global.get_config().temporary_blocked_list.is_empty()
-		and Global.get_config().temporary_muted_list.is_empty()
-	):
-		Global.social_blacklist.init_from_profile(new_profile)
-	else:
-		# Initialize blacklist from config if available
-		if Global.get_config().temporary_blocked_list.size() > 0:
-			prints("temporary blocked list", Global.get_config().temporary_blocked_list)
-			Global.social_blacklist.append_blocked(Global.get_config().temporary_blocked_list)
-		if Global.get_config().temporary_muted_list.size() > 0:
-			Global.social_blacklist.append_muted(Global.get_config().temporary_muted_list)
+	Global.social_blacklist.init_from_profile(new_profile)
 
 	request_update_avatar = true
 	request_show_wearables = true
+	is_loading_profile = false
 
 
 func _on_set_new_emotes(emotes_urns: PackedStringArray):
@@ -344,11 +349,12 @@ func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat, profile: D
 	snapshot_avatar_preview.hide()
 
 
-func async_save_profile():
+func async_save_profile(generate_snapshots: bool = true):
 	avatar_preview.avatar.emote_controller.stop_emote()
 	mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 
-	await async_prepare_snapshots(mutable_avatar, mutable_profile)
+	if generate_snapshots:
+		await async_prepare_snapshots(mutable_avatar, mutable_profile)
 
 	mutable_profile.set_avatar(mutable_avatar)
 
@@ -356,7 +362,8 @@ func async_save_profile():
 	mutable_profile.set_blocked(Global.social_blacklist.get_blocked_list())
 	mutable_profile.set_muted(Global.social_blacklist.get_muted_list())
 
-	await Global.player_identity.async_deploy_profile(mutable_profile, true)
+	# Use the new profile service static method
+	await ProfileService.async_deploy_profile(mutable_profile, generate_snapshots)
 
 
 func _on_wearable_equip(wearable_id: String):
@@ -466,6 +473,11 @@ func _on_color_picker_panel_hided():
 	skin_color_picker.set_pressed(false)
 
 
+# Save profile without snapshots (for non-visual changes like blocked/muted lists)
+func async_save_profile_metadata_only():
+	await async_save_profile(false)
+
+
 func _on_rich_text_box_open_marketplace_meta_clicked(_meta):
 	Global.open_url("https://decentraland.org/marketplace/browse?section=wearables")
 
@@ -490,3 +502,33 @@ func _on_check_box_only_collectibles_toggled(toggled_on):
 	emote_editor.async_set_only_collectibles(toggled_on)
 	only_collectibles = toggled_on
 	_load_filtered_data(current_filter)
+
+
+func _exit_tree():
+	# Clean up timer and disconnect signals
+	if blacklist_deploy_timer:
+		blacklist_deploy_timer.stop()
+		blacklist_deploy_timer.queue_free()
+
+	if Global.social_blacklist.blacklist_changed.is_connected(self._on_blacklist_changed):
+		Global.social_blacklist.blacklist_changed.disconnect(self._on_blacklist_changed)
+
+
+func _on_blacklist_changed():
+	# Don't trigger deployment if we're loading a profile from server
+	if is_loading_profile:
+		return
+
+	prints("Blacklist changed, scheduling profile deployment in 5 seconds...")
+	# Reset the timer if it's already running
+	blacklist_deploy_timer.stop()
+	blacklist_deploy_timer.start()
+
+
+func _on_blacklist_deploy_timer_timeout():
+	prints("Deploying profile with updated blacklist...")
+	# Update the mutable profile with current blacklist before deploying
+	mutable_profile.set_blocked(Global.social_blacklist.get_blocked_list())
+	mutable_profile.set_muted(Global.social_blacklist.get_muted_list())
+	# Deploy without regenerating snapshots since blacklist is not a visual change
+	ProfileService.async_deploy_profile(mutable_profile, false)

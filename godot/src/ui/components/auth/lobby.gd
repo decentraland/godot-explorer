@@ -184,10 +184,7 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 func _on_button_different_account_pressed():
 	Global.get_config().session_account = {}
 
-	# Clear temporary blocked/muted lists when switching accounts
-	Global.get_config().temporary_blocked_list = []
-	Global.get_config().temporary_muted_list = []
-	# Also clear the current social blacklist
+	# Clear the current social blacklist when switching accounts
 	Global.social_blacklist.clear_blocked()
 	Global.social_blacklist.clear_muted()
 
@@ -229,7 +226,7 @@ func _on_button_next_pressed():
 
 	current_profile.set_avatar(avatar)
 
-	await Global.player_identity.async_deploy_profile(current_profile, true)
+	await ProfileService.async_deploy_profile(current_profile, true)
 
 	await async_close_sign_in(false)
 

@@ -94,7 +94,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn increment_profile_version(&mut self) {
+    pub fn increment_profile_version(&mut self) {
         self.inner.content.version += 1;
         self.inner.version = self.inner.content.version as u32;
     }
@@ -141,10 +141,8 @@ impl DclUserProfile {
 
     #[func]
     pub fn set_blocked(&mut self, blocked_list: Array<GString>) {
-        let mut blocked_set = std::collections::HashSet::new();
-        for addr in blocked_list.iter_shared() {
-            blocked_set.insert(addr.to_string());
-        }
+        let blocked_set: std::collections::HashSet<String> =
+            blocked_list.iter_shared().map(|s| s.to_string()).collect();
         self.inner.content.blocked = if blocked_set.is_empty() {
             None
         } else {
@@ -154,10 +152,8 @@ impl DclUserProfile {
 
     #[func]
     pub fn set_muted(&mut self, muted_list: Array<GString>) {
-        let mut muted_set = std::collections::HashSet::new();
-        for addr in muted_list.iter_shared() {
-            muted_set.insert(addr.to_string());
-        }
+        let muted_set: std::collections::HashSet<String> =
+            muted_list.iter_shared().map(|s| s.to_string()).collect();
         self.inner.content.muted = if muted_set.is_empty() {
             None
         } else {
