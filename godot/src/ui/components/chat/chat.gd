@@ -5,9 +5,7 @@ signal submit_message(message: String)
 const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
 const ACK: String = "␆"
-const NEARBY_PLAYER_ITEM = preload(
-	"res://src/ui/components/nearby_player_item/nearby_player_item.tscn"
-)
+
 
 var hide_tween = null
 var nearby_avatars = null
@@ -23,17 +21,16 @@ var nearby_avatars = null
 @onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
 @onready var margin_container_chat_nearby: Panel = %Panel_Nearby
 @onready var timer_hide = %Timer_Hide
-@onready var v_box_container_nearby_players: VBoxContainer = %VBoxContainer_NearbyPlayers
-@onready var margin_container_nearby: MarginContainer = %MarginContainer_Nearby
+@onready var avatars_list: Control = $VBoxContainer/AvatarsList
 
 
 func _ready():
 	_on_button_back_pressed()
-	async_update_nearby_users(Global.avatars.get_avatars())
+	avatars_list.async_update_nearby_users(Global.avatars.get_avatars())
 
 	# Connect to avatar scene changed signal instead of using timer
-	Global.avatars.avatar_scene_changed.connect(self.async_update_nearby_users)
-
+	Global.avatars.avatar_scene_changed.connect(avatars_list.async_update_nearby_users)
+	avatars_list.size_changed.connect(self.update_nearby_quantity)
 	add_chat_message(
 		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
 	)
@@ -140,7 +137,7 @@ func _set_open_chat(value: bool):
 
 
 func _on_timer_hide_timeout():
-	if margin_container_nearby.visible:
+	if avatars_list.visible:
 		return
 	if hide_tween != null:
 		hide_tween.stop()
@@ -150,100 +147,13 @@ func _on_timer_hide_timeout():
 	hide_tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.5)
 
 
-func async_update_nearby_users(remote_avatars: Array) -> void:
-	prints("async_update_nearby_users - received", remote_avatars.size(), "avatars")
-	var children_avatars = []
-	for child in v_box_container_nearby_players.get_children():
-		if child.avatar != null and is_instance_valid(child.avatar):
-			children_avatars.append(child.avatar)
-	prints("  Current children:", children_avatars.size())
-
-	var avatars_to_remove = []
-	for child_avatar in children_avatars:
-		if not is_instance_valid(child_avatar):
-			continue
-
-		var found = false
-		for remote_avatar in remote_avatars:
-			if not is_instance_valid(remote_avatar):
-				continue
-			if child_avatar.get_unique_id() == remote_avatar.get_unique_id():
-				found = true
-				break
-		if not found:
-			avatars_to_remove.append(child_avatar)
-
-	var avatars_to_add = []
-	for remote_avatar in remote_avatars:
-		if not is_instance_valid(remote_avatar):
-			continue
-
-		var found = false
-		for child_avatar in children_avatars:
-			if not is_instance_valid(child_avatar):
-				continue
-			if remote_avatar.get_unique_id() == child_avatar.get_unique_id():
-				found = true
-				break
-		if not found:
-			avatars_to_add.append(remote_avatar)
-
-	prints("  Avatars to add:", avatars_to_add.size())
-	prints("  Avatars to remove:", avatars_to_remove.size())
-
-	for child in v_box_container_nearby_players.get_children():
-		if child.avatar != null and is_instance_valid(child.avatar):
-			for avatar_to_remove in avatars_to_remove:
-				if not is_instance_valid(avatar_to_remove):
-					continue
-				if child.avatar.get_unique_id() == avatar_to_remove.get_unique_id():
-					if (
-						child.avatar is Avatar
-						and child.avatar.avatar_loaded.is_connected(child.async_set_data)
-					):
-						child.avatar.avatar_loaded.disconnect(child.async_set_data)
-					child.queue_free()
-					break
-
-	for avatar in avatars_to_add:
-		prints(
-			"  Adding avatar with unique_id:",
-			avatar.get_unique_id(),
-			"name:",
-			avatar.get_avatar_name()
-		)
-		var avatar_item = NEARBY_PLAYER_ITEM.instantiate()
-		v_box_container_nearby_players.add_child(avatar_item)
-
-		if avatar is Avatar:
-			if not avatar.avatar_loaded.is_connected(avatar_item.async_set_data):
-				avatar.avatar_loaded.connect(avatar_item.async_set_data)
-		await avatar_item.async_set_data(avatar)
-
-	var children = v_box_container_nearby_players.get_children()
-	var valid_children = []
-	for child in children:
-		if child.avatar != null and is_instance_valid(child.avatar):
-			valid_children.append(child)
-
-	valid_children.sort_custom(self._compare_avatar_names)
-
-	for child in valid_children:
-		v_box_container_nearby_players.move_child(child, -1)
-
-	button_nearby_users.text = str(valid_children.size())
-	label_members_quantity.text = str(valid_children.size())
-
-
-func _compare_avatar_names(a, b):
-	if not is_instance_valid(a.avatar) or not is_instance_valid(b.avatar):
-		return false
-	return a.avatar.get_avatar_name() < b.avatar.get_avatar_name()
-
+func update_nearby_quantity() -> void:
+	button_nearby_users.text = str(avatars_list.list_size)
+	label_members_quantity.text = str(avatars_list.list_size)
 
 func _on_button_nearby_users_pressed() -> void:
 	self_modulate = "#00000080"
-	margin_container_nearby.show()
+	avatars_list.show()
 	button_back.show()
 	h_box_container_nearby_users.show()
 	margin_container_chat.hide()
@@ -254,7 +164,7 @@ func _on_button_nearby_users_pressed() -> void:
 
 func _on_button_back_pressed() -> void:
 	self_modulate = "#00000040"
-	margin_container_nearby.hide()
+	avatars_list.hide()
 	button_back.hide()
 	h_box_container_nearby_users.hide()
 	margin_container_chat.show()

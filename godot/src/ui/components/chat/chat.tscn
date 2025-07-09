@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://bl6h58asl377"]
+[gd_scene load_steps=14 format=3 uid="uid://bl6h58asl377"]
 
 [ext_resource type="Script" uid="uid://daglkxqdyrtmb" path="res://src/ui/components/chat/chat.gd" id="1_llfi5"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://byv55qwr3riuh" path="res://assets/themes/dark_dcl_theme/icons/send.svg" id="3_umu3q"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_euk1h"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_mb7k1"]
+[ext_resource type="PackedScene" uid="uid://desag1pjamllj" path="res://src/ui/components/avatars_list/avatars_list.tscn" id="8_lt7hs"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xauh3"]
 bg_color = Color(1, 1, 1, 1)
@@ -212,27 +213,9 @@ size_flags_vertical = 3
 bbcode_enabled = true
 scroll_following = true
 
-[node name="MarginContainer_Nearby" type="MarginContainer" parent="VBoxContainer"]
-unique_name_in_owner = true
-visible = false
+[node name="AvatarsList" parent="VBoxContainer" instance=ExtResource("8_lt7hs")]
 layout_mode = 2
 size_flags_vertical = 3
-theme = ExtResource("1_ytipc")
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_bottom = 8
-
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer_Nearby"]
-layout_mode = 2
-vertical_scroll_mode = 2
-
-[node name="VBoxContainer_NearbyPlayers" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Nearby/ScrollContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_constants/separation = 2
 
 [connection signal="timeout" from="Timer_Hide" to="." method="_on_timer_hide_timeout"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/HBoxContainer/Button_Back" to="." method="_on_button_back_pressed"]
