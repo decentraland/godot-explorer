@@ -174,6 +174,20 @@ func _on_profile_changed(new_profile: DclUserProfile):
 		current_profile.get_profile_version()
 	)
 
+	# Update social blacklist from the profile
+	if (
+		Global.get_config().temporary_blocked_list.is_empty()
+		and Global.get_config().temporary_muted_list.is_empty()
+	):
+		Global.social_blacklist.init_from_profile(new_profile)
+	else:
+		# Initialize blacklist from config if available
+		if Global.get_config().temporary_blocked_list.size() > 0:
+			prints("temporary blocked list", Global.get_config().temporary_blocked_list)
+			Global.social_blacklist.append_blocked(Global.get_config().temporary_blocked_list)
+		if Global.get_config().temporary_muted_list.size() > 0:
+			Global.social_blacklist.append_muted(Global.get_config().temporary_muted_list)
+
 	request_update_avatar = true
 	request_show_wearables = true
 
@@ -337,6 +351,10 @@ func async_save_profile():
 	await async_prepare_snapshots(mutable_avatar, mutable_profile)
 
 	mutable_profile.set_avatar(mutable_avatar)
+
+	# Update blocked and muted lists from social_blacklist
+	mutable_profile.set_blocked(Global.social_blacklist.get_blocked_list())
+	mutable_profile.set_muted(Global.social_blacklist.get_muted_list())
 
 	await Global.player_identity.async_deploy_profile(mutable_profile, true)
 

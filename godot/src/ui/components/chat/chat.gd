@@ -30,10 +30,10 @@ var nearby_avatars = null
 func _ready():
 	_on_button_back_pressed()
 	async_update_nearby_users(Global.avatars.get_avatars())
-	
+
 	# Connect to avatar scene changed signal instead of using timer
 	Global.avatars.avatar_scene_changed.connect(self.async_update_nearby_users)
-	
+
 	add_chat_message(
 		"[color=#cfc][b]Welcome to the Godot Client! Navigate to Advanced Settings > Realm tab to change the realm. Press Enter or click in the Talk button to say something to nearby.[/b][/color]"
 	)
@@ -162,7 +162,7 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 	for child_avatar in children_avatars:
 		if not is_instance_valid(child_avatar):
 			continue
-			
+
 		var found = false
 		for remote_avatar in remote_avatars:
 			if not is_instance_valid(remote_avatar):
@@ -177,7 +177,7 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 	for remote_avatar in remote_avatars:
 		if not is_instance_valid(remote_avatar):
 			continue
-			
+
 		var found = false
 		for child_avatar in children_avatars:
 			if not is_instance_valid(child_avatar):
@@ -187,7 +187,7 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 				break
 		if not found:
 			avatars_to_add.append(remote_avatar)
-	
+
 	prints("  Avatars to add:", avatars_to_add.size())
 	prints("  Avatars to remove:", avatars_to_remove.size())
 
@@ -206,7 +206,12 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 					break
 
 	for avatar in avatars_to_add:
-		prints("  Adding avatar with unique_id:", avatar.get_unique_id(), "name:", avatar.get_avatar_name())
+		prints(
+			"  Adding avatar with unique_id:",
+			avatar.get_unique_id(),
+			"name:",
+			avatar.get_avatar_name()
+		)
 		var avatar_item = NEARBY_PLAYER_ITEM.instantiate()
 		v_box_container_nearby_players.add_child(avatar_item)
 
@@ -220,18 +225,20 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 	for child in children:
 		if child.avatar != null and is_instance_valid(child.avatar):
 			valid_children.append(child)
-	
-	valid_children.sort_custom(func(a, b): 
-		if not is_instance_valid(a.avatar) or not is_instance_valid(b.avatar):
-			return false
-		return a.avatar.get_avatar_name() < b.avatar.get_avatar_name()
-	)
+
+	valid_children.sort_custom(self._compare_avatar_names)
 
 	for child in valid_children:
 		v_box_container_nearby_players.move_child(child, -1)
 
 	button_nearby_users.text = str(valid_children.size())
 	label_members_quantity.text = str(valid_children.size())
+
+
+func _compare_avatar_names(a, b):
+	if not is_instance_valid(a.avatar) or not is_instance_valid(b.avatar):
+		return false
+	return a.avatar.get_avatar_name() < b.avatar.get_avatar_name()
 
 
 func _on_button_nearby_users_pressed() -> void:

@@ -123,7 +123,7 @@ func _ready():
 
 	self.avatars = AvatarScene.new()
 	self.avatars.set_name("avatar_scene")
-	
+
 	self.social_blacklist.set_name("social_blacklist")
 
 	get_tree().root.add_child.call_deferred(self.music_player)

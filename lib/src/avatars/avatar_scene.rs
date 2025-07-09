@@ -203,10 +203,11 @@ impl AvatarScene {
 
         self.base_mut().add_child(new_avatar.clone().upcast());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
-        
+
         // Emit signal with updated avatar list
         let avatars = self.get_avatars();
-        self.base_mut().emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
+        self.base_mut()
+            .emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
     }
 
     #[func]
@@ -377,10 +378,11 @@ impl AvatarScene {
                     .deleted_entities
                     .insert(entity_id);
             }
-            
+
             // Emit signal with updated avatar list
             let avatars = self.get_avatars();
-            self.base_mut().emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
+            self.base_mut()
+                .emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
         }
     }
 

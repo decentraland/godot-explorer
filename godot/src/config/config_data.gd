@@ -159,6 +159,14 @@ var guest_profile: Dictionary = {}:
 		guest_profile = value
 		param_changed.emit(ConfigParams.GUEST_PROFILE)
 
+var temporary_blocked_list: Array = []:
+	set(value):
+		temporary_blocked_list = value
+
+var temporary_muted_list: Array = []:
+	set(value):
+		temporary_muted_list = value
+
 var audio_general_volume: float = 100.0:
 	set(value):
 		audio_general_volume = value
@@ -347,6 +355,14 @@ func load_from_settings_file():
 		"session", "guest_profile", data_default.guest_profile
 	)
 
+	self.temporary_blocked_list = settings_file.get_value(
+		"session", "temporary_blocked_list", data_default.temporary_blocked_list
+	)
+
+	self.temporary_muted_list = settings_file.get_value(
+		"session", "temporary_muted_list", data_default.temporary_muted_list
+	)
+
 	self.last_parcel_position = settings_file.get_value(
 		"user", "last_parcel_position", data_default.last_parcel_position
 	)
@@ -404,6 +420,8 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "texture_quality", self.get_texture_quality())
 	new_settings_file.set_value("session", "account", self.session_account)
 	new_settings_file.set_value("session", "guest_profile", self.guest_profile)
+	new_settings_file.set_value("session", "temporary_blocked_list", self.temporary_blocked_list)
+	new_settings_file.set_value("session", "temporary_muted_list", self.temporary_muted_list)
 	new_settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	new_settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	new_settings_file.set_value("user", "last_places", self.last_places)

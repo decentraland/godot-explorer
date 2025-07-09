@@ -1,5 +1,5 @@
 use godot::{
-    builtin::{meta::ToGodot, Dictionary, GString},
+    builtin::{meta::ToGodot, Array, Dictionary, GString},
     obj::Gd,
     prelude::*,
 };
@@ -115,5 +115,53 @@ impl DclUserProfile {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
         let value = godot::engine::Json::parse_string(value.into());
         value.to::<Dictionary>()
+    }
+
+    #[func]
+    pub fn get_blocked(&self) -> Array<GString> {
+        let mut arr = Array::new();
+        if let Some(blocked) = &self.inner.content.blocked {
+            for addr in blocked {
+                arr.push(GString::from(addr.as_str()));
+            }
+        }
+        arr
+    }
+
+    #[func]
+    pub fn get_muted(&self) -> Array<GString> {
+        let mut arr = Array::new();
+        if let Some(muted) = &self.inner.content.muted {
+            for addr in muted {
+                arr.push(GString::from(addr.as_str()));
+            }
+        }
+        arr
+    }
+
+    #[func]
+    pub fn set_blocked(&mut self, blocked_list: Array<GString>) {
+        let mut blocked_set = std::collections::HashSet::new();
+        for addr in blocked_list.iter_shared() {
+            blocked_set.insert(addr.to_string());
+        }
+        self.inner.content.blocked = if blocked_set.is_empty() {
+            None
+        } else {
+            Some(blocked_set)
+        };
+    }
+
+    #[func]
+    pub fn set_muted(&mut self, muted_list: Array<GString>) {
+        let mut muted_set = std::collections::HashSet::new();
+        for addr in muted_list.iter_shared() {
+            muted_set.insert(addr.to_string());
+        }
+        self.inner.content.muted = if muted_set.is_empty() {
+            None
+        } else {
+            Some(muted_set)
+        };
     }
 }

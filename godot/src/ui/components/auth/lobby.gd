@@ -183,6 +183,14 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 func _on_button_different_account_pressed():
 	Global.get_config().session_account = {}
+
+	# Clear temporary blocked/muted lists when switching accounts
+	Global.get_config().temporary_blocked_list = []
+	Global.get_config().temporary_muted_list = []
+	# Also clear the current social blacklist
+	Global.social_blacklist.clear_blocked()
+	Global.social_blacklist.clear_muted()
+
 	Global.get_config().save_to_settings_file()
 	show_connect()
 	avatar_preview.hide()

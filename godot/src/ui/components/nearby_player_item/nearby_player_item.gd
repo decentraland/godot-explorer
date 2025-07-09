@@ -24,39 +24,30 @@ var pause_duration: float = 2
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
 
 
-
 func async_set_data(avatar_param = null):
 	if avatar_param != null:
 		avatar = avatar_param
-		_update_buttons()
 
 	elif avatar == null:
 		return
-	
+
 	# Verificar que el avatar es válido antes de acceder a él
 	if not is_instance_valid(avatar):
 		return
-		
+
 	var avatar_data = avatar.get_avatar_data()
 	if avatar_data != null:
 		profile_picture.async_update_profile_picture(avatar)
 	else:
 		printerr("NO AVATAR DATA")
 
-	#TODO: I think this will be redundant when client receive depured avatar list.
-	var avatar_name = avatar.get_avatar_name()
-	# Don't delete items with empty names - they might still be loading
-	# if avatar_name.is_empty():
-	#	print("Deleting element because name is empty")
-	#	queue_free()
-
-
-	if avatar_name.is_empty():
+	if !avatar.finish_loading:
 		# Show a placeholder while loading
 		nickname.text = "Loading..."
 		texture_rect_claimed_checkmark.hide()
 		tag.text = ""
 	else:
+		var avatar_name = avatar.get_avatar_name()
 		var position = avatar_name.find("#")
 		if position != -1:
 			nickname.text = avatar_name.left(position)
@@ -66,10 +57,11 @@ func async_set_data(avatar_param = null):
 			texture_rect_claimed_checkmark.show()
 
 		tag.text = avatar.avatar_id.right(4)
-	
+		_update_buttons()
 
-	var nickname_color = avatar.get_nickname_color(avatar_name)
-	nickname.add_theme_color_override("font_color", nickname_color)
+		var nickname_color = avatar.get_nickname_color(avatar_name)
+		nickname.add_theme_color_override("font_color", nickname_color)
+
 	call_deferred("check_and_start_marquee")
 
 
@@ -144,13 +136,14 @@ func _on_button_block_user_toggled(toggled_on: bool) -> void:
 		Global.social_blacklist.remove_blocked(avatar.avatar_id)
 	_update_buttons()
 
+
 func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		Global.social_blacklist.add_muted(avatar.avatar_id)
 	else:
 		Global.social_blacklist.remove_muted(avatar.avatar_id)
 	_update_buttons()
-	
+
 
 func _update_buttons() -> void:
 	var is_blocked = Global.social_blacklist.is_blocked(avatar.avatar_id)
@@ -159,14 +152,14 @@ func _update_buttons() -> void:
 		button_block_user.icon = BLOCK
 	else:
 		button_block_user.icon = UNBLOCK
-	
+
 	var is_muted = Global.social_blacklist.is_muted(avatar.avatar_id)
 	button_mute_user.set_pressed_no_signal(is_muted)
 	if is_muted:
 		button_mute_user.icon = MUTE
 	else:
 		button_mute_user.icon = UNMUTE
-	
-	
+
+
 func _exit_tree() -> void:
 	stop_marquee_effect()

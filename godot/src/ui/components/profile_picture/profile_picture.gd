@@ -10,10 +10,9 @@ extends Control
 func async_update_profile_picture(avatar: DclAvatar):
 	var avatar_name = avatar.get_avatar_name()
 	var nickname_color = avatar.get_nickname_color(avatar_name)
-	
+
 	var background_color = nickname_color
-	
-	
+
 	var stylebox_background := panel.get_theme_stylebox("panel")
 	stylebox_background = stylebox_background.duplicate()
 	if stylebox_background is StyleBoxFlat:
@@ -23,7 +22,6 @@ func async_update_profile_picture(avatar: DclAvatar):
 	var white = Color.WHITE
 	var factor = 0.3
 	var border_color = background_color.lerp(white, factor)
-
 
 	var stylebox_border := panel_border.get_theme_stylebox("panel")
 	stylebox_border = stylebox_border.duplicate()

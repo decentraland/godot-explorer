@@ -7,6 +7,9 @@ func _ready():
 	wallet_connected.connect(self._on_wallet_connected)
 	Global.realm.realm_changed.connect(self._on_realm_changed)
 
+	# Connect to blacklist changes to save to config
+	Global.social_blacklist.blacklist_changed.connect(self._on_blacklist_changed)
+
 
 func _on_realm_changed():
 	if Global.realm.get_lambda_server_base_url() == _current_lambda_server_base_url:
@@ -96,3 +99,16 @@ func async_deploy_profile(new_profile: DclUserProfile, has_new_snapshots: bool) 
 	if response is Dictionary:
 		if response.get("creationTimestamp") != null:
 			self.set_profile(new_profile)
+
+			# Clear temporary lists after successful deployment
+			Global.get_config().temporary_blocked_list = []
+			Global.get_config().temporary_muted_list = []
+			Global.get_config().save_to_settings_file()
+
+
+func _on_blacklist_changed():
+	prints("_on_blacklist_changed:", Global.social_blacklist.get_blocked_list())
+	# Save the current blocked and muted lists to config as temporary backup
+	Global.get_config().temporary_blocked_list = Global.social_blacklist.get_blocked_list()
+	Global.get_config().temporary_muted_list = Global.social_blacklist.get_muted_list()
+	Global.get_config().save_to_settings_file()

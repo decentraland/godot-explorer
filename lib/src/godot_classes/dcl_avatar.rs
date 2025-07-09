@@ -74,7 +74,7 @@ impl INode3D for DclAvatar {
             AVATAR_ID_COUNTER += 1;
             id
         };
-        
+
         Self {
             unique_id,
             movement_type: AvatarMovementType::ExternalController,
@@ -288,6 +288,7 @@ impl DclAvatar {
     pub fn set_blocked_and_hidden(&mut self, value: bool) {
         self.blocked = value;
         // Call the GDScript set_hidden method
-        self.base_mut().call("set_hidden".into(), &[value.to_variant()]);
+        self.base_mut()
+            .call("set_hidden".into(), &[value.to_variant()]);
     }
 }
