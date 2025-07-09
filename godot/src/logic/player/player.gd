@@ -20,6 +20,7 @@ var stored_camera_mode_before_block: Global.CameraMode
 var current_direction: Vector3 = Vector3()
 
 var time_falling := 0.0
+var current_profile_version: int = -1
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
@@ -81,7 +82,11 @@ func _ready():
 
 
 func _on_player_profile_changed(new_profile: DclUserProfile):
-	avatar.async_update_avatar_from_profile(new_profile)
+	var new_version = new_profile.get_profile_version()
+	# Only update avatar if the profile version has changed
+	if new_version != current_profile_version:
+		current_profile_version = new_version
+		avatar.async_update_avatar_from_profile(new_profile)
 
 
 func _on_param_changed(_param):

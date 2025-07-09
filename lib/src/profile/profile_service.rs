@@ -39,8 +39,18 @@ impl IRefCounted for ProfileService {
 impl ProfileService {
     #[func]
     pub fn async_deploy_profile(
+        new_profile: Gd<DclUserProfile>,
+        generate_snapshots: bool,
+    ) -> Gd<Promise> {
+        // Default behavior: increment version
+        Self::async_deploy_profile_with_version_control(new_profile, generate_snapshots, true)
+    }
+
+    #[func]
+    pub fn async_deploy_profile_with_version_control(
         mut new_profile: Gd<DclUserProfile>,
         generate_snapshots: bool,
+        increment_version: bool,
     ) -> Gd<Promise> {
         let promise = Promise::new_alloc();
         let promise_instance_id = promise.instance_id();
@@ -56,7 +66,9 @@ impl ProfileService {
             config.set("guest_profile".into(), profile_dict.to_variant());
             config.call("save_to_settings_file".into(), &[]);
 
-            new_profile.bind_mut().increment_profile_version();
+            if increment_version {
+                new_profile.bind_mut().increment_profile_version();
+            }
             player_identity.bind_mut().set_profile(new_profile);
 
             let mut promise_clone = promise.clone();
@@ -66,7 +78,9 @@ impl ProfileService {
 
         // For non-guest profiles, prepare deployment
         let mut profile_binding = new_profile.bind_mut();
-        profile_binding.increment_profile_version();
+        if increment_version {
+            profile_binding.increment_profile_version();
+        }
         let profile = profile_binding.inner.clone();
         drop(profile_binding);
 

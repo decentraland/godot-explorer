@@ -530,5 +530,5 @@ func _on_blacklist_deploy_timer_timeout():
 	# Update the mutable profile with current blacklist before deploying
 	mutable_profile.set_blocked(Global.social_blacklist.get_blocked_list())
 	mutable_profile.set_muted(Global.social_blacklist.get_muted_list())
-	# Deploy without regenerating snapshots since blacklist is not a visual change
-	ProfileService.async_deploy_profile(mutable_profile, false)
+	# Deploy without regenerating snapshots and without incrementing version for blacklist changes
+	ProfileService.async_deploy_profile_with_version_control(mutable_profile, false, false)
