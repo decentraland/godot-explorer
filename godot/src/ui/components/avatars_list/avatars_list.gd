@@ -13,20 +13,14 @@ var list_size: int = 0
 func async_update_nearby_users(remote_avatars: Array) -> void:
 	list_size = remote_avatars.size()
 	size_changed.emit()
-
-	print(list_size)
-	prints("async_update_nearby_users - received", remote_avatars.size(), "avatars")
 	var children_avatars = []
 	for child in v_box_container_nearby_players.get_children():
 		if child.avatar != null and is_instance_valid(child.avatar):
 			children_avatars.append(child.avatar)
-	prints("  Current children:", children_avatars.size())
-
 	var avatars_to_remove = []
 	for child_avatar in children_avatars:
 		if not is_instance_valid(child_avatar):
 			continue
-
 		var found = false
 		for remote_avatar in remote_avatars:
 			if not is_instance_valid(remote_avatar):
@@ -52,9 +46,6 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 		if not found:
 			avatars_to_add.append(remote_avatar)
 
-	prints("  Avatars to add:", avatars_to_add.size())
-	prints("  Avatars to remove:", avatars_to_remove.size())
-
 	for child in v_box_container_nearby_players.get_children():
 		if child.avatar != null and is_instance_valid(child.avatar):
 			for avatar_to_remove in avatars_to_remove:
@@ -70,12 +61,6 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 					break
 
 	for avatar in avatars_to_add:
-		prints(
-			"  Adding avatar with unique_id:",
-			avatar.get_unique_id(),
-			"name:",
-			avatar.get_avatar_name()
-		)
 		var avatar_item = NEARBY_PLAYER_ITEM.instantiate()
 		v_box_container_nearby_players.add_child(avatar_item)
 

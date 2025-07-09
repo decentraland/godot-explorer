@@ -31,7 +31,6 @@ func async_set_data(avatar_param = null):
 	elif avatar == null:
 		return
 
-	# Verificar que el avatar es válido antes de acceder a él
 	if not is_instance_valid(avatar):
 		return
 
@@ -123,10 +122,6 @@ func stop_marquee_effect() -> void:
 	nickname.position.x = 0
 
 
-func _on_button_report_pressed() -> void:
-	print("Report ", avatar.avatar_id, " (", avatar.get_avatar_name(), ")")
-
-
 func _on_button_mute_user_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		Global.social_blacklist.add_muted(avatar.avatar_id)
@@ -161,7 +156,6 @@ func _exit_tree() -> void:
 
 func _on_button_block_user_pressed() -> void:
 	var is_blocked = Global.social_blacklist.is_blocked(avatar.avatar_id)
-	print(is_blocked)
 	if is_blocked:
 		Global.social_blacklist.remove_blocked(avatar.avatar_id)
 	else:

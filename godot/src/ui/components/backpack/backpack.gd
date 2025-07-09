@@ -183,12 +183,6 @@ func _on_profile_changed(new_profile: DclUserProfile):
 	current_profile = new_profile.duplicated()
 	mutable_avatar = mutable_profile.get_avatar()
 
-	prints(
-		"Profile change!: ",
-		mutable_profile.get_profile_version(),
-		current_profile.get_profile_version()
-	)
-
 	# Update social blacklist from the profile
 	Global.social_blacklist.init_from_profile(new_profile)
 
@@ -343,7 +337,6 @@ func async_prepare_snapshots(new_mutable_avatar: DclAvatarWireFormat, profile: D
 	await PromiseUtils.async_awaiter(Global.content_provider.store_file(face_hash, face_data))
 
 	new_mutable_avatar.set_snapshots(face_hash, body_hash)
-	prints("Profile saved", face_hash, body_hash)
 
 	snapshot_avatar_preview.reparent(self)
 	snapshot_avatar_preview.hide()
@@ -518,15 +511,12 @@ func _on_blacklist_changed():
 	# Don't trigger deployment if we're loading a profile from server
 	if is_loading_profile:
 		return
-
-	prints("Blacklist changed, scheduling profile deployment in 5 seconds...")
 	# Reset the timer if it's already running
 	blacklist_deploy_timer.stop()
 	blacklist_deploy_timer.start()
 
 
 func _on_blacklist_deploy_timer_timeout():
-	prints("Deploying profile with updated blacklist...")
 	# Update the mutable profile with current blacklist before deploying
 	mutable_profile.set_blocked(Global.social_blacklist.get_blocked_list())
 	mutable_profile.set_muted(Global.social_blacklist.get_muted_list())

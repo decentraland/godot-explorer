@@ -162,10 +162,6 @@ func _on_toggled(_button_pressed):
 		clear_filter.emit()
 
 
-func _on_pressed() -> void:
-	prints("Hello world")
-
-
 func _on_button_down() -> void:
 	press_time = Time.get_ticks_msec()
 
@@ -173,6 +169,5 @@ func _on_button_down() -> void:
 func _on_button_up() -> void:
 	var release_time = Time.get_ticks_msec()
 	var duration = release_time - press_time
-	print("Button was held for %d milliseconds" % duration)
 	if duration <= 300:
 		button_pressed = !button_pressed

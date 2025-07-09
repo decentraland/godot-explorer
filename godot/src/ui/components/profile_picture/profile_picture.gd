@@ -31,7 +31,7 @@ func async_update_profile_picture(avatar: DclAvatar):
 
 	var avatar_data = avatar.get_avatar_data()
 	if avatar_data == null:
-		print("Profile picture: avatar_data is null")
+		printerr("Profile picture: avatar_data is null")
 		return
 
 	var face256_value = avatar_data.to_godot_dictionary()["snapshots"]["face256"]
@@ -46,7 +46,7 @@ func async_update_profile_picture(avatar: DclAvatar):
 		url = "https://profile-images.decentraland.org/entities/%s/face.png" % hash
 
 	if hash.is_empty() or url.is_empty():
-		print("Profile picture: missing face256 data")
+		printerr("Profile picture: missing face256 data")
 		return
 
 	var promise = Global.content_provider.fetch_texture_by_url(hash, url)
