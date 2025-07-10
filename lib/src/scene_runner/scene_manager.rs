@@ -63,7 +63,10 @@ pub struct SceneManager {
     #[export]
     camera_node: Option<Gd<Camera3D>>,
 
+    #[var]
     player_avatar_node: Gd<Node3D>,
+
+    #[var]
     player_body_node: Gd<Node3D>,
 
     #[var]

@@ -148,12 +148,10 @@ impl AvatarScene {
             .bind_mut()
             .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
 
-        let _instance_id = self.base().instance_id();
-        let _avatar_entity_id = entity_id;
-        // TODO: Fix Callable::from_fn for gdext 0.3.x
-        let avatar_changed_scene_callable = self.base().callable("on_avatar_changed_scene");
-        /* = 
-            Callable::from_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
+        let instance_id = self.base().instance_id();
+        let avatar_entity_id = entity_id;
+        let avatar_changed_scene_callable = 
+            Callable::from_local_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
                 if args.len() != 2 {
                     return Err(());
                 }
@@ -163,7 +161,7 @@ impl AvatarScene {
 
                 if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
                     avatar_scene.call_deferred(
-                        "on_avatar_changed_scene".into(),
+                        "on_avatar_changed_scene",
                         &[
                             scene_id.to_variant(),
                             prev_scene_id.to_variant(),
@@ -173,12 +171,10 @@ impl AvatarScene {
                 }
 
                 Ok(Variant::nil())
-            });*/
+            });
 
-        // TODO: Fix Callable::from_fn for gdext 0.3.x
-        let emote_triggered_callable = self.base().callable("on_avatar_trigger_emote");
-        /* =
-            Callable::from_fn("on_avatar_trigger_emote", move |args: &[&Variant]| {
+        let emote_triggered_callable = 
+            Callable::from_local_fn("on_avatar_trigger_emote", move |args: &[&Variant]| {
                 if args.len() != 2 {
                     return Err(());
                 }
@@ -188,7 +184,7 @@ impl AvatarScene {
 
                 if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
                     avatar_scene.call_deferred(
-                        "on_avatar_trigger_emote".into(),
+                        "on_avatar_trigger_emote",
                         &[
                             emote_id.to_variant(),
                             looping.to_variant(),
@@ -198,7 +194,7 @@ impl AvatarScene {
                 }
 
                 Ok(Variant::nil())
-            });*/
+            });
 
         new_avatar.connect("change_scene_id", &avatar_changed_scene_callable);
         new_avatar.connect("emote_triggered", &emote_triggered_callable);
