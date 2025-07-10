@@ -520,15 +520,15 @@ impl SceneEntityCoordinator {
         let mut empty_parcels = VariantArray::new();
 
         for loadable_scene in self.get_loadable_scenes().iter() {
-            loadable_scenes.push(Variant::from(GString::from(loadable_scene)));
+            loadable_scenes.push(&Variant::from(GString::from(loadable_scene)));
         }
 
         for keep_alive_scene in self.get_keep_alive_scenes().iter() {
-            keep_alive_scenes.push(Variant::from(GString::from(keep_alive_scene)));
+            keep_alive_scenes.push(&Variant::from(GString::from(keep_alive_scene)));
         }
 
         for empty_parcel in self.get_empty_parcels().iter() {
-            empty_parcels.push(Variant::from(GString::from(empty_parcel)));
+            empty_parcels.push(&Variant::from(GString::from(empty_parcel)));
         }
 
         dict.set(GString::from("loadable_scenes"), loadable_scenes);

@@ -45,9 +45,9 @@ pub fn update_billboard(
                 Billboard::Y => {
                     let origin = node_3d.get_global_position();
                     let direction = node_3d.get_global_position() - camera_position;
-                    let basis = Basis::new_looking_at(direction, Vector3::UP, false);
+                    let basis = Basis::looking_at(direction, Vector3::UP, false);
 
-                    let mut euler_vector = basis.to_euler(EulerOrder::YXZ);
+                    let mut euler_vector = basis.get_euler();
                     euler_vector.z = 0.0;
                     euler_vector.x = 0.0;
                     let basis = Basis::from_euler(EulerOrder::YXZ, euler_vector);
@@ -58,7 +58,7 @@ pub fn update_billboard(
                 Billboard::All | Billboard::YX => {
                     let origin = node_3d.get_global_position();
                     let direction = node_3d.get_global_position() - camera_position;
-                    let basis = Basis::new_looking_at(direction, Vector3::UP, false);
+                    let basis = Basis::looking_at(direction, Vector3::UP, false);
                     node_3d.set_global_transform(Transform3D { basis, origin });
                 }
             }
@@ -68,6 +68,7 @@ pub fn update_billboard(
 }
 
 mod test {
+    use godot::classes::Node;
     use godot::prelude::{Basis, Transform3D, Vector3};
 
     use crate::{
@@ -91,7 +92,7 @@ mod test {
         scene_context
             .scene_tree
             .clone()
-            .add_child(scene.godot_dcl_scene.root_node_3d.clone().upcast());
+            .add_child(&scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node>());
 
         let camera_global_transform = Transform3D::IDENTITY;
         update_billboard(&mut scene, &mut crdt_state, &camera_global_transform);
@@ -105,7 +106,7 @@ mod test {
         scene_context
             .scene_tree
             .clone()
-            .add_child(scene.godot_dcl_scene.root_node_3d.clone().upcast());
+            .add_child(&scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node>());
 
         let camera_global_transform =
             Transform3D::new(Basis::IDENTITY, Vector3::new(1.0, 0.0, 1.0));
