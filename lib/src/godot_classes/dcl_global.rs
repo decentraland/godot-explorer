@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use godot::{
-    engine::{node::ProcessMode, Engine},
+    classes::{node::ProcessMode, Engine},
     prelude::*,
 };
 
@@ -119,25 +119,25 @@ impl INode for DclGlobal {
         let mut scene_runner: Gd<SceneManager> = SceneManager::new_alloc();
         let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::new_alloc();
 
-        tokio_runtime.set_name("tokio_runtime".into());
-        scene_runner.set_name("scene_runner".into());
+        tokio_runtime.set_name("tokio_runtime");
+        scene_runner.set_name("scene_runner");
         scene_runner.set_process_mode(ProcessMode::DISABLED);
 
-        comms.set_name("comms".into());
-        avatars.set_name("avatars".into());
+        comms.set_name("comms");
+        avatars.set_name("avatars");
 
-        let args = godot::engine::Os::singleton().get_cmdline_args();
+        let args = godot::classes::Os::singleton().get_cmdline_args();
 
-        let testing_scene_mode = args.find(&"--scene-test".into(), None).is_some();
-        let preview_mode = args.find(&"--preview".into(), None).is_some();
-        let developer_mode = args.find(&"--dev".into(), None).is_some();
+        let testing_scene_mode = args.find("--scene-test", None).is_some();
+        let preview_mode = args.find("--preview", None).is_some();
+        let developer_mode = args.find("--dev", None).is_some();
 
         let fixed_skybox_time =
-            testing_scene_mode || args.find(&"--scene-renderer".into(), None).is_some();
+            testing_scene_mode || args.find("--scene-renderer", None).is_some();
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
 
-        let is_mobile = godot::engine::Os::singleton().has_feature("mobile".into());
+        let is_mobile = godot::classes::Os::singleton().has_feature("mobile");
         Self {
             _base: base,
             is_mobile,
@@ -200,7 +200,7 @@ impl DclGlobal {
         let Some(root) = main_loop.cast::<SceneTree>().get_root() else {
             return false;
         };
-        root.has_node("Global".into())
+        root.has_node("Global")
     }
 
     pub fn try_singleton() -> Option<Gd<Self>> {
@@ -208,7 +208,7 @@ impl DclGlobal {
             .get_main_loop()?
             .cast::<SceneTree>()
             .get_root()?
-            .get_node_or_null("Global".into())?
+            .get_node_or_null("Global")?
             .try_cast::<Self>();
         if let Ok(res) = res {
             Some(res)

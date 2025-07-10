@@ -1,7 +1,8 @@
 use godot::{
-    engine::{Control, INinePatchRect, NinePatchRect},
+    classes::{Control, INinePatchRect, NinePatchRect, Texture2D},
     prelude::*,
 };
+use godot::builtin::Side;
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrlRef, DclContentMappingAndUrl},
@@ -42,7 +43,7 @@ impl INinePatchRect for DclUiBackground {
             .base()
             .get_parent()
             .expect("ui_background suppose to have a parent");
-        parent.connect("resized".into(), self.base().callable("_on_parent_size"));
+        parent.connect("resized", &self.base().callable("_on_parent_size"));
 
         self._set_white_pixel();
     }
@@ -75,9 +76,9 @@ impl DclUiBackground {
             .set_position((parent_size / 2.0) - (size / 2.0));
 
         self.base_mut()
-            .set_h_axis_stretch_mode(godot::engine::nine_patch_rect::AxisStretchMode::STRETCH);
+            .set_h_axis_stretch_mode(godot::classes::nine_patch_rect::AxisStretchMode::STRETCH);
         self.base_mut()
-            .set_v_axis_stretch_mode(godot::engine::nine_patch_rect::AxisStretchMode::STRETCH);
+            .set_v_axis_stretch_mode(godot::classes::nine_patch_rect::AxisStretchMode::STRETCH);
         Some(())
     }
 
@@ -130,14 +131,14 @@ impl DclUiBackground {
 
         if !promise.bind().is_resolved() {
             promise.connect(
-                "on_resolved".into(),
-                self.base().callable("_on_texture_loaded"),
+                "on_resolved",
+                &self.base().callable("_on_texture_loaded"),
             );
         }
 
         self.first_texture_load_shot = true;
         self.base_mut()
-            .call_deferred("_on_texture_loaded".into(), &[]);
+            .call_deferred("_on_texture_loaded", &[]);
     }
 
     #[func]
@@ -156,7 +157,7 @@ impl DclUiBackground {
             return;
         };
         self.texture_loaded = true;
-        self.base_mut().set_texture(godot_texture.clone().upcast());
+        self.base_mut().set_texture(&godot_texture.upcast::<Texture2D>());
 
         self._set_texture_params();
     }
@@ -168,7 +169,7 @@ impl DclUiBackground {
         match self.current_value.texture_mode() {
             BackgroundTextureMode::NineSlices => {
                 self.base_mut()
-                    .set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
+                    .set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
 
                 let texture_size = godot_texture.get_size();
                 let (patch_margin_left, patch_margin_top, patch_margin_right, patch_margin_bottom) =
@@ -189,24 +190,24 @@ impl DclUiBackground {
                     };
 
                 self.base_mut().set_patch_margin(
-                    godot::engine::global::Side::BOTTOM,
+                    Side::BOTTOM,
                     patch_margin_bottom as i32,
                 );
                 self.base_mut()
-                    .set_patch_margin(godot::engine::global::Side::LEFT, patch_margin_left as i32);
+                    .set_patch_margin(Side::LEFT, patch_margin_left as i32);
                 self.base_mut()
-                    .set_patch_margin(godot::engine::global::Side::TOP, patch_margin_top as i32);
+                    .set_patch_margin(Side::TOP, patch_margin_top as i32);
                 self.base_mut().set_patch_margin(
-                    godot::engine::global::Side::RIGHT,
+                    Side::RIGHT,
                     patch_margin_right as i32,
                 );
 
                 // TODO: should be TILE or STRETCH?
                 self.base_mut().set_h_axis_stretch_mode(
-                    godot::engine::nine_patch_rect::AxisStretchMode::TILE_FIT,
+                    godot::classes::nine_patch_rect::AxisStretchMode::TILE_FIT,
                 );
                 self.base_mut().set_v_axis_stretch_mode(
-                    godot::engine::nine_patch_rect::AxisStretchMode::TILE_FIT,
+                    godot::classes::nine_patch_rect::AxisStretchMode::TILE_FIT,
                 );
             }
             BackgroundTextureMode::Center => {
@@ -214,20 +215,20 @@ impl DclUiBackground {
             }
             BackgroundTextureMode::Stretch => {
                 self.base_mut()
-                    .set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
+                    .set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
                 self.base_mut()
-                    .set_patch_margin(godot::engine::global::Side::BOTTOM, 0);
+                    .set_patch_margin(Side::BOTTOM, 0);
                 self.base_mut()
-                    .set_patch_margin(godot::engine::global::Side::LEFT, 0);
+                    .set_patch_margin(Side::LEFT, 0);
                 self.base_mut()
-                    .set_patch_margin(godot::engine::global::Side::TOP, 0);
+                    .set_patch_margin(Side::TOP, 0);
                 self.base_mut()
-                    .set_patch_margin(godot::engine::global::Side::RIGHT, 0);
+                    .set_patch_margin(Side::RIGHT, 0);
                 self.base_mut().set_h_axis_stretch_mode(
-                    godot::engine::nine_patch_rect::AxisStretchMode::STRETCH,
+                    godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );
                 self.base_mut().set_v_axis_stretch_mode(
-                    godot::engine::nine_patch_rect::AxisStretchMode::STRETCH,
+                    godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );
 
                 if self.current_value.uvs.len() == 8 {
@@ -258,7 +259,7 @@ impl DclUiBackground {
     fn _set_white_pixel(&mut self) {
         self.texture_loaded = false;
         self.base_mut()
-            .set_texture(load("res://assets/white_pixel.png"));
+            .set_texture(&load::<Texture2D>("res://assets/white_pixel.png"));
         self.base_mut().set_region_rect(Rect2 {
             position: Vector2 { x: 0.0, y: 0.0 },
             size: Vector2 { x: 0.0, y: 0.0 },
@@ -294,14 +295,14 @@ impl DclUiBackground {
 
                         if !promise.bind().is_resolved() {
                             promise.connect(
-                                "on_resolved".into(),
-                                self.base().callable("_on_texture_loaded"),
+                                "on_resolved",
+                                &self.base().callable("_on_texture_loaded"),
                             );
                         }
 
                         self.first_texture_load_shot = true;
                         self.base_mut()
-                            .call_deferred("_on_texture_loaded".into(), &[]);
+                            .call_deferred("_on_texture_loaded", &[]);
                     }
                     DclSourceTex::VideoTexture(_) => {
                         // TODO: implement video texture
@@ -315,32 +316,32 @@ impl DclUiBackground {
 
                         if !promise.bind().is_resolved() {
                             promise.connect(
-                                "on_resolved".into(),
-                                self.base().callable("_on_profile_for_texture_loaded"),
+                                "on_resolved",
+                                &self.base().callable("_on_profile_for_texture_loaded"),
                             );
                         } else {
                             self.base_mut()
-                                .call_deferred("_on_profile_for_texture_loaded".into(), &[]);
+                                .call_deferred("_on_profile_for_texture_loaded", &[]);
                         }
                     }
                 }
             } else {
                 self.base_mut()
-                    .set_texture(load("res://assets/white_pixel.png"));
+                    .set_texture(&load::<Texture2D>("res://assets/white_pixel.png"));
             }
 
             if self.current_value.texture.is_none() {
                 let mut base_mut = self.base_mut();
-                base_mut.set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
-                base_mut.set_patch_margin(godot::engine::global::Side::BOTTOM, 0);
-                base_mut.set_patch_margin(godot::engine::global::Side::LEFT, 0);
-                base_mut.set_patch_margin(godot::engine::global::Side::TOP, 0);
-                base_mut.set_patch_margin(godot::engine::global::Side::RIGHT, 0);
+                base_mut.set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
+                base_mut.set_patch_margin(Side::BOTTOM, 0);
+                base_mut.set_patch_margin(Side::LEFT, 0);
+                base_mut.set_patch_margin(Side::TOP, 0);
+                base_mut.set_patch_margin(Side::RIGHT, 0);
                 base_mut.set_h_axis_stretch_mode(
-                    godot::engine::nine_patch_rect::AxisStretchMode::STRETCH,
+                    godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );
                 base_mut.set_v_axis_stretch_mode(
-                    godot::engine::nine_patch_rect::AxisStretchMode::STRETCH,
+                    godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );
             }
         } else {

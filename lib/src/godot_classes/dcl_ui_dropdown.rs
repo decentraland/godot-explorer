@@ -1,7 +1,7 @@
 use std::{cell::RefCell, cmp::Ordering, rc::Rc};
 
 use godot::{
-    engine::{IOptionButton, OptionButton, StyleBoxEmpty},
+    classes::{IOptionButton, OptionButton, StyleBoxEmpty},
     prelude::*,
 };
 
@@ -41,23 +41,23 @@ impl IOptionButton for DclUiDropdown {
     }
 
     fn ready(&mut self) {
-        let style_box_empty: Gd<godot::engine::StyleBox> = StyleBoxEmpty::new_gd().upcast();
+        let style_box_empty: Gd<godot::classes::StyleBox> = StyleBoxEmpty::new_gd().upcast();
         let font_resource = self.current_font.get_font_resource();
         self.base_mut()
-            .add_theme_font_override("font".into(), font_resource);
+            .add_theme_font_override("font", &font_resource);
         self.base_mut()
-            .add_theme_stylebox_override("normal".into(), style_box_empty.clone());
+            .add_theme_stylebox_override("normal", &style_box_empty);
         self.base_mut()
-            .add_theme_stylebox_override("focus".into(), style_box_empty.clone());
+            .add_theme_stylebox_override("focus", &style_box_empty);
         self.base_mut()
-            .add_theme_stylebox_override("hover".into(), style_box_empty.clone());
+            .add_theme_stylebox_override("hover", &style_box_empty);
         self.base_mut()
-            .add_theme_stylebox_override("pressed".into(), style_box_empty.clone());
+            .add_theme_stylebox_override("pressed", &style_box_empty);
 
         let callable_on_item_selected = self.base().callable("on_item_selected");
         self.base_mut()
             .clone()
-            .connect("item_selected".into(), callable_on_item_selected);
+            .connect("item_selected", &callable_on_item_selected);
     }
 }
 
@@ -87,7 +87,7 @@ impl DclUiDropdown {
             }
             Ordering::Less => {
                 for _ in current_item_count..new_value.options.len() as i32 {
-                    self.base_mut().add_item("".into());
+                    self.base_mut().add_item("");
                 }
             }
             _ => {}
@@ -95,7 +95,7 @@ impl DclUiDropdown {
         let current_item_count = new_value.options.len();
         for i in 0..current_item_count {
             self.base_mut()
-                .set_item_text(i as i32, new_value.options[i].clone().into());
+                .set_item_text(i as i32, &new_value.options[i]);
         }
 
         let current_selected_index = if current_item_count > 0 {
@@ -108,7 +108,7 @@ impl DclUiDropdown {
                 self.base_mut().select(new_value.selected_index());
             }
             if let Some(label) = new_value.empty_label.as_ref() {
-                self.base_mut().set_text(label.into());
+                self.base_mut().set_text(label);
             }
         } else if let Some(new_selected_index) = new_value.selected_index.as_ref() {
             self.base_mut().select(*new_selected_index);
@@ -119,10 +119,10 @@ impl DclUiDropdown {
             .to_godot_or_else(godot::prelude::Color::WHITE);
 
         self.base_mut()
-            .add_theme_color_override("font_color".into(), font_color);
+            .add_theme_color_override("font_color", font_color);
 
         self.base_mut()
-            .add_theme_font_size_override("font_size".into(), new_value.font_size.unwrap_or(10));
+            .add_theme_font_size_override("font_size", new_value.font_size.unwrap_or(10));
 
         self.base_mut().set_disabled(new_value.disabled);
 
@@ -139,7 +139,7 @@ impl DclUiDropdown {
             self.current_font = new_value.font();
             let new_font_resource = self.current_font.get_font_resource();
             self.base_mut()
-                .add_theme_font_override("font".into(), new_font_resource);
+                .add_theme_font_override("font", &new_font_resource);
         }
     }
 

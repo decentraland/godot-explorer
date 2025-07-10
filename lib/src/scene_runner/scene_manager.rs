@@ -24,12 +24,13 @@ use crate::{
     tools::network_inspector::NETWORK_INSPECTOR_ENABLE,
 };
 use godot::{
-    engine::{
+    classes::{
         control::{LayoutPreset, MouseFilter},
-        PhysicsRayQueryParameters3D,
+        PhysicsRayQueryParameters3D, Camera3D,
     },
     prelude::*,
 };
+use godot::prelude::varray;
 use std::{
     collections::{HashMap, HashSet},
     sync::atomic::AtomicU32,
@@ -62,10 +63,7 @@ pub struct SceneManager {
     #[export]
     camera_node: Option<Gd<Camera3D>>,
 
-    #[export]
     player_avatar_node: Gd<Node3D>,
-
-    #[export]
     player_body_node: Gd<Node3D>,
 
     #[var]
@@ -104,10 +102,10 @@ const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tic
 #[godot_api]
 impl SceneManager {
     #[signal]
-    fn scene_spawned(&self, scene_id: i32, entity_id: GString) {}
+    fn scene_spawned(scene_id: i32, entity_id: GString);
 
     #[signal]
-    fn scene_killed(&self, scene_id: i32, entity_id: GString) {}
+    fn scene_killed(scene_id: i32, entity_id: GString);
 
     // Testing a comment for the API
     #[func]
@@ -201,11 +199,11 @@ impl SceneManager {
         );
 
         self.base_mut()
-            .add_child(new_scene.godot_dcl_scene.root_node_3d.clone().upcast());
+            .add_child(&new_scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node>());
 
         if let SceneType::Global(_) = scene_type {
             self.base_ui
-                .add_child(new_scene.godot_dcl_scene.root_node_ui.clone().upcast());
+                .add_child(&new_scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
         }
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
@@ -213,7 +211,7 @@ impl SceneManager {
         self.compute_scene_distance();
 
         self.base_mut().call_deferred(
-            "emit_signal".into(),
+            "emit_signal",
             &[
                 "scene_spawned".to_variant(),
                 signal_data.0 .0.to_variant(),
@@ -400,7 +398,7 @@ impl SceneManager {
             0
         };
 
-        let frames_count = godot::engine::Engine::singleton().get_physics_frames();
+        let frames_count = godot::classes::Engine::singleton().get_physics_frames();
 
         let player_parcel_position = Vector2i::new(
             (player_global_transform.origin.x / 16.0).floor() as i32,
@@ -536,12 +534,12 @@ impl SceneManager {
             scene.godot_dcl_scene.root_node_3d.queue_free();
 
             self.base_mut()
-                .remove_child(scene.godot_dcl_scene.root_node_3d.upcast());
+                .remove_child(&scene.godot_dcl_scene.root_node_3d.upcast::<Node>());
 
             let node_ui = scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>();
 
             if node_ui.get_parent().is_some() {
-                self.base_ui.remove_child(node_ui);
+                self.base_ui.remove_child(&node_ui);
             }
 
             self.sorted_scene_ids.retain(|x| x != scene_id);
@@ -562,7 +560,7 @@ impl SceneManager {
             }
 
             self.base_mut().emit_signal(
-                "scene_killed".into(),
+                "scene_killed",
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
         }
@@ -574,12 +572,13 @@ impl SceneManager {
             match self.main_receiver_from_thread.try_recv() {
                 Ok(response) => match response {
                     SceneResponse::Error(scene_id, msg) => {
-                        let mut arguments = VariantArray::new();
-                        arguments.push((scene_id.0).to_variant());
-                        arguments.push((SceneLogLevel::SystemError as i32).to_variant());
-                        arguments.push(self.total_time_seconds_time.to_variant());
-                        arguments.push(GString::from(&msg).to_variant());
-                        self.console.callv(arguments);
+                        let arguments = varray![
+                            scene_id.0,
+                            SceneLogLevel::SystemError as i32,
+                            self.total_time_seconds_time,
+                            GString::from(&msg)
+                        ];
+                        self.console.callv(&arguments);
                     }
                     SceneResponse::Ok {
                         scene_id,
@@ -616,12 +615,13 @@ impl SceneManager {
                         }
                         // enable logs
                         for log in &logs {
-                            let mut arguments = VariantArray::new();
-                            arguments.push(scene_id.0.to_variant());
-                            arguments.push((log.level as i32).to_variant());
-                            arguments.push((log.timestamp as f32).to_variant());
-                            arguments.push(GString::from(&log.message).to_variant());
-                            self.console.callv(arguments);
+                            let arguments = varray![
+                                scene_id.0,
+                                log.level as i32,
+                                log.timestamp as f32,
+                                GString::from(&log.message)
+                            ];
+                            self.console.callv(&arguments);
                         }
                     }
 
@@ -649,13 +649,13 @@ impl SceneManager {
                                 + offset;
 
                         let mut testing_tools = DclGlobal::singleton().bind().get_testing_tools();
-                        if testing_tools.has_method("async_take_and_compare_snapshot".into()) {
+                        if testing_tools.has_method("async_take_and_compare_snapshot") {
                             let mut dcl_rpc_sender: Gd<DclRpcSenderTakeAndCompareSnapshotResponse> =
                                 DclRpcSenderTakeAndCompareSnapshotResponse::new_gd();
                             dcl_rpc_sender.bind_mut().set_sender(response);
 
                             testing_tools.call_deferred(
-                                "async_take_and_compare_snapshot".into(),
+                                "async_take_and_compare_snapshot",
                                 &[
                                     scene_id.0.to_variant(),
                                     src_stored_snapshot.to_variant(),
@@ -708,12 +708,12 @@ impl SceneManager {
         raycast_query.set_to(raycast_to);
         raycast_query.set_collision_mask(1); // CL_POINTER
 
-        let raycast_result = space.intersect_ray(raycast_query);
+        let raycast_result = space.intersect_ray(&raycast_query);
         let collider = raycast_result.get("collider")?;
 
         let has_dcl_entity_id = collider
             .call(
-                StringName::from("has_meta"),
+                &StringName::from("has_meta"),
                 &[Variant::from("dcl_entity_id")],
             )
             .booleanize();
@@ -724,13 +724,13 @@ impl SceneManager {
 
         let dcl_entity_id = collider
             .call(
-                StringName::from("get_meta"),
+                &StringName::from("get_meta"),
                 &[Variant::from("dcl_entity_id")],
             )
             .to::<i32>();
         let dcl_scene_id = collider
             .call(
-                StringName::from("get_meta"),
+                &StringName::from("get_meta"),
                 &[Variant::from("dcl_scene_id")],
             )
             .to::<i32>();
@@ -752,11 +752,11 @@ impl SceneManager {
     }
 
     #[signal]
-    fn pointer_tooltip_changed() {}
+    fn pointer_tooltip_changed();
 
     fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
         let canvas_size = self.base_ui.get_size();
-        let window_size: Vector2i = godot::engine::DisplayServer::singleton().window_get_size();
+        let window_size: Vector2i = godot::classes::DisplayServer::singleton().window_get_size();
 
         let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
 
@@ -801,7 +801,7 @@ impl SceneManager {
             for (_, audio_source_node) in scene.audio_sources.iter() {
                 let mut audio_source_node = audio_source_node.clone();
                 audio_source_node.bind_mut().set_dcl_enable(false);
-                audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+                audio_source_node.call(&StringName::from("apply_audio_props"), &[false.to_variant()]);
             }
             for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
                 audio_stream_node.bind_mut().set_muted(true);
@@ -817,14 +817,14 @@ impl SceneManager {
 
             // leave it orphan! it will be re-added when you are in the scene, and deleted on scene deletion
             self.base_ui
-                .remove_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
+                .remove_child(&scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
             for (_, audio_source_node) in scene.audio_sources.iter() {
                 let mut audio_source_node = audio_source_node.clone();
                 audio_source_node.bind_mut().set_dcl_enable(true);
-                audio_source_node.call("apply_audio_props".into(), &[false.to_variant()]);
+                audio_source_node.call(&StringName::from("apply_audio_props"), &[false.to_variant()]);
             }
             for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
                 audio_stream_node.bind_mut().set_muted(false);
@@ -839,17 +839,17 @@ impl SceneManager {
                 .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: true });
 
             self.base_ui
-                .add_child(scene.godot_dcl_scene.root_node_ui.clone().upcast());
+                .add_child(&scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()
-            .emit_signal("on_change_scene_id".into(), &[scene_id]);
+            .emit_signal("on_change_scene_id", &[scene_id]);
     }
 
     #[signal]
-    fn on_change_scene_id(scene_id: i32) {}
+    fn on_change_scene_id(scene_id: i32);
 
     pub fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
         &mut self.scenes
@@ -1010,8 +1010,8 @@ impl INode for SceneManager {
         let callable_on_ui_resize = self.base().callable("_on_ui_resize");
 
         self.base_ui
-            .connect("resized".into(), callable_on_ui_resize);
-        self.base_ui.set_name("scenes_ui".into());
+            .connect("resized", &callable_on_ui_resize);
+        self.base_ui.set_name("scenes_ui");
         self.ui_canvas_information = self.create_ui_canvas_information();
         let viewport = self.base().get_viewport();
         if let Some(viewport) = viewport {
@@ -1086,7 +1086,7 @@ impl INode for SceneManager {
                             dict.set(StringName::from("action"), input_action_gstr);
 
                             if !exists {
-                                tooltips.push(dict.to_variant());
+                                tooltips.push(&dict.to_variant());
                             }
                         }
                     }
@@ -1096,7 +1096,7 @@ impl INode for SceneManager {
 
         self.set_pointer_tooltips(tooltips);
         self.base_mut()
-            .emit_signal("pointer_tooltip_changed".into(), &[]);
+            .emit_signal("pointer_tooltip_changed", &[]);
 
         if self.camera_node.is_none() {
             return;

@@ -1,4 +1,4 @@
-use godot::obj::Gd;
+use godot::{obj::Gd, classes::ResourceLoader};
 
 use crate::{
     dcl::components::proto_components::sdk::components::common::Font, framework::TestContext,
@@ -13,12 +13,12 @@ impl Font {
         }
     }
 
-    pub fn try_get_font_resource(&self) -> Option<Gd<godot::engine::Font>> {
-        godot::engine::try_load(self.get_font_path()).ok()
+    pub fn try_get_font_resource(&self) -> Option<Gd<godot::classes::Font>> {
+        ResourceLoader::singleton().load(self.get_font_path()).map(|resource| resource.cast::<godot::classes::Font>())
     }
 
     // TODO: Maybe the load can be cached and then return a duplicated one
-    pub fn get_font_resource(&self) -> Gd<godot::engine::Font> {
+    pub fn get_font_resource(&self) -> Gd<godot::classes::Font> {
         self.try_get_font_resource().expect("Failed to load font")
     }
 }

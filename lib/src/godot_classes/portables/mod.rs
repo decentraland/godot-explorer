@@ -187,7 +187,7 @@ impl DclPortableExperienceController {
         for (_, portable_experience) in self.portable_experiences.iter_mut() {
             if let PortableExperienceState::SpawnRequested = portable_experience.state {
                 portable_experience.state = PortableExperienceState::Spawning;
-                ret.push(GString::from(&portable_experience.pid));
+                ret.push(&portable_experience.pid);
             }
         }
         ret
@@ -199,7 +199,7 @@ impl DclPortableExperienceController {
         for (_, portable_experience) in self.portable_experiences.iter_mut() {
             if let PortableExperienceState::KillRequested(scene_id) = portable_experience.state {
                 portable_experience.state = PortableExperienceState::Killing(scene_id);
-                ret.push(GString::from(&portable_experience.pid));
+                ret.push(&portable_experience.pid);
             }
         }
         ret

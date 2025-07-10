@@ -1,4 +1,4 @@
-use godot::prelude::*;
+use godot::{prelude::*, classes::AudioStreamPlayer};
 
 #[derive(GodotClass)]
 #[class(init, base=AudioStreamPlayer)]

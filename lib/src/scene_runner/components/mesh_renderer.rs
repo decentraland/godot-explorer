@@ -1,3 +1,4 @@
+use godot::classes::{ResourceLoader, PackedScene, Mesh};
 use std::time::Instant;
 
 use crate::{
@@ -14,7 +15,7 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{BoxMesh, MeshInstance3D},
+    classes::{BoxMesh, MeshInstance3D},
     prelude::*,
 };
 
@@ -30,16 +31,16 @@ pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMe
                     .map(f32::to_variant)
                     .collect::<VariantArray>()
                     .to_variant();
-                mesh_instance.call("set_box".into(), &[uvs]);
+                mesh_instance.call("set_box", &[uvs]);
             }
             pb_mesh_renderer::Mesh::Sphere(_) => {
-                mesh_instance.call("set_sphere".into(), &[]);
+                mesh_instance.call("set_sphere", &[]);
             }
             pb_mesh_renderer::Mesh::Cylinder(cylinder_mesh_value) => {
                 let top_radius = cylinder_mesh_value.radius_top.unwrap_or(0.5);
                 let bottom_radius = cylinder_mesh_value.radius_bottom.unwrap_or(0.5);
                 mesh_instance.call(
-                    "set_cylinder".into(),
+                    "set_cylinder",
                     &[top_radius.to_variant(), bottom_radius.to_variant()],
                 );
             }
@@ -51,7 +52,7 @@ pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMe
                     .collect::<VariantArray>()
                     .to_variant();
 
-                mesh_instance.call("set_plane".into(), &[uvs]);
+                mesh_instance.call("set_plane", &[uvs]);
             }
             pb_mesh_renderer::Mesh::Gltf(_) => {
                 todo!("Implement Gltf Mesh Renderer")
@@ -64,7 +65,7 @@ pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMe
                     .unwrap_or(BoxMesh::new_gd()),
                 None => BoxMesh::new_gd(),
             };
-            mesh_instance.set_mesh(box_mesh.upcast());
+            mesh_instance.set_mesh(&box_mesh.upcast::<Mesh>());
             // update the material (and with uvs)
         }
     }
@@ -98,20 +99,22 @@ pub fn update_mesh_renderer(
 
             let new_value = new_value.value.clone();
             let existing =
-                node_3d.try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
+                node_3d.try_get_node_as::<MeshInstance3D>(&NodePath::from("MeshRenderer"));
 
             if new_value.is_none() {
                 if let Some(mut mesh_renderer_node) = existing {
                     mesh_renderer_node.queue_free();
-                    node_3d.remove_child(mesh_renderer_node.upcast());
+                    node_3d.remove_child(&mesh_renderer_node.upcast::<Node>());
                 }
             } else if let Some(new_value) = new_value {
                 let (mut mesh_instance_3d, add_to_base) = match existing {
                     Some(mesh_instance_3d) => (mesh_instance_3d, false),
                     None => (
-                        godot::engine::load::<PackedScene>(
+                        ResourceLoader::singleton().load(
                             "res://src/decentraland_components/mesh_renderer.tscn",
                         )
+                        .unwrap()
+                        .cast::<PackedScene>()
                         .instantiate()
                         .unwrap()
                         .cast::<MeshInstance3D>(),
@@ -122,8 +125,8 @@ pub fn update_mesh_renderer(
                 create_or_update_mesh(&mut mesh_instance_3d, &new_value);
 
                 if add_to_base {
-                    mesh_instance_3d.set_name(GString::from("MeshRenderer"));
-                    node_3d.add_child(mesh_instance_3d.upcast());
+                    mesh_instance_3d.set_name(&GString::from("MeshRenderer"));
+                    node_3d.add_child(&mesh_instance_3d.upcast::<Node>());
                 }
             }
             updated_count += 1;

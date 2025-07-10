@@ -1,3 +1,4 @@
+use godot::classes::{ResourceLoader, PackedScene};
 use crate::{
     dcl::{
         components::SceneComponentId,
@@ -26,39 +27,40 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarAttach"));
+            let existing = node_3d.try_get_node_as::<Node>(&NodePath::from("AvatarAttach"));
 
             if new_value.is_none() {
                 if let Some(mut avatar_attach_node) = existing {
                     avatar_attach_node.queue_free();
-                    node_3d.remove_child(avatar_attach_node);
+                    node_3d.remove_child(&avatar_attach_node);
                     // TODO: resolve the current transform
                 }
             } else if let Some(new_value) = new_value {
                 let mut avatar_attach_node = if let Some(avatar_attach_node) = existing {
                     avatar_attach_node
                 } else {
-                    godot::engine::load::<PackedScene>(
-                        "res://src/decentraland_components/avatar_attach.tscn",
-                    )
-                    .instantiate()
-                    .unwrap()
+                    ResourceLoader::singleton()
+                        .load("res://src/decentraland_components/avatar_attach.tscn")
+                        .unwrap()
+                        .cast::<PackedScene>()
+                        .instantiate()
+                        .unwrap()
                 };
 
                 avatar_attach_node.set(
-                    StringName::from("user_id"),
-                    Variant::from(new_value.avatar_id.unwrap_or_default()),
+                    &StringName::from("user_id"),
+                    &Variant::from(new_value.avatar_id.unwrap_or_default()),
                 );
 
                 avatar_attach_node.set(
-                    StringName::from("attach_point"),
-                    Variant::from(new_value.anchor_point_id),
+                    &StringName::from("attach_point"),
+                    &Variant::from(new_value.anchor_point_id),
                 );
 
-                avatar_attach_node.set_name(GString::from("AvatarAttach"));
+                avatar_attach_node.set_name(&GString::from("AvatarAttach"));
 
-                node_3d.add_child(avatar_attach_node.clone());
-                avatar_attach_node.call("init".into(), &[]);
+                node_3d.add_child(&avatar_attach_node);
+                avatar_attach_node.call("init", &[]);
             }
         }
     }

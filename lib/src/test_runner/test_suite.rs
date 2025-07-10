@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::{time::{Duration, Instant}, io::Write};
 
 use godot::prelude::*;
 use tracing::error;
@@ -82,7 +82,7 @@ impl TestRunnerSuite {
             print_test_pre(&test_case, test_file, &mut last_file, true);
             let result = test.call("run", &[]);
             // In case a test needs to disable error messages to ensure it runs properly.
-            godot::engine::Engine::singleton().set_print_error_messages(true);
+            godot::classes::Engine::singleton().set_print_error_messages(true);
 
             if let Some(duration) = get_execution_time(&test) {
                 extra_duration += duration;
@@ -216,7 +216,8 @@ fn print_test_pre(test_case: &str, test_file: String, last_file: &mut Option<Str
     if flush {
         // Flush in GDScript, because its own print may come sooner than Rust prints otherwise
         // (strictly speaking, this can also happen from Rust, when Godot prints something. So far, it didn't though...
-        godot::private::flush_stdout();
+        // Note: flush_stdout is no longer available in gdext 0.3.x
+        std::io::stdout().flush().ok();
     }
 
     // State update for file-category-print

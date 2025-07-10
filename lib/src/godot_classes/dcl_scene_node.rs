@@ -13,19 +13,19 @@ pub struct DclSceneNode {
     pub max_gltf_loaded_count: i32,
     pub gltf_loading_count: i32,
 
-    _base: Base<Node3D>,
+    base: Base<Node3D>,
 }
 
 #[godot_api]
 impl DclSceneNode {
     #[signal]
-    pub fn tree_changed(&self) {}
+    pub fn tree_changed();
 
     pub fn new_alloc(scene_id: i32, is_global: bool) -> Gd<Self> {
-        let mut obj = Gd::from_init_fn(|_base| {
+        let mut obj = Gd::from_init_fn(|base| {
             // accepts the base and returns a constructed object containing it
             DclSceneNode {
-                _base,
+                base,
                 scene_id,
                 is_global,
                 last_tick_number: -1,
@@ -33,7 +33,7 @@ impl DclSceneNode {
                 gltf_loading_count: 0,
             }
         });
-        obj.set_name(GString::from(format!("scene_id_{:?}", scene_id.clone())));
+        obj.set_name(&format!("scene_id_{:?}", scene_id));
         obj
     }
 

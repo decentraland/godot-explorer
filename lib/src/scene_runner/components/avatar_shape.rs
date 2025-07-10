@@ -1,3 +1,5 @@
+use godot::classes::{ResourceLoader, PackedScene};
+use godot::prelude::{StringName, Node};
 use crate::{
     avatars::avatar_type::DclAvatarWireFormat,
     comms::profile::{AvatarColor, AvatarColor3, AvatarEmote, AvatarWireFormat},
@@ -69,12 +71,12 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("AvatarShape"));
+            let existing = node_3d.try_get_node_as::<Node>(&NodePath::from("AvatarShape"));
 
             if new_value.is_none() {
                 if let Some(mut avatar_node) = existing {
                     avatar_node.queue_free();
-                    node_3d.remove_child(avatar_node);
+                    node_3d.remove_child(&avatar_node);
                 }
             } else if let Some(new_value) = new_value {
                 let avatar_name = new_value.name.unwrap_or("NPC".into());
@@ -112,22 +114,24 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 if let Some(mut avatar_node) = existing {
                     avatar_node.call_deferred(
-                        "async_update_avatar".into(),
+                        &StringName::from("async_update_avatar"),
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 } else {
-                    let mut new_avatar_shape = godot::engine::load::<PackedScene>(
+                    let mut new_avatar_shape = ResourceLoader::singleton().load(
                         "res://src/decentraland_components/avatar/avatar.tscn",
                     )
+                    .unwrap()
+                    .cast::<PackedScene>()
                     .instantiate()
                     .unwrap();
 
-                    new_avatar_shape.set("skip_process".into(), true.to_variant());
-                    new_avatar_shape.set_name(GString::from("AvatarShape"));
-                    node_3d.add_child(new_avatar_shape.clone().upcast());
+                    new_avatar_shape.set(&StringName::from("skip_process"), &true.to_variant());
+                    new_avatar_shape.set_name(&GString::from("AvatarShape"));
+                    node_3d.add_child(&new_avatar_shape.clone().upcast::<Node>());
 
                     new_avatar_shape.call_deferred(
-                        "async_update_avatar".into(),
+                        &StringName::from("async_update_avatar"),
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 }
@@ -157,7 +161,7 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
             };
 
             let Some(mut avatar_node) =
-                node_3d.try_get_node_as::<Node>(NodePath::from("AvatarShape"))
+                node_3d.try_get_node_as::<Node>(&NodePath::from("AvatarShape"))
             else {
                 continue;
             };
@@ -180,7 +184,7 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 emote.emote_urn.clone()
             };
 
-            avatar_node.call_deferred("async_play_emote".into(), &[urn.to_variant()]);
+            avatar_node.call_deferred(&StringName::from("async_play_emote"), &[urn.to_variant()]);
         }
     }
 }

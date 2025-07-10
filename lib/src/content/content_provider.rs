@@ -9,7 +9,7 @@ use std::{
 
 use futures_util::future::try_join_all;
 use godot::{
-    engine::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
+    classes::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
@@ -126,7 +126,7 @@ impl INode for ContentProvider {
     fn init(_base: Base<Node>) -> Self {
         let content_folder = Arc::new(format!(
             "{}/content/",
-            godot::engine::Os::singleton().get_user_data_dir()
+            godot::classes::Os::singleton().get_user_data_dir()
         ));
 
         #[cfg(feature = "use_resource_tracking")]
@@ -214,7 +214,7 @@ impl INode for ContentProvider {
                     let data = entry.promise.bind().get_data();
                     if let Ok(mut node_3d) = Gd::<Node3D>::try_from_variant(&data) {
                         if let Some(resource_locker) =
-                            node_3d.get_node_or_null(NodePath::from("ResourceLocker"))
+                            node_3d.get_node_or_null(&NodePath::from("ResourceLocker"))
                         {
                             if let Ok(resource_locker) =
                                 resource_locker.try_cast::<ResourceLocker>()
@@ -562,7 +562,7 @@ impl ContentProvider {
         let file_hash = content_mapping.bind().get_hash(file_path);
         let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
 
-        self.fetch_file_by_url(file_hash, url.into_godot())
+        self.fetch_file_by_url(file_hash, url.to_godot())
     }
 
     #[func]
@@ -753,10 +753,10 @@ impl ContentProvider {
                 let godot_path = format!("res://content/{}", hash_id).to_godot();
 
                 let resource = ResourceLoader::singleton()
-                    .load(godot_path.clone())
+                    .load(&godot_path)
                     .unwrap();
 
-                let texture = resource.cast::<godot::engine::Texture2D>();
+                let texture = resource.cast::<godot::classes::Texture2D>();
                 let image = texture.get_image().unwrap();
 
                 let original_size = if let Some(original_size) = original_size {
@@ -989,7 +989,7 @@ impl ContentProvider {
                         continue;
                     };
 
-                    mesh.surface_set_material(i, new_material.cast::<Material>());
+                    mesh.surface_set_material(i, &new_material.cast::<Material>());
                 }
             }
 
@@ -1297,8 +1297,8 @@ impl ContentProvider {
         for hash_to_load in &hashes_to_load {
             let hash_zip = format!("{}-mobile.zip", hash_to_load);
             let zip_path = format!("user://content/{}", hash_zip).to_godot();
-            let result = godot::engine::ProjectSettings::singleton()
-                .load_resource_pack_ex(zip_path.clone())
+            let result = godot::classes::ProjectSettings::singleton()
+                .load_resource_pack_ex(&zip_path)
                 .replace_files(false)
                 .done();
 

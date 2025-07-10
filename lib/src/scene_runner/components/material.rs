@@ -16,9 +16,9 @@ use crate::{
     scene_runner::scene::{MaterialItem, Scene},
 };
 use godot::{
-    engine::{
+    classes::{
         base_material_3d::{Feature, Flags, ShadingMode, Transparency},
-        MeshInstance3D, StandardMaterial3D,
+        MeshInstance3D, StandardMaterial3D, Texture2D, Material,
     },
     global::weakref,
     prelude::*,
@@ -73,7 +73,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     for tex in dcl_material.get_textures().into_iter().flatten() {
                         if let DclSourceTex::Texture(hash) = &tex.source {
                             content_provider.call_deferred(
-                                "fetch_texture_by_hash".into(),
+                                "fetch_texture_by_hash",
                                 &[
                                     GString::from(hash).to_variant(),
                                     DclContentMappingAndUrl::from_ref(
@@ -107,7 +107,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         *entity,
                         MaterialItem {
                             dcl_mat: dcl_material.clone(),
-                            weak_ref: weakref(godot_material.to_variant()),
+                            weak_ref: weakref(&godot_material.to_variant()),
                             waiting_textures,
                             alive: true,
                         },
@@ -150,17 +150,17 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     }
                 }
                 let mesh_renderer =
-                    node_3d.try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
+                    node_3d.try_get_node_as::<MeshInstance3D>(&NodePath::from("MeshRenderer"));
                 if let Some(mut mesh_renderer) = mesh_renderer {
-                    mesh_renderer.set_surface_override_material(0, godot_material.upcast());
+                    mesh_renderer.set_surface_override_material(0, &godot_material.upcast::<Material>());
                 }
             } else {
                 let mesh_renderer =
-                    node_3d.try_get_node_as::<MeshInstance3D>(NodePath::from("MeshRenderer"));
+                    node_3d.try_get_node_as::<MeshInstance3D>(&NodePath::from("MeshRenderer"));
 
                 if let Some(mut mesh_renderer) = mesh_renderer {
                     mesh_renderer.call(
-                        "set_surface_override_material".into(),
+                        "set_surface_override_material",
                         &[0.to_variant(), Variant::nil()],
                     );
                     godot_entity_node.material.take();
@@ -192,7 +192,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 match dcl_material {
                     DclMaterial::Unlit(unlit_material) => {
                         ready &= check_texture(
-                            godot::engine::base_material_3d::TextureParam::ALBEDO,
+                            godot::classes::base_material_3d::TextureParam::ALBEDO,
                             &unlit_material.texture,
                             &mut material,
                             content_provider.bind_mut(),
@@ -201,27 +201,27 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     }
                     DclMaterial::Pbr(pbr) => {
                         ready &= check_texture(
-                            godot::engine::base_material_3d::TextureParam::ALBEDO,
+                            godot::classes::base_material_3d::TextureParam::ALBEDO,
                             &pbr.texture,
                             &mut material,
                             content_provider.bind_mut(),
                             scene,
                         );
                         // check_texture(
-                        //     godot::engine::base_material_3d::TextureParam::,
+                        //     godot::classes::base_material_3d::TextureParam::,
                         //     &pbr.alpha_texture,
                         //     item,
                         //     &mut content_provider,
                         // );
                         ready &= check_texture(
-                            godot::engine::base_material_3d::TextureParam::NORMAL,
+                            godot::classes::base_material_3d::TextureParam::NORMAL,
                             &pbr.bump_texture,
                             &mut material,
                             content_provider.bind_mut(),
                             scene,
                         );
                         ready &= check_texture(
-                            godot::engine::base_material_3d::TextureParam::EMISSION,
+                            godot::classes::base_material_3d::TextureParam::EMISSION,
                             &pbr.emissive_texture,
                             &mut material,
                             content_provider.bind_mut(),
@@ -253,7 +253,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 }
 
 fn check_texture(
-    param: godot::engine::base_material_3d::TextureParam,
+    param: godot::classes::base_material_3d::TextureParam,
     dcl_texture: &Option<DclTexture>,
     material: &mut Gd<StandardMaterial3D>,
     mut content_provider: GdMut<ContentProvider>,
@@ -271,7 +271,7 @@ fn check_texture(
                 if let Some(resource) =
                     content_provider.get_texture_from_hash(GString::from(content_hash))
                 {
-                    material.set_texture(param, resource.upcast());
+                    material.set_texture(param, &resource.upcast::<Texture2D>());
                 }
                 return true;
             } else {
@@ -293,7 +293,7 @@ fn check_texture(
                 .get_godot_entity_node(video_entity_id)
             {
                 if let Some(data) = &node.video_player_data {
-                    material.set_texture(param, data.video_sink.texture.clone().upcast());
+                    material.set_texture(param, &data.video_sink.texture.clone().upcast::<Texture2D>());
                     return true;
                 }
             }

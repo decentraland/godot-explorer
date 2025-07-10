@@ -3,7 +3,7 @@ use std::{
     sync::atomic::Ordering,
 };
 
-use godot::{engine::Node3D, obj::Gd};
+use godot::{classes::Node3D, obj::Gd};
 
 use crate::{
     dcl::{

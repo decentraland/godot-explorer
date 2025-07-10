@@ -1,4 +1,5 @@
 use godot::{obj::NewAlloc, prelude::Gd};
+use godot::prelude::Node;
 
 use crate::{
     dcl::{
@@ -34,10 +35,10 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             if value.is_none() {
                 if let Some(mut node) = existing_ui_text
                     .base_control
-                    .get_node_or_null("text".into())
+                    .get_node_or_null("text")
                 {
                     node.queue_free();
-                    existing_ui_text.base_control.remove_child(node);
+                    existing_ui_text.base_control.remove_child(&node);
                 }
                 existing_ui_text.text_size = None;
                 continue;
@@ -46,20 +47,20 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let value = value.as_ref().unwrap();
             let mut existing_ui_text_control = if let Some(node) = existing_ui_text
                 .base_control
-                .get_node_or_null("text".into())
+                .get_node_or_null("text")
             {
                 node.cast::<DclUiText>()
             } else {
                 let mut node: Gd<DclUiText> = DclUiText::new_alloc();
-                node.set_name("text".into());
-                node.set_anchors_preset(godot::engine::control::LayoutPreset::FULL_RECT);
+                node.set_name("text");
+                node.set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
 
                 existing_ui_text
                     .base_control
-                    .add_child(node.clone().upcast());
+                    .add_child(&node.clone().upcast::<Node>());
                 existing_ui_text
                     .base_control
-                    .move_child(node.clone().upcast(), 1);
+                    .move_child(&node.clone().upcast::<Node>(), 1);
                 node
             };
 

@@ -12,12 +12,12 @@ use crate::{
     scene_runner::scene::Scene,
 };
 use godot::{
-    engine::{
-        global::{HorizontalAlignment, VerticalAlignment},
+    classes::{
         label_3d::AlphaCutMode,
         text_server::AutowrapMode,
         Label3D,
     },
+    global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };
 
@@ -37,12 +37,12 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Label3D>(NodePath::from("TextShape"));
+            let existing = node_3d.try_get_node_as::<Label3D>(&NodePath::from("TextShape"));
 
             if new_value.is_none() {
                 if let Some(mut text_shape_node) = existing {
                     text_shape_node.queue_free();
-                    node_3d.remove_child(text_shape_node.upcast());
+                    node_3d.remove_child(&text_shape_node.upcast::<Node>());
                 }
             } else if let Some(new_value) = new_value {
                 let (mut label_3d, add_to_base) = match existing {
@@ -72,7 +72,7 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     .map(|color| Color::from_rgba(color.r, color.g, color.b, opacity))
                     .unwrap_or(Color::from_rgba(1.0, 1.0, 1.0, opacity));
 
-                label_3d.set_text(GString::from(new_value.text));
+                label_3d.set_text(&GString::from(new_value.text));
                 label_3d.set_modulate(text_color);
 
                 let font_size = (22.0 * new_value.font_size.unwrap_or(3.0)).max(1.0);
@@ -137,9 +137,9 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 label_3d.set_horizontal_alignment(h_align);
 
                 if add_to_base {
-                    label_3d.set_name(GString::from("TextShape"));
-                    label_3d.set_font(new_font.get_font_resource());
-                    node_3d.add_child(label_3d.upcast());
+                    label_3d.set_name(&GString::from("TextShape"));
+                    label_3d.set_font(&new_font.get_font_resource());
+                    node_3d.add_child(&label_3d.upcast::<Node>());
                 }
 
                 // TODO: missing properties

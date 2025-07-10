@@ -27,7 +27,7 @@ impl DclSceneEntityDefinition {
     fn get_parcels(&self) -> godot::prelude::Array<Vector2i> {
         let mut ret = godot::prelude::Array::new();
         let parcels_str = &self.inner.scene_meta_scene.scene.parcels;
-        ret.resize(parcels_str.len(), &Vector2i::ZERO);
+        ret.resize(parcels_str.len(), Vector2i::ZERO);
         parcels_str.iter().for_each(|parcel| ret.push(*parcel));
 
         ret
@@ -78,7 +78,7 @@ impl DclSceneEntityDefinition {
 
     #[func]
     fn get_main_js_path(&self) -> GString {
-        self.inner.scene_meta_scene.main.as_str().into_godot()
+        self.inner.scene_meta_scene.main.as_str().to_godot()
     }
 
     #[func]

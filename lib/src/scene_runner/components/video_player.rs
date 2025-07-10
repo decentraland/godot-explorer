@@ -19,9 +19,10 @@ use crate::{
     },
 };
 use godot::{
-    engine::{image::Format, AudioStreamGenerator, Image, ImageTexture},
+    classes::{image::Format, AudioStreamGenerator, Image, ImageTexture, AudioStream},
     prelude::*,
 };
+use godot::prelude::{StringName, Node};
 
 use crate::av::{
     stream_processor::{AVCommand, StreamStateData},
@@ -97,7 +98,7 @@ pub fn update_video_player(
                             .expect("video_player_data not found in node");
 
                         let mut video_player_node: Gd<DclVideoPlayer> = node_3d
-                            .get_node_or_null("VideoPlayer".into())
+                            .get_node_or_null("VideoPlayer")
                             .expect("enters on change video branch but a VideoPlayer wasn't found there")
                             .try_cast::<DclVideoPlayer>()
                             .expect("the expected VideoPlayer wasn't a DclVideoPlayer");
@@ -134,7 +135,7 @@ pub fn update_video_player(
                                 .try_send(AVCommand::Dispose);
                         }
 
-                        let mut video_player_node = node_3d.get_node_or_null("VideoPlayer".into()).expect(
+                        let mut video_player_node = node_3d.get_node_or_null("VideoPlayer").expect(
                             "enters on change video branch but a VideoPlayer wasn't found there",
                         ).try_cast::<DclVideoPlayer>().expect("the expected VideoPlayer wasn't a DclVideoPlayer");
 
@@ -187,7 +188,7 @@ pub fn update_video_player(
 
                         if !file_hash.is_empty() {
                             video_player_node.call_deferred(
-                                "async_request_video".into(),
+                                "async_request_video",
                                 &[file_hash.to_variant()],
                             );
                         }
@@ -195,12 +196,14 @@ pub fn update_video_player(
                     VideoUpdateMode::FirstSpawnVideo => {
                         let image = Image::create(8, 8, false, Format::RGBA8)
                             .expect("couldn't create an video image");
-                        let texture = ImageTexture::create_from_image(image)
+                        let texture = ImageTexture::create_from_image(&image)
                             .expect("couldn't create an video image texture");
 
-                        let mut video_player_node = godot::engine::load::<PackedScene>(
+                        let mut video_player_node = ResourceLoader::singleton().load(
                             "res://src/decentraland_components/video_player.tscn",
                         )
+                        .unwrap()
+                        .cast::<PackedScene>()
                         .instantiate()
                         .unwrap()
                         .cast::<DclVideoPlayer>();
@@ -224,16 +227,16 @@ pub fn update_video_player(
                         video_player_node.bind_mut().resolve_resource_sender =
                             wait_for_resource_sender;
 
-                        video_player_node.set_name("VideoPlayer".into());
+                        video_player_node.set_name("VideoPlayer");
 
                         video_player_node
                             .bind_mut()
                             .set_dcl_texture(Some(texture.clone()));
 
                         let audio_stream_generator = AudioStreamGenerator::new_gd();
-                        video_player_node.set_stream(audio_stream_generator.upcast());
+                        video_player_node.set_stream(&audio_stream_generator.upcast::<AudioStream>());
 
-                        node_3d.add_child(video_player_node.clone().upcast());
+                        node_3d.add_child(&video_player_node.clone().upcast::<Node>());
                         video_player_node.play();
 
                         video_player_node.bind_mut().set_dcl_volume(dcl_volume);
@@ -267,7 +270,7 @@ pub fn update_video_player(
 
                         if !file_hash.is_empty() {
                             video_player_node.call_deferred(
-                                "async_request_video".into(),
+                                "async_request_video",
                                 &[file_hash.to_variant()],
                             );
                         }

@@ -104,7 +104,7 @@ impl RequestResponse {
 
         match response {
             ResponseEnum::String(string) => {
-                godot::engine::Json::parse_string(GString::from(string))
+                godot::classes::Json::parse_string(string)
             }
             _ => Variant::default(),
         }

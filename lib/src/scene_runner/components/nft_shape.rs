@@ -1,3 +1,5 @@
+use godot::classes::{ResourceLoader, PackedScene};
+use godot::prelude::{StringName, Node};
 use crate::{
     dcl::{
         components::{proto_components::common::Color3, SceneComponentId},
@@ -27,12 +29,12 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             let new_value = new_value.value.clone();
 
-            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("NFTShape"));
+            let existing = node_3d.try_get_node_as::<Node>(&NodePath::from("NFTShape"));
 
             if new_value.is_none() {
                 if let Some(mut nft_shape_node) = existing {
                     nft_shape_node.queue_free();
-                    node_3d.remove_child(nft_shape_node);
+                    node_3d.remove_child(&nft_shape_node);
                 }
             } else if let Some(new_value) = new_value {
                 let urn = new_value.urn.to_godot();
@@ -47,19 +49,21 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mut nft_shape_3d = if let Some(nft_shape_3d) = existing {
                     nft_shape_3d
                 } else {
-                    let mut nft_shape_3d = godot::engine::load::<PackedScene>(
+                    let mut nft_shape_3d = ResourceLoader::singleton().load(
                         "res://src/decentraland_components/nft_shape.tscn",
                     )
+                    .unwrap()
+                    .cast::<PackedScene>()
                     .instantiate()
                     .unwrap();
 
-                    nft_shape_3d.set_name(GString::from("NFTShape"));
-                    node_3d.add_child(nft_shape_3d.clone().upcast());
+                    nft_shape_3d.set_name(&GString::from("NFTShape"));
+                    node_3d.add_child(&nft_shape_3d.clone().upcast::<Node>());
                     nft_shape_3d
                 };
 
                 nft_shape_3d.call(
-                    "async_load_nft".into(),
+                    &StringName::from("async_load_nft"),
                     &[urn.to_variant(), style.to_variant(), color.to_variant()],
                 );
             }
