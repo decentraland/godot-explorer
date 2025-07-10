@@ -1,9 +1,5 @@
 use godot::{
-    classes::{
-        control::LayoutPreset,
-        text_server::JustificationFlag,
-        ILabel, Label,
-    },
+    classes::{control::LayoutPreset, text_server::JustificationFlag, ILabel, Label},
     global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };

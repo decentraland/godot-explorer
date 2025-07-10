@@ -1,6 +1,6 @@
 use ethers_core::types::H160;
-use godot::prelude::*;
 use godot::prelude::varray;
+use godot::prelude::*;
 use http::Uri;
 #[cfg(feature = "use_livekit")]
 use std::sync::Arc;
@@ -210,8 +210,7 @@ impl INode for CommunicationManager {
 
                 if player_identity.bind().try_get_address().is_some() {
                     let var = adapter_url.to_variant();
-                    self.base_mut()
-                        .call_deferred("change_adapter", &[var]);
+                    self.base_mut().call_deferred("change_adapter", &[var]);
                 }
             }
             CommsConnection::SignedLogin(signed_login) => match signed_login.poll() {
@@ -853,10 +852,10 @@ impl CommunicationManager {
 
     #[func]
     fn init_rs(&mut self) {
-        DclGlobal::singleton().bind().get_realm().connect(
-            "realm_changed",
-            &self.base().callable("_on_realm_changed"),
-        );
+        DclGlobal::singleton()
+            .bind()
+            .get_realm()
+            .connect("realm_changed", &self.base().callable("_on_realm_changed"));
 
         let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
         player_identity.connect(
@@ -891,8 +890,7 @@ impl CommunicationManager {
 
     #[func]
     fn _on_profile_changed(&mut self, _: Variant) {
-        self.base_mut()
-            .call_deferred("_on_update_profile", &[]);
+        self.base_mut().call_deferred("_on_update_profile", &[]);
     }
 
     #[func]

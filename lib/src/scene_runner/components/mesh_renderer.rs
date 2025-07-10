@@ -1,4 +1,4 @@
-use godot::classes::{ResourceLoader, PackedScene, Mesh};
+use godot::classes::{Mesh, PackedScene, ResourceLoader};
 use std::time::Instant;
 
 use crate::{
@@ -110,14 +110,13 @@ pub fn update_mesh_renderer(
                 let (mut mesh_instance_3d, add_to_base) = match existing {
                     Some(mesh_instance_3d) => (mesh_instance_3d, false),
                     None => (
-                        ResourceLoader::singleton().load(
-                            "res://src/decentraland_components/mesh_renderer.tscn",
-                        )
-                        .unwrap()
-                        .cast::<PackedScene>()
-                        .instantiate()
-                        .unwrap()
-                        .cast::<MeshInstance3D>(),
+                        ResourceLoader::singleton()
+                            .load("res://src/decentraland_components/mesh_renderer.tscn")
+                            .unwrap()
+                            .cast::<PackedScene>()
+                            .instantiate()
+                            .unwrap()
+                            .cast::<MeshInstance3D>(),
                         true,
                     ),
                 };

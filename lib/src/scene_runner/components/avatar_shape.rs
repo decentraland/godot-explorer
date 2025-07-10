@@ -1,5 +1,3 @@
-use godot::classes::{ResourceLoader, PackedScene};
-use godot::prelude::{StringName, Node};
 use crate::{
     avatars::avatar_type::DclAvatarWireFormat,
     comms::profile::{AvatarColor, AvatarColor3, AvatarEmote, AvatarWireFormat},
@@ -13,7 +11,9 @@ use crate::{
     },
     scene_runner::scene::Scene,
 };
+use godot::classes::{PackedScene, ResourceLoader};
 use godot::prelude::*;
+use godot::prelude::{Node, StringName};
 
 #[allow(dead_code)]
 trait ToDictionaryColorObject {
@@ -118,13 +118,12 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         &[new_avatar_data.to_variant(), avatar_name.to_variant()],
                     );
                 } else {
-                    let mut new_avatar_shape = ResourceLoader::singleton().load(
-                        "res://src/decentraland_components/avatar/avatar.tscn",
-                    )
-                    .unwrap()
-                    .cast::<PackedScene>()
-                    .instantiate()
-                    .unwrap();
+                    let mut new_avatar_shape = ResourceLoader::singleton()
+                        .load("res://src/decentraland_components/avatar/avatar.tscn")
+                        .unwrap()
+                        .cast::<PackedScene>()
+                        .instantiate()
+                        .unwrap();
 
                     new_avatar_shape.set(&StringName::from("skip_process"), &true.to_variant());
                     new_avatar_shape.set_name(&GString::from("AvatarShape"));

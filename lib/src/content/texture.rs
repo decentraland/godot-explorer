@@ -5,10 +5,10 @@ use super::{
     thread_safety::GodotSingleThreadSafety,
 };
 use godot::{
-    builtin::{ GString, PackedByteArray, Variant, Vector2i},
+    builtin::{GString, PackedByteArray, Variant, Vector2i},
     classes::{
-        image::CompressMode, portable_compressed_texture_2d::CompressionMode,
-        DirAccess, Image, ImageTexture, PortableCompressedTexture2D, Texture2D,
+        image::CompressMode, portable_compressed_texture_2d::CompressionMode, DirAccess, Image,
+        ImageTexture, PortableCompressedTexture2D, Texture2D,
     },
     global::Error,
     obj::Gd,

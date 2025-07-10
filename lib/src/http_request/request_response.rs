@@ -103,9 +103,7 @@ impl RequestResponse {
         let response = self.response_data.as_ref().unwrap();
 
         match response {
-            ResponseEnum::String(string) => {
-                godot::classes::Json::parse_string(string)
-            }
+            ResponseEnum::String(string) => godot::classes::Json::parse_string(string),
             _ => Variant::default(),
         }
     }

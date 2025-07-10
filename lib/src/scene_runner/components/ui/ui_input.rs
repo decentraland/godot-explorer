@@ -1,5 +1,5 @@
+use godot::prelude::{Node, StringName};
 use godot::{obj::NewAlloc, prelude::Gd};
-use godot::prelude::{StringName, Node};
 
 use crate::{
     dcl::{
@@ -33,10 +33,7 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 .unwrap();
 
             if value.is_none() {
-                if let Some(mut node) = existing_ui_input
-                    .base_control
-                    .get_node_or_null("input")
-                {
+                if let Some(mut node) = existing_ui_input.base_control.get_node_or_null("input") {
                     node.queue_free();
                     existing_ui_input.base_control.remove_child(&node);
                 }
@@ -45,10 +42,7 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             }
 
             let value = value.as_ref().unwrap();
-            if let Some(node) = existing_ui_input
-                .base_control
-                .get_node_or_null("input")
-            {
+            if let Some(node) = existing_ui_input.base_control.get_node_or_null("input") {
                 let mut existing_ui_input_control = node.cast::<DclUiInput>();
                 existing_ui_input_control.bind_mut().change_value(value);
                 existing_ui_input.text_size = Some(existing_ui_input_control.get_size());

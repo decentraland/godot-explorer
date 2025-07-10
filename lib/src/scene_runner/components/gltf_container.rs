@@ -1,5 +1,5 @@
-use godot::classes::{ResourceLoader, PackedScene};
-use godot::prelude::{StringName, Node};
+use godot::classes::{PackedScene, ResourceLoader};
+use godot::prelude::{Node, StringName};
 use std::time::Instant;
 
 use crate::{
@@ -71,14 +71,13 @@ pub fn update_gltf_container(
                     scene.gltf_loading.insert(*entity);
                 } else {
                     // TODO: preload this resource
-                    let mut new_gltf = ResourceLoader::singleton().load(
-                        "res://src/decentraland_components/gltf_container.tscn",
-                    )
-                    .unwrap()
-                    .cast::<PackedScene>()
-                    .instantiate()
-                    .unwrap()
-                    .cast::<DclGltfContainer>();
+                    let mut new_gltf = ResourceLoader::singleton()
+                        .load("res://src/decentraland_components/gltf_container.tscn")
+                        .unwrap()
+                        .cast::<PackedScene>()
+                        .instantiate()
+                        .unwrap()
+                        .cast::<DclGltfContainer>();
 
                     let mut new_gltf_ref = new_gltf.bind_mut();
                     new_gltf_ref.set_dcl_gltf_src(GString::from(new_value.src));

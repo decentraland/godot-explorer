@@ -752,9 +752,7 @@ impl ContentProvider {
 
                 let godot_path = format!("res://content/{}", hash_id).to_godot();
 
-                let resource = ResourceLoader::singleton()
-                    .load(&godot_path)
-                    .unwrap();
+                let resource = ResourceLoader::singleton().load(&godot_path).unwrap();
 
                 let texture = resource.cast::<godot::classes::Texture2D>();
                 let image = texture.get_image().unwrap();

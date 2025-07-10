@@ -1,5 +1,5 @@
+use godot::prelude::{Node, StringName};
 use godot::{obj::NewAlloc, prelude::Gd};
-use godot::prelude::{StringName, Node};
 
 use crate::{
     dcl::{

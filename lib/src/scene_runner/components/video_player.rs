@@ -18,11 +18,11 @@ use crate::{
         scene::{Scene, SceneType},
     },
 };
+use godot::prelude::{Node, StringName};
 use godot::{
-    classes::{image::Format, AudioStreamGenerator, Image, ImageTexture, AudioStream},
+    classes::{image::Format, AudioStream, AudioStreamGenerator, Image, ImageTexture},
     prelude::*,
 };
-use godot::prelude::{StringName, Node};
 
 use crate::av::{
     stream_processor::{AVCommand, StreamStateData},
@@ -187,10 +187,8 @@ pub fn update_video_player(
                         });
 
                         if !file_hash.is_empty() {
-                            video_player_node.call_deferred(
-                                "async_request_video",
-                                &[file_hash.to_variant()],
-                            );
+                            video_player_node
+                                .call_deferred("async_request_video", &[file_hash.to_variant()]);
                         }
                     }
                     VideoUpdateMode::FirstSpawnVideo => {
@@ -199,14 +197,13 @@ pub fn update_video_player(
                         let texture = ImageTexture::create_from_image(&image)
                             .expect("couldn't create an video image texture");
 
-                        let mut video_player_node = ResourceLoader::singleton().load(
-                            "res://src/decentraland_components/video_player.tscn",
-                        )
-                        .unwrap()
-                        .cast::<PackedScene>()
-                        .instantiate()
-                        .unwrap()
-                        .cast::<DclVideoPlayer>();
+                        let mut video_player_node = ResourceLoader::singleton()
+                            .load("res://src/decentraland_components/video_player.tscn")
+                            .unwrap()
+                            .cast::<PackedScene>()
+                            .instantiate()
+                            .unwrap()
+                            .cast::<DclVideoPlayer>();
 
                         let (wait_for_resource_sender, wait_for_resource_receiver, file_hash) =
                             if let Some(local_scene_resource) =
@@ -234,7 +231,8 @@ pub fn update_video_player(
                             .set_dcl_texture(Some(texture.clone()));
 
                         let audio_stream_generator = AudioStreamGenerator::new_gd();
-                        video_player_node.set_stream(&audio_stream_generator.upcast::<AudioStream>());
+                        video_player_node
+                            .set_stream(&audio_stream_generator.upcast::<AudioStream>());
 
                         node_3d.add_child(&video_player_node.clone().upcast::<Node>());
                         video_player_node.play();
@@ -269,10 +267,8 @@ pub fn update_video_player(
                             .insert(*entity, video_player_node.clone());
 
                         if !file_hash.is_empty() {
-                            video_player_node.call_deferred(
-                                "async_request_video",
-                                &[file_hash.to_variant()],
-                            );
+                            video_player_node
+                                .call_deferred("async_request_video", &[file_hash.to_variant()]);
                         }
                     }
                 }

@@ -1,8 +1,8 @@
+use godot::builtin::Side;
 use godot::{
     classes::{Control, INinePatchRect, NinePatchRect, Texture2D},
     prelude::*,
 };
-use godot::builtin::Side;
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrlRef, DclContentMappingAndUrl},
@@ -130,15 +130,11 @@ impl DclUiBackground {
         self.waiting_hash = GString::from(snapshots.face256.as_str());
 
         if !promise.bind().is_resolved() {
-            promise.connect(
-                "on_resolved",
-                &self.base().callable("_on_texture_loaded"),
-            );
+            promise.connect("on_resolved", &self.base().callable("_on_texture_loaded"));
         }
 
         self.first_texture_load_shot = true;
-        self.base_mut()
-            .call_deferred("_on_texture_loaded", &[]);
+        self.base_mut().call_deferred("_on_texture_loaded", &[]);
     }
 
     #[func]
@@ -157,7 +153,8 @@ impl DclUiBackground {
             return;
         };
         self.texture_loaded = true;
-        self.base_mut().set_texture(&godot_texture.upcast::<Texture2D>());
+        self.base_mut()
+            .set_texture(&godot_texture.upcast::<Texture2D>());
 
         self._set_texture_params();
     }
@@ -189,18 +186,14 @@ impl DclUiBackground {
                         )
                     };
 
-                self.base_mut().set_patch_margin(
-                    Side::BOTTOM,
-                    patch_margin_bottom as i32,
-                );
+                self.base_mut()
+                    .set_patch_margin(Side::BOTTOM, patch_margin_bottom as i32);
                 self.base_mut()
                     .set_patch_margin(Side::LEFT, patch_margin_left as i32);
                 self.base_mut()
                     .set_patch_margin(Side::TOP, patch_margin_top as i32);
-                self.base_mut().set_patch_margin(
-                    Side::RIGHT,
-                    patch_margin_right as i32,
-                );
+                self.base_mut()
+                    .set_patch_margin(Side::RIGHT, patch_margin_right as i32);
 
                 // TODO: should be TILE or STRETCH?
                 self.base_mut().set_h_axis_stretch_mode(
@@ -216,14 +209,10 @@ impl DclUiBackground {
             BackgroundTextureMode::Stretch => {
                 self.base_mut()
                     .set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
-                self.base_mut()
-                    .set_patch_margin(Side::BOTTOM, 0);
-                self.base_mut()
-                    .set_patch_margin(Side::LEFT, 0);
-                self.base_mut()
-                    .set_patch_margin(Side::TOP, 0);
-                self.base_mut()
-                    .set_patch_margin(Side::RIGHT, 0);
+                self.base_mut().set_patch_margin(Side::BOTTOM, 0);
+                self.base_mut().set_patch_margin(Side::LEFT, 0);
+                self.base_mut().set_patch_margin(Side::TOP, 0);
+                self.base_mut().set_patch_margin(Side::RIGHT, 0);
                 self.base_mut().set_h_axis_stretch_mode(
                     godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );
@@ -301,8 +290,7 @@ impl DclUiBackground {
                         }
 
                         self.first_texture_load_shot = true;
-                        self.base_mut()
-                            .call_deferred("_on_texture_loaded", &[]);
+                        self.base_mut().call_deferred("_on_texture_loaded", &[]);
                     }
                     DclSourceTex::VideoTexture(_) => {
                         // TODO: implement video texture

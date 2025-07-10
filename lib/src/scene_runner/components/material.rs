@@ -18,7 +18,7 @@ use crate::{
 use godot::{
     classes::{
         base_material_3d::{Feature, Flags, ShadingMode, Transparency},
-        MeshInstance3D, StandardMaterial3D, Texture2D, Material,
+        Material, MeshInstance3D, StandardMaterial3D, Texture2D,
     },
     global::weakref,
     prelude::*,
@@ -152,7 +152,8 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mesh_renderer =
                     node_3d.try_get_node_as::<MeshInstance3D>(&NodePath::from("MeshRenderer"));
                 if let Some(mut mesh_renderer) = mesh_renderer {
-                    mesh_renderer.set_surface_override_material(0, &godot_material.upcast::<Material>());
+                    mesh_renderer
+                        .set_surface_override_material(0, &godot_material.upcast::<Material>());
                 }
             } else {
                 let mesh_renderer =
@@ -293,7 +294,10 @@ fn check_texture(
                 .get_godot_entity_node(video_entity_id)
             {
                 if let Some(data) = &node.video_player_data {
-                    material.set_texture(param, &data.video_sink.texture.clone().upcast::<Texture2D>());
+                    material.set_texture(
+                        param,
+                        &data.video_sink.texture.clone().upcast::<Texture2D>(),
+                    );
                     return true;
                 }
             }

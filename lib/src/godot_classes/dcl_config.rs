@@ -57,8 +57,7 @@ impl IRefCounted for DclConfig {
         let mut settings_file: Gd<ConfigFile> = ConfigFile::new_gd();
         settings_file.load(&DclConfig::get_settings_file_path());
 
-        let texture_quality =
-            settings_file.get_value("config", "texture_quality");
+        let texture_quality = settings_file.get_value("config", "texture_quality");
         let texture_quality = texture_quality
             .try_to::<i32>()
             .unwrap_or(TextureQuality::Medium.to_i32());

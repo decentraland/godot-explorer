@@ -5,7 +5,10 @@ use std::{
 };
 
 use godot::{
-    classes::{text_server::{JustificationFlag, LineBreakFlag}, Node},
+    classes::{
+        text_server::{JustificationFlag, LineBreakFlag},
+        Node,
+    },
     obj::Gd,
 };
 

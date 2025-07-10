@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
 use godot::{
-    builtin::{ StringName},
+    builtin::StringName,
     classes::{
-        Animation, AnimationNode, AnimationNodeAdd2, AnimationNodeAnimation, AnimationNodeBlend2, AnimationNodeBlendTree,
-        AnimationNodeTimeScale, AnimationNodeTimeSeek, AnimationPlayer, AnimationRootNode, AnimationTree,
-        IAnimationTree, Node, Node3D,
+        Animation, AnimationNode, AnimationNodeAdd2, AnimationNodeAnimation, AnimationNodeBlend2,
+        AnimationNodeBlendTree, AnimationNodeTimeScale, AnimationNodeTimeSeek, AnimationPlayer,
+        AnimationRootNode, AnimationTree, IAnimationTree, Node, Node3D,
     },
     obj::{Base, Gd, NewGd, WithBaseField},
     prelude::{godot_api, GodotClass, ToGodot},
@@ -44,8 +44,7 @@ impl IAnimationTree for MultipleAnimationController {
     fn ready(&mut self) {
         // connect animation_finished
         let callable = self.base().callable("_animation_finished");
-        self.base_mut()
-            .connect("animation_finished", &callable);
+        self.base_mut().connect("animation_finished", &callable);
     }
 }
 
@@ -292,10 +291,8 @@ impl MultipleAnimationController {
                 *self.existing_anims_duration.get(&anim.clip).unwrap_or(&0.0)
             };
 
-            self.base_mut().set(
-                &anim_item.time_param_ref_str,
-                &playing_time.to_variant(),
-            );
+            self.base_mut()
+                .set(&anim_item.time_param_ref_str, &playing_time.to_variant());
 
             let mut anim_node = self
                 .base()
@@ -355,32 +352,28 @@ impl MultipleAnimationController {
             anim_node.set_animation(DUMMY_ANIMATION_NAME);
             dummy_anim_node.set_animation(DUMMY_ANIMATION_NAME);
 
-            tree.add_node(&format!("tanim_{}", i), &time_anim_node.upcast::<AnimationNode>());
-            tree.add_node(&format!("danim_{}", i), &dummy_anim_node.upcast::<AnimationNode>());
-            tree.add_node(&format!("sanim_{}", i), &speed_anim_node.upcast::<AnimationNode>());
-            tree.add_node(&format!("blend_{}", i), &blend_anim_node.upcast::<AnimationNode>());
+            tree.add_node(
+                &format!("tanim_{}", i),
+                &time_anim_node.upcast::<AnimationNode>(),
+            );
+            tree.add_node(
+                &format!("danim_{}", i),
+                &dummy_anim_node.upcast::<AnimationNode>(),
+            );
+            tree.add_node(
+                &format!("sanim_{}", i),
+                &speed_anim_node.upcast::<AnimationNode>(),
+            );
+            tree.add_node(
+                &format!("blend_{}", i),
+                &blend_anim_node.upcast::<AnimationNode>(),
+            );
             tree.add_node(&format!("anim_{}", i), &anim_node.upcast::<AnimationNode>());
 
-            tree.connect_node(
-                &format!("tanim_{}", i),
-                0,
-                &format!("anim_{}", i),
-            );
-            tree.connect_node(
-                &format!("sanim_{}", i),
-                0,
-                &format!("tanim_{}", i),
-            );
-            tree.connect_node(
-                &format!("blend_{}", i),
-                0,
-                &format!("danim_{}", i),
-            );
-            tree.connect_node(
-                &format!("blend_{}", i),
-                1,
-                &format!("sanim_{}", i),
-            );
+            tree.connect_node(&format!("tanim_{}", i), 0, &format!("anim_{}", i));
+            tree.connect_node(&format!("sanim_{}", i), 0, &format!("tanim_{}", i));
+            tree.connect_node(&format!("blend_{}", i), 0, &format!("danim_{}", i));
+            tree.connect_node(&format!("blend_{}", i), 1, &format!("sanim_{}", i));
 
             self.base_mut().set(
                 &format!("parameters/blend_{}/blend_amount", i),
@@ -398,16 +391,8 @@ impl MultipleAnimationController {
                 tree.connect_node("add_0", 0, "blend_0");
                 tree.connect_node("add_0", 1, "blend_1");
             } else {
-                tree.connect_node(
-                    &format!("add_{}", i),
-                    0,
-                    &format!("add_{}", i - 1),
-                );
-                tree.connect_node(
-                    &format!("add_{}", i),
-                    1,
-                    &format!("blend_{}", i + 1),
-                );
+                tree.connect_node(&format!("add_{}", i), 0, &format!("add_{}", i - 1));
+                tree.connect_node(&format!("add_{}", i), 1, &format!("blend_{}", i + 1));
             }
 
             self.base_mut().set(

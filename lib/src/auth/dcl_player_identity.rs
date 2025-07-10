@@ -212,10 +212,7 @@ impl DclPlayerIdentity {
                 }
                 Err(err) => {
                     tracing::error!("error getting wallet {:?}", err);
-                    this.call_deferred(
-                        "_error_getting_wallet",
-                        &["Unknown error".to_variant()],
-                    );
+                    this.call_deferred("_error_getting_wallet", &["Unknown error".to_variant()]);
                 }
             }
         });

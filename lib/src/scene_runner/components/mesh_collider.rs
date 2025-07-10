@@ -11,14 +11,14 @@ use crate::{
     },
     scene_runner::scene::Scene,
 };
+use godot::prelude::{Node, StringName};
 use godot::{
     classes::{
         mesh::PrimitiveType, AnimatableBody3D, ArrayMesh, BoxShape3D, CollisionShape3D,
-        CylinderShape3D, SphereShape3D, Shape3D,
+        CylinderShape3D, Shape3D, SphereShape3D,
     },
     prelude::*,
 };
-use godot::prelude::{StringName, Node};
 use num_traits::Zero;
 
 fn build_cylinder_arrays(radius_top: f32, radius_bottom: f32) -> VariantArray {
@@ -346,10 +346,14 @@ pub fn update_mesh_collider(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
 
                 if add_to_base {
                     animatable_body_3d.set_name(&GString::from("MeshCollider"));
-                    animatable_body_3d
-                        .set_meta(&StringName::from("dcl_entity_id"), &(entity.as_i32()).to_variant());
-                    animatable_body_3d
-                        .set_meta(&StringName::from("dcl_scene_id"), &(scene.scene_id.0).to_variant());
+                    animatable_body_3d.set_meta(
+                        &StringName::from("dcl_entity_id"),
+                        &(entity.as_i32()).to_variant(),
+                    );
+                    animatable_body_3d.set_meta(
+                        &StringName::from("dcl_scene_id"),
+                        &(scene.scene_id.0).to_variant(),
+                    );
 
                     node_3d.add_child(&animatable_body_3d.upcast::<Node>());
                 }

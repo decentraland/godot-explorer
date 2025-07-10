@@ -1,4 +1,7 @@
-use std::{time::{Duration, Instant}, io::Write};
+use std::{
+    io::Write,
+    time::{Duration, Instant},
+};
 
 use godot::prelude::*;
 use tracing::error;

@@ -1,4 +1,3 @@
-use godot::classes::{ResourceLoader, PackedScene};
 use crate::{
     dcl::{
         components::{proto_components, SceneComponentId},
@@ -10,6 +9,7 @@ use crate::{
     godot_classes::dcl_camera_mode_area_3d::DclCameraModeArea3D,
     scene_runner::scene::Scene,
 };
+use godot::classes::{PackedScene, ResourceLoader};
 use godot::prelude::*;
 
 pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -56,14 +56,13 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
                         .bind_mut()
                         .set_forced_camera_mode(forced_camera_mode);
                 } else {
-                    let mut camera_mode_area_3d = ResourceLoader::singleton().load(
-                        "res://src/decentraland_components/camera_mode_area.tscn",
-                    )
-                    .unwrap()
-                    .cast::<PackedScene>()
-                    .instantiate()
-                    .unwrap()
-                    .cast::<DclCameraModeArea3D>();
+                    let mut camera_mode_area_3d = ResourceLoader::singleton()
+                        .load("res://src/decentraland_components/camera_mode_area.tscn")
+                        .unwrap()
+                        .cast::<PackedScene>()
+                        .instantiate()
+                        .unwrap()
+                        .cast::<DclCameraModeArea3D>();
 
                     camera_mode_area_3d
                         .bind_mut()

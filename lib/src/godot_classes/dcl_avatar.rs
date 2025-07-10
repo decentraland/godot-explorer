@@ -288,7 +288,6 @@ impl DclAvatar {
     pub fn set_blocked_and_hidden(&mut self, value: bool) {
         self.blocked = value;
         // Call the GDScript set_hidden method
-        self.base_mut()
-            .call("set_hidden", &[value.to_variant()]);
+        self.base_mut().call("set_hidden", &[value.to_variant()]);
     }
 }

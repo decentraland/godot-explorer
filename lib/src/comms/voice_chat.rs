@@ -1,5 +1,8 @@
 use godot::{
-    classes::{AudioEffectCapture, AudioServer, AudioStream, AudioStreamMicrophone, AudioStreamPlayer, IAudioStreamPlayer},
+    classes::{
+        AudioEffectCapture, AudioServer, AudioStream, AudioStreamMicrophone, AudioStreamPlayer,
+        IAudioStreamPlayer,
+    },
     prelude::*,
 };
 

@@ -10,9 +10,9 @@ use crate::{
 };
 
 use godot::{
-    prelude::ToGodot,
-    prelude::{GString, PackedScene, Variant, Vector2i, Vector3, StringName},
     classes::ResourceLoader,
+    prelude::ToGodot,
+    prelude::{GString, PackedScene, StringName, Variant, Vector2i, Vector3},
 };
 use http::Uri;
 
@@ -43,12 +43,12 @@ pub fn change_realm(
 
     let mut realm_node = get_realm_node(scene);
 
-    let confirm_dialog =
-        ResourceLoader::singleton().load("res://src/ui/dialogs/confirm_dialog.tscn")
-            .unwrap()
-            .cast::<PackedScene>()
-            .instantiate()
-            .expect("ConfirmDialog instantiate error");
+    let confirm_dialog = ResourceLoader::singleton()
+        .load("res://src/ui/dialogs/confirm_dialog.tscn")
+        .unwrap()
+        .cast::<PackedScene>()
+        .instantiate()
+        .expect("ConfirmDialog instantiate error");
 
     // Setup confirm dialog
     dialog_stack.add_child(&confirm_dialog.clone());
@@ -98,12 +98,12 @@ pub fn open_external_url(
     // Get nodes
     let mut dialog_stack = get_dialog_stack_node(scene);
 
-    let confirm_dialog =
-        ResourceLoader::singleton().load("res://src/ui/dialogs/confirm_dialog.tscn")
-            .unwrap()
-            .cast::<PackedScene>()
-            .instantiate()
-            .expect("ConfirmDialog instantiate error");
+    let confirm_dialog = ResourceLoader::singleton()
+        .load("res://src/ui/dialogs/confirm_dialog.tscn")
+        .unwrap()
+        .cast::<PackedScene>()
+        .instantiate()
+        .expect("ConfirmDialog instantiate error");
 
     // Setup confirm dialog
     dialog_stack.add_child(&confirm_dialog.clone());
@@ -153,12 +153,12 @@ pub fn open_nft_dialog(
     // Get nodes
     let mut dialog_stack = get_dialog_stack_node(scene);
 
-    let mut confirm_dialog =
-        ResourceLoader::singleton().load("res://src/ui/dialogs/nft_dialog.tscn")
-            .unwrap()
-            .cast::<PackedScene>()
-            .instantiate()
-            .expect("NftDialog instantiate error");
+    let mut confirm_dialog = ResourceLoader::singleton()
+        .load("res://src/ui/dialogs/nft_dialog.tscn")
+        .unwrap()
+        .cast::<PackedScene>()
+        .instantiate()
+        .expect("NftDialog instantiate error");
 
     // Setup confirm dialog
     dialog_stack.add_child(&confirm_dialog.clone());
@@ -225,7 +225,10 @@ pub fn move_player_to(
             Vector3::new(camera_target[0], camera_target[1], camera_target[2]) + scene_position;
         let camera_target = Vector3::new(camera_target.x, camera_target.y, -camera_target.z);
 
-        explorer_node.call(&StringName::from("player_look_at"), &[Variant::from(camera_target)]);
+        explorer_node.call(
+            &StringName::from("player_look_at"),
+            &[Variant::from(camera_target)],
+        );
     }
 
     response.send(Ok(()));
@@ -250,12 +253,12 @@ pub fn teleport_to(
     let mut dialog_stack = get_dialog_stack_node(scene);
 
     // TODO: We should implement a new Dialog, that shows the thumbnail of the destination
-    let confirm_dialog =
-        ResourceLoader::singleton().load("res://src/ui/dialogs/confirm_dialog.tscn")
-            .unwrap()
-            .cast::<PackedScene>()
-            .instantiate()
-            .expect("ConfirmDialog instantiate error");
+    let confirm_dialog = ResourceLoader::singleton()
+        .load("res://src/ui/dialogs/confirm_dialog.tscn")
+        .unwrap()
+        .cast::<PackedScene>()
+        .instantiate()
+        .expect("ConfirmDialog instantiate error");
 
     dialog_stack.add_child(&confirm_dialog.clone());
 
@@ -279,7 +282,10 @@ pub fn teleport_to(
         move |ok| {
             if ok {
                 let mut explorer_node = explorer_node.clone();
-                explorer_node.call(&StringName::from("teleport_to"), &[Variant::from(target_parcel)]);
+                explorer_node.call(
+                    &StringName::from("teleport_to"),
+                    &[Variant::from(target_parcel)],
+                );
 
                 response.send(Ok(()));
             } else {
@@ -302,7 +308,10 @@ pub fn trigger_emote(
     }
 
     let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call(&StringName::from("async_play_emote"), &[emote_id.to_variant()]);
+    avatar_node.call(
+        &StringName::from("async_play_emote"),
+        &[emote_id.to_variant()],
+    );
     avatar_node.call(
         &StringName::from("broadcast_avatar_animation"),
         &[emote_id.to_variant()],

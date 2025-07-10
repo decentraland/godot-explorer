@@ -1,4 +1,3 @@
-use godot::classes::{ResourceLoader, PackedScene};
 use crate::{
     dcl::{
         components::{proto_components, SceneComponentId},
@@ -10,6 +9,7 @@ use crate::{
     godot_classes::dcl_avatar_modifier_area_3d::DclAvatarModifierArea3D,
     scene_runner::scene::Scene,
 };
+use godot::classes::{PackedScene, ResourceLoader};
 use godot::prelude::*;
 
 pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -64,14 +64,13 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                         .bind_mut()
                         .set_exclude_ids(exclude_ids);
                 } else {
-                    let mut avatar_modifier_area = ResourceLoader::singleton().load(
-                        "res://src/decentraland_components/avatar_modifier_area.tscn",
-                    )
-                    .unwrap()
-                    .cast::<PackedScene>()
-                    .instantiate()
-                    .unwrap()
-                    .cast::<DclAvatarModifierArea3D>();
+                    let mut avatar_modifier_area = ResourceLoader::singleton()
+                        .load("res://src/decentraland_components/avatar_modifier_area.tscn")
+                        .unwrap()
+                        .cast::<PackedScene>()
+                        .instantiate()
+                        .unwrap()
+                        .cast::<DclAvatarModifierArea3D>();
 
                     avatar_modifier_area
                         .bind_mut()

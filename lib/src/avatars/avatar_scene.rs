@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use ethers_core::types::H160;
-use godot::{prelude::*, classes::{ResourceLoader, PackedScene}};
+use godot::{
+    classes::{PackedScene, ResourceLoader},
+    prelude::*,
+};
 
 use crate::{
     auth::wallet::AsH160,
@@ -66,10 +69,10 @@ impl INode for AvatarScene {
     }
 
     fn ready(&mut self) {
-        DclGlobal::singleton().bind_mut().scene_runner.connect(
-            "scene_spawned",
-            &self.base().callable("on_scene_spawned"),
-        );
+        DclGlobal::singleton()
+            .bind_mut()
+            .scene_runner
+            .connect("scene_spawned", &self.base().callable("on_scene_spawned"));
     }
 }
 
@@ -153,7 +156,7 @@ impl AvatarScene {
 
         let instance_id = self.base().instance_id();
         let avatar_entity_id = entity_id;
-        let avatar_changed_scene_callable = 
+        let avatar_changed_scene_callable =
             Callable::from_local_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
                 if args.len() != 2 {
                     return Err(());
@@ -176,7 +179,7 @@ impl AvatarScene {
                 Ok(Variant::nil())
             });
 
-        let emote_triggered_callable = 
+        let emote_triggered_callable =
             Callable::from_local_fn("on_avatar_trigger_emote", move |args: &[&Variant]| {
                 if args.len() != 2 {
                     return Err(());
@@ -202,7 +205,8 @@ impl AvatarScene {
         new_avatar.connect("change_scene_id", &avatar_changed_scene_callable);
         new_avatar.connect("emote_triggered", &emote_triggered_callable);
 
-        self.base_mut().add_child(&new_avatar.clone().upcast::<Node>());
+        self.base_mut()
+            .add_child(&new_avatar.clone().upcast::<Node>());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
 
         // Emit signal with updated avatar list
@@ -351,7 +355,8 @@ impl AvatarScene {
 
         let avatars = std::mem::take(&mut self.avatar_godot_scene);
         for (_, mut avatar) in avatars {
-            self.base_mut().remove_child(&avatar.clone().upcast::<Node>());
+            self.base_mut()
+                .remove_child(&avatar.clone().upcast::<Node>());
             avatar.queue_free()
         }
     }
@@ -368,7 +373,8 @@ impl AvatarScene {
             self.last_position_index.remove(&alias);
 
             avatar.queue_free();
-            self.base_mut().remove_child(&avatar.clone().upcast::<Node>());
+            self.base_mut()
+                .remove_child(&avatar.clone().upcast::<Node>());
 
             // Push dirty state in all the scenes
             let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
@@ -629,7 +635,10 @@ impl AvatarScene {
         self.last_emote_incremental_id.insert(alias, incremental_id);
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
-            avatar_scene.call(&StringName::from("async_play_emote"), &[emote_urn.to_variant()]);
+            avatar_scene.call(
+                &StringName::from("async_play_emote"),
+                &[emote_urn.to_variant()],
+            );
         }
     }
 

@@ -1,9 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use godot::{
-    classes::{
-        ILineEdit, LineEdit, StyleBoxEmpty,
-    },
+    classes::{ILineEdit, LineEdit, StyleBoxEmpty},
     global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };
@@ -100,8 +98,7 @@ impl DclUiInput {
     }
 
     pub fn change_value(&mut self, new_value: &PbUiInput) {
-        self.base_mut()
-            .set_placeholder(&new_value.placeholder);
+        self.base_mut().set_placeholder(&new_value.placeholder);
 
         let font_placeholder_color = new_value
             .placeholder_color

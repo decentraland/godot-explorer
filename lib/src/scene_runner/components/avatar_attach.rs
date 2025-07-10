@@ -1,4 +1,3 @@
-use godot::classes::{ResourceLoader, PackedScene};
 use crate::{
     dcl::{
         components::SceneComponentId,
@@ -9,6 +8,7 @@ use crate::{
     },
     scene_runner::scene::Scene,
 };
+use godot::classes::{PackedScene, ResourceLoader};
 use godot::prelude::*;
 
 pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {

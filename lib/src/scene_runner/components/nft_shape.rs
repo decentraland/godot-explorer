@@ -1,5 +1,3 @@
-use godot::classes::{ResourceLoader, PackedScene};
-use godot::prelude::{StringName, Node};
 use crate::{
     dcl::{
         components::{proto_components::common::Color3, SceneComponentId},
@@ -10,7 +8,9 @@ use crate::{
     },
     scene_runner::scene::Scene,
 };
+use godot::classes::{PackedScene, ResourceLoader};
 use godot::prelude::*;
+use godot::prelude::{Node, StringName};
 
 pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
@@ -49,13 +49,12 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mut nft_shape_3d = if let Some(nft_shape_3d) = existing {
                     nft_shape_3d
                 } else {
-                    let mut nft_shape_3d = ResourceLoader::singleton().load(
-                        "res://src/decentraland_components/nft_shape.tscn",
-                    )
-                    .unwrap()
-                    .cast::<PackedScene>()
-                    .instantiate()
-                    .unwrap();
+                    let mut nft_shape_3d = ResourceLoader::singleton()
+                        .load("res://src/decentraland_components/nft_shape.tscn")
+                        .unwrap()
+                        .cast::<PackedScene>()
+                        .instantiate()
+                        .unwrap();
 
                     nft_shape_3d.set_name(&GString::from("NFTShape"));
                     node_3d.add_child(&nft_shape_3d.clone().upcast::<Node>());

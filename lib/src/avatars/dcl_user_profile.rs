@@ -1,5 +1,5 @@
 use godot::{
-    builtin::{ Dictionary, GString},
+    builtin::{Dictionary, GString},
     obj::Gd,
     prelude::*,
 };

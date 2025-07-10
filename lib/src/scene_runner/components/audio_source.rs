@@ -1,5 +1,3 @@
-use godot::classes::{ResourceLoader, PackedScene};
-use godot::prelude::{StringName, Node};
 use crate::{
     dcl::{
         components::SceneComponentId,
@@ -12,7 +10,9 @@ use crate::{
     godot_classes::dcl_audio_source::DclAudioSource,
     scene_runner::scene::{Scene, SceneType},
 };
+use godot::classes::{PackedScene, ResourceLoader};
 use godot::prelude::*;
+use godot::prelude::{Node, StringName};
 
 pub fn update_audio_source(
     scene: &mut Scene,

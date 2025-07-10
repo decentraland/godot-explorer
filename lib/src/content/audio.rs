@@ -1,5 +1,5 @@
 use godot::{
-    builtin::{ PackedByteArray, Variant},
+    builtin::{PackedByteArray, Variant},
     classes::{AudioStream, AudioStreamMp3, AudioStreamOggVorbis, AudioStreamWav},
     obj::{Gd, NewGd},
     prelude::ToGodot,

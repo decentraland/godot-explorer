@@ -68,8 +68,8 @@ pub fn update_billboard(
 }
 
 mod test {
-    use godot::prelude::{Basis, Transform3D, Vector3};
     use godot::classes::Node;
+    use godot::prelude::{Basis, Transform3D, Vector3};
 
     use crate::{
         dcl::{

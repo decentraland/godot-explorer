@@ -1,12 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
 use godot::{
-    builtin::{ Dictionary, GString, Variant, VariantArray},
+    builtin::{Dictionary, GString, Variant, VariantArray},
     classes::{
-        animation::TrackType, base_material_3d::TextureParam, node::ProcessMode,
-        AnimatableBody3D, Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D,
-        CollisionShape3D, ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture,
-        MeshInstance3D, Node, Node3D, StaticBody3D,
+        animation::TrackType, base_material_3d::TextureParam, node::ProcessMode, AnimatableBody3D,
+        Animation, AnimationLibrary, AnimationPlayer, BaseMaterial3D, CollisionShape3D,
+        ConcavePolygonShape3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D,
+        StaticBody3D,
     },
     global::Error,
     obj::{EngineEnum, Gd, InstanceId},
@@ -122,10 +122,7 @@ pub async fn internal_load_gltf(
     new_gltf_state.set_additional_data("mappings", &mappings.to_variant());
 
     let err = new_gltf
-        .append_from_file_ex(
-            &GString::from(absolute_file_path.as_str()),
-            &new_gltf_state,
-        )
+        .append_from_file_ex(&GString::from(absolute_file_path.as_str()), &new_gltf_state)
         .base_path(&GString::from(ctx.content_folder.as_str()))
         .flags(0)
         .done();
@@ -491,7 +488,8 @@ fn _duplicate_animation_resources(gltf_node: &Gd<Node>) {
 
         let mut new_animation_library = AnimationLibrary::new_gd();
         for new_animation in new_animations {
-            new_animation_library.add_animation(&new_animation.0, &new_animation.1.cast::<Animation>());
+            new_animation_library
+                .add_animation(&new_animation.0, &new_animation.1.cast::<Animation>());
         }
         new_animation_libraries.insert(animation_library_name, new_animation_library);
     }

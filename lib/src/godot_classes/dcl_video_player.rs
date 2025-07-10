@@ -1,4 +1,4 @@
-use godot::classes::{ImageTexture, AudioStreamPlayer};
+use godot::classes::{AudioStreamPlayer, ImageTexture};
 use godot::prelude::*;
 
 #[derive(GodotClass)]

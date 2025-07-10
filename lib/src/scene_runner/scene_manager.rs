@@ -23,14 +23,14 @@ use crate::{
     realm::dcl_scene_entity_definition::DclSceneEntityDefinition,
     tools::network_inspector::NETWORK_INSPECTOR_ENABLE,
 };
+use godot::prelude::varray;
 use godot::{
     classes::{
         control::{LayoutPreset, MouseFilter},
-        PhysicsRayQueryParameters3D, Camera3D,
+        Camera3D, PhysicsRayQueryParameters3D,
     },
     prelude::*,
 };
-use godot::prelude::varray;
 use std::{
     collections::{HashMap, HashSet},
     sync::atomic::AtomicU32,
@@ -201,12 +201,22 @@ impl SceneManager {
             self.base_ui.clone(),
         );
 
-        self.base_mut()
-            .add_child(&new_scene.godot_dcl_scene.root_node_3d.clone().upcast::<Node>());
+        self.base_mut().add_child(
+            &new_scene
+                .godot_dcl_scene
+                .root_node_3d
+                .clone()
+                .upcast::<Node>(),
+        );
 
         if let SceneType::Global(_) = scene_type {
-            self.base_ui
-                .add_child(&new_scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
+            self.base_ui.add_child(
+                &new_scene
+                    .godot_dcl_scene
+                    .root_node_ui
+                    .clone()
+                    .upcast::<Node>(),
+            );
         }
 
         self.scenes.insert(new_scene.dcl_scene.scene_id, new_scene);
@@ -804,7 +814,10 @@ impl SceneManager {
             for (_, audio_source_node) in scene.audio_sources.iter() {
                 let mut audio_source_node = audio_source_node.clone();
                 audio_source_node.bind_mut().set_dcl_enable(false);
-                audio_source_node.call(&StringName::from("apply_audio_props"), &[false.to_variant()]);
+                audio_source_node.call(
+                    &StringName::from("apply_audio_props"),
+                    &[false.to_variant()],
+                );
             }
             for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
                 audio_stream_node.bind_mut().set_muted(true);
@@ -827,7 +840,10 @@ impl SceneManager {
             for (_, audio_source_node) in scene.audio_sources.iter() {
                 let mut audio_source_node = audio_source_node.clone();
                 audio_source_node.bind_mut().set_dcl_enable(true);
-                audio_source_node.call(&StringName::from("apply_audio_props"), &[false.to_variant()]);
+                audio_source_node.call(
+                    &StringName::from("apply_audio_props"),
+                    &[false.to_variant()],
+                );
             }
             for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
                 audio_stream_node.bind_mut().set_muted(false);
@@ -1012,8 +1028,7 @@ impl INode for SceneManager {
     fn ready(&mut self) {
         let callable_on_ui_resize = self.base().callable("_on_ui_resize");
 
-        self.base_ui
-            .connect("resized", &callable_on_ui_resize);
+        self.base_ui.connect("resized", &callable_on_ui_resize);
         self.base_ui.set_name("scenes_ui");
         self.ui_canvas_information = self.create_ui_canvas_information();
         let viewport = self.base().get_viewport();
@@ -1098,8 +1113,7 @@ impl INode for SceneManager {
         }
 
         self.set_pointer_tooltips(tooltips);
-        self.base_mut()
-            .emit_signal("pointer_tooltip_changed", &[]);
+        self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
 
         if self.camera_node.is_none() {
             return;

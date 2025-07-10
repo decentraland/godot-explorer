@@ -1,7 +1,7 @@
 mod handle_restricted_actions;
 mod portables;
 
-use godot::{prelude::ToGodot, obj::NewGd};
+use godot::{obj::NewGd, prelude::ToGodot};
 
 use crate::{
     content::content_mapping::DclContentMappingAndUrl,
