@@ -243,7 +243,8 @@ pub async fn apply_update_set_mask_colliders(
         .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
 
     let mut to_remove_nodes = Vec::new();
-    let gltf_node: Gd<Node> = Gd::from_instance_id(gltf_node_instance_id);
+    let gltf_node: Gd<Node> = Gd::try_from_instance_id(gltf_node_instance_id)
+        .map_err(|_| anyhow::Error::msg("GLTF node instance no longer exists"))?;
     let gltf_node = gltf_node
         .duplicate_ex()
         .flags(8)

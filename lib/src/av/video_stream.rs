@@ -103,7 +103,7 @@ fn av_thread(
     wait_for_resource: Option<tokio::sync::oneshot::Receiver<String>>,
     sink: tokio::sync::mpsc::Sender<StreamStateData>,
 ) {
-    let tex = tex.map(Gd::from_instance_id);
+    let tex = tex.and_then(Gd::try_from_instance_id);
     if let Err(error) = av_thread_inner(commands, path, tex, audio_stream, wait_for_resource, sink)
     {
         warn!("av error: {error}");
