@@ -548,15 +548,15 @@ mod tests {
 
         let files_to_download = vec![
             (
-                "https://link.testfile.org/15MB",
+                "https://freetestdata.com/wp-content/uploads/2021/09/500kb.png",
                 "bafkreibmrvrdgqthfrvehyell552sk7ivuas2ozzjdmlojbzttqlcrxiya",
             ),
             (
-                "https://link.testfile.org/15MB",
+                "https://freetestdata.com/wp-content/uploads/2021/09/500kb.png",
                 "bafkreic4osvzsjzyqutwjxt2xmyd4hjrwukrxzclvixke3putyrihggmam",
             ),
             (
-                "https://link.testfile.org/15MB",
+                "https://freetestdata.com/wp-content/uploads/2021/09/500kb.png",
                 "bafkreibhjuitdcu3jwu7khjcg2fo6xf2h3hilnfv4liy4p5h2olxj6tcce",
             ),
         ];

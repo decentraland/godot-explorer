@@ -94,7 +94,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn increment_profile_version(&mut self) {
+    pub fn increment_profile_version(&mut self) {
         self.inner.content.version += 1;
         self.inner.version = self.inner.content.version as u32;
     }
@@ -115,5 +115,49 @@ impl DclUserProfile {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
         let value = godot::classes::Json::parse_string(&value);
         value.to::<Dictionary>()
+    }
+
+    #[func]
+    pub fn get_blocked(&self) -> Array<GString> {
+        let mut arr = Array::new();
+        if let Some(blocked) = &self.inner.content.blocked {
+            for addr in blocked {
+                arr.push(&GString::from(addr.as_str()));
+            }
+        }
+        arr
+    }
+
+    #[func]
+    pub fn get_muted(&self) -> Array<GString> {
+        let mut arr = Array::new();
+        if let Some(muted) = &self.inner.content.muted {
+            for addr in muted {
+                arr.push(&GString::from(addr.as_str()));
+            }
+        }
+        arr
+    }
+
+    #[func]
+    pub fn set_blocked(&mut self, blocked_list: Array<GString>) {
+        let blocked_set: std::collections::HashSet<String> =
+            blocked_list.iter_shared().map(|s| s.to_string()).collect();
+        self.inner.content.blocked = if blocked_set.is_empty() {
+            None
+        } else {
+            Some(blocked_set)
+        };
+    }
+
+    #[func]
+    pub fn set_muted(&mut self, muted_list: Array<GString>) {
+        let muted_set: std::collections::HashSet<String> =
+            muted_list.iter_shared().map(|s| s.to_string()).collect();
+        self.inner.content.muted = if muted_set.is_empty() {
+            None
+        } else {
+            Some(muted_set)
+        };
     }
 }

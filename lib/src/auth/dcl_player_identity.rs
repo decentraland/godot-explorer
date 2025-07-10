@@ -6,7 +6,6 @@ use tokio::task::JoinHandle;
 
 use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::comms::profile::UserProfile;
-use crate::content::packed_array::PackedByteArrayFromVec;
 use crate::dcl::scene_apis::RpcResultSender;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
@@ -359,6 +358,31 @@ impl DclPlayerIdentity {
     }
 
     #[func]
+    pub fn async_get_ephemeral_auth_chain(&self) -> Gd<Promise> {
+        let promise = Promise::new_alloc();
+
+        if let Some(ephemeral_auth_chain) = &self.ephemeral_auth_chain {
+            let auth_chain_str =
+                serde_json::to_string(ephemeral_auth_chain).unwrap_or_else(|_| "{}".to_string());
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .resolve_with_data(auth_chain_str.to_variant());
+        } else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("No ephemeral auth chain available".into());
+        }
+
+        promise
+    }
+
+    pub fn get_ephemeral_auth_chain(&self) -> Option<&EphemeralAuthChain> {
+        self.ephemeral_auth_chain.as_ref()
+    }
+
+    #[func]
     pub fn async_get_identity_headers(
         &self,
         uri: GString,
@@ -443,75 +467,6 @@ impl DclPlayerIdentity {
             promise_clone
                 .bind_mut()
                 .reject("Tokio runtime not initialized".into());
-        }
-
-        promise
-    }
-
-    #[func]
-    pub fn async_prepare_deploy_profile(
-        &self,
-        mut new_profile: Gd<DclUserProfile>,
-        has_new_snapshots: bool,
-    ) -> Gd<Promise> {
-        let promise = Promise::new_alloc();
-        let promise_instance_id = promise.instance_id();
-
-        let mut new_profile = new_profile.bind_mut();
-        new_profile.inner.version += 1;
-        new_profile.inner.content.version = new_profile.inner.version as i64;
-
-        let mut new_user_profile = new_profile.inner.clone();
-        let eth_address = self.get_address_str().to_string();
-        new_user_profile.version = new_profile.inner.version;
-        new_user_profile.content.version = new_profile.inner.content.version;
-
-        tracing::warn!(
-            "profile > Preparing deploy profile for address: {}, version: {}",
-            eth_address,
-            new_user_profile.version
-        );
-
-        new_user_profile.content.user_id = Some(eth_address.clone());
-        new_user_profile.content.eth_address = eth_address;
-
-        if let Some(handle) = TokioRuntime::static_clone_handle() {
-            let ephemeral_auth_chain = self
-                .ephemeral_auth_chain
-                .as_ref()
-                .expect("ephemeral auth chain not initialized")
-                .clone();
-            handle.spawn(async move {
-                let deploy_data = super::deploy_profile::prepare_deploy_profile(
-                    ephemeral_auth_chain.clone(),
-                    new_user_profile,
-                    has_new_snapshots,
-                )
-                .await;
-
-                let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
-                else {
-                    tracing::error!("error getting promise");
-                    return;
-                };
-
-                if let Err(e) = deploy_data {
-                    println!("Deployment error: {:?}", e);
-                    promise
-                        .bind_mut()
-                        .reject(format!("error preparing deploy profile: {}", e).into());
-                    return;
-                }
-
-                let (content_type, body_payload) = deploy_data.unwrap(); // checked before
-
-                let body_payload = PackedByteArray::from_vec(&body_payload);
-                let mut dict = Dictionary::default();
-                dict.set("content_type", content_type.to_variant());
-                dict.set("body_payload", body_payload.to_variant());
-
-                promise.bind_mut().resolve_with_data(dict.to_variant());
-            });
         }
 
         promise

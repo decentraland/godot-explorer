@@ -10,7 +10,7 @@ use crate::{
 use super::request_response::send_result_to_promise;
 
 // Deriving GodotClass makes the class available to Godot
-#[derive(GodotClass)]
+#[derive(GodotClass, Clone)]
 #[class(base=RefCounted)]
 pub struct RustHttpQueueRequester {
     http_queue_requester: Arc<super::http_queue_requester::HttpQueueRequester>,
@@ -65,7 +65,7 @@ impl RustHttpQueueRequester {
     }
 
     #[func]
-    fn request_json(
+    pub fn request_json(
         &self,
         url: GString,
         method: godot::classes::http_client::Method,
@@ -80,7 +80,7 @@ impl RustHttpQueueRequester {
     }
 
     #[func]
-    fn request_json_bin(
+    pub fn request_json_bin(
         &self,
         url: GString,
         method: godot::classes::http_client::Method,
