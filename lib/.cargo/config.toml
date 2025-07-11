@@ -16,5 +16,8 @@ rustflags = ["-C", "link-args=-mios-version-min=12.0 -ObjC"]
 [target.aarch64-apple-ios-sim]
 rustflags = ["-C", "link-args=-mios-version-min=12.0 -ObjC"]
 
+[target.aarch64-linux-android]
+# cargo-ndk handles the linker configuration
+
 [env]
 CARGO_FEATURE_CRT_STATIC = "ohyes"

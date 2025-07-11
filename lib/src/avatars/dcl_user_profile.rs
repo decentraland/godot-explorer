@@ -1,5 +1,5 @@
 use godot::{
-    builtin::{meta::ToGodot, Dictionary, GString},
+    builtin::{meta::ToGodot, Array, Dictionary, GString},
     obj::Gd,
     prelude::*,
 };
@@ -84,13 +84,24 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn set_has_claimed_nlame(&mut self, has_claimed_name: bool) {
+    fn set_has_claimed_name(&mut self, has_claimed_name: bool) {
         self.inner.content.has_claimed_name = Some(has_claimed_name);
     }
 
     #[func]
     fn set_avatar(&mut self, avatar: Gd<DclAvatarWireFormat>) {
         self.inner.content.avatar = avatar.bind().inner.clone();
+    }
+
+    #[func]
+    pub fn increment_profile_version(&mut self) {
+        self.inner.content.version += 1;
+        self.inner.version = self.inner.content.version as u32;
+    }
+
+    #[func]
+    fn get_profile_version(&self) -> u32 {
+        self.inner.content.version as u32
     }
 
     #[func]
@@ -104,5 +115,49 @@ impl DclUserProfile {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
         let value = godot::engine::Json::parse_string(value.into());
         value.to::<Dictionary>()
+    }
+
+    #[func]
+    pub fn get_blocked(&self) -> Array<GString> {
+        let mut arr = Array::new();
+        if let Some(blocked) = &self.inner.content.blocked {
+            for addr in blocked {
+                arr.push(GString::from(addr.as_str()));
+            }
+        }
+        arr
+    }
+
+    #[func]
+    pub fn get_muted(&self) -> Array<GString> {
+        let mut arr = Array::new();
+        if let Some(muted) = &self.inner.content.muted {
+            for addr in muted {
+                arr.push(GString::from(addr.as_str()));
+            }
+        }
+        arr
+    }
+
+    #[func]
+    pub fn set_blocked(&mut self, blocked_list: Array<GString>) {
+        let blocked_set: std::collections::HashSet<String> =
+            blocked_list.iter_shared().map(|s| s.to_string()).collect();
+        self.inner.content.blocked = if blocked_set.is_empty() {
+            None
+        } else {
+            Some(blocked_set)
+        };
+    }
+
+    #[func]
+    pub fn set_muted(&mut self, muted_list: Array<GString>) {
+        let muted_set: std::collections::HashSet<String> =
+            muted_list.iter_shared().map(|s| s.to_string()).collect();
+        self.inner.content.muted = if muted_set.is_empty() {
+            None
+        } else {
+            Some(muted_set)
+        };
     }
 }

@@ -105,13 +105,21 @@ func _ready():
 
 	var session_account: Dictionary = Global.get_config().session_account
 
+	if args.has("--guest-profile"):
+		session_account.clear()
+		Global.get_config().save_to_settings_file()
+		Global.player_identity.create_guest_account()
+		Global.player_identity.set_random_profile()
+		var random_profile = Global.player_identity.get_profile_or_null()
+		if random_profile != null:
+			Global.get_config().guest_profile = random_profile.to_godot_dictionary()
+
 	if Global.player_identity.try_recover_account(session_account):
 		loading_first_profile = true
 		show_panel(control_loading)
 
 	elif _skip_lobby:
 		show_panel(control_loading)
-		create_guest_account_if_needed()
 		go_to_explorer.call_deferred()
 	else:
 		show_panel(control_start)
@@ -175,6 +183,11 @@ func _on_wallet_connected(_address: String, _chain_id: int, _is_guest: bool) -> 
 
 func _on_button_different_account_pressed():
 	Global.get_config().session_account = {}
+
+	# Clear the current social blacklist when switching accounts
+	Global.social_blacklist.clear_blocked()
+	Global.social_blacklist.clear_muted()
+
 	Global.get_config().save_to_settings_file()
 	show_connect()
 	avatar_preview.hide()
@@ -213,7 +226,7 @@ func _on_button_next_pressed():
 
 	current_profile.set_avatar(avatar)
 
-	await Global.player_identity.async_deploy_profile(current_profile, true)
+	await ProfileService.async_deploy_profile(current_profile, true)
 
 	await async_close_sign_in(false)
 

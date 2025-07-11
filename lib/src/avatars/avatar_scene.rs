@@ -41,6 +41,12 @@ pub struct AvatarScene {
     crdt_state: SceneCrdtState,
 
     last_updated_profile: HashMap<SceneEntityId, UserProfile>,
+
+    // Timestamp tracking for movement messages
+    last_movement_timestamp: HashMap<AvatarAlias, f32>,
+    last_position_index: HashMap<AvatarAlias, u32>,
+
+    last_emote_incremental_id: HashMap<AvatarAlias, u32>,
 }
 
 #[godot_api]
@@ -53,6 +59,9 @@ impl INode for AvatarScene {
             avatar_godot_scene: HashMap::new(),
             avatar_address: HashMap::new(),
             last_updated_profile: HashMap::new(),
+            last_movement_timestamp: HashMap::new(),
+            last_position_index: HashMap::new(),
+            last_emote_incremental_id: HashMap::new(),
         }
     }
 
@@ -85,6 +94,9 @@ fn sync_crdt_lww_component<T>(
 
 #[godot_api]
 impl AvatarScene {
+    #[signal]
+    fn avatar_scene_changed(avatars: Array<Gd<DclAvatar>>) {}
+
     #[func]
     pub fn update_primary_player_profile(&mut self, profile: Gd<DclUserProfile>) {
         self.update_avatar(SceneEntityId::PLAYER, &profile.bind().inner);
@@ -109,6 +121,12 @@ impl AvatarScene {
 
     #[func]
     pub fn add_avatar(&mut self, alias: u32, address: GString) {
+        // Check if avatar with this alias already exists
+        if self.avatar_entity.contains_key(&alias) {
+            tracing::debug!("Avatar with alias {} already exists, discarding", alias);
+            return;
+        }
+
         // TODO: the entity Self::MAX_ENTITY_ID + 1 would be a buggy avatar
         let entity_id = self
             .get_next_entity_id()
@@ -185,6 +203,11 @@ impl AvatarScene {
 
         self.base_mut().add_child(new_avatar.clone().upcast());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
+
+        // Emit signal with updated avatar list
+        let avatars = self.get_avatars();
+        self.base_mut()
+            .emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
     }
 
     #[func]
@@ -197,6 +220,11 @@ impl AvatarScene {
             }
         }
         None
+    }
+
+    #[func]
+    pub fn get_avatars(&self) -> Array<Gd<DclAvatar>> {
+        Array::from_iter(self.avatar_godot_scene.values().cloned())
     }
 
     #[func]
@@ -335,6 +363,8 @@ impl AvatarScene {
             self.avatar_address.retain(|_, v| *v != alias);
 
             self.last_updated_profile.remove(&entity_id);
+            self.last_movement_timestamp.remove(&alias);
+            self.last_position_index.remove(&alias);
 
             avatar.queue_free();
             self.base_mut().remove_child(avatar.upcast());
@@ -348,6 +378,11 @@ impl AvatarScene {
                     .deleted_entities
                     .insert(entity_id);
             }
+
+            // Emit signal with updated avatar list
+            let avatars = self.get_avatars();
+            self.base_mut()
+                .emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
         }
     }
 
@@ -404,13 +439,25 @@ impl AvatarScene {
         &mut self,
         alias: u32,
         transform: &rfc4::Position,
-    ) {
+    ) -> bool {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
             // TODO: handle this condition
-            return;
+            return false;
         };
+
+        // Skip position messages if we have movement messages (Movement has priority)
+        if self.last_movement_timestamp.contains_key(&alias) {
+            return false;
+        }
+
+        // Check position index to ensure we only process newer positions
+        if let Some(last_index) = self.last_position_index.get(&alias) {
+            if transform.index <= *last_index {
+                return false; // Skip if the position index is not newer than the last one
+            }
+        }
 
         let dcl_transform = DclTransformAndParent {
             translation: godot::prelude::Vector3 {
@@ -429,6 +476,106 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform);
+        self.last_position_index.insert(alias, transform.index);
+        true
+    }
+
+    pub fn update_avatar_transform_with_movement(
+        &mut self,
+        alias: u32,
+        movement: &rfc4::Movement,
+    ) -> bool {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            // TODO: handle this condition
+            tracing::warn!("Avatar with alias {} not found", alias);
+            return false;
+        };
+
+        // Discard if movement.timestamp is older than the last one (with tolerance)
+        const TIMESTAMP_TOLERANCE: f32 = 0.001;
+        if let Some(last_timestamp) = self.last_movement_timestamp.get(&alias) {
+            // Only discard if the new timestamp is significantly older
+            if movement.timestamp < *last_timestamp - TIMESTAMP_TOLERANCE {
+                return false;
+            }
+            // If timestamps are nearly identical (within tolerance), also skip to avoid duplicate processing
+            if (movement.timestamp - *last_timestamp).abs() < TIMESTAMP_TOLERANCE {
+                return false;
+            }
+        }
+
+        // Convert rotation_y from degrees to radians and create quaternion
+        let rotation_rad = movement.rotation_y * std::f32::consts::PI / 180.0;
+        let rotation_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
+            x: 0.0,
+            y: rotation_rad,
+            z: 0.0,
+        });
+
+        let dcl_transform = DclTransformAndParent {
+            translation: godot::prelude::Vector3 {
+                x: movement.position_x,
+                y: movement.position_y,
+                z: movement.position_z,
+            },
+            rotation: rotation_quat,
+            scale: godot::prelude::Vector3::ONE,
+            parent: SceneEntityId::ROOT,
+        };
+
+        self._update_avatar_transform(&entity_id, dcl_transform);
+        self.last_movement_timestamp
+            .insert(alias, movement.timestamp);
+        true
+    }
+
+    pub fn update_avatar_transform_with_movement_compressed(
+        &mut self,
+        alias: u32,
+        position: godot::prelude::Vector3,
+        rotation_rad: f32,
+        timestamp: f32,
+    ) -> bool {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            // TODO: handle this condition
+            tracing::warn!("Avatar with alias {} not found", alias);
+            return false;
+        };
+
+        // Discard if timestamp is older than the last one (with tolerance)
+        const TIMESTAMP_TOLERANCE: f32 = 0.001;
+        if let Some(last_timestamp) = self.last_movement_timestamp.get(&alias) {
+            // Only discard if the new timestamp is significantly older
+            if timestamp < *last_timestamp - TIMESTAMP_TOLERANCE {
+                return false;
+            }
+            // If timestamps are nearly identical (within tolerance), also skip to avoid duplicate processing
+            if (timestamp - *last_timestamp).abs() < TIMESTAMP_TOLERANCE {
+                return false;
+            }
+        }
+
+        // Create quaternion from rotation (already in radians)
+        let rotation_quat = godot::prelude::Quaternion::from_euler(godot::prelude::Vector3 {
+            x: 0.0,
+            y: rotation_rad,
+            z: 0.0,
+        });
+
+        let dcl_transform = DclTransformAndParent {
+            translation: position,
+            rotation: rotation_quat,
+            scale: godot::prelude::Vector3::ONE,
+            parent: SceneEntityId::ROOT,
+        };
+
+        self._update_avatar_transform(&entity_id, dcl_transform);
+        self.last_movement_timestamp.insert(alias, timestamp);
+        true
     }
 
     pub fn update_avatar_by_alias(&mut self, alias: u32, profile: &UserProfile) {
@@ -440,6 +587,49 @@ impl AvatarScene {
         };
 
         self.update_avatar(entity_id, profile);
+    }
+
+    pub fn set_avatar_blocked(&mut self, alias: u32, blocked: bool) {
+        if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
+                avatar.call("set_blocked_and_hidden".into(), &[blocked.to_variant()]);
+            }
+        }
+    }
+
+    pub fn set_avatar_blocked_by_address(&mut self, address: &H160, blocked: bool) {
+        if let Some(alias) = self.avatar_address.get(address) {
+            self.set_avatar_blocked(*alias, blocked);
+        }
+    }
+
+    pub fn play_emote(&mut self, alias: u32, incremental_id: u32, emote_urn: &String) {
+        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            *entity_id
+        } else {
+            return;
+        };
+
+        // Discard if the emote is less than or equal to the last played emote
+        if let Some(last_incremental_id) = self.last_emote_incremental_id.get(&alias) {
+            if incremental_id <= *last_incremental_id {
+                tracing::debug!(
+                    "Discarding emote {} for alias {}: incremental_id {} <= last_emote_incremental_id {}",
+                    emote_urn,
+                    alias,
+                    incremental_id,
+                    last_incremental_id
+                );
+                return;
+            }
+        }
+
+        // Store the last emote incremental ID for this alias
+        self.last_emote_incremental_id.insert(alias, incremental_id);
+
+        if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
+            avatar_scene.call("async_play_emote".into(), &[emote_urn.to_variant()]);
+        }
     }
 
     pub fn update_avatar(&mut self, entity_id: SceneEntityId, profile: &UserProfile) {

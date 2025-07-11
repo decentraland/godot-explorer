@@ -67,6 +67,8 @@ func _ready():
 
 
 func _process(_delta):
+	if avatar.blocked:
+		return
 	var current_time = Time.get_ticks_msec()
 	if !audio_player_steps.is_playing() and avatar.land and current_time > next_tick:
 		if avatar.run:

@@ -6,8 +6,8 @@ const SPRINTING_CAMERA_FOV = 100.0
 const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 
 var walk_speed = 1.5
-var jog_speed = 5.0
-var run_speed = 8.0
+var jog_speed = 8.0
+var run_speed = 11.0
 var gravity := 10.0
 var jump_height := 1.0
 var jump_velocity_0 := sqrt(2 * jump_height * gravity)
@@ -20,6 +20,7 @@ var stored_camera_mode_before_block: Global.CameraMode
 var current_direction: Vector3 = Vector3()
 
 var time_falling := 0.0
+var current_profile_version: int = -1
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/Camera3D
@@ -81,7 +82,11 @@ func _ready():
 
 
 func _on_player_profile_changed(new_profile: DclUserProfile):
-	avatar.async_update_avatar_from_profile(new_profile)
+	var new_version = new_profile.get_profile_version()
+	# Only update avatar if the profile version has changed
+	if new_version != current_profile_version:
+		current_profile_version = new_version
+		avatar.async_update_avatar_from_profile(new_profile)
 
 
 func _on_param_changed(_param):
@@ -198,3 +203,24 @@ func avatar_look_at(target_position: Vector3):
 
 func _on_avatar_visibility_changed():
 	pass  # Replace with function body.
+
+
+func get_broadcast_position() -> Vector3:
+	return avatar.get_global_transform().origin
+
+
+func get_broadcast_rotation_y() -> float:
+	var rotation_y := 0.0
+
+	if camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
+		rotation_y = rotation.y + avatar.rotation.y
+	else:
+		rotation_y = rotation.y
+
+	# 1. Wrap into [-PI, PI) so we never go past the discontinuity
+	rotation_y = wrapf(rotation_y, -PI, PI)
+
+	# 2. Snap to 1-degree steps (≈0.01745 rad)
+	const SNAP_STEP := 0.0174533  # PI / 180
+	rotation_y = snapped(rotation_y, SNAP_STEP)
+	return rotation_y

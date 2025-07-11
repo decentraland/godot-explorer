@@ -1,8 +1,7 @@
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{collections::HashMap, sync::Arc};
 
 use ethers_core::types::H160;
 use futures_util::StreamExt;
-use godot::prelude::{GString, Gd, PackedVector2Array};
 use http::Uri;
 use livekit::{
     options::TrackPublishOptions,
@@ -16,71 +15,68 @@ use livekit::{
 use prost::Message;
 
 use crate::{
-    auth::wallet::AsH160,
-    avatars::avatar_scene::AvatarScene,
-    comms::profile::{SerializedProfile, UserProfile},
+    auth::wallet::AsH160, comms::profile::UserProfile,
     dcl::components::proto_components::kernel::comms::rfc4,
 };
 
-use super::adapter_trait::Adapter;
+use super::{
+    adapter_trait::Adapter,
+    message_processor::{IncomingMessage, MessageType, Rfc4Message, VoiceFrameData, VoiceInitData},
+};
+
+// Constants
+const CHANNEL_SIZE: usize = 1000;
 
 pub struct NetworkMessage {
     pub data: Vec<u8>,
     pub unreliable: bool,
 }
 
-enum ToSceneMessage<'a> {
-    Rfc4(rfc4::packet::Message),
-    InitVoice(livekit::webrtc::prelude::AudioFrame<'a>),
-    VoiceFrame(livekit::webrtc::prelude::AudioFrame<'a>),
-}
-
-struct IncomingMessage<'a> {
-    message: ToSceneMessage<'a>,
-    address: H160,
-}
-
-#[derive(Debug)]
-struct Peer {
-    alias: u32,
-    profile: Option<UserProfile>,
-    announced_version: Option<u32>,
-}
-
 pub struct LivekitRoom {
     sender_to_thread: tokio::sync::mpsc::Sender<NetworkMessage>,
     mic_sender_to_thread: tokio::sync::mpsc::Sender<Vec<i16>>,
-    receiver_from_thread: tokio::sync::mpsc::Receiver<IncomingMessage<'static>>,
-    player_address: H160,
-    player_profile: Option<UserProfile>,
-    avatars: Gd<AvatarScene>,
-    peer_identities: HashMap<H160, Peer>,
-    peer_alias_counter: u32,
-    last_profile_response_sent: Instant,
-    last_profile_request_sent: Instant,
-    last_profile_version_announced: u32,
-    chats: Vec<(H160, rfc4::Chat)>,
-
-    // Scene messges
-    incoming_scene_messages: HashMap<String, Vec<(H160, Vec<u8>)>>,
+    receiver_from_thread:
+        tokio::sync::mpsc::Receiver<crate::comms::adapter::message_processor::IncomingMessage>,
+    #[allow(dead_code)]
+    room_id: String,
+    message_processor_sender: Option<
+        tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>,
+    >,
 }
 
 impl LivekitRoom {
-    pub fn new(
-        remote_address: String,
-        player_address: H160,
-        player_profile: Option<UserProfile>,
-        avatars: Gd<AvatarScene>,
-    ) -> Self {
-        tracing::debug!(">> lk connect async : {remote_address}");
-        let (sender, receiver_from_thread) = tokio::sync::mpsc::channel(1000);
-        let (sender_to_thread, receiver) = tokio::sync::mpsc::channel(1000);
-        let (mic_sender_to_thread, mic_receiver) = tokio::sync::mpsc::channel(1000);
+    pub fn new(remote_address: String, room_id: String) -> Self {
+        Self::new_with_options(remote_address, room_id, true)
+    }
 
+    pub fn new_with_options(remote_address: String, room_id: String, auto_subscribe: bool) -> Self {
+        let room_type = if auto_subscribe {
+            "Archipelago/Main"
+        } else {
+            "Scene"
+        };
+        tracing::info!(
+            "🔧 Creating {} LiveKit room '{}' with auto_subscribe={}",
+            room_type,
+            room_id,
+            auto_subscribe
+        );
+        let (sender, receiver_from_thread) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+        let (sender_to_thread, receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+        let (mic_sender_to_thread, mic_receiver) = tokio::sync::mpsc::channel(CHANNEL_SIZE);
+
+        let room_id_clone = room_id.clone();
         let _ = std::thread::Builder::new()
             .name("livekit dcl thread".into())
             .spawn(move || {
-                spawn_livekit_task(remote_address, receiver, sender, mic_receiver);
+                spawn_livekit_task(
+                    remote_address,
+                    receiver,
+                    sender,
+                    mic_receiver,
+                    room_id_clone,
+                    auto_subscribe,
+                );
             })
             .unwrap();
 
@@ -88,228 +84,33 @@ impl LivekitRoom {
             sender_to_thread,
             mic_sender_to_thread,
             receiver_from_thread,
-            player_address,
-            player_profile,
-            avatars,
-            peer_identities: HashMap::new(),
-            last_profile_response_sent: Instant::now(),
-            last_profile_request_sent: Instant::now(),
-            peer_alias_counter: 0,
-            last_profile_version_announced: 0,
-            chats: Vec::new(),
-            incoming_scene_messages: HashMap::new(),
+            room_id,
+            message_processor_sender: None,
         }
+    }
+
+    pub fn set_message_processor_sender(
+        &mut self,
+        sender: tokio::sync::mpsc::Sender<
+            crate::comms::adapter::message_processor::IncomingMessage,
+        >,
+    ) {
+        self.message_processor_sender = Some(sender);
     }
 
     fn _clean(&mut self) {}
 
     fn _poll(&mut self) -> bool {
-        let mut avatar_scene_ref = self.avatars.clone();
-        let mut avatar_scene = avatar_scene_ref.bind_mut();
-
-        loop {
-            match self.receiver_from_thread.try_recv() {
-                Ok(message) => {
-                    let peer = if let Some(value) = self.peer_identities.get_mut(&message.address) {
-                        value
-                    } else {
-                        self.peer_alias_counter += 1;
-                        self.peer_identities.insert(
-                            message.address,
-                            Peer {
-                                alias: self.peer_alias_counter,
-                                profile: None,
-                                announced_version: None,
-                            },
-                        );
-                        avatar_scene.add_avatar(
-                            self.peer_alias_counter,
-                            GString::from(format!("{:#x}", message.address)),
-                        );
-                        self.peer_identities.get_mut(&message.address).unwrap()
-                    };
-
-                    match message.message {
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::Position(position)) => {
-                            avatar_scene
-                                .update_avatar_transform_with_rfc4_position(peer.alias, &position);
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::Chat(chat)) => {
-                            self.chats.push((message.address, chat));
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileVersion(
-                            announce_profile_version,
-                        )) => {
-                            peer.announced_version = Some(
-                                announce_profile_version
-                                    .profile_version
-                                    .max(peer.announced_version.unwrap_or(0)),
-                            );
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileRequest(
-                            profile_request,
-                        )) => {
-                            if self.last_profile_response_sent.elapsed().as_secs_f32() < 10.0 {
-                                continue;
-                            }
-
-                            tracing::info!("comms > received ProfileRequest {:?}", profile_request);
-
-                            if let Some(addr) = profile_request.address.as_h160() {
-                                if addr == self.player_address {
-                                    if let Some(profile) = self.player_profile.as_ref() {
-                                        self.last_profile_response_sent = Instant::now();
-
-                                        self.send_rfc4(
-                                            rfc4::Packet {
-                                                protocol_version: 0,
-                                                message: Some(
-                                                    rfc4::packet::Message::ProfileResponse(
-                                                        rfc4::ProfileResponse {
-                                                            serialized_profile:
-                                                                serde_json::to_string(
-                                                                    &profile.content,
-                                                                )
-                                                                .unwrap(),
-                                                            base_url: profile.base_url.clone(),
-                                                        },
-                                                    ),
-                                                ),
-                                            },
-                                            false,
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::ProfileResponse(
-                            profile_response,
-                        )) => {
-                            let serialized_profile: SerializedProfile =
-                                match serde_json::from_str(&profile_response.serialized_profile) {
-                                    Ok(p) => p,
-                                    Err(_e) => {
-                                        tracing::error!(
-                                            "comms > invalid data ProfileResponse {:?}",
-                                            profile_response
-                                        );
-                                        continue;
-                                    }
-                                };
-
-                            let incoming_version = serialized_profile.version as u32;
-                            let current_version = if let Some(profile) = peer.profile.as_ref() {
-                                profile.version
-                            } else {
-                                0
-                            };
-
-                            if incoming_version <= current_version {
-                                continue;
-                            }
-
-                            let profile = UserProfile {
-                                version: incoming_version,
-                                content: serialized_profile.clone(),
-                                base_url: profile_response.base_url.clone(),
-                            };
-
-                            avatar_scene.update_avatar_by_alias(peer.alias, &profile);
-                            peer.profile = Some(profile);
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::Scene(scene)) => {
-                            let entry = self
-                                .incoming_scene_messages
-                                .entry(scene.scene_id)
-                                .or_default();
-
-                            // TODO: should we limit the size of the queue or accumulated bytes?
-                            entry.push((message.address, scene.data));
-                        }
-                        ToSceneMessage::Rfc4(rfc4::packet::Message::Voice(_voice)) => {}
-                        ToSceneMessage::InitVoice(frame) => {
-                            avatar_scene.spawn_voice_channel(
-                                peer.alias,
-                                frame.sample_rate,
-                                frame.num_channels,
-                                frame.samples_per_channel,
-                            );
-                        }
-                        ToSceneMessage::VoiceFrame(frame) => {
-                            // If all the frame.data is less than 10, we skip the frame
-                            if frame.data.iter().all(|&c| c.abs() < 10) {
-                                continue;
-                            }
-
-                            let frame = PackedVector2Array::from_iter(frame.data.iter().map(|c| {
-                                let val = (*c as f32) / (i16::MAX as f32);
-                                godot::prelude::Vector2 { x: val, y: val }
-                            }));
-
-                            avatar_scene.push_voice_frame(peer.alias, frame);
-                        }
-                        _ => {
-                            tracing::debug!("comms > unhandled message");
-                        }
-                    }
-                }
-
-                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => break,
-                Err(err) => {
-                    tracing::error!("error polling livekit thread: {err}");
-                    return false;
+        if let Some(processor_sender) = &self.message_processor_sender {
+            // Forward all messages from the LiveKit thread to the message processor
+            while let Ok(message) = self.receiver_from_thread.try_recv() {
+                if let Err(err) = processor_sender.try_send(message) {
+                    tracing::warn!("Failed to forward message to processor: {}", err);
                 }
             }
-        }
-
-        if self.last_profile_request_sent.elapsed().as_secs_f32() > 10.0 {
-            self.last_profile_request_sent = Instant::now();
-
-            let to_request = self
-                .peer_identities
-                .iter()
-                .filter_map(|(address, peer)| {
-                    if peer.profile.is_some() {
-                        let announced_version = peer.announced_version.unwrap_or(0);
-                        let current_version = peer.profile.as_ref().unwrap().version;
-
-                        if announced_version > current_version {
-                            None
-                        } else {
-                            Some((*address, announced_version))
-                        }
-                    } else {
-                        Some((*address, peer.announced_version.unwrap_or(0)))
-                    }
-                })
-                .collect::<Vec<(H160, u32)>>();
-
-            for (address, profile_version) in to_request {
-                self.send_rfc4(
-                    rfc4::Packet {
-                        message: Some(rfc4::packet::Message::ProfileRequest(
-                            rfc4::ProfileRequest {
-                                address: format!("{:#x}", address),
-                                profile_version,
-                            },
-                        )),
-                        protocol_version: 0,
-                    },
-                    true,
-                );
-            }
-
-            self.send_rfc4(
-                rfc4::Packet {
-                    message: Some(rfc4::packet::Message::ProfileVersion(
-                        rfc4::AnnounceProfileVersion {
-                            profile_version: self.last_profile_version_announced,
-                        },
-                    )),
-                    protocol_version: 0,
-                },
-                false,
-            );
+        } else {
+            // If no processor is connected, just drain the messages to prevent backing up
+            while self.receiver_from_thread.try_recv().is_ok() {}
         }
 
         true
@@ -322,14 +123,6 @@ impl LivekitRoom {
         self.sender_to_thread
             .blocking_send(NetworkMessage { data, unreliable })
             .is_ok()
-    }
-
-    fn _change_profile(&mut self, new_profile: UserProfile) {
-        self.player_profile = Some(new_profile);
-    }
-
-    fn _consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
-        std::mem::take(&mut self.chats)
     }
 
     fn _broadcast_voice(&mut self, frame: Vec<i16>) {
@@ -346,12 +139,14 @@ impl Adapter for LivekitRoom {
         self._clean();
     }
 
-    fn change_profile(&mut self, new_profile: UserProfile) {
-        self._change_profile(new_profile);
+    fn change_profile(&mut self, _new_profile: UserProfile) {
+        // Profile changes are now handled by MessageProcessor
+        tracing::warn!("Profile changes should be handled by MessageProcessor");
     }
 
     fn consume_chats(&mut self) -> Vec<(H160, rfc4::Chat)> {
-        self._consume_chats()
+        // Chats are now handled by MessageProcessor
+        Vec::new()
     }
 
     fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
@@ -366,20 +161,19 @@ impl Adapter for LivekitRoom {
         true
     }
 
-    fn consume_scene_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
-        if let Some(messages) = self.incoming_scene_messages.get_mut(scene_id) {
-            std::mem::take(messages)
-        } else {
-            Vec::new()
-        }
+    fn consume_scene_messages(&mut self, _scene_id: &str) -> Vec<(H160, Vec<u8>)> {
+        // Scene messages are now handled by MessageProcessor
+        Vec::new()
     }
 }
 
 fn spawn_livekit_task(
     remote_address: String,
     mut receiver: tokio::sync::mpsc::Receiver<NetworkMessage>,
-    sender: tokio::sync::mpsc::Sender<IncomingMessage<'static>>,
+    sender: tokio::sync::mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage>,
     mut mic_receiver: tokio::sync::mpsc::Receiver<Vec<i16>>,
+    room_id: String,
+    auto_subscribe: bool,
 ) {
     let url = Uri::try_from(remote_address).unwrap();
     let address = format!(
@@ -406,7 +200,8 @@ fn spawn_livekit_task(
     let rt2 = rt.clone();
 
     let task = rt.spawn(async move {
-        let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe: true, adaptive_stream: false, dynacast: false, ..Default::default() }).await.unwrap();
+        tracing::info!("🔌 Connecting to LiveKit room '{}' with auto_subscribe={}", room_id, auto_subscribe);
+        let (room, mut network_rx) = livekit::prelude::Room::connect(&address, &token, RoomOptions{ auto_subscribe, adaptive_stream: false, dynacast: false, ..Default::default() }).await.unwrap();
         let native_source = NativeAudioSource::new(AudioSourceOptions{
             echo_cancellation: true,
             noise_suppression: true,
@@ -459,8 +254,12 @@ fn spawn_livekit_task(
                                     continue;
                                 };
                                 if let Err(e) = sender.send(IncomingMessage {
-                                    message: ToSceneMessage::Rfc4(message),
+                                    message: MessageType::Rfc4(Rfc4Message {
+                                        message,
+                                        protocol_version: packet.protocol_version,
+                                    }),
                                     address,
+                                    room_id: room_id.clone(),
                                 }).await {
                                     tracing::warn!("app pipe broken ({e}), existing loop");
                                     break 'stream;
@@ -472,6 +271,7 @@ fn spawn_livekit_task(
                                 match track {
                                     livekit::track::RemoteTrack::Audio(audio) => {
                                         let sender = sender.clone();
+                                        let room_id_clone = room_id.clone();
                                         rt2.spawn(async move {
                                             let mut x = livekit::webrtc::audio_stream::native::NativeAudioStream::new(audio.rtc_track(), 48000, 1);
 
@@ -483,16 +283,27 @@ fn spawn_livekit_task(
                                                 return;
                                             };
 
-                                            let _ = sender.send(IncomingMessage {
-                                                message: ToSceneMessage::InitVoice(frame),
+                                            if let Err(e) = sender.send(IncomingMessage {
+                                                message: MessageType::InitVoice(VoiceInitData {
+                                                    sample_rate: frame.sample_rate,
+                                                    num_channels: frame.num_channels,
+                                                    samples_per_channel: frame.samples_per_channel,
+                                                }),
                                                 address,
-                                            }).await;
+                                                room_id: room_id_clone.clone(),
+                                            }).await {
+                                                tracing::warn!("Failed to send InitVoice message: {}", e);
+                                                return;
+                                            }
 
                                             while let Some(frame) = x.next().await {
                                                 let frame: livekit::webrtc::prelude::AudioFrame = frame;
                                                 match sender.try_send(IncomingMessage {
-                                                    message: ToSceneMessage::VoiceFrame(frame),
+                                                    message: MessageType::VoiceFrame(VoiceFrameData {
+                                                        data: frame.data.to_vec(),
+                                                    }),
                                                     address,
+                                                    room_id: room_id_clone.clone(),
                                                 }) {
                                                     Ok(()) => (),
                                                     Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => (),
@@ -507,6 +318,30 @@ fn spawn_livekit_task(
                                         });
                                     },
                                     _ => tracing::warn!("not processing video tracks"),
+                                }
+                            }
+                        }
+                        livekit::RoomEvent::ParticipantConnected(participant) => {
+                            if let Some(address) = participant.identity().0.as_str().as_h160() {
+                                tracing::info!("👋 Participant {:#x} connected to LiveKit room", address);
+                                if let Err(e) = sender.send(IncomingMessage {
+                                    message: MessageType::PeerJoined,
+                                    address,
+                                    room_id: room_id.clone(),
+                                }).await {
+                                    tracing::warn!("Failed to send PeerJoined: {}", e);
+                                }
+                            }
+                        }
+                        livekit::RoomEvent::ParticipantDisconnected(participant) => {
+                            if let Some(address) = participant.identity().0.as_str().as_h160() {
+                                tracing::info!("👋 Participant {:#x} disconnected from LiveKit room", address);
+                                if let Err(e) = sender.send(IncomingMessage {
+                                    message: MessageType::PeerLeft,
+                                    address,
+                                    room_id: room_id.clone(),
+                                }).await {
+                                    tracing::warn!("Failed to send PeerLeft: {}", e);
                                 }
                             }
                         }

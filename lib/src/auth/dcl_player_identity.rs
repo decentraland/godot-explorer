@@ -6,7 +6,6 @@ use tokio::task::JoinHandle;
 
 use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::comms::profile::UserProfile;
-use crate::content::packed_array::PackedByteArrayFromVec;
 use crate::dcl::scene_apis::RpcResultSender;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
@@ -316,6 +315,22 @@ impl DclPlayerIdentity {
         profile.content.eth_address = self.get_address_str().to_string();
         let profile = DclUserProfile::from_gd(profile);
         self.profile = Some(profile.clone());
+        tracing::warn!("profile > set default profile",);
+
+        self.base_mut().call_deferred(
+            "emit_signal".into(),
+            &["profile_changed".to_variant(), profile.to_variant()],
+        );
+    }
+
+    #[func]
+    pub fn set_random_profile(&mut self) {
+        let mut profile = UserProfile::randomize();
+        profile.content.user_id = Some(self.get_address_str().to_string());
+        profile.content.eth_address = self.get_address_str().to_string();
+        let profile = DclUserProfile::from_gd(profile);
+        self.profile = Some(profile.clone());
+        tracing::warn!("profile > set random profile",);
 
         self.base_mut().call_deferred(
             "emit_signal".into(),
@@ -326,6 +341,7 @@ impl DclPlayerIdentity {
     #[func]
     pub fn set_profile(&mut self, profile: Gd<DclUserProfile>) {
         self.profile = Some(profile.clone());
+        tracing::warn!("profile > set profile func",);
 
         self.base_mut().call_deferred(
             "emit_signal".into(),
@@ -339,6 +355,31 @@ impl DclPlayerIdentity {
             Some(address) => format!("{:#x}", address).into(),
             None => "".into(),
         }
+    }
+
+    #[func]
+    pub fn async_get_ephemeral_auth_chain(&self) -> Gd<Promise> {
+        let promise = Promise::new_alloc();
+
+        if let Some(ephemeral_auth_chain) = &self.ephemeral_auth_chain {
+            let auth_chain_str =
+                serde_json::to_string(ephemeral_auth_chain).unwrap_or_else(|_| "{}".to_string());
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .resolve_with_data(auth_chain_str.to_variant());
+        } else {
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("No ephemeral auth chain available".into());
+        }
+
+        promise
+    }
+
+    pub fn get_ephemeral_auth_chain(&self) -> Option<&EphemeralAuthChain> {
+        self.ephemeral_auth_chain.as_ref()
     }
 
     #[func]
@@ -432,74 +473,6 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    pub fn async_prepare_deploy_profile(
-        &self,
-        new_profile: Gd<DclUserProfile>,
-        has_new_snapshots: bool,
-    ) -> Gd<Promise> {
-        let promise = Promise::new_alloc();
-        let promise_instance_id = promise.instance_id();
-
-        let current_profile = if let Some(profile) = self.profile.clone() {
-            profile
-        } else {
-            DclUserProfile::from_gd(UserProfile {
-                version: 0,
-                ..Default::default()
-            })
-        };
-
-        let new_profile = new_profile.bind();
-        let mut new_user_profile = new_profile.inner.clone();
-        let eth_address = self.get_address_str().to_string();
-        new_user_profile.version = current_profile.bind().inner.version + 1;
-        new_user_profile.content.version = new_user_profile.version as i64;
-        new_user_profile.content.user_id = Some(eth_address.clone());
-        new_user_profile.content.eth_address = eth_address;
-
-        if let Some(handle) = TokioRuntime::static_clone_handle() {
-            let ephemeral_auth_chain = self
-                .ephemeral_auth_chain
-                .as_ref()
-                .expect("ephemeral auth chain not initialized")
-                .clone();
-            handle.spawn(async move {
-                let deploy_data = super::deploy_profile::prepare_deploy_profile(
-                    ephemeral_auth_chain.clone(),
-                    new_user_profile,
-                    has_new_snapshots,
-                )
-                .await;
-
-                let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(promise_instance_id)
-                else {
-                    tracing::error!("error getting promise");
-                    return;
-                };
-
-                if let Err(e) = deploy_data {
-                    println!("Deployment error: {:?}", e);
-                    promise
-                        .bind_mut()
-                        .reject(format!("error preparing deploy profile: {}", e).into());
-                    return;
-                }
-
-                let (content_type, body_payload) = deploy_data.unwrap(); // checked before
-
-                let body_payload = PackedByteArray::from_vec(&body_payload);
-                let mut dict = Dictionary::default();
-                dict.set("content_type", content_type.to_variant());
-                dict.set("body_payload", body_payload.to_variant());
-
-                promise.bind_mut().resolve_with_data(dict.to_variant());
-            });
-        }
-
-        promise
-    }
-
-    #[func]
     fn _update_profile_from_lambda(&mut self, response: Gd<RequestResponse>) -> bool {
         let base_url = DclGlobal::singleton()
             .bind()
@@ -514,6 +487,7 @@ impl DclPlayerIdentity {
             Ok(profile) => {
                 let new_profile = DclUserProfile::from_gd(profile);
                 self.profile = Some(new_profile.clone());
+                tracing::warn!("profile > set profile from lambda",);
 
                 self.base_mut().call_deferred(
                     "emit_signal".into(),

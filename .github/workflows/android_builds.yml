@@ -29,25 +29,41 @@ jobs:
         run: |
           rustup target add aarch64-linux-android
       - name: Cargo install
-        run: cargo run -- install --platforms android linux
-      - name: Build
+        run: cargo run -- install --targets android linux
+      - name: Build Rust libraries
         run: |
-          bash build-android-apk.sh
+          cargo run -- build --release
+          cargo run -- build --release --target android
+          cargo run -- import-assets
+      
+      - name: Export Android APK
+        run: |
+          cargo run -- export --target android --format apk --release
+      
+      - name: Export Android AAB
+        run: |
+          cargo run -- export --target android --format aab
+      
+      - name: Export Quest APK
+        run: |
+          cargo run -- export --target quest --format apk --release
 
-      # if libdclgodot.so does not exist, the build failed, nothing to upload
+      # Copy Android Artifacts
       - name: Copy Android Artifacts
         if: success() || failure()
         run: |
+          pwd
+          ls -la
+          ls -la exports/
           mkdir -p android-artifacts
-          mv android.apk android-artifacts/ || true
-          mv android-unsigned.aab android-artifacts/ || true
+          mv exports/decentraland.godot.client.apk android-artifacts/ || true
+          mv exports/decentraland.godot.client.aab android-artifacts/ || true
 
       - name: Copy Meta Quest Artifacts
         if: success() || failure()
         run: |
           mkdir -p meta-quest-artifacts
-          mv meta-quest.apk meta-quest-artifacts/ || true
-          mv meta-quest-unsigned.aab meta-quest-artifacts/ || true
+          mv exports/meta-quest.apk meta-quest-artifacts/ || true
 
       - uses: actions/upload-artifact@v4
         if: success() || failure()
