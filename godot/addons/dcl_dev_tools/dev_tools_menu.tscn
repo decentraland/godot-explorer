@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://bphpsgsi3d3xj"]
+
+[sub_resource type="Theme" id="Theme_ile8c"]
+
+[node name="DevToolsMenu" type="MenuButton"]
+offset_right = 36.0
+offset_bottom = 22.0
+size_flags_horizontal = 0
+theme = SubResource("Theme_ile8c")
+text = "Test"

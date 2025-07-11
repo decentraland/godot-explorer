@@ -1,8 +1,8 @@
 [gd_scene load_steps=22 format=3 uid="uid://bmjwqm6jgri7c"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_uio8w"]
-[ext_resource type="Script" path="res://src/ui/components/loading_screen/loading_screen.gd" id="2_7hdbk"]
-[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_6uwlu"]
+[ext_resource type="Script" uid="uid://cm08lp37agj2o" path="res://src/ui/components/loading_screen/loading_screen.gd" id="2_7hdbk"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="3_6uwlu"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_fygee"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_uxxaw"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="4_w6anr"]
