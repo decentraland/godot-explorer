@@ -1,0 +1,42 @@
+extends Control
+signal change_editing(editing:bool)
+
+@export var title:String = "title"
+@export var icon:Texture
+
+@onready var texture_rect_icon: TextureRect = %TextureRect_Icon
+@onready var label_title: Label = %Label_Title
+@onready var button_erase: Button = %Button_Erase
+@onready var option_button: OptionButton = %OptionButton
+@onready var label_value: Label = %Label_Value
+
+
+func _ready() -> void:
+	_on_change_editing(false)
+	label_title.text = title
+	if icon:
+		texture_rect_icon.texture = icon
+
+func _on_option_button_item_selected(index: int) -> void:
+	label_value.text = option_button.get_item_text(index)
+	if option_button.selected != -1:
+				button_erase.show()
+				
+func _on_change_editing(editing: bool) -> void:
+	if editing:
+		self.show()
+		option_button.show()
+		if option_button.selected != -1:
+			button_erase.show()
+		label_value.hide()
+	else:
+		print(option_button.selected)
+		if option_button.selected == -1:
+			self.hide()
+		button_erase.hide()
+		option_button.hide()
+		label_value.show()
+
+func _on_button_pressed() -> void:
+	option_button.selected = -1
+	button_erase.hide()

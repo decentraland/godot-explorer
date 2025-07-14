@@ -1,0 +1,283 @@
+[gd_scene load_steps=9 format=3 uid="uid://dcar8bc8rcscu"]
+
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="1_fgcha"]
+[ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
+[ext_resource type="PackedScene" uid="uid://iilv4kmeybtx" path="res://src/ui/components/profile/profile_field_option.tscn" id="2_orrtq"]
+[ext_resource type="Texture2D" uid="uid://b6t3f0hltrjov" path="res://assets/ui/edit_icon.svg" id="3_gf7h4"]
+[ext_resource type="PackedScene" uid="uid://cib31p07gwaj5" path="res://src/ui/components/profile/profile_field_text.tscn" id="4_8pwo8"]
+[ext_resource type="PackedScene" uid="uid://bahsrsgo0jx48" path="res://src/ui/components/wearable_item/wearable_item.tscn" id="6_1l10o"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_y2op1"]
+bg_color = Color(0.865912, 0.495142, 5.77569e-07, 1)
+corner_radius_top_left = 30
+corner_radius_top_right = 30
+corner_radius_bottom_right = 30
+corner_radius_bottom_left = 30
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8pwo8"]
+bg_color = Color(0, 0, 0, 0.196078)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[node name="Profile" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.196078)
+script = ExtResource("1_y2op1")
+
+[node name="SafeMarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 50
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 50
+theme_override_constants/margin_bottom = 50
+script = ExtResource("1_fgcha")
+default_margin = 50
+metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
+
+[node name="Panel" type="Panel" parent="SafeMarginContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_y2op1")
+
+[node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -55.0
+offset_right = 56.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 60
+theme_override_constants/margin_top = 60
+theme_override_constants/margin_right = 60
+theme_override_constants/margin_bottom = 60
+
+[node name="ScrollContainer" type="ScrollContainer" parent="SafeMarginContainer/Panel/MarginContainer"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 30
+
+[node name="PanelContainer_Badges" type="PanelContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_8pwo8")
+
+[node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_Badges"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBoxContainer_Badges" type="VBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_Badges/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="Label" type="Label" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_Badges/MarginContainer/VBoxContainer_Badges"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 25
+text = "Badges"
+
+[node name="HBoxContainer_Badges" type="HBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_Badges/MarginContainer/VBoxContainer_Badges"]
+layout_mode = 2
+
+[node name="PanelContainer_About" type="PanelContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_8pwo8")
+
+[node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 40
+
+[node name="VBoxContainer_About" type="VBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 25
+text = "About"
+
+[node name="Button_EditAbout" type="Button" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+theme_type_variation = &"BlackButton"
+theme_override_constants/icon_max_width = 15
+toggle_mode = true
+icon = ExtResource("3_gf7h4")
+icon_alignment = 1
+
+[node name="HBoxContainer_About1" type="HBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ProfileFieldText" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer_About1" instance=ExtResource("4_8pwo8")]
+layout_mode = 2
+size_flags_horizontal = 3
+title = "Intro"
+
+[node name="HBoxContainer_About2" type="HBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="ProfileFieldOption" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer_About2" instance=ExtResource("2_orrtq")]
+custom_minimum_size = Vector2(100, 70)
+layout_mode = 2
+size_flags_horizontal = 1
+title = "First"
+
+[node name="ProfileFieldOption2" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer_About2" instance=ExtResource("2_orrtq")]
+custom_minimum_size = Vector2(100, 70)
+layout_mode = 2
+size_flags_horizontal = 1
+title = "Second"
+
+[node name="ProfileFieldText" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer_About2" instance=ExtResource("4_8pwo8")]
+custom_minimum_size = Vector2(100, 70)
+layout_mode = 2
+size_flags_horizontal = 1
+title = "Third"
+
+[node name="VBoxContainer_Links" type="VBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 25
+text = "Links"
+
+[node name="Button_EditLinks" type="Button" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer"]
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+theme_type_variation = &"BlackButton"
+theme_override_constants/icon_max_width = 15
+toggle_mode = true
+icon = ExtResource("3_gf7h4")
+icon_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links"]
+layout_mode = 2
+
+[node name="Label_NoLinks" type="Label" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+text = "No links."
+
+[node name="Label_EditingLinks" type="Label" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+text = "Add a maximum of 5 links to promote your personal website or social networks."
+
+[node name="PanelContainer_EquippedItems" type="PanelContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_8pwo8")
+
+[node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBoxContainer_About" type="VBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 25
+text = "Equipped Items"
+
+[node name="ItemList" type="HFlowContainer" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About"]
+visible = false
+layout_mode = 2
+last_wrap_alignment = 1
+
+[node name="WearableItem" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem6" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem7" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem8" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem9" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem10" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem11" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem12" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem13" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem2" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem3" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem4" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[node name="WearableItem5" parent="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About/ItemList" instance=ExtResource("6_1l10o")]
+layout_mode = 2
+
+[connection signal="toggled" from="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer/Button_EditAbout" to="." method="_on_button_edit_about_toggled"]
+[connection signal="toggled" from="SafeMarginContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer/Button_EditLinks" to="." method="_on_button_edit_links_toggled"]

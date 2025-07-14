@@ -1,0 +1,61 @@
+[gd_scene load_steps=3 format=3 uid="uid://iilv4kmeybtx"]
+
+[ext_resource type="Script" uid="uid://d3d4x5mxt1xnu" path="res://src/ui/components/profile/profile_field_option.gd" id="1_krey6"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_pp2nd"]
+
+[node name="ProfileFieldOption" type="MarginContainer"]
+custom_minimum_size = Vector2(150, 70)
+offset_right = 150.0
+offset_bottom = 70.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+script = ExtResource("1_krey6")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+custom_minimum_size = Vector2(100, 60)
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+alignment = 1
+
+[node name="TextureRect_Icon" type="TextureRect" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Title"
+
+[node name="Button_Erase" type="Button" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+theme_type_variation = &"BlackButton"
+theme_override_constants/icon_max_width = 15
+icon = ExtResource("2_pp2nd")
+icon_alignment = 1
+
+[node name="OptionButton" type="OptionButton" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+item_count = 3
+popup/item_0/text = "asd"
+popup/item_0/id = 0
+popup/item_1/text = "qwe"
+popup/item_1/id = 1
+popup/item_2/text = "zxc"
+popup/item_2/id = 2
+
+[node name="Label_Value" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[connection signal="change_editing" from="." to="." method="_on_change_editing"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/Button_Erase" to="." method="_on_button_pressed"]
+[connection signal="item_selected" from="VBoxContainer/OptionButton" to="." method="_on_option_button_item_selected"]

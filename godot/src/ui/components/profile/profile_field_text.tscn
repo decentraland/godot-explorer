@@ -1,0 +1,65 @@
+[gd_scene load_steps=3 format=3 uid="uid://cib31p07gwaj5"]
+
+[ext_resource type="Script" uid="uid://bqkafqxgd5r7p" path="res://src/ui/components/profile/profile_field_text.gd" id="1_4w3st"]
+[ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_cfjxh"]
+
+[node name="ProfileFieldText" type="MarginContainer"]
+custom_minimum_size = Vector2(150, 70)
+offset_right = 150.0
+offset_bottom = 70.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+script = ExtResource("1_4w3st")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+custom_minimum_size = Vector2(100, 60)
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+alignment = 1
+
+[node name="TextureRect_Icon" type="TextureRect" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Title"
+
+[node name="Button_Erase" type="Button" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+theme_type_variation = &"BlackButton"
+theme_override_constants/icon_max_width = 15
+icon = ExtResource("2_cfjxh")
+icon_alignment = 1
+
+[node name="TextEdit_Value" type="TextEdit" parent="VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+placeholder_text = "Write here"
+context_menu_enabled = false
+emoji_menu_enabled = false
+shortcut_keys_enabled = false
+selecting_enabled = false
+deselect_on_focus_loss_enabled = false
+drag_and_drop_selection_enabled = false
+middle_mouse_paste_enabled = false
+empty_selection_clipboard_enabled = false
+wrap_mode = 1
+
+[node name="Label_Value" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[connection signal="change_editing" from="." to="." method="_on_change_editing"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/Button_Erase" to="." method="_on_button_pressed"]
+[connection signal="text_changed" from="VBoxContainer/TextEdit_Value" to="." method="_on_text_edit_value_text_changed"]
