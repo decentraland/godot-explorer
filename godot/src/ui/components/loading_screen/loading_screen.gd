@@ -33,7 +33,7 @@ var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer
 
 @onready var loading_screen_progress_logic = $LoadingScreenProgressLogic
 @onready var timer_check_progress_timeout = $Timer_CheckProgressTimeout
-@onready var debug_chronometer := Chronometer.new()
+@onready var debug_chronometer := preload("res://src/utils/chronometer.gd").new()
 
 
 func _ready():
