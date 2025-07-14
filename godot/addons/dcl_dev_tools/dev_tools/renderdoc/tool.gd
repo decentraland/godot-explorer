@@ -2,7 +2,8 @@ extends "res://addons/dcl_dev_tools/dev_tools/dcl_dev_tool.gd"
 
 const SETTINGS_PATH_KEY = "renderdoc/executable_path"
 
-var editor_settings : EditorSettings
+var editor_settings: EditorSettings
+
 
 func _init(a_plugin: EditorPlugin):
 	plugin = a_plugin

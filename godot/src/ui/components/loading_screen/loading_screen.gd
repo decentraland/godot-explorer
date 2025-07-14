@@ -68,9 +68,12 @@ func async_hide_loading_screen_effect():
 	background.use_parent_material = false  # enable material
 	self.position.y = 0
 
-	# Debug singleton for counting resources
-	var counter = get_tree().get_root().get_node_or_null("ResourceCounter")
-	if counter:
+	var args := OS.get_cmdline_args()
+	if args.has("--measure-perf"):
+		var counter = (
+			load("res://addons/dcl_dev_tools/dev_tools/resource_counter/resource_counter.gd").new()
+		)
+		add_child(counter)
 		await get_tree().create_timer(5).timeout
 		counter.log_active_counts()
 

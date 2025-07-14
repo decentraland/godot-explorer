@@ -217,10 +217,6 @@ environment/volumetric_fog/use_filter=0
 lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
-[resource_counter]
-
-enable_counting=true
-
 [shader_globals]
 
 day_night_cycle={
