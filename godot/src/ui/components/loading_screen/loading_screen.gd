@@ -1,7 +1,5 @@
 extends Control
 
-const CHRONOMETER = preload("res://src/utils/chronometer.gd")
-
 var bg_colors: Array[Color] = [
 	Color(0.5, 0.25, 0.0, 1.0),
 	Color(0.0, 0.0, 0.5, 1.0),
@@ -35,7 +33,7 @@ var carousel = $VBox_Loading/ColorRect_Background/Control_Discover/VBoxContainer
 
 @onready var loading_screen_progress_logic = $LoadingScreenProgressLogic
 @onready var timer_check_progress_timeout = $Timer_CheckProgressTimeout
-@onready var debug_chronometer := CHRONOMETER.new()
+@onready var debug_chronometer := Chronometer.new()
 
 
 func _ready():
@@ -49,7 +47,7 @@ func _ready():
 # Forward
 func enable_loading_screen():
 	if !debug_chronometer:
-		debug_chronometer = CHRONOMETER.new()
+		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
 	Global.loading_started.emit()
 	Global.release_mouse()
