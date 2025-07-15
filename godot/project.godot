@@ -30,7 +30,6 @@ UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
 XRToolsUserSettings="*res://addons/godot-xr-tools/user_settings/user_settings.gd"
 XRToolsRumbleManager="*res://addons/godot-xr-tools/rumble/rumble_manager.gd"
-ResourceCounter="*res://addons/dcl_dev_tools/dev_tools/resource_counter/resource_counter.gd"
 
 [debug]
 
@@ -46,10 +45,6 @@ window/size/viewport_height=720
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/handheld/orientation=6
-
-[editor]
-
-run/main_run_args="--skip-lobby --realm https://realm-provider.decentraland.org/main --location 0,0"
 
 [editor_plugins]
 
@@ -197,23 +192,18 @@ limits/debugger/max_chars_per_second=3276800
 
 [rendering]
 
-occlusion_culling/bvh_build_quality=0
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=2048
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
 lights_and_shadows/positional_shadow/soft_shadow_filter_quality=0
-shader_compiler/shader_cache/strip_debug=true
 reflections/sky_reflections/texture_array_reflections=false
 reflections/sky_reflections/ggx_samples=16
 shading/overrides/force_vertex_shading=true
 shading/overrides/force_lambert_over_burley=true
-camera/depth_of_field/depth_of_field_bokeh_shape=0
-environment/ssao/quality=0
-environment/ssil/quality=0
+anti_aliasing/quality/msaa_3d=1
 environment/glow/upscale_mode=0
-lightmapping/lightmap_gi/use_bicubic_filter=false
-environment/volumetric_fog/use_filter=0
+anti_aliasing/quality/screen_space_aa=1
 lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
