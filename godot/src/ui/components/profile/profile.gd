@@ -3,9 +3,11 @@ extends Control
 @onready var h_box_container_about_2: HBoxContainer = %HBoxContainer_About2
 @onready var label_no_links: Label = %Label_NoLinks
 @onready var label_editing_links: Label = %Label_EditingLinks
+@onready var scroll_container: ScrollContainer = %ScrollContainer
 
 
 func _ready() -> void:
+	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_on_button_edit_about_toggled(false)
 	_on_button_edit_links_toggled(false) 
 

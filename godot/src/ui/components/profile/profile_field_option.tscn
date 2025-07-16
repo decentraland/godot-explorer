@@ -4,8 +4,8 @@
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_pp2nd"]
 
 [node name="ProfileFieldOption" type="MarginContainer"]
-custom_minimum_size = Vector2(150, 70)
-offset_right = 150.0
+custom_minimum_size = Vector2(50, 70)
+offset_right = 100.0
 offset_bottom = 70.0
 size_flags_horizontal = 0
 size_flags_vertical = 0

@@ -4,8 +4,8 @@
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_cfjxh"]
 
 [node name="ProfileFieldText" type="MarginContainer"]
-custom_minimum_size = Vector2(150, 70)
-offset_right = 150.0
+custom_minimum_size = Vector2(50, 70)
+offset_right = 100.0
 offset_bottom = 70.0
 size_flags_horizontal = 0
 size_flags_vertical = 0
@@ -42,7 +42,7 @@ icon_alignment = 1
 
 [node name="TextEdit_Value" type="TextEdit" parent="VBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 80)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 placeholder_text = "Write here"
 context_menu_enabled = false
