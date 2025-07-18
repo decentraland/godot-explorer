@@ -42,6 +42,8 @@ jobs:
       # Export section
       - name: Import Assets
         uses: ./.github/actions/import-assets
+        with:
+          cache: false
 
       - name: Export
         run: cargo run -- export
