@@ -26,25 +26,25 @@ jobs:
     needs: static-checks
     uses: ./.github/workflows/android_builds.yml
 
-  linux-build:
-    name: 🐧 Linux
-    needs: static-checks
-    uses: ./.github/workflows/linux_builds.yml
-
-  macos-build:
-    name: 🍎 macOS
-    needs: static-checks
-    uses: ./.github/workflows/macos_builds.yml
-
   ios-build:
     name: 🍏 iOS (only lib)
     needs: static-checks
     uses: ./.github/workflows/ios_builds.yml
 
-  windows-build:
-    name: 🏁 Windows
+  linux-build:
+    name: 🐧 Linux
     needs: static-checks
-    uses: ./.github/workflows/windows_builds.yml
+    uses: ./.github/workflows/linux_builds.yml
+  # Disable Windows and MacOS builds for now
+  # macos-build:
+  #   name: 🍎 macOS
+  #   needs: static-checks
+  #   uses: ./.github/workflows/macos_builds.yml
+
+  # windows-build:
+  #   name: 🏁 Windows
+  #   needs: static-checks
+  #   uses: ./.github/workflows/windows_builds.yml
 
   # Third stage: Extras
   docker-build-test:
