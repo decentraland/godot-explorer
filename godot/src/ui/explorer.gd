@@ -33,6 +33,7 @@ var _last_parcel_position: Vector2i = Vector2i.MAX
 @onready var control_minimap = %Control_Minimap
 @onready var mobile_ui = %MobileUI
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
+@onready var profile_panel: Control = %Profile
 
 @onready var loading_ui = %Loading
 
@@ -186,6 +187,9 @@ func _ready():
 	Global.metrics.update_identity(
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
 	)
+
+	# Conectar la señal player_profile_clicked del chat
+	panel_chat.player_profile_clicked.connect(_on_panel_chat_player_profile_clicked)
 
 	# last
 	ui_root.grab_focus.call_deferred()
@@ -468,7 +472,11 @@ func _on_ui_root_gui_input(event: InputEvent):
 
 
 func _on_panel_profile_open_profile():
-	control_menu.show_backpack()
+	profile_panel.show()
+	var profile := Global.player_identity.get_profile_or_null()
+	print(profile)
+	if profile != null:
+		profile_panel.async_show_profile(profile)
 	release_mouse()
 
 
@@ -502,3 +510,23 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 			_first_time_refresh_warning = false
 	else:
 		button_load_scenes.hide()
+
+
+func _on_panel_chat_player_profile_clicked(avatar: DclAvatar):
+	if avatar == null or not is_instance_valid(avatar):
+		return
+	
+	# Obtener el perfil del usuario usando su dirección
+	var user_address = avatar.avatar_id
+	var promise = Global.content_provider.fetch_profile(user_address)
+	var result = await PromiseUtils.async_awaiter(promise)
+	
+	if result is PromiseError:
+		printerr("Error al obtener el perfil del usuario: ", result.get_error())
+		return
+	
+	# Mostrar el panel de perfil con el perfil obtenido
+	profile_panel.show()
+	if result != null:
+		profile_panel.async_show_profile(result)
+	release_mouse()

@@ -1,10 +1,11 @@
-[gd_scene load_steps=3 format=3 uid="uid://iilv4kmeybtx"]
+[gd_scene load_steps=4 format=3 uid="uid://iilv4kmeybtx"]
 
 [ext_resource type="Script" uid="uid://d3d4x5mxt1xnu" path="res://src/ui/components/profile/profile_field_option.gd" id="1_krey6"]
+[ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="2_ktslb"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_pp2nd"]
 
 [node name="ProfileFieldOption" type="MarginContainer"]
-custom_minimum_size = Vector2(50, 70)
+custom_minimum_size = Vector2(50, 50)
 offset_right = 100.0
 offset_bottom = 70.0
 size_flags_horizontal = 0
@@ -16,6 +17,7 @@ custom_minimum_size = Vector2(100, 60)
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 size_flags_vertical = 3
 alignment = 1
@@ -24,17 +26,24 @@ alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
+texture = ExtResource("2_ktslb")
+expand_mode = 3
+stretch_mode = 5
 
 [node name="Label_Title" type="Label" parent="VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 20
 text = "Title"
 
 [node name="Button_Erase" type="Button" parent="VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(35, 35)
 layout_mode = 2
+size_flags_horizontal = 4
 theme_type_variation = &"BlackButton"
 theme_override_constants/icon_max_width = 15
 icon = ExtResource("2_pp2nd")
@@ -42,7 +51,10 @@ icon_alignment = 1
 
 [node name="OptionButton" type="OptionButton" parent="VBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
+focus_mode = 1
+theme_override_font_sizes/font_size = 20
 item_count = 3
 popup/item_0/text = "asd"
 popup/item_0/id = 0

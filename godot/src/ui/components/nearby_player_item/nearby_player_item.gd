@@ -1,5 +1,7 @@
 extends Control
 
+signal profile_picture_clicked(avatar: DclAvatar)
+
 const MUTE = preload("res://assets/ui/audio_off.svg")
 const UNMUTE = preload("res://assets/ui/audio_on.svg")
 const BLOCK = preload("res://assets/ui/block.svg")
@@ -22,6 +24,18 @@ var pause_duration: float = 2
 @onready var button_mute_user: Button = %Button_MuteUser
 @onready var v_box_container_nickname: VBoxContainer = %VBoxContainer_Nickname
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
+
+
+func _ready():
+	# Conectar el evento de click del ProfilePicture
+	profile_picture.gui_input.connect(_on_profile_picture_gui_input)
+
+
+func _on_profile_picture_gui_input(event: InputEvent):
+	if event is InputEventMouseButton:
+		if event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			if avatar != null and is_instance_valid(avatar):
+				profile_picture_clicked.emit(avatar)
 
 
 func async_set_data(avatar_param = null):
