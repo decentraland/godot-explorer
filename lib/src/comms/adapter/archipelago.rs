@@ -12,7 +12,7 @@ use crate::{
     },
 };
 use ethers_core::types::H160;
-use godot::{engine::WebSocketPeer, prelude::*};
+use godot::{classes::WebSocketPeer, prelude::*};
 use prost::Message;
 
 use super::{adapter_trait::Adapter, livekit::LivekitRoom};
@@ -122,7 +122,7 @@ impl ArchipelagoManager {
         }
 
         let buf = PackedByteArray::from_iter(buf);
-        matches!(self.ws_peer.send(buf), godot::engine::global::Error::OK)
+        matches!(self.ws_peer.send(&buf), godot::global::Error::OK)
     }
 
     pub fn poll(&mut self) {
@@ -133,29 +133,29 @@ impl ArchipelagoManager {
 
         match self.state.clone() {
             ArchipelagoState::Connecting => match ws_state {
-                godot::engine::web_socket_peer::State::CLOSED => {
+                godot::classes::web_socket_peer::State::CLOSED => {
                     if (Instant::now() - self.last_try_to_connect).as_secs()
                         > RECONNECT_INTERVAL_SECS
                     {
                         let ws_protocols = {
                             let mut v = PackedStringArray::new();
-                            v.push(GString::from("archipelago"));
+                            v.push("archipelago");
                             v
                         };
 
-                        peer.set("supported_protocols".into(), ws_protocols.to_variant());
-                        peer.call("connect_to_url".into(), &[self.ws_url.clone().to_variant()]);
+                        peer.set("supported_protocols", &ws_protocols.to_variant());
+                        peer.call("connect_to_url", &[self.ws_url.clone().to_variant()]);
 
                         self.last_try_to_connect = Instant::now();
                     }
                 }
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     self.state = ArchipelagoState::Connected;
                 }
                 _ => {}
             },
             ArchipelagoState::Connected => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     let client_packet = ClientPacket {
                         message: Some(client_packet::Message::ChallengeRequest(
                             ChallengeRequestMessage {
@@ -171,8 +171,8 @@ impl ArchipelagoManager {
                 }
             },
             ArchipelagoState::IdentMessageSent => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
-                    while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
+                godot::classes::web_socket_peer::State::OPEN => {
+                    while let Some((packet_length, message)) = get_next_packet(&mut peer.clone()) {
                         match message {
                             server_packet::Message::ChallengeResponse(challenge_msg) => {
                                 tracing::info!("comms > peer msg {:?}", challenge_msg);
@@ -219,8 +219,8 @@ impl ArchipelagoManager {
                 }
             },
             ArchipelagoState::ChallengeMessageSent => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
-                    while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
+                godot::classes::web_socket_peer::State::OPEN => {
+                    while let Some((packet_length, message)) = get_next_packet(&mut peer.clone()) {
                         match message {
                             server_packet::Message::Welcome(_welcome) => {
                                 self.state = ArchipelagoState::WelcomeMessageReceived;
@@ -239,7 +239,7 @@ impl ArchipelagoManager {
                 }
             },
             ArchipelagoState::WelcomeMessageReceived => match ws_state {
-                godot::engine::web_socket_peer::State::OPEN => {
+                godot::classes::web_socket_peer::State::OPEN => {
                     self._handle_messages();
                     if (Instant::now() - self.last_send_heartbeat) > HEARTBEAT_INTERVAL {
                         let client_packet = ClientPacket {
@@ -277,8 +277,8 @@ impl ArchipelagoManager {
         let mut peer = self.ws_peer.clone();
         peer.close();
         match peer.get_ready_state() {
-            godot::engine::web_socket_peer::State::OPEN
-            | godot::engine::web_socket_peer::State::CONNECTING => {
+            godot::classes::web_socket_peer::State::OPEN
+            | godot::classes::web_socket_peer::State::CONNECTING => {
                 peer.close();
             }
             _ => {}
@@ -286,7 +286,7 @@ impl ArchipelagoManager {
     }
 
     fn _handle_messages(&mut self) {
-        while let Some((_packet_length, message)) = get_next_packet(self.ws_peer.clone()) {
+        while let Some((_packet_length, message)) = get_next_packet(&mut self.ws_peer.clone()) {
             match message {
                 server_packet::Message::Kicked(msg) => {
                     tracing::info!("comms > received PeerKicked {:?}", msg.reason);
@@ -348,7 +348,7 @@ impl ArchipelagoManager {
     }
 }
 
-fn get_next_packet(mut peer: Gd<WebSocketPeer>) -> Option<(usize, server_packet::Message)> {
+fn get_next_packet(peer: &mut Gd<WebSocketPeer>) -> Option<(usize, server_packet::Message)> {
     if peer.get_available_packet_count() > 0 {
         let packet = peer.get_packet();
         let packet_length = packet.len();

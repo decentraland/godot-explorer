@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use ethers_core::types::H160;
-use godot::prelude::*;
+use godot::{
+    classes::{PackedScene, ResourceLoader},
+    prelude::*,
+};
 
 use crate::{
     auth::wallet::AsH160,
@@ -66,10 +69,10 @@ impl INode for AvatarScene {
     }
 
     fn ready(&mut self) {
-        DclGlobal::singleton().bind_mut().scene_runner.connect(
-            "scene_spawned".into(),
-            self.base().callable("on_scene_spawned"),
-        );
+        DclGlobal::singleton()
+            .bind_mut()
+            .scene_runner
+            .connect("scene_spawned", &self.base().callable("on_scene_spawned"));
     }
 }
 
@@ -95,7 +98,7 @@ fn sync_crdt_lww_component<T>(
 #[godot_api]
 impl AvatarScene {
     #[signal]
-    fn avatar_scene_changed(avatars: Array<Gd<DclAvatar>>) {}
+    fn avatar_scene_changed(avatars: Array<Gd<DclAvatar>>);
 
     #[func]
     pub fn update_primary_player_profile(&mut self, profile: Gd<DclUserProfile>) {
@@ -135,12 +138,13 @@ impl AvatarScene {
 
         self.avatar_entity.insert(alias, entity_id);
 
-        let mut new_avatar: Gd<DclAvatar> = godot::engine::load::<PackedScene>(
-            "res://src/decentraland_components/avatar/avatar.tscn",
-        )
-        .instantiate()
-        .unwrap()
-        .cast::<DclAvatar>();
+        let mut new_avatar: Gd<DclAvatar> = ResourceLoader::singleton()
+            .load("res://src/decentraland_components/avatar/avatar.tscn")
+            .unwrap()
+            .cast::<PackedScene>()
+            .instantiate()
+            .unwrap()
+            .cast::<DclAvatar>();
 
         if let Some(address) = address.to_string().as_h160() {
             self.avatar_address.insert(address, alias);
@@ -153,7 +157,7 @@ impl AvatarScene {
         let instance_id = self.base().instance_id();
         let avatar_entity_id = entity_id;
         let avatar_changed_scene_callable =
-            Callable::from_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
+            Callable::from_local_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
                 if args.len() != 2 {
                     return Err(());
                 }
@@ -163,7 +167,7 @@ impl AvatarScene {
 
                 if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
                     avatar_scene.call_deferred(
-                        "on_avatar_changed_scene".into(),
+                        "on_avatar_changed_scene",
                         &[
                             scene_id.to_variant(),
                             prev_scene_id.to_variant(),
@@ -176,7 +180,7 @@ impl AvatarScene {
             });
 
         let emote_triggered_callable =
-            Callable::from_fn("on_avatar_trigger_emote", move |args: &[&Variant]| {
+            Callable::from_local_fn("on_avatar_trigger_emote", move |args: &[&Variant]| {
                 if args.len() != 2 {
                     return Err(());
                 }
@@ -186,7 +190,7 @@ impl AvatarScene {
 
                 if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
                     avatar_scene.call_deferred(
-                        "on_avatar_trigger_emote".into(),
+                        "on_avatar_trigger_emote",
                         &[
                             emote_id.to_variant(),
                             looping.to_variant(),
@@ -198,16 +202,17 @@ impl AvatarScene {
                 Ok(Variant::nil())
             });
 
-        new_avatar.connect("change_scene_id".into(), avatar_changed_scene_callable);
-        new_avatar.connect("emote_triggered".into(), emote_triggered_callable);
+        new_avatar.connect("change_scene_id", &avatar_changed_scene_callable);
+        new_avatar.connect("emote_triggered", &emote_triggered_callable);
 
-        self.base_mut().add_child(new_avatar.clone().upcast());
+        self.base_mut()
+            .add_child(&new_avatar.clone().upcast::<Node>());
         self.avatar_godot_scene.insert(entity_id, new_avatar);
 
         // Emit signal with updated avatar list
         let avatars = self.get_avatars();
         self.base_mut()
-            .emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
+            .emit_signal("avatar_scene_changed", &[avatars.to_variant()]);
     }
 
     #[func]
@@ -350,7 +355,8 @@ impl AvatarScene {
 
         let avatars = std::mem::take(&mut self.avatar_godot_scene);
         for (_, mut avatar) in avatars {
-            self.base_mut().remove_child(avatar.clone().upcast());
+            self.base_mut()
+                .remove_child(&avatar.clone().upcast::<Node>());
             avatar.queue_free()
         }
     }
@@ -367,7 +373,8 @@ impl AvatarScene {
             self.last_position_index.remove(&alias);
 
             avatar.queue_free();
-            self.base_mut().remove_child(avatar.upcast());
+            self.base_mut()
+                .remove_child(&avatar.clone().upcast::<Node>());
 
             // Push dirty state in all the scenes
             let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
@@ -382,7 +389,7 @@ impl AvatarScene {
             // Emit signal with updated avatar list
             let avatars = self.get_avatars();
             self.base_mut()
-                .emit_signal("avatar_scene_changed".into(), &[avatars.to_variant()]);
+                .emit_signal("avatar_scene_changed", &[avatars.to_variant()]);
         }
     }
 
@@ -592,7 +599,7 @@ impl AvatarScene {
     pub fn set_avatar_blocked(&mut self, alias: u32, blocked: bool) {
         if let Some(entity_id) = self.avatar_entity.get(&alias) {
             if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
-                avatar.call("set_blocked_and_hidden".into(), &[blocked.to_variant()]);
+                avatar.call("set_blocked_and_hidden", &[blocked.to_variant()]);
             }
         }
     }
@@ -628,7 +635,10 @@ impl AvatarScene {
         self.last_emote_incremental_id.insert(alias, incremental_id);
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
-            avatar_scene.call("async_play_emote".into(), &[emote_urn.to_variant()]);
+            avatar_scene.call(
+                &StringName::from("async_play_emote"),
+                &[emote_urn.to_variant()],
+            );
         }
     }
 
@@ -644,7 +654,7 @@ impl AvatarScene {
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             let dcl_user_profile = DclUserProfile::from_gd(profile.clone());
             avatar_scene.call(
-                "async_update_avatar_from_profile".into(),
+                &StringName::from("async_update_avatar_from_profile"),
                 &[dcl_user_profile.to_variant()],
             );
         }
@@ -736,7 +746,7 @@ impl AvatarScene {
         );
 
         self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
-            "spawn_voice_channel".into(),
+            &StringName::from("spawn_voice_channel"),
             &[sample_rate, num_channels, samples_per_channel],
         );
     }
@@ -752,7 +762,7 @@ impl AvatarScene {
         self.avatar_godot_scene
             .get_mut(&entity_id)
             .unwrap()
-            .call("push_voice_frame".into(), &[frame.to_variant()]);
+            .call(&StringName::from("push_voice_frame"), &[frame.to_variant()]);
     }
 
     // This function should be only called in the first tick

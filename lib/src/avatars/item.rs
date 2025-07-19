@@ -323,7 +323,7 @@ impl DclItemEntityDefinition {
             let mut content_provider = _content_provider.bind_mut();
 
             if let Some(obj) = content_provider.get_gltf_from_hash(GString::from(main_file_hash)) {
-                obj.find_child("Skeleton3D".into()).is_some()
+                obj.find_child("Skeleton3D").is_some()
             } else if let Some(_obj) =
                 content_provider.get_texture_from_hash(GString::from(main_file_hash))
             {

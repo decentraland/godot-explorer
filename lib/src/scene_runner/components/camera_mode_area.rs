@@ -9,6 +9,7 @@ use crate::{
     godot_classes::dcl_camera_mode_area_3d::DclCameraModeArea3D,
     scene_runner::scene::Scene,
 };
+use godot::classes::{PackedScene, ResourceLoader};
 use godot::prelude::*;
 
 pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -31,12 +32,12 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
 
             let new_value = new_value.value.clone();
 
-            let existing = node_3d.try_get_node_as::<Node>(NodePath::from("DCLCameraModeArea3D"));
+            let existing = node_3d.try_get_node_as::<Node>(&NodePath::from("DCLCameraModeArea3D"));
 
             if new_value.is_none() {
                 if let Some(mut camera_mode_area_node) = existing {
                     camera_mode_area_node.queue_free();
-                    node_3d.remove_child(camera_mode_area_node);
+                    node_3d.remove_child(&camera_mode_area_node);
                 }
             } else if let Some(new_value) = new_value {
                 let area = new_value
@@ -55,12 +56,13 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
                         .bind_mut()
                         .set_forced_camera_mode(forced_camera_mode);
                 } else {
-                    let mut camera_mode_area_3d = godot::engine::load::<PackedScene>(
-                        "res://src/decentraland_components/camera_mode_area.tscn",
-                    )
-                    .instantiate()
-                    .unwrap()
-                    .cast::<DclCameraModeArea3D>();
+                    let mut camera_mode_area_3d = ResourceLoader::singleton()
+                        .load("res://src/decentraland_components/camera_mode_area.tscn")
+                        .unwrap()
+                        .cast::<PackedScene>()
+                        .instantiate()
+                        .unwrap()
+                        .cast::<DclCameraModeArea3D>();
 
                     camera_mode_area_3d
                         .bind_mut()
@@ -68,8 +70,8 @@ pub fn update_camera_mode_area(scene: &mut Scene, crdt_state: &mut SceneCrdtStat
                     camera_mode_area_3d
                         .bind_mut()
                         .set_forced_camera_mode(forced_camera_mode);
-                    camera_mode_area_3d.set_name(GString::from("DCLCameraModeArea3D"));
-                    node_3d.add_child(camera_mode_area_3d.clone().upcast());
+                    camera_mode_area_3d.set_name(&GString::from("DCLCameraModeArea3D"));
+                    node_3d.add_child(&camera_mode_area_3d.clone().upcast::<Node>());
                 }
             }
         }

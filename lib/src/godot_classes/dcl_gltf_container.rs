@@ -1,4 +1,4 @@
-use godot::engine::AnimationPlayer;
+use godot::classes::AnimationPlayer;
 use godot::prelude::*;
 
 use crate::dcl::components::proto_components::sdk::components::{PbAnimationState, PbAnimator};
@@ -137,7 +137,7 @@ impl DclGltfContainer {
         let dcl_scene_runner = scene_runner.bind();
         if let Some(scene) = dcl_scene_runner.get_scene(&SceneId(self.dcl_scene_id)) {
             if let Some(pending_animator_value) = scene.dup_animator.get(&entity_id) {
-                apply_anims(gltf_container_node, pending_animator_value);
+                apply_anims(&gltf_container_node, pending_animator_value);
             } else {
                 let animation_list = animation_player.get_animation_list();
                 let animation_name = if animation_list.len() > 1 {
@@ -154,7 +154,7 @@ impl DclGltfContainer {
                 };
 
                 apply_anims(
-                    gltf_container_node,
+                    &gltf_container_node,
                     &PbAnimator {
                         states: vec![PbAnimationState {
                             clip: animation_name,
