@@ -48,7 +48,7 @@ window/handheld/orientation=6
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dcl_build_plugin/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/webview-godot-android/plugin.cfg")
+enabled=PackedStringArray("res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/webview-godot-android/plugin.cfg")
 
 [filesystem]
 

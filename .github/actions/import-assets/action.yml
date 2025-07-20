@@ -1,11 +1,18 @@
 name: Import assets
 description: Import assets
 
+inputs:
+  cache:
+    description: 'Whether to use cache for Godot assets'
+    required: false
+    default: 'false'
+
 runs:
   using: composite
   steps:
     # Step 1: Restore cache
     - name: Restore Godot assets cache
+      if: inputs.cache == 'true'
       uses: actions/cache@v3
       with:
         path: godot/.godot
@@ -18,6 +25,7 @@ runs:
 
     # Step 3: Save cache
     - name: Cache Godot assets
+      if: inputs.cache == 'true'
       uses: actions/cache@v3
       with:
         path: godot/.godot

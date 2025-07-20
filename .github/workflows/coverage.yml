@@ -76,6 +76,8 @@ jobs:
 
       - name: Import Assets
         uses: ./.github/actions/import-assets
+        with:
+          cache: false
 
       - name: Run xtask coverage
         run: |
