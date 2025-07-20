@@ -27,6 +27,8 @@ func _ready():
 	if Global.is_xr():
 		Global.loading_started.connect(self._on_loading_started)
 		Global.loading_finished.connect(self._on_loading_finished)
+	if OS.get_name() == "iOS":
+		world_environment.environment.glow_enabled = false
 
 
 func on_scene_runner_child_entered_tree(node: Node3D):
