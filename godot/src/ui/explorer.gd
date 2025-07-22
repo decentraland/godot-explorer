@@ -472,12 +472,7 @@ func _on_ui_root_gui_input(event: InputEvent):
 
 
 func _on_panel_profile_open_profile():
-	profile_panel.show()
-	var profile := Global.player_identity.get_profile_or_null()
-	print(profile)
-	if profile != null:
-		profile_panel.async_show_profile(profile)
-	release_mouse()
+	_open_own_profile()
 
 
 func _on_adapter_changed(voice_chat_enabled, _adapter_str):
@@ -529,4 +524,15 @@ func _on_panel_chat_player_profile_clicked(avatar: DclAvatar):
 	profile_panel.show()
 	if result != null:
 		profile_panel.async_show_profile(result)
+	release_mouse()
+
+
+func _on_control_menu_open_profile() -> void:
+	_open_own_profile()
+
+func _open_own_profile() -> void:
+	profile_panel.show()
+	var profile := Global.player_identity.get_profile_or_null()
+	if profile != null:
+		profile_panel.async_show_profile(profile)
 	release_mouse()

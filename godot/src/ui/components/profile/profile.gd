@@ -1,10 +1,6 @@
 extends Control
 
-const WEARABLE_ITEM_INSTANTIABLE = preload(
-	"res://src/ui/components/wearable_item/wearable_item.tscn"
-)
-const EMOTE_SQUARE_ITEM = preload("res://src/ui/components/emotes/emote_square_item.tscn")
-
+const PROFILE_EQUIPPED_ITEM = preload("res://src/ui/components/profile/profile_equipped_item.tscn")
 
 @onready var h_box_container_about_1: HBoxContainer = %HBoxContainer_About1
 @onready var label_no_links: Label = %Label_NoLinks
@@ -104,9 +100,9 @@ func async_show_profile(profile: DclUserProfile) -> void:
 			var wearable_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(wearable_urn)
 			if wearable_definition != null:
 				print("Instanciando wearable: ", wearable_urn)
-				var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
+				var wearable_item = PROFILE_EQUIPPED_ITEM.instantiate()
 				h_flow_container_equipped_wearables.add_child(wearable_item)
-				wearable_item.async_set_wearable(wearable_definition)
+				wearable_item.async_set_item(wearable_definition)
 			else:
 				printerr("No se pudo obtener el wearable: ", wearable_urn)
 	else:
@@ -118,9 +114,17 @@ func async_show_profile(profile: DclUserProfile) -> void:
 
 	if not emotes.is_empty():
 		for emote in emotes:
-			var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
-			emote_item.async_load_from_urn(emote.urn)
-			h_flow_container_equipped_wearables.add_child(emote_item)
+			var emote_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(emote.urn)
+			if emote_definition != null:
+				print("Instanciando emote: ", emote.urn)
+				var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
+				h_flow_container_equipped_wearables.add_child(emote_item)
+				emote_item.async_set_item(emote_definition)
+			else:
+				if Emotes.is_emote_default(emote.urn):
+					var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
+					h_flow_container_equipped_wearables.add_child(emote_item)
+					emote_item.set_base_emote(emote.urn)
 	else:
 		print("No se encontraron emotes equipados")
 	

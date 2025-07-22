@@ -61,7 +61,6 @@ grow_vertical = 2
 theme_override_constants/separation = 0
 
 [node name="Header" type="ColorRect" parent="VBoxContainer"]
-z_index = 1
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 color = Color(0.0862745, 0.0823529, 0.0941176, 0.301961)

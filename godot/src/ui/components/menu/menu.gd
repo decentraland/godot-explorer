@@ -1,5 +1,6 @@
 extends Control
 
+signal open_profile
 signal hide_menu
 signal jump_to(Vector2i)
 signal toggle_minimap
@@ -193,7 +194,7 @@ func _on_button_backpack_pressed():
 
 func _on_menu_profile_button_open_menu_profile():
 	select_node(control_profile_settings)
-
+	open_profile.emit()
 
 func fade_in(node: Control):
 	selected_node = node

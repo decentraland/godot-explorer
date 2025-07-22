@@ -1,0 +1,111 @@
+[gd_scene load_steps=8 format=3 uid="uid://drq5jh5xpenw1"]
+
+[ext_resource type="Script" uid="uid://dkt5n7cdnupm4" path="res://src/ui/components/item_preview/item_preview.gd" id="1_rugyg"]
+[ext_resource type="Texture2D" uid="uid://c0qx68m7rge52" path="res://assets/ui/MythicThumbnail.png" id="2_xicoh"]
+[ext_resource type="Texture2D" uid="uid://vnikogxsqjwe" path="res://assets/ui/Subtract.svg" id="4_63ids"]
+[ext_resource type="Texture2D" uid="uid://dw4mn6l1jn25f" path="res://assets/ui/Intersect.svg" id="5_0rbuu"]
+[ext_resource type="Texture2D" uid="uid://bygnpeber2qmc" path="res://assets/ui/wearable_categories/mask-icon.svg" id="6_g7el2"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="7_ph8vs"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6655i"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="ItemPreview" type="Control"]
+custom_minimum_size = Vector2(150, 150)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 150.0
+offset_bottom = 150.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 1
+script = ExtResource("1_rugyg")
+
+[node name="PanelContainer_White" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_6655i")
+
+[node name="TextureRect_Background" type="TextureRect" parent="PanelContainer_White"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_stretch_ratio = 0.0
+mouse_filter = 2
+texture = ExtResource("2_xicoh")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="TextureRect_Preview" type="TextureRect" parent="PanelContainer_White"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 3
+stretch_mode = 5
+
+[node name="TextureRect_Preview3" type="TextureRect" parent="PanelContainer_White/TextureRect_Preview"]
+custom_minimum_size = Vector2(42, 42)
+layout_mode = 1
+offset_right = 36.0
+offset_bottom = 36.0
+size_flags_horizontal = 0
+mouse_filter = 2
+texture = ExtResource("4_63ids")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="TextureRect_Preview4" type="TextureRect" parent="PanelContainer_White/TextureRect_Preview"]
+custom_minimum_size = Vector2(42, 42)
+layout_mode = 1
+offset_right = 28.0
+offset_bottom = 28.0
+size_flags_horizontal = 0
+mouse_filter = 2
+texture = ExtResource("5_0rbuu")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="TextureRect_Category" type="TextureRect" parent="PanelContainer_White/TextureRect_Preview"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.01
+anchor_top = 0.01
+anchor_right = 0.07
+anchor_bottom = 0.07
+offset_right = 12.0
+offset_bottom = 12.0
+size_flags_horizontal = 0
+mouse_filter = 2
+texture = ExtResource("6_g7el2")
+expand_mode = 1
+stretch_mode = 4
+
+[node name="TextureProgressBar_Loading" parent="." instance=ExtResource("7_ph8vs")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
