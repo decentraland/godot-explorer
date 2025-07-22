@@ -369,8 +369,9 @@ text = "Equipped Items"
 
 [node name="HFlowContainer_EquippedWearables" type="HFlowContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 500)
 layout_mode = 2
+theme_override_constants/h_separation = 15
+theme_override_constants/v_separation = 15
 last_wrap_alignment = 1
 
 [connection signal="gui_input" from="ColorRect" to="." method="_on_color_rect_gui_input"]

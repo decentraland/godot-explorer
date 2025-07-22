@@ -73,15 +73,15 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	print(profile_dictionary)
 	var loading_id := _set_avatar_loading()
 	
-	# Limpiar wearables anteriores
+	var equipped_button_group = ButtonGroup.new()
+	equipped_button_group.allow_unpress = true
+	
 	for child in h_flow_container_equipped_wearables.get_children():
 		child.queue_free()
 	
-	# Cargar los avatars en paralelo con los wearables
 	await avatar_preview_portrait.avatar.async_update_avatar_from_profile(profile)
 	await avatar_preview_landscape.avatar.async_update_avatar_from_profile(profile)
 	
-	# Obtener los wearables equipados desde la ruta correcta
 	var avatar_data = profile_dictionary.get("content", {}).get("avatar", {})
 	var wearables_urns = avatar_data.get("wearables", [])
 	print("Wearables encontrados: ", wearables_urns)
@@ -102,6 +102,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 				print("Instanciando wearable: ", wearable_urn)
 				var wearable_item = PROFILE_EQUIPPED_ITEM.instantiate()
 				h_flow_container_equipped_wearables.add_child(wearable_item)
+				wearable_item.button_group = equipped_button_group
 				wearable_item.async_set_item(wearable_definition)
 			else:
 				printerr("No se pudo obtener el wearable: ", wearable_urn)
@@ -119,13 +120,16 @@ func async_show_profile(profile: DclUserProfile) -> void:
 				print("Instanciando emote: ", emote.urn)
 				var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
 				h_flow_container_equipped_wearables.add_child(emote_item)
+				emote_item.button_group = equipped_button_group
 				emote_item.async_set_item(emote_definition)
 			else:
 				if Emotes.is_emote_default(emote.urn):
 					var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
 					h_flow_container_equipped_wearables.add_child(emote_item)
+					emote_item.button_group = equipped_button_group
 					emote_item.set_base_emote(emote.urn)
 	else:
 		print("No se encontraron emotes equipados")
 	
 	_unset_avatar_loading(loading_id)
+	
