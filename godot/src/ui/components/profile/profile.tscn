@@ -1,24 +1,34 @@
-[gd_scene load_steps=12 format=3 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=15 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="1_fgcha"]
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
 [ext_resource type="PackedScene" uid="uid://iilv4kmeybtx" path="res://src/ui/components/profile/profile_field_option.tscn" id="2_orrtq"]
+[ext_resource type="Shader" uid="uid://c17t4i65mhoo0" path="res://src/ui/components/profile/profile.gdshader" id="3_4hw2j"]
 [ext_resource type="Texture2D" uid="uid://b6t3f0hltrjov" path="res://assets/ui/edit_icon.svg" id="3_gf7h4"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/components/utils/hide_orientation.gd" id="3_oe5oo"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_4hw2j"]
 [ext_resource type="PackedScene" uid="uid://cib31p07gwaj5" path="res://src/ui/components/profile/profile_field_text.tscn" id="4_8pwo8"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="5_yx7pe"]
+[ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="7_yx7pe"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="9_4hw2j"]
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_l7lko"]
+shader = ExtResource("3_4hw2j")
+shader_parameter/background_color = Color(0.115842, 0.0424458, 0.154271, 1)
+shader_parameter/centers = PackedVector2Array(0, 0, 0.25, 1.5, 0.75, 1.5, 1.5, 0.75)
+shader_parameter/radii = PackedFloat32Array(0.75, 0.75, 0.75, 0.75)
+shader_parameter/colors = PackedVector4Array(150, 20, 80, 0.005, 150, 200, 50, 0.005, 150, 200, 50, 0.005, 150, 200, 50, 0.005)
+shader_parameter/time_scale = 1.0
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_y2op1"]
-bg_color = Color(0.300099, 0.0251559, 0.385166, 1)
-corner_radius_top_left = 30
-corner_radius_top_right = 30
-corner_radius_bottom_right = 30
-corner_radius_bottom_left = 30
+bg_color = Color(0.301961, 0.0235294, 0.384314, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8pwo8"]
-bg_color = Color(0, 0, 0, 0.196078)
+bg_color = Color(0, 0, 0, 0.352941)
 corner_radius_top_left = 15
 corner_radius_top_right = 15
 corner_radius_bottom_right = 15
@@ -59,6 +69,8 @@ default_margin = 50
 metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 
 [node name="Panel" type="Panel" parent="ColorRect/SafeMarginContainer"]
+show_behind_parent = true
+material = SubResource("ShaderMaterial_l7lko")
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_y2op1")
 
@@ -142,6 +154,7 @@ theme_override_constants/separation = 30
 
 [node name="Control_Avatar" type="Control" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(150, 400)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -203,6 +216,8 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 24
 text = "Badges"
+label_settings = ExtResource("7_yx7pe")
+uppercase = true
 
 [node name="HBoxContainer_Badges" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_Badges/MarginContainer/VBoxContainer_Badges"]
 layout_mode = 2
@@ -238,6 +253,8 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 24
 text = "About"
+label_settings = ExtResource("7_yx7pe")
+uppercase = true
 
 [node name="Button_EditAbout" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer"]
 unique_name_in_owner = true
@@ -302,6 +319,8 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 24
 text = "Links"
+label_settings = ExtResource("7_yx7pe")
+uppercase = true
 
 [node name="Button_EditLinks" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer"]
 unique_name_in_owner = true
@@ -366,6 +385,8 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 24
 text = "Equipped Items"
+label_settings = ExtResource("7_yx7pe")
+uppercase = true
 
 [node name="HFlowContainer_EquippedWearables" type="HFlowContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_EquippedItems/MarginContainer/VBoxContainer_About"]
 unique_name_in_owner = true

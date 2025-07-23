@@ -34,23 +34,15 @@ func set_base_emote(urn:String):
 
 
 func _update_view() -> void:
-	#var margin_pressed = 0
-	#var margin_unpressed = 15
+
 	if is_pressed:
 		marquee_label_name.check_and_start_marquee()
 		if is_buyable:
 			button_buy.show()
-		#margin_container.add_theme_constant_override("margin_top", margin_pressed)
-		#margin_container.add_theme_constant_override("margin_left", margin_pressed)
-		#margin_container.add_theme_constant_override("margin_bottom", margin_pressed)
-		#margin_container.add_theme_constant_override("margin_right", margin_pressed)
 	else:
 		button_buy.hide()
 		marquee_label_name.stop_marquee_effect()
-		#margin_container.add_theme_constant_override("margin_top", margin_unpressed)
-		#margin_container.add_theme_constant_override("margin_left", margin_unpressed)
-		#margin_container.add_theme_constant_override("margin_bottom", margin_unpressed)
-		#margin_container.add_theme_constant_override("margin_right", margin_unpressed)
+
 
 
 func _on_toggled(toggled_on: bool) -> void:

@@ -70,7 +70,6 @@ func _unset_avatar_loading(current: int):
 func async_show_profile(profile: DclUserProfile) -> void:
 	isOwnPassport = profile == Global.player_identity.get_profile_or_null()
 	var profile_dictionary = profile.to_godot_dictionary()
-	print(profile_dictionary)
 	var loading_id := _set_avatar_loading()
 	
 	var equipped_button_group = ButtonGroup.new()
@@ -84,7 +83,6 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	
 	var avatar_data = profile_dictionary.get("content", {}).get("avatar", {})
 	var wearables_urns = avatar_data.get("wearables", [])
-	print("Wearables encontrados: ", wearables_urns)
 
 	if not wearables_urns.is_empty():
 		# Solicitar los wearables al servidor
@@ -94,30 +92,25 @@ func async_show_profile(profile: DclUserProfile) -> void:
 		)
 		await PromiseUtils.async_all(equipped_wearables_promises)
 		
-		# Crear y mostrar cada wearable item
-		print("Procesando ", wearables_urns.size(), " wearables")
+		
 		for wearable_urn in wearables_urns:
 			var wearable_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(wearable_urn)
 			if wearable_definition != null:
-				print("Instanciando wearable: ", wearable_urn)
 				var wearable_item = PROFILE_EQUIPPED_ITEM.instantiate()
 				h_flow_container_equipped_wearables.add_child(wearable_item)
 				wearable_item.button_group = equipped_button_group
 				wearable_item.async_set_item(wearable_definition)
 			else:
-				printerr("No se pudo obtener el wearable: ", wearable_urn)
+				printerr("Error getting wearable: ", wearable_urn)
 	else:
-		print("No se encontraron wearables equipados")
+		printerr("Error getting wearables")
 	
-	# Obtener los emotes equipados desde la ruta correcta
 	var emotes = avatar_data.get("emotes", [])
-	print("Emotes encontrados: ", emotes)
 
 	if not emotes.is_empty():
 		for emote in emotes:
 			var emote_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(emote.urn)
 			if emote_definition != null:
-				print("Instanciando emote: ", emote.urn)
 				var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
 				h_flow_container_equipped_wearables.add_child(emote_item)
 				emote_item.button_group = equipped_button_group
@@ -129,7 +122,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 					emote_item.button_group = equipped_button_group
 					emote_item.set_base_emote(emote.urn)
 	else:
-		print("No se encontraron emotes equipados")
+		printerr("Error getting emotes")
 	
 	_unset_avatar_loading(loading_id)
 	

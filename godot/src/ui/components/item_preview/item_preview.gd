@@ -41,7 +41,6 @@ func set_base_emote_info(urn: String):
 
 func async_set_item(item: DclItemEntityDefinition):
 	item_data = item
-	print(item.get_id())
 	_update_category_icon(item)
 	_update_rarity_background(item)
 	_update_thumbnail(item)
@@ -80,6 +79,7 @@ func _update_thumbnail(item: DclItemEntityDefinition):
 
 
 func _update_rarity_background(item: DclItemEntityDefinition):
+	print('Item Rarity: ', item.get_rarity())
 	match item.get_rarity():
 		"common":
 			texture_rect_background.texture = common_thumbnail
