@@ -1,9 +1,11 @@
-[gd_scene load_steps=8 format=3 uid="uid://cc14rtphm0sjh"]
+[gd_scene load_steps=11 format=3 uid="uid://cc14rtphm0sjh"]
 
 [ext_resource type="Script" uid="uid://cha42k205r6lq" path="res://src/ui/components/profile/profile_equipped_item.gd" id="1_2saji"]
 [ext_resource type="ButtonGroup" uid="uid://c1dh04f5u2ojq" path="res://src/ui/components/profile/equipped_button_group.tres" id="1_mktc3"]
 [ext_resource type="PackedScene" uid="uid://drq5jh5xpenw1" path="res://src/ui/components/item_preview/item_preview.tscn" id="2_7lhdd"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_mktc3"]
+[ext_resource type="PackedScene" uid="uid://cqsb3na8hoq06" path="res://src/ui/components/marquee_label/marquee_label.tscn" id="4_uq8ip"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_2saji"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="5_ykumo"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7lhdd"]
@@ -12,6 +14,9 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+
+[sub_resource type="LabelSettings" id="LabelSettings_3nubj"]
+font = ExtResource("5_2saji")
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4co5n"]
 content_margin_left = 8.0
@@ -76,22 +81,29 @@ layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 20.0
 
-[node name="Label_Name" type="Label" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
-unique_name_in_owner = true
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-size_flags_vertical = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-text = "Item name"
-clip_text = true
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
 
-[node name="PanelContainer_Rarity" type="PanelContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer"]
+layout_mode = 2
+
+[node name="MarqueeLabel_Name" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_uq8ip")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 20)
+layout_mode = 2
+label_settings = SubResource("LabelSettings_3nubj")
+
+[node name="PanelContainer_Rarity" type="PanelContainer" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_4co5n")
 
-[node name="Label_Rarity" type="Label" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/PanelContainer_Rarity"]
+[node name="Label_Rarity" type="Label" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer/PanelContainer_Rarity"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -101,7 +113,7 @@ text = "Rarity"
 horizontal_alignment = 1
 uppercase = true
 
-[node name="Button_Buy" type="Button" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="Button_Buy" type="Button" parent="MarginContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
