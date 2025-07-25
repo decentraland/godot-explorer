@@ -1,13 +1,25 @@
-[gd_scene load_steps=4 format=3 uid="uid://iilv4kmeybtx"]
+[gd_scene load_steps=6 format=3 uid="uid://iilv4kmeybtx"]
 
 [ext_resource type="Script" uid="uid://d3d4x5mxt1xnu" path="res://src/ui/components/profile/profile_field_option.gd" id="1_krey6"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="2_ktslb"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_pp2nd"]
+[ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="3_23jnd"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_23jnd"]
+content_margin_left = 5.0
+content_margin_top = 5.0
+content_margin_right = 5.0
+content_margin_bottom = 5.0
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
 
 [node name="ProfileFieldOption" type="MarginContainer"]
-custom_minimum_size = Vector2(50, 50)
-offset_right = 100.0
-offset_bottom = 70.0
+custom_minimum_size = Vector2(150, 0)
+offset_right = 150.0
+offset_bottom = 462.0
 size_flags_horizontal = 0
 size_flags_vertical = 0
 script = ExtResource("1_krey6")
@@ -19,13 +31,15 @@ layout_mode = 2
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 4
 alignment = 1
 
 [node name="TextureRect_Icon" type="TextureRect" parent="VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(20, 20)
+custom_minimum_size = Vector2(25, 25)
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
 texture = ExtResource("2_ktslb")
 expand_mode = 3
 stretch_mode = 5
@@ -34,16 +48,38 @@ stretch_mode = 5
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 8
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 20
-text = "Title"
+text = "title"
+label_settings = ExtResource("3_23jnd")
+uppercase = true
 
-[node name="Button_Erase" type="Button" parent="VBoxContainer/HBoxContainer"]
-unique_name_in_owner = true
+[node name="Control" type="Control" parent="VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(35, 35)
 layout_mode = 2
 size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="Button_Erase" type="Button" parent="VBoxContainer/HBoxContainer/Control"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -17.5
+offset_top = -17.5
+offset_right = 17.5
+offset_bottom = 17.5
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
 theme_type_variation = &"BlackButton"
 theme_override_constants/icon_max_width = 15
 icon = ExtResource("2_pp2nd")
@@ -55,6 +91,10 @@ custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 focus_mode = 1
 theme_override_font_sizes/font_size = 20
+theme_override_styles/focus = SubResource("StyleBoxFlat_23jnd")
+theme_override_styles/hover = SubResource("StyleBoxFlat_23jnd")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_23jnd")
+theme_override_styles/normal = SubResource("StyleBoxFlat_23jnd")
 item_count = 3
 popup/item_0/text = "asd"
 popup/item_0/id = 0
@@ -67,7 +107,8 @@ popup/item_2/id = 2
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+label_settings = ExtResource("3_23jnd")
 
 [connection signal="change_editing" from="." to="." method="_on_change_editing"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer/Button_Erase" to="." method="_on_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/Control/Button_Erase" to="." method="_on_button_pressed"]
 [connection signal="item_selected" from="VBoxContainer/OptionButton" to="." method="_on_option_button_item_selected"]

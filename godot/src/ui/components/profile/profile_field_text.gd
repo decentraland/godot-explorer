@@ -1,17 +1,22 @@
 extends Control
 signal change_editing(editing:bool)
 
-@export var title:String = "title"
+@export var title:String = "Title"
+@export var instructions:String = "Here you can explain how use this field"
 @export var icon:Texture
+@export var only_field:bool = false
 
 @onready var texture_rect_icon: TextureRect = %TextureRect_Icon
 @onready var label_title: Label = %Label_Title
 @onready var button_erase: Button = %Button_Erase
 @onready var label_value: Label = %Label_Value
 @onready var text_edit_value: TextEdit = %TextEdit_Value
+@onready var h_box_container: HBoxContainer = %HBoxContainer
 
 
 func _ready() -> void:
+	if only_field:
+		h_box_container.hide()
 	_on_change_editing(false)
 	label_title.text = title
 	if icon:
