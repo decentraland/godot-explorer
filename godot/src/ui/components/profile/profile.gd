@@ -1,6 +1,11 @@
 extends Control
 
 const PROFILE_EQUIPPED_ITEM = preload("res://src/ui/components/profile/profile_equipped_item.tscn")
+const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_link_button.tscn")
+
+
+#MOCKED DATA:
+const links = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Facebook", "link":"www.facebook.com"}]
 
 @onready var h_box_container_about_1: HBoxContainer = %HBoxContainer_About1
 @onready var label_no_links: Label = %Label_NoLinks
@@ -19,12 +24,19 @@ const PROFILE_EQUIPPED_ITEM = preload("res://src/ui/components/profile/profile_e
 @onready var h_separator_1: HSeparator = %HSeparator1
 @onready var v_box_container_about_actions: VBoxContainer = %VBoxContainer_AboutActions
 @onready var v_box_container_links_actions: VBoxContainer = %VBoxContainer_LinksActions
+@onready var h_flow_container_links: HFlowContainer = %HFlowContainer_Links
+@onready var button_add_link: Button = %Button_AddLink
+
 
 var avatar_loading_counter: int = 0
 var isOwnPassport: bool = false
 
 func _ready() -> void:
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for link in links:
+		var new_link_button = PROFILE_LINK_BUTTON.instantiate()
+		h_flow_container_links.add_child(new_link_button)
+		new_link_button.text = link.label
 	_turn_about_editing(false)
 	_turn_links_editing(false)
 
@@ -147,11 +159,20 @@ func _turn_about_editing(editing:bool) -> void:
 	
 
 func _turn_links_editing(editing:bool) -> void:
+	button_add_link.disabled = links.size() >= 5
+	if h_flow_container_links.get_child_count() > 0 and h_flow_container_links.get_child(h_flow_container_links.get_child_count() - 1) != button_add_link:
+		h_flow_container_links.move_child(button_add_link, h_flow_container_links.get_child_count() - 1)
+	for child in h_flow_container_links.get_children():
+		if child.is_class("ProfileLinkButton"):
+			print("CHANGE EDITING")
+			child.emit_signal('change_editing', editing)
 	if editing:
+		button_add_link.show()
 		label_editing_links.show()
 		v_box_container_links_actions.show()
 		button_edit_links.hide()
 	else:
+		button_add_link.hide()
 		label_editing_links.hide()
 		v_box_container_links_actions.hide()
 		button_edit_links.show()
