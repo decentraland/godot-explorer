@@ -11,8 +11,9 @@ func _ready():
 
 
 func _on_config_changed(param: ConfigData.ConfigParams):
-	set_skybox(Global.get_config().skybox)
-	if param == ConfigData.ConfigParams.ANTI_ALIASING:
+	if param == ConfigData.ConfigParams.SKY_BOX:
+		set_skybox(Global.get_config().skybox)
+	elif param == ConfigData.ConfigParams.ANTI_ALIASING:
 		set_anti_aliasing(Global.get_config().anti_aliasing)
 
 
