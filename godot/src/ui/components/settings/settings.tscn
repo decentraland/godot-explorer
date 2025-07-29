@@ -1,15 +1,15 @@
 [gd_scene load_steps=17 format=3 uid="uid://cfuskyu58uo2v"]
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
-[ext_resource type="Script" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
+[ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/components/settings/settings.gd" id="2_gps4e"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_1ym31"]
 [ext_resource type="Texture2D" uid="uid://djwf5d8a0rw6y" path="res://assets/ui/graphics.svg" id="5_lso3q"]
 [ext_resource type="Texture2D" uid="uid://fx5fj4f8uf7k" path="res://assets/ui/Filter.svg" id="6_br0rl"]
 [ext_resource type="Texture2D" uid="uid://bqypc3fidla5s" path="res://assets/ui/SettingsOff.png" id="6_gugrl"]
 [ext_resource type="Texture2D" uid="uid://g38eqwq311ph" path="res://assets/ui/speaker-on.svg" id="6_q1ods"]
 [ext_resource type="PackedScene" uid="uid://b5lfwgmd7h8cj" path="res://src/ui/components/radio_selector/radio_selector.tscn" id="7_u8bs2"]
-[ext_resource type="Script" path="res://src/ui/components/utils/orientation_container.gd" id="8_aj150"]
-[ext_resource type="Script" path="res://src/ui/components/utils/safe_margin_container.gd" id="8_wyn32"]
+[ext_resource type="Script" uid="uid://cqwijn2jpiuqj" path="res://src/ui/components/utils/orientation_container.gd" id="8_aj150"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="8_wyn32"]
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_jdndg"]
 
@@ -463,6 +463,7 @@ layout_mode = 2
 items = Array[String](["BASIC", "NORMAL", "REALISTIC"])
 
 [node name="Shadows" type="VBoxContainer" parent="ColorRect_Content/SafeMarginContainer/ScrollContainer/VBoxContainer/VBoxContainer_Graphics/CustomSettings/VBoxContainer_Custom"]
+visible = false
 layout_mode = 2
 size_flags_vertical = 0
 alignment = 1
