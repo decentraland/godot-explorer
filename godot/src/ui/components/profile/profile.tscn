@@ -340,6 +340,7 @@ theme_override_constants/v_separation = 20
 columns = 2
 
 [node name="ProfileFieldOption_Country" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -347,6 +348,7 @@ title = "Country"
 icon = ExtResource("11_q5707")
 
 [node name="ProfileFieldOption_Language" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -355,6 +357,7 @@ title = "Language"
 icon = ExtResource("12_6ld5p")
 
 [node name="ProfileFieldOption_Pronouns" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -363,6 +366,7 @@ title = "Pronouns"
 icon = ExtResource("13_wt1aa")
 
 [node name="ProfileFieldOption_Gender" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -371,6 +375,7 @@ title = "Gender"
 icon = ExtResource("14_v4qqr")
 
 [node name="ProfileFieldOption_RelationshipStatus" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -379,6 +384,7 @@ title = "Relationship Status"
 icon = ExtResource("15_qnwic")
 
 [node name="ProfileFieldOption_SexualOrientation" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -387,6 +393,7 @@ title = "Sexual Orientation"
 icon = ExtResource("16_d31ng")
 
 [node name="ProfileFieldOption_EmploymentStatus" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("2_orrtq")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -395,6 +402,7 @@ title = "Employment Status"
 icon = ExtResource("17_g7mhu")
 
 [node name="ProfileFieldText_Profession" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("4_8pwo8")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -403,6 +411,7 @@ title = "Profession"
 icon = ExtResource("18_uj2xw")
 
 [node name="ProfileFieldText_RealName" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("4_8pwo8")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -411,6 +420,7 @@ title = "Real Name"
 icon = ExtResource("19_mpru1")
 
 [node name="ProfileFieldText_Hobbies" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/GridContainer_About" instance=ExtResource("4_8pwo8")]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 size_flags_horizontal = 3

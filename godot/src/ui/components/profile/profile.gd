@@ -26,6 +26,16 @@ const links = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Face
 @onready var v_box_container_links_actions: VBoxContainer = %VBoxContainer_LinksActions
 @onready var h_flow_container_links: HFlowContainer = %HFlowContainer_Links
 @onready var button_add_link: Button = %Button_AddLink
+@onready var profile_field_option_country: MarginContainer = %ProfileFieldOption_Country
+@onready var profile_field_option_language: MarginContainer = %ProfileFieldOption_Language
+@onready var profile_field_option_pronouns: MarginContainer = %ProfileFieldOption_Pronouns
+@onready var profile_field_option_gender: MarginContainer = %ProfileFieldOption_Gender
+@onready var profile_field_option_relationship_status: MarginContainer = %ProfileFieldOption_RelationshipStatus
+@onready var profile_field_option_sexual_orientation: MarginContainer = %ProfileFieldOption_SexualOrientation
+@onready var profile_field_option_employment_status: MarginContainer = %ProfileFieldOption_EmploymentStatus
+@onready var profile_field_text_profession: MarginContainer = %ProfileFieldText_Profession
+@onready var profile_field_text_real_name: MarginContainer = %ProfileFieldText_RealName
+@onready var profile_field_text_hobbies: MarginContainer = %ProfileFieldText_Hobbies
 
 
 var avatar_loading_counter: int = 0
@@ -39,6 +49,24 @@ func _ready() -> void:
 		new_link_button.text = link.label
 	_turn_about_editing(false)
 	_turn_links_editing(false)
+	
+	for country in ProfileConstants.COUNTRIES:
+		profile_field_option_country.add_option(country)
+	for language in ProfileConstants.LANGUAGES:
+		profile_field_option_language.add_option(language)
+	for pronoun in ProfileConstants.PRONOUNS:
+		profile_field_option_pronouns.add_option(pronoun)
+	for gender in ProfileConstants.GENDERS:
+		profile_field_option_gender.add_option(gender)
+	for relationship in ProfileConstants.RELATIONSHIP_STATUS:
+		profile_field_option_relationship_status.add_option(relationship)
+	for sexual_orientation in ProfileConstants.SEXUAL_ORIENTATIONS:
+		profile_field_option_sexual_orientation.add_option(sexual_orientation)
+	for employment_status in ProfileConstants.EMPLOYMENT_STATUS:
+		profile_field_option_employment_status.add_option(employment_status)
+	for child in grid_container_about.get_children():
+		if child.is_class("ProfileFieldOption"):
+			child.emit_signal("item_selected", 0)
 
 func _on_color_rect_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:

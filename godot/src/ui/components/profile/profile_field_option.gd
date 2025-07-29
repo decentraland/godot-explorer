@@ -1,3 +1,4 @@
+class_name ProfileFieldOption
 extends Control
 signal change_editing(editing:bool)
 
@@ -19,24 +20,33 @@ func _ready() -> void:
 
 func _on_option_button_item_selected(index: int) -> void:
 	label_value.text = option_button.get_item_text(index)
-	if option_button.selected != -1:
-				button_erase.show()
+	if option_button.selected > 0:
+		button_erase.show()
+	else:
+		button_erase.hide()
 				
 func _on_change_editing(editing: bool) -> void:
 	if editing:
 		self.show()
 		option_button.show()
-		if option_button.selected != -1:
+		if option_button.selected > 0:
 			button_erase.show()
 		label_value.hide()
 	else:
 		print(option_button.selected)
-		if option_button.selected == -1:
+		if option_button.selected <= 0:
 			self.hide()
 		button_erase.hide()
 		option_button.hide()
 		label_value.show()
 
 func _on_button_pressed() -> void:
-	option_button.selected = -1
+	option_button.selected = 0
 	button_erase.hide()
+
+func add_option(option:String)-> void:
+	option_button.add_item(option)
+
+
+func select_option(index:int) -> void:
+	_on_option_button_item_selected(index)
