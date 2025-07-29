@@ -151,7 +151,7 @@ void sky() {
   stars *= milky_way * stars_energy;
 
 
-  float is_floor = smoothstep(.00125,-.00125,dot(EYEDIR, vec3(0.0, 1.0, 0.0)));
+  float is_floor = smoothstep(-.025,-.05,dot(EYEDIR, vec3(0.0, 1.0, 0.0)));
 
   float day_night_blend = sin(cycle * 3.14159);
 

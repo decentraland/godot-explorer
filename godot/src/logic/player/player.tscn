@@ -35,6 +35,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, -0.21)
 [node name="Camera3D" type="DclCamera3D" parent="Mount"]
 smoothing_speed = 2.0
 target_fov = 75.0
+far = 100.0
 
 [node name="Avatar" parent="." instance=ExtResource("2_n22nx")]
 skip_process = true

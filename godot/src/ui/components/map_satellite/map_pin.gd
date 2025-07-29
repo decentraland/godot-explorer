@@ -72,6 +72,7 @@ func show_cluster(quantity: int = 1):
 
 
 func _process(_delta: float) -> void:
+	return
 	var camera_zoom = get_sibling_camera_zoom()
 	scale = Vector2.ONE / camera_zoom
 

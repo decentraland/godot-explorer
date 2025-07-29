@@ -89,9 +89,9 @@ shader_parameter/tint_color_cycle_bottom = SubResource("GradientTexture1D_g2lqa"
 shader_parameter/sun_color_cycle = SubResource("GradientTexture1D_c4tp5")
 shader_parameter/moon_color_cycle = SubResource("GradientTexture1D_nrrql")
 shader_parameter/dither_range = 0.1
-shader_parameter/dither_amount = 256.0
+shader_parameter/dither_amount = 128.0
 shader_parameter/other_sun_rotation_offset = Vector2(0.3, 0.3)
-shader_parameter/floor_color = Color(0, 0.301978, 0.158083, 1)
+shader_parameter/floor_color = Color(0.169958, 0.000345964, 0.313964, 1)
 
 [resource]
 sky_material = SubResource("ShaderMaterial_fx4kt")
