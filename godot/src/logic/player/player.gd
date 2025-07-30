@@ -5,6 +5,9 @@ const DEFAULT_CAMERA_FOV = 75.0
 const SPRINTING_CAMERA_FOV = 100.0
 const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 
+var last_position : Vector3
+var actual_velocity_xz : float
+
 var walk_speed = 1.5
 var jog_speed = 8.0
 var run_speed = 11.0
@@ -27,6 +30,9 @@ var current_profile_version: int = -1
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 
+
+func to_xz(pos: Vector3) -> Vector2:
+	return Vector2(pos.x, pos.z)
 
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
 	if !camera_mode_change_blocked:  # if it's already blocked, we don't store the state again...
@@ -63,6 +69,31 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		avatar.set_hidden(true)
 		if play_sound:
 			UiSounds.play_sound("ui_fade_in")
+
+func update_avatar_movement_state(vel: float):
+	avatar.walk = false
+	avatar.jog = false
+	avatar.run = false
+
+	var speed_diffs = {
+		"idle": abs(vel),
+		"walk": abs(vel - walk_speed),
+		"jog": abs(vel - jog_speed),
+		"run": abs(vel - run_speed)
+	}
+
+	var nearest = speed_diffs.keys()[0]
+	for key in speed_diffs.keys():
+		if speed_diffs[key] < speed_diffs[nearest]:
+			nearest = key
+
+	match nearest:
+		"walk":
+			avatar.walk = true
+		"jog":
+			avatar.jog = true
+		"run":
+			avatar.run = true
 
 
 func _ready():
@@ -110,6 +141,7 @@ func clamp_camera_rotation():
 func _physics_process(dt: float) -> void:
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 
+
 	if not Global.explorer_has_focus():  # ignore input
 		input_dir = Vector2(0, 0)
 
@@ -149,22 +181,13 @@ func _physics_process(dt: float) -> void:
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
 	if current_direction:
 		if Input.is_action_pressed("ia_walk"):
-			avatar.walk = true
-			avatar.run = false
-			avatar.jog = false
 			velocity.x = current_direction.x * walk_speed
 			velocity.z = current_direction.z * walk_speed
 		elif Input.is_action_pressed("ia_sprint"):
 			camera.set_target_fov(SPRINTING_CAMERA_FOV)
-			avatar.walk = false
-			avatar.run = true
-			avatar.jog = false
 			velocity.x = current_direction.x * run_speed
 			velocity.z = current_direction.z * run_speed
 		else:
-			avatar.walk = false
-			avatar.run = false
-			avatar.jog = true
 			velocity.x = current_direction.x * jog_speed
 			velocity.z = current_direction.z * jog_speed
 
@@ -172,16 +195,16 @@ func _physics_process(dt: float) -> void:
 		avatar.rotation.x = 0.0
 		avatar.rotation.z = 0.0
 	else:
-		avatar.walk = false
-		avatar.run = false
-		avatar.jog = false
-
 		velocity.x = move_toward(velocity.x, 0, walk_speed)
 		velocity.z = move_toward(velocity.z, 0, walk_speed)
 
+	actual_velocity_xz = (to_xz(global_position) - to_xz(last_position)).length() / dt
+
+	update_avatar_movement_state(actual_velocity_xz)
+
+	last_position = global_position
 	move_and_slide()
 	position.y = max(position.y, 0)
-
 
 func avatar_look_at(target_position: Vector3):
 	var global_pos := get_global_position()
