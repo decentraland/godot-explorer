@@ -5,8 +5,10 @@ var last_time := 0.0
 
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
 @onready var sky_material = world_environment.environment.sky.sky_material
-@onready var day_fog_color = sky_material.get_shader_parameter("clouds_gradient_day").gradient.colors[0]
-@onready var night_fog_color = sky_material.get_shader_parameter("clouds_gradient_night").gradient.colors[0]
+@onready
+var day_fog_color = sky_material.get_shader_parameter("clouds_gradient_day").gradient.colors[0]
+@onready
+var night_fog_color = sky_material.get_shader_parameter("clouds_gradient_night").gradient.colors[0]
 
 
 func _ready():
@@ -44,8 +46,9 @@ func _on_loading_finished():
 	tween.tween_property(world_environment, "environment:background_energy_multiplier", 1.0, 1.0)
 	tween.tween_property(world_environment, "environment:ambient_light_energy", 1.0, 1.0)
 
-func _process(delta: float) -> void:
+
+func _process(_delta: float) -> void:
 	var cycle = Global.skybox_time.get_normalized_time() + .43
 	cycle -= floor(cycle)
-	var blend = sin(cycle * PI);
+	var blend = sin(cycle * PI)
 	world_environment.environment.fog_light_color = day_fog_color.lerp(night_fog_color, blend)
