@@ -5,8 +5,8 @@ const DEFAULT_CAMERA_FOV = 75.0
 const SPRINTING_CAMERA_FOV = 100.0
 const THIRD_PERSON_CAMERA = Vector3(0.5, 0, 3)
 
-var last_position : Vector3
-var actual_velocity_xz : float
+var last_position: Vector3
+var actual_velocity_xz: float
 
 var walk_speed = 1.5
 var jog_speed = 8.0
@@ -33,6 +33,7 @@ var current_profile_version: int = -1
 
 func to_xz(pos: Vector3) -> Vector2:
 	return Vector2(pos.x, pos.z)
+
 
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
 	if !camera_mode_change_blocked:  # if it's already blocked, we don't store the state again...
@@ -69,6 +70,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		avatar.set_hidden(true)
 		if play_sound:
 			UiSounds.play_sound("ui_fade_in")
+
 
 func update_avatar_movement_state(vel: float):
 	avatar.walk = false
@@ -141,7 +143,6 @@ func clamp_camera_rotation():
 func _physics_process(dt: float) -> void:
 	var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
 
-
 	if not Global.explorer_has_focus():  # ignore input
 		input_dir = Vector2(0, 0)
 
@@ -205,6 +206,7 @@ func _physics_process(dt: float) -> void:
 	last_position = global_position
 	move_and_slide()
 	position.y = max(position.y, 0)
+
 
 func avatar_look_at(target_position: Vector3):
 	var global_pos := get_global_position()
