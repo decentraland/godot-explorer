@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=28 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="1_fgcha"]
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/loading_spinner/loading_spinner.tscn" id="4_4hw2j"]
 [ext_resource type="PackedScene" uid="uid://cib31p07gwaj5" path="res://src/ui/components/profile/profile_field_text.tscn" id="4_8pwo8"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/components/backpack/avatar_preview.tscn" id="5_yx7pe"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="7_m8kjd"]
 [ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="7_yx7pe"]
 [ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="9_uj2xw"]
 [ext_resource type="Texture2D" uid="uid://cl6wfontbtg2d" path="res://assets/ui/profile/country.svg" id="11_q5707"]
@@ -168,9 +169,20 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 30
 
+[node name="VBoxContainer" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label_Nickname" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("7_m8kjd")
+theme_override_font_sizes/font_size = 21
+text = "NickName"
+
 [node name="Control_Avatar" type="Control" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 custom_minimum_size = Vector2(150, 400)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -288,6 +300,9 @@ theme_override_constants/icon_max_width = 15
 toggle_mode = true
 icon = ExtResource("3_gf7h4")
 icon_alignment = 1
+
+[node name="Button" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer"]
+layout_mode = 2
 
 [node name="Label_InfoDescription" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About"]
 unique_name_in_owner = true
@@ -585,6 +600,8 @@ last_wrap_alignment = 1
 
 [connection signal="gui_input" from="ColorRect" to="." method="_on_color_rect_gui_input"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer/Button_EditAbout" to="." method="_on_button_edit_about_pressed"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer/Button" to="." method="_on_button_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutCancel" to="." method="_on_button_about_cancel_pressed"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutSave" to="." method="_on_button_about_save_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer/Button_EditLinks" to="." method="_on_button_edit_links_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksCancel" to="." method="_on_button_links_cancel_pressed"]

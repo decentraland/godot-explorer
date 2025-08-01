@@ -79,7 +79,6 @@ func _update_thumbnail(item: DclItemEntityDefinition):
 
 
 func _update_rarity_background(item: DclItemEntityDefinition):
-	print('Item Rarity: ', item.get_rarity())
 	match item.get_rarity():
 		"common":
 			texture_rect_background.texture = common_thumbnail

@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://iilv4kmeybtx"]
+[gd_scene load_steps=7 format=3 uid="uid://iilv4kmeybtx"]
 
 [ext_resource type="Script" uid="uid://d3d4x5mxt1xnu" path="res://src/ui/components/profile/profile_field_option.gd" id="1_krey6"]
 [ext_resource type="Texture2D" uid="uid://bsi31cwrsdll1" path="res://assets/themes/dark_dcl_theme/icons/Emotes.svg" id="2_ktslb"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="2_pp2nd"]
 [ext_resource type="LabelSettings" uid="uid://chcc4etqvrmaw" path="res://src/ui/components/profile/profile_tittle_label_settings.tres" id="3_23jnd"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="5_foi8g"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_23jnd"]
 content_margin_left = 5.0
@@ -90,7 +91,13 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 focus_mode = 1
-theme_override_font_sizes/font_size = 20
+theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_foi8g")
+theme_override_font_sizes/font_size = 14
 theme_override_styles/focus = SubResource("StyleBoxFlat_23jnd")
 theme_override_styles/hover = SubResource("StyleBoxFlat_23jnd")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_23jnd")
