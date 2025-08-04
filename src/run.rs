@@ -64,13 +64,13 @@ pub fn build(
     if target == "android" {
         // TODO: FFMPEG feature is going to be implemented for mobile platforms
         // For now, disable it for Android builds
-        let mut android_build_args = extra_build_args.clone();
+        let android_build_args = extra_build_args.clone();
 
         build_with_cargo_ndk(release_mode, android_build_args)?;
     } else if target == "ios" {
         // TODO: FFMPEG feature is going to be implemented for mobile platforms
         // For now, disable it for iOS builds
-        let mut ios_build_args = extra_build_args.clone();
+        let ios_build_args = extra_build_args.clone();
 
         let (build_args, with_build_envs) = prepare_build_args_envs(
             release_mode,
