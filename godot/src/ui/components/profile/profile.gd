@@ -12,7 +12,7 @@ const links = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Face
 @onready var avatar_preview_portrait: AvatarPreview = %AvatarPreviewPortrait
 @onready var avatar_preview_landscape: AvatarPreview = %AvatarPreviewLandscape
 @onready var avatar_loading_landscape: TextureProgressBar = %TextureProgressBar_AvatarLoading
-@onready var avatar_loading_portrait: TextureProgressBar = $ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/Control_info/ScrollContainer/VBoxContainer/Control_Avatar/TextureProgressBar_AvatarLoading
+@onready var avatar_loading_portrait: TextureProgressBar = $ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/Control_Avatar/TextureProgressBar_AvatarLoading
 @onready var button_edit_about: Button = %Button_EditAbout
 @onready var button_edit_links: Button = %Button_EditLinks
 @onready var h_flow_container_equipped_wearables: HFlowContainer = %HFlowContainer_EquippedWearables
@@ -24,6 +24,7 @@ const links = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Face
 @onready var v_box_container_links_actions: VBoxContainer = %VBoxContainer_LinksActions
 @onready var h_flow_container_links: HFlowContainer = %HFlowContainer_Links
 @onready var button_add_link: Button = %Button_AddLink
+@onready var profile_field_text_about_me: MarginContainer = %ProfileFieldText_AboutMe
 @onready var profile_field_option_country: MarginContainer = %ProfileFieldOption_Country
 @onready var profile_field_option_language: MarginContainer = %ProfileFieldOption_Language
 @onready var profile_field_option_pronouns: MarginContainer = %ProfileFieldOption_Pronouns
@@ -35,11 +36,17 @@ const links = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Face
 @onready var profile_field_text_real_name: MarginContainer = %ProfileFieldText_RealName
 @onready var profile_field_text_hobbies: MarginContainer = %ProfileFieldText_Hobbies
 @onready var label_nickname: Label = %Label_Nickname
+@onready var label_address: Label = %Label_Address
+@onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
+@onready var label_tag: Label = %Label_Tag
+@onready var button_edit_nick: Button = %Button_EditNick
+@onready var button_claim_name: Button = %Button_ClaimName
 
 var avatar_loading_counter: int = 0
 var isOwnPassport: bool = false
+var hasClaimedName: bool = false
 var current_profile: DclUserProfile = null
-
+var address: String = ""
 var original_country_index: int = 0
 var original_language_index: int = 0
 var original_pronouns_index: int = 0
@@ -50,6 +57,7 @@ var original_employment_index: int = 0
 var original_profession: String = ""
 var original_real_name: String = ""
 var original_hobbies: String = ""
+var original_about_me: String = ""
 
 func _ready() -> void:
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -114,14 +122,10 @@ func _save_original_values() -> void:
 	original_relationship_index = profile_field_option_relationship_status.option_button.selected
 	original_sexual_orientation_index = profile_field_option_sexual_orientation.option_button.selected
 	original_employment_index = profile_field_option_employment_status.option_button.selected
-	
-	var profession_text_edit = profile_field_text_profession.get_node("VBoxContainer/TextEdit_Value")
-	var real_name_text_edit = profile_field_text_real_name.get_node("VBoxContainer/TextEdit_Value")
-	var hobbies_text_edit = profile_field_text_hobbies.get_node("VBoxContainer/TextEdit_Value")
-	
-	original_profession = profession_text_edit.text if profession_text_edit else ""
-	original_real_name = real_name_text_edit.text if real_name_text_edit else ""
-	original_hobbies = hobbies_text_edit.text if hobbies_text_edit else ""
+	original_profession = profile_field_text_profession.text_edit.text
+	original_real_name = profile_field_text_real_name.text_edit.text
+	original_hobbies = profile_field_text_hobbies.text_edit.text
+	original_about_me = profile_field_text_about_me.text_edit.text
 
 func _restore_original_values() -> void:
 	profile_field_option_country.select_option(original_country_index)
@@ -208,13 +212,33 @@ func _save_profile_changes(profile: DclUserProfile) -> void:
 		profile.set_hobbies(current_hobbies)
 		original_hobbies = current_hobbies
 
-func _update_edit_buttons_visibility() -> void:
+func _update_elements_visibility() -> void:
 	if isOwnPassport:
 		button_edit_about.show()
 		button_edit_links.show()
+		button_edit_nick.show()
+		if hasClaimedName:
+			button_claim_name.hide()
+		else:
+			button_claim_name.show()
 	else:
 		button_edit_about.hide()
 		button_edit_links.hide()
+		button_edit_nick.hide()
+		button_claim_name.hide()
+		
+	if hasClaimedName:
+		texture_rect_claimed_checkmark.show()
+		label_tag.hide()
+		button_claim_name.hide()
+	else:
+		texture_rect_claimed_checkmark.hide()
+		label_tag.show()
+		label_tag.text = "#" + address.substr(address.length() - 4, 4)
+		if isOwnPassport:
+			button_claim_name.show()
+
+
 
 func _on_color_rect_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
@@ -239,7 +263,7 @@ func _unset_avatar_loading(current: int):
 	avatar_preview_portrait.show()
 	avatar_preview_landscape.show()
 	
-	_update_edit_buttons_visibility()
+	_update_elements_visibility()
 
 func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
@@ -249,11 +273,19 @@ func async_show_profile(profile: DclUserProfile) -> void:
 		isOwnPassport = profile.get_ethereum_address() == player_profile.get_ethereum_address()
 	else:
 		isOwnPassport = false
+
+	hasClaimedName = profile.has_claimed_name()
 	
-	var profile_dictionary = profile.to_godot_dictionary()
+	_update_elements_visibility()
+	
 	label_nickname.text = profile.get_name()
-	var loading_id := _set_avatar_loading()
 	
+	address = profile.get_ethereum_address()
+	label_address.text = Global.shorten_address(address)
+	
+	
+			
+	var loading_id := _set_avatar_loading()
 	var country = profile.get_country()
 	var country_index = _find_option_index(country, ProfileConstants.COUNTRIES)
 	profile_field_option_country.select_option(country_index)
@@ -303,6 +335,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	var nickname_color = avatar_preview_landscape.avatar.get_nickname_color(profile.get_name())
 	label_nickname.add_theme_color_override("font_color", nickname_color)
 	
+	var profile_dictionary = profile.to_godot_dictionary()
 	var avatar_data = profile_dictionary.get("content", {}).get("avatar", {})
 	var wearables_urns = avatar_data.get("wearables", [])
 
@@ -354,6 +387,8 @@ func _on_button_edit_links_pressed() -> void:
 	_turn_links_editing(true)
 
 func _turn_about_editing(editing:bool) -> void:
+	if !isOwnPassport:
+		return
 	if editing:
 		label_info_description.show()
 		label_info_description_2.show()
@@ -365,17 +400,16 @@ func _turn_about_editing(editing:bool) -> void:
 		label_info_description_2.hide()
 		h_separator_1.hide()
 		v_box_container_about_actions.hide()
-		if isOwnPassport:
-			button_edit_about.show()
-		else:
-			button_edit_about.hide()
-		
+		button_edit_about.show()
+
 	for child in h_box_container_about_1.get_children():
 		child.emit_signal('change_editing', editing)
 	for child in grid_container_about.get_children():
 		child.emit_signal('change_editing', editing)
 
 func _turn_links_editing(editing:bool) -> void:
+	if !isOwnPassport:
+		return
 	button_add_link.disabled = links.size() >= 5
 	if h_flow_container_links.get_child_count() > 0 and h_flow_container_links.get_child(h_flow_container_links.get_child_count() - 1) != button_add_link:
 		h_flow_container_links.move_child(button_add_link, h_flow_container_links.get_child_count() - 1)
@@ -391,10 +425,8 @@ func _turn_links_editing(editing:bool) -> void:
 		button_add_link.hide()
 		label_editing_links.hide()
 		v_box_container_links_actions.hide()
-		if isOwnPassport:
-			button_edit_links.show()
-		else:
-			button_edit_links.hide()
+		button_edit_links.show()
+		
 
 func _on_button_about_cancel_pressed() -> void:
 	_restore_original_values()
@@ -409,3 +441,11 @@ func _on_button_about_save_pressed() -> void:
 		_turn_about_editing(false)
 	else:
 		printerr("No current profile to save")
+
+
+func _on_button_copy_nick_pressed() -> void:
+	DisplayServer.clipboard_set(label_nickname.text)
+
+
+func _on_button_copy_address_pressed() -> void:
+	DisplayServer.clipboard_set(address)

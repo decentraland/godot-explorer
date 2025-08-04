@@ -393,3 +393,10 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 # Save profile without generating new snapshots (for non-visual changes)
 func async_save_profile_metadata(profile: DclUserProfile):
 	await ProfileService.async_deploy_profile(profile, false)
+
+func shorten_address(address: String) -> String:
+	if address.length() <= 8:
+		return address
+	var first_part := address.substr(0, 5)
+	var last_part := address.substr(address.length() - 5, 5)
+	return first_part + "..." + last_part
