@@ -107,5 +107,5 @@ layout_mode = 2
 label_settings = ExtResource("3_gnik5")
 
 [connection signal="change_editing" from="." to="." method="_on_change_editing"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer/Control/Button_Erase" to="." method="_on_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/Control/Button_Erase" to="." method="_on_button_erase_pressed"]
 [connection signal="text_changed" from="VBoxContainer/TextEdit_Value" to="." method="_on_text_edit_value_text_changed"]

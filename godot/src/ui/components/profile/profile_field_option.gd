@@ -38,15 +38,11 @@ func _on_change_editing(editing: bool) -> void:
 	_update_erase_button_visibility()
 
 func _update_erase_button_visibility() -> void:
-	# Solo mostrar el botón de borrar si está en modo edición Y tiene un valor válido
 	if is_editing and option_button.selected > 0:
 		button_erase.show()
 	else:
 		button_erase.hide()
 
-func _on_button_pressed() -> void:
-	option_button.selected = 0
-	_update_erase_button_visibility()
 
 func add_option(option:String)-> void:
 	option_button.add_item(option)
@@ -57,9 +53,13 @@ func select_option(index:int) -> void:
 	_update_visibility()
 
 func _update_visibility() -> void:
-	# Si no está en modo edición, mostrar el campo solo si tiene un valor válido (índice > 0)
 	if not option_button.visible:
 		if option_button.selected > 0:
 			self.show()
 		else:
 			self.hide()
+
+
+func _on_button_erase_pressed() -> void:
+	option_button.selected = 0
+	_update_erase_button_visibility()

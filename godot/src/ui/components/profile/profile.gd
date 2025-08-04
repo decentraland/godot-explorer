@@ -41,6 +41,10 @@ const links = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Face
 @onready var label_tag: Label = %Label_Tag
 @onready var button_edit_nick: Button = %Button_EditNick
 @onready var button_claim_name: Button = %Button_ClaimName
+@onready var button_add_friend: Button = %Button_AddFriend
+@onready var button_block_user: Button = %Button_BlockUser
+@onready var button_send_dm: Button = %Button_SendDM
+@onready var label_no_intro: Label = %Label_NoIntro
 
 var avatar_loading_counter: int = 0
 var isOwnPassport: bool = false
@@ -58,6 +62,7 @@ var original_profession: String = ""
 var original_real_name: String = ""
 var original_hobbies: String = ""
 var original_about_me: String = ""
+
 
 func _ready() -> void:
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -85,9 +90,7 @@ func _ready() -> void:
 		profile_field_option_sexual_orientation.add_option(sexual_orientation)
 	for employment_status in ProfileConstants.EMPLOYMENT_STATUS:
 		profile_field_option_employment_status.add_option(employment_status)
-	for child in grid_container_about.get_children():
-		if child.is_class("ProfileFieldOption"):
-			child.emit_signal("item_selected", 0)
+
 
 func _find_option_index(value: String, options_array: Array) -> int:
 	if value.is_empty():
@@ -106,13 +109,6 @@ func _find_option_index(value: String, options_array: Array) -> int:
 	
 	return 0
 
-func _set_text_field_value(field: MarginContainer, value: String) -> void:
-	if field.has_method("get_node"):
-		var text_edit = field.get_node("VBoxContainer/TextEdit_Value")
-		var label_value = field.get_node("VBoxContainer/Label_Value")
-		if text_edit and label_value:
-			text_edit.text = value
-			label_value.text = value
 
 func _save_original_values() -> void:
 	original_country_index = profile_field_option_country.option_button.selected
@@ -122,10 +118,11 @@ func _save_original_values() -> void:
 	original_relationship_index = profile_field_option_relationship_status.option_button.selected
 	original_sexual_orientation_index = profile_field_option_sexual_orientation.option_button.selected
 	original_employment_index = profile_field_option_employment_status.option_button.selected
-	original_profession = profile_field_text_profession.text_edit.text
-	original_real_name = profile_field_text_real_name.text_edit.text
-	original_hobbies = profile_field_text_hobbies.text_edit.text
-	original_about_me = profile_field_text_about_me.text_edit.text
+	original_profession = profile_field_text_profession.text_edit_value.text
+	original_real_name = profile_field_text_real_name.text_edit_value.text
+	original_hobbies = profile_field_text_hobbies.text_edit_value.text
+	original_about_me = profile_field_text_about_me.text_edit_value.text
+
 
 func _restore_original_values() -> void:
 	profile_field_option_country.select_option(original_country_index)
@@ -135,10 +132,11 @@ func _restore_original_values() -> void:
 	profile_field_option_relationship_status.select_option(original_relationship_index)
 	profile_field_option_sexual_orientation.select_option(original_sexual_orientation_index)
 	profile_field_option_employment_status.select_option(original_employment_index)
-	
-	_set_text_field_value(profile_field_text_profession, original_profession)
-	_set_text_field_value(profile_field_text_real_name, original_real_name)
-	_set_text_field_value(profile_field_text_hobbies, original_hobbies)
+	profile_field_text_profession.set_text(original_profession)
+	profile_field_text_real_name.set_text(original_real_name)
+	profile_field_text_hobbies.set_text(original_hobbies)
+	profile_field_text_about_me.set_text(original_about_me)
+
 
 func _get_option_text(option_field: MarginContainer, index: int) -> String:
 	if index <= 0:
@@ -149,7 +147,9 @@ func _get_option_text(option_field: MarginContainer, index: int) -> String:
 		return option_button.get_item_text(index)
 	return ""
 
+
 func _save_profile_changes(profile: DclUserProfile) -> void:
+	
 	var current_country_index = profile_field_option_country.option_button.selected
 	if current_country_index != original_country_index:
 		var country_text = _get_option_text(profile_field_option_country, current_country_index)
@@ -192,28 +192,32 @@ func _save_profile_changes(profile: DclUserProfile) -> void:
 		profile.set_employment_status(employment_text)
 		original_employment_index = current_employment_index
 	
-	var profession_text_edit = profile_field_text_profession.get_node("VBoxContainer/TextEdit_Value")
-	var real_name_text_edit = profile_field_text_real_name.get_node("VBoxContainer/TextEdit_Value")
-	var hobbies_text_edit = profile_field_text_hobbies.get_node("VBoxContainer/TextEdit_Value")
-	
-	var current_profession = profession_text_edit.text if profession_text_edit else ""
-	var current_real_name = real_name_text_edit.text if real_name_text_edit else ""
-	var current_hobbies = hobbies_text_edit.text if hobbies_text_edit else ""
-	
+	var current_profession = profile_field_text_profession.text_edit_value.text
 	if current_profession != original_profession:
 		profile.set_profession(current_profession)
 		original_profession = current_profession
 	
+	var current_real_name = profile_field_text_real_name.text_edit_value.text
 	if current_real_name != original_real_name:
 		profile.set_real_name(current_real_name)
 		original_real_name = current_real_name
 	
+	var current_hobbies = profile_field_text_hobbies.text_edit_value.text
 	if current_hobbies != original_hobbies:
 		profile.set_hobbies(current_hobbies)
 		original_hobbies = current_hobbies
+		
+	var current_about_me = profile_field_text_about_me.text_edit_value.text
+	if current_about_me != original_about_me:
+		profile.set_description(current_about_me)
+		original_about_me = current_about_me
+
 
 func _update_elements_visibility() -> void:
 	if isOwnPassport:
+		button_add_friend.hide()
+		button_block_user.hide()
+		button_send_dm.hide()
 		button_edit_about.show()
 		button_edit_links.show()
 		button_edit_nick.show()
@@ -222,6 +226,9 @@ func _update_elements_visibility() -> void:
 		else:
 			button_claim_name.show()
 	else:
+		button_add_friend.show()
+		button_block_user.show()
+		button_send_dm.show()
 		button_edit_about.hide()
 		button_edit_links.hide()
 		button_edit_nick.hide()
@@ -239,11 +246,11 @@ func _update_elements_visibility() -> void:
 			button_claim_name.show()
 
 
-
 func _on_color_rect_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			hide()
+			close()
+
 
 func _set_avatar_loading() -> int:
 	button_edit_about.hide()
@@ -255,6 +262,7 @@ func _set_avatar_loading() -> int:
 	avatar_loading_counter += 1
 	return avatar_loading_counter
 
+
 func _unset_avatar_loading(current: int):
 	if current != avatar_loading_counter:
 		return
@@ -264,6 +272,7 @@ func _unset_avatar_loading(current: int):
 	avatar_preview_landscape.show()
 	
 	_update_elements_visibility()
+
 
 func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
@@ -283,9 +292,9 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	address = profile.get_ethereum_address()
 	label_address.text = Global.shorten_address(address)
 	
-	
-			
+
 	var loading_id := _set_avatar_loading()
+	
 	var country = profile.get_country()
 	var country_index = _find_option_index(country, ProfileConstants.COUNTRIES)
 	profile_field_option_country.select_option(country_index)
@@ -315,17 +324,20 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	profile_field_option_employment_status.select_option(employment_index)
 	
 	var profession = profile.get_profession()
-	_set_text_field_value(profile_field_text_profession, profession)
+	profile_field_text_profession.set_text(profession, true)
 	
 	var real_name = profile.get_real_name()
-	_set_text_field_value(profile_field_text_real_name, real_name)
+	profile_field_text_real_name.set_text(real_name, true)
 	
 	var hobbies = profile.get_hobbies()
-	_set_text_field_value(profile_field_text_hobbies, hobbies)
+	profile_field_text_hobbies.set_text(hobbies, true)
+	
+	var about_me = profile.get_description()
+	profile_field_text_about_me.set_text(about_me, true)
 	
 	var equipped_button_group = ButtonGroup.new()
 	equipped_button_group.allow_unpress = true
-	
+		
 	for child in h_flow_container_equipped_wearables.get_children():
 		child.queue_free()
 	
@@ -379,26 +391,30 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	
 	_unset_avatar_loading(loading_id)
 
+
 func _on_button_edit_about_pressed() -> void:
 	_save_original_values()
 	_turn_about_editing(true)
 
+
 func _on_button_edit_links_pressed() -> void:
 	_turn_links_editing(true)
 
+
 func _turn_about_editing(editing:bool) -> void:
-	if !isOwnPassport:
-		return
 	if editing:
 		label_info_description.show()
 		label_info_description_2.show()
-		h_separator_1.show()
 		v_box_container_about_actions.show()
 		button_edit_about.hide()
+		label_no_intro.hide()
 	else:
+		if profile_field_text_about_me.label_value.text == "":
+			label_no_intro.show()
+		else:
+			label_no_intro.hide()
 		label_info_description.hide()
 		label_info_description_2.hide()
-		h_separator_1.hide()
 		v_box_container_about_actions.hide()
 		button_edit_about.show()
 
@@ -406,10 +422,9 @@ func _turn_about_editing(editing:bool) -> void:
 		child.emit_signal('change_editing', editing)
 	for child in grid_container_about.get_children():
 		child.emit_signal('change_editing', editing)
+	
 
 func _turn_links_editing(editing:bool) -> void:
-	if !isOwnPassport:
-		return
 	button_add_link.disabled = links.size() >= 5
 	if h_flow_container_links.get_child_count() > 0 and h_flow_container_links.get_child(h_flow_container_links.get_child_count() - 1) != button_add_link:
 		h_flow_container_links.move_child(button_add_link, h_flow_container_links.get_child_count() - 1)
@@ -421,19 +436,27 @@ func _turn_links_editing(editing:bool) -> void:
 		label_editing_links.show()
 		v_box_container_links_actions.show()
 		button_edit_links.hide()
+		label_no_links.hide()
 	else:
+		# TODO: GET LINKS FROM PROFILE
+		if links.size() > 0:
+			label_no_links.show()
+		else:
+			label_no_links.hide()
 		button_add_link.hide()
 		label_editing_links.hide()
 		v_box_container_links_actions.hide()
 		button_edit_links.show()
-		
+
 
 func _on_button_about_cancel_pressed() -> void:
 	_restore_original_values()
 	_turn_about_editing(false)
 
+
 func _on_button_links_cancel_pressed() -> void:
 	_turn_links_editing(false)
+
 
 func _on_button_about_save_pressed() -> void:
 	if current_profile != null:
@@ -449,3 +472,13 @@ func _on_button_copy_nick_pressed() -> void:
 
 func _on_button_copy_address_pressed() -> void:
 	DisplayServer.clipboard_set(address)
+
+
+func close() -> void:
+	hide()
+	_turn_links_editing(false)
+	_turn_about_editing(false)
+
+
+func _on_button_close_profile_pressed() -> void:
+	close()

@@ -1,3 +1,4 @@
+class_name ProfileFieldText
 extends Control
 signal change_editing(editing:bool)
 
@@ -13,6 +14,7 @@ signal change_editing(editing:bool)
 @onready var text_edit_value: TextEdit = %TextEdit_Value
 @onready var h_box_container: HBoxContainer = %HBoxContainer
 
+var editing: bool = false
 
 func _ready() -> void:
 	if only_field:
@@ -23,29 +25,44 @@ func _ready() -> void:
 		texture_rect_icon.texture = icon
 
 
-func _on_change_editing(editing: bool) -> void:
+func _on_change_editing(status: bool) -> void:
+	editing = status
 	if editing:
-		self.show()
-		text_edit_value.show()
-		if text_edit_value.text != "":
-			button_erase.show()
-		label_value.hide()
-	else:
-		if text_edit_value.text == "":
-			self.hide()
-		button_erase.hide()
-		text_edit_value.hide()
-		label_value.show()
-
-
-func _on_button_pressed() -> void:
-	text_edit_value.text = ""
-	button_erase.hide()
+		if label_value.text != "":
+			text_edit_value.text = label_value.text
+	_update_visibility()
 
 
 func _on_text_edit_value_text_changed() -> void:
-	label_value.text = text_edit_value.text
-	if text_edit_value.text != "":
-		button_erase.show()
+	set_text(text_edit_value.text)
+
+
+func set_text(value:String, field_too: bool = false) -> void:
+	label_value.text = value
+	if field_too:
+		text_edit_value.text = value
+	_update_visibility()
+
+
+func _update_visibility() -> void:
+	if editing:
+		show()
+		text_edit_value.show()
+		label_value.hide()
+		if label_value.text != "":
+			button_erase.show()
+		else:
+			button_erase.hide()
 	else:
+		text_edit_value.hide()
 		button_erase.hide()
+		label_value.show()
+		if label_value.text != "":
+			show()
+		else:
+			hide()
+
+
+func _on_button_erase_pressed() -> void:
+	set_text("")
+	button_erase.hide()
