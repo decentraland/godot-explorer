@@ -64,5 +64,5 @@ func _update_visibility() -> void:
 
 
 func _on_button_erase_pressed() -> void:
-	set_text("")
+	set_text("", true)
 	button_erase.hide()

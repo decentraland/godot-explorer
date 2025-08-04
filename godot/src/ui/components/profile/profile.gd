@@ -390,7 +390,8 @@ func async_show_profile(profile: DclUserProfile) -> void:
 		printerr("Error getting emotes")
 	
 	_unset_avatar_loading(loading_id)
-
+	_turn_about_editing(false)
+	_turn_links_editing(false)
 
 func _on_button_edit_about_pressed() -> void:
 	_save_original_values()
@@ -439,7 +440,7 @@ func _turn_links_editing(editing:bool) -> void:
 		label_no_links.hide()
 	else:
 		# TODO: GET LINKS FROM PROFILE
-		if links.size() > 0:
+		if links.size() == 0:
 			label_no_links.show()
 		else:
 			label_no_links.hide()
