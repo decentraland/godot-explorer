@@ -119,6 +119,7 @@ visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("5_ykumo")
+disabled = true
 text = "BUY"
 
 [connection signal="toggled" from="." to="." method="_on_toggled"]

@@ -45,6 +45,10 @@ const links = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Face
 @onready var button_block_user: Button = %Button_BlockUser
 @onready var button_send_dm: Button = %Button_SendDM
 @onready var label_no_intro: Label = %Label_NoIntro
+@onready var label_nick_length: Label = %Label_NickLength
+@onready var text_edit_new_nick: TextEdit = %TextEdit_NewNick
+@onready var button_nick_save: Button = %Button_NickSave
+@onready var color_rect_change_nick: ColorRect = %ColorRect_ChangeNick
 
 var avatar_loading_counter: int = 0
 var isOwnPassport: bool = false
@@ -65,6 +69,7 @@ var original_about_me: String = ""
 
 
 func _ready() -> void:
+	color_rect_change_nick.hide()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for link in links:
 		var new_link_button = PROFILE_LINK_BUTTON.instantiate()
@@ -148,70 +153,71 @@ func _get_option_text(option_field: MarginContainer, index: int) -> String:
 	return ""
 
 
-func _save_profile_changes(profile: DclUserProfile) -> void:
-	
+func _save_profile_changes() -> void:
 	var current_country_index = profile_field_option_country.option_button.selected
 	if current_country_index != original_country_index:
 		var country_text = _get_option_text(profile_field_option_country, current_country_index)
-		profile.set_country(country_text)
+		ProfileHelper.get_mutable_profile().set_country(country_text)
 		original_country_index = current_country_index
 	
 	var current_language_index = profile_field_option_language.option_button.selected
 	if current_language_index != original_language_index:
 		var language_text = _get_option_text(profile_field_option_language, current_language_index)
-		profile.set_language(language_text)
+		ProfileHelper.get_mutable_profile().set_language(language_text)
+		ProfileHelper.get_mutable_profile()
 		original_language_index = current_language_index
 	
 	var current_pronouns_index = profile_field_option_pronouns.option_button.selected
 	if current_pronouns_index != original_pronouns_index:
 		var pronouns_text = _get_option_text(profile_field_option_pronouns, current_pronouns_index)
-		profile.set_pronouns(pronouns_text)
+		ProfileHelper.get_mutable_profile().set_pronouns(pronouns_text)
 		original_pronouns_index = current_pronouns_index
 	
 	var current_gender_index = profile_field_option_gender.option_button.selected
 	if current_gender_index != original_gender_index:
 		var gender_text = _get_option_text(profile_field_option_gender, current_gender_index)
-		profile.set_gender(gender_text)
+		ProfileHelper.get_mutable_profile().set_gender(gender_text)
 		original_gender_index = current_gender_index
 	
 	var current_relationship_index = profile_field_option_relationship_status.option_button.selected
 	if current_relationship_index != original_relationship_index:
 		var relationship_text = _get_option_text(profile_field_option_relationship_status, current_relationship_index)
-		profile.set_relationship_status(relationship_text)
+		ProfileHelper.get_mutable_profile().set_relationship_status(relationship_text)
 		original_relationship_index = current_relationship_index
 	
 	var current_sexual_orientation_index = profile_field_option_sexual_orientation.option_button.selected
 	if current_sexual_orientation_index != original_sexual_orientation_index:
 		var sexual_orientation_text = _get_option_text(profile_field_option_sexual_orientation, current_sexual_orientation_index)
-		profile.set_sexual_orientation(sexual_orientation_text)
+		ProfileHelper.get_mutable_profile().set_sexual_orientation(sexual_orientation_text)
 		original_sexual_orientation_index = current_sexual_orientation_index
 	
 	var current_employment_index = profile_field_option_employment_status.option_button.selected
 	if current_employment_index != original_employment_index:
 		var employment_text = _get_option_text(profile_field_option_employment_status, current_employment_index)
-		profile.set_employment_status(employment_text)
+		ProfileHelper.get_mutable_profile().set_employment_status(employment_text)
 		original_employment_index = current_employment_index
 	
 	var current_profession = profile_field_text_profession.text_edit_value.text
 	if current_profession != original_profession:
-		profile.set_profession(current_profession)
+		ProfileHelper.get_mutable_profile().set_profession(current_profession)
 		original_profession = current_profession
 	
 	var current_real_name = profile_field_text_real_name.text_edit_value.text
 	if current_real_name != original_real_name:
-		profile.set_real_name(current_real_name)
+		ProfileHelper.get_mutable_profile().set_real_name(current_real_name)
 		original_real_name = current_real_name
 	
 	var current_hobbies = profile_field_text_hobbies.text_edit_value.text
 	if current_hobbies != original_hobbies:
-		profile.set_hobbies(current_hobbies)
+		ProfileHelper.get_mutable_profile().set_hobbies(current_hobbies)
 		original_hobbies = current_hobbies
 		
 	var current_about_me = profile_field_text_about_me.text_edit_value.text
 	if current_about_me != original_about_me:
-		profile.set_description(current_about_me)
+		ProfileHelper.get_mutable_profile().set_description(current_about_me)
 		original_about_me = current_about_me
-
+	
+	ProfileHelper.save_profile()
 
 func _update_elements_visibility() -> void:
 	if isOwnPassport:
@@ -236,6 +242,7 @@ func _update_elements_visibility() -> void:
 		
 	if hasClaimedName:
 		texture_rect_claimed_checkmark.show()
+		label_tag.text = ""
 		label_tag.hide()
 		button_claim_name.hide()
 	else:
@@ -389,6 +396,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	else:
 		printerr("Error getting emotes")
 	
+	color_rect_change_nick.hide()
 	_unset_avatar_loading(loading_id)
 	_turn_about_editing(false)
 	_turn_links_editing(false)
@@ -461,14 +469,14 @@ func _on_button_links_cancel_pressed() -> void:
 
 func _on_button_about_save_pressed() -> void:
 	if current_profile != null:
-		_save_profile_changes(current_profile)
+		_save_profile_changes()
 		_turn_about_editing(false)
 	else:
 		printerr("No current profile to save")
 
 
 func _on_button_copy_nick_pressed() -> void:
-	DisplayServer.clipboard_set(label_nickname.text)
+	DisplayServer.clipboard_set(label_nickname.text + label_tag.text)
 
 
 func _on_button_copy_address_pressed() -> void:
@@ -483,3 +491,33 @@ func close() -> void:
 
 func _on_button_close_profile_pressed() -> void:
 	close()
+
+
+func _on_button_claim_name_pressed() -> void:
+	Global.open_url("https://decentraland.org/marketplace/names/claim")
+
+
+func _on_text_edit_text_changed() -> void:
+	label_nick_length.text = str(text_edit_new_nick.text.length()) + "/15"
+	button_nick_save.disabled = text_edit_new_nick.text.length() > 15
+
+
+func _on_button_edit_nick_pressed() -> void:
+	color_rect_change_nick.show()
+
+
+func _on_color_rect_change_nick_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			color_rect_change_nick.hide()
+
+
+func _on_button_nick_cancel_pressed() -> void:
+	color_rect_change_nick.hide() 
+
+
+func _on_button_nick_save_pressed() -> void:
+	ProfileHelper.get_mutable_profile().set_name(text_edit_new_nick.text)
+	ProfileHelper.save_profile()
+	label_nickname.text = text_edit_new_nick.text
+	color_rect_change_nick.hide()

@@ -103,8 +103,10 @@ caret_blink = true
 [node name="Label_Value" type="Label" parent="VBoxContainer"]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 label_settings = ExtResource("3_gnik5")
+autowrap_mode = 2
 
 [connection signal="change_editing" from="." to="." method="_on_change_editing"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/Control/Button_Erase" to="." method="_on_button_erase_pressed"]
