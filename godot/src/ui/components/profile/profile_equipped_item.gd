@@ -1,5 +1,8 @@
 extends Control
 
+signal emote_pressed
+signal stop_emote
+
 @onready var item_preview: ItemPreview = %ItemPreview
 @onready var label_rarity: Label = %Label_Rarity
 @onready var button_buy: Button = %Button_Buy
@@ -9,7 +12,8 @@ extends Control
 
 var is_pressed:bool = false
 var is_buyable:bool = true
-
+var is_emote:bool = false
+var urn: String = ""
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
@@ -26,11 +30,13 @@ func async_set_item(item:DclItemEntityDefinition):
 		label_rarity.text = 'BASE'
 		is_buyable = false
 
-func set_base_emote(urn:String):
-	item_preview.set_base_emote_info(urn)
+func set_base_emote(emote_urn:String):
+	item_preview.set_base_emote_info(emote_urn)
 	label_rarity.text = 'BASE'
-	marquee_label_name.set_text(Emotes.DEFAULT_EMOTE_NAMES[urn])
+	marquee_label_name.set_text(Emotes.DEFAULT_EMOTE_NAMES[emote_urn])
 	is_buyable = false
+	urn = emote_urn
+	is_emote = true
 
 
 func _update_view() -> void:
@@ -48,5 +54,13 @@ func _update_view() -> void:
 func _on_toggled(toggled_on: bool) -> void:
 	is_pressed = toggled_on
 	_update_view()
+	if is_emote:
+		if toggled_on:
+			emit_signal("emote_pressed", urn)
+		else:
+			emit_signal("stop_emote")
 	
+func set_as_emote(emote_urn:String) -> void:
+	is_emote = true
+	urn = emote_urn
 	

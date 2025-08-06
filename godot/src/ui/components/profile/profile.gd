@@ -3,7 +3,8 @@ extends Control
 const PROFILE_EQUIPPED_ITEM = preload("res://src/ui/components/profile/profile_equipped_item.tscn")
 const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_link_button.tscn")
 
-const links = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Facebook", "link":"www.facebook.com"}]
+const LINKS = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Facebook", "link":"www.facebook.com"}]
+const NICK_MAX_LENGTH: int = 15
 
 @onready var h_box_container_about_1: HBoxContainer = %HBoxContainer_About1
 @onready var label_no_links: Label = %Label_NoLinks
@@ -40,7 +41,6 @@ const links = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Face
 @onready var texture_rect_claimed_checkmark: TextureRect = %TextureRect_ClaimedCheckmark
 @onready var label_tag: Label = %Label_Tag
 @onready var button_edit_nick: Button = %Button_EditNick
-@onready var button_claim_name: Button = %Button_ClaimName
 @onready var button_add_friend: Button = %Button_AddFriend
 @onready var button_block_user: Button = %Button_BlockUser
 @onready var button_send_dm: Button = %Button_SendDM
@@ -49,6 +49,9 @@ const links = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Face
 @onready var text_edit_new_nick: TextEdit = %TextEdit_NewNick
 @onready var button_nick_save: Button = %Button_NickSave
 @onready var color_rect_change_nick: ColorRect = %ColorRect_ChangeNick
+@onready var button_claim_name: Button = %Button_ClaimName
+@onready var label_new_nick_tag: Label = %Label_NewNickTag
+@onready var button_claim_name_2: Button = %Button_ClaimName2
 
 var avatar_loading_counter: int = 0
 var isOwnPassport: bool = false
@@ -71,7 +74,7 @@ var original_about_me: String = ""
 func _ready() -> void:
 	color_rect_change_nick.hide()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for link in links:
+	for link in LINKS:
 		var new_link_button = PROFILE_LINK_BUTTON.instantiate()
 		h_flow_container_links.add_child(new_link_button)
 		new_link_button.text = link.label
@@ -219,7 +222,9 @@ func _save_profile_changes() -> void:
 	
 	ProfileHelper.save_profile()
 
+
 func _update_elements_visibility() -> void:
+	print("isOwnProfile = ", isOwnPassport)
 	if isOwnPassport:
 		button_add_friend.hide()
 		button_block_user.hide()
@@ -239,16 +244,20 @@ func _update_elements_visibility() -> void:
 		button_edit_links.hide()
 		button_edit_nick.hide()
 		button_claim_name.hide()
-		
+
 	if hasClaimedName:
 		texture_rect_claimed_checkmark.show()
 		label_tag.text = ""
 		label_tag.hide()
+		label_new_nick_tag.text = ""
+		label_new_nick_tag.hide()
 		button_claim_name.hide()
 	else:
 		texture_rect_claimed_checkmark.hide()
 		label_tag.show()
 		label_tag.text = "#" + address.substr(address.length() - 4, 4)
+		label_new_nick_tag.show()
+		label_new_nick_tag.text = "#" + address.substr(address.length() - 4, 4)
 		if isOwnPassport:
 			button_claim_name.show()
 
@@ -277,10 +286,13 @@ func _unset_avatar_loading(current: int):
 	avatar_loading_portrait.hide()
 	avatar_preview_portrait.show()
 	avatar_preview_landscape.show()
-	
-	_update_elements_visibility()
-
-
+	_on_stop_emote()
+	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
+		avatar_preview_landscape.avatar.emote_controller.play_emote("wave")
+	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
+		avatar_preview_portrait.avatar.emote_controller.play_emote("wave")
+		
+		
 func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
 	var player_profile = Global.player_identity.get_profile_or_null()
@@ -292,14 +304,14 @@ func async_show_profile(profile: DclUserProfile) -> void:
 
 	hasClaimedName = profile.has_claimed_name()
 	
-	_update_elements_visibility()
-	
-	label_nickname.text = profile.get_name()
+	var name = profile.get_name()
+	label_nickname.text = name
+	text_edit_new_nick.text = name
+	label_nick_length.text = str(name.length()) + "/15"
 	
 	address = profile.get_ethereum_address()
 	label_address.text = Global.shorten_address(address)
 	
-
 	var loading_id := _set_avatar_loading()
 	
 	var country = profile.get_country()
@@ -387,12 +399,18 @@ func async_show_profile(profile: DclUserProfile) -> void:
 				h_flow_container_equipped_wearables.add_child(emote_item)
 				emote_item.button_group = equipped_button_group
 				emote_item.async_set_item(emote_definition)
+				emote_item.set_as_emote(emote.urn)
+				emote_item.emote_pressed.connect(_on_emote_pressed)
+				emote_item.stop_emote.connect(_on_stop_emote)
 			else:
 				if Emotes.is_emote_default(emote.urn):
 					var emote_item = PROFILE_EQUIPPED_ITEM.instantiate()
 					h_flow_container_equipped_wearables.add_child(emote_item)
 					emote_item.button_group = equipped_button_group
 					emote_item.set_base_emote(emote.urn)
+					emote_item.emote_pressed.connect(_on_emote_pressed)
+					emote_item.stop_emote.connect(_on_stop_emote)
+
 	else:
 		printerr("Error getting emotes")
 	
@@ -400,6 +418,21 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	_unset_avatar_loading(loading_id)
 	_turn_about_editing(false)
 	_turn_links_editing(false)
+	_update_elements_visibility()
+
+func _on_emote_pressed(urn: String) -> void:
+	avatar_preview_landscape.avatar.emote_controller.stop_emote()
+	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
+		avatar_preview_landscape.avatar.emote_controller.play_emote(urn)
+	avatar_preview_portrait.avatar.emote_controller.stop_emote()
+	if not avatar_preview_portrait.avatar.emote_controller.is_playing():
+		avatar_preview_portrait.avatar.emote_controller.play_emote(urn)
+
+
+func _on_stop_emote() -> void:
+	avatar_preview_landscape.avatar.emote_controller.stop_emote()
+	avatar_preview_portrait.avatar.emote_controller.stop_emote()
+
 
 func _on_button_edit_about_pressed() -> void:
 	_save_original_values()
@@ -425,7 +458,8 @@ func _turn_about_editing(editing:bool) -> void:
 		label_info_description.hide()
 		label_info_description_2.hide()
 		v_box_container_about_actions.hide()
-		button_edit_about.show()
+		if isOwnPassport:
+			button_edit_about.show()
 
 	for child in h_box_container_about_1.get_children():
 		child.emit_signal('change_editing', editing)
@@ -434,7 +468,7 @@ func _turn_about_editing(editing:bool) -> void:
 	
 
 func _turn_links_editing(editing:bool) -> void:
-	button_add_link.disabled = links.size() >= 5
+	button_add_link.disabled = LINKS.size() >= 5
 	if h_flow_container_links.get_child_count() > 0 and h_flow_container_links.get_child(h_flow_container_links.get_child_count() - 1) != button_add_link:
 		h_flow_container_links.move_child(button_add_link, h_flow_container_links.get_child_count() - 1)
 	for child in h_flow_container_links.get_children():
@@ -448,14 +482,15 @@ func _turn_links_editing(editing:bool) -> void:
 		label_no_links.hide()
 	else:
 		# TODO: GET LINKS FROM PROFILE
-		if links.size() == 0:
+		if LINKS.size() == 0:
 			label_no_links.show()
 		else:
 			label_no_links.hide()
 		button_add_link.hide()
 		label_editing_links.hide()
 		v_box_container_links_actions.hide()
-		button_edit_links.show()
+		if isOwnPassport:
+			button_edit_links.show()
 
 
 func _on_button_about_cancel_pressed() -> void:
@@ -495,11 +530,7 @@ func _on_button_close_profile_pressed() -> void:
 
 func _on_button_claim_name_pressed() -> void:
 	Global.open_url("https://decentraland.org/marketplace/names/claim")
-
-
-func _on_text_edit_text_changed() -> void:
-	label_nick_length.text = str(text_edit_new_nick.text.length()) + "/15"
-	button_nick_save.disabled = text_edit_new_nick.text.length() > 15
+	
 
 
 func _on_button_edit_nick_pressed() -> void:
@@ -521,3 +552,8 @@ func _on_button_nick_save_pressed() -> void:
 	ProfileHelper.save_profile()
 	label_nickname.text = text_edit_new_nick.text
 	color_rect_change_nick.hide()
+
+
+func _on_text_edit_new_nick_text_changed() -> void:
+	label_nick_length.text = str(text_edit_new_nick.text.length()) + "/" + str(NICK_MAX_LENGTH)
+	button_nick_save.disabled = text_edit_new_nick.text.length() > NICK_MAX_LENGTH
