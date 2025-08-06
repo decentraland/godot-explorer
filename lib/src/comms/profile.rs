@@ -9,6 +9,12 @@ use crate::{
     http_request::request_response::{RequestResponse, ResponseEnum},
 };
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ProfileLink {
+    pub title: String,
+    pub url: String,
+}
+
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
 pub struct AvatarColor3 {
     pub r: f32,
@@ -121,7 +127,7 @@ pub struct SerializedProfile {
     pub real_name: Option<String>,
     pub hobbies: Option<String>,
     pub birthdate: Option<i64>,
-
+    pub links: Option<Vec<ProfileLink>>,
 
 
 
@@ -201,6 +207,7 @@ impl Default for SerializedProfile {
             real_name: Default::default(),
             hobbies: Default::default(),
             birthdate: Default::default(),
+            links: Default::default(),
         }
     }
 }

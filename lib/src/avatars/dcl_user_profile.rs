@@ -4,7 +4,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::comms::profile::UserProfile;
+use crate::comms::profile::{UserProfile, ProfileLink};
 
 use super::avatar_type::DclAvatarWireFormat;
 
@@ -390,6 +390,37 @@ impl DclUserProfile {
             None
         } else {
             Some(user_id_str)
+        };
+    }
+
+    #[func]
+    fn get_links(&self) -> Array<Dictionary> {
+        let mut arr = Array::new();
+        if let Some(links) = &self.inner.content.links {
+            for link in links {
+                let mut dict = Dictionary::new();
+                dict.set("title", link.title.clone());
+                dict.set("url", link.url.clone());
+                arr.push(dict);
+            }
+        }
+        arr
+    }
+
+    #[func]
+    fn set_links(&mut self, links_array: Array<Dictionary>) {
+        let links_vec: Vec<ProfileLink> = links_array.iter_shared()
+            .filter_map(|dict| {
+                let title = dict.get("title")?.to::<GString>().to_string();
+                let url = dict.get("url")?.to::<GString>().to_string();
+                Some(ProfileLink { title, url })
+            })
+            .collect();
+        
+        self.inner.content.links = if links_vec.is_empty() {
+            None
+        } else {
+            Some(links_vec)
         };
     }
 }
