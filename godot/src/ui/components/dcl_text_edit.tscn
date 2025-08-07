@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://cu6sgdwwqisn6" path="res://src/ui/components/dcl_text_edit.gd" id="1_iibrq"]
 [ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="2_755oe"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_iibrq"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_755oe"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
 draw_center = false
 border_width_left = 2
@@ -26,7 +26,7 @@ script = ExtResource("1_iibrq")
 
 [node name="PanelContainer" type="PanelContainer" parent="."]
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_iibrq")
+theme_override_styles/panel = SubResource("StyleBoxFlat_755oe")
 
 [node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
 layout_mode = 2
@@ -39,6 +39,7 @@ theme_override_constants/margin_bottom = 3
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
+placeholder_text = "Type text here..."
 caret_blink = true
 
 [node name="MarginContainer2" type="MarginContainer" parent="."]
@@ -48,6 +49,7 @@ theme_override_constants/margin_left = 5
 [node name="Label_Length" type="Label" parent="MarginContainer2"]
 unique_name_in_owner = true
 layout_mode = 2
+text = "0/15"
 label_settings = ExtResource("2_755oe")
 
 [connection signal="text_changed" from="PanelContainer/MarginContainer/TextEdit" to="." method="_on_text_edit_text_changed"]

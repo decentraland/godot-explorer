@@ -44,3 +44,7 @@ func _on_text_edit_text_changed() -> void:
 	
 func get_text_value() -> String:
 	return text_edit.text
+
+func set_text(new_text: String) -> void:
+	text_edit.text = new_text
+	_update_length()

@@ -54,6 +54,7 @@ const NICK_MAX_LENGTH: int = 15
 @onready var color_rect_new_link: ColorRect = %ColorRect_NewLink
 @onready var url_popup: ColorRect = %UrlPopup
 @onready var profile_new_link_popup: ColorRect = %ProfileNewLinkPopup
+@onready var change_nick_popup: ColorRect = %ChangeNickPopup
 
 
 var url_to_visit: String = ""
@@ -79,9 +80,9 @@ var player_profile = Global.player_identity.get_profile_or_null()
 
 func _ready() -> void:
 	url_popup.close()
-	color_rect_change_nick.hide()
+	change_nick_popup.close()
+	profile_new_link_popup.close()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	
 	_turn_about_editing(false)
 	_turn_links_editing(false)
 	
@@ -260,8 +261,7 @@ func _update_elements_visibility() -> void:
 		texture_rect_claimed_checkmark.hide()
 		label_tag.show()
 		label_tag.text = "#" + address.substr(address.length() - 4, 4)
-		label_new_nick_tag.show()
-		label_new_nick_tag.text = "#" + address.substr(address.length() - 4, 4)
+		
 		if isOwnPassport:
 			button_claim_name.show()
 
@@ -310,8 +310,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	
 	var name = profile.get_name()
 	label_nickname.text = name
-	text_edit_new_nick.text = name
-	label_nick_length.text = str(name.length()) + "/15"
+	
 	
 	address = profile.get_ethereum_address()
 	label_address.text = Global.shorten_address(address)
@@ -423,7 +422,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	else:
 		printerr("Error getting emotes")
 	
-	color_rect_change_nick.hide()
+	change_nick_popup.close()
 	_unset_avatar_loading(loading_id)
 	_turn_about_editing(false)
 	_turn_links_editing(false)
@@ -527,6 +526,7 @@ func _on_button_copy_nick_pressed() -> void:
 func _on_button_copy_address_pressed() -> void:
 	DisplayServer.clipboard_set(address)
 
+	
 
 func close() -> void:
 	hide()
@@ -544,7 +544,7 @@ func _on_button_claim_name_pressed() -> void:
 
 
 func _on_button_edit_nick_pressed() -> void:
-	color_rect_change_nick.show()
+	change_nick_popup.open()
 
 
 func _on_color_rect_change_nick_gui_input(event: InputEvent) -> void:
@@ -608,9 +608,11 @@ func _on_profile_new_link_popup_add_link(title:String, url:String) -> void:
 	_reorder_add_link_button()
 
 func _on_button_links_save_pressed() -> void:
+	print("Player Profile Links: ", player_profile.get_links())
 	ProfileHelper.get_mutable_profile().set_links(links_to_save)
-	print(ProfileHelper.get_mutable_profile().get_links())
+	print("Mutable Profile Links: ",ProfileHelper.get_mutable_profile().get_links())
 	ProfileHelper.save_profile(false)
+	print("Saved Profile Links: ", Global.player_identity.get_profile_or_null().get_links())
 	_refresh_links(player_profile)
 	_turn_links_editing(false)
 
@@ -618,3 +620,7 @@ func _on_button_links_save_pressed() -> void:
 func _reorder_add_link_button() -> void:
 	if h_flow_container_links.get_child_count() > 0 and h_flow_container_links.get_child(h_flow_container_links.get_child_count() - 1) != button_add_link:
 		h_flow_container_links.move_child(button_add_link, h_flow_container_links.get_child_count() - 1)
+
+
+func _on_change_nick_popup_update_name_on_profile(nickname: String) -> void:
+	label_nickname.text = nickname
