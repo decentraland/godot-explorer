@@ -3,7 +3,6 @@ extends Control
 const PROFILE_EQUIPPED_ITEM = preload("res://src/ui/components/profile/profile_equipped_item.tscn")
 const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_link_button.tscn")
 
-const LINKS = [{"label":"Instagram", "link":"www.instagram.com"}, {"label":"Facebook", "link":"www.facebook.com"}]
 const NICK_MAX_LENGTH: int = 15
 
 @onready var h_box_container_about_1: HBoxContainer = %HBoxContainer_About1
@@ -52,7 +51,14 @@ const NICK_MAX_LENGTH: int = 15
 @onready var button_claim_name: Button = %Button_ClaimName
 @onready var label_new_nick_tag: Label = %Label_NewNickTag
 @onready var button_claim_name_2: Button = %Button_ClaimName2
+@onready var color_rect_new_link: ColorRect = %ColorRect_NewLink
+@onready var url_popup: ColorRect = %UrlPopup
+@onready var profile_new_link_popup: ColorRect = %ProfileNewLinkPopup
 
+
+var url_to_visit: String = ""
+var links = []
+var links_to_save = []
 var avatar_loading_counter: int = 0
 var isOwnPassport: bool = false
 var hasClaimedName: bool = false
@@ -69,15 +75,13 @@ var original_profession: String = ""
 var original_real_name: String = ""
 var original_hobbies: String = ""
 var original_about_me: String = ""
-
+var player_profile = Global.player_identity.get_profile_or_null()
 
 func _ready() -> void:
+	url_popup.close()
 	color_rect_change_nick.hide()
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for link in LINKS:
-		var new_link_button = PROFILE_LINK_BUTTON.instantiate()
-		h_flow_container_links.add_child(new_link_button)
-		new_link_button.text = link.label
+	
 	_turn_about_editing(false)
 	_turn_links_editing(false)
 	
@@ -295,7 +299,7 @@ func _unset_avatar_loading(current: int):
 		
 func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
-	var player_profile = Global.player_identity.get_profile_or_null()
+	
 	
 	if player_profile != null:
 		isOwnPassport = profile.get_ethereum_address() == player_profile.get_ethereum_address()
@@ -354,8 +358,13 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	var about_me = profile.get_description()
 	profile_field_text_about_me.set_text(about_me, true)
 	
+	
+	_refresh_links(profile)
+		
 	var equipped_button_group = ButtonGroup.new()
 	equipped_button_group.allow_unpress = true
+	
+	
 		
 	for child in h_flow_container_equipped_wearables.get_children():
 		child.queue_free()
@@ -468,21 +477,20 @@ func _turn_about_editing(editing:bool) -> void:
 	
 
 func _turn_links_editing(editing:bool) -> void:
-	button_add_link.disabled = LINKS.size() >= 5
-	if h_flow_container_links.get_child_count() > 0 and h_flow_container_links.get_child(h_flow_container_links.get_child_count() - 1) != button_add_link:
-		h_flow_container_links.move_child(button_add_link, h_flow_container_links.get_child_count() - 1)
+	button_add_link.disabled = links.size() >= 5 
+	_reorder_add_link_button()
 	for child in h_flow_container_links.get_children():
 		if child.is_class("ProfileLinkButton"):
 			child.emit_signal('change_editing', editing)
 	if editing:
+		links_to_save = links
 		button_add_link.show()
 		label_editing_links.show()
 		v_box_container_links_actions.show()
 		button_edit_links.hide()
 		label_no_links.hide()
 	else:
-		# TODO: GET LINKS FROM PROFILE
-		if LINKS.size() == 0:
+		if links.size() == 0:
 			label_no_links.show()
 		else:
 			label_no_links.hide()
@@ -500,6 +508,8 @@ func _on_button_about_cancel_pressed() -> void:
 
 func _on_button_links_cancel_pressed() -> void:
 	_turn_links_editing(false)
+	_refresh_links(player_profile)
+	
 
 
 func _on_button_about_save_pressed() -> void:
@@ -557,3 +567,54 @@ func _on_button_nick_save_pressed() -> void:
 func _on_text_edit_new_nick_text_changed() -> void:
 	label_nick_length.text = str(text_edit_new_nick.text.length()) + "/" + str(NICK_MAX_LENGTH)
 	button_nick_save.disabled = text_edit_new_nick.text.length() > NICK_MAX_LENGTH
+
+
+func _refresh_links(profile:DclUserProfile):
+	links = profile.get_links()
+	var children_to_remove = []
+	
+	for child in h_flow_container_links.get_children():
+		if child.is_in_group("profile_link_buttons"):
+			children_to_remove.append(child)
+			
+	for child in children_to_remove:
+		h_flow_container_links.remove_child(child)
+		child.queue_free()
+		
+	for link in links:
+		var new_link_button = PROFILE_LINK_BUTTON.instantiate()
+		h_flow_container_links.add_child(new_link_button)
+		new_link_button.try_open_link.connect(_open_go_to_link)
+		new_link_button.text = link.title
+		new_link_button.url = link.url
+
+
+
+func _on_button_add_link_pressed() -> void:
+	profile_new_link_popup.open()
+
+
+func _open_go_to_link(link_url:String)->void:
+	url_popup.open(link_url)
+
+
+func _on_profile_new_link_popup_add_link(title:String, url:String) -> void:
+	links_to_save.append({"title":title, "url":url})
+	var new_link_button = PROFILE_LINK_BUTTON.instantiate()
+	h_flow_container_links.add_child(new_link_button)
+	new_link_button.try_open_link.connect(_open_go_to_link)
+	new_link_button.text = title
+	new_link_button.url = url
+	_reorder_add_link_button()
+
+func _on_button_links_save_pressed() -> void:
+	ProfileHelper.get_mutable_profile().set_links(links_to_save)
+	print(ProfileHelper.get_mutable_profile().get_links())
+	ProfileHelper.save_profile(false)
+	_refresh_links(player_profile)
+	_turn_links_editing(false)
+
+
+func _reorder_add_link_button() -> void:
+	if h_flow_container_links.get_child_count() > 0 and h_flow_container_links.get_child(h_flow_container_links.get_child_count() - 1) != button_add_link:
+		h_flow_container_links.move_child(button_add_link, h_flow_container_links.get_child_count() - 1)

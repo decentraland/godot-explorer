@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=4 uid="uid://dcar8bc8rcscu"]
+[gd_scene load_steps=40 format=4 uid="uid://dcar8bc8rcscu"]
 
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/components/utils/safe_margin_container.gd" id="1_fgcha"]
 [ext_resource type="Script" uid="uid://clbi5hqf614e7" path="res://src/ui/components/profile/profile.gd" id="1_y2op1"]
@@ -30,6 +30,8 @@
 [ext_resource type="Texture2D" uid="uid://y82giak6j1iy" path="res://assets/ui/profile/hobbies.svg" id="20_m8kjd"]
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="22_mpru1"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="30_usboe"]
+[ext_resource type="PackedScene" uid="uid://dklmxtp0xs5sv" path="res://src/ui/components/profile/profile_new_link_popup.tscn" id="31_8t4r5"]
+[ext_resource type="PackedScene" uid="uid://qbcqm5fskyho" path="res://src/ui/components/url_popup/url_popup.tscn" id="31_ood4l"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_l7lko"]
 shader = ExtResource("3_4hw2j")
@@ -920,6 +922,16 @@ theme = ExtResource("22_mpru1")
 theme_override_constants/icon_max_width = 12
 text = "CLAIM NAME"
 
+[node name="ProfileNewLinkPopup" parent="ColorRect" instance=ExtResource("31_8t4r5")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="UrlPopup" parent="ColorRect" instance=ExtResource("31_ood4l")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
 [connection signal="gui_input" from="ColorRect" to="." method="_on_color_rect_gui_input"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/Button_CopyNick" to="." method="_on_button_copy_nick_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/Button_EditNick" to="." method="_on_button_edit_nick_pressed"]
@@ -931,9 +943,11 @@ text = "CLAIM NAME"
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutCancel" to="." method="_on_button_about_cancel_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutSave" to="." method="_on_button_about_save_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/HBoxContainer/Button_EditLinks" to="." method="_on_button_edit_links_pressed"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer/HFlowContainer_Links/Button_AddLink" to="." method="_on_button_add_link_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksCancel" to="." method="_on_button_links_cancel_pressed"]
-[connection signal="gui_input" from="ColorRect/ColorRect_ChangeNick" to="." method="_on_color_rect_change_nick_gui_input"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_Links/VBoxContainer_LinksActions/HBoxContainer/Button_LinksSave" to="." method="_on_button_links_save_pressed"]
 [connection signal="text_changed" from="ColorRect/ColorRect_ChangeNick/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/TextEdit_NewNick" to="." method="_on_text_edit_new_nick_text_changed"]
 [connection signal="pressed" from="ColorRect/ColorRect_ChangeNick/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_NickCancel" to="." method="_on_button_nick_cancel_pressed"]
 [connection signal="pressed" from="ColorRect/ColorRect_ChangeNick/PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_NickSave" to="." method="_on_button_nick_save_pressed"]
 [connection signal="pressed" from="ColorRect/ColorRect_ChangeNick/PanelContainer/VBoxContainer/MarginContainer2/VBoxContainer/Button_ClaimName2" to="." method="_on_button_claim_name_pressed"]
+[connection signal="add_link" from="ColorRect/ProfileNewLinkPopup" to="." method="_on_profile_new_link_popup_add_link"]

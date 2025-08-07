@@ -1,0 +1,53 @@
+[gd_scene load_steps=4 format=3 uid="uid://18n0y7iu0obv"]
+
+[ext_resource type="Script" uid="uid://cu6sgdwwqisn6" path="res://src/ui/components/dcl_text_edit.gd" id="1_iibrq"]
+[ext_resource type="LabelSettings" uid="uid://6uimow55ok0b" path="res://src/ui/components/profile/profile_description_label_settings.tres" id="2_755oe"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_iibrq"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+draw_center = false
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="DclTextEdit" type="VBoxContainer"]
+custom_minimum_size = Vector2(100, 0)
+offset_right = 102.0
+offset_bottom = 49.0
+size_flags_horizontal = 3
+size_flags_vertical = 0
+script = ExtResource("1_iibrq")
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_iibrq")
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 3
+theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 3
+theme_override_constants/margin_bottom = 3
+
+[node name="TextEdit" type="TextEdit" parent="PanelContainer/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 2
+caret_blink = true
+
+[node name="MarginContainer2" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+
+[node name="Label_Length" type="Label" parent="MarginContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+label_settings = ExtResource("2_755oe")
+
+[connection signal="text_changed" from="PanelContainer/MarginContainer/TextEdit" to="." method="_on_text_edit_text_changed"]

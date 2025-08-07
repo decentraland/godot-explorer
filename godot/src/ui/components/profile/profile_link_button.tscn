@@ -2,13 +2,13 @@
 
 [ext_resource type="Texture2D" uid="uid://c13mgihwjpqy7" path="res://assets/ui/profile/link.svg" id="1_3knha"]
 [ext_resource type="Script" uid="uid://c7ktnujnnsko8" path="res://src/ui/components/profile/profile_link_button.gd" id="2_j0r87"]
-[ext_resource type="Theme" uid="uid://yt0vgau51udk" path="res://src/ui/components/debug_panel/dark_theme/Dark.theme" id="3_oyqjs"]
+[ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="3_3knha"]
 [ext_resource type="Texture2D" uid="uid://dt2en45rqmrsa" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="4_r8w7o"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rgnn6"]
 content_margin_left = 12.0
 content_margin_top = 12.0
-content_margin_right = 45.0
+content_margin_right = 12.0
 content_margin_bottom = 12.0
 bg_color = Color(0.458405, 0.458405, 0.458405, 0.588235)
 corner_radius_top_left = 10
@@ -19,7 +19,7 @@ corner_radius_bottom_left = 10
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t8jvf"]
 content_margin_left = 12.0
 content_margin_top = 12.0
-content_margin_right = 45.0
+content_margin_right = 12.0
 content_margin_bottom = 12.0
 bg_color = Color(0.458405, 0.458405, 0.458405, 0.588235)
 corner_radius_top_left = 10
@@ -41,7 +41,7 @@ corner_radius_bottom_left = 10
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gcy7b"]
 content_margin_left = 12.0
 content_margin_top = 12.0
-content_margin_right = 45.0
+content_margin_right = 12.0
 content_margin_bottom = 12.0
 bg_color = Color(0, 0, 0, 0.588235)
 corner_radius_top_left = 10
@@ -50,8 +50,8 @@ corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
 [node name="PofileLinkButton" type="Button"]
-offset_right = 20.0
-offset_bottom = 20.0
+offset_right = 133.0
+offset_bottom = 42.0
 theme_override_colors/font_hover_color = Color(0.341176, 0.760784, 1, 1)
 theme_override_colors/font_color = Color(0.341176, 0.760784, 1, 1)
 theme_override_colors/font_focus_color = Color(0.341176, 0.760784, 1, 1)
@@ -66,25 +66,27 @@ text = "LINK LABEL"
 icon = ExtResource("1_3knha")
 script = ExtResource("2_j0r87")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_top = 7
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 7
-
-[node name="Button_Remove" type="Button" parent="MarginContainer"]
+[node name="Button_Remove" type="Button" parent="."]
 unique_name_in_owner = true
-layout_mode = 2
+custom_minimum_size = Vector2(25, 25)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -10.0
+offset_top = -16.0
+offset_right = 25.0
+offset_bottom = 19.0
+grow_horizontal = 0
 size_flags_horizontal = 8
 size_flags_vertical = 4
-theme = ExtResource("3_oyqjs")
-theme_override_constants/icon_max_width = 10
+theme = ExtResource("3_3knha")
+theme_type_variation = &"BlackButton"
+theme_override_constants/icon_max_width = 20
 icon = ExtResource("4_r8w7o")
+icon_alignment = 1
+expand_icon = true
 
 [connection signal="change_editing" from="." to="." method="_on_change_editing"]
-[connection signal="pressed" from="MarginContainer/Button_Remove" to="." method="_on_button_remove_pressed"]
+[connection signal="pressed" from="." to="." method="_on_pressed"]
+[connection signal="pressed" from="Button_Remove" to="." method="_on_button_remove_pressed"]
