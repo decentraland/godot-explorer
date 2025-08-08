@@ -156,7 +156,6 @@ size_flags_horizontal = 3
 size_flags_stretch_ratio = 2.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info"]
-custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 theme_override_constants/separation = -5
 
@@ -170,7 +169,11 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="Label_Nickname" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Label_Nickname" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -179,7 +182,7 @@ theme_override_fonts/font = ExtResource("7_m8kjd")
 theme_override_font_sizes/font_size = 21
 text = "NickName"
 
-[node name="Label_Tag" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer"]
+[node name="Label_Tag" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.625597, 0.625597, 0.625597, 1)
@@ -189,7 +192,11 @@ theme_override_fonts/font = ExtResource("7_m8kjd")
 theme_override_font_sizes/font_size = 21
 text = "#Tag"
 
-[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/HBoxContainer/MarginContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(15, 15)
 layout_mode = 2
@@ -198,7 +205,7 @@ texture = ExtResource("8_wxsqs")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="Button_CopyNick" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer"]
+[node name="Button_CopyNick" type="Button" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 modulate = Color(0.796243, 0.796243, 0.796243, 1)
 custom_minimum_size = Vector2(15, 15)
@@ -284,7 +291,7 @@ icon_alignment = 1
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 1
 
 [node name="Label_Address" type="Label" parent="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer2"]
 unique_name_in_owner = true
@@ -749,6 +756,7 @@ last_wrap_alignment = 1
 
 [node name="ChangeNickPopup" parent="ColorRect" instance=ExtResource("30_8t4r5")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 
 [node name="ProfileNewLinkPopup" parent="ColorRect" instance=ExtResource("31_8t4r5")]
@@ -762,11 +770,14 @@ visible = false
 layout_mode = 1
 
 [connection signal="gui_input" from="ColorRect" to="." method="_on_color_rect_gui_input"]
-[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/Button_CopyNick" to="." method="_on_button_copy_nick_pressed"]
+[connection signal="gui_input" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/HBoxContainer/Label_Nickname" to="." method="_on_label_nickname_gui_input"]
+[connection signal="gui_input" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/HBoxContainer/Label_Tag" to="." method="_on_label_tag_gui_input"]
+[connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/HBoxContainer/Button_CopyNick" to="." method="_on_button_copy_nick_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/Button_EditNick" to="." method="_on_button_edit_nick_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer/Button_ClaimName" to="." method="_on_button_claim_name_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/HBoxContainer2/Button_AddFriend" to="." method="_on_button_copy_nick_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer3/Button_CloseProfile" to="." method="_on_button_close_profile_pressed"]
+[connection signal="gui_input" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer2/Label_Address" to="." method="_on_label_address_gui_input"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/VBoxContainer/HBoxContainer2/Button_CopyAddress" to="." method="_on_button_copy_address_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/HBoxContainer/Button_EditAbout" to="." method="_on_button_edit_about_pressed"]
 [connection signal="pressed" from="ColorRect/SafeMarginContainer/Panel/MarginContainer/HBoxContainer/VBoxContainer_info/ScrollContainer/VBoxContainer/PanelContainer_About/MarginContainer/VBoxContainer/VBoxContainer_About/VBoxContainer_AboutActions/HBoxContainer/Button_AboutCancel" to="." method="_on_button_about_cancel_pressed"]

@@ -518,11 +518,11 @@ func _on_button_about_save_pressed() -> void:
 
 
 func _on_button_copy_nick_pressed() -> void:
-	DisplayServer.clipboard_set(label_nickname.text + label_tag.text)
+	_copy_name_and_tag()
 
 
 func _on_button_copy_address_pressed() -> void:
-	DisplayServer.clipboard_set(address)
+	_copy_address()
 
 
 func close() -> void:
@@ -621,3 +621,29 @@ func _reorder_add_link_button() -> void:
 
 func _on_change_nick_popup_update_name_on_profile(nickname: String) -> void:
 	label_nickname.text = nickname
+
+
+func _copy_name_and_tag() -> void:
+	DisplayServer.clipboard_set(label_nickname.text + label_tag.text)
+	
+	
+func _copy_address() -> void:
+	DisplayServer.clipboard_set(address)
+	
+	
+func _on_label_nickname_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_copy_name_and_tag()
+
+
+func _on_label_tag_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_copy_name_and_tag()
+
+
+func _on_label_address_gui_input(event: InputEvent) -> void:
+		if event is InputEventScreenTouch:
+			if event.pressed:
+				_copy_address()

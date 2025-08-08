@@ -29,8 +29,10 @@ func async_set_item(item:DclItemEntityDefinition):
 	else:
 		label_rarity.text = 'BASE'
 		is_buyable = false
+		self.disabled = true
 
 func set_base_emote(emote_urn:String):
+	self.disabled = true
 	item_preview.set_base_emote_info(emote_urn)
 	label_rarity.text = 'BASE'
 	marquee_label_name.set_text(Emotes.DEFAULT_EMOTE_NAMES[emote_urn])
