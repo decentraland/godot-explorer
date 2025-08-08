@@ -99,7 +99,7 @@ pub async fn prepare_deploy_profile(
         if let Some(snapshots) = profile.content.avatar.snapshots {
             let content_folder = format!(
                 "{}/content/",
-                godot::engine::Os::singleton().get_user_data_dir()
+                godot::classes::Os::singleton().get_user_data_dir()
             );
             let body_path = format!("{}{}", content_folder, snapshots.body);
             let face_path = format!("{}{}", content_folder, snapshots.face256);

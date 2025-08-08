@@ -63,8 +63,8 @@ impl ProfileService {
         if is_guest {
             let profile_dict = new_profile.bind().to_godot_dictionary();
             let mut config = DclGlobal::singleton().bind().get_config();
-            config.set("guest_profile".into(), profile_dict.to_variant());
-            config.call("save_to_settings_file".into(), &[]);
+            config.set("guest_profile", &profile_dict.to_variant());
+            config.call("save_to_settings_file", &[]);
 
             if increment_version {
                 new_profile.bind_mut().increment_profile_version();
@@ -165,7 +165,7 @@ impl ProfileService {
         let http_requester = DclGlobal::singleton().bind().get_http_requester();
         let promise = http_requester.bind().request_json(
             url.into(),
-            godot::engine::http_client::Method::GET,
+            godot::classes::http_client::Method::GET,
             GString::new(),
             Dictionary::new(),
         );
@@ -197,7 +197,7 @@ impl ProfileService {
         if has_new_snapshots {
             let content_folder = format!(
                 "{}/content/",
-                godot::engine::Os::singleton().get_user_data_dir()
+                godot::classes::Os::singleton().get_user_data_dir()
             );
             let body_path = format!("{}{}", content_folder, snapshots.body);
             let face_path = format!("{}{}", content_folder, snapshots.face256);

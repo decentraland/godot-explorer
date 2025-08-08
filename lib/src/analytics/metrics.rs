@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use godot::{engine::Timer, prelude::*};
+use godot::{classes::Timer, prelude::*};
 
 use crate::{
     godot_classes::dcl_global::DclGlobal,
@@ -63,9 +63,9 @@ impl INode for Metrics {
         timer.set_autostart(true);
 
         let callable = self.base().callable("timer_timeout");
-        timer.connect("timeout".into(), callable);
+        timer.connect("timeout", &callable);
 
-        self.base_mut().add_child(timer.upcast());
+        self.base_mut().add_child(&timer.upcast::<Node>());
     }
 
     fn process(&mut self, delta: f64) {

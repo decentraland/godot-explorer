@@ -1,4 +1,5 @@
 use crate::dcl::components::SceneEntityId;
+use godot::classes::Node;
 
 use super::scene::Scene;
 
@@ -14,7 +15,7 @@ pub fn update_deleted_entities(scene: &mut Scene) {
         if died.contains(&node.computed_parent_3d) && *entity_id != node.computed_parent_3d {
             if let Some(node_3d) = node.base_3d.as_mut() {
                 node_3d
-                    .reparent_ex(godot_dcl_scene.root_node_3d.clone().upcast())
+                    .reparent_ex(&godot_dcl_scene.root_node_3d.clone().upcast::<Node>())
                     .keep_global_transform(false)
                     .done();
             }

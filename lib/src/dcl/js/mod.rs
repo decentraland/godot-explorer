@@ -160,9 +160,9 @@ pub(crate) fn scene_thread(
 
     // on main.crdt detected
     if !local_main_crdt_file_path.is_empty() {
-        let file = godot::engine::FileAccess::open(
-            godot::prelude::GString::from(local_main_crdt_file_path),
-            godot::engine::file_access::ModeFlags::READ,
+        let file = godot::classes::FileAccess::open(
+            &godot::prelude::GString::from(local_main_crdt_file_path),
+            godot::classes::file_access::ModeFlags::READ,
         );
 
         if let Some(file) = file {
@@ -188,9 +188,9 @@ pub(crate) fn scene_thread(
         }
     }
 
-    let file = godot::engine::FileAccess::open(
-        godot::prelude::GString::from(local_main_js_file_path.clone()),
-        godot::engine::file_access::ModeFlags::READ,
+    let file = godot::classes::FileAccess::open(
+        &godot::prelude::GString::from(local_main_js_file_path.clone()),
+        godot::classes::file_access::ModeFlags::READ,
     );
 
     if file.is_none() {
