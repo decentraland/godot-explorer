@@ -254,8 +254,6 @@ func _update_elements_visibility() -> void:
 		texture_rect_claimed_checkmark.show()
 		label_tag.text = ""
 		label_tag.hide()
-		label_new_nick_tag.text = ""
-		label_new_nick_tag.hide()
 		button_claim_name.hide()
 	else:
 		texture_rect_claimed_checkmark.hide()
@@ -526,7 +524,6 @@ func _on_button_copy_nick_pressed() -> void:
 func _on_button_copy_address_pressed() -> void:
 	DisplayServer.clipboard_set(address)
 
-	
 
 func close() -> void:
 	hide()
