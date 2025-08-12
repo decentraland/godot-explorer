@@ -56,7 +56,7 @@ var message_tween: Tween
 @onready var message_label = %MessageText
 
 
-func show_message(message: String):
+func async_show_message(message: String):
 	if message_tween:
 		message_tween.kill()
 	message_tween = create_tween()

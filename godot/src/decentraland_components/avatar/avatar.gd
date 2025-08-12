@@ -87,7 +87,7 @@ func _ready():
 func on_player_said(address: String, message: String):
 	if avatar_id != address:
 		return
-	nickname_ui.show_message(message)
+	nickname_ui.async_show_message(message)
 
 
 func try_show():
