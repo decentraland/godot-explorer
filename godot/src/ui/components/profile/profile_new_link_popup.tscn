@@ -62,6 +62,7 @@ label_settings = ExtResource("3_snn6b")
 unique_name_in_owner = true
 layout_mode = 2
 place_holder = "Link Title (E.g. Instagram)"
+validate_url = false
 is_optional = false
 
 [node name="DclTextEdit_LinkUrl" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_e5d0b")]

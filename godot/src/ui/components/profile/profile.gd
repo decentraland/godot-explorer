@@ -47,11 +47,9 @@ const NICK_MAX_LENGTH: int = 15
 @onready var label_nick_length: Label = %Label_NickLength
 @onready var text_edit_new_nick: TextEdit = %TextEdit_NewNick
 @onready var button_nick_save: Button = %Button_NickSave
-@onready var color_rect_change_nick: ColorRect = %ColorRect_ChangeNick
 @onready var button_claim_name: Button = %Button_ClaimName
 @onready var label_new_nick_tag: Label = %Label_NewNickTag
 @onready var button_claim_name_2: Button = %Button_ClaimName2
-@onready var color_rect_new_link: ColorRect = %ColorRect_NewLink
 @onready var url_popup: ColorRect = %UrlPopup
 @onready var profile_new_link_popup: ColorRect = %ProfileNewLinkPopup
 @onready var change_nick_popup: ColorRect = %ChangeNickPopup
@@ -225,11 +223,10 @@ func _save_profile_changes() -> void:
 		ProfileHelper.get_mutable_profile().set_description(current_about_me)
 		original_about_me = current_about_me
 	
-	ProfileHelper.save_profile()
+	await ProfileHelper.save_profile()
 
 
 func _update_elements_visibility() -> void:
-	print("isOwnProfile = ", isOwnPassport)
 	if isOwnPassport:
 		button_add_friend.hide()
 		button_block_user.hide()
@@ -355,8 +352,8 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	var about_me = profile.get_description()
 	profile_field_text_about_me.set_text(about_me, true)
 	
-	
-	_refresh_links(profile)
+	links = profile.get_links()
+	_refresh_links()
 		
 	var equipped_button_group = ButtonGroup.new()
 	equipped_button_group.allow_unpress = true
@@ -426,6 +423,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	_turn_links_editing(false)
 	_update_elements_visibility()
 
+
 func _on_emote_pressed(urn: String) -> void:
 	avatar_preview_landscape.avatar.emote_controller.stop_emote()
 	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
@@ -474,14 +472,12 @@ func _turn_about_editing(editing:bool) -> void:
 	
 
 func _turn_links_editing(editing:bool) -> void:
-	button_add_link.disabled = links.size() >= 5 
-	_reorder_add_link_button()
+	links_to_save = player_profile.get_links()
 	for child in h_flow_container_links.get_children():
-		if child.is_class("ProfileLinkButton"):
+		if child.is_in_group("profile_link_buttons"):
 			child.emit_signal('change_editing', editing)
 	if editing:
-		links_to_save = links
-		button_add_link.show()
+		_check_add_link_button_status()
 		label_editing_links.show()
 		v_box_container_links_actions.show()
 		button_edit_links.hide()
@@ -496,7 +492,8 @@ func _turn_links_editing(editing:bool) -> void:
 		v_box_container_links_actions.hide()
 		if isOwnPassport:
 			button_edit_links.show()
-
+	 
+	_reorder_add_link_button()
 
 func _on_button_about_cancel_pressed() -> void:
 	_restore_original_values()
@@ -505,8 +502,7 @@ func _on_button_about_cancel_pressed() -> void:
 
 func _on_button_links_cancel_pressed() -> void:
 	_turn_links_editing(false)
-	_refresh_links(player_profile)
-	
+	_refresh_links()
 
 
 func _on_button_about_save_pressed() -> void:
@@ -537,58 +533,27 @@ func _on_button_close_profile_pressed() -> void:
 
 func _on_button_claim_name_pressed() -> void:
 	Global.open_url("https://decentraland.org/marketplace/names/claim")
-	
 
 
 func _on_button_edit_nick_pressed() -> void:
 	change_nick_popup.open()
 
 
-func _on_color_rect_change_nick_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			color_rect_change_nick.hide()
-
-
-func _on_button_nick_cancel_pressed() -> void:
-	color_rect_change_nick.hide() 
-
-
-func _on_button_nick_save_pressed() -> void:
-	ProfileHelper.get_mutable_profile().set_name(text_edit_new_nick.text)
-	ProfileHelper.save_profile()
-	label_nickname.text = text_edit_new_nick.text
-	color_rect_change_nick.hide()
-
-
-func _on_text_edit_new_nick_text_changed() -> void:
-	label_nick_length.text = str(text_edit_new_nick.text.length()) + "/" + str(NICK_MAX_LENGTH)
-	button_nick_save.disabled = text_edit_new_nick.text.length() > NICK_MAX_LENGTH
-
-
-func _refresh_links(profile:DclUserProfile):
-	links = profile.get_links()
+func _refresh_links():
 	var children_to_remove = []
-	
 	for child in h_flow_container_links.get_children():
 		if child.is_in_group("profile_link_buttons"):
 			children_to_remove.append(child)
-			
 	for child in children_to_remove:
 		h_flow_container_links.remove_child(child)
 		child.queue_free()
-		
 	for link in links:
-		var new_link_button = PROFILE_LINK_BUTTON.instantiate()
-		h_flow_container_links.add_child(new_link_button)
-		new_link_button.try_open_link.connect(_open_go_to_link)
-		new_link_button.text = link.title
-		new_link_button.url = link.url
-
+		_add_link_button(link.title, link.url, false)
 
 
 func _on_button_add_link_pressed() -> void:
-	profile_new_link_popup.open()
+	if links_to_save.size() < 5:
+		profile_new_link_popup.open()
 
 
 func _open_go_to_link(link_url:String)->void:
@@ -597,20 +562,15 @@ func _open_go_to_link(link_url:String)->void:
 
 func _on_profile_new_link_popup_add_link(title:String, url:String) -> void:
 	links_to_save.append({"title":title, "url":url})
-	var new_link_button = PROFILE_LINK_BUTTON.instantiate()
-	h_flow_container_links.add_child(new_link_button)
-	new_link_button.try_open_link.connect(_open_go_to_link)
-	new_link_button.text = title
-	new_link_button.url = url
+	_add_link_button(title,url,true)
 	_reorder_add_link_button()
+	_check_add_link_button_status()
 
 func _on_button_links_save_pressed() -> void:
-	print("Player Profile Links: ", player_profile.get_links())
 	ProfileHelper.get_mutable_profile().set_links(links_to_save)
-	print("Mutable Profile Links: ",ProfileHelper.get_mutable_profile().get_links())
-	ProfileHelper.save_profile(false)
-	print("Saved Profile Links: ", Global.player_identity.get_profile_or_null().get_links())
-	_refresh_links(player_profile)
+	await ProfileHelper.save_profile(false)
+	links = player_profile.get_links()
+	_refresh_links()
 	_turn_links_editing(false)
 
 
@@ -647,3 +607,30 @@ func _on_label_address_gui_input(event: InputEvent) -> void:
 		if event is InputEventScreenTouch:
 			if event.pressed:
 				_copy_address()
+
+
+func _on_delete_link(title:String, url:String) -> void:
+	for i in range(links_to_save.size()):
+		var link = links_to_save[i]
+		if link.has("title") and link.has("url"):
+			if link.title == title and link.url == url:
+				links_to_save.remove_at(i)
+				print("LINKS TO SAVE AFTER DELETE", links_to_save)
+				return
+
+
+func _check_add_link_button_status() -> void:
+	if links_to_save.size() >= 5:
+		button_add_link.hide()
+	else:
+		button_add_link.show()
+
+
+func _add_link_button(title:String, url:String, editing:bool) -> void:
+	var new_link_button = PROFILE_LINK_BUTTON.instantiate()
+	h_flow_container_links.add_child(new_link_button)
+	new_link_button.try_open_link.connect(_open_go_to_link)
+	new_link_button.text = title
+	new_link_button.url = url
+	new_link_button.emit_signal("change_editing", editing)
+	new_link_button.connect("delete_link", _on_delete_link)

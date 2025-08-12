@@ -80,7 +80,6 @@ offset_top = 4.0
 offset_right = 390.0
 offset_bottom = 71.0
 place_holder = "Type your new name here..."
-validate_url = null
 is_optional = false
 
 [node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control"]

@@ -23,7 +23,6 @@ offset_bottom = 70.0
 size_flags_horizontal = 3
 size_flags_vertical = 0
 script = ExtResource("1_iibrq")
-validate_url = null
 
 [node name="PanelContainer" type="PanelContainer" parent="."]
 layout_mode = 2
