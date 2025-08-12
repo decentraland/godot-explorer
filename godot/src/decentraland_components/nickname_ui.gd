@@ -7,8 +7,6 @@ const MAX_WIDTH := 1200.0
 const TWEEN_DURATION := .25
 const MESSAGE_DURATION := 2.5
 
-
-
 @export var name_claimed := false:
 	set(value):
 		name_claimed = value
