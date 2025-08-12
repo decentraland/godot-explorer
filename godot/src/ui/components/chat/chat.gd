@@ -19,7 +19,6 @@ var nearby_avatars = null
 @onready var button_back: Button = %Button_Back
 @onready var texture_rect_logo: TextureRect = %TextureRect_Logo
 @onready var h_box_container_nearby_users: HBoxContainer = %HBoxContainer_NearbyUsers
-@onready var margin_container_chat_nearby: Panel = %Panel_Nearby
 @onready var timer_hide = %Timer_Hide
 @onready var avatars_list: Control = $VBoxContainer/AvatarsList
 

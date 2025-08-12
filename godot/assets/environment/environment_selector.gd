@@ -5,21 +5,19 @@ var sky: SkyBase = null
 
 
 func _ready():
-	set_skybox_and_shadow(Global.get_config().skybox)
+	set_skybox(Global.get_config().skybox)
 	set_anti_aliasing(Global.get_config().anti_aliasing)
 	Global.get_config().param_changed.connect(self._on_config_changed)
 
 
 func _on_config_changed(param: ConfigData.ConfigParams):
 	if param == ConfigData.ConfigParams.SKY_BOX:
-		set_skybox_and_shadow(Global.get_config().skybox)
-	elif param == ConfigData.ConfigParams.SHADOW_QUALITY:
-		set_shadow(Global.get_config().shadow_quality)
+		set_skybox(Global.get_config().skybox)
 	elif param == ConfigData.ConfigParams.ANTI_ALIASING:
 		set_anti_aliasing(Global.get_config().anti_aliasing)
 
 
-func set_skybox_and_shadow(skybox_index: int):
+func set_skybox(skybox_index: int):
 	if sky != null:
 		sky.queue_free()
 
@@ -36,21 +34,6 @@ func set_skybox_and_shadow(skybox_index: int):
 				sky = load("res://assets/environment/sky_high/sky_high.tscn").instantiate()
 
 	add_child(sky)
-	set_shadow(Global.get_config().shadow_quality)
-
-
-func set_shadow(shadow_quality: int):
-	var quality: RenderingServer.ShadowQuality = RenderingServer.SHADOW_QUALITY_HARD
-	match shadow_quality:
-		0:  # no shadow
-			sky.sun_light.shadow_enabled = false
-		1:  # low res shadow
-			sky.sun_light.shadow_enabled = true
-		2:  # high res shadow
-			sky.sun_light.shadow_enabled = true
-			quality = RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM
-
-	RenderingServer.directional_soft_shadow_filter_set_quality(quality)
 
 
 # Reason that anti aliasing is here it's because

@@ -1,6 +1,6 @@
 [package]
 name = "dclgodot"
-version = "0.24.0"
+version = "0.32.0"
 edition = "2021"
 publish = false
 
@@ -80,8 +80,6 @@ paranoid-android = "0.2.1"
 [features]
 # FFMPEG disabled until next iteration
 default = ["use_livekit", "use_deno", "enable_inspector"]
-android = ["use_livekit", "use_deno"]
-ios = ["use_livekit", "use_deno"]
 use_ffmpeg = ["dep:ffmpeg-next", "dep:cpal"]
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
 use_deno = ["dep:deno_core", "dep:v8"]

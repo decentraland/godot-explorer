@@ -220,6 +220,8 @@ func fix_material(mat: BaseMaterial3D):
 	if mat.metallic_texture:
 		mat.metallic *= .5
 
+	mat.albedo_texture_force_srgb = true
+
 	# To replicate foundation
 	mat.vertex_color_use_as_albedo = false
 
@@ -228,7 +230,11 @@ func fix_material(mat: BaseMaterial3D):
 
 
 func set_emission_params(mat: BaseMaterial3D):
+	var ios_workarounds = OS.get_name() == "iOS"
+	var base_energy_multiplier = 1.0 if !ios_workarounds else .15
+
 	if mat.resource_name.contains("_emission"):
+		mat.emission_energy_multiplier = 1.0 * base_energy_multiplier
 		mat.emission_enabled = true
 		return
 
@@ -242,13 +248,13 @@ func set_emission_params(mat: BaseMaterial3D):
 
 	if !mat.albedo_texture and !mat.emission_texture and mat.emission != Color.BLACK:
 		mat.emission_enabled = true
-		mat.emission_energy_multiplier = 1.0
+		mat.emission_energy_multiplier = 1.0 * base_energy_multiplier
 		mat.emission_operator = BaseMaterial3D.EMISSION_OP_ADD
 		return
 
 	if mat.albedo_texture and mat.emission_texture and mat.emission == Color.BLACK:
 		mat.emission_enabled = true
-		mat.emission_energy_multiplier = 2.0
+		mat.emission_energy_multiplier = 2.0 * base_energy_multiplier
 		mat.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
 		mat.emission = Color.WHITE
 		return

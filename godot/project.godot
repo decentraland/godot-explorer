@@ -48,7 +48,7 @@ window/handheld/orientation=6
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dcl_build_plugin/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/webview-godot-android/plugin.cfg")
+enabled=PackedStringArray("res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/resource_tracker/plugin.cfg", "res://addons/webview-godot-android/plugin.cfg")
 
 [filesystem]
 
@@ -192,6 +192,8 @@ limits/debugger/max_chars_per_second=3276800
 
 [rendering]
 
+rendering_device/driver.ios="vulkan"
+rendering_device/driver.macos="vulkan"
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=2048
@@ -201,9 +203,11 @@ reflections/sky_reflections/texture_array_reflections=false
 reflections/sky_reflections/ggx_samples=16
 shading/overrides/force_vertex_shading=true
 shading/overrides/force_lambert_over_burley=true
-anti_aliasing/quality/msaa_3d=1
+environment/ssao/quality=0
+environment/ssil/quality=0
 environment/glow/upscale_mode=0
-anti_aliasing/quality/screen_space_aa=1
+environment/screen_space_reflection/roughness_quality=0
+environment/subsurface_scattering/subsurface_scattering_quality=0
 lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
@@ -211,7 +215,7 @@ lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 
 day_night_cycle={
 "type": "float",
-"value": 0.975
+"value": 1.265
 }
 
 [xr]
