@@ -83,8 +83,10 @@ func _ready():
 	nickname_ui.mic_enabled = false
 	Global.player_said.connect(on_player_said)
 
-func on_player_said(address:String, message:String):
-	if avatar_id != address: return
+
+func on_player_said(address: String, message: String):
+	if avatar_id != address:
+		return
 	nickname_ui.show_message(message)
 
 
