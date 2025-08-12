@@ -80,6 +80,8 @@ offset_top = 4.0
 offset_right = 390.0
 offset_bottom = 71.0
 place_holder = "Type your new name here..."
+validate_url = null
+is_optional = false
 
 [node name="MarginContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control"]
 layout_mode = 1
@@ -160,6 +162,7 @@ theme_override_constants/icon_max_width = 12
 text = "CLAIM NAME"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="dcl_text_edit_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer/Control/DclTextEdit_NewNick" to="." method="_on_dcl_text_edit_new_nick_dcl_text_edit_changed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Cancel" to="." method="_on_button_cancel_pressed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_Save" to="." method="_on_button_save_pressed"]

@@ -10,7 +10,7 @@ border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(1, 1, 1, 1)
+border_color = Color(1, 1, 1, 0)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
@@ -18,14 +18,16 @@ corner_radius_bottom_left = 8
 
 [node name="DclTextEdit" type="VBoxContainer"]
 custom_minimum_size = Vector2(100, 0)
-offset_right = 102.0
-offset_bottom = 49.0
+offset_right = 159.0
+offset_bottom = 70.0
 size_flags_horizontal = 3
 size_flags_vertical = 0
 script = ExtResource("1_iibrq")
+validate_url = null
 
 [node name="PanelContainer" type="PanelContainer" parent="."]
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_755oe")
 
 [node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
@@ -37,7 +39,7 @@ theme_override_constants/margin_bottom = 3
 
 [node name="TextEdit" type="TextEdit" parent="PanelContainer/MarginContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 35)
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 placeholder_text = "Type text here..."
 caret_blink = true
@@ -48,6 +50,7 @@ theme_override_constants/margin_left = 5
 
 [node name="Label_Length" type="Label" parent="MarginContainer2"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 text = "0/15"
 label_settings = ExtResource("2_755oe")

@@ -16,8 +16,8 @@ func _on_gui_input(event: InputEvent) -> void:
 			close()
 			
 func close() -> void:
-	dcl_text_edit_link_title.text_edit.text = ""
-	dcl_text_edit_link_url.text_edit.text = ""
+	dcl_text_edit_link_title.set_text()
+	dcl_text_edit_link_url.set_text()
 	hide()
 	
 func open() -> void:
@@ -35,7 +35,7 @@ func _on_dcl_text_edit_link_url_dcl_text_edit_changed() -> void:
 	_check_error()
 	
 func _check_error() -> void:
-	if dcl_text_edit_link_title.error or dcl_text_edit_link_url.text_edit.text.length() <= 0:
+	if dcl_text_edit_link_title.error or dcl_text_edit_link_url.error:
 		button_new_link_save.disabled = true
 	else:
 		button_new_link_save.disabled = false

@@ -61,13 +61,16 @@ label_settings = ExtResource("3_snn6b")
 [node name="DclTextEdit_LinkTitle" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_e5d0b")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Enter Link Title (E.g. Instagram)"
+place_holder = "Link Title (E.g. Instagram)"
+is_optional = false
 
 [node name="DclTextEdit_LinkUrl" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_e5d0b")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Enter URL"
+place_holder = "Link URL (start with \"https://\")"
 has_max_length = false
+validate_url = true
+is_optional = false
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 38)
@@ -92,7 +95,9 @@ theme = ExtResource("6_5sklh")
 text = "SAVE"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="dcl_text_edit_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/DclTextEdit_LinkTitle" to="." method="_on_dcl_text_edit_link_title_dcl_text_edit_changed"]
+[connection signal="visibility_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/DclTextEdit_LinkTitle" to="." method="_on_dcl_text_edit_link_title_visibility_changed"]
 [connection signal="dcl_text_edit_changed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/DclTextEdit_LinkUrl" to="." method="_on_dcl_text_edit_link_url_dcl_text_edit_changed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_NewLinkCancel" to="." method="_on_button_new_link_cancel_pressed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_NewLinkSave" to="." method="_on_button_new_link_save_pressed"]

@@ -4,28 +4,30 @@ extends Button
 
 signal change_editing(editing:bool)
 signal try_open_link(url:String)
-
-var url: String = ""
-var is_editing: bool = false
+signal delete_link(title:String, url:String)
 
 @onready var button_remove: Button = %Button_Remove
+var url: String = ""
+var stylebox:StyleBoxFlat
 
 func _ready() -> void:
+	stylebox = self.get_theme_stylebox("normal")
 	add_to_group("profile_link_buttons")
 	_on_change_editing(false)
 		
 
 func _on_change_editing(editing: bool) -> void:
-	is_editing = editing
 	
-	if is_editing:
+	if editing:
 		button_remove.show()
+		stylebox.content_margin_right = 12 + 5 + 35 
 	else:
 		button_remove.hide()
-
+		stylebox.content_margin_right = 12
 
 func _on_button_remove_pressed() -> void:
 	queue_free()
+	emit_signal("delete_link", text, url)
 
 
 func _on_pressed() -> void:
