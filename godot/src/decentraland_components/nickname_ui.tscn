@@ -18,7 +18,7 @@ corner_radius_bottom_right = 75
 corner_radius_bottom_left = 75
 
 [sub_resource type="LabelSettings" id="LabelSettings_tj4hi"]
-font_size = 48
+font_size = 72
 
 [node name="NicknameUI" type="MarginContainer"]
 offset_right = 130.0
@@ -106,7 +106,7 @@ clip_contents = true
 custom_minimum_size = Vector2(0, 1.07)
 layout_mode = 2
 
-[node name="_" type="MarginContainer" parent="MarginContainer/VBoxContainer/MessageClip"]
+[node name="MessageContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/MessageClip"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -119,9 +119,9 @@ size_flags_vertical = 0
 theme_override_constants/margin_left = 15
 theme_override_constants/margin_top = 25
 theme_override_constants/margin_right = 15
-theme_override_constants/margin_bottom = 25
+theme_override_constants/margin_bottom = 15
 
-[node name="MessageText" type="Label" parent="MarginContainer/VBoxContainer/MessageClip/_"]
+[node name="MessageText" type="Label" parent="MarginContainer/VBoxContainer/MessageClip/MessageContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

@@ -1,11 +1,11 @@
 @tool
 extends MarginContainer
 
-const MAX_CHAR_COUNT = 90
-const CHARACTER_WIDTH = 32.0
-const MAX_WIDTH := 800.0
+const MAX_CHAR_COUNT = 80
+const CHARACTER_WIDTH = 44
+const MAX_WIDTH := 1200.0
 const TWEEN_DURATION := .25
-const MESSAGE_DURATION := 1.5
+const MESSAGE_DURATION := 2.5
 
 @export var name_claimed := false:
 	set(value):
@@ -63,7 +63,7 @@ func show_message(message: String):
 	var height : float
 	if width > MAX_WIDTH:
 		width = MAX_WIDTH
-		height = 220
+		height = 250
 		message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		message_label.custom_minimum_size.x = width
 		message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
