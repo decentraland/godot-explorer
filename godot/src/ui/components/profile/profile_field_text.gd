@@ -1,11 +1,13 @@
 class_name ProfileFieldText
 extends Control
-signal change_editing(editing:bool)
+signal change_editing(editing: bool)
 
-@export var title:String = "Title"
-@export var instructions:String = "Here you can explain how use this field"
-@export var icon:Texture
-@export var only_field:bool = false
+@export var title: String = "Title"
+@export var instructions: String = "Here you can explain how use this field"
+@export var icon: Texture
+@export var only_field: bool = false
+
+var editing: bool = false
 
 @onready var texture_rect_icon: TextureRect = %TextureRect_Icon
 @onready var label_title: Label = %Label_Title
@@ -14,7 +16,6 @@ signal change_editing(editing:bool)
 @onready var text_edit_value: TextEdit = %TextEdit_Value
 @onready var h_box_container: HBoxContainer = %HBoxContainer
 
-var editing: bool = false
 
 func _ready() -> void:
 	if only_field:
@@ -37,7 +38,7 @@ func _on_text_edit_value_text_changed() -> void:
 	set_text(text_edit_value.text)
 
 
-func set_text(value:String, field_too: bool = false) -> void:
+func set_text(value: String, field_too: bool = false) -> void:
 	label_value.text = value
 	if field_too:
 		text_edit_value.text = value

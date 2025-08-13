@@ -394,6 +394,7 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 func async_save_profile_metadata(profile: DclUserProfile):
 	await ProfileService.async_deploy_profile(profile, false)
 
+
 func shorten_address(address: String) -> String:
 	if address.length() <= 8:
 		return address

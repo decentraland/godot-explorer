@@ -59,11 +59,11 @@ func async_update_nearby_users(remote_avatars: Array) -> void:
 						and child.avatar.avatar_loaded.is_connected(child.async_set_data)
 					):
 						child.avatar.avatar_loaded.disconnect(child.async_set_data)
-					
+
 					# Desconectar la señal profile_picture_clicked si está conectada
 					if child.profile_picture_clicked.is_connected(_on_player_profile_clicked):
 						child.profile_picture_clicked.disconnect(_on_player_profile_clicked)
-					
+
 					child.queue_free()
 					break
 

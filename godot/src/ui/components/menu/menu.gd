@@ -196,6 +196,7 @@ func _on_menu_profile_button_open_menu_profile():
 	select_node(control_profile_settings)
 	open_profile.emit()
 
+
 func fade_in(node: Control):
 	selected_node = node
 	node.show()

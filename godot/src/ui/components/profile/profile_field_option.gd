@@ -1,9 +1,11 @@
 class_name ProfileFieldOption
 extends Control
-signal change_editing(editing:bool)
+signal change_editing(editing: bool)
 
-@export var title:String = "title"
-@export var icon:Texture
+@export var title: String = "title"
+@export var icon: Texture
+
+var is_editing: bool = false
 
 @onready var texture_rect_icon: TextureRect = %TextureRect_Icon
 @onready var label_title: Label = %Label_Title
@@ -11,7 +13,6 @@ signal change_editing(editing:bool)
 @onready var option_button: OptionButton = %OptionButton
 @onready var label_value: Label = %Label_Value
 
-var is_editing: bool = false
 
 func _ready() -> void:
 	_on_change_editing(false)
@@ -19,10 +20,12 @@ func _ready() -> void:
 	if icon:
 		texture_rect_icon.texture = icon
 
+
 func _on_option_button_item_selected(index: int) -> void:
 	label_value.text = option_button.get_item_text(index)
 	_update_erase_button_visibility()
-				
+
+
 func _on_change_editing(editing: bool) -> void:
 	is_editing = editing
 	if editing:
@@ -34,8 +37,9 @@ func _on_change_editing(editing: bool) -> void:
 			self.hide()
 		option_button.hide()
 		label_value.show()
-	
+
 	_update_erase_button_visibility()
+
 
 func _update_erase_button_visibility() -> void:
 	if is_editing and option_button.selected > 0:
@@ -44,13 +48,15 @@ func _update_erase_button_visibility() -> void:
 		button_erase.hide()
 
 
-func add_option(option:String)-> void:
+func add_option(option: String) -> void:
 	option_button.add_item(option)
 
-func select_option(index:int) -> void:
+
+func select_option(index: int) -> void:
 	option_button.selected = index
 	_on_option_button_item_selected(index)
 	_update_visibility()
+
 
 func _update_visibility() -> void:
 	if not option_button.visible:

@@ -1,18 +1,22 @@
 extends ScrollContainer
 
+@export var label_settings: LabelSettings
+
 var is_marquee_active: bool = false
 var marquee_tween: Tween
 var marquee_speed: float = 60.0
 var pause_duration: float = 2
-@export var label_settings: LabelSettings
+
 @onready var label: Label = %Label
+
 
 func _ready() -> void:
 	label.label_settings = label_settings
 
 
-func set_text(text:String)-> void:
+func set_text(text: String) -> void:
 	label.text = text
+
 
 func is_text_overflowing() -> bool:
 	return label.size.x > size.x

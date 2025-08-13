@@ -331,17 +331,19 @@ class ItemRarity:
 	const EXOTIC: String = "exotic"
 	const ALL_LIST: PackedStringArray = [RARE, UNCOMMON, EPIC, LEGENDARY, MYTHIC, UNIQUE, EXOTIC]
 
+
 class RarityColor:
-	const COMMON: Color = Color(115.0/255.0, 211.0/255.0, 211.0/255.0, 1.0)
-	const UNCOMMON: Color = Color(255.0/255.0, 131.0/255.0, 98.0/255.0, 1.0)
-	const RARE: Color = Color(52.0/255.0, 206.0/255.0, 118.0/255.0, 1.0)
-	const EPIC: Color = Color(67.0/255.0, 143.0/255.0, 255.0/255.0, 1.0)
-	const LEGENDARY: Color = Color(161.0/255.0, 75.0/255.0, 243.0/255.0, 1.0)
-	const MYTHIC: Color = Color(255.0/255.0, 75.0/255.0, 237.0/255.0, 1.0)
-	const UNIQUE: Color = Color(254.0/255.0, 162.0/255.0, 23.0/255.0, 1.0)
+	const COMMON: Color = Color(115.0 / 255.0, 211.0 / 255.0, 211.0 / 255.0, 1.0)
+	const UNCOMMON: Color = Color(255.0 / 255.0, 131.0 / 255.0, 98.0 / 255.0, 1.0)
+	const RARE: Color = Color(52.0 / 255.0, 206.0 / 255.0, 118.0 / 255.0, 1.0)
+	const EPIC: Color = Color(67.0 / 255.0, 143.0 / 255.0, 255.0 / 255.0, 1.0)
+	const LEGENDARY: Color = Color(161.0 / 255.0, 75.0 / 255.0, 243.0 / 255.0, 1.0)
+	const MYTHIC: Color = Color(255.0 / 255.0, 75.0 / 255.0, 237.0 / 255.0, 1.0)
+	const UNIQUE: Color = Color(254.0 / 255.0, 162.0 / 255.0, 23.0 / 255.0, 1.0)
 	# TO DO: Set a color for Exotic Rarity
-	const EXOTIC: Color = Color(254.0/255.0, 162.0/255.0, 23.0/255.0, 1.0)
-	const BASE: Color = Color(160.0/255.0, 155.0/255.0, 168.0/255.0, 1.0)
+	const EXOTIC: Color = Color(254.0 / 255.0, 162.0 / 255.0, 23.0 / 255.0, 1.0)
+	const BASE: Color = Color(160.0 / 255.0, 155.0 / 255.0, 168.0 / 255.0, 1.0)
+
 
 class Categories:
 	const ALL: String = "all"
