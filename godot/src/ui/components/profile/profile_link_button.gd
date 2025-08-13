@@ -4,7 +4,7 @@ extends Button
 
 signal change_editing(editing: bool)
 signal try_open_link(url: String)
-signal delete_link(title: String, url: String)
+signal delete_link()
 
 var url: String = ""
 var stylebox: StyleBoxFlat
@@ -29,7 +29,7 @@ func _on_change_editing(editing: bool) -> void:
 
 func _on_button_remove_pressed() -> void:
 	queue_free()
-	emit_signal("delete_link", text, url)
+	emit_signal("delete_link")
 
 
 func _on_pressed() -> void:

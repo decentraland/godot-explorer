@@ -2,8 +2,29 @@ extends Control
 
 const PROFILE_EQUIPPED_ITEM = preload("res://src/ui/components/profile/profile_equipped_item.tscn")
 const PROFILE_LINK_BUTTON = preload("res://src/ui/components/profile/profile_link_button.tscn")
-
 const NICK_MAX_LENGTH: int = 15
+
+var url_to_visit: String = ""
+var links_to_save: Array[Dictionary] = []
+var avatar_loading_counter: int = 0
+var is_own_passport: bool = false
+var hasClaimedName: bool = false
+var current_profile: DclUserProfile = null
+var address: String = ""
+var original_country_index: int = 0
+var original_language_index: int = 0
+var original_pronouns_index: int = 0
+var original_gender_index: int = 0
+var original_relationship_index: int = 0
+var original_sexual_orientation_index: int = 0
+var original_employment_index: int = 0
+var original_profession: String = ""
+var original_real_name: String = ""
+var original_hobbies: String = ""
+var original_about_me: String = ""
+var player_profile = Global.player_identity.get_profile_or_null()
+var _deploy_loading_id: int = -1
+var _deploy_timeout_timer: Timer
 
 @onready var h_box_container_about_1: HBoxContainer = %HBoxContainer_About1
 @onready var label_no_links: Label = %Label_NoLinks
@@ -58,27 +79,7 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var panel_container_getting_data: PanelContainer = %PanelContainer_GettingData
 @onready var v_box_container_name_and_address: VBoxContainer = %VBoxContainer_NameAndAddress
 
-var url_to_visit: String = ""
-var links_to_save: Array[Dictionary] = []
-var avatar_loading_counter: int = 0
-var isOwnPassport: bool = false
-var hasClaimedName: bool = false
-var current_profile: DclUserProfile = null
-var address: String = ""
-var original_country_index: int = 0
-var original_language_index: int = 0
-var original_pronouns_index: int = 0
-var original_gender_index: int = 0
-var original_relationship_index: int = 0
-var original_sexual_orientation_index: int = 0
-var original_employment_index: int = 0
-var original_profession: String = ""
-var original_real_name: String = ""
-var original_hobbies: String = ""
-var original_about_me: String = ""
-var player_profile = Global.player_identity.get_profile_or_null()
-var _deploy_loading_id: int = -1
-var _deploy_timeout_timer: Timer
+
 
 
 func _ready() -> void:
@@ -232,17 +233,18 @@ func _update_elements_visibility() -> void:
 	url_popup.close()
 	change_nick_popup.close()
 	profile_new_link_popup.close()
-	if isOwnPassport:
+	if is_own_passport:
 		button_add_friend.hide()
 		button_block_user.hide()
 		button_send_dm.hide()
 		button_edit_about.show()
 		button_edit_links.show()
 		button_edit_nick.show()
-		if hasClaimedName:
-			button_claim_name.hide()
-		else:
-			button_claim_name.show()
+		if current_profile != null:
+			if current_profile.has_claimed_name():
+				button_claim_name.hide()
+			else:
+				button_claim_name.show()
 	else:
 		button_add_friend.show()
 		button_block_user.show()
@@ -251,18 +253,19 @@ func _update_elements_visibility() -> void:
 		button_edit_links.hide()
 		button_edit_nick.hide()
 		button_claim_name.hide()
-	if hasClaimedName:
-		texture_rect_claimed_checkmark.show()
-		label_tag.text = ""
-		label_tag.hide()
-		button_claim_name.hide()
-	else:
-		texture_rect_claimed_checkmark.hide()
-		label_tag.show()
-		label_tag.text = "#" + address.substr(address.length() - 4, 4)
-
-		if isOwnPassport:
-			button_claim_name.show()
+	if current_profile != null:
+		if current_profile.has_claimed_name():
+			texture_rect_claimed_checkmark.show()
+			label_tag.text = ""
+			label_tag.hide()
+			button_claim_name.hide()
+		else:
+			texture_rect_claimed_checkmark.hide()
+			label_tag.show()
+			label_tag.text = "#" + address.substr(address.length() - 4, 4)
+			if is_own_passport:
+				button_claim_name.show()
+			
 	_turn_links_editing(false)
 	_turn_about_editing(false)
 
@@ -304,9 +307,9 @@ func _unset_avatar_loading(current: int):
 func async_show_profile(profile: DclUserProfile) -> void:
 	current_profile = profile
 	if player_profile != null:
-		isOwnPassport = profile.get_ethereum_address() == player_profile.get_ethereum_address()
+		is_own_passport = profile.get_ethereum_address() == player_profile.get_ethereum_address()
 	else:
-		isOwnPassport = false
+		is_own_passport = false
 
 	var loading_id := _set_avatar_loading()
 
@@ -321,7 +324,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 
 	_unset_avatar_loading(loading_id)
 
-	if isOwnPassport:
+	if is_own_passport:
 		var mutable := ProfileHelper.get_mutable_profile()
 		if mutable != null and profile.get_profile_version() < mutable.get_profile_version():
 			if _deploy_loading_id == -1:
@@ -367,7 +370,7 @@ func _turn_about_editing(editing: bool) -> void:
 		label_info_description.hide()
 		label_info_description_2.hide()
 		v_box_container_about_actions.hide()
-		if isOwnPassport:
+		if is_own_passport:
 			button_edit_about.show()
 
 	for child in h_box_container_about_1.get_children():
@@ -395,7 +398,7 @@ func _turn_links_editing(editing: bool) -> void:
 			button_add_link.hide()
 			label_editing_links.hide()
 			v_box_container_links_actions.hide()
-		if isOwnPassport:
+		if is_own_passport:
 			button_edit_links.show()
 
 	_reorder_add_link_button()
@@ -504,7 +507,6 @@ func _refresh_about() -> void:
 
 
 func _refresh_name_and_address() -> void:
-	hasClaimedName = current_profile.has_claimed_name()
 	address = current_profile.get_ethereum_address()
 	label_address.text = Global.shorten_address(address)
 
@@ -629,7 +631,7 @@ func _on_label_address_gui_input(event: InputEvent) -> void:
 			_copy_address()
 
 
-func _on_delete_link(title: String, url: String) -> void:
+func _on_delete_link() -> void:
 	call_deferred("_check_add_link_button_status")
 
 
@@ -694,7 +696,7 @@ func _on_global_profile_changed(new_profile: DclUserProfile) -> void:
 	if new_profile == null:
 		return
 	var new_addr = new_profile.get_ethereum_address()
-	if not isOwnPassport and new_addr != address:
+	if not is_own_passport and new_addr != address:
 		return
 	current_profile = new_profile
 	_refresh_links()
