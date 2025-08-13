@@ -4,7 +4,7 @@ extends Button
 
 signal change_editing(editing: bool)
 signal try_open_link(url: String)
-signal delete_link()
+signal delete_link
 
 var url: String = ""
 var stylebox: StyleBoxFlat

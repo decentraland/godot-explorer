@@ -2,13 +2,13 @@ extends ColorRect
 
 signal update_name_on_profile(nickname: String)
 
+var new_nickname: String
+
 @onready var button_cancel: Button = %Button_Cancel
 @onready var button_save: Button = %Button_Save
 @onready var button_claim_name: Button = %Button_ClaimName
 @onready var dcl_text_edit_new_nick: VBoxContainer = %DclTextEdit_NewNick
 @onready var label_tag: Label = %Label_Tag
-
-var new_nickname: String
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -54,6 +54,6 @@ func _on_button_cancel_pressed() -> void:
 
 func _on_button_save_pressed() -> void:
 	ProfileHelper.get_mutable_profile().set_name(new_nickname)
-	ProfileHelper.save_profile(false)
+	ProfileHelper.async_save_profile(false)
 	emit_signal("update_name_on_profile", new_nickname)
 	close()

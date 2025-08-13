@@ -15,7 +15,7 @@ static func get_mutable_profile() -> DclUserProfile:
 	return null
 
 
-static func save_profile(generate_snapshots: bool = true):
+static func async_save_profile(generate_snapshots: bool = true):
 	var backpack = get_backpack()
 	if backpack != null:
 		await backpack.async_save_profile(generate_snapshots)

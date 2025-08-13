@@ -8,7 +8,6 @@ var url_to_visit: String = ""
 var links_to_save: Array[Dictionary] = []
 var avatar_loading_counter: int = 0
 var is_own_passport: bool = false
-var hasClaimedName: bool = false
 var current_profile: DclUserProfile = null
 var address: String = ""
 var original_country_index: int = 0
@@ -80,8 +79,6 @@ var profile_field_option_employment_status: MarginContainer = %ProfileFieldOptio
 @onready var v_box_container_name_and_address: VBoxContainer = %VBoxContainer_NameAndAddress
 
 
-
-
 func _ready() -> void:
 	scroll_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Global.player_identity.profile_changed.connect(self._on_global_profile_changed)
@@ -89,11 +86,11 @@ func _ready() -> void:
 	_deploy_timeout_timer = Timer.new()
 	_deploy_timeout_timer.wait_time = 15.0
 	_deploy_timeout_timer.one_shot = true
-	_deploy_timeout_timer.timeout.connect(self._on_deploy_timeout)
+	_deploy_timeout_timer.timeout.connect(self._async_on_deploy_timeout)
 	add_child(_deploy_timeout_timer)
 
-	_update_elements_visibility()
 	_populate_about_fields()
+	_update_elements_visibility()
 
 
 func _find_option_index(value: String, options_array: Array) -> int:
@@ -154,7 +151,7 @@ func _get_option_text(option_field: MarginContainer, index: int) -> String:
 	return ""
 
 
-func _save_profile_changes() -> void:
+func _async_save_profile_changes() -> void:
 	var current_country_index = profile_field_option_country.option_button.selected
 	if current_country_index != original_country_index:
 		var country_text = _get_option_text(profile_field_option_country, current_country_index)
@@ -226,7 +223,7 @@ func _save_profile_changes() -> void:
 		ProfileHelper.get_mutable_profile().set_description(current_about_me)
 		original_about_me = current_about_me
 
-	await ProfileHelper.save_profile()
+	await ProfileHelper.async_save_profile(false)
 
 
 func _update_elements_visibility() -> void:
@@ -265,7 +262,7 @@ func _update_elements_visibility() -> void:
 			label_tag.text = "#" + address.substr(address.length() - 4, 4)
 			if is_own_passport:
 				button_claim_name.show()
-			
+
 	_turn_links_editing(false)
 	_turn_about_editing(false)
 
@@ -316,7 +313,7 @@ func async_show_profile(profile: DclUserProfile) -> void:
 	_refresh_about()
 	_refresh_links()
 	_refresh_name_and_address()
-	_refresh_equipped_items()
+	_async_refresh_equipped_items()
 
 	change_nick_popup.close()
 	profile_new_link_popup.close()
@@ -414,9 +411,9 @@ func _on_button_links_cancel_pressed() -> void:
 	_refresh_links()
 
 
-func _on_button_about_save_pressed() -> void:
+func _async_on_button_about_save_pressed() -> void:
 	if current_profile != null:
-		_save_profile_changes()
+		_async_save_profile_changes()
 		_turn_about_editing(false)
 	else:
 		printerr("No current profile to save")
@@ -517,7 +514,7 @@ func _refresh_name_and_address() -> void:
 	label_nickname.add_theme_color_override("font_color", nickname_color)
 
 
-func _refresh_equipped_items() -> void:
+func _async_refresh_equipped_items() -> void:
 	var equipped_button_group = ButtonGroup.new()
 	equipped_button_group.allow_unpress = true
 
@@ -665,13 +662,13 @@ func _on_profile_new_link_popup_add_link(title: String, url: String) -> void:
 	_check_add_link_button_status()
 
 
-func _on_button_links_save_pressed():
+func _async_on_button_links_save_pressed():
 	links_to_save.clear()
 	for child in h_flow_container_links.get_children():
 		if child.is_in_group("profile_link_buttons"):
 			links_to_save.append({"title": child.text, "url": child.url})
 	ProfileHelper.get_mutable_profile().set_links(links_to_save)
-	await ProfileHelper.save_profile(false)
+	await ProfileHelper.async_save_profile(false)
 	_turn_links_editing(false)
 
 
@@ -709,7 +706,7 @@ func _on_global_profile_changed(new_profile: DclUserProfile) -> void:
 		_deploy_timeout_timer.stop()
 
 
-func _on_deploy_timeout() -> void:
+func _async_on_deploy_timeout() -> void:
 	if _deploy_loading_id == -1:
 		return
 	var addr = Global.player_identity.get_address_str()

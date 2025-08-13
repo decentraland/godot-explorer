@@ -45,7 +45,7 @@ func async_set_item(item: DclItemEntityDefinition):
 	item_data = item
 	_update_category_icon(item)
 	_update_rarity_background(item)
-	_update_thumbnail(item)
+	_async_update_thumbnail(item)
 	texture_progress_bar_loading.hide()
 
 
@@ -60,7 +60,7 @@ func _update_category_icon(item: DclItemEntityDefinition):
 			texture_rect_category.texture = texture
 
 
-func _update_thumbnail(item: DclItemEntityDefinition):
+func _async_update_thumbnail(item: DclItemEntityDefinition):
 	var dcl_content_mapping = item.get_content_mapping()
 	var item_thumbnail: String = item.get_thumbnail()
 	var thumbnail_hash = dcl_content_mapping.get_hash(item_thumbnail)
