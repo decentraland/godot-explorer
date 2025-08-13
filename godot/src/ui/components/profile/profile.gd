@@ -472,11 +472,11 @@ func _turn_about_editing(editing:bool) -> void:
 	
 
 func _turn_links_editing(editing:bool) -> void:
-	links_to_save = player_profile.get_links()
 	for child in h_flow_container_links.get_children():
 		if child.is_in_group("profile_link_buttons"):
 			child.emit_signal('change_editing', editing)
 	if editing:
+		links_to_save = player_profile.get_links()
 		_check_add_link_button_status()
 		label_editing_links.show()
 		v_box_container_links_actions.show()
@@ -494,6 +494,7 @@ func _turn_links_editing(editing:bool) -> void:
 			button_edit_links.show()
 	 
 	_reorder_add_link_button()
+
 
 func _on_button_about_cancel_pressed() -> void:
 	_restore_original_values()
@@ -548,7 +549,7 @@ func _refresh_links():
 		h_flow_container_links.remove_child(child)
 		child.queue_free()
 	for link in links:
-		_add_link_button(link.title, link.url, false)
+		_instantiate_link_button(link.title, link.url, false)
 
 
 func _on_button_add_link_pressed() -> void:
@@ -558,20 +559,6 @@ func _on_button_add_link_pressed() -> void:
 
 func _open_go_to_link(link_url:String)->void:
 	url_popup.open(link_url)
-
-
-func _on_profile_new_link_popup_add_link(title:String, url:String) -> void:
-	links_to_save.append({"title":title, "url":url})
-	_add_link_button(title,url,true)
-	_reorder_add_link_button()
-	_check_add_link_button_status()
-
-func _on_button_links_save_pressed() -> void:
-	ProfileHelper.get_mutable_profile().set_links(links_to_save)
-	await ProfileHelper.save_profile(false)
-	links = player_profile.get_links()
-	_refresh_links()
-	_turn_links_editing(false)
 
 
 func _reorder_add_link_button() -> void:
@@ -626,7 +613,7 @@ func _check_add_link_button_status() -> void:
 		button_add_link.show()
 
 
-func _add_link_button(title:String, url:String, editing:bool) -> void:
+func _instantiate_link_button(title:String, url:String, editing:bool) -> void:
 	var new_link_button = PROFILE_LINK_BUTTON.instantiate()
 	h_flow_container_links.add_child(new_link_button)
 	new_link_button.try_open_link.connect(_open_go_to_link)
@@ -634,3 +621,21 @@ func _add_link_button(title:String, url:String, editing:bool) -> void:
 	new_link_button.url = url
 	new_link_button.emit_signal("change_editing", editing)
 	new_link_button.connect("delete_link", _on_delete_link)
+
+
+func _on_profile_new_link_popup_add_link(title:String, url:String) -> void:
+	links_to_save.append({"title":title, "url":url})
+	_instantiate_link_button(title,url,true)
+	_reorder_add_link_button()
+	_check_add_link_button_status()
+
+
+func _on_button_links_save_pressed():
+	ProfileHelper.get_mutable_profile().set_links(links_to_save)
+	print("LINKS TO SAVE: ", links_to_save)
+	await ProfileHelper.save_profile(false)
+	player_profile = Global.player_identity.get_profile_or_null()
+	links = player_profile.get_links()
+	print("PROFILE LINKS: ",  links)
+	_refresh_links()
+	_turn_links_editing(false)
