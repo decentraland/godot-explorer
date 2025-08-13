@@ -1,6 +1,6 @@
 extends ColorRect
 
-signal update_name_on_profile(nickname:String)
+signal update_name_on_profile(nickname: String)
 
 @onready var button_cancel: Button = %Button_Cancel
 @onready var button_save: Button = %Button_Save
@@ -8,7 +8,7 @@ signal update_name_on_profile(nickname:String)
 @onready var dcl_text_edit_new_nick: VBoxContainer = %DclTextEdit_NewNick
 @onready var label_tag: Label = %Label_Tag
 
-var new_nickname:String
+var new_nickname: String
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -20,13 +20,14 @@ func _on_gui_input(event: InputEvent) -> void:
 func close() -> void:
 	dcl_text_edit_new_nick.text_edit.text = ""
 	hide()
-	
+
+
 func open() -> void:
 	var profile = Global.player_identity.get_profile_or_null()
 	var address = profile.get_ethereum_address()
 	new_nickname = profile.get_name()
 	label_tag.text = "#" + address.substr(address.length() - 4, 4)
-	dcl_text_edit_new_nick.set_text(new_nickname) 
+	dcl_text_edit_new_nick.set_text(new_nickname)
 	_check_error()
 	show()
 

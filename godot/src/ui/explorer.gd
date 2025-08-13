@@ -510,16 +510,16 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 func _on_panel_chat_player_profile_clicked(avatar: DclAvatar):
 	if avatar == null or not is_instance_valid(avatar):
 		return
-	
+
 	# Obtener el perfil del usuario usando su dirección
 	var user_address = avatar.avatar_id
 	var promise = Global.content_provider.fetch_profile(user_address)
 	var result = await PromiseUtils.async_awaiter(promise)
-	
+
 	if result is PromiseError:
 		printerr("Error al obtener el perfil del usuario: ", result.get_error())
 		return
-	
+
 	# Mostrar el panel de perfil con el perfil obtenido
 	profile_panel.show()
 	if result != null:
@@ -529,6 +529,7 @@ func _on_panel_chat_player_profile_clicked(avatar: DclAvatar):
 
 func _on_control_menu_open_profile() -> void:
 	_open_own_profile()
+
 
 func _open_own_profile() -> void:
 	profile_panel.show()

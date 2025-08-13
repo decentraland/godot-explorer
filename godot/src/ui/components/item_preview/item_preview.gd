@@ -22,14 +22,15 @@ var item_data: DclItemEntityDefinition
 func _ready():
 	pass
 
+
 func set_base_emote_info(urn: String):
 	var picture = load("res://assets/avatar/default_emotes_thumbnails/%s.png" % urn)
 	var current_size = texture_rect_preview.size
 	texture_rect_preview.texture = picture
 	texture_rect_preview.size = current_size
-	
+
 	texture_rect_background.texture = base_thumbnail
-	
+
 	var texture_path: String = "res://assets/ui/EmotesIcon.png"
 	if ResourceLoader.exists(texture_path):
 		var texture = load(texture_path)
@@ -38,6 +39,7 @@ func set_base_emote_info(urn: String):
 	texture_rect_triangle.self_modulate = Wearables.RarityColor.BASE
 	panel_container_border.self_modulate = Wearables.RarityColor.BASE
 	texture_progress_bar_loading.hide()
+
 
 func async_set_item(item: DclItemEntityDefinition):
 	item_data = item
@@ -50,10 +52,8 @@ func async_set_item(item: DclItemEntityDefinition):
 func _update_category_icon(item: DclItemEntityDefinition):
 	var texture_path: String = "res://assets/ui/EmotesIcon.png"
 	if !item.is_emote():
-		texture_path = (
-			"res://assets/ui/wearable_categories/" + item.get_category() + "-icon.svg"
-		)
-	
+		texture_path = ("res://assets/ui/wearable_categories/" + item.get_category() + "-icon.svg")
+
 	if ResourceLoader.exists(texture_path):
 		var texture = load(texture_path)
 		if texture != null:
@@ -64,7 +64,7 @@ func _update_thumbnail(item: DclItemEntityDefinition):
 	var dcl_content_mapping = item.get_content_mapping()
 	var item_thumbnail: String = item.get_thumbnail()
 	var thumbnail_hash = dcl_content_mapping.get_hash(item_thumbnail)
-	
+
 	if not thumbnail_hash.is_empty():
 		var promise: Promise = Global.content_provider.fetch_texture(
 			item_thumbnail, dcl_content_mapping
