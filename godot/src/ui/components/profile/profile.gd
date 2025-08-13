@@ -330,6 +330,8 @@ func async_show_profile(profile: DclUserProfile) -> void:
 
 
 func _on_emote_pressed(urn: String) -> void:
+	avatar_preview_landscape.reset_avatar_rotation()
+	avatar_preview_portrait.reset_avatar_rotation()
 	avatar_preview_landscape.avatar.emote_controller.stop_emote()
 	if not avatar_preview_landscape.avatar.emote_controller.is_playing():
 		avatar_preview_landscape.avatar.emote_controller.play_emote(urn)
