@@ -5,7 +5,13 @@ const MAX_CHAR_COUNT = 80
 const CHARACTER_WIDTH = 44
 const MAX_WIDTH := 1200.0
 const TWEEN_DURATION := .25
-const MESSAGE_DURATION := 2.5
+const MESSAGE_DURATION := 6.0
+
+@export var send_message: String
+@export_tool_button("Send message", "Callable")
+var send_message_action = func(): async_show_message.bind(send_message).call()
+
+@export var message_container_scene: PackedScene
 
 @export var name_claimed := false:
 	set(value):
@@ -52,47 +58,50 @@ var message_tween: Tween
 @onready var hash_container = %Hash
 @onready var checkmark_container = %ClaimedCheckmark
 @onready var message_clip = %MessageClip
-@onready var message_container = %MessageContainer
-@onready var message_label = %MessageText
+
+
+func create_message_container(message: String):
+	var message_container = message_container_scene.instantiate()
+	var message_label = message_container.get_child(0)
+	message_label.text = message
+	return message_container
 
 
 func async_show_message(message: String):
+	for child in message_clip.get_children():
+		child.queue_free()
+	if message == "":
+		return
 	if message_tween:
 		message_tween.kill()
-	message_tween = create_tween()
-	message_label.custom_minimum_size = Vector2.ZERO
-	message_label.size = Vector2.ZERO
-	message_label.text = (
-		message
-		if message.length() < MAX_CHAR_COUNT
-		else "%s..." % message.substr(0, MAX_CHAR_COUNT - 3)
-	)
 
-	# We use estimate sizes to avoid waiting for resize
-	var width: float = max(nickname_tag.size.x, message.length() * CHARACTER_WIDTH)
-	var height: float
-	if width > MAX_WIDTH:
+	var message_container = create_message_container(message)
+	var message_label = message_container.get_child(0)
+
+	message_clip.custom_minimum_size = Vector2.ZERO
+	message_clip.add_child(message_container)
+
+	var container_size = message_container.size
+	var width: float = container_size.x
+	if width >= MAX_WIDTH:
 		width = MAX_WIDTH
-		height = 250
+		message_container.queue_free()
+		message_container = create_message_container(message)
+		message_label = message_container.get_child(0)
 		message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		message_label.custom_minimum_size.x = width
-		message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	else:
-		height = 75
-		message_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-		message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		message_clip.add_child(message_container)
 
-	message_clip.visible = true
-	message_clip.custom_minimum_size = Vector2.ZERO
-	message_tween.tween_property(
-		message_clip, "custom_minimum_size", Vector2(width, height), TWEEN_DURATION
-	)
-	message_tween.tween_property(
-		message_clip, "custom_minimum_size", Vector2(width, height), MESSAGE_DURATION
-	)
+	var final_size = Vector2(width, message_container.size.y)
+	print(final_size)
+
+	message_tween = create_tween()
+	message_tween.tween_property(message_clip, "custom_minimum_size", final_size, TWEEN_DURATION)
+	message_tween.tween_property(message_clip, "custom_minimum_size", final_size, MESSAGE_DURATION)
 	var subtween = create_tween().set_parallel()
 	subtween.tween_property(message_clip, "custom_minimum_size", Vector2.ZERO, TWEEN_DURATION)
 	subtween.tween_property(message_clip, "size", Vector2.ZERO, TWEEN_DURATION)
+
 	message_tween.tween_subtween(subtween)
 	await message_tween.finished
-	message_clip.visible = false
+	message_container.queue_free()

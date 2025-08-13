@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3 uid="uid://bce2jth446t8i"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_tj4hi"]
+font_size = 72
+
+[node name="MessageContainer" type="MarginContainer"]
+offset_right = 610.0
+offset_bottom = 128.0
+size_flags_horizontal = 3
+size_flags_vertical = 0
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 25
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="MessageText" type="Label" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(580, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+label_settings = SubResource("LabelSettings_tj4hi")
